@@ -12,7 +12,7 @@
 
 ## Operator Upgrade Impact
 
-Select exactly one declaration for every PR, including automated PRs. Commit
+Select exactly one declaration for every PR except Dependabot PRs. Commit
 required guidance under `## Unreleased` in
 `docs/operations/operator-upgrade-notes.md` with the source changes.
 

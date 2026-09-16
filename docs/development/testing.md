@@ -67,10 +67,11 @@ use and widths of 320 pixels; it does not verify a physical iPhone or iPad.
 
 ## Pull request gates
 
-The Operator Upgrade Gate checks every pull request to `main`, including
-automated pull requests. Select exactly one operator-impact declaration in
-the pull request template. `Operator notes updated` requires a meaningful
-addition or correction under `## Unreleased` in the committed operator notes.
+The Operator Upgrade Gate checks every pull request to `main` except those
+authored by `dependabot[bot]`. For other pull requests, select exactly one
+operator-impact declaration in the pull request template.
+`Operator notes updated` requires a meaningful addition or correction under
+`## Unreleased` in the committed operator notes.
 Formatting, source markers, removal-only changes, and release history do not
 count as updated guidance. `No operator notes needed` still requires a valid
 notes document. The gate verifies the declaration and notes structure;
@@ -79,10 +80,11 @@ reviewers assess whether the guidance covers the actual operational impact.
 The SSDLC Gate requires the template's security-review checkbox for changes
 to application code, persistence, dependencies, deployment, authentication,
 security documentation, or development and CI security controls. Ordinary
-documentation-only changes can pass without the checkbox. As in the source
-workflow, Dependabot pull requests skip this gate; they still run the
-Operator Upgrade Gate. A checked box records the author's assessment and
-does not replace security review or security testing.
+documentation-only changes can pass without the checkbox. Dependabot pull
+requests skip both gates. The workflows check the pull request author, so
+the exemption also applies when a maintainer edits a Dependabot pull request.
+A checked box records the author's assessment and does not replace security
+review or security testing.
 
 Both gates rerun when a pull request opens, receives commits, reopens, changes
 its description, or becomes ready for review. They use `pull_request_target`,
@@ -129,10 +131,10 @@ update workflow, so no custom workflow file is needed. See GitHub's
 [Dependabot configuration guide](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configure-version-updates).
 
 Review each update and let application CI validate it. Dependabot pull
-requests still require an operator-impact assessment: add exactly one
-declaration from the pull request template and commit meaningful operator
-notes when needed. The SSDLC workflow skips Dependabot as described above.
-Updates do not merge automatically.
+requests skip the Operator Upgrade and SSDLC gates, so their descriptions
+do not need the template declarations. Reviewers must still assess operational
+impact and commit meaningful operator notes when needed. Updates do not merge
+automatically.
 
 The source project's nested npm projects and devcontainer configuration do
 not exist in Skyttel, so they are not included. Runtime Node.js and Docker
