@@ -19,6 +19,7 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
+      - run: npm run test:gates
       - run: npm run typecheck
       - run: npm run lint:docs
       - run: npx playwright install --with-deps chromium

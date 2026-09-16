@@ -65,6 +65,61 @@ Playwright 1.63.0, and Chromium 153. Typechecking, Markdown lint, spelling,
 and the dependency audit also pass. Browser viewport emulation covers keyboard
 use and widths of 320 pixels; it does not verify a physical iPhone or iPad.
 
+## Pull request gates
+
+The Operator Upgrade Gate checks every pull request to `main`, including
+automated pull requests. Select exactly one operator-impact declaration in
+the pull request template. `Operator notes updated` requires a meaningful
+addition or correction under `## Unreleased` in the committed operator notes.
+Formatting, source markers, removal-only changes, and release history do not
+count as updated guidance. `No operator notes needed` still requires a valid
+notes document. The gate verifies the declaration and notes structure;
+reviewers assess whether the guidance covers the actual operational impact.
+
+The SSDLC Gate requires the template's security-review checkbox for changes
+to application code, persistence, dependencies, deployment, authentication,
+security documentation, or development and CI security controls. Ordinary
+documentation-only changes can pass without the checkbox. As in the source
+workflow, Dependabot pull requests skip this gate; they still run the
+Operator Upgrade Gate. A checked box records the author's assessment and
+does not replace security review or security testing.
+
+Both gates rerun when a pull request opens, receives commits, reopens, changes
+its description, or becomes ready for review. They use `pull_request_target`,
+check out the exact trusted base revision, and read pull request metadata and
+committed notes through GitHub's API with read-only permissions. They do not
+install dependencies or execute code from the pull request. API failures or
+incomplete evidence fail the check.
+
+The workflows and their scripts must first reach `main` before these gates
+can run. After a successful initial run, maintainers can select the
+`operator-upgrade-gate` and `ssdlc-gate` checks in the `main` branch rules to
+require them before merging. The workflow files alone do not change branch
+protection. Editing a pull request description reruns the gates after setup.
+See GitHub's [pull request target documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_target)
+for the execution context.
+
+Run the dependency-free gate tests with Node.js 24:
+
+```sh
+npm run test:gates
+```
+
+Application CI runs these tests too. They use synthetic pull request data
+and simulated GitHub responses, including fork notes, missing guidance,
+checkbox declarations, renamed files, pagination, and API failures. To check
+a real pull request, use the read-only GitHub API mode with a suitable token
+in the environment; keep the token out of command arguments and logs:
+
+```sh
+export GITHUB_REPOSITORY=viscalyx/skyttel
+node scripts/release/operator-upgrade-gate.mjs --github-pr 66
+node scripts/security/ssdlc-gate.mjs --github-pr 66
+```
+
+Both commands read `GITHUB_TOKEN`. An unchecked SSDLC declaration on a
+security-sensitive change must fail until the assessment is complete.
+
 ## Production-container checks
 
 With a running Docker daemon:

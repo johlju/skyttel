@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "lint:docs": "node scripts/check-docs.mjs && cspell --no-progress docs/operations/installation.md docs/operations/operator-upgrade-notes.md docs/development/testing.md",
     "test": "npm run build && playwright test",
+    "test:gates": "node --test scripts/release/__tests__/*.test.mjs scripts/security/__tests__/*.test.mjs",
     "test:integration": "playwright test",
     "test:container": "node scripts/check-container.mjs"
   },
