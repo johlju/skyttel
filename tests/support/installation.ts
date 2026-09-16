@@ -30,6 +30,7 @@ export async function createInstallation(firstAdmin = { provider: 'google' as 'g
   };
   let identity = alex;
   let providerFails = false;
+  let consentDenied = false;
   let database: ReturnType<typeof openDatabase>;
   let server: ServerType;
   async function start() {
@@ -53,7 +54,8 @@ export async function createInstallation(firstAdmin = { provider: 'google' as 'g
       provider.createAuthorizationURL = async ({ state, redirectURI }) => {
         const callback = new URL(redirectURI);
         callback.searchParams.set('state', state);
-        callback.searchParams.set('code', 'synthetic-authorization-code');
+        if (consentDenied) callback.searchParams.set('error', 'access_denied');
+        else callback.searchParams.set('code', 'synthetic-authorization-code');
         return callback;
       };
       provider.validateAuthorizationCode = async () => {
@@ -86,6 +88,7 @@ export async function createInstallation(firstAdmin = { provider: 'google' as 'g
     directory,
     setIdentity(value: Identity) { identity = value; },
     failProvider(value: boolean) { providerFails = value; },
+    denyConsent(value: boolean) { consentDenied = value; },
     // Arrangement for access scenarios whose administration UI is a later issue.
     seedMembership(userId: string, householdId: string, name: string) {
       database.transaction(() => {

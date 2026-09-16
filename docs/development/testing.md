@@ -41,7 +41,8 @@ entry point and Docker build context.
 These checks cover installation setup, server-side access decisions,
 independent installations, same-email identities, current membership,
 revoked access, and restart persistence. Browser checks include recoverable
-startup errors, keyboard operation, and a narrow
+startup errors, denied Google and Microsoft consent with successful retry,
+keyboard operation, and a narrow
 mobile viewport. Tests must never use live provider credentials, real
 households, or production storage. Keep generated traces and reports local;
 their inputs must remain synthetic.
@@ -59,8 +60,8 @@ Do not replace SQLite with an in-memory repository mock. Membership fixtures
 arrange scenarios for administration features that belong to later issues;
 all assertions observe the public HTTP interface, not internal database rows.
 
-Verification status on 2026-09-16: all 12 application tests pass from a clean
-export of the staged implementation on macOS ARM64 with Node.js 24.19.0,
+Verification status on 2026-09-16: all 14 application tests and all 31 workflow
+gate tests pass on macOS ARM64 with Node.js 24.19.0,
 Playwright 1.63.0, and Chromium 153. Typechecking, Markdown lint, spelling,
 and the dependency audit also pass. Browser viewport emulation covers keyboard
 use and widths of 320 pixels; it does not verify a physical iPhone or iPad.
@@ -171,10 +172,13 @@ Verification status on 2026-09-16: this workflow passes with Node.js 24.21.0
 on `linux/arm64`. It confirms initial startup, UID/GID 1000, unavailable test
 login routes, anonymous access denial, persisted authenticated household
 access after restart, and failed migration without readiness. Real Google
-and personal Microsoft account sign-in remain pending the separate checks
+and personal Microsoft account sign-in have separate verification evidence
 below.
 
 ## Verify real identity providers separately
+
+If you are new to provider registration, start with the
+[first-time setup walkthrough](../operations/first-time-use.md).
 
 Use a private verification installation with its own persistent disk, secret,
 and provider registrations. Register the correct callback URLs and authorize
@@ -199,6 +203,51 @@ household data in public evidence.
 
 Record the date, image digest, provider, Microsoft account category, scenarios,
 and pass/fail result in private release evidence. State explicitly which
-checks are deterministic and which use a real provider. Until these live
-checks run, provider compatibility remains unverified; passing the automated
-suite is not a claim of live Google or Microsoft sign-in success.
+checks are deterministic and which use a real provider. Passing the automated
+suite alone is not a claim of live Google or Microsoft sign-in success.
+
+### Live-provider verification scope on 2026-09-16
+
+Real Google and personal Microsoft sign-in pass in two sequential local
+verification installations at `http://localhost:3000`. Each installation has
+its own persistent SQLite volume, first-administrator configuration, and
+authentication secret. Both use the dedicated local provider registrations.
+The live production image contains the application code from commit
+`c047bd05c5753d5cf5c35618070d667a022d5680`, with Node.js 24.21.0 on Linux ARM64.
+Its image digest is:
+
+```text
+sha256:30bd93a317a878f369dbd861e6c929b7b8b69b2a45a13863f06569e3796a3fbb
+```
+
+The installation operator performs the browser sign-ins and confirms the
+displayed outcomes. Local checks verify readiness, the personal Microsoft
+account category, and public HTTP access decisions. The evidence covers:
+
+- Google and Microsoft callbacks returning an authenticated account with
+  household access denied before first-administrator configuration.
+- Household creation by each configured administrator, sign-out, return
+  sign-in, and access to the same household after a container restart.
+- A personal Microsoft account confirmed by the consumer tenant in the
+  provider-validated ID token, without displaying the token or claim values.
+- Denied Microsoft access to the Google household. HTTP checks reuse sessions
+  established by the real provider flows, keeping cookie material in memory.
+  The Google member can read its household; the Microsoft nonmember receives
+  `403` on direct household reads and creation attempts. Anonymous reads and
+  creation receive `401`, and an unassigned household identifier receives
+  `403` for the Google member. Response bodies and private identifiers are
+  excluded from public evidence.
+- Application output from both containers contains only fixed event names;
+  no configured private values appear in standard output or standard error.
+
+Microsoft evidence includes an initial generic retry screen before a
+permissions dialog and a successful subsequent consent and sign-in attempt.
+The cause of the first failure is undetermined. It does not establish a live
+consent-cancellation result. Explicit denied consent for both providers,
+same-email isolation, membership revocation, forged callbacks, and provider
+outages have deterministic application-test coverage.
+
+The live checks cover local HTTP callbacks and browser use on the operator's
+computer. They do not verify a public HTTPS deployment, every account policy,
+or physical mobile devices. Private credentials, identity values, session
+material, and household records remain outside Git and public evidence.

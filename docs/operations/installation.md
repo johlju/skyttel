@@ -55,6 +55,11 @@ startup before the application accepts traffic.
 
 ## Register identity providers
 
+For a first setup, follow the
+[beginner's provider registration walkthrough](first-time-use.md), including
+Google project creation, Microsoft directory access, and private credential
+storage.
+
 Create a Google OAuth web application and a Microsoft Entra web application.
 Register these exact redirect URIs, substituting the installation's origin:
 
@@ -65,10 +70,13 @@ https://skyttel.example.com/api/auth/callback/microsoft
 
 For local verification register the corresponding
 `http://localhost:3000/api/auth/callback/google` and
-`http://localhost:3000/api/auth/callback/microsoft` URIs. Google consent-screen
-access must include the intended test users while the provider application is
-in testing mode. Use the provider's web application client secret on the
-server, never in browser configuration.
+`http://localhost:3000/api/auth/callback/microsoft` URIs. Keep the Google
+application in testing mode for local verification. Its basic sign-in scopes
+are exempt from Google's test-user restriction; the test-user list does not
+protect household access. See the
+[Testing exception](https://support.google.com/cloud/answer/15549945?hl=en).
+Use the provider's web application client secret on the server, never in
+browser configuration.
 
 The Microsoft registration must allow personal Microsoft accounts as well as
 accounts in organizational directories. Skyttel uses the `common` authority.
@@ -77,6 +85,11 @@ alone does not enable personal accounts. See the official
 [Google setup](https://better-auth.com/docs/authentication/google),
 [Microsoft setup](https://better-auth.com/docs/authentication/microsoft), and
 [Microsoft audience guidance](https://learn.microsoft.com/entra/identity-platform/msal-client-application-configuration).
+
+Before the Microsoft credential expires, follow the
+[secret renewal procedure](first-time-use.md#renew-the-microsoft-secret-before-it-expires).
+Create and verify a replacement in the same registration before removing the
+old credential, and reload the application's environment after changing it.
 
 ## Designate the first administrator
 
