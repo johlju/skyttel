@@ -1,0 +1,21 @@
+services:
+  skyttel:
+    build: .
+    image: skyttel:local
+    init: true
+    restart: unless-stopped
+    env_file: .env.local
+    environment:
+      SKYTTEL_DATABASE_PATH: /data/skyttel.sqlite
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - skyttel-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  skyttel-data:

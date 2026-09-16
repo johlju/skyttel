@@ -1,0 +1,8 @@
+{
+  "version": "0.2",
+  "language": "sv,en",
+  "import": ["@cspell/dict-sv/cspell-ext.json"],
+  "words": ["healthz", "journaling"],
+  "useGitignore": true,
+  "ignorePaths": [".git/**", "node_modules/**"]
+}

@@ -1,0 +1,13 @@
+# Only production build inputs may enter the build context.
+*
+!Dockerfile
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.server.json
+!vite.config.ts
+!index.html
+!src/
+!src/**
+!migrations/
+!migrations/**

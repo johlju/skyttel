@@ -1,0 +1,44 @@
+{
+  "name": "skyttel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0 <25",
+    "npm": ">=11 <12"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server/index.ts",
+    "dev:client": "vite --host 127.0.0.1",
+    "build": "tsc -p tsconfig.server.json && vite build",
+    "start": "node dist/server/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint:docs": "node scripts/check-docs.mjs && cspell --no-progress docs/operations/installation.md docs/operations/operator-upgrade-notes.md docs/development/testing.md",
+    "test": "npm run build && playwright test",
+    "test:integration": "playwright test",
+    "test:container": "node scripts/check-container.mjs"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.1",
+    "better-auth": "1.7.5",
+    "better-sqlite3": "13.0.3",
+    "hono": "4.13.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router": "8.4.0"
+  },
+  "devDependencies": {
+    "@cspell/dict-sv": "2.3.2",
+    "@playwright/test": "1.63.0",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "24.13.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "cspell": "10.3.3",
+    "markdownlint": "0.41.1",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  }
+}
