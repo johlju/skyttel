@@ -120,6 +120,26 @@ node scripts/security/ssdlc-gate.mjs --github-pr 66
 Both commands read `GITHUB_TOKEN`. An unchecked SSDLC declaration on a
 security-sensitive change must fail until the assessment is complete.
 
+## Dependency updates
+
+`.github/dependabot.yml` enables weekly version-update checks for the root
+npm project and GitHub Actions. Each dependency gets a separate pull request.
+The configuration takes effect on `main`. GitHub supplies the Dependabot
+update workflow, so no custom workflow file is needed. See GitHub's
+[Dependabot configuration guide](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configure-version-updates).
+
+Review each update and let application CI validate it. Dependabot pull
+requests still require an operator-impact assessment: add exactly one
+declaration from the pull request template and commit meaningful operator
+notes when needed. The SSDLC workflow skips Dependabot as described above.
+Updates do not merge automatically.
+
+The source project's nested npm projects and devcontainer configuration do
+not exist in Skyttel, so they are not included. Runtime Node.js and Docker
+image updates remain coordinated maintenance: keep `.node-version`, the
+`package.json` engine range, and both pinned Dockerfile base references
+compatible, then run the production-container checks.
+
 ## Production-container checks
 
 With a running Docker daemon:
