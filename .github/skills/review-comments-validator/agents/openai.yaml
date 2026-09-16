@@ -1,0 +1,6 @@
+interface:
+  display_name: "Review Comments Validator"
+  short_description: "Validate review findings before code changes"
+  default_prompt: "Use $review-comments-validator to validate these review comments, fix valid findings, and defer oversized improvements."
+policy:
+  allow_implicit_invocation: false

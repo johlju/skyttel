@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research"
+  short_description: "Research questions with primary sources"
+  default_prompt: "Use $research to research this question against primary sources and write a cited Markdown findings file in the repository."

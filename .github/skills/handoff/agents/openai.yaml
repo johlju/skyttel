@@ -1,0 +1,6 @@
+interface:
+  display_name: "Handoff"
+  short_description: "Create agent handoffs from current work"
+  default_prompt: "Use $handoff to create a concise, redacted handoff document for the next agent."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Wayfinder"
+  short_description: "Map multi-session work into issue tickets"
+  default_prompt: "Use $wayfinder to map this large multi-session effort into issue-tracker investigation tickets."
+policy:
+  allow_implicit_invocation: false

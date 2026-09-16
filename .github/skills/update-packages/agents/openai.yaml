@@ -1,0 +1,6 @@
+interface:
+  display_name: "Update Packages"
+  short_description: "Audit safe npm dependency updates"
+  default_prompt: "Use $update-packages to audit npm dependencies, recommend safe LTS updates, and generate commands."
+policy:
+  allow_implicit_invocation: false

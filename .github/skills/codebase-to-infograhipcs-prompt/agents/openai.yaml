@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codebase to Infographic Prompt"
+  short_description: "Create infographic prompts from codebases"
+  default_prompt: "Use $codebase-to-infographic-prompt to analyze a codebase and create a professional infographic-generation prompt."
+policy:
+  allow_implicit_invocation: false
