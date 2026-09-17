@@ -15,3 +15,7 @@ Ett abonnemang blir därför mer än bara en återkommande kostnad. Skyttel kan 
 Målet med Skyttel är att ge hushållet en gemensam, tydlig och sammanhängande bild av sina digitala tjänster, konton, avtal och åtaganden – och därmed göra det enklare att förstå, administrera och förändra dem över tid.
 
 ![Konceptillustration](docs/images/shuttle-conceptillustration.png)
+
+Utveckla i projektets [devcontainer](docs/development/devcontainer.md).
+[Utvecklings- och testinstruktionerna](docs/development/testing.md) beskriver
+projektets kontroller och hur de körs.

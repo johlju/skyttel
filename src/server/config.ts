@@ -31,7 +31,10 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
     throw new ConfigurationError('SKYTTEL_ORIGIN');
   }
   const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
-  if (url.origin !== origin || (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback))) {
+  if (
+    url.origin !== origin ||
+    (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback))
+  ) {
     throw new ConfigurationError('SKYTTEL_ORIGIN');
   }
   const provider = required('SKYTTEL_FIRST_ADMIN_PROVIDER');
@@ -50,8 +53,14 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
     databasePath,
     firstAdmin: { provider, subject: required('SKYTTEL_FIRST_ADMIN_SUBJECT') },
     authSecret,
-    google: { clientId: required('GOOGLE_CLIENT_ID'), clientSecret: required('GOOGLE_CLIENT_SECRET') },
-    microsoft: { clientId: required('MICROSOFT_CLIENT_ID'), clientSecret: required('MICROSOFT_CLIENT_SECRET') },
+    google: {
+      clientId: required('GOOGLE_CLIENT_ID'),
+      clientSecret: required('GOOGLE_CLIENT_SECRET'),
+    },
+    microsoft: {
+      clientId: required('MICROSOFT_CLIENT_ID'),
+      clientSecret: required('MICROSOFT_CLIENT_SECRET'),
+    },
     port,
     host: environment.HOST ?? '0.0.0.0',
   };

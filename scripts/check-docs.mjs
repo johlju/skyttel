@@ -6,12 +6,15 @@ const result = lint({
     'docs/operations/installation.md',
     'docs/operations/operator-upgrade-notes.md',
     'docs/development/testing.md',
+    'docs/development/devcontainer.md',
   ],
   config: { default: true, MD060: { style: 'compact' } },
 });
 for (const [file, errors] of Object.entries(result)) {
   for (const error of errors) {
-    console.error(`${file}:${error.lineNumber} ${error.ruleNames[0]} ${error.ruleDescription}: ${error.errorDetail ?? ''}`);
+    console.error(
+      `${file}:${error.lineNumber} ${error.ruleNames[0]} ${error.ruleDescription}: ${error.errorDetail ?? ''}`,
+    );
     process.exitCode = 1;
   }
 }

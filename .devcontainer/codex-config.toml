@@ -1,0 +1,51 @@
+# User-level Codex settings required by the Skyttel devcontainer.
+# The devcontainer postCreateCommand copies this to user configuration (~/.codex/config.toml).
+# Then Codex automatically layers the project’s .codex/config.toml on top of it.
+
+approval_policy = "never"
+default_permissions = "skyttel-development"
+
+[projects."/workspace"]
+trust_level = "trusted"
+
+[permissions.skyttel-development]
+description = "Workspace access with Skyttel local development network."
+extends = ":workspace"
+
+[permissions.skyttel-development.filesystem]
+"~/.codex/skills" = "write"
+
+[permissions.skyttel-development.filesystem.":workspace_roots"]
+".codex" = "write"
+".git" = "write"
+
+[permissions.skyttel-development.network]
+enabled = true
+allow_local_binding = true
+
+[permissions.skyttel-development.network.domains]
+"localhost" = "allow"
+"127.0.0.1" = "allow"
+"::1" = "allow"
+
+[plugins.openai-templates]
+enabled = false
+
+[plugins.plugin-management]
+enabled = false
+
+[[skills.config]]
+path = "/home/vscode/.codex/skills/.system/plugin-creator/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/home/vscode/.codex/skills/.system/review-agent/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/home/vscode/.codex/skills/.system/skill-creator/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/home/vscode/.codex/skills/.system/skill-installer/SKILL.md"
+enabled = false

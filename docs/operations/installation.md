@@ -7,18 +7,14 @@ secret, provider credentials, and configured first administrator.
 
 ## Supported runtime
 
-- Node.js 24 LTS, with exact JavaScript dependencies in `package-lock.json`.
-- The production image uses Node.js 24.21.0 on Debian Bookworm slim, pinned by
-  its multi-platform image digest. It runs as the `node` user, UID/GID 1000.
+- Node.js 24 LTS for running directly from a build.
+- The production image includes the runtime and dependencies. It runs as
+  the `node` user, UID/GID 1000.
 - Docker Engine with Docker Compose v2 for the local container workflow.
 - A writable persistent filesystem for SQLite; use a local disk, not a shared
   network filesystem. The image stores its database in `/data/skyttel.sqlite`.
 
-The application uses TypeScript, React, Vite, React Router, Hono, Better Auth,
-and `better-sqlite3`. SQLite runs inside the application; no database service is
-required. See the
-[technology decision](https://github.com/viscalyx/skyttel/issues/12#issuecomment-5691771132)
-and [access decision](https://github.com/viscalyx/skyttel/issues/6#issuecomment-5654275475).
+SQLite runs inside the application; no separate database service is required.
 
 ## Configure the installation
 
@@ -145,14 +141,6 @@ is disabled: a second provider with the same email address cannot take over
 the first provider's user or household. Explicit linking is separate future
 work; use the original provider to return to the household.
 
-Provider email addresses do not select a Skyttel user. Each provider identity
-gets a separate user with a random internal ID. The authentication library's
-required email field contains an opaque internal address derived from the
-provider and immutable identifier, not a contact address. This prevents a
-different identity from reserving the administrator's email before setup.
-Never send email to that internal address. Future contact-address and explicit
-linking features must keep this identity boundary intact.
-
 ## Build, start, and restart
 
 After filling every required configuration value:
@@ -201,9 +189,6 @@ exactly one instance and allow a deployment interruption.
 
 ## Startup failures and storage
 
-SQLite uses WAL journaling and full synchronization. Migrations run before
-the listener opens, and household creation uses a short transaction.
-
 A failed migration or inaccessible database exits with failure and no ready
 listener. A fixed error event such as `database_initialization_failed` appears
 in the technical log with a safe reason such as `database_unavailable` or
@@ -213,9 +198,10 @@ service out of traffic and check disk availability, write permission, free
 space, and the deployed migration files. Correct the cause and restart. Do not
 delete the database or edit migration history to force a healthy state.
 
-This delivery does not provide automated backups, household export/import,
-or a data recovery interface. Those require separate work. Persistent disk
-protects ordinary restarts; it does not protect against loss of the disk.
+Skyttel does not provide automated backups, household export/import, or a data
+recovery interface. Arrange backups separately before storing data you need
+to keep. Persistent disk protects ordinary restarts; it does not protect
+against loss of the disk.
 
 ## Verification limits
 

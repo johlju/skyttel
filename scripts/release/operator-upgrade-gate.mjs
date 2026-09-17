@@ -21,7 +21,9 @@ export function evaluateOperatorUpgradeGate({ prBody, baseNotes, headNotes }) {
     ),
   ];
   if (declarations.length !== 1) {
-    failures.push('Select exactly one declaration: "Operator notes updated" or "No operator notes needed".');
+    failures.push(
+      'Select exactly one declaration: "Operator notes updated" or "No operator notes needed".',
+    );
   }
   try {
     parseOperatorUpgradeNotes(headNotes);
@@ -42,7 +44,7 @@ export function formatGateReport(result) {
     'The PR declaration or committed operator guidance is incomplete.',
     '',
     'Required fixes:',
-    ...result.failures.map(failure => `  - ${failure}`),
+    ...result.failures.map((failure) => `  - ${failure}`),
   ].join('\n');
 }
 
@@ -143,14 +145,20 @@ async function readSnapshot(repository, sha, { allowAbsent, fetchImpl, token }) 
     // before treating first-time adoption as an empty notes document.
     const commit = await fetchGitHubJson(`${baseUrl}/git/commits/${sha}`, { fetchImpl, token });
     const treeSha = requireCommitSha(commit.tree?.sha);
-    const tree = await fetchGitHubJson(`${baseUrl}/git/trees/${treeSha}?recursive=1`, { fetchImpl, token });
+    const tree = await fetchGitHubJson(`${baseUrl}/git/trees/${treeSha}?recursive=1`, {
+      fetchImpl,
+      token,
+    });
     if (
-      tree.truncated !== false || !Array.isArray(tree.tree) ||
-      tree.tree.some(entry => typeof entry.path !== 'string')
+      tree.truncated !== false ||
+      !Array.isArray(tree.tree) ||
+      tree.tree.some((entry) => typeof entry.path !== 'string')
     ) {
-      throw new Error('Cannot confirm whether base operator notes exist in the complete commit tree.');
+      throw new Error(
+        'Cannot confirm whether base operator notes exist in the complete commit tree.',
+      );
     }
-    if (tree.tree.some(entry => entry.path === DEFAULT_OPERATOR_UPGRADE_NOTES_PATH)) throw error;
+    if (tree.tree.some((entry) => entry.path === DEFAULT_OPERATOR_UPGRADE_NOTES_PATH)) throw error;
     return EMPTY_NOTES;
   }
   if (file.encoding !== 'base64' || typeof file.content !== 'string') {
@@ -190,10 +198,14 @@ export async function main(args = process.argv.slice(2), options = {}) {
         token,
       });
       input.baseNotes = await readSnapshot(repository, input.baseSha, {
-        allowAbsent: true, fetchImpl, token,
+        allowAbsent: true,
+        fetchImpl,
+        token,
       });
       input.headNotes = await readSnapshot(input.headRepository, input.headSha, {
-        allowAbsent: false, fetchImpl, token,
+        allowAbsent: false,
+        fetchImpl,
+        token,
       });
     }
     const result = evaluateOperatorUpgradeGate(input);

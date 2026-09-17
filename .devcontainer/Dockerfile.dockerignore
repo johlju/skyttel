@@ -1,0 +1,10 @@
+# Repository-root context, restricted to development image inputs.
+*
+!.node-version
+!package.json
+!scripts/
+!scripts/install-repository-npm.mjs
+!.devcontainer/
+!.devcontainer/Dockerfile
+!.devcontainer/install-node.sh
+!.devcontainer/install-codex.sh

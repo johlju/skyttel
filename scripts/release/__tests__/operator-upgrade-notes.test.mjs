@@ -7,7 +7,8 @@ import {
 } from '../operator-upgrade-notes.mjs';
 
 const empty = '# Operator Upgrade Notes\n\n## Unreleased\n';
-const block = '<!-- operator-upgrade:source pr-1 start -->\nBack up SQL.\n<!-- operator-upgrade:source pr-1 end -->';
+const block =
+  '<!-- operator-upgrade:source pr-1 start -->\nBack up SQL.\n<!-- operator-upgrade:source pr-1 end -->';
 const history = '\n## v1.0.0 - 2026-08-01\n\nExisting history.\n';
 const source = `${empty}\n${block}\n${history}`;
 
@@ -24,7 +25,9 @@ describe('committed operator notes', () => {
 
   it('rejects missing headings, invalid history and unbalanced source markers', () => {
     for (const document of [
-      undefined, '# Notes', `${empty}\n## Unreleased\n`,
+      undefined,
+      '# Notes',
+      `${empty}\n## Unreleased\n`,
       `${empty}\n## Invalid\n`,
       '# Notes\n\n## v1.0.0 - 2026-08-01\n\n## Unreleased\n',
       `${empty}\n<!-- operator-upgrade:source pr-1 start -->`,
@@ -38,8 +41,14 @@ describe('committed operator notes', () => {
 
   it('accepts new or corrected guidance but ignores history-only changes', () => {
     assert.equal(meaningfulUnreleasedChange(empty, source), true);
-    assert.equal(meaningfulUnreleasedChange(source, source.replace('Back up SQL.', 'Back up SQL and keys.')), true);
-    assert.equal(meaningfulUnreleasedChange(source, source.replace('Existing history.', 'Corrected history.')), false);
+    assert.equal(
+      meaningfulUnreleasedChange(source, source.replace('Back up SQL.', 'Back up SQL and keys.')),
+      true,
+    );
+    assert.equal(
+      meaningfulUnreleasedChange(source, source.replace('Existing history.', 'Corrected history.')),
+      false,
+    );
     assert.equal(meaningfulUnreleasedChange(source, empty), false);
   });
 
@@ -47,10 +56,13 @@ describe('committed operator notes', () => {
     const before = `${empty}\nBack up the database.\n\nStop the service.\n\nRestart the application.\n`;
     const after = before.replace('\nStop the service.\n', '');
     assert.equal(meaningfulUnreleasedChange(before, after), false);
-    assert.equal(meaningfulUnreleasedChange(
-      `${empty}\nBack up the database and encryption keys.\n`,
-      `${empty}\nBack up the encryption keys.\n`,
-    ), false);
+    assert.equal(
+      meaningfulUnreleasedChange(
+        `${empty}\nBack up the database and encryption keys.\n`,
+        `${empty}\nBack up the encryption keys.\n`,
+      ),
+      false,
+    );
   });
 
   it('rejects equivalent Markdown formatting and source-marker or comment changes', () => {
@@ -63,7 +75,10 @@ describe('committed operator notes', () => {
       ['Back up SQL.', '<!-- Added metadata -->\nBack up SQL.'],
       ['Back up SQL.', block],
     ]) {
-      assert.equal(meaningfulUnreleasedChange(`${empty}\n${before}\n`, `${empty}\n${after}\n`), false);
+      assert.equal(
+        meaningfulUnreleasedChange(`${empty}\n${before}\n`, `${empty}\n${after}\n`),
+        false,
+      );
     }
   });
 });

@@ -1,8 +1,15 @@
-# Only production build inputs may enter the build context.
+# Only application and development image inputs may enter the build context.
 *
 !Dockerfile
 !package.json
 !package-lock.json
+!.npmrc
+!.node-version
+!.devcontainer/
+!.devcontainer/install-node.sh
+!.devcontainer/install-codex.sh
+!scripts/
+!scripts/install-repository-npm.mjs
 !tsconfig.json
 !tsconfig.server.json
 !vite.config.ts

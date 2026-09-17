@@ -3,10 +3,16 @@
 Kontrolldatum: 2026-09-13. Underlag till beslutsticketen
 [Vilka tekniska vägar kan stödja svenska samtal som ändrar en relationskarta?](https://github.com/viscalyx/skyttel/issues/4).
 
-Detta är dokumentationsresearch, utan liveprov, modellinstallationer,
-betalda API-anrop eller verkliga hushållsuppgifter. Alla exempel är påhittade.
-Rapporten väljer ingen leverantör, databas, klientplattform eller stack.
-Begreppen objekt och relation är tillfälliga ord för README:s varp och väft.
+Använd rapporten som tekniskt jämförelseunderlag inför prototyper.
+Produktkrav och arkitekturbeslut finns i [beslutsöversikten](../planning/README.md).
+Rapportens förslag och frågor är underlag, inte gällande krav eller en lista
+över öppna beslut. Kontrollera aktuellt leverantörsstöd inför implementation;
+uppgifterna gäller kontrolldatumet ovan.
+
+Underlaget omfattar dokumentationsresearch, utan liveprov,
+modellinstallationer, betalda API-anrop eller verkliga hushållsuppgifter.
+Alla exempel är påhittade. Med relation avses ett samband enligt
+[Skyttels begrepp](../../CONTEXT.md).
 
 ## Vad underlaget visar
 
@@ -175,7 +181,7 @@ tillfällig behandling eller cache i länder där Google har anläggningar.
 Inget specifikt konto eller regionalt upplägg är verifierat här.
 [Google: användning av data](https://ai.google.dev/gemini-api/terms#paid-services).
 
-Produktval som återstår: vilka externa mottagare som får behandla data,
+Kontrollera produktbesluten om vilka externa mottagare som får behandla data,
 vilka kartdelar AI:n får se, samt lagringstid för ljud, transkript, utkast,
 historik och felsökningsloggar. Privat innebär inte automatiskt enbart
 lokalt, men den skillnaden behöver vara begriplig för användaren.
@@ -210,7 +216,7 @@ kronkostnad eller hastighetsvinst är inte uppmätt i detta underlag.
 6. Fördröjning, resursbruk, kostnad och vilka data som faktiskt lämnar
    enheten. Lokala och externa vägar ska använda jämförbara uppgifter.
 
-Kvar för produktbeslut: kravet på offlinebruk, accepterad molnbehandling,
-första målplattform, om AI:n måste svara med röst, tolererad väntetid och
-hur användaren godkänner ändringar. Först därefter går det att välja en
-rättvis prototypjämförelse och precisera leverantörskraven.
+Inför ett prototypval, kontrollera produktbesluten om offlinebruk,
+accepterad molnbehandling, första målplattform, om AI:n måste svara med röst,
+tolererad väntetid och hur användaren godkänner ändringar. Använd dem för att
+välja en rättvis prototypjämförelse och precisera leverantörskraven.

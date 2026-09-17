@@ -1,33 +1,50 @@
 import { serveStatic } from '@hono/node-server/serve-static';
+import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
-import type Database from 'better-sqlite3';
+import { normalizeHouseholdName } from '../shared/household-name.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { createHousehold, householdAccess, isFirstAdmin, isInitialized } from './households.js';
-import { normalizeHouseholdName } from '../shared/household-name.js';
 
-export function createApp({ config, database, auth }: { config: Config; database: Database.Database; auth: Auth }) {
+export function createApp({
+  config,
+  database,
+  auth,
+}: {
+  config: Config;
+  database: Database.Database;
+  auth: Auth;
+}) {
   const app = new Hono();
-  app.use('*', secureHeaders({
-    contentSecurityPolicy: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'"],
-      frameAncestors: ["'none'"],
-      baseUri: ["'none'"],
-      formAction: ["'self'"],
-    },
-    referrerPolicy: 'no-referrer',
-  }));
+  app.use(
+    '*',
+    secureHeaders({
+      contentSecurityPolicy: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'none'"],
+        formAction: ["'self'"],
+      },
+      referrerPolicy: 'no-referrer',
+    }),
+  );
   app.use('/api/*', async (context, next) => {
     context.header('Cache-Control', 'no-store');
     await next();
   });
-  app.use('/api/*', bodyLimit({ maxSize: 16_384, onError: (context) => context.json({ error: 'invalid_request' }, 413) }));
+  app.use(
+    '/api/*',
+    bodyLimit({
+      maxSize: 16_384,
+      onError: (context) => context.json({ error: 'invalid_request' }, 413),
+    }),
+  );
   app.onError((_error, context) => {
     console.error(JSON.stringify({ event: 'request_failed' }));
     return context.json({ error: 'internal_error' }, 500);
@@ -61,8 +78,12 @@ export function createApp({ config, database, auth }: { config: Config; database
   app.post('/api/households', async (context) => {
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
     if (!session) return context.json({ error: 'unauthenticated' }, 401);
-    if (context.req.header('Origin') !== config.origin) return context.json({ error: 'forbidden' }, 403);
-    if (context.req.header('Content-Type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
+    if (context.req.header('Origin') !== config.origin)
+      return context.json({ error: 'forbidden' }, 403);
+    if (
+      context.req.header('Content-Type')?.split(';', 1)[0].trim().toLowerCase() !==
+      'application/json'
+    ) {
       return context.json({ error: 'invalid_request' }, 400);
     }
     let body: unknown;

@@ -2,7 +2,11 @@
 
 Kunskapsläge: 2026-09-13. Underlag för
 [Hur kan externa AI-assistenter läsa och föreslå ändringar i Skyttel?](https://github.com/viscalyx/skyttel/issues/5).
-Detta är research inför produktbeslut, utan val av leverantör eller stack.
+Använd rapporten som tekniskt jämförelseunderlag inför integrationsprov.
+Produktkrav och arkitekturbeslut finns i [beslutsöversikten](../planning/README.md).
+Rapportens förslag och frågor är underlag, inte gällande krav eller en lista
+över öppna beslut. Kontrollera aktuellt klientstöd inför implementation;
+uppgifterna gäller kunskapsläget ovan.
 
 ## Slutsats för den fortsatta diskussionen
 
@@ -11,7 +15,7 @@ systems data. MCP standardiserar sådana verktyg; varje assistentklient avgör
 vilka funktioner och gränssnitt den stöder.
 [MCP: verktyg](https://modelcontextprotocol.io/specification/2026-07-28/server/tools).
 
-För Skyttel är följande en rekommendation att pröva, inget fattat beslut:
+Rapportens rekommendation att bedöma mot produktbesluten är:
 behåll en gemensam uppsättning regler för läsning, ändringsförslag och
 verkställande, oavsett om samtalet sker i Skyttel eller i en extern assistent.
 Den externa assistenten får bara de rättigheter och uppgifter som användaren
@@ -19,8 +23,8 @@ väljer att lämna ut. Ett sparat förslag är också privat applikationsdata.
 
 Projektets fasta förutsättning är att källkoden är publik och alla uppgifter
 som användare matar in är privata. Publika rapporter, ärenden och testfall
-ska därför endast innehålla syntetiska exempel. Detta avgör ännu inte om
-privata uppgifter får behandlas av en vald molnleverantör.
+ska därför endast innehålla syntetiska exempel. Kontrollera produktbesluten
+innan privata uppgifter skickas till en molnleverantör.
 
 ## Tre skilda sätt att koppla ihop systemen
 
@@ -137,7 +141,7 @@ behöver definieras var för sig.
 
 ## Ett förslagsflöde att pröva
 
-Följande är ett eget designförslag som ska granskas med användaren:
+Bedöm följande designförslag mot produktbesluten inför ett integrationsprov:
 
 1. **Läs begränsat.** Sök och hämta bara de objekt och relationer som behövs
    för uppgiften och som användaren får se.
@@ -158,11 +162,11 @@ den externa assistenten behövs ett särskilt beslut om delegering och hur
 Skyttel verifierar godkännandet. Det följer inte automatiskt av MCP-stöd.
 
 Förslag, ljud, transkript, ändringshistorik, felsökningsloggar och verktygssvar
-omfattas av privatkravet. Vilka av dessa som får lämna enheten, bevaras av en
-assistentleverantör eller synas för andra hushållsmedlemmar återstår att
-besluta. Lokal MCP innebär ingen garanti om lokal eller offline AI.
+omfattas av privatkravet. Kontrollera produktbesluten om vilka av dessa som
+får lämna enheten, bevaras av en assistentleverantör eller synas för andra
+hushållsmedlemmar. Lokal MCP innebär ingen garanti om lokal eller offline AI.
 
-## Beslut som fortfarande kräver människan
+## Frågor att kontrollera mot produktbesluten
 
 - Ska externa assistenter ingå i första versionen, eller förberedas senare?
 - Får privata uppgifter skickas till en vald assistentleverantör, vilka
@@ -176,11 +180,12 @@ besluta. Lokal MCP innebär ingen garanti om lokal eller offline AI.
 
 ## Verifieringsnivå och nästa praktiska kontroll
 
-Underlaget bygger på öppnade primärkällor. Den aktuella MCP-specifikationen
-är 2026-07-28; det bevisar inte att varje klient stöder hela den versionen.
-Ingen integration med Skyttel är implementerad eller testad från början till
-slut. Inga betalda modell-API-anrop, kontokopplingar eller privata hushållsdata
-ingår i undersökningen.
+Underlaget bygger på primärkällor och MCP-specifikationen 2026-07-28;
+det bevisar inte att varje klient stöder hela den versionen.
+Undersökningen omfattar inga integrationsprov med Skyttel, betalda
+modell-API-anrop, kontokopplingar eller privata hushållsdata. Använd
+[beslutsöversikten](../planning/README.md) för att hitta beslut och separat
+verifiering av MCP-flödet.
 
 En senare prototyp bör använda syntetiska hushåll och kontrollera svensk
 röst, felaktiga relationer, åtkomst mellan hushåll, utgången eller återkallad

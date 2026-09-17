@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext } from '@playwright/test';
+import { type APIRequestContext, expect } from '@playwright/test';
 
 export async function signIn(client: APIRequestContext, origin: string, provider = 'google') {
   const response = await client.post(`${origin}/api/auth/sign-in/social`, {
@@ -10,6 +10,10 @@ export async function signIn(client: APIRequestContext, origin: string, provider
   return client.get(url);
 }
 
-export async function createHousehold(client: APIRequestContext, origin: string, name = 'Hushållet Linden') {
+export async function createHousehold(
+  client: APIRequestContext,
+  origin: string,
+  name = 'Hushållet Linden',
+) {
   return client.post(`${origin}/api/households`, { headers: { origin }, data: { name } });
 }

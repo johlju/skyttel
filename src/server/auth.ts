@@ -1,6 +1,6 @@
+import { createHash } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import type Database from 'better-sqlite3';
-import { createHash } from 'node:crypto';
 import type { Config } from './config.js';
 
 function internalEmail(provider: 'google' | 'microsoft', subject: unknown) {
@@ -9,7 +9,9 @@ function internalEmail(provider: 'google' | 'microsoft', subject: unknown) {
   }
   // Better Auth requires a unique email. A contact address must neither merge
   // identities nor let an earlier sign-in reserve another identity's user.
-  const key = createHash('sha256').update(JSON.stringify([provider, subject])).digest('hex');
+  const key = createHash('sha256')
+    .update(JSON.stringify([provider, subject]))
+    .digest('hex');
   return { email: `${key}@identity.skyttel.invalid`, emailVerified: false };
 }
 

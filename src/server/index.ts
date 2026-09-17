@@ -38,11 +38,12 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  const status = error instanceof ConfigurationError
-    ? { event: 'configuration_invalid', variable: error.variable }
-    : error instanceof DatabaseInitializationError
-      ? { event: 'database_initialization_failed', reason: error.reason }
-      : { event: 'startup_failed' };
+  const status =
+    error instanceof ConfigurationError
+      ? { event: 'configuration_invalid', variable: error.variable }
+      : error instanceof DatabaseInitializationError
+        ? { event: 'database_initialization_failed', reason: error.reason }
+        : { event: 'startup_failed' };
   console.error(JSON.stringify(status));
   process.exitCode = 1;
 });

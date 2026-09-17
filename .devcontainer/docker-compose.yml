@@ -1,0 +1,68 @@
+name: skyttel-devcontainer
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      # Mount the root folder that contains .git
+      - ..:/workspace:cached
+
+      # Persist Codex configuration, installation, and SQLite state/logs
+      - type: volume
+        source: codex-state
+        target: /home/vscode/.codex
+
+      # Bind-mount only the subdirectories you want to persist on the host
+      - type: bind
+        source: ${HOME}/.codex/sessions
+        target: /home/vscode/.codex/sessions
+      - type: bind
+        source: ${HOME}/.codex/plugins
+        target: /home/vscode/.codex/plugins
+      - type: bind
+        source: ${HOME}/.codex/skills
+        target: /home/vscode/.codex/skills
+      - type: bind
+        source: ${HOME}/.codex/rules
+        target: /home/vscode/.codex/rules
+
+      # Re-use auth file from host
+      - type: bind
+        source: ${HOME}/.codex/auth.json
+        target: /home/vscode/.codex/auth.json
+
+      # Keep runtime temp wrappers container-local
+      - codex-tmp:/home/vscode/.codex/tmp
+      - skyttel-data:/data
+      - config:/home/vscode/.config
+      - vscode-server:/home/vscode/.vscode-server
+      - node-modules:/workspace/node_modules
+      - worktrees:/home/vscode/worktrees
+    # Keep container running
+    command: sleep infinity
+    user: vscode
+    env_file:
+    - path: .env
+      required: false
+    environment:
+      SKYTTEL_DATABASE_PATH: /data/skyttel.sqlite
+      HOST: 0.0.0.0
+      PORT: 3000
+      NODE_ENV: ${NODE_ENV:-development}
+      DOTNET_CLI_TELEMETRY_OPTOUT: ${DOTNET_CLI_TELEMETRY_OPTOUT:-1}
+      DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: ${DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE:-true}
+      DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK: ${DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK:-true}
+    # Ports are forwarded via devcontainer.json forwardPorts (VS Code handles this)
+    # Proper init system for signal handling and zombie process reaping
+    init: true
+
+volumes:
+  skyttel-data:
+  codex-state:
+  codex-tmp:
+  config:
+  vscode-server:
+  node-modules:
+  worktrees:

@@ -1,32 +1,23 @@
-export const DEFAULT_OPERATOR_UPGRADE_NOTES_PATH =
-  'docs/operations/operator-upgrade-notes.md';
+export const DEFAULT_OPERATOR_UPGRADE_NOTES_PATH = 'docs/operations/operator-upgrade-notes.md';
 
 function stripOperatorUpgradeSourceMarkers(content) {
-  return content.replace(
-    /^\s*<!-- operator-upgrade:source \S+ (?:start|end) -->\s*$/gmu,
-    '',
-  );
+  return content.replace(/^\s*<!-- operator-upgrade:source \S+ (?:start|end) -->\s*$/gmu, '');
 }
 
-export function parseOperatorUpgradeNotes(
-  content,
-  filePath = DEFAULT_OPERATOR_UPGRADE_NOTES_PATH,
-) {
+export function parseOperatorUpgradeNotes(content, filePath = DEFAULT_OPERATOR_UPGRADE_NOTES_PATH) {
   if (typeof content !== 'string' || !/^# [^\n]+/u.test(content)) {
     throw new Error(`Operator upgrade notes file ${filePath} is missing or malformed.`);
   }
   const headings = [...content.matchAll(/^##[ \t]+(.+?)[ \t]*$/gmu)];
   if (
     headings[0]?.[1] !== 'Unreleased' ||
-    headings.filter(match => match[1] === 'Unreleased').length !== 1
+    headings.filter((match) => match[1] === 'Unreleased').length !== 1
   ) {
     throw new Error(
       `Operator upgrade notes file ${filePath} must contain exactly one leading "## Unreleased".`,
     );
   }
-  if (
-    headings.slice(1).some(match => !/^v\d+\.\d+\.\d+ - \d{4}-\d{2}-\d{2}$/u.test(match[1]))
-  ) {
+  if (headings.slice(1).some((match) => !/^v\d+\.\d+\.\d+ - \d{4}-\d{2}-\d{2}$/u.test(match[1]))) {
     throw new Error('Malformed operator notes release history heading.');
   }
   let open;
@@ -57,15 +48,17 @@ export function parseOperatorUpgradeNotes(
 }
 
 export function meaningfulUnreleasedChange(baseNotes, headNotes) {
-  const normalize = value => value
-    .replace(/<!--[\s\S]*?-->/gu, '')
-    .replace(/^\s*(?:[-+*]|\d+[.)])\s+/gmu, '')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/gu, (_match, label, url) =>
-      label === url ? url : `${label} ${url}`)
-    .replace(/<([^>]+)>/gu, '$1')
-    .replace(/[*_#>`~]/gu, '')
-    .replace(/\s+/gu, ' ')
-    .trim();
+  const normalize = (value) =>
+    value
+      .replace(/<!--[\s\S]*?-->/gu, '')
+      .replace(/^\s*(?:[-+*]|\d+[.)])\s+/gmu, '')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/gu, (_match, label, url) =>
+        label === url ? url : `${label} ${url}`,
+      )
+      .replace(/<([^>]+)>/gu, '$1')
+      .replace(/[*_#>`~]/gu, '')
+      .replace(/\s+/gu, ' ')
+      .trim();
   const before = normalize(parseOperatorUpgradeNotes(baseNotes).unreleased);
   const after = normalize(parseOperatorUpgradeNotes(headNotes).unreleased);
   if (!after || after === before) return false;

@@ -1,7 +1,7 @@
-import Database from 'better-sqlite3';
 import { createHash } from 'node:crypto';
 import { chmodSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import Database from 'better-sqlite3';
 
 interface MigrationRecord {
   version: number;
@@ -9,8 +9,12 @@ interface MigrationRecord {
   checksum: string;
 }
 
-type DatabaseFailure = 'database_unavailable' | 'migration_failed' | 'migration_files_missing'
-  | 'invalid_migration_sequence' | 'migration_history_mismatch';
+type DatabaseFailure =
+  | 'database_unavailable'
+  | 'migration_failed'
+  | 'migration_files_missing'
+  | 'invalid_migration_sequence'
+  | 'migration_history_mismatch';
 
 export class DatabaseInitializationError extends Error {
   constructor(readonly reason: DatabaseFailure) {
@@ -38,17 +42,22 @@ export function openDatabase(
     return database;
   } catch (error) {
     database?.close();
-    throw error instanceof DatabaseInitializationError ? error : new DatabaseInitializationError(reason);
+    throw error instanceof DatabaseInitializationError
+      ? error
+      : new DatabaseInitializationError(reason);
   }
 }
 
 function migrate(database: Database.Database, directory: string) {
-  const files = readdirSync(directory).filter((file) => file.endsWith('.sql')).sort();
+  const files = readdirSync(directory)
+    .filter((file) => file.endsWith('.sql'))
+    .sort();
   if (files.length === 0) throw new DatabaseInitializationError('migration_files_missing');
   const migrations = files.map((name, index) => {
     const match = /^(\d{3})_[a-z0-9_]+\.sql$/.exec(name);
     const version = Number(match?.[1]);
-    if (!match || version !== index + 1) throw new DatabaseInitializationError('invalid_migration_sequence');
+    if (!match || version !== index + 1)
+      throw new DatabaseInitializationError('invalid_migration_sequence');
     const sql = readFileSync(join(directory, name), 'utf8');
     return { version, name, sql, checksum: createHash('sha256').update(sql).digest('hex') };
   });
@@ -59,18 +68,34 @@ function migrate(database: Database.Database, directory: string) {
     checksum TEXT NOT NULL,
     appliedAt TEXT NOT NULL
   )`);
-  database.transaction(() => {
-    const applied = database.prepare('SELECT version, name, checksum FROM schema_migration ORDER BY version').all() as MigrationRecord[];
-    for (const [index, record] of applied.entries()) {
-      const migration = migrations[index];
-      if (!migration || record.version !== migration.version || record.name !== migration.name || record.checksum !== migration.checksum) {
-        throw new DatabaseInitializationError('migration_history_mismatch');
+  database
+    .transaction(() => {
+      const applied = database
+        .prepare('SELECT version, name, checksum FROM schema_migration ORDER BY version')
+        .all() as MigrationRecord[];
+      for (const [index, record] of applied.entries()) {
+        const migration = migrations[index];
+        if (
+          !migration ||
+          record.version !== migration.version ||
+          record.name !== migration.name ||
+          record.checksum !== migration.checksum
+        ) {
+          throw new DatabaseInitializationError('migration_history_mismatch');
+        }
       }
-    }
-    const recordMigration = database.prepare('INSERT INTO schema_migration (version, name, checksum, appliedAt) VALUES (?, ?, ?, ?)');
-    for (const migration of migrations.slice(applied.length)) {
-      database.exec(migration.sql);
-      recordMigration.run(migration.version, migration.name, migration.checksum, new Date().toISOString());
-    }
-  }).immediate();
+      const recordMigration = database.prepare(
+        'INSERT INTO schema_migration (version, name, checksum, appliedAt) VALUES (?, ?, ?, ?)',
+      );
+      for (const migration of migrations.slice(applied.length)) {
+        database.exec(migration.sql);
+        recordMigration.run(
+          migration.version,
+          migration.name,
+          migration.checksum,
+          new Date().toISOString(),
+        );
+      }
+    })
+    .immediate();
 }

@@ -4,7 +4,9 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install --no-install-recommends -y python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
+COPY scripts/install-repository-npm.mjs ./scripts/install-repository-npm.mjs
+RUN node scripts/install-repository-npm.mjs
 RUN npm ci
 
 FROM dependencies AS build

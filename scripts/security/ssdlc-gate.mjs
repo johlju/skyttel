@@ -29,9 +29,16 @@ export const SECURITY_SENSITIVE_PATH_RULES = [
     id: 'deployment-configuration',
     label: 'deployment, runtime, or build configuration',
     patterns: [
-      'Dockerfile', '.dockerignore', 'compose.yaml', '.env.example',
-      '.node-version', 'src/server/config.ts', 'vite.config.ts',
-      'tsconfig.json', 'tsconfig.server.json', 'docs/operations/installation.md',
+      'Dockerfile',
+      '.dockerignore',
+      'compose.yaml',
+      '.env.example',
+      '.node-version',
+      'src/server/config.ts',
+      'vite.config.ts',
+      'tsconfig.json',
+      'tsconfig.server.json',
+      'docs/operations/installation.md',
     ],
   },
   {
@@ -52,9 +59,14 @@ export const SECURITY_SENSITIVE_PATH_RULES = [
     id: 'ci-release-security',
     label: 'CI, release, or security validation',
     patterns: [
-      '.github/workflows/**', '.github/pull_request_template.md',
-      'scripts/**', 'tests/**', 'playwright.config.ts', 'docs/development/testing.md',
-      '.codex/**', 'docs/development/codex-permissions.md',
+      '.github/workflows/**',
+      '.github/pull_request_template.md',
+      'scripts/**',
+      'tests/**',
+      'playwright.config.ts',
+      'docs/development/testing.md',
+      '.codex/**',
+      'docs/development/codex-permissions.md',
     ],
   },
 ];
@@ -66,7 +78,10 @@ function readNonEmpty(value) {
 }
 
 export function normalizeChangedFile(filePath) {
-  return String(filePath ?? '').trim().replaceAll('\\', '/').replace(/^\.\//u, '');
+  return String(filePath ?? '')
+    .trim()
+    .replaceAll('\\', '/')
+    .replace(/^\.\//u, '');
 }
 
 export function matchesPathPattern(filePath, pattern) {
@@ -82,12 +97,16 @@ export function matchesPathPattern(filePath, pattern) {
 
 export function classifyChangedFiles(changedFiles, rules = SECURITY_SENSITIVE_PATH_RULES) {
   const normalizedFiles = [...new Set(changedFiles.map(normalizeChangedFile))]
-    .filter(Boolean).sort();
-  return rules.map((rule) => ({
-    ...rule,
-    files: normalizedFiles.filter((file) =>
-      rule.patterns.some((pattern) => matchesPathPattern(file, pattern))),
-  })).filter((rule) => rule.files.length > 0);
+    .filter(Boolean)
+    .sort();
+  return rules
+    .map((rule) => ({
+      ...rule,
+      files: normalizedFiles.filter((file) =>
+        rule.patterns.some((pattern) => matchesPathPattern(file, pattern)),
+      ),
+    }))
+    .filter((rule) => rule.files.length > 0);
 }
 
 export function checkboxState(prBody, markerId) {
@@ -122,8 +141,11 @@ export function evaluateSsdlcGate({ changedFiles, prBody }) {
     }
   }
   return {
-    checkboxResults, failures, passed: failures.length === 0,
-    requiresGate: true, sensitiveGroups,
+    checkboxResults,
+    failures,
+    passed: failures.length === 0,
+    requiresGate: true,
+    sensitiveGroups,
   };
 }
 
@@ -131,20 +153,28 @@ export function formatGateReport(result) {
   if (!result.requiresGate) {
     return 'SSDLC gate not required: no security-sensitive paths changed.';
   }
-  const touchedPaths = result.sensitiveGroups.map((group) => {
-    const files = group.files.map((file) => `    - ${file}`).join('\n');
-    return `  - ${group.label} (${group.id})\n${files}`;
-  }).join('\n');
+  const touchedPaths = result.sensitiveGroups
+    .map((group) => {
+      const files = group.files.map((file) => `    - ${file}`).join('\n');
+      return `  - ${group.label} (${group.id})\n${files}`;
+    })
+    .join('\n');
   if (result.passed) {
     return [
       'SSDLC gate passed for security-sensitive changes.',
-      'Touched security-sensitive paths:', touchedPaths,
+      'Touched security-sensitive paths:',
+      touchedPaths,
     ].join('\n');
   }
   return [
-    'SSDLC gate failed.', '',
+    'SSDLC gate failed.',
+    '',
     'This PR changes security-sensitive paths but the PR body does not contain completed SSDLC evidence.',
-    '', 'Touched security-sensitive paths:', touchedPaths, '', 'Required fixes:',
+    '',
+    'Touched security-sensitive paths:',
+    touchedPaths,
+    '',
+    'Required fixes:',
     ...result.failures.map((failure) => `  - ${failure}`),
   ].join('\n');
 }
@@ -194,7 +224,10 @@ async function fetchGitHubJson(url, { fetchImpl, token }) {
 }
 
 export async function readPullRequestFromGitHub({
-  fetchImpl = fetch, prNumber, repository, token,
+  fetchImpl = fetch,
+  prNumber,
+  repository,
+  token,
 }) {
   const cleanRepository = readNonEmpty(repository);
   const cleanToken = readNonEmpty(token);
@@ -213,7 +246,9 @@ export async function readPullRequestFromGitHub({
   const expectedCount = pullRequest?.changed_files;
   // GitHub returns at most 3,000 changed files, so larger PRs cannot be classified safely.
   if (!Number.isSafeInteger(expectedCount) || expectedCount < 0 || expectedCount > 3_000) {
-    throw new Error('GitHub changed-file count is missing, invalid, or exceeds the 3,000-file API limit.');
+    throw new Error(
+      'GitHub changed-file count is missing, invalid, or exceeds the 3,000-file API limit.',
+    );
   }
   if (pullRequest.body != null && typeof pullRequest.body !== 'string') {
     throw new Error('GitHub pull request body is invalid.');
@@ -223,7 +258,10 @@ export async function readPullRequestFromGitHub({
   const filenames = new Set();
   // Use the declared count, including exact full pages, and reject truncated/duplicate results.
   for (let page = 1; page <= Math.ceil(expectedCount / 100); page += 1) {
-    const files = await fetchGitHubJson(`${baseUrl}/files?per_page=100&page=${page}`, requestOptions);
+    const files = await fetchGitHubJson(
+      `${baseUrl}/files?per_page=100&page=${page}`,
+      requestOptions,
+    );
     const expectedPageSize = Math.min(100, expectedCount - (page - 1) * 100);
     if (!Array.isArray(files) || files.length !== expectedPageSize) {
       throw new Error('GitHub returned an incomplete or inconsistent changed-file list.');
@@ -264,8 +302,11 @@ export async function main(args = process.argv.slice(2), options = {}) {
         throw new Error('--changed-files and --pr-body must be provided together.');
       }
       input = {
-        changedFiles: fsImpl.readFileSync(parsedArgs['changed-files'], 'utf8')
-          .split(/\r?\n/u).map(normalizeChangedFile).filter(Boolean),
+        changedFiles: fsImpl
+          .readFileSync(parsedArgs['changed-files'], 'utf8')
+          .split(/\r?\n/u)
+          .map(normalizeChangedFile)
+          .filter(Boolean),
         prBody: fsImpl.readFileSync(parsedArgs['pr-body'], 'utf8'),
       };
     } else {
