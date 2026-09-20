@@ -5,6 +5,19 @@ before upgrading Skyttel.
 
 ## Unreleased
 
+### Verified login linking
+
+Back up the persistent database and retain the matching image before
+upgrade. Startup adds storage for login verification and preserves existing
+users and memberships. An older image requires its matching database
+backup; stop the application before restoring it.
+
+Verify explicit linking with real Google and Microsoft logins after
+deployment, including a personal Microsoft account. Check that both logins
+reach the same user and household, and that denied consent leaves existing
+access intact. Existing provider callback addresses remain valid. Do not
+include tokens or identity proofs in logs or release evidence.
+
 ### First installation and persistent storage
 
 Deploy one application instance with a persistent disk that the application

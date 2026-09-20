@@ -338,9 +338,9 @@ try the old value if the replacement fails.
    `docker compose restart` does not load changed environment variables.
 6. Open a private browser window and complete a fresh **Microsoft** sign-in
    at [local Skyttel](http://localhost:3000). Check the expected access for that
-   identity. If Microsoft is the household's original provider, confirm the
-   same household opens. A Google household does not automatically belong to
-   a Microsoft identity with the same email address.
+   identity. If Microsoft is the household's original provider or an explicitly
+   linked login, confirm the same household opens. A Google household does not
+   automatically belong to a Microsoft identity with the same email address.
 7. After the fresh Microsoft flow succeeds, return to **Client secrets**
    and delete only the **old** credential. Use the description, expiry, and
    Secret ID to distinguish it from the replacement. If the registration is
@@ -375,9 +375,9 @@ Populated entries alone do not prove that the credentials work or the
 callback settings match.
 
 If this installation already contains a household, keep its configuration
-and sign in with its original provider. Skip the identity-discovery steps;
-changing the first-administrator setting does not transfer an existing
-household to another account.
+and sign in with its original provider or an explicitly linked login. Skip
+the identity-discovery steps; changing the first-administrator setting does
+not transfer an existing household to another account.
 
 ### 10. Complete the local configuration
 
@@ -540,6 +540,11 @@ granting household membership.
 
 A Microsoft identity does not automatically gain access to the Google
 identity's household, even when both providers report the same email.
+Use an identity with no membership or existing login link for the denied-access
+check below. Signing in separately creates a separate Skyttel user, which
+cannot later be merged through login linking. To test linking instead, follow
+the [login-linking steps](../users/access.md#link-google-and-microsoft) with
+an identity that does not already belong to another Skyttel user.
 
 You can also check the consent-cancellation path during the first Microsoft
 sign-in. In a fresh private browser window, choose **Fortsätt med Microsoft**

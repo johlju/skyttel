@@ -18,6 +18,29 @@ The household must keep at least one administrator. Give another member the
 administrator role before you remove the last administrator's access or
 change that person's role to member.
 
+## Link Google and Microsoft
+
+Open **Inloggningssätt** while signed in. The page lists your connected
+providers. Select **Verifiera Google** or **Verifiera Microsoft** and prove
+the existing login again. Choose the same provider identity that already
+belongs to your Skyttel user. Then select **Koppla Microsoft** or
+**Koppla Google** and complete the other provider's login within ten minutes.
+Personal Microsoft accounts are supported as well as work accounts.
+
+Wait for the verified result and check that both providers are listed as
+connected. Either login then reaches the same Skyttel user and household
+access. Matching email addresses never link accounts automatically; the two
+addresses may also differ.
+
+Select **Avbryt länkning** to cancel. If verification is already completing,
+wait for its result; a completed link remains connected. Denied consent,
+provider errors, a wrong existing identity, or an expired verification leave
+earlier logins and access intact. Start again from the existing login. An
+identity that already belongs to another Skyttel user cannot be taken over or
+silently
+merged. Signing in separately with the second provider before linking can
+create such a separate user.
+
 ## Invite a Skyttel user
 
 1. Ask the recipient to open your Skyttel installation and sign in. A person
@@ -38,9 +61,9 @@ change that person's role to member.
 
 An invitation works once, expires after seven days, and belongs to the
 specified Skyttel user and household. Someone with another identity cannot
-use it, even if that person has the same name or email address. Using Google
-and Microsoft with the same email does not link the two Skyttel identities.
-Continue to use the sign-in identity that receives the invitation.
+use it, even if that person has the same name or email address. Use the login
+that shows the invited Skyttel user ID, or another login you explicitly link
+to that same user through **Inloggningssätt**.
 
 Keep invitation codes out of public messages, screenshots, and support
 reports. If a code is lost or shared with the wrong person, revoke that
@@ -61,8 +84,7 @@ intended person still needs to join.
 
 Use the member's role control to make that person an administrator or a
 member. A member can use the shared map but cannot manage invitations,
-membership, or roles. The server checks the current role for each request,
-including requests from a page that is already open.
+membership, or roles. Role changes also apply when a page is already open.
 
 The role and access controls on your own row, marked **(du)**, stay visible
 but are disabled. Ask another administrator to change your role or revoke
@@ -74,11 +96,10 @@ An administrator can remove a member's access from **Medlemmar**. Check the
 person's Skyttel user ID as well as their name before you remove access.
 The last administrator cannot be removed until another administrator exists.
 
-Revocation stops access to this household on the next server request, even
-when the person's sign-in session or browser page remains open. Information
-that a browser already displays cannot be recalled. A new invitation and
-acceptance are required to give access again; an old accepted code cannot
-restore membership.
+Revocation blocks further loading or changes in this household, even when
+the person stays signed in. Information that a browser already displays
+cannot be recalled. A new invitation and acceptance are required to give
+access again; an old accepted code cannot restore membership.
 
 If your own access changes while a page is open, refresh the page to check
 your current access. Signing in again does not restore membership. For an

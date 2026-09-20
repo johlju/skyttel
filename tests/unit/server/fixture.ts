@@ -28,6 +28,7 @@ export async function applicationFixture() {
   await verifyAuthSchema(auth);
   let subject: unknown = config.firstAdmin.subject;
   let providerFails = false;
+  let providerPause: { entered: () => void; wait: Promise<void> } | undefined;
   const context = await auth.$context;
   for (const provider of context.socialProviders) {
     // Substitute only the external identity provider; authentication and
@@ -39,6 +40,10 @@ export async function applicationFixture() {
       return callback;
     };
     provider.validateAuthorizationCode = async () => {
+      if (providerPause) {
+        providerPause.entered();
+        await providerPause.wait;
+      }
       if (providerFails) throw new Error('Synthetic provider outage');
       return { accessToken: 'synthetic-token', tokenType: 'bearer' };
     };
@@ -99,6 +104,18 @@ export async function applicationFixture() {
     },
     failProvider() {
       providerFails = true;
+    },
+    pauseProvider() {
+      let entered: () => void = () => {};
+      let resume: () => void = () => {};
+      const reached = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const wait = new Promise<void>((resolve) => {
+        resume = resolve;
+      });
+      providerPause = { entered, wait };
+      return { reached, resume };
     },
     close() {
       if (database.open) database.close();

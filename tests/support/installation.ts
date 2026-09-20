@@ -26,7 +26,7 @@ export const robin: Identity = {
 
 export async function createInstallation(
   firstAdmin = { provider: 'google' as 'google' | 'microsoft', subject: alex.subject },
-  databaseOptions: { migrationsDirectory?: string } = {},
+  databaseOptions: { migrationsDirectory?: string; legacyAuthCallbacks?: boolean } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
   const config: Config = {
@@ -95,7 +95,17 @@ export async function createInstallation(
         };
       };
     }
-    handle = createApp({ config, database, auth }).fetch;
+    const app = createApp({ config, database, auth });
+    handle = (request) => {
+      // Model the original login-only callback while arranging a legacy
+      // installation. Production always applies all migrations before serving.
+      if (
+        databaseOptions.legacyAuthCallbacks &&
+        new URL(request.url).pathname.startsWith('/api/auth/callback/')
+      )
+        return auth.handler(request);
+      return app.fetch(request);
+    };
   }
   async function stop() {
     await new Promise<void>((resolve, reject) =>

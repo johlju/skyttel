@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import type Database from 'better-sqlite3';
 import type { Config } from './config.js';
+import { linkingAttempt } from './login-methods.js';
 
 export function internalEmail(provider: 'google' | 'microsoft', subject: unknown) {
   if (typeof subject !== 'string' || subject.trim().length === 0) {
@@ -27,8 +28,41 @@ export function createAuth(config: Config, database: Database.Database) {
     telemetry: { enabled: false },
     session: { cookieCache: { enabled: false } },
     account: {
-      accountLinking: { enabled: false },
+      accountLinking: {
+        enabled: true,
+        allowDifferentEmails: true,
+        trustedProviders: ['google', 'microsoft'],
+        disableImplicitLinking: true,
+      },
       encryptOAuthTokens: true,
+    },
+    user: {
+      validateUserInfo: ({ user, source }, context) => {
+        if (source.action !== 'link-account') return;
+        const state = context.query?.state;
+        const attempt = typeof state === 'string' ? linkingAttempt(database, state) : undefined;
+        if (
+          !attempt ||
+          attempt.userId !== user.id ||
+          attempt.expiresAt <= Date.now() ||
+          attempt.provider !== source.oauth?.providerId ||
+          !['prove', 'add'].includes(attempt.stage)
+        )
+          return { error: 'verification_required' };
+        if (attempt.stage === 'prove') {
+          const profile = source.oauth?.profile;
+          const subject = attempt.provider === 'google' ? profile?.sub : profile?.oid;
+          if (
+            typeof subject !== 'string' ||
+            !database
+              .prepare(
+                'SELECT 1 FROM account WHERE userId = ? AND providerId = ? AND accountId = ?',
+              )
+              .get(user.id, attempt.provider, subject)
+          )
+            return { error: 'wrong_identity' };
+        }
+      },
     },
     socialProviders: {
       google: {

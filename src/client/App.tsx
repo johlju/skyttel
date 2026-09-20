@@ -199,6 +199,96 @@ function Login({ providers }: { providers: Provider[] }) {
   );
 }
 
+function LoginMethods() {
+  const [revision, setRevision] = useState(0);
+  const result = useResource<{ providers: Provider[]; stage: string | null }>(
+    '/api/login-methods',
+    revision,
+  );
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState(new URLSearchParams(useLocation().search).has('failed'));
+  async function action(step: string, provider?: Provider) {
+    setPending(true);
+    setError(false);
+    try {
+      const response = await request<{ url?: string }>(`/api/login-methods/${step}`, { provider });
+      if (step === 'cancel') setRevision((value) => value + 1);
+      else if (response.url && ['http:', 'https:'].includes(new URL(response.url).protocol))
+        window.location.assign(response.url);
+      else throw new Error('invalid_redirect');
+    } catch {
+      setError(true);
+    } finally {
+      setPending(false);
+    }
+  }
+  if (result.status === 'loading') return <Loading />;
+  if (result.status === 'error')
+    return <Failure onRetry={() => setRevision((value) => value + 1)} />;
+  const { providers, stage } = result.data;
+  const labels = { google: 'Google', microsoft: 'Microsoft' };
+  return (
+    <section className="panel">
+      <Heading>Inloggningssätt</Heading>
+      <p>
+        Verifiera först en kopplad inloggning och sedan den nya. Ditt Skyttel-användar-ID, innehåll
+        och din tillgång till hushållet bevaras. Samma e-postadress länkar aldrig inloggningar
+        automatiskt.
+      </p>
+      <ul>
+        {providers.map((provider) => (
+          <li key={provider}>{labels[provider]} – kopplat</li>
+        ))}
+      </ul>
+      {stage === 'complete' && providers.length === 2 && (
+        <p role="status">
+          Länkningen är verifierad. Båda inloggningssätten når samma Skyttel-användare.
+        </p>
+      )}
+      {providers.length < 2 && (
+        <>
+          <p>
+            {stage === 'verified'
+              ? 'Din befintliga inloggning är verifierad. Koppla nu den andra inom tio minuter.'
+              : 'Välj din befintliga inloggning för att börja.'}
+          </p>
+          {(stage === 'verified'
+            ? (['google', 'microsoft'] as Provider[]).filter(
+                (provider) => !providers.includes(provider),
+              )
+            : providers
+          ).map((provider) => (
+            <button
+              key={provider}
+              type="button"
+              disabled={pending}
+              onClick={() => void action(stage === 'verified' ? 'add' : 'prove', provider)}
+            >
+              {stage === 'verified' ? 'Koppla' : 'Verifiera'} {labels[provider]}
+            </button>
+          ))}
+        </>
+      )}
+      {stage && stage !== 'complete' && (
+        <button type="button" disabled={pending} onClick={() => void action('cancel')}>
+          Avbryt länkning
+        </button>
+      )}
+      {pending && <p role="status">Kontrollerar inloggningen…</p>}
+      {(error || stage === 'failed') && (
+        <p role="alert">
+          Länkningen kunde inte slutföras. Åtkomst kan ha nekats, fel identitet valts eller
+          leverantören kan ha ett fel. En inloggning som tillhör en annan Skyttel-användare kan inte
+          tas över. Dina tidigare inloggningar och din tillgång finns kvar. Försök igen.
+        </p>
+      )}
+      <p>
+        <Link to="/">Till startsidan</Link>
+      </p>
+    </section>
+  );
+}
+
 function Setup({
   onCreated,
   onReload,
@@ -728,6 +818,7 @@ function HouseholdPage({ onSessionExpired }: { onSessionExpired: () => void }) {
 
 export function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
@@ -766,6 +857,7 @@ export function App() {
         </Link>
         {data && data.status !== 'anonymous' ? (
           <div className="session-controls">
+            <Link to="/login-methods">Inloggningssätt</Link>
             <span className="session-name">{data.user?.name}</span>
             <button type="button" disabled={signingOut} onClick={() => void signOut()}>
               {signingOut ? 'Loggar ut…' : 'Logga ut'}
@@ -784,35 +876,40 @@ export function App() {
         {bootstrap.status === 'loading' && <Loading />}
         {bootstrap.status === 'error' && <Failure onRetry={reload} />}
         {data?.status === 'anonymous' && <Login providers={data.providers} />}
-        {data?.status === 'forbidden' && <Forbidden />}
-        {data && (data.status === 'setup' || data.status === 'ready') && (
-          <Routes>
-            <Route
-              path="/"
-              element={
-                data.status === 'setup' ? (
-                  <Setup onCreated={created} onReload={reload} />
-                ) : (
-                  <Navigate to={`/households/${encodeURIComponent(data.household.id)}`} replace />
-                )
-              }
-            />
-            <Route path="/households/:id" element={<HouseholdPage onSessionExpired={reload} />} />
-            <Route
-              path="/households/:id/administration"
-              element={<AdministrationPage userId={data.user.id} onReload={reload} />}
-            />
-            <Route
-              path="*"
-              element={
-                <section className="panel">
-                  <Heading>Sidan finns inte</Heading>
-                  <Link to="/">Till startsidan</Link>
-                </section>
-              }
-            />
-          </Routes>
+        {data && data.status !== 'anonymous' && location.pathname === '/login-methods' && (
+          <LoginMethods />
         )}
+        {data?.status === 'forbidden' && location.pathname !== '/login-methods' && <Forbidden />}
+        {data &&
+          location.pathname !== '/login-methods' &&
+          (data.status === 'setup' || data.status === 'ready') && (
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  data.status === 'setup' ? (
+                    <Setup onCreated={created} onReload={reload} />
+                  ) : (
+                    <Navigate to={`/households/${encodeURIComponent(data.household.id)}`} replace />
+                  )
+                }
+              />
+              <Route path="/households/:id" element={<HouseholdPage onSessionExpired={reload} />} />
+              <Route
+                path="/households/:id/administration"
+                element={<AdministrationPage userId={data.user.id} onReload={reload} />}
+              />
+              <Route
+                path="*"
+                element={
+                  <section className="panel">
+                    <Heading>Sidan finns inte</Heading>
+                    <Link to="/">Till startsidan</Link>
+                  </section>
+                }
+              />
+            </Routes>
+          )}
         {data && (data.status === 'forbidden' || data.status === 'ready') && (
           <InvitationEntry
             userId={data.user.id}

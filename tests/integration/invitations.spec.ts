@@ -8,7 +8,8 @@ import { alex, createInstallation, robin } from '../support/installation.js';
 test('upgrading an existing household preserves its membership and enables invitations', async () => {
   const migrationsDirectory = await mkdtemp(join(tmpdir(), 'skyttel-upgrade-'));
   await copyFile('migrations/001_initial.sql', join(migrationsDirectory, '001_initial.sql'));
-  const installation = await createInstallation(undefined, { migrationsDirectory });
+  const options = { migrationsDirectory, legacyAuthCallbacks: true };
+  const installation = await createInstallation(undefined, options);
   const administrator = await request.newContext();
   const recipient = await request.newContext();
   const { origin } = installation;
@@ -20,6 +21,11 @@ test('upgrading an existing household preserves its membership and enables invit
       'migrations/002_invitations.sql',
       join(migrationsDirectory, '002_invitations.sql'),
     );
+    await copyFile(
+      'migrations/003_login_link.sql',
+      join(migrationsDirectory, '003_login_link.sql'),
+    );
+    options.legacyAuthCallbacks = false;
     await installation.restart();
     expect(
       await (
@@ -40,6 +46,16 @@ test('upgrading an existing household preserves its membership and enables invit
       data: { code },
     });
     expect(await accepted.json()).toEqual({ household: { ...household, role: 'member' } });
+    const proof = await recipient.post(`${origin}/api/login-methods/prove`, {
+      headers,
+      data: { provider: 'microsoft' },
+    });
+    expect(proof.status()).toBe(200);
+    await recipient.get((await proof.json()).url);
+    expect(await (await recipient.get(`${origin}/api/login-methods`)).json()).toEqual({
+      providers: ['microsoft'],
+      stage: 'verified',
+    });
   } finally {
     await Promise.all([administrator.dispose(), recipient.dispose()]);
     await installation.close();

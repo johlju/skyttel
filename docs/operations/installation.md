@@ -136,10 +136,11 @@ first household. Once the household exists, current membership controls
 access. Changing the first-administrator configuration does not transfer an
 existing household or restore a removed member's access.
 
-Provider accounts attach to a stable Skyttel user. Automatic account linking
-is disabled: a second provider with the same email address cannot take over
-the first provider's user or household. Explicit linking is separate future
-work; use the original provider to return to the household.
+Provider accounts attach to a stable Skyttel user. Matching email addresses
+do not link accounts automatically. Users can explicitly link Google and
+Microsoft from **Inloggningssätt** by verifying both identities; either
+linked provider then reaches the same user and household. See the
+[login-linking steps](../users/access.md#link-google-and-microsoft).
 
 ## Build, start, and restart
 
@@ -167,10 +168,12 @@ The named volume retains household records, identities, and sessions across
 container restarts and replacements. `docker compose down` keeps that volume;
 adding `--volumes` deletes it and its household data.
 
-To update, build the new image, keep the same volume and secret, and run
-`docker compose up -d` again. Do not run old and new application versions
-against the same SQLite volume at the same time. Arbitrary downgrades after
-schema changes are not supported.
+Before updating, read the [operator upgrade notes](operator-upgrade-notes.md),
+back up the database, and retain the matching application image. Build the
+new image, keep the same volume and secret, and run `docker compose up -d`
+again. Do not run old and new application versions against the same SQLite
+volume at the same time. To return to an older image after a schema change,
+stop the application and restore that image's matching database backup.
 
 ## Deploy on a container host
 
@@ -203,9 +206,11 @@ recovery interface. Arrange backups separately before storing data you need
 to keep. Persistent disk protects ordinary restarts; it does not protect
 against loss of the disk.
 
-## Verification limits
+## Verify before opening access
 
-Run the [automated verification workflow](../development/testing.md) before
-delivery. Deterministic identity tests do not establish that Google or
-Microsoft accepts the real registration. Complete the separate provider
-checks described there before treating a deployment as ready for users.
+Check the deployed HTTPS origin, provider callbacks, fresh sign-in with both
+providers, and household access after a restart. Include a personal Microsoft
+account and verify that linked logins reach the same household. Follow the
+[real-provider checks](../development/testing.md#verify-real-identity-providers-separately)
+for the full procedure. A successful health check or automated test run does
+not verify the installation's real provider registrations.

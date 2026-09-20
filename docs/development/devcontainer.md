@@ -17,10 +17,12 @@ openssl rand -base64 48
 Put the generated value in `BETTER_AUTH_SECRET` in `.devcontainer/.env` and
 keep it stable across rebuilds. This ignored file is the default environment
 for `npm run dev:all` and `npm run db:setup`. The synthetic provider values
-display the sign-in page but cannot complete real sign-in. Configure
-dedicated provider registrations and a first administrator using the
-[installation guide](../operations/installation.md) when real sign-in is
-needed. Keep credentials and identity values out of Git and public logs.
+display the sign-in page but cannot complete real sign-in. The example
+administrator identifier also fails the required demo-data setup during
+container creation. Configure dedicated provider registrations and a first
+administrator before creating the container, using the
+[installation guide](../operations/installation.md). Keep credentials and
+identity values out of Git and public logs.
 
 Ensure the host directories
 `~/.codex/sessions`, `~/.codex/plugins`, `~/.codex/skills`, and
@@ -154,6 +156,9 @@ The host Codex bind mounts override their corresponding paths inside
 `.devcontainer/.env` remain in the repository's host bind mount.
 
 Restarting or rebuilding the same Compose project retains its volumes.
+Rebuilding also runs `npm run db:setup`, which replaces application data in
+the retained database with demo data. Back up development data you need
+before rebuilding; a normal restart does not run this reset.
 The normal `skyttel-devcontainer` and opt-in `skyttel-devcontainer-elevated`
 projects have separate named volumes; they share the same host bind mounts.
 Changing the Compose project name selects different volumes. Removing
@@ -177,8 +182,9 @@ the application's locked Playwright version. Codex CLI and separate global
 Playwright tooling use rolling releases and can change on rebuild. VS Code
 manages editor extension updates.
 
-After tool updates, rebuild, start the application, and check that your
-development data is still available. Run the application checks explicitly:
+Before rebuilding for tool updates, back up development data you need.
+After the rebuild, start the application and check that the demo household
+is available. Run the application checks explicitly:
 
 ```sh
 npm run check

@@ -9,6 +9,7 @@ import { administrationRoutes } from './administration-routes.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { createHousehold, householdAccess, isFirstAdmin, isInitialized } from './households.js';
+import { createLoginMethods } from './login-methods.js';
 
 export function createApp({
   config,
@@ -20,6 +21,7 @@ export function createApp({
   auth: Auth;
 }) {
   const app = new Hono();
+  const linking = createLoginMethods(database, auth, config.origin);
   app.use(
     '*',
     secureHeaders({
@@ -63,7 +65,9 @@ export function createApp({
   ]);
   app.on(['GET', 'POST'], '/api/auth/*', async (context) => {
     if (!authRoutes.has(context.req.path)) return context.json({ error: 'not_found' }, 404);
-    return auth.handler(context.req.raw);
+    return context.req.path.startsWith('/api/auth/callback/')
+      ? linking.handleCallback(context.req.raw)
+      : auth.handler(context.req.raw);
   });
 
   app.get('/api/bootstrap', async (context) => {
@@ -118,6 +122,7 @@ export function createApp({
     return context.json({ household });
   });
   app.route('/api', administrationRoutes(database, auth, config.origin));
+  app.route('/api', linking.routes);
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));
   app.get('*', serveStatic({ path: './dist/client/index.html' }));

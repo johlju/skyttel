@@ -1,10 +1,13 @@
 # Copilot Instructions
 
-## General Rules
+## Documentation
 
-- Create or update `docs/**/*.md` only when the change affects what the intended
-  readers need to know or do. Match the content to their role: developers,
-  application users, operators, or other audiences.
-- Include only information that helps those readers complete tasks, make
-  decisions, or avoid mistakes. Leave documentation unchanged when existing
-  guidance remains accurate and sufficient for its audience.
+- For affected documentation under `docs/**/*.md`, identify the intended
+  readers and what they need to know or do.
+- Create or update guidance when it is missing, inaccurate, or insufficient
+  for those readers. Leave accurate, sufficient guidance unchanged.
+- Match content and technical detail to the audience: developers,
+  application users, operators, or other readers. Include information only
+  when it helps them complete tasks, make decisions, or avoid mistakes.
+- Remove obsolete or audience-irrelevant content. Delete a document when
+  none of its content remains useful; update or remove links to it.
