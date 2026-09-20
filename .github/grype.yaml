@@ -1,0 +1,7 @@
+# Never suppress unfixed findings or apply implicit local ignore rules.
+ignore: []
+check-for-app-update: false
+db:
+  auto-update: true
+  validate-age: true
+  max-allowed-built-age: 120h

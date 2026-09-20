@@ -1,0 +1,20 @@
+[extend]
+useDefault = true
+
+# This literal belongs exclusively to disposable test installations. Match
+# both its exact value and these fixture paths; do not exempt whole files.
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Known synthetic SQLite test authentication secret"
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^synthetic-test-secret-with-at-least-32-characters$''']
+paths = ['''^(tests/integration/database-setup\.spec\.ts|tests/support/installation\.ts|scripts/check-container\.mjs)$''']
+
+[[rules.allowlists]]
+description = "Known synthetic authentication secret for the disposable ZAP installation"
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^synthetic-ci-secret-at-least-32-characters$''']
+paths = ['''^\.github/workflows/security\.yml$''']

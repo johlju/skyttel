@@ -60,6 +60,12 @@ export const SECURITY_SENSITIVE_PATH_RULES = [
     label: 'CI, release, or security validation',
     patterns: [
       '.github/workflows/**',
+      '.github/security-exceptions.json',
+      '.github/grype.yaml',
+      '.gitleaks.toml',
+      '.github/dependabot.yml',
+      'SECURITY.md',
+      'docs/development/security-checks.md',
       '.github/pull_request_template.md',
       'scripts/**',
       'tests/**',

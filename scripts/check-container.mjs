@@ -118,6 +118,14 @@ try {
   await waitUntilReady(fresh);
   assert.equal(await command(['exec', fresh, 'id', '-u']), '1000');
   assert.equal(await command(['exec', fresh, 'id', '-g']), '1000');
+  await command([
+    'exec',
+    fresh,
+    'sh',
+    '-ec',
+    'for manager in apk npm npx yarn yarnpkg corepack; do if command -v "$manager"; then exit 1; fi; done; ' +
+      'test ! -e /usr/local/lib/node_modules/corepack',
+  ]);
   const loginPage = await request(fresh, '/');
   assert.equal(loginPage.status, 200);
   assert.match(loginPage.body, /<html/u);

@@ -157,7 +157,8 @@ security-sensitive change must fail until the assessment is complete.
 ## Dependency updates
 
 `.github/dependabot.yml` enables weekly version-update checks for the root
-npm project and GitHub Actions. Each dependency gets a separate pull request.
+npm project, GitHub Actions, and production Docker base. Each dependency gets
+a separate pull request.
 The configuration takes effect on `main`. GitHub supplies the Dependabot
 update workflow, so no custom workflow file is needed. See GitHub's
 [Dependabot configuration guide](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configure-version-updates).
@@ -179,6 +180,10 @@ requests skip the Operator Upgrade and SSDLC gates, so their descriptions
 do not need the template declarations. Reviewers must still assess operational
 impact and commit meaningful operator notes when needed. Updates do not merge
 automatically.
+
+All updates run the mandatory application and security checks. See the
+[security checks guide](security-checks.md) for failure policy, container
+exceptions, repository settings, and how to attach new feature tests.
 
 After updating Playwright, install its matching Chromium browser with
 `npx playwright install chromium`. Keep `.node-version`, the `package.json`

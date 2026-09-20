@@ -8,6 +8,8 @@ const result = lint({
     'docs/operations/operator-upgrade-notes.md',
     'docs/development/testing.md',
     'docs/development/devcontainer.md',
+    'docs/development/security-checks.md',
+    'SECURITY.md',
   ],
   config: { default: true, MD060: { style: 'compact' } },
 });

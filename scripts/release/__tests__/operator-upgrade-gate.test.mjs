@@ -263,6 +263,25 @@ describe('GitHub API boundary', () => {
 });
 
 describe('local command interface', () => {
+  it('rejects comment-only additions even when removal reconstructs another comment', async () => {
+    const files = {
+      'pr.md': declaration('updated'),
+      'base.md': document,
+      'head.md': `${document}\n<!<!-- annotation -->-- hidden guidance -->\n`,
+    };
+    const errors = [];
+    const exitCode = await main(
+      ['--pr-body', 'pr.md', '--base-notes', 'base.md', '--head-notes', 'head.md'],
+      {
+        env: {},
+        consoleObj: { log() {}, error: (message) => errors.push(message) },
+        fsImpl: { readFileSync: (file) => files[file] },
+      },
+    );
+    assert.equal(exitCode, 1);
+    assert.ok(errors.some((message) => message.includes('meaningful')));
+  });
+
   it('accepts local committed snapshots without a GitHub token', async () => {
     const files = {
       'pr.md': declaration('updated'),

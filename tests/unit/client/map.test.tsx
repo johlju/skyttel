@@ -66,6 +66,7 @@ test('review, search, correction, discard and deletion use the real persistent m
     (screen.getByRole('button', { name: 'Spara hela utkastet' }) as HTMLButtonElement).disabled,
   ).toBe(true);
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
+  await waitFor(() => expect(screen.getByRole('status').textContent).toContain('privata utkast'));
   await save();
   await userEvent.type(screen.getByLabelText('Sök objekt'), 'No match');
   expect(within(screen.getByRole('list', { name: 'Objekt' })).queryByRole('button')).toBeNull();
@@ -75,12 +76,17 @@ test('review, search, correction, discard and deletion use the real persistent m
   await userEvent.type(screen.getByLabelText('Objektets namn'), 'Lo Berg');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
   const review = screen.getByRole('region', { name: 'Hela mitt utkast' });
-  expect(review.textContent).toContain('Lo Lind');
-  expect(review.textContent).toContain('Lo Berg');
+  await waitFor(() => {
+    expect(review.textContent).toContain('Lo Lind');
+    expect(review.textContent).toContain('Lo Berg');
+  });
   await userEvent.click(screen.getByRole('button', { name: 'Kasta hela utkastet' }));
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Utkastet är kastat'),
+  );
   await userEvent.click(screen.getByRole('button', { name: 'Lo Lind' }));
   await userEvent.click(screen.getByRole('button', { name: 'Föreslå borttagning' }));
-  expect(review.textContent).toContain('Borttagning');
+  await waitFor(() => expect(review.textContent).toContain('Borttagning'));
   await save();
   expect(within(screen.getByRole('list', { name: 'Objekt' })).queryByRole('button')).toBeNull();
 });

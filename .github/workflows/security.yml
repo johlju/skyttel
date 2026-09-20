@@ -1,0 +1,195 @@
+name: Security checks
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          languages: javascript-typescript,actions
+          queries: security-extended
+      - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+        with:
+          output: reports/codeql
+          upload: always
+      # Upload success alone does not mean the findings meet policy.
+      - run: node scripts/security/check-results.mjs codeql reports/codeql
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: codeql-results
+          path: reports/codeql
+          if-no-files-found: error
+          retention-days: 14
+
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: node scripts/install-repository-npm.mjs
+      - run: npm audit --audit-level=high
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        if: github.event_name == 'pull_request'
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: never
+
+  configuration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: aquasecurity/setup-trivy@e6c2c5e321ed9123bda567646e2f96565e34abe1 # v0.2.4
+        with:
+          version: v0.74.0
+      - name: Scan configuration and reject parser errors
+        run: |
+          status=0
+          trivy config --skip-dirs node_modules,.git --skip-files '**/*.dockerignore' \
+            --severity HIGH,CRITICAL --exit-code 1 --format json --output trivy.json \
+            . 2> trivy-errors.log || status=$?
+          cat trivy-errors.log >&2
+          test "$status" -eq 0
+          if grep -q 'ERROR' trivy-errors.log; then
+            exit 1
+          fi
+          node scripts/security/check-results.mjs trivy trivy.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: configuration-results
+          path: trivy.json
+          if-no-files-found: error
+          retention-days: 14
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan repository history with redacted output
+        run: >-
+          docker run --rm -v "$PWD:/repo:ro"
+          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo --config /repo/.gitleaks.toml --redact --no-banner --exit-code 1
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: mkdir -p reports && docker build --tag skyttel-security .
+      - name: Bind evidence to the exported image configuration
+        run: |
+          docker save skyttel-security -o "$RUNNER_TEMP/security-image.tar"
+          config=$(tar -xOf "$RUNNER_TEMP/security-image.tar" manifest.json | jq -er 'if length == 1 then .[0].Config else error("Expected one image") end')
+          tar -xOf "$RUNNER_TEMP/security-image.tar" "$config" | sha256sum | awk '{print "sha256:" $1}' > reports/image-id.txt
+      - uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: docker-archive:${{ runner.temp }}/security-image.tar
+          syft-version: v1.52.0
+          format: spdx-json
+          output-file: reports/sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: docker-archive:${{ runner.temp }}/security-image.tar
+          grype-version: v0.119.0
+          output-format: json
+          output-file: reports/grype.json
+          config: .github/grype.yaml
+          only-fixed: false
+          # Findings are evaluated below; scanner execution errors still fail.
+          fail-build: false
+      - run: node scripts/security/check-results.mjs grype reports .github/security-exceptions.json
+      - name: Start disposable production installation
+        run: |
+          docker run -d --name skyttel-zap -p 127.0.0.1:3000:3000 \
+            --tmpfs /data:uid=1000,gid=1000 \
+            -e SKYTTEL_ORIGIN=http://localhost:3000 \
+            -e SKYTTEL_FIRST_ADMIN_PROVIDER=google \
+            -e SKYTTEL_FIRST_ADMIN_SUBJECT=synthetic-admin \
+            -e BETTER_AUTH_SECRET=synthetic-ci-secret-at-least-32-characters \
+            -e GOOGLE_CLIENT_ID=synthetic -e GOOGLE_CLIENT_SECRET=synthetic \
+            -e MICROSOFT_CLIENT_ID=synthetic -e MICROSOFT_CLIENT_SECRET=synthetic \
+            skyttel-security
+          curl --fail --retry 20 --retry-connrefused --retry-all-errors --retry-delay 1 \
+            --connect-timeout 2 --max-time 2 --retry-max-time 30 http://localhost:3000/healthz
+          curl --fail http://localhost:3000/ > reports/index.html
+          chmod 777 reports
+      - name: ZAP baseline
+        run: |
+          status=0
+          docker run --rm --network host -v "$PWD/reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:2.17.0@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef \
+            zap-baseline.py -t http://localhost:3000 -J zap.json -r zap.html -m 1 || status=$?
+          # 2 means warnings; the report policy below still rejects High risk.
+          if [ "$status" -ne 0 ] && [ "$status" -ne 2 ]; then exit "$status"; fi
+          node scripts/security/check-results.mjs zap reports/zap.json
+      - name: Remove disposable installation
+        if: always()
+        run: docker rm --force skyttel-zap 2>/dev/null || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: container-security-results
+          path: reports
+          if-no-files-found: error
+          retention-days: 14
+
+  scanner-gate:
+    if: always()
+    needs: [codeql, dependencies, configuration, secrets, container]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: node scripts/security/check-results.mjs jobs codeql dependencies configuration secrets container
+        env:
+          REQUIRED_RESULTS: ${{ toJSON(needs) }}

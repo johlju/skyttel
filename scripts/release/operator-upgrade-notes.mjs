@@ -47,10 +47,18 @@ export function parseOperatorUpgradeNotes(content, filePath = DEFAULT_OPERATOR_U
   };
 }
 
+function stripHtmlComments(content) {
+  let previous;
+  do {
+    previous = content;
+    content = content.replace(/<!--[\s\S]*?-->/gu, '');
+  } while (content !== previous);
+  return content;
+}
+
 export function meaningfulUnreleasedChange(baseNotes, headNotes) {
   const normalize = (value) =>
-    value
-      .replace(/<!--[\s\S]*?-->/gu, '')
+    stripHtmlComments(value)
       .replace(/^\s*(?:[-+*]|\d+[.)])\s+/gmu, '')
       .replace(/\[([^\]]+)\]\(([^)]+)\)/gu, (_match, label, url) =>
         label === url ? url : `${label} ${url}`,
