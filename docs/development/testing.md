@@ -204,6 +204,14 @@ command removes all existing application data and sessions. Add reusable
 demo fixtures in `scripts/seeds/demo.ts`. Automated tests continue to use
 their own temporary databases and synthetic provider identities.
 
+Demo data includes the fictional person Lo Exempel and a private proposal
+to rename that person to Lo Lind. Review the before and after values, then
+save or discard the whole draft. The HTTP and browser map tests exercise
+draft privacy, version conflicts, atomic rollback, receipts, and reopening.
+Only external identity providers are substituted for these flows; SQLite
+and the application remain real. Failure tests inject a SQLite write error
+or interrupt an HTTP response to exercise recovery.
+
 ## Production-container checks
 
 With a running Docker daemon:
@@ -220,6 +228,8 @@ files, migrations, and production dependencies. It has no test entry point.
 
 The check also verifies authenticated household access before and after a
 production-container restart using synthetic identities and data.
+It also verifies private draft recovery, saved objects, history, and repeated
+saving with the same receipt across container restarts.
 
 Temporary test containers and volumes are removed after the check. These
 checks do not deploy to Render and do not certify a provider registration,

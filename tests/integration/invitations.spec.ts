@@ -2,6 +2,7 @@ import { copyFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, request, test } from '@playwright/test';
+import Database from 'better-sqlite3';
 import { createHousehold, signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 
@@ -16,7 +17,26 @@ test('upgrading an existing household preserves its membership and enables invit
   const headers = { origin };
   try {
     await signIn(administrator, origin);
-    const { household } = await (await createHousehold(administrator, origin)).json();
+    const { user: originalUser } = await (
+      await administrator.get(`${origin}/api/bootstrap`)
+    ).json();
+    // Arrange the old installation's data without running current household
+    // creation code against a schema that predates object types.
+    installation.seedMembership(
+      originalUser.id,
+      'legacy-household',
+      'Hushållet Linden',
+      'administrator',
+    );
+    const legacy = new Database(join(installation.directory, 'skyttel.db'));
+    try {
+      legacy.prepare('INSERT INTO installation VALUES (1, ?)').run('legacy-household');
+    } finally {
+      legacy.close();
+    }
+    const { household } = await (
+      await administrator.get(`${origin}/api/households/legacy-household`)
+    ).json();
     await copyFile(
       'migrations/002_invitations.sql',
       join(migrationsDirectory, '002_invitations.sql'),
@@ -25,6 +45,7 @@ test('upgrading an existing household preserves its membership and enables invit
       'migrations/003_login_link.sql',
       join(migrationsDirectory, '003_login_link.sql'),
     );
+    await copyFile('migrations/004_map.sql', join(migrationsDirectory, '004_map.sql'));
     options.legacyAuthCallbacks = false;
     await installation.restart();
     expect(
@@ -32,6 +53,14 @@ test('upgrading an existing household preserves its membership and enables invit
         await administrator.get(`${origin}/api/households/${household.id}`, { maxRetries: 1 })
       ).json(),
     ).toEqual({ household });
+    const map = await (
+      await administrator.get(`${origin}/api/households/${household.id}/map`)
+    ).json();
+    expect(map.types).toEqual([
+      expect.objectContaining({ householdId: household.id, name: 'Person', revision: 1 }),
+    ]);
+    expect(map.objects).toEqual([]);
+    expect(map.draft).toEqual({ version: 0, changes: [] });
     installation.setIdentity(robin);
     await signIn(recipient, origin, 'microsoft');
     const { user } = await (await recipient.get(`${origin}/api/bootstrap`)).json();

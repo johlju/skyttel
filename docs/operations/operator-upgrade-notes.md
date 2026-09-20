@@ -5,6 +5,18 @@ before upgrading Skyttel.
 
 ## Unreleased
 
+### Persistent objects and private drafts
+
+Back up the persistent database and retain its matching image before upgrade.
+Startup adds storage for objects, private drafts, history, and save receipts.
+Existing households receive an initial Person object type. Keep the same
+persistent disk across restarts. Backups now contain private drafts as well
+as shared household content; restrict backup access accordingly.
+
+An older image cannot open the upgraded database. Stop the application and
+restore its matching backup before returning to that image. Changes after
+the backup, including private drafts and receipts, will not be present.
+
 ### Verified login linking
 
 Back up the persistent database and retain the matching image before

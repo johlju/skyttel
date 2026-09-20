@@ -376,3 +376,39 @@ footer {
   background: #fff3ee;
   border-radius: 0.5rem;
 }
+
+.household-map {
+  margin-top: 2rem;
+}
+.household-map fieldset {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #dae3de;
+}
+.household-map select,
+.household-map textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  font: inherit;
+  padding: 0.65rem;
+  margin-bottom: 1rem;
+}
+.household-map textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+.draft-review {
+  margin-top: 2rem;
+}
+.draft-review article {
+  border-top: 1px solid #dae3de;
+  padding-block: 1rem;
+}
+.draft-review h4 {
+  margin-bottom: 0.5rem;
+}
+.draft-review p {
+  margin-bottom: 0.5rem;
+  white-space: pre-wrap;
+}

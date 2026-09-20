@@ -108,9 +108,19 @@ export async function createInstallation(
     };
   }
   async function stop() {
-    await new Promise<void>((resolve, reject) =>
-      server.close((error) => (error ? reject(error) : resolve())),
-    );
+    await new Promise<void>((resolve, reject) => {
+      // Requests already in flight can become idle after close() performs
+      // its initial idle-connection sweep. Drain those too, so an open
+      // browser's access polling cannot keep fixture shutdown alive.
+      const drain = setInterval(() => {
+        if ('closeIdleConnections' in server) server.closeIdleConnections();
+      }, 25);
+      server.close((error) => {
+        clearInterval(drain);
+        if (error) reject(error);
+        else resolve();
+      });
+    });
     database.close();
   }
   await start();

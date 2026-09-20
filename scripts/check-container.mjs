@@ -177,11 +177,42 @@ try {
   await command(['start', persisted]);
   await waitUntilReady(persisted);
   const before = await household(persisted, fixture);
+  const mapPath = `/api/households/${fixture.householdId}/map`;
+  async function mapRequest(suffix = '', body) {
+    const response = await request(persisted, `${mapPath}${suffix}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: {
+        cookie: fixture.cookie,
+        origin: configuredOrigin,
+        'content-type': 'application/json',
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    assert.equal(response.status, 200);
+    return JSON.parse(response.body);
+  }
+  const initialMap = await mapRequest();
+  await mapRequest('/draft', {
+    version: 0,
+    id: 'synthetic-person',
+    baseRevision: null,
+    value: { typeId: initialMap.types[0].id, name: 'Lo Exempel', description: 'Synthetic person' },
+  });
+  const privateDraft = await mapRequest();
+  await command(['restart', persisted]);
+  await waitUntilReady(persisted);
+  assert.deepEqual(await mapRequest(), privateDraft);
+  const saveRequest = { version: 1, operationId: 'container-save' };
+  const receipt = await mapRequest('/save', saveRequest);
+  const savedMap = await mapRequest();
   await command(['restart', persisted]);
   await waitUntilReady(persisted);
   assert.deepEqual(await household(persisted, fixture), before);
+  assert.deepEqual(await mapRequest(), savedMap);
+  assert.deepEqual(await mapRequest('/save', saveRequest), receipt);
+  assert.deepEqual((await mapRequest('/history')).history, [receipt.receipt]);
   console.log(
-    'PASS: provider identity, session, membership, and household survive container restart',
+    'PASS: identity, household, private draft, objects, history, and receipt survive container restart',
   );
 
   await command(['stop', fresh]);

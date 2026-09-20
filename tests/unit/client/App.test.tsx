@@ -16,6 +16,9 @@ type Reply = { data?: unknown; status?: number; error?: Error };
 const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
+  routes['/api/households/linden/map?reload=0'] ??= [
+    { data: { types: [], objects: [], draft: { version: 0, changes: [] } } },
+  ];
   const fetch = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
     const path =
       typeof input === 'string'

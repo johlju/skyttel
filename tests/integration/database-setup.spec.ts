@@ -75,6 +75,16 @@ for (const provider of ['google', 'microsoft'] as const) {
       ).json();
       expect(status).toBe('ready');
       expect(household).toMatchObject({ name: 'TestHousehold', role: 'administrator' });
+      const map = await (
+        await request.get(`${installation.origin}/api/households/${household.id}/map`)
+      ).json();
+      expect(map.objects).toEqual([expect.objectContaining({ name: 'Lo Exempel' })]);
+      expect(map.draft.changes).toEqual([
+        expect.objectContaining({
+          before: expect.objectContaining({ name: 'Lo Exempel' }),
+          after: expect.objectContaining({ name: 'Lo Lind' }),
+        }),
+      ]);
       expect(
         (
           await request.get(`${installation.origin}/api/households/${household.id}/administration`)

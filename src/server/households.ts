@@ -55,6 +55,14 @@ export function createHousehold(
       database
         .prepare('INSERT INTO installation (id, householdId) VALUES (1, ?)')
         .run(household.id);
+      database
+        .prepare('INSERT INTO object_type VALUES (?, ?, 1, ?, ?)')
+        .run(
+          randomUUID(),
+          household.id,
+          'Person',
+          'En person i hushållets karta. Ger inte tillgång till Skyttel.',
+        );
       return { household };
     })
     .immediate();

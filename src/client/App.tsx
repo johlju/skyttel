@@ -2,6 +2,7 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useStat
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
+import { HouseholdMap } from './HouseholdMap.js';
 
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
@@ -803,6 +804,7 @@ function HouseholdPage({ onSessionExpired }: { onSessionExpired: () => void }) {
           </Link>
         </p>
       )}
+      <HouseholdMap key={result.data.household.id} householdId={result.data.household.id} />
       <div className="empty-state">
         <div className="weave-mark" aria-hidden="true">
           ↗

@@ -4,7 +4,38 @@ Each person who uses Skyttel signs in with their own Google or Microsoft
 account. A household administrator decides which Skyttel users can join the
 household. An email address or a name does not grant access.
 
-## Roles
+## Objects and your private draft
+
+Choose **Nytt objekt**, enter a name, choose an object type, and optionally
+enter a description. **Lägg i mitt utkast** puts the proposal in your private
+draft. Text still in the form has not been sent. Resizing or rotating the
+screen keeps that text; closing the page can lose unsent form text.
+
+Your draft remains available after closing the app or signing in on another
+device. Other household members cannot read it. Search with **Sök objekt**
+and select a result to correct its details or propose deletion.
+
+Review **Hela mitt utkast** for the before and after values of every proposal.
+**Spara hela utkastet** saves all proposals together to the shared map.
+Confirmation shows the saved names and a receipt. **Kasta hela utkastet**
+removes your proposals without changing the shared map. Deleting a saved
+object retains its prior values in history; it is not permanent erasure.
+
+If another client changes your draft or the underlying objects, saving is
+blocked. Fetch the current information and review it again. For an object
+conflict, discard the draft and recreate the intended proposals from current
+values. An older open form keeps its text but cannot be submitted after a
+draft conflict. Copy any text you need, close the form, and reopen the current
+proposal before editing again. Nothing is partially saved.
+If the save result is unknown, use
+**Hämta samma kvitto igen** before making another save. An unknown result
+does not mean that saving failed.
+
+Use fictional examples such as Lo Exempel when trying the flow. Never enter
+full account or card numbers, passwords, PINs, security codes, or recovery
+codes. People recorded in the map do not gain access to Skyttel.
+
+## Access roles
 
 **Medlem** means member. Every current member has the same access to the
 household's shared map and the same right to view and edit its content.

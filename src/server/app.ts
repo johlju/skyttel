@@ -10,6 +10,8 @@ import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { createHousehold, householdAccess, isFirstAdmin, isInitialized } from './households.js';
 import { createLoginMethods } from './login-methods.js';
+import { MapError } from './map.js';
+import { mapRoutes } from './map-routes.js';
 
 export function createApp({
   config,
@@ -50,7 +52,7 @@ export function createApp({
     }),
   );
   app.onError((error, context) => {
-    if (error instanceof AdministrationError)
+    if (error instanceof AdministrationError || error instanceof MapError)
       return context.json({ error: error.code }, error.status);
     console.error(JSON.stringify({ event: 'request_failed' }));
     return context.json({ error: 'internal_error' }, 500);
@@ -123,6 +125,7 @@ export function createApp({
   });
   app.route('/api', administrationRoutes(database, auth, config.origin));
   app.route('/api', linking.routes);
+  app.route('/api', mapRoutes(database, auth, config.origin));
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));
   app.get('*', serveStatic({ path: './dist/client/index.html' }));
