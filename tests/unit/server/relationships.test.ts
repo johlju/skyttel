@@ -463,12 +463,13 @@ test('a failed receipt rolls back relationships with objects and preserves the c
   fixture.database.exec(
     "CREATE TRIGGER fail_family_receipt BEFORE INSERT ON map_save BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END",
   );
-  expect((await save()).status).toBe(500);
+  const body = { version: (await read()).draft.version, operationId: 'retry-family' };
+  expect((await client.json(`${path}/save`, body)).status).toBe(500);
   expect((await read()).relationships).toEqual([]);
   expect((await read()).objects).toEqual([]);
   expect((await read()).draft.relationships).toHaveLength(1);
   fixture.database.exec('DROP TRIGGER fail_family_receipt');
-  expect((await save()).status).toBe(200);
+  expect((await client.json(`${path}/save`, body)).status).toBe(200);
   expect((await read()).relationships).toHaveLength(1);
 });
 
@@ -478,7 +479,7 @@ test('foreign household objects and types cannot be linked, and revoked members 
   await object('b');
   await save();
   fixture.database
-    .prepare('INSERT INTO household VALUES (?, ?, ?)')
+    .prepare('INSERT INTO household (id, name, createdAt) VALUES (?, ?, ?)')
     .run('foreign-household', 'Annat hushåll', '2026-01-01');
   fixture.database
     .prepare('INSERT INTO object_type VALUES (?, ?, ?, ?, ?)')

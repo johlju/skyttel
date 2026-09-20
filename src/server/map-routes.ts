@@ -37,6 +37,25 @@ export function mapRoutes(database: Database.Database, auth: Auth, origin: strin
   routes.get('/households/:id/map/history', (context) =>
     context.json(householdMap(database, context.get('userId'), context.req.param('id')).history()),
   );
+  routes.get('/households/:id/map/operations', (context) =>
+    context.json(
+      householdMap(database, context.get('userId'), context.req.param('id')).operations(),
+    ),
+  );
+  routes.get('/households/:id/map/operations/:operationId', (context) =>
+    context.json(
+      householdMap(database, context.get('userId'), context.req.param('id')).operation(
+        context.req.param('operationId'),
+      ),
+    ),
+  );
+  routes.post('/households/:id/map/operations', (context) =>
+    context.json(
+      householdMap(database, context.get('userId'), context.req.param('id')).registerOperation(
+        context.get('body'),
+      ),
+    ),
+  );
   routes.post('/households/:id/map/draft', (context) =>
     context.json(
       householdMap(database, context.get('userId'), context.req.param('id')).propose(

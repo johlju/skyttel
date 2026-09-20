@@ -16,7 +16,9 @@ async function linkStep(
   return (await response.json()).url as string;
 }
 
-test('both proven providers return to the same user and household', async ({ request }) => {
+test('ACCESS-09: both proven providers return to the same user and household', async ({
+  request,
+}) => {
   const installation = await createInstallation();
   const { origin } = installation;
   try {
@@ -187,7 +189,9 @@ test('linking requires the original session, explicit proof and same-origin requ
   }
 });
 
-test('the interface verifies the result and lists both login methods', async ({ page }) => {
+test('ACCESS-09: the interface verifies the result and lists both login methods', async ({
+  page,
+}) => {
   const installation = await createInstallation();
   try {
     await signIn(page.request, installation.origin);
@@ -203,6 +207,70 @@ test('the interface verifies the result and lists both login methods', async ({ 
     );
     await expect(page.getByText('Microsoft – kopplat', { exact: true })).toBeVisible();
     await expect(page.getByText('Google – kopplat', { exact: true })).toBeVisible();
+  } finally {
+    await installation.close();
+  }
+});
+
+test('ACCESS-10: cancelling a verified link requires fresh proof and preserves household access', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    await signIn(page.request, installation.origin);
+    await createHousehold(page.request, installation.origin);
+    const before = await (await page.request.get(`${installation.origin}/api/bootstrap`)).json();
+    await page.goto(`${installation.origin}/login-methods`);
+    await page.getByRole('button', { name: 'Verifiera Google' }).click();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    await page.getByRole('button', { name: 'Avbryt länkning' }).click();
+    await expect(page.getByRole('button', { name: 'Verifiera Google' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Avbryt länkning' })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByText('Google – kopplat', { exact: true })).toBeVisible();
+    await expect(page.getByText('Microsoft – kopplat', { exact: true })).toHaveCount(0);
+    await page.getByRole('link', { name: 'Till startsidan' }).click();
+    await expect(
+      page.getByRole('heading', { name: before.household.name, exact: true }),
+    ).toBeVisible();
+    expect(await (await page.request.get(`${installation.origin}/api/bootstrap`)).json()).toEqual(
+      before,
+    );
+    await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
+    await page.getByRole('button', { name: 'Verifiera Google' }).click();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+  } finally {
+    await installation.close();
+  }
+});
+
+test('ACCESS-11: the wrong existing identity leaves linking retryable without changing access', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    await signIn(page.request, installation.origin);
+    await createHousehold(page.request, installation.origin);
+    const before = await (await page.request.get(`${installation.origin}/api/bootstrap`)).json();
+    await page.goto(`${installation.origin}/login-methods`);
+    installation.setIdentity({ ...alex, subject: 'wrong-google' });
+    await page.getByRole('button', { name: 'Verifiera Google' }).click();
+    await expect(page.getByRole('alert')).toContainText('Länkningen kunde inte slutföras');
+    await expect(page.getByRole('button', { name: 'Verifiera Google' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toHaveCount(0);
+    expect(await (await page.request.get(`${installation.origin}/api/bootstrap`)).json()).toEqual(
+      before,
+    );
+
+    installation.setIdentity(alex);
+    await page.getByRole('button', { name: 'Verifiera Google' }).click();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Till startsidan' }).click();
+    await expect(
+      page.getByRole('heading', { name: before.household.name, exact: true }),
+    ).toBeVisible();
   } finally {
     await installation.close();
   }

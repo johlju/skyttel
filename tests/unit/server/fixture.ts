@@ -20,10 +20,14 @@ export function configurationEnvironment(databasePath = '/synthetic/skyttel.sqli
   };
 }
 
-export async function applicationFixture() {
+export async function applicationFixture({
+  migrationsDirectory,
+}: {
+  migrationsDirectory?: string;
+} = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-unit-'));
   const config = readConfig(configurationEnvironment(join(directory, 'skyttel.sqlite')));
-  const database = openDatabase(config.databasePath);
+  const database = openDatabase(config.databasePath, { migrationsDirectory });
   const auth = createAuth(config, database);
   await verifyAuthSchema(auth);
   let subject: unknown = config.firstAdmin.subject;

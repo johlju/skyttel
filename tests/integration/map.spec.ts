@@ -84,7 +84,7 @@ test('an uncertain save recovers its receipt and stale tabs cannot save newer dr
   }
 });
 
-test('objects move from a persistent private proposal to the shared map after review', async ({
+test('KARTA-06: objects move from a persistent private proposal to the shared map after review', async ({
   page,
   browser,
 }) => {

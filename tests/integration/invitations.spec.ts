@@ -50,6 +50,10 @@ test('upgrading an existing household preserves its membership and enables invit
       'migrations/005_relationships.sql',
       join(migrationsDirectory, '005_relationships.sql'),
     );
+    await copyFile(
+      'migrations/006_save_operations.sql',
+      join(migrationsDirectory, '006_save_operations.sql'),
+    );
     options.legacyAuthCallbacks = false;
     await installation.restart();
     expect(

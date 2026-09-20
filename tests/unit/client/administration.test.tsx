@@ -39,8 +39,19 @@ const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
   routes['/api/households/linden/map?reload=0'] ??= [
-    { data: { types: [], objects: [], draft: { version: 0, changes: [] } } },
+    {
+      data: {
+        userId: 'alex',
+        contentVersion: 1,
+        types: [],
+        objects: [],
+        relationshipTypes: [],
+        relationships: [],
+        draft: { version: 0, changes: [] },
+      },
+    },
   ];
+  routes['/api/households/linden/map/operations'] ??= [{ data: { operations: [] } }];
   const fetch = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
     const path =
       typeof input === 'string'

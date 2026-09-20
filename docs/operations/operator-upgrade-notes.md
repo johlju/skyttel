@@ -5,6 +5,22 @@ before upgrading Skyttel.
 
 ## Unreleased
 
+### Recovery of interrupted saves
+
+Back up the persistent database and retain its matching image before upgrade.
+Startup preserves existing household content, private drafts, and save receipts.
+It adds persistent records of pending and rejected save attempts. An older image
+requires its matching database backup. Stop the application before restoring
+that backup; changes after the backup will not be present.
+
+After rollout, ask users to preserve unsent form text and reload open browser
+sessions to make the recovery controls available. After an interrupted save or
+restart, have the affected user check their save attempts before changing the
+draft. The same user can check and retry a pending attempt from another device.
+A missing response does not establish that the save failed. Apply existing backup
+access restrictions and retention rules to private save attempts as well as
+drafts and household content.
+
 ### Family subscriptions and relationships
 
 Back up the persistent database and retain its matching image before upgrade.

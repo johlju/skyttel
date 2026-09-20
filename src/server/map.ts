@@ -12,12 +12,14 @@ import type {
 import { householdAccess } from './households.js';
 
 import { MapError } from './map-error.js';
+import { mapOperations } from './map-operations.js';
 import { relationships } from './relationships.js';
 
 export { MapError } from './map-error.js';
 
 export function householdMap(database: Database.Database, userId: string, householdId: string) {
   const edges = relationships(database, householdId);
+  const operations = mapOperations(database, userId, householdId);
   function authorize() {
     if (!householdAccess(database, userId, householdId)) throw new MapError('forbidden', 403);
   }
@@ -76,6 +78,8 @@ export function householdMap(database: Database.Database, userId: string, househ
   }
   function readState(): MapState {
     return {
+      userId,
+      contentVersion: operations.contentVersion(),
       relationshipTypes: edges.types(),
       relationships: edges.read(),
       types: database
@@ -98,6 +102,15 @@ export function householdMap(database: Database.Database, userId: string, househ
   }
 
   return {
+    registerOperation(body: Record<string, unknown>) {
+      return transaction(() => ({ operation: operations.register(body, draft()) }));
+    },
+    operation(operationId: string) {
+      return transaction(() => ({ operation: operations.read(operationId) }));
+    },
+    operations() {
+      return transaction(() => ({ operations: operations.list() }));
+    },
     history() {
       return transaction(() => ({
         history: (
@@ -114,6 +127,7 @@ export function householdMap(database: Database.Database, userId: string, househ
     },
     resolve(body: Record<string, unknown>) {
       return transaction(() => {
+        operations.assertEditable();
         const current = checkedDraft(body.version);
         if (body.choice !== 'saved' && body.choice !== 'proposed')
           throw new MapError('invalid_request', 400);
@@ -167,6 +181,7 @@ export function householdMap(database: Database.Database, userId: string, househ
     },
     proposeRelationship(body: Record<string, unknown>) {
       return transaction(() => {
+        operations.assertEditable();
         const result = edges.propose(checkedDraft(body.version), body);
         return {
           ...writeDraft(result.draft),
@@ -176,6 +191,7 @@ export function householdMap(database: Database.Database, userId: string, househ
     },
     propose(body: Record<string, unknown>) {
       return transaction(() => {
+        operations.assertEditable();
         const current = checkedDraft(body.version);
         if (typeof body.id !== 'string' || !/^[\w-]{1,128}$/.test(body.id))
           throw new MapError('invalid_request', 400);
@@ -218,100 +234,116 @@ export function householdMap(database: Database.Database, userId: string, househ
       });
     },
     discard(version: unknown) {
-      return transaction(() =>
-        writeDraft({ version: checkedDraft(version).version + 1, changes: [] }),
-      );
+      return transaction(() => {
+        operations.assertEditable();
+        return writeDraft({ version: checkedDraft(version).version + 1, changes: [] });
+      });
     },
     save(body: Record<string, unknown>) {
-      return transaction(() => {
-        if (Object.keys(body).some((key) => key !== 'version' && key !== 'operationId'))
-          throw new MapError('invalid_request', 400);
-        if (typeof body.operationId !== 'string' || !/^[\w-]{1,128}$/.test(body.operationId))
-          throw new MapError('invalid_request', 400);
-        const previous = database
-          .prepare(
-            'SELECT draftVersion, receipt FROM map_save WHERE householdId = ? AND userId = ? AND operationId = ?',
-          )
-          .get(householdId, userId, body.operationId) as
-          | { draftVersion: number; receipt: string }
-          | undefined;
-        if (previous) {
-          if (previous.draftVersion !== body.version) throw new MapError('operation_conflict');
-          return { receipt: JSON.parse(previous.receipt) as SaveReceipt };
-        }
-        const current = checkedDraft(body.version);
-        if (!current.changes.length && !current.relationships?.length)
-          throw new MapError('empty_draft');
-        const receipt: SaveReceipt = {
-          operationId: body.operationId,
-          householdId,
-          userId,
-          draftVersion: current.version,
-          savedAt: new Date().toISOString(),
-          changes: [],
-        };
-        for (const change of current.changes) {
-          if (change.after?.identity === 'unresolved') throw new MapError('unresolved_identity');
-          const saved = object(change.id);
-          if (JSON.stringify(saved ?? null) !== JSON.stringify(change.before))
-            throw new MapError('object_conflict');
-          const type = database
-            .prepare('SELECT * FROM object_type WHERE householdId = ? AND id = ?')
-            .get(householdId, change.type.id) as ObjectType | undefined;
-          if (!type || type.revision !== change.type.revision) throw new MapError('type_conflict');
-          const after = change.after
-            ? {
-                id: change.id,
-                householdId,
-                typeId: change.after.typeId,
-                revision: (saved?.revision ?? 0) + 1,
-                name: change.after.name,
-                description: change.after.description,
-                ...(change.after.identity ? { identity: change.after.identity } : {}),
-              }
-            : null;
-          if (after) {
-            if (!saved && database.prepare('SELECT 1 FROM map_object WHERE id = ?').get(change.id))
-              throw new MapError('object_conflict');
-            database
-              .prepare(`INSERT INTO map_object (id, householdId, typeId, revision, name, description, identity) VALUES (?, ?, ?, ?, ?, ?, ?)
+      // Registration commits before applying so interruption cannot erase the attempt.
+      const registered = transaction(() => operations.register(body, draft()));
+      const outcome = transaction(() => {
+        if (registered.contentVersion !== operations.contentVersion())
+          throw new MapError('content_conflict');
+        const previous = operations.find(registered.operationId);
+        if (!previous) throw new MapError('operation_conflict');
+        const result = operations.result(previous);
+        if (result.status === 'succeeded') return { receipt: result.receipt };
+        if (result.status === 'rejected')
+          throw new MapError(result.error, previous.errorStatus ?? 409);
+        try {
+          // A savepoint rolls back every map write before recording a terminal rejection.
+          return database.transaction(() => {
+            const current = checkedDraft(body.version);
+            if (operations.hash(current) !== previous.draftHash)
+              throw new MapError('operation_conflict');
+            if (!current.changes.length && !current.relationships?.length)
+              throw new MapError('empty_draft');
+            const receipt: SaveReceipt = {
+              contentVersion: operations.contentVersion(),
+              operationId: registered.operationId,
+              householdId,
+              userId,
+              draftVersion: current.version,
+              savedAt: new Date().toISOString(),
+              changes: [],
+            };
+            for (const change of current.changes) {
+              if (change.after?.identity === 'unresolved')
+                throw new MapError('unresolved_identity');
+              const saved = object(change.id);
+              if (JSON.stringify(saved ?? null) !== JSON.stringify(change.before))
+                throw new MapError('object_conflict');
+              const type = database
+                .prepare('SELECT * FROM object_type WHERE householdId = ? AND id = ?')
+                .get(householdId, change.type.id) as ObjectType | undefined;
+              if (!type || type.revision !== change.type.revision)
+                throw new MapError('type_conflict');
+              const after = change.after
+                ? {
+                    id: change.id,
+                    householdId,
+                    typeId: change.after.typeId,
+                    revision: (saved?.revision ?? 0) + 1,
+                    name: change.after.name,
+                    description: change.after.description,
+                    ...(change.after.identity ? { identity: change.after.identity } : {}),
+                  }
+                : null;
+              if (after) {
+                if (
+                  !saved &&
+                  database.prepare('SELECT 1 FROM map_object WHERE id = ?').get(change.id)
+                )
+                  throw new MapError('object_conflict');
+                database
+                  .prepare(`INSERT INTO map_object (id, householdId, typeId, revision, name, description, identity) VALUES (?, ?, ?, ?, ?, ?, ?)
               ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, name = excluded.name, description = excluded.description, identity = excluded.identity`)
-              .run(
-                after.id,
-                householdId,
-                after.typeId,
-                after.revision,
-                after.name,
-                after.description,
-                after.identity ?? null,
-              );
-          } else
+                  .run(
+                    after.id,
+                    householdId,
+                    after.typeId,
+                    after.revision,
+                    after.name,
+                    after.description,
+                    after.identity ?? null,
+                  );
+              } else
+                database
+                  .prepare(
+                    'UPDATE map_object SET deleted = 1, revision = revision + 1 WHERE householdId = ? AND id = ?',
+                  )
+                  .run(householdId, change.id);
+              receipt.changes.push({ before: change.before, after, type });
+            }
+            const relationshipChanges = edges.save(current);
+            if (relationshipChanges.length) receipt.relationships = relationshipChanges;
             database
               .prepare(
-                'UPDATE map_object SET deleted = 1, revision = revision + 1 WHERE householdId = ? AND id = ?',
+                'INSERT INTO map_history (householdId, userId, operationId, savedAt, changes) VALUES (?, ?, ?, ?, ?)',
               )
-              .run(householdId, change.id);
-          receipt.changes.push({ before: change.before, after, type });
+              .run(
+                householdId,
+                userId,
+                body.operationId,
+                receipt.savedAt,
+                JSON.stringify(receipt.changes),
+              );
+            writeDraft({ version: current.version + 1, changes: [] });
+            database
+              .prepare('INSERT INTO map_save VALUES (?, ?, ?, ?, ?)')
+              .run(body.operationId, householdId, userId, current.version, JSON.stringify(receipt));
+            operations.complete(registered.operationId);
+            return { receipt };
+          })();
+        } catch (error) {
+          if (!(error instanceof MapError)) throw error;
+          operations.reject(registered.operationId, error);
+          return { error };
         }
-        const relationshipChanges = edges.save(current);
-        if (relationshipChanges.length) receipt.relationships = relationshipChanges;
-        database
-          .prepare(
-            'INSERT INTO map_history (householdId, userId, operationId, savedAt, changes) VALUES (?, ?, ?, ?, ?)',
-          )
-          .run(
-            householdId,
-            userId,
-            body.operationId,
-            receipt.savedAt,
-            JSON.stringify(receipt.changes),
-          );
-        writeDraft({ version: current.version + 1, changes: [] });
-        database
-          .prepare('INSERT INTO map_save VALUES (?, ?, ?, ?, ?)')
-          .run(body.operationId, householdId, userId, current.version, JSON.stringify(receipt));
-        return { receipt };
       });
+      if ('error' in outcome) throw outcome.error;
+      return outcome;
     },
   };
 }

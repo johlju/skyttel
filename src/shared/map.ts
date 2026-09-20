@@ -31,6 +31,8 @@ export interface MapDraft {
   relationships?: DraftRelationshipChange[];
 }
 export interface MapState {
+  userId: string;
+  contentVersion: number;
   types: ObjectType[];
   objects: MapObject[];
   relationshipTypes: RelationshipType[];
@@ -38,6 +40,7 @@ export interface MapState {
   draft: MapDraft;
 }
 export interface SaveReceipt {
+  contentVersion: number;
   operationId: string;
   draftVersion: number;
   householdId: string;
@@ -46,6 +49,21 @@ export interface SaveReceipt {
   relationships?: RelationshipChange[];
   changes: { before: MapObject | null; after: MapObject | null; type: ObjectType }[];
 }
+
+interface SaveOperationIdentity {
+  operationId: string;
+  householdId: string;
+  userId: string;
+  draftVersion: number;
+  contentVersion: number;
+  createdAt: string;
+}
+export type SaveOperation = SaveOperationIdentity &
+  (
+    | { status: 'pending' }
+    | { status: 'succeeded'; receipt: SaveReceipt }
+    | { status: 'rejected'; error: string }
+  );
 
 export type Knowledge = 'known' | 'unknown' | 'none' | 'uncertain' | 'unresolved';
 export interface RelationshipValue {

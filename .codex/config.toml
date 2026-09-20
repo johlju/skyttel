@@ -2,6 +2,9 @@
 # Codex automatically layers the settings on top of the user configuration in ~/.codex/config.toml.
 # GitHub CLI command approvals are configured in rules/github.rules.
 
+model = "gpt-6-astra"
+model_reasoning_effort = "high"
+
 default_permissions = "skyttel-development"
 
 personality = "pragmatic"

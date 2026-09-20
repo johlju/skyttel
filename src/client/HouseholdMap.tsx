@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { type DraftConflict, draftConflicts } from '../shared/draft-conflicts.js';
 import type {
   MapDraft,
@@ -7,35 +7,39 @@ import type {
   MapState,
   ObjectValue,
   RelationshipValue,
+  SaveOperation,
   SaveReceipt,
 } from '../shared/map.js';
 import { proposedRelationships } from '../shared/map.js';
-
+import { MapRequestError, request } from './map-request.js';
 import { RelationshipEditor, relationshipLabel } from './RelationshipEditor.js';
-
-class MapRequestError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-  ) {
-    super(code);
-  }
-}
-
-async function request<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(path, {
-    method: body === undefined ? 'GET' : 'POST',
-    credentials: 'same-origin',
-    cache: 'no-store',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const result = await response.json();
-  if (!response.ok) throw new MapRequestError(response.status, result.error);
-  return result;
-}
+import {
+  checkOperation,
+  checkSaveIdentity,
+  receiptMessage,
+  rejectionMessage,
+  type SaveAttempt,
+  SaveOperations,
+} from './SaveOperations.js';
 
 type Editor = { id: string; version: number; baseRevision: number | null; value: ObjectValue };
+
+function checkOperations(operations: SaveOperation[], householdId: string, current: MapState) {
+  for (const operation of operations)
+    checkOperation(operation, {
+      operationId: operation.operationId,
+      version: operation.draftVersion,
+      contentVersion: current.contentVersion,
+      householdId,
+      userId: current.userId,
+    });
+}
+
+async function readOperations(path: string, householdId: string, current: MapState) {
+  const result = await request<{ operations: SaveOperation[] }>(`${path}/operations`);
+  checkOperations(result.operations, householdId, current);
+  return result.operations;
+}
 
 export function HouseholdMap({ householdId }: { householdId: string }) {
   const path = `/api/households/${encodeURIComponent(householdId)}/map`;
@@ -53,23 +57,82 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
   const [blocked, setBlocked] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
-  const saveAttempt = useRef<{ version: number; operationId: string } | null>(null);
+  const saveAttempt = useRef<SaveAttempt | null>(null);
+  const [operations, setOperations] = useState<SaveOperation[]>([]);
   const nameInput = useRef<HTMLInputElement>(null);
   const newButton = useRef<HTMLButtonElement>(null);
+  const focusAfterClose = useRef(false);
   const [load, setLoad] = useState(0);
+
+  const loseAccess = useCallback(() => {
+    setState(null);
+    setOperations([]);
+    setEditor(null);
+    setEdgeEditor(null);
+    setDirty(false);
+    saveAttempt.current = null;
+    setStatus('');
+    setError('Du har inte längre tillgång. Logga in och kontrollera din tillgång till hushållet.');
+  }, []);
 
   useEffect(() => {
     let active = true;
     setPending(true);
-    void request<MapState>(`${path}?reload=${load}`)
-      .then((value) => {
+    void (async () => {
+      const result = await request<{ operations: SaveOperation[] }>(`${path}/operations`);
+      const attempt = saveAttempt.current;
+      const operation = attempt
+        ? (
+            await request<{ operation: SaveOperation | null }>(
+              `${path}/operations/${encodeURIComponent(attempt.operationId)}`,
+            )
+          ).operation
+        : null;
+      // Read the map after the results: another client may have completed a
+      // pending save while this client was discovering its durable receipt.
+      const value = await request<MapState>(`${path}?reload=${load}`);
+      if (!active) return;
+      checkOperations(result.operations, householdId, value);
+      let recent = result.operations;
+      let message = '';
+      if (attempt) {
+        if (
+          attempt.contentVersion !== value.contentVersion ||
+          attempt.userId !== value.userId ||
+          attempt.householdId !== householdId
+        ) {
+          saveAttempt.current = null;
+          setStatus('');
+          message = rejectionMessage('content_conflict');
+        } else if (operation) {
+          checkOperation(operation, attempt);
+          recent = [
+            operation,
+            ...recent.filter((item) => item.operationId !== operation.operationId),
+          ];
+          if (operation.status === 'succeeded') {
+            setStatus(receiptMessage(operation.receipt));
+            saveAttempt.current = null;
+          } else if (operation.status === 'rejected') {
+            message = rejectionMessage(operation.error);
+            saveAttempt.current = null;
+          }
+        } else {
+          message =
+            'Utfallet är okänt. Inget registrerat resultat hittades. Återförsök samma sparande.';
+        }
+      }
+      const waiting = recent.some((item) => item.status === 'pending');
+      setState(value);
+      setOperations(recent);
+      setBlocked(waiting || Boolean(saveAttempt.current));
+      setError(message || (waiting ? rejectionMessage('operation_pending') : ''));
+    })()
+      .catch((failure) => {
         if (!active) return;
-        setState(value);
-        setBlocked(false);
-        setError('');
-      })
-      .catch(() => {
-        if (active) setError('Kartan kunde inte hämtas. Försök igen.');
+        setBlocked(true);
+        if (failure instanceof MapRequestError && [401, 403].includes(failure.status)) loseAccess();
+        else setError('Kartan och sparförsöken kunde inte hämtas. Försök igen.');
       })
       .finally(() => {
         if (active) setPending(false);
@@ -77,70 +140,140 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
     return () => {
       active = false;
     };
-  }, [path, load]);
+  }, [path, load, householdId, loseAccess]);
 
   useEffect(() => {
     if (editor?.id) nameInput.current?.focus();
+    else if (focusAfterClose.current) {
+      focusAfterClose.current = false;
+      newButton.current?.focus();
+    }
   }, [editor?.id]);
 
-  async function action(
-    kind: 'draft' | 'relationship' | 'discard' | 'save' | 'resolve',
-    body: unknown,
-  ) {
+  async function save(attempt: SaveAttempt, recover = false) {
     if (!state || pending) return;
+    saveAttempt.current = attempt;
     setPending(true);
     setError('');
     setStatus('');
     let confirmed = false;
     try {
-      if (kind === 'save') {
-        const { receipt } = await request<{ receipt: SaveReceipt }>(`${path}/save`, body);
-        if (
-          receipt.operationId !== saveAttempt.current?.operationId ||
-          receipt.draftVersion !== saveAttempt.current.version
-        )
-          throw new Error('invalid_receipt');
-        setStatus(
-          `Sparat: ${[...receipt.changes.map((change) => change.after?.name ?? change.before?.name), ...(receipt.relationships ?? []).map((change) => `${change.type.name} (${change.after ? 'samband' : 'borttaget samband'})`)].join(', ')}. Kvitto: ${receipt.operationId}.`,
+      const body = {
+        operationId: attempt.operationId,
+        version: attempt.version,
+        contentVersion: attempt.contentVersion,
+      };
+      let operation: SaveOperation | null = null;
+      if (recover) {
+        const result = await request<{ operation: SaveOperation | null }>(
+          `${path}/operations/${encodeURIComponent(attempt.operationId)}`,
         );
-        saveAttempt.current = null;
-        confirmed = true;
+        operation = result.operation;
+      }
+      if (!operation) {
+        const result = await request<{ operation: SaveOperation }>(`${path}/operations`, body);
+        operation = result.operation;
+      }
+      checkOperation(operation, attempt);
+      setOperations((previous) => [
+        operation,
+        ...previous.filter((item) => item.operationId !== attempt.operationId),
+      ]);
+      if (operation.status === 'rejected') throw new MapRequestError(409, operation.error);
+      const receipt =
+        operation.status === 'succeeded'
+          ? operation.receipt
+          : (await request<{ receipt: SaveReceipt }>(`${path}/save`, body)).receipt;
+      checkSaveIdentity(receipt, attempt);
+      setStatus(receiptMessage(receipt));
+      setOperations((previous) =>
+        previous.map((item) =>
+          item.operationId === attempt.operationId
+            ? { ...item, status: 'succeeded', receipt }
+            : item,
+        ),
+      );
+      saveAttempt.current = null;
+      confirmed = true;
+      // Recovery can happen while an older form has unsent text. Keep that text
+      // and let its draft-version check prevent it from overwriting newer work.
+      if (!dirty) {
         setEditor(null);
-        setDirty(false);
-        setState(await request<MapState>(path));
-      } else {
-        const draft = await request<MapDraft & { existingId?: string }>(`${path}/${kind}`, body);
-        if (draft.existingId) {
-          const latest = await request<MapState>(path);
-          setState(latest);
-          const edge = proposedRelationships(latest.relationships, latest.draft.relationships).get(
-            draft.existingId,
-          );
-          const objects = new Map(latest.objects.map((object) => [object.id, object]));
-          for (const change of latest.draft.changes) {
-            if (change.after)
-              objects.set(change.id, {
-                ...change.after,
-                id: change.id,
-                householdId,
-                revision: change.before?.revision ?? 0,
-              });
-          }
-          setStatus(
-            edge
-              ? `Sambandet finns redan: ${relationshipLabel(edge, latest, objects)}. Ingen dubblett skapades.`
-              : 'Det befintliga sambandet har ändrats. Granska aktuellt underlag.',
-          );
-        } else {
-          setState({ ...state, draft });
-          setStatus(
-            kind === 'resolve'
-              ? 'Konfliktvalet finns i ditt privata utkast. Granska hela utkastet och ge ett nytt sparbesked.'
-              : kind === 'discard'
-                ? 'Utkastet är kastat. Kartan är inte ändrad.'
-                : 'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.',
-          );
+        setEdgeEditor(null);
+      }
+      const { operations: recent } = await request<{ operations: SaveOperation[] }>(
+        `${path}/operations`,
+      );
+      const latest = await request<MapState>(path);
+      checkOperations(recent, householdId, latest);
+      setState(latest);
+      setOperations(recent);
+      setBlocked(recent.some((item) => item.status === 'pending'));
+      if (!dirty) newButton.current?.focus();
+    } catch (failure) {
+      setBlocked(true);
+      if (failure instanceof MapRequestError && [401, 403].includes(failure.status)) {
+        loseAccess();
+      } else if (confirmed) {
+        setError(
+          'Ändringarna är sparade enligt kvittot, men kartan kunde inte hämtas. Hämta aktuellt underlag.',
+        );
+      } else if (failure instanceof MapRequestError && failure.status === 409) {
+        // An ID mismatch does not disprove an earlier successful save.
+        if (failure.code !== 'operation_conflict') saveAttempt.current = null;
+        setError(rejectionMessage(failure.code));
+        try {
+          setOperations(await readOperations(path, householdId, state));
+        } catch {
+          // Keep the received rejection visible when the follow-up read fails.
         }
+      } else {
+        setError(
+          'Sparandet kunde inte bekräftas. Utfallet är okänt. Försök hämta samma kvitto igen.',
+        );
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function action(kind: 'draft' | 'relationship' | 'discard' | 'resolve', body: unknown) {
+    if (!state || pending || blocked) return;
+    setPending(true);
+    setError('');
+    setStatus('');
+    try {
+      const draft = await request<MapDraft & { existingId?: string }>(`${path}/${kind}`, body);
+      if (draft.existingId) {
+        const latest = await request<MapState>(path);
+        setState(latest);
+        const edge = proposedRelationships(latest.relationships, latest.draft.relationships).get(
+          draft.existingId,
+        );
+        const objects = new Map(latest.objects.map((object) => [object.id, object]));
+        for (const change of latest.draft.changes) {
+          if (change.after)
+            objects.set(change.id, {
+              ...change.after,
+              id: change.id,
+              householdId,
+              revision: change.before?.revision ?? 0,
+            });
+        }
+        setStatus(
+          edge
+            ? `Sambandet finns redan: ${relationshipLabel(edge, latest, objects)}. Ingen dubblett skapades.`
+            : 'Det befintliga sambandet har ändrats. Granska aktuellt underlag.',
+        );
+      } else {
+        setState({ ...state, draft });
+        setStatus(
+          kind === 'resolve'
+            ? 'Konfliktvalet finns i ditt privata utkast. Granska hela utkastet och ge ett nytt sparbesked.'
+            : kind === 'discard'
+              ? 'Utkastet är kastat. Kartan är inte ändrad.'
+              : 'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.',
+        );
       }
       setEditor(null);
       setEdgeEditor(null);
@@ -153,28 +286,12 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         failure instanceof MapRequestError &&
         (failure.status === 401 || failure.status === 403)
       ) {
-        setState(null);
-        setEditor(null);
-        setEdgeEditor(null);
-        setStatus('');
-        setError(
-          'Du har inte längre tillgång. Logga in och kontrollera din tillgång till hushållet.',
-        );
-      } else if (confirmed) {
-        setError(
-          'Ändringarna är sparade enligt kvittot, men kartan kunde inte hämtas. Hämta aktuellt underlag.',
-        );
+        loseAccess();
       } else if (failure instanceof MapRequestError && failure.status === 409) {
         saveAttempt.current = null;
-        setError(
-          'Förslaget eller kartan har ändrats. Inget sparades av detta försök. Hämta aktuellt underlag och granska hela utkastet. Välj hur varje konflikt ska lösas.',
-        );
+        setError(rejectionMessage(failure.code));
       } else {
-        setError(
-          kind === 'save'
-            ? 'Sparandet kunde inte bekräftas. Utfallet är okänt. Försök hämta samma kvitto igen.'
-            : 'Ändringen kunde inte bekräftas. Hämta aktuellt underlag innan du fortsätter.',
-        );
+        setError('Ändringen kunde inte bekräftas. Hämta aktuellt underlag innan du fortsätter.');
       }
     } finally {
       setPending(false);
@@ -354,7 +471,13 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         Skriv inte fullständiga konto- eller kortnummer, lösenord, pinkoder, säkerhetskoder eller
         återställningskoder.
       </p>
-      <p role="status">{pending ? 'Arbetar…' : status}</p>
+      <p role="status">
+        {pending
+          ? saveAttempt.current
+            ? 'Väntande: kontrollerar sparandet…'
+            : 'Arbetar…'
+          : status}
+      </p>
       {error && (
         <p role="alert" className="error">
           {error}
@@ -365,7 +488,6 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
           type="button"
           disabled={pending}
           onClick={() => {
-            saveAttempt.current = null;
             setLoad((value) => value + 1);
           }}
         >
@@ -376,13 +498,31 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         <button
           type="button"
           disabled={pending}
-          onClick={() => void action('save', saveAttempt.current)}
+          onClick={() => {
+            if (saveAttempt.current) void save(saveAttempt.current, true);
+          }}
         >
           Hämta samma kvitto igen
         </button>
       )}
       {state && (
         <>
+          <SaveOperations
+            operations={operations}
+            disabled={pending}
+            onRetry={(operation) =>
+              void save(
+                {
+                  operationId: operation.operationId,
+                  version: operation.draftVersion,
+                  contentVersion: operation.contentVersion,
+                  householdId: operation.householdId,
+                  userId: operation.userId,
+                },
+                true,
+              )
+            }
+          />
           <label htmlFor="object-search">Sök objekt</label>
           <input
             id="object-search"
@@ -397,7 +537,11 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
               )
               .map((object) => (
                 <li key={object.id}>
-                  <button type="button" disabled={pending || dirty} onClick={() => edit(object)}>
+                  <button
+                    type="button"
+                    disabled={pending || dirty || blocked}
+                    onClick={() => edit(object)}
+                  >
                     {object.name}
                   </button>
                   <span>
@@ -521,9 +665,9 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
                 type="button"
                 disabled={pending}
                 onClick={() => {
+                  focusAfterClose.current = true;
                   setEditor(null);
                   setDirty(false);
-                  newButton.current?.focus();
                 }}
               >
                 Stäng utan att skicka texten
@@ -650,8 +794,11 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
                   saveAttempt.current = {
                     version: state.draft.version,
                     operationId: crypto.randomUUID(),
+                    contentVersion: state.contentVersion,
+                    userId: state.userId,
+                    householdId,
                   };
-                  void action('save', saveAttempt.current);
+                  void save(saveAttempt.current);
                 }}
               >
                 Spara hela utkastet

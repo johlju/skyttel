@@ -12,7 +12,7 @@ För det påhittade familjeabonnemanget Molnmusik kan du lägga till:
 - Tjänsten Molnmusik och företaget Molnmusik AB som erbjuder den.
 - Familjens tjänstekonto och abonnemanget Familjens Molnmusik.
 - Personerna Alex, Kim och Lo.
-- E-postadressen familjen@example.test.
+- E-postadressen `familjen@example.test`.
 - Familjens kort och bankkontot som betalar kortfakturan.
 
 Välj hushållets aktuella objekttyp, skriv ett begripligt namn och lägg
@@ -116,8 +116,31 @@ eller rätta ett sambands mål till ett annat befintligt objekt.
 Ett konfliktval ändrar bara utkastet. Granska **Hela mitt utkast** igen
 och välj därefter **Spara hela utkastet**. Tidigare sparbesked återanvänds
 inte. Om underlaget ändras medan du väljer avvisas även ett gammalt
-konfliktval; hämta aktuellt underlag och välj igen. Vid okänt sparutfall
-kan du hämta samma kvitto igen.
+konfliktval; hämta aktuellt underlag och välj igen.
+
+## Följ upp ett oklart sparande
+
+**Mina sparförsök** visar dina väntande och senaste sparförsök för
+hushållet. Logga in som samma Skyttel-användare på en annan enhet för
+att hitta dem, även efter omstart. Du behöver inte komma ihåg ett
+operations-ID eller ha kvar den ursprungliga fliken.
+
+- **Okänt utfall** betyder att klienten saknar ett säkert besked.
+  Ett avbrutet svar säger inte om ändringarna sparas. Fortsatt ändring
+  blockeras tills försöket kontrolleras. I den ursprungliga fliken kan
+  du välja **Hämta samma kvitto igen**.
+- **Väntande** betyder att försöket finns registrerat men saknar ett
+  slutligt resultat. Välj **Återförsök sparandet** för samma försök.
+- **Genomfört** visar det beständiga kvittot med de sparade ändringarna.
+  Ett återförsök av samma sparande ger samma kvitto utan dubbletter.
+- **Avvisat** betyder att inget sparas genom det försöket. Läs orsaken
+  och välj **Hämta aktuellt underlag**. Rätta eller lös konflikter och
+  granska hela utkastet innan du gör ett nytt sparförsök.
+
+Ett tidigare kvitto bekräftar bara sitt eget sparande. Nya förslag och
+text som ännu bara finns i ett öppet formulär omfattas inte av kvittot.
+Andra hushållsmedlemmar ser de gemensamma ändringarna efter sparandet,
+men kan inte läsa dina privata sparförsök.
 
 Privata utkast ingår enligt hushållets informationsregler i fullständig
 administrativ export. Administrativa flöden för export, återimport och

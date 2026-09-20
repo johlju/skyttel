@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
-test('family objects and directed relationships save together and keep their identities', async ({
+test('KARTA-07: family objects and directed relationships save together and keep their identities', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -77,7 +77,7 @@ test('family objects and directed relationships save together and keep their ide
   }
 });
 
-test('manual forms preserve incomplete meanings and block an unanswered identity question', async ({
+test('KARTA-05: manual forms preserve incomplete meanings and block an unanswered identity question', async ({
   page,
 }) => {
   const installation = await createInstallation();

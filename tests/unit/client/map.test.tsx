@@ -12,6 +12,9 @@ let path: string;
 let failRead = false;
 let loseResponse = '';
 let deny = false;
+let preventSave = false;
+let wrongReceipt: Record<string, unknown> | null = null;
+let beforeOperationsRead: (() => Promise<void>) | null = null;
 beforeEach(async () => {
   fixture = await applicationFixture();
   client = fixture.client();
@@ -22,16 +25,29 @@ beforeEach(async () => {
   failRead = false;
   loseResponse = '';
   deny = false;
+  preventSave = false;
+  wrongReceipt = null;
+  beforeOperationsRead = null;
   // Connect the rendered browser UI to the real HTTP app and SQLite. Only
   // the external identity provider is substituted by applicationFixture.
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     if (deny) return Response.json({ error: 'forbidden' }, { status: 403 });
     if (failRead && init?.method === 'GET') throw new Error('Synthetic disconnection');
+    if (preventSave && url.endsWith('/save')) throw new Error('Synthetic unsent save');
+    if (beforeOperationsRead && init?.method === 'GET' && url.endsWith('/operations')) {
+      const callback = beforeOperationsRead;
+      beforeOperationsRead = null;
+      await callback();
+    }
     const response = await client.request(url, {
       ...init,
       headers: { ...init?.headers, origin: fixture.config.origin },
     });
     if (loseResponse && url.endsWith(loseResponse)) throw new Error('Synthetic lost response');
+    if (wrongReceipt && url.endsWith('/save') && response.ok) {
+      const result = await response.json();
+      return Response.json({ receipt: { ...result.receipt, ...wrongReceipt } });
+    }
     return response;
   });
 });
@@ -110,6 +126,92 @@ test('lost responses remain uncertain and the same receipt can be recovered', as
   );
   const history = await (await client.request(`${path}/history`)).json();
   expect(history.history).toHaveLength(1);
+});
+
+test('a reopened client finds a completed save without retaining the original attempt', async () => {
+  await open();
+  await add();
+  loseResponse = '/save';
+  await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('Utfallet är okänt');
+  cleanup();
+  loseResponse = '';
+  await open();
+  const operations = await screen.findByRole('region', { name: 'Mina sparförsök' });
+  await waitFor(() => expect(operations.textContent).toContain('Genomfört'));
+  expect(operations.textContent).toContain('Lo Exempel');
+  expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
+    'Inga förslag',
+  );
+  const history = await (await client.request(`${path}/history`)).json();
+  expect(history.history).toHaveLength(1);
+});
+
+test('recovery reads the consumed draft after another client completes the discovered operation', async () => {
+  await open();
+  await add();
+  cleanup();
+  const attempt = { operationId: 'concurrent-recovery', version: 1, contentVersion: 1 };
+  await client.json(`${path}/operations`, attempt);
+  beforeOperationsRead = async () => {
+    expect((await client.json(`${path}/save`, attempt)).status).toBe(200);
+  };
+  await open();
+  expect(screen.getByRole('region', { name: 'Mina sparförsök' }).textContent).toContain(
+    'Genomfört',
+  );
+  expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
+    'Inga förslag',
+  );
+  expect(
+    (screen.getByRole('button', { name: 'Spara hela utkastet' }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+});
+
+test('refreshing an unknown save keeps the draft locked until the registered attempt is retried', async () => {
+  await open();
+  await add();
+  preventSave = true;
+  await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('Utfallet är okänt');
+  await userEvent.click(screen.getByRole('button', { name: 'Hämta aktuellt underlag' }));
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('väntande'));
+  for (const name of ['Nytt objekt', 'Kasta hela utkastet', 'Spara hela utkastet'])
+    expect((screen.getByRole('button', { name }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
+    'Lo Exempel',
+  );
+  preventSave = false;
+  await userEvent.click(screen.getByRole('button', { name: 'Återförsök sparandet' }));
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Sparat: Lo Exempel'),
+  );
+  const history = await (await client.request(`${path}/history`)).json();
+  expect(history.history).toHaveLength(1);
+});
+
+test.each([
+  { operationId: 'another-operation' },
+  { draftVersion: 99 },
+  { householdId: 'another-household' },
+  { userId: 'another-user' },
+  { contentVersion: 99 },
+])('a receipt with mismatched identity %j cannot confirm the current save', async (identity) => {
+  await open();
+  await add();
+  wrongReceipt = identity;
+  await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('Utfallet är okänt');
+  expect(screen.getByRole('status').textContent).not.toContain('Sparat:');
+  expect((screen.getByRole('button', { name: 'Nytt objekt' }) as HTMLButtonElement).disabled).toBe(
+    true,
+  );
+  wrongReceipt = null;
+  await userEvent.click(screen.getByRole('button', { name: 'Hämta aktuellt underlag' }));
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Sparat: Lo Exempel'),
+  );
+  expect((await (await client.request(`${path}/history`)).json()).history).toHaveLength(1);
 });
 
 test('a stale draft is blocked until refreshed, and a lost proposal is recovered without replacing form text', async () => {
