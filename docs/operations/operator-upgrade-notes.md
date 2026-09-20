@@ -5,6 +5,17 @@ before upgrading Skyttel.
 
 ## Unreleased
 
+### Verified container releases
+
+Before using a published image, verify its source and signed evidence. Read
+the upgrade guidance attached to that release and select the image by its
+digest. Publication does not change the running installation.
+
+Retain the current image and each planned recovery image with their matching
+release evidence and database backup. Keep this material after temporary
+build artifacts expire. Do not replace the content of an existing release
+version or remove evidence needed for recovery.
+
 ### Recovery of interrupted saves
 
 Back up the persistent database and retain its matching image before upgrade.

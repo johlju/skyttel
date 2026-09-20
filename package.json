@@ -26,7 +26,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "lint:docs": "node scripts/check-docs.mjs && cspell --no-progress docs/users/access.md docs/operations/first-time-use.md docs/operations/installation.md docs/operations/operator-upgrade-notes.md docs/development/testing.md docs/development/devcontainer.md docs/development/security-checks.md SECURITY.md",
+    "lint:docs": "node scripts/check-docs.mjs && cspell --no-progress --dot '**/*.md'",
     "test": "npm run build && npm run test:unit && playwright test",
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",

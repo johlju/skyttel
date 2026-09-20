@@ -17,4 +17,4 @@ description = "Known synthetic authentication secret for the disposable ZAP inst
 condition = "AND"
 regexTarget = "secret"
 regexes = ['''^synthetic-ci-secret-at-least-32-characters$''']
-paths = ['''^\.github/workflows/security\.yml$''']
+paths = ['''^(\.github/workflows/security\.yml|scripts/security/scan-running-image\.sh)$''']

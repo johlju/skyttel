@@ -1,0 +1,45 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: Security
+      labels:
+        - security
+    - title: Features
+      labels:
+        - enhancement
+        - feature
+        - features
+    - title: Fixes
+      labels:
+        - bug
+        - fix
+    - title: Data
+      labels:
+        - data
+        - database
+        - migration
+    - title: MCP and AI
+      labels:
+        - mcp
+        - ai
+    - title: Container operations
+      labels:
+        - container
+        - docker
+        - deployment
+    - title: Continuous integration
+      labels:
+        - ci
+        - github_actions
+    - title: Dependencies
+      labels:
+        - dependencies
+    - title: Documentation
+      labels:
+        - documentation
+        - docs
+    - title: Other changes
+      labels:
+        - '*'

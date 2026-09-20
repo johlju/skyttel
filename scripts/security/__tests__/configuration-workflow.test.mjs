@@ -8,10 +8,10 @@ import { it } from 'node:test';
 it('rejects Trivy execution and parser errors before accepting its report', () => {
   const workflow = readFileSync('.github/workflows/security.yml', 'utf8');
   const step = workflow.match(
-    /- name: Scan configuration and reject parser errors\n        run: \|\n((?:          .*\n)+)/u,
+    /- name: Scan configuration and reject parser errors\n {8}run: \|\n((?: {10}.*\n)+)/u,
   );
   assert.ok(step, 'The configuration scan step must exist');
-  const script = step[1].replace(/^          /gmu, '');
+  const script = step[1].replace(/^ {10}/gmu, '');
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-trivy-workflow-'));
   try {
     for (const [log, scannerStatus, expectedStatus] of [

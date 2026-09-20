@@ -129,13 +129,14 @@ public behavior. Add every new scanner job to the scanner gate's explicit
 required list and `needs` list. Run `npm run test:gates` for deliberate failure,
 skipped-result, absent-report, and exception-expiry cases.
 
-Release automation must call `.github/workflows/ci.yml` as a prerequisite and
-require successful completion before publishing or deploying. Publishing jobs
-must run only on trusted main/release events, hold their own credentials, and
-scan the exact candidate image before promotion. Never rebuild after scanning
-and assume the second image is identical. This issue does not implement GHCR,
-Render deployment, or daily scanning of the deployed digest; those release
-jobs must enforce these contracts when introduced.
+The [container release chain](container-releases.md) calls
+`.github/workflows/ci.yml` and requires its successful completion before
+publication. Main pushes and stable tags start trusted release runs. The
+publication job holds its own credentials and publishes the exact candidate
+archive after container tests, scanning, and signature verification. It does
+not rebuild that image after scanning. Release evidence has separate
+retention from ordinary check reports. Render deployment and daily scanning
+of running and recovery images remain separate work.
 
 ## Upstream references
 

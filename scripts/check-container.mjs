@@ -10,7 +10,8 @@ import { promisify } from 'node:util';
 const exec = promisify(execFile);
 const docker = process.env.DOCKER_BIN ?? 'docker';
 const suffix = randomUUID();
-const image = `skyttel-container-check:${suffix}`;
+const suppliedImage = process.env.SKYTTEL_CHECK_IMAGE;
+const image = suppliedImage ?? `skyttel-container-check:${suffix}`;
 const volume = `skyttel-container-check-${suffix}`;
 const persistedVolume = `skyttel-container-persisted-${suffix}`;
 const containers = new Set();
@@ -68,13 +69,22 @@ async function request(name, path, options = {}) {
     'exec',
     name,
     'node',
-    '--input-type=module',
+    '--input-type=commonjs',
     '-e',
-    `const { path, options } = JSON.parse(process.argv[1]);
-     const response = await fetch(new URL(path, 'http://127.0.0.1:3000'), {
-       ...options, signal: AbortSignal.timeout(1000),
+    `const http = require('node:http');
+     const { path, options } = JSON.parse(process.argv[1]);
+     const request = http.request({
+       hostname: '127.0.0.1', port: 3000, path,
+       method: options.method, headers: options.headers, timeout: 1000,
+     }, (response) => {
+       let body = '';
+       response.setEncoding('utf8');
+       response.on('data', (chunk) => { body += chunk; });
+       response.on('end', () => console.log(JSON.stringify({ status: response.statusCode, body })));
      });
-     console.log(JSON.stringify({ status: response.status, body: await response.text() }));`,
+     request.on('timeout', () => request.destroy(new Error('Container request timed out')));
+     request.on('error', (error) => { console.error(error.message); process.exitCode = 1; });
+     request.end(options.body);`,
     JSON.stringify({ path, options }),
   ]);
   return JSON.parse(output);
@@ -109,7 +119,7 @@ async function household(name, fixture) {
 
 try {
   await command(['info', '--format', '{{.ServerVersion}}']);
-  await build();
+  if (!suppliedImage) await build();
   await command(['volume', 'create', volume]);
 
   const fresh = `skyttel-fresh-${suffix}`;
@@ -248,6 +258,6 @@ try {
   }
   await command(['volume', 'rm', volume]).catch(() => {});
   await command(['volume', 'rm', persistedVolume]).catch(() => {});
-  await command(['image', 'rm', image]).catch(() => {});
+  if (!suppliedImage) await command(['image', 'rm', image]).catch(() => {});
   await rm(directory, { recursive: true, force: true });
 }

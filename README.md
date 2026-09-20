@@ -22,3 +22,5 @@ inbjudningar och hur en administratör återkallar tillgång.
 Utveckla i projektets [devcontainer](docs/development/devcontainer.md).
 [Utvecklings- och testinstruktionerna](docs/development/testing.md) beskriver
 projektets kontroller och hur de körs.
+[Releaseguiden](docs/development/container-releases.md) beskriver publicering,
+verifiering och bevarande av containerbilder.
