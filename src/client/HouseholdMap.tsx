@@ -11,6 +11,7 @@ import type {
   SaveReceipt,
 } from '../shared/map.js';
 import { proposedRelationships } from '../shared/map.js';
+import { FinancialFactsDetails, FinancialFactsEditor } from './FinancialFacts.js';
 import { MapRequestError, request } from './map-request.js';
 import { RelationshipEditor, relationshipLabel } from './RelationshipEditor.js';
 import {
@@ -450,6 +451,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         <p>Namn: {value.name}</p>
         <p>Objekttyp: {typeName(value.typeId)}</p>
         <p>Beskrivning: {value.description || 'Ingen beskrivning'}</p>
+        <FinancialFactsDetails facts={value.financialFacts} />
         {value.identity && (
           <p>
             {value.identity === 'unspecified'
@@ -632,6 +634,17 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
                   }}
                 />
                 <p>Texten i formuläret skickas först när du lägger den i utkastet.</p>
+                <FinancialFactsEditor
+                  key={editor.id}
+                  facts={editor.value.financialFacts}
+                  onChange={(financialFacts) => {
+                    setDirty(true);
+                    const value = { ...editor.value };
+                    if (Object.keys(financialFacts).length) value.financialFacts = financialFacts;
+                    else delete value.financialFacts;
+                    setEditor({ ...editor, value });
+                  }}
+                />
                 {editor.version !== state.draft.version && (
                   <p role="alert">
                     Formuläret bygger på ett äldre utkast. Kopiera eventuell text du vill behålla,

@@ -9,6 +9,7 @@ import type {
   ObjectValue,
   SaveReceipt,
 } from '../shared/map.js';
+import { readFinancialFacts } from './financial-facts.js';
 import { householdAccess } from './households.js';
 
 import { MapError } from './map-error.js';
@@ -55,11 +56,24 @@ export function householdMap(database: Database.Database, userId: string, househ
   function object(id: string) {
     const row = database
       .prepare(
-        'SELECT id, householdId, typeId, revision, name, description, identity FROM map_object WHERE householdId = ? AND id = ? AND deleted = 0',
+        'SELECT id, householdId, typeId, revision, name, description, identity, financialFacts FROM map_object WHERE householdId = ? AND id = ? AND deleted = 0',
       )
-      .get(householdId, id) as (MapObject & { identity: string | null }) | undefined;
-    if (row && row.identity === null) delete (row as Partial<MapObject>).identity;
-    return row;
+      .get(householdId, id);
+    return row ? readObject(row) : undefined;
+  }
+  function readObject(row: unknown): MapObject {
+    const { identity, financialFacts, ...value } = row as Omit<
+      MapObject,
+      'identity' | 'financialFacts'
+    > & {
+      identity: MapObject['identity'] | null;
+      financialFacts: string | null;
+    };
+    return {
+      ...value,
+      ...(identity ? { identity } : {}),
+      ...(financialFacts ? { financialFacts: JSON.parse(financialFacts) } : {}),
+    };
   }
   function checkedDraft(version: unknown) {
     if (!Number.isSafeInteger(version) || (version as number) < 0)
@@ -89,14 +103,10 @@ export function householdMap(database: Database.Database, userId: string, househ
         .all(householdId) as ObjectType[],
       objects: database
         .prepare(
-          'SELECT id, householdId, typeId, revision, name, description, identity FROM map_object WHERE householdId = ? AND deleted = 0 ORDER BY name, id',
+          'SELECT id, householdId, typeId, revision, name, description, identity, financialFacts FROM map_object WHERE householdId = ? AND deleted = 0 ORDER BY name, id',
         )
         .all(householdId)
-        .map((row) => {
-          const value = row as MapObject;
-          if (value.identity === null) delete value.identity;
-          return value;
-        }),
+        .map(readObject),
       draft: draft(),
     };
   }
@@ -214,11 +224,13 @@ export function householdMap(database: Database.Database, userId: string, househ
               !['unspecified', 'unresolved'].includes(value.identity))
           )
             throw new MapError('invalid_request', 400);
+          const financialFacts = readFinancialFacts(value.financialFacts);
           after = {
             typeId: value.typeId,
             name: value.name.trim(),
             description: value.description,
             ...(value.identity ? { identity: value.identity } : {}),
+            ...(financialFacts ? { financialFacts } : {}),
           };
         }
         const typeId = after?.typeId ?? before?.typeId ?? existing?.type.id;
@@ -272,7 +284,7 @@ export function householdMap(database: Database.Database, userId: string, househ
               if (change.after?.identity === 'unresolved')
                 throw new MapError('unresolved_identity');
               const saved = object(change.id);
-              if (JSON.stringify(saved ?? null) !== JSON.stringify(change.before))
+              if (!isDeepStrictEqual(saved ?? null, change.before))
                 throw new MapError('object_conflict');
               const type = database
                 .prepare('SELECT * FROM object_type WHERE householdId = ? AND id = ?')
@@ -288,6 +300,9 @@ export function householdMap(database: Database.Database, userId: string, househ
                     name: change.after.name,
                     description: change.after.description,
                     ...(change.after.identity ? { identity: change.after.identity } : {}),
+                    ...(change.after.financialFacts
+                      ? { financialFacts: change.after.financialFacts }
+                      : {}),
                   }
                 : null;
               if (after) {
@@ -297,8 +312,8 @@ export function householdMap(database: Database.Database, userId: string, househ
                 )
                   throw new MapError('object_conflict');
                 database
-                  .prepare(`INSERT INTO map_object (id, householdId, typeId, revision, name, description, identity) VALUES (?, ?, ?, ?, ?, ?, ?)
-              ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, name = excluded.name, description = excluded.description, identity = excluded.identity`)
+                  .prepare(`INSERT INTO map_object (id, householdId, typeId, revision, name, description, identity, financialFacts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, name = excluded.name, description = excluded.description, identity = excluded.identity, financialFacts = excluded.financialFacts`)
                   .run(
                     after.id,
                     householdId,
@@ -307,6 +322,7 @@ export function householdMap(database: Database.Database, userId: string, househ
                     after.name,
                     after.description,
                     after.identity ?? null,
+                    after.financialFacts ? JSON.stringify(after.financialFacts) : null,
                   );
               } else
                 database

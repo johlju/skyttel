@@ -5,6 +5,9 @@ De ligger i ditt privata utkast tills du väljer **Spara hela utkastet**.
 Du kan börja med det du vet och fortsätta efter omladdning. Personer som
 läggs till i kartan får ingen inloggning eller tillgång till hushållet.
 
+För bostad, garage och finansiering, följ
+[guiden för hyra, lån, kredit och avbetalning](contracts.md).
+
 ## Skapa separata objekt
 
 För det påhittade familjeabonnemanget Molnmusik kan du lägga till:

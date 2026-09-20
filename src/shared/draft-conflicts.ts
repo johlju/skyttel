@@ -1,3 +1,4 @@
+import { type FinancialFact, type FinancialFacts, financialFields } from './financial-facts.js';
 import type {
   DraftChange,
   MapObject,
@@ -28,11 +29,24 @@ export function resolvedObjectValue(
   const field = <K extends keyof ObjectValue>(key: K): ObjectValue[K] =>
     after[key] === before[key] ? current[key] : after[key];
   const identity = field('identity');
+  const financialFacts: FinancialFacts = {};
+  const sameFact = (left?: FinancialFact, right?: FinancialFact) =>
+    left?.knowledge === right?.knowledge &&
+    left?.value === right?.value &&
+    left?.reportedOn === right?.reportedOn;
+  for (const { key } of financialFields) {
+    // The value, certainty and date describe one fact and must stay together.
+    const fact = sameFact(after.financialFacts?.[key], before.financialFacts?.[key])
+      ? current.financialFacts?.[key]
+      : after.financialFacts?.[key];
+    if (fact) financialFacts[key] = fact;
+  }
   return {
     typeId: field('typeId'),
     name: field('name'),
     description: field('description'),
     ...(identity ? { identity } : {}),
+    ...(Object.keys(financialFacts).length ? { financialFacts } : {}),
   };
 }
 

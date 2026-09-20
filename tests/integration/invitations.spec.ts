@@ -54,6 +54,7 @@ test('upgrading an existing household preserves its membership and enables invit
       'migrations/006_save_operations.sql',
       join(migrationsDirectory, '006_save_operations.sql'),
     );
+    await copyFile('migrations/007_contracts.sql', join(migrationsDirectory, '007_contracts.sql'));
     options.legacyAuthCallbacks = false;
     await installation.restart();
     expect(
@@ -75,6 +76,15 @@ test('upgrading an existing household preserves its membership and enables invit
         'Kort',
         'Företag',
         'Förening',
+        'Bostad',
+        'Garage',
+        'Fordon',
+        'Avtal',
+        'Hyresavtal',
+        'Låneavtal',
+        'Kreditavtal',
+        'Avbetalningsavtal',
+        'Försäkringsavtal',
       ].sort(),
     );
     expect(map.relationshipTypes.map((type: { name: string }) => type.name).sort()).toEqual(
@@ -92,6 +102,11 @@ test('upgrading an existing household preserves its membership and enables invit
         'Kontokoppling',
         'Kortfakturan betalas från',
         'Används av',
+        'Gäller',
+        'Finansierar',
+        'Försäkrar',
+        'Hyresvärd',
+        'Långivare',
       ].sort(),
     );
     expect(map.relationships).toEqual([]);

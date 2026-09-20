@@ -21,17 +21,19 @@ A missing response does not establish that the save failed. Apply existing backu
 access restrictions and retention rules to private save attempts as well as
 drafts and household content.
 
-### Family subscriptions and relationships
+### Contracts and household relationships
 
 Back up the persistent database and retain its matching image before upgrade.
-Startup adds household type definitions and storage for directed relationships
-and incomplete information. Existing objects and private drafts remain.
+Startup adds contract type definitions and storage for optional financial
+facts, directed relationships, and incomplete information. Existing type
+definitions, objects, and private drafts remain.
 Use the upgraded image with this database; an older image requires its
 matching backup. Stop the application before restoring that backup.
 
-Backups contain relationship proposals and identity questions as well as
-saved household content. Apply the same access restrictions and retention
-rules to this information as to existing private drafts.
+Backups contain financial facts and contract terms in private drafts, saved
+objects, save receipts, and history. They also contain relationship proposals
+and identity questions. Apply the same access restrictions and retention
+rules to this information as to existing household content and private drafts.
 
 ### Production runtime base
 

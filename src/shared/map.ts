@@ -1,3 +1,5 @@
+import type { FinancialFacts } from './financial-facts.js';
+
 export interface TypeDefinition {
   id: string;
   householdId: string;
@@ -13,6 +15,7 @@ export interface ObjectValue {
   name: string;
   description: string;
   identity?: 'unspecified' | 'unresolved';
+  financialFacts?: FinancialFacts;
 }
 export interface MapObject extends ObjectValue {
   id: string;
