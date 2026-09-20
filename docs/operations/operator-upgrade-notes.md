@@ -5,6 +5,18 @@ before upgrading Skyttel.
 
 ## Unreleased
 
+### Family subscriptions and relationships
+
+Back up the persistent database and retain its matching image before upgrade.
+Startup adds household type definitions and storage for directed relationships
+and incomplete information. Existing objects and private drafts remain.
+Use the upgraded image with this database; an older image requires its
+matching backup. Stop the application before restoring that backup.
+
+Backups contain relationship proposals and identity questions as well as
+saved household content. Apply the same access restrictions and retention
+rules to this information as to existing private drafts.
+
 ### Production runtime base
 
 The production container uses Alpine Linux 3.24. Rebuild the complete image

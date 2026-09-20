@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import type { MapDraft, MapObject, MapState, ObjectValue, SaveReceipt } from '../shared/map.js';
+import type {
+  MapDraft,
+  MapObject,
+  MapRelationship,
+  MapState,
+  ObjectValue,
+  RelationshipValue,
+  SaveReceipt,
+} from '../shared/map.js';
+import { proposedRelationships } from '../shared/map.js';
+
+import { RelationshipEditor, relationshipLabel } from './RelationshipEditor.js';
 
 class MapRequestError extends Error {
   constructor(
@@ -29,6 +40,12 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
   const path = `/api/households/${encodeURIComponent(householdId)}/map`;
   const [state, setState] = useState<MapState | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [edgeEditor, setEdgeEditor] = useState<{
+    id: string;
+    version: number;
+    baseRevision: number | null;
+    value: RelationshipValue;
+  } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [query, setQuery] = useState('');
   const [pending, setPending] = useState(false);
@@ -65,7 +82,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
     if (editor?.id) nameInput.current?.focus();
   }, [editor?.id]);
 
-  async function action(kind: 'draft' | 'discard' | 'save', body: unknown) {
+  async function action(kind: 'draft' | 'relationship' | 'discard' | 'save', body: unknown) {
     if (!state || pending) return;
     setPending(true);
     setError('');
@@ -80,7 +97,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         )
           throw new Error('invalid_receipt');
         setStatus(
-          `Sparat: ${receipt.changes.map((change) => change.after?.name ?? change.before?.name).join(', ')}. Kvitto: ${receipt.operationId}.`,
+          `Sparat: ${[...receipt.changes.map((change) => change.after?.name ?? change.before?.name), ...(receipt.relationships ?? []).map((change) => `${change.type.name} (${change.after ? 'samband' : 'borttaget samband'})`)].join(', ')}. Kvitto: ${receipt.operationId}.`,
         );
         saveAttempt.current = null;
         confirmed = true;
@@ -88,15 +105,39 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         setDirty(false);
         setState(await request<MapState>(path));
       } else {
-        const draft = await request<MapDraft>(`${path}/${kind}`, body);
-        setState({ ...state, draft });
-        setStatus(
-          kind === 'draft'
-            ? 'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.'
-            : 'Utkastet är kastat. Kartan är inte ändrad.',
-        );
+        const draft = await request<MapDraft & { existingId?: string }>(`${path}/${kind}`, body);
+        if (draft.existingId) {
+          const latest = await request<MapState>(path);
+          setState(latest);
+          const edge = proposedRelationships(latest.relationships, latest.draft.relationships).get(
+            draft.existingId,
+          );
+          const objects = new Map(latest.objects.map((object) => [object.id, object]));
+          for (const change of latest.draft.changes) {
+            if (change.after)
+              objects.set(change.id, {
+                ...change.after,
+                id: change.id,
+                householdId,
+                revision: change.before?.revision ?? 0,
+              });
+          }
+          setStatus(
+            edge
+              ? `Sambandet finns redan: ${relationshipLabel(edge, latest, objects)}. Ingen dubblett skapades.`
+              : 'Det befintliga sambandet har ändrats. Granska aktuellt underlag.',
+          );
+        } else {
+          setState({ ...state, draft });
+          setStatus(
+            kind === 'discard'
+              ? 'Utkastet är kastat. Kartan är inte ändrad.'
+              : 'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.',
+          );
+        }
       }
       setEditor(null);
+      setEdgeEditor(null);
       setDirty(false);
       setBlocked(false);
       newButton.current?.focus();
@@ -108,6 +149,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
       ) {
         setState(null);
         setEditor(null);
+        setEdgeEditor(null);
         setStatus('');
         setError(
           'Du har inte längre tillgång. Logga in och kontrollera din tillgång till hushållet.',
@@ -157,6 +199,30 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         revision: change.before?.revision ?? 0,
       });
   }
+  const displayedEdges = proposedRelationships(
+    state?.relationships ?? [],
+    state?.draft.relationships,
+  );
+  const savedObjects = new Map((state?.objects ?? []).map((object) => [object.id, object]));
+  const hasChanges = Boolean(
+    state && (state.draft.changes.length || state.draft.relationships?.length),
+  );
+  const unresolved =
+    state?.draft.changes.some((change) => change.after?.identity === 'unresolved') ||
+    state?.draft.relationships?.some((change) => change.after?.knowledge === 'unresolved');
+  function editRelationship(edge?: MapRelationship) {
+    if (!state) return;
+    const proposal = state.draft.relationships?.find((change) => change.id === edge?.id);
+    setEditor(null);
+    setEdgeEditor({
+      id: edge?.id ?? crypto.randomUUID(),
+      version: state.draft.version,
+      baseRevision: proposal ? (proposal.before?.revision ?? null) : (edge?.revision ?? null),
+      value: proposal?.after ??
+        edge ?? { typeId: '', sourceId: '', targetId: '', knowledge: 'known' },
+    });
+    setDirty(true);
+  }
   function typeName(id: string) {
     return state?.types.find((type) => type.id === id)?.name ?? id;
   }
@@ -166,6 +232,13 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         <p>Namn: {value.name}</p>
         <p>Objekttyp: {typeName(value.typeId)}</p>
         <p>Beskrivning: {value.description || 'Ingen beskrivning'}</p>
+        {value.identity && (
+          <p>
+            {value.identity === 'unspecified'
+              ? 'Ospecificerat objekt'
+              : 'Obesvarad identitetsfråga'}
+          </p>
+        )}
       </>
     ) : (
       <p>Finns inte i kartan</p>
@@ -284,6 +357,22 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
                     </option>
                   ))}
                 </select>
+                <label htmlFor="object-identity">Objektets identitet</label>
+                <select
+                  id="object-identity"
+                  value={editor.value.identity ?? 'identified'}
+                  onChange={(event) => {
+                    setDirty(true);
+                    const value = { ...editor.value };
+                    if (event.target.value === 'identified') delete value.identity;
+                    else value.identity = event.target.value as 'unspecified' | 'unresolved';
+                    setEditor({ ...editor, value });
+                  }}
+                >
+                  <option value="identified">Identifierat objekt</option>
+                  <option value="unspecified">Ospecificerat objekt</option>
+                  <option value="unresolved">Obesvarad identitetsfråga</option>
+                </select>
                 <label htmlFor="object-description">Beskrivning</label>
                 <textarea
                   id="object-description"
@@ -340,9 +429,44 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
               </button>
             </form>
           )}
+          <h2>Samband</h2>
+          <ul aria-label="Samband">
+            {[...displayedEdges.values()].map((edge) => (
+              <li key={edge.id}>
+                <button
+                  type="button"
+                  disabled={pending || dirty || blocked}
+                  onClick={() => editRelationship(edge)}
+                >
+                  {relationshipLabel(edge, state, displayed)}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            disabled={pending || dirty || blocked}
+            onClick={() => editRelationship()}
+          >
+            Nytt samband
+          </button>
+          {edgeEditor && (
+            <RelationshipEditor
+              key={edgeEditor.id}
+              state={state}
+              objects={displayed}
+              initial={edgeEditor}
+              disabled={pending || blocked}
+              onSubmit={(body) => void action('relationship', body)}
+              onClose={() => {
+                setEdgeEditor(null);
+                setDirty(false);
+              }}
+            />
+          )}
           <section aria-labelledby="draft-title" className="draft-review">
             <h2 id="draft-title">Hela mitt utkast</h2>
-            {!state.draft.changes.length && <p>Inga förslag i utkastet.</p>}
+            {!hasChanges && <p>Inga förslag i utkastet.</p>}
             {state.draft.changes.map((change) => (
               <article key={change.id}>
                 <h3>
@@ -355,6 +479,27 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
                 {details(change.after)}
               </article>
             ))}
+            {(state.draft.relationships ?? []).map((change) => (
+              <article key={change.id}>
+                <h3>{change.after ? 'Samband' : 'Borttagning av samband'}</h3>
+                <h4>Sparat underlag</h4>
+                <p>
+                  {change.before
+                    ? relationshipLabel(change.before, state, savedObjects)
+                    : 'Finns inte i kartan'}
+                </p>
+                <h4>Förslag</h4>
+                <p>
+                  {change.after ? relationshipLabel(change.after, state, displayed) : 'Borttaget'}
+                </p>
+              </article>
+            ))}
+            {unresolved && (
+              <p role="alert">
+                Obesvarad identitetsfråga: välj rätt objekt eller uttryckligen ett ospecificerat
+                objekt före sparande.
+              </p>
+            )}
             {dirty && (
               <p>
                 Lägg formulärets text i utkastet eller stäng formuläret innan du sparar eller kastar
@@ -365,7 +510,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
               <button
                 type="button"
                 className="primary"
-                disabled={pending || blocked || dirty || !state.draft.changes.length}
+                disabled={pending || blocked || dirty || !hasChanges || unresolved}
                 onClick={() => {
                   saveAttempt.current = {
                     version: state.draft.version,
@@ -378,7 +523,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
               </button>
               <button
                 type="button"
-                disabled={pending || blocked || dirty || !state.draft.changes.length}
+                disabled={pending || blocked || dirty || !hasChanges}
                 onClick={() => void action('discard', { version: state.draft.version })}
               >
                 Kasta hela utkastet

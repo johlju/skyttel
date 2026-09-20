@@ -46,6 +46,10 @@ test('upgrading an existing household preserves its membership and enables invit
       join(migrationsDirectory, '003_login_link.sql'),
     );
     await copyFile('migrations/004_map.sql', join(migrationsDirectory, '004_map.sql'));
+    await copyFile(
+      'migrations/005_relationships.sql',
+      join(migrationsDirectory, '005_relationships.sql'),
+    );
     options.legacyAuthCallbacks = false;
     await installation.restart();
     expect(
@@ -56,9 +60,37 @@ test('upgrading an existing household preserves its membership and enables invit
     const map = await (
       await administrator.get(`${origin}/api/households/${household.id}/map`)
     ).json();
-    expect(map.types).toEqual([
-      expect.objectContaining({ householdId: household.id, name: 'Person', revision: 1 }),
-    ]);
+    expect(map.types.map((type: { name: string }) => type.name).sort()).toEqual(
+      [
+        'Person',
+        'Tjänst',
+        'Tjänstekonto',
+        'Abonnemang',
+        'E-postadress',
+        'Bankkonto',
+        'Kort',
+        'Företag',
+        'Förening',
+      ].sort(),
+    );
+    expect(map.relationshipTypes.map((type: { name: string }) => type.name).sort()).toEqual(
+      [
+        'Tillhör tjänsten',
+        'Gäller tjänstekontot',
+        'Erbjuder',
+        'Inloggningsadress',
+        'Kontaktadress',
+        'Använder',
+        'Står på avtalet',
+        'Äger',
+        'Betalar',
+        'Betalas med',
+        'Kontokoppling',
+        'Kortfakturan betalas från',
+        'Används av',
+      ].sort(),
+    );
+    expect(map.relationships).toEqual([]);
     expect(map.objects).toEqual([]);
     expect(map.draft).toEqual({ version: 0, changes: [] });
     installation.setIdentity(robin);

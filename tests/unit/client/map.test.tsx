@@ -164,3 +164,120 @@ test('a confirmed receipt remains successful when refreshing the map fails', asy
     'Inga förslag',
   );
 });
+
+test('relationship forms distinguish equal names, preserve meanings, correct and remove links', async () => {
+  await open();
+  await add('Lo');
+  await add('Lo');
+  await userEvent.click(screen.getByRole('button', { name: 'Nytt samband' }));
+  const source = screen.getByLabelText('Från objekt') as HTMLSelectElement;
+  const choices = [...source.options].filter((option) => option.value);
+  expect(choices).toHaveLength(2);
+  expect(choices[0].text).not.toBe(choices[1].text);
+  expect(choices[0].text).toContain('En påhittad person');
+  await userEvent.selectOptions(source, choices[0].value);
+  const type = screen.getByLabelText('Sambandstyp') as HTMLSelectElement;
+  await userEvent.selectOptions(type, type.options[1].value);
+  await userEvent.selectOptions(screen.getByLabelText('Uppgiftens säkerhet'), 'unresolved');
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+  await screen.findByRole('button', { name: /Lo → .* → Obesvarad identitetsfråga/ });
+  expect(
+    (screen.getByRole('button', { name: 'Spara hela utkastet' }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  await userEvent.click(
+    screen.getByRole('button', { name: /Lo → .* → Obesvarad identitetsfråga/ }),
+  );
+  await userEvent.selectOptions(screen.getByLabelText('Uppgiftens säkerhet'), 'uncertain');
+  await userEvent.selectOptions(screen.getByLabelText('Till objekt'), choices[1].value);
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+  await screen.findByRole('button', { name: /Lo → .* → Lo \(Osäkert uppgivet\)/ });
+  await save();
+  for (const [knowledge, label] of [
+    ['unknown', 'Okänt'],
+    ['none', 'Uttryckligen inget'],
+  ]) {
+    await userEvent.click(
+      within(screen.getByRole('list', { name: 'Samband' })).getByRole('button'),
+    );
+    await userEvent.selectOptions(screen.getByLabelText('Uppgiftens säkerhet'), knowledge);
+    await userEvent.click(screen.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+    await screen.findByRole('button', { name: new RegExp(`Lo → .* → ${label}`) });
+    await save();
+  }
+  await userEvent.click(within(screen.getByRole('list', { name: 'Samband' })).getByRole('button'));
+  await userEvent.click(screen.getByRole('button', { name: 'Föreslå borttagning av sambandet' }));
+  await waitFor(() =>
+    expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
+      'Borttagning av samband',
+    ),
+  );
+  await save();
+  expect(within(screen.getByRole('list', { name: 'Samband' })).queryByRole('button')).toBeNull();
+});
+
+test('a duplicate displays its existing relationship and stale relationship text cannot overwrite a draft', async () => {
+  await open();
+  await add('Alex');
+  await add('Kim');
+  async function proposeLink() {
+    await userEvent.click(screen.getByRole('button', { name: 'Nytt samband' }));
+    for (const label of ['Från objekt', 'Sambandstyp', 'Till objekt']) {
+      const select = screen.getByLabelText(label) as HTMLSelectElement;
+      await userEvent.selectOptions(select, select.options[label === 'Till objekt' ? 2 : 1].value);
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+    await waitFor(() => expect(screen.queryByLabelText('Från objekt')).toBeNull());
+  }
+  await proposeLink();
+  await proposeLink();
+  expect(screen.getByRole('status').textContent).toContain('Sambandet finns redan');
+  await userEvent.click(within(screen.getByRole('list', { name: 'Samband' })).getByRole('button'));
+  const state = await (await client.request(path)).json();
+  await client.json(`${path}/draft`, {
+    version: state.draft.version,
+    id: 'concurrent',
+    baseRevision: null,
+    value: { typeId: state.types[0].id, name: 'Robin', description: '' },
+  });
+  await userEvent.selectOptions(screen.getByLabelText('Uppgiftens säkerhet'), 'unknown');
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Inget sparades'));
+  await userEvent.click(screen.getByRole('button', { name: 'Hämta aktuellt underlag' }));
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('äldre utkast'));
+  expect(
+    (screen.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }) as HTMLButtonElement)
+      .disabled ||
+      (screen.getByLabelText('Från objekt').closest('fieldset') as HTMLFieldSetElement).disabled,
+  ).toBe(true);
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng sambandet utan att skicka' }));
+  await userEvent.click(within(screen.getByRole('list', { name: 'Samband' })).getByRole('button'));
+  expect((screen.getByLabelText('Uppgiftens säkerhet') as HTMLSelectElement).value).toBe('known');
+});
+
+test('object identity can be explicitly unspecified and later identified', async () => {
+  await open();
+  await userEvent.click(screen.getByRole('button', { name: 'Nytt objekt' }));
+  await userEvent.type(screen.getByLabelText('Objektets namn'), 'Betalkonto');
+  await userEvent.selectOptions(screen.getByLabelText('Objektets identitet'), 'unresolved');
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
+  await screen.findByRole('button', { name: 'Betalkonto' });
+  expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
+    'Obesvarad identitetsfråga',
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Betalkonto' }));
+  await userEvent.selectOptions(screen.getByLabelText('Objektets identitet'), 'unspecified');
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
+  await waitFor(() => expect(screen.queryByLabelText('Objektets identitet')).toBeNull());
+  expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
+    'Ospecificerat objekt',
+  );
+  await save();
+  await userEvent.click(screen.getByRole('button', { name: 'Betalkonto' }));
+  expect((screen.getByLabelText('Objektets identitet') as HTMLSelectElement).value).toBe(
+    'unspecified',
+  );
+  await userEvent.selectOptions(screen.getByLabelText('Objektets identitet'), 'identified');
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
+  await waitFor(() => expect(screen.queryByLabelText('Objektets identitet')).toBeNull());
+  await save();
+});

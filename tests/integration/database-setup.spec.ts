@@ -78,7 +78,33 @@ for (const provider of ['google', 'microsoft'] as const) {
       const map = await (
         await request.get(`${installation.origin}/api/households/${household.id}/map`)
       ).json();
-      expect(map.objects).toEqual([expect.objectContaining({ name: 'Lo Exempel' })]);
+      expect(map.objects.map((object: { name: string }) => object.name).sort()).toEqual(
+        [
+          'Alex Exempel',
+          'Familjens Molnmusik',
+          'Familjens musikkonto',
+          'Familjens musikkort',
+          'Föreningens musikkonto',
+          'Hushållets betalkonto',
+          'Kim Exempel',
+          'Kortets kontokoppling',
+          'Lindens musikförening',
+          'Lo Exempel',
+          'Molnmusik',
+          'Molnmusik AB',
+          'familjen@example.test',
+          'musik@example.test',
+        ].sort(),
+      );
+      expect(map.relationships).toHaveLength(21);
+      expect(map.draft.relationships).toHaveLength(1);
+      expect(map.draft.relationships[0].before.id).toBe(map.draft.relationships[0].id);
+      expect(map.draft.relationships[0].after.sourceId).toBe(
+        map.draft.relationships[0].before.sourceId,
+      );
+      expect(map.draft.relationships[0].after.targetId).not.toBe(
+        map.draft.relationships[0].before.targetId,
+      );
       expect(map.draft.changes).toEqual([
         expect.objectContaining({
           before: expect.objectContaining({ name: 'Lo Exempel' }),

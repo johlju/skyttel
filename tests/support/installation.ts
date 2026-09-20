@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type ServerType, serve } from '@hono/node-server';
+import { seedDemo } from '../../scripts/seeds/demo.js';
 import { createApp } from '../../src/server/app.js';
 import { createAuth, verifyAuthSchema } from '../../src/server/auth.js';
 import type { Config } from '../../src/server/config.js';
@@ -126,6 +127,9 @@ export async function createInstallation(
   await start();
   return {
     origin: config.origin,
+    seedDemo() {
+      return seedDemo(database, config);
+    },
     directory,
     setIdentity(value: Identity) {
       identity = value;

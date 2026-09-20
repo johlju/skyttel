@@ -24,24 +24,117 @@ export function seedDemo(database: Database.Database, config: Config) {
   const result = createHousehold(database, config, administratorId, 'TestHousehold');
   if ('error' in result) throw new Error('demo_household_setup_failed');
   const map = householdMap(database, administratorId, result.household.id);
-  const typeId = map.read().types[0].id;
-  const id = randomUUID();
+  const initial = map.read();
+  const ids = new Map<string, string>();
+  const objects = [
+    ['lo', 'Person', 'Lo Exempel', 'Använder familjens musik.'],
+    ['alex', 'Person', 'Alex Exempel', 'Står på abonnemanget.'],
+    ['kim', 'Person', 'Kim Exempel', 'Betalar abonnemanget.'],
+    ['service', 'Tjänst', 'Molnmusik', 'Påhittad musiktjänst.'],
+    ['company', 'Företag', 'Molnmusik AB', 'Påhittad tjänsteleverantör.'],
+    ['association', 'Förening', 'Lindens musikförening', 'En förening, skild från tjänsten.'],
+    [
+      'account',
+      'Tjänstekonto',
+      'Familjens musikkonto',
+      'Samma konto även när e-postadressen ändras.',
+    ],
+    [
+      'second-account',
+      'Tjänstekonto',
+      'Föreningens musikkonto',
+      'Delar kontaktadress med familjekontot.',
+    ],
+    [
+      'subscription',
+      'Abonnemang',
+      'Familjens Molnmusik',
+      'Ett enda avtalsobjekt. Påhittat pris: 149 kr per månad.',
+    ],
+    ['email', 'E-postadress', 'familjen@example.test', 'Delas av Alex och Kim.'],
+    ['new-email', 'E-postadress', 'musik@example.test', 'Föreslagen ny inloggningsadress.'],
+    ['card', 'Kort', 'Familjens musikkort', 'Påhittat kort utan kortnummer.'],
+    ['bank', 'Bankkonto', 'Hushållets betalkonto', 'Betalar kortfakturan.'],
+    [
+      'linked-bank',
+      'Bankkonto',
+      'Kortets kontokoppling',
+      'Ospecificerat bankkonto; ingen bank eller ägare antas.',
+    ],
+  ];
+  for (const [key, type, name, description] of objects) {
+    const id = randomUUID();
+    ids.set(key, id);
+    map.propose({
+      version: map.read().draft.version,
+      id,
+      baseRevision: null,
+      value: {
+        typeId: initial.types.find((value) => value.name === type)?.id,
+        name,
+        description,
+        ...(key === 'linked-bank' ? { identity: 'unspecified' } : {}),
+      },
+    });
+  }
+  const links = [
+    ['company', 'Erbjuder', 'service'],
+    ['account', 'Tillhör tjänsten', 'service'],
+    ['second-account', 'Tillhör tjänsten', 'service'],
+    ['subscription', 'Tillhör tjänsten', 'service'],
+    ['subscription', 'Gäller tjänstekontot', 'account'],
+    ['account', 'Inloggningsadress', 'email'],
+    ['account', 'Kontaktadress', 'email'],
+    ['second-account', 'Kontaktadress', 'email'],
+    ['alex', 'Använder', 'email'],
+    ['kim', 'Använder', 'email'],
+    ['subscription', 'Står på avtalet', 'alex'],
+    ['kim', 'Betalar', 'subscription'],
+    ['lo', 'Använder', 'service'],
+    ['alex', 'Använder', 'service'],
+    ['account', 'Äger', 'alex'],
+    ['subscription', 'Betalas med', 'card'],
+    ['card', 'Kontokoppling', 'linked-bank'],
+    ['card', 'Kortfakturan betalas från', 'bank'],
+    ['service', 'Används av', 'lo', 'uncertain'],
+    ['second-account', 'Äger', '', 'unknown'],
+    ['association', 'Används av', '', 'none'],
+  ];
+  for (const [source, type, target, knowledge] of links) {
+    map.proposeRelationship({
+      version: map.read().draft.version,
+      id: randomUUID(),
+      baseRevision: null,
+      value: {
+        typeId: initial.relationshipTypes.find((value) => value.name === type)?.id,
+        sourceId: ids.get(source),
+        targetId: target ? ids.get(target) : null,
+        knowledge: knowledge ?? 'known',
+      },
+    });
+  }
+  map.save({ version: map.read().draft.version, operationId: randomUUID() });
+  const saved = map.read();
+  const lo = saved.objects.find((value) => value.id === ids.get('lo'));
+  if (!lo) throw new Error('demo_person_missing');
   map.propose({
-    version: 0,
-    id,
-    baseRevision: null,
-    value: { typeId, name: 'Lo Exempel', description: 'Påhittad person för att prova kartan.' },
-  });
-  map.save({ version: 1, operationId: randomUUID() });
-  map.propose({
-    version: 2,
-    id,
-    baseRevision: 1,
+    version: saved.draft.version,
+    id: lo.id,
+    baseRevision: lo.revision,
     value: {
-      typeId,
+      ...lo,
       name: 'Lo Lind',
       description: 'Påhittad rättelse. Granska och välj att spara eller kasta hela utkastet.',
     },
+  });
+  const loginType = saved.relationshipTypes.find((value) => value.name === 'Inloggningsadress');
+  const login = saved.relationships.find((value) => value.typeId === loginType?.id);
+  if (!login) throw new Error('demo_relationship_missing');
+  map.proposeRelationship({
+    version: map.read().draft.version,
+    id: login.id,
+    baseRevision: login.revision,
+    value: { ...login, targetId: ids.get('new-email') },
   });
   return result.household;
 }

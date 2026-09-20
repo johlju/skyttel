@@ -146,3 +146,6 @@ remove that person's objects, relationships, or other shared map content.
 
 Membership applies only to the household that grants it. Access to one
 household does not grant access to another household or installation.
+
+For objects, relationships, and private drafts, follow the Swedish
+[family subscription guide](family-subscription.md).

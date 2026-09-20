@@ -209,13 +209,30 @@ command removes all existing application data and sessions. Add reusable
 demo fixtures in `scripts/seeds/demo.ts`. Automated tests continue to use
 their own temporary databases and synthetic provider identities.
 
-Demo data includes the fictional person Lo Exempel and a private proposal
-to rename that person to Lo Lind. Review the before and after values, then
-save or discard the whole draft. The HTTP and browser map tests exercise
-draft privacy, version conflicts, atomic rollback, receipts, and reopening.
-Only external identity providers are substituted for these flows; SQLite
-and the application remain real. Failure tests inject a SQLite write error
-or interrupt an HTTP response to exercise recovery.
+Demo data includes a fictional Molnmusik family subscription with separate
+people, service, company, association, service accounts, email addresses,
+card, and bank accounts. Directed relationships show independent roles,
+shared addresses, card account links, and bill payment. Examples include
+unknown, explicitly absent, uncertain, and unspecified information.
+A private draft proposes renaming Lo Exempel to Lo Lind and changing the
+family account's login address while keeping the same account identity.
+Review the entire difference, then save or discard it.
+
+The HTTP and browser map tests exercise draft privacy, version conflicts,
+atomic rollback, receipts, and reopening. The family scenario also covers
+relationship duplication, concurrent additions, incomplete information,
+identity questions, deletion review, and the actual demo seed. Only external
+identity providers are substituted; SQLite and the application remain real.
+Failure tests inject a SQLite write error or interrupt an HTTP response.
+
+Relationship and object types are household-owned database records. Forms
+read current definitions and drafts capture their revisions. Catalog editing
+has separate implementation tickets. Future full export, replacement import,
+and permanent erasure must include relationship types, current and deleted
+relationships, object identity status, relationship draft changes, and their
+receipt/history snapshots, alongside the existing household content. Keep
+stable IDs and meanings; do not infer identity from labels. Administrative
+export/import and erasure are not yet implemented.
 
 ## Production-container checks
 
