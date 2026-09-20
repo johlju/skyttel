@@ -85,6 +85,13 @@ npm run build
 npm run test:integration -- tests/integration/bootstrap.spec.ts
 ```
 
+To generate an HTML report and open it on port 9324, use:
+
+```sh
+npm run test:integration -- --reporter=html
+npm run test:report
+```
+
 Do not replace SQLite with an in-memory repository mock. Arrange membership
 scenarios with fixtures and assert through the public HTTP interface.
 

@@ -4,5 +4,5 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react()],
   build: { outDir: 'dist/client' },
-  server: { proxy: { '/api': 'http://127.0.0.1:3000', '/healthz': 'http://127.0.0.1:3000' } },
+  server: { proxy: { '/api': 'http://127.0.0.1:3300', '/healthz': 'http://127.0.0.1:3300' } },
 });

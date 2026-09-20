@@ -18,11 +18,11 @@ try {
   console.error('Development configuration has an invalid SKYTTEL_ORIGIN.');
   process.exit(1);
 }
-origin.port = '3001';
+origin.port = '3301';
 const serverEnvironment = {
   ...process.env,
   NODE_ENV: 'production',
-  PORT: '3001',
+  PORT: '3301',
   SKYTTEL_ORIGIN: origin.origin,
 };
 

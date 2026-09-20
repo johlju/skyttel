@@ -177,13 +177,13 @@
   },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally
-  "forwardPorts": [3000, 3001, 5173, 9323],
+  "forwardPorts": [3300, 3301, 5173, 9324],
   "portsAttributes": {
-    "3000": {
+    "3300": {
       "label": "Skyttel API",
       "onAutoForward": "notify"
     },
-    "3001": {
+    "3301": {
       "label": "Skyttel compiled application",
       "onAutoForward": "notify",
       "requireLocalPort": true
@@ -193,7 +193,7 @@
       "onAutoForward": "notify",
       "requireLocalPort": true
     },
-    "9323": {
+    "9324": {
       "label": "Playwright Report",
       "onAutoForward": "notify"
     }

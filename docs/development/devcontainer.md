@@ -44,30 +44,36 @@ npm run dev:all
 ```
 
 Open [the development client](http://localhost:5173). Vite proxies `/api`
-and `/healthz` to the server on container port 3000. VS Code forwards ports
-3000 for the API, 3001 for the compiled application, 5173 for the client,
-and 9323 for Playwright reports.
+and `/healthz` to the server on container port 3300. VS Code forwards ports
+3300 for the API, 3301 for the compiled application, 5173 for the client,
+and 9324 for Playwright reports.
 Keep host port 5173 free because the sign-in origin uses that port. Ctrl+C
 stops both development processes; source edits reload them.
 
-To build and run the compiled application on port 3001, use:
+To build and run the compiled application on port 3301, use:
 
 ```sh
 npm run dev:prodlike
 ```
 
 This command builds once, then serves the Vite client and API through the
-production Hono server at [port 3001](http://localhost:3001). It uses the same
+production Hono server at [port 3301](http://localhost:3301). It uses the same
 database and provider credentials as normal development. Its public origin
-uses the configured host and protocol with port 3001. For real sign-in, add
-the corresponding port-3001 callback URLs to the dedicated provider
-registrations. Source edits require another build. Keep host port 3001 free.
+uses the configured host and protocol with port 3301. For real sign-in, add
+the corresponding port-3301 callback URLs to the dedicated provider
+registrations. Source edits require another build. Keep host port 3301 free.
 
 `SKYTTEL_DEV_ENV_FILE` selects another private environment file. Exported
 environment values take precedence over file values. Compose also loads
 `.devcontainer/.env`, so recreate the container after changing a value it
 exports. The default database is `/data/skyttel.sqlite`.
 SQLite runs inside the app and migrates when the app starts.
+
+Set `PORT=3300` in private development environment files, including files
+used to run development on the host, so the API matches the Vite proxy.
+Update existing development files that set `PORT=3000`. Recreate the
+container after changing its environment, and rebuild it to apply the
+updated forwarded ports.
 
 ## Use a host terminal
 

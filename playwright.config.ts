@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
+process.env.PLAYWRIGHT_HTML_PORT ??= '9324';
+
 export default defineConfig({
   testDir: './tests/integration',
   fullyParallel: true,

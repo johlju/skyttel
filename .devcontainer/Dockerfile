@@ -57,7 +57,7 @@ WORKDIR /workspace
 RUN git config --system --add safe.directory /workspace
 
 # Expose the ports that Skyttel and Playwright use
-EXPOSE 3000 3001 5173 9323
+EXPOSE 3300 3301 5173 9324
 
 # Run the long-lived container process as the same non-root user VS Code uses.
 USER vscode
