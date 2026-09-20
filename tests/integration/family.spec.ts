@@ -134,7 +134,7 @@ test('manual forms preserve incomplete meanings and block an unanswered identity
   }
 });
 
-test('demo seed supplies a readable family map and a private correction without granting access to map people', async ({
+test('UTKAST-01: demo seed resumes a conflict and preserves independent proposals without granting access to map people', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -151,6 +151,14 @@ test('demo seed supplies a readable family map and a private correction without 
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Lo Exempel');
     await expect(review).toContainText('Lo Lind');
+    await expect(review).toContainText('Lo Berg');
+    await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeDisabled();
+    await installation.restart();
+    await page.reload();
+    await expect(review).toContainText('Lo Berg');
+    await review.getByRole('button', { name: 'Behåll mitt förslag' }).click();
+    await expect(page.getByRole('status')).toContainText('Granska hela utkastet');
+    await expect(review).toContainText('Spelar piano i musikföreningen.');
     await expect(review).toContainText('familjen@example.test');
     await expect(review).toContainText('musik@example.test');
     await page.getByRole('button', { name: 'Familjens musikkonto', exact: true }).click();

@@ -89,7 +89,7 @@ for (const provider of ['google', 'microsoft'] as const) {
           'Kim Exempel',
           'Kortets kontokoppling',
           'Lindens musikförening',
-          'Lo Exempel',
+          'Lo Berg',
           'Molnmusik',
           'Molnmusik AB',
           'familjen@example.test',
@@ -111,6 +111,24 @@ for (const provider of ['google', 'microsoft'] as const) {
           after: expect.objectContaining({ name: 'Lo Lind' }),
         }),
       ]);
+      const savedLo = map.objects.find((object: { name: string }) => object.name === 'Lo Berg');
+      expect(savedLo.revision).toBeGreaterThan(map.draft.changes[0].before.revision);
+      expect(savedLo.description).toBe('Spelar piano i musikföreningen.');
+      expect(map.draft.relationships[0].objectNames).toEqual(
+        expect.objectContaining({
+          [map.draft.relationships[0].before.targetId]: 'familjen@example.test',
+          [map.draft.relationships[0].after.targetId]: 'musik@example.test',
+        }),
+      );
+      const { history } = await (
+        await request.get(`${installation.origin}/api/households/${household.id}/map/history`)
+      ).json();
+      expect(history).toHaveLength(2);
+      expect(history[1].userId).not.toBe(history[0].userId);
+      expect(history[1].changes[0]).toMatchObject({
+        before: { name: 'Lo Exempel' },
+        after: { name: 'Lo Berg' },
+      });
       expect(
         (
           await request.get(`${installation.origin}/api/households/${household.id}/administration`)

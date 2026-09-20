@@ -1,4 +1,6 @@
+import { isDeepStrictEqual } from 'node:util';
 import type Database from 'better-sqlite3';
+import { draftConflicts, resolvedObjectValue } from '../shared/draft-conflicts.js';
 import type {
   MapDraft,
   MapObject,
@@ -72,6 +74,29 @@ export function householdMap(database: Database.Database, userId: string, househ
       })
       .immediate();
   }
+  function readState(): MapState {
+    return {
+      relationshipTypes: edges.types(),
+      relationships: edges.read(),
+      types: database
+        .prepare(
+          "SELECT * FROM object_type WHERE householdId = ? ORDER BY CASE WHEN name = 'Person' THEN 0 ELSE 1 END, name, id",
+        )
+        .all(householdId) as ObjectType[],
+      objects: database
+        .prepare(
+          'SELECT id, householdId, typeId, revision, name, description, identity FROM map_object WHERE householdId = ? AND deleted = 0 ORDER BY name, id',
+        )
+        .all(householdId)
+        .map((row) => {
+          const value = row as MapObject;
+          if (value.identity === null) delete value.identity;
+          return value;
+        }),
+      draft: draft(),
+    };
+  }
+
   return {
     history() {
       return transaction(() => ({
@@ -85,26 +110,60 @@ export function householdMap(database: Database.Database, userId: string, househ
       }));
     },
     read(): MapState {
-      return transaction(() => ({
-        relationshipTypes: edges.types(),
-        relationships: edges.read(),
-        types: database
-          .prepare(
-            "SELECT * FROM object_type WHERE householdId = ? ORDER BY CASE WHEN name = 'Person' THEN 0 ELSE 1 END, name, id",
-          )
-          .all(householdId) as ObjectType[],
-        objects: database
-          .prepare(
-            'SELECT id, householdId, typeId, revision, name, description, identity FROM map_object WHERE householdId = ? AND deleted = 0 ORDER BY name, id',
-          )
-          .all(householdId)
-          .map((row) => {
-            const value = row as MapObject;
-            if (value.identity === null) delete value.identity;
-            return value;
-          }),
-        draft: draft(),
-      }));
+      return transaction(readState);
+    },
+    resolve(body: Record<string, unknown>) {
+      return transaction(() => {
+        const current = checkedDraft(body.version);
+        if (body.choice !== 'saved' && body.choice !== 'proposed')
+          throw new MapError('invalid_request', 400);
+        const conflict = draftConflicts(readState()).find((item) =>
+          isDeepStrictEqual(item, body.conflict),
+        );
+        if (!conflict) throw new MapError('resolution_conflict');
+        if (body.choice === 'proposed' && conflict.duplicates)
+          throw new MapError('duplicate_relationship');
+        if (body.choice === 'proposed' && conflict.missingEndpoints)
+          throw new MapError('endpoint_conflict');
+        if (body.choice === 'proposed' && conflict.type === null)
+          throw new MapError('type_conflict');
+        if (conflict.kind === 'object') {
+          const change = current.changes.find((item) => item.id === conflict.id);
+          if (!change) throw new MapError('resolution_conflict');
+          if (body.choice === 'saved') {
+            current.changes = current.changes.filter((item) => item.id !== conflict.id);
+          } else {
+            if (!conflict.current && change.before) throw new MapError('object_conflict');
+            change.after = resolvedObjectValue(change, conflict.current);
+            change.before = conflict.current;
+            if (conflict.type) change.type = conflict.type;
+            if (!change.after) edges.removeObject(current, change.id);
+          }
+          edges.reconcileObjectRemovals(current);
+        } else {
+          const change = current.relationships?.find((item) => item.id === conflict.id);
+          if (!change) throw new MapError('resolution_conflict');
+          if (body.choice === 'saved') {
+            current.relationships = current.relationships?.filter(
+              (item) => item.id !== conflict.id,
+            );
+          } else {
+            if (!conflict.current && change.before) throw new MapError('relationship_conflict');
+            const before = change.before;
+            change.before = conflict.current;
+            if (conflict.type) change.type = conflict.type;
+            // Keep triggers from draft edits, but drop dependencies on detached saved endpoints.
+            if (change.removedWithObjects)
+              change.removedWithObjects = change.removedWithObjects.filter(
+                (id) =>
+                  (before?.sourceId !== id && before?.targetId !== id) ||
+                  change.before?.sourceId === id ||
+                  change.before?.targetId === id,
+              );
+          }
+        }
+        return writeDraft({ ...current, version: current.version + 1 });
+      });
     },
     proposeRelationship(body: Record<string, unknown>) {
       return transaction(() => {
@@ -154,6 +213,7 @@ export function householdMap(database: Database.Database, userId: string, househ
         current.changes = current.changes.filter((change) => change.id !== id);
         if (before || after) current.changes.push({ id, before, after, type });
         if (!after) edges.removeObject(current, id);
+        edges.reconcileObjectRemovals(current);
         return writeDraft({ ...current, version: current.version + 1 });
       });
     },

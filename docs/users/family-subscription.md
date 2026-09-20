@@ -81,10 +81,43 @@ bekräftar sparandet och historiken bevarar ändringsgruppen. **Kasta hela
 utkastet** lämnar den gemensamma kartan oförändrad. Borttagning av ett objekt
 visar också dess samband som borttagningar; andra objekt finns kvar.
 
-Vid konflikt sparas inget från försöket. Hämta aktuellt underlag, granska
-ändringarna och gör om förslagen vid behov. Om utfallet är okänt kan du
-hämta samma kvitto igen. Ett nytt samband från någon annan kan blockera en
-planerad objektborttagning så att det inte tas bort utan granskning.
+## Fortsätt ett utkast och lös konflikter
+
+Förslag som du lägger i utkastet finns kvar efter omladdning, stängd app
+och normal omstart av servern. Logga in som samma Skyttel-användare på en
+annan enhet för att fortsätta. **Hela mitt utkast** visar underlaget och
+förslagen, inklusive osäkerhet och obesvarade frågor. Text som bara finns
+i ett öppet formulär är ännu inte bevarad. Ljud och fullständig
+samtalshistorik behövs inte för att fortsätta.
+
+Varje hushållsmedlem arbetar med sitt eget privata utkast mot samma sparade
+karta. Oberoende ändringar av olika objekt kan sparas var för sig.
+Om två klienter ändrar samma användares utkast avvisas ett gammalt
+ändrings-, kasta- eller sparförsök. Välj **Hämta aktuellt underlag**.
+Nyare förslag finns kvar. Kopiera eventuell formulärtext du vill behålla,
+stäng formuläret och öppna det aktuella förslaget innan du fortsätter.
+
+Vid konflikt sparas inget från försöket, inte heller de konfliktfria
+delarna. Hämta aktuellt underlag. Utkastet visar ditt tidigare underlag,
+ditt förslag och det som är sparat nu. Välj för varje konflikt:
+
+- **Behåll mitt förslag** för att lägga din ändring ovanpå aktuellt
+  underlag. För objekt bevaras fält som bara den andra användaren ändrar.
+- **Använd sparat värde** för att ta bort just ditt överlappande förslag.
+  Övriga förslag finns kvar.
+
+Ett nytt samband kan blockera en planerad objektborttagning. Konflikten
+visar vilka ytterligare samband borttagningen berör. Om du behåller
+borttagningen läggs även dessa samband i utkastet som borttagningar.
+Vid en dubblett kan du använda det befintliga sambandet. Om ett objekt
+eller samband är borttaget kan du ta bort förslaget och skapa ett nytt,
+eller rätta ett sambands mål till ett annat befintligt objekt.
+
+Ett konfliktval ändrar bara utkastet. Granska **Hela mitt utkast** igen
+och välj därefter **Spara hela utkastet**. Tidigare sparbesked återanvänds
+inte. Om underlaget ändras medan du väljer avvisas även ett gammalt
+konfliktval; hämta aktuellt underlag och välj igen. Vid okänt sparutfall
+kan du hämta samma kvitto igen.
 
 Privata utkast ingår enligt hushållets informationsregler i fullständig
 administrativ export. Administrativa flöden för export, återimport och

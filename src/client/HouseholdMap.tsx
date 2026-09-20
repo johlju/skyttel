@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { type DraftConflict, draftConflicts } from '../shared/draft-conflicts.js';
 import type {
   MapDraft,
   MapObject,
@@ -82,7 +83,10 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
     if (editor?.id) nameInput.current?.focus();
   }, [editor?.id]);
 
-  async function action(kind: 'draft' | 'relationship' | 'discard' | 'save', body: unknown) {
+  async function action(
+    kind: 'draft' | 'relationship' | 'discard' | 'save' | 'resolve',
+    body: unknown,
+  ) {
     if (!state || pending) return;
     setPending(true);
     setError('');
@@ -130,9 +134,11 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         } else {
           setState({ ...state, draft });
           setStatus(
-            kind === 'discard'
-              ? 'Utkastet är kastat. Kartan är inte ändrad.'
-              : 'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.',
+            kind === 'resolve'
+              ? 'Konfliktvalet finns i ditt privata utkast. Granska hela utkastet och ge ett nytt sparbesked.'
+              : kind === 'discard'
+                ? 'Utkastet är kastat. Kartan är inte ändrad.'
+                : 'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.',
           );
         }
       }
@@ -161,7 +167,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
       } else if (failure instanceof MapRequestError && failure.status === 409) {
         saveAttempt.current = null;
         setError(
-          'Förslaget eller kartan har ändrats. Inget sparades av detta försök. Hämta aktuellt underlag och granska hela utkastet. Kasta utkastet och gör om förslagen om kartan har ändrats.',
+          'Förslaget eller kartan har ändrats. Inget sparades av detta försök. Hämta aktuellt underlag och granska hela utkastet. Välj hur varje konflikt ska lösas.',
         );
       } else {
         setError(
@@ -173,6 +179,101 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
     } finally {
       setPending(false);
     }
+  }
+
+  const conflicts = state ? draftConflicts(state) : [];
+  function conflictReview(conflict: DraftConflict) {
+    const proposal = (
+      conflict.kind === 'object' ? state?.draft.changes : state?.draft.relationships
+    )?.find((change) => change.id === conflict.id);
+    const deleted = Boolean(proposal?.before && !conflict.current);
+    return (
+      <div className="conflict-review">
+        <h4>Konflikt: sparat i kartan nu</h4>
+        {conflict.kind === 'object' ? (
+          details(conflict.current)
+        ) : (
+          <p>
+            {conflict.current && state
+              ? relationshipLabel(conflict.current, state, savedObjects)
+              : 'Finns inte i kartan'}
+          </p>
+        )}
+        <p>Välj vilket värde du vill behålla. Valet ändrar bara ditt utkast.</p>
+        {conflict.type !== undefined && (
+          <p>
+            Typdefinitionen har ändrats:{' '}
+            {conflict.type
+              ? `${conflict.type.name}. ${conflict.type.description}`
+              : 'Typen finns inte längre.'}
+          </p>
+        )}
+        {conflict.missingEndpoints && (
+          <p>
+            Sambandet hänvisar till ett borttaget objekt. Ta bort förslaget eller öppna sambandet
+            och välj ett annat objekt.
+          </p>
+        )}
+        {conflict.duplicates && state && (
+          <>
+            <p>
+              Samma samband finns redan. Använd sparat värde för att ta bort ditt överlappande
+              förslag.
+            </p>
+            <ul>
+              {conflict.duplicates.map((edge) => (
+                <li key={edge.id}>{relationshipLabel(edge, state, displayed)}</li>
+              ))}
+            </ul>
+          </>
+        )}
+        {conflict.connections && state && (
+          <>
+            <p>
+              Borttagningen berör också dessa samband. Behåll förslaget för att lägga deras
+              borttagningar i utkastet.
+            </p>
+            <ul>
+              {conflict.connections.map((edge) => (
+                <li key={edge.id}>{relationshipLabel(edge, state, savedObjects)}</li>
+              ))}
+            </ul>
+          </>
+        )}
+        <button
+          type="button"
+          disabled={pending || blocked || dirty}
+          onClick={() =>
+            void action('resolve', { version: state?.draft.version, conflict, choice: 'saved' })
+          }
+        >
+          Använd sparat värde
+        </button>
+        {conflict.type !== null &&
+          !conflict.duplicates &&
+          !conflict.missingEndpoints &&
+          !deleted && (
+            <button
+              type="button"
+              disabled={pending || blocked || dirty}
+              onClick={() =>
+                void action('resolve', {
+                  version: state?.draft.version,
+                  conflict,
+                  choice: 'proposed',
+                })
+              }
+            >
+              Behåll mitt förslag
+            </button>
+          )}
+        {deleted && (
+          <p>
+            Objektet eller sambandet är borttaget. Skapa ett nytt förslag om det fortfarande behövs.
+          </p>
+        )}
+      </div>
+    );
   }
 
   function edit(object?: MapObject) {
@@ -477,6 +578,11 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
                 {details(change.before)}
                 <h4>Förslag</h4>
                 {details(change.after)}
+                {conflicts
+                  .filter((conflict) => conflict.kind === 'object' && conflict.id === change.id)
+                  .map((conflict) => (
+                    <div key={conflict.id}>{conflictReview(conflict)}</div>
+                  ))}
               </article>
             ))}
             {(state.draft.relationships ?? []).map((change) => (
@@ -485,13 +591,40 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
                 <h4>Sparat underlag</h4>
                 <p>
                   {change.before
-                    ? relationshipLabel(change.before, state, savedObjects)
+                    ? relationshipLabel(
+                        change.before,
+                        state,
+                        new Map([
+                          ...savedObjects,
+                          ...Object.entries(change.objectNames ?? {}).map(
+                            ([id, name]) => [id, { name }] as const,
+                          ),
+                        ]),
+                      )
                     : 'Finns inte i kartan'}
                 </p>
                 <h4>Förslag</h4>
                 <p>
-                  {change.after ? relationshipLabel(change.after, state, displayed) : 'Borttaget'}
+                  {change.after
+                    ? relationshipLabel(
+                        change.after,
+                        state,
+                        new Map([
+                          ...Object.entries(change.objectNames ?? {}).map(
+                            ([id, name]) => [id, { name }] as const,
+                          ),
+                          ...displayed,
+                        ]),
+                      )
+                    : 'Borttaget'}
                 </p>
+                {conflicts
+                  .filter(
+                    (conflict) => conflict.kind === 'relationship' && conflict.id === change.id,
+                  )
+                  .map((conflict) => (
+                    <div key={conflict.id}>{conflictReview(conflict)}</div>
+                  ))}
               </article>
             ))}
             {unresolved && (
@@ -510,7 +643,9 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
               <button
                 type="button"
                 className="primary"
-                disabled={pending || blocked || dirty || !hasChanges || unresolved}
+                disabled={
+                  pending || blocked || dirty || !hasChanges || unresolved || conflicts.length > 0
+                }
                 onClick={() => {
                   saveAttempt.current = {
                     version: state.draft.version,

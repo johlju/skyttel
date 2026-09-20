@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
+import { changeMembership } from '../../src/server/administration.js';
 import { internalEmail } from '../../src/server/auth.js';
 import type { Config } from '../../src/server/config.js';
 import { createHousehold } from '../../src/server/households.js';
@@ -124,7 +125,6 @@ export function seedDemo(database: Database.Database, config: Config) {
     value: {
       ...lo,
       name: 'Lo Lind',
-      description: 'Påhittad rättelse. Granska och välj att spara eller kasta hela utkastet.',
     },
   });
   const loginType = saved.relationshipTypes.find((value) => value.name === 'Inloggningsadress');
@@ -136,5 +136,27 @@ export function seedDemo(database: Database.Database, config: Config) {
     baseRevision: login.revision,
     value: { ...login, targetId: ids.get('new-email') },
   });
+
+  // A fictional former member supplies a real, separately saved correction.
+  // There is no provider account or session for this history-only identity.
+  const contributorId = randomUUID();
+  database
+    .prepare('INSERT INTO user (id, name, email, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)')
+    .run(contributorId, 'Robin Demo', `${contributorId}@example.test`, now, now);
+  database
+    .prepare('INSERT INTO membership (householdId, userId, role) VALUES (?, ?, ?)')
+    .run(result.household.id, contributorId, 'member');
+  const contributorMap = householdMap(database, contributorId, result.household.id);
+  contributorMap.propose({
+    version: contributorMap.read().draft.version,
+    id: lo.id,
+    baseRevision: lo.revision,
+    value: { ...lo, name: 'Lo Berg', description: 'Spelar piano i musikföreningen.' },
+  });
+  contributorMap.save({
+    version: contributorMap.read().draft.version,
+    operationId: randomUUID(),
+  });
+  changeMembership(database, administratorId, result.household.id, contributorId, null);
   return result.household;
 }

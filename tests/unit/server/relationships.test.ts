@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
+import { draftConflicts } from '../../../src/shared/draft-conflicts.js';
 import type { MapState, ObjectValue, RelationshipValue } from '../../../src/shared/map.js';
 import { applicationFixture } from './fixture.js';
 
@@ -50,6 +51,12 @@ async function save(actor = client) {
     operationId: crypto.randomUUID(),
   });
 }
+async function resolveObject(id: string, choice: 'saved' | 'proposed') {
+  const state = await read();
+  const conflict = draftConflicts(state).find((item) => item.kind === 'object' && item.id === id);
+  expect(conflict).toBeDefined();
+  return client.json(`${path}/resolve`, { version: state.draft.version, conflict, choice });
+}
 async function member() {
   fixture.setSubject('second-person');
   const actor = fixture.client();
@@ -79,6 +86,234 @@ test('object deletion previews all relationship removals and rejects newly attac
   expect((await save()).status).toBe(409);
   expect((await read()).objects).toHaveLength(2);
   expect((await read()).relationships).toHaveLength(2);
+});
+
+test.each(['before', 'after'] as const)(
+  'keeping a saved object preserves relationship deletions proposed independently %s object removal',
+  async (timing) => {
+    await object('a');
+    await object('b');
+    await object('c');
+    await edge();
+    await edge('independent', { sourceId: 'b', targetId: 'a' });
+    await edge('unrelated', { sourceId: 'b', targetId: 'c' });
+    expect((await save()).status).toBe(200);
+
+    if (timing === 'before') expect((await edge('independent', null)).status).toBe(200);
+    expect((await object('a', null)).status).toBe(200);
+    if (timing === 'after') expect((await edge('independent', null)).status).toBe(200);
+    expect(
+      (await edge('unrelated', { sourceId: 'b', targetId: 'c', knowledge: 'uncertain' })).status,
+    ).toBe(200);
+    expect((await object('c', { name: 'Mitt förslag' })).status).toBe(200);
+
+    const actor = await member();
+    await object('a', { name: 'Sparat namn' }, actor);
+    expect((await save(actor)).status).toBe(200);
+    expect((await resolveObject('a', 'saved')).status).toBe(200);
+    const state = await read();
+    expect(state.draft.changes).toMatchObject([{ id: 'c', after: { name: 'Mitt förslag' } }]);
+    expect(state.draft.relationships).toHaveLength(2);
+    expect(state.draft.relationships).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'independent', after: null }),
+        expect.objectContaining({
+          id: 'unrelated',
+          after: expect.objectContaining({ knowledge: 'uncertain' }),
+        }),
+      ]),
+    );
+    expect((await save()).status).toBe(200);
+    const saved = await read();
+    expect(saved.objects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'a', name: 'Sparat namn' }),
+        expect.objectContaining({ id: 'c', name: 'Mitt förslag' }),
+      ]),
+    );
+    expect(saved.relationships.map((value) => value.id)).toEqual(['edge', 'unrelated']);
+    expect(saved.relationships.find((value) => value.id === 'unrelated')?.knowledge).toBe(
+      'uncertain',
+    );
+  },
+);
+
+test.each([
+  ['a', 'b'],
+  ['b', 'a'],
+])(
+  'withdrawing %s then %s removes a shared relationship deletion only after both withdrawals',
+  async (first, second) => {
+    await object('a');
+    await object('b');
+    await edge();
+    expect((await save()).status).toBe(200);
+    await object('a', null);
+    await object('b', null);
+    await object('c');
+
+    const actor = await member();
+    await object('a', { name: 'Sparat A' }, actor);
+    await object('b', { name: 'Sparat B' }, actor);
+    expect((await save(actor)).status).toBe(200);
+    expect((await resolveObject(first, 'saved')).status).toBe(200);
+    const remaining = await read();
+    expect(remaining.draft.relationships).toMatchObject([{ id: 'edge', after: null }]);
+    expect(remaining.draft.changes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: second, after: null })]),
+    );
+
+    expect((await resolveObject(second, 'saved')).status).toBe(200);
+    expect((await read()).draft.relationships ?? []).toEqual([]);
+    expect((await save()).status).toBe(200);
+    const saved = await read();
+    expect(saved.objects).toHaveLength(3);
+    expect(saved.relationships).toMatchObject([{ id: 'edge', sourceId: 'a', targetId: 'b' }]);
+  },
+);
+
+test('replacing an object deletion with an edit removes generated relationship deletions and preserves independent ones', async () => {
+  await object('a');
+  await object('b');
+  await edge();
+  await edge('independent', { sourceId: 'b', targetId: 'a' });
+  expect((await save()).status).toBe(200);
+  await edge('independent', null);
+  await object('a', null);
+  expect((await object('a', { name: 'Behåll mig' })).status).toBe(200);
+  expect((await read()).draft.relationships).toMatchObject([{ id: 'independent', after: null }]);
+  expect((await save()).status).toBe(200);
+  const saved = await read();
+  expect(saved.objects.find((value) => value.id === 'a')?.name).toBe('Behåll mig');
+  expect(saved.relationships).toMatchObject([{ id: 'edge', sourceId: 'a', targetId: 'b' }]);
+});
+
+test('keeping a saved object removes relationship deletions generated by earlier conflict resolution', async () => {
+  await object('a');
+  await object('b');
+  await edge();
+  expect((await save()).status).toBe(200);
+  await object('a', null);
+  await object('c');
+
+  const actor = await member();
+  const state = await read(actor);
+  await edge('new-edge', { typeId: state.relationshipTypes[1].id }, actor);
+  expect((await save(actor)).status).toBe(200);
+  expect((await resolveObject('a', 'proposed')).status).toBe(200);
+  expect((await read()).draft.relationships).toHaveLength(2);
+
+  await object('a', { name: 'Sparat namn' }, actor);
+  expect((await save(actor)).status).toBe(200);
+  expect((await resolveObject('a', 'saved')).status).toBe(200);
+  expect((await read()).draft.relationships ?? []).toEqual([]);
+  expect((await save()).status).toBe(200);
+  const saved = await read();
+  expect(saved.objects).toHaveLength(3);
+  expect(saved.relationships.map((value) => value.id)).toEqual(['edge', 'new-edge']);
+});
+
+test('a relationship deletion added during conflict resolution remains required by the other removed endpoint', async () => {
+  await object('a');
+  await object('b');
+  expect((await save()).status).toBe(200);
+  await object('a', null);
+  await object('b', null);
+
+  const actor = await member();
+  await edge('new-edge', {}, actor);
+  expect((await save(actor)).status).toBe(200);
+  expect((await resolveObject('a', 'proposed')).status).toBe(200);
+  expect((await read()).draft.relationships).toMatchObject([{ id: 'new-edge', after: null }]);
+
+  await object('a', { name: 'Sparat namn' }, actor);
+  expect((await save(actor)).status).toBe(200);
+  expect((await resolveObject('a', 'saved')).status).toBe(200);
+  expect((await read()).draft.relationships).toMatchObject([{ id: 'new-edge', after: null }]);
+  expect((await save()).status).toBe(200);
+  const saved = await read();
+  expect(saved.objects).toMatchObject([{ id: 'a', name: 'Sparat namn' }]);
+  expect(saved.relationships).toEqual([]);
+});
+
+test('rebasing a generated relationship deletion stops attributing it to an endpoint that moved away', async () => {
+  await object('a');
+  await object('b');
+  await object('c');
+  await edge();
+  expect((await save()).status).toBe(200);
+  await object('a', null);
+  await object('b', null);
+
+  const actor = await member();
+  expect((await edge('edge', { targetId: 'c' }, actor)).status).toBe(200);
+  expect((await save(actor)).status).toBe(200);
+  const state = await read();
+  const conflict = draftConflicts(state).find(
+    (item) => item.kind === 'relationship' && item.id === 'edge',
+  );
+  expect(conflict).toBeDefined();
+  expect(
+    (
+      await client.json(`${path}/resolve`, {
+        version: state.draft.version,
+        conflict,
+        choice: 'proposed',
+      })
+    ).status,
+  ).toBe(200);
+  expect((await read()).draft.relationships).toMatchObject([
+    { id: 'edge', before: { sourceId: 'a', targetId: 'c' }, after: null },
+  ]);
+
+  await object('a', { name: 'Sparat namn' }, actor);
+  expect((await save(actor)).status).toBe(200);
+  expect((await resolveObject('a', 'saved')).status).toBe(200);
+  expect((await read()).draft.relationships ?? []).toEqual([]);
+  expect((await save()).status).toBe(200);
+  const saved = await read();
+  expect(saved.objects.map((value) => value.id).sort()).toEqual(['a', 'c']);
+  expect(saved.relationships).toMatchObject([{ id: 'edge', sourceId: 'a', targetId: 'c' }]);
+});
+
+test('a draft endpoint move retains its generated deletion until the object removal that triggered it is withdrawn', async () => {
+  await object('a');
+  await object('b');
+  await object('c');
+  await edge();
+  expect((await save()).status).toBe(200);
+  expect((await edge('edge', { targetId: 'c' })).status).toBe(200);
+  expect((await object('c', null)).status).toBe(200);
+  fixture.database
+    .prepare('UPDATE relationship_type SET revision = revision + 1 WHERE id = ?')
+    .run((await read()).relationships[0].typeId);
+  const state = await read();
+  const conflict = draftConflicts(state).find(
+    (item) => item.kind === 'relationship' && item.id === 'edge',
+  );
+  expect(conflict).toBeDefined();
+  expect(
+    (
+      await client.json(`${path}/resolve`, {
+        version: state.draft.version,
+        conflict,
+        choice: 'proposed',
+      })
+    ).status,
+  ).toBe(200);
+  expect((await object('b', { name: 'Annat förslag' })).status).toBe(200);
+  expect((await read()).draft.relationships).toMatchObject([
+    { id: 'edge', before: { sourceId: 'a', targetId: 'b' }, after: null },
+  ]);
+
+  expect((await object('c', { name: 'Behåll mig' })).status).toBe(200);
+  expect((await read()).draft.relationships ?? []).toEqual([]);
+  expect((await save()).status).toBe(200);
+  const saved = await read();
+  expect(saved.objects).toHaveLength(3);
+  expect(saved.objects.find((value) => value.id === 'b')?.name).toBe('Annat förslag');
+  expect(saved.objects.find((value) => value.id === 'c')?.name).toBe('Behåll mig');
+  expect(saved.relationships).toMatchObject([{ id: 'edge', sourceId: 'a', targetId: 'b' }]);
 });
 
 test('independent roles and shared endpoints survive edits, deletion and receipt retries', async () => {

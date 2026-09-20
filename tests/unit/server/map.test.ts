@@ -256,3 +256,58 @@ test('invalid objects and changed type definitions cannot enter the shared map',
   ).toBe(409);
   expect((await read()).objects).toEqual([]);
 });
+
+test('shared history does not expose abandoned private relationship endpoint names', async () => {
+  await propose('Lo', 'lo');
+  await propose('Kim', 'kim');
+  await client.json(`${path}/save`, { version: 2, operationId: 'seed' });
+  const { actor } = await member();
+  await propose('Private abandoned name', 'private');
+  let state = await read();
+  const value = {
+    typeId: state.relationshipTypes[0].id,
+    sourceId: 'lo',
+    targetId: 'private',
+    knowledge: 'known',
+  };
+  expect(
+    (
+      await client.json(`${path}/relationship`, {
+        version: state.draft.version,
+        id: 'link',
+        baseRevision: null,
+        value,
+      })
+    ).status,
+  ).toBe(200);
+  state = await read();
+  expect(
+    (
+      await client.json(`${path}/relationship`, {
+        version: state.draft.version,
+        id: 'link',
+        baseRevision: null,
+        value: { ...value, targetId: 'kim' },
+      })
+    ).status,
+  ).toBe(200);
+  state = await read();
+  await client.json(`${path}/draft`, {
+    version: state.draft.version,
+    id: 'private',
+    baseRevision: null,
+    value: null,
+  });
+  state = await read();
+  expect(
+    (
+      await client.json(`${path}/save`, {
+        version: state.draft.version,
+        operationId: 'public-link',
+      })
+    ).status,
+  ).toBe(200);
+  const history = await (await actor.request(`${path}/history`)).text();
+  expect(history).not.toContain('Private abandoned name');
+  expect(history).not.toContain('objectNames');
+});

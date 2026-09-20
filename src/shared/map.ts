@@ -28,7 +28,7 @@ export interface DraftChange {
 export interface MapDraft {
   version: number;
   changes: DraftChange[];
-  relationships?: RelationshipChange[];
+  relationships?: DraftRelationshipChange[];
 }
 export interface MapState {
   types: ObjectType[];
@@ -64,6 +64,11 @@ export interface RelationshipChange {
   before: MapRelationship | null;
   after: RelationshipValue | null;
   type: RelationshipType;
+  objectNames?: Record<string, string>;
+}
+export interface DraftRelationshipChange extends RelationshipChange {
+  // Object deletions that require this generated relationship deletion.
+  removedWithObjects?: string[];
 }
 
 export function proposedRelationships(

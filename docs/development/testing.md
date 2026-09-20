@@ -209,14 +209,13 @@ command removes all existing application data and sessions. Add reusable
 demo fixtures in `scripts/seeds/demo.ts`. Automated tests continue to use
 their own temporary databases and synthetic provider identities.
 
-Demo data includes a fictional Molnmusik family subscription with separate
-people, service, company, association, service accounts, email addresses,
-card, and bank accounts. Directed relationships show independent roles,
-shared addresses, card account links, and bill payment. Examples include
-unknown, explicitly absent, uncertain, and unspecified information.
-A private draft proposes renaming Lo Exempel to Lo Lind and changing the
-family account's login address while keeping the same account identity.
-Review the entire difference, then save or discard it.
+Run the seed and family scenarios with:
+
+```sh
+npm run build
+npm run test:integration -- \
+  tests/integration/database-setup.spec.ts tests/integration/family.spec.ts
+```
 
 The HTTP and browser map tests exercise draft privacy, version conflicts,
 atomic rollback, receipts, and reopening. The family scenario also covers
@@ -225,14 +224,15 @@ identity questions, deletion review, and the actual demo seed. Only external
 identity providers are substituted; SQLite and the application remain real.
 Failure tests inject a SQLite write error or interrupt an HTTP response.
 
-Relationship and object types are household-owned database records. Forms
-read current definitions and drafts capture their revisions. Catalog editing
-has separate implementation tickets. Future full export, replacement import,
-and permanent erasure must include relationship types, current and deleted
-relationships, object identity status, relationship draft changes, and their
-receipt/history snapshots, alongside the existing household content. Keep
-stable IDs and meanings; do not infer identity from labels. Administrative
-export/import and erasure are not yet implemented.
+`tests/integration/draft-conflicts.spec.ts` orders requests from separate
+users and clients against the running app and real SQLite. It covers
+whole-draft rollback, stale resolution choices and approvals, private
+draft access, membership revocation, independent saves, overlapping
+objects and relationships, duplicate links, and deleted endpoints.
+Browser checks require an explicit conflict choice followed by a new save.
+They also verify that a resolved draft and readable relationship proposals
+survive normal server restart. The fixtures use only fictional identities
+and content; no timing delays decide which writer wins.
 
 ## Production-container checks
 

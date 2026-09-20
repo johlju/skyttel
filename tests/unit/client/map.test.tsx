@@ -2,6 +2,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { HouseholdMap } from '../../../src/client/HouseholdMap.js';
+import type { MapState, ObjectValue, RelationshipValue } from '../../../src/shared/map.js';
 import { applicationFixture } from '../server/fixture.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
@@ -281,3 +282,205 @@ test('object identity can be explicitly unspecified and later identified', async
   await waitFor(() => expect(screen.queryByLabelText('Objektets identitet')).toBeNull());
   await save();
 });
+
+async function concurrentEditors() {
+  fixture.setSubject('robin-concurrent');
+  const other = fixture.client();
+  await other.signIn();
+  const { user } = await (await other.request('/api/bootstrap')).json();
+  const { code } = await (
+    await client.json(`/api/households/${householdId}/invitations`, { userId: user.id })
+  ).json();
+  await other.json('/api/invitations/accept', { code });
+  const read = async (actor = client): Promise<MapState> => (await actor.request(path)).json();
+  async function propose(
+    actor: typeof client,
+    kind: 'draft' | 'relationship',
+    id: string,
+    value: ObjectValue | RelationshipValue | null,
+  ) {
+    const state = await read(actor);
+    const pending = (kind === 'draft' ? state.draft.changes : state.draft.relationships)?.find(
+      (item) => item.id === id,
+    );
+    const saved = (kind === 'draft' ? state.objects : state.relationships).find(
+      (item) => item.id === id,
+    );
+    expect(
+      (
+        await actor.json(`${path}/${kind}`, {
+          version: state.draft.version,
+          id,
+          baseRevision: pending ? (pending.before?.revision ?? null) : (saved?.revision ?? null),
+          value,
+        })
+      ).status,
+    ).toBe(200);
+  }
+  async function commit(actor = client) {
+    expect(
+      (
+        await actor.json(`${path}/save`, {
+          version: (await read(actor)).draft.version,
+          operationId: crypto.randomUUID(),
+        })
+      ).status,
+    ).toBe(200);
+  }
+  const state = await read();
+  for (const [id, name] of [
+    ['lo', 'Lo'],
+    ['kim', 'Kim'],
+  ])
+    await propose(client, 'draft', id, { typeId: state.types[0].id, name, description: '' });
+  await commit();
+  return { other, read, propose, commit, state };
+}
+
+test('conflict choices retain independent object fields and cannot reuse stale approval', async () => {
+  const { other, read, propose, commit, state } = await concurrentEditors();
+  const value = { typeId: state.types[0].id, name: 'Lo Lind', description: '' };
+  await propose(client, 'draft', 'lo', value);
+  await propose(other, 'draft', 'lo', {
+    ...value,
+    name: 'Lo Berg',
+    description: 'Spelar piano',
+    identity: 'unspecified',
+  });
+  await commit(other);
+  const oldVersion = (await read()).draft.version;
+  await open();
+  const review = screen.getByRole('region', { name: 'Hela mitt utkast' });
+  expect(review.textContent).toContain('Lo Berg');
+  await userEvent.click(screen.getByRole('button', { name: 'Behåll mitt förslag' }));
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Granska hela utkastet'),
+  );
+  expect((await read()).draft.changes[0].after).toMatchObject({
+    name: 'Lo Lind',
+    description: 'Spelar piano',
+    identity: 'unspecified',
+  });
+  expect(
+    (await client.json(`${path}/save`, { version: oldVersion, operationId: 'stale' })).status,
+  ).toBe(409);
+  expect(
+    (await client.json(`${path}/resolve`, { version: oldVersion, choice: 'saved', conflict: {} }))
+      .status,
+  ).toBe(409);
+  const version = (await read()).draft.version;
+  expect((await client.json(`${path}/resolve`, { version, choice: 'invalid' })).status).toBe(400);
+  expect(
+    (await client.json(`${path}/resolve`, { version, choice: 'saved', conflict: {} })).status,
+  ).toBe(409);
+  await save();
+  expect((await read(other)).objects.find((object) => object.id === 'lo')?.description).toBe(
+    'Spelar piano',
+  );
+});
+
+test.each(['changed', 'duplicate', 'endpoint', 'deletion'] as const)(
+  'relationship conflict recovery: %s',
+  async (scenario) => {
+    const { other, read, propose, commit, state } = await concurrentEditors();
+    const value: RelationshipValue = {
+      typeId: state.relationshipTypes[0].id,
+      sourceId: 'lo',
+      targetId: 'kim',
+      knowledge: 'known',
+    };
+    if (scenario === 'changed') {
+      await propose(client, 'relationship', 'link', value);
+      await commit();
+      await propose(client, 'relationship', 'link', { ...value, knowledge: 'uncertain' });
+      await propose(other, 'relationship', 'link', {
+        ...value,
+        targetId: null,
+        knowledge: 'unknown',
+      });
+    } else if (scenario === 'duplicate') {
+      await propose(client, 'relationship', 'mine', value);
+      await propose(other, 'relationship', 'link', value);
+    } else if (scenario === 'endpoint') {
+      await propose(client, 'relationship', 'mine', value);
+      await propose(other, 'draft', 'kim', null);
+    } else {
+      await propose(client, 'draft', 'lo', null);
+      await propose(other, 'relationship', 'link', value);
+    }
+    await commit(other);
+    await open();
+    const review = screen.getByRole('region', { name: 'Hela mitt utkast' });
+    expect(review.textContent).toContain('Konflikt');
+    const keep = scenario === 'changed' || scenario === 'deletion';
+    await userEvent.click(
+      screen.getByRole('button', { name: keep ? 'Behåll mitt förslag' : 'Använd sparat värde' }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('Granska hela utkastet'),
+    );
+    if (keep) {
+      await save();
+      expect((await read()).relationships).toHaveLength(scenario === 'changed' ? 1 : 0);
+    } else {
+      expect((await read()).draft.relationships ?? []).toEqual([]);
+    }
+  },
+);
+
+test('accepting a saved object removes only that proposal after another user deletes it', async () => {
+  const { other, read, propose, commit, state } = await concurrentEditors();
+  await propose(client, 'draft', 'lo', {
+    typeId: state.types[0].id,
+    name: 'Lo Lind',
+    description: '',
+  });
+  await propose(other, 'draft', 'lo', null);
+  await commit(other);
+  const current = await read();
+  const conflict = { kind: 'object', id: 'lo', current: null };
+  expect(
+    (
+      await client.json(`${path}/resolve`, {
+        version: current.draft.version,
+        conflict,
+        choice: 'proposed',
+      })
+    ).status,
+  ).toBe(409);
+  await open();
+  expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
+    'borttaget',
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Använd sparat värde' }));
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Granska hela utkastet'),
+  );
+  expect((await read()).draft.changes).toEqual([]);
+});
+
+test.each(['lo', 'new'])(
+  'changed type definitions must be reviewed before keeping proposal %s',
+  async (id) => {
+    const { read, propose, state } = await concurrentEditors();
+    await propose(client, 'draft', id, {
+      typeId: state.types[0].id,
+      name: 'Lo Lind',
+      description: '',
+    });
+    // Catalog editing is not exposed yet; arrange its concurrent revision in SQLite.
+    fixture.database
+      .prepare('UPDATE object_type SET description = ?, revision = revision + 1 WHERE id = ?')
+      .run('Ny typbeskrivning', state.types[0].id);
+    await open();
+    expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
+      'Ny typbeskrivning',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Behåll mitt förslag' }));
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('Granska hela utkastet'),
+    );
+    await save();
+    expect((await read()).objects.find((object) => object.id === id)?.name).toBe('Lo Lind');
+  },
+);

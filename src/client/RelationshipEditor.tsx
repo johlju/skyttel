@@ -11,7 +11,7 @@ export const knowledgeLabels: Record<Knowledge, string> = {
 export function relationshipLabel(
   value: RelationshipValue,
   state: MapState,
-  objects: Map<string, MapObject>,
+  objects: Map<string, { name: string }>,
 ) {
   return `${objects.get(value.sourceId)?.name ?? value.sourceId} → ${state.relationshipTypes.find((type) => type.id === value.typeId)?.name ?? value.typeId} → ${value.targetId ? (objects.get(value.targetId)?.name ?? value.targetId) : knowledgeLabels[value.knowledge]}${value.knowledge === 'uncertain' ? ' (Osäkert uppgivet)' : ''}`;
 }
