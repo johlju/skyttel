@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -189,12 +189,17 @@ try {
   await writeFile(brokenSql, 'THIS IS NOT VALID SQL;\n');
   const failed = `skyttel-failed-${suffix}`;
   await createApplication(failed, [`type=volume,src=${volume},dst=/data`]);
-  await command(['cp', brokenSql, `${failed}:/app/migrations/002_container_smoke.sql`]);
+  const migrationFiles = (await readdir('migrations')).filter((name) => name.endsWith('.sql'));
+  const nextVersion = String(migrationFiles.length + 1).padStart(3, '0');
+  await command(['cp', brokenSql, `${failed}:/app/migrations/${nextVersion}_container_smoke.sql`]);
   await command(['start', failed]);
   const exitCode = await command(['wait', failed]);
   assert.equal(exitCode, '1', 'Migration failure must exit with failure');
   const logs = await exec(docker, ['logs', failed]);
-  assert.match(`${logs.stdout}${logs.stderr}`, /database_initialization_failed/u);
+  assert.deepEqual(JSON.parse(`${logs.stdout}${logs.stderr}`.trim()), {
+    event: 'database_initialization_failed',
+    reason: 'migration_failed',
+  });
   assert.doesNotMatch(`${logs.stdout}${logs.stderr}`, /server_ready/u);
   assert.doesNotMatch(`${logs.stdout}${logs.stderr}`, /synthetic-google-secret|alex-google/u);
   console.log('PASS: failed migration exits without readiness or private diagnostic values');

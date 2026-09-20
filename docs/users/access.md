@@ -1,0 +1,96 @@
+# Share access to a household
+
+Each person who uses Skyttel signs in with their own Google or Microsoft
+account. A household administrator decides which Skyttel users can join the
+household. An email address or a name does not grant access.
+
+## Roles
+
+**Medlem** means member. Every current member has the same access to the
+household's shared map and the same right to view and edit its content.
+
+**Administratör** means administrator. An administrator also manages
+invitations, membership, and roles. Several administrators can share this
+responsibility. The role does not provide extra visibility into the map or
+create private parts of it.
+
+The household must keep at least one administrator. Give another member the
+administrator role before you remove the last administrator's access or
+change that person's role to member.
+
+## Invite a Skyttel user
+
+1. Ask the recipient to open your Skyttel installation and sign in. A person
+   without membership sees **Du har inte tillgång till hushållet**. This
+   means that sign-in succeeds but household access is not yet available.
+2. Ask the recipient to copy **Ditt Skyttel-användar-ID** and send it to you
+   privately. Confirm with the intended person that it is their ID. Names
+   and email addresses can be shared by different identities.
+3. Open the household and select **Administrera tillgång**. Enter the ID in
+   **Skyttel-användar-ID att bjuda in**, then select **Skapa inbjudan**.
+4. Copy **Inbjudningskod att dela** and send the code privately to the
+   recipient. Skyttel does not send an email. The code appears only when you
+   create the invitation; it is not available again after you leave or
+   reload the page.
+5. Ask the recipient to stay signed in with the identity that supplies the
+   ID. They enter the code in **Inbjudningskod** and select **Acceptera
+   inbjudan**. The household opens with the role **Medlem**.
+
+An invitation works once, expires after seven days, and belongs to the
+specified Skyttel user and household. Someone with another identity cannot
+use it, even if that person has the same name or email address. Using Google
+and Microsoft with the same email does not link the two Skyttel identities.
+Continue to use the sign-in identity that receives the invitation.
+
+Keep invitation codes out of public messages, screenshots, and support
+reports. If a code is lost or shared with the wrong person, revoke that
+invitation and create a new one for the correct ID.
+Creating another invitation for the same recipient replaces that person's
+pending invitation to this household and invalidates its code.
+
+## Track invitations and share administration
+
+Open **Administrera tillgång** to see **Inbjudningar** and **Medlemmar**.
+An invitation starts with **Väntar på svar**. After the recipient joins,
+its status is **Accepterad** and the recipient appears among the members.
+The invitation list also shows when an invitation expires or is revoked.
+
+Administrators can cancel an invitation before it is accepted. An expired
+or revoked invitation cannot grant access. Create a new invitation if the
+intended person still needs to join.
+
+Use the member's role control to make that person an administrator or a
+member. A member can use the shared map but cannot manage invitations,
+membership, or roles. The server checks the current role for each request,
+including requests from a page that is already open.
+
+The role and access controls on your own row, marked **(du)**, stay visible
+but are disabled. Ask another administrator to change your role or revoke
+your access through **Administrera tillgång**.
+
+## Revoke access
+
+An administrator can remove a member's access from **Medlemmar**. Check the
+person's Skyttel user ID as well as their name before you remove access.
+The last administrator cannot be removed until another administrator exists.
+
+Revocation stops access to this household on the next server request, even
+when the person's sign-in session or browser page remains open. Information
+that a browser already displays cannot be recalled. A new invitation and
+acceptance are required to give access again; an old accepted code cannot
+restore membership.
+
+If your own access changes while a page is open, refresh the page to check
+your current access. Signing in again does not restore membership. For an
+invalid, expired, or revoked invitation, ask an administrator for a new
+code. Use the same Skyttel identity whose ID the administrator invites.
+
+## People in the map and Skyttel users
+
+A person described in the household map is separate from a Skyttel user
+with a sign-in identity. Adding a person to the map does not create
+membership or an invitation. Revoking a Skyttel user's access does not
+remove that person's objects, relationships, or other shared map content.
+
+Membership applies only to the household that grants it. Access to one
+household does not grant access to another household or installation.

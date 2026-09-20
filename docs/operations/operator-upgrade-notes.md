@@ -21,3 +21,13 @@ callback addresses. Enable personal Microsoft accounts and verify real sign-in
 with both providers before use. Email addresses do not grant access or link
 accounts. After household creation, current membership controls access;
 changing the configured first administrator does not transfer the household.
+
+### Household invitations and database compatibility
+
+Back up the persistent database before upgrade and retain the matching
+application image. Startup adds storage for household invitations and keeps
+existing households and memberships. No configuration changes are required.
+
+An older application image cannot start with the upgraded database. To
+return to that image, restore its matching database backup while the
+application is stopped. Changes made after the backup will not be present.

@@ -201,7 +201,7 @@
 
   // Use 'postCreateCommand' to run commands after the container is created
   // Install tools and dependencies without running application or CI tests.
-  "postCreateCommand": "bash -lc 'set -e; bash .devcontainer/prepare-storage.sh && CODEX_HOME=/home/vscode/.codex CODEX_INSTALL_DIR=/home/vscode/.local/bin CODEX_NON_INTERACTIVE=1 bash .devcontainer/install-codex.sh && python3 .devcontainer/merge-codex-config.py .devcontainer/codex-config.toml /home/vscode/.codex/config.toml && npm ci && dotnet tool restore && npm install --global --prefix \"$HOME/.local\" playwright@latest && \"$HOME/.local/bin/playwright\" install --with-deps && npx --no-install playwright install && bash .devcontainer/link-playwright-chrome.sh'",
+  "postCreateCommand": "bash -lc 'set -e; bash .devcontainer/prepare-storage.sh && CODEX_HOME=/home/vscode/.codex CODEX_INSTALL_DIR=/home/vscode/.local/bin CODEX_NON_INTERACTIVE=1 bash .devcontainer/install-codex.sh && codex app-server daemon update && python3 .devcontainer/merge-codex-config.py .devcontainer/codex-config.toml /home/vscode/.codex/config.toml && npm ci && dotnet tool restore && npm install --global --prefix \"$HOME/.local\" playwright@latest && \"$HOME/.local/bin/playwright\" install --with-deps && npx --no-install playwright install && bash .devcontainer/link-playwright-chrome.sh && npm run db:setup'",
 
   // Copy .devcontainer/.env.example to .devcontainer/.env before the first rebuild.
   // Use 'postStartCommand' to run commands after the container starts and every time it starts

@@ -16,6 +16,9 @@ Målet med Skyttel är att ge hushållet en gemensam, tydlig och sammanhängande
 
 ![Konceptillustration](docs/images/shuttle-conceptillustration.png)
 
+[Guiden för hushållets tillgång](docs/users/access.md) beskriver roller,
+inbjudningar och hur en administratör återkallar tillgång.
+
 Utveckla i projektets [devcontainer](docs/development/devcontainer.md).
 [Utvecklings- och testinstruktionerna](docs/development/testing.md) beskriver
 projektets kontroller och hur de körs.

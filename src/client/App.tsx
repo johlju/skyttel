@@ -1,5 +1,6 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
+import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
 
 type Provider = 'google' | 'microsoft';
@@ -16,8 +17,11 @@ type LoadState<T> =
   | { status: 'loaded'; data: T };
 
 class RequestError extends Error {
-  constructor(readonly status: number) {
-    super('request_failed');
+  constructor(
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(code ?? 'request_failed');
   }
 }
 
@@ -30,11 +34,14 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
-  if (!response.ok) throw new RequestError(response.status);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new RequestError(response.status, data.error);
+  }
   return response.json() as Promise<T>;
 }
 
-function useResource<T>(path: string, revision = 0): LoadState<T> {
+function useResource<T>(path: string, revision = 0, refreshAccess = false): LoadState<T> {
   const key = `${path}:${revision}`;
   const [result, setResult] = useState<{ key: string; state: LoadState<T> }>({
     key,
@@ -43,23 +50,46 @@ function useResource<T>(path: string, revision = 0): LoadState<T> {
   useEffect(() => {
     const controller = new AbortController();
     setResult({ key, state: { status: 'loading' } });
-    request<T>(path, undefined, controller.signal).then(
-      (data) => {
+    let pending = false;
+    async function refresh() {
+      if (pending) return;
+      pending = true;
+      try {
+        const data = await request<T>(path, undefined, controller.signal);
         if (!controller.signal.aborted) setResult({ key, state: { status: 'loaded', data } });
-      },
-      (error: unknown) => {
+      } catch (error) {
         if (!controller.signal.aborted)
-          setResult({
-            key,
-            state: {
-              status: 'error',
-              code: error instanceof RequestError ? error.status : undefined,
-            },
+          setResult((previous) => {
+            const code = error instanceof RequestError ? error.status : undefined;
+            if (
+              previous.key === key &&
+              previous.state.status === 'loaded' &&
+              code !== 401 &&
+              code !== 403
+            )
+              return previous;
+            return { key, state: { status: 'error', code } };
           });
-      },
-    );
-    return () => controller.abort();
-  }, [path, key]);
+      } finally {
+        pending = false;
+      }
+    }
+    void refresh();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    const interval = refreshAccess ? window.setInterval(() => void refresh(), 5_000) : undefined;
+    if (refreshAccess) {
+      window.addEventListener('focus', onVisible);
+      document.addEventListener('visibilitychange', onVisible);
+    }
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [path, key, refreshAccess]);
   return result.key === key ? result.state : { status: 'loading' };
 }
 
@@ -275,8 +305,376 @@ function Forbidden() {
         Den här inloggningen har inte tillgång till hushållet. Logga ut för att använda en annan
         inloggning.
       </p>
-      <p className="muted">Kontakta den som ansvarar för installationen om du behöver hjälp.</p>
+      <p className="muted">
+        Dela ditt Skyttel-användar-ID nedan med en administratör för att få en inbjudan.
+      </p>
       <Link to="/">Till startsidan</Link>
+    </section>
+  );
+}
+
+function InvitationEntry({
+  userId,
+  showInvitation,
+  onAccepted,
+  onReload,
+}: {
+  userId: string;
+  showInvitation: boolean;
+  onAccepted: (household: Household) => void;
+  onReload: () => void;
+}) {
+  const [code, setCode] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function accept(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    try {
+      const { household } = await request<{ household: Household }>('/api/invitations/accept', {
+        code: code.trim(),
+      });
+      onAccepted(household);
+    } catch (failure) {
+      if (failure instanceof RequestError && failure.status === 401) onReload();
+      else
+        setError(
+          failure instanceof RequestError && [400, 409].includes(failure.status)
+            ? 'Inbjudan kan inte användas. Kontrollera koden och att du är inloggad med rätt Skyttel-användare. Be administratören om en ny inbjudan om den har upphört.'
+            : 'Inbjudan kunde inte bekräftas. Kontrollera anslutningen och försök igen.',
+        );
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <section className="panel invitation-panel">
+      <h2>Din Skyttel-användare</h2>
+      <label htmlFor="own-user-id">Ditt Skyttel-användar-ID</label>
+      <input
+        id="own-user-id"
+        readOnly
+        value={userId}
+        aria-describedby={showInvitation ? 'user-id-hint' : undefined}
+      />
+      {showInvitation && (
+        <>
+          <p id="user-id-hint" className="muted">
+            Dela detta ID med administratören som ska bjuda in dig. Namn och e-postadress ger inte
+            tillgång.
+          </p>
+          <form onSubmit={(event) => void accept(event)} aria-busy={pending}>
+            <h2>Har du en inbjudan?</h2>
+            <label htmlFor="invitation-code">Inbjudningskod</label>
+            <input
+              id="invitation-code"
+              autoComplete="off"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              required
+              readOnly={pending}
+            />
+            <button type="submit" disabled={pending}>
+              {pending ? 'Accepterar inbjudan…' : 'Acceptera inbjudan'}
+            </button>
+            {pending && (
+              <p className="form-status" role="status">
+                Kontrollerar din inbjudan…
+              </p>
+            )}
+            {error && (
+              <div className="form-status">
+                <p className="error" role="alert">
+                  {error}
+                </p>
+                <button type="button" onClick={onReload}>
+                  Kontrollera tillgång
+                </button>
+              </div>
+            )}
+          </form>
+        </>
+      )}
+    </section>
+  );
+}
+
+const invitationStatuses: Record<HouseholdInvitation['status'], string> = {
+  pending: 'Väntar på svar',
+  accepted: 'Accepterad',
+  revoked: 'Återkallad',
+  expired: 'Utgången',
+};
+
+function AdministrationPage({ userId, onReload }: { userId: string; onReload: () => void }) {
+  const { id } = useParams();
+  const path = `/api/households/${encodeURIComponent(id ?? '')}`;
+  const [revision, setRevision] = useState(0);
+  const result = useResource<Administration>(`${path}/administration`, revision, true);
+  const [recipient, setRecipient] = useState('');
+  const [code, setCode] = useState<{ invitationId: string; value: string } | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmMember, setConfirmMember] = useState<string | null>(null);
+  const [confirmInvitation, setConfirmInvitation] = useState<string | null>(null);
+  const sessionExpired = result.status === 'error' && result.code === 401;
+  useEffect(() => {
+    if (sessionExpired) onReload();
+  }, [sessionExpired, onReload]);
+  async function invite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    setNotice(null);
+    setCode(null);
+    try {
+      const created = await request<{ invitation: HouseholdInvitation; code: string }>(
+        `${path}/invitations`,
+        {
+          userId: recipient.trim(),
+        },
+      );
+      setCode({ invitationId: created.invitation.id, value: created.code });
+      setRecipient('');
+      setRevision((value) => value + 1);
+    } catch (failure) {
+      if (failure instanceof RequestError && [401, 403].includes(failure.status)) onReload();
+      else
+        setError(
+          failure instanceof RequestError && failure.code === 'user_not_found'
+            ? 'Skyttel-användaren finns inte. Be mottagaren logga in och dela sitt Skyttel-användar-ID.'
+            : failure instanceof RequestError && failure.code === 'already_member'
+              ? 'Skyttel-användaren har redan tillgång till hushållet.'
+              : 'Inbjudan kunde inte skapas. Kontrollera uppgifterna och anslutningen och försök igen.',
+        );
+    } finally {
+      setPending(false);
+    }
+  }
+  async function changeAccess(suffix: string, body: unknown, success: string) {
+    setPending(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await request(`${path}/${suffix}`, body);
+      setConfirmMember(null);
+      setConfirmInvitation(null);
+      setNotice(success);
+      setRevision((value) => value + 1);
+    } catch (failure) {
+      if (failure instanceof RequestError && [401, 403].includes(failure.status)) onReload();
+      else
+        setError(
+          failure instanceof RequestError && failure.code === 'last_administrator'
+            ? 'Hushållet måste ha minst en administratör. Gör en annan medlem till administratör först.'
+            : 'Ändringen kunde inte bekräftas. Kontrollera den aktuella listan och försök igen.',
+        );
+    } finally {
+      setPending(false);
+    }
+  }
+  if (sessionExpired || result.status === 'loading') return <Loading />;
+  if (result.status === 'error')
+    return result.code === 403 ? (
+      <section className="panel">
+        <Heading>Du kan inte administrera hushållet</Heading>
+        <p>Endast aktuella administratörer kan hantera tillgång.</p>
+        <Link to="/">Till startsidan</Link>
+      </section>
+    ) : (
+      <Failure onRetry={() => setRevision((value) => value + 1)} />
+    );
+  return (
+    <section className="panel administration-panel">
+      <Link to={`/households/${encodeURIComponent(id ?? '')}`}>Till hushållet</Link>
+      <Heading>Administrera tillgång</Heading>
+      <p>
+        Alla medlemmar har samma insyn i hushållets gemensamma karta. Administratörer hanterar
+        tillgången.
+      </p>
+      <form onSubmit={(event) => void invite(event)} aria-busy={pending}>
+        <h2>Bjud in en Skyttel-användare</h2>
+        <label htmlFor="recipient-id">Skyttel-användar-ID att bjuda in</label>
+        <input
+          id="recipient-id"
+          autoComplete="off"
+          value={recipient}
+          onChange={(event) => setRecipient(event.target.value)}
+          required
+          readOnly={pending}
+        />
+        <p className="muted">
+          Be mottagaren logga in och dela sitt ID från Skyttel. Inbjudan gäller i sju dagar. En ny
+          inbjudan ersätter tidigare väntande inbjudan till samma användare.
+        </p>
+        <button type="submit" className="primary" disabled={pending}>
+          {pending ? 'Skapar inbjudan…' : 'Skapa inbjudan'}
+        </button>
+      </form>
+      {pending && (
+        <p className="form-status" role="status">
+          Sparar ändringen…
+        </p>
+      )}
+      {notice && (
+        <p className="form-status" role="status">
+          {notice}
+        </p>
+      )}
+      {error && (
+        <p className="error form-status" role="alert">
+          {error}
+        </p>
+      )}
+      {code &&
+        result.data.invitations.some(
+          (invitation) => invitation.id === code.invitationId && invitation.status === 'pending',
+        ) && (
+          <div className="invitation-result">
+            <p role="status">
+              Inbjudan är skapad. Dela koden med den avsedda mottagaren. Koden visas bara nu.
+            </p>
+            <label htmlFor="created-code">Inbjudningskod att dela</label>
+            <input id="created-code" readOnly value={code.value} />
+          </div>
+        )}
+      <h2 className="section-heading">Medlemmar</h2>
+      <ul className="access-list" aria-label="Medlemmar">
+        {result.data.members.map((member) => (
+          <li
+            key={member.userId}
+            className={member.userId === userId ? 'own-membership' : undefined}
+          >
+            <h3>
+              {member.name}
+              {member.userId === userId ? ' (du)' : ''}
+            </h3>
+            <p className="muted">{member.userId}</p>
+            <p>{member.role === 'administrator' ? 'Administratör' : 'Medlem'}</p>
+            <div className="access-actions">
+              <button
+                type="button"
+                disabled={pending || member.userId === userId}
+                aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
+                onClick={() =>
+                  void changeAccess(
+                    `members/${encodeURIComponent(member.userId)}/role`,
+                    { role: member.role === 'administrator' ? 'member' : 'administrator' },
+                    'Rollen har ändrats.',
+                  )
+                }
+              >
+                {member.role === 'administrator' ? 'Gör till medlem' : 'Gör till administratör'}
+              </button>
+              <button
+                type="button"
+                disabled={pending || member.userId === userId}
+                aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
+                onClick={() => setConfirmMember(member.userId)}
+              >
+                Återkalla tillgång
+              </button>
+            </div>
+            {member.userId === userId && (
+              <p id="own-access-hint" className="muted">
+                Din roll och tillgång ändras av en annan administratör.
+              </p>
+            )}
+            {confirmMember === member.userId && (
+              <fieldset
+                className="confirmation"
+                aria-label={`Återkalla tillgång för ${member.name}`}
+              >
+                <p>
+                  Återkalla tillgång för {member.name}? Alla befintliga sessioner förlorar tillgång.
+                  Personer och innehåll i kartan finns kvar.
+                </p>
+                <div className="access-actions">
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() =>
+                      void changeAccess(
+                        `members/${encodeURIComponent(member.userId)}/revoke`,
+                        {},
+                        'Tillgången har återkallats.',
+                      )
+                    }
+                  >
+                    Bekräfta återkallelse
+                  </button>
+                  <button type="button" disabled={pending} onClick={() => setConfirmMember(null)}>
+                    Avbryt
+                  </button>
+                </div>
+              </fieldset>
+            )}
+          </li>
+        ))}
+      </ul>
+      <h2 className="section-heading">Inbjudningar</h2>
+      {result.data.invitations.length === 0 ? (
+        <p>Inga inbjudningar ännu.</p>
+      ) : (
+        <ul className="access-list" aria-label="Inbjudningar">
+          {result.data.invitations.map((invitation) => (
+            <li key={invitation.id}>
+              <h3>{invitation.name}</h3>
+              <p className="muted">{invitation.userId}</p>
+              <p>{invitationStatuses[invitation.status]}</p>
+              <p className="muted">
+                Gäller till{' '}
+                <time dateTime={invitation.expiresAt}>
+                  {new Date(invitation.expiresAt).toLocaleString('sv-SE')}
+                </time>
+              </p>
+              {invitation.status === 'pending' && (
+                <>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => setConfirmInvitation(invitation.id)}
+                  >
+                    Återkalla inbjudan
+                  </button>
+                  {confirmInvitation === invitation.id && (
+                    <fieldset
+                      className="confirmation"
+                      aria-label={`Återkalla inbjudan till ${invitation.name}`}
+                    >
+                      <p>Återkalla inbjudan till {invitation.name}? Koden slutar fungera.</p>
+                      <div className="access-actions">
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() =>
+                            void changeAccess(
+                              `invitations/${encodeURIComponent(invitation.id)}/revoke`,
+                              {},
+                              'Inbjudan har återkallats.',
+                            )
+                          }
+                        >
+                          Bekräfta återkallelse
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => setConfirmInvitation(null)}
+                        >
+                          Avbryt
+                        </button>
+                      </div>
+                    </fieldset>
+                  )}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -287,6 +685,7 @@ function HouseholdPage({ onSessionExpired }: { onSessionExpired: () => void }) {
   const result = useResource<{ household: Household }>(
     `/api/households/${encodeURIComponent(id ?? '')}`,
     revision,
+    true,
   );
   const sessionExpired = result.status === 'error' && result.code === 401;
   useEffect(() => {
@@ -307,6 +706,13 @@ function HouseholdPage({ onSessionExpired }: { onSessionExpired: () => void }) {
       <p className="membership">
         {result.data.household.role === 'administrator' ? 'Administratör' : 'Medlem'}
       </p>
+      {result.data.household.role === 'administrator' && (
+        <p>
+          <Link to={`/households/${encodeURIComponent(result.data.household.id)}/administration`}>
+            Administrera tillgång
+          </Link>
+        </p>
+      )}
       <div className="empty-state">
         <div className="weave-mark" aria-hidden="true">
           ↗
@@ -325,7 +731,7 @@ export function App() {
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
-  const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision);
+  const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
   const data = bootstrap.status === 'loaded' ? bootstrap.data : undefined;
   async function signOut() {
@@ -393,6 +799,10 @@ export function App() {
             />
             <Route path="/households/:id" element={<HouseholdPage onSessionExpired={reload} />} />
             <Route
+              path="/households/:id/administration"
+              element={<AdministrationPage userId={data.user.id} onReload={reload} />}
+            />
+            <Route
               path="*"
               element={
                 <section className="panel">
@@ -402,6 +812,14 @@ export function App() {
               }
             />
           </Routes>
+        )}
+        {data && (data.status === 'forbidden' || data.status === 'ready') && (
+          <InvitationEntry
+            userId={data.user.id}
+            showInvitation={data.status === 'forbidden' || data.household.role !== 'administrator'}
+            onAccepted={created}
+            onReload={reload}
+          />
         )}
       </main>
       <footer>Det som hör ihop, samlat.</footer>

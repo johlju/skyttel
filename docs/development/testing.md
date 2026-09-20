@@ -195,6 +195,13 @@ rebuild and start the container, check the tools, and confirm that existing
 development data remains available. Run the application checks explicitly;
 container startup does not run them.
 
+Use `npm run db:setup` to replace the development database contents with
+`TestHousehold` and its configured administrator. Follow the
+[demo data setup](devcontainer.md#reset-demo-data) before running it; the
+command removes all existing application data and sessions. Add reusable
+demo fixtures in `scripts/seeds/demo.ts`. Automated tests continue to use
+their own temporary databases and synthetic provider identities.
+
 ## Production-container checks
 
 With a running Docker daemon:

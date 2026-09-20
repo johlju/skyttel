@@ -3,7 +3,7 @@ import { betterAuth } from 'better-auth';
 import type Database from 'better-sqlite3';
 import type { Config } from './config.js';
 
-function internalEmail(provider: 'google' | 'microsoft', subject: unknown) {
+export function internalEmail(provider: 'google' | 'microsoft', subject: unknown) {
   if (typeof subject !== 'string' || subject.trim().length === 0) {
     throw new Error('invalid_provider_identity');
   }

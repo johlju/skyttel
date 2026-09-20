@@ -26,6 +26,7 @@ export const robin: Identity = {
 
 export async function createInstallation(
   firstAdmin = { provider: 'google' as 'google' | 'microsoft', subject: alex.subject },
+  databaseOptions: { migrationsDirectory?: string } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
   const config: Config = {
@@ -59,7 +60,7 @@ export async function createInstallation(
     if (!address || typeof address === 'string') throw new Error('No test address');
     config.port = address.port;
     config.origin = `http://127.0.0.1:${address.port}`;
-    database = openDatabase(config.databasePath);
+    database = openDatabase(config.databasePath, databaseOptions);
     const auth = createAuth(config, database);
     await verifyAuthSchema(auth);
     const context = await auth.$context;
@@ -115,15 +116,15 @@ export async function createInstallation(
     denyConsent(value: boolean) {
       consentDenied = value;
     },
-    // Arrangement for access scenarios whose administration UI is a later issue.
-    seedMembership(userId: string, householdId: string, name: string) {
+    // Arrange another household on the same installation for boundary checks.
+    seedMembership(userId: string, householdId: string, name: string, role = 'member') {
       database.transaction(() => {
         database
           .prepare('INSERT INTO household (id, name, createdAt) VALUES (?, ?, ?)')
           .run(householdId, name, '2026-01-01T00:00:00Z');
         database
           .prepare('INSERT INTO membership (householdId, userId, role) VALUES (?, ?, ?)')
-          .run(householdId, userId, 'member');
+          .run(householdId, userId, role);
       })();
     },
     revokeMembership(userId: string) {

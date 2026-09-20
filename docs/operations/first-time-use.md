@@ -531,6 +531,11 @@ recreation when configuration changes. Keep the same volume and
 `BETTER_AUTH_SECRET`; `docker compose down --volumes` deletes the stored
 household and is not a restart or a repair step.
 
+To invite other Skyttel users and share administrator responsibility, follow
+the [household access guide](../users/access.md). Keep provider verification
+below separate from invitations so that you can check sign-in without
+granting household membership.
+
 ### 14. Verify personal Microsoft sign-in separately
 
 A Microsoft identity does not automatically gain access to the Google

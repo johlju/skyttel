@@ -4,6 +4,8 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { normalizeHouseholdName } from '../shared/household-name.js';
+import { AdministrationError } from './administration.js';
+import { administrationRoutes } from './administration-routes.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { createHousehold, householdAccess, isFirstAdmin, isInitialized } from './households.js';
@@ -45,7 +47,9 @@ export function createApp({
       onError: (context) => context.json({ error: 'invalid_request' }, 413),
     }),
   );
-  app.onError((_error, context) => {
+  app.onError((error, context) => {
+    if (error instanceof AdministrationError)
+      return context.json({ error: error.code }, error.status);
     console.error(JSON.stringify({ event: 'request_failed' }));
     return context.json({ error: 'internal_error' }, 500);
   });
@@ -113,6 +117,7 @@ export function createApp({
     if (!household) return context.json({ error: 'forbidden' }, 403);
     return context.json({ household });
   });
+  app.route('/api', administrationRoutes(database, auth, config.origin));
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));
   app.get('*', serveStatic({ path: './dist/client/index.html' }));

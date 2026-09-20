@@ -226,12 +226,26 @@ describe('Skyttel application interface', () => {
     'opens the current household and displays the %s role',
     async (role) => {
       serve({
-        '/api/bootstrap': [{ data: ready }],
+        '/api/bootstrap': [{ data: { ...ready, household: { ...household, role } } }],
         '/api/households/linden': [{ data: { household: { ...household, role } } }],
       });
       mount();
       expect(await screen.findByRole('heading', { name: 'Hushållet Linden' })).toBeDefined();
       expect(screen.getByText(role === 'administrator' ? 'Administratör' : 'Medlem')).toBeDefined();
+      expect(screen.getByRole('heading', { name: 'Din Skyttel-användare' })).toBeDefined();
+      const userId = screen.getByRole('textbox', { name: 'Ditt Skyttel-användar-ID' });
+      expect((userId as HTMLInputElement).value).toBe('alex');
+      const invitationHeading = screen.queryByRole('heading', { name: 'Har du en inbjudan?' });
+      const invitationHint = screen.queryByText(/Dela detta ID med administratören/);
+      if (role === 'administrator') {
+        expect(invitationHeading).toBeNull();
+        expect(invitationHint).toBeNull();
+        expect(userId.getAttribute('aria-describedby')).toBeNull();
+      } else {
+        expect(invitationHeading).not.toBeNull();
+        expect(invitationHint).not.toBeNull();
+        expect(userId.getAttribute('aria-describedby')).toBe(invitationHint?.id);
+      }
     },
   );
 

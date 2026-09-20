@@ -16,9 +16,9 @@ openssl rand -base64 48
 
 Put the generated value in `BETTER_AUTH_SECRET` in `.devcontainer/.env` and
 keep it stable across rebuilds. This ignored file is the default environment
-for `npm run dev:all`. The synthetic provider values display the sign-in page
-but cannot complete real sign-in. Configure dedicated provider registrations
-and a first administrator using the
+for `npm run dev:all` and `npm run db:setup`. The synthetic provider values
+display the sign-in page but cannot complete real sign-in. Configure
+dedicated provider registrations and a first administrator using the
 [installation guide](../operations/installation.md) when real sign-in is
 needed. Keep credentials and identity values out of Git and public logs.
 
@@ -74,6 +74,51 @@ used to run development on the host, so the API matches the Vite proxy.
 Update existing development files that set `PORT=3000`. Recreate the
 container after changing its environment, and rebuild it to apply the
 updated forwarded ports.
+
+## Reset demo data
+
+Both dev container profiles run `npm run db:setup` as the final creation
+step, including after a rebuild. Configure real provider credentials and
+the first administrator before creating the container. Each successful
+setup replaces the development database contents with demo data.
+
+After configuring real provider credentials and the first administrator,
+prepare the development database and start the application:
+
+```sh
+npm run db:setup
+npm run dev:all
+```
+
+Open [the development client](http://localhost:5173) and sign in with the
+account identified by `SKYTTEL_FIRST_ADMIN_PROVIDER` and
+`SKYTTEL_FIRST_ADMIN_SUBJECT`. The `TestHousehold` household is ready, and
+that account has the administrator role. Its initial display name is
+`Development administrator`. Sign-in still requires the configured identity
+provider; the seed does not create a password or an authenticated session.
+
+Every successful `npm run db:setup` removes all application data from
+`SKYTTEL_DATABASE_PATH` and replaces it with the demo data. This includes
+households, memberships, invitations, provider accounts, and sessions, so
+sign in again after a reset. Back up any development data you want to keep.
+Starting the development server does not reset the database.
+
+The command uses `.devcontainer/.env` by default, or the file selected by
+`SKYTTEL_DEV_ENV_FILE`. Exported environment values take precedence, including
+values Compose loads when creating the container. Recreate the container
+after changing those values in the file. Check `SKYTTEL_DATABASE_PATH`
+before resetting; use a dedicated development database.
+
+Setup validates the configuration before opening the database and rejects
+`NODE_ENV=production` and the example first-administrator subject values.
+It applies migrations, then clears and seeds application data in one
+transaction. If clearing or seeding fails, the previous application data
+remains. Migration history is retained.
+
+Add future demo fixtures in `scripts/seeds/demo.ts`, or in helpers called
+from that file. The reset also clears application tables introduced by
+future migrations. Keep the fixtures synthetic; the configured administrator
+identity comes from the private environment file.
 
 ## Use a host terminal
 
