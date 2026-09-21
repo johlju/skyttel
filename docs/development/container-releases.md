@@ -103,7 +103,8 @@ gh attestation verify "$release_dir/manifest.json" \
 
 For a stable release, use its `refs/tags/vX.Y.Z` source ref. To check the
 inventory bundle directly, use `sbom.sigstore.json` and add
-`--predicate-type https://spdx.dev/Document`. See the
+`--predicate-type https://spdx.dev/Document/v2.3` for the SPDX 2.3 inventory.
+See the
 [GitHub CLI verification reference](https://cli.github.com/manual/gh_attestation_verify)
 for the identity checks and supported artifact forms.
 

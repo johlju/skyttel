@@ -122,7 +122,7 @@ async function verify(directory) {
   validateCandidateReports(identity, await readJson(join(directory, 'grype.json')));
   for (const [name, predicateType] of [
     ['provenance', 'https://slsa.dev/provenance/v1'],
-    ['sbom', 'https://spdx.dev/Document'],
+    ['sbom', 'https://spdx.dev/Document/v2.3'],
   ]) {
     const output = execFileSync(
       'gh',
