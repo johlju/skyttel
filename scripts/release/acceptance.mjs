@@ -219,8 +219,18 @@ async function inspectRelease(directory, requirePublic = true) {
   return { options, checked, tags, sourceRun };
 }
 
-async function published(tag, directory) {
-  assert.match(tag ?? '', /^v\d+\.\d+\.\d+(?:-preview\.\d+)?$/u, 'A release tag is required');
+export function normalizeReleaseTag(value) {
+  const tag = typeof value === 'string' ? value.trim() : '';
+  assert.match(
+    tag,
+    /^v?\d+\.\d+\.\d+(?:-preview\.\d+)?$/u,
+    'Enter a release version or tag, such as 0.0.1-preview.25 or v0.0.1-preview.25',
+  );
+  return tag.startsWith('v') ? tag : `v${tag}`;
+}
+
+async function published(value, directory) {
+  const tag = normalizeReleaseTag(value);
   fs.mkdirSync(directory, { recursive: true });
   gh('release', 'download', tag, '--repo', repository, '--dir', directory);
   const result = await inspectRelease(directory);

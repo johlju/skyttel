@@ -246,7 +246,9 @@ retry release runs, inject live failures, or change release assets. Each
 successful report covers only its selected scenario. Keep issue #38 open
 until the required scenarios have live evidence.
 
-For either release channel, select `release` and supply the published tag:
+For either release channel, select `release` and supply the published version
+or tag. Both `0.0.1-preview.25` and `v0.0.1-preview.25` are accepted. Surrounding
+whitespace is removed, and a missing `v` prefix is added automatically:
 
 ```sh
 gh workflow run release-acceptance.yml --repo viscalyx/skyttel --ref main \
