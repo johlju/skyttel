@@ -43,6 +43,8 @@ export function receiptMessage(receipt: SaveReceipt) {
 }
 
 export function rejectionMessage(code: string) {
+  if (code === 'client_outdated')
+    return 'Skyttel har uppdaterats. Kopiera osänd text och ladda om sidan. Kontrollera tidigare sparförsök efter omladdning.';
   if (code === 'operation_conflict')
     return 'Avvisat: samma sparförsök gäller ett annat innehåll. Kontrollera det ursprungliga försöket innan du fortsätter.';
   if (code === 'content_conflict')

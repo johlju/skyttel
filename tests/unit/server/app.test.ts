@@ -11,6 +11,46 @@ afterEach(() => {
 });
 
 describe('public application HTTP interface', () => {
+  test('rejects outdated or absent browser identity before changing household content', async () => {
+    fixture.close();
+    const identity = { commit: 'a'.repeat(40), version: '0.1.0-preview.2+2' };
+    fixture = await applicationFixture({ identity });
+    const client = fixture.client();
+    await client.signIn();
+    const version = await client.request('/api/version');
+    expect(version.headers.get('cache-control')).toBe('no-store');
+    expect(await version.json()).toMatchObject({ ...identity, database: { status: 'ready' } });
+    for (const header of [undefined, `${'b'.repeat(40)}:0.1.0-preview.1+1`]) {
+      const response = await client.request('/api/households', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Linden' }),
+        headers: {
+          origin: 'http://localhost:3000',
+          'content-type': 'application/json',
+          ...(header ? { 'X-Skyttel-Build': header } : {}),
+        },
+      });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ error: 'client_outdated' });
+      expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
+        status: 'setup',
+      });
+    }
+    expect(
+      (
+        await client.request('/api/households', {
+          method: 'POST',
+          body: JSON.stringify({ name: 'Linden' }),
+          headers: {
+            origin: 'http://localhost:3000',
+            'content-type': 'application/json',
+            'X-Skyttel-Build': `${identity.commit}:${identity.version}`,
+          },
+        })
+      ).status,
+    ).toBe(201);
+  });
+
   test('offers setup to the configured administrator after provider authentication', async () => {
     const client = fixture.client();
     expect((await client.signIn()).status).toBe(302);

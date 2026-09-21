@@ -12,7 +12,7 @@ services:
       # Persist Codex configuration, installation, and SQLite state/logs
       - type: volume
         source: codex-state
-        target: /home/vscode/.codex
+        target: /home/vscode/.codex/sqlite
 
       # Bind-mount only the subdirectories you want to persist on the host
       - type: bind

@@ -5,11 +5,30 @@ before upgrading Skyttel.
 
 ## Unreleased
 
+### Automatic Render deployment
+
+Configure the production deployment environment and one image-based Render
+service with a persistent disk before enabling automatic updates. A verified
+release from the main branch now changes production automatically. Keep the
+same disk and authentication secret. Expect a short interruption and enable
+deployment-failure notifications. Keep other deployment paths disabled.
+
+After failure, establish the actual running image and database state before
+retry. Wait for any active migration. Return to older code only when it is
+compatible with the current database; changing the image does not restore
+data. No extra automatic backup is added. Full household export and reimport
+remain the planned recovery path and are not yet available.
+
+Ask users to preserve unsent text and reload old browser sessions after an
+update. Outdated sessions cannot submit changes. An interrupted save must
+be checked through its receipt before its outcome is treated as known.
+
 ### Verified container releases
 
 Before using a published image, verify its source and signed evidence. Read
 the upgrade guidance attached to that release and select the image by its
-digest. Publication does not change the running installation.
+digest. Releases from the main branch proceed to automatic deployment;
+stable release tags do not change the running installation.
 
 Retain the current image and each planned recovery image with their matching
 release evidence and database backup. Keep this material after temporary

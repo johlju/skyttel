@@ -18,6 +18,7 @@ const containers = new Set();
 const directory = await mkdtemp(join(tmpdir(), 'skyttel-container-check-'));
 const authSecret = 'synthetic-test-secret-with-at-least-32-characters';
 const configuredOrigin = 'http://localhost:3000';
+let buildHeader;
 const environment = {
   SKYTTEL_ORIGIN: configuredOrigin,
   SKYTTEL_DATABASE_PATH: '/data/skyttel.sqlite',
@@ -42,7 +43,20 @@ async function command(args) {
 
 async function build() {
   await new Promise((resolve, reject) => {
-    const child = spawn(docker, ['build', '--tag', image, '.'], { stdio: 'inherit' });
+    const child = spawn(
+      docker,
+      [
+        'build',
+        '--tag',
+        image,
+        '--build-arg',
+        'SKYTTEL_VERSION=0.0.0-container',
+        '--build-arg',
+        `SKYTTEL_COMMIT=${'a'.repeat(40)}`,
+        '.',
+      ],
+      { stdio: 'inherit' },
+    );
     child.once('error', reject);
     child.once('exit', (code) =>
       code === 0 ? resolve() : reject(new Error(`Container build failed (${code})`)),
@@ -63,6 +77,7 @@ async function createApplication(name, mounts) {
 }
 
 async function request(name, path, options = {}) {
+  options = { ...options, headers: { 'X-Skyttel-Build': buildHeader, ...options.headers } };
   // Run the HTTP client beside the app: the Docker engine may be on another
   // host, so its published ports are not necessarily on our loopback address.
   const output = await command([
@@ -126,6 +141,17 @@ try {
   await createApplication(fresh, [`type=volume,src=${volume},dst=/data`]);
   await command(['start', fresh]);
   await waitUntilReady(fresh);
+  const identity = JSON.parse((await request(fresh, '/api/version')).body);
+  buildHeader = `${identity.commit}:${identity.version}`;
+  assert.match(identity.commit, /^[a-f0-9]{40}$/u);
+  assert.equal(identity.database.status, 'ready');
+  if (suppliedImage) {
+    const labels = JSON.parse(
+      await command(['image', 'inspect', '--format', '{{json .Config.Labels}}', image]),
+    );
+    assert.equal(identity.commit, labels['org.opencontainers.image.revision']);
+    assert.equal(identity.version, labels['org.opencontainers.image.version']);
+  }
   assert.equal(await command(['exec', fresh, 'id', '-u']), '1000');
   assert.equal(await command(['exec', fresh, 'id', '-g']), '1000');
   await command([
@@ -190,7 +216,7 @@ try {
   await command(['start', '--attach', seedContainer]);
   assert.equal(await command(['inspect', '--format', '{{.State.ExitCode}}', seedContainer]), '0');
 
-  const persisted = `skyttel-persisted-${suffix}`;
+  let persisted = `skyttel-persisted-${suffix}`;
   await createApplication(persisted, [`type=volume,src=${persistedVolume},dst=/data`]);
   await command(['start', persisted]);
   await waitUntilReady(persisted);
@@ -220,6 +246,12 @@ try {
   await command(['restart', persisted]);
   await waitUntilReady(persisted);
   assert.deepEqual(await mapRequest(), privateDraft);
+  await command(['stop', persisted]);
+  persisted = `skyttel-replaced-draft-${suffix}`;
+  await createApplication(persisted, [`type=volume,src=${persistedVolume},dst=/data`]);
+  await command(['start', persisted]);
+  await waitUntilReady(persisted);
+  assert.deepEqual(await mapRequest(), privateDraft);
   const saveRequest = { version: 1, operationId: 'container-save' };
   const receipt = await mapRequest('/save', saveRequest);
   const savedMap = await mapRequest();
@@ -229,15 +261,24 @@ try {
   assert.deepEqual(await mapRequest(), savedMap);
   assert.deepEqual(await mapRequest('/save', saveRequest), receipt);
   assert.deepEqual((await mapRequest('/history')).history, [receipt.receipt]);
+  await command(['stop', persisted]);
+  persisted = `skyttel-replaced-saved-${suffix}`;
+  await createApplication(persisted, [`type=volume,src=${persistedVolume},dst=/data`]);
+  await command(['start', persisted]);
+  await waitUntilReady(persisted);
+  assert.deepEqual(await household(persisted, fixture), before);
+  assert.deepEqual(await mapRequest(), savedMap);
+  assert.deepEqual(await mapRequest('/save', saveRequest), receipt);
+  assert.deepEqual((await mapRequest('/history')).history, [receipt.receipt]);
   console.log(
-    'PASS: identity, household, private draft, objects, history, and receipt survive container restart',
+    'PASS: identity, household, private draft, objects, history, and receipt survive restart and replacement',
   );
 
-  await command(['stop', fresh]);
+  await command(['stop', persisted]);
   const brokenSql = join(directory, 'broken.sql');
   await writeFile(brokenSql, 'THIS IS NOT VALID SQL;\n');
   const failed = `skyttel-failed-${suffix}`;
-  await createApplication(failed, [`type=volume,src=${volume},dst=/data`]);
+  await createApplication(failed, [`type=volume,src=${persistedVolume},dst=/data`]);
   const migrationFiles = (await readdir('migrations')).filter((name) => name.endsWith('.sql'));
   const nextVersion = String(migrationFiles.length + 1).padStart(3, '0');
   await command(['cp', brokenSql, `${failed}:/app/migrations/${nextVersion}_container_smoke.sql`]);
@@ -251,6 +292,10 @@ try {
   });
   assert.doesNotMatch(`${logs.stdout}${logs.stderr}`, /server_ready/u);
   assert.doesNotMatch(`${logs.stdout}${logs.stderr}`, /synthetic-google-secret|alex-google/u);
+  await command(['start', persisted]);
+  await waitUntilReady(persisted);
+  assert.deepEqual(await mapRequest(), savedMap);
+  assert.deepEqual(await mapRequest('/save', saveRequest), receipt);
   console.log('PASS: failed migration exits without readiness or private diagnostic values');
 } finally {
   for (const name of containers) {

@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { BuildNotice } from '../../../src/client/build-guard.js';
 import { HouseholdMap } from '../../../src/client/HouseholdMap.js';
 import type { MapState, ObjectValue, RelationshipValue } from '../../../src/shared/map.js';
 import { applicationFixture } from '../server/fixture.js';
@@ -15,8 +16,10 @@ let deny = false;
 let preventSave = false;
 let wrongReceipt: Record<string, unknown> | null = null;
 let beforeOperationsRead: (() => Promise<void>) | null = null;
+let runningIdentity: { commit: string; version: string };
 beforeEach(async () => {
-  fixture = await applicationFixture();
+  runningIdentity = { commit: 'development', version: 'development' };
+  fixture = await applicationFixture({ identity: runningIdentity });
   client = fixture.client();
   await client.signIn();
   householdId = (await (await client.json('/api/households', { name: 'Linden' })).json()).household
@@ -72,6 +75,24 @@ async function save() {
   await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
   await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Sparat:'));
 }
+
+test('an update rejects an open form, preserves unsent text and explains how to recover', async () => {
+  await open();
+  render(<BuildNotice />);
+  await userEvent.click(screen.getByRole('button', { name: 'Nytt objekt' }));
+  await userEvent.type(screen.getByLabelText('Objektets namn'), 'Osänt efter uppdatering');
+  runningIdentity.commit = 'f'.repeat(40);
+  runningIdentity.version = '0.1.0-preview.3';
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
+  await screen.findByRole('button', { name: 'Ladda om Skyttel' });
+  expect((screen.getByLabelText('Objektets namn') as HTMLInputElement).value).toBe(
+    'Osänt efter uppdatering',
+  );
+  expect(screen.getByText(/Kopiera osänd text innan/)).toBeDefined();
+  const map = await (await client.request(path)).json();
+  expect(map.draft.changes).toEqual([]);
+  expect(screen.queryByText(/Förslaget finns i ditt privata utkast/)).toBeNull();
+});
 
 test('review, search, correction, discard and deletion use the real persistent map', async () => {
   await open();

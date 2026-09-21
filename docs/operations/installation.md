@@ -15,6 +15,8 @@ secret, provider credentials, and configured first administrator.
   network filesystem. The image stores its database in `/data/skyttel.sqlite`.
 
 SQLite runs inside the application; no separate database service is required.
+For production on Render, follow the [deployment runbook](render.md) to
+configure the persistent disk, automatic digest deployment and recovery.
 
 ## Configure the installation
 

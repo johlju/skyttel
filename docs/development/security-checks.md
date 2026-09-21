@@ -135,8 +135,10 @@ publication. Main pushes and stable tags start trusted release runs. The
 publication job holds its own credentials and publishes the exact candidate
 archive after container tests, scanning, and signature verification. It does
 not rebuild that image after scanning. Release evidence has separate
-retention from ordinary check reports. Render deployment and daily scanning
-of running and recovery images remain separate work.
+retention from ordinary check reports. After successful main publication,
+the [Render deployment job](../operations/render.md) uses separate credentials
+to deploy and verify that digest. Stable tags do not change production.
+Daily scanning of running and recovery images remains separate work.
 
 ## Upstream references
 

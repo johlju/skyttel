@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto';
 import { serveStatic } from '@hono/node-server/serve-static';
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
+import { buildIdentity } from '../shared/build-identity.js';
 import { normalizeHouseholdName } from '../shared/household-name.js';
 import { AdministrationError } from './administration.js';
 import { administrationRoutes } from './administration-routes.js';
@@ -17,10 +19,12 @@ export function createApp({
   config,
   database,
   auth,
+  identity = buildIdentity,
 }: {
   config: Config;
   database: Database.Database;
   auth: Auth;
+  identity?: typeof buildIdentity;
 }) {
   const app = new Hono();
   const linking = createLoginMethods(database, auth, config.origin);
@@ -42,6 +46,13 @@ export function createApp({
   );
   app.use('/api/*', async (context, next) => {
     context.header('Cache-Control', 'no-store');
+    if (
+      identity.commit !== 'development' &&
+      !['GET', 'HEAD', 'OPTIONS'].includes(context.req.method) &&
+      !context.req.path.startsWith('/api/auth/') &&
+      context.req.header('X-Skyttel-Build') !== `${identity.commit}:${identity.version}`
+    )
+      return context.json({ error: 'client_outdated' }, 409);
     await next();
   });
   app.use(
@@ -57,7 +68,29 @@ export function createApp({
     console.error(JSON.stringify({ event: 'request_failed' }));
     return context.json({ error: 'internal_error' }, 500);
   });
-  app.get('/healthz', (context) => context.json({ status: 'ok' }));
+  function databaseReadiness() {
+    const migrations = database
+      .prepare('SELECT version, checksum FROM schema_migration ORDER BY version')
+      .all() as { version: number; checksum: string }[];
+    if (!migrations.length) throw new Error('database_not_ready');
+    return {
+      status: 'ready',
+      schemaVersion: migrations.at(-1)?.version,
+      schemaChecksum: createHash('sha256').update(JSON.stringify(migrations)).digest('hex'),
+    };
+  }
+  app.get('/healthz', (context) => {
+    context.header('Cache-Control', 'no-store');
+    try {
+      databaseReadiness();
+      return context.json({ status: 'ok' });
+    } catch {
+      return context.json({ status: 'unavailable' }, 503);
+    }
+  });
+  app.get('/api/version', (context) =>
+    context.json({ ...identity, database: databaseReadiness() }),
+  );
   const authRoutes = new Set([
     '/api/auth/sign-in/social',
     '/api/auth/callback/google',
@@ -128,6 +161,13 @@ export function createApp({
   app.route('/api', mapRoutes(database, auth, config.origin));
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));
-  app.get('*', serveStatic({ path: './dist/client/index.html' }));
+  app.get(
+    '*',
+    async (context, next) => {
+      context.header('Cache-Control', 'no-store');
+      await next();
+    },
+    serveStatic({ path: './dist/client/index.html' }),
+  );
   return app;
 }

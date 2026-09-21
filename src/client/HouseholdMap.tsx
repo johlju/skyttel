@@ -221,7 +221,8 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
         );
       } else if (failure instanceof MapRequestError && failure.status === 409) {
         // An ID mismatch does not disprove an earlier successful save.
-        if (failure.code !== 'operation_conflict') saveAttempt.current = null;
+        if (!['operation_conflict', 'client_outdated'].includes(failure.code))
+          saveAttempt.current = null;
         setError(rejectionMessage(failure.code));
         try {
           setOperations(await readOperations(path, householdId, state));

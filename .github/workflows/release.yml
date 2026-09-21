@@ -103,6 +103,8 @@ jobs:
         if: steps.restore.outputs.found != 'true'
         run: |
           docker buildx build --platform linux/amd64 --provenance=false --sbom=false \
+            --build-arg "SKYTTEL_VERSION=$(jq -r .fullVersion release/plan.json)" \
+            --build-arg "SKYTTEL_COMMIT=$GITHUB_SHA" \
             --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --label "org.opencontainers.image.version=$(jq -r .fullVersion release/plan.json)" \
@@ -260,3 +262,51 @@ jobs:
           printf '%s' "$GH_TOKEN" | skopeo login --username "$GITHUB_ACTOR" --password-stdin ghcr.io
           node scripts/release/candidate.mjs publish release
           node scripts/release/github-release.mjs publish release
+
+  deploy:
+    # Stable tags publish recovery images; only an approved main push changes production.
+    if: github.repository == 'viscalyx/skyttel' && github.ref == 'refs/heads/main'
+    needs: [plan, checks, candidate, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    environment: production
+    concurrency:
+      group: render-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Require successful release publication and all prerequisite checks
+        run: node scripts/security/check-results.mjs jobs plan checks candidate publish
+        env:
+          REQUIRED_RESULTS: ${{ toJSON(needs) }}
+      - name: Restore the exact published image identity
+        run: node scripts/release/restore.mjs release-evidence release
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Deploy and verify Render production
+        run: node scripts/release/deploy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          SKYTTEL_ORIGIN: ${{ vars.SKYTTEL_ORIGIN }}
+          DEPLOYMENT_DIRECTORY: ${{ runner.temp }}/deployment
+      - name: Retain sanitized deployment evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: render-deployment-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deployment
+          if-no-files-found: warn
+          retention-days: 90

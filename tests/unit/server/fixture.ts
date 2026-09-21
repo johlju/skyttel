@@ -22,8 +22,10 @@ export function configurationEnvironment(databasePath = '/synthetic/skyttel.sqli
 
 export async function applicationFixture({
   migrationsDirectory,
+  identity,
 }: {
   migrationsDirectory?: string;
+  identity?: { version: string; commit: string };
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-unit-'));
   const config = readConfig(configurationEnvironment(join(directory, 'skyttel.sqlite')));
@@ -65,7 +67,7 @@ export async function applicationFixture({
       };
     };
   }
-  const app = createApp({ config, database, auth });
+  const app = createApp({ config, database, auth, identity });
   function client() {
     const cookies = new Map<string, string>();
     async function request(path: string, init: RequestInit = {}) {

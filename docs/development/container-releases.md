@@ -2,7 +2,10 @@
 
 This guide is for maintainers who publish, review, or recover a Skyttel
 container release. The release workflow publishes to GHCR and GitHub Releases.
-It does not deploy to Render or change a running installation.
+After successful publication from `main`, it deploys the exact digest to
+Render. Follow the [Render runbook](../operations/render.md) for setup,
+deployment evidence and failure recovery. Stable tags publish without
+changing production.
 
 ## Triggers and version identity
 

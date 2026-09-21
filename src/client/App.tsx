@@ -3,6 +3,7 @@ import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } fr
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
 import { HouseholdMap } from './HouseholdMap.js';
+import { MapRequestError as RequestError, request } from './map-request.js';
 
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
@@ -16,31 +17,6 @@ type LoadState<T> =
   | { status: 'loading' }
   | { status: 'error'; code?: number }
   | { status: 'loaded'; data: T };
-
-class RequestError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code?: string,
-  ) {
-    super(code ?? 'request_failed');
-  }
-}
-
-async function request<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(path, {
-    method: body === undefined ? 'GET' : 'POST',
-    credentials: 'same-origin',
-    cache: 'no-store',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    signal,
-  });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new RequestError(response.status, data.error);
-  }
-  return response.json() as Promise<T>;
-}
 
 function useResource<T>(path: string, revision = 0, refreshAccess = false): LoadState<T> {
   const key = `${path}:${revision}`;
