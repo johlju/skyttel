@@ -3,12 +3,41 @@ import { it } from 'node:test';
 
 import {
   conflicts,
+  normalizeReleaseTag,
   validateChangelog,
   validateFailedJobs,
   validateIdentity,
   validateRetry,
 } from '../acceptance.mjs';
 import { createReleasePlan } from '../plan.mjs';
+
+it('accepts pasted release versions and tags with surrounding whitespace', () => {
+  for (const version of ['0.0.1-preview.25', '1.2.3']) {
+    for (const value of [version, `v${version}`, ` \n${version}\t `, ` v${version}\n`]) {
+      assert.equal(normalizeReleaseTag(value), `v${version}`);
+    }
+  }
+});
+
+it('rejects malformed release inputs with an actionable error', () => {
+  for (const value of [
+    undefined,
+    null,
+    123,
+    '',
+    '   ',
+    'vv1.2.3',
+    '1.2',
+    '1.2.3-preview.',
+    '1.2.3-rc.1',
+    '1.2.3+metadata',
+    'refs/tags/v1.2.3',
+    'https://github.com/viscalyx/skyttel/releases/tag/v1.2.3',
+    '1.2.3 other',
+  ]) {
+    assert.throws(() => normalizeReleaseTag(value), /Enter a release version or tag/u);
+  }
+});
 
 const repository = 'viscalyx/skyttel';
 const commit = 'a'.repeat(40);
