@@ -209,7 +209,10 @@ assets. Use synthetic data for investigation and acceptance evidence.
 ## External acceptance
 
 Local helper tests and workflow checks do not establish live publication.
-Actual trusted GitHub Actions and GHCR acceptance remains to be recorded.
+The [preview release run](https://github.com/viscalyx/skyttel/actions/runs/35587073912)
+and [published preview](https://github.com/viscalyx/skyttel/releases/tag/v0.0.1-preview.24)
+provide initial publication evidence. They do not establish stable-channel,
+partial-retry, failed-check, or conflict acceptance.
 Before treating the chain as production verified, retain links and evidence
 for these outcomes:
 
@@ -222,9 +225,89 @@ for these outcomes:
 4. A retry after partial publication preserves the original version, image,
    signed bundles, text, and existing assets while completing missing work.
 5. A conflicting version, source, registry digest, or evidence file stops
-   publication. Exercise deliberate conflicts in an isolated acceptance
-   repository with the same workflow, not by damaging retained releases.
+   publication. Use the read-only conflict probes below. Any rehearsal that
+   changes remote objects requires an isolated acceptance repository; never
+   damage retained releases to create a failure.
 
 Record the run URLs, release URLs, digest references, verification results,
 and any unresolved limitations. These results do not verify Render rollout
 or daily scanning of running and recovery images; those are separate work.
+
+### Automated live checks
+
+Use the **Container release acceptance** workflow on `main`. It reads
+GitHub and GHCR with the workflow token and saves a `release-acceptance`
+artifact, including `report.json`, for 90 days. A failed check also produces
+a report. Keep the run URL and copy evidence needed for long-term acceptance
+before the artifact expires.
+
+The workflow verifies existing results. It does not create stable tags,
+retry release runs, inject live failures, or change release assets. Each
+successful report covers only its selected scenario. Keep issue #38 open
+until the required scenarios have live evidence.
+
+For either release channel, select `release` and supply the published tag:
+
+```sh
+gh workflow run release-acceptance.yml --repo viscalyx/skyttel --ref main \
+  -f scenario=release -f tag=v0.0.1-preview.24
+```
+
+Repeat with an approved published stable `vX.Y.Z` tag. The check verifies
+the source run, version plan, Git tag, manifest, signed provenance, SPDX
+inventory, every release asset, registry tags, and source-bound operator
+guidance. Stable commits must belong to main. Preview verification also
+checks for a duplicate run triggered by its preview tag. The report records
+a same-channel comparison, an explicit first-release notice, or an explicit
+changelog generation failure. Review any generation failure before upgrade.
+
+The same scenario probes source, version, origin, asset-byte, and
+registry-digest conflicts against the live release. It alters only local
+proposed evidence and requires the specific conflict error from the
+publication checks. A network or authentication error fails acceptance.
+The probes use read-only preflight checks and confirm the live state again
+afterward; they do not attempt a write with invalid evidence.
+
+For a run whose required application, security, or candidate check fails,
+select `failed-check` and supply its numeric run ID:
+
+```sh
+gh workflow run release-acceptance.yml --repo viscalyx/skyttel --ref main \
+  -f scenario=failed-check -f release_run=RELEASE_RUN_ID
+```
+
+The check requires a failed gate, a skipped publisher, and no public release
+for the original version plan. A publisher failure alone does not qualify.
+
+For partial-publication recovery, preserve a baseline **before retrying**:
+
+1. Select a failed release run with retained plan, candidate, and signed
+   evidence artifacts. Its image tags must exist, and its draft GitHub
+   release must contain some, but not all, expected assets. Other failure
+   stages do not qualify for this scenario.
+2. Run `snapshot-retry` with that run ID. Wait for success and retain the
+   acceptance run ID. The snapshot contains the original evidence, draft
+   identity, asset IDs and hashes, registry digests, and artifact identities.
+3. Resolve the transient cause and retry the original container release
+   run using GitHub's retry controls. Do not delete or replace its artifacts,
+   release, or tags. Wait for the retry to succeed.
+4. Run `verify-retry` with the original release run ID and the successful
+   snapshot acceptance run ID.
+
+```sh
+gh workflow run release-acceptance.yml --repo viscalyx/skyttel --ref main \
+  -f scenario=snapshot-retry -f release_run=RELEASE_RUN_ID
+
+# After the snapshot and the original release retry both succeed:
+gh workflow run release-acceptance.yml --repo viscalyx/skyttel --ref main \
+  -f scenario=verify-retry -f release_run=RELEASE_RUN_ID \
+  -f snapshot_run=SNAPSHOT_ACCEPTANCE_RUN_ID
+```
+
+Retry verification requires a later successful attempt of the same run,
+completion of missing assets, identical existing asset IDs and bytes,
+unchanged version, commit, digest, release text, and retained artifacts,
+and byte-for-byte preservation of signed evidence. Attestation steps must
+be skipped. If the candidate job runs again, its build step must be skipped.
+An ordinary rerun of a complete release cannot satisfy partial-retry
+acceptance. Missing or expired baseline evidence fails the check.

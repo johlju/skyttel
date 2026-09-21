@@ -1,0 +1,63 @@
+name: Container release acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Live acceptance scenario (each report covers only this scenario)
+        required: true
+        type: choice
+        options:
+          - release
+          - snapshot-retry
+          - verify-retry
+          - failed-check
+      tag:
+        description: Published preview or stable tag (release scenario)
+        type: string
+      release_run:
+        description: Container release run ID (retry and failed-check scenarios)
+        type: string
+      snapshot_run:
+        description: Successful snapshot-retry acceptance run ID (verify-retry)
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    if: github.repository == 'viscalyx/skyttel' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Verify live release evidence
+        run: node scripts/release/acceptance.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACCEPTANCE_SCENARIO: ${{ inputs.scenario }}
+          ACCEPTANCE_TAG: ${{ inputs.tag }}
+          ACCEPTANCE_RELEASE_RUN: ${{ inputs.release_run }}
+          ACCEPTANCE_SNAPSHOT_RUN: ${{ inputs.snapshot_run }}
+          ACCEPTANCE_DIRECTORY: ${{ runner.temp }}/release-acceptance
+      - name: Retain acceptance evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-acceptance
+          path: ${{ runner.temp }}/release-acceptance
+          if-no-files-found: error
+          retention-days: 90

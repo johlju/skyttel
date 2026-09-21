@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
-const requiredAssets = [
+export const requiredAssets = [
   'plan.json',
   'release.json',
   'gitversion.json',

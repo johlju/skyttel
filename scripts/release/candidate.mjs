@@ -116,7 +116,7 @@ async function inspect(directory, layout) {
   }
 }
 
-async function verify(directory) {
+export async function verify(directory) {
   const identity = await readJson(join(directory, 'release.json'));
   assert.equal(digest(await readFile(join(directory, 'manifest.json'))), identity.digest);
   validateCandidateReports(identity, await readJson(join(directory, 'grype.json')));
@@ -157,7 +157,7 @@ async function verify(directory) {
   }
 }
 
-async function registryTags(identity) {
+export async function registryTags(identity) {
   // GHCR credentials are sent only to GHCR's own token endpoint.
   const tokenUrl = new URL('https://ghcr.io/token');
   tokenUrl.searchParams.set('service', 'ghcr.io');
