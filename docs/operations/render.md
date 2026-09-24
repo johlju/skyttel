@@ -2,8 +2,10 @@
 
 This guide walks a first-time Render operator through setup, verification,
 and recovery. You need access to the Render workspace, permission to manage
-GitHub repository environments, and access to the Google and Microsoft app
-registrations used for sign-in. Keep both dashboards open while you work.
+GitHub repository environments, and accounts that can register Google and
+Microsoft sign-in applications. The [production authentication guide](authentication.md)
+explains those accounts and registrations from the beginning. Keep the
+deployment and authentication guides open while you work.
 
 Complete the first deployment while someone is available to check it. After
 setup, an approved merge to `main` publishes a verified image and deploys it
@@ -12,6 +14,69 @@ release but does not replace production.
 
 If this installation already contains household data, start with
 [updating an existing installation](#updating-an-existing-installation).
+
+## Setup checklist
+
+Use this inventory to prepare for the first deployment and track progress.
+Gather the access below before starting. The walkthrough creates or verifies
+the remaining items in order; you do not need their values in advance.
+
+### Gather before starting
+
+- [ ] **Render access:** permission to manage the workspace, web service,
+      persistent disk, and billing for paid resources; a monitored email
+      address for the dedicated deployment account.
+- [ ] **GitHub access:** permission to manage the upstream repository's
+      `production` environment, read releases, and rerun workflow jobs.
+- [ ] **Release verification tools or help:** an authenticated GitHub CLI
+      (`gh`), Node.js, `jq`, and the repository's release scripts, or a
+      maintainer who can verify the release and provide its deployment values.
+- [ ] **Provider registration access:** Google and Microsoft accounts with
+      the permissions described in
+      [authentication prerequisites](authentication.md#before-you-start).
+- [ ] **People for sign-in checks:** the intended first administrator and a
+      controlled nonmember account. The administrator or another intended
+      household user needs both a Google and a personal Microsoft account
+      for linking. Include a work or school Microsoft account if the
+      household will use one.
+- [ ] **Private storage and contact details:** a password manager or secret
+      store, a private place for verification records, and an operator email
+      address monitored for failure notifications.
+- [ ] **Optional domain access:** permission to edit DNS for a custom domain.
+      This is unnecessary if you use the assigned `onrender.com` address.
+
+### Collect during setup
+
+Keep values and completion notes in your private setup record. Store secrets
+in the password manager or secret store. After each expected result, a
+**Checklist update** names the items you can mark complete. Mark optional
+items as unnecessary when you skip them.
+
+<!-- markdownlint-disable MD013 -->
+| Item | What to gather or confirm | Ready after |
+| :-- | :-- | :-- |
+| Deployment account | Dedicated Render login, account recovery details in a password vault, and the deployment workspace and role. | [Account setup](#prepare-the-deployment-account) |
+| Workspace and release environment | Render workspace and GitHub `production` environment restricted to `main`. | [Step 1](#1-prepare-the-workspace-and-github-environment) |
+| Release identity | Verified `image`, `digest`, `tag`, `fullVersion`, `commit`, complete `image@digest` reference, and retained signed release evidence. | [Step 2](#2-select-the-published-image) |
+| Service and disk | One paid web service and one persistent disk mounted at `/data`. | [Step 3](#3-create-the-render-web-service-and-disk) |
+| Private image access | Optional GHCR username and classic token with `read:packages`, saved as a Render registry credential. | [Private image setup](#if-the-image-is-private) |
+| Custom domain | Optional hostname with verified DNS and an issued HTTPS certificate. | [Custom domain setup](#optional-add-a-custom-domain) |
+| Address and service ID | Final public `SKYTTEL_ORIGIN` and `RENDER_SERVICE_ID` beginning with `srv-`. | [Step 4](#record-the-chosen-address) |
+| Provider registrations | Google project and Microsoft registration details, both callback URLs, both client IDs and secrets, Microsoft secret expiry and renewal reminder, and Google publishing settings for the intended audience. | [Step 4](#record-the-chosen-address) |
+| Application secret | A securely stored, stable `BETTER_AUTH_SECRET`. | [Step 4](#record-the-chosen-address) |
+| First administrator | `SKYTTEL_FIRST_ADMIN_PROVIDER` and verified `SKYTTEL_FIRST_ADMIN_SUBJECT`, applied to the service. | Provider in [step 4](#record-the-chosen-address); verified subject in [step 6](#6-verify-the-first-live-application) |
+| Render configuration | All application environment variables saved and deployed, including `SKYTTEL_DATABASE_PATH=/data/skyttel.sqlite`, `HOST=0.0.0.0`, and `PORT=3000`. | [Step 5](#5-enter-the-application-configuration-in-render) |
+| Live access checks | Matching release identity, household access, Google and personal Microsoft sign-in, linked accounts, rejected nonmember access, and recorded check outcomes. | [Step 6](#6-verify-the-first-live-application) |
+| Setup access closed | Production terminal sessions closed and any temporary keys or helper access removed. | [Terminal cleanup](#use-and-close-the-production-terminal) |
+| Deployment credentials | `RENDER_API_KEY` as a GitHub environment secret; matching service ID and origin as environment variables. | [Step 7](#7-give-github-permission-to-deploy) |
+| Failure notifications | Render and GitHub destinations configured and both controlled failure notifications received. | [Step 8](#8-enable-failure-notifications) |
+| Deployment evidence | Successful `deployment.json`, checked against the release identity and retained with the release evidence. | [Step 9](#9-retry-the-github-deployment-and-read-its-result) |
+| Restart evidence | Confirmation that the same image, household content, and private drafts survive a service restart; recorded outcome and version identity. | [Step 10](#10-check-persistence-through-a-normal-restart) |
+<!-- markdownlint-enable MD013 -->
+
+The initial subject `not-configured` is temporary. Keep **First administrator**
+open until step 6 verifies the real identity, and **Restart evidence** open
+until step 10 confirms persistence on this deployment.
 
 ## Understand the names
 
@@ -31,10 +96,75 @@ If this installation already contains household data, start with
 
 ## 1. Prepare the workspace and GitHub environment
 
+### Prepare the deployment account
+
+This Render account supplies the API key that GitHub uses in step 7. Reserve
+it for Skyttel: Render API keys can access every workspace their account
+belongs to. Selecting a workspace in the dashboard does not limit the key.
+See [Render API authentication](https://api-docs.render.com/reference/authentication).
+
+The deployment workspace must also be reserved for Skyttel. Inviting a
+separate account to a workspace containing other applications gives it
+access to those applications too.
+
+> [!IMPORTANT]
+> A Hobby workspace cannot invite another account. For a new deployment,
+> the dedicated account can own the Hobby workspace from the start. To add
+> it to a workspace owned by another account, use Pro or higher. Keep the
+> existing service and disk, and review the workspace plan charge before
+> upgrading. See [Render workspace membership](https://render.com/docs/team-members#manage-team-members).
+
+1. If your current Render account is already reserved for this deployment,
+   use it. Otherwise, open a separate browser profile or private window and
+   [sign up for Render](https://dashboard.render.com/register) with an email
+   address you control and monitor. You can use email and a unique password;
+   save the login details in a password vault. If the destination workspace
+   requires Google login, use the Google account matching the invited email
+   address instead.
+1. In the dedicated account, open **Account Settings → Account Security**
+   and enable two-factor authentication. Save its recovery information in
+   your password vault. See [Render login settings](https://render.com/docs/login-settings).
+1. If the dedicated account will own a new workspace, use the Hobby workspace
+   Render creates for it and continue with the access check below.
+1. If it needs access to another account's existing workspace, sign in as
+   that workspace's Admin in your usual browser. Open the
+   workspace's **Billing** page and, if it uses Hobby, select **Update Plan**
+   to upgrade to Pro after reviewing the charge. Then open
+   **Settings → Team members → + Invite members** and enter the dedicated
+   account's email address. Choose **Developer** for an unprotected service,
+   or **Admin** if you use or plan to use a protected project environment.
+   Accept the invitation while signed in to the dedicated account.
+1. Check the dedicated account's workspace access. It should have access to
+   the Skyttel deployment and no unrelated services or workspaces containing
+   other applications. For an existing deployment, confirm that the same
+   service and disk remain in the original workspace. Record the account
+   email, workspace, and role in your private setup record.
+
+The role choice follows this deployment workflow's need to read service
+configuration, update the saved image, and deploy it. Reading environment
+variables requires an Admin in a protected environment, so its deployment
+account also needs that role. See
+[Render role permissions](https://render.com/docs/team-members#role-permissions)
+and [protected environments](https://render.com/docs/projects#protected-environments).
+
+Expected result: a dedicated Render account can access the deployment
+workspace with the required role, and you can recover its login when needed.
+
+Checklist update: **Deployment account** is ready. Create its API key in
+step 7 after the live application checks succeed.
+
+### Prepare the workspace and repository settings
+
+Use the workspace's Admin account for the remaining setup. On Hobby, this
+is also the dedicated deployment account. If you invite a separate account,
+sign in to it again when creating the API key in step 7.
+
 1. Sign in to the [Render dashboard](https://dashboard.render.com/) and
-   select or create the workspace that will contain Skyttel. Use the Hobby
-   workspace plan. The web service and disk still require paid resources;
-   review the displayed charges before creating them. See
+   select the Skyttel workspace from the account setup above. Use Hobby when
+   the dedicated account owns the workspace, or retain Pro or higher when
+   you invite it as an additional member. The web service and disk still
+   require paid resources; review the displayed charges before creating
+   them. See
    [Render pricing](https://render.com/pricing).
 1. Open [the Skyttel repository](https://github.com/viscalyx/skyttel), then
    **Settings → Environments**. Configure the upstream repository where the
@@ -49,8 +179,12 @@ If this installation already contains household data, start with
    them after the Render service works.
 
 Expected result: the Render workspace exists and GitHub has a `production`
-environment restricted to `main`. If repository settings are unavailable,
-ask a repository administrator to complete the GitHub steps. GitHub's
+environment restricted to `main`.
+
+Checklist update: **Workspace and release environment** are ready.
+
+If repository settings are unavailable, ask a repository administrator to
+complete the GitHub steps. GitHub's
 [environment instructions](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
 explain the settings and permission requirements.
 
@@ -65,7 +199,11 @@ explain the settings and permission requirements.
    to be resolved first.
 1. Open the corresponding GitHub release under **Releases**. Expand
    **Assets**, download `release.json`, and open it in a text editor.
-   Record its `image`, `digest`, `fullVersion`, and `commit` values.
+   Record its `image`, `digest`, `tag`, `fullVersion`, and `commit` values.
+   Use `tag`, including its leading `v`, as `release_tag` in the release
+   verification procedure below. Keep `fullVersion` for the application
+   version check in step 6; it can include `+...` build metadata that is
+   absent from the tag.
 1. Join `image`, an `@`, and the complete `digest` value. The result has
    this form; replace the example text with the actual digest:
 
@@ -73,15 +211,30 @@ explain the settings and permission requirements.
    ghcr.io/viscalyx/skyttel@sha256:REPLACE_WITH_THE_COMPLETE_DIGEST
    ```
 
+   This is the image reference that Render accepts. The `oci://` prefix
+   shown by GitHub's verification command is not part of this value.
+
 1. Follow the
    [release verification procedure](../development/container-releases.md#review-a-published-release)
-   before using the image. If you cannot run its command-line checks, ask a
-   maintainer to verify this exact release and provide the verified image
-   reference. Retain its signed release evidence and keep the registry
-   image available for future restarts and recovery.
+   before using the image. The registry check reports
+   `✓ Verification succeeded!` and lists the matching attestation.
+1. After verification succeeds, run the separate command under
+   [Print deployment values](../development/container-releases.md#print-deployment-values).
+   That command prints **Image URL**, **Application version**, and
+   **Source commit**. Copy the complete value after `Image URL:` for step 3.
+   If you cannot run the command-line checks, ask a maintainer to verify
+   this exact release and provide those three values. Retain its signed
+   release evidence and keep the registry image available for future
+   restarts and recovery.
 
-Expected result: you have a verified image reference and its matching
-version and commit. Keep the workflow run open for the retry in step 9.
+Expected result: successful verification and a saved image reference in the
+`ghcr.io/viscalyx/skyttel@sha256:...` form, plus its application version and
+source commit.
+
+Checklist update: **Release identity** is ready, including the release tag
+and retained verification evidence.
+
+Keep the workflow run open for the retry in step 9.
 
 ## 3. Create the Render web service and disk
 
@@ -115,6 +268,10 @@ version and commit. Keep the workflow run open for the retry in step 9.
 
 Expected result: one paid web service with one persistent disk. Its first
 startup may still fail until you supply the remaining configuration.
+
+Checklist update: **Service and disk** are ready. Apply any missing database,
+host, and port settings with the rest of the configuration in step 5.
+
 Render's [web service guide](https://render.com/docs/web-services) and
 [persistent disk guide](https://render.com/docs/disks) describe these controls.
 
@@ -133,6 +290,12 @@ token for an account allowed to read the package. Use a token with only
 for registry authentication; authorize it for organization SSO if required.
 Public images do not require this credential.
 
+Expected result: Render has a registry credential that can read the private
+image when you connect it to the service.
+
+Checklist update: **Private image access** is ready. Mark it unnecessary
+if the image is public.
+
 This GitHub token lets Render download the image. It is separate from the
 Render API key created in step 7. Keep the registry credential valid for
 later restarts as well as the first deployment. See
@@ -141,42 +304,104 @@ later restarts as well as the first deployment. See
 
 ## 4. Record the address and prepare sign-in
 
-1. Copy the public HTTPS address shown on the Render service page. Use the
-   assigned address, including its actual `onrender.com` hostname; do not
-   guess it from the service name. Remove any trailing slash. This is your
-   `SKYTTEL_ORIGIN`.
+Choose either the assigned `onrender.com` address or a custom domain before
+registering Google and Microsoft callbacks. To keep the assigned address,
+skip to [record the chosen address](#record-the-chosen-address).
+
+### Optional: add a custom domain
+
+You need a domain you control and access to its DNS settings. DNS records
+tell browsers where to send requests for a hostname. An unused subdomain,
+such as `skyttel.example.com`, lets you use Skyttel alongside an existing
+website on `example.com`.
+
+1. On the Render web service page, open **Settings** and find
+   **Custom Domains**. Choose **Add Custom Domain**, enter the hostname
+   without `https://` or a path, then **Save**.
+1. Keep Render's DNS instructions open. In your domain's DNS provider,
+   open the DNS settings for the domain. For a subdomain such as
+   `skyttel.example.com`, add a **CNAME** record named `skyttel` that points
+   to this service's actual `onrender.com` hostname. Copy the target from
+   Render without `https://` or a path; do not guess it from the service name.
+1. Change only records for the selected hostname. Remove conflicting
+   records there, including any **AAAA** record, as Render directs. For a
+   root domain such as `example.com`, follow Render's
+   [root-domain DNS instructions](https://render.com/docs/configure-other-dns#configuring-root-domains).
+   Use the provider-specific instructions for
+   [Cloudflare](https://render.com/docs/configure-cloudflare-dns) or
+   [Namecheap](https://render.com/docs/configure-namecheap-dns) where applicable.
+1. Return to **Settings → Custom Domains** in Render and click **Verify**
+   beside the domain. DNS changes can take time to propagate; if verification
+   is pending, wait and retry. Render automatically issues and renews the
+   HTTPS certificate after verification.
+1. Confirm Render shows the domain as verified and its certificate as issued.
+   Use the final hostname that serves the application directly. If Render
+   redirects between the root domain and `www`, choose the destination
+   hostname: Skyttel's deployment checks do not follow redirects.
+
+Expected result: the custom hostname is configured in Render, with DNS
+verified and an HTTPS certificate issued.
+
+Checklist update: **Custom domain** is ready. Mark it unnecessary if you
+keep the assigned `onrender.com` address.
+
+The application can still be unavailable until you enter authentication
+settings in step 5; check its health in step 6. If certificate issuance
+stalls, follow Render's
+[custom-domain troubleshooting and certificate requirements](https://render.com/docs/custom-domains).
+
+Render keeps the assigned `onrender.com` address when you add a custom
+domain. Use the one chosen origin consistently for sign-in and deployment
+checks. Continue below with the custom address.
+
+### Record the chosen address
+
+1. Copy the chosen public HTTPS address: either the verified custom domain,
+   such as `https://skyttel.example.com`, or the assigned address shown on
+   the service page, including its actual `onrender.com` hostname. Remove
+   any trailing slash. This is your `SKYTTEL_ORIGIN`; use the same value in
+   Render's environment and GitHub's `production` environment in step 7.
 1. Record the service ID. In the Render dashboard URL for this service,
    copy the segment beginning with `srv-`. This is `RENDER_SERVICE_ID`;
-   it is different from the service name and public address.
-1. Follow the
-   [provider registration walkthrough](first-time-use.md) to create the
-   Google and Microsoft app registrations. That walkthrough describes a
-   local installation: for Render, use your public HTTPS origin wherever
-   it asks for the application origin or callback address. Both providers
-   must be configured before Skyttel starts.
-1. Register these callback URLs, replacing `YOUR-SERVICE.onrender.com`
-   with the actual hostname from your public address:
-
-   ```text
-   https://YOUR-SERVICE.onrender.com/api/auth/callback/google
-   https://YOUR-SERVICE.onrender.com/api/auth/callback/microsoft
-   ```
-
-1. Store both client IDs and client secrets privately. Follow
-   [designate the first administrator](installation.md#designate-the-first-administrator)
-   to obtain the intended administrator's stable provider identifier.
-   This is Google's `sub` or Microsoft's `oid`, not an email address or
-   the application's client ID. The linked guide includes a private local
-   lookup procedure if you do not already have this identifier.
+   it is different from the service name and public address. Save it for
+   GitHub's `production` environment in step 7.
+1. Complete sections 1–3 of
+   [production authentication](authentication.md#1-choose-the-production-address).
+   Use this service's actual HTTPS origin for both callback URLs. That guide
+   covers Google publishing choices, Microsoft directory requirements,
+   registration, and private credential storage. Return here with
+   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID`, and
+   `MICROSOFT_CLIENT_SECRET` saved privately. Both providers are required
+   for startup.
+1. Choose the intended first administrator's provider: `google` or
+   `microsoft`. Record this as `SKYTTEL_FIRST_ADMIN_PROVIDER` in your private
+   setup record. For an existing household, retain its configured provider.
+1. For a new installation, record `not-configured` as the initial
+   `SKYTTEL_FIRST_ADMIN_SUBJECT`. You will replace this temporary value with
+   the verified identifier obtained through sign-in on this production
+   service in step 6. No local installation is required. For an existing
+   household, retain its configured subject.
 1. Generate a random authentication secret of at least 32 characters with
    a password manager. Alternatively, run `openssl rand -base64 48` in a
-   private terminal. Store it securely and keep it unchanged across
-   deployments.
+   private terminal. Use the generated value for `BETTER_AUTH_SECRET` in
+   step 5; this is the checklist's **Application secret**. Save the value in
+   a password vault so you can retrieve it when needed, and keep it unchanged
+   across deployments.
 
-Expected result: the public origin, service ID, both provider credentials,
-first administrator's provider and identifier, and authentication secret are
-ready. If you later adopt a custom domain, update the public origin and
-provider callback registrations together.
+Expected result: your private setup record contains `SKYTTEL_ORIGIN`,
+`RENDER_SERVICE_ID`, the Google client ID (`GOOGLE_CLIENT_ID`) and secret
+(`GOOGLE_CLIENT_SECRET`), the Microsoft client ID (`MICROSOFT_CLIENT_ID`)
+and secret (`MICROSOFT_CLIENT_SECRET`), `SKYTTEL_FIRST_ADMIN_PROVIDER`,
+the initial `SKYTTEL_FIRST_ADMIN_SUBJECT`, and `BETTER_AUTH_SECRET` for
+the following configuration steps.
+
+Checklist update: **Address and service ID**, **Provider registrations**, and
+**Application secret** are ready. **First administrator** has a recorded
+provider and initial subject; its verified subject remains open until step 6.
+
+For a later domain change, follow the
+[domain transition procedure](authentication.md#change-the-public-domain)
+and update the GitHub `production` environment's `SKYTTEL_ORIGIN` as well.
 
 ## 5. Enter the application configuration in Render
 
@@ -188,10 +413,10 @@ provider callback registrations together.
    <!-- markdownlint-disable MD013 -->
    | Key | Value |
    | :-- | :-- |
-   | `SKYTTEL_ORIGIN` | The public HTTPS origin from step 4, without a trailing slash. |
+   | `SKYTTEL_ORIGIN` | The public address from step 4, including `https://` but without a trailing slash or path, for example `https://skyttel.example.com`. |
    | `SKYTTEL_DATABASE_PATH` | `/data/skyttel.sqlite` |
-   | `SKYTTEL_FIRST_ADMIN_PROVIDER` | `google` or `microsoft`, matching the administrator's identifier. |
-   | `SKYTTEL_FIRST_ADMIN_SUBJECT` | The private provider identifier obtained in step 4. |
+   | `SKYTTEL_FIRST_ADMIN_PROVIDER` | `google` or `microsoft`, matching the intended administrator's login. |
+   | `SKYTTEL_FIRST_ADMIN_SUBJECT` | For a new installation, `not-configured` until the production lookup in step 6. After lookup, replace it with the verified identifier. Retain the existing value for an established household. |
    | `BETTER_AUTH_SECRET` | The random secret generated in step 4. Keep it stable. |
    | `GOOGLE_CLIENT_ID` | The Google web application's client ID. |
    | `GOOGLE_CLIENT_SECRET` | The Google web application's client secret. |
@@ -208,10 +433,21 @@ provider callback registrations together.
    **Logs** if it fails, and use the troubleshooting section below.
 
 Expected result: Skyttel starts, migrates its database, verifies its
-sign-in schema, and accepts traffic. Render's
+sign-in schema, and accepts traffic.
+
+Checklist update: **Render configuration** is ready. **First administrator**
+and **Live access checks** still require step 6.
+
+Render's
 [environment variable guide](https://render.com/docs/configure-environment-variables)
 explains the save options. The deployment API key belongs in GitHub in
 step 7; it is not an application environment variable.
+
+> [!IMPORTANT]
+> With `not-configured`, a healthy service can authenticate people but cannot
+> create its first household. Complete the production administrator lookup
+> in step 6, replace the subject, and use **Save and deploy** again. Do not
+> substitute an email address or select an arbitrary signed-in account.
 
 ## 6. Verify the first live application
 
@@ -223,25 +459,94 @@ step 7; it is not an application environment variable.
 1. In a private or incognito browser window, open `/api/bootstrap`. Expect
    `status` to be `anonymous` and `providers` to include both `google` and
    `microsoft`.
-1. Open the public origin itself. Confirm the sign-in page loads. For a
-   new installation, sign in as the designated first administrator and
-   create the household. For an existing installation, have an authorized
-   user sign in and confirm access to the existing household.
-1. Complete the
-   [real-provider checks](../development/testing.md#verify-real-identity-providers-separately),
-   including personal Microsoft account support and linked logins reaching
-   the same household. Keep personal identities and provider responses
-   private; record only the check outcomes in shared evidence.
+1. Open the public origin itself and confirm the sign-in page loads.
+   For a new installation, follow
+   [identify the first administrator](authentication.md#5-identify-the-first-administrator-on-the-running-service)
+   on this running service. Use the terminal instructions below for the
+   lookup, then return to **Environment**, replace the subject, and use
+   **Save and deploy**. Wait for readiness and finish household creation in
+   that procedure. For an existing installation, have an authorized user
+   sign in and confirm the existing household opens.
+1. Complete the [production sign-in checks](authentication.md#6-verify-production-sign-in)
+   using this deployment and its actual provider registrations. Include
+   personal Microsoft sign-in and linked logins reaching the same household.
+   Perform the restart check when you reach step 10 below.
+1. Follow [close setup access](authentication.md#close-setup-access), including
+   the terminal access options below. Keep personal identities and provider
+   responses private; record only check outcomes in shared evidence.
 
 Expected result: the exact released application is healthy and real sign-in
-works. A **Live** status or visible sign-in page alone is insufficient.
-Resolve failures before enabling automatic updates.
+works.
+
+Checklist update: **First administrator** and **Live access checks** are
+complete after the production lookup, household setup, and all required
+sign-in checks succeed. **Setup access closed** is complete after the cleanup
+below. Keep **Restart evidence** open until step 10.
+
+A **Live** status or visible sign-in page alone is insufficient. Resolve
+failures before enabling automatic updates.
+
+### Use and close the production terminal
+
+1. On the **running web service's** page, open **Shell**. A paid web service
+   supports this terminal; the free instance type does not. You do not need
+   to register a personal SSH key for the dashboard procedure.
+2. Use the [administrator lookup](authentication.md#5-identify-the-first-administrator-on-the-running-service)
+   in that terminal. It reads the live database. Do not use a temporary
+   shell instance, a one-off job, or a pre-deploy command, which cannot
+   provide this lookup on the running service's disk.
+3. Type `exit` when finished, close the terminal tab, and clear copied
+   identity values from the clipboard. Redeployment also closes active SSH
+   sessions. Do not leave a helper's session open after setup.
+
+If you prefer your own SSH terminal, follow
+[Render's SSH setup](https://render.com/docs/ssh) and use the connection
+command for this running service. The image supplies the runtime user's
+private `.ssh` directory required by Render. It contains no keys, does not
+start an SSH server, and does not add an application port. Render manages
+access. Deleting the directory in a running container is not an access
+control and will not persist across deployments.
+
+To restrict future terminal access after setup:
+
+- If you added a temporary SSH key, remove it from your Render
+  **Account settings → SSH Public Keys** after closing its session.
+  Removing a key does not disable Dashboard Shell.
+- If your workspace has temporary helpers, an Admin can use
+  **Settings → Team members** → the member's **•••** → **Remove team member**.
+  Keep the operator account needed for maintenance. Team membership requires
+  a Pro or higher workspace; a Hobby workspace has no extra team members.
+- To limit service terminals and secret settings to workspace Admins, put
+  the service in a Render project environment. From the project page, open
+  that environment's **••• → All settings → Permissions → Edit**, choose
+  **Protected**, then **Save**. If necessary, first create the project and
+  use the existing service's **••• → Move** to place it in that environment.
+  Keep the same service and disk. Check that the account used for automatic
+  deployment retains the required access before continuing.
+
+Expected result: setup sessions are closed and any temporary SSH keys or
+helper access are removed. The operator retains maintenance access.
+
+Checklist update: **Setup access closed** is complete. Record any optional
+restriction on future terminal access separately from closing sessions.
+
+> [!NOTE]
+> Closing a session does not revoke permission to open another one.
+> A protected Render environment limits terminal access to Admins; it does
+> not disable Admin access. These controls do not provide a complete
+> terminal shutdown. Keep Render account access restricted to the operators
+> who need it.
+
+See [Render's terminal controls](https://render.com/docs/ssh),
+[protected environments](https://render.com/docs/projects#protected-environments),
+and [member permissions](https://render.com/docs/team-members).
 
 ## 7. Give GitHub permission to deploy
 
-1. Use a dedicated Render account whose access is limited to this
-   deployment workspace. Its API key inherits the account's access; do
-   not use an account with unrelated services.
+1. Sign in to the dedicated Render account from
+   [prepare the deployment account](#prepare-the-deployment-account).
+   Confirm you are using that account before creating the API key. Its
+   access should still be limited to this deployment.
 1. Open Render **Account Settings → API Keys** and create a key named for
    this deployment, such as `Skyttel GitHub deployment`. Copy it into
    private storage when shown; Render only shows the full key once. See
@@ -256,19 +561,25 @@ Resolve failures before enabling automatic updates.
 | Name | Value |
 | :-- | :-- |
 | `RENDER_SERVICE_ID` | The service ID beginning with `srv-` from step 4. |
-| `SKYTTEL_ORIGIN` | The same public HTTPS origin configured in Render. |
+| `SKYTTEL_ORIGIN` | The same public address configured in Render, including `https://` but without a trailing slash or path, for example `https://skyttel.example.com`. |
 <!-- markdownlint-enable MD013 -->
 
 Expected result: `production` contains one deployment secret and two
-variables, with access still restricted to `main`. Store the API key as a
-secret, never as a plain variable. The workflow's GitHub token can read
-release artifacts and create deployment statuses; it cannot publish images
-from the deployment job.
+variables, with access still restricted to `main`.
+
+Checklist update: **Deployment credentials** are ready, with the same
+**Address and service ID** recorded in step 4. Step 9 verifies deployment.
+
+Store the API key as a secret, never as a plain variable. The workflow's
+GitHub token can read release artifacts and create deployment statuses; it
+cannot publish images from the deployment job.
 
 ## 8. Enable failure notifications
 
-1. In the Render workspace, open **Integrations → Notifications**. Choose
-   the operator's email destination and **Only failure** or **All**.
+1. Sign in to Render as the workspace Admin again if you switch to a
+   separate deployment account in step 7. In the workspace, open
+   **Integrations → Notifications**. Choose the operator's email destination
+   and **Only failure** or **All**.
 1. On the service's **Settings** page, check **Notifications** for a
    service-specific override. Ensure it does not disable failure messages.
    See [Render notifications](https://render.com/docs/notifications).
@@ -284,6 +595,10 @@ from the deployment job.
    data or an active migration.
 
 Expected result: the operator can receive both Render and GitHub failures.
+
+Checklist update: **Failure notifications** are complete after both controlled
+failure notifications arrive at the monitored destinations.
+
 GitHub can report a failed deployment even when Render shows **Live**, for
 example when the application's verification checks fail.
 
@@ -303,7 +618,12 @@ example when the application's verification checks fail.
    `observedDeploy.digest` must identify the same requested image, with
    `observedDeploy.status` equal to `live`.
 
-Expected result: GitHub records a successful, verified deployment. See
+Expected result: GitHub records a successful, verified deployment.
+
+Checklist update: **Deployment evidence** is complete after you check and
+retain the successful report with its matching **Release identity**.
+
+See
 [rerunning GitHub jobs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
 if the retry control is unavailable. Retain the report with the release
 evidence beyond the workflow's 90-day artifact retention period.
@@ -329,6 +649,10 @@ contain no household names, content, or identities.
    remain. Record pass/fail and the version identity.
 
 Expected result: the same image runs with the existing household data.
+
+Checklist update: **Restart evidence** is complete after the health, image,
+household content, and private draft checks pass and you record the outcome.
+
 Render documents the control under
 [restarting a service](https://render.com/docs/deploys#restarting-a-service).
 
@@ -368,7 +692,7 @@ and database readiness are unknown.
 | :-- | :-- |
 | Render cannot download the image | Check the complete digest reference and, for private images, the registry credential's package access. |
 | `configuration_invalid` | Find the variable name in the startup event, correct it in Render **Environment**, then use **Save and deploy**. |
-| Sign-in fails | Compare the actual public origin and both registered callback URLs. Check provider credentials and follow the real-provider verification guide. |
+| Sign-in fails | Compare the actual public origin and both registered callback URLs. Check credentials and follow [production sign-in troubleshooting](authentication.md#troubleshoot-sign-in). |
 | `unsafe_service_configuration` | Check one image web service, one instance, no autoscaling or auto-deploy, disk at `/data`, `/healthz`, and empty command overrides. Ask a maintainer to inspect the Render API if a setting is not visible in the dashboard. |
 | `database_not_on_persistent_disk` | Explicitly set `SKYTTEL_DATABASE_PATH` to `/data/skyttel.sqlite` and confirm the `/data` disk is attached. |
 | `database_initialization_failed` | Inspect the safe reason in private logs. Check free disk space and write permission for UID/GID 1000; ask a maintainer to repair permissions if needed. Preserve the existing database. |

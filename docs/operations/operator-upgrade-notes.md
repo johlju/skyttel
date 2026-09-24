@@ -5,6 +5,19 @@ before upgrading Skyttel.
 
 ## Unreleased
 
+### Production terminal access
+
+Before rollout, review who can use the production host's terminals. The
+container supports Render's managed SSH access. After administrator setup,
+close terminal sessions and remove temporary operator access or SSH keys.
+If access must be restricted further, protect the Render project environment
+so only workspace Admins can use its terminals. Admins retain maintenance
+access; closing a session does not prevent a new session.
+
+Keep existing household identities and settings when upgrading. The
+production first-administrator procedure is only for a new installation;
+it does not transfer an existing household or restore removed membership.
+
 ### Automatic Render deployment
 
 Configure the production deployment environment and one image-based Render

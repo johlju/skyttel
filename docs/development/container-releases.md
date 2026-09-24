@@ -75,23 +75,30 @@ the [GitHub package access settings](https://docs.github.com/en/packages/learn-g
 
 ## Review a published release
 
-Use an authenticated GitHub CLI, Node.js, and `jq`. Choose a release tag and
-download its assets into a new directory:
+Use an authenticated GitHub CLI, Node.js, and `jq`. Set `release_tag` to the
+selected GitHub release's tag, including the leading `v`. If you already
+have its `release.json`, use the `tag` field. For example, a `tag` value of
+`v0.1.1-preview.2` means `release_tag=v0.1.1-preview.2`. The `fullVersion`
+field is for checking the running application's version, not downloading a
+GitHub release.
+
+Replace the placeholder below with the selected tag, then download its
+assets into a new directory:
 
 ```sh
-release_tag=vX.Y.Z
+release_tag=REPLACE_WITH_RELEASE_TAG
 release_dir=$(mktemp -d)
 gh release download "$release_tag" --repo viscalyx/skyttel \
   --dir "$release_dir"
 cat "$release_dir/release.json"
-node scripts/release/candidate.mjs verify "$release_dir"
 ```
 
 Confirm the source commit against the reviewed repository history and the
 release tag. Read the changelog and `operator-upgrade-notes.md` before use.
-The helper verifies the manifest, both signatures, their expected identities,
-and the signed inventory. To independently require a particular approved
-source, set the expected commit and ref yourself:
+The verification helper used below checks the manifest, both signatures,
+their expected identities, and the signed inventory. To independently
+require a particular approved source, set the expected commit and ref
+yourself:
 
 ```sh
 release_commit=REPLACE_WITH_APPROVED_FULL_COMMIT
@@ -111,12 +118,14 @@ See the
 [GitHub CLI verification reference](https://cli.github.com/manual/gh_attestation_verify)
 for the identity checks and supported artifact forms.
 
-Verify the actual registry image as well. Authenticate the container client
-to GHCR if its visibility requires it, then verify the digest reference:
+Verify the release files and the actual registry image. Authenticate the
+container client to GHCR if its visibility requires it, then run this block
+in the same terminal, with `release_commit` and `release_ref` set above:
 
 ```sh
 release_image=$(jq -r .image "$release_dir/release.json")
 release_digest=$(jq -r .digest "$release_dir/release.json")
+node scripts/release/candidate.mjs verify "$release_dir" &&
 gh attestation verify "oci://${release_image}@${release_digest}" \
   --bundle "$release_dir/provenance.sigstore.json" \
   --repo viscalyx/skyttel \
@@ -125,10 +134,41 @@ gh attestation verify "oci://${release_image}@${release_digest}" \
   --deny-self-hosted-runners
 ```
 
-Use that exact image digest in a later rollout. Retain the matching database
-backup and follow the [installation guidance](../operations/installation.md)
-for compatibility and recovery. Successful publication does not establish
-that an installation has deployed or passed its real-provider checks.
+Expected result: the registry check reports `✓ Verification succeeded!`
+and lists the attestation that matches the policy criteria. Resolve any
+verification error before continuing.
+
+### Print deployment values
+
+After verification succeeds, run this separate command in the same terminal:
+
+```sh
+jq -r '
+  "Image URL: \(.image)@\(.digest)",
+  "Application version: \(.fullVersion)",
+  "Source commit: \(.commit)"
+' "$release_dir/release.json"
+```
+
+This command prints the labels below; they are not part of the
+`gh attestation verify` output. The example values are placeholders:
+
+```text
+Image URL: ghcr.io/viscalyx/skyttel@sha256:COMPLETE_VERIFIED_DIGEST
+Application version: FULL_VERSION_FROM_RELEASE_JSON
+Source commit: FULL_COMMIT_FROM_RELEASE_JSON
+```
+
+Copy the complete value after `Image URL:` into Render's **Image URL** field.
+The `oci://` prefix tells `gh attestation verify` to read a container image;
+it is not part of the image reference you paste into Render. The reference
+is the `image` and `digest` from `release.json`, joined by `@`. Verification
+checks this existing reference; it does not create a new one.
+
+Retain the matching database backup when updating an existing installation,
+and follow the [installation guidance](../operations/installation.md) for
+compatibility and recovery. Successful publication does not establish that
+an installation has deployed or passed its real-provider checks.
 
 ## Changelog and operator guidance
 

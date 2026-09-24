@@ -27,9 +27,12 @@ ENV NODE_ENV=production \
 WORKDIR /app
 # Retain the trust store explicitly before removing the unused package manager
 # and its dependencies. Native modules are installed in the matching base above.
+# Render SSH access requires the runtime user's private .ssh directory.
 RUN apk add --no-cache ca-certificates-bundle \
     && apk del apk-tools zlib \
-    && mkdir /data && chown node:node /data \
+    && mkdir /data /home/node/.ssh \
+    && chown node:node /data /home/node/.ssh \
+    && chmod 700 /home/node/.ssh \
     && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
     /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg \
     /usr/local/bin/corepack

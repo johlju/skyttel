@@ -268,7 +268,7 @@ provider policy or personal Microsoft account support. Use synthetic data
 only; never put tokens or identity proofs in technical logs or test reports.
 
 If you are new to provider registration, start with the
-[first-time setup walkthrough](../operations/first-time-use.md).
+[local authentication walkthrough](local-authentication.md).
 
 Use a private verification installation with its own persistent disk, secret,
 and provider registrations. Register the correct callback URLs and authorize

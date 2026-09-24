@@ -17,13 +17,21 @@ secret, provider credentials, and configured first administrator.
 SQLite runs inside the application; no separate database service is required.
 For production on Render, follow the [deployment runbook](render.md) to
 configure the persistent disk, automatic digest deployment and recovery.
+For provider registration and first administrator setup on the running
+production service, use [production authentication](authentication.md).
 
 ## Configure the installation
 
-Copy the blank example and edit only the local file:
+For production, enter these settings through the host's private environment
+controls. The [authentication guide](authentication.md) explains where each
+identity setting comes from. It uses production sign-in and the production
+database to identify the first administrator.
+
+For a local developer installation, copy the blank example and edit only
+the local file. Keep an existing `.env.local` if one is already present:
 
 ```sh
-cp .env.example .env.local
+cp -n .env.example .env.local
 chmod 600 .env.local
 openssl rand -base64 48
 ```
@@ -53,26 +61,22 @@ startup before the application accepts traffic.
 
 ## Register identity providers
 
-For a first setup, follow the
-[beginner's provider registration walkthrough](first-time-use.md), including
-Google project creation, Microsoft directory access, and private credential
-storage.
+Follow the guide for the installation you are configuring:
 
-Create a Google OAuth web application and a Microsoft Entra web application.
-Register these exact redirect URIs, substituting the installation's origin:
+- [Production authentication](authentication.md) covers provider accounts,
+  registration, publishing choices, credentials, and checks on the deployed
+  service. On Render, follow the [deployment sequence](render.md).
+- [Local authentication](../development/local-authentication.md) covers
+  developer registration, localhost callbacks, and local verification.
+
+Both use a Google OAuth web application and a Microsoft Entra web
+application. Register the exact callbacks for the installation's origin:
 
 ```text
 https://skyttel.example.com/api/auth/callback/google
 https://skyttel.example.com/api/auth/callback/microsoft
 ```
 
-For local verification register the corresponding
-`http://localhost:3000/api/auth/callback/google` and
-`http://localhost:3000/api/auth/callback/microsoft` URIs. Keep the Google
-application in testing mode for local verification. Its basic sign-in scopes
-are exempt from Google's test-user restriction; the test-user list does not
-protect household access. See the
-[Testing exception](https://support.google.com/cloud/answer/15549945?hl=en).
 Use the provider's web application client secret on the server, never in
 browser configuration.
 
@@ -84,10 +88,12 @@ alone does not enable personal accounts. See the official
 [Microsoft setup](https://better-auth.com/docs/authentication/microsoft), and
 [Microsoft audience guidance](https://learn.microsoft.com/entra/identity-platform/msal-client-application-configuration).
 
-Before the Microsoft credential expires, follow the
-[secret renewal procedure](first-time-use.md#renew-the-microsoft-secret-before-it-expires).
+Before a production credential expires, follow
+[provider secret renewal](authentication.md#renew-provider-secrets).
 Create and verify a replacement in the same registration before removing the
 old credential, and reload the application's environment after changing it.
+The developer guide has a separate
+[local Microsoft renewal procedure](../development/local-authentication.md#renew-the-microsoft-secret-before-it-expires).
 
 ## Designate the first administrator
 
@@ -98,40 +104,17 @@ do not authorize installation setup. See
 [Google's identifier guidance](https://developers.google.com/identity/openid-connect/openid-connect)
 and [Better Auth's Microsoft account identifiers](https://better-auth.com/docs/authentication/microsoft#account-identifiers).
 
-If the identifier is not available, obtain it through a private local setup:
+For a new production installation, first deploy with the intended provider
+and `not-configured` as the subject. Then follow
+[identify the first administrator on the running service](authentication.md#5-identify-the-first-administrator-on-the-running-service).
+The procedure uses the intended person's production sign-in and a private,
+read-only lookup on that service's database. It selects the specific
+authenticated user rather than assuming that the first account is correct.
+Replace the placeholder and deploy the changed environment before creating
+the household. No separate local installation is needed for production setup.
 
-1. Set the intended provider and use `not-configured` as a deliberately
-   unmatched `SKYTTEL_FIRST_ADMIN_SUBJECT`. Keep the local Compose service bound
-   to loopback and register the local callback URI with that provider.
-2. Build and start the service with the commands below. Let only the intended
-   administrator complete sign-in. The page denies household access while
-   the configured identifier is unmatched; this is expected.
-3. In a private terminal, inspect the authenticated provider identifier:
-
-   ```sh
-   docker compose exec -T skyttel node --input-type=module <<'JS'
-   import Database from 'better-sqlite3';
-   const db = new Database(process.env.SKYTTEL_DATABASE_PATH, {
-     readonly: true,
-   });
-   console.table(db.prepare('SELECT providerId, accountId FROM account').all());
-   db.close();
-   JS
-   ```
-
-4. There must be exactly one expected provider account in this fresh
-   installation. If there is more than one, stop and confirm which identity
-   belongs to the intended administrator before configuring access. Copy its
-   `accountId` into `SKYTTEL_FIRST_ADMIN_SUBJECT` and its `providerId` into
-   `SKYTTEL_FIRST_ADMIN_PROVIDER` in the private local configuration.
-5. Reload the changed environment with
-   `docker compose up -d --force-recreate`, then return to the application.
-   A plain container restart does not reload a changed Compose environment.
-
-Run this lookup without terminal recording or shared logging. Do not redirect,
-publish, or attach its output to an issue. It contains a real private identity
-identifier; it is operator inspection, not an application log. The placeholder
-must be replaced before household creation.
+For developer installations, follow the
+[local first-household procedure](../development/local-authentication.md#continue-with-the-first-household).
 
 Only the configured provider and identifier can create the installation's
 first household. Once the household exists, current membership controls
@@ -146,7 +129,7 @@ linked provider then reaches the same user and household. See the
 
 ## Build, start, and restart
 
-After filling every required configuration value:
+For the local Compose workflow, after filling every required value:
 
 ```sh
 docker compose build
@@ -213,6 +196,6 @@ against loss of the disk.
 Check the deployed HTTPS origin, provider callbacks, fresh sign-in with both
 providers, and household access after a restart. Include a personal Microsoft
 account and verify that linked logins reach the same household. Follow the
-[real-provider checks](../development/testing.md#verify-real-identity-providers-separately)
+[production sign-in checks](authentication.md#6-verify-production-sign-in)
 for the full procedure. A successful health check or automated test run does
 not verify the installation's real provider registrations.

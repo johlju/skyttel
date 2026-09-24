@@ -1,15 +1,21 @@
-# First-time local setup
+# Set up local authentication
 
-This guide explains how to register Google and Microsoft sign-in for a local
-Skyttel installation. It uses the English names shown in the providers'
-dashboards. The local application address is `http://localhost:3000`. Use
-invented household information while checking the installation.
+This guide is for developers who need to register and verify real Google and
+Microsoft sign-in in a local Skyttel installation. It uses the English names
+shown in the providers' dashboards. The local application address is
+`http://localhost:3000`. Use invented household information while checking
+the installation.
+
+For a production deployment, follow the
+[production authentication guide](../operations/authentication.md).
+For the complete developer environment, follow the
+[devcontainer guide](devcontainer.md).
 
 Provider registration gives Skyttel permission to offer a sign-in button.
 It does not start Skyttel or give anyone access to a household. Both Google
 and Microsoft credentials are required before Skyttel can start. The
-[installation guide](installation.md) covers the complete configuration,
-first administrator, and container startup.
+[installation guide](../operations/installation.md) covers the complete
+configuration, first administrator, and container startup.
 
 ## Understand the names
 
@@ -418,7 +424,7 @@ discover the intended person's provider identifier after a real sign-in
 without granting household creation first. An email address, OAuth client
 ID, or Microsoft Secret ID cannot replace that personal identifier.
 
-See the [configuration reference](installation.md#configure-the-installation)
+See the [configuration reference](../operations/installation.md#configure-the-installation)
 for the purpose of every setting.
 
 ### 11. Build and start the local service
@@ -436,7 +442,7 @@ curl --fail http://localhost:3000/healthz
 The first build can take several minutes. Wait for the service to start;
 the health command should return `{"status":"ok"}`. This confirms startup
 and database preparation, not provider sign-in. If startup fails, follow
-the [startup checks](installation.md#startup-failures-and-storage).
+the [startup checks](../operations/installation.md#startup-failures-and-storage).
 
 Use the same Compose project and files for every command belonging to this
 installation. If you start with `-p` or `-f` options, keep those options on
@@ -499,7 +505,7 @@ browser. Keep those settings consistent.
    account. If access is still denied, check the provider and exact account
    identifier; keep the database and authentication secret intact.
 
-The [administrator procedure](installation.md#designate-the-first-administrator)
+The [administrator procedure](../operations/installation.md#designate-the-first-administrator)
 explains this access boundary. Google describes the stable `sub` value in its
 [identity guidance](https://developers.google.com/identity/openid-connect/openid-connect#an-id-tokens-payload).
 
@@ -591,7 +597,7 @@ performed; closing a browser tab does not test the callback error path.
    personal-account support.
 
 Complete the additional denied-access and failure scenarios in the
-[real-provider verification steps](../development/testing.md#verify-real-identity-providers-separately).
+[real-provider verification steps](testing.md#verify-real-identity-providers-separately).
 Record outcomes privately only after performing the checks. Dashboard setup,
 application readiness, and automated tests do not establish successful live
 provider sign-in. Better Auth describes the Microsoft identifier in its
