@@ -608,8 +608,9 @@ example when the application's verification checks fail.
 ## 9. Retry the GitHub deployment and read its result
 
 1. Return to **Actions → Container release** and the run from step 2.
-   Confirm its commit is still the latest commit on `main`. If a newer
-   release exists, use that run instead; older candidates are skipped.
+   Choose a main push whose plan summary requires Render deployment. If a
+   newer push changes production inputs, use that run instead. Later
+   documentation or devcontainer changes alone do not prevent a retry.
 1. Choose **Re-run jobs → Re-run failed jobs**. The `deploy` job now has
    the credentials it needs. A retry verifies an already live matching
    image without another restart, or deploys the requested new image.
@@ -677,7 +678,10 @@ Keep the existing service, persistent disk, and authentication secret.
    any required preparation before approving a merge to `main`.
 1. After the merge, open **Actions → Container release** for that commit.
    The workflow publishes the verified image and deploys its exact digest
-   to the configured Render service automatically.
+   to the configured Render service automatically when the push changes
+   production inputs. Documentation, tests, release tooling, and devcontainer
+   changes alone publish without deploying. The plan summary records this
+   decision; see the [production input list](container-releases.md#triggers-and-version-identity).
 1. Wait for `deploy` to succeed, then inspect the deployment report using
    step 9. If it fails, follow the diagnosis procedure below before retrying.
 1. Confirm application health, version, and existing household access using
@@ -699,6 +703,37 @@ For older reports without these details, a maintainer must read the current
 service configuration through the authenticated Render API; the original
 configuration response cannot be recovered from the report.
 
+For request failures, the job error and summary identify the deployment phase,
+the API or application endpoint, and the HTTP status or network error code.
+The `render-deployment-<attempt>` artifact contains:
+
+- `deployment.json`: the original failure, failed request, completed checks,
+  final observations, and request history. Failures during evidence collection
+  or GitHub status recording do not replace the original request failure.
+- `requests.ndjson`: one JSON record for each completed request, with its UTC
+  timestamp, phase, method, endpoint, status, and elapsed milliseconds. The job
+  also prints these records as requests complete, so they remain available if
+  execution stops before the final report is written.
+
+To retrieve the evidence with GitHub CLI, replace the run ID, job ID, and
+attempt number with those shown in the failed run:
+
+```bash
+gh run view RUN_ID --repo viscalyx/skyttel --job JOB_ID --log
+gh run download RUN_ID --repo viscalyx/skyttel \
+  --name render-deployment-ATTEMPT --dir deployment-evidence
+```
+
+Use the failed request timestamp and deployment ID to find the corresponding
+events in the service's Render **Logs** and **Deploys** pages. Render runtime
+logs require your Render access; they are not copied to GitHub. Public evidence
+excludes response bodies, credentials, arbitrary error messages, and household
+content. A missing HTTP status means no response headers were received. For a
+response read or JSON error, the record retains the received HTTP status.
+
+If the job stops before the deploy step starts, use the job log to diagnose
+the earlier failed step. There may be no deployment artifact in that case.
+
 Older deployment scripts can reject an image service because its API
 response contains `autoDeploy: "yes"`. This field does not enable automatic
 deployment for image services and needs no dashboard change. Use a release
@@ -716,7 +751,8 @@ older job uses its original script.
 | `database_initialization_failed` | Inspect the safe reason in private logs. Check free disk space and write permission for UID/GID 1000; ask a maintainer to repair permissions if needed. Preserve the existing database. |
 | A migration or deployment is still running | Wait. A GitHub timeout does not cancel Render. Do not cancel the migration or start a competing deployment. |
 | `previous_deployment_requires_diagnosis` or an image mismatch | Reconcile the failed or canceled deployment, saved image, running image, and database state in an attended maintenance window before retrying. |
-| `superseded` | Use the release run for the current head of `main`. The older candidate is intentionally skipped. |
+| `superseded` | Use the latest main release run whose push changes production inputs. The older candidate is intentionally skipped. |
+| `main_comparison_incomplete` | A maintainer must inspect the source comparison. Missing or potentially truncated evidence cannot authorize an older release. Use the latest eligible release when production inputs differ. |
 <!-- markdownlint-enable MD013 -->
 
 Release build, test, or security failures do not call Render. After a

@@ -26,6 +26,7 @@ jobs:
       image: ${{ steps.plan.outputs.image }}
       version: ${{ steps.plan.outputs.version }}
       channel: ${{ steps.plan.outputs.channel }}
+      deploy: ${{ steps.deployment.outputs.deploy }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,6 +42,9 @@ jobs:
         run: node scripts/release/restore.mjs release-plan release
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Check whether the push changes production inputs
+        id: deployment
+        run: node scripts/release/deployment-changes.mjs
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         if: steps.restore.outputs.found != 'true'
         with:
@@ -280,8 +284,8 @@ jobs:
           node scripts/release/github-release.mjs publish release
 
   deploy:
-    # Stable tags publish recovery images; only an approved main push changes production.
-    if: github.repository == 'viscalyx/skyttel' && github.ref == 'refs/heads/main'
+    # Stable tags and pushes without production changes still publish, but do not deploy.
+    if: github.repository == 'viscalyx/skyttel' && github.ref == 'refs/heads/main' && needs.plan.outputs.deploy == 'true'
     needs: [plan, checks, candidate, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 50

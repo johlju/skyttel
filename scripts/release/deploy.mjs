@@ -1,8 +1,10 @@
+import { appendFileSync } from 'node:fs';
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 import { validateReleasePlan } from './plan.mjs';
+import { isProductionInput } from './production-inputs.mjs';
 
 const active = new Set([
   'created',
@@ -18,7 +20,37 @@ function requireState(condition, code) {
   if (!condition) throw new DeploymentError(code);
 }
 
-class DeploymentError extends Error {}
+class DeploymentError extends Error {
+  constructor(code, request) {
+    super(code);
+    this.request = request;
+  }
+}
+
+function errorCode(error) {
+  const codes = new Set([
+    'ECONNREFUSED',
+    'ECONNRESET',
+    'ENOTFOUND',
+    'EAI_AGAIN',
+    'ETIMEDOUT',
+    'UND_ERR_CONNECT_TIMEOUT',
+    'UND_ERR_HEADERS_TIMEOUT',
+    'UND_ERR_BODY_TIMEOUT',
+    'UND_ERR_SOCKET',
+    'CERT_HAS_EXPIRED',
+    'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+    'ENOENT',
+    'EACCES',
+    'ENOSPC',
+  ]);
+  for (const code of [error?.code, error?.cause?.code]) {
+    if (codes.has(code)) return code;
+  }
+  if (error?.name === 'TimeoutError') return 'timeout';
+  if (error?.name === 'AbortError') return 'aborted';
+  return 'unknown';
+}
 
 function serviceConfigurationFailures(service) {
   const details = service.serviceDetails;
@@ -71,6 +103,11 @@ function serviceConfigurationFailures(service) {
 export function deploymentFailureLog(report) {
   return [
     `::error::Render deployment failed: ${report.failure}. Inspect app and database evidence before retry; no automatic rollback was attempted.`,
+    `Failure phase: ${report.failurePhase ?? 'unknown'}.`,
+    ...(report.failedRequest ? [`Failed request: ${JSON.stringify(report.failedRequest)}`] : []),
+    ...(report.errorCode ? [`Error code: ${report.errorCode}.`] : []),
+    ...(report.deployId ? [`Render deployment: ${report.deployId}.`] : []),
+    'See deployment.json and requests.ndjson in the render-deployment artifact; request diagnostics also appear above in this job log.',
     ...(report.configurationFailures ?? []).map(
       ({ field, expected, observed }) =>
         `::error::Render preflight: ${field}: expected ${JSON.stringify(expected)}, observed ${JSON.stringify(observed)}. No deployment was requested.`,
@@ -107,6 +144,7 @@ function observedIdentity(value) {
 /** Deploy one approved main release. HTTP and time are the external boundaries. */
 export async function deployRelease({
   identity,
+  sourceCommit,
   serviceId,
   origin,
   githubToken,
@@ -114,47 +152,83 @@ export async function deployRelease({
   fetch: send = globalThis.fetch,
   sleep = delay,
   attempts = 120,
+  onEvent = () => {},
 }) {
   const report = {
     outcome: 'failure',
     requested: {
       version: identity.fullVersion,
-      commit: identity.commit,
+      commit: sourceCommit,
       digest: identity.digest,
     },
     checks: [],
     database: 'unknown',
+    requests: [],
   };
   const servicePath = `/services/${serviceId}`;
   let deploymentId;
-  async function http(url, token, method = 'GET', body) {
-    const response = await send(url, {
+  let phase = 'preflight';
+  let validated = false;
+  async function http(target, path, token, method = 'GET', body, format = 'json') {
+    const base =
+      target === 'render'
+        ? 'https://api.render.com/v1'
+        : target === 'github'
+          ? 'https://api.github.com/repos/viscalyx/skyttel'
+          : origin;
+    const request = {
+      timestamp: new Date().toISOString(),
+      phase,
+      target,
       method,
-      redirect: 'error',
-      signal: AbortSignal.timeout(15_000),
-      headers: {
-        Accept: 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-    requireState(response.ok, 'http_request_failed');
-    return response;
+      path: path
+        .replace(servicePath, '/services/{serviceId}')
+        .replace(/\/deploys\/dep-[a-z0-9]+$/u, '/deploys/{deployId}')
+        .replace(/\/deployments\/\d+\/statuses$/u, '/deployments/{deploymentId}/statuses'),
+      status: null,
+    };
+    const started = performance.now();
+    let code = 'network_request_failed';
+    try {
+      const response = await send(`${base}${path}`, {
+        method,
+        redirect: 'error',
+        signal: AbortSignal.timeout(15_000),
+        headers: {
+          Accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+      request.status = response.status;
+      code = 'http_request_failed';
+      requireState(response.ok, code);
+      code = 'response_read_failed';
+      const text = await response.text();
+      if (format === 'text') return text;
+      code = 'invalid_json_response';
+      return JSON.parse(text);
+    } catch (error) {
+      request.failure = code;
+      if (code === 'network_request_failed' || code === 'response_read_failed')
+        request.errorCode = errorCode(error);
+      throw new DeploymentError(code, request);
+    } finally {
+      request.durationMs = Math.round(performance.now() - started);
+      report.requests.push(request);
+      onEvent(request);
+    }
   }
-  const render = async (path, method, body) =>
-    (await http(`https://api.render.com/v1${path}`, renderToken, method, body)).json();
-  const github = async (path, method, body) =>
-    (
-      await http(`https://api.github.com/repos/viscalyx/skyttel${path}`, githubToken, method, body)
-    ).json();
-  const application = async (path) => (await http(`${origin}${path}`)).json();
+  const render = async (path, method, body) => http('render', path, renderToken, method, body);
+  const github = async (path, method, body) => http('github', path, githubToken, method, body);
+  const application = async (path) => http('application', path);
   const latest = async () => {
     const list = await render(`${servicePath}/deploys?limit=1`);
     return list[0]?.deploy;
   };
   const status = async (state) => {
-    if (deploymentId)
+    if (Number.isSafeInteger(deploymentId) && deploymentId > 0)
       await github(`/deployments/${deploymentId}/statuses`, 'POST', {
         state,
         environment: 'production',
@@ -175,7 +249,7 @@ export async function deployRelease({
       application('/healthz'),
     ]);
     report.savedImage =
-      service.status === 'fulfilled' && imagePattern.test(service.value.imagePath)
+      service.status === 'fulfilled' && imagePattern.test(service.value?.imagePath)
         ? service.value.imagePath
         : null;
     report.observedDeploy =
@@ -199,12 +273,17 @@ export async function deployRelease({
     report.application = version.status === 'fulfilled' ? observedIdentity(version.value) : null;
     report.database = report.application?.database.status ?? 'unknown';
     report.health =
-      health.status === 'fulfilled' && health.value.status === 'ok' ? 'ok' : 'unknown';
+      health.status === 'fulfilled' && health.value?.status === 'ok' ? 'ok' : 'unknown';
   };
   try {
+    requireState(
+      typeof sourceCommit === 'string' && /^[a-f0-9]{40}$/u.test(sourceCommit),
+      'invalid_source_commit',
+    );
+    requireState(identity.commit === sourceCommit, 'release_commit_mismatch');
     validateReleasePlan(identity, {
       repository: 'viscalyx/skyttel',
-      commit: identity.commit,
+      commit: sourceCommit,
       ref: 'refs/heads/main',
       eventName: 'push',
     });
@@ -215,8 +294,33 @@ export async function deployRelease({
       'invalid_origin',
     );
     requireState(Boolean(githubToken && renderToken), 'missing_credentials');
-    const currentMain = async () => (await github('/git/ref/heads/main')).object.sha;
-    if ((await currentMain()) !== identity.commit) {
+    validated = true;
+    const superseded = async () => {
+      const currentMain = (await github('/git/ref/heads/main')).object.sha;
+      requireState(/^[a-f0-9]{40}$/u.test(currentMain), 'invalid_main_revision');
+      if (currentMain === sourceCommit) return false;
+      // Request paths use the workflow revision, never data from the release file.
+      const comparison = await github(`/compare/${sourceCommit}...${currentMain}`);
+      // A rewritten branch cannot authorize an older candidate. Only permit
+      // descendants with a complete comparison and unchanged production inputs.
+      if (comparison.status !== 'ahead') return true;
+      requireState(
+        Array.isArray(comparison.files) &&
+          comparison.files.length < 300 &&
+          comparison.files.every(
+            (file) =>
+              typeof file?.filename === 'string' &&
+              (file.previous_filename === undefined || typeof file.previous_filename === 'string'),
+          ),
+        'main_comparison_incomplete',
+      );
+      return comparison.files.some(
+        (file) =>
+          isProductionInput(file.filename) ||
+          (file.previous_filename !== undefined && isProductionInput(file.previous_filename)),
+      );
+    };
+    if (await superseded()) {
       report.outcome = 'superseded';
       return report;
     }
@@ -232,6 +336,7 @@ export async function deployRelease({
       'database_not_on_persistent_disk',
     );
     let previous = await latest();
+    phase = 'wait-for-previous-deployment';
     for (let count = 0; active.has(previous?.status) && count < attempts; count++) {
       await sleep(10_000);
       previous = await latest();
@@ -239,13 +344,14 @@ export async function deployRelease({
     requireState(!active.has(previous?.status), 'deployment_still_active');
     // A deploy that finished while we waited may have changed the saved reference.
     service = await render(servicePath);
-    if ((await currentMain()) !== identity.commit) {
+    if (await superseded()) {
       report.outcome = 'superseded';
       return report;
     }
     // Never automatically retry an unresolved failed migration or unknown result.
     requireState(!previous || previous.status === 'live', 'previous_deployment_requires_diagnosis');
     if (previous) {
+      phase = 'verify-previous-application';
       requireState((await application('/healthz')).status === 'ok', 'previous_health_failed');
       const before = observedIdentity(await application('/api/version'));
       requireState(before?.database.status === 'ready', 'database_status_unknown');
@@ -257,13 +363,14 @@ export async function deployRelease({
       report.before = before;
     }
     // Recheck after waiting: GitHub concurrency does not promise queue order.
-    if ((await currentMain()) !== identity.commit) {
+    if (await superseded()) {
       report.outcome = 'superseded';
       return report;
     }
+    phase = 'create-deployment-record';
     deploymentId = (
       await github('/deployments', 'POST', {
-        ref: identity.commit,
+        ref: sourceCommit,
         environment: 'production',
         auto_merge: false,
         required_contexts: [],
@@ -271,11 +378,15 @@ export async function deployRelease({
         payload: { image: `${identity.image}@${identity.digest}`, version: identity.fullVersion },
       })
     ).id;
-    requireState(Number.isSafeInteger(deploymentId), 'deployment_record_failed');
+    requireState(
+      Number.isSafeInteger(deploymentId) && deploymentId > 0,
+      'deployment_record_failed',
+    );
     await status('in_progress');
     const imageUrl = `${identity.image}@${identity.digest}`;
     let deploy = previous;
     if (service.imagePath !== imageUrl || previous?.image?.sha !== identity.digest) {
+      phase = 'update-service-image';
       await render(servicePath, 'PATCH', {
         image: {
           ownerId: service.ownerId,
@@ -286,12 +397,14 @@ export async function deployRelease({
         },
       });
       requireState((await render(servicePath)).imagePath === imageUrl, 'saved_image_mismatch');
+      phase = 'trigger-deployment';
       deploy = await render(`${servicePath}/deploys`, 'POST', { imageUrl });
     }
     report.checks.push('saved-image');
     const deployId = observedDeployId(deploy.id);
     requireState(deployId !== null, 'missing_deploy_id');
     report.deployId = deployId;
+    phase = 'wait-for-deployment';
     for (let count = 0; active.has(deploy.status) && count < attempts; count++) {
       await sleep(10_000);
       deploy = await render(`${servicePath}/deploys/${report.deployId}`);
@@ -305,16 +418,18 @@ export async function deployRelease({
       'running_digest_mismatch',
     );
     report.checks.push('running-digest');
+    phase = 'verify-application';
     const health = await application('/healthz');
     requireState(health.status === 'ok', 'health_failed');
     const running = observedIdentity(await application('/api/version'));
     requireState(
-      running?.commit === identity.commit &&
+      running?.commit === sourceCommit &&
         running.version === identity.fullVersion &&
         running.database.status === 'ready',
       'running_identity_mismatch',
     );
     report.checks.push('readiness', 'version', 'database');
+    phase = 'smoke-checks';
     const bootstrap = await application('/api/bootstrap');
     requireState(
       bootstrap.status === 'anonymous' &&
@@ -322,28 +437,35 @@ export async function deployRelease({
         bootstrap.providers?.includes('microsoft'),
       'smoke_failed',
     );
-    const page = await http(`${origin}/`);
-    requireState((await page.text()).includes('<html'), 'smoke_failed');
+    const page = await http('application', '/', undefined, 'GET', undefined, 'text');
+    requireState(page.includes('<html'), 'smoke_failed');
     report.checks.push('smoke');
+    phase = 'final-snapshot';
     await snapshot();
     requireState(
       report.savedImage === imageUrl &&
         report.observedDeploy?.id === report.deployId &&
         report.observedDeploy.status === 'live' &&
         report.observedDeploy.digest === identity.digest &&
-        report.application?.commit === identity.commit &&
+        report.application?.commit === sourceCommit &&
         report.application.version === identity.fullVersion &&
         report.database === 'ready' &&
         report.health === 'ok',
       'final_state_changed',
     );
+    phase = 'record-success';
     await status('success');
     report.outcome = 'success';
   } catch (error) {
-    // API bodies, network errors, logs and household responses are never published.
+    // Retain request metadata, never arbitrary error messages or response bodies.
     report.failure =
       error instanceof DeploymentError ? error.message : 'deployment_verification_failed';
-    await snapshot();
+    report.failurePhase = phase;
+    if (error instanceof DeploymentError && error.request) report.failedRequest = error.request;
+    else report.errorCode = errorCode(error);
+    phase = 'failure-snapshot';
+    if (validated) await snapshot();
+    phase = 'record-failure';
     await status('failure').catch(() => {
       report.statusRecording = 'failed';
     });
@@ -354,37 +476,59 @@ export async function deployRelease({
 export async function main(env = process.env) {
   const directory = env.DEPLOYMENT_DIRECTORY ?? 'deployment';
   await mkdir(directory, { recursive: true });
-  requireState(
-    env.GITHUB_EVENT_NAME === 'push' &&
-      env.GITHUB_REF === 'refs/heads/main' &&
-      env.GITHUB_REPOSITORY === 'viscalyx/skyttel',
-    'untrusted_deployment_context',
-  );
-  const identity = JSON.parse(await readFile('release/release.json', 'utf8'));
-  requireState(identity.commit === env.GITHUB_SHA, 'release_commit_mismatch');
-  const report = await deployRelease({
-    identity,
-    serviceId: env.RENDER_SERVICE_ID,
-    origin: env.SKYTTEL_ORIGIN,
-    githubToken: env.GH_TOKEN,
-    renderToken: env.RENDER_API_KEY,
-  });
-  await writeFile(join(directory, 'deployment.json'), `${JSON.stringify(report, null, 2)}\n`);
-  if (env.GITHUB_STEP_SUMMARY)
-    await appendFile(
-      env.GITHUB_STEP_SUMMARY,
-      `Render deployment: **${report.outcome}**.\n\nSee the deployment evidence artifact for image and database status.\n`,
+  await writeFile(join(directory, 'requests.ndjson'), '');
+  const onEvent = (event) => {
+    const line = `${JSON.stringify(event)}\n`;
+    console.log(line.trimEnd());
+    try {
+      appendFileSync(join(directory, 'requests.ndjson'), line);
+    } catch (error) {
+      console.error(`::error::Cannot retain request log: ${errorCode(error)}. See job output.`);
+    }
+  };
+  let report;
+  try {
+    requireState(
+      env.GITHUB_EVENT_NAME === 'push' &&
+        env.GITHUB_REF === 'refs/heads/main' &&
+        env.GITHUB_REPOSITORY === 'viscalyx/skyttel',
+      'untrusted_deployment_context',
     );
+    const identity = JSON.parse(await readFile('release/release.json', 'utf8'));
+    requireState(identity.commit === env.GITHUB_SHA, 'release_commit_mismatch');
+    report = await deployRelease({
+      identity,
+      sourceCommit: env.GITHUB_SHA,
+      serviceId: env.RENDER_SERVICE_ID,
+      origin: env.SKYTTEL_ORIGIN,
+      githubToken: env.GH_TOKEN,
+      renderToken: env.RENDER_API_KEY,
+      onEvent,
+    });
+  } catch (error) {
+    report = {
+      outcome: 'failure',
+      failure: error instanceof DeploymentError ? error.message : 'deployment_setup_failed',
+      failurePhase: 'setup',
+      errorCode: errorCode(error),
+    };
+  }
   if (report.outcome === 'failure') {
     console.error(deploymentFailureLog(report));
     process.exitCode = 1;
   }
+  await writeFile(join(directory, 'deployment.json'), `${JSON.stringify(report, null, 2)}\n`);
+  if (env.GITHUB_STEP_SUMMARY)
+    await appendFile(
+      env.GITHUB_STEP_SUMMARY,
+      `Render deployment: **${report.outcome}**.\n\nDownload the render-deployment artifact for deployment.json and requests.ndjson. Request diagnostics are also in the job log.\n${report.outcome === 'failure' ? `\n\`\`\`text\n${deploymentFailureLog(report)}\n\`\`\`\n` : ''}`,
+    );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch(() => {
+  main().catch((error) => {
     console.error(
-      '::error::Deployment setup failed. Verify configuration and retained release evidence.',
+      `::error::Deployment evidence could not be completed: ${errorCode(error)}. Read the request diagnostics and failure above in the job log.`,
     );
     process.exitCode = 1;
   });

@@ -167,10 +167,17 @@ maintenance access; closing a session does not prevent a new session.
 
 Before enabling automatic updates, configure the production deployment
 environment and one image-based Render service with a persistent disk. A
-verified release from the main branch now changes production automatically;
+verified release from the main branch changes production automatically when
+the push changes application source, dependencies, or production configuration;
 stable release tags do not change the running installation. Expect a short
 interruption, enable deployment-failure notifications and keep other deployment
 paths disabled. Follow the [deployment runbook](render.md).
+
+Documentation, tests, release tooling, and development-container changes alone
+still publish a release, but do not deploy it. Use the latest release run that
+requires production deployment when retrying a failed update. Later changes
+outside production inputs do not prevent that retry. Read the job summary and
+retain its deployment report and request log when investigating failures.
 
 After failure, establish the actual running image and database state before
 retry. Wait for any active migration. A complete household export restores

@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { deploymentFailureLog, deployRelease } from '../deploy.mjs';
 import { createReleasePlan } from '../plan.mjs';
@@ -47,6 +51,7 @@ function platform() {
     ignorePatch: false,
     databasePath: '/data/skyttel.sqlite',
     serviceOverrides: {},
+    comparison: { status: 'ahead', files: [{ filename: 'src/server/app.ts' }] },
   };
   const reply = (body, status = 200) => new Response(JSON.stringify(body), { status });
   const fetch = async (url, options = {}) => {
@@ -54,7 +59,10 @@ function platform() {
     const method = options.method ?? 'GET';
     const body = options.body && JSON.parse(options.body);
     state.requests.push({ url, method, body });
+    const override = await state.respond?.({ path, method, body });
+    if (override) return override;
     if (path.endsWith('/git/ref/heads/main')) return reply({ object: { sha: state.main } });
+    if (path.startsWith('/repos/viscalyx/skyttel/compare/')) return reply(state.comparison);
     if (path === '/repos/viscalyx/skyttel/deployments') return reply({ id: 42 });
     if (path.endsWith('/deployments/42/statuses')) {
       state.statuses.push(body.state);
@@ -105,9 +113,11 @@ function platform() {
     if (path === '/') return new Response('<html><body>Skyttel</body></html>');
     throw new Error(`Unexpected HTTP request: ${path}`);
   };
-  const run = () =>
+  const events = [];
+  const run = (overrides = {}) =>
     deployRelease({
       identity,
+      sourceCommit: commit,
       serviceId: 'srv-synthetic',
       origin: 'https://skyttel.example.test',
       githubToken: 'synthetic-github-secret',
@@ -118,8 +128,10 @@ function platform() {
         await state.onWait?.();
       },
       attempts: 2,
+      onEvent: (event) => events.push(structuredClone(event)),
+      ...overrides,
     });
-  return { state, run };
+  return { state, run, events };
 }
 
 test('a verified release updates the saved image and running digest; retry verifies without another interruption', async () => {
@@ -239,6 +251,78 @@ test('a superseded candidate never changes Render, including when main advances 
   assert.ok(state.requests.every((r) => !r.url.includes('/cancel')));
 });
 
+test('documentation and devcontainer pushes cannot supersede a pending production release', async () => {
+  const { state, run } = platform();
+  state.main = 'f'.repeat(40);
+  state.comparison.files = [
+    { filename: 'docs/operations/render.md' },
+    { filename: '.devcontainer/Dockerfile' },
+    { filename: 'scripts/release/deploy.mjs' },
+  ];
+  assert.equal((await run()).outcome, 'success');
+  assert.equal(state.deploys, 1);
+  assert.equal(state.requests.filter(({ url }) => url.includes('/compare/')).length, 3);
+  assert.ok(
+    state.requests
+      .filter(({ url }) => url.includes('/compare/'))
+      .every(
+        ({ url }) =>
+          url === `https://api.github.com/repos/viscalyx/skyttel/compare/${commit}...${state.main}`,
+      ),
+  );
+});
+
+test('release identity must match a valid workflow revision before any outbound request', async () => {
+  for (const sourceCommit of [undefined, '', 'main', `${commit}/private-data`, [commit]]) {
+    const { state, run } = platform();
+    const report = await run({ sourceCommit });
+    assert.equal(report.failure, 'invalid_source_commit');
+    assert.equal(state.requests.length, 0);
+  }
+  for (const artifactCommit of ['f'.repeat(40), `${commit}/private-data`, [commit]]) {
+    const { state, run } = platform();
+    const report = await run({ identity: { ...identity, commit: artifactCommit } });
+    assert.equal(report.failure, 'release_commit_mismatch');
+    assert.equal(state.requests.length, 0);
+    assert.equal(report.requested.commit, commit);
+    assert.doesNotMatch(JSON.stringify(report), /private-data/);
+  }
+});
+
+test('renamed production inputs and rewritten main supersede a candidate', async () => {
+  for (const comparison of [
+    {
+      status: 'ahead',
+      files: [{ filename: 'docs/example.ts', previous_filename: 'src/server/app.ts' }],
+    },
+    { status: 'diverged', files: [] },
+    { status: 'behind', files: [] },
+  ]) {
+    const { state, run } = platform();
+    state.main = 'f'.repeat(40);
+    state.comparison = comparison;
+    assert.equal((await run()).outcome, 'superseded');
+    assert.equal(state.patches, 0);
+    assert.equal(state.deploys, 0);
+  }
+});
+
+test('incomplete comparisons fail rather than treating unobserved changes as safe', async () => {
+  for (const files of [
+    undefined,
+    Array.from({ length: 300 }, () => ({ filename: 'docs/readme.md' })),
+    [{}],
+  ]) {
+    const { state, run } = platform();
+    state.main = 'f'.repeat(40);
+    state.comparison = { status: 'ahead', files };
+    const report = await run();
+    assert.equal(report.failure, 'main_comparison_incomplete');
+    assert.equal(state.patches, 0);
+    assert.equal(state.deploys, 0);
+  }
+});
+
 test('migration failure records failure and prevents a blind retry or rollback', async () => {
   const { state, run } = platform();
   state.nextStatus = 'update_failed';
@@ -260,6 +344,161 @@ test('a failed health check never records deployment success', async () => {
   assert.equal(result.observedDeploy.status, 'live');
   assert.equal(state.statuses.at(-1), 'failure');
   assert.ok(!state.statuses.includes('success'));
+  assert.equal(result.failurePhase, 'verify-application');
+  assert.equal(result.failedRequest.path, '/healthz');
+  assert.equal(result.failedRequest.target, 'application');
+  assert.equal(result.failedRequest.status, 503);
+  assert.match(deploymentFailureLog(result), /503/);
+});
+
+test('request diagnostics preserve the primary HTTP failure when snapshot and status recording also fail', async () => {
+  const { state, run, events } = platform();
+  state.respond = ({ path }) => {
+    if (state.deploys && path !== '/healthz')
+      return new Response('private-household-name synthetic-render-secret\n::error::injected', {
+        status: path === '/api/version' ? 502 : 403,
+        statusText: 'private-status-text',
+        headers: { 'set-cookie': 'private-cookie' },
+      });
+  };
+  const report = await run();
+  assert.equal(report.failure, 'http_request_failed');
+  assert.equal(report.failurePhase, 'verify-application');
+  assert.equal(report.failedRequest.path, '/api/version');
+  assert.equal(report.failedRequest.status, 502);
+  assert.equal(report.statusRecording, 'failed');
+  assert.equal(report.requests.at(-1).phase, 'record-failure');
+  assert.equal(report.requests.at(-1).status, 403);
+  assert.ok(report.requests.some(({ phase, failure }) => phase === 'failure-snapshot' && failure));
+  assert.deepEqual(events, report.requests);
+  for (const request of events) {
+    assert.ok(Number.isFinite(Date.parse(request.timestamp)));
+    assert.ok(request.durationMs >= 0);
+  }
+  assert.doesNotMatch(
+    JSON.stringify(report) + deploymentFailureLog(report) + JSON.stringify(events),
+    /private-|synthetic-.*-secret|::error::injected/,
+  );
+});
+
+test('network, timeout, response-body and JSON errors retain endpoint context without raw error text', async () => {
+  const cases = [
+    {
+      respond: () => {
+        throw new TypeError('private-network-message', { cause: { code: 'ECONNRESET' } });
+      },
+      failure: 'network_request_failed',
+      errorCode: 'ECONNRESET',
+      status: null,
+    },
+    {
+      respond: () => {
+        throw new DOMException('private-timeout-message', 'TimeoutError');
+      },
+      failure: 'network_request_failed',
+      errorCode: 'timeout',
+      status: null,
+    },
+    {
+      respond: () => ({
+        ok: true,
+        status: 200,
+        text: async () => {
+          throw new Error('private-read-message');
+        },
+      }),
+      failure: 'response_read_failed',
+      errorCode: 'unknown',
+      status: 200,
+    },
+    {
+      respond: () => new Response('<html>private-response-body</html>'),
+      failure: 'invalid_json_response',
+      errorCode: undefined,
+      status: 200,
+    },
+  ];
+  for (const { respond, failure, errorCode, status } of cases) {
+    const { state, run } = platform();
+    state.respond = ({ path }) =>
+      state.deploys && path === '/api/version' ? respond() : undefined;
+    const report = await run();
+    assert.equal(report.failure, failure);
+    assert.equal(report.failedRequest.path, '/api/version');
+    assert.equal(report.failedRequest.errorCode, errorCode);
+    assert.equal(report.failedRequest.status, status);
+    assert.doesNotMatch(JSON.stringify(report) + deploymentFailureLog(report), /private-/);
+  }
+});
+
+test('CLI retains diagnostics in job output, artifact files and summary, including setup failures and interruption', () => {
+  for (const scenario of ['http-failure', 'setup-failure', 'interruption']) {
+    const directory = mkdtempSync(join(tmpdir(), 'skyttel-deploy-diagnostics-'));
+    try {
+      mkdirSync(join(directory, 'release'));
+      if (scenario !== 'setup-failure')
+        writeFileSync(join(directory, 'release/release.json'), JSON.stringify(identity));
+      const script = `
+        import { main } from ${JSON.stringify(new URL('../deploy.mjs', import.meta.url).href)};
+        let calls = 0;
+        globalThis.fetch = async () => {
+          if (${JSON.stringify(scenario)} === 'interruption') {
+            if (++calls === 2) process.exit(23);
+            return new Response(JSON.stringify({ object: { sha: ${JSON.stringify(commit)} } }));
+          }
+          return new Response('private-response-secret', { status: 503 });
+        };
+        await main();
+      `;
+      const result = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
+        cwd: directory,
+        env: {
+          ...process.env,
+          GITHUB_EVENT_NAME: 'push',
+          GITHUB_REF: 'refs/heads/main',
+          GITHUB_REPOSITORY: 'viscalyx/skyttel',
+          GITHUB_SHA: commit,
+          GH_TOKEN: 'private-github-secret',
+          RENDER_API_KEY: 'private-render-secret',
+          RENDER_SERVICE_ID: 'srv-synthetic',
+          SKYTTEL_ORIGIN: 'https://skyttel.example.test',
+          DEPLOYMENT_DIRECTORY: join(directory, 'evidence'),
+          GITHUB_STEP_SUMMARY: join(directory, 'summary.md'),
+        },
+        encoding: 'utf8',
+      });
+      const log = readFileSync(join(directory, 'evidence/requests.ndjson'), 'utf8');
+      assert.equal(result.status, scenario === 'interruption' ? 23 : 1);
+      if (scenario === 'interruption') {
+        assert.equal(JSON.parse(log).status, 200);
+        assert.ok(result.stdout.includes(log.trim()));
+        continue;
+      }
+      const report = JSON.parse(readFileSync(join(directory, 'evidence/deployment.json'), 'utf8'));
+      const summary = readFileSync(join(directory, 'summary.md'), 'utf8');
+      assert.ok(result.stderr.includes(report.failure));
+      assert.ok(summary.includes(report.failure));
+      if (scenario === 'setup-failure') {
+        assert.equal(report.failurePhase, 'setup');
+        assert.equal(report.errorCode, 'ENOENT');
+      } else {
+        const requests = log
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line));
+        assert.deepEqual(requests, report.requests);
+        assert.equal(report.failedRequest.status, 503);
+        assert.match(result.stdout, /503/);
+        assert.match(summary, /503/);
+      }
+      assert.doesNotMatch(
+        result.stdout + result.stderr + log + summary + JSON.stringify(report),
+        /private-/,
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
 });
 
 test('timeout leaves a migration running and the next attempt waits without starting a competing deploy', async () => {
@@ -332,4 +571,16 @@ test('malformed deployment IDs are rejected before polling and excluded from pub
     assert.equal(state.waits, 0);
     assert.doesNotMatch(JSON.stringify(report), /dep-private|secret/);
   }
+});
+
+test('an invalid GitHub deployment ID cannot enter a status request or public request log', async () => {
+  const { state, run } = platform();
+  state.respond = ({ path }) => {
+    if (path === '/repos/viscalyx/skyttel/deployments')
+      return new Response(JSON.stringify({ id: 'private-id\n::error::injected' }));
+  };
+  const report = await run();
+  assert.equal(report.failure, 'deployment_record_failed');
+  assert.ok(state.requests.every(({ url }) => !url.includes('/statuses')));
+  assert.doesNotMatch(JSON.stringify(report) + deploymentFailureLog(report), /private-id|injected/);
 });

@@ -2,9 +2,10 @@
 
 This guide is for maintainers who publish, review, or recover a Skyttel
 container release. The release workflow publishes to GHCR and GitHub Releases.
-After successful publication from `main`, it deploys the exact digest to
-Render. Follow the [Render runbook](render.md) for setup,
-deployment evidence and failure recovery. Stable tags publish without
+After successful publication from a `main` push that changes production
+inputs, it deploys the exact digest to Render. Follow the
+[Render runbook](render.md) for setup, deployment evidence and failure recovery.
+Stable tags publish without
 changing production.
 
 ## Triggers and version identity
@@ -15,6 +16,20 @@ separate stable chain. Its commit must be part of `origin/main`; the tag and
 release plan must identify the same commit. Preview tags created by the
 workflow do not trigger another run. An older stable tag is not a request to
 replace a newer running main version.
+
+Only the Render deployment job is filtered by changed files. Source and
+migration changes, package manifests, the lockfile, and production build or
+container configuration require deployment. The inputs are `src/`,
+`migrations/`, `package.json`, `package-lock.json`, `Dockerfile`,
+`.dockerignore`, `compose.yaml`, `.npmrc`, `.node-version`,
+`scripts/install-repository-npm.mjs`, `tsconfig.json`, `tsconfig.server.json`,
+`vite.config.ts`, and `index.html`.
+
+The decision compares the full push's before and after revisions, including
+deletions and renames. Documentation, tests, release tooling, and devcontainer
+changes alone still run checks and publish a release, but skip Render. The
+plan job summary records the decision. A newer commit with unchanged
+production inputs does not supersede an eligible pending deployment.
 
 GitVersion uses full Git history and tags, the exact version in
 `.config/dotnet-tools.json`, and `GitVersion.yml`. Main uses
