@@ -14,8 +14,9 @@ async function main() {
     const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, () => {
       console.info(JSON.stringify({ event: 'server_ready' }));
     });
-    server.on('error', () => {
+    server.on('error', async () => {
       console.error(JSON.stringify({ event: 'listener_failed' }));
+      await app.close();
       database.close();
       process.exitCode = 1;
     });
@@ -23,7 +24,8 @@ async function main() {
     const shutdown = () => {
       if (closing) return;
       closing = true;
-      server.close(() => {
+      server.close(async () => {
+        await app.close();
         database.close();
         process.exitCode = 0;
       });

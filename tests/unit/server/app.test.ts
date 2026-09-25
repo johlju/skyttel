@@ -69,6 +69,7 @@ describe('public application HTTP interface', () => {
     const bootstrap = await client.request('/api/bootstrap');
     expect(await bootstrap.json()).toEqual({
       status: 'anonymous',
+      operator: false,
       providers: ['google', 'microsoft'],
     });
     expect(bootstrap.headers.get('cache-control')).toBe('no-store');

@@ -1,0 +1,64 @@
+.conversation-transcript {
+  list-style: none;
+  max-height: 24rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0;
+}
+
+.conversation-row {
+  margin-block: 0.75rem;
+  padding: 0.75rem;
+  border-inline-start: 3px solid #577263;
+  overflow-wrap: anywhere;
+}
+
+.conversation-row.user {
+  border-inline-start-color: #93c9ac;
+}
+
+.conversation-row p {
+  margin-block: 0.25rem 0;
+  white-space: pre-wrap;
+}
+
+.conversation-row.partial {
+  border-inline-start-style: dotted;
+}
+
+.assistant-work-indicator.is-working {
+  position: fixed;
+  z-index: 80;
+  inset-inline: 1rem;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #648673;
+  border-radius: 0.75rem;
+  background: #173328;
+  color: #f0f7f2;
+  box-shadow: 0 0.5rem 1.5rem #0005;
+  pointer-events: none;
+}
+
+.assistant-work-indicator.is-working p {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.draft-change-summary > li {
+  margin-block: 0.6rem;
+}
+
+.assistant-work-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

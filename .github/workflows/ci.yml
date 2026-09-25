@@ -36,6 +36,21 @@ jobs:
       - run: npm run test:integration
       - run: npm run test:container
 
+  devcontainer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: node scripts/install-repository-npm.mjs
+      - run: npm ci
+      - run: npm run test:devcontainer
+
   security:
     uses: ./.github/workflows/security.yml
     permissions:
@@ -44,7 +59,7 @@ jobs:
 
   security-gate:
     if: always()
-    needs: [application, security]
+    needs: [application, devcontainer, security]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -55,6 +70,6 @@ jobs:
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      - run: node scripts/security/check-results.mjs jobs application security
+      - run: node scripts/security/check-results.mjs jobs application devcontainer security
         env:
           REQUIRED_RESULTS: ${{ toJSON(needs) }}

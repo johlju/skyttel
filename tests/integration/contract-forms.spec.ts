@@ -45,6 +45,7 @@ test('AVTAL-01: optional rent facts can be reviewed, found and corrected after r
     await expect(objects.getByRole('button')).toHaveText(['Hyra för lägenheten']);
     await expect(objects).toContainText('Hyresavtal');
     await objects.getByRole('button', { name: 'Hyra för lägenheten', exact: true }).click();
+    await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByText('Ekonomiska uppgifter och avtalsvillkor', { exact: true }).click();
     await expect(page.getByLabel('Pris', { exact: true })).toHaveValue('9 500');
     await expect(page.getByLabel('Slutdatum: uppgiftens säkerhet')).toHaveValue('');
@@ -58,6 +59,7 @@ test('AVTAL-01: optional rent facts can be reviewed, found and corrected after r
     await installation.restart();
     await page.reload();
     await page.getByRole('button', { name: 'Hyra för lägenheten', exact: true }).click();
+    await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByText('Ekonomiska uppgifter och avtalsvillkor', { exact: true }).click();
     await expect(page.getByLabel('Pris', { exact: true })).toHaveValue('9 700');
     await expect(page.getByLabel('Startdatum', { exact: true })).toHaveValue('2026-01-01');
@@ -122,6 +124,7 @@ test('AVTAL-02: dated debt and credit keep distinct values and incomplete meanin
     await installation.restart();
     await page.reload();
     await page.getByRole('button', { name: 'Familjens kreditavtal', exact: true }).click();
+    await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByText('Ekonomiska uppgifter och avtalsvillkor', { exact: true }).click();
     await expect(page.getByLabel('Senast uppgiven skuld: uppgiftens säkerhet')).toHaveValue(
       'uncertain',
@@ -156,6 +159,7 @@ test('AVTAL-02: dated debt and credit keep distinct values and incomplete meanin
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.reload();
     await page.getByRole('button', { name: 'Familjens kreditavtal', exact: true }).click();
+    await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByText('Ekonomiska uppgifter och avtalsvillkor', { exact: true }).click();
     await expect(page.getByLabel('Senast uppgiven skuld: uppgiftens säkerhet')).toHaveValue(
       'unknown',

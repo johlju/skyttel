@@ -13,6 +13,12 @@ webbläsarprofil. Alla namn, adresser och beskrivningar nedan är påhittade.
 
 ## Allmän förberedelse
 
+När ett befintligt objekt eller samband ska ändras, välj det först i
+kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+**Redigera valt objekt** eller **Redigera valt samband** för att öppna
+formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
+objektet eller sambandet öppnar inte formuläret.
+
 1. Förbered en separat testinstallation med en ny, tom databas enligt
    [installationsguiden](../operations/installation.md). Använd inga verkliga
    hushållsuppgifter. Börja varje testfall med en ny testdatabas.
@@ -180,7 +186,7 @@ deleting a relationship”.
    Öppna sambandet igen och kontrollera målet.
 5. Byt åter till det andra adressobjektet, lägg sambandet i utkastet,
    spara och ladda om sidan. Öppna sambandet och kontrollera målet.
-6. Välj **Föreslå borttagning av sambandet**, granska borttagningen,
+6. Välj **Ta bort sambandet**, granska borttagningen,
    spara och ladda om sidan.
 
 **Förväntat resultat:**
@@ -216,7 +222,7 @@ and can be discarded”.
 
 **Steg:**
 
-1. Öppna Musikkonto och välj **Föreslå borttagning**. Granska hela utkastet.
+1. Öppna Musikkonto och välj **Ta bort**. Granska hela utkastet.
 2. Välj **Nytt samband** och kontrollera alternativen i **Från objekt**
    och **Till objekt**. Välj **Stäng sambandet utan att skicka**.
 3. Välj **Kasta hela utkastet**. Kontrollera objekt och samband.
@@ -261,7 +267,7 @@ shared map after review”.
    öppna Lo Exempel, ändra namnet till **Lo Lind** och lägg i utkastet.
    Granska sparat underlag och förslag.
 5. Välj **Kasta hela utkastet**. Öppna Lo Exempel, välj
-   **Föreslå borttagning**, granska utkastet och spara det.
+   **Ta bort**, granska utkastet och spara det.
 
 **Förväntat resultat:**
 

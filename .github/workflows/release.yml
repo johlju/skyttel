@@ -155,10 +155,26 @@ jobs:
           node scripts/security/check-results.mjs grype release .github/security-exceptions.json
           bash scripts/security/scan-running-image.sh skyttel-release:verified "$RUNNER_TEMP/zap"
           cp "$RUNNER_TEMP/zap/zap.json" "$RUNNER_TEMP/zap/zap.html" release/
+      - name: Collect available candidate diagnostics
+        if: always()
+        run: |
+          for report in "$RUNNER_TEMP/zap/zap.json" "$RUNNER_TEMP/zap/zap.html"; do
+            if [ -f "$report" ]; then cp "$report" release/; fi
+          done
+      - name: Preserve candidate diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-candidate-diagnostics-${{ github.run_attempt }}
+          path: |
+            release
+            !release/image.oci.tar
+          if-no-files-found: warn
+          retention-days: 90
       # Upload only after all candidate checks pass. Existing artifacts are never overwritten.
       - name: Preserve verified candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: steps.restore.outputs.found != 'true'
+        if: success() && steps.restore.outputs.found != 'true'
         with:
           name: release-candidate
           path: release

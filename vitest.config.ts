@@ -1,8 +1,21 @@
+import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     projects: [
+      {
+        test: {
+          name: 'graphics',
+          include: ['tests/browser/**/*.test.tsx'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
       {
         test: {
           name: 'server',

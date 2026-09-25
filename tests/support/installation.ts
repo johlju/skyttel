@@ -7,6 +7,10 @@ import { createApp } from '../../src/server/app.js';
 import { createAuth, verifyAuthSchema } from '../../src/server/auth.js';
 import type { Config } from '../../src/server/config.js';
 import { openDatabase } from '../../src/server/database.js';
+import type { LiveSidebandFactory, LiveUsage } from '../../src/server/live-provider.js';
+import type { TextModelUsage } from '../../src/server/text-assistant-model.js';
+import { seedLargeMap } from './large-map.js';
+import { legacyAuth } from './legacy-auth.js';
 
 export type Identity = {
   subject: string;
@@ -27,27 +31,45 @@ export const robin: Identity = {
 
 export async function createInstallation(
   firstAdmin = { provider: 'google' as 'google' | 'microsoft', subject: alex.subject },
-  databaseOptions: { migrationsDirectory?: string; legacyAuthCallbacks?: boolean } = {},
+  databaseOptions: {
+    migrationsDirectory?: string;
+    legacyAuthCallbacks?: boolean;
+    databasePath?: string;
+    modelFetch?: typeof fetch;
+    providerApiKey?: string;
+    modelUsage?: TextModelUsage;
+    liveFetch?: typeof fetch;
+    liveSideband?: LiveSidebandFactory;
+    liveUsage?: LiveUsage;
+    browserProviderScript?: string;
+    assistantDispatch?: Parameters<typeof createApp>[0]['assistantDispatch'];
+  } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
   const config: Config = {
     origin: 'http://127.0.0.1',
-    databasePath: join(directory, 'skyttel.db'),
+    databasePath: databaseOptions.databasePath ?? join(directory, 'skyttel.db'),
     firstAdmin,
     authSecret: 'synthetic-test-secret-with-at-least-32-characters',
     google: { clientId: 'fake-google', clientSecret: 'fake-secret' },
     microsoft: { clientId: 'fake-microsoft', clientSecret: 'fake-secret' },
     port: 0,
     host: '127.0.0.1',
+    ...(databaseOptions.providerApiKey
+      ? { openaiApiKey: databaseOptions.providerApiKey }
+      : databaseOptions.modelFetch
+        ? { openaiApiKey: 'synthetic-model-key' }
+        : {}),
   };
   let identity = alex;
   let providerFails = false;
   let consentDenied = false;
   let database: ReturnType<typeof openDatabase>;
   let server: ServerType;
+  let closeApp: () => Promise<void>;
+  let handle: (request: Request) => Response | Promise<Response> = () =>
+    new Response(null, { status: 503 });
   async function start() {
-    let handle: (request: Request) => Response | Promise<Response> = () =>
-      new Response(null, { status: 503 });
     server = serve({
       fetch: (request) => handle(request),
       hostname: config.host,
@@ -62,7 +84,10 @@ export async function createInstallation(
     config.port = address.port;
     config.origin = `http://127.0.0.1:${address.port}`;
     database = openDatabase(config.databasePath, databaseOptions);
-    const auth = createAuth(config, database);
+    const hasOAuth = database
+      .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'oauthClient'")
+      .get();
+    const auth = hasOAuth ? createAuth(config, database) : legacyAuth(config, database);
     await verifyAuthSchema(auth);
     const context = await auth.$context;
     for (const provider of context.socialProviders) {
@@ -96,8 +121,19 @@ export async function createInstallation(
         };
       };
     }
-    const app = createApp({ config, database, auth });
-    handle = (request) => {
+    const app = createApp({
+      config,
+      database,
+      auth,
+      modelFetch: databaseOptions.modelFetch,
+      modelUsage: databaseOptions.modelUsage,
+      liveFetch: databaseOptions.liveFetch,
+      liveSideband: databaseOptions.liveSideband,
+      liveUsage: databaseOptions.liveUsage,
+      assistantDispatch: databaseOptions.assistantDispatch,
+    });
+    closeApp = app.close;
+    handle = async (request) => {
       // Model the original login-only callback while arranging a legacy
       // installation. Production always applies all migrations before serving.
       if (
@@ -105,7 +141,35 @@ export async function createInstallation(
         new URL(request.url).pathname.startsWith('/api/auth/callback/')
       )
         return auth.handler(request);
-      return app.fetch(request);
+      // Disposable browser-provider substitution only. Production has no asset,
+      // HTML alteration or switch for this controlled microphone/WebRTC seam.
+      const script = databaseOptions.browserProviderScript;
+      const scriptPath = '/assets/manual-voice-provider.js';
+      if (script && request.method === 'GET' && new URL(request.url).pathname === scriptPath)
+        return new Response(script, {
+          headers: {
+            'Content-Type': 'text/javascript; charset=utf-8',
+            'Cache-Control': 'no-store',
+          },
+        });
+      const response = await app.fetch(request);
+      if (
+        script &&
+        response.status === 200 &&
+        response.headers.get('Content-Type')?.includes('text/html')
+      ) {
+        const headers = new Headers(response.headers);
+        headers.delete('Content-Length');
+        headers.delete('ETag');
+        return new Response(
+          (await response.text()).replace('<head>', `<head><script src="${scriptPath}"></script>`),
+          {
+            status: response.status,
+            headers,
+          },
+        );
+      }
+      return response;
     };
   }
   async function stop() {
@@ -122,13 +186,18 @@ export async function createInstallation(
         else resolve();
       });
     });
+    await closeApp();
     database.close();
   }
   await start();
   return {
     origin: config.origin,
+    fetch: (request: Request) => handle(request),
     seedDemo() {
       return seedDemo(database, config);
+    },
+    seedLargeMap(userId: string, householdId: string) {
+      seedLargeMap(database, userId, householdId);
     },
     directory,
     setIdentity(value: Identity) {

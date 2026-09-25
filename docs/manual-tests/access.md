@@ -16,7 +16,7 @@ Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning
 Använd endast fiktiva hushåll och kontrollerade testidentiteter. Den
 automatiserade motsvarigheten använder syntetiska identitetsleverantörer.
 Verkliga leverantörer kontrolleras separat enligt
-[testguiden](../development/testing.md#verify-real-identity-providers-separately).
+[förberedelsen för verkliga leverantörer](#real-identity-provider-preparation).
 
 ## Allmän förberedelse
 
@@ -409,3 +409,53 @@ closed and allows a successful retry”.
   **Hushållet Linden**.
 - Integrationstesterna kontrollerar även att direkta försök att läsa eller
   skapa hushåll nekas före den lyckade inloggningen.
+
+## Real identity provider preparation
+
+If you are new to provider registration, start with the
+[local authentication walkthrough](../development/devcontainer.md#set-up-local-sign-in).
+
+For a manual Codex CLI connection inside the devcontainer, use the
+[local assistant setup](setup/assistants.md#manual-local-codex-cli-setup).
+It reuses development Google credentials with the port-3301 callback and a
+disposable database. Normal development login uses the port-5173 callback
+on the same Google client. This live-client check is excluded from CI and
+pull request workflows; do not add provider secrets or a Codex login to run
+it there. Automated tests retain their synthetic identity providers.
+
+Use a private verification installation with its own persistent disk, secret,
+and provider registrations. Register the correct callback URLs and authorize
+Google test accounts if its consent screen requires them. Do not post tokens,
+subjects, personal email addresses, screenshots with identity details, or
+household data in public evidence.
+
+1. Configure a controlled Google identity as first administrator. Complete the
+   actual Google redirect and consent flow, create a synthetic household,
+   sign out, and sign in again.
+2. Restart the production container and confirm that the same household and
+   provider identity are retained.
+3. Repeat in a separate installation with a personal Microsoft account as
+   first administrator. An organizational Microsoft account alone does not
+   verify personal-account support.
+4. Confirm that another authenticated identity cannot create or access the
+   household, including direct API requests. If using matching email
+   addresses across providers, confirm they do not merge automatically.
+5. Verify logout, denied consent, and a provider error. Confirm that the page
+   gives a usable retry path and technical logs contain no secret or identity
+   detail.
+6. Open **Inloggningssätt**, prove the existing login, then link a controlled
+   identity from the other provider. Include a personal Microsoft account.
+   Check the verified result, sign out, and sign in with each provider.
+   Confirm the same Skyttel user ID and household access. Repeat with denied
+   consent and an identity already owned by another Skyttel user; earlier
+   access must remain intact.
+
+Record the date, image digest, provider, Microsoft account category, scenarios,
+and pass/fail result in private release evidence. State explicitly which
+checks are deterministic and which use a real provider. Passing the automated
+suite alone is not a claim of live Google or Microsoft sign-in success.
+
+Verify the deployed HTTPS origin and callback URLs before release. Local
+HTTP checks do not verify hosted ingress or provider policies for that
+deployment. Test physical mobile devices separately when they are part of
+the release's target platforms; browser viewport emulation is insufficient.

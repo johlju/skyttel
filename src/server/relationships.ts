@@ -1,28 +1,45 @@
+import { isDeepStrictEqual } from 'node:util';
 import type Database from 'better-sqlite3';
 import type {
   MapDraft,
   MapRelationship,
-  RelationshipChange,
   RelationshipType,
   RelationshipValue,
+  SavedRelationshipChange,
 } from '../shared/map.js';
 import { proposedRelationships } from '../shared/map.js';
+import { readFinancialFacts } from './financial-facts.js';
+import { readLifecycle } from './lifecycle.js';
 import { MapError } from './map-error.js';
+import { mapTombstones } from './map-tombstones.js';
+import { relationshipTypes } from './relationship-types.js';
 
 // All operations run inside the map's authorized, immediate transaction.
 export function relationships(database: Database.Database, householdId: string) {
+  const definitions = relationshipTypes(database, householdId);
+  const tombstones = mapTombstones(database, householdId);
   function read(): MapRelationship[] {
     return database
       .prepare(
-        'SELECT id, householdId, typeId, revision, sourceId, targetId, knowledge FROM map_relationship WHERE householdId = ? AND deleted = 0 ORDER BY id',
+        'SELECT id, householdId, typeId, revision, sourceId, targetId, knowledge, lifecycle, endDate FROM map_relationship WHERE householdId = ? AND deleted = 0 ORDER BY id',
       )
-      .all(householdId) as MapRelationship[];
+      .all(householdId)
+      .map((row) => {
+        const { lifecycle, endDate, ...value } = row as Omit<
+          MapRelationship,
+          'lifecycle' | 'endDate'
+        > & {
+          lifecycle: MapRelationship['lifecycle'] | null;
+          endDate: string | null;
+        };
+        return {
+          ...value,
+          ...(lifecycle ? { lifecycle } : {}),
+          ...(endDate ? { endDate: JSON.parse(endDate) } : {}),
+        };
+      });
   }
-  function types(): RelationshipType[] {
-    return database
-      .prepare('SELECT * FROM relationship_type WHERE householdId = ? ORDER BY name, id')
-      .all(householdId) as RelationshipType[];
-  }
+  const types = definitions.read;
   function effective(draft: MapDraft) {
     return [...proposedRelationships(read(), draft.relationships).values()];
   }
@@ -96,8 +113,11 @@ export function relationships(database: Database.Database, householdId: string) 
             removedWithObjects: [id],
             objectNames: existing?.objectNames ?? objectNames(draft, before, null),
             type:
-              existing?.type ??
-              (types().find((type) => type.id === value.typeId) as RelationshipType),
+              existing?.type.id === before.typeId
+                ? existing.type
+                : (definitions
+                    .effective(draft)
+                    .find((type) => type.id === before.typeId) as RelationshipType),
           });
       }
     },
@@ -123,11 +143,18 @@ export function relationships(database: Database.Database, householdId: string) 
             : value.targetId !== null)
         )
           throw new MapError('invalid_request', 400);
+        const lifecycle = readLifecycle(value.lifecycle);
+        const endDate =
+          value.endDate === undefined
+            ? undefined
+            : readFinancialFacts({ endDate: value.endDate })?.endDate;
         after = {
           typeId: value.typeId,
           sourceId: value.sourceId,
           targetId: value.targetId,
           knowledge: value.knowledge,
+          ...(lifecycle ? { lifecycle } : {}),
+          ...(endDate ? { endDate } : {}),
         };
         if (
           !endpoint(after.sourceId, draft) ||
@@ -143,10 +170,12 @@ export function relationships(database: Database.Database, householdId: string) 
           return { draft, existingId: duplicate.id };
         }
       }
-      const type = types().find(
-        (type) => type.id === (after?.typeId ?? before?.typeId ?? existing?.type.id),
-      );
+      const type = definitions
+        .effective(draft)
+        .find((type) => type.id === (after?.typeId ?? before?.typeId ?? existing?.type.id));
       if (!type) throw new MapError('invalid_type', 400);
+      if (body.typeRevision !== undefined && body.typeRevision !== type.revision)
+        throw new MapError('type_conflict');
       const changes = (draft.relationships ?? []).filter((change) => change.id !== body.id);
       if (before || after)
         changes.push({
@@ -155,10 +184,15 @@ export function relationships(database: Database.Database, householdId: string) 
           after,
           type,
           objectNames: objectNames(draft, before, after, existing?.objectNames),
+          ...(existing?.restoreRevision !== undefined
+            ? { restoreRevision: existing.restoreRevision }
+            : {}),
+          ...(existing?.undo ? { undo: true as const } : {}),
+          ...(existing?.undoFields ? { undoFields: existing.undoFields } : {}),
         });
       return { draft: { ...draft, version: draft.version + 1, relationships: changes } };
     },
-    save(draft: MapDraft): RelationshipChange[] {
+    save(draft: MapDraft, previousTypes: RelationshipType[]): SavedRelationshipChange[] {
       const current = read();
       const changes = [...(draft.relationships ?? [])];
       const final = effective({ ...draft, relationships: changes });
@@ -180,19 +214,18 @@ export function relationships(database: Database.Database, householdId: string) 
       }
       for (const change of changes) {
         const saved = current.find((value) => value.id === change.id) ?? null;
-        if (JSON.stringify(saved) !== JSON.stringify(change.before))
-          throw new MapError('relationship_conflict');
+        if (!isDeepStrictEqual(saved, change.before)) throw new MapError('relationship_conflict');
+        const removedType = !change.after
+          ? draft.relationshipTypes?.find((item) => item.id === change.type.id && !item.after)
+              ?.before
+          : null;
         if (
-          !types().some(
+          !(removedType ? [removedType] : types()).some(
             (type) => type.id === change.type.id && type.revision === change.type.revision,
           )
         )
           throw new MapError('type_conflict');
-        if (
-          !saved &&
-          database.prepare('SELECT 1 FROM map_relationship WHERE id = ?').get(change.id)
-        )
-          throw new MapError('relationship_conflict');
+        if (!saved) tombstones.assertCreation('relationship', change.id, change.restoreRevision);
       }
       // Temporarily remove changed edges so endpoint swaps do not violate the unique index.
       for (const change of changes)
@@ -205,13 +238,13 @@ export function relationships(database: Database.Database, householdId: string) 
               ...change.after,
               id: change.id,
               householdId,
-              revision: (change.before?.revision ?? 0) + 1,
+              revision: (change.before?.revision ?? change.restoreRevision ?? 0) + 1,
             }
           : null;
         if (after)
           database
-            .prepare(`INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, knowledge) VALUES (?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, sourceId = excluded.sourceId, targetId = excluded.targetId, knowledge = excluded.knowledge, deleted = 0`)
+            .prepare(`INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, knowledge, lifecycle, endDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, sourceId = excluded.sourceId, targetId = excluded.targetId, knowledge = excluded.knowledge, lifecycle = excluded.lifecycle, endDate = excluded.endDate, deleted = 0`)
             .run(
               after.id,
               householdId,
@@ -220,6 +253,8 @@ export function relationships(database: Database.Database, householdId: string) 
               after.sourceId,
               after.targetId,
               after.knowledge,
+              after.lifecycle ?? null,
+              after.endDate ? JSON.stringify(after.endDate) : null,
             );
         else
           database
@@ -227,7 +262,19 @@ export function relationships(database: Database.Database, householdId: string) 
               'UPDATE map_relationship SET revision = revision + 1 WHERE householdId = ? AND id = ?',
             )
             .run(householdId, change.id);
-        return { id: change.id, before: change.before, after, type: change.type };
+        const beforeType = previousTypes.find((type) => type.id === change.before?.typeId);
+        return {
+          id: change.id,
+          before: change.before,
+          after,
+          type: change.type,
+          ...(beforeType &&
+          (beforeType.id !== change.type.id || beforeType.revision !== change.type.revision)
+            ? { beforeType }
+            : {}),
+          // Build shared snapshots from saved objects, never cached private draft names.
+          objectNames: objectNames(draft, change.before, after),
+        };
       });
     },
   };

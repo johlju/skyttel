@@ -15,8 +15,15 @@ Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning
 
 ## Allmän förberedelse
 
+När ett befintligt objekt eller samband ska ändras, välj det först i
+kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+**Redigera valt objekt** eller **Redigera valt samband** för att öppna
+formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
+objektet eller sambandet öppnar inte formuläret.
+
 1. Starta en separat testinstallation enligt
-   [utvecklingsguiden](../development/testing.md). Logga in som Alex och
+   [provförberedelsen](../development/devcontainer.md#disposable-local-database).
+   Logga in som Alex och
    skapa ett hushåll om installationen ännu saknar ett.
 2. Börja varje fall utan förslag i **Hela mitt utkast**. Använd en ny
    testinstallation vid omkörning, eller ta bort testfallets egna objekt
@@ -235,12 +242,16 @@ definitioner eller privata utkast ersätts.
 **Användare:** En operatör med en isolerad provinstallation och dess
 inloggade hushållsmedlem.
 
-**Förutsättningar:** En provinstallation med databasversionen före
-avtalsstödet. Den innehåller en egen objekttyp Bostad och sambandstyp
-Hyresvärd med egna beskrivningar, ett sparat bostadsobjekt Björkbacken
-och ett privat utkast som ändrar namnet till Björkbacken hemma. Behåll
-installationens disk, inloggningar och matchande säkerhetskopia.
-Det automatiska provet ordnar denna äldre installation som provdata.
+**Förutsättningar:** Följ
+[förberedelsen för äldre avtalsdata](../development/testing.md#legacy-contract-upgrade).
+Den ger en separat databas med migrationerna 001–006, egen Bostad och
+Hyresvärd, sparade Björkbacken och samma verifierade användares privata
+namnförslag Björkbacken hemma. Bostad har ID `household-home-type`, revision
+7 och beskrivningen **Hushållets egen beskrivning av bostad**. Hyresvärd
+har ID `household-landlord-role`, revision 4 och beskrivningen
+**Hushållets egen beskrivning av hyresvärd**. Objektet har ID
+`home-before-upgrade`. Behåll den tillfälliga katalogen och använd
+`legacy.env` vid varje start; kör inte provdatakommandot igen under fallet.
 
 **Integrationstest:**
 [contract-relationships.spec.ts](../../tests/integration/contract-relationships.spec.ts),
@@ -249,8 +260,8 @@ private draft”.
 
 **Steg:**
 
-1. Uppgradera provinstallationen till versionen med avtalsstödet och
-   öppna hushållets karta som samma användare.
+1. Starta nuvarande app med `legacy.env` enligt förberedelsen. Starten
+   uppgraderar databasen. Logga in på nytt med samma konto och öppna kartan.
 2. Kontrollera att bostaden och namnförslaget finns kvar. Kontrollera
    hushållets definitioner genom det publika kartgränssnittet: egna
    Bostad och Hyresvärd ska behålla namn, beskrivning, revision och

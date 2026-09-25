@@ -1,0 +1,91 @@
+{
+  "measuredAt": "2026-09-25T06:25:31.680Z",
+  "commit": "caa5f068bb21031ae80a2ebe684771578a011678",
+  "sourceTree": "55b50a03a2cc71728535d2274fdd922330d10bfd",
+  "uncommitted": "",
+  "browser": "153.0.8010.12",
+  "node": "v24.21.0",
+  "environment": {
+    "platform": "linux",
+    "architecture": "arm64",
+    "release": "7.0.12-linuxkit",
+    "cpu": "unknown",
+    "availableParallelism": 10,
+    "totalmem": 25159561216,
+    "loadavg": [
+      3.42,
+      4.03,
+      2.72
+    ],
+    "memoryLimit": "max\n",
+    "cpuLimit": "max 100000\n"
+  },
+  "network": {
+    "offline": false,
+    "latency": 40,
+    "downloadThroughput": 2500000,
+    "uploadThroughput": 625000
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "samples": [
+    {
+      "run": 1,
+      "cache": "cold",
+      "openMs": 2912.220626,
+      "searchMs": 41.003208000000086,
+      "saveMs": 866.2418749999997,
+      "labels": 13,
+      "overlappingPairs": 0
+    },
+    {
+      "run": 1,
+      "cache": "warm",
+      "openMs": 2738.2963340000006,
+      "searchMs": 43.607458000000406,
+      "saveMs": 852.6537919999992,
+      "labels": 13,
+      "overlappingPairs": 0
+    },
+    {
+      "run": 2,
+      "cache": "cold",
+      "openMs": 2881.021375999999,
+      "searchMs": 47.45845899999949,
+      "saveMs": 853.2455840000002,
+      "labels": 13,
+      "overlappingPairs": 0
+    },
+    {
+      "run": 2,
+      "cache": "warm",
+      "openMs": 2871.0760009999995,
+      "searchMs": 38.00287500000195,
+      "saveMs": 841.5949169999985,
+      "labels": 13,
+      "overlappingPairs": 0
+    },
+    {
+      "run": 3,
+      "cache": "cold",
+      "openMs": 2787.1943759999995,
+      "searchMs": 35.63154199999917,
+      "saveMs": 857.3153329999986,
+      "labels": 13,
+      "overlappingPairs": 0
+    },
+    {
+      "run": 3,
+      "cache": "warm",
+      "openMs": 2783.8721259999984,
+      "searchMs": 43.65095899999869,
+      "saveMs": 839.3772509999981,
+      "labels": 13,
+      "overlappingPairs": 0
+    }
+  ],
+  "durableAfterRestart": true,
+  "targetsMet": true
+}

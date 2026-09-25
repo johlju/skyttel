@@ -34,6 +34,14 @@ export function checkOperation(operation: SaveOperation, attempt: SaveAttempt) {
 
 export function receiptMessage(receipt: SaveReceipt) {
   const changes = [
+    ...(receipt.objectTypes ?? []).map(
+      (change) =>
+        `${change.after?.name ?? change.before?.name} (${change.after ? 'objekttyp' : 'borttagen objekttyp'})`,
+    ),
+    ...(receipt.relationshipTypes ?? []).map(
+      (change) =>
+        `${change.after?.name ?? change.before?.name} (${change.after ? 'sambandstyp' : 'borttagen sambandstyp'})`,
+    ),
     ...receipt.changes.map((change) => change.after?.name ?? change.before?.name),
     ...(receipt.relationships ?? []).map(
       (change) => `${change.type.name} (${change.after ? 'samband' : 'borttaget samband'})`,
@@ -43,6 +51,32 @@ export function receiptMessage(receipt: SaveReceipt) {
 }
 
 export function rejectionMessage(code: string) {
+  if (code === 'merge_choices_required')
+    return 'Välj uttryckligen varje uppgift som skiljer sig och hur varje samband ska hanteras.';
+  if (code === 'merge_review_required')
+    return 'Detta ingår i en sammanslagning. Kasta sammanslagningen för att rätta; tidigare egna förslag återkommer. Välj sedan objekten igen och granska hela skillnaden.';
+  if (code === 'merge_conflict')
+    return 'Underlaget för sammanslagningen har ändrats. Hämta aktuellt underlag och välj objekten igen.';
+  if (code === 'restoration_conflict')
+    return 'Det borttagna innehållet har ändrats sedan återställningsförslaget skapades. Inget sparades. Hämta aktuellt underlag, kasta det gamla återställningsförslaget och välj sparandet i historiken igen.';
+  if (code === 'undo_draft_overlap')
+    return 'Ångringen överlappar ett eget förslag. Utkastet är oförändrat. Rätta eller kasta det överlappande förslaget och försök igen. Oberoende förslag kan vara kvar.';
+  if (code === 'undo_unavailable')
+    return 'Sparandet eller det återställningsbara innehållet finns inte kvar. Inget ångringsförslag lades till.';
+  if (code === 'definition_in_use')
+    return 'Typen används fortfarande i kartan eller privata utkast, även om innehållet är upphört. För en objekttyp: ta bort eller byt typ på användande objekt. För en sambandstyp: ta bort eller byt typ på sambanden; objekten kan finnas kvar. Ingen ändring genomfördes.';
+  if (code === 'field_in_use')
+    return 'Fältet används fortfarande i kartan eller privata utkast, även om innehållet är upphört. Ta bort fältvärdena och hantera berörda typförslag först. Ingen ändring genomfördes.';
+  if (code === 'invalid_relationship_type')
+    return 'Ange sambandstypens namn, beskrivning och benämningar från båda hållen. Sambandstyper har inga egna fält.';
+  if (code === 'duplicate_relationship')
+    return 'Samma samband finns redan. Inget sparades. Hämta aktuellt underlag och använd det befintliga sambandet eller ändra ditt förslag.';
+  if (code === 'invalid_custom_value')
+    return 'Kontrollera de egna fälten: ange text, ett giltigt tal, datum eller ja/nej enligt fältets värdeslag.';
+  if (code === 'invalid_type_definition')
+    return 'Ange namn, beskrivning och giltiga fält för objekttypen.';
+  if (code === 'field_kind_in_use')
+    return 'Fältets värdeslag används redan. Skapa ett nytt fält med rätt värdeslag; tidigare fält och värden finns kvar.';
   if (code === 'client_outdated')
     return 'Skyttel har uppdaterats. Kopiera osänd text och ladda om sidan. Kontrollera tidigare sparförsök efter omladdning.';
   if (code === 'operation_conflict')

@@ -16,11 +16,24 @@ Målet med Skyttel är att ge hushållet en gemensam, tydlig och sammanhängande
 
 ![Konceptillustration](docs/images/shuttle-conceptillustration.png)
 
-[Guiden för hushållets tillgång](docs/users/access.md) beskriver roller,
-inbjudningar och hur en administratör återkallar tillgång.
+[Användarguiden](docs/user-guide/README.md) beskriver hur du kommer igång,
+bygger hushållets karta, använder text och röst och administrerar hushållet.
+Börja med [Kom igång](docs/user-guide/getting-started.md) eller välj ett
+arbetsflöde i guidens innehållsförteckning.
 
-Utveckla i projektets [devcontainer](docs/development/devcontainer.md).
-[Utvecklings- och testinstruktionerna](docs/development/testing.md) beskriver
-projektets kontroller och hur de körs.
-[Releaseguiden](docs/development/container-releases.md) beskriver publicering,
+Förbered utvecklingsmiljön med [utvecklingsguiden](docs/development/devcontainer.md).
+Registrera egna utvecklingskonton och konfigurera
+[lokal inloggning](docs/development/local-authentication.md).
+[Testinstruktionerna](docs/development/testing.md) beskriver projektets
+kontroller och hur de körs.
+
+[Grundspecifikationen](https://github.com/viscalyx/skyttel/issues/13#issuecomment-5697070021)
+anger acceptanskriterierna. [Beslutskartan](https://github.com/viscalyx/skyttel/issues/2)
+samlar produktbesluten, och [produktverifieringen](https://github.com/viscalyx/skyttel/issues/31)
+följer genomförandet. Läs [arkitekturbesluten](docs/adr) vid berörda ändringar
+och [avgränsningsbesluten](https://github.com/viscalyx/skyttel/issues/30#issuecomment-5697500300)
+vid triage. Skilj varaktiga avslag från uppskjutet arbete och första
+versionens begränsningar.
+
+[Releaseguiden](docs/operations/container-releases.md) beskriver publicering,
 verifiering och bevarande av containerbilder.

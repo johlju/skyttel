@@ -9,6 +9,7 @@ export interface Config {
   microsoft: { clientId: string; clientSecret: string };
   port: number;
   host: string;
+  openaiApiKey?: string;
 }
 
 export class ConfigurationError extends Error {
@@ -63,5 +64,6 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
     },
     port,
     host: environment.HOST ?? '0.0.0.0',
+    openaiApiKey: environment.OPENAI_API_KEY || undefined,
   };
 }

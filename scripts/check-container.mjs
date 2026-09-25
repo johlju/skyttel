@@ -6,6 +6,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
+import { checkContainerAssistants } from './check-container-assistants.mjs';
+import { checkContainerCosts } from './check-container-costs.mjs';
+import { checkContainerErasure } from './check-container-erasure.mjs';
+import { checkContainerRecovery } from './check-container-recovery.mjs';
+import { checkContainerTextAssistant } from './check-container-text-assistant.mjs';
+import { checkContainerVoiceAssistant } from './check-container-voice-assistant.mjs';
 
 const exec = promisify(execFile);
 const docker = process.env.DOCKER_BIN ?? 'docker';
@@ -30,6 +36,7 @@ const environment = {
   MICROSOFT_CLIENT_ID: 'synthetic-microsoft-client',
   MICROSOFT_CLIENT_SECRET: 'synthetic-microsoft-secret',
   SKYTTEL_TEST_LOGIN: '1',
+  OPENAI_API_KEY: 'synthetic-openai-container-key',
 };
 
 async function command(args) {
@@ -92,14 +99,14 @@ async function request(name, path, options = {}) {
        hostname: '127.0.0.1', port: 3000, path,
        method: options.method, headers: options.headers, timeout: 1000,
      }, (response) => {
-       let body = '';
-       response.setEncoding('utf8');
-       response.on('data', (chunk) => { body += chunk; });
-       response.on('end', () => console.log(JSON.stringify({ status: response.statusCode, body })));
+       const chunks = [];
+       response.on('data', (chunk) => { chunks.push(chunk); });
+       response.on('end', () => console.log(JSON.stringify({ status: response.statusCode, headers: response.headers,
+         body: Buffer.concat(chunks).toString(options.binary ? 'base64' : 'utf8') })));
      });
      request.on('timeout', () => request.destroy(new Error('Container request timed out')));
      request.on('error', (error) => { console.error(error.message); process.exitCode = 1; });
-     request.end(options.body);`,
+     request.end(options.bodyBase64 ? Buffer.from(options.bodyBase64, 'base64') : options.body);`,
     JSON.stringify({ path, options }),
   ]);
   return JSON.parse(output);
@@ -242,7 +249,60 @@ try {
     baseRevision: null,
     value: { typeId: initialMap.types[0].id, name: 'Lo Exempel', description: 'Synthetic person' },
   });
+  // Generate synthetic pixels and decode the actual HTTP result with the native
+  // production dependency inside Alpine, after development packages are pruned.
+  const imageFixture = JSON.parse(
+    await command([
+      'exec',
+      persisted,
+      'node',
+      '--input-type=module',
+      '-e',
+      `import sharp from 'sharp';
+     const bytes = await sharp({ create: { width: 640, height: 480, channels: 3,
+       background: '#336699' } }).png().toBuffer();
+     console.log(JSON.stringify({ body: bytes.toString('base64') }));`,
+    ]),
+  );
+  const imagesPath = `/api/households/${fixture.householdId}/profile-images`;
+  const uploaded = await request(persisted, `${imagesPath}/synthetic-person`, {
+    method: 'POST',
+    headers: {
+      cookie: fixture.cookie,
+      origin: configuredOrigin,
+      'content-type': 'application/octet-stream',
+      'X-Skyttel-Draft-Version': '1',
+      'X-Skyttel-Content-Version': String(initialMap.contentVersion),
+      'X-Skyttel-Object-Revision': 'null',
+    },
+    bodyBase64: imageFixture.body,
+  });
+  assert.equal(uploaded.status, 200);
   const privateDraft = await mapRequest();
+  const imageId = privateDraft.draft.changes[0].after.profileImageId;
+  async function checkProfileImage() {
+    const encoded = await request(persisted, `${imagesPath}/${imageId}`, {
+      headers: { cookie: fixture.cookie },
+      binary: true,
+    });
+    assert.equal(encoded.status, 200);
+    assert.ok(Buffer.from(encoded.body, 'base64').length <= 262144);
+    const metadata = JSON.parse(
+      await command([
+        'exec',
+        persisted,
+        'node',
+        '--input-type=module',
+        '-e',
+        `import sharp from 'sharp'; console.log(JSON.stringify(await sharp(Buffer.from(process.argv[1], 'base64')).metadata()));`,
+        encoded.body,
+      ]),
+    );
+    assert.equal(metadata.format, 'webp');
+    assert.equal(metadata.width, 300);
+    assert.equal(metadata.height, 225);
+  }
+  await checkProfileImage();
   await command(['restart', persisted]);
   await waitUntilReady(persisted);
   assert.deepEqual(await mapRequest(), privateDraft);
@@ -252,13 +312,15 @@ try {
   await command(['start', persisted]);
   await waitUntilReady(persisted);
   assert.deepEqual(await mapRequest(), privateDraft);
-  const saveRequest = { version: 1, operationId: 'container-save' };
+  await checkProfileImage();
+  const saveRequest = { version: privateDraft.draft.version, operationId: 'container-save' };
   const receipt = await mapRequest('/save', saveRequest);
   const savedMap = await mapRequest();
   await command(['restart', persisted]);
   await waitUntilReady(persisted);
   assert.deepEqual(await household(persisted, fixture), before);
   assert.deepEqual(await mapRequest(), savedMap);
+  await checkProfileImage();
   assert.deepEqual(await mapRequest('/save', saveRequest), receipt);
   assert.deepEqual((await mapRequest('/history')).history, [receipt.receipt]);
   await command(['stop', persisted]);
@@ -271,7 +333,7 @@ try {
   assert.deepEqual(await mapRequest('/save', saveRequest), receipt);
   assert.deepEqual((await mapRequest('/history')).history, [receipt.receipt]);
   console.log(
-    'PASS: identity, household, private draft, objects, history, and receipt survive restart and replacement',
+    'PASS: identity, household, private draft, objects, encoded profile image, history, and receipt survive restart and replacement',
   );
 
   await command(['stop', persisted]);
@@ -297,6 +359,59 @@ try {
   assert.deepEqual(await mapRequest(), savedMap);
   assert.deepEqual(await mapRequest('/save', saveRequest), receipt);
   console.log('PASS: failed migration exits without readiness or private diagnostic values');
+  await checkContainerErasure({
+    command,
+    request,
+    waitUntilReady,
+    container: persisted,
+    image,
+    volume: persistedVolume,
+    containers,
+    fixture,
+    origin: configuredOrigin,
+    imageId,
+    saveRequest,
+  });
+  await checkContainerAssistants({
+    command,
+    request,
+    waitUntilReady,
+    name: persisted,
+    fixture,
+    origin: configuredOrigin,
+  });
+  await checkContainerTextAssistant({
+    command,
+    request,
+    waitUntilReady,
+    name: persisted,
+    fixture,
+    origin: configuredOrigin,
+  });
+  await checkContainerVoiceAssistant({
+    command,
+    request,
+    waitUntilReady,
+    name: persisted,
+    fixture,
+    origin: configuredOrigin,
+  });
+  await checkContainerCosts({
+    command,
+    request,
+    waitUntilReady,
+    name: persisted,
+    fixture,
+    origin: configuredOrigin,
+  });
+  await checkContainerRecovery({
+    command,
+    request,
+    waitUntilReady,
+    name: persisted,
+    fixture,
+    origin: configuredOrigin,
+  });
 } finally {
   for (const name of containers) {
     await command(['rm', '--force', name]).catch(() => {});

@@ -172,20 +172,79 @@ test('deletion keeps prior values and actor in history, while discard leaves the
 
 test('all map operations enforce current household membership and request boundaries', async () => {
   const { actor, userId } = await member();
-  await propose('Robin Exempel', 'member-person', actor);
-  await client.json(`${path.replace('/map', '')}/members/${userId}/revoke`, {});
+  expect((await propose()).status).toBe(200);
+  expect((await client.json(`${path}/save`, { version: 1, operationId: 'initial' })).status).toBe(
+    200,
+  );
+  expect((await propose('Privat rättelse')).status).toBe(200);
+  expect((await propose('Robin Exempel', 'member-person', actor)).status).toBe(200);
+  const initial = await read();
+  const memberInitial = await read(actor);
+  const history = await (await client.request(`${path}/history`)).json();
+  const actions = [
+    {
+      action: 'draft',
+      body: {
+        version: 1,
+        id: 'another-person',
+        baseRevision: null,
+        value: { typeId: initial.types[0].id, name: 'Kim Exempel', description: '' },
+      },
+    },
+    { action: 'discard', body: { version: 1 } },
+    { action: 'save', body: { version: 1, operationId: 'denied-save' } },
+    {
+      action: 'object-type',
+      body: {
+        version: 1,
+        id: 'solar',
+        baseRevision: null,
+        value: { name: 'Solcellsanläggning', description: 'Elproduktion', fields: [] },
+      },
+    },
+    {
+      action: 'relationship-type',
+      body: {
+        version: 1,
+        id: 'storage',
+        baseRevision: null,
+        value: {
+          name: 'Förvaring',
+          description: 'Förvaringsplats',
+          forwardLabel: 'förvaras i',
+          reverseLabel: 'innehåller',
+        },
+      },
+    },
+  ];
+  // Arrange another household; the current member has access only to Linden.
+  fixture.database
+    .prepare('INSERT INTO household (id, name, createdAt) VALUES (?, ?, ?)')
+    .run('other', 'Annat hushåll', '2026-01-01');
+  fixture.database
+    .prepare('INSERT INTO membership (householdId, userId, role) VALUES (?, ?, ?)')
+    .run('other', initial.userId, 'administrator');
+  const otherPath = '/api/households/other/map';
+  const otherInitial = await (await client.request(otherPath)).json();
+  const otherHistory = await (await client.request(`${otherPath}/history`)).json();
+  for (const target of [otherPath, `${otherPath}/history`]) {
+    expect((await actor.request(target)).status).toBe(403);
+  }
+  for (const { action, body } of actions) {
+    expect((await actor.json(`${otherPath}/${action}`, { ...body, version: 0 })).status).toBe(403);
+  }
+  expect(
+    (await client.json(`${path.replace('/map', '')}/members/${userId}/revoke`, {})).status,
+  ).toBe(200);
   const anonymous = fixture.client();
   for (const target of [path, `${path}/history`]) {
     expect((await actor.request(target)).status).toBe(403);
     expect((await anonymous.request(target)).status).toBe(401);
-    expect(
-      (await client.request(target.replace(/households\/[^/]+/, 'households/other'))).status,
-    ).toBe(403);
   }
-  for (const action of ['draft', 'discard', 'save']) {
+  for (const { action, body: payload } of actions) {
     const target = `${path}/${action}`;
-    expect((await actor.json(target, { version: 1, operationId: 'revoked' })).status).toBe(403);
-    expect((await anonymous.json(target, {})).status).toBe(401);
+    expect((await actor.json(target, payload)).status).toBe(403);
+    expect((await anonymous.json(target, payload)).status).toBe(401);
     expect(
       (
         await client.request(target, {
@@ -216,6 +275,21 @@ test('all map operations enforce current household membership and request bounda
       ).toBe(400);
     }
   }
+  expect(await read()).toEqual(initial);
+  expect(await (await client.request(`${path}/history`)).json()).toEqual(history);
+  expect(await (await client.request(otherPath)).json()).toEqual(otherInitial);
+  expect(await (await client.request(`${otherPath}/history`)).json()).toEqual(otherHistory);
+  // Restore access through the API to inspect both private drafts without bypassing privacy.
+  for (const target of [path, otherPath]) {
+    const invitation = await client.json(`${target.replace('/map', '')}/invitations`, {
+      userId,
+    });
+    expect(invitation.status).toBe(201);
+    const { code } = await invitation.json();
+    expect((await actor.json('/api/invitations/accept', { code })).status).toBe(200);
+  }
+  expect(await read(actor)).toEqual(memberInitial);
+  expect((await (await actor.request(otherPath)).json()).draft).toEqual(otherInitial.draft);
 });
 
 test('invalid objects and changed type definitions cannot enter the shared map', async () => {
@@ -236,6 +310,7 @@ test('invalid objects and changed type definitions cannot enter the shared map',
     {},
     { ...body.value, typeId: 'missing' },
     { ...body.value, description: 'x'.repeat(2001) },
+    { ...body.value, lifecycle: 'deleted' },
   ]) {
     expect((await client.json(`${path}/draft`, { ...body, value })).status).toBe(400);
   }
@@ -255,6 +330,43 @@ test('invalid objects and changed type definitions cannot enter the shared map',
     (await client.json(`${path}/save`, { version: 1, operationId: 'changed-type' })).status,
   ).toBe(409);
   expect((await read()).objects).toEqual([]);
+});
+
+test('manual lifecycle corrections retain their prior values in shared history', async () => {
+  const { types } = await read();
+  for (const lifecycle of ['ended', 'active']) {
+    const state = await read();
+    const value = {
+      typeId: types[0].id,
+      name: 'Lo Exempel',
+      description: '',
+      lifecycle,
+      financialFacts: { endDate: { knowledge: 'known', value: '2020-01-01' } },
+    };
+    const proposed = await client.json(`${path}/draft`, {
+      version: state.draft.version,
+      id: 'lo',
+      baseRevision: state.objects[0]?.revision ?? null,
+      value,
+    });
+    expect(proposed.status).toBe(200);
+    expect((await read()).objects).toEqual(state.objects);
+    const draft = await proposed.json();
+    const saved = await client.json(`${path}/save`, {
+      version: draft.version,
+      operationId: lifecycle,
+    });
+    expect(saved.status).toBe(200);
+    expect((await read()).objects[0]).toMatchObject(value);
+  }
+  const { history } = await (await client.request(`${path}/history`)).json();
+  expect(history.at(-1).changes[0]).toMatchObject({
+    before: { lifecycle: 'ended' },
+    after: {
+      lifecycle: 'active',
+      financialFacts: { endDate: { knowledge: 'known', value: '2020-01-01' } },
+    },
+  });
 });
 
 test('shared history does not expose abandoned private relationship endpoint names', async () => {
@@ -309,5 +421,8 @@ test('shared history does not expose abandoned private relationship endpoint nam
   ).toBe(200);
   const history = await (await actor.request(`${path}/history`)).text();
   expect(history).not.toContain('Private abandoned name');
-  expect(history).not.toContain('objectNames');
+  expect(JSON.parse(history).history.at(-1).relationships[0].objectNames).toEqual({
+    lo: 'Lo',
+    kim: 'Kim',
+  });
 });

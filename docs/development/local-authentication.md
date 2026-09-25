@@ -2,9 +2,21 @@
 
 This guide is for developers who need to register and verify real Google and
 Microsoft sign-in in a local Skyttel installation. It uses the English names
-shown in the providers' dashboards. The local application address is
-`http://localhost:3000`. Use invented household information while checking
-the installation.
+shown in the providers' dashboards. Normal devcontainer development uses
+`http://localhost:5173`; the compiled application and local Codex CLI test use
+`http://localhost:3301`. Use invented household information throughout.
+Start with provider registration, then follow the first-household steps to
+start the development server. Production-container checks belong in the
+[installation guide](../operations/installation.md#build-start-and-restart).
+
+For a new contributor, complete provider registration in sections 1–9, then
+[set up sign-in inside the container](devcontainer.md#set-up-local-sign-in)
+or use the host setup in sections 10–13. Host development requires Git,
+the repository's Node.js and npm versions, and a supported shell.
+Devcontainer development needs Docker and VS Code with Dev Containers;
+Node.js and npm run inside the container. If your credentials and
+administrator identity already exist, use
+[the configured devcontainer steps](#use-the-credentials-in-the-devcontainer).
 
 For a production deployment, follow the
 [production authentication guide](../operations/authentication.md).
@@ -39,6 +51,8 @@ Google explains these registration terms in
 
 ## 1. Create and select a Google Cloud project
 
+Use your own Google account, or follow Google's
+[account creation instructions](https://support.google.com/accounts/answer/27441?hl=en).
 You can create an account and project for this sign-in setup for free, as
 described in Google's
 [Sign in with Google tutorial](https://codelabs.developers.google.com/codelabs/sign-in-with-google-button).
@@ -50,11 +64,11 @@ you are in the separate billing or free-trial signup before continuing.
 2. Sign in with your Google account and complete any initial welcome steps.
    Review any terms yourself before accepting them.
 3. Open the project selector near the top of the page, then **New Project**.
-4. Enter `Skyttel verification` as the project name. Google may suggest a
+4. Enter `Skyttel development` as the project name. Google may suggest a
    different project ID; that is normal. The name is a label for you.
 5. If a location is requested for a personal account, use **No organization**
    when available. Click **Create**.
-6. Select **Skyttel verification** in the project selector. Check this name
+6. Select **Skyttel development** in the project selector. Check this name
    before changing any settings in the following steps.
 
 Expected result: the dashboard shows your selected project. See Google's
@@ -70,7 +84,7 @@ Google a contact address for project notifications.
    If the menu is hard to find, search for **Google Auth Platform** using the
    search bar at the top.
 2. Click **Get started** if Google Auth Platform is not configured yet.
-3. Under **App Information**, enter `Skyttel verification` as the **App name**.
+3. Under **App Information**, enter `Skyttel development` as the **App name**.
    Select your own email for **User support email**, then click **Next**.
 4. Under **Audience**, choose **External**, then click **Next**. This supports
    ordinary Google accounts, including a personal account.
@@ -105,23 +119,38 @@ See Google's [Testing exception](https://support.google.com/cloud/answer/1554994
 
 ## 4. Create the Google web client
 
+Use the existing development project and client when available. For example,
+open **Skyttel local development** under **Clients**, review its type and
+redirect URIs, then save any additions. Adding a redirect URI does not require
+a new client ID or secret. Keep callbacks used by other development setups.
+For a new client:
+
 1. Open **Clients** in Google Auth Platform, then **Create client**.
 2. Choose **Web application** as the application type.
-3. Set the name to `Skyttel local verification`.
+3. Set the name to `Skyttel local development`.
 4. Leave **Authorized JavaScript origins** empty. Skyttel's server handles
    this sign-in flow; it does not use Google's browser sign-in library.
-5. Under **Authorized redirect URIs**, click **Add URI** and enter exactly:
+5. Under **Authorized redirect URIs**, add these as two separate entries:
 
    ```text
-   http://localhost:3000/api/auth/callback/google
+   http://localhost:5173/api/auth/callback/google
+   http://localhost:3301/api/auth/callback/google
    ```
 
 6. Click **Create**. Keep the credentials dialog open until you save the
    **Client ID** and **Client secret** privately in the next step.
 
-The callback must match exactly: use `localhost`, port `3000`, and no trailing
-slash. An address using `127.0.0.1` is a different callback. These values are
-for local testing; a hosted installation needs its own HTTPS address.
+Each callback must match exactly: use `localhost`, the port for that workflow,
+and no trailing slash. An address using `127.0.0.1` is a different callback.
+Google returns the browser to port 5173 for `npm run dev:all` and port 3301
+for `npm run dev:prodlike`. Do not register the API's internal port 3300 in
+place of these browser addresses. Google permits HTTP localhost callbacks;
+a hosted installation needs its own HTTPS address.
+
+The Codex MCP callback is a different registration between Codex and Skyttel.
+Do not add Codex's generated return address to the Google web client.
+Allow time for Google configuration changes to take effect before diagnosing
+a redirect mismatch; propagation can take several minutes or longer.
 
 Skyttel requests only basic identity information. A **scope** is a permission
 requested during sign-in. If configuring **Data Access**, use only `openid`,
@@ -136,10 +165,13 @@ and [Better Auth's Google setup](https://better-auth.com/docs/authentication/goo
 
 ## 5. Save the credentials privately
 
-Skyttel reads settings from environment variables. For the local container,
-these are stored in a file named `.env.local` in the Skyttel project folder.
-That file is private configuration: Git ignores it, so it is not included in
-commits. It still contains readable secrets and must stay on your computer.
+Skyttel reads settings from environment variables. This walkthrough saves
+your provider credentials in `.env.local` in the Skyttel project folder for
+host development. Devcontainer development reads `.devcontainer/.env`; the
+[container steps](#use-the-credentials-in-the-devcontainer) explain what to
+copy there. Both files are private configuration: Git ignores them, so they
+are not included in commits. They still contain readable secrets and must
+stay on your computer.
 
 The command steps in this guide require Unix tools and a POSIX-compatible
 shell, such as Bash or Zsh on macOS or Linux. On Windows, use a Linux shell in
@@ -191,6 +223,53 @@ outside the repository; an arbitrary JSON filename is not protected by the
 issues, or this guide. See Google's
 [client secret handling guidance](https://support.google.com/cloud/answer/15549257?hl=en).
 
+### Use the credentials in the devcontainer
+
+Complete both provider registrations before continuing. Follow
+[Prepare and start](devcontainer.md#prepare-and-start) to prepare the host,
+create `.devcontainer/.env`, and generate `BETTER_AUTH_SECRET` if needed.
+In your editor, copy the four provider credentials from `.env.local` into
+their existing entries in `.devcontainer/.env`. Keep the container settings:
+
+```dotenv
+SKYTTEL_DATABASE_PATH=/data/skyttel.sqlite
+SKYTTEL_ORIGIN=http://localhost:5173
+HOST=0.0.0.0
+PORT=3300
+```
+
+Keep an existing administrator's provider and subject. If you configured
+them on the host, copy both entries from `.env.local`; do not replace the
+subject with a client ID. For a new installation without a known subject,
+follow [administrator discovery](devcontainer.md#designate-the-first-administrator)
+inside the container. Initial container setup stops at `db:setup` until
+the subject is configured; dependencies are already installed for discovery.
+
+The development scripts read `.devcontainer/.env` by default. Compose exports
+its values at container creation, and exported values take precedence over
+file values. Recreate the container after changing exported settings.
+Creation and rebuilding run `db:setup`, replacing application data and
+sessions with the demo household; ordinary restarts preserve data. See
+[state and rebuilds](devcontainer.md#state-and-rebuilds).
+
+With the administrator configured, run `npm run dev:all` in the container,
+open `http://localhost:5173`, and sign in with that provider. Check that the
+expected development household opens. This verifies the port-5173 callback;
+it does not verify the separate Codex connection.
+
+For the compiled application, `npm run dev:prodlike` sets the origin and
+listening port to 3301. Use the
+[isolated Codex preparation](../manual-tests/setup/assistants.md#manual-local-codex-cli-setup)
+for the manual assistant test; that preparation explicitly selects a new
+database and loads credentials from the selected private development file.
+The same Google development client serves both ports, without a public
+tunnel or new provider secrets.
+Keep real-provider and real-Codex tests outside CI and pull request workflows.
+
+The remaining provider sections also cover Microsoft configuration. New
+contributors then follow [the first-household steps](#continue-with-the-first-household)
+to discover their administrator identity and start the development server.
+
 ## 6. Open Microsoft app registrations
 
 1. Open the [Microsoft Entra admin center](https://entra.microsoft.com/).
@@ -213,6 +292,13 @@ prerequisites. Microsoft's
 also limits creation of additional workforce tenants by free or trial users.
 Review the applicable signup and billing terms if you need a new Azure account.
 
+If you have no directory, follow [Azure account signup](https://azure.microsoft.com/en-us/free/).
+The signup requires a phone number and a supported payment card, and creates
+a directory you can select in Entra, often named **Default Directory**.
+If your existing directory denies app registration, ask its administrator for
+**Application Developer** access or a registration you can manage. See
+Microsoft's [app-registration permissions](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/delegate-app-roles).
+
 The account managing this registration and the account used to test Skyttel
 can differ. The sign-in verification needs a **personal Microsoft account**;
 a successful work or school account sign-in alone does not check that case.
@@ -220,7 +306,7 @@ a successful work or school account sign-in alone does not check that case.
 ## 7. Register Skyttel with Microsoft
 
 1. In **App registrations**, choose **New registration**.
-2. Enter `Skyttel local verification` as the name.
+2. Enter `Skyttel local development` as the name.
 3. Under **Supported account types**, select
    **Any Entra ID Tenant + Personal Microsoft accounts**. Some portal versions
    describe this as accounts in any organizational directory and personal
@@ -229,7 +315,7 @@ a successful work or school account sign-in alone does not check that case.
    platform and enter:
 
    ```text
-   http://localhost:3000/api/auth/callback/microsoft
+   http://localhost:5173/api/auth/callback/microsoft
    ```
 
    The field is optional during registration, but Skyttel needs the callback
@@ -259,7 +345,7 @@ the saved **Web** entry. Add it only if it is missing.
    button:
 
    ```text
-   http://localhost:3000/api/auth/callback/microsoft
+   http://localhost:5173/api/auth/callback/microsoft
    ```
 
 Leave the front-channel logout URL empty. This setup uses an authorization
@@ -268,13 +354,20 @@ grant or public-client authentication. If this callback already exists as a
 **Web** redirect, check the saved entry instead of
 adding a duplicate.
 
-Reference: Microsoft's
-[redirect URI setup](https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-redirect-uri).
+For `localhost`, Microsoft ignores the port when matching this callback.
+One **Web** entry covers both development on 5173 and the compiled app on
+3301. Do not add duplicate localhost entries that differ only by port. An
+existing entry with the same host and path on port 3000 can remain. Google
+has different matching rules and needs both exact callback ports above.
+
+References: Microsoft's
+[redirect URI setup](https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-redirect-uri)
+and [localhost exceptions](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url#localhost-exceptions).
 
 ## 9. Create and save the Microsoft client secret
 
 1. In the registration, open **Certificates & secrets** → **Client secrets**.
-2. Choose **New client secret** and describe it as `Skyttel local verification`.
+2. Choose **New client secret** and describe it as `Skyttel local development`.
 3. Choose **6 months** if offered, or a shorter period required by your
    directory's policy, then **Add**. Record the expiry privately so you can
    replace the secret before it stops working.
@@ -310,8 +403,8 @@ See Microsoft's
 Plan the replacement before the expiry date shown in Entra, for example two
 weeks beforehand. The expiry is set by Microsoft, not by when you first start
 Skyttel. Renewal means creating a replacement secret in the **same app
-registration**, updating Skyttel, and retiring the old secret. You keep the
-same Application (client) ID and household.
+registration**, updating Skyttel, and retiring the old secret. Secret
+replacement keeps the same Application (client) ID and household ownership.
 
 During replacement, both credentials can remain valid in Entra, but Skyttel
 uses only the one configured in its environment. It does not automatically
@@ -323,30 +416,40 @@ try the old value if the replacement fails.
    secret by its description, expiry, and Secret ID. Leave it in place while
    creating its replacement so the running application can still sign in.
 3. Click **New client secret**. Use a description that distinguishes it from
-   the old one, such as `Skyttel local renewal YYYY-MM`, with the actual year
-   and month. Choose the new expiry, then **Add**.
+   the old one, such as `Skyttel development renewal YYYY-MM`, with the actual
+   year and month. Choose the new expiry, then **Add**.
 4. Copy the new **Value** immediately. Replace only the value after
    `MICROSOFT_CLIENT_SECRET=` in `.env.local` and save. Keep the client ID,
    `BETTER_AUTH_SECRET`, administrator identity, and database settings.
-5. From the Skyttel project folder, recreate the running local service so it
-   loads the changed environment:
+5. Stop the development server with Ctrl+C. In the devcontainer, update
+   `MICROSOFT_CLIENT_SECRET` in `.devcontainer/.env` too, then run:
 
    ```sh
-   docker compose up -d --force-recreate skyttel
-   docker compose ps
-   curl --fail http://localhost:3000/healthz
+   (
+     unset MICROSOFT_CLIENT_SECRET
+     SKYTTEL_DEV_ENV_FILE=.devcontainer/.env npm run dev:all
+   )
    ```
 
-   Use the same Compose project and files as the original startup. If your
-   startup command uses `-p` or `-f` options, include those options here. The
-   recreation briefly interrupts the service and preserves its named volume.
-   Do not remove the volume or create a new project during renewal. A plain
-   `docker compose restart` does not load changed environment variables.
+   The subshell clears the old exported secret for this process so the
+   development command loads the new value from the file. Use this command
+   for subsequent starts while the container still exports the old value.
+   This reload preserves your development household and linked logins.
+   Container creation and rebuilding run `db:setup` and reset that data;
+   they are unnecessary for secret renewal.
+   For host development, open a terminal without stale exported credentials,
+   select `.env.local`, and start the server again:
+
+   ```sh
+   SKYTTEL_DEV_ENV_FILE=.env.local npm run dev:all
+   ```
+
 6. Open a private browser window and complete a fresh **Microsoft** sign-in
-   at [local Skyttel](http://localhost:3000). Check the expected access for that
-   identity. If Microsoft is the household's original provider or an explicitly
-   linked login, confirm the same household opens. A Google household does not
-   automatically belong to a Microsoft identity with the same email address.
+   at [development Skyttel](http://localhost:5173). Check the expected access
+   for that identity. If Microsoft is the household's original provider or an
+   explicitly linked login, confirm the same household opens. A Google
+   household does not automatically belong to a Microsoft identity with the
+   same email address.
 7. After the fresh Microsoft flow succeeds, return to **Client secrets**
    and delete only the **old** credential. Use the description, expiry, and
    Secret ID to distinguish it from the replacement. If the registration is
@@ -358,7 +461,7 @@ secret works: both can succeed without a fresh exchange with Microsoft. If
 the new sign-in fails, keep the old credential until the replacement is
 working. Check the copied **Value**, matching app registration, expiry, and
 environment reload. An unexpired old value saved in a password manager can
-be restored to `.env.local` and loaded with the same recreation command if
+be restored to the private environment and loaded by restarting development if
 needed; Entra cannot show its full value again.
 
 If the secret is already expired, create and load a replacement using these
@@ -369,236 +472,218 @@ the host's redeploy procedure with the existing persistent disk.
 
 References: Microsoft's
 [credential management](https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-credentials),
-[rotation guidance](https://learn.microsoft.com/en-us/entra/msidweb/authentication/client-secrets#rotation-strategy),
-Docker's [service recreation](https://docs.docker.com/reference/cli/docker/compose/up/),
-and the [restart limitation](https://docs.docker.com/reference/cli/docker/compose/restart/).
+[rotation guidance](https://learn.microsoft.com/en-us/entra/msidweb/authentication/client-secrets#rotation-strategy).
 
 ## Continue with the first household
 
-These steps create a test household with Google as the first provider in a
-new local installation. Both providers must be configured before startup.
-Populated entries alone do not prove that the credentials work or the
-callback settings match.
+These steps get a new contributor to a running development server and a
+known Google administrator identity. Both providers must be configured before
+startup. Existing contributors with a configured administrator can skip
+identity discovery and use the [devcontainer guide](devcontainer.md).
+Changing the first-administrator setting does not transfer an existing
+household to another account.
 
-If this installation already contains a household, keep its configuration
-and sign in with its original provider or an explicitly linked login. Skip
-the identity-discovery steps; changing the first-administrator setting does
-not transfer an existing household to another account.
+Container creation and rebuilding run `db:setup`, which requires a known
+administrator subject and resets application data to the demo household.
+For a first setup, either follow
+[the container steps](#use-the-credentials-in-the-devcontainer), including
+administrator discovery, or use the host development server below.
+Both paths use port 5173 and the same provider registration as normal
+development. Neither requires a production container or another callback.
 
-### 10. Complete the local configuration
+### 10. Prepare the host and local configuration
 
-1. Open the existing `.env.local` in your text editor. Keep the Google and
-   Microsoft client IDs and secrets you save during provider registration.
-   Edit the existing lines below for a new Google verification installation:
+Clone the repository and open a terminal at its root. Install the Node.js
+version in `.node-version`, then install the npm version pinned in
+`package.json` and the dependencies:
+
+```sh
+node scripts/install-repository-npm.mjs
+npm ci
+```
+
+Use a user-managed Node.js installation where the npm bootstrap can update
+npm without administrator privileges. Native SQLite dependencies need a
+supported prebuilt binary or Python, a C/C++ compiler, and Make; see the
+[development prerequisites](devcontainer.md#develop-without-the-container).
+A host installation of dependencies is separate from the devcontainer's
+dependency volume.
+
+1. Open the existing `.env.local`. Keep the provider credentials saved above.
+   For a new development installation, set:
 
    ```dotenv
-   SKYTTEL_ORIGIN=http://localhost:3000
+   SKYTTEL_ORIGIN=http://localhost:5173
+   SKYTTEL_DATABASE_PATH=./data/skyttel.sqlite
    SKYTTEL_FIRST_ADMIN_PROVIDER=google
    SKYTTEL_FIRST_ADMIN_SUBJECT=not-configured
-   PORT=3000
+   HOST=127.0.0.1
+   PORT=3300
    ```
 
-2. If `BETTER_AUTH_SECRET` already contains a generated value, keep it. If it
-   is empty, run this command in a private terminal:
+2. Keep an existing generated `BETTER_AUTH_SECRET`. If it is empty, generate
+   one in a private terminal and save it in that entry:
 
    ```sh
    openssl rand -base64 48
    ```
 
-   Copy the generated value into the existing `BETTER_AUTH_SECRET=` line.
-   Save it privately; do not paste it into chat or verification evidence.
-   This is Skyttel's own authentication secret, separate from both provider
-   client secrets. Keep it unchanged across restarts and updates.
-3. Keep `SKYTTEL_DATABASE_PATH=./data/skyttel.sqlite` from the example for
-   running directly with Node.js. The supplied Compose file overrides this
-   setting inside the container with `/data/skyttel.sqlite` and mounts its
-   persistent named volume at `/data`. You do not need to create a `/data`
-   directory on your computer for this Compose setup.
-4. Check that all four Google and Microsoft credential entries contain their
-   respective values, even though Google is the first provider you will use.
-   Save `.env.local`. Keep each setting on one line and avoid duplicate
-   variable names.
+3. Confirm that both provider credential pairs are present and save the file.
+   Use a fresh host terminal without exported Skyttel settings from another
+   installation. Exported values override the selected environment file.
 
-`not-configured` deliberately matches no real account. It allows you to
-discover the intended person's provider identifier after a real sign-in
-without granting household creation first. An email address, OAuth client
-ID, or Microsoft Secret ID cannot replace that personal identifier.
+`not-configured` allows real sign-in without granting household creation.
+It is a temporary discovery setting, not a usable administrator identifier.
+An email address or OAuth client ID cannot replace the Google subject.
+Do not run `db:setup` until that subject is known: the seed deliberately
+rejects placeholder identities and resets its selected database.
 
-See the [configuration reference](../operations/installation.md#configure-the-installation)
-for the purpose of every setting.
+### 11. Start the development server
 
-### 11. Build and start the local service
-
-Start Docker Desktop or your Docker Engine, then open a terminal in the
-Skyttel project folder. Run:
+From the repository root in host terminal A:
 
 ```sh
-docker compose build
-docker compose up -d skyttel
-docker compose ps
-curl --fail http://localhost:3000/healthz
+export SKYTTEL_DEV_ENV_FILE=.env.local
+npm run dev:all
 ```
 
-The first build can take several minutes. Wait for the service to start;
-the health command should return `{"status":"ok"}`. This confirms startup
-and database preparation, not provider sign-in. If startup fails, follow
-the [startup checks](../operations/installation.md#startup-failures-and-storage).
+In host terminal B, check the browser-facing server:
 
-Use the same Compose project and files for every command belonging to this
-installation. If you start with `-p` or `-f` options, keep those options on
-the later `exec`, `up`, `restart`, and `stop` commands too. A different
-project name can select a different persistent volume.
+```sh
+curl --fail http://localhost:5173/healthz
+```
 
-If startup reports that port `3000` is already in use, identify the existing
-application or SSH port forwarding before stopping anything. You can either
-free that port or choose a different local port. A different port also
-requires updating `SKYTTEL_ORIGIN`, the host-side container port mapping,
-both providers' registered callback URLs, and the address you open in the
-browser. Keep those settings consistent.
+Expect `{"status":"ok"}`. Vite serves the client on port 5173 and forwards
+API requests to port 3300. The API creates and migrates the configured SQLite
+file on startup. Neither the readiness response nor visible sign-in buttons
+prove that provider login works. Keep both ports free; do not change only the
+browser port to resolve a conflict, because the Google callback must match.
 
 ### 12. Discover and designate the Google administrator
 
-1. Open [local Skyttel](http://localhost:3000) in your browser. Use this exact
-   address throughout the check; do not switch between `localhost` and
-   `127.0.0.1`.
-2. Select **Fortsätt med Google** and complete Google's sign-in using the
-   account intended to administer this test installation. Review the
-   identity permissions when Google asks for consent.
-3. Expect **Du har inte tillgång till hushållet** after returning to Skyttel.
-   The header shows your signed-in name and **Logga ut**. This denial is
-   correct while `SKYTTEL_FIRST_ADMIN_SUBJECT` is `not-configured`: Google
-   authentication succeeds, but no account has permission to create the
-   household yet. **Inloggningen kunde inte slutföras** instead means the
-   sign-in itself fails; check the credentials and callback before continuing.
-4. In a private terminal, inspect only the authenticated provider account
-   identifiers with this command:
+1. Open [development Skyttel](http://localhost:5173). Use `localhost`
+   consistently, not `127.0.0.1`, in the browser.
+2. Select **Fortsätt med Google** and sign in with the intended development
+   administrator's Google account.
+3. Expect **Du har inte tillgång till hushållet**, with your signed-in name
+   and **Logga ut**. This is the expected result while the administrator
+   subject is `not-configured`. **Inloggningen kunde inte slutföras** means
+   authentication failed; check the credentials and callback before continuing.
+4. In the same signed-in browser, open
+   `http://localhost:5173/api/bootstrap`. Confirm `status` is `forbidden`
+   and copy `user.id` privately. Stop terminal A with Ctrl+C.
+5. From the repository root in a private host terminal, read that user's
+   provider identifier. Run the prompt first, then the Node block. The lookup
+   loads the selected environment file and refuses an existing household.
 
    ```sh
-   docker compose exec -T skyttel node --input-type=module <<'JS'
+   export SKYTTEL_SETUP_USER_ID=''
+   printf 'Skyttel user ID: '
+   read -r SKYTTEL_SETUP_USER_ID
+   ```
+
+   ```sh
+   node --input-type=module <<'JS'
    import Database from 'better-sqlite3';
+   process.loadEnvFile(process.env.SKYTTEL_DEV_ENV_FILE ?? '.env.local');
+   const userId = process.env.SKYTTEL_SETUP_USER_ID?.trim();
+   const provider = process.env.SKYTTEL_FIRST_ADMIN_PROVIDER;
+   if (!userId || provider !== 'google') {
+     throw new Error('Check the user ID and configured Google provider.');
+   }
    const db = new Database(process.env.SKYTTEL_DATABASE_PATH, {
      readonly: true,
+     fileMustExist: true,
    });
-   console.table(db.prepare('SELECT providerId, accountId FROM account').all());
-   db.close();
+   try {
+     if (db.prepare('SELECT 1 FROM installation WHERE id = 1').get()) {
+       throw new Error('A household already exists. Stop setup.');
+     }
+     const accounts = db.prepare(
+       'SELECT accountId FROM account WHERE userId = ? AND providerId = ?',
+     ).all(userId, provider);
+     if (accounts.length !== 1) {
+       throw new Error('Expected one matching account. Check the sign-in.');
+     }
+     console.log(accounts[0].accountId);
+   } finally {
+     db.close();
+   }
    JS
+   unset SKYTTEL_SETUP_USER_ID
    ```
 
-   Its output contains a private identity identifier. Run it without screen
-   sharing or terminal recording; do not attach the output to an issue.
-   In this fresh installation, expect exactly one row with `providerId`
-   equal to `google`. If there are several accounts, stop and establish which
-   belongs to the intended administrator rather than copying the first row.
-5. Copy that row's complete `accountId` into the existing
-   `SKYTTEL_FIRST_ADMIN_SUBJECT=` line in `.env.local`, replacing only
-   `not-configured`. Keep `SKYTTEL_FIRST_ADMIN_PROVIDER=google`. The account
-   identifier comes from Google's stable `sub` claim; it is not an email.
-6. Save the file, then reload the environment by recreating the service:
+   The output is a private identity identifier; do not share or record the
+   terminal. The lookup matches the signed-in user and configured provider.
+6. Copy the returned `accountId` into `SKYTTEL_FIRST_ADMIN_SUBJECT`
+   in `.env.local`. Keep `SKYTTEL_FIRST_ADMIN_PROVIDER=google` and save.
+   Google's stable `sub` is the identifier; it is not your email address.
 
-   ```sh
-   docker compose up -d --force-recreate skyttel
-   curl --fail http://localhost:3000/healthz
-   ```
+Google documents the [identity claim](https://developers.google.com/identity/openid-connect/openid-connect#an-id-tokens-payload).
+Skyttel's [administrator rules](../operations/installation.md#designate-the-first-administrator)
+explain the distinction between provider login and household access.
 
-7. After readiness, refresh the same browser tab. Expect **Skapa ditt
-   hushåll**. If the browser asks you to sign in again, choose the same Google
-   account. If access is still denied, check the provider and exact account
-   identifier; keep the database and authentication secret intact.
+### 13. Start normal development with demo data
 
-The [administrator procedure](../operations/installation.md#designate-the-first-administrator)
-explains this access boundary. Google describes the stable `sub` value in its
-[identity guidance](https://developers.google.com/identity/openid-connect/openid-connect#an-id-tokens-payload).
+For continued **host development**, run from the repository root:
 
-### 13. Create the household and check that it persists
+```sh
+export SKYTTEL_DEV_ENV_FILE=.env.local
+npm run db:setup
+npm run dev:all
+```
 
-1. In **Hushållets namn**, enter an invented name such as `Hushållet Linden`.
-   Select **Skapa hushåll** once and wait for completion.
-2. Expect the household's name, **Administratör**, and **Hushållet är redo**.
-   Keep the household URL privately if you want to check direct access later.
-3. Select **Logga ut**. Expect the sign-in page. Opening the saved household
-   URL while signed out must not reveal household information.
-4. Choose **Fortsätt med Google** and sign in with the same Google account.
-   Expect the same household, without another household-creation form.
-   Google may remember its own account session; Skyttel sign-out does not
-   sign you out of every Google service.
-5. With the household open, restart the container:
+The reset removes all data and sessions from the selected development
+SQLite file and creates `TestHousehold` with your configured administrator.
+Open `http://localhost:5173` and sign in again with Google. Expect the demo
+household and administrator access. Future `npm run dev:all` starts preserve
+data; run `db:setup` only when you intend to replace it.
 
-   ```sh
-   docker compose restart skyttel
-   curl --fail http://localhost:3000/healthz
-   ```
+For **devcontainer development**, stop the host server first. Before the
+first container creation, prepare its private file without overwriting an
+existing one:
 
-6. Wait for readiness, then refresh the household page in the same browser.
-   Confirm the same household is available. Also repeat sign-out and Google
-   sign-in after the restart to check the saved identity and membership.
+```sh
+cp -n .devcontainer/.env.example .devcontainer/.env
+chmod 600 .devcontainer/.env
+```
 
-Use `restart` here because no environment values change. Use service
-recreation when configuration changes. Keep the same volume and
-`BETTER_AUTH_SECRET`; `docker compose down --volumes` deletes the stored
-household and is not a restart or a repair step.
+In your editor, copy the four provider credentials, `BETTER_AUTH_SECRET`,
+`SKYTTEL_FIRST_ADMIN_PROVIDER`, and the verified `SKYTTEL_FIRST_ADMIN_SUBJECT`
+from `.env.local` into their existing entries in `.devcontainer/.env`.
+Keep the container's `SKYTTEL_DATABASE_PATH=/data/skyttel.sqlite`,
+`SKYTTEL_ORIGIN=http://localhost:5173`, `HOST=0.0.0.0`, and `PORT=3300`.
+Do not copy the host database into the container volume. Keep both private
+files out of Git and update their shared credentials together when needed.
 
-To invite other Skyttel users and share administrator responsibility, follow
-the [household access guide](../users/access.md). Keep provider verification
-below separate from invitations so that you can check sign-in without
-granting household membership.
+Follow [Prepare and start](devcontainer.md#prepare-and-start), including the
+host Codex prerequisites, then reopen the repository in the devcontainer.
+Its creation script runs `db:setup`, migrating the container's separate
+development database and replacing its application data and sessions with
+`TestHousehold`. Rebuilding repeats that reset; ordinary restarts preserve
+data. In a container terminal, run
+`npm run dev:all` and open port 5173 on the host. Sign in with Google and check
+the household you created. The devcontainer supplies its own Node.js, npm,
+tools, and native dependencies for ongoing work.
 
-### 14. Verify personal Microsoft sign-in separately
+For the **manual Codex CLI test**, stop any existing port-3301 app and use
+[the isolated setup](../manual-tests/setup/assistants.md#manual-local-codex-cli-setup).
+It reuses the same Google client but uses the registered port-3301 callback
+and a fresh throwaway database. Normal development stays on port 5173.
 
-A Microsoft identity does not automatically gain access to the Google
-identity's household, even when both providers report the same email.
-Use an identity with no membership or existing login link for the denied-access
-check below. Signing in separately creates a separate Skyttel user, which
-cannot later be merged through login linking. To test linking instead, follow
-the [login-linking steps](../users/access.md#link-google-and-microsoft) with
-an identity that does not already belong to another Skyttel user.
+### 14. Check Microsoft sign-in separately
 
-You can also check the consent-cancellation path during the first Microsoft
-sign-in. In a fresh private browser window, choose **Fortsätt med Microsoft**
-and use a personal account. If Microsoft presents a permissions or consent
-screen, select **Cancel** or **No** once. Expect Skyttel's sign-in page to
-show **Inloggningen kunde inte slutföras** with the sign-in buttons available
-for another attempt. Retry and review the requested permissions before
-continuing. If no consent screen appears, record that this check is not
-performed; closing a browser tab does not test the callback error path.
+The Codex case tests Google only. To check the development Microsoft client,
+use a separate private browser window at `http://localhost:5173` and choose
+**Fortsätt med Microsoft** with a personal Microsoft account.
+For an identity with no membership or linked login, expect **Du har inte
+tillgång till hushållet** after successful sign-in. A provider error is not
+an expected access denial. A Google household does not automatically belong
+to a Microsoft identity with the same email address.
 
-1. For a first Microsoft check, sign out of Skyttel or open a fresh private
-   browser window. Select **Fortsätt med Microsoft** and sign in with a
-   personal Microsoft account. If Microsoft offers both a personal and a
-   work or school account, select the personal account.
-2. In this Google household installation, expect **Du har inte tillgång till
-   hushållet** with the signed-in name and **Logga ut** in the header. This
-   shows the expected lack of household membership after authentication.
-   A provider error or **Inloggningen kunde inte slutföras** is a failed
-   sign-in, not the expected access denial.
-3. To verify Microsoft household creation and persistence, prepare a
-   separate private installation with its own first-administrator
-   configuration, `BETTER_AUTH_SECRET`, and empty persistent volume. When
-   running these local installations one at a time at the same origin, reuse
-   the dedicated local verification registrations for Google and Microsoft.
-   Do not use production provider registrations. Give the separate
-   installation a distinct Compose project name and keep using that name for
-   its commands. Preserve the Google installation's `.env.local` and volume;
-   do not change its administrator to Microsoft or delete its data to reuse
-   the setup.
-4. If the separate installation uses the same `localhost:3000` address,
-   stop the Google service first with `docker compose stop skyttel` in its
-   original project. Only one installation can listen on that port at a time.
-   Use a fresh private browser session for the separate installation so
-   cookies from the first one do not carry across.
-5. In the separate configuration, start with
-   `SKYTTEL_FIRST_ADMIN_PROVIDER=microsoft` and
-   `SKYTTEL_FIRST_ADMIN_SUBJECT=not-configured`. Repeat the discovery and
-   household steps above with **Fortsätt med Microsoft**. Expect one
-   `microsoft` row after the first discovery sign-in and copy its `accountId`
-   into that installation's private configuration. Better Auth uses the
-   Microsoft `oid` identifier. Do not copy a Google identifier or an email.
-6. Verify creation, sign-out, return sign-in, and restart persistence for the
-   Microsoft household too. A work or school account alone does not verify
-   personal-account support.
-
-Complete the additional denied-access and failure scenarios in the
-[real-provider verification steps](testing.md#verify-real-identity-providers-separately).
-Record outcomes privately only after performing the checks. Dashboard setup,
-application readiness, and automated tests do not establish successful live
-provider sign-in. Better Auth describes the Microsoft identifier in its
-[provider documentation](https://better-auth.com/docs/authentication/microsoft#account-identifiers).
+To test linking instead, follow the [login-linking steps](../user-guide/access.md#koppla-google-och-microsoft)
+with an identity that does not already belong to a Skyttel user. Signing in
+separately creates a separate user, which cannot later be merged by linking.
+Additional provider, persistence, and denial checks are described in
+[real-provider verification](../manual-tests/access.md#real-identity-provider-preparation).
+Those checks and real Codex login remain manual and separate from CI.

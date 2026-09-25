@@ -27,7 +27,7 @@ namnet Robin ger ingen inloggning eller tillgång.
    hushållet**. Behåll separata profiler under hela körningen.
 2. Återställ en separat testinstallation mellan testfallen. Om ett fall
    kräver medlemskap, använd flödet i
-   [inbjudan av en användare](../users/access.md#invite-a-skyttel-user).
+   [inbjudan av en användare](../user-guide/access.md#bjud-in-en-skyttel-användare).
    Behåll koder endast för det aktuella testfallet och dela dem privat.
 3. MEDLEM-05 kräver en förberedd inbjudan vars sjudagarsfrist har gått ut.
    Skapa den minst sju dagar före körningen, anteckna koden privat och

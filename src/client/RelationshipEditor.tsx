@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Knowledge, MapObject, MapState, RelationshipValue } from '../shared/map.js';
+import { LifecycleEditor, RelationshipEndDate } from './Lifecycle.js';
 
 export const knowledgeLabels: Record<Knowledge, string> = {
   known: 'Känt',
@@ -10,10 +11,17 @@ export const knowledgeLabels: Record<Knowledge, string> = {
 };
 export function relationshipLabel(
   value: RelationshipValue,
-  state: MapState,
+  state: Pick<MapState, 'relationshipTypes'>,
   objects: Map<string, { name: string }>,
+  perspectiveId?: string,
 ) {
-  return `${objects.get(value.sourceId)?.name ?? value.sourceId} → ${state.relationshipTypes.find((type) => type.id === value.typeId)?.name ?? value.typeId} → ${value.targetId ? (objects.get(value.targetId)?.name ?? value.targetId) : knowledgeLabels[value.knowledge]}${value.knowledge === 'uncertain' ? ' (Osäkert uppgivet)' : ''}`;
+  const type = state.relationshipTypes.find((type) => type.id === value.typeId);
+  const source = objects.get(value.sourceId)?.name ?? value.sourceId;
+  const target = value.targetId
+    ? (objects.get(value.targetId)?.name ?? value.targetId)
+    : knowledgeLabels[value.knowledge];
+  const reverse = perspectiveId === value.targetId && type?.reverseLabel;
+  return `${reverse ? target : source} → ${reverse || type?.forwardLabel || type?.name || value.typeId} → ${reverse ? source : target}${value.knowledge === 'uncertain' ? ' (Osäkert uppgivet)' : ''}`;
 }
 export function RelationshipEditor({
   state,
@@ -31,6 +39,9 @@ export function RelationshipEditor({
   onClose: () => void;
 }) {
   const [value, setValue] = useState(initial.value);
+  const [typeRevisions] = useState(
+    () => new Map(state.relationshipTypes.map((type) => [type.id, type.revision])),
+  );
   const stale = initial.version !== state.draft.version;
   const choices = [...objects.values()].filter(
     (object) => !state.draft.changes.some((change) => change.id === object.id && !change.after),
@@ -55,7 +66,7 @@ export function RelationshipEditor({
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit({ ...initial, value });
+        onSubmit({ ...initial, value, typeRevision: typeRevisions.get(value.typeId) });
       }}
     >
       <fieldset disabled={disabled || stale}>
@@ -120,11 +131,20 @@ export function RelationshipEditor({
             </select>
           </>
         )}
+        <LifecycleEditor
+          kind="relationship"
+          value={value.lifecycle}
+          onChange={(lifecycle) => setValue({ ...value, lifecycle })}
+        />
+        <RelationshipEndDate
+          value={value.endDate}
+          onChange={(endDate) => setValue({ ...value, endDate })}
+        />
         <button type="submit">Lägg sambandet i mitt utkast</button>
         {(initial.baseRevision !== null ||
           state.draft.relationships?.some((change) => change.id === initial.id)) && (
           <button type="button" onClick={() => onSubmit({ ...initial, value: null })}>
-            Föreslå borttagning av sambandet
+            Ta bort sambandet
           </button>
         )}
       </fieldset>

@@ -5,6 +5,7 @@
 model = "gpt-6-astra"
 model_reasoning_effort = "high"
 
+approval_policy = "never"
 default_permissions = "skyttel-development"
 
 personality = "pragmatic"

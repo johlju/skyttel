@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import type Database from 'better-sqlite3';
+import { assistantAuthPlugins } from './assistant-auth.js';
 import type { Config } from './config.js';
 import { linkingAttempt } from './login-methods.js';
 
@@ -23,6 +24,8 @@ export function createAuth(config: Config, database: Database.Database) {
     basePath: '/api/auth',
     secret: config.authSecret,
     database,
+    plugins: assistantAuthPlugins(database, config.origin),
+    disabledPaths: ['/token'],
     trustedOrigins: [config.origin],
     logger: { disabled: true },
     telemetry: { enabled: false },

@@ -69,6 +69,245 @@ async function member() {
   return actor;
 }
 
+test('resolving a relationship date proposal preserves an independently saved ended status', async () => {
+  await object('a');
+  await object('b');
+  await edge();
+  expect((await save()).status).toBe(200);
+  const actor = await member();
+  expect(
+    (await edge('edge', { endDate: { knowledge: 'known', value: '2031-04-12' } })).status,
+  ).toBe(200);
+  expect((await edge('edge', { lifecycle: 'ended' }, actor)).status).toBe(200);
+  expect((await save(actor)).status).toBe(200);
+  expect((await save()).status).toBe(409);
+  const state = await read();
+  expect(
+    (
+      await client.json(`${path}/resolve`, {
+        version: state.draft.version,
+        conflict: { kind: 'relationship', id: 'edge', current: state.relationships[0] },
+        choice: 'proposed',
+      })
+    ).status,
+  ).toBe(200);
+  expect((await read()).relationships[0]).not.toHaveProperty('endDate');
+  expect((await save()).status).toBe(200);
+  expect((await read()).relationships[0]).toMatchObject({
+    lifecycle: 'ended',
+    endDate: { knowledge: 'known', value: '2031-04-12' },
+  });
+});
+
+test.each<{
+  name: string;
+  initial: Partial<RelationshipValue>;
+  proposed: Partial<RelationshipValue>;
+  saved: Partial<RelationshipValue>;
+  expected: Partial<RelationshipValue>;
+}>([
+  {
+    name: 'a status proposal preserves an independently saved date and certainty',
+    initial: { endDate: { knowledge: 'known', value: '2031-04-12' } },
+    proposed: { lifecycle: 'ended', endDate: { knowledge: 'known', value: '2031-04-12' } },
+    saved: { endDate: { knowledge: 'uncertain', value: '2031-05-15' } },
+    expected: { lifecycle: 'ended', endDate: { knowledge: 'uncertain', value: '2031-05-15' } },
+  },
+  {
+    name: 'removing a status preserves an independently saved unknown date',
+    initial: { lifecycle: 'ended' },
+    proposed: {},
+    saved: { lifecycle: 'ended', endDate: { knowledge: 'unknown' } },
+    expected: { endDate: { knowledge: 'unknown' } },
+  },
+  {
+    name: 'a date choice keeps proposed certainty and value together when both writers change it',
+    initial: { endDate: { knowledge: 'known', value: '2031-04-12' } },
+    proposed: { endDate: { knowledge: 'uncertain', value: '2031-04-12' } },
+    saved: { lifecycle: 'active', endDate: { knowledge: 'known', value: '2031-05-15' } },
+    expected: { lifecycle: 'active', endDate: { knowledge: 'uncertain', value: '2031-04-12' } },
+  },
+  {
+    name: 'removing a date preserves an independently saved status',
+    initial: { endDate: { knowledge: 'known', value: '2031-04-12' } },
+    proposed: {},
+    saved: { lifecycle: 'ended', endDate: { knowledge: 'known', value: '2031-04-12' } },
+    expected: { lifecycle: 'ended' },
+  },
+  {
+    name: 'a status overlap keeps the chosen proposal and independent saved date',
+    initial: { lifecycle: 'ended' },
+    proposed: { lifecycle: 'active' },
+    saved: { endDate: { knowledge: 'none' } },
+    expected: { lifecycle: 'active', endDate: { knowledge: 'none' } },
+  },
+  {
+    name: 'a certainty choice retains its target when the other writer removes that target',
+    initial: {},
+    proposed: { knowledge: 'uncertain' },
+    saved: { targetId: null, knowledge: 'none', lifecycle: 'ended' },
+    expected: { targetId: 'b', knowledge: 'uncertain', lifecycle: 'ended' },
+  },
+  {
+    name: 'an explicitly absent target stays absent when the other writer changes certainty',
+    initial: {},
+    proposed: { targetId: null, knowledge: 'none' },
+    saved: { knowledge: 'uncertain', lifecycle: 'ended' },
+    expected: { targetId: null, knowledge: 'none', lifecycle: 'ended' },
+  },
+])('relationship resolution: $name', async ({ initial, proposed, saved, expected }) => {
+  await object('a');
+  await object('b');
+  await edge('edge', initial);
+  expect((await save()).status).toBe(200);
+  const original = (await read()).relationships[0];
+  const actor = await member();
+  expect((await edge('edge', proposed)).status).toBe(200);
+  expect((await edge('edge', saved, actor)).status).toBe(200);
+  expect((await save(actor)).status).toBe(200);
+  expect((await save()).status).toBe(409);
+  const state = await read();
+  expect(
+    (
+      await client.json(`${path}/resolve`, {
+        version: state.draft.version,
+        conflict: { kind: 'relationship', id: 'edge', current: state.relationships[0] },
+        choice: 'proposed',
+      })
+    ).status,
+  ).toBe(200);
+  expect((await save()).status).toBe(200);
+  expect((await read()).relationships[0]).toEqual({
+    id: 'edge',
+    householdId: original.householdId,
+    typeId: original.typeId,
+    sourceId: 'a',
+    targetId: 'b',
+    knowledge: 'known',
+    revision: 3,
+    ...expected,
+  });
+});
+
+test('a status proposal preserves saved relationship meaning after an old endpoint is removed', async () => {
+  await object('a');
+  await object('b');
+  await edge();
+  expect((await save()).status).toBe(200);
+  const actor = await member();
+  expect((await edge('edge', { lifecycle: 'ended' })).status).toBe(200);
+  const type = (await read()).relationshipTypes[1];
+  expect(
+    (
+      await edge(
+        'edge',
+        { typeId: type.id, sourceId: 'b', targetId: null, knowledge: 'unknown' },
+        actor,
+      )
+    ).status,
+  ).toBe(200);
+  expect((await object('a', null, actor)).status).toBe(200);
+  expect((await save(actor)).status).toBe(200);
+  const state = await read();
+  expect(
+    (
+      await client.json(`${path}/resolve`, {
+        version: state.draft.version,
+        conflict: { kind: 'relationship', id: 'edge', current: state.relationships[0], type },
+        choice: 'proposed',
+      })
+    ).status,
+  ).toBe(200);
+  const response = await save();
+  expect(response.status).toBe(200);
+  const { receipt } = await response.json();
+  expect(receipt.relationships[0]).toMatchObject({
+    after: {
+      typeId: type.id,
+      sourceId: 'b',
+      targetId: null,
+      knowledge: 'unknown',
+      lifecycle: 'ended',
+    },
+    type,
+  });
+  expect((await read()).relationships).toEqual([receipt.relationships[0].after]);
+});
+
+test('choosing a certainty correction keeps the original relationship assertion and saved status', async () => {
+  await object('a');
+  await object('b');
+  await object('c');
+  await edge();
+  expect((await save()).status).toBe(200);
+  const original = (await read()).relationships[0];
+  const actor = await member();
+  expect((await edge('edge', { knowledge: 'uncertain' })).status).toBe(200);
+  const type = (await read()).relationshipTypes[1];
+  expect(
+    (await edge('edge', { typeId: type.id, sourceId: 'c', lifecycle: 'ended' }, actor)).status,
+  ).toBe(200);
+  expect((await save(actor)).status).toBe(200);
+  const state = await read();
+  expect(
+    (
+      await client.json(`${path}/resolve`, {
+        version: state.draft.version,
+        conflict: { kind: 'relationship', id: 'edge', current: state.relationships[0] },
+        choice: 'proposed',
+      })
+    ).status,
+  ).toBe(200);
+  expect((await save()).status).toBe(200);
+  expect((await read()).relationships[0]).toMatchObject({
+    typeId: original.typeId,
+    sourceId: 'a',
+    targetId: 'b',
+    knowledge: 'uncertain',
+    lifecycle: 'ended',
+  });
+});
+
+test.each(['object', 'relationship'] as const)(
+  'resolving %s deletion after a type change records the current historical definition',
+  async (kind) => {
+    await object('a');
+    await object('b');
+    await edge();
+    expect((await save()).status).toBe(200);
+    const actor = await member();
+    const state = await read();
+    const type = (kind === 'object' ? state.types : state.relationshipTypes)[1];
+    if (kind === 'object') {
+      expect((await object('a', null)).status).toBe(200);
+      expect((await object('a', { typeId: type.id }, actor)).status).toBe(200);
+    } else {
+      expect((await edge('edge', null)).status).toBe(200);
+      expect((await edge('edge', { typeId: type.id }, actor)).status).toBe(200);
+    }
+    expect((await save(actor)).status).toBe(200);
+    const changed = await read();
+    expect(
+      (
+        await client.json(`${path}/resolve`, {
+          version: changed.draft.version,
+          conflict: draftConflicts(changed).find(
+            (item) => item.kind === kind && item.id === (kind === 'object' ? 'a' : 'edge'),
+          ),
+          choice: 'proposed',
+        })
+      ).status,
+    ).toBe(200);
+    const response = await save();
+    expect(response.status).toBe(200);
+    const { receipt } = await response.json();
+    const change = (kind === 'object' ? receipt.changes : receipt.relationships)[0];
+    expect(change).toMatchObject({ before: { typeId: type.id }, after: null, type });
+    const { history } = await (await client.request(`${path}/history`)).json();
+    expect(history.at(-1)).toEqual(receipt);
+  },
+);
+
 test('object deletion previews all relationship removals and rejects newly attached edges', async () => {
   await object('a');
   await object('b');
@@ -86,6 +325,122 @@ test('object deletion previews all relationship removals and rejects newly attac
   expect((await save()).status).toBe(409);
   expect((await read()).objects).toHaveLength(2);
   expect((await read()).relationships).toHaveLength(2);
+});
+
+test('deleting an endpoint after a private type change retains the saved relationship definition', async () => {
+  await object('a');
+  await object('b');
+  await edge();
+  expect((await save()).status).toBe(200);
+  const initial = await read();
+  const savedType = initial.relationshipTypes[0];
+  const proposedType = initial.relationshipTypes[1];
+  expect((await edge('edge', { typeId: proposedType.id })).status).toBe(200);
+  expect((await object('a', null)).status).toBe(200);
+  const state = await read();
+  expect(draftConflicts(state)).toEqual([]);
+  expect(state.draft.relationships).toMatchObject([
+    { id: 'edge', before: { typeId: savedType.id }, after: null, type: savedType },
+  ]);
+  expect(state.objects).toEqual(initial.objects);
+  expect(state.relationships).toEqual(initial.relationships);
+  const response = await save();
+  expect(response.status).toBe(200);
+  const { receipt } = await response.json();
+  expect(receipt.relationships).toMatchObject([
+    { id: 'edge', before: { typeId: savedType.id }, after: null, type: savedType },
+  ]);
+  const saved = await read();
+  expect(saved.objects.map((item) => item.id)).toEqual(['b']);
+  expect(saved.relationships).toEqual([]);
+  expect(saved.relationshipTypes).toEqual(initial.relationshipTypes);
+  const { history } = await (await client.request(`${path}/history`)).json();
+  expect(history.at(-1)).toEqual(receipt);
+});
+
+test.each(['before', 'after'] as const)(
+  'editing the retained definition %s an endpoint deletion saves labels with the deletion atomically',
+  async (timing) => {
+    await object('a');
+    await object('b');
+    await edge();
+    expect((await save()).status).toBe(200);
+    const initial = await read();
+    const savedType = initial.relationshipTypes[0];
+    const definition = {
+      name: 'Användning',
+      description: 'Användning i hushållet',
+      forwardLabel: 'använder',
+      reverseLabel: 'används av',
+    };
+    const define = async () =>
+      client.json(`${path}/relationship-type`, {
+        version: (await read()).draft.version,
+        id: savedType.id,
+        baseRevision: savedType.revision,
+        value: definition,
+      });
+    expect((await edge('edge', { typeId: initial.relationshipTypes[1].id })).status).toBe(200);
+    if (timing === 'before') expect((await define()).status).toBe(200);
+    expect((await object('a', null)).status).toBe(200);
+    if (timing === 'after') expect((await define()).status).toBe(200);
+    const proposed = await read();
+    expect(draftConflicts(proposed)).toEqual([]);
+    const expectedType = { ...savedType, ...definition, revision: 2 };
+    expect(proposed.draft.relationships?.[0].type).toEqual(expectedType);
+    const response = await save();
+    expect(response.status).toBe(200);
+    const { receipt } = await response.json();
+    expect(receipt.relationshipTypes).toEqual([
+      { id: savedType.id, before: savedType, after: expectedType },
+    ]);
+    expect(receipt.relationships).toMatchObject([
+      { id: 'edge', before: { typeId: savedType.id }, after: null, type: expectedType },
+    ]);
+    expect((await read()).relationshipTypes.find((item) => item.id === savedType.id)).toEqual(
+      expectedType,
+    );
+    const { history } = await (await client.request(`${path}/history`)).json();
+    expect(history.at(-1)).toEqual(receipt);
+  },
+);
+
+test('cascade deletion preserves the reviewed definition revision when the relationship type is unchanged', async () => {
+  await object('a');
+  await object('b');
+  await edge();
+  expect((await save()).status).toBe(200);
+  const actor = await member();
+  expect((await edge('edge', { lifecycle: 'ended' })).status).toBe(200);
+  const initial = await read();
+  const savedType = initial.relationshipTypes[0];
+  expect(
+    (
+      await actor.json(`${path}/relationship-type`, {
+        version: (await read(actor)).draft.version,
+        id: savedType.id,
+        baseRevision: savedType.revision,
+        value: {
+          name: 'Ändrad betydelse',
+          description: '',
+          forwardLabel: 'kopplar till',
+          reverseLabel: 'kopplas från',
+        },
+      })
+    ).status,
+  ).toBe(200);
+  expect((await save(actor)).status).toBe(200);
+  expect((await object('a', null)).status).toBe(200);
+  const proposed = await read();
+  expect(proposed.draft.relationships?.[0].type).toEqual(savedType);
+  expect(draftConflicts(proposed)).toMatchObject([
+    { kind: 'relationship', id: 'edge', type: { id: savedType.id, revision: 2 } },
+  ]);
+  expect((await save()).status).toBe(409);
+  const rejected = await read();
+  expect(rejected.objects).toEqual(initial.objects);
+  expect(rejected.relationships).toEqual(initial.relationships);
+  expect(rejected.draft).toEqual(proposed.draft);
 });
 
 test.each(['before', 'after'] as const)(

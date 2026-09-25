@@ -1,0 +1,76 @@
+name: Deployed image security
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+    inputs:
+      verify_notification:
+        description: Send a controlled delivery check to the configured operator
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    if: github.repository == 'viscalyx/skyttel' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    # Prevent competing issue updates without replacing queued release deployments.
+    concurrency:
+      group: deployed-image-security
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      deployments: read
+      packages: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install pinned inventory and vulnerability tools
+        id: tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/image-monitor-tools"
+          cd "$RUNNER_TEMP/image-monitor-tools"
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/anchore/grype/releases/download/v0.119.0/grype_0.119.0_linux_amd64.tar.gz -o grype.tar.gz
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/anchore/syft/releases/download/v1.52.0/syft_1.52.0_linux_amd64.tar.gz -o syft.tar.gz
+          printf '%s\n' \
+            '3fa2dc4b924621ab65404cf08d0b8438d896d80ab949c9d5a4ca283c36004c9b  grype.tar.gz' \
+            'caeedb81fb0491615f1ebd1761e4145d41ee86dd2cc7bf80669f9f5ad9d6133d  syft.tar.gz' | sha256sum --check
+          tar -xzf grype.tar.gz grype
+          tar -xzf syft.tar.gz syft
+          echo "$RUNNER_TEMP/image-monitor-tools" >> "$GITHUB_PATH"
+      - name: Authenticate read-only registry access
+        id: registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Observe, scan and reconcile operator status
+        if: always()
+        run: node scripts/security/monitor-images.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+          SECURITY_MONITOR_RECIPIENT: ${{ vars.SECURITY_MONITOR_RECIPIENT }}
+          VERIFY_NOTIFICATION: ${{ inputs.verify_notification }}
+          SCAN_PREREQUISITES_OK: ${{ steps.tools.outcome == 'success' && steps.registry.outcome == 'success' }}
+      - name: Retain sanitized image status
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deployed-image-security
+          path: monitoring/status.json
+          if-no-files-found: error
+          retention-days: 90

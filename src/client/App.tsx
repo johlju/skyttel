@@ -2,12 +2,18 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useStat
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
+import { Assistants } from './Assistants.js';
+import { ContentOwners } from './ContentOwners.js';
+import { Costs } from './Costs.js';
+import { HouseholdErasure } from './HouseholdErasure.js';
+import { HouseholdExport } from './HouseholdExport.js';
+import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
 
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
-type Bootstrap = { providers: Provider[] } & (
+type Bootstrap = { providers: Provider[]; operator: boolean } & (
   | { status: 'anonymous'; user?: never }
   | { status: 'setup'; user: { id: string; name: string } }
   | { status: 'forbidden'; user: { id: string; name: string } }
@@ -116,7 +122,10 @@ function Login({ providers }: { providers: Provider[] }) {
     try {
       const result = await request<{ url: string }>('/api/auth/sign-in/social', {
         provider,
-        callbackURL: '/',
+        callbackURL: location.pathname === '/costs' ? '/costs' : '/',
+        ...(location.pathname === '/assistant-consent'
+          ? { oauth_query: location.search.slice(1) }
+          : {}),
         errorCallbackURL: '/?authError=1',
       });
       if (typeof result.url !== 'string') throw new Error('invalid_redirect');
@@ -742,6 +751,10 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
           ))}
         </ul>
       )}
+      <HouseholdExport key={`export-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
+      <HouseholdErasure key={`erasure-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
+      <HouseholdImport key={`import-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
+      <ContentOwners key={`owners-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
     </section>
   );
 }
@@ -781,15 +794,9 @@ function HouseholdPage({ onSessionExpired }: { onSessionExpired: () => void }) {
         </p>
       )}
       <HouseholdMap key={result.data.household.id} householdId={result.data.household.id} />
-      <div className="empty-state">
-        <div className="weave-mark" aria-hidden="true">
-          ↗
-        </div>
-        <h2>Hushållet är redo</h2>
-        <p>
-          Ditt hushåll är skapat. Du kan återkomma hit genom att logga in med samma inloggningssätt.
-        </p>
-      </div>
+      <p>
+        <Link to="/assistants">Assistentanslutningar</Link>
+      </p>
     </section>
   );
 }
@@ -834,8 +841,9 @@ export function App() {
           Skyttel
         </Link>
         {data && data.status !== 'anonymous' ? (
-          <div className="session-controls">
+          <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
             <Link to="/login-methods">Inloggningssätt</Link>
+            {data.operator && <Link to="/costs">Månadskostnad</Link>}
             <span className="session-name">{data.user?.name}</span>
             <button type="button" disabled={signingOut} onClick={() => void signOut()}>
               {signingOut ? 'Loggar ut…' : 'Logga ut'}
@@ -857,11 +865,29 @@ export function App() {
         {data && data.status !== 'anonymous' && location.pathname === '/login-methods' && (
           <LoginMethods />
         )}
-        {data?.status === 'forbidden' && location.pathname !== '/login-methods' && <Forbidden />}
+        {data &&
+          data.status !== 'anonymous' &&
+          location.pathname === '/costs' &&
+          (data.operator ? (
+            <Costs key={data.user.id} onAccessLost={reload} />
+          ) : (
+            <section className="panel">
+              <Heading>
+                Endast installationens driftansvarige har tillgång till kostnadsöversikten
+              </Heading>
+              <Link to="/">Till startsidan</Link>
+            </section>
+          ))}
+        {data?.status === 'forbidden' &&
+          location.pathname !== '/login-methods' &&
+          location.pathname !== '/costs' && <Forbidden />}
         {data &&
           location.pathname !== '/login-methods' &&
+          location.pathname !== '/costs' &&
           (data.status === 'setup' || data.status === 'ready') && (
             <Routes>
+              <Route path="/assistant-consent" element={<Assistants consent />} />
+              <Route path="/assistants" element={<Assistants />} />
               <Route
                 path="/"
                 element={
@@ -888,14 +914,18 @@ export function App() {
               />
             </Routes>
           )}
-        {data && (data.status === 'forbidden' || data.status === 'ready') && (
-          <InvitationEntry
-            userId={data.user.id}
-            showInvitation={data.status === 'forbidden' || data.household.role !== 'administrator'}
-            onAccepted={created}
-            onReload={reload}
-          />
-        )}
+        {data &&
+          location.pathname !== '/costs' &&
+          (data.status === 'forbidden' || data.status === 'ready') && (
+            <InvitationEntry
+              userId={data.user.id}
+              showInvitation={
+                data.status === 'forbidden' || data.household.role !== 'administrator'
+              }
+              onAccepted={created}
+              onReload={reload}
+            />
+          )}
       </main>
       <footer>Det som hör ihop, samlat.</footer>
     </div>

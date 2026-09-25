@@ -14,12 +14,18 @@ profilens flikar eller lokala webbläsardata.
 
 SPAR-04 behöver dessutom en separat testidentitet med aktuell tillgång
 till hushållet och rollen medlem. Följ
-[inbjudan av en användare](../users/access.md#invite-a-skyttel-user)
+[inbjudan av en användare](../user-guide/access.md#bjud-in-en-skyttel-användare)
 för att ge identiteten tillgång. Kartans påhittade personer och Robin Demo
 saknar inloggning;
 de kan inte användas som testidentitet.
 
 ## Allmän förberedelse
+
+När ett befintligt objekt eller samband ska ändras, välj det först i
+kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+**Redigera valt objekt** eller **Redigera valt samband** för att öppna
+formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
+objektet eller sambandet öppnar inte formuläret.
 
 1. Förbered en separat utvecklingsdatabas enligt
    [demodata och återställning](../development/devcontainer.md#reset-demo-data).

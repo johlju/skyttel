@@ -1,0 +1,950 @@
+{
+  "manifest": {
+    "format": "skyttel-household",
+    "version": 1,
+    "createdAt": "2026-09-24T22:29:21.826Z",
+    "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+    "schemaVersion": 14,
+    "parts": [
+      {
+        "path": "content.json",
+        "bytes": 21481,
+        "sha256": "dbfd8b2e2a333e99db2d2229efc91ef6f531fa355f29e0c58dfeb39d1427a34d"
+      },
+      {
+        "path": "images.bin",
+        "bytes": 238,
+        "sha256": "b7ef7072023d83a9375dcc278045c9d3b18c91325c7dd02b49275e5eb417dee3"
+      }
+    ]
+  },
+  "content": {
+    "household": {
+      "id": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+      "name": "Hushållet Linden",
+      "createdAt": "2026-09-24T22:29:21.685Z",
+      "contentVersion": 1
+    },
+    "identities": [
+      {
+        "id": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "name": "Alex Exempel"
+      }
+    ],
+    "objectTypes": [
+      {
+        "id": "021228db1745b9b4a05973f813e801a1",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Företag",
+        "description": ""
+      },
+      {
+        "id": "03a9efc4b83489ba054560303c5dec84",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "E-postadress",
+        "description": ""
+      },
+      {
+        "id": "0fd50707fdb08ed519dc647dfa64417b",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Avtal",
+        "description": "En överenskommelse mellan parter."
+      },
+      {
+        "id": "111aebe3c1cb40002baa0ebc9276bec5",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Kreditavtal",
+        "description": "Ett avtal om kredit. Beviljat kreditutrymme och utnyttjad kredit är olika uppgifter."
+      },
+      {
+        "id": "1acfdb14475641bf79d203bc01ee7853",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Bankkonto",
+        "description": ""
+      },
+      {
+        "id": "2d6e9291d36dec64361ec7538ede16ac",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Fordon",
+        "description": "Ett fordon, oberoende av finansiering, ägande och användning."
+      },
+      {
+        "id": "2e5bffdf810d5e85e0bdc3e30d496d00",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Tjänstekonto",
+        "description": ""
+      },
+      {
+        "id": "40c926e1192323caf0f39e0f5b551c44",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Låneavtal",
+        "description": "Ett avtal om lån, skilt från senast uppgiven skuld."
+      },
+      {
+        "id": "4d880b5601e0e958515b84b8da35f4fa",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Förening",
+        "description": ""
+      },
+      {
+        "id": "5a42a21ab6f32ed5ce2512e645d96b3d",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Avbetalningsavtal",
+        "description": "Ett avtal om att betala ett köp i delar."
+      },
+      {
+        "id": "721ef79093aae44f5124ad9bc731f7c5",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Hyresavtal",
+        "description": "Ett avtal om hyra. Återkommande betalning gör det inte till ett abonnemang."
+      },
+      {
+        "id": "962499795b9bde99dd42709a857faf16",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Försäkringsavtal",
+        "description": "Ett avtal om försäkring, skilt från det som försäkras."
+      },
+      {
+        "id": "98eabf6fa4b11f3dc91a471819a1886a",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Bostad",
+        "description": "En bostad som kan omfattas av flera avtal."
+      },
+      {
+        "id": "a201c45ce25ee8b9bbea25a1c449351f",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Garage",
+        "description": "Ett garage, skilt från avtalet som gäller det."
+      },
+      {
+        "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Person",
+        "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+      },
+      {
+        "id": "da3a387025779be086aae5c45b54f1b7",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Abonnemang",
+        "description": ""
+      },
+      {
+        "id": "f7d33a6f41caa2e12cd51c2efd1b586a",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Kort",
+        "description": ""
+      },
+      {
+        "id": "fdbb713b581a418c22230331b10d6067",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Tjänst",
+        "description": ""
+      }
+    ],
+    "objectTypeFields": [],
+    "relationshipTypes": [
+      {
+        "id": "03d526b33bacc9931171ec943af5da5f",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Står på avtalet",
+        "description": "Från avtal till avtalspart."
+      },
+      {
+        "id": "173fd5a4659f3708594c89d8dbf8f491",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Inloggningsadress",
+        "description": "Från tjänstekonto till e-postadress."
+      },
+      {
+        "id": "28fa1838b95e78e0b6a1c0a97804c8e5",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Kontokoppling",
+        "description": "Från kort till bankkonto."
+      },
+      {
+        "id": "35ec2463295e654046fe2942adb55767",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Kortfakturan betalas från",
+        "description": "Från kort till bankkontot som betalar kortfakturan."
+      },
+      {
+        "id": "3c705a28767c2a84e1c8767113459f2d",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Finansierar",
+        "description": "Från finansieringsavtal till det objekt som finansieras."
+      },
+      {
+        "id": "3f426ea81a5a8f37e4ed6efdb870c1d5",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Används av",
+        "description": "Från objekt till person som använder det."
+      },
+      {
+        "id": "412aae926310b926fdbea19551f3d227",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Gäller tjänstekontot",
+        "description": "Från abonnemang till tjänstekonto."
+      },
+      {
+        "id": "53358cc687b9e3847824846f39a5d3bf",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Försäkrar",
+        "description": "Från försäkringsavtal till det objekt som försäkras."
+      },
+      {
+        "id": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Använder",
+        "description": "Från person till det som personen använder."
+      },
+      {
+        "id": "6971051227f3e85bb5dbd19a5ae1ccd1",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Erbjuder",
+        "description": "Från tjänsteleverantör till tjänst."
+      },
+      {
+        "id": "6f282f691c4af20bc25abc5dee4d2454",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Betalar",
+        "description": "Från person till avtal."
+      },
+      {
+        "id": "93e57b8c3b0db93041f99e21692108cb",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Betalas med",
+        "description": "Från avtal till betalningsmedel."
+      },
+      {
+        "id": "981926f74c86336db4e02f9b1a40dd21",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Gäller",
+        "description": "Från avtal till det objekt som avtalet gäller."
+      },
+      {
+        "id": "9c627e85eb14601cbd2bd8f6970eeaa3",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Tillhör tjänsten",
+        "description": "Från tjänstekonto eller abonnemang till tjänst."
+      },
+      {
+        "id": "c2670b023a08b018cd09fcee9c97ea99",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Kontaktadress",
+        "description": "Från tjänstekonto till e-postadress."
+      },
+      {
+        "id": "ce2c6a648b034b813ef64eedd6eba8d3",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Långivare",
+        "description": "Från låneavtal eller kreditavtal till den person, det företag eller den förening som lämnar lånet eller krediten."
+      },
+      {
+        "id": "d15a207004b0f8dad0da067543947a97",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Hyresvärd",
+        "description": "Från hyresavtal till den person, det företag eller den förening som hyr ut."
+      },
+      {
+        "id": "fe91b89bdb2b3c02539926f5bc02818e",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "revision": 1,
+        "name": "Äger",
+        "description": "Från objekt till ägare."
+      }
+    ],
+    "relationshipTypeLabels": [],
+    "removedTypes": [],
+    "objects": [
+      {
+        "id": "first",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+        "revision": 2,
+        "name": "Lo Exempel",
+        "description": "",
+        "deleted": 0,
+        "identity": null,
+        "financialFacts": null,
+        "customValues": null,
+        "lifecycle": null,
+        "profileImageId": "0f430dbd-4918-4d39-8e65-6ff06efb17f5"
+      },
+      {
+        "id": "second",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+        "revision": 3,
+        "name": "Lo Exempel",
+        "description": "",
+        "deleted": 1,
+        "identity": null,
+        "financialFacts": null,
+        "customValues": null,
+        "lifecycle": null,
+        "profileImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd"
+      }
+    ],
+    "relationships": [
+      {
+        "id": "unknown-endpoint",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "typeId": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+        "revision": 2,
+        "sourceId": "first",
+        "targetId": null,
+        "knowledge": "unknown",
+        "deleted": 0,
+        "lifecycle": null,
+        "endDate": null
+      }
+    ],
+    "drafts": [
+      {
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "version": 9,
+        "changes": [
+          {
+            "id": "first",
+            "before": {
+              "id": "first",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 2,
+              "name": "Lo Exempel",
+              "description": "",
+              "profileImageId": "0f430dbd-4918-4d39-8e65-6ff06efb17f5"
+            },
+            "after": {
+              "id": "first",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 2,
+              "name": "Lo Exempel",
+              "description": "",
+              "profileImageId": "547dbc87-6d35-4c59-b7ab-45f0a11db095"
+            },
+            "type": {
+              "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "revision": 1,
+              "name": "Person",
+              "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+            }
+          }
+        ],
+        "relationships": [],
+        "objectTypes": [],
+        "relationshipTypes": []
+      }
+    ],
+    "saves": [
+      {
+        "operationId": "initial",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "draftVersion": 3,
+        "receipt": {
+          "contentVersion": 1,
+          "operationId": "initial",
+          "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+          "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+          "draftVersion": 3,
+          "savedAt": "2026-09-24T22:29:21.728Z",
+          "actorName": "Alex Exempel",
+          "changes": [
+            {
+              "before": null,
+              "after": {
+                "id": "first",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "revision": 1,
+                "name": "Lo Exempel",
+                "description": ""
+              },
+              "type": {
+                "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 1,
+                "name": "Person",
+                "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+              }
+            },
+            {
+              "before": null,
+              "after": {
+                "id": "second",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "revision": 1,
+                "name": "Lo Exempel",
+                "description": ""
+              },
+              "type": {
+                "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 1,
+                "name": "Person",
+                "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+              }
+            }
+          ],
+          "relationships": [
+            {
+              "id": "unknown-endpoint",
+              "before": null,
+              "after": {
+                "typeId": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                "sourceId": "second",
+                "targetId": null,
+                "knowledge": "unknown",
+                "id": "unknown-endpoint",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 1
+              },
+              "type": {
+                "id": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 1,
+                "name": "Använder",
+                "description": "Från person till det som personen använder."
+              },
+              "objectNames": {
+                "second": "Lo Exempel"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "operationId": "merge-with-image",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "draftVersion": 7,
+        "receipt": {
+          "contentVersion": 1,
+          "operationId": "merge-with-image",
+          "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+          "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+          "draftVersion": 7,
+          "savedAt": "2026-09-24T22:29:21.780Z",
+          "actorName": "Alex Exempel",
+          "changes": [
+            {
+              "before": {
+                "id": "first",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "revision": 1,
+                "name": "Lo Exempel",
+                "description": ""
+              },
+              "after": {
+                "id": "first",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "revision": 2,
+                "name": "Lo Exempel",
+                "description": "",
+                "profileImageId": "0f430dbd-4918-4d39-8e65-6ff06efb17f5"
+              },
+              "type": {
+                "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 1,
+                "name": "Person",
+                "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+              },
+              "merge": {
+                "survivorId": "first",
+                "absorbedId": "second",
+                "identityConfirmed": true,
+                "objects": [
+                  {
+                    "id": "first",
+                    "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                    "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                    "revision": 1,
+                    "name": "Lo Exempel",
+                    "description": ""
+                  },
+                  {
+                    "id": "second",
+                    "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                    "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                    "revision": 2,
+                    "name": "Lo Exempel",
+                    "description": "",
+                    "profileImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd"
+                  }
+                ],
+                "types": [
+                  {
+                    "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+                    "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                    "revision": 1,
+                    "name": "Person",
+                    "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+                  }
+                ],
+                "relationships": [
+                  {
+                    "id": "unknown-endpoint",
+                    "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                    "typeId": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                    "revision": 1,
+                    "sourceId": "second",
+                    "targetId": null,
+                    "knowledge": "unknown"
+                  }
+                ],
+                "relationshipTypes": [
+                  {
+                    "id": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                    "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                    "revision": 1,
+                    "name": "Använder",
+                    "description": "Från person till det som personen använder."
+                  }
+                ],
+                "objectNames": {
+                  "second": "Lo Exempel"
+                },
+                "imageCopy": {
+                  "sourceObjectId": "second",
+                  "sourceImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd",
+                  "copiedImageId": "0f430dbd-4918-4d39-8e65-6ff06efb17f5"
+                }
+              }
+            },
+            {
+              "before": {
+                "id": "second",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "revision": 2,
+                "name": "Lo Exempel",
+                "description": "",
+                "profileImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd"
+              },
+              "after": null,
+              "type": {
+                "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 1,
+                "name": "Person",
+                "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+              }
+            }
+          ],
+          "relationships": [
+            {
+              "id": "unknown-endpoint",
+              "before": {
+                "id": "unknown-endpoint",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "typeId": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                "revision": 1,
+                "sourceId": "second",
+                "targetId": null,
+                "knowledge": "unknown"
+              },
+              "after": {
+                "typeId": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                "sourceId": "first",
+                "targetId": null,
+                "knowledge": "unknown",
+                "id": "unknown-endpoint",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 2
+              },
+              "type": {
+                "id": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 1,
+                "name": "Använder",
+                "description": "Från person till det som personen använder."
+              },
+              "objectNames": {
+                "second": "Lo Exempel",
+                "first": "Lo Exempel"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "operationId": "source-image",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "draftVersion": 5,
+        "receipt": {
+          "contentVersion": 1,
+          "operationId": "source-image",
+          "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+          "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+          "draftVersion": 5,
+          "savedAt": "2026-09-24T22:29:21.759Z",
+          "actorName": "Alex Exempel",
+          "changes": [
+            {
+              "before": {
+                "id": "second",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "revision": 1,
+                "name": "Lo Exempel",
+                "description": ""
+              },
+              "after": {
+                "id": "second",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "revision": 2,
+                "name": "Lo Exempel",
+                "description": "",
+                "profileImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd"
+              },
+              "type": {
+                "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+                "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                "revision": 1,
+                "name": "Person",
+                "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "history": [
+      {
+        "id": 1,
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "operationId": "initial",
+        "savedAt": "2026-09-24T22:29:21.728Z",
+        "changes": [
+          {
+            "before": null,
+            "after": {
+              "id": "first",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 1,
+              "name": "Lo Exempel",
+              "description": ""
+            },
+            "type": {
+              "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "revision": 1,
+              "name": "Person",
+              "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+            }
+          },
+          {
+            "before": null,
+            "after": {
+              "id": "second",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 1,
+              "name": "Lo Exempel",
+              "description": ""
+            },
+            "type": {
+              "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "revision": 1,
+              "name": "Person",
+              "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+            }
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "operationId": "source-image",
+        "savedAt": "2026-09-24T22:29:21.759Z",
+        "changes": [
+          {
+            "before": {
+              "id": "second",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 1,
+              "name": "Lo Exempel",
+              "description": ""
+            },
+            "after": {
+              "id": "second",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 2,
+              "name": "Lo Exempel",
+              "description": "",
+              "profileImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd"
+            },
+            "type": {
+              "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "revision": 1,
+              "name": "Person",
+              "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+            }
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "operationId": "merge-with-image",
+        "savedAt": "2026-09-24T22:29:21.780Z",
+        "changes": [
+          {
+            "before": {
+              "id": "first",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 1,
+              "name": "Lo Exempel",
+              "description": ""
+            },
+            "after": {
+              "id": "first",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 2,
+              "name": "Lo Exempel",
+              "description": "",
+              "profileImageId": "0f430dbd-4918-4d39-8e65-6ff06efb17f5"
+            },
+            "type": {
+              "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "revision": 1,
+              "name": "Person",
+              "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+            },
+            "merge": {
+              "survivorId": "first",
+              "absorbedId": "second",
+              "identityConfirmed": true,
+              "objects": [
+                {
+                  "id": "first",
+                  "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                  "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                  "revision": 1,
+                  "name": "Lo Exempel",
+                  "description": ""
+                },
+                {
+                  "id": "second",
+                  "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                  "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+                  "revision": 2,
+                  "name": "Lo Exempel",
+                  "description": "",
+                  "profileImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd"
+                }
+              ],
+              "types": [
+                {
+                  "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+                  "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                  "revision": 1,
+                  "name": "Person",
+                  "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+                }
+              ],
+              "relationships": [
+                {
+                  "id": "unknown-endpoint",
+                  "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                  "typeId": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                  "revision": 1,
+                  "sourceId": "second",
+                  "targetId": null,
+                  "knowledge": "unknown"
+                }
+              ],
+              "relationshipTypes": [
+                {
+                  "id": "54ea962e05d50e0ee9cc1b7c95bc1c9f",
+                  "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+                  "revision": 1,
+                  "name": "Använder",
+                  "description": "Från person till det som personen använder."
+                }
+              ],
+              "objectNames": {
+                "second": "Lo Exempel"
+              },
+              "imageCopy": {
+                "sourceObjectId": "second",
+                "sourceImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd",
+                "copiedImageId": "0f430dbd-4918-4d39-8e65-6ff06efb17f5"
+              }
+            }
+          },
+          {
+            "before": {
+              "id": "second",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "typeId": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "revision": 2,
+              "name": "Lo Exempel",
+              "description": "",
+              "profileImageId": "273203d2-c3bd-4588-a977-bcc48ab40ccd"
+            },
+            "after": null,
+            "type": {
+              "id": "caf98ebd-b953-4183-bdd6-94165840673c",
+              "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+              "revision": 1,
+              "name": "Person",
+              "description": "En person i hushållets karta. Ger inte tillgång till Skyttel."
+            }
+          }
+        ]
+      }
+    ],
+    "operations": [
+      {
+        "operationId": "initial",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "draftVersion": 3,
+        "contentVersion": 1,
+        "createdAt": "2026-09-24T22:29:21.727Z",
+        "status": "succeeded",
+        "draftHash": null,
+        "error": null,
+        "errorStatus": null
+      },
+      {
+        "operationId": "merge-with-image",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "draftVersion": 7,
+        "contentVersion": 1,
+        "createdAt": "2026-09-24T22:29:21.779Z",
+        "status": "succeeded",
+        "draftHash": null,
+        "error": null,
+        "errorStatus": null
+      },
+      {
+        "operationId": "source-image",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "draftVersion": 5,
+        "contentVersion": 1,
+        "createdAt": "2026-09-24T22:29:21.758Z",
+        "status": "succeeded",
+        "draftHash": null,
+        "error": null,
+        "errorStatus": null
+      }
+    ],
+    "positions": [
+      {
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "objectId": "first",
+        "version": 1,
+        "x": 45,
+        "y": 8,
+        "z": 3
+      },
+      {
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "userId": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "objectId": "second",
+        "version": 1,
+        "x": -23,
+        "y": 8,
+        "z": 3
+      }
+    ],
+    "viewSettings": [],
+    "images": [
+      {
+        "id": "0f430dbd-4918-4d39-8e65-6ff06efb17f5",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "objectId": "first",
+        "createdBy": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "width": 24,
+        "height": 18,
+        "offset": 0,
+        "length": 78,
+        "sha256": "20c949cbff716bc5af1dc976ade252239447d84905208a697aacc53e3c29f79d"
+      },
+      {
+        "id": "273203d2-c3bd-4588-a977-bcc48ab40ccd",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "objectId": "second",
+        "createdBy": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "width": 24,
+        "height": 18,
+        "offset": 78,
+        "length": 78,
+        "sha256": "20c949cbff716bc5af1dc976ade252239447d84905208a697aacc53e3c29f79d"
+      },
+      {
+        "id": "547dbc87-6d35-4c59-b7ab-45f0a11db095",
+        "householdId": "c43d6cef-491c-42e4-9d18-d864408bebf8",
+        "objectId": "first",
+        "createdBy": "c6fbe94a-b7ed-4a24-8193-570563e7bd1c",
+        "width": 24,
+        "height": 18,
+        "offset": 156,
+        "length": 82,
+        "sha256": "d916aefde4042fa6b2e1aee345220c5c8281806b3e1ba36471f207bc5502a16e"
+      }
+    ]
+  },
+  "imagesBase64": "UklGRkYAAABXRUJQVlA4IDoAAAAQAwCdASoYABIAPm00lkekIyIhKAgAgA2JZQB2AACAoKAA/vBTH//8zR95vst6k///Abr4tl8AAAAAUklGRkYAAABXRUJQVlA4IDoAAAAQAwCdASoYABIAPm00lkekIyIhKAgAgA2JZQB2AACAoKAA/vBTH//8zR95vst6k///Abr4tl8AAAAAUklGRkoAAABXRUJQVlA4ID4AAABwAwCdASoYABIAPm00lUekIyIhKAgAgA2JZQC7LoB+AABBlBAA/uns//4s5GI7PN/+Smv8bcjTtrlQ4AAAAA=="
+}

@@ -9,6 +9,7 @@ import {
   revokeInvitation,
 } from './administration.js';
 import type { Auth } from './auth.js';
+import { invalidateHouseholdExports } from './household-export.js';
 
 export function administrationRoutes(database: Database.Database, auth: Auth, origin: string) {
   type Environment = { Variables: { userId: string; body: Record<string, unknown> } };
@@ -74,30 +75,39 @@ export function administrationRoutes(database: Database.Database, auth: Auth, or
       ),
     ),
   );
-  routes.post('/households/:id/members/:userId/role', (context) => {
+  routes.post('/households/:id/members/:userId/role', async (context) => {
     const role = context.get('body').role;
     if (role !== 'administrator' && role !== 'member')
       throw new AdministrationError('invalid_request', 400);
-    return context.json(
-      changeMembership(
-        database,
-        context.get('userId'),
-        context.req.param('id'),
-        context.req.param('userId'),
-        role,
-      ),
+    const result = changeMembership(
+      database,
+      context.get('userId'),
+      context.req.param('id'),
+      context.req.param('userId'),
+      role,
     );
-  });
-  routes.post('/households/:id/members/:userId/revoke', (context) =>
-    context.json(
-      changeMembership(
+    if (role !== 'administrator')
+      await invalidateHouseholdExports(
         database,
-        context.get('userId'),
         context.req.param('id'),
         context.req.param('userId'),
-        null,
-      ),
-    ),
-  );
+      );
+    return context.json(result);
+  });
+  routes.post('/households/:id/members/:userId/revoke', async (context) => {
+    const result = changeMembership(
+      database,
+      context.get('userId'),
+      context.req.param('id'),
+      context.req.param('userId'),
+      null,
+    );
+    await invalidateHouseholdExports(
+      database,
+      context.req.param('id'),
+      context.req.param('userId'),
+    );
+    return context.json(result);
+  });
   return routes;
 }

@@ -1,4 +1,4 @@
-import { copyFile, mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, request, test } from '@playwright/test';
@@ -37,24 +37,11 @@ test('upgrading an existing household preserves its membership and enables invit
     const { household } = await (
       await administrator.get(`${origin}/api/households/legacy-household`)
     ).json();
-    await copyFile(
-      'migrations/002_invitations.sql',
-      join(migrationsDirectory, '002_invitations.sql'),
+    await Promise.all(
+      (await readdir('migrations'))
+        .filter((name) => name.endsWith('.sql') && name > '001_initial.sql')
+        .map((name) => copyFile(join('migrations', name), join(migrationsDirectory, name))),
     );
-    await copyFile(
-      'migrations/003_login_link.sql',
-      join(migrationsDirectory, '003_login_link.sql'),
-    );
-    await copyFile('migrations/004_map.sql', join(migrationsDirectory, '004_map.sql'));
-    await copyFile(
-      'migrations/005_relationships.sql',
-      join(migrationsDirectory, '005_relationships.sql'),
-    );
-    await copyFile(
-      'migrations/006_save_operations.sql',
-      join(migrationsDirectory, '006_save_operations.sql'),
-    );
-    await copyFile('migrations/007_contracts.sql', join(migrationsDirectory, '007_contracts.sql'));
     options.legacyAuthCallbacks = false;
     await installation.restart();
     expect(

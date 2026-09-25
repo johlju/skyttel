@@ -1,0 +1,53 @@
+.operator-controls {
+  flex-wrap: wrap;
+}
+.costs-panel {
+  width: min(100%, 72rem);
+}
+.cost-controls,
+.cost-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.cost-controls {
+  align-items: end;
+}
+.cost-controls label {
+  flex: 1 1 12rem;
+}
+.cost-categories > section {
+  flex: 1 1 16rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #dae3de;
+  border-radius: 0.75rem;
+}
+.cost-amount,
+.cost-total {
+  font-size: 1.2rem;
+  font-weight: 650;
+}
+.costs-panel dd {
+  margin: 0 0 0.5rem;
+}
+.costs-panel dt {
+  font-weight: 600;
+}
+.cost-table-scroll {
+  overflow-x: auto;
+}
+.costs-panel th,
+.costs-panel td {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid #dae3de;
+}
+.costs-panel details {
+  margin: 1rem 0;
+}
+.costs-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+}

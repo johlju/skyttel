@@ -110,7 +110,7 @@ test('a stale registration is a durable rejection and does not lock the current 
   expect((await read()).objects).toEqual([]);
 });
 
-test('replacing household content erases old attempts and receipts and rejects their retries', async () => {
+test('a content generation retires attempts without deleting historical receipts', async () => {
   await propose();
   const savedBody = { operationId: 'old-save', version: 1, contentVersion: 1 };
   const { receipt } = await (await client.json(`${path}/save`, savedBody)).json();
@@ -146,22 +146,21 @@ test('replacing household content erases old attempts and receipts and rejects t
   expect(await read()).toMatchObject({
     contentVersion: 2,
     objects: [],
-    draft: { version: 0, changes: [] },
+    draft: { version: 2, changes: [] },
   });
   expect(await (await client.request(`${path}/operations`)).json()).toEqual({ operations: [] });
   expect(await (await client.request(`${path}/operations/old-save`)).json()).toEqual({
     operation: null,
   });
-  expect(await (await client.request(`${path}/history`)).json()).toEqual({ history: [] });
+  expect(await (await client.request(`${path}/history`)).json()).toEqual({ history: [receipt] });
   for (const body of [savedBody, { operationId: 'old-save', version: 1 }]) {
     const retry = await client.json(`${path}/save`, body);
     expect(retry.status).toBe(409);
     expect(await retry.json()).toEqual({ error: 'content_conflict' });
   }
-  await propose();
-  const current = await client.json(`${path}/save`, { ...savedBody, contentVersion: 2 });
-  expect(current.status).toBe(200);
-  expect((await current.json()).receipt.contentVersion).toBe(2);
+  const reused = await client.json(`${path}/save`, { ...savedBody, contentVersion: 2 });
+  expect(reused.status).toBe(409);
+  expect(await reused.json()).toEqual({ error: 'content_conflict' });
   expect(() =>
     fixture.database
       .prepare('UPDATE household SET contentVersion = 1 WHERE id = ?')

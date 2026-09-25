@@ -101,6 +101,12 @@ export function mapOperations(database: Database.Database, userId: string, house
       )
         throw new MapError('invalid_request', 400);
       if (generation !== contentVersion()) throw new MapError('content_conflict');
+      if (
+        database
+          .prepare('SELECT 1 FROM retired_operation WHERE householdId = ? AND operationId = ?')
+          .get(householdId, body.operationId)
+      )
+        throw new MapError('content_conflict');
       const previous = find(body.operationId);
       if (previous) {
         if (previous.draftVersion !== body.version) throw new MapError('operation_conflict');

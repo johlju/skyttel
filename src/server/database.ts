@@ -68,34 +68,43 @@ function migrate(database: Database.Database, directory: string) {
     checksum TEXT NOT NULL,
     appliedAt TEXT NOT NULL
   )`);
-  database
-    .transaction(() => {
-      const applied = database
-        .prepare('SELECT version, name, checksum FROM schema_migration ORDER BY version')
-        .all() as MigrationRecord[];
-      for (const [index, record] of applied.entries()) {
-        const migration = migrations[index];
-        if (
-          !migration ||
-          record.version !== migration.version ||
-          record.name !== migration.name ||
-          record.checksum !== migration.checksum
-        ) {
-          throw new DatabaseInitializationError('migration_history_mismatch');
+  // SQLite table replacement requires foreign keys disabled before BEGIN.
+  // Check the entire resulting graph before committing any schema or data.
+  database.pragma('foreign_keys = OFF');
+  try {
+    database
+      .transaction(() => {
+        const applied = database
+          .prepare('SELECT version, name, checksum FROM schema_migration ORDER BY version')
+          .all() as MigrationRecord[];
+        for (const [index, record] of applied.entries()) {
+          const migration = migrations[index];
+          if (
+            !migration ||
+            record.version !== migration.version ||
+            record.name !== migration.name ||
+            record.checksum !== migration.checksum
+          ) {
+            throw new DatabaseInitializationError('migration_history_mismatch');
+          }
         }
-      }
-      const recordMigration = database.prepare(
-        'INSERT INTO schema_migration (version, name, checksum, appliedAt) VALUES (?, ?, ?, ?)',
-      );
-      for (const migration of migrations.slice(applied.length)) {
-        database.exec(migration.sql);
-        recordMigration.run(
-          migration.version,
-          migration.name,
-          migration.checksum,
-          new Date().toISOString(),
+        const recordMigration = database.prepare(
+          'INSERT INTO schema_migration (version, name, checksum, appliedAt) VALUES (?, ?, ?, ?)',
         );
-      }
-    })
-    .immediate();
+        for (const migration of migrations.slice(applied.length)) {
+          database.exec(migration.sql);
+          recordMigration.run(
+            migration.version,
+            migration.name,
+            migration.checksum,
+            new Date().toISOString(),
+          );
+        }
+        if ((database.pragma('foreign_key_check') as unknown[]).length)
+          throw new DatabaseInitializationError('migration_failed');
+      })
+      .immediate();
+  } finally {
+    database.pragma('foreign_keys = ON');
+  }
 }

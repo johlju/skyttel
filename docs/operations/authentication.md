@@ -8,7 +8,7 @@ additional Google requirements described below.
 Complete setup and verification on the actual production service, with its
 production database and provider registrations. You do not need a developer
 environment or a separate verification installation. Developers who need
-local sign-in should use [local authentication](../development/local-authentication.md).
+local sign-in should use the [development setup](../development/devcontainer.md).
 
 ## Before you start
 
@@ -354,7 +354,7 @@ the date, deployed version, provider/account category, and pass or fail.
 1. Sign out of Skyttel, then complete a fresh sign-in with the first
    administrator's provider. Confirm the intended household opens.
 2. Have a household user who owns both a Google account and a personal
-   Microsoft account follow [link Google and Microsoft](../users/access.md#link-google-and-microsoft)
+   Microsoft account follow [link Google and Microsoft](../user-guide/access.md#koppla-google-och-microsoft)
    under **Inloggningssätt**. Link only that person's own identities.
    Matching email addresses do not link accounts automatically.
 3. Sign out and complete a fresh Google sign-in, then sign out and complete

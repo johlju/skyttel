@@ -5,6 +5,7 @@ import { createApp } from '../../../src/server/app.js';
 import { createAuth, verifyAuthSchema } from '../../../src/server/auth.js';
 import { readConfig } from '../../../src/server/config.js';
 import { openDatabase } from '../../../src/server/database.js';
+import { legacyAuth } from '../../support/legacy-auth.js';
 
 export function configurationEnvironment(databasePath = '/synthetic/skyttel.sqlite') {
   return {
@@ -30,7 +31,10 @@ export async function applicationFixture({
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-unit-'));
   const config = readConfig(configurationEnvironment(join(directory, 'skyttel.sqlite')));
   const database = openDatabase(config.databasePath, { migrationsDirectory });
-  const auth = createAuth(config, database);
+  const hasOAuth = database
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'oauthClient'")
+    .get();
+  const auth = hasOAuth ? createAuth(config, database) : legacyAuth(config, database);
   await verifyAuthSchema(auth);
   let subject: unknown = config.firstAdmin.subject;
   let providerFails = false;

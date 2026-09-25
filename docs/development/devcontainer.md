@@ -1,250 +1,324 @@
-# Develop in the devcontainer
+# Set up the development environment
 
-Use the devcontainer for Skyttel's Node.js and SQLite development environment.
-Docker Compose runs one `app` service with the repository at `/workspace`.
-Start the application and run checks from a container terminal.
+Use the devcontainer for Skyttel's Node.js, SQLite, and browser tools.
+This guide covers local setup, sign-in, startup, and development data.
+For deployed installations, use [production authentication](../operations/authentication.md)
+and [installation](../operations/installation.md).
 
 ## Prepare and start
 
-Use a running Docker engine and VS Code with the Dev Containers extension.
-Before the first container creation, prepare the private environment file:
+Install Docker and VS Code with the Dev Containers extension. Start Docker,
+clone the repository, and open its root in VS Code. Run the following in a
+host terminal with Bash or Zsh; on Windows, use a WSL Linux shell:
 
 ```sh
-cp .devcontainer/.env.example .devcontainer/.env
+mkdir -p "$HOME/.codex/sessions" "$HOME/.codex/plugins" \
+  "$HOME/.codex/skills" "$HOME/.codex/rules"
+if [ ! -e "$HOME/.codex/auth.json" ]; then
+  (umask 077; printf '{}\n' > "$HOME/.codex/auth.json")
+fi
+cp -n .devcontainer/.env.example .devcontainer/.env
+chmod 600 .devcontainer/.env
 openssl rand -base64 48
 ```
 
-Put the generated value in `BETTER_AUTH_SECRET` in `.devcontainer/.env` and
-keep it stable across rebuilds. This ignored file is the default environment
-for `npm run dev:all` and `npm run db:setup`. The synthetic provider values
-display the sign-in page but cannot complete real sign-in. The example
-administrator identifier also fails the required demo-data setup during
-container creation. Configure dedicated provider registrations and a first
-administrator before creating the container, using the
-[installation guide](../operations/installation.md). Keep credentials and
-identity values out of Git and public logs.
+Save the generated value in `BETTER_AUTH_SECRET` in `.devcontainer/.env`.
+Keep an existing secret when rebuilding. The file is ignored by Git;
+keep its credentials and personal identity values private.
 
-Ensure the host directories
-`~/.codex/sessions`, `~/.codex/plugins`, `~/.codex/skills`, and
-`~/.codex/rules` exist. `~/.codex/auth.json` must be an existing regular file
-from your host Codex authentication setup. An empty placeholder is not usable
-authentication. These mounts share their actual contents with the container;
-changes to a shared directory also affect the host. The container does not
-copy authentication into its image or the repository.
+Select **Dev Containers: Reopen in Container** and the normal Skyttel
+configuration. Wait for installation and the Codex daemon to finish starting.
+Creation installs the repository's Node.js and npm versions, application
+dependencies, and browser tools, then runs `npm run db:setup`.
+Creation and rebuilding apply migrations, remove existing application data
+and sessions, and load the demo household. Ordinary restarts preserve data.
+The application and tests start only when you run them.
 
-Select **Dev Containers: Reopen in Container** and choose the normal Skyttel
-configuration. Wait for dependency and tool installation and the Codex daemon
-to finish starting. Container creation and startup do not start the
-application or run tests.
+The example provider values allow startup and display the sign-in page.
+Complete [local sign-in setup](#set-up-local-sign-in) to use the application.
+On first setup, `db:setup` stops with `SKYTTEL_FIRST_ADMIN_SUBJECT` until
+you configure your administrator's provider identifier. The dependencies
+are already installed: follow the sign-in steps below, then rebuild to
+complete setup and load the demo household.
+Use invented household information in development.
+
+The normal configuration includes access to the host Docker engine. Use it
+for trusted development work. The elevated profile is only for investigating
+a demonstrated container restriction; it uses separate development volumes.
 
 ## Run the application
 
-Start the client and server in a container terminal:
+Run from the repository root inside the container:
 
 ```sh
 npm run dev:all
 ```
 
-Open [the development client](http://localhost:5173). Vite proxies `/api`
-and `/healthz` to the server on container port 3300. VS Code forwards ports
-3300 for the API, 3301 for the compiled application, 5173 for the client,
-and 9324 for Playwright reports.
-Keep host port 5173 free because the sign-in origin uses that port. Ctrl+C
-stops both development processes; source edits reload them.
+Open [Skyttel](http://localhost:5173). Vite serves the client on port 5173
+and proxies API requests to port 3300. VS Code forwards these ports to the
+host. Keep host port 5173 free and use `localhost` consistently so the
+browser origin matches the provider callback. Source edits reload the app;
+Ctrl+C stops both processes.
 
-To build and run the compiled application on port 3301, use:
+For a compiled build served by the application server:
 
 ```sh
 npm run dev:prodlike
 ```
 
-This command builds once, then serves the Vite client and API through the
-production Hono server at [port 3301](http://localhost:3301). It uses the same
-database and provider credentials as normal development. Its public origin
-uses the configured host and protocol with port 3301. For real sign-in, add
-the corresponding port-3301 callback URLs to the dedicated provider
-registrations. Source edits require another build. Keep host port 3301 free.
+Open [the compiled application](http://localhost:3301). This command builds
+once and uses the same database and provider credentials as `dev:all`.
+Restart the command after source edits. Keep host port 3301 free and keep
+`PORT=3300` in the private development file: the command overrides it for
+its own process.
 
-`SKYTTEL_DEV_ENV_FILE` selects another private environment file. Exported
-environment values take precedence over file values. Compose also loads
-`.devcontainer/.env`, so recreate the container after changing a value it
-exports. The default database is `/data/skyttel.sqlite`.
-SQLite runs inside the app and migrates when the app starts.
+The development commands read `.devcontainer/.env` by default.
+`SKYTTEL_DEV_ENV_FILE` selects another private file. Exported environment
+values take precedence over file values. Compose exports settings when
+creating the container, so recreate it after changing those settings.
+The container database is `/data/skyttel.sqlite`; ordinary startup applies
+pending migrations and preserves application data.
 
-Set `PORT=3300` in private development environment files, including files
-used to run development on the host, so the API matches the Vite proxy.
-Update existing development files that set `PORT=3000`. Recreate the
-container after changing its environment, and rebuild it to apply the
-updated forwarded ports.
+## Set up local sign-in
+
+Both Google and Microsoft client IDs and secrets must be present in the
+private environment file. Replace the synthetic credentials with your own
+development registrations to sign in with those providers. Keep development
+credentials separate from production credentials.
+
+Follow the detailed [local authentication walkthrough](local-authentication.md)
+to create your own provider accounts and development registrations, configure
+callbacks, save the credentials privately, and renew Microsoft secrets.
+Copy the four provider credentials into `.devcontainer/.env`, keeping the
+container's database path and other settings. Recreate the container to load
+the credentials, then continue below to designate your first administrator.
+
+### Designate the first administrator
+
+Skip identity discovery if your administrator is already configured.
+Changing this setting does not transfer an existing household.
+For a new empty installation, leave the template's administrator subject
+in place while identifying your account. Select `google` or `microsoft`
+in `SKYTTEL_FIRST_ADMIN_PROVIDER`, then recreate the container to load the
+real provider credentials.
+
+1. Run `npm run dev:all`, open `http://localhost:5173`, and sign in using
+   the intended administrator's selected provider. Expect **Du har inte
+   tillgång till hushållet** while the subject is still a placeholder.
+2. In the same signed-in browser, open
+   `http://localhost:5173/api/bootstrap`. Confirm `status` is `forbidden`
+   and copy `user.id` privately. Stop the development server with Ctrl+C.
+3. In a private terminal at the repository root, read that user's provider
+   identifier. Run the prompt first, then the Node block. The lookup loads
+   the same environment file as development and refuses an existing household.
+
+   ```sh
+   export SKYTTEL_SETUP_USER_ID=''
+   printf 'Skyttel user ID: '
+   read -r SKYTTEL_SETUP_USER_ID
+   ```
+
+   ```sh
+   node --input-type=module <<'JS'
+   import Database from 'better-sqlite3';
+   process.loadEnvFile(process.env.SKYTTEL_DEV_ENV_FILE ?? '.devcontainer/.env');
+   const userId = process.env.SKYTTEL_SETUP_USER_ID?.trim();
+   const provider = process.env.SKYTTEL_FIRST_ADMIN_PROVIDER;
+   if (!userId || !['google', 'microsoft'].includes(provider)) {
+     throw new Error('Check the user ID and configured provider.');
+   }
+   const db = new Database(process.env.SKYTTEL_DATABASE_PATH, {
+     readonly: true,
+     fileMustExist: true,
+   });
+   try {
+     if (db.prepare('SELECT 1 FROM installation WHERE id = 1').get()) {
+       throw new Error('A household already exists. Stop setup.');
+     }
+     const accounts = db.prepare(
+       'SELECT accountId FROM account WHERE userId = ? AND providerId = ?',
+     ).all(userId, provider);
+     if (accounts.length !== 1) {
+       throw new Error('Expected one matching account. Check the sign-in.');
+     }
+     console.log(accounts[0].accountId);
+   } finally {
+     db.close();
+   }
+   JS
+   unset SKYTTEL_SETUP_USER_ID
+   ```
+
+4. Save the returned value as `SKYTTEL_FIRST_ADMIN_SUBJECT` in your private
+   environment file. It is the provider's account identifier, not an email
+   address, client ID, or the Skyttel `user.id` used for the lookup.
+5. Rebuild the devcontainer to complete setup and load `TestHousehold`,
+   then restart development and sign in again. When developing without
+   the container, restart development and follow the installation screen
+   to create a household, or explicitly choose [demo data](#reset-demo-data).
+
+A successful provider sign-in alone does not grant household access.
+Matching email addresses at Google and Microsoft do not link their accounts.
+Use the [access guide](../user-guide/access.md) when testing another identity.
 
 ## Reset demo data
 
-Both dev container profiles run `npm run db:setup` as the final creation
-step, including after a rebuild. Configure real provider credentials and
-the first administrator before creating the container. Each successful
-setup replaces the development database contents with demo data.
-
-After configuring real provider credentials and the first administrator,
-prepare the development database and start the application:
+After configuring provider credentials and a verified administrator subject,
+container creation and rebuilding reset the database to the demo household.
+To perform the same reset without rebuilding:
 
 ```sh
 npm run db:setup
 npm run dev:all
 ```
 
-Open [the development client](http://localhost:5173) and sign in with the
-account identified by `SKYTTEL_FIRST_ADMIN_PROVIDER` and
-`SKYTTEL_FIRST_ADMIN_SUBJECT`. The `TestHousehold` household is ready, and
-that account has the administrator role. Its initial display name is
-`Development administrator`. Sign-in still requires the configured identity
-provider; the seed does not create a password or an authenticated session.
+`db:setup` removes all application data and sessions from the selected
+`SKYTTEL_DATABASE_PATH` and creates `TestHousehold` with your configured
+administrator. Check the selected path and back up anything you want to
+keep before running it or rebuilding the container. Sign in again after the
+reset. `db:migrate`, normal application startup, and container stop/start
+preserve the data.
 
-Every successful `npm run db:setup` removes all application data from
-`SKYTTEL_DATABASE_PATH` and replaces it with the demo data. This includes
-households, memberships, invitations, provider accounts, and sessions, so
-sign in again after a reset. Back up any development data you want to keep.
-Starting the development server does not reset the database.
+## Disposable local database
 
-The command uses `.devcontainer/.env` by default, or the file selected by
-`SKYTTEL_DEV_ENV_FILE`. Exported environment values take precedence, including
-values Compose loads when creating the container. Recreate the container
-after changing those values in the file. Check `SKYTTEL_DATABASE_PATH`
-before resetting; use a dedicated development database.
+Use a disposable database when investigating a bug or replacing household
+content during development. Run it inside the devcontainer and open
+`http://localhost:5173` in the host browser. Complete
+[local sign-in setup](#set-up-local-sign-in) first and use the configured
+administrator's account. Use only invented household information.
 
-Setup validates the configuration before opening the database and rejects
-`NODE_ENV=production` and the example first-administrator subject values.
-It applies migrations, then clears and seeds application data in one
-transaction. If clearing or seeding fails, the previous application data
-remains. Migration history is retained.
-
-Add future demo fixtures in `scripts/seeds/demo.ts`, or in helpers called
-from that file. The reset also clears application tables introduced by
-future migrations. Keep the fixtures synthetic; the configured administrator
-identity comes from the private environment file.
-
-## Use a host terminal
-
-For terminal access through the default configuration, run on the host:
+Stop the normal `npm run dev:all` with Ctrl+C and keep ports 3300 and 5173
+free. From the repository root, run this block in a terminal that you keep
+open for the whole check. It creates a new empty database without running
+`db:setup` or changing the ordinary development database. Provider settings
+come from the same private environment file as normal development:
+`SKYTTEL_DEV_ENV_FILE`, or `.devcontainer/.env` when it is not set.
 
 ```sh
-npm ci
-npx devcontainer up --workspace-folder .
-npx devcontainer exec --workspace-folder . zsh
+umask 077
+SKYTTEL_BROWSER_CASE_DIR=$(mktemp -d /tmp/skyttel-browser-case.XXXXXX)
+printf 'SKYTTEL_DATABASE_PATH=%s/skyttel.sqlite\n' \
+  "$SKYTTEL_BROWSER_CASE_DIR" > "$SKYTTEL_BROWSER_CASE_DIR/case.env"
+env -u SKYTTEL_DATABASE_PATH \
+  node --env-file="$SKYTTEL_BROWSER_CASE_DIR/case.env" scripts/develop.mjs
 ```
 
-The CLI does not provide VS Code's port-forwarding UI. Use the attached
-editor when opening the application through its forwarded ports.
+Open a fresh private browser window on the host, sign in and create the
+requested household. If two profiles are required, use two separate browser
+profiles, both signed in as the same configured administrator. Session
+cookies are profile-local. Keep any downloaded synthetic archives in a
+separate private folder on the host.
+
+For a restart within the check, press Ctrl+C, wait for both development
+processes to stop, and run only this command in the same terminal. It uses
+the same database, sessions, and household:
+
+```sh
+env -u SKYTTEL_DATABASE_PATH \
+  node --env-file="$SKYTTEL_BROWSER_CASE_DIR/case.env" scripts/develop.mjs
+```
+
+Reload the browser after startup. Do not rerun the directory-creation block
+or `db:setup` during a persistence check. When finished, stop the server,
+close the test browser windows, remove downloaded test archives, and delete
+only this temporary directory in the same terminal:
+
+```sh
+rm -r -- "${SKYTTEL_BROWSER_CASE_DIR:?}"
+unset SKYTTEL_BROWSER_CASE_DIR
+```
+
+Start the ordinary environment again with `npm run dev:all`. For another
+isolated check, create a fresh directory with the first block.
+
+## Develop without the container
+
+Install Git and the Node.js version in `.node-version`, using a Node
+installation your user can update. Native SQLite dependencies require a
+supported prebuilt binary or Python, a C/C++ compiler, and Make.
+From the repository root, install the pinned npm and dependencies:
+
+```sh
+node scripts/install-repository-npm.mjs
+npm ci
+npx playwright install --with-deps chromium
+cp -n .env.example .env.local
+chmod 600 .env.local
+```
+
+Set the following in `.env.local`, along with a generated
+`BETTER_AUTH_SECRET` and your provider credentials:
+
+```dotenv
+SKYTTEL_ORIGIN=http://localhost:5173
+SKYTTEL_DATABASE_PATH=./data/skyttel.sqlite
+SKYTTEL_FIRST_ADMIN_PROVIDER=google
+SKYTTEL_FIRST_ADMIN_SUBJECT=not-configured
+HOST=127.0.0.1
+PORT=3300
+```
+
+Use a terminal without stale exported settings. Select the host file before
+starting development or running the administrator lookup:
+
+```sh
+export SKYTTEL_DEV_ENV_FILE=.env.local
+npm run dev:all
+```
+
+Follow the same provider registration and administrator steps above.
+On the host, restart the development command after editing the file;
+there is no container to recreate. Keep ports 3300 and 5173 available.
+
+## Optional assistant access
+
+For Skyttel's text and voice assistants to call the real provider, add
+`OPENAI_API_KEY` to the private environment file and reload the environment.
+It is server-only; never use a `VITE_` variable for the key. Normal automated
+checks use synthetic providers and do not require a real key.
+
+The devcontainer installs Codex tooling. If you use it, sign in from the
+container's CLI or VS Code extension. The host directories prepared above
+share sessions, plugins, skills, and rules with the container; editing their
+contents also changes the host copies. Both profiles also mount the host's
+`~/.codex/auth.json` as a file. The preparation command creates an empty
+placeholder only when the file is absent; it preserves existing credentials.
+Keep credentials out of the repository and container image.
 
 ## State and rebuilds
 
-Compose keeps independent named volumes for the following state:
+Both profiles run `db:setup` when created or rebuilt: saved application
+data, private drafts, and sessions are replaced with fresh demo data.
+The database volume remains mounted, but its application contents reset.
+A normal container stop/start or application restart preserves those contents.
 
-<!-- markdownlint-disable MD013 -->
-| Volume | Container path and purpose |
-| --- | --- |
-| `skyttel-data` | `/data`: development SQLite database and journal files. |
-| `codex-state` | `/home/vscode/.codex`: installed runtime, configuration, and remaining Codex state. |
-| `codex-tmp` | `/home/vscode/.codex/tmp`: container-local runtime wrappers. |
-| `config` | `/home/vscode/.config`: personal tool settings. |
-| `vscode-server` | `/home/vscode/.vscode-server`: remote editor settings and extensions. |
-| `node-modules` | `/workspace/node_modules`: Linux dependencies isolated from the host. |
-| `worktrees` | `/home/vscode/worktrees`: Git worktrees outside the checkout. |
-<!-- markdownlint-enable MD013 -->
+The same Compose project retains dependencies, editor state, `~/.config`,
+and `/home/vscode/worktrees` in named volumes across rebuilds.
+Keep additional Git worktrees outside the checkout and install dependencies
+for each. Changing profiles or the Compose project name selects different
+volumes; removing volumes deletes their contents.
 
-The host Codex bind mounts override their corresponding paths inside
-`codex-state`; their contents remain on the host. Source and the private
-`.devcontainer/.env` remain in the repository's host bind mount.
+Codex sessions, plugins, skills, and rules use host directories; `auth.json`
+uses a host file. These mounts survive container recreation. Codex's SQLite
+state and temporary files have separate named volumes. The Compose files do
+not mount the whole `~/.codex` directory: back up personal `config.toml`
+outside the disposable container filesystem before rebuilding.
+Setup replaces managed configuration blocks and applies the repository's
+approval policy, default permissions, workspace trust, and disabled plugins
+and skills. Keep unrelated personal settings outside managed blocks.
 
-Restarting or rebuilding the same Compose project retains its volumes.
-Rebuilding also runs `npm run db:setup`, which replaces application data in
-the retained database with demo data. Back up development data you need
-before rebuilding; a normal restart does not run this reset.
-The normal `skyttel-devcontainer` and opt-in `skyttel-devcontainer-elevated`
-projects have separate named volumes; they share the same host bind mounts.
-Changing the Compose project name selects different volumes. Removing
-volumes, including `docker compose down --volumes`, deletes their state.
-Back up data you need to keep before removing volumes.
+Rebuild after changing `.node-version` or the npm pin in `package.json`.
+Keep the private environment file and authentication secret when rebuilding.
 
-Use `/home/vscode/worktrees` for additional worktrees and install their
-dependencies separately. Keep the main `/workspace` path stable because
-worktree metadata refers to it. Applications and tools run as `vscode`;
-use `sudo` for development installations that require root access.
+## Verify the environment
 
-## Tools and updates
+Run `npm run check` to typecheck, lint, build, and run the automated suites.
+See [testing](testing.md) for focused commands and optional
+manual environments.
 
-Both profiles install the Node version from `.node-version` and the npm
-version from `packageManager` in `package.json`. Rebuild after changing
-either version source. Keep them compatible with the package engine range,
-CI, and production Node images.
-
-Creation installs application dependencies with `npm ci` and browsers matching
-the application's locked Playwright version. Codex CLI and separate global
-Playwright tooling use rolling releases and can change on rebuild. VS Code
-manages editor extension updates.
-
-Before rebuilding for tool updates, back up development data you need.
-After the rebuild, start the application and check that the demo household
-is available. Run the application checks explicitly:
-
-```sh
-npm run check
-dotnet gitversion /output json
-```
-
-Check rolling tool versions with `codex --version` and
-`"$HOME/.local/bin/playwright" --version`. Use
-`npx --no-install playwright --version` for the project's locked Playwright
-version. In VS Code's
-Extensions view, select the installed Codex extension to see its version.
-
-See [development testing](testing.md) for focused application checks and
-the explicit `npm run purge:install` dependency-maintenance command.
-
-## Temporary containers
-
-Docker CLI, Compose, and Buildx connect to the host engine. For example:
-
-```sh
-docker run --rm alpine echo ready
-docker compose version
-docker buildx version
-```
-
-The temporary container is removed when its process exits. Containers and
-images use the host engine and appear in Docker Desktop. Bind-mount paths
-refer to the Docker host, so use named volumes or `docker cp` for files that
-exist only inside the devcontainer. The application `test:container` command
-uses Docker copy and exec to work in both environments.
-
-## Codex permissions and remaining verification
-
-Creation configures Codex permissions in `~/.codex/config.toml`.
-The `skyttel-development` profile allows workspace writes and networking
-to `localhost`, `127.0.0.1`, and `::1`, with approval policy `never`.
-Repository settings also apply; see [Codex command permissions](codex-permissions.md).
-
-Use the normal profile first. It includes the host Docker socket, which lets
-commands manage host containers; use it for trusted development work.
-Use the elevated configuration only when investigating a demonstrated
-container restriction. It adds `SYS_ADMIN` and relaxed sandbox-related
-Linux settings `seccomp=unconfined` and `systempaths=unconfined`.
-Do not disable the Codex sandbox to work around a failure.
-
-Codex command approval does not change Linux capabilities. An expected
-denial of an out-of-scope write does not justify switching profiles.
-A running daemon does not establish that signed-in CLI or VS Code extension
-use works; see [issue #25](https://github.com/viscalyx/skyttel/issues/25)
-for client verification.
-
-## Troubleshoot startup
-
-Use **Dev Containers: Show Container Log** for build and lifecycle failures.
-Fix a missing host Codex mount, failed installation, or daemon error before
-assuming startup completed. For application errors, inspect its terminal,
-the environment file, `/data` permissions, and `/healthz`. Synthetic provider
-credentials cannot complete sign-in. Preserve data when investigating a
-migration failure. Run `npm ci` inside the container for missing or
-incompatible native packages; never copy host `node_modules` into Linux.
-
-Record exact errors, host OS/CPU, Docker version, profile, and tool versions.
-Keep authentication, session content, and household data out of public logs.
+For container startup failures, use **Dev Containers: Show Container Log**.
+For application failures, inspect its terminal, private environment settings,
+and database permissions. Check `http://localhost:5173/healthz` for
+`{"status":"ok"}`. A healthy response does not verify provider credentials;
+test a fresh sign-in. Run `npm ci` inside the container for missing or
+incompatible dependencies; keep host `node_modules` out of Linux containers.

@@ -8,25 +8,52 @@ import { buildIdentity } from '../shared/build-identity.js';
 import { normalizeHouseholdName } from '../shared/household-name.js';
 import { AdministrationError } from './administration.js';
 import { administrationRoutes } from './administration-routes.js';
+import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
+import { contentOwnerRoutes } from './content-owner-routes.js';
+import { costRoutes } from './cost-routes.js';
+import { installationCosts } from './costs.js';
+import { householdErasureRoutes } from './household-erasure-routes.js';
+import { householdExportRoutes } from './household-export-routes.js';
+import { householdImportRoutes } from './household-import-routes.js';
 import { createHousehold, householdAccess, isFirstAdmin, isInitialized } from './households.js';
+import type { LiveSidebandFactory, LiveUsage } from './live-provider.js';
 import { createLoginMethods } from './login-methods.js';
 import { MapError } from './map.js';
 import { mapRoutes } from './map-routes.js';
+import { profileImageRoutes } from './profile-image-routes.js';
+import { imageUploadLimit } from './profile-images.js';
+import { textAssistantRoutes } from './text-assistant.js';
+import type { LocalDispatch } from './text-assistant-mcp.js';
+import type { TextModelUsage } from './text-assistant-model.js';
+import { voiceAssistantRoutes } from './voice-assistant.js';
 
 export function createApp({
   config,
   database,
   auth,
   identity = buildIdentity,
+  modelFetch,
+  modelUsage,
+  liveFetch,
+  liveSideband,
+  liveUsage,
+  assistantDispatch,
 }: {
   config: Config;
   database: Database.Database;
   auth: Auth;
   identity?: typeof buildIdentity;
+  modelFetch?: typeof fetch;
+  modelUsage?: TextModelUsage;
+  liveFetch?: typeof fetch;
+  liveSideband?: LiveSidebandFactory;
+  liveUsage?: LiveUsage;
+  assistantDispatch?: (request: Request, dispatch: LocalDispatch) => Response | Promise<Response>;
 }) {
   const app = new Hono();
+  const costs = installationCosts(database);
   const linking = createLoginMethods(database, auth, config.origin);
   app.use(
     '*',
@@ -55,12 +82,17 @@ export function createApp({
       return context.json({ error: 'client_outdated' }, 409);
     await next();
   });
-  app.use(
-    '/api/*',
-    bodyLimit({
-      maxSize: 16_384,
-      onError: (context) => context.json({ error: 'invalid_request' }, 413),
-    }),
+  app.use('/api/*', (context, next) =>
+    context.req.method === 'POST' && /^\/api\/households\/[^/]+\/imports$/.test(context.req.path)
+      ? next()
+      : bodyLimit({
+          maxSize:
+            context.req.method === 'POST' &&
+            /^\/api\/households\/[^/]+\/profile-images\/[^/]+$/.test(context.req.path)
+              ? imageUploadLimit
+              : 16_384,
+          onError: (failed) => failed.json({ error: 'invalid_request' }, 413),
+        })(context, next),
   );
   app.onError((error, context) => {
     if (error instanceof AdministrationError || error instanceof MapError)
@@ -97,9 +129,20 @@ export function createApp({
     '/api/auth/callback/microsoft',
     '/api/auth/sign-out',
     '/api/auth/get-session',
+    '/api/auth/.well-known/oauth-authorization-server',
+    '/api/auth/jwks',
+    '/api/auth/oauth2/authorize',
+    '/api/auth/oauth2/register',
+    '/api/auth/oauth2/token',
+    '/api/auth/oauth2/revoke',
   ]);
   app.on(['GET', 'POST'], '/api/auth/*', async (context) => {
     if (!authRoutes.has(context.req.path)) return context.json({ error: 'not_found' }, 404);
+    if (context.req.path === '/api/auth/oauth2/authorize') {
+      const url = new URL(context.req.url);
+      url.searchParams.set('prompt', 'consent');
+      return auth.handler(new Request(url, context.req.raw));
+    }
     return context.req.path.startsWith('/api/auth/callback/')
       ? linking.handleCallback(context.req.raw)
       : auth.handler(context.req.raw);
@@ -108,14 +151,15 @@ export function createApp({
   app.get('/api/bootstrap', async (context) => {
     const providers = ['google', 'microsoft'] as const;
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
-    if (!session) return context.json({ status: 'anonymous', providers });
+    if (!session) return context.json({ status: 'anonymous', providers, operator: false });
     const user = { id: session.user.id, name: session.user.name };
+    const operator = isFirstAdmin(database, user.id, config);
     const household = householdAccess(database, user.id);
-    if (household) return context.json({ status: 'ready', providers, user, household });
+    if (household) return context.json({ status: 'ready', providers, user, household, operator });
     if (!isInitialized(database) && isFirstAdmin(database, user.id, config)) {
-      return context.json({ status: 'setup', providers, user });
+      return context.json({ status: 'setup', providers, user, operator });
     }
-    return context.json({ status: 'forbidden', providers, user });
+    return context.json({ status: 'forbidden', providers, user, operator });
   });
 
   app.post('/api/households', async (context) => {
@@ -157,8 +201,43 @@ export function createApp({
     return context.json({ household });
   });
   app.route('/api', administrationRoutes(database, auth, config.origin));
+  app.route('/api', costRoutes(database, auth, config, costs));
+  app.route('/api', contentOwnerRoutes(database, auth, config.origin));
+  app.route('/api', householdExportRoutes(database, auth, config.origin));
+  app.route('/api', householdErasureRoutes(database, auth, config.origin));
+  app.route('/api', householdImportRoutes(database, auth, config.origin));
   app.route('/api', linking.routes);
   app.route('/api', mapRoutes(database, auth, config.origin));
+  app.route('/api', profileImageRoutes(database, auth, config.origin));
+  app.route('/', assistantRoutes(database, auth, config.origin));
+  let stopVoice: ((sessionId: string) => void) | undefined;
+  const textAssistant = textAssistantRoutes({
+    database,
+    auth,
+    config,
+    dispatch: (request) =>
+      assistantDispatch
+        ? assistantDispatch(request, (next) => app.fetch(next))
+        : app.fetch(request),
+    modelFetch,
+    modelUsage: (attempt) => {
+      costs.model(attempt);
+      modelUsage?.(attempt);
+    },
+    onStop: (sessionId) => stopVoice?.(sessionId),
+  });
+  app.route('/api', textAssistant.routes);
+  const voiceAssistant = voiceAssistantRoutes({
+    config,
+    dispatch: (request) => app.fetch(request),
+    liveFetch,
+    liveSideband,
+    liveUsage,
+    recordUsage: costs.live,
+    interrupt: textAssistant.interrupt,
+  });
+  stopVoice = voiceAssistant.stopSession;
+  app.route('/api', voiceAssistant.routes);
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));
   app.get(
@@ -169,5 +248,10 @@ export function createApp({
     },
     serveStatic({ path: './dist/client/index.html' }),
   );
-  return app;
+  return Object.assign(app, {
+    close: async () => {
+      await voiceAssistant.close();
+      await textAssistant.close();
+    },
+  });
 }

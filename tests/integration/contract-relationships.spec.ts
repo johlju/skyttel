@@ -24,7 +24,7 @@ async function addRelationship(
   await page.getByRole('button', { name: 'Nytt samband', exact: true }).click();
   await page.getByLabel('Från objekt').selectOption(sourceId);
   await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: type });
-  await page.getByLabel('Uppgiftens säkerhet').selectOption(knowledge);
+  await page.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption(knowledge);
   if (targetId) await page.getByLabel('Till objekt').selectOption(targetId);
   await page.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }).click();
 }
@@ -136,7 +136,8 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
     await page
       .getByRole('button', { name: 'Bostadshyra → Betalas med → Obesvarad identitetsfråga' })
       .click();
-    await page.getByLabel('Uppgiftens säkerhet').selectOption('known');
+    await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
+    await page.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('known');
     await page.getByLabel('Till objekt').selectOption('bank');
     await page.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }).click();
     relationships[relationships.length - 1] = ['home-rent', 'Betalas med', 'bank', 'known'];
@@ -193,15 +194,18 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
       page.getByRole('list', { name: 'Objekt', exact: true }).getByRole('button'),
     ).toHaveText(['Bostadshyra']);
     await page.getByRole('button', { name: 'Bostadshyra', exact: true }).click();
+    await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Hyran på Björkbacken');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await page.getByLabel('Sök objekt').fill('');
     await page.getByRole('button', { name: 'Betalkontot', exact: true }).click();
+    await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Objektets identitet')).toHaveValue('unspecified');
     await page.getByLabel('Objektets identitet').selectOption('identified');
     await page.getByLabel('Objektets namn').fill('Hushållets bankkonto');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await page.getByRole('button', { name: 'Blå bilen → Äger → Kim', exact: true }).click();
+    await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
     await page.getByLabel('Till objekt').selectOption('alex');
     await page.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }).click();
     await expect(review).toContainText('Blå bilen → Äger → Kim');
@@ -335,7 +339,11 @@ test('AVTAL-06: upgrading preserves household definitions and an older private d
     } finally {
       database.close();
     }
-    await copyFile('migrations/007_contracts.sql', join(migrationsDirectory, '007_contracts.sql'));
+    await Promise.all(
+      (await readdir('migrations'))
+        .filter((name) => name.endsWith('.sql') && name >= '007')
+        .map((name) => copyFile(join('migrations', name), join(migrationsDirectory, name))),
+    );
     await installation.restart();
     const path = `${installation.origin}/api/households/${household.id}/map`;
     const response = await request.get(path, { maxRetries: 1 });

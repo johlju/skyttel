@@ -198,6 +198,139 @@ test('UTKAST-07: overlapping relationship proposals show meanings and can accept
   }
 });
 
+test('UTKAST-10: relationship choices preserve independent status and keep date certainty with its value', async ({
+  page,
+  browser,
+}) => {
+  const other = await browser.newContext();
+  const app = await collaborators(page.request, other.request);
+  try {
+    const state = await app.read();
+    const value: RelationshipValue = {
+      typeId: state.relationshipTypes[0].id,
+      sourceId: 'lo',
+      targetId: 'service',
+      knowledge: 'known',
+    };
+    await app.propose(page.request, 'relationship', 'edge', value);
+    expect((await app.save(page.request, 'edge')).status()).toBe(200);
+    await app.propose(page.request, 'relationship', 'edge', {
+      ...value,
+      endDate: { knowledge: 'known', value: '2031-04-12' },
+    });
+    await app.propose(other.request, 'relationship', 'edge', { ...value, lifecycle: 'ended' });
+    expect((await app.save(other.request, 'ended')).status()).toBe(200);
+    await page.goto(app.installation.origin);
+    const review = page.getByRole('region', { name: 'Hela mitt utkast' });
+    await expect(review).toContainText('Upphört');
+    await expect(review).toContainText('2031-04-12');
+    await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeDisabled();
+    await review.getByRole('button', { name: 'Behåll mitt förslag' }).click();
+    await expect(page.getByRole('status')).toContainText('Granska hela utkastet');
+    expect((await app.read()).relationships[0]).not.toHaveProperty('endDate');
+    await app.installation.restart();
+    await page.reload();
+    await expect(review).toContainText('Upphört');
+    await expect(review).toContainText('2031-04-12');
+    await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
+    await expect(page.getByRole('status')).toContainText('Sparat:');
+    const first = (await app.read(other.request)).relationships[0];
+    expect(first).toMatchObject({
+      lifecycle: 'ended',
+      endDate: { knowledge: 'known', value: '2031-04-12' },
+    });
+
+    await app.propose(page.request, 'relationship', 'edge', {
+      ...first,
+      endDate: { knowledge: 'uncertain', value: '2031-04-12' },
+    });
+    await app.propose(other.request, 'relationship', 'edge', {
+      ...first,
+      lifecycle: 'active',
+      endDate: { knowledge: 'known', value: '2031-05-15' },
+    });
+    expect((await app.save(other.request, 'changed-date')).status()).toBe(200);
+    await page.reload();
+    await expect(review).toContainText('2031-04-12 (Osäkert uppgivet)');
+    await expect(review).toContainText('2031-05-15');
+    await expect(review).toContainText('Gäller fortfarande');
+    await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeDisabled();
+    await review.getByRole('button', { name: 'Behåll mitt förslag' }).click();
+    expect((await app.read()).relationships[0].endDate).toEqual({
+      knowledge: 'known',
+      value: '2031-05-15',
+    });
+    await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
+    await expect(page.getByRole('status')).toContainText('Sparat:');
+    expect((await app.read(other.request)).relationships[0]).toMatchObject({
+      lifecycle: 'active',
+      endDate: { knowledge: 'uncertain', value: '2031-04-12' },
+    });
+  } finally {
+    await other.close();
+    await app.installation.close();
+  }
+});
+
+test('UTKAST-11: deletion after concurrent type changes retains the matching historical definitions', async ({
+  page,
+  browser,
+}) => {
+  const other = await browser.newContext();
+  const app = await collaborators(page.request, other.request);
+  try {
+    const state = await app.read();
+    const value: RelationshipValue = {
+      typeId: state.relationshipTypes[0].id,
+      sourceId: 'lo',
+      targetId: 'service',
+      knowledge: 'known',
+    };
+    await app.propose(page.request, 'relationship', 'edge', value);
+    expect((await app.save(page.request, 'edge')).status()).toBe(200);
+    await app.propose(page.request, 'draft', 'lo', null);
+    await app.propose(other.request, 'draft', 'lo', {
+      name: 'Lo Exempel',
+      description: '',
+      typeId: state.types[1].id,
+    });
+    await app.propose(other.request, 'relationship', 'edge', {
+      ...value,
+      typeId: state.relationshipTypes[1].id,
+    });
+    expect((await app.save(other.request, 'changed-types')).status()).toBe(200);
+    await page.goto(app.installation.origin);
+    const review = page.getByRole('region', { name: 'Hela mitt utkast' });
+    await expect(review).toContainText(state.types[1].name);
+    await expect(review).toContainText(state.relationshipTypes[1].name);
+    await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeDisabled();
+    await expect(review.getByRole('button', { name: 'Behåll mitt förslag' })).toHaveCount(2);
+    await review.getByRole('button', { name: 'Behåll mitt förslag' }).first().click();
+    await expect(review.getByRole('button', { name: 'Behåll mitt förslag' })).toHaveCount(1);
+    await review.getByRole('button', { name: 'Behåll mitt förslag' }).click();
+    expect((await app.read(other.request)).relationships).toHaveLength(1);
+    await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
+    await expect(page.getByRole('status')).toContainText('Sparat:');
+    const saved = await app.read(other.request);
+    expect(saved.objects.map((object) => object.id)).toEqual(['service']);
+    expect(saved.relationships).toEqual([]);
+    const { history } = await (await page.request.get(`${app.path}/history`)).json();
+    expect(history.at(-1)).toMatchObject({
+      changes: [{ before: { typeId: state.types[1].id }, after: null, type: state.types[1] }],
+      relationships: [
+        {
+          before: { typeId: state.relationshipTypes[1].id },
+          after: null,
+          type: state.relationshipTypes[1],
+        },
+      ],
+    });
+  } finally {
+    await other.close();
+    await app.installation.close();
+  }
+});
+
 test('UTKAST-08: a saved duplicate can be selected without losing another proposal', async ({
   page,
   browser,
@@ -445,7 +578,9 @@ test('UTKAST-02: a stale discard preserves newer object and relationship proposa
     await newer.goto(app.installation.origin);
     await newer.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await newer.getByLabel('Från objekt').selectOption('lo');
-    await newer.getByLabel('Sambandstyp').selectOption(initial.relationshipTypes[0].id);
+    await newer
+      .getByLabel('Sambandstyp', { exact: true })
+      .selectOption(initial.relationshipTypes[0].id);
     await newer.getByLabel('Till objekt').selectOption('service');
     await newer.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }).click();
     await expect(newer.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(

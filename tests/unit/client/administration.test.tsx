@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { App } from '../../../src/client/App.js';
 import type { Administration, HouseholdInvitation } from '../../../src/shared/administration.js';
+import { defaultViewSettings } from '../../../src/shared/personal-view.js';
 
 const household = { id: 'linden', name: 'Hushållet Linden', role: 'administrator' };
 const ready = {
@@ -38,6 +39,10 @@ type Reply = { data?: unknown; status?: number; error?: Error; response?: Promis
 const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
+  routes['/api/households/linden/text-assistant'] ??= [{ data: { available: false } }];
+  routes['/api/households/linden/erasure'] ??= Array.from({ length: 3 }, () => ({
+    data: { objects: [], relationships: [], objectTypes: [], relationshipTypes: [], status: null },
+  }));
   routes['/api/households/linden/map?reload=0'] ??= [
     {
       data: {
@@ -52,6 +57,9 @@ function serve(routes: Record<string, Reply[]>) {
     },
   ];
   routes['/api/households/linden/map/operations'] ??= [{ data: { operations: [] } }];
+  routes['/api/households/linden/map/view'] ??= [
+    { data: { positions: [], settings: { ...defaultViewSettings, version: 0 } } },
+  ];
   const fetch = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
     const path =
       typeof input === 'string'

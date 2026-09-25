@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { Hono, type MiddlewareHandler } from 'hono';
 import type { Auth } from './auth.js';
 import { householdMap, MapError } from './map.js';
+import { personalView } from './personal-view.js';
 
 export function mapRoutes(database: Database.Database, auth: Auth, origin: string) {
   type Environment = { Variables: { userId: string; body: Record<string, unknown> } };
@@ -31,6 +32,23 @@ export function mapRoutes(database: Database.Database, auth: Auth, origin: strin
   };
   routes.use('/households/:id/map/*', authenticate);
   routes.use('/households/:id/map', authenticate);
+  routes.get('/households/:id/map/view', (context) =>
+    context.json(personalView(database, context.get('userId'), context.req.param('id')).read()),
+  );
+  routes.post('/households/:id/map/view/position', (context) =>
+    context.json(
+      personalView(database, context.get('userId'), context.req.param('id')).move(
+        context.get('body'),
+      ),
+    ),
+  );
+  routes.post('/households/:id/map/view/settings', (context) =>
+    context.json(
+      personalView(database, context.get('userId'), context.req.param('id')).configure(
+        context.get('body'),
+      ),
+    ),
+  );
   routes.get('/households/:id/map', (context) =>
     context.json(householdMap(database, context.get('userId'), context.req.param('id')).read()),
   );
@@ -56,9 +74,23 @@ export function mapRoutes(database: Database.Database, auth: Auth, origin: strin
       ),
     ),
   );
+  routes.post('/households/:id/map/merge', (context) =>
+    context.json(
+      householdMap(database, context.get('userId'), context.req.param('id')).merge(
+        context.get('body'),
+      ),
+    ),
+  );
   routes.post('/households/:id/map/draft', (context) =>
     context.json(
       householdMap(database, context.get('userId'), context.req.param('id')).propose(
+        context.get('body'),
+      ),
+    ),
+  );
+  routes.post('/households/:id/map/object-type', (context) =>
+    context.json(
+      householdMap(database, context.get('userId'), context.req.param('id')).proposeObjectType(
         context.get('body'),
       ),
     ),
@@ -70,9 +102,32 @@ export function mapRoutes(database: Database.Database, auth: Auth, origin: strin
       ),
     ),
   );
+  routes.post('/households/:id/map/relationship-type', (context) =>
+    context.json(
+      householdMap(
+        database,
+        context.get('userId'),
+        context.req.param('id'),
+      ).proposeRelationshipType(context.get('body')),
+    ),
+  );
   routes.post('/households/:id/map/resolve', (context) =>
     context.json(
       householdMap(database, context.get('userId'), context.req.param('id')).resolve(
+        context.get('body'),
+      ),
+    ),
+  );
+  routes.post('/households/:id/map/undo', (context) =>
+    context.json(
+      householdMap(database, context.get('userId'), context.req.param('id')).undo(
+        context.get('body'),
+      ),
+    ),
+  );
+  routes.post('/households/:id/map/discard-change', (context) =>
+    context.json(
+      householdMap(database, context.get('userId'), context.req.param('id')).discardChange(
         context.get('body'),
       ),
     ),
@@ -81,6 +136,7 @@ export function mapRoutes(database: Database.Database, auth: Auth, origin: strin
     context.json(
       householdMap(database, context.get('userId'), context.req.param('id')).discard(
         context.get('body').version,
+        context.get('body').contentVersion,
       ),
     ),
   );
