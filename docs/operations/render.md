@@ -263,8 +263,9 @@ Keep the workflow run open for the retry in step 9.
    `/data`. If you could not add it in the creation form, add it here;
    attaching it starts another deployment.
 1. Keep exactly one service instance. Do not enable autoscaling. Image
-   services do not use Git-triggered automatic deployments; if an
-   **Auto-Deploy** setting is shown, set it to **No**.
+   services require explicit deployment requests. There is no **Auto-Deploy**
+   setting to configure for this image service; GitHub requests each verified
+   release through the Render API.
 
 Expected result: one paid web service with one persistent disk. Its first
 startup may still fail until you supply the remaining configuration.
@@ -274,6 +275,8 @@ host, and port settings with the rest of the configuration in step 5.
 
 Render's [web service guide](https://render.com/docs/web-services) and
 [persistent disk guide](https://render.com/docs/disks) describe these controls.
+See [Render's deployment guide](https://render.com/docs/deploys#automatic-deploys)
+for the difference between Git-triggered and image-service deployments.
 
 The disk must be writable by the image's UID/GID 1000 user. If startup later
 reports a disk permission failure, use the troubleshooting section; do not
@@ -687,13 +690,28 @@ pages. Compare the saved image reference, the live deployment's resolved
 digest, and `/api/version`. If the application cannot respond, its version
 and database readiness are unknown.
 
+For `unsafe_service_configuration`, read the failed field names and expected
+and observed values in the GitHub job log. The report retains the same
+details in `configurationFailures`. Arbitrary API strings and command
+contents are redacted. This check stops before requesting a Render
+deployment, so Render can still show the previous deployment as **Live**.
+For older reports without these details, a maintainer must read the current
+service configuration through the authenticated Render API; the original
+configuration response cannot be recovered from the report.
+
+Older deployment scripts can reject an image service because its API
+response contains `autoDeploy: "yes"`. This field does not enable automatic
+deployment for image services and needs no dashboard change. Use a release
+run from the current main branch with the corrected checks; rerunning the
+older job uses its original script.
+
 <!-- markdownlint-disable MD013 -->
 | Symptom or report reason | Next action |
 | :-- | :-- |
 | Render cannot download the image | Check the complete digest reference and, for private images, the registry credential's package access. |
 | `configuration_invalid` | Find the variable name in the startup event, correct it in Render **Environment**, then use **Save and deploy**. |
 | Sign-in fails | Compare the actual public origin and both registered callback URLs. Check credentials and follow [production sign-in troubleshooting](authentication.md#troubleshoot-sign-in). |
-| `unsafe_service_configuration` | Check one image web service, one instance, no autoscaling or auto-deploy, disk at `/data`, `/healthz`, and empty command overrides. Ask a maintainer to inspect the Render API if a setting is not visible in the dashboard. |
+| `unsafe_service_configuration` | Check one image web service, one instance, no autoscaling, disk at `/data`, `/healthz`, and empty command overrides. Ask a maintainer to inspect the Render API if a setting is not visible in the dashboard. |
 | `database_not_on_persistent_disk` | Explicitly set `SKYTTEL_DATABASE_PATH` to `/data/skyttel.sqlite` and confirm the `/data` disk is attached. |
 | `database_initialization_failed` | Inspect the safe reason in private logs. Check free disk space and write permission for UID/GID 1000; ask a maintainer to repair permissions if needed. Preserve the existing database. |
 | A migration or deployment is still running | Wait. A GitHub timeout does not cancel Render. Do not cancel the migration or start a competing deployment. |

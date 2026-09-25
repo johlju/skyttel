@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { deployRelease } from '../deploy.mjs';
+import { deploymentFailureLog, deployRelease } from '../deploy.mjs';
 import { createReleasePlan } from '../plan.mjs';
 
 const commit = 'a'.repeat(40);
@@ -46,6 +46,7 @@ function platform() {
     nextIdentity: version,
     ignorePatch: false,
     databasePath: '/data/skyttel.sqlite',
+    serviceOverrides: {},
   };
   const reply = (body, status = 200) => new Response(JSON.stringify(body), { status });
   const fetch = async (url, options = {}) => {
@@ -67,7 +68,7 @@ function platform() {
       return reply({
         type: 'web_service',
         suspended: 'not_suspended',
-        autoDeploy: 'no',
+        autoDeploy: 'yes',
         ownerId: 'tea-synthetic',
         imagePath: state.savedImage,
         serviceDetails: {
@@ -76,6 +77,7 @@ function platform() {
           disk: { mountPath: '/data' },
           healthCheckPath: '/healthz',
         },
+        ...state.serviceOverrides,
       });
     }
     if (path === '/v1/services/srv-synthetic/deploys') {
@@ -129,6 +131,91 @@ test('a verified release updates the saved image and running digest; retry verif
   assert.equal(state.statuses.at(-1), 'success');
   assert.equal((await run()).outcome, 'success');
   assert.equal(state.deploys, 1, 'A retry must verify the already running image, not restart it');
+});
+
+test('image services deploy and retry regardless of the inapplicable autoDeploy field', async () => {
+  for (const autoDeploy of ['yes', 'no', undefined]) {
+    const { state, run } = platform();
+    state.serviceOverrides = { autoDeploy };
+    assert.equal((await run()).outcome, 'success');
+    assert.equal((await run()).outcome, 'success');
+    assert.equal(state.deploys, 1);
+    assert.equal(state.savedImage, `${image}@${digest}`);
+    assert.ok(
+      state.requests
+        .filter(({ method }) => method === 'PATCH')
+        .every(({ body }) => !Object.hasOwn(body, 'autoDeploy')),
+    );
+  }
+});
+
+test('Git-backed services remain blocked even with automatic deployment disabled', async () => {
+  const { state, run } = platform();
+  state.serviceOverrides = {
+    autoDeploy: 'no',
+    serviceDetails: {
+      runtime: 'docker',
+      numInstances: 1,
+      disk: { mountPath: '/data' },
+      healthCheckPath: '/healthz',
+    },
+  };
+  const report = await run();
+  assert.equal(report.failure, 'unsafe_service_configuration');
+  assert.deepEqual(report.configurationFailures, [
+    { field: 'serviceDetails.runtime', expected: 'image', observed: 'docker' },
+  ]);
+  assert.ok(state.requests.every(({ method }) => method === 'GET'));
+});
+
+test('preflight reports every failed field in evidence and job errors without making changes', async () => {
+  const { state, run } = platform();
+  state.serviceOverrides = {
+    autoDeploy: 'yes',
+    serviceDetails: {
+      runtime: 'image',
+      numInstances: 2,
+      healthCheckPath: '/healthz',
+      envSpecificDetails: { dockerCommand: 'private-command-secret\n::warning::injected' },
+    },
+  };
+  const report = await run();
+  assert.equal(report.failure, 'unsafe_service_configuration');
+  assert.deepEqual(report.configurationFailures, [
+    { field: 'serviceDetails.numInstances', expected: 1, observed: 2 },
+    { field: 'serviceDetails.disk.mountPath', expected: '/data', observed: 'missing' },
+    {
+      field: 'serviceDetails.envSpecificDetails.dockerCommand configured',
+      expected: false,
+      observed: true,
+    },
+  ]);
+  const log = deploymentFailureLog(report);
+  assert.match(log, /::error::Render deployment failed: unsafe_service_configuration/);
+  for (const { field } of report.configurationFailures) assert.ok(log.includes(field));
+  assert.match(log, /expected 1, observed 2/);
+  assert.match(log, /No deployment was requested/);
+  assert.doesNotMatch(log + JSON.stringify(report), /private-command-secret|::warning::injected/);
+  assert.ok(state.requests.every(({ method }) => method === 'GET'));
+});
+
+test('missing service details and arbitrary API values remain diagnosable without leaking data', async () => {
+  for (const serviceDetails of [
+    null,
+    {},
+    { runtime: 'private-runtime-secret\n::error::injected' },
+  ]) {
+    const { state, run } = platform();
+    state.serviceOverrides = { serviceDetails };
+    const report = await run();
+    assert.equal(report.failure, 'unsafe_service_configuration');
+    assert.ok(report.configurationFailures.some(({ field }) => field === 'serviceDetails.runtime'));
+    assert.doesNotMatch(
+      deploymentFailureLog(report) + JSON.stringify(report),
+      /private-runtime-secret|::error::injected/,
+    );
+    assert.ok(state.requests.every(({ method }) => method === 'GET'));
+  }
 });
 
 test('a superseded candidate never changes Render, including when main advances during a migration', async () => {

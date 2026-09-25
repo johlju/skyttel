@@ -20,6 +20,64 @@ function requireState(condition, code) {
 
 class DeploymentError extends Error {}
 
+function serviceConfigurationFailures(service) {
+  const details = service.serviceDetails;
+  // Do not copy arbitrary API strings, especially command overrides, into evidence.
+  const observed = (value) => {
+    if (value === undefined || value === null) return 'missing';
+    if (typeof value === 'boolean') return value;
+    if (Number.isSafeInteger(value) && value >= 0 && value <= 10_000) return value;
+    if (
+      [
+        'web_service',
+        'not_suspended',
+        'suspended',
+        'image',
+        'docker',
+        '/data',
+        '/healthz',
+      ].includes(value)
+    )
+      return value;
+    return 'unexpected value (redacted)';
+  };
+  // Image-backed services require explicit deploys; Render's autoDeploy field
+  // does not control them: https://render.com/docs/deploys#automatic-deploys
+  const checks = [
+    ['type', service.type, 'web_service'],
+    ['suspended', service.suspended, 'not_suspended'],
+    ['serviceDetails.runtime', details?.runtime, 'image'],
+    ['serviceDetails.numInstances', details?.numInstances, 1],
+    ['serviceDetails.autoscaling.enabled', Boolean(details?.autoscaling?.enabled), false],
+    ['serviceDetails.disk.mountPath', details?.disk?.mountPath, '/data'],
+    ['serviceDetails.healthCheckPath', details?.healthCheckPath, '/healthz'],
+    [
+      'serviceDetails.envSpecificDetails.dockerCommand configured',
+      Boolean(details?.envSpecificDetails?.dockerCommand),
+      false,
+    ],
+    [
+      'serviceDetails.envSpecificDetails.preDeployCommand configured',
+      Boolean(details?.envSpecificDetails?.preDeployCommand),
+      false,
+    ],
+    ['imagePath matches Skyttel digest reference', imagePattern.test(service.imagePath), true],
+  ];
+  return checks
+    .filter(([, actual, expected]) => actual !== expected)
+    .map(([field, actual, expected]) => ({ field, expected, observed: observed(actual) }));
+}
+
+export function deploymentFailureLog(report) {
+  return [
+    `::error::Render deployment failed: ${report.failure}. Inspect app and database evidence before retry; no automatic rollback was attempted.`,
+    ...(report.configurationFailures ?? []).map(
+      ({ field, expected, observed }) =>
+        `::error::Render preflight: ${field}: expected ${JSON.stringify(expected)}, observed ${JSON.stringify(observed)}. No deployment was requested.`,
+    ),
+  ].join('\n');
+}
+
 function observedDeployId(value) {
   if (typeof value !== 'string' || !/^dep-[a-z0-9]{1,64}$/u.test(value)) return null;
   return value;
@@ -163,21 +221,11 @@ export async function deployRelease({
       return report;
     }
     let service = await render(servicePath);
-    const details = service.serviceDetails;
-    requireState(
-      service.type === 'web_service' &&
-        service.suspended === 'not_suspended' &&
-        service.autoDeploy === 'no' &&
-        details?.runtime === 'image' &&
-        details.numInstances === 1 &&
-        !details.autoscaling?.enabled &&
-        details.disk?.mountPath === '/data' &&
-        details.healthCheckPath === '/healthz' &&
-        !details.envSpecificDetails?.dockerCommand &&
-        !details.envSpecificDetails?.preDeployCommand &&
-        imagePattern.test(service.imagePath),
-      'unsafe_service_configuration',
-    );
+    const configurationFailures = serviceConfigurationFailures(service);
+    if (configurationFailures.length) {
+      report.configurationFailures = configurationFailures;
+      throw new DeploymentError('unsafe_service_configuration');
+    }
     requireState(
       (await render(`${servicePath}/env-vars/SKYTTEL_DATABASE_PATH`)).value ===
         '/data/skyttel.sqlite',
@@ -229,7 +277,6 @@ export async function deployRelease({
     let deploy = previous;
     if (service.imagePath !== imageUrl || previous?.image?.sha !== identity.digest) {
       await render(servicePath, 'PATCH', {
-        autoDeploy: 'no',
         image: {
           ownerId: service.ownerId,
           imagePath: imageUrl,
@@ -329,9 +376,7 @@ export async function main(env = process.env) {
       `Render deployment: **${report.outcome}**.\n\nSee the deployment evidence artifact for image and database status.\n`,
     );
   if (report.outcome === 'failure') {
-    console.error(
-      '::error::Render deployment failed. Inspect app and database evidence before retry; no automatic rollback was attempted.',
-    );
+    console.error(deploymentFailureLog(report));
     process.exitCode = 1;
   }
 }
