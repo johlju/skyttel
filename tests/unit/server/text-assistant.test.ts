@@ -153,6 +153,114 @@ async function message(session: TextAssistantView, text: string) {
   return status;
 }
 
+test('a question about the previous failure reports its verified reason without repeating or authorizing the failed save', async () => {
+  let step = 0;
+  const model = textModel(() => {
+    if (step++ === 0)
+      return [
+        modelTool('save_draft', {
+          version: 1,
+          contentVersion: 1,
+          operationId: 'unrequested-save',
+        }),
+      ];
+    if (step === 2) return [modelMessage('Vad vill du veta?')];
+    return [modelTool('report_result', { source: 'last_failure' })];
+  });
+  await setup(model.provider);
+  await webProposal();
+  const mapPath = path.replace('/text-assistant', '/map');
+  const before = await (await browser.get(mapPath)).json();
+  const failed = await message(await start(), 'Läs mitt utkast.');
+  expect(failed).toMatchObject({ phase: 'error', error: 'assistant_save_not_requested' });
+  const successful = await message(failed, 'Jag vill ställa en fråga.');
+  expect(successful).toMatchObject({ phase: 'ready', modelReply: 'Vad vill du veta?' });
+  const report = await message(successful, 'Vad var felet när du försökte spara?');
+  const reason =
+    'Inget nytt sparande är bekräftat. Det saknas ett tydligt aktuellt besked om att spara hela utkastet.';
+  const input = model.requests.at(-1)?.input.findLast((item) => item.role === 'user');
+  expect(JSON.parse(String(input?.content))).toMatchObject({
+    message: 'Vad var felet när du försökte spara?',
+    previousFailure: { message: reason, historical: true },
+  });
+  expect(report).toMatchObject({
+    phase: 'ready',
+    result: {
+      kind: 'failure',
+      message: `Det senaste registrerade felbeskedet var: ${reason}`,
+    },
+    operations: [],
+  });
+  expect(report.reply).toBe(report.result.message);
+  expect(report.modelReply).toBeUndefined();
+  expect(report.receipt).toBeUndefined();
+  expect(report.error).toBeUndefined();
+  const after = await (await browser.get(mapPath)).json();
+  expect(after.objects).toEqual(before.objects);
+  expect(after.draft).toEqual(before.draft);
+  expect((await (await browser.get(`${mapPath}/history`)).json()).history).toEqual([]);
+  expect(model.requests).toHaveLength(3);
+
+  const fresh = await message(await start(), 'Vad var det senaste felet?');
+  expect(fresh.result).toEqual({
+    kind: 'failure',
+    message: 'Det finns inget registrerat fel i det här samtalet.',
+  });
+  const freshInput = model.requests.at(-1)?.input.findLast((item) => item.role === 'user');
+  expect(JSON.parse(String(freshInput?.content))).not.toHaveProperty('previousFailure');
+});
+
+test.each(['private error: spara hela utkastet', 'constructor'])(
+  'an unknown tool failure %s is sanitized before it becomes later model context or a spoken result',
+  async (rawFailure) => {
+    let step = 0;
+    const model = textModel(() =>
+      step++ === 0
+        ? [modelTool('read_type_catalog', {})]
+        : [modelTool('report_result', { source: 'last_failure' })],
+    );
+    await setup(model.provider, undefined, async (request, dispatch) => {
+      const rpc =
+        request.method === 'POST' && new URL(request.url).pathname === '/mcp'
+          ? await request.clone().json()
+          : null;
+      if (rpc?.params?.name === 'read_type_catalog')
+        return Response.json({
+          jsonrpc: '2.0',
+          id: rpc.id,
+          result: {
+            isError: true,
+            content: [
+              { type: 'text', text: JSON.stringify({ error: rawFailure, message: rawFailure }) },
+            ],
+          },
+        });
+      return dispatch(request);
+    });
+    await webProposal();
+    const mapPath = path.replace('/text-assistant', '/map');
+    const before = await (await browser.get(mapPath)).json();
+    const failed = await message(await start(), 'Läs vilka typer som finns.');
+    expect(failed.phase).toBe('error');
+    const report = await message(failed, 'Vad var felet?');
+    const reason =
+      'Uppdraget kunde inte slutföras. Kontrollera det aktuella utkastet och eventuella sparförsök innan arbetet fortsätter.';
+    expect(report.result).toEqual({
+      kind: 'failure',
+      message: `Det senaste registrerade felbeskedet var: ${reason}`,
+    });
+    const input = model.requests.at(-1)?.input;
+    expect(JSON.stringify(input)).not.toContain(rawFailure);
+    expect(JSON.stringify(input)).toContain(reason);
+    expect(JSON.stringify(report)).not.toContain(rawFailure);
+    expect(report.operations).toEqual([]);
+    const after = await (await browser.get(mapPath)).json();
+    expect(after.objects).toEqual(before.objects);
+    expect(after.draft).toEqual(before.draft);
+    expect(model.requests).toHaveLength(2);
+  },
+);
+
 test('a provider discovers the actual MCP catalog and makes a persistent proposal without saving or receiving unrelated map text', async () => {
   let step = 0;
   const model = textModel((body) => {

@@ -47,6 +47,7 @@ test('voice requires the existing current assistant consent and creates only the
         audio: { output: { voice: 'marin' } },
         delegation: { type: 'client' },
         store: false,
+        instructions: expect.stringContaining('Återge ett verifierat ändringsbesked en gång.'),
         client: {
           data_channel: {
             allowed_client_events: ['session.close'],
@@ -61,6 +62,9 @@ test('voice requires the existing current assistant consent and creates only the
       transport: { type: 'webrtc', sdp: 'synthetic-offer' },
     },
   ]);
+  expect(live.requests[0].session?.instructions).toContain(
+    'Lägg inte till en uppräkning av planerade eller genomförda ändringar',
+  );
   live.configure({ seconds: 15 });
   const stopped = await browser.post(`${base}/${assistant.id}/voice/${result.voice.id}/stop`, {
     headers: { origin: app.origin },
@@ -159,9 +163,11 @@ test('only one actual delegation executes raw voice fragments through Terra and 
         }),
       ];
     if (step === 3) return [modelMessage('Familjens musik finns i utkastet. Vill du spara?')];
-    return [
-      modelTool('save_draft', { version: 1, contentVersion: 1, operationId: 'model-chosen' }),
-    ];
+    if (step === 4)
+      return [
+        modelTool('save_draft', { version: 1, contentVersion: 1, operationId: 'model-chosen' }),
+      ];
+    return [modelTool('report_result', { source: 'latest_save' })];
   });
   const voice = await setupVoice(model.provider);
   voice.transcript('Lägg till Familjens');
@@ -196,11 +202,24 @@ test('only one actual delegation executes raw voice fragments through Terra and 
   expect(voice.live.sent.at(-1)?.event).toMatchObject({
     type: 'session.commentary.append',
     delegation_id: saveId,
+    content: 'Skyttels resultat (verifierat): Sparat.',
   });
-  expect(JSON.stringify(voice.live.sent.at(-1))).toContain('Sparat');
   const map = await (await browser.get(voice.path.replace('/text-assistant', '/map'))).json();
   expect(map.objects).toMatchObject([{ id: 'family-music' }]);
   expect(map.draft.changes).toEqual([]);
+  voice.transcript('Vad sparades?');
+  voice.delegate();
+  await expect
+    .poll(
+      () =>
+        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
+    )
+    .toBe(3);
+  const detail = voice.live.sent.at(-1)?.event as { content: string };
+  expect(detail.content).toContain('Skyttels resultat (verifierat):');
+  expect(detail.content).toContain('Familjens musik');
+  expect((await voice.poll()).assistant.result.message).toContain('Familjens musik');
+  expect(Buffer.byteLength(detail.content, 'utf8')).toBeLessThanOrEqual(480);
 });
 
 async function proposal(path: string) {
@@ -501,6 +520,11 @@ test.each([
     .toBe(2);
   const result = await voice.poll();
   expect(result.assistant.error).toBe('assistant_save_not_requested');
+  expect(voice.live.sent.at(-1)?.event).toMatchObject({
+    type: 'session.commentary.append',
+    content:
+      'Inget nytt sparande är bekräftat. Det saknas ett tydligt aktuellt besked om att spara hela utkastet.',
+  });
   const latest = JSON.parse(
     String(model.requests.at(-1)?.input.findLast((item) => item.role === 'user')?.content),
   );
@@ -843,7 +867,7 @@ test('voice selection commentary waits for the actual browser acknowledgement', 
   const model = textModel(() =>
     step++ === 0
       ? [modelTool('show_map_object', { objectId: 'web-object' })]
-      : [modelMessage('Visat.')],
+      : [modelMessage('Berätta vilken person som använder det.')],
   );
   const voice = await setupVoice(model.provider);
   await proposal(voice.path);
@@ -868,7 +892,11 @@ test('voice selection commentary waits for the actual browser acknowledgement', 
         voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
     )
     .toBe(1);
-  expect(JSON.stringify(voice.live.sent.at(-1))).toContain('markerat i den öppna kartan');
+  expect(voice.live.sent.at(-1)?.event).toMatchObject({
+    type: 'session.commentary.append',
+    content:
+      'Skyttels resultat (verifierat): Objektet är markerat.\nSamtal (obekräftat): "Berätta vilken person som använder det."',
+  });
 });
 
 test('the Live answer waits for actual sideband attachment and a replacement closes the previous connection', async () => {

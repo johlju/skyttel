@@ -537,8 +537,13 @@ test('the actual MCP initialization teaches whole-draft intent and recovery with
       'okänt',
       'kvittot',
       'bevis',
+      'Kontrollera hela utkastet internt',
+      'Ge detaljer först när användaren frågar',
+      'Fråga inte om lov att göra ett förslag som redan är beställt',
+      'fråga endast om den faktiskt oklara delen',
     ])
       expect(instructions).toContain(required);
+    expect(instructions).not.toContain('Återge hela utkastet begripligt');
     const tools = (await client.listTools()).tools.map(({ name }) => name);
     expect(tools).toContain('save_draft');
     expect(tools.join(' ')).not.toMatch(/export|import|erase|member|admin/);

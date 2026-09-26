@@ -30,6 +30,11 @@ att ett uppdrag pågår, med ökande tid längst ned på skärmen.
 Om ett sparresultat är oklart visas att det tidigare
 sparförsöket måste kontrolleras innan nya ändringar.
 
+Skyttel ger korta resultatbesked, exempelvis **Utkastet är uppdaterat**
+eller **Sparat**, utan att läsa upp ändringarna efter varje steg.
+Be om detaljer när du vill höra dem. Nödvändiga följdfrågor och felbesked
+ges även när vanliga bekräftelser är korta.
+
 I **Samtalet** visas både dina ord och Skyttels svar löpande. Tidigare
 rader finns kvar under samtalet. Korta pauser kan fortsätta samma rad.
 Välj **Pausa mikrofon** för att sluta skicka ljud utan att avsluta samtalet;
@@ -66,6 +71,10 @@ Fråga om något är oklart. Assistenten
 ska fråga vid tvetydig identitet och skilja okänt, uttryckligen inget,
 osäkert uppgivet och ospecificerat objekt åt.
 
+Du kan ge flera önskemål samtidigt. Assistenten kan lägga tydliga delar
+i utkastet och fråga om den del som är oklar. **Spara inte** låter dig
+göra beställda utkaständringar utan att spara dem i hushållets karta.
+
 Skriv exempelvis **Rätta priset till 189 kr och spara**. Ett tydligt
 sparbesked gäller hela det aktuella utkastet, utan ett extra ja bara för
 att rättelsen ändrar utkastversionen. Vid konflikt eller samtidig ändring
@@ -96,6 +105,11 @@ Ett väntande försök kan slutföras med **Slutför samma sparförsök**. Det
 startar du en ny anslutning och öppnar **Tidigare sparförsök**. Där finns
 även kvitton från andra enheter. Ett avvisat försök behöver ett nytt
 underlag och ett nytt sparbesked.
+
+Fråga **Vad var felet?** för att höra det senaste registrerade felet i
+det pågående samtalet. Felminnet följer samtalet och försvinner när det
+avslutas. Ett oklart sparresultat behöver kontrolleras innan ett nytt
+uppdrag kan börja.
 
 **Stäng av rösten** behåller den synliga dialogen i det pågående samtalet.
 **Avsluta textassistenten** tar bort anslutningen och samtalsminnet.

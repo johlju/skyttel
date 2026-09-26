@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { TextAssistantView } from '../shared/text-assistant.js';
+import { assistantFailureMessage } from './assistant-feedback.js';
 import type { LiveSideband } from './live-provider.js';
 
 type Anchor = { revision: number; draftVersion: number; contentVersion: number };
@@ -68,17 +69,16 @@ export function voiceWork({
   function completion(view: TextAssistantView) {
     if (view.phase === 'recovery')
       return 'Sparresultatet är inte bekräftat. Tidigare sparförsök kontrolleras innan nytt arbete. Säg ”slutför samma sparförsök” om du vill slutföra exakt det väntande försöket.';
-    if (view.error)
-      return 'Uppdraget kunde inte slutföras. Utkastet finns kvar. Kontrollera det aktuella underlaget och ge ett nytt tydligt uppdrag; inget nytt sparande är bekräftat.';
+    if (view.error) return assistantFailureMessage(view.error);
     const count =
       view.review.changes.length +
       (view.review.relationships?.length ?? 0) +
       (view.review.objectTypes?.length ?? 0) +
       (view.review.relationshipTypes?.length ?? 0);
     const fullResult = view.receipt
-      ? 'Skyttels resultat (verifierat): Sparat. Hela utkastet finns i hushållets karta.'
+      ? 'Skyttels resultat (verifierat): Sparat.'
       : view.displayedSelection
-        ? `Skyttels resultat (verifierat): ${view.displayedItem?.kind === 'relationship' ? 'Sambandet' : 'Objektet'} är markerat i den öppna kartan.`
+        ? `Skyttels resultat (verifierat): ${view.displayedItem?.kind === 'relationship' ? 'Sambandet' : 'Objektet'} är markerat.`
         : view.result
           ? `Skyttels resultat (verifierat): ${view.result.message}`
           : `Utkast: ${count} ${count === 1 ? 'osparat förslag' : 'osparade förslag'}.`;
