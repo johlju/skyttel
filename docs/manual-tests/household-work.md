@@ -56,7 +56,8 @@ at 320px”.
 **Steg:**
 
 1. Välj **Nytt objekt**. Skriv **Oskickad cykel** och beskrivningen
-   **Behåll denna text**. Skriv **cykel** i **Sök objekt**.
+   **Behåll denna text**. Öppna Lista igen och skriv **cykel** i
+   **Sök objekt**. Välj **Nytt objekt** i panelväljaren och fokusera namnfältet.
 2. Använd Tab och Enter för att besöka **Inloggningssätt**. Kontrollera
    rubrikfokus och att kartan och dess formulär inte går att nå.
 3. Välj **Till startsidan** med tangentbordet. Kontrollera namn,
@@ -209,25 +210,26 @@ and resizing”.
 
 **Steg:**
 
-1. Skapa och spara **Min cykel**. Välj cykeln i listan och **Samlad vy**.
+1. Skapa och spara **Min cykel**. Välj cykeln i listan och öppna Lista igen.
 2. Öppna **Ordna min vy**. Välj **Flytta höger i rummet**, invänta sparad
    personlig vy och markera **Visa höjdhjälp**.
 3. Besök **Inloggningssätt**, minska fönstret till mobilstorlek och
    återgå med **Till startsidan**.
-4. Kontrollera **Samlad vy** och cykelns urval. Välj **Stäng arbetsytan**
-   för att kontrollera kartans höjdhjälp och personliga placering.
+4. Välj **Min cykel** i panelväljaren och kontrollera uppgifterna. Välj
+   **Stäng arbetsytan** för att kontrollera kartans urval, höjdhjälp och
+   personliga placering.
 
 **Förväntat resultat:**
 
-- **Samlad vy**, cykelns urval och **Visa höjdhjälp** består.
+- De öppna panelerna, cykelns urval och **Visa höjdhjälp** består.
 - Den personliga placeringen är densamma efter återgång.
 
 ## Bedömning och återstående manuella prov
 
 Referensen 87ddb01, alternativ D i administrationsprovet, kräver att
 kartarbete och mikrofon består när kartan döljs bakom andra vyer.
-Dessa fall provar den livstiden i befintlig navigation. De kommande fria
-panelerna och den nya inställningssidan bedöms i sina egna leveranser.
+Dessa fall provar den livstiden i befintlig navigation. Panelernas placering och
+byte på mobil beskrivs i [fria paneler](workspace-panels.md).
 
 Automationen provar semantiska namn, rubrik- och formulärfokus, dolda
 kontroller och funktionella flöden vid dator- och mobilbredder.

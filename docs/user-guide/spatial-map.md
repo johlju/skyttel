@@ -8,7 +8,7 @@ Välj **Lista** i verktygen för listor, formulär och utkast. Välj
 **Stäng arbetsytan** för att återgå till hela kartan. På telefon visar
 **Visa verktygens namn** även de kompletterande verktygen.
 
-När assistenten visar ett objekt eller samband öppnas **Samlad vy**.
+När assistenten visar ett objekt eller samband öppnas dess detaljpanel.
 Kartan och det valda innehållets detaljpanel visas samtidigt innan
 markeringsbeskedet. På en smal skärm ligger detaljpanelen direkt under
 kartan; rulla i panelen för att läsa längre uppgifter. Välj
@@ -20,8 +20,9 @@ Utgångsläget omfattar alla objekt och samband. **Sök objekt** och
 **Filtrera objekttyp** begränsar både karta och lista. **Sök i kartan**
 i verktygen öppnar sökningen.
 
-Klicka på ett objekts runda symbol för att öppna samma detaljer som i
-listan. Symbolen visar objektets profilbild eller en ikon för dess typ.
+Klicka på ett objekts runda symbol för att markera det. Öppna Lista och
+välj objektet där för att öppna dess panel. Symbolen visar objektets
+profilbild eller en ikon för dess typ.
 Namnet visas bredvid symbolen. När du väljer ett objekt visas etiketterna
 för dess samband. **Alla etiketter** visar även de andra sambandsnamnen.
 Klicka på ett sambands etikett för att läsa dess uppgifter. Välj sedan
@@ -80,9 +81,9 @@ sparade sambandet utan att ändra det.
 
 Högerklick eller långtryck på ett objekt ger **Redigera objekt**,
 **Visa kopplingar** och **Ta bort objekt**. I listan finns också
-**Redigera** och **Ta bort** vid det valda objektet. Fokus stannar på
-listraden efter val; Tab når åtgärderna. Valet visar uppgifterna utan att
-öppna formuläret. **Redigera** flyttar fokus till formuläret.
+**Redigera** och **Ta bort** vid det valda objektet. Ett objektval i listan öppnar
+objektets panel med rubrikfokus. Valet visar uppgifterna utan att öppna
+formuläret. **Redigera valt objekt** flyttar fokus till formuläret.
 
 Formulärtext skickas först när du lägger den i utkastet. Val och
 oskickad text för samma objekt eller samband finns kvar vid vybyte,
@@ -115,15 +116,15 @@ det är inte ångring av ett tidigare sparande.
 
 ## Enheter och begränsningar
 
-Lista och detaljer ger hela det vanliga kartarbetet med tangentbord utan
+Lista och objektpanelerna ger hela det vanliga kartarbetet med tangentbord utan
 rumslig navigering. Fokusmarkeringar, fältnamn och statusbesked finns kvar.
 Kameran byter läge direkt utan animation och systemets minskade rörelse
 respekteras. Om grafiken avbryts finns utkast och oskickad text kvar.
 Du kan fortsätta i listan medan grafiken återställs. Om WebGL 2 saknas
 visas ett besked och listan kan fortfarande användas.
 
-På en liten skärm kan **Lista och detaljer** göra det lättare att läsa
-och redigera uppgifter än i kartan.
+På en liten skärm väljer **Öppna paneler** mellan lista, samtal och
+objektpaneler. En panel visas åt gången.
 Textredigering på liggande iPhone kan kräva att du vänder till stående läge.
 
 ## Ordna din personliga vy

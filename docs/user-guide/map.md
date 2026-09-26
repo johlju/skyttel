@@ -31,7 +31,11 @@ Oskickad formulärtext hör fortfarande inte till utkastet; välj
 **Lägg i mitt utkast** för att ta med den i det samlade sparandet.
 
 **Stäng arbetsytan** återgår till kartan och behåller oskickad text.
-Öppna **Lista** eller **Samtal och text** för att fortsätta.
+Öppna **Lista** eller **Samtal och text** och välj din panel i
+**Öppna paneler** för att fortsätta. Ett kryss stänger bara den panelen;
+objektets oskickade text finns kvar när du öppnar samma objekt igen.
+Ett nytt objekt som ännu inte finns i utkastet öppnar du med **Fortsätt**
+under **Påbörjade objekt** i Lista. Du kan ha flera sådana formulär samtidigt.
 
 Bevarandet gäller under pågående användning. Omladdning kan ta bort
 oskickad text; beständiga utkast och sparade personliga vyer finns kvar.

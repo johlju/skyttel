@@ -94,7 +94,7 @@ export function waitForMapDisplay(
           inspector.scrollTop = 0;
           // The shell keeps conversation text and details in a scrolling work
           // surface. Reveal the populated inspector there before acknowledging it.
-          const workSurface = inspector.closest('.assistant-workspace');
+          const workSurface = inspector.closest('.workspace-panel-body, .assistant-workspace');
           if (workSurface instanceof HTMLElement) workSurface.scrollTop = 0;
           const mapBox = surface.getBoundingClientRect();
           const detailsBox = inspector.getBoundingClientRect();
@@ -123,16 +123,20 @@ export function waitForMapDisplay(
           );
         });
         const summary = inspector.querySelector('p');
+        const panelBody = inspector.closest('.workspace-panel-body');
+        const detailsBounds =
+          panelBody instanceof HTMLElement
+            ? panelBody.getBoundingClientRect()
+            : inspector.getBoundingClientRect();
         if (
           nodesVisible &&
           rendered(selected) &&
           contained(selected, bounds) &&
           contained(selected, viewport) &&
           uncovered(selected) &&
-          contained(inspector, viewport) &&
-          uncovered(inspector) &&
           rendered(summary) &&
-          contained(summary, inspector.getBoundingClientRect()) &&
+          contained(summary, viewport) &&
+          contained(summary, detailsBounds) &&
           uncovered(summary)
         ) {
           finish(true);

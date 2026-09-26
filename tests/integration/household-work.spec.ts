@@ -1,6 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
+  activatePanel,
   createHousehold,
+  openConversation,
   openProfile,
   openSettings,
   openWorkspace,
@@ -14,7 +16,7 @@ import { modelMessage, textModel } from '../support/text-model.js';
 async function startConversation(page: Page, origin: string) {
   await page.addInitScript({ content: liveBrowserFixtureSource });
   await page.goto(origin);
-  await openWorkspace(page);
+  await openConversation(page);
   await page.getByLabel(/Jag tillåter att OpenAI/).check();
   await page.getByLabel(/Jag tillåter förslag och sparande/).check();
   await page.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
@@ -46,7 +48,10 @@ for (const width of [1280, 390, 320]) {
       await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
       await page.getByLabel('Objektets namn').fill('Oskickad cykel');
       await page.getByLabel('Beskrivning', { exact: true }).fill('Behåll denna text');
+      await openWorkspace(page);
       await page.getByLabel('Sök objekt', { exact: true }).fill('cykel');
+      await activatePanel(page, 'Nytt objekt');
+      await page.getByLabel('Objektets namn').focus();
       await openProfile(page);
       await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).focus();
       await page.keyboard.press('Enter');
@@ -149,6 +154,7 @@ test('ARBETE-03: revoked household access retires hidden forms and microphone', 
     ).toBe(true);
     const memberPage = await member.newPage();
     await startConversation(memberPage, installation.origin);
+    await openWorkspace(memberPage);
     await memberPage.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await memberPage.getByLabel('Objektets namn').fill('Privat oskickad cykel');
     await openProfile(memberPage);
@@ -192,6 +198,7 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
     ).json();
     const archive = await (await page.request.get(`${path}/exports/${exported.id}`)).body();
     await startConversation(page, installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Gammal oskickad cykel');
     await openSettings(page);
@@ -212,10 +219,11 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
       .toEqual([{ enabled: false, state: 'ended' }]);
     await expect(page.getByLabel('Objektets namn')).toHaveCount(0, { timeout: 10000 });
     await page.getByRole('link', { name: 'Till hushållet', exact: true }).click();
-    await openWorkspace(page);
+    await openConversation(page);
     await expect(
       page.getByRole('button', { name: 'Starta textassistenten', exact: true }),
     ).toBeVisible();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Inga förslag',
     );
@@ -293,8 +301,10 @@ test('ARBETE-06: selection and personal map view survive navigation and resizing
       .getByRole('list', { name: 'Objekt', exact: true })
       .getByRole('button', { name: 'Min cykel', exact: true })
       .click();
-    await page.getByRole('button', { name: 'Samlad vy', exact: true }).click();
+    await openWorkspace(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
+    await expect(page.getByRole('region', { name: 'Lista och utkast', exact: true })).toBeVisible();
+    await expect(space).toBeVisible();
     await space.getByText('Ordna min vy', { exact: true }).click();
     await space.getByRole('button', { name: 'Flytta höger i rummet', exact: true }).click();
     await expect(space.getByText('Din personliga vy är sparad.', { exact: true })).toBeVisible();
@@ -304,14 +314,15 @@ test('ARBETE-06: selection and personal map view survive navigation and resizing
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('link', { name: 'Till startsidan', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Samlad vy', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    await expect(page.getByRole('region', { name: 'Lista och utkast', exact: true })).toBeVisible();
+    await activatePanel(page, 'Min cykel');
+    await expect(page.getByRole('region', { name: 'Min cykel', exact: true })).toContainText(
+      'Min cykel',
     );
-    await expect(
-      page.getByRole('region', { name: 'Val och redigering', exact: true }),
-    ).toContainText('Min cykel');
     await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+    await expect(
+      space.getByRole('button', { name: 'Välj objekt: Min cykel', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
     await expect(space.getByLabel('Visa höjdhjälp', { exact: true })).toBeChecked();
     expect(await (await page.request.get(path)).json()).toEqual(view);
   } finally {

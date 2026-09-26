@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { FinancialFact } from '../shared/financial-facts.js';
 import { hasEnded, type Lifecycle, type LifecycleValue } from '../shared/lifecycle.js';
 
@@ -49,13 +49,14 @@ export function LifecycleEditor({
   value?: Lifecycle;
   onChange: (value: Lifecycle | undefined) => void;
 }) {
+  const prefix = useId();
   return (
     <>
-      <label htmlFor={`${kind}-status`}>
+      <label htmlFor={`${prefix}-${kind}-status`}>
         {kind === 'object' ? 'Objektets status' : 'Sambandets status'}
       </label>
       <select
-        id={`${kind}-status`}
+        id={`${prefix}-${kind}-status`}
         value={value ?? ''}
         onChange={(event) => onChange((event.target.value || undefined) as Lifecycle | undefined)}
       >

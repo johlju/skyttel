@@ -159,10 +159,10 @@ viewport changes preserve existing placement and unsent text”.
    minskad rörelse igen utan omladdning och granska samma reglage och
    bakgrund. Stäng av minskad rörelse igen.
 3. Skapa Ny sak i listan och lägg i utkastet. Öppna kartan igen.
-4. Välj Lampan och Redigera. Skriv Oskickad text som nytt namn utan att
-   skicka texten.
+4. Välj Lampan och **Redigera valt objekt**. Skriv Oskickad text som nytt namn
+   utan att skicka texten.
    Öppna kartan och växla mellan stående och liggande smal visningsyta.
-   Återgå till detaljerna.
+   Öppna Lista och välj Lampan i **Öppna paneler** för att återgå till texten.
 
 **Förväntat resultat:**
 
@@ -257,7 +257,7 @@ later refreshes preserve the camera”.
 
 **Steg:**
 
-1. Välj Lampan via Lista och detaljer och öppna rymdkartan. Öppna Ordna
+1. Välj Lampan via Lista och stäng arbetsytan. Öppna Ordna
    min vy. Använd Flytta höger i rummet upprepade gånger tills Lampan
    ligger helt utanför den ursprungliga vyn. Vänta på beskedet att din
    personliga vy är sparad. Gör samma sak med Cykeln, utan att ändra kameran.

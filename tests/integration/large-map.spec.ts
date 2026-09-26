@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, openWorkspace, signIn } from '../support/client.js';
+import { activatePanel, createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('STORKARTA-01: dense overview keeps readable labels and every object and relationship reachable', async ({
@@ -85,7 +85,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
       'Oskickad text i den täta kartan',
     );
     await openWorkspace(page);
-    await page.getByRole('button', { name: 'Samlad vy', exact: true }).click();
+    await activatePanel(page, 'Provobjekt 499');
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Oskickad text i den täta kartan',
     );

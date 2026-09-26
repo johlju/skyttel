@@ -39,7 +39,8 @@ closed”.
 1. Öppna hushållet. Kontrollera kartan och beskedet **Din karta börjar här**.
 2. Välj **Visa verktygens namn**, sedan **Lista** och **Nytt objekt**.
    Ange namnet **Cykeln**.
-3. Välj **Stäng arbetsytan**. Öppna **Lista** igen och kontrollera namnet.
+3. Välj **Stäng arbetsytan**. Öppna **Lista** igen, välj
+   **Nytt objekt** i panelväljaren och kontrollera namnet.
 4. Välj **Lägg i mitt utkast**, sedan **Spara hela utkastet**.
 5. Läs sparbeskedet och ladda om sidan.
 

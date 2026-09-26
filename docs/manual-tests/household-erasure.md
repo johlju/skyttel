@@ -38,11 +38,12 @@ objektet eller sambandet öppnar inte formuläret.
    **Välj profilbild**. Stäng detaljerna utan att ändra texten och välj
    **Spara hela utkastet**. Öppna lampan igen. Högerklicka på bilden,
    välj att kopiera bildens adress och spara adressen för senare kontroll.
-4. Välj lampan i listan, välj **Öppna rymdkartan** och öppna **Ordna min vy**.
+4. Välj lampan i listan, välj **Stäng arbetsytan** och öppna **Ordna min vy**.
    Välj **Flytta höger i rummet** en gång. Välj stolen och flytta den åt vänster
    med **Flytta vänster i rummet**. Ladda om och kontrollera placeringarna.
-5. Öppna stolen i **Lista och detaljer**, skriv **Oberoende privat förslag**
-   i **Beskrivning** och välj **Lägg i mitt utkast**. Kontrollera förslaget
+5. Öppna stolen från **Lista**, välj **Redigera valt objekt** och skriv
+   **Oberoende privat förslag** i **Beskrivning**. Välj **Lägg i mitt utkast**.
+   Kontrollera förslaget
    under **Hela mitt utkast**. Spara inte hela utkastet.
 6. Behåll samma databas vid omstart inom ett fall. RADERING-02 använder
    Chromium med utvecklarverktyg; RADERING-04 behöver en andra terminal.
@@ -107,7 +108,7 @@ preserves unrelated work after restart”.
    **RADERA PERMANENT** i bekräftelsefältet och aktivera knappen med Enter.
 5. Invänta **Den permanenta raderingen är slutförd.** Starta om enligt
    avsnittet ovan, ladda om sidan och kontrollera samma raderingsstatus.
-6. Välj **Till hushållet** och **Lista och detaljer**. Sök efter lampan;
+6. Välj **Till hushållet** och **Lista**. Sök efter lampan;
    ingen träff ska visas. Öppna stolen och kontrollera dess beskrivning
    samt förslaget under **Hela mitt utkast**. Välj **Visa historik** under
    **Ändringshistorik**: stolen ska finnas i det ursprungliga sparandet,
@@ -216,7 +217,7 @@ innehållet ändras efter granskningen.
 
 **Förutsättningar:** Samma nya provkarta är öppen i båda profilerna.
 Profil A visar **Administrera tillgång**. Profil B visar hushållets
-**Lista och detaljer** och är inloggad med samma konto som profil A.
+**Lista och utkast** och är inloggad med samma konto som profil A.
 
 **Integrationstest:**
 [household-erasure.spec.ts](../../tests/integration/household-erasure.spec.ts),

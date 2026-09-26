@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
   type FinancialFact,
   type FinancialFacts,
@@ -19,6 +20,7 @@ export function FinancialFactsEditor({
   facts?: FinancialFacts;
   onChange: (facts: FinancialFacts) => void;
 }) {
+  const prefix = useId();
   function change(field: FinancialField, fact?: FinancialFact) {
     const next = { ...facts };
     if (fact) next[field] = fact;
@@ -35,7 +37,7 @@ export function FinancialFactsEditor({
       </p>
       {financialFields.map((field) => {
         const fact = facts[field.key];
-        const id = `financial-${field.key}`;
+        const id = `${prefix}-financial-${field.key}`;
         const hasValue = fact?.knowledge === 'known' || fact?.knowledge === 'uncertain';
         return (
           <div key={field.key}>

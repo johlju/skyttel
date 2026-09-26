@@ -70,9 +70,9 @@ selection”.
 **Steg:**
 
 1. Öppna rymdkartan. Kontrollera pilen från Lo Exempel till Molnmusik
-   före och efter rotation och panorering. Byt till Samlad vy och välj
+   före och efter rotation och panorering. Välj
    Lo Exempels runda symbol. Kontrollera att sambandets etikett visas.
-   Filtrera på Person och kontrollera att tjänsten döljs.
+   Öppna Lista, filtrera på Person och kontrollera att tjänsten döljs.
 2. Välj Visa hela rymden och Ctrl-högerklicka Lo Exempel. Kontrollera
    fokus utan att objektmenyn öppnas. Rulla lodrätt över tom rymd,
    objektsymbolen och namnet. Kontrollera att alla tre panorerar likadant.
@@ -185,14 +185,14 @@ changes”.
 
 **Steg:**
 
-1. Öppna Samlad vy och välj Lo Exempels runda symbol. Kontrollera namn,
+1. Öppna kartan och välj Lo Exempels runda symbol. Kontrollera namn,
    typikoner och sambandets etikett. Välj Alla etiketter, slå av och på
    valet igen och kontrollera att kameran står kvar. Panorera och välj
    Återställ vy.
-2. Välj Lo Exempel i objektlistan med tangentbord. Kontrollera att fokus
-   stannar på raden och att Tab når Redigera och Ta bort. Läs att objektet
-   och ett samband läggs som borttagningar i utkastet. Välj Redigera,
-   kontrollera rätt formulär och stäng utan ändring.
+2. Öppna Lista och välj Lo Exempel i objektlistan med tangentbord.
+   Kontrollera rubrikfokus i objektpanelen. Välj **Redigera valt objekt**,
+   läs att objektet och ett samband läggs som borttagningar i utkastet.
+   Kontrollera rätt formulär och stäng utan ändring.
 3. Välj sambandet i listan med tangentbord och välj Redigera. Ange känt slutdatum
    2026-12-31 utan att skicka formuläret.
 4. Öppna kartan, ändra fönsterstorlek och öppna detaljer och utkast.
@@ -293,7 +293,7 @@ and opens the saved route read-only”.
 
 **Steg:**
 
-1. Öppna Samlad vy och Ctrl-högerklicka Molnmusik.
+1. Öppna kartan och Ctrl-högerklicka Molnmusik.
 2. Kontrollera Lo Exempel och Kim Exempel med båda betalningssambanden.
 3. Välj den tidigare etiketten Lo Exempel → Betalar → Molnmusik med ×.
 4. Läs Tidigare samband. Ctrl-klicka sedan Kim Exempel och välj det
