@@ -79,6 +79,7 @@ test('YTA-03: narrow screens keep tools, help and text work reachable without gr
       await page.setViewportSize({ width, height: 568 });
       await page.goto(installation.origin);
       const tools = page.getByRole('navigation', { name: 'Kartans verktyg', exact: true });
+      await expect(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
       await page.getByRole('link', { name: 'Hoppa till innehållet', exact: true }).focus();
       await page.keyboard.press('Tab');
       await expect(page.getByRole('link', { name: 'Till verktygen', exact: true })).toBeFocused();

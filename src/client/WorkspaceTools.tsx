@@ -53,9 +53,23 @@ export function WorkspaceTools({
   );
   const returnFocus = useRef<HTMLButtonElement | null>(null);
   const expansionControl = useRef<HTMLButtonElement>(null);
+  const tools = useRef<HTMLElement>(null);
   const utilityPanel = useRef<HTMLElement>(null);
   useEffect(() => {
     if (utility) utilityPanel.current?.querySelector<HTMLElement>('h2')?.focus();
+  }, [utility]);
+  useEffect(() => {
+    if (!utility) return;
+    const dismissWhenLeaving = (event: FocusEvent) => {
+      if (
+        event.target instanceof Node &&
+        !utilityPanel.current?.contains(event.target) &&
+        !tools.current?.contains(event.target)
+      )
+        setUtility(null);
+    };
+    document.addEventListener('focusin', dismissWhenLeaving);
+    return () => document.removeEventListener('focusin', dismissWhenLeaving);
   }, [utility]);
   function closeUtility() {
     setUtility(null);
@@ -67,6 +81,7 @@ export function WorkspaceTools({
   return (
     <>
       <nav
+        ref={tools}
         className={`workspace-tools${expanded ? ' expanded' : ''}`}
         aria-label="Kartans verktyg"
         id="workspace-tools"

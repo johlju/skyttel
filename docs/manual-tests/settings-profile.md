@@ -107,11 +107,92 @@ groups personal entries”.
 4. Öppna profilen igen och välj **Inloggningssätt**. Gå tillbaka via
    **Din profil** i kontosidornas navigation, på mobil via **Välj inställning**.
 5. Välj **Tillbaka till arbetet** och fortsätt beskrivningen.
+6. Stäng arbetsytan, öppna profilen och välj **Tillbaka till arbetet**.
+   Kontrollera att Lista får fokus och att formuläret förblir dolt.
 
 **Förväntat resultat:**
 
 - Profilen har en egen ikon och kompakt panel; kontots undersidor har
   egen sida. Kostnader och hushållets administration finns i Inställningar.
 - Återgången bevarar aktivt formulär, text och fokus.
+- Om arbetsytan har stängts återgår fokus till ett synligt verktyg.
 - Befintliga prov för [bevarat hushållsarbete](household-work.md) täcker
   mikrofon, samtal, urval, väntande sparande och avslut vid förlorad tillgång.
+
+## Fokus och läsbarhet
+
+### INST-04: återgå till kartans objekt och verktyg
+
+**Syfte:** Bevara fokus även utanför arbetsytans paneler.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Kartan är tom.
+
+**Integrationstest:**
+[settings-profile.spec.ts](../../tests/integration/settings-profile.spec.ts),
+testfallet “INST-04: settings and profile restore map and toolbar focus
+without opening panels”.
+
+**Steg:**
+
+1. Öppna Lista och ett nytt objekt. Lägg Cykeln i utkastet och stäng arbetsytan.
+2. Fokusera Cykeln med tangentbord. Besök Inställningar och återgå till kartan.
+3. Öppna profilen och välj **Tillbaka till arbetet**.
+4. Upprepa båda besöken med fokus på verktyget **Prata med Skyttel**.
+
+**Förväntat resultat:**
+
+- Samma kartobjekt eller verktyg återfår fokus efter båda besöken.
+- Arbetsytans stängda paneler öppnas inte.
+
+### INST-05: tangentbordsfokus skyms inte av profilen
+
+**Syfte:** Fortsätta arbetet med tangentbord från den kompakta profilen.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Kartan är öppen på dator.
+
+**Integrationstest:**
+[settings-profile.spec.ts](../../tests/integration/settings-profile.spec.ts),
+testfallet “INST-05: leaving the compact profile exposes keyboard focus
+in the retained work”.
+
+**Steg:**
+
+1. Öppna ett nytt objekt och skriv Kvar bakom profilen i namnfältet.
+2. Öppna profilen och gå med Tab till **Tillbaka till arbetet**.
+3. Tryck Tab igen och fortsätt till arbetsytans kontroller.
+
+**Förväntat resultat:**
+
+- Profilen stängs när fokus lämnar profilen och kartans verktyg.
+- Nästa kontroll har synligt fokus. Ingen kontroll döljs bakom profilen.
+- Objektets oskickade namn finns kvar. Mikrofonreglage förblir tillgängliga.
+
+### INST-06: läsbara knappar i båda teman
+
+**Syfte:** Läsa inställningarnas knappar även när pekaren ligger över dem.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Kartan är öppen.
+
+**Integrationstest:**
+[settings-profile.spec.ts](../../tests/integration/settings-profile.spec.ts),
+testfallet “INST-06: settings form buttons retain readable contrast when
+hovered in both themes”.
+
+**Steg:**
+
+1. Öppna Inställningar och **Administrera tillgång**.
+2. Välj mörkt tema. För pekaren över **Hämta aktuella innehållskopplingar**
+   och **Skapa inbjudan** utan att trycka.
+3. Upprepa med ljust tema.
+
+**Förväntat resultat:**
+
+- Vanliga knappar och primära knappar har tydligt läsbar text i båda teman,
+  även när pekaren ligger över dem.
+- Pekarrörelsen utför ingen åtgärd och ändrar inga hushållsuppgifter.

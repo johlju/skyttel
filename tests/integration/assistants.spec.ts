@@ -34,7 +34,7 @@ test('AI-03: medgivandet kräver val av hushåll och AI-behandling', async ({ pa
       .click();
     await expect(page.getByText('Inga aktiva assistentanslutningar.')).toBeVisible();
     expect((await callAssistant(app.origin, access_token, 'read_map')).status).toBe(401);
-    await page.getByRole('link', { name: 'Till kartan' }).click();
+    await page.getByRole('link', { name: 'Till kartan', exact: true }).click();
     await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toBeVisible();
   } finally {
@@ -317,7 +317,7 @@ test('AI-04: inloggning följs av medgivande och ett nej bevarar kartarbete', as
     expect(new URL((await callback).url()).searchParams.get('error')).toBe('access_denied');
     await page.goto(`${app.origin}/assistants`);
     await expect(page.getByText('Inga aktiva assistentanslutningar.')).toBeVisible();
-    await page.getByRole('link', { name: 'Till kartan' }).click();
+    await page.getByRole('link', { name: 'Till kartan', exact: true }).click();
     await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toBeVisible();
   } finally {
