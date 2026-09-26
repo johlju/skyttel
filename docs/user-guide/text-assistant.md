@@ -25,6 +25,10 @@ du väljer det och anslutningen är klar. Om webbläsaren blockerar ljudet,
 välj **Spela upp ljud**. Du kan fortsätta med text eller formulär när
 mikrofonen eller ljuduppspelningen inte fungerar.
 
+Om rösten inte startar visar felmeddelandet vad du kan prova. Om det visar
+**Felreferens**, skicka referensen till den som driver installationen för
+felsökning. Du kan fortsätta med text och formulär under tiden.
+
 **Lyssnar** betyder att rösten är ansluten. **Assistenten arbetar** visar
 att ett uppdrag pågår, med ökande tid längst ned på skärmen.
 Om ett sparresultat är oklart visas att det tidigare

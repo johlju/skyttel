@@ -31,6 +31,18 @@ type Voice = {
   work?: ReturnType<typeof voiceWork>;
 };
 
+function startupErrorCode(error: unknown) {
+  if (error instanceof OpenAI.APIConnectionTimeoutError) return 'voice_provider_timeout';
+  if (error instanceof OpenAI.APIError) {
+    if (error.status === 401) return 'voice_provider_authentication_failed';
+    if (error.status === 403 || error.status === 404) return 'voice_provider_access_denied';
+    if (error.status === 429) return 'voice_provider_limit';
+    if (error.status === 400 || error.status === 422) return 'voice_provider_rejected';
+    if (error.status && error.status >= 500) return 'voice_provider_unavailable';
+  }
+  return 'voice_connection_failed';
+}
+
 export function voiceAssistantRoutes({
   config,
   dispatch,
@@ -160,6 +172,7 @@ export function voiceAssistantRoutes({
     } catch {
       console.error(JSON.stringify({ event: 'live_usage_unavailable' }));
     }
+    let stage = 'create';
     try {
       const result = await client.live.create(
         {
@@ -194,6 +207,7 @@ export function voiceAssistantRoutes({
       )
         throw new Error('invalid_live_response');
       usage.sessionId = result.session.id;
+      stage = 'sideband';
       const channel = liveSideband
         ? liveSideband(client, result.session.id)
         : new SidebandWS(client, { session_id: result.session.id, graceful_close: true });
@@ -308,11 +322,27 @@ export function voiceAssistantRoutes({
       } finally {
         context.req.raw.signal.removeEventListener('abort', aborted);
       }
-    } catch {
+    } catch (error) {
       usage.outcome = 'failed';
       usage.endedAt = new Date().toISOString();
       report(usage);
-      return context.json({ error: 'voice_connection_failed' }, 503);
+      const code = startupErrorCode(error);
+      console.error(
+        JSON.stringify({
+          event: 'voice_start_failed',
+          diagnosticId: usage.attemptId,
+          stage,
+          code,
+          providerStatus: error instanceof OpenAI.APIError ? error.status : undefined,
+          providerRequestId:
+            error instanceof OpenAI.APIError &&
+            typeof error.requestID === 'string' &&
+            /^[\w-]{1,200}$/.test(error.requestID)
+              ? error.requestID
+              : undefined,
+        }),
+      );
+      return context.json({ error: code, diagnosticId: usage.attemptId }, 503);
     }
   });
   routes.post(`${base}/:voiceId/:action`, async (context) => {

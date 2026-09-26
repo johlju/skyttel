@@ -89,6 +89,13 @@ Correct or rotate the key in the server's private settings and restart with
 the same disk and authentication secret. Keep provider error bodies,
 requests and credentials out of shared diagnostics.
 
+When voice startup shows **Felreferens**, find the matching `diagnosticId`
+in the server's `voice_start_failed` log entry. Check `code` and, when
+present, `providerStatus` and `providerRequestId`. The `stage` distinguishes
+session creation (`create`) from the server control connection (`sideband`).
+Use these fields to investigate credentials, model access, quota or network
+failures without collecting microphone audio or household content.
+
 A denied microphone, blocked audio or broken voice connection leaves text
 and forms usable. Check browser permissions, secure origin and network
 access, then start a fresh voice connection. Voice does not reconnect

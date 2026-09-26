@@ -4,6 +4,7 @@ export class MapRequestError extends Error {
   constructor(
     readonly status: number,
     readonly code: string = 'request_failed',
+    readonly diagnosticId?: string,
   ) {
     super(code);
   }
@@ -27,7 +28,14 @@ export async function request<T>(path: string, body?: unknown, signal?: AbortSig
   if (!response.ok) {
     const result = await response.json().catch(() => ({}));
     notifyOutdatedClient(result.error);
-    throw new MapRequestError(response.status, result.error);
+    throw new MapRequestError(
+      response.status,
+      result.error,
+      typeof result.diagnosticId === 'string' &&
+        /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(result.diagnosticId)
+        ? result.diagnosticId
+        : undefined,
+    );
   }
   return response.json() as Promise<T>;
 }

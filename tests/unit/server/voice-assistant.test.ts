@@ -1,5 +1,5 @@
 import { type APIRequestContext, request } from '@playwright/test';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
@@ -10,6 +10,7 @@ let browser: APIRequestContext;
 afterEach(async () => {
   await browser?.dispose();
   await app?.close();
+  vi.restoreAllMocks();
 });
 
 test('voice requires the existing current assistant consent and creates only the fixed private Live session', async () => {
@@ -784,7 +785,10 @@ test('provider startup failure records unknown usage and leaves the same text se
     data: { sdp: 'synthetic-offer', revision: 0, draftVersion: 1, contentVersion: 1 },
   });
   expect(response.status()).toBe(503);
-  expect(await response.json()).toEqual({ error: 'voice_connection_failed' });
+  expect(await response.json()).toMatchObject({
+    error: 'voice_connection_failed',
+    diagnosticId: expect.any(String),
+  });
   expect(usage).toHaveLength(2);
   expect(usage[1]).toMatchObject({
     sessionId: null,
@@ -796,6 +800,59 @@ test('provider startup failure records unknown usage and leaves the same text se
   expect(current.review.changes).toHaveLength(1);
   expect(current.phase).toBe('ready');
 });
+
+test.each([
+  [400, 'voice_provider_rejected'],
+  [401, 'voice_provider_authentication_failed'],
+  [403, 'voice_provider_access_denied'],
+  [404, 'voice_provider_access_denied'],
+  [422, 'voice_provider_rejected'],
+  [429, 'voice_provider_limit'],
+  [500, 'voice_provider_unavailable'],
+])(
+  'provider startup status %s exposes a safe cause and a matching log reference',
+  async (status, code) => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    app = await createInstallation(undefined, {
+      modelFetch: textModel(() => []).provider,
+      liveFetch: async () =>
+        Response.json(
+          { error: { message: 'private provider details', code: 'private-code' } },
+          { status, headers: { 'x-request-id': 'req_synthetic' } },
+        ),
+    });
+    browser = await request.newContext();
+    await signIn(browser, app.origin);
+    const { household } = await (await createHousehold(browser, app.origin)).json();
+    const path = `${app.origin}/api/households/${household.id}/text-assistant`;
+    const session = await (
+      await browser.post(path, {
+        headers: { origin: app.origin },
+        data: { externalAi: true, mapWork: true },
+      })
+    ).json();
+    const response = await browser.post(`${path}/${session.id}/voice`, {
+      headers: { origin: app.origin },
+      data: { sdp: 'synthetic-offer', revision: 0, draftVersion: 0, contentVersion: 1 },
+    });
+    expect(response.status()).toBe(503);
+    const body = await response.json();
+    expect(body).toEqual({ error: code, diagnosticId: expect.any(String) });
+    const entries = log.mock.calls.map(([entry]) => JSON.parse(String(entry)));
+    expect(entries).toContainEqual({
+      event: 'voice_start_failed',
+      diagnosticId: body.diagnosticId,
+      stage: 'create',
+      code,
+      providerStatus: status,
+      providerRequestId: 'req_synthetic',
+    });
+    expect(JSON.stringify({ body, entries })).not.toMatch(
+      /private|synthetic-model-key|synthetic-offer/,
+    );
+    expect((await browser.get(`${path}/${session.id}`)).status()).toBe(200);
+  },
+);
 
 test('an aborted public retry request cannot commit its previously prepared operation after its body arrives', async () => {
   let step = 0;
@@ -958,7 +1015,10 @@ test('sideband attachment failure closes the allocated session and preserves the
     data: { sdp: 'replacement-offer', revision: 0, draftVersion: 0, contentVersion: 1 },
   });
   expect(response.status()).toBe(503);
-  expect(await response.json()).toEqual({ error: 'voice_connection_failed' });
+  expect(await response.json()).toMatchObject({
+    error: 'voice_connection_failed',
+    diagnosticId: expect.any(String),
+  });
   expect(voice.live.channels.size).toBe(0);
   expect((await browser.get(`${voice.path}/${voice.assistant.id}`)).status()).toBe(200);
 });

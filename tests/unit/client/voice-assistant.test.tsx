@@ -330,6 +330,77 @@ test('a microphone refusal offers recovery without creating a remote session', a
   await waitFor(() => expect(calls[0]?.url).toBe(base));
 });
 
+test.each([
+  ['NotFoundError', 'Ingen mikrofon hittades'],
+  ['NotReadableError', 'Mikrofonen kunde inte öppnas'],
+])(
+  'microphone failure %s explains how to recover without exposing raw errors',
+  async (name, message) => {
+    const { getUserMedia, calls } = setup();
+    getUserMedia.mockRejectedValueOnce(new DOMException('private device details', name));
+    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain(message);
+    expect(alert.textContent).not.toContain('private device details');
+    expect(calls).toHaveLength(0);
+  },
+);
+
+test('unsupported browsers explain missing voice support before capturing audio', async () => {
+  const { calls, getUserMedia } = setup();
+  vi.stubGlobal('RTCPeerConnection', undefined);
+  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('saknar stöd för röstsamtal');
+  expect(getUserMedia).not.toHaveBeenCalled();
+  expect(calls).toHaveLength(0);
+});
+
+test.each([
+  ['voice_unavailable', 'inte konfigurerad'],
+  ['voice_provider_authentication_failed', 'nekade serverns API-nyckel'],
+  ['voice_provider_access_denied', 'nekade åtkomst'],
+  ['voice_provider_limit', 'användningsgräns'],
+  ['voice_provider_rejected', 'avvisade begäran'],
+  ['voice_provider_unavailable', 'kunde inte starta rösttjänsten just nu'],
+  ['voice_provider_timeout', 'svarade inte i tid'],
+  ['voice_connection_failed', 'Servern kunde inte ansluta'],
+  ['assistant_draft_changed', 'Utkastet eller samtalet har ändrats'],
+  ['voice_session_expired', 'Röstsamtalet har avslutats'],
+])(
+  'server failure %s remains visible with its diagnostic reference and allows retry',
+  async (code, message) => {
+    const { track, accessLost } = setup();
+    const diagnosticId = '91c11f4f-f4c7-4f75-86d9-cb91d91ddcb8';
+    vi.mocked(fetch).mockResolvedValueOnce(
+      Response.json({ error: code, diagnosticId }, { status: 503 }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain(message);
+    expect(alert.textContent).toContain(`Felreferens: ${diagnosticId}`);
+    expect(track.stop).toHaveBeenCalled();
+    expect(accessLost).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    await waitFor(() => expect(Peer.all[1]?.channel.readyState).toBe('open'));
+    expect(screen.queryByRole('alert')).toBeNull();
+  },
+);
+
+test('untrusted diagnostic references and error messages are not rendered', async () => {
+  setup();
+  vi.mocked(fetch).mockResolvedValueOnce(
+    Response.json(
+      { error: 'voice_connection_failed', diagnosticId: 'private provider details' },
+      { status: 503 },
+    ),
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  const alert = await screen.findByRole('alert');
+  expect(alert.textContent).toContain('Servern kunde inte ansluta');
+  expect(alert.textContent).not.toContain('private provider details');
+  expect(alert.textContent).not.toContain('Felreferens');
+});
+
 test('cancelling permission stops a late microphone stream without opening a session', async () => {
   const { getUserMedia, track, calls, changed } = setup();
   let grant!: (stream: Stream) => void;

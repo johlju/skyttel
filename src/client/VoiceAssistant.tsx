@@ -3,6 +3,7 @@ import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
+import { voiceErrorMessage } from './voice-error.js';
 import { createVoiceTransport, type VoiceTransport } from './voice-transport.js';
 
 type Attempt = {
@@ -128,19 +129,15 @@ export function VoiceAssistant(props: {
       if (!active()) return;
       if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
         latest.current.onAccessLost();
-      const denied =
-        (failure instanceof Error || failure instanceof DOMException) &&
-        failure.name === 'NotAllowedError';
       void stop(
-        denied
-          ? 'Mikrofonen tilläts inte. Tillåt mikrofonen i webbläsaren och försök igen, eller fortsätt med text och formulär.'
-          : reason === 'audio'
+        voiceErrorMessage(failure) ??
+          (reason === 'audio'
             ? 'Ljuduppspelningen avbröts. Starta rösten igen eller fortsätt med text. Ett genomfört sparande är inte ångrat.'
             : reason === 'microphone'
               ? 'Mikrofonen slutade fungera. Kontrollera mikrofonen och starta rösten igen, eller fortsätt med text.'
               : reason === 'provider'
                 ? 'Rösttjänsten avbröt samtalet. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'
-                : 'Röstanslutningen avbröts. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.',
+                : 'Röstanslutningen avbröts. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'),
       );
     };
     const poll = async () => {
@@ -168,6 +165,8 @@ export function VoiceAssistant(props: {
       }
     };
     try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === 'undefined')
+        throw new DOMException('Voice is not supported', 'NotSupportedError');
       attempt.transport = createVoiceTransport({
         onReady: () => {
           if (active()) setState('listening');
