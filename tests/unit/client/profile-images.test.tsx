@@ -11,6 +11,10 @@ let client: ReturnType<typeof fixture.client>;
 let householdId: string;
 let path: string;
 let failure: number;
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(
+  HTMLElement.prototype,
+  'scrollIntoView',
+);
 const read = async (): Promise<MapState> => (await client.request(path)).json();
 const file = async () =>
   new File(
@@ -33,6 +37,11 @@ const file = async () =>
   );
 
 beforeEach(async () => {
+  // jsdom has no layout; browser tests verify actual focus scrolling.
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value() {},
+  });
   fixture = await applicationFixture();
   client = fixture.client();
   await client.signIn();
@@ -74,6 +83,9 @@ beforeEach(async () => {
 });
 afterEach(() => {
   cleanup();
+  if (originalScrollIntoView)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView);
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
   vi.unstubAllGlobals();
   fixture.close();
 });
