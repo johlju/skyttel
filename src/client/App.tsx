@@ -778,12 +778,7 @@ function HouseholdWork({ onSessionExpired }: { onSessionExpired: () => void }) {
   const id = routeId ?? currentId;
   if (!id) return null;
   return (
-    <HouseholdPage
-      key={id}
-      id={id}
-      active={Boolean(routeId)}
-      onSessionExpired={onSessionExpired}
-    />
+    <HouseholdPage key={id} id={id} active={Boolean(routeId)} onSessionExpired={onSessionExpired} />
   );
 }
 
