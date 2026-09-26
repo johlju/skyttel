@@ -731,6 +731,21 @@ excludes response bodies, credentials, arbitrary error messages, and household
 content. A missing HTTP status means no response headers were received. For a
 response read or JSON error, the record retains the received HTTP status.
 
+Render can report a deployment as **Live** while its public endpoint still
+returns a temporary gateway error. Application checks allow up to 12 attempts
+per request, with five seconds between attempts, for HTTP 502, 503, 504 and
+temporary connection failures. Each request has a 15-second timeout. All
+attempts remain in the request evidence. The job still requires the expected
+release identity, a ready database and successful smoke checks. Persistent
+errors fail the job; deployment writes are never automatically retried.
+
+An older job can fail on its first temporary gateway error even when Render
+finishes the deployment. Compare its requested release with the current
+`/api/version`, confirm `/healthz` and database readiness, and inspect the
+saved and live image evidence before retrying. When those identities agree,
+retrying verifies the existing deployment without restarting it. Rerunning an
+older job uses its original verification script.
+
 If the job stops before the deploy step starts, use the job log to diagnose
 the earlier failed step. There may be no deployment artifact in that case.
 

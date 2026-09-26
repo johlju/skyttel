@@ -52,6 +52,26 @@ function errorCode(error) {
   return 'unknown';
 }
 
+function transientApplicationFailure(error) {
+  const request = error instanceof DeploymentError && error.request;
+  if (!request) return false;
+  if (request.failure === 'http_request_failed') return [502, 503, 504].includes(request.status);
+  return (
+    ['network_request_failed', 'response_read_failed'].includes(request.failure) &&
+    [
+      'ECONNREFUSED',
+      'ECONNRESET',
+      'EAI_AGAIN',
+      'ETIMEDOUT',
+      'UND_ERR_CONNECT_TIMEOUT',
+      'UND_ERR_HEADERS_TIMEOUT',
+      'UND_ERR_BODY_TIMEOUT',
+      'UND_ERR_SOCKET',
+      'timeout',
+    ].includes(request.errorCode)
+  );
+}
+
 function serviceConfigurationFailures(service) {
   const details = service.serviceDetails;
   // Do not copy arbitrary API strings, especially command overrides, into evidence.
@@ -152,6 +172,7 @@ export async function deployRelease({
   fetch: send = globalThis.fetch,
   sleep = delay,
   attempts = 120,
+  applicationAttempts = 12,
   onEvent = () => {},
 }) {
   const report = {
@@ -222,7 +243,24 @@ export async function deployRelease({
   }
   const render = async (path, method, body) => http('render', path, renderToken, method, body);
   const github = async (path, method, body) => http('github', path, githubToken, method, body);
-  const application = async (path) => http('application', path);
+  const application = async (path, format = 'json') => {
+    // Render can report live before the public route is ready. Retry only
+    // transient read failures; never repeat a deployment mutation or weaken
+    // the health, identity, database, or smoke assertions below.
+    for (let count = 1; ; count++) {
+      try {
+        return await http('application', path, undefined, 'GET', undefined, format);
+      } catch (error) {
+        if (
+          phase === 'failure-snapshot' ||
+          count >= applicationAttempts ||
+          !transientApplicationFailure(error)
+        )
+          throw error;
+        await sleep(5_000);
+      }
+    }
+  };
   const latest = async () => {
     const list = await render(`${servicePath}/deploys?limit=1`);
     return list[0]?.deploy;
@@ -437,7 +475,7 @@ export async function deployRelease({
         bootstrap.providers?.includes('microsoft'),
       'smoke_failed',
     );
-    const page = await http('application', '/', undefined, 'GET', undefined, 'text');
+    const page = await application('/', 'text');
     requireState(page.includes('<html'), 'smoke_failed');
     report.checks.push('smoke');
     phase = 'final-snapshot';
