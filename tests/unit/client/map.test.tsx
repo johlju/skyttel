@@ -25,7 +25,16 @@ const dialogMethods = ['showModal', 'close'] as const;
 const originalDialogMethods = dialogMethods.map((name) =>
   Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, name),
 );
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(
+  HTMLElement.prototype,
+  'scrollIntoView',
+);
 beforeEach(async () => {
+  // jsdom has no layout; browser tests verify actual focus scrolling.
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value() {},
+  });
   // jsdom omits native dialog methods. Real modal behavior is covered by browser tests.
   for (const name of dialogMethods)
     Object.defineProperty(HTMLDialogElement.prototype, name, {
@@ -72,6 +81,9 @@ beforeEach(async () => {
 });
 afterEach(() => {
   cleanup();
+  if (originalScrollIntoView)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView);
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
   vi.unstubAllGlobals();
   dialogMethods.forEach((name, index) => {
     const original = originalDialogMethods[index];

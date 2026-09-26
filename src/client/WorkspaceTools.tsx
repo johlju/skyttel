@@ -60,6 +60,7 @@ export function WorkspaceTools({
         className={`workspace-tools${expanded ? ' expanded' : ''}`}
         aria-label="Kartans verktyg"
         id="workspace-tools"
+        tabIndex={-1}
       >
         <a
           className="workspace-brand"
