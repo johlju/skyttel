@@ -806,6 +806,7 @@ test.each([
   [401, 'voice_provider_authentication_failed'],
   [403, 'voice_provider_access_denied'],
   [404, 'voice_provider_access_denied'],
+  [408, 'voice_provider_timeout'],
   [422, 'voice_provider_rejected'],
   [429, 'voice_provider_limit'],
   [500, 'voice_provider_unavailable'],

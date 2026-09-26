@@ -34,6 +34,7 @@ type Voice = {
 function startupErrorCode(error: unknown) {
   if (error instanceof OpenAI.APIConnectionTimeoutError) return 'voice_provider_timeout';
   if (error instanceof OpenAI.APIError) {
+    if (error.status === 408) return 'voice_provider_timeout';
     if (error.status === 401) return 'voice_provider_authentication_failed';
     if (error.status === 403 || error.status === 404) return 'voice_provider_access_denied';
     if (error.status === 429) return 'voice_provider_limit';
