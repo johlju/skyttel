@@ -1073,7 +1073,7 @@ export function App() {
         ))}
       {location.pathname === '/costs' &&
         (data.operator ? (
-          <Costs key={data.user.id} onAccessLost={reload} />
+          <Costs key={`costs-${data.user.id}`} onAccessLost={reload} />
         ) : (
           <section className="panel">
             <Heading>
