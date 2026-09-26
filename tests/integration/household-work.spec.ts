@@ -34,7 +34,7 @@ for (const width of [1280, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page.request, installation.origin);
       const { household } = await (await createHousehold(page.request, installation.origin)).json();
-      await page.goto(installation.origin);
+      await page.goto(`${installation.origin}/households/${household.id}/`);
       await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
       await page.getByLabel('Objektets namn').fill('Oskickad cykel');
       await page.getByLabel('Beskrivning', { exact: true }).fill('Behåll denna text');
@@ -46,6 +46,7 @@ for (const width of [1280, 390, 320]) {
       ).toBeFocused();
       await expect(page.getByLabel('Objektets namn')).not.toBeVisible();
       await expect(page.getByLabel('Sök objekt', { exact: true })).not.toBeVisible();
+      await expect(page.getByText('Administratör', { exact: true })).not.toBeVisible();
       await page.getByRole('link', { name: 'Till startsidan', exact: true }).focus();
       await page.keyboard.press('Enter');
       await expect(page.getByLabel('Objektets namn')).toHaveValue('Oskickad cykel');
