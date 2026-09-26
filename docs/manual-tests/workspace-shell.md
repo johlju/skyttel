@@ -102,11 +102,14 @@ without graphics”.
    formulär och samtal före kartgrafiken.
 5. Öppna **Sök i kartan** och **Utkast och historik** från de expanderade
    verktygen. Stäng arbetsytan efter varje val och kontrollera fokus.
+6. Öppna hjälpen igen och fäll ihop verktygen. Flytta fokus till hjälpen
+   och tryck Escape. Kontrollera att fokus är kvar på en synlig knapp.
 
 **Förväntat resultat:**
 
 - Vägledningen försvinner. Hjälpens rubrik får fokus; Escape återför
-  fokus till hjälpknappen.
+  fokus till hjälpknappen eller den synliga knappen för att expandera
+  verktygen om hjälpknappen har dolts.
 - Formulär och samtal går att nå utan att välja något grafiskt objekt.
 - Innehållet är läsbart och kontrollerna nåbara även med förstoring.
 - Fokus återgår till en synlig verktygsknapp. Täckta kartkontroller går
