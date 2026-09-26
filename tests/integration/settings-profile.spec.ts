@@ -270,3 +270,40 @@ test('INST-06: settings form buttons retain readable contrast when hovered in bo
     await installation.close();
   }
 });
+
+for (const width of [390, 320]) {
+  test(`INST-07: reverse keyboard navigation exposes covered profile tools at ${width}px`, async ({
+    page,
+  }) => {
+    const installation = await createInstallation();
+    try {
+      await page.setViewportSize({ width, height: 900 });
+      await signIn(page.request, installation.origin);
+      await createHousehold(page.request, installation.origin);
+      await page.goto(installation.origin);
+      await openWorkspace(page);
+      await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+      await page.getByLabel('Objektets namn').fill('Behåll mobiltexten');
+      await openProfile(page);
+      const profile = page.getByRole('region', { name: 'Din profil', exact: true });
+      await expect(profile.getByRole('heading', { name: 'Din profil', exact: true })).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Shift+Tab');
+      const expansion = page.getByRole('button', { name: 'Dölj verktygens namn', exact: true });
+      await expect(expansion).toBeFocused();
+      await expect(profile).not.toBeVisible();
+      expect(
+        await expansion.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return element.contains(
+            document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+          );
+        }),
+      ).toBe(true);
+      await expansion.press('Enter');
+      await expect(page.getByLabel('Objektets namn')).toHaveValue('Behåll mobiltexten');
+    } finally {
+      await installation.close();
+    }
+  });
+}

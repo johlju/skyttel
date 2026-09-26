@@ -17,6 +17,12 @@ if (typeof HTMLElement.prototype.scrollTo !== 'function') {
 
 // Geometry and responsive behavior are verified in real Chromium. These defaults
 // allow HTTP-backed jsdom clients to mount the same panels without a layout engine.
+if (typeof document.elementFromPoint !== 'function') {
+  Object.defineProperty(document, 'elementFromPoint', {
+    configurable: true,
+    value: () => null,
+  });
+}
 if (typeof window.matchMedia !== 'function') {
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
