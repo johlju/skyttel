@@ -49,7 +49,7 @@ import {
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
 import { TextAssistant } from './TextAssistant.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
-import { WorkspacePanels } from './WorkspacePanels.js';
+import { type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
 import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
 import './workspace.css';
 import './workspace-panels.css';
@@ -121,13 +121,11 @@ export function HouseholdMap({
   const [objectDirty, setObjectDirty] = useState<Record<string, boolean>>({});
   const [openPanels, setOpenPanels] = useState<string[]>([]);
   const [activePanel, setActivePanel] = useState<string | null>(null);
-  const [panelFocusRequest, setPanelFocusRequest] = useState(0);
-  const currentPanel = useRef(activePanel);
-  currentPanel.current = activePanel;
-  function openPanel(id: string) {
+  const [panelFocusRequest, setPanelFocusRequest] = useState<PanelFocusRequest | null>(null);
+  function openPanel(id: string, element?: HTMLElement | null) {
     setOpenPanels((previous) => (previous.includes(id) ? previous : [...previous, id]));
     setActivePanel(id);
-    setPanelFocusRequest((previous) => previous + 1);
+    setPanelFocusRequest({ id, element });
     setPresentation('combined');
     setRevealRequest(undefined);
   }
@@ -1143,6 +1141,7 @@ export function HouseholdMap({
               activeId={activePanel}
               focusRequest={panelFocusRequest}
               onActivate={(id) => {
+                setPanelFocusRequest(null);
                 setActivePanel(id);
                 if (id !== activePanel) setRevealRequest(undefined);
               }}
@@ -1198,10 +1197,7 @@ export function HouseholdMap({
                           setObjectPanels((previous) =>
                             previous.filter((entry) => entry.id !== panel.id),
                           );
-                          openPanel('work');
-                          requestAnimationFrame(() => {
-                            if (currentPanel.current === 'work') newButton.current?.focus();
-                          });
+                          openPanel('work', newButton.current);
                         }}
                         action={(body) => action('draft', body)}
                         changeImage={changeImage}
@@ -1362,11 +1358,7 @@ export function HouseholdMap({
               <button
                 type="button"
                 onClick={() => {
-                  openPanel('work');
-                  requestAnimationFrame(() => {
-                    if (currentPanel.current === 'work')
-                      document.getElementById('draft-title')?.focus();
-                  });
+                  openPanel('work', document.getElementById('draft-title'));
                 }}
               >
                 Granska utkastet

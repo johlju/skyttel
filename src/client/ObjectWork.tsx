@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CustomValues, MapObject, MapState, ObjectType, ObjectValue } from '../shared/map.js';
 import { FinancialFactsEditor } from './FinancialFacts.js';
 import { LifecycleEditor } from './Lifecycle.js';
@@ -52,10 +52,16 @@ export function ObjectWork({
 }) {
   const prefix = useId();
   const nameInput = useRef<HTMLInputElement>(null);
+  const focusNameOnOpen = useRef(false);
   const [editor, setEditor] = useState<ObjectEditor | null>(editing ? initial : null);
   const [dirty, markDirty] = useState(false);
   const editRequest = useRef(editing);
   const basis = useRef(initial);
+  useLayoutEffect(() => {
+    if (!focusNameOnOpen.current || !editor) return;
+    focusNameOnOpen.current = false;
+    nameInput.current?.focus();
+  }, [editor]);
   // A sibling proposal advances the single draft version. Carry that version
   // forward only when this object's source and type are still the same.
   useEffect(() => {
@@ -80,8 +86,8 @@ export function ObjectWork({
   }
   function begin() {
     basis.current = initial;
+    focusNameOnOpen.current = true;
     setEditor(initial);
-    requestAnimationFrame(() => nameInput.current?.focus());
   }
   useEffect(() => {
     if (editing !== editRequest.current) {

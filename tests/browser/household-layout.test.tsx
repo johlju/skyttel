@@ -1,5 +1,5 @@
 import { cleanup, render } from '@testing-library/react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
 import { cdp, page, userEvent } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import '../../src/client/styles.css';
@@ -130,6 +130,74 @@ test.each([320, 390, 1440])(
     await userEvent.keyboard(' kvar');
     await expect.element(name).toHaveFocus();
     await expect.element(name).toHaveValue('Alex oskickat kvar');
+  },
+);
+
+test('opening an editor does not redirect typing after the user chooses another field', async ({
+  onTestFinished,
+}) => {
+  await open(1440);
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
+  await page.getByRole('button', { name: 'Alex', exact: true }).click();
+  const object = page.getByRole('region', { name: 'Alex', exact: true });
+  const panel = object.element();
+  // Choose the description as soon as it appears, before the next paint.
+  // Initial name focus must finish with the form commit, not steal this choice later.
+  const observer = new MutationObserver(() => {
+    const description = panel.querySelector('textarea');
+    if (!description) return;
+    observer.disconnect();
+    description.focus();
+  });
+  observer.observe(panel, { childList: true, subtree: true });
+  onTestFinished(() => observer.disconnect());
+  await object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await userEvent.keyboard('Min oskickade text');
+  await expect
+    .element(object.getByLabelText('Beskrivning', { exact: true }))
+    .toHaveValue('Min oskickade text');
+  await expect
+    .element(object.getByLabelText('Objektets namn', { exact: true }))
+    .toHaveValue('Alex');
+  await expect.element(object.getByLabelText('Beskrivning', { exact: true })).toHaveFocus();
+});
+
+test.each(['chooser', 'close', 'finish'] as const)(
+  '%s panel transition preserves a newer choice to type in search',
+  async (transition) => {
+    await open(390);
+    await page.getByRole('button', { name: 'Lista', exact: true }).click();
+    await page.getByRole('button', { name: 'Alex', exact: true }).click();
+    const object = page.getByRole('region', { name: 'Alex', exact: true });
+    if (transition === 'finish')
+      await object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
+    const work = document.querySelector<HTMLElement>('.workspace-window[data-window-id="work"]');
+    const search = document.querySelector<HTMLInputElement>('#object-search');
+    if (!work || !search) throw new Error('The retained list and search must exist');
+    const observer = new MutationObserver(() => {
+      if (work.hidden) return;
+      observer.disconnect();
+      search.focus();
+    });
+    observer.observe(work, { attributes: true });
+    onTestFinished(() => observer.disconnect());
+    if (transition === 'chooser')
+      await page
+        .getByLabelText(/^Öppna paneler/)
+        .selectOptions(page.getByRole('option', { name: 'Lista och utkast', exact: true }));
+    else if (transition === 'close')
+      await object.getByRole('button', { name: 'Stäng Alex', exact: true }).click();
+    else
+      await object
+        .getByRole('button', { name: 'Stäng utan att skicka texten', exact: true })
+        .click();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await userEvent.keyboard('Min sökning');
+    await expect
+      .element(page.getByLabelText('Sök objekt', { exact: true }))
+      .toHaveValue('Min sökning');
+    await expect.element(page.getByLabelText('Sök objekt', { exact: true })).toHaveFocus();
   },
 );
 
