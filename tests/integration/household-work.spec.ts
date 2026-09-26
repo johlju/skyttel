@@ -236,7 +236,9 @@ test('ARBETE-05: navigation preserves a save attempt after its response disappea
     await page.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
     await expect.poll(() => saved).toBe(true);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
-    await expect(page.getByRole('status')).toContainText('Väntande: kontrollerar sparandet');
+    await expect(
+      page.getByRole('region', { name: 'Hushållskarta', exact: true }).getByRole('status'),
+    ).toContainText('Väntande: kontrollerar sparandet');
     release();
     await expect(page.getByRole('alert')).toContainText('Utfallet är okänt');
     await page.getByRole('link', { name: 'Till startsidan', exact: true }).click();
