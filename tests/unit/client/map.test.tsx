@@ -81,6 +81,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   cleanup();
+  localStorage.removeItem('skyttel-theme');
   if (originalScrollIntoView)
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView);
   else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
@@ -109,6 +110,61 @@ async function save() {
   await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
   await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Sparat:'));
 }
+
+test('workspace theme persists and System follows device preference changes', async () => {
+  // jsdom has no device preference; keep its external browser event boundary.
+  // YTA-02 also exercises this flow with Chromium's actual media preference.
+  const device = Object.assign(new EventTarget(), { matches: false });
+  vi.stubGlobal('matchMedia', () => device);
+  await open();
+  const workspace = () => screen.getByRole('region', { name: 'Hushållskarta' });
+  const button = () => screen.getByRole('button', { name: /^Tema:/ });
+  expect(workspace().getAttribute('data-theme')).toBe('light');
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'Mörkt' }));
+  expect(document.activeElement).toBe(button());
+  expect(workspace().getAttribute('data-theme')).toBe('dark');
+  cleanup();
+  await open();
+  expect(button().getAttribute('aria-label')).toBe('Tema: Mörkt. Byt tema');
+  expect(workspace().getAttribute('data-theme')).toBe('dark');
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'Ljust' }));
+  expect(workspace().getAttribute('data-theme')).toBe('light');
+  cleanup();
+  await open();
+  expect(button().getAttribute('aria-label')).toBe('Tema: Ljust. Byt tema');
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'System' }));
+  device.matches = true;
+  device.dispatchEvent(new Event('change'));
+  await waitFor(() => expect(workspace().getAttribute('data-theme')).toBe('dark'));
+  device.matches = false;
+  device.dispatchEvent(new Event('change'));
+  await waitFor(() => expect(workspace().getAttribute('data-theme')).toBe('light'));
+});
+
+test('workspace theme restores focus after choice or Escape and permits leaving by Tab or pointer', async () => {
+  await open();
+  const button = () => screen.getByRole('button', { name: /^Tema:/ });
+  const popup = () => screen.queryByRole('dialog', { name: 'Tema' });
+  await userEvent.click(button());
+  expect(document.activeElement).toBe(screen.getByRole('radio', { name: 'System' }));
+  await userEvent.keyboard('{Escape}');
+  expect(popup()).toBeNull();
+  expect(document.activeElement).toBe(button());
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'System' }));
+  expect(popup()).toBeNull();
+  expect(document.activeElement).toBe(button());
+  await userEvent.click(button());
+  await userEvent.tab();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Visa verktygens namn' }));
+  expect(popup()).toBeNull();
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('region', { name: 'Hushållskarta' }));
+  expect(popup()).toBeNull();
+});
 
 test('changing type shows displaced values and requires handling them without copying matching field IDs', async () => {
   for (const [version, id, name, kind] of [

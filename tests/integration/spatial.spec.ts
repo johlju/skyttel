@@ -255,6 +255,7 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
     await expect(page.getByLabel('Sök objekt')).toHaveValue('');
     await expect(page.getByLabel('Filtrera objekttyp')).toHaveValue('');
     await expect(page.getByText('Fokus: Lo Exempel', { exact: true })).toHaveCount(0);
+    await space.getByText('Navigera rymden', { exact: true }).click();
     await space.getByLabel('Alla etiketter', { exact: true }).check();
     await expect(
       space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }),

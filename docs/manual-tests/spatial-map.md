@@ -80,7 +80,8 @@ selection”.
 4. Sök efter Lo. Flytta tangentbordsfokus till en kameraknapp och tryck
    Escape.
 5. Fokusera Lo Exempel igen, sök efter Lo och filtrera på Person. Välj
-   Återställ vy, välj Alla etiketter och sedan användningssambandets etikett.
+   Återställ vy och fäll ihop Navigera rymden. Välj Alla etiketter och
+   sedan användningssambandets etikett.
 
 **Förväntat resultat:**
 
