@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { MapState, SaveOperation, SaveReceipt } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 test('SPAR-01: find a committed save after losing its response and reopening on another client', async ({
@@ -14,6 +14,7 @@ test('SPAR-01: find a committed save after losing its response and reopening on 
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
     const path = `${installation.origin}/api/households/${household.id}/map`;
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
@@ -34,6 +35,7 @@ test('SPAR-01: find a committed save after losing its response and reopening on 
     await signIn(recovered.request, installation.origin);
     const reopened = await recovered.newPage();
     await reopened.goto(installation.origin);
+    await openWorkspace(reopened);
     const operations = reopened.getByRole('region', { name: 'Mina sparförsök' });
     await expect(operations).toContainText('Genomfört');
     await expect(operations).toContainText('Lo Exempel');
@@ -76,6 +78,7 @@ test('SPAR-02: retry a pending save on another client after interruption before 
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
     const path = `${installation.origin}/api/households/${household.id}/map`;
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
@@ -89,6 +92,7 @@ test('SPAR-02: retry a pending save on another client after interruption before 
     await signIn(recovered.request, installation.origin);
     const reopened = await recovered.newPage();
     await reopened.goto(installation.origin);
+    await openWorkspace(reopened);
     const operations = reopened.getByRole('region', { name: 'Mina sparförsök' });
     await expect(operations).toContainText('Väntande');
     await expect(reopened.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
@@ -155,12 +159,14 @@ test('SPAR-03: a rejected stale save survives restart without consuming newer pr
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
     const path = `${installation.origin}/api/households/${household.id}/map`;
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
     await signIn(second.request, installation.origin);
     const newer = await second.newPage();
     await newer.goto(installation.origin);
+    await openWorkspace(newer);
     await newer.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
     await newer.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await newer.getByLabel('Objektets namn').fill('Lo Lind');
@@ -173,6 +179,7 @@ test('SPAR-03: a rejected stale save survives restart without consuming newer pr
     await page.close();
     await installation.restart();
     await newer.reload();
+    await openWorkspace(newer);
     const operations = newer.getByRole('region', { name: 'Mina sparförsök' });
     await expect(operations).toContainText('Avvisat');
     await expect(operations).toContainText('Förslaget eller kartan har ändrats');
@@ -236,6 +243,7 @@ test('SPAR-04: private pending saves stay hidden from administrators and revoked
     expect(accepted.status()).toBe(200);
     const memberPage = await member.newPage();
     await memberPage.goto(installation.origin);
+    await openWorkspace(memberPage);
     await memberPage.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await memberPage.getByLabel('Objektets namn').fill('Privat förslag');
     await memberPage.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
@@ -250,6 +258,8 @@ test('SPAR-04: private pending saves stay hidden from administrators and revoked
     expect(attempt.status).toBe('pending');
 
     await page.goto(installation.origin);
+
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Mina sparförsök' })).toContainText(
       'Inga registrerade sparförsök',
     );

@@ -14,6 +14,9 @@ att prova samtidighet.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Starta en isolerad installation enligt
    [provförberedelsen](../development/devcontainer.md#disposable-local-database).
    Använd ett nytt hushåll

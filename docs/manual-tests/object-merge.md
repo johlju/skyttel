@@ -12,6 +12,9 @@ Använd endast påhittade uppgifter och installationens testinloggning.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Starta en isolerad testinstallation. Logga in som Alex och skapa Linden.
 2. Återställ installationen mellan körningar. Behåll databasen vid omstart
    och använd samma hushåll och inloggning i båda webbläsarna.

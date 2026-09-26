@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('IMPORT-06: replacement preserves merged image history and private work, rejects a lost-receipt retry and permits fresh undo after restart', async ({
@@ -150,6 +150,7 @@ test('IMPORT-06: replacement preserves merged image history and private work, re
       ).status(),
     ).toBe(200);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     let lostReceipt: SaveReceipt | undefined;
     await page.route('**/map/save', async (route) => {
       const response = await route.fetch();

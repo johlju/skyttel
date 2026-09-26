@@ -2,6 +2,7 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
+import '../../src/client/styles.css';
 import { defaultViewSettings, type PersonalView } from '../../src/shared/personal-view.js';
 
 const state = {
@@ -92,8 +93,10 @@ function service() {
 }
 async function open() {
   render(<HouseholdMap householdId="home" />);
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page.getByRole('button', { name: 'Lampan', exact: true }).click();
-  await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+  await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+  await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
   await page.getByText('Ordna min vy', { exact: true }).click();
 }
 afterEach(() => {
@@ -159,7 +162,7 @@ test.each(['network', 'uncertain', 'denied'] as const)(
           'Du har inte längre tillgång. Logga in och kontrollera din tillgång till hushållet.',
         );
       await expect
-        .element(page.getByRole('button', { name: 'Lista och detaljer', exact: true }))
+        .element(page.getByRole('button', { name: 'Välj objekt: Lampan', exact: true }))
         .not.toBeInTheDocument();
     } else if (failure === 'network') {
       await expect.element(page.getByText(/Din vy kunde inte sparas/)).toBeVisible();

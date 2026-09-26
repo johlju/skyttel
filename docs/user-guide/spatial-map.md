@@ -3,9 +3,10 @@
 [Till användarguidens innehåll](README.md)
 
 Rymdkartan, listan och detaljerna visar samma hushållskarta och ditt
-privata utkast. På telefon och platta börjar du i **Lista och detaljer**.
-**Öppna rymdkartan** fyller den tillgängliga webbytan. **Samlad vy** visar
-kartan och listan tillsammans där det finns plats.
+privata utkast. Hushållet öppnar rymdkartan som huvudyta på alla enheter.
+Välj **Lista** i verktygen för listor, formulär och utkast. Välj
+**Stäng arbetsytan** för att återgå till hela kartan. På telefon visar
+**Visa verktygens namn** även de kompletterande verktygen.
 
 När assistenten visar ett objekt eller samband öppnas **Samlad vy**.
 Kartan och det valda innehållets detaljpanel visas samtidigt innan
@@ -16,8 +17,8 @@ kartan; rulla i panelen för att läsa längre uppgifter. Välj
 ## Hitta innehåll
 
 Utgångsläget omfattar alla objekt och samband. **Sök objekt** och
-**Filtrera objekttyp** begränsar både karta och lista. I helskärmskartan
-finns dessa kontroller under **Sök och fokus**.
+**Filtrera objekttyp** begränsar både karta och lista. **Sök i kartan**
+i verktygen öppnar sökningen.
 
 Klicka på ett objekts runda symbol för att öppna samma detaljer som i
 listan. Symbolen visar objektets profilbild eller en ikon för dess typ.
@@ -86,9 +87,9 @@ listraden efter val; Tab når åtgärderna. Valet visar uppgifterna utan att
 Formulärtext skickas först när du lägger den i utkastet. Val och
 oskickad text för samma objekt eller samband finns kvar vid vybyte,
 storleksändring och vändning av enheten. Ett vanligt val i helskärmskartan
-behåller kartan. **Redigera val** öppnar samma formulär i en avgränsad
-dialog över kartan; **Till kartan** stänger den och behåller texten.
-**Visa detaljer och utkast** ger även tillgång till hela ändringslistan.
+behåller kartan. Öppna **Lista** och välj **Redigera valt objekt** eller
+**Redigera valt samband** för att ändra uppgifter. **Stäng arbetsytan**
+behåller texten. **Utkast och historik** ger tillgång till ändringslistan.
 
 Markeringarna visar skillnaden mot sparad karta:
 

@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 async function setup(client: APIRequestContext, origin: string) {
@@ -68,6 +68,7 @@ test('HISTORIK-01: history explains a save and undo preserves independent work a
     await save('description');
     await propose('independent', 'Robin Exempel');
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
     const history = page.getByRole('region', { name: 'Ändringshistorik' });
     const group = history.getByRole('article').filter({ hasText: 'Sparande: name-change' });
@@ -88,6 +89,7 @@ test('HISTORIK-01: history explains a save and undo preserves independent work a
     await expect(history.getByRole('article')).toHaveCount(3);
     await propose('independent', 'Robin Exempel');
     await page.reload();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
     await group.getByRole('button', { name: 'Ångra sparandet' }).click();
     await expect(draft).toContainText('Lo Exempel');
@@ -96,6 +98,7 @@ test('HISTORIK-01: history explains a save and undo preserves independent work a
     try {
       const second = await context.newPage();
       await second.goto(installation.origin);
+      await openWorkspace(second);
       await expect(second.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
         'Oberoende beskrivning',
       );
@@ -149,6 +152,7 @@ test('HISTORIK-02: deletion undo restores ended objects and relationships with t
     ).toBe(true);
     await save('initial');
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByText('Åtgärder för Lo Exempel', { exact: true }).click();
     await page.getByRole('button', { name: 'Ta bort', exact: true }).click();
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
@@ -160,6 +164,7 @@ test('HISTORIK-02: deletion undo restores ended objects and relationships with t
     try {
       const second = await context.newPage();
       await second.goto(installation.origin);
+      await openWorkspace(second);
       await second.getByRole('button', { name: 'Visa historik', exact: true }).click();
       const group = second
         .getByRole('region', { name: 'Ändringshistorik' })
@@ -238,6 +243,7 @@ test('HISTORIK-03: later overlaps need a fresh choice and own overlaps block ato
       (await (await page.request.get(`${path}/history`)).json()).history;
     const historyBefore = await readHistory();
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
     const group = page
       .getByRole('region', { name: 'Ändringshistorik' })
@@ -337,6 +343,7 @@ test('HISTORIK-04: keeping saved values retains independent private facts and th
     await otherEdit({ name: 'Lo Ek' }, 'later-name');
     await object('person', 'Lo Ek', { description: 'Egen beskrivning' });
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
     await page
       .getByRole('region', { name: 'Ändringshistorik' })
@@ -348,6 +355,7 @@ test('HISTORIK-04: keeping saved values retains independent private facts and th
     await expect(draft).toContainText('Konflikt: sparat i kartan nu');
     await otherEdit({ description: 'Senare delad beskrivning' }, 'later-description');
     await page.reload();
+    await openWorkspace(page);
     await draft.getByRole('button', { name: 'Använd sparat värde', exact: true }).click();
     await expect(draft).toContainText('Egen beskrivning');
     await expect(draft).toContainText('Senare delad beskrivning');
@@ -414,6 +422,7 @@ test('HISTORIK-05: restored field values require a compatible definition and a f
     await define('text');
     await save('unused-now-text');
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
     const group = page
       .getByRole('region', { name: 'Ändringshistorik' })

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('TYP-01: custom definitions and four optional fields share one durable save and history', async ({
@@ -71,6 +71,7 @@ test('TYP-02: forms create, review and correct optional custom fields without co
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Ny objekttyp', exact: true }).click();
     await page.getByLabel('Typens namn').fill('Solcellsanläggning');
     await page.getByLabel('Typens beskrivning').fill('Hushållets elproduktion');
@@ -98,6 +99,7 @@ test('TYP-02: forms create, review and correct optional custom fields without co
     await expect(review).toContainText('Batteri: Obesvarat');
     await expect(review).toContainText('Objekttyp: Solcellsanläggning');
     await page.reload();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Paneler på taket', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Leverantör', { exact: true })).toHaveValue('');
@@ -107,6 +109,7 @@ test('TYP-02: forms create, review and correct optional custom fields without co
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.reload();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Paneler på taket', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Batteri', { exact: true })).toHaveValue('');
@@ -120,6 +123,7 @@ test('TYP-02: forms create, review and correct optional custom fields without co
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.reload();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Paneler på taket', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Batteri', { exact: true })).toHaveValue('false');
@@ -133,6 +137,7 @@ test('TYP-02: forms create, review and correct optional custom fields without co
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.reload();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Paneler på taket', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Leverantör', { exact: true })).toHaveValue('Ny leverantör');
@@ -257,6 +262,7 @@ test('TYP-03: members share editable definitions while private proposals and use
     expect((await read()).objects).toEqual([]);
     expect((await read()).draft).toEqual(newer.draft);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await expect(page.getByText('Typdefinitionen har ändrats:')).toContainText('Solkraft');
     await page.getByRole('button', { name: 'Behåll mitt förslag', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
@@ -269,6 +275,7 @@ test('TYP-03: members share editable definitions while private proposals and use
     expect(saved.types.find((type: { id: string }) => type.id === 'solar')).toMatchObject(renamed);
     const memberPage = await other.newPage();
     await memberPage.goto(installation.origin);
+    await openWorkspace(memberPage);
     await memberPage.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await memberPage.getByLabel('Objekttyp', { exact: true }).selectOption({ label: 'Solkraft' });
     await memberPage.getByLabel('Objektets namn').fill('Medlemmens paneler');
@@ -290,6 +297,7 @@ test('TYP-03: members share editable definitions while private proposals and use
     await memberPage.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(memberPage.getByRole('status')).toContainText('Sparat');
     await memberPage.reload();
+    await openWorkspace(memberPage);
     await memberPage.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await expect(
       memberPage
@@ -377,6 +385,7 @@ test('TYP-04: concurrent definition changes reject the whole draft until an expl
     expect((await read()).objects).toEqual([]);
     expect((await read()).draft).toEqual(before.draft);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Konflikt: sparad typdefinition');
     await expect(review).toContainText('Annans rättelse');
@@ -394,6 +403,7 @@ test('TYP-04: concurrent definition changes reject the whole draft until an expl
     });
     expect(after.objects).toHaveLength(1);
     await page.reload();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Alex', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Smeknamn', { exact: true })).toHaveValue('');
@@ -522,6 +532,7 @@ test('TYP-05: invalid values and newly used field kinds preserve the entire draf
       ).status(),
     ).toBe(200);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('alert')).toContainText('Skapa ett nytt fält');
     await expect(page.getByRole('alert')).not.toContainText('Hemligt');

@@ -1,6 +1,6 @@
 import { access } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openProfile, openWorkspace, signIn } from '../support/client.js';
 import { launchManualCosts } from '../support/manual-costs.js';
 
 const assistant = (page: Page) =>
@@ -10,6 +10,7 @@ async function startAssistant(page: Page, origin: string) {
   await signIn(page.request, origin);
   const { household } = await (await createHousehold(page.request, origin, 'Kostnadsprov')).json();
   await page.goto(origin);
+  await openWorkspace(page);
   const panel = assistant(page);
   await panel.getByLabel(/Jag tillåter att OpenAI/).check();
   await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
@@ -29,7 +30,9 @@ async function startVoice(page: Page) {
   );
 }
 async function openCosts(page: Page) {
-  await page.getByRole('link', { name: 'Månadskostnad', exact: true }).click();
+  const link = page.getByRole('link', { name: 'Månadskostnad', exact: true });
+  if (!(await link.isVisible())) await openProfile(page);
+  await link.click();
   await expect(category(page, 'Render – hel månad')).toBeVisible();
 }
 
@@ -201,6 +204,7 @@ test('KOST-03: endast driftansvarig har åtkomst oberoende av hushållets roller
     ).toBe(200);
     const otherPage = await robin.newPage();
     await otherPage.goto(app.origin);
+    await openProfile(otherPage);
     await expect(otherPage.getByRole('link', { name: 'Månadskostnad' })).toHaveCount(0);
     const month = new Date().toISOString().slice(0, 7);
     expect(

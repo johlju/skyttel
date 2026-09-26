@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('SAMMANSLAGNING-01: explicit identities and edge choices survive restart, lost receipt and whole-save undo', async ({
@@ -61,6 +61,7 @@ test('SAMMANSLAGNING-01: explicit identities and edge choices survive restart, l
     await save('initial');
     await object('independent', 'Robin Exempel', 'Eget förslag');
     await page.goto(installation.origin);
+    await openWorkspace(page);
     const open = async (confirmed: boolean) => {
       await page.getByRole('button', { name: 'Slå samman objekt', exact: true }).click();
       const form = page.getByRole('region', { name: 'Sammanslagning', exact: true });
@@ -93,6 +94,7 @@ test('SAMMANSLAGNING-01: explicit identities and edge choices survive restart, l
     await expect(draft).toContainText('Samma företeelse är uttryckligen bekräftad');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(draft).toContainText('Andra uppgiften');
     let dropped = false;
     await page.route('**/map/save', async (route) => {
@@ -108,6 +110,7 @@ test('SAMMANSLAGNING-01: explicit identities and edge choices survive restart, l
       .toBe(false);
     await page.unroute('**/map/save');
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Mina sparförsök' })).toContainText('Genomfört');
     const { history } = await (await page.request.get(`${path}/history`)).json();
     expect(history).toHaveLength(2);
@@ -120,6 +123,7 @@ test('SAMMANSLAGNING-01: explicit identities and edge choices survive restart, l
     try {
       const other = await context.newPage();
       await other.goto(installation.origin);
+      await openWorkspace(other);
       await other.getByRole('button', { name: 'Visa historik', exact: true }).click();
       const group = other
         .getByRole('region', { name: 'Ändringshistorik' })

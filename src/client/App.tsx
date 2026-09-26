@@ -9,6 +9,7 @@ import {
   useNavigate,
   useParams,
 } from 'react-router';
+import logo from '../../docs/images/shuttle-logo-transparent-small.png';
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
 import type { PersonalView } from '../shared/personal-view.js';
@@ -770,7 +771,13 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
   );
 }
 
-function HouseholdWork({ onSessionExpired }: { onSessionExpired: () => void }) {
+function HouseholdWork({
+  onSessionExpired,
+  account,
+}: {
+  onSessionExpired: () => void;
+  account: ReactNode;
+}) {
   const { pathname } = useLocation();
   const routeId = matchPath('/households/:id', pathname)?.params.id;
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -778,7 +785,13 @@ function HouseholdWork({ onSessionExpired }: { onSessionExpired: () => void }) {
   const id = routeId ?? currentId;
   if (!id) return null;
   return (
-    <HouseholdPage key={id} id={id} active={Boolean(routeId)} onSessionExpired={onSessionExpired} />
+    <HouseholdPage
+      key={id}
+      id={id}
+      active={Boolean(routeId)}
+      onSessionExpired={onSessionExpired}
+      account={account}
+    />
   );
 }
 
@@ -786,10 +799,12 @@ function HouseholdPage({
   id,
   active,
   onSessionExpired,
+  account,
 }: {
   id: string;
   active: boolean;
   onSessionExpired: () => void;
+  account: ReactNode;
 }) {
   const [revision, setRevision] = useState(0);
   const [workRevision, setWorkRevision] = useState(0);
@@ -843,23 +858,27 @@ function HouseholdPage({
       <p className="membership" hidden={!active}>
         {result.data.household.role === 'administrator' ? 'Administratör' : 'Medlem'}
       </p>
-      {result.data.household.role === 'administrator' && (
-        <p hidden={!active}>
-          <Link to={`/households/${encodeURIComponent(result.data.household.id)}/administration`}>
-            Administrera tillgång
-          </Link>
-        </p>
-      )}
       <HouseholdMap
         key={`${result.data.household.id}:${workRevision}`}
         householdId={result.data.household.id}
         active={active}
+        householdName={result.data.household.name}
+        account={account}
+        settings={
+          <>
+            {result.data.household.role === 'administrator' && (
+              <Link
+                to={`/households/${encodeURIComponent(result.data.household.id)}/administration`}
+              >
+                Administrera tillgång
+              </Link>
+            )}
+            <Link to="/assistants">Assistentanslutningar</Link>
+          </>
+        }
         contentVersion={content.status === 'loaded' ? content.data.contentVersion : undefined}
         onContentReplaced={retireWork}
       />
-      <p hidden={!active}>
-        <Link to="/assistants">Assistentanslutningar</Link>
-      </p>
     </section>
   );
 }
@@ -890,17 +909,16 @@ export function App() {
     navigate(`/households/${encodeURIComponent(household.id)}`, { replace: true });
     reload();
   }
+  const mapActive =
+    data?.status === 'ready' && Boolean(matchPath('/households/:id', location.pathname));
   return (
-    <div className="app-shell">
+    <div className={`app-shell${mapActive ? ' has-workspace' : ''}`}>
       <a className="skip-link" href="#main">
         Hoppa till innehållet
       </a>
-      <header className="site-header">
+      <header className="site-header" hidden={mapActive}>
         <Link className="brand" to="/" aria-label="Skyttel, startsida">
-          <svg viewBox="0 0 32 32" aria-hidden="true">
-            <path d="M6 8h12a8 8 0 0 1 0 16H6M26 8H14a8 8 0 0 0 0 16h12" />
-            <path d="m20 3-8 26" />
-          </svg>
+          <img className="brand-logo" src={logo} alt="" />
           Skyttel
         </Link>
         {data && data.status !== 'anonymous' ? (
@@ -916,7 +934,7 @@ export function App() {
           <span className="header-note">Ett hushåll. En gemensam bild.</span>
         )}
       </header>
-      {signOutError && (
+      {signOutError && !mapActive && (
         <p className="error sign-out-error" role="alert">
           Du kunde inte loggas ut. Kontrollera anslutningen och försök igen.
         </p>
@@ -944,7 +962,36 @@ export function App() {
         {data?.status === 'forbidden' &&
           location.pathname !== '/login-methods' &&
           location.pathname !== '/costs' && <Forbidden />}
-        {data?.status === 'ready' && <HouseholdWork key={data.user.id} onSessionExpired={reload} />}
+        {data?.status === 'ready' && (
+          <HouseholdWork
+            key={data.user.id}
+            onSessionExpired={reload}
+            account={
+              <>
+                <p>
+                  {data.user.name} ·{' '}
+                  {data.household.role === 'administrator' ? 'Administratör' : 'Medlem'}
+                </p>
+                <InvitationEntry
+                  userId={data.user.id}
+                  showInvitation={data.household.role !== 'administrator'}
+                  onAccepted={created}
+                  onReload={reload}
+                />
+                <Link to="/login-methods">Inloggningssätt</Link>
+                {data.operator && <Link to="/costs">Månadskostnad</Link>}
+                <button type="button" disabled={signingOut} onClick={() => void signOut()}>
+                  {signingOut ? 'Loggar ut…' : 'Logga ut'}
+                </button>
+                {signOutError && (
+                  <p role="alert">
+                    Du kunde inte loggas ut. Kontrollera anslutningen och försök igen.
+                  </p>
+                )}
+              </>
+            }
+          />
+        )}
         {data &&
           location.pathname !== '/login-methods' &&
           location.pathname !== '/costs' &&
@@ -979,6 +1026,7 @@ export function App() {
             </Routes>
           )}
         {data &&
+          !mapActive &&
           location.pathname !== '/costs' &&
           (data.status === 'forbidden' || data.status === 'ready') && (
             <InvitationEntry
@@ -991,7 +1039,7 @@ export function App() {
             />
           )}
       </main>
-      <footer>Det som hör ihop, samlat.</footer>
+      <footer hidden={mapActive}>Det som hör ihop, samlat.</footer>
     </div>
   );
 }

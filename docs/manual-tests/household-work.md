@@ -11,6 +11,9 @@ eller den kontrollerade miljön nedan, aldrig verkliga hushållsuppgifter.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Förbered en
    [separat provdatabas](../development/devcontainer.md#disposable-local-database).
    Skapa hushållet och ge Robin tillgång enligt

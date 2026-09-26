@@ -20,6 +20,9 @@ Verkliga leverantörer kontrolleras separat enligt
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Använd en isolerad installation enligt
    [installationsguiden](../operations/installation.md). För ACCESS-01 till
    ACCESS-04 ska installationen sakna hushåll. För övriga fall får Alex

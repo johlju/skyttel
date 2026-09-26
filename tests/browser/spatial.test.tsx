@@ -942,8 +942,8 @@ test('reduced motion overrides a saved star choice and follows system changes', 
   const context = sample.getContext('2d');
   if (!context) throw new Error('Pixel sampling unavailable');
   context.drawImage(picture, 0, 0);
-  // Empty corners use the flat green sky, not the dark blue star sky.
-  expect([...context.getImageData(30, 30, 1, 1).data]).toEqual([19, 46, 37, 255]);
+  // Reduced motion keeps the flat background of the selected dark theme.
+  expect([...context.getImageData(30, 30, 1, 1).data]).toEqual([16, 27, 41, 255]);
   await session.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }],
   });

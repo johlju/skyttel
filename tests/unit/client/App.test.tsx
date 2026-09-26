@@ -258,6 +258,7 @@ describe('Skyttel application interface', () => {
       mount();
       expect(await screen.findByRole('heading', { name: 'Hushållet Linden' })).toBeDefined();
       expect(screen.getByText(role === 'administrator' ? 'Administratör' : 'Medlem')).toBeDefined();
+      await userEvent.click(screen.getByRole('button', { name: 'Min profil' }));
       expect(screen.getByRole('heading', { name: 'Din Skyttel-användare' })).toBeDefined();
       const userId = screen.getByRole('textbox', { name: 'Ditt Skyttel-användar-ID' });
       expect((userId as HTMLInputElement).value).toBe('alex');

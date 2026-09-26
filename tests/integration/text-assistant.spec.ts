@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -34,6 +34,7 @@ async function arrange(page: Page, app: Awaited<ReturnType<typeof createInstalla
     data: { version: 0, contentVersion: 1, id: 'lo', baseRevision: null, value },
   });
   await page.goto(app.origin);
+  await openWorkspace(page);
   return { path, value };
 }
 
@@ -111,6 +112,7 @@ test('TEXT-07: hela ändringslistan visar samband, typer och verkliga före- och
       },
     });
     await page.goto(app.origin);
+    await openWorkspace(page);
     await consent(page);
     const summary = assistant(page).getByRole('list', { name: 'Alla föreslagna ändringar' });
     await expect(summary.getByRole('listitem')).toHaveCount(4);
@@ -187,6 +189,7 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
     const household = app.seedDemo();
     await signIn(page.request, app.origin);
     await page.goto(app.origin);
+    await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
       .getByRole('button', { name: 'Kim Exempel', exact: true })
@@ -365,6 +368,7 @@ test('TEXT-04: ett tappat sparbesked återfinns efter omstart utan dubbelt spara
     await app.restart();
     await page.unroute('**/text-assistant/*/messages');
     await page.reload();
+    await openWorkspace(page);
     await consent(page);
     await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
     await expect(assistant(page)).toContainText('Sparat:');
@@ -535,6 +539,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
       value: { ...relationship, typeId: paymentType.id },
     });
     await page.reload();
+    await openWorkspace(page);
     await consent(page);
     const listMode = page.getByRole('button', { name: 'Lista och detaljer', exact: true });
     await listMode.click();

@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 import { unzipSync } from 'fflate';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 async function arrange(page: Page, formerImageType = false) {
@@ -456,11 +456,13 @@ test('RADERING-05: erasing a former type removes its historical image from a fre
     expect(JSON.stringify(content)).not.toContain(fixture.imageId);
     expect(JSON.stringify(content)).toContain('Oberoende privat förslag');
     await page.getByRole('link', { name: 'Till hushållet', exact: true }).click();
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Lampan att radera', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(
-      page.getByRole('img', { name: 'Profilbild för Lampan att radera' }),
+      page
+        .getByRole('region', { name: 'Val och redigering' })
+        .getByRole('img', { name: 'Profilbild för Lampan att radera' }),
     ).toHaveAttribute('src', new RegExp(`/profile-images/${currentImage}$`));
   } finally {
     await fixture.installation.close();

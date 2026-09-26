@@ -79,6 +79,7 @@ afterEach(() => {
 });
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Lo Exempel' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   return within(screen.getByRole('group', { name: 'Objektets detaljer' }));

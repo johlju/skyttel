@@ -343,10 +343,10 @@ export function spatialScene(
       onMotion();
       return true;
     },
-    configure(value: ViewSettings) {
+    configure(value: ViewSettings, theme: 'light' | 'dark' = 'dark') {
       settings = value;
       stars.visible = value.stars;
-      sky.background = new Color(value.stars ? '#09121f' : '#132e25');
+      sky.background = new Color(theme === 'light' ? '#eef3f3' : '#101b29');
       draw();
     },
     beginCameraGesture: gestures.beginTouch,

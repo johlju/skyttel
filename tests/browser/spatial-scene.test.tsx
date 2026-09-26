@@ -141,7 +141,7 @@ test('the varied universe sky rotates and zooms but stays fixed during pan and p
     const colour = [...first.slice(index, index + 3)].join(',');
     colours.set(colour, (colours.get(colour) ?? 0) + 1);
   }
-  expect(colours.get('9,18,31')).toBeGreaterThan(canvas.width * canvas.height * 0.95);
+  expect(colours.get('16,27,41')).toBeGreaterThan(canvas.width * canvas.height * 0.95);
   expect(colours.size).toBeGreaterThan(15);
   scene.navigate('left');
   expect(pixels()).toEqual(first);
@@ -154,7 +154,7 @@ test('the varied universe sky rotates and zooms but stays fixed during pan and p
   scene.navigate('in');
   expect(pixels()).not.toEqual(first);
   scene.configure(defaultViewSettings);
-  expect([...pixels().slice(0, 4)]).toEqual([19, 46, 37, 255]);
+  expect([...pixels().slice(0, 4)]).toEqual([16, 27, 41, 255]);
 });
 
 test('restarting with reordered household content retains spacious three-dimensional defaults', () => {

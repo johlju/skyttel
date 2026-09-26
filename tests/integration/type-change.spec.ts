@@ -1,7 +1,7 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import { draftConflicts } from '../../src/shared/draft-conflicts.js';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 async function setup(client: APIRequestContext, origin: string) {
@@ -93,6 +93,7 @@ test('TYP-06: type changes review displaced values and preserve identity, edges 
     const { read, post, save } = await setup(page.request, installation.origin);
     const initial = await read();
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Alex blå cykel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objekttyp', { exact: true }).selectOption('vehicle');
@@ -115,6 +116,7 @@ test('TYP-06: type changes review displaced values and preserve identity, edges 
     await expect(review).toContainText('Försäkrad: Obesvarat');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('Nummer: SYNTH-42');
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
@@ -145,6 +147,7 @@ test('TYP-06: type changes review displaced values and preserve identity, edges 
     await save('rename-source');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Visa historik' }).click();
     const selected = page
       .getByRole('region', { name: 'Ändringshistorik' })

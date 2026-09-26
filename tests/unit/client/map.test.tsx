@@ -83,6 +83,7 @@ afterEach(() => {
 
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   await screen.findByRole('button', { name: 'Nytt objekt' });
 }
 async function add(name = 'Lo Exempel') {
@@ -367,6 +368,7 @@ test('review, search, correction, discard and deletion use the real persistent m
 test('lost responses remain uncertain and the same receipt can be recovered', async () => {
   failRead = true;
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   expect((await screen.findByRole('alert')).textContent).toContain('kunde inte hämtas');
   failRead = false;
   await userEvent.click(screen.getByRole('button', { name: 'Hämta aktuellt underlag' }));
@@ -1007,13 +1009,13 @@ test('view changes retain unsent object text and filters can clear without chang
   await userEvent.clear(screen.getByLabelText('Beskrivning'));
   await userEvent.type(screen.getByLabelText('Beskrivning'), 'Oskickad vytext');
   await userEvent.click(screen.getByRole('button', { name: 'Samlad vy' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Öppna rymdkartan' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Visa detaljer och utkast' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng arbetsytan' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
   expect((screen.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
     'Oskickad vytext',
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Till kartan' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Lista och detaljer' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng arbetsytan' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
   await userEvent.click(screen.getByRole('button', { name: 'Stäng utan att skicka texten' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera Lo Rymdprov' }));
   await userEvent.click(screen.getByRole('button', { name: 'Visa objektets kopplingar' }));

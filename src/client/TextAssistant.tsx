@@ -309,7 +309,13 @@ export function TextAssistant({
   }, [selectionKey, pending, command]);
   const review = session?.review;
   return (
-    <section aria-label="Skyttels textassistent" className="assistant-workspace">
+    <section
+      aria-label="Skyttels textassistent"
+      className="assistant-workspace"
+      data-session-active={Boolean(session)}
+      id="workspace-work"
+      tabIndex={-1}
+    >
       <section aria-label="Talsamtal" className="assistant-bar" hidden={!workVisible && !session}>
         {session ? (
           <VoiceAssistant

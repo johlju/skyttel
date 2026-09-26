@@ -12,6 +12,9 @@ Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Använd en isolerad provinstallation med påhittade uppgifter. Skapa
    hushållet som Alex och bjud in Robin.
 2. Börja varje fall med ett tomt hushåll och utan privata utkast.

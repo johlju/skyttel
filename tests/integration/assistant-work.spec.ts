@@ -1,7 +1,7 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import type { SaveReceipt } from '../../src/shared/map.js';
 import { beginAssistant, callAssistant } from '../support/assistant.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 async function connection(actor: APIRequestContext, origin: string, householdId: string) {
@@ -28,6 +28,7 @@ test('AI-08: kartmedgivande fortsätter webbutkast och sparar hela familjeärend
     const household = app.seedDemo();
     await signIn(page.request, app.origin);
     await page.goto(app.origin);
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText('Lo Lind');
     const flow = await beginAssistant(page.request, app.origin, 'skyttel:read skyttel:write');
     await page.goto(flow.consentUrl.href);
@@ -96,6 +97,7 @@ test('AI-08: kartmedgivande fortsätter webbutkast och sparar hela familjeärend
     await app.restart();
     expect(await tool(app.origin, token, 'save_draft', attempt)).toEqual(saved);
     await page.goto(app.origin);
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Inga förslag',
     );
@@ -129,6 +131,7 @@ test('AI-09: ett nytt webbförslag stoppar gammalt MCP-sparbesked utan delsparan
     const { household } = await (await createHousehold(page.request, app.origin)).json();
     const token = await connection(page.request, app.origin, household.id);
     await page.goto(app.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
@@ -147,6 +150,7 @@ test('AI-09: ett nytt webbförslag stoppar gammalt MCP-sparbesked utan delsparan
     expect(denied.review.changes).toHaveLength(2);
     expect((await tool(app.origin, token, 'read_map')).objects).toEqual([]);
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Lo Exempel',
     );
@@ -174,6 +178,7 @@ test('AI-09: ett nytt webbförslag stoppar gammalt MCP-sparbesked utan delsparan
       }),
     ).toMatchObject({ operation: { status: 'succeeded', receipt: saved.receipt } });
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Inga förslag',
     );
@@ -191,6 +196,7 @@ test('AI-10: förlorat MCP-kvittosvar återfinns efter omstart utan dubbelt spar
     const { household } = await (await createHousehold(page.request, app.origin)).json();
     const token = await connection(page.request, app.origin, household.id);
     await page.goto(app.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
@@ -250,6 +256,7 @@ test('AI-10: förlorat MCP-kvittosvar återfinns efter omstart utan dubbelt spar
     ).json();
     expect(history.history).toEqual([committedReceipt]);
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Mina sparförsök' })).toContainText('Genomfört');
     await expect(page.getByRole('region', { name: 'Mina sparförsök' })).toContainText('Lo Exempel');
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
@@ -296,6 +303,7 @@ test('AI-11: identitetsfrågor blockerar och kastade MCP-förslag förblir kasta
     ).toBe('unresolved_identity');
     expect((await tool(app.origin, token, 'read_map')).objects).toEqual([]);
     await page.goto(app.origin);
+    await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeDisabled();
     review = await tool(app.origin, token, 'propose_object', {
       version: review.version,
@@ -326,6 +334,7 @@ test('AI-11: identitetsfrågor blockerar och kastade MCP-förslag förblir kasta
       operationId: 'unspecified',
     });
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Hushållskonto', exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: 'Betalkonto', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();

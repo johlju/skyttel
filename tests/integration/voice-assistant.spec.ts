@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -286,6 +286,7 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await signIn(page.request, app.origin);
     await page.addInitScript({ content: liveBrowserFixtureSource });
     await page.goto(app.origin);
+    await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
       .getByRole('button', { name: 'Kim Exempel', exact: true })
@@ -351,6 +352,7 @@ async function simpleMap(page: Page, app: Awaited<ReturnType<typeof createInstal
   });
   await page.addInitScript({ content: liveBrowserFixtureSource });
   await page.goto(app.origin);
+  await openWorkspace(page);
   await consent(page);
   await startVoice(page);
   return { path, value };
@@ -499,6 +501,7 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     await expect(assistant(page).getByText('Rösten är avstängd.')).toBeVisible();
     await app.restart();
     await page.reload();
+    await openWorkspace(page);
     await consent(page);
     await startVoice(page, 'Kontrollera det tidigare sparförsöket innan nya ändringar.');
     speak(live, 'Slutför samma sparförsök.');
@@ -520,6 +523,7 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     const afterDrop = (await (await page.request.get(`${path}/operations`)).json()).operations;
     expect(afterDrop).toEqual(operations);
     await page.reload();
+    await openWorkspace(page);
     await consent(page);
     await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
     await expect(assistant(page)).toContainText(operation.operationId);

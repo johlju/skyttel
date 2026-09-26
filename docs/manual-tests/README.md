@@ -31,7 +31,24 @@ kontroller beskrivs tillsammans med respektive områdesfall.
 För [stora kartor](large-map-performance.md) finns en separat mätplan och
 [uppmätta resultat](large-map-results.md).
 
+## Öppna arbetsytor
+
+Hushållet öppnar rymdkartan. Välj **Lista** i **Kartans verktyg** före
+fallens formulär, listor, typer, historik och utkast. Välj **Samtal och text**
+före samtalsfallen. På telefon öppnar **Visa verktygens namn** även de
+kompletterande verktygen.
+
+**Min profil** innehåller användar-ID, inbjudningar, **Inloggningssätt**,
+**Månadskostnad** för driftansvarig och **Logga ut**. **Inställningar**
+innehåller **Administrera tillgång** för administratören och
+**Assistentanslutningar**. Följ dessa ingångar när ett fall anger en sådan
+funktion. **Stäng arbetsytan** återgår till kartan och behåller oskickad text.
+
 ## Områden
+
+- [Kartans arbetsyta](workspace-shell.md): kompakt och expanderad verktygslåda,
+  teman och fokus, stängbar vägledning, hjälp, formulär på telefon samt
+  laddning och återhämtning efter nätfel.
 
 - [Bevarat hushållsarbete](household-work.md): oskickad text, samtal,
   mikrofon, sökning, urval, personlig vy och samma sparförsök vid

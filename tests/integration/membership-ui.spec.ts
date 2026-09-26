@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import Database from 'better-sqlite3';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openSettings, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 test('MEDLEM-04: replacing an invitation invalidates the old code and cancellation keeps the new code usable', async ({
@@ -147,6 +147,7 @@ test('MEDLEM-06: revocation preserves shared objects and only a new invitation r
     expect(accepted.status()).toBe(200);
     const recipientPage = await recipient.newPage();
     await recipientPage.goto(installation.origin);
+    await openWorkspace(recipientPage);
     await recipientPage.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await recipientPage.getByLabel('Objektets namn').fill('Robin i kartan');
     await recipientPage.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
@@ -174,8 +175,11 @@ test('MEDLEM-06: revocation preserves shared objects and only a new invitation r
     await recipientPage.getByRole('button', { name: 'Acceptera inbjudan' }).click();
     await expect(recipientPage.getByRole('alert')).toContainText('Inbjudan kan inte användas');
     await page.getByRole('link', { name: 'Till hushållet' }).click();
+    await openWorkspace(page);
     await page.getByLabel('Sök objekt').fill('Robin i kartan');
     await expect(page.getByRole('button', { name: 'Robin i kartan', exact: true })).toBeVisible();
+
+    await openSettings(page);
 
     await page.getByRole('link', { name: 'Administrera tillgång' }).click();
     await page.getByLabel('Skyttel-användar-ID att bjuda in').fill(user.id);
@@ -186,6 +190,7 @@ test('MEDLEM-06: revocation preserves shared objects and only a new invitation r
     await recipientPage.getByRole('button', { name: 'Acceptera inbjudan' }).click();
     await expect(recipientPage.getByRole('heading', { name: 'Hushållet Linden' })).toBeVisible();
     await expect(recipientPage.getByText('Medlem', { exact: true })).toBeVisible();
+    await openWorkspace(recipientPage);
     await recipientPage.getByLabel('Sök objekt').fill('Robin i kartan');
     await expect(
       recipientPage.getByRole('button', { name: 'Robin i kartan', exact: true }),
@@ -212,6 +217,7 @@ test('MEDLEM-01: an administrator invites an authenticated user who joins by key
     const userId = await recipientPage.getByLabel('Ditt Skyttel-användar-ID').inputValue();
 
     await page.goto(installation.origin);
+    await openSettings(page);
     await page.getByRole('link', { name: 'Administrera tillgång' }).click();
     await page.getByLabel('Skyttel-användar-ID att bjuda in').fill(userId);
     await page.getByRole('button', { name: 'Skapa inbjudan', exact: true }).click();
@@ -225,6 +231,7 @@ test('MEDLEM-01: an administrator invites an authenticated user who joins by key
     await recipientPage.keyboard.press('Enter');
     await expect(recipientPage.getByRole('heading', { name: 'Hushållet Linden' })).toBeVisible();
     await expect(recipientPage.getByText('Medlem', { exact: true })).toBeVisible();
+    await openSettings(recipientPage);
     await expect(recipientPage.getByRole('link', { name: 'Administrera tillgång' })).toHaveCount(0);
     expect(
       await recipientPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -395,6 +402,7 @@ test('MEDLEM-03: administrators share responsibility and open clients lose revok
     await expect(page.getByRole('list', { name: 'Medlemmar' })).toHaveCount(0);
     await page.getByRole('link', { name: 'Till startsidan' }).click();
     await expect(page.getByRole('heading', { name: 'Hushållet Linden' })).toBeVisible();
+    await openSettings(page);
     await expect(page.getByRole('link', { name: 'Administrera tillgång' })).toHaveCount(0);
     await expect(ownRow.getByRole('button', { name: 'Gör till medlem' })).toBeDisabled();
     await expect(ownRow.getByRole('button', { name: 'Återkalla tillgång' })).toBeDisabled();

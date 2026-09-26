@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('refreshing after a conflict preserves text without authorizing a stale form', async ({
@@ -12,12 +12,14 @@ test('refreshing after a conflict preserves text without authorizing a stale for
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
     await signIn(second.request, installation.origin);
     const tab = await second.newPage();
     await tab.goto(installation.origin);
+    await openWorkspace(tab);
     for (const editor of [page, tab]) {
       await editor.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
       await editor.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
@@ -54,12 +56,14 @@ test('an uncertain save recovers its receipt and stale tabs cannot save newer dr
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
     await signIn(other.request, installation.origin);
     const tab = await other.newPage();
     await tab.goto(installation.origin);
+    await openWorkspace(tab);
     await expect(tab.getByRole('region', { name: 'Hela mitt utkast' })).toContainText('Lo Exempel');
     await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
@@ -97,6 +101,7 @@ test('KARTA-06: objects move from a persistent private proposal to the shared ma
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByLabel('Beskrivning', { exact: true }).fill('En påhittad person');
@@ -110,6 +115,7 @@ test('KARTA-06: objects move from a persistent private proposal to the shared ma
       'Lo Exempel',
     );
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'En påhittad person',
     );
@@ -119,6 +125,7 @@ test('KARTA-06: objects move from a persistent private proposal to the shared ma
       await signIn(second.request, installation.origin);
       const reopened = await second.newPage();
       await reopened.goto(installation.origin);
+      await openWorkspace(reopened);
       await expect(reopened.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
         'Lo Exempel',
       );

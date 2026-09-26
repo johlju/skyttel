@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   type DraftConflict,
@@ -52,7 +53,10 @@ import {
 } from './SaveOperations.js';
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
 import { TextAssistant } from './TextAssistant.js';
+import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
+import './workspace.css';
 import { usePersonalView } from './use-personal-view.js';
+import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
 
 type Editor = {
   id: string;
@@ -87,12 +91,19 @@ export function HouseholdMap({
   active = true,
   contentVersion,
   onContentReplaced,
+  householdName = 'Hushållets karta',
+  account,
+  settings,
 }: {
   householdId: string;
   active?: boolean;
   contentVersion?: number;
   onContentReplaced?: () => void;
+  householdName?: string;
+  account?: ReactNode;
+  settings?: ReactNode;
 }) {
+  const theme = useWorkspaceTheme();
   const path = `/api/households/${encodeURIComponent(householdId)}/map`;
   const [state, setState] = useState<MapState | null>(null);
   const initialContentVersion = useRef<number | null>(null);
@@ -130,12 +141,7 @@ export function HouseholdMap({
     contentVersion: number;
     baseRevision: number | null;
   } | null>(null);
-  const [presentation, setPresentation] = useState<'list' | 'combined' | 'map'>(() =>
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(min-width: 1100px) and (pointer: fine)').matches
-      ? 'combined'
-      : 'list',
-  );
+  const [presentation, setPresentation] = useState<'list' | 'combined' | 'map'>('map');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const editorDialog = useRef<HTMLDialogElement>(null);
@@ -146,27 +152,33 @@ export function HouseholdMap({
   const revealAbort = useRef<AbortController | null>(null);
   useEffect(() => () => revealAbort.current?.abort(), []);
   const listModeButton = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!active || presentation !== 'map') return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const hidden: { node: HTMLElement; inert: boolean }[] = [];
-    let current = workspace.current;
-    while (current?.parentElement) {
-      for (const sibling of current.parentElement.children)
-        if (sibling !== current && sibling instanceof HTMLElement) {
-          hidden.push({ node: sibling, inert: sibling.inert });
-          sibling.inert = true;
-        }
-      current = current.parentElement;
-      if (current === document.body) break;
-    }
-    listModeButton.current?.focus();
-    return () => {
-      document.body.style.overflow = previous;
-      for (const item of hidden) item.node.inert = item.inert;
-    };
-  }, [presentation, active]);
+  const workTrigger = useRef<HTMLElement | null>(null);
+  const [guidance, setGuidance] = useState(true);
+  const workOpen = presentation !== 'map' || detailsOpen || editorOpen;
+  function openWork(target: WorkspaceTarget) {
+    workTrigger.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setPresentation('combined');
+    setFiltersOpen(true);
+    requestAnimationFrame(() => {
+      const selector =
+        target === 'search'
+          ? '#object-search'
+          : target === 'conversation' || target === 'voice'
+            ? '#text-assistant-message, .assistant-bar input, .assistant-bar button'
+            : target === 'draft'
+              ? '#draft-title'
+              : '.map-content button';
+      workspace.current?.querySelector<HTMLElement>(selector)?.focus();
+    });
+  }
+  function closeWork() {
+    setPresentation('map');
+    setRevealRequest(undefined);
+    setDetailsOpen(false);
+    setEditorOpen(false);
+    workTrigger.current?.focus();
+  }
   const [dirty, setDirty] = useState(false);
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -188,55 +200,43 @@ export function HouseholdMap({
   const nameInput = useRef<HTMLInputElement>(null);
   const hasMap = state !== null;
   useLayoutEffect(() => {
-    const dialog = editorDialog.current;
-    if (!dialog || !hasMap) return;
-    if (!active) {
-      dialog.close();
-      return;
-    }
-    if (presentation !== 'map' || (detailsOpen && !editorOpen)) {
-      if (dialog.matches(':modal')) dialog.close();
-      dialog.open = true;
-      setEditorOpen(false);
-    } else if (editorOpen) {
-      if (!dialog.matches(':modal')) {
-        dialog.close();
-        dialog.showModal();
-      }
+    if (active && editorOpen && hasMap) {
       (
-        nameInput.current ?? dialog.querySelector<HTMLSelectElement>('#relationship-source')
+        nameInput.current ??
+        editorDialog.current?.querySelector<HTMLSelectElement>('#relationship-source')
       )?.focus();
-    } else {
-      const wasModal = dialog.matches(':modal');
-      dialog.close();
-      if (wasModal) editMapButton.current?.focus();
     }
-  }, [presentation, editorOpen, detailsOpen, hasMap, active]);
+  }, [active, editorOpen, hasMap]);
   useEffect(() => {
-    if (!editorOpen || presentation !== 'map') return;
+    if (!active || !workOpen) return;
     const viewport = window.visualViewport;
+    let frame = 0;
     const resize = () => {
-      const dialog = editorDialog.current;
-      if (!dialog) return;
-      dialog.style.setProperty('--editor-height', `${viewport?.height ?? window.innerHeight}px`);
-      dialog.style.setProperty('--editor-top', `${viewport?.offsetTop ?? 0}px`);
-      const field = document.activeElement;
-      if (field instanceof HTMLElement && dialog.contains(field)) {
-        const bounds = dialog.getBoundingClientRect();
-        const target = field.getBoundingClientRect();
-        if (target.top < bounds.top + 12) dialog.scrollTop += target.top - bounds.top - 12;
-        else if (target.bottom > bounds.bottom - 12)
-          dialog.scrollTop += target.bottom - bounds.bottom + 12;
-      }
+      workspace.current?.style.setProperty(
+        '--work-height',
+        `${viewport?.height ?? window.innerHeight}px`,
+      );
+      workspace.current?.style.setProperty('--work-offset', `${viewport?.offsetTop ?? 0}px`);
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const field = document.activeElement;
+        const workSurface = workspace.current?.querySelector('.assistant-workspace');
+        if (field instanceof HTMLElement && workSurface?.contains(field)) {
+          field.scrollIntoView({ block: 'center', behavior: 'instant' });
+        }
+      });
     };
     resize();
+    window.addEventListener('resize', resize);
     viewport?.addEventListener('resize', resize);
     viewport?.addEventListener('scroll', resize);
     return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', resize);
       viewport?.removeEventListener('resize', resize);
       viewport?.removeEventListener('scroll', resize);
     };
-  }, [editorOpen, presentation]);
+  }, [active, workOpen]);
   const newButton = useRef<HTMLButtonElement>(null);
   const focusAfterClose = useRef(false);
   const [load, setLoad] = useState(0);
@@ -934,8 +934,9 @@ export function HouseholdMap({
     <section
       ref={workspace}
       tabIndex={-1}
-      className={`household-map presentation-${active ? presentation : 'list'}${detailsOpen ? ' map-details-open' : ''}${editorOpen ? ' map-editor-open' : ''}`}
+      className={`household-map${active ? ' workspace-shell' : ''}${workOpen ? ' workspace-open' : ''}${revealRequest ? ' workspace-revealing' : ''} presentation-${active ? presentation : 'list'}${detailsOpen ? ' map-details-open' : ''}${editorOpen ? ' map-editor-open' : ''}`}
       aria-label="Hushållskarta"
+      data-theme={theme.theme}
       onKeyDown={(event) => {
         if (
           event.key === 'Escape' &&
@@ -947,49 +948,164 @@ export function HouseholdMap({
           showAll();
       }}
     >
-      <header className="household-intro" hidden={!active}>
-        <p className="eyebrow">Från samtal till hushållets karta</p>
-        <h2>Berätta. Rätta. Spara med rösten.</h2>
-        <p>Följ ändringarna medan du pratar. Du kan också skriva eller använda kartans formulär.</p>
-      </header>
-      <p role="status">
-        {pending
-          ? saveAttempt.current
-            ? 'Väntande: kontrollerar sparandet…'
-            : 'Arbetar…'
-          : status}
-      </p>
-      {error && (
-        <p role="alert" className="error">
-          {error}
+      {active && (
+        <>
+          <a className="skip-link" href="#workspace-tools">
+            Till verktygen
+          </a>
+          <button type="button" className="skip-link" onClick={() => openWork('list')}>
+            Till lista och formulär
+          </button>
+          <button type="button" className="skip-link" onClick={() => openWork('conversation')}>
+            Till samtal och text
+          </button>
+          <WorkspaceTools
+            onOpen={openWork}
+            account={account}
+            settings={settings}
+            theme={<WorkspaceTheme mode={theme.mode} onChange={theme.changeMode} />}
+          />
+          <div className="workspace-context">
+            {householdName}
+            <span>Gemensam karta</span>
+          </div>
+          {guidance && !workOpen && Boolean(visibleObjects.size) && (
+            <aside className="workspace-guidance" aria-label="Kom igång med kartan">
+              <button
+                type="button"
+                className="workspace-close"
+                aria-label="Stäng vägledningen"
+                onClick={() => {
+                  setGuidance(false);
+                  workspace.current
+                    ?.querySelector<HTMLButtonElement>('.workspace-tools button')
+                    ?.focus();
+                }}
+              >
+                <WorkspaceIcon name="close" />
+              </button>
+              <h2>Din karta, på ditt sätt</h2>
+              <p>Berätta, skriv eller öppna Lista. Förslag blir gemensamma först när du sparar.</p>
+              <button type="button" onClick={() => openWork('conversation')}>
+                Samtal och text
+              </button>
+            </aside>
+          )}
+          {state && !visibleObjects.size && !query && !typeFilter && !workOpen && (
+            <div className="workspace-empty">
+              <h2>Din karta börjar här</h2>
+              <p>Lägg till ditt första objekt genom Lista eller berätta för Skyttel.</p>
+              {guidance && (
+                <aside aria-label="Kom igång med kartan">
+                  <button
+                    type="button"
+                    className="workspace-close"
+                    aria-label="Stäng vägledningen"
+                    onClick={() => {
+                      setGuidance(false);
+                      workspace.current
+                        ?.querySelector<HTMLButtonElement>('.workspace-tools button')
+                        ?.focus();
+                    }}
+                  >
+                    <WorkspaceIcon name="close" />
+                  </button>
+                  <p>Förslag blir gemensamma först när du sparar.</p>
+                </aside>
+              )}
+              <button type="button" onClick={() => openWork('list')}>
+                Öppna Lista
+              </button>
+            </div>
+          )}
+        </>
+      )}
+      <div className="workspace-feedback">
+        {status && !pending && !error && (
+          <button
+            type="button"
+            className="workspace-close"
+            aria-label="Stäng status"
+            onClick={() => setStatus('')}
+          >
+            <WorkspaceIcon name="close" />
+          </button>
+        )}
+        <p role="status">
+          {pending
+            ? saveAttempt.current
+              ? 'Väntande: kontrollerar sparandet…'
+              : 'Arbetar…'
+            : status}
         </p>
-      )}
-      {(error || blocked) && (
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        {(error || blocked) && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              setLoad((value) => value + 1);
+            }}
+          >
+            Hämta aktuellt underlag
+          </button>
+        )}
+        {saveAttempt.current && blocked && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              if (saveAttempt.current) void save(saveAttempt.current, true);
+            }}
+          >
+            Hämta samma kvitto igen
+          </button>
+        )}
+        {!state && !error && (
+          <div className="map-loading" role="status" aria-busy="true">
+            <span className="assistant-spinner" aria-hidden="true" />
+            Hushållets karta hämtas…
+          </div>
+        )}
+      </div>
+      {active && workOpen && (
         <button
           type="button"
-          disabled={pending}
-          onClick={() => {
-            setLoad((value) => value + 1);
-          }}
+          className="workspace-work-close"
+          onClick={closeWork}
+          aria-label="Stäng arbetsytan"
         >
-          Hämta aktuellt underlag
+          <WorkspaceIcon name="close" />
+          Till kartan
         </button>
       )}
-      {saveAttempt.current && blocked && (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => {
-            if (saveAttempt.current) void save(saveAttempt.current, true);
-          }}
-        >
-          Hämta samma kvitto igen
-        </button>
-      )}
-      {!state && !error && (
-        <div className="map-loading" role="status" aria-busy="true">
-          <span className="assistant-spinner" aria-hidden="true" />
-          Hushållets karta hämtas…
+      {state && (
+        <div className="map-space" hidden={!active}>
+          <SpatialMap
+            theme={theme.theme}
+            revealRequest={revealRequest}
+            personal={personal}
+            active={active}
+            state={effectiveState ?? state}
+            objects={visibleObjects}
+            relationships={visibleEdges}
+            selection={selection}
+            disabled={pending || dirty || blocked}
+            onSelect={selectObject}
+            onEdit={edit}
+            onSelectRelationship={selectRelationship}
+            onFocus={focusObject}
+            onClear={showAll}
+            onReset={() => {
+              showAll();
+              setStatus('Översikt återställd. Alla objekt visas.');
+            }}
+            onRemove={(object) => remove('draft', object)}
+          />
         </div>
       )}
       {state && (
@@ -1003,18 +1119,10 @@ export function HouseholdMap({
             <dialog
               ref={editorDialog}
               className="map-editor-dialog"
-              role={editorOpen ? 'dialog' : 'presentation'}
+              role="presentation"
               aria-label={editorOpen ? 'Redigera val' : undefined}
-              onCancel={(event) => {
-                event.preventDefault();
-                setEditorOpen(false);
-              }}
+              open={active && workOpen}
             >
-              {presentation === 'map' && editorOpen && (
-                <button type="button" onClick={() => setEditorOpen(false)}>
-                  Till kartan
-                </button>
-              )}
               <section
                 className="map-inspector"
                 aria-label="Val och redigering"
@@ -1509,34 +1617,7 @@ export function HouseholdMap({
             </div>
           </details>
           <div className="map-workspace">
-            <div
-              className="map-space"
-              hidden={presentation === 'list' || (presentation === 'map' && detailsOpen)}
-            >
-              <SpatialMap
-                revealRequest={revealRequest}
-                personal={personal}
-                active={
-                  active && presentation !== 'list' && !(presentation === 'map' && detailsOpen)
-                }
-                state={effectiveState ?? state}
-                objects={visibleObjects}
-                relationships={visibleEdges}
-                selection={selection}
-                disabled={pending || dirty || blocked}
-                onSelect={selectObject}
-                onEdit={edit}
-                onSelectRelationship={selectRelationship}
-                onFocus={focusObject}
-                onClear={showAll}
-                onReset={() => {
-                  showAll();
-                  setStatus('Översikt återställd. Alla objekt visas.');
-                }}
-                onRemove={(object) => remove('draft', object)}
-              />
-            </div>
-            <div className="map-content" hidden={presentation === 'map' && !detailsOpen}>
+            <div className="map-content" hidden={!workOpen}>
               <div className="map-management">
                 <PagedList
                   label="Objekt"

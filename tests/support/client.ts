@@ -1,4 +1,38 @@
-import { type APIRequestContext, expect } from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
+
+export async function openWorkspace(page: Page) {
+  await page
+    .getByRole('navigation', { name: 'Kartans verktyg' })
+    .getByRole('button', { name: 'Lista', exact: true })
+    .click();
+}
+
+export async function openMap(page: Page) {
+  const close = page.getByRole('button', { name: 'Stäng arbetsytan', exact: true });
+  if (await close.isVisible()) await close.click();
+  await expect(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
+  const guidance = page.getByRole('button', { name: 'Stäng vägledningen', exact: true });
+  if (await guidance.isVisible()) await guidance.click();
+}
+
+export async function openProfile(page: Page) {
+  const button = await utilityButton(page, 'Min profil');
+  if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click();
+}
+
+export async function openSettings(page: Page) {
+  const button = await utilityButton(page, 'Inställningar');
+  if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click();
+}
+
+async function utilityButton(page: Page, name: string) {
+  const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
+  await expect(tools).toBeVisible();
+  const button = tools.getByRole('button', { name, exact: true });
+  if (!(await button.isVisible()))
+    await tools.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
+  return button;
+}
 
 export async function signIn(client: APIRequestContext, origin: string, provider = 'google') {
   const response = await client.post(`${origin}/api/auth/sign-in/social`, {
