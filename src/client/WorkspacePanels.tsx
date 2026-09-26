@@ -16,6 +16,11 @@ export type WorkspacePanel = {
   content: ReactNode;
   open: boolean;
 };
+export type PanelFocusRequest = { id: string; element?: HTMLElement | null };
+
+type TransitionFocus =
+  | { kind: 'panel' | 'selector'; id: string }
+  | { kind: 'empty'; focus: () => void };
 
 type Position = { x: number; y: number };
 type Drag = {
@@ -61,7 +66,7 @@ export function WorkspacePanels({
 }: {
   windows: WorkspacePanel[];
   activeId: string | null;
-  focusRequest: number;
+  focusRequest: PanelFocusRequest | null;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
   hidden?: boolean;
@@ -75,15 +80,17 @@ export function WorkspacePanels({
   const lastFocus = useRef(new Map<string, HTMLElement>());
   const handleRefs = useRef(new Map<string, HTMLButtonElement>());
   const dragRef = useRef<Drag | null>(null);
-  const previousIds = useRef(new Set<string>());
   const previousHidden = useRef(hidden);
-  const previousFocusRequest = useRef(focusRequest);
+  const appliedFocusRequest = useRef(focusRequest);
+  const explicitFocusCommitted = useRef(false);
+  const appliedTransition = useRef<TransitionFocus | null>(null);
   const rememberedPositions = useRef<Record<string, Position>>({});
   const [positions, setPositions] = useState<Record<string, Position>>({});
   const [stack, setStack] = useState<string[]>([]);
   const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [movementStatus, setMovementStatus] = useState('');
+  const [transitionFocus, setTransitionFocus] = useState<TransitionFocus | null>(null);
   const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 700px)').matches);
   const opened = windows.filter((entry) => entry.open);
   const visibleId = opened.some((entry) => entry.id === activeId) ? activeId : opened[0]?.id;
@@ -133,25 +140,41 @@ export function WorkspacePanels({
     return () => observer.disconnect();
   }, [windows, compact, hidden]);
 
+  useLayoutEffect(() => {
+    if (hidden || !focusRequest || appliedFocusRequest.current === focusRequest) return;
+    appliedFocusRequest.current = focusRequest;
+    const panel = panelRefs.current.get(focusRequest.id);
+    if (focusRequest.id !== visibleId || !panel || panel.hidden) return;
+    explicitFocusCommitted.current = true;
+    const element = focusRequest.element;
+    if (element?.isConnected && panel.contains(element) && element.offsetHeight) element.focus();
+    else panel.querySelector('h2')?.focus();
+  }, [focusRequest, hidden, visibleId]);
+
+  useLayoutEffect(() => {
+    if (!transitionFocus || appliedTransition.current === transitionFocus) return;
+    appliedTransition.current = transitionFocus;
+    if (transitionFocus.kind !== 'empty' && (hidden || transitionFocus.id !== visibleId)) return;
+    explicitFocusCommitted.current = true;
+    if (transitionFocus.kind === 'empty') transitionFocus.focus();
+    else if (transitionFocus.kind === 'selector') selectorRef.current?.focus();
+    else panelRefs.current.get(transitionFocus.id)?.querySelector('h2')?.focus();
+  }, [transitionFocus, hidden, visibleId]);
+
+  // Route return follows the application's heading effect. Explicit panel
+  // transitions already focused during their commit and must not run again.
   useEffect(() => {
-    const added = opened.filter((entry) => !previousIds.current.has(entry.id));
     const reopened = previousHidden.current && !hidden;
-    const requested = previousFocusRequest.current !== focusRequest;
-    previousIds.current = new Set(opened.map((entry) => entry.id));
+    const explicit = explicitFocusCommitted.current;
     previousHidden.current = hidden;
-    previousFocusRequest.current = focusRequest;
-    if (hidden) return;
-    const target =
-      (requested ? visibleId : undefined) ??
-      added.find((entry) => entry.id === visibleId)?.id ??
-      added.at(-1)?.id ??
-      (reopened ? visibleId : undefined);
-    if (target) {
-      const previousFocus = reopened && !requested ? lastFocus.current.get(target) : undefined;
-      if (previousFocus?.isConnected && previousFocus.offsetHeight) previousFocus.focus();
-      else panelRefs.current.get(target)?.querySelector('h2')?.focus();
-    }
-  }, [opened, hidden, visibleId, focusRequest]);
+    explicitFocusCommitted.current = false;
+    if (hidden || !reopened || explicit || !visibleId) return;
+    const panel = panelRefs.current.get(visibleId);
+    if (panel?.contains(document.activeElement)) return;
+    const previousFocus = lastFocus.current.get(visibleId);
+    if (previousFocus?.isConnected && previousFocus.offsetHeight) previousFocus.focus();
+    else panel?.querySelector('h2')?.focus();
+  });
 
   const activate = (id: string) => {
     onActivate(id);
@@ -238,11 +261,11 @@ export function WorkspacePanels({
     setMoveMenuId(null);
     onClose(id);
     if (next) onActivate(next.id);
-    requestAnimationFrame(() => {
-      if (next && compact) selectorRef.current?.focus();
-      else if (next) panelRefs.current.get(next.id)?.querySelector('h2')?.focus();
-      else onEmpty();
-    });
+    setTransitionFocus(
+      next
+        ? { kind: compact ? 'selector' : 'panel', id: next.id }
+        : { kind: 'empty', focus: onEmpty },
+    );
   };
 
   return (
@@ -262,10 +285,9 @@ export function WorkspacePanels({
           ref={selectorRef}
           value={visibleId ?? ''}
           onChange={(event) => {
-            activate(event.target.value);
-            requestAnimationFrame(() =>
-              panelRefs.current.get(event.target.value)?.querySelector('h2')?.focus(),
-            );
+            const id = event.target.value;
+            activate(id);
+            setTransitionFocus({ kind: 'panel', id });
           }}
         >
           {opened.map((entry) => (

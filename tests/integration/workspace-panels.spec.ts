@@ -258,6 +258,10 @@ test('PANEL-03: an intervening proposal for the same object preserves text and b
     const object = page.getByRole('region', { name: 'Cykeln', exact: true });
     await object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await object.getByLabel('Beskrivning', { exact: true }).fill('Min oskickade text');
+    await expect(object.getByLabel('Beskrivning', { exact: true })).toHaveValue(
+      'Min oskickade text',
+    );
+    await expect(object.getByLabel('Objektets namn', { exact: true })).toHaveValue('Cykeln');
     await page
       .getByRole('navigation', { name: 'Kartans verktyg' })
       .getByRole('button', { name: 'Samtal och text', exact: true })

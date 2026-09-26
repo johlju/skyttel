@@ -122,6 +122,8 @@ text and blocks stale staging”.
 
 1. Öppna Cykeln, välj **Redigera valt objekt** och skriv
    **Min oskickade text** som beskrivning utan att skicka formuläret.
+   Flytta direkt till beskrivningen när formuläret öppnas; kontrollera
+   att namnet fortfarande är Cykeln och att texten hamnar i valt fält.
 2. Starta textassistenten och be om ett förslag till en annan beskrivning
    för samma cykel. Vänta på det bekräftade förslaget i ditt utkast.
 3. Välj Cykeln i panelväljaren. Läs varningen och kontrollera din text.
