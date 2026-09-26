@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   type DraftConflict,
   draftConflicts,
@@ -80,7 +81,9 @@ export function HouseholdMap({
   onContentReplaced,
   householdName = 'Hushållets karta',
   account,
-  settings,
+  profileRequested,
+  onSettings,
+  typeSettingsTarget,
 }: {
   householdId: string;
   active?: boolean;
@@ -88,9 +91,17 @@ export function HouseholdMap({
   onContentReplaced?: () => void;
   householdName?: string;
   account?: ReactNode;
-  settings?: ReactNode;
+  profileRequested?: boolean;
+  onSettings?: () => void;
+  typeSettingsTarget?: HTMLElement | null;
 }) {
   const theme = useWorkspaceTheme();
+  const [typeHost] = useState(() => document.createElement('div'));
+  const typeSlot = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const target = typeSettingsTarget ?? typeSlot.current;
+    if (target && typeHost.parentElement !== target) target.append(typeHost);
+  });
   const path = `/api/households/${encodeURIComponent(householdId)}/map`;
   const [state, setState] = useState<MapState | null>(null);
   const initialContentVersion = useRef<number | null>(null);
@@ -164,6 +175,7 @@ export function HouseholdMap({
   const editMapButton = useRef<HTMLButtonElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const workspace = useRef<HTMLElement>(null);
+  const lastWorkFocus = useRef<HTMLElement | null>(null);
   const [revealRequest, setRevealRequest] = useState<MapRevealRequest>();
   const revealAbort = useRef<AbortController | null>(null);
   useEffect(() => () => revealAbort.current?.abort(), []);
@@ -982,10 +994,15 @@ export function HouseholdMap({
       ref={workspace}
       tabIndex={-1}
       className={`household-map${active ? ' workspace-shell' : ''}${workOpen ? ' workspace-open' : ''}${revealRequest ? ' workspace-revealing' : ''} presentation-${active ? presentation : 'list'}${detailsOpen ? ' map-details-open' : ''}${editorOpen ? ' map-editor-open' : ''}`}
+      onFocusCapture={(event) => {
+        if (event.target instanceof HTMLElement && event.target.closest('.workspace-window'))
+          lastWorkFocus.current = event.target;
+      }}
       aria-label="Hushållskarta"
       data-theme={theme.theme}
       onKeyDown={(event) => {
         if (
+          event.currentTarget.contains(event.target as Node) &&
           event.key === 'Escape' &&
           !(
             event.target instanceof HTMLElement &&
@@ -1009,7 +1026,13 @@ export function HouseholdMap({
           <WorkspaceTools
             onOpen={openWork}
             account={account}
-            settings={settings}
+            profileRequested={profileRequested}
+            onReturnWork={() => {
+              if (!activePanel || !lastWorkFocus.current?.isConnected) return false;
+              setPanelFocusRequest({ id: activePanel, element: lastWorkFocus.current });
+              return true;
+            }}
+            onSettings={onSettings}
             theme={<WorkspaceTheme mode={theme.mode} onChange={theme.changeMode} />}
           />
           <div className="workspace-context">
@@ -1701,174 +1724,180 @@ export function HouseholdMap({
                       })
                     }
                   />
-                  <details>
-                    <summary>Objekttyper och egna fält</summary>
-                    <p>
-                      Alla medlemmar kan föreslå ändringar, även i förifyllda typer. Egna fält är
-                      inte till för hemliga uppgifter.
-                    </p>
-                    <ul aria-label="Objekttyper">
-                      {effectiveTypes.map((type) => (
-                        <li key={type.id}>
-                          <button
-                            type="button"
-                            disabled={pending || dirty || blocked}
-                            onClick={() => {
-                              const proposal = state.draft.objectTypes?.find(
-                                (item) => item.id === type.id,
-                              );
+                  <div ref={typeSlot} />
+                  {createPortal(
+                    <div className="shared-type-settings">
+                      <details>
+                        <summary>Objekttyper och egna fält</summary>
+                        <p>
+                          Alla medlemmar kan föreslå ändringar, även i förifyllda typer. Egna fält
+                          är inte till för hemliga uppgifter.
+                        </p>
+                        <ul aria-label="Objekttyper">
+                          {effectiveTypes.map((type) => (
+                            <li key={type.id}>
+                              <button
+                                type="button"
+                                disabled={pending || dirty || blocked}
+                                onClick={() => {
+                                  const proposal = state.draft.objectTypes?.find(
+                                    (item) => item.id === type.id,
+                                  );
 
-                              setEdgeEditor(null);
-                              setDirty(false);
-                              setEdgeTypeEditor(null);
-                              setTypeEditor({
-                                type,
-                                version: state.draft.version,
-                                contentVersion: state.contentVersion,
-                                baseRevision: proposal
-                                  ? (proposal.before?.revision ?? null)
-                                  : type.revision,
-                              });
-                            }}
-                          >
-                            Ändra typ: {type.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                  <button
-                    type="button"
-                    disabled={pending || dirty || blocked}
-                    onClick={() => {
-                      setEdgeEditor(null);
-                      setDirty(true);
-                      setEdgeTypeEditor(null);
-                      setTypeEditor({
-                        type: {
-                          id: crypto.randomUUID(),
-                          householdId,
-                          revision: 0,
-                          name: '',
-                          description: '',
-                        },
-                        version: state.draft.version,
-                        contentVersion: state.contentVersion,
-                        baseRevision: null,
-                      });
-                    }}
-                  >
-                    Ny objekttyp
-                  </button>
-                  {typeEditor && (
-                    <ObjectTypeEditor
-                      key={typeEditor.type.id}
-                      initial={typeEditor.type}
-                      disabled={pending || blocked}
-                      stale={
-                        typeEditor.version !== state.draft.version ||
-                        typeEditor.contentVersion !== state.contentVersion
-                      }
-                      onDirty={() => setDirty(true)}
-                      onSubmit={(value) =>
-                        void action('object-type', {
-                          version: typeEditor.version,
-                          contentVersion: typeEditor.contentVersion,
-                          id: typeEditor.type.id,
-                          baseRevision: typeEditor.baseRevision,
-                          value,
-                        })
-                      }
-                      onClose={() => {
-                        setTypeEditor(null);
-                        setEdgeTypeEditor(null);
-                        setDirty(false);
-                      }}
-                    />
-                  )}
-                  <details>
-                    <summary>Sambandstyper och riktning</summary>
-                    <p>
-                      Alla medlemmar kan ändra definitionerna, även förifyllda typer. En ändrad
-                      definition kopplar inte om objekten.
-                    </p>
-                    <ul aria-label="Sambandstyper">
-                      {effectiveEdgeTypes.map((type) => (
-                        <li key={type.id}>
-                          <button
-                            type="button"
-                            disabled={pending || dirty || blocked}
-                            onClick={() => {
-                              const proposal = state.draft.relationshipTypes?.find(
-                                (item) => item.id === type.id,
-                              );
+                                  setEdgeEditor(null);
+                                  setDirty(false);
+                                  setEdgeTypeEditor(null);
+                                  setTypeEditor({
+                                    type,
+                                    version: state.draft.version,
+                                    contentVersion: state.contentVersion,
+                                    baseRevision: proposal
+                                      ? (proposal.before?.revision ?? null)
+                                      : type.revision,
+                                  });
+                                }}
+                              >
+                                Ändra typ: {type.name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                      <button
+                        type="button"
+                        disabled={pending || dirty || blocked}
+                        onClick={() => {
+                          setEdgeEditor(null);
+                          setDirty(true);
+                          setEdgeTypeEditor(null);
+                          setTypeEditor({
+                            type: {
+                              id: crypto.randomUUID(),
+                              householdId,
+                              revision: 0,
+                              name: '',
+                              description: '',
+                            },
+                            version: state.draft.version,
+                            contentVersion: state.contentVersion,
+                            baseRevision: null,
+                          });
+                        }}
+                      >
+                        Ny objekttyp
+                      </button>
+                      {typeEditor && (
+                        <ObjectTypeEditor
+                          key={typeEditor.type.id}
+                          initial={typeEditor.type}
+                          disabled={pending || blocked}
+                          stale={
+                            typeEditor.version !== state.draft.version ||
+                            typeEditor.contentVersion !== state.contentVersion
+                          }
+                          onDirty={() => setDirty(true)}
+                          onSubmit={(value) =>
+                            void action('object-type', {
+                              version: typeEditor.version,
+                              contentVersion: typeEditor.contentVersion,
+                              id: typeEditor.type.id,
+                              baseRevision: typeEditor.baseRevision,
+                              value,
+                            })
+                          }
+                          onClose={() => {
+                            setTypeEditor(null);
+                            setEdgeTypeEditor(null);
+                            setDirty(false);
+                          }}
+                        />
+                      )}
+                      <details>
+                        <summary>Sambandstyper och riktning</summary>
+                        <p>
+                          Alla medlemmar kan ändra definitionerna, även förifyllda typer. En ändrad
+                          definition kopplar inte om objekten.
+                        </p>
+                        <ul aria-label="Sambandstyper">
+                          {effectiveEdgeTypes.map((type) => (
+                            <li key={type.id}>
+                              <button
+                                type="button"
+                                disabled={pending || dirty || blocked}
+                                onClick={() => {
+                                  const proposal = state.draft.relationshipTypes?.find(
+                                    (item) => item.id === type.id,
+                                  );
 
-                              setEdgeEditor(null);
-                              setTypeEditor(null);
-                              setDirty(false);
-                              setEdgeTypeEditor({
-                                type,
-                                version: state.draft.version,
-                                contentVersion: state.contentVersion,
-                                baseRevision: proposal
-                                  ? (proposal.before?.revision ?? null)
-                                  : type.revision,
-                              });
-                            }}
-                          >
-                            Ändra sambandstyp: {type.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                  <button
-                    type="button"
-                    disabled={pending || dirty || blocked}
-                    onClick={() => {
-                      setEdgeEditor(null);
-                      setTypeEditor(null);
-                      setDirty(true);
-                      setEdgeTypeEditor({
-                        type: {
-                          id: crypto.randomUUID(),
-                          householdId,
-                          revision: 0,
-                          name: '',
-                          description: '',
-                        },
-                        version: state.draft.version,
-                        contentVersion: state.contentVersion,
-                        baseRevision: null,
-                      });
-                    }}
-                  >
-                    Ny sambandstyp
-                  </button>
-                  {edgeTypeEditor && (
-                    <RelationshipTypeEditor
-                      key={edgeTypeEditor.type.id}
-                      initial={edgeTypeEditor.type}
-                      disabled={pending || blocked}
-                      stale={
-                        edgeTypeEditor.version !== state.draft.version ||
-                        edgeTypeEditor.contentVersion !== state.contentVersion
-                      }
-                      onDirty={() => setDirty(true)}
-                      onSubmit={(value) =>
-                        void action('relationship-type', {
-                          version: edgeTypeEditor.version,
-                          contentVersion: edgeTypeEditor.contentVersion,
-                          id: edgeTypeEditor.type.id,
-                          baseRevision: edgeTypeEditor.baseRevision,
-                          value,
-                        })
-                      }
-                      onClose={() => {
-                        setEdgeTypeEditor(null);
-                        setDirty(false);
-                      }}
-                    />
+                                  setEdgeEditor(null);
+                                  setTypeEditor(null);
+                                  setDirty(false);
+                                  setEdgeTypeEditor({
+                                    type,
+                                    version: state.draft.version,
+                                    contentVersion: state.contentVersion,
+                                    baseRevision: proposal
+                                      ? (proposal.before?.revision ?? null)
+                                      : type.revision,
+                                  });
+                                }}
+                              >
+                                Ändra sambandstyp: {type.name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                      <button
+                        type="button"
+                        disabled={pending || dirty || blocked}
+                        onClick={() => {
+                          setEdgeEditor(null);
+                          setTypeEditor(null);
+                          setDirty(true);
+                          setEdgeTypeEditor({
+                            type: {
+                              id: crypto.randomUUID(),
+                              householdId,
+                              revision: 0,
+                              name: '',
+                              description: '',
+                            },
+                            version: state.draft.version,
+                            contentVersion: state.contentVersion,
+                            baseRevision: null,
+                          });
+                        }}
+                      >
+                        Ny sambandstyp
+                      </button>
+                      {edgeTypeEditor && (
+                        <RelationshipTypeEditor
+                          key={edgeTypeEditor.type.id}
+                          initial={edgeTypeEditor.type}
+                          disabled={pending || blocked}
+                          stale={
+                            edgeTypeEditor.version !== state.draft.version ||
+                            edgeTypeEditor.contentVersion !== state.contentVersion
+                          }
+                          onDirty={() => setDirty(true)}
+                          onSubmit={(value) =>
+                            void action('relationship-type', {
+                              version: edgeTypeEditor.version,
+                              contentVersion: edgeTypeEditor.contentVersion,
+                              id: edgeTypeEditor.type.id,
+                              baseRevision: edgeTypeEditor.baseRevision,
+                              value,
+                            })
+                          }
+                          onClose={() => {
+                            setEdgeTypeEditor(null);
+                            setDirty(false);
+                          }}
+                        />
+                      )}
+                    </div>,
+                    typeHost,
                   )}
                 </div>
                 <section aria-labelledby="draft-title" className="draft-review">

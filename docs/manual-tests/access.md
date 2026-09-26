@@ -546,7 +546,7 @@ to login”.
 **Steg:**
 
 1. Öppna **Tema** i kartans verktyg och välj **Mörkt**.
-2. Öppna **Min profil** och välj **Logga ut**.
+2. Öppna **Din profil** och välj **Logga ut**.
 3. Öppna installationens adresser `/costs` och `/login-methods` direkt
    medan du är utloggad. Välj Google utan att fortsätta till leverantören.
 

@@ -1,6 +1,12 @@
 import { access } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
-import { createHousehold, openConversation, openProfile, signIn } from '../support/client.js';
+import {
+  createHousehold,
+  openConversation,
+  openProfile,
+  openSettings,
+  signIn,
+} from '../support/client.js';
 import { launchManualCosts } from '../support/manual-costs.js';
 
 const assistant = (page: Page) =>
@@ -35,7 +41,7 @@ async function openCosts(page: Page) {
   const link = page.getByRole('link', { name: 'Månadskostnad', exact: true });
   const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
   await expect(link.or(tools).first()).toBeVisible();
-  if (!(await link.isVisible())) await openProfile(page);
+  if (!(await link.isVisible())) await openSettings(page);
   await link.click();
   await expect(category(page, 'Render – hel månad')).toBeVisible();
 }

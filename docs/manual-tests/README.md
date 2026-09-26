@@ -43,13 +43,18 @@ till ett redan öppet objekt, välj objektet i **Öppna paneler**. Stäng
 arbetsytan inför kartgester om panelerna täcker kartan eller dess reglage;
 öppna Lista igen för sökning, filter, samband och utkast.
 
-**Min profil** innehåller användar-ID, inbjudningar, **Inloggningssätt**,
-**Månadskostnad** för driftansvarig och **Logga ut**. **Inställningar**
-innehåller **Administrera tillgång** för administratören och
-**Assistentanslutningar**. Följ dessa ingångar när ett fall anger en sådan
-funktion. **Stäng arbetsytan** återgår till kartan och behåller oskickad text.
+**Din profil** innehåller användar-ID, inbjudningar, **Inloggningssätt**,
+**Assistentanslutningar** och **Logga ut**. **Inställningar** öppnar en egen
+sida med **Typer och egna fält**, **Administrera tillgång** för
+administratören och **Månadskostnad** för driftansvarig. Mobilnavigationen
+öppnas med **Välj inställning**. Följ dessa ingångar när ett fall anger en
+sådan funktion. **Tillbaka till kartan** återger arbetet.
+**Stäng arbetsytan** återgår till kartan och behåller oskickad text.
 
 ## Områden
+
+- [Inställningar och profil](settings-profile.md): helsida, mobilnavigation,
+  återgång med fokus och typdefinitioner i kartans samlade utkast.
 
 - [Fria paneler](workspace-panels.md): flera objekt och samtal, placering,
   mobil panelväljare, återöppning av nya objekt och bevarade samband och typer.

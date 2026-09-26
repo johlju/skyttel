@@ -35,16 +35,22 @@ export type WorkspaceTarget = 'list' | 'conversation' | 'voice' | 'search' | 'dr
 export function WorkspaceTools({
   onOpen,
   account,
-  settings,
+  onSettings,
+  profileRequested = false,
+  onReturnWork,
   theme,
 }: {
   onOpen: (target: WorkspaceTarget) => void;
   account?: ReactNode;
-  settings?: ReactNode;
+  onSettings?: () => void;
+  profileRequested?: boolean;
+  onReturnWork?: () => boolean;
   theme?: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [utility, setUtility] = useState<'help' | 'profile' | 'settings' | null>(null);
+  const [utility, setUtility] = useState<'help' | 'profile' | null>(
+    profileRequested ? 'profile' : null,
+  );
   const returnFocus = useRef<HTMLButtonElement | null>(null);
   const expansionControl = useRef<HTMLButtonElement>(null);
   const utilityPanel = useRef<HTMLElement>(null);
@@ -53,6 +59,7 @@ export function WorkspaceTools({
   }, [utility]);
   function closeUtility() {
     setUtility(null);
+    if (utility === 'profile' && onReturnWork?.()) return;
     const trigger = returnFocus.current;
     if (trigger?.offsetWidth && trigger.offsetHeight) trigger.focus();
     else expansionControl.current?.focus();
@@ -103,7 +110,7 @@ export function WorkspaceTools({
           {(
             [
               ['settings', 'Inställningar', 'settings'],
-              ['profile', 'Min profil', 'profile'],
+              ['profile', 'Din profil', 'profile'],
               ['info', 'Information och hjälp', 'help'],
             ] as const
           ).map(([icon, label, target]) => (
@@ -113,10 +120,11 @@ export function WorkspaceTools({
               title={label}
               aria-label={label}
               data-secondary
-              aria-expanded={utility === target}
+              aria-expanded={target === 'settings' ? undefined : utility === target}
               onClick={(event) => {
                 returnFocus.current = event.currentTarget;
-                setUtility(utility === target ? null : target);
+                if (target === 'settings') onSettings?.();
+                else setUtility(utility === target ? null : target);
               }}
             >
               <WorkspaceIcon name={icon} />
@@ -140,13 +148,7 @@ export function WorkspaceTools({
         <section
           ref={utilityPanel}
           className="workspace-utility"
-          aria-label={
-            utility === 'help'
-              ? 'Information och hjälp'
-              : utility === 'profile'
-                ? 'Min profil'
-                : 'Inställningar'
-          }
+          aria-label={utility === 'help' ? 'Information och hjälp' : 'Din profil'}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.stopPropagation();
@@ -178,15 +180,13 @@ export function WorkspaceTools({
                 återgå till kartan; din oskickade text finns kvar.
               </p>
             </>
-          ) : utility === 'profile' ? (
-            <>
-              <h2 tabIndex={-1}>Min profil</h2>
-              {account}
-            </>
           ) : (
             <>
-              <h2 tabIndex={-1}>Inställningar</h2>
-              {settings}
+              <h2 tabIndex={-1}>Din profil</h2>
+              {account}
+              <button type="button" onClick={closeUtility}>
+                Tillbaka till arbetet
+              </button>
             </>
           )}
         </section>

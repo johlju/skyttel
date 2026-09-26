@@ -181,7 +181,7 @@ test('MEDLEM-06: revocation preserves shared objects and only a new invitation r
 
     await openSettings(page);
 
-    await page.getByRole('link', { name: 'Administrera tillgång' }).click();
+    await page.getByRole('link', { name: 'Administrera tillgång', exact: true }).click();
     await page.getByLabel('Skyttel-användar-ID att bjuda in').fill(user.id);
     await page.getByRole('button', { name: 'Skapa inbjudan', exact: true }).click();
     const newCode = await page.getByLabel('Inbjudningskod att dela').inputValue();
@@ -218,7 +218,7 @@ test('MEDLEM-01: an administrator invites an authenticated user who joins by key
 
     await page.goto(installation.origin);
     await openSettings(page);
-    await page.getByRole('link', { name: 'Administrera tillgång' }).click();
+    await page.getByRole('link', { name: 'Administrera tillgång', exact: true }).click();
     await page.getByLabel('Skyttel-användar-ID att bjuda in').fill(userId);
     await page.getByRole('button', { name: 'Skapa inbjudan', exact: true }).click();
     const code = await page.getByLabel('Inbjudningskod att dela').inputValue();
@@ -232,7 +232,9 @@ test('MEDLEM-01: an administrator invites an authenticated user who joins by key
     await expect(recipientPage.getByRole('heading', { name: 'Hushållet Linden' })).toBeVisible();
     await expect(recipientPage.getByText('Medlem', { exact: true })).toBeVisible();
     await openSettings(recipientPage);
-    await expect(recipientPage.getByRole('link', { name: 'Administrera tillgång' })).toHaveCount(0);
+    await expect(
+      recipientPage.getByRole('link', { name: 'Administrera tillgång', exact: true }),
+    ).toHaveCount(0);
     expect(
       await recipientPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     ).toBe(true);
@@ -403,7 +405,9 @@ test('MEDLEM-03: administrators share responsibility and open clients lose revok
     await page.getByRole('link', { name: 'Till startsidan' }).click();
     await expect(page.getByRole('heading', { name: 'Hushållet Linden' })).toBeVisible();
     await openSettings(page);
-    await expect(page.getByRole('link', { name: 'Administrera tillgång' })).toHaveCount(0);
+    await expect(
+      page.getByRole('link', { name: 'Administrera tillgång', exact: true }),
+    ).toHaveCount(0);
     await expect(ownRow.getByRole('button', { name: 'Gör till medlem' })).toBeDisabled();
     await expect(ownRow.getByRole('button', { name: 'Återkalla tillgång' })).toBeDisabled();
     await alexRow.getByRole('button', { name: 'Återkalla tillgång' }).click();

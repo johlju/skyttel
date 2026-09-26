@@ -15,9 +15,16 @@ formulär och text med tangentbord före kartgrafiken.
 
 ## Besök andra vyer och fortsätt arbetet
 
-Öppna **Min profil** för **Inloggningssätt**, användar-ID, inbjudningar
-eller **Logga ut**. **Inställningar** innehåller **Assistentanslutningar**
-och, för administratören, **Administrera tillgång**.
+Öppna **Din profil** för kontouppgifter, **Inloggningssätt**, användar-ID,
+inbjudningar, **Assistentanslutningar** eller **Logga ut**. Profilen har en
+egen ikon och **Tillbaka till arbetet** återgår till ditt aktiva formulär.
+
+**Inställningar** öppnar en egen sida med **Typer och egna fält** och,
+för administratören, **Administrera tillgång**. Driftansvariga når även
+**Månadskostnad**. På mobil fäller **Välj inställning** ut sidnavigeringen.
+Kartan är dold medan du besöker sidan. **Tillbaka till kartan** återger
+ditt pågående arbete och fokus. Typförslag hör till samma privata utkast
+som objekt och samband; granska och spara hela utkastet i kartan.
 
 Du kan besöka **Inloggningssätt**, **Assistentanslutningar** eller
 **Administrera tillgång** och återvända utan att förlora formulärtext,

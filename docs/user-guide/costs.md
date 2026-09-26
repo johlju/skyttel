@@ -3,8 +3,9 @@
 [Till användarguidens innehåll](README.md)
 
 Den här sidan är till för installationens driftansvarige. Logga in med den
-identitet som är konfigurerad för det ansvaret och välj **Månadskostnad** i
-sidhuvudet, eller öppna `/costs`. Du behöver inte vara medlem i ett hushåll.
+identitet som är konfigurerad för det ansvaret och välj **Inställningar**
+och **Månadskostnad** från kartan, eller öppna `/costs`. Före hushållets
+start finns länken i sidhuvudet. Du behöver inte vara medlem i ett hushåll.
 Att vara hushållsadministratör ger inte i sig tillgång till kostnadsöversikten.
 
 ## Läs underlaget

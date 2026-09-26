@@ -28,7 +28,7 @@ export async function openMap(page: Page) {
 }
 
 export async function openProfile(page: Page) {
-  const button = await utilityButton(page, 'Min profil');
+  const button = await utilityButton(page, 'Din profil');
   if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click();
 }
 
