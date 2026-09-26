@@ -68,6 +68,8 @@ and cancellation retain selection”.
 **Steg:**
 
 1. Markera Lo. Öppna Lista och skriv Exempel i Sök objekt.
+   Avmarkera och markera Lo med Control-klick. Kontrollera att söktext
+   och kamera finns kvar och att inga detaljer öppnas.
 2. Klicka fri bakgrund med en mycket liten rörelse. Kontrollera att
    markeringen släcks medan söktext, panel och kamera finns kvar.
 3. Återgå till kartan och markera Lo. Dra bakgrunden för att rotera.
@@ -110,6 +112,7 @@ across desktop and compact panels”.
 5. Avmarkera alla. Upprepa med tangentbord på varje skärmbredd.
 6. På den smala skärmen väljer du Visa verktygens namn och Tema. Välj
    Mörkt och kontrollera tema och fokus tillbaka till temaknappen.
+   För pekaren över Markera och kontrollera att knapptexten är läsbar.
 
 **Förväntat resultat:**
 

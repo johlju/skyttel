@@ -104,6 +104,7 @@ export function SpatialMap({
   const returnFocus = useRef<HTMLElement | null>(null);
   const hold = useRef<{ timer: number; x: number; y: number } | null>(null);
   const held = useRef(false);
+  const contextClick = useRef<string | null>(null);
   const cancelHold = useCallback(() => {
     if (hold.current) window.clearTimeout(hold.current.timer);
     hold.current = null;
@@ -853,11 +854,13 @@ export function SpatialMap({
                     if (event.ctrlKey) {
                       cancelHold();
                       movement.cancel();
+                      contextClick.current = object.id;
                       if (event.altKey) onOpenDetails(object);
-                      else onFocus(object.id);
+                      else onSelect(object, true);
                     } else openMenu(object, event.currentTarget);
                   }}
                   onPointerDown={(event) => {
+                    contextClick.current = null;
                     cancelHold();
                     held.current = false;
                     movement.start(object.id, event);
@@ -884,6 +887,10 @@ export function SpatialMap({
                   onPointerCancel={cancelHold}
                   onPointerLeave={cancelHold}
                   onClick={(event) => {
+                    const pairedContextClick =
+                      contextClick.current === object.id && event.detail > 0;
+                    contextClick.current = null;
+                    if (pairedContextClick) return;
                     if (held.current) {
                       held.current = false;
                       return;

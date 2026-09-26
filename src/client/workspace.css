@@ -97,6 +97,15 @@
   border-color: var(--space-accent);
   background: color-mix(in srgb, var(--space-accent), transparent 88%);
 }
+.household-map.workspace-shell .workspace-window button:hover:enabled {
+  background: var(--space-surface);
+  border-color: var(--space-accent);
+  color: var(--space-text);
+}
+.household-map.workspace-shell .workspace-window .primary:hover:enabled {
+  background: var(--space-accent);
+  color: var(--space-bg);
+}
 .household-map.workspace-shell .workspace-tools .workspace-talk {
   background: var(--space-accent);
   color: white;

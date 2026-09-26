@@ -1127,3 +1127,48 @@ test('view changes retain unsent object text and filters can clear without chang
   ).toHaveLength(2);
   expect((await (await client.request(path)).json()).objects).toEqual(original.objects);
 });
+
+test('text-only multi-selection leaves the shared draft unchanged and reopens retained object work', async () => {
+  await open();
+  await add('Lo Urval');
+  await add('Kim Urval');
+  await save();
+  const original = await (await client.request(path)).json();
+  const list = within(screen.getByRole('list', { name: 'Objekt' }));
+  const lo = list.getByRole('button', { name: 'Markera Lo Urval' });
+  const kim = list.getByRole('button', { name: 'Markera Kim Urval' });
+  const details = within(screen.getByRole('navigation', { name: 'Kartans verktyg' })).getByRole(
+    'button',
+    { name: 'Visa detaljer' },
+  );
+  await userEvent.click(lo);
+  await userEvent.click(kim);
+  expect(lo.getAttribute('aria-pressed')).toBe('true');
+  expect(kim.getAttribute('aria-pressed')).toBe('true');
+  expect(screen.queryByRole('region', { name: 'Kim Urval' })).toBeNull();
+  await userEvent.click(lo);
+  expect(lo.getAttribute('aria-pressed')).toBe('false');
+  await userEvent.click(kim);
+  expect(details.hasAttribute('disabled')).toBe(true);
+  await userEvent.click(list.getByRole('button', { name: 'Visa detaljer för Lo Urval' }));
+  const panel = within(screen.getByRole('region', { name: 'Lo Urval' }));
+  await userEvent.click(panel.getByRole('button', { name: 'Redigera valt objekt' }));
+  await userEvent.clear(panel.getByLabelText('Beskrivning'));
+  await userEvent.type(panel.getByLabelText('Beskrivning'), 'Behåll utan kartgrafik');
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+  await userEvent.click(kim);
+  await userEvent.click(list.getByRole('button', { name: 'Visa detaljer för Lo Urval' }));
+  expect(lo.getAttribute('aria-pressed')).toBe('true');
+  expect(kim.getAttribute('aria-pressed')).toBe('true');
+  await userEvent.click(panel.getByRole('button', { name: 'Stäng Lo Urval' }));
+  await userEvent.click(details);
+  expect((panel.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
+    'Behåll utan kartgrafik',
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Avmarkera alla' }));
+  expect(details.hasAttribute('disabled')).toBe(true);
+  const after = await (await client.request(path)).json();
+  expect(after.objects).toEqual(original.objects);
+  expect(after.draft).toEqual(original.draft);
+});

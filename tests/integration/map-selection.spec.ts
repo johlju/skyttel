@@ -199,6 +199,28 @@ test('MARKERING-03: text selection and detail controls retain work across deskto
       'data-theme',
       'dark',
     );
+    const mark = work.getByRole('button', { name: 'Markera Lo Exempel', exact: true });
+    await mark.hover();
+    expect(
+      await mark.evaluate((button) => {
+        const style = getComputedStyle(button);
+        const luminance = (color: string) => {
+          const channels = (color.match(/\d+/g) ?? [])
+            .slice(0, 3)
+            .map(Number)
+            .map((value) => {
+              const unit = value / 255;
+              return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+            });
+          return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+        };
+        const foreground = luminance(style.color);
+        const background = luminance(style.backgroundColor);
+        return (
+          (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+        );
+      }),
+    ).toBeGreaterThanOrEqual(4.5);
   } finally {
     await installation.close();
   }
@@ -290,6 +312,16 @@ test('MARKERING-02: empty clicks clear highlighting while navigation and cancell
     await openWorkspace(page);
     await page.getByLabel('Sök objekt', { exact: true }).fill('Exempel');
     const before = await positions();
+    await lo.click({ button: 'right', modifiers: ['Control'] });
+    await expect(lo).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByLabel('Sök objekt', { exact: true })).toHaveValue('Exempel');
+    await expect(page.getByRole('region', { name: 'Lo Exempel', exact: true })).toHaveCount(0);
+    expect(await positions()).toEqual(before);
+    await lo.click({ button: 'right', modifiers: ['Control'] });
+    await expect(lo).toHaveAttribute('aria-pressed', 'true');
+    // Some native Control-click sequences also deliver a click after contextmenu.
+    await lo.dispatchEvent('click', { ctrlKey: true, detail: 1 });
+    await expect(lo).toHaveAttribute('aria-pressed', 'true');
     const target = await emptyPoint(page);
     await page.mouse.move(target.x, target.y);
     await page.mouse.down();
