@@ -27,6 +27,7 @@ export default defineConfig({
         test: {
           name: 'client',
           environment: 'jsdom',
+          setupFiles: ['./tests/support/client-dom.ts'],
           include: ['tests/unit/client/**/*.test.tsx'],
         },
       },
