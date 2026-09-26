@@ -123,6 +123,8 @@ test('map selection gestures preserve membership and open retained details only 
       const { x, y } = node.element().getBoundingClientRect();
       return { x, y };
     });
+  await expect.element(alex).toBeVisible();
+  await expect.element(music).toBeVisible();
   const before = positions();
   await alex.click();
   await music.click({ modifiers: ['Control'] });
