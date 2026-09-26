@@ -130,6 +130,7 @@ describe('Skyttel application interface', () => {
       serve({ '/api/bootstrap': [{ data: anonymous }], '/api/auth/sign-in/social': [reply] });
       mount();
       await userEvent.click(await screen.findByRole('button', { name: 'Fortsätt med Google' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Fortsätt till Google' }));
       expect((await screen.findByRole('alert')).textContent).toContain(
         'Inloggningen kunde inte slutföras',
       );
@@ -151,8 +152,9 @@ describe('Skyttel application interface', () => {
       await userEvent.click(
         await screen.findByRole('button', { name: `Fortsätt med ${provider}` }),
       );
+      await userEvent.click(screen.getByRole('button', { name: `Fortsätt till ${provider}` }));
       expect((await screen.findByRole('status')).textContent).toBe(
-        'Du skickas vidare för att logga in.',
+        `Öppnar ${provider} för att verifiera din inloggning…`,
       );
       expect(
         (screen.getByRole('button', { name: `Öppnar ${provider}…` }) as HTMLButtonElement).disabled,

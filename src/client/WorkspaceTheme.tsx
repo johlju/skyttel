@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import './workspace-theme.css';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
+const themeChangeEvent = 'skyttel-theme-change';
 
 const themeOptions: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: 'Ljust' },
@@ -25,7 +26,17 @@ export function useWorkspaceTheme() {
     } catch {
       /* Theme also works without browser storage. */
     }
+    window.dispatchEvent(new CustomEvent(themeChangeEvent, { detail: value }));
   };
+  useEffect(() => {
+    const synchronize = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const value = event.detail;
+      if (value === 'light' || value === 'dark' || value === 'system') setMode(value);
+    };
+    window.addEventListener(themeChangeEvent, synchronize);
+    return () => window.removeEventListener(themeChangeEvent, synchronize);
+  }, []);
   const [systemDark, setSystemDark] = useState(
     () =>
       typeof window.matchMedia === 'function' &&

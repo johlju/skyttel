@@ -307,6 +307,7 @@ test('AI-04: inloggning följs av medgivande och ett nej bevarar kartarbete', as
     const flow = await beginAssistant(page.request, app.origin);
     await page.goto(flow.consentUrl.href);
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Google' }).click();
     await expect(page.getByRole('heading', { name: 'Anslut extern assistent' })).toBeVisible();
     await page.route('http://127.0.0.1:7777/callback**', (route) =>
       route.fulfill({ body: 'Påhittad klient' }),

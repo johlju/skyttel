@@ -11,6 +11,8 @@ test('ACCESS-04: setup works by keyboard within a narrow phone viewport', async 
     await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Fortsätt med Google' })).toBeFocused();
     await page.keyboard.press('Enter');
+    await expect(page.getByRole('button', { name: 'Fortsätt till Google' })).toBeFocused();
+    await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { name: 'Skapa ditt hushåll' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByLabel('Hushållets namn')).toBeFocused();
@@ -54,10 +56,12 @@ test('ACCESS-12: provider outage gives a readable error and allows another login
     installation.failProvider(true);
     await page.goto(installation.origin);
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Google' }).click();
     await expect(page.getByRole('alert')).toContainText('Inloggningen kunde inte slutföras');
     await expect(page.getByRole('button', { name: 'Fortsätt med Google' })).toBeEnabled();
     installation.failProvider(false);
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Google' }).click();
     await expect(page.getByRole('heading', { name: 'Skapa ditt hushåll' })).toBeVisible();
   } finally {
     await installation.close();
@@ -77,6 +81,7 @@ for (const { provider, label, identity } of [
       installation.denyConsent(true);
       await page.goto(installation.origin);
       await page.getByRole('button', { name: `Fortsätt med ${label}` }).click();
+      await page.getByRole('button', { name: `Fortsätt till ${label}` }).click();
       await expect(page.getByRole('alert')).toContainText('Inloggningen kunde inte slutföras');
       expect(new URL(page.url()).searchParams.get('error')).toBe('access_denied');
       await expect(page.getByRole('button', { name: `Fortsätt med ${label}` })).toBeEnabled();
@@ -101,6 +106,7 @@ for (const { provider, label, identity } of [
 
       installation.denyConsent(false);
       await page.getByRole('button', { name: `Fortsätt med ${label}` }).click();
+      await page.getByRole('button', { name: `Fortsätt till ${label}` }).click();
       await expect(page.getByRole('heading', { name: 'Skapa ditt hushåll' })).toBeVisible();
       await page.getByLabel('Hushållets namn').fill('Hushållet Linden');
       await page.getByRole('button', { name: 'Skapa hushåll', exact: true }).click();
@@ -121,6 +127,7 @@ test('ACCESS-06: a signed-in outsider sees an access explanation without setup c
     installation.setIdentity(robin);
     await page.goto(installation.origin);
     await page.getByRole('button', { name: 'Fortsätt med Microsoft' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Microsoft' }).click();
     await expect(
       page.getByRole('heading', { name: 'Du har inte tillgång till hushållet' }),
     ).toBeVisible();
@@ -191,6 +198,7 @@ test('ACCESS-08: logout in another tab closes an already open household', async 
     );
     await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Google' }).click();
     await expect(
       page.getByRole('heading', { name: 'Hushållet Linden', exact: true }),
     ).toBeVisible();
