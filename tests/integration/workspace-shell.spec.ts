@@ -103,6 +103,16 @@ test('YTA-03: narrow screens keep tools, help and text work reachable without gr
       await expect(
         tools.getByRole('button', { name: 'Information och hjälp', exact: true }),
       ).toBeFocused();
+      await tools.getByRole('button', { name: 'Information och hjälp', exact: true }).click();
+      await tools.getByRole('button', { name: 'Dölj verktygens namn', exact: true }).click();
+      await page.keyboard.press('Tab');
+      await expect(
+        page.getByRole('button', { name: 'Stäng verktyget', exact: true }),
+      ).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(
+        tools.getByRole('button', { name: 'Visa verktygens namn', exact: true }),
+      ).toBeFocused();
       await tools.getByRole('button', { name: 'Lista', exact: true }).click();
       await expect(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toHaveCount(0);
       await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();

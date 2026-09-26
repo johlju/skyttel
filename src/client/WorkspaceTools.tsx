@@ -46,13 +46,16 @@ export function WorkspaceTools({
   const [expanded, setExpanded] = useState(false);
   const [utility, setUtility] = useState<'help' | 'profile' | 'settings' | null>(null);
   const returnFocus = useRef<HTMLButtonElement | null>(null);
+  const expansionControl = useRef<HTMLButtonElement>(null);
   const utilityPanel = useRef<HTMLElement>(null);
   useEffect(() => {
     if (utility) utilityPanel.current?.querySelector<HTMLElement>('h2')?.focus();
   }, [utility]);
   function closeUtility() {
     setUtility(null);
-    returnFocus.current?.focus();
+    const trigger = returnFocus.current;
+    if (trigger?.offsetWidth && trigger.offsetHeight) trigger.focus();
+    else expansionControl.current?.focus();
   }
   return (
     <>
@@ -123,6 +126,7 @@ export function WorkspaceTools({
           {theme}
           <button
             type="button"
+            ref={expansionControl}
             aria-label={expanded ? 'Dölj verktygens namn' : 'Visa verktygens namn'}
             aria-expanded={expanded}
             onClick={() => setExpanded(!expanded)}
