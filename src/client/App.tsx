@@ -781,7 +781,7 @@ function HouseholdWork({ onSessionExpired }: { onSessionExpired: () => void }) {
     <HouseholdPage
       key={id}
       id={id}
-      active={pathname === `/households/${encodeURIComponent(id)}`}
+      active={Boolean(routeId)}
       onSessionExpired={onSessionExpired}
     />
   );
