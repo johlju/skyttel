@@ -197,7 +197,10 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
     expect((await read()).relationships).toEqual(saved.relationships);
     await page.getByLabel('Sök objekt').fill('bostadshyra');
     await expect(
-      page.getByRole('list', { name: 'Objekt', exact: true }).getByRole('button'),
+      page
+        .getByRole('list', { name: 'Objekt', exact: true })
+        .getByRole('listitem')
+        .locator(':scope > button'),
     ).toHaveText(['Bostadshyra']);
     await page.getByRole('button', { name: 'Bostadshyra', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();

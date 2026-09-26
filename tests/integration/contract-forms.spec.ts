@@ -44,7 +44,9 @@ test('AVTAL-01: optional rent facts can be reviewed, found and corrected after r
     await openWorkspace(page);
     await page.getByLabel('Sök objekt').fill('hyra');
     const objects = page.getByRole('list', { name: 'Objekt', exact: true });
-    await expect(objects.getByRole('button')).toHaveText(['Hyra för lägenheten']);
+    await expect(objects.getByRole('listitem').locator(':scope > button')).toHaveText([
+      'Hyra för lägenheten',
+    ]);
     await expect(objects).toContainText('Hyresavtal');
     await objects.getByRole('button', { name: 'Hyra för lägenheten', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
