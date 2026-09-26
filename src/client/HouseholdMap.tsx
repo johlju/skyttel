@@ -571,6 +571,7 @@ export function HouseholdMap({
     body: unknown,
   ) {
     if (!state || pending || blocked) return false;
+    const submittedFocus = document.activeElement;
     setPending(true);
     setError('');
     setStatus('');
@@ -617,7 +618,8 @@ export function HouseholdMap({
       setEdgeTypeEditor(null);
       setDirty(false);
       setBlocked(false);
-      newButton.current?.focus();
+      if (document.activeElement === submittedFocus || document.activeElement === document.body)
+        newButton.current?.focus();
       return true;
     } catch (failure) {
       if (
@@ -1320,11 +1322,17 @@ export function HouseholdMap({
                           );
                         }}
                         onDone={() => {
+                          const focused = document.activeElement;
+                          const returnToWork =
+                            focused === document.body ||
+                            (focused instanceof HTMLElement &&
+                              focused.closest<HTMLElement>('.workspace-window')?.dataset
+                                .windowId === panel.id);
                           closePanel(panel.id);
                           setObjectPanels((previous) =>
                             previous.filter((entry) => entry.id !== panel.id),
                           );
-                          openPanel('work', newButton.current);
+                          if (returnToWork) openPanel('work', newButton.current);
                         }}
                         action={(body) => action('draft', body)}
                         changeImage={changeImage}
