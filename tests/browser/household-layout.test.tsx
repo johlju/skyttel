@@ -125,6 +125,9 @@ test('map selection gestures preserve membership and open retained details only 
     });
   await expect.element(alex).toBeVisible();
   await expect.element(music).toBeVisible();
+  // Native pointer actionability waits for the initial projection to stop moving.
+  await alex.hover();
+  await music.hover();
   const before = positions();
   await alex.click();
   await music.click({ modifiers: ['Control'] });
