@@ -128,6 +128,7 @@ function platform() {
         await state.onWait?.();
       },
       attempts: 2,
+      applicationAttempts: 3,
       onEvent: (event) => events.push(structuredClone(event)),
       ...overrides,
     });
@@ -349,6 +350,92 @@ test('a failed health check never records deployment success', async () => {
   assert.equal(result.failedRequest.target, 'application');
   assert.equal(result.failedRequest.status, 503);
   assert.match(deploymentFailureLog(result), /503/);
+  assert.equal(state.waits, 2);
+  assert.equal(result.requests.filter(({ phase }) => phase === 'verify-application').length, 3);
+  assert.equal(state.deploys, 1);
+});
+
+test('public application checks recover from transient failures after Render reports live', async () => {
+  for (const path of ['/healthz', '/api/version', '/api/bootstrap', '/']) {
+    for (const status of [502, 503, 504]) {
+      const { state, run, events } = platform();
+      let failures = 0;
+      state.respond = (request) => {
+        if (state.deploys && request.path === path && failures++ < 2)
+          return new Response('private gateway response', { status });
+      };
+      const report = await run();
+      assert.equal(report.outcome, 'success', `${path}: ${status}`);
+      assert.equal(state.waits, 2);
+      assert.equal(state.deploys, 1);
+      assert.equal(state.patches, 1);
+      assert.equal(state.statuses.at(-1), 'success');
+      assert.equal(report.requests.filter((request) => request.status === status).length, 2);
+      assert.deepEqual(events, report.requests);
+      assert.doesNotMatch(JSON.stringify(report), /private gateway/);
+    }
+  }
+});
+
+test('transient connection and body-read failures retry without replaying deployment writes', async () => {
+  for (const failure of ['ECONNRESET', 'timeout', 'UND_ERR_SOCKET']) {
+    const { state, run } = platform();
+    let failed = false;
+    state.respond = ({ path }) => {
+      if (!state.deploys || path !== '/api/version' || failed) return;
+      failed = true;
+      if (failure === 'timeout') throw new DOMException('private timeout', 'TimeoutError');
+      const error = new TypeError('private connection', { cause: { code: failure } });
+      if (failure === 'ECONNRESET') throw error;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => {
+          throw error;
+        },
+      };
+    };
+    const report = await run();
+    assert.equal(report.outcome, 'success');
+    assert.equal(state.waits, 1);
+    assert.equal(state.deploys, 1);
+    assert.ok(report.requests.some(({ errorCode }) => errorCode === failure));
+  }
+});
+
+test('permanent HTTP, certificate and malformed response failures do not retry', async () => {
+  for (const response of [
+    () => new Response('unauthorized', { status: 401 }),
+    () => new Response('forbidden', { status: 403 }),
+    () => new Response('missing', { status: 404 }),
+    () => new Response('bug', { status: 500 }),
+    () => new Response('invalid JSON'),
+    () => {
+      throw new TypeError('private certificate', { cause: { code: 'CERT_HAS_EXPIRED' } });
+    },
+  ]) {
+    const { state, run } = platform();
+    state.respond = ({ path }) =>
+      state.deploys && path === '/api/version' ? response() : undefined;
+    const report = await run();
+    assert.equal(report.outcome, 'failure');
+    assert.equal(state.waits, 0);
+    assert.ok(!state.statuses.includes('success'));
+  }
+});
+
+test('an incorrect release identity or database state still fails immediately', async () => {
+  for (const running of [
+    { ...version, commit: 'f'.repeat(40) },
+    { ...version, database: { ...version.database, status: 'unknown' } },
+  ]) {
+    const { state, run } = platform();
+    state.nextIdentity = running;
+    const report = await run();
+    assert.equal(report.failure, 'running_identity_mismatch');
+    assert.equal(state.waits, 0);
+    assert.ok(!state.statuses.includes('success'));
+  }
 });
 
 test('request diagnostics preserve the primary HTTP failure when snapshot and status recording also fail', async () => {
