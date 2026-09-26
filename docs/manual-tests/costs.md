@@ -15,6 +15,9 @@ manuell körning är stöd för felsökning och krävs inte i #97.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Starta den [kontrollerade installationen](#controlled-cost-fixture).
    Följ portkopplingen och använd exakt den utskrivna adressen. Inga verkliga
    leverantörskonton, modellnycklar eller mikrofoner behövs.

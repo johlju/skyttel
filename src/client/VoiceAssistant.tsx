@@ -219,7 +219,7 @@ export function VoiceAssistant(props: {
     if (props.autoStart) void start();
   }, [props.autoStart, start]);
   return (
-    <section aria-label="Skyttels röst" className="voice-assistant">
+    <section aria-label="Skyttels röst" className="voice-assistant" data-voice-state={state}>
       <div className="voice-controls">
         {state === 'idle' ? (
           <button

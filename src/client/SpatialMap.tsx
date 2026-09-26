@@ -55,6 +55,7 @@ function arrowTip(source: { x: number; y: number }, target: { x: number; y: numb
 }
 
 export function SpatialMap({
+  theme = 'dark',
   state,
   active,
   objects,
@@ -71,6 +72,7 @@ export function SpatialMap({
   personal,
   revealRequest,
 }: {
+  theme?: 'light' | 'dark';
   state: MapState;
   active: boolean;
   objects: Map<string, MapObject>;
@@ -285,13 +287,13 @@ export function SpatialMap({
   }, [objects, relationships, activated, personal?.view?.positions, personalReady]);
   useEffect(() => {
     if (!activated) return;
-    scene.current?.configure({ ...preferences, stars: preferences.stars && !reducedMotion });
+    scene.current?.configure({ ...preferences, stars: preferences.stars && !reducedMotion }, theme);
     if (!active) return;
     if (preferences.allLabels && !previousLabels.current) {
       if (scene.current?.openLabelView()) setCloserLabels(true);
     }
     previousLabels.current = preferences.allLabels;
-  }, [preferences, activated, active, reducedMotion]);
+  }, [preferences, activated, active, reducedMotion, theme]);
   useEffect(() => {
     if (
       revealRequest &&
@@ -303,8 +305,13 @@ export function SpatialMap({
       revealRequest.objectIds.every((id) => objects.has(id)) &&
       (!revealRequest.relationshipId || relationships.has(revealRequest.relationshipId)) &&
       scene.current?.reveal(revealRequest.objectIds)
-    )
+    ) {
+      for (const tools of surface.current?.parentElement?.querySelectorAll<HTMLDetailsElement>(
+        '.camera-tools[open]',
+      ) ?? [])
+        tools.open = false;
       setCompletedRevealId(revealRequest.id);
+    }
   }, [
     revealRequest,
     completedRevealId,

@@ -92,6 +92,10 @@ export function waitForMapDisplay(
         );
         if (!scrolled && nodes.every(rendered) && rendered(selected)) {
           inspector.scrollTop = 0;
+          // The shell keeps conversation text and details in a scrolling work
+          // surface. Reveal the populated inspector there before acknowledging it.
+          const workSurface = inspector.closest('.assistant-workspace');
+          if (workSurface instanceof HTMLElement) workSurface.scrollTop = 0;
           const mapBox = surface.getBoundingClientRect();
           const detailsBox = inspector.getBoundingClientRect();
           let top = Math.min(mapBox.top, detailsBox.top);

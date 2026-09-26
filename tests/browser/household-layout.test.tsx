@@ -61,9 +61,7 @@ async function open(width: number) {
       </section>
     </main>,
   );
-  await expect
-    .element(page.getByRole('button', { name: 'Nytt objekt', exact: true }))
-    .toBeVisible();
+  await expect.element(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
 }
 
 afterEach(() => {
@@ -71,8 +69,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test('desktop keeps the wide map beside its inspector, with speech above and the object list below', async () => {
+test('desktop keeps the map beside a bounded work panel with conversation, selection and list', async () => {
   await open(1440);
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
   const surface = document.querySelector('.spatial-surface');
   const inspector = page.getByRole('region', { name: 'Val och redigering' });
   await expect.element(inspector).toBeVisible();
@@ -82,10 +81,11 @@ test('desktop keeps the wide map beside its inspector, with speech above and the
   const speech = page.getByRole('region', { name: 'Talsamtal' }).element().getBoundingClientRect();
   expect(bounds?.width).toBeGreaterThan(800);
   expect(details.left).toBeGreaterThan(bounds?.right ?? 0);
-  expect(speech.bottom).toBeLessThan(details.top);
+  expect(details.right).toBeLessThanOrEqual(1440);
+  expect(speech.height).toBeGreaterThan(0);
   expect(
     page.getByRole('button', { name: 'Alex', exact: true }).element().getBoundingClientRect().top,
-  ).toBeGreaterThan(bounds?.bottom ?? 0);
+  ).toBeGreaterThan(details.top);
   await page.getByRole('button', { name: 'Alex', exact: true }).click();
   await expect.element(page.getByText('Namn: Alex', { exact: true })).toBeVisible();
   await expect
@@ -93,11 +93,12 @@ test('desktop keeps the wide map beside its inspector, with speech above and the
     .not.toBeInTheDocument();
 });
 
-test('phone starts with the list and preserves an edited name through full-map navigation', async () => {
+test('phone opens the list from the map and preserves an edited name through map navigation', async () => {
   await open(390);
   await expect
-    .element(page.getByRole('button', { name: 'Lista och detaljer', exact: true }))
-    .toHaveAttribute('aria-pressed', 'true');
+    .element(page.getByRole('button', { name: 'Nytt objekt', exact: true }))
+    .not.toBeInTheDocument();
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page.getByRole('button', { name: 'Alex', exact: true }).click();
   await expect.element(page.getByRole('button', { name: 'Alex', exact: true })).toHaveFocus();
   await userEvent.keyboard('{Tab}');
@@ -107,7 +108,7 @@ test('phone starts with the list and preserves an edited name through full-map n
   await userEvent.keyboard('{Enter}');
   await expect.element(page.getByLabelText('Objektets namn', { exact: true })).toHaveFocus();
   await page.getByLabelText('Objektets namn', { exact: true }).fill('Alex ändrat');
-  await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+  await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
   await expect
     .element(page.elementLocator(document.querySelector('.assistant-bar') as HTMLElement))
     .not.toBeVisible();
@@ -117,12 +118,12 @@ test('phone starts with the list and preserves an edited name through full-map n
   const bounds = document.querySelector('.spatial-surface')?.getBoundingClientRect();
   expect(bounds?.height).toBeGreaterThan(500);
   expect(bounds?.width).toBeGreaterThan(340);
-  await page.getByRole('button', { name: 'Redigera val', exact: true }).click();
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await expect
     .element(page.getByLabelText('Objektets namn', { exact: true }))
     .toHaveValue('Alex ändrat');
-  await page.getByRole('button', { name: 'Till kartan', exact: true }).click();
-  await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+  await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await expect.element(page.getByRole('region', { name: 'Talsamtal' })).toBeVisible();
   await expect
     .element(page.getByLabelText('Objektets namn', { exact: true }))
@@ -142,7 +143,6 @@ test('landscape toolbar overflow preserves canvas height and reachable controls'
   });
   await open(640);
   await page.viewport(640, 390);
-  await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
   const toolbar = document.querySelector('.spatial-bottom-bar') as HTMLElement;
   await expect.poll(() => toolbar.scrollWidth > toolbar.clientWidth).toBe(true);
   const height = () => document.querySelector('canvas')?.getBoundingClientRect().height;
@@ -156,7 +156,6 @@ test('landscape toolbar overflow preserves canvas height and reachable controls'
 
 test('full map fills the available desktop and landscape phone area', async () => {
   await open(1280);
-  await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
   const surface = () => document.querySelector('.spatial-surface')?.getBoundingClientRect();
   await expect.poll(() => surface()?.width).toBeGreaterThan(1200);
   await page.viewport(844, 390);
@@ -169,20 +168,19 @@ test('full map fills the available desktop and landscape phone area', async () =
   await expect
     .element(page.getByLabelText('Objektets namn', { exact: true }))
     .not.toBeInTheDocument();
-  await page.getByRole('button', { name: 'Redigera val', exact: true }).click();
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
+  await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
   await expect.element(page.getByLabelText('Objektets namn', { exact: true })).toHaveValue('Alex');
-  const dialog = page.getByRole('dialog', { name: 'Redigera val', exact: true });
-  await expect.element(dialog).toBeVisible();
-  expect(dialog.element().getBoundingClientRect().height).toBeLessThan(390);
-  expect(dialog.element().getBoundingClientRect().width).toBeLessThan(844);
+  const work = page.elementLocator(document.querySelector('.assistant-workspace') as HTMLElement);
+  await expect.element(work).toBeVisible();
+  expect(work.element().getBoundingClientRect().height).toBeLessThanOrEqual(390);
+  expect(work.element().getBoundingClientRect().width).toBeLessThan(844);
   await page.viewport(844, 140);
   const name = page.getByLabelText('Objektets namn', { exact: true });
   await expect.poll(() => name.element().getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
   await expect.poll(() => name.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(140);
   await expect.element(name).toHaveValue('Alex');
   await page.viewport(844, 390);
-  await page.getByRole('button', { name: 'Till kartan', exact: true }).click();
-  await expect
-    .element(page.getByRole('button', { name: 'Redigera val', exact: true }))
-    .toHaveFocus();
+  await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+  await expect.element(page.getByRole('button', { name: 'Lista', exact: true })).toHaveFocus();
 });

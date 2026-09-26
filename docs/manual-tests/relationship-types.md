@@ -14,6 +14,9 @@ Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 När ett befintligt objekt eller samband ska ändras, välj det först i
 kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna

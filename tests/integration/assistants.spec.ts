@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { beginAssistant, callAssistant } from '../support/assistant.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 test('AI-03: medgivandet kräver val av hushåll och AI-behandling', async ({ page }) => {
@@ -35,6 +35,7 @@ test('AI-03: medgivandet kräver val av hushåll och AI-behandling', async ({ pa
     await expect(page.getByText('Inga aktiva assistentanslutningar.')).toBeVisible();
     expect((await callAssistant(app.origin, access_token, 'read_map')).status).toBe(401);
     await page.getByRole('link', { name: 'Till kartan' }).click();
+    await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toBeVisible();
   } finally {
     await app.close();
@@ -316,6 +317,7 @@ test('AI-04: inloggning följs av medgivande och ett nej bevarar kartarbete', as
     await page.goto(`${app.origin}/assistants`);
     await expect(page.getByText('Inga aktiva assistentanslutningar.')).toBeVisible();
     await page.getByRole('link', { name: 'Till kartan' }).click();
+    await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toBeVisible();
   } finally {
     await app.close();

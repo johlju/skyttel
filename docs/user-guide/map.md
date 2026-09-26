@@ -4,9 +4,20 @@
 
 Objekt och samband bildar hushållets gemensamma karta. Du föreslår
 ändringar i ditt privata utkast och sparar dem tillsammans när du är klar.
-Du kan göra hela arbetet i **Lista och detaljer**.
+Öppna **Lista** i kartans verktyg för att göra hela arbetet med formulär.
+**Samtal och text** öppnar assistenten. På telefon visar
+**Visa verktygens namn** även de kompletterande verktygen.
+
+**Tema** ger valen **Ljust**, **Mörkt** och **System**. System följer
+inställningen på din enhet. **Information och hjälp** förklarar verktygen.
+Den korta första vägledningen kan stängas. Hopplänkarna når verktyg,
+formulär och text med tangentbord före kartgrafiken.
 
 ## Besök andra vyer och fortsätt arbetet
+
+Öppna **Min profil** för **Inloggningssätt**, användar-ID, inbjudningar
+eller **Logga ut**. **Inställningar** innehåller **Assistentanslutningar**
+och, för administratören, **Administrera tillgång**.
 
 Du kan besöka **Inloggningssätt**, **Assistentanslutningar** eller
 **Administrera tillgång** och återvända utan att förlora formulärtext,
@@ -18,6 +29,9 @@ Ett pågående samtal behåller mikrofonens läge. Mikrofonkontrollen finns
 kvar i den andra vyn så att du kan pausa eller stänga av rösten.
 Oskickad formulärtext hör fortfarande inte till utkastet; välj
 **Lägg i mitt utkast** för att ta med den i det samlade sparandet.
+
+**Stäng arbetsytan** återgår till kartan och behåller oskickad text.
+Öppna **Lista** eller **Samtal och text** för att fortsätta.
 
 Bevarandet gäller under pågående användning. Omladdning kan ta bort
 oskickad text; beständiga utkast och sparade personliga vyer finns kvar.

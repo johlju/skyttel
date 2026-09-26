@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openMap, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -73,6 +73,7 @@ for (const viewport of [
           ).ok(),
         ).toBe(true);
         await page.goto(installation.origin);
+        await openWorkspace(page);
         const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
         await panel.getByLabel(/Jag tillåter att OpenAI/).check();
         await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
@@ -192,7 +193,7 @@ for (const viewport of [
           await panel.getByLabel('Meddelande till textassistenten').fill(text);
           await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
         };
-        await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+        await openWorkspace(page);
         await send('Visa Lo i kartan.');
         await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');
         expect(acknowledgements[0]).toMatchObject({
@@ -206,9 +207,11 @@ for (const viewport of [
         await expect(page.getByRole('region', { name: 'Val och redigering' })).toContainText(
           'Påhittad uppgift',
         );
+        await openMap(page);
         await page.getByText('Navigera rymden', { exact: true }).click();
         for (let index = 0; index < 16; index++)
           await page.getByRole('button', { name: 'Panorera vänster', exact: true }).click();
+        await openWorkspace(page);
         await send('Visa sambandet mellan Lo och Molnmusik.');
         await expect.poll(() => acknowledgements.length).toBe(2);
         await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');

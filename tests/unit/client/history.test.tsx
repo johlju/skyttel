@@ -36,6 +36,7 @@ async function save(operationId: string): Promise<SaveReceipt> {
 }
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Visa historik' }));
   return screen.getByRole('region', { name: 'Ändringshistorik' });
 }
@@ -227,6 +228,7 @@ test('a history request after revoked access clears the household content', asyn
   await save('saved');
   historyFailure = 403;
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Visa historik' }));
   await waitFor(() =>
     expect(screen.getByRole('alert').textContent).toContain('inte längre tillgång'),

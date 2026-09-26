@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openProfile, signIn } from '../support/client.js';
 import { alex, createInstallation } from '../support/installation.js';
 
 async function linkStep(
@@ -197,6 +197,7 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.getByRole('button', { name: 'Verifiera Google' }).click();
     await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
@@ -237,6 +238,7 @@ test('ACCESS-10: cancelling a verified link requires fresh proof and preserves h
     expect(await (await page.request.get(`${installation.origin}/api/bootstrap`)).json()).toEqual(
       before,
     );
+    await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.getByRole('button', { name: 'Verifiera Google' }).click();
     await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();

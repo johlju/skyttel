@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openProfile } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('a new installation offers login and protects direct household requests', async ({
@@ -38,6 +39,7 @@ test('ACCESS-01: the configured administrator creates a private household and re
       page.getByRole('heading', { name: 'Hushållet Linden', exact: true }),
     ).toBeVisible();
     expect(page.url()).toBe(address);
+    await openProfile(page);
     await page.getByRole('button', { name: 'Logga ut' }).click();
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
     await expect(

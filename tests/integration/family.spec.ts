@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('KARTA-07: family objects and directed relationships save together and keep their identities', async ({
@@ -85,6 +85,7 @@ test('KARTA-05: manual forms preserve incomplete meanings and block an unanswere
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     for (const [name, type, identity] of [
       ['Familjemusik', 'Abonnemang', 'identified'],
       ['Betalkonto', 'Bankkonto', 'unspecified'],
@@ -101,6 +102,7 @@ test('KARTA-05: manual forms preserve incomplete meanings and block an unanswere
     await page.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('unresolved');
     await page.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }).click();
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Obesvarad identitetsfråga',
     );
@@ -116,6 +118,7 @@ test('KARTA-05: manual forms preserve incomplete meanings and block an unanswere
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Samband', exact: true })).toContainText(
       'Osäkert uppgivet',
     );
@@ -134,6 +137,7 @@ test('KARTA-05: manual forms preserve incomplete meanings and block an unanswere
       await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
       await expect(page.getByRole('status')).toContainText('Sparat');
       await page.reload();
+      await openWorkspace(page);
       await expect(page.getByRole('list', { name: 'Samband', exact: true })).toContainText(
         knowledge === 'unknown' ? 'Okänt' : 'Uttryckligen inget',
       );
@@ -151,6 +155,7 @@ test('UTKAST-01: demo seed resumes a conflict and preserves independent proposal
     installation.seedDemo();
     await signIn(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Objekt', exact: true })).toContainText(
       'Familjens Molnmusik',
     );
@@ -164,6 +169,7 @@ test('UTKAST-01: demo seed resumes a conflict and preserves independent proposal
     await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeDisabled();
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('Lo Berg');
     await review.getByRole('button', { name: 'Behåll mitt förslag' }).click();
     await expect(page.getByRole('status')).toContainText('Granska hela utkastet');
@@ -187,6 +193,7 @@ test('UTKAST-01: demo seed resumes a conflict and preserves independent proposal
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('Inga förslag');
     await expect(page.getByRole('list', { name: 'Samband', exact: true })).toContainText(
       'Familjens rättade konto → Inloggningsadress → musik@example.test',
@@ -212,6 +219,7 @@ test('a concurrent duplicate refreshes the existing relationship instead of fail
       data: { version: state.draft.version },
     });
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await page.getByLabel('Från objekt').selectOption({ label: 'Kim Exempel (Person)' });
     await page.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Använder' });

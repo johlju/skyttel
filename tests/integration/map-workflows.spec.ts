@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 async function openMap(page: Page) {
@@ -9,6 +9,7 @@ async function openMap(page: Page) {
   const { household } = await (await createHousehold(page.request, installation.origin)).json();
   const path = `${installation.origin}/api/households/${household.id}/map`;
   await page.goto(installation.origin);
+  await openWorkspace(page);
   const read = async (): Promise<MapState> => (await page.request.get(path)).json();
   return { installation, read };
 }
@@ -73,6 +74,7 @@ test('KARTA-01: Swedish object search and closing unsent forms preserve the save
     await page.getByLabel('Objektets namn').fill('Avbrutet objekt');
     await page.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
     await page.reload();
+    await openWorkspace(page);
     await expect(objects.getByRole('listitem')).toHaveCount(3);
     expect((await read()).objects).toEqual(saved.objects);
     expect((await read()).draft.changes).toEqual([]);
@@ -93,6 +95,7 @@ test('KARTA-02: an unresolved object can become unspecified and later identified
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     const objectId = (await read()).draft.changes[0].id;
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Obesvarad identitetsfråga',
     );
@@ -116,6 +119,7 @@ test('KARTA-02: an unresolved object can become unspecified and later identified
     const relationship = before.relationships[0];
     expect(relationship.targetId).toBe(objectId);
     await page.reload();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Betalkonto', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Objektets identitet')).toHaveValue('unspecified');
@@ -125,6 +129,7 @@ test('KARTA-02: an unresolved object can become unspecified and later identified
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await save(page);
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Samband', exact: true })).toContainText(
       'Familjemusik → Betalas med → Hushållskontot',
     );
@@ -196,6 +201,7 @@ test('KARTA-03: equal object names stay distinct when correcting and deleting a 
     await page.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }).click();
     await save(page);
     await page.reload();
+    await openWorkspace(page);
     await loginButton.click();
     await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
     await expect(page.getByLabel('Till objekt')).toHaveValue(second ?? '');
@@ -214,6 +220,7 @@ test('KARTA-03: equal object names stay distinct when correcting and deleting a 
     );
     await save(page);
     await page.reload();
+    await openWorkspace(page);
     await expect(loginButton).toHaveCount(0);
     await expect(
       page.getByRole('button', {
@@ -291,6 +298,7 @@ test('KARTA-04: object deletion reviews incoming and outgoing links and can be d
     await page.getByRole('button', { name: 'Ta bort', exact: true }).click();
     await save(page);
     await page.reload();
+    await openWorkspace(page);
     await expect(
       page.getByRole('list', { name: 'Objekt', exact: true }).getByRole('button'),
     ).toHaveText(['Familjemusik', 'Kim', 'Molnmusik']);

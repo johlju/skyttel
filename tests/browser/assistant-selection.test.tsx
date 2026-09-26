@@ -103,6 +103,7 @@ async function open(width = 1280, height = 900, mapState = state) {
       <HouseholdMap householdId="home" />
     </main>,
   );
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page.getByLabelText(/Jag tillåter att OpenAI/).click();
   await page.getByLabelText(/Jag tillåter förslag och sparande/).click();
   await page.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
@@ -126,9 +127,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('assistant display opens a hidden map and populated inspector before confirming the actual object and relationship', async () => {
+test('assistant display shows the map and populated inspector before confirming the actual object and relationship', async () => {
   const app = await open();
-  await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await app.show({ kind: 'object', id: 'lo' });
   await expect.poll(() => app.acknowledgements.length).toBe(1);
   expect(app.acknowledgements[0]).toMatchObject({ kind: 'object', id: 'lo', displayed: true });

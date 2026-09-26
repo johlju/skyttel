@@ -13,6 +13,9 @@ påhittade uppgifter. Administratörsrollen behövs inte för kartarbetet.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Starta en isolerad installation enligt
    [provförberedelsen](../development/devcontainer.md#disposable-local-database).
    Använd ett nytt
@@ -39,8 +42,9 @@ durable save”.
 **Steg:**
 
 1. Öppna rymdkartan och välj Molnmusik. Kontrollera att kartan ligger
-   kvar. Välj Redigera val och skriv Molnmusik familj som namn i dialogen.
-2. Välj Till kartan och byt till Lista och detaljer. Kontrollera texten
+   kvar. Öppna Lista och välj Redigera valt objekt. Skriv Molnmusik familj
+   som namn i formuläret.
+2. Välj Stäng arbetsytan och öppna Lista igen. Kontrollera texten
    och lägg den i utkastet.
 3. Granska och spara hela utkastet. Starta om appen och öppna kartan igen.
 
@@ -140,7 +144,7 @@ unsent editing”.
 
 **Steg:**
 
-1. Kontrollera att Lista och detaljer är startläge. Öppna kartan och håll
+1. Kontrollera att rymdkartan är startläge. Håll
    på Molnmusik tills menyn visas. Släpp och välj Redigera objekt.
 2. Skriv Oskickad mobiltext i beskrivningen. Vänd enheten, välj Till
    kartan och byt vy.
@@ -254,9 +258,10 @@ draft symbols”.
    behåll Följ slutdatum och lägg sambandet i utkastet.
 4. Öppna rymdkartan, välj Alla etiketter och kontrollera objektens och
    sambandets etiketter.
-5. Visa detaljer och utkast, spara hela utkastet, starta om appen och
+5. Öppna Utkast och historik, spara hela utkastet, starta om appen och
    öppna rymdkartan igen.
-6. Välj sambandets etikett och Redigera val. Välj Gäller fortfarande
+6. Välj sambandets etikett, Lista och Redigera valt samband.
+   Välj Gäller fortfarande
    och lägg sambandet
    i utkastet. Gå tillbaka till kartan.
 

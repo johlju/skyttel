@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import type { MapState, ObjectValue, RelationshipValue } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 
 test('UTKAST-05: a conflict choice preserves independent proposals and requires a new save', async ({
@@ -25,6 +25,7 @@ test('UTKAST-05: a conflict choice preserves independent proposals and requires 
       description: '',
     });
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeEnabled();
     await propose(other.request, 'draft', 'lo', {
       typeId: (await read()).types[0].id,
@@ -48,6 +49,7 @@ test('UTKAST-05: a conflict choice preserves independent proposals and requires 
     expect((await read()).objects[0].name).toBe('Lo Berg');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('Lo Lind');
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat:');
@@ -134,6 +136,7 @@ test('UTKAST-06: deleting an object requires reviewing newly saved relationships
     const state = await app.read();
     await app.propose(page.request, 'draft', 'lo', null);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeEnabled();
     await app.propose(other.request, 'relationship', 'new-edge', {
       typeId: state.relationshipTypes[0].id,
@@ -185,6 +188,7 @@ test('UTKAST-07: overlapping relationship proposals show meanings and can accept
     });
     expect((await app.save(other.request, 'other-edge')).status()).toBe(200);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Osäkert uppgivet');
     await expect(review).toContainText('Uttryckligen inget');
@@ -221,6 +225,7 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
     await app.propose(other.request, 'relationship', 'edge', { ...value, lifecycle: 'ended' });
     expect((await app.save(other.request, 'ended')).status()).toBe(200);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Upphört');
     await expect(review).toContainText('2031-04-12');
@@ -230,6 +235,7 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
     expect((await app.read()).relationships[0]).not.toHaveProperty('endDate');
     await app.installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('Upphört');
     await expect(review).toContainText('2031-04-12');
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
@@ -251,6 +257,7 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
     });
     expect((await app.save(other.request, 'changed-date')).status()).toBe(200);
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('2031-04-12 (Osäkert uppgivet)');
     await expect(review).toContainText('2031-05-15');
     await expect(review).toContainText('Gäller fortfarande');
@@ -300,6 +307,7 @@ test('UTKAST-11: deletion after concurrent type changes retains the matching his
     });
     expect((await app.save(other.request, 'changed-types')).status()).toBe(200);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText(state.types[1].name);
     await expect(review).toContainText(state.relationshipTypes[1].name);
@@ -355,6 +363,7 @@ test('UTKAST-08: a saved duplicate can be selected without losing another propos
     expect((await app.save(other.request, 'other-edge')).status()).toBe(200);
     expect((await app.save(page.request, 'blocked-duplicate')).status()).toBe(409);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Samma samband finns redan');
     await review.getByRole('button', { name: 'Använd sparat värde' }).click();
@@ -388,10 +397,12 @@ test('UTKAST-09: a deleted relationship endpoint has an explicit recovery choice
     expect((await app.save(other.request, 'delete-service')).status()).toBe(200);
     expect((await app.save(page.request, 'blocked-endpoint')).status()).toBe(409);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Sambandet hänvisar till ett borttaget objekt');
     await app.installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('Lo Exempel → Använder → Molnmusik (Osäkert uppgivet)');
     await expect(review.getByRole('button', { name: 'Behåll mitt förslag' })).toHaveCount(0);
     await review.getByRole('button', { name: 'Använd sparat värde' }).click();
@@ -511,6 +522,7 @@ test('resolving an object preserves fields changed only by the other user', asyn
     });
     expect((await app.save(other.request, 'description')).status()).toBe(200);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Behåll mitt förslag' }).click();
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Lo Lind');
@@ -574,8 +586,10 @@ test('UTKAST-02: a stale discard preserves newer object and relationship proposa
       description: '',
     });
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText('Lo Lind');
     await newer.goto(app.installation.origin);
+    await openWorkspace(newer);
     await newer.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await newer.getByLabel('Från objekt').selectOption('lo');
     await newer
@@ -597,6 +611,7 @@ test('UTKAST-02: a stale discard preserves newer object and relationship proposa
     await page.getByRole('button', { name: 'Kasta hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Utkastet är kastat');
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('Inga förslag');
     const discarded = await app.read();
     expect(discarded.draft.changes).toEqual([]);
@@ -624,6 +639,7 @@ test('UTKAST-03: a stale conflict choice requires refreshed review before saving
     await app.propose(other.request, 'draft', 'lo', { ...value, name: 'Lo Berg' });
     expect((await app.save(other.request, 'first-change')).status()).toBe(200);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Lo Berg');
     const beforeChoice = (await app.read()).draft;
@@ -671,6 +687,7 @@ test('UTKAST-04: accepting a deleted object preserves an independent proposal', 
     await app.propose(other.request, 'draft', 'lo', null);
     expect((await app.save(other.request, 'delete-lo')).status()).toBe(200);
     await page.goto(app.installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Objektet eller sambandet är borttaget');
     await expect(review.getByRole('button', { name: 'Behåll mitt förslag' })).toHaveCount(0);
@@ -682,6 +699,7 @@ test('UTKAST-04: accepting a deleted object preserves an independent proposal', 
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat: Kim Exempel');
     await page.reload();
+    await openWorkspace(page);
     const objects = page.getByRole('list', { name: 'Objekt' });
     await expect(objects).toContainText('Kim Exempel');
     await expect(objects).toContainText('Molnmusik');

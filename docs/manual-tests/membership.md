@@ -22,6 +22,9 @@ namnet Robin ger ingen inloggning eller tillgång.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Skapa testhushållet som Alex. Logga in som Robin och kopiera
    **Ditt Skyttel-användar-ID** från sidan **Du har inte tillgång till
    hushållet**. Behåll separata profiler under hela körningen.

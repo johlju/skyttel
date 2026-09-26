@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('STORKARTA-01: dense overview keeps readable labels and every object and relationship reachable', async ({
@@ -27,6 +27,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
     const personal = await (await page.request.get(`${path}/view`)).json();
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await expect(page.getByText('500 objekt och 1500 samband', { exact: true })).toBeVisible();
     const labels = page.locator('.spatial-labels [data-layout-id]');
     await expect(labels.first()).toBeVisible();
@@ -83,7 +84,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Oskickad text i den täta kartan',
     );
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Samlad vy', exact: true }).click();
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Oskickad text i den täta kartan',
@@ -96,6 +97,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
     await expect(page.getByRole('status')).toContainText('Sparat');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     const saved: MapState = await (await page.request.get(path)).json();
     expect(saved.objects).toHaveLength(500);
     expect(saved.relationships).toHaveLength(1500);

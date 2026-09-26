@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 async function arrange(client: APIRequestContext, origin: string) {
@@ -64,6 +64,7 @@ test('LIVSCYKEL-01: ended objects and relationships stay visible and independent
   try {
     const { read } = await arrange(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     const objects = page.getByRole('list', { name: 'Objekt', exact: true });
     const subscription = objects.getByRole('listitem').filter({ hasText: 'Familjemusik' });
     await subscription.getByRole('button', { name: 'Familjemusik', exact: true }).click();
@@ -85,6 +86,7 @@ test('LIVSCYKEL-01: ended objects and relationships stay visible and independent
     await expect(page.getByRole('status')).toContainText('Sparat');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(subscription).toContainText('Upphört');
     await expect(objects.getByRole('listitem').filter({ hasText: 'Lo Exempel' })).not.toContainText(
       'Upphört',
@@ -112,6 +114,7 @@ test('LIVSCYKEL-01: ended objects and relationships stay visible and independent
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.reload();
+    await openWorkspace(page);
     await expect(subscription).not.toContainText('Upphört');
     await expect(edges).toContainText('Upphört');
   } finally {
@@ -127,6 +130,7 @@ test('LIVSCYKEL-03: removing from the list immediately proposes every connected 
     const { read, path } = await arrange(page.request, installation.origin);
     const initial = await read();
     await page.goto(installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     const proposeTypeChange = async () => {
       await page
@@ -152,6 +156,7 @@ test('LIVSCYKEL-03: removing from the list immediately proposes every connected 
     expect((await read()).objects).toEqual(initial.objects);
     expect((await read()).relationships).toEqual(initial.relationships);
     await page.reload();
+    await openWorkspace(page);
     await expect(review).toContainText('Borttagning: Familjemusik');
     await page.getByRole('button', { name: 'Kasta hela utkastet' }).click();
     await expect(review).toContainText('Inga förslag');
@@ -166,6 +171,7 @@ test('LIVSCYKEL-03: removing from the list immediately proposes every connected 
     await expect(page.getByRole('status')).toContainText('Sparat');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     const saved = await read();
     expect(saved.objects.map((item) => item.id)).toEqual(['person', 'service']);
     expect(saved.relationships).toEqual([]);
@@ -234,6 +240,7 @@ test('LIVSCYKEL-02: only a known elapsed end date ends content and dates or stat
     expect((await save()).ok()).toBe(true);
     await page.clock.install({ time: new Date('2031-03-12T23:59:58Z') });
     await page.goto(installation.origin);
+    await openWorkspace(page);
     const objects = page.getByRole('list', { name: 'Objekt', exact: true });
     const subscription = objects.getByRole('listitem').filter({ hasText: 'Familjemusik' });
     await expect(objects).not.toContainText('Upphört');
@@ -274,6 +281,7 @@ test('LIVSCYKEL-02: only a known elapsed end date ends content and dates or stat
     await expect(page.getByRole('status')).toContainText('Sparat');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(incoming).not.toContainText('Upphört');
     await expect(subscription).not.toContainText('Upphört');
     const { history } = await (await page.request.get(`${path}/history`)).json();

@@ -1,0 +1,667 @@
+.household-map.workspace-shell {
+  --space-bg: #eef3f3;
+  --work-top: min(84px, max(12px, calc(var(--work-height, 100dvh) - 300px)));
+  --space-surface: #fff;
+  --space-text: #1d3543;
+  --space-muted: #506777;
+  --space-line: #95a6ae;
+  --space-control: #607c89;
+  --space-accent: #1d706b;
+  --space-shadow: 0 12px 45px #233b4817, 0 2px 8px #233b4810;
+  color-scheme: light;
+}
+.household-map.workspace-shell[data-theme="dark"] {
+  --space-bg: #101b29;
+  --space-surface: #1a293a;
+  --space-text: #edf2f9;
+  --space-muted: #adbed2;
+  --space-line: #4d647e;
+  --space-control: #8198b3;
+  --space-accent: #8ce4db;
+  --space-shadow: 0 12px 45px #0004, 0 2px 8px #0002;
+  color-scheme: dark;
+}
+.household-map.workspace-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  background: var(--space-bg);
+  color: var(--space-text);
+  font:
+    15px / 1.5 Inter,
+    "Avenir Next",
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.015em;
+}
+.household-map.workspace-shell :is(button, input, select, textarea) {
+  color: var(--space-text);
+  background: var(--space-surface);
+  border-color: var(--space-control);
+}
+.household-map.workspace-shell :is(a, .muted, .microphone-state) {
+  color: var(--space-muted);
+}
+.household-map.workspace-shell :focus-visible {
+  outline: 3px solid var(--space-accent);
+  outline-offset: 3px;
+}
+.household-map.workspace-shell .primary {
+  color: white;
+  background: var(--space-accent);
+}
+.workspace-tools {
+  position: fixed;
+  z-index: 30;
+  top: 24px;
+  left: 24px;
+  width: 64px;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: 9px;
+  border: 1px solid var(--space-control);
+  border-radius: 20px;
+  background: var(--space-surface);
+  box-shadow: var(--space-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.workspace-tools.expanded {
+  width: 224px;
+}
+.workspace-tools button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px;
+  flex-shrink: 0;
+}
+.workspace-tools button:hover {
+  background: color-mix(in srgb, var(--space-accent), transparent 88%);
+}
+.household-map.workspace-shell .workspace-tools .workspace-talk {
+  background: var(--space-accent);
+  color: white;
+}
+.household-map.workspace-shell[data-theme="dark"] .workspace-tools .workspace-talk {
+  color: #092b2b;
+}
+.workspace-tools svg,
+.workspace-close svg,
+.workspace-work-close svg {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+.workspace-context span {
+  margin-left: 12px;
+  color: var(--space-muted);
+  font-size: 10px;
+}
+.workspace-brand > span,
+.workspace-tools button > span {
+  display: none;
+}
+.workspace-tools.expanded button {
+  width: 100%;
+  text-align: left;
+}
+.workspace-tools.expanded button > span,
+.workspace-tools.expanded .workspace-brand > span {
+  display: inline;
+}
+.workspace-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 49px;
+  padding: 5px;
+  text-decoration: none;
+  font-size: 22px;
+  font-weight: 700;
+}
+.workspace-brand img {
+  width: 30px;
+  height: 36px;
+  object-fit: contain;
+}
+.workspace-tools-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-top: 1px solid var(--space-line);
+  padding-top: 9px;
+  margin-top: 5px;
+}
+.workspace-context {
+  position: fixed;
+  z-index: 2;
+  top: 30px;
+  left: 112px;
+  font-size: 12px;
+}
+
+.workspace-guidance,
+.workspace-utility,
+.workspace-empty {
+  position: fixed;
+  z-index: 20;
+  max-width: calc(100vw - 112px);
+  padding: 20px;
+  border: 1px solid var(--space-line);
+  border-radius: 16px;
+  background: var(--space-surface);
+  box-shadow: var(--space-shadow);
+}
+.workspace-guidance {
+  right: 24px;
+  bottom: 24px;
+  width: 330px;
+}
+.workspace-guidance h2,
+.workspace-empty h2,
+.workspace-utility h2 {
+  padding-right: 44px;
+}
+.workspace-utility {
+  top: 24px;
+  left: 108px;
+  width: 390px;
+  z-index: 35;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+.workspace-utility :is(a, button:not(.workspace-close)) {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  margin-block: 8px;
+}
+.workspace-empty {
+  left: 50%;
+  top: 32%;
+  transform: translateX(-50%);
+  width: 350px;
+}
+.workspace-close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+}
+.household-map.workspace-shell .workspace-feedback {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 26;
+  max-width: min(360px, calc(100vw - 112px));
+  border-radius: 14px;
+  background: var(--space-surface);
+  box-shadow: var(--space-shadow);
+}
+.workspace-feedback > :empty {
+  display: none;
+}
+.workspace-feedback:has(> :not(:empty)) {
+  padding: 12px;
+  border: 1px solid var(--space-line);
+}
+.workspace-feedback p {
+  margin: 0;
+}
+.household-map.workspace-shell .assistant-workspace,
+.household-map.workspace-shell .assistant-layout,
+.household-map.workspace-shell .assistant-map-panel,
+.household-map.workspace-shell .map-workspace {
+  display: contents;
+}
+.household-map.workspace-shell .map-space {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+.household-map.workspace-shell .spatial-map {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.household-map.workspace-shell .spatial-surface {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  border-radius: 0;
+  background: var(--space-bg);
+}
+.household-map.workspace-shell .spatial-tools {
+  position: absolute;
+  left: 112px;
+  right: 12px;
+  bottom: 76px;
+  z-index: 3;
+  align-items: end;
+  background: transparent;
+}
+.household-map.workspace-shell .spatial-bottom-bar {
+  position: absolute;
+  left: 112px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  max-height: 60px;
+  overflow: auto;
+  border: 1px solid var(--space-line);
+  border-radius: 12px;
+}
+.household-map.workspace-shell .camera-tools {
+  max-height: 40dvh;
+}
+.household-map.workspace-shell .spatial-map > h2,
+.household-map.workspace-shell .household-map-heading,
+.household-map.workspace-shell .assistant-bar {
+  background: var(--space-surface);
+  color: var(--space-text);
+  border-color: var(--space-line);
+}
+.household-map.workspace-shell:not(.workspace-open)
+  :is(.assistant-bar, .assistant-side, .map-filter-panel, .map-presentation, .map-content) {
+  display: none;
+}
+.household-map.workspace-shell.workspace-open .assistant-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: fixed;
+  z-index: 15;
+  top: calc(var(--work-offset, 0px) + var(--work-top));
+  right: 24px;
+  height: calc(var(--work-height, 100dvh) - var(--work-top) - 24px);
+  width: min(560px, calc(100vw - 124px));
+  overflow-y: auto;
+  padding: 56px 20px 20px;
+  background: var(--space-surface);
+  border: 1px solid var(--space-control);
+  border-radius: 16px;
+  box-shadow: var(--space-shadow);
+}
+.household-map.workspace-shell.workspace-open .assistant-bar {
+  display: block;
+  order: 3;
+}
+.household-map.workspace-shell.workspace-open .assistant-side {
+  display: contents;
+}
+.household-map.workspace-shell.workspace-open .assistant-side > :first-child {
+  order: -1;
+}
+.household-map.workspace-shell.workspace-open .assistant-conversation {
+  order: 4;
+}
+.household-map.workspace-shell.workspace-open .assistant-changes {
+  order: 5;
+}
+.household-map.workspace-shell.workspace-open .map-filter-panel {
+  position: static;
+  display: block;
+  max-width: none;
+}
+.household-map.workspace-shell.workspace-open .map-filters {
+  position: static;
+  width: 100%;
+  max-height: none;
+  background: var(--space-surface);
+}
+.household-map.workspace-shell.workspace-open .map-content {
+  display: block;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  background: var(--space-surface);
+}
+.household-map.workspace-shell.workspace-open .map-presentation {
+  position: static;
+  display: flex;
+  margin: 0;
+}
+.household-map.workspace-shell.workspace-open .map-editor-dialog[open] {
+  transform: none;
+  height: auto;
+  display: block;
+  position: static;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--space-surface);
+  color: var(--space-text);
+  box-shadow: none;
+}
+.household-map.workspace-shell .assistant-panel {
+  background: var(--space-surface);
+  color: var(--space-text);
+}
+.household-map.workspace-shell:not(.workspace-open)
+  .assistant-workspace[data-session-active="true"]
+  .assistant-bar {
+  display: block;
+  position: fixed;
+  z-index: 22;
+  right: 24px;
+  bottom: 24px;
+  width: min(380px, calc(100vw - 24px));
+  max-height: 45dvh;
+  overflow-y: auto;
+  background: var(--space-surface);
+  color: var(--space-text);
+  box-shadow: var(--space-shadow);
+}
+.household-map.workspace-shell:has(.assistant-workspace[data-session-active="true"])
+  .workspace-guidance {
+  display: none;
+}
+.household-map.workspace-shell:not(.workspace-open)
+  .assistant-bar:has(.voice-assistant[data-voice-state="idle"]):not(:has([role="alert"])) {
+  display: none;
+}
+.household-map.workspace-shell .workspace-work-close {
+  position: fixed;
+  z-index: 40;
+  top: calc(var(--work-offset, 0px) + var(--work-top) + 8px);
+  right: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.household-map.workspace-shell.workspace-open .workspace-feedback {
+  top: 60px;
+  bottom: auto;
+  right: auto;
+  left: 112px;
+  max-width: min(330px, calc(100vw - 724px));
+  max-height: 35dvh;
+  overflow-y: auto;
+}
+.household-map.workspace-shell .workspace-feedback:has(.workspace-close) {
+  padding-right: 60px;
+  min-height: 64px;
+}
+.household-map.workspace-shell .workspace-tools button {
+  border-color: transparent;
+  border-radius: 12px;
+}
+.household-map.workspace-shell .workspace-tools button:hover,
+.household-map.workspace-shell .workspace-tools button[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--space-accent), var(--space-surface) 88%);
+  color: var(--space-text);
+}
+.household-map.workspace-shell :is(.assistant-bar p, .assistant-bar .microphone-state) {
+  color: var(--space-muted);
+}
+.household-map.workspace-shell.workspace-open .map-space {
+  display: block;
+  right: min(600px, 50vw);
+}
+.household-map.workspace-shell :is(.personal-view-status, .label-note) {
+  position: absolute;
+  z-index: 3;
+  right: 12px;
+  top: 56px;
+  max-width: min(330px, calc(100% - 124px));
+  padding: 8px 12px;
+  border-radius: 12px;
+  color: var(--space-text);
+  background: var(--space-surface);
+}
+.household-map.workspace-shell .label-note {
+  top: auto;
+  bottom: 120px;
+}
+.household-map.workspace-shell.workspace-revealing :is(.personal-view-status, .label-note) {
+  display: none;
+}
+@media (max-width: 700px) {
+  .household-map.workspace-shell .spatial-tools,
+  .household-map.workspace-shell .spatial-bottom-bar {
+    left: 12px;
+  }
+  .household-map.workspace-shell .spatial-bottom-bar {
+    flex-wrap: nowrap;
+    max-height: 52px;
+  }
+  .household-map.workspace-shell .spatial-bottom-bar > * {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .workspace-tools {
+    left: 12px;
+    top: 12px;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    padding: 5px;
+    border-radius: 17px;
+    flex-direction: row;
+    align-items: center;
+    gap: 1px;
+  }
+  .workspace-tools:not(.expanded) [data-secondary] {
+    display: none;
+  }
+  .workspace-tools-footer {
+    flex-direction: row;
+    gap: 1px;
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .workspace-brand {
+    min-height: 44px;
+    width: 35px;
+    padding: 3px;
+    flex-shrink: 0;
+  }
+  .workspace-brand img {
+    width: 24px;
+    height: 30px;
+  }
+  .workspace-tools.expanded {
+    width: 296px;
+    flex-wrap: wrap;
+  }
+  .workspace-tools.expanded .workspace-brand {
+    width: 100%;
+  }
+  .workspace-tools.expanded .workspace-tools-footer {
+    width: 100%;
+    flex-direction: column;
+  }
+  .workspace-tools.expanded .workspace-theme-control {
+    width: 100%;
+  }
+  .workspace-context {
+    left: 18px;
+    top: 80px;
+    max-width: calc(100vw - 36px);
+  }
+  .workspace-context span {
+    display: none;
+  }
+  .workspace-guidance {
+    right: 12px;
+    bottom: 108px;
+    max-width: calc(100vw - 24px);
+    padding: 16px;
+  }
+  .workspace-empty {
+    left: 12px;
+    right: 12px;
+    top: 120px;
+    transform: none;
+    width: auto;
+    max-width: none;
+    padding: 16px;
+  }
+  .household-map.workspace-shell.workspace-open .assistant-workspace {
+    --work-top: min(108px, max(12px, calc(var(--work-height, 100dvh) - 300px)));
+    top: calc(var(--work-offset, 0px) + var(--work-top));
+    left: 12px;
+    right: 12px;
+    height: calc(var(--work-height, 100dvh) - var(--work-top) - 12px);
+    width: auto;
+    padding: 56px 12px 12px;
+  }
+  .household-map.workspace-shell.workspace-open .map-space {
+    right: 0;
+  }
+  .household-map.workspace-shell .workspace-work-close {
+    top: calc(
+      var(--work-offset, 0px) +
+      min(108px, max(12px, calc(var(--work-height, 100dvh) - 300px))) +
+      8px
+    );
+    right: 20px;
+  }
+  .workspace-utility {
+    top: 108px;
+    left: 12px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 120px);
+    padding: 14px;
+  }
+  .household-map.workspace-shell .workspace-feedback {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+    max-width: calc(100vw - 24px);
+  }
+  .household-map.workspace-shell.workspace-open .workspace-feedback {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+  }
+  .household-map.workspace-shell.workspace-open:has(.workspace-feedback > p:not(:empty))
+    .assistant-workspace {
+    padding-bottom: 160px;
+  }
+}
+.site-header[hidden],
+footer[hidden] {
+  display: none;
+}
+.brand-logo {
+  width: 30px;
+  height: 36px;
+  object-fit: contain;
+}
+.has-workspace > main {
+  padding: 0;
+}
+.has-workspace .household-panel > :not(.household-map) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.household-map.workspace-shell
+  :is(
+    .spatial-tools,
+    .spatial-bottom-bar,
+    .camera-tools,
+    .assistant-empty,
+    .assistant-save-note,
+    .assistant-work-status,
+    .assistant-utterance,
+    .assistant-transcript-empty,
+    .map-loading,
+    .map-management .access-list li
+  ) {
+  background: var(--space-surface);
+  color: var(--space-text);
+  border-color: var(--space-line);
+}
+.household-map.workspace-shell .spatial-edge,
+.household-map.workspace-shell .spatial-name,
+.household-map.workspace-shell .spatial-orb {
+  background: var(--space-surface);
+  color: var(--space-text);
+  border-color: var(--space-line);
+}
+.household-map.workspace-shell .workspace-utility .panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+.household-map.workspace-shell.workspace-revealing .assistant-workspace {
+  scroll-padding-top: 56px;
+}
+@media (max-width: 700px) {
+  .household-map.workspace-shell.workspace-revealing.workspace-open .map-space {
+    top: 98px;
+    bottom: 52dvh;
+  }
+  .household-map.workspace-shell.workspace-revealing.workspace-open .assistant-workspace {
+    top: 50dvh;
+    height: calc(50dvh - 12px);
+  }
+  .household-map.workspace-shell.workspace-revealing.workspace-open .workspace-work-close {
+    top: calc(50dvh + 8px);
+  }
+  .household-map.workspace-shell.workspace-revealing .spatial-tools,
+  .household-map.workspace-shell.workspace-revealing .spatial-bottom-bar {
+    display: none;
+  }
+  .household-map.workspace-shell.workspace-revealing .map-inspector:not(:has(form)) {
+    max-height: 27dvh;
+  }
+}
+
+.household-map.workspace-shell[data-theme="dark"] .workspace-brand img {
+  box-sizing: content-box;
+  padding: 4px;
+  border-radius: 10px;
+  background: #dce7ef;
+}
+.household-map.workspace-shell[data-theme="dark"] .primary {
+  color: #092b2b;
+}
+
+.household-map.workspace-shell .spatial-type-name {
+  color: var(--space-muted);
+}
+.household-map.workspace-shell .connection {
+  stroke: var(--space-accent);
+  opacity: 0.7;
+}
+.household-map.workspace-shell .connection.selected {
+  opacity: 1;
+}
+.household-map.workspace-shell[data-theme="light"]
+  :is(.spatial-name.added, .spatial-node.added, .spatial-edge.added, .spatial-edge.changed) {
+  color: #805414;
+}
+.household-map.workspace-shell[data-theme="light"]
+  :is(.spatial-name.removed, .spatial-node.removed, .spatial-edge.removed) {
+  color: #a72929;
+}

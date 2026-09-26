@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 test('KATALOG-01: unused fields and custom and prefilled types are reviewed, discarded or saved without automatic cleanup', async ({
@@ -40,6 +40,7 @@ test('KATALOG-01: unused fields and custom and prefilled types are reviewed, dis
     ).toBe(true);
     expect((await post('save', { version: 2, operationId: 'definitions' })).ok()).toBe(true);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByText('Objekttyper och egna fält', { exact: true }).click();
     await page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }).click();
     await page.getByRole('button', { name: 'Ta bort fält: Serienummer' }).click();
@@ -72,6 +73,7 @@ test('KATALOG-01: unused fields and custom and prefilled types are reviewed, dis
     await expect(page.getByRole('status')).toContainText('Sparat');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     const final = await read();
     expect(final.types.find((item) => item.id === type.id)?.fields).toBeUndefined();
     expect(final.types.find((item) => item.id === 'solar')).toBeUndefined();
@@ -194,6 +196,7 @@ test('KATALOG-02: private drafts and ended content block removal with a useful e
       const before = await read();
       const otherBefore = await read(other.request);
       await page.goto(installation.origin);
+      await openWorkspace(page);
       await page.getByText('Objekttyper och egna fält', { exact: true }).click();
       await page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }).click();
       await page.getByRole('button', { name: 'Ta bort objekttypen' }).click();
@@ -308,6 +311,7 @@ test('KATALOG-03: history restores missing definitions and content together only
     await object('independent', initial.types[1].id, 'Oberoende förslag');
     const before = await read();
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
     const history = page.getByRole('region', { name: 'Ändringshistorik' });
     const group = history.getByRole('article').filter({ hasText: 'Sparande: delete-content' });
@@ -324,6 +328,7 @@ test('KATALOG-03: history restores missing definitions and content together only
     expect((await read()).types).toEqual(before.types);
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(draft).toContainText(`Återställ objekttyp: ${type.name}`);
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');

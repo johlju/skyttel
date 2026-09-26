@@ -1,5 +1,11 @@
 import { expect, type Page, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import {
+  createHousehold,
+  openProfile,
+  openSettings,
+  openWorkspace,
+  signIn,
+} from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -8,6 +14,7 @@ import { modelMessage, textModel } from '../support/text-model.js';
 async function startConversation(page: Page, origin: string) {
   await page.addInitScript({ content: liveBrowserFixtureSource });
   await page.goto(origin);
+  await openWorkspace(page);
   await page.getByLabel(/Jag tillåter att OpenAI/).check();
   await page.getByLabel(/Jag tillåter förslag och sparande/).check();
   await page.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
@@ -35,10 +42,12 @@ for (const width of [1280, 390, 320]) {
       await signIn(page.request, installation.origin);
       const { household } = await (await createHousehold(page.request, installation.origin)).json();
       await page.goto(`${installation.origin}/households/${household.id}/`);
+      await openWorkspace(page);
       await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
       await page.getByLabel('Objektets namn').fill('Oskickad cykel');
       await page.getByLabel('Beskrivning', { exact: true }).fill('Behåll denna text');
       await page.getByLabel('Sök objekt', { exact: true }).fill('cykel');
+      await openProfile(page);
       await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).focus();
       await page.keyboard.press('Enter');
       await expect(
@@ -83,6 +92,7 @@ test('ARBETE-02: conversation and microphone survive navigation and end on logou
       'Vem använder cykeln?',
     );
     await page.getByLabel('Meddelande till textassistenten').fill('Oskickat svar');
+    await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Pausa mikrofon', exact: true }).click();
@@ -97,6 +107,7 @@ test('ARBETE-02: conversation and microphone survive navigation and end on logou
     );
     await expect(page.getByText('Mikrofonen är pausad', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Återuppta mikrofon', exact: true }).click();
+    await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.getByRole('button', { name: 'Logga ut', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();
@@ -140,6 +151,7 @@ test('ARBETE-03: revoked household access retires hidden forms and microphone', 
     await startConversation(memberPage, installation.origin);
     await memberPage.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await memberPage.getByLabel('Objektets namn').fill('Privat oskickad cykel');
+    await openProfile(memberPage);
     await memberPage.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.goto(`${installation.origin}/households/${household.id}/administration`);
     const membership = page
@@ -182,6 +194,7 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
     await startConversation(page, installation.origin);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Gammal oskickad cykel');
+    await openSettings(page);
     await page.getByRole('link', { name: 'Administrera tillgång', exact: true }).click();
     await page
       .getByLabel('Skyttel-export (ZIP)')
@@ -197,11 +210,12 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
         timeout: 10000,
       })
       .toEqual([{ enabled: false, state: 'ended' }]);
+    await expect(page.getByLabel('Objektets namn')).toHaveCount(0, { timeout: 10000 });
     await page.getByRole('link', { name: 'Till hushållet', exact: true }).click();
+    await openWorkspace(page);
     await expect(
       page.getByRole('button', { name: 'Starta textassistenten', exact: true }),
     ).toBeVisible();
-    await expect(page.getByLabel('Objektets namn')).toHaveCount(0);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Inga förslag',
     );
@@ -220,6 +234,7 @@ test('ARBETE-05: navigation preserves a save attempt after its response disappea
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
     const path = `${installation.origin}/api/households/${household.id}/map`;
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Sparad cykel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
@@ -235,6 +250,7 @@ test('ARBETE-05: navigation preserves a save attempt after its response disappea
     });
     await page.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
     await expect.poll(() => saved).toBe(true);
+    await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await expect(
       page.getByRole('region', { name: 'Hushållskarta', exact: true }).getByRole('status'),
@@ -247,6 +263,7 @@ test('ARBETE-05: navigation preserves a save attempt after its response disappea
     const history = await (await page.request.get(`${path}/history`)).json();
     expect(history.history).toHaveLength(1);
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Objekt', exact: true })).toContainText(
       'Sparad cykel',
     );
@@ -266,6 +283,7 @@ test('ARBETE-06: selection and personal map view survive navigation and resizing
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
     const path = `${installation.origin}/api/households/${household.id}/map/view`;
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Min cykel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
@@ -282,6 +300,7 @@ test('ARBETE-06: selection and personal map view survive navigation and resizing
     await expect(space.getByText('Din personliga vy är sparad.', { exact: true })).toBeVisible();
     await space.getByLabel('Visa höjdhjälp', { exact: true }).check();
     const view = await (await page.request.get(path)).json();
+    await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('link', { name: 'Till startsidan', exact: true }).click();

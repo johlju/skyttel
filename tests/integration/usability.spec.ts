@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openProfile, signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 
 test('ACCESS-04: setup works by keyboard within a narrow phone viewport', async ({ page }) => {
@@ -19,6 +19,7 @@ test('ACCESS-04: setup works by keyboard within a narrow phone viewport', async 
     await expect(page.getByRole('button', { name: 'Skapa hushåll', exact: true })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { name: 'Hushallet Linden' })).toBeFocused();
+    await openProfile(page);
     for (const height of [568, 320]) {
       await page.setViewportSize({ width: 320, height });
       expect(
@@ -140,6 +141,7 @@ test('ACCESS-07: failed logout preserves the session and a retry closes househol
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
     await page.goto(installation.origin);
     await expect(page.getByRole('heading', { name: household.name, exact: true })).toBeVisible();
+    await openProfile(page);
     await page.route('**/api/auth/sign-out', (route) => route.abort());
     await page.getByRole('button', { name: 'Logga ut' }).click();
     await expect(page.getByRole('alert')).toHaveText(
@@ -177,6 +179,7 @@ test('ACCESS-08: logout in another tab closes an already open household', async 
       page.getByRole('heading', { name: 'Hushållet Linden', exact: true }),
     ).toBeVisible();
     await otherTab.goto(installation.origin);
+    await openProfile(otherTab);
     await otherTab.getByRole('button', { name: 'Logga ut' }).click();
     await expect(otherTab.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();
     await page.bringToFront();

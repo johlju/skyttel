@@ -4,7 +4,7 @@ import { unzipSync } from 'fflate';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import { defaultViewSettings } from '../../src/shared/personal-view.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openSettings, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 async function arrange(page: Page) {
@@ -166,6 +166,7 @@ test('EXPORT-01: an administrator downloads the complete household archive by ke
     await expect(
       memberPage.getByRole('heading', { name: 'Hushållet Linden', exact: true }),
     ).toBeVisible();
+    await openSettings(memberPage);
     await expect(memberPage.getByRole('link', { name: 'Administrera tillgång' })).toHaveCount(0);
     await memberPage.goto(fixture.administration);
     await expect(

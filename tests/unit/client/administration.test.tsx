@@ -561,12 +561,16 @@ describe('current household access', () => {
       ],
     });
     await act(async () => mount('/'));
+    await act(async () => screen.getByRole('button', { name: 'Inställningar' }).click());
     expect(screen.getByRole('link', { name: 'Administrera tillgång' })).toBeDefined();
+    await act(async () => screen.getByRole('button', { name: 'Min profil' }).click());
     expect(screen.getByRole('heading', { name: 'Din Skyttel-användare' })).toBeDefined();
     expect(screen.queryByRole('textbox', { name: 'Inbjudningskod' })).toBeNull();
     await act(async () => vi.advanceTimersByTimeAsync(5_000));
     expect(screen.getByText('Medlem')).toBeDefined();
+    await act(async () => screen.getByRole('button', { name: 'Inställningar' }).click());
     expect(screen.queryByRole('link', { name: 'Administrera tillgång' })).toBeNull();
+    await act(async () => screen.getByRole('button', { name: 'Min profil' }).click());
     expect(screen.getByRole('textbox', { name: 'Inbjudningskod' })).toBeDefined();
     await act(async () => vi.advanceTimersByTimeAsync(5_000));
     expect(
@@ -583,6 +587,7 @@ describe('current household access', () => {
       '/api/households/linden': [{ data: { household } }, { status: 403 }],
     });
     mount('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Inställningar' }));
     expect(await screen.findByRole('link', { name: 'Administrera tillgång' })).toBeDefined();
     await act(async () => window.dispatchEvent(new Event('focus')));
     expect(screen.getByRole('heading', { name: 'Hushållet Linden' })).toBeDefined();

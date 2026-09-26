@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import type { PersonalView } from '../../src/shared/personal-view.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openMap, openProfile, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 async function arrange(page: Page, origin: string) {
@@ -37,7 +37,7 @@ async function arrange(page: Page, origin: string) {
     ).ok(),
   ).toBe(true);
   await page.goto(origin);
-  await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+  await openMap(page);
   const read = async (): Promise<PersonalView> => (await page.request.get(`${path}/view`)).json();
   return { path, read };
 }
@@ -61,12 +61,12 @@ async function drag(page: Page, dx: number, dy: number, height = false) {
   await expect(space(page).getByText('Din personliga vy är sparad.')).toBeVisible();
 }
 async function selectAndArrange(page: Page, name = 'Lampan') {
-  await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+  await openWorkspace(page);
   await page
     .getByRole('list', { name: 'Objekt', exact: true })
     .getByRole('button', { name, exact: true })
     .click();
-  await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+  await openMap(page);
   await space(page).getByText('Ordna min vy', { exact: true }).click();
 }
 
@@ -115,7 +115,7 @@ test('PLACERING-01: mouse, height and keyboard movement persist across reload, c
     expect(await (await other.request.get(`${path}/view`)).json()).toEqual(expected);
     const secondPage = await other.newPage();
     await secondPage.goto(installation.origin);
-    await secondPage.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(secondPage);
     await space(secondPage).getByText('Ordna min vy', { exact: true }).click();
     await expect(space(secondPage).getByLabel('Visa stjärnhimmel', { exact: true })).toBeChecked();
   } finally {
@@ -135,7 +135,7 @@ test('PLACERING-02: concurrent clients retain independent moves and visibly reje
     await signIn(other.request, installation.origin);
     const second = await other.newPage();
     await second.goto(installation.origin);
-    await second.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(second);
     await selectAndArrange(page);
     await selectAndArrange(second);
     await space(page).getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
@@ -268,14 +268,14 @@ test('PLACERING-03: synthetic touch gestures handle height, interruption, finger
     await resetView();
     const box = await space(page).locator('canvas').boundingBox();
     if (!box) throw new Error('Canvas must be visible');
-    const empty = { id: 1, x: box.x + 20, y: box.y + 25 };
+    const empty = { id: 1, x: box.x + 20, y: box.y + box.height - 160 };
     const oldPoint = await center(page);
     await touch('touchStart', [empty]);
     await touch('touchMove', [{ ...empty, x: empty.x + 50 }]);
     await touch('touchEnd', []);
     await expect.poll(async () => (await center(page)).x).not.toBe(oldPoint.x);
     const panBefore = await resetView();
-    const panStart = { id: 1, x: box.x + 70, y: box.y + 65 };
+    const panStart = { id: 1, x: box.x + 70, y: box.y + box.height - 160 };
     const second = { id: 2, x: panStart.x + 150, y: panStart.y };
     await touch('touchStart', [panStart, second]);
     await touch('touchMove', [
@@ -335,9 +335,24 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
     }
     await space(page).getByText('Ordna min vy', { exact: true }).click();
     const canvas = space(page).locator('canvas');
-    const dark = await sharp(await canvas.screenshot())
-      .raw()
-      .toBuffer();
+    const bounds = await canvas.boundingBox();
+    if (!bounds) throw new Error('The map background must be visible');
+    // Floating controls now share the canvas area. Compare its unobscured
+    // center so focus rings and disabled controls do not masquerade as stars.
+    const background = async () =>
+      sharp(
+        await page.screenshot({
+          clip: {
+            x: bounds.x + bounds.width / 4,
+            y: bounds.y + bounds.height / 4,
+            width: bounds.width / 2,
+            height: bounds.height / 2,
+          },
+        }),
+      )
+        .raw()
+        .toBuffer();
+    const dark = await background();
     await space(page).getByText('Ordna min vy', { exact: true }).click();
     const starControl = space(page).getByLabel('Visa stjärnhimmel', { exact: true });
     await expect(starControl).not.toBeChecked();
@@ -346,20 +361,12 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
     await starControl.check();
     await expect.poll(async () => (await read()).settings.stars).toBe(true);
     await space(page).getByText('Ordna min vy', { exact: true }).click();
-    const stars = await sharp(await canvas.screenshot())
-      .raw()
-      .toBuffer();
+    const stars = await background();
     expect(stars.equals(dark)).toBe(false);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await expect(starControl).not.toBeChecked();
     await expect(starControl).toBeDisabled();
-    expect(
-      (
-        await sharp(await canvas.screenshot())
-          .raw()
-          .toBuffer()
-      ).equals(dark),
-    ).toBe(true);
+    expect((await background()).equals(dark)).toBe(true);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await expect(starControl).toBeEnabled();
     await expect(starControl).toBeChecked();
@@ -378,22 +385,22 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
           };
         });
     const pointBefore = await projection();
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Ny sak');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     expect((await read()).positions).toEqual(placement);
     await expect.poll(async () => (await projection()).x).toBeCloseTo(pointBefore.x, 3);
     await expect.poll(async () => (await projection()).y).toBeCloseTo(pointBefore.y, 3);
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+    await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
       .getByRole('button', { name: 'Lampan', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera Lampan', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Oskickad text');
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.setViewportSize({ width: 844, height: 390 });
     const axis = await space(page)
@@ -401,7 +408,7 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
       .boundingBox();
     expect(axis?.x).toBeGreaterThanOrEqual(0);
     expect((axis?.y ?? 0) + (axis?.height ?? 0)).toBeLessThanOrEqual(390);
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+    await openWorkspace(page);
     await expect(page.getByLabel('Objektets namn')).toHaveValue('Oskickad text');
     expect((await read()).positions).toEqual(placement);
     expect((await (await page.request.get(path)).json()).draft.changes[0].after.name).toBe(
@@ -444,7 +451,9 @@ test('PLACERING-06: delayed initial personal positions frame once and later refr
     await page.reload();
     const canvas = space(page).locator('canvas');
     await expect(canvas).toBeVisible();
+    await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Objekt', exact: true })).toBeVisible();
+    await openMap(page);
     await space(page).getByText('Ordna min vy', { exact: true }).click();
     const stars = space(page).getByLabel('Visa stjärnhimmel', { exact: true });
     await expect(stars).toBeDisabled();
@@ -560,7 +569,7 @@ test('PLACERING-05: personal views stay private and revocation denies further re
     expect(await read()).toEqual(own);
     const memberPage = await member.newPage();
     await memberPage.goto(installation.origin);
-    await memberPage.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(memberPage);
     await space(memberPage).getByText('Ordna min vy', { exact: true }).click();
     expect(
       (
@@ -573,6 +582,7 @@ test('PLACERING-05: personal views stay private and revocation denies further re
     await space(memberPage)
       .getByRole('button', { name: 'Läs in min aktuella vy', exact: true })
       .click();
+    await openProfile(memberPage);
     await expect(memberPage.getByRole('button', { name: 'Logga ut', exact: true })).toBeVisible();
     expect((await member.request.get(`${path}/view`)).status()).toBe(403);
     for (const [suffix, data] of [

@@ -15,6 +15,9 @@ webbläsarprofiler så att båda kan arbeta samtidigt.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Använd en separat utvecklingsdatabas med påhittade uppgifter, exempelvis
    i devcontainern enligt [utvecklingsguiden](../development/devcontainer.md).
    Testerna behöver ingen publik adress eller extern assistent.

@@ -47,7 +47,7 @@ innehåller även privata utkast och personliga vyer; läs
 
 ## Gör din första ändring
 
-1. Välj **Lista och detaljer** om du vill börja med formulären.
+1. Välj **Lista** i kartans verktyg för att börja med formulären.
 2. Välj **Nytt objekt**. Ange ett namn, exempelvis `Alex cykel`, välj
    objekttypen **Fordon** och fyll vid behov i en beskrivning.
 3. Välj **Lägg i mitt utkast**. Förslaget finns nu kvar även efter
@@ -63,7 +63,7 @@ ett [familjeabonnemang](family-subscription.md). Du kan också öppna
 
 ## Välj arbetssätt
 
-**Lista och detaljer** ger tillgång till kartans uppgifter och formulär.
+**Lista** ger tillgång till kartans uppgifter och formulär.
 **Öppna rymdkartan** visar den rumsliga kartan över hela den tillgängliga
 webbytan. **Samlad vy** visar karta och lista tillsammans.
 Läs om [navigering och personlig vy](spatial-map.md) för att söka,
