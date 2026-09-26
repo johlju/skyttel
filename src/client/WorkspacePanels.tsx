@@ -15,8 +15,10 @@ export type WorkspacePanel = {
   title: string;
   content: ReactNode;
   open: boolean;
+  anchor?: PanelAnchor;
 };
 export type PanelFocusRequest = { id: string; element?: HTMLElement | null };
+export type PanelAnchor = { x: number; y: number };
 
 type TransitionFocus =
   | { kind: 'panel' | 'selector'; id: string }
@@ -40,6 +42,15 @@ function startingPosition(index: number, width: number): Position {
   return {
     x: (index % columns) * (panelWidth + panelGap),
     y: Math.floor(index / columns) * 52,
+  };
+}
+
+function anchoredPosition(anchor: PanelAnchor, region: HTMLElement): Position {
+  const bounds = region.getBoundingClientRect();
+  const x = anchor.x - bounds.left;
+  return {
+    x: x + 32 + panelWidth <= region.clientWidth ? x + 32 : x - 32 - panelWidth,
+    y: anchor.y - bounds.top - 24,
   };
 }
 
@@ -124,7 +135,10 @@ export function WorkspacePanels({
         windows.forEach((entry, index) => {
           const panel = panelRefs.current.get(entry.id);
           const proposed =
-            rememberedPositions.current[entry.id] || startingPosition(index, region.clientWidth);
+            rememberedPositions.current[entry.id] ||
+            (entry.anchor
+              ? anchoredPosition(entry.anchor, region)
+              : startingPosition(index, region.clientWidth));
           rememberedPositions.current[entry.id] = proposed;
           const position = clampPosition(proposed, region, panel);
           next[entry.id] = position;
@@ -412,7 +426,13 @@ export function WorkspacePanels({
                 type="button"
                 onClick={() => {
                   const region = regionRef.current;
-                  if (region) move(entry.id, startingPosition(index, region.clientWidth));
+                  if (region)
+                    move(
+                      entry.id,
+                      entry.anchor
+                        ? anchoredPosition(entry.anchor, region)
+                        : startingPosition(index, region.clientWidth),
+                    );
                   setMovementStatus('Panelens position återställd.');
                 }}
               >

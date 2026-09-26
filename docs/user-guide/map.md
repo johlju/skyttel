@@ -95,8 +95,10 @@ och förklaringar som går att läsa från båda objekten.
 ## Hitta och rätta uppgifter
 
 Använd **Sök objekt** och **Filtrera objekttyp**. Sökningen gäller hela
-kartan, även objekt som finns på andra listsidor. Välj objektet för att
-läsa detaljerna och dess samband. Längre listor har sidval samt
+kartan, även objekt som finns på andra listsidor. **Markera** ändrar
+urvalet; **Visa detaljer** öppnar objektets uppgifter och samband.
+**Avmarkera alla** behåller sökning och öppna paneler.
+Längre listor har sidval samt
 **Föregående sida** och **Nästa sida**.
 
 Välj **Redigera valt objekt** eller **Redigera valt samband** i

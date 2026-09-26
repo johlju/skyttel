@@ -50,7 +50,7 @@ import {
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
 import { TextAssistant } from './TextAssistant.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
-import { type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
+import { type PanelAnchor, type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
 import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
 import './workspace.css';
 import './workspace-panels.css';
@@ -127,6 +127,7 @@ export function HouseholdMap({
       editing: number;
       newObject: boolean;
       unsentName: string;
+      anchor?: PanelAnchor;
     }[]
   >([]);
   const [objectDirty, setObjectDirty] = useState<Record<string, boolean>>({});
@@ -248,8 +249,10 @@ export function HouseholdMap({
   const [selection, setSelection] = useState<{
     kind: 'object' | 'relationship';
     id: string;
+    ids?: string[];
     previous?: boolean;
   } | null>(null);
+  const selectedIds = selection?.kind === 'object' ? (selection.ids ?? [selection.id]) : [];
   const [pending, setPending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [error, setError] = useState('');
@@ -788,6 +791,16 @@ export function HouseholdMap({
     if (!state) return;
     const initial = objectEditor(object);
     const id = initial.id;
+    const node =
+      !narrow && object
+        ? [...(workspace.current?.querySelectorAll<HTMLElement>('.spatial-node') ?? [])].find(
+            (node) => node.dataset.objectId === object.id,
+          )
+        : undefined;
+    const bounds = node?.getBoundingClientRect();
+    const anchor = bounds?.width
+      ? { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
+      : undefined;
     setObjectPanels((previous) =>
       previous.some((panel) => panel.id === id)
         ? previous.map((panel) =>
@@ -802,10 +815,11 @@ export function HouseholdMap({
               editing: editing ? 1 : 0,
               newObject: !object,
               unsentName: '',
+              anchor,
             },
           ],
     );
-    if (object) setSelection({ kind: 'object', id });
+    if (object) selectObject(object, true, false);
     openPanel(id);
   }
   const { displayed, displayedEdges, visibleObjects, visibleEdges } = useMemo(() => {
@@ -866,6 +880,9 @@ export function HouseholdMap({
     setSelection(null);
     setStatus('Hela rymden visas. Kameran behåller sin vinkel, zoom och panorering.');
   }
+  function clearSelection() {
+    setSelection(null);
+  }
   function focusObject(id: string) {
     setFocusId(id);
     setQuery('');
@@ -917,8 +934,26 @@ export function HouseholdMap({
     });
     setDirty(true);
   }
-  function selectObject(object: MapObject) {
-    setSelection({ kind: 'object', id: object.id });
+  function selectObject(object: MapObject, additive = false, toggle = true) {
+    setSelection((previous) => {
+      const ids = previous?.kind === 'object' ? (previous.ids ?? [previous.id]) : [];
+      const selected = ids.includes(object.id);
+      const next = additive
+        ? selected
+          ? toggle
+            ? ids.filter((id) => id !== object.id)
+            : ids
+          : [...ids, object.id]
+        : selected
+          ? ids
+          : [object.id];
+      if (!next.length) return null;
+      return {
+        kind: 'object',
+        id: next.includes(object.id) ? object.id : next[next.length - 1],
+        ids: next,
+      };
+    });
     if (legacyDirty) return;
     setEdgeEditor(null);
     setTypeEditor(null);
@@ -1080,10 +1115,28 @@ export function HouseholdMap({
             }}
             onSettings={onSettings}
             theme={<WorkspaceTheme mode={theme.mode} onChange={theme.changeMode} />}
+            onDetails={() => {
+              if (selectedObject) edit(selectedObject, false);
+            }}
+            detailsAvailable={Boolean(selectedObject) && !pending && !blocked}
+            detailsVisible={Boolean(
+              selectedObject &&
+                workOpen &&
+                openPanels.includes(selectedObject.id) &&
+                (!(narrow || revealRequest) || activePanel === selectedObject.id),
+            )}
           />
           <div className="workspace-context">
             {householdName}
             <span>Gemensam karta</span>
+            <span
+              className="workspace-selection-count"
+              data-multiple={selectedIds.length > 1}
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {selectedIds.length} markerade
+            </span>
           </div>
           {guidance && !workOpen && Boolean(visibleObjects.size) && (
             <WelcomeGuidance onOpen={openGuidedWork} onDismiss={dismissGuidance} />
@@ -1177,12 +1230,14 @@ export function HouseholdMap({
             objects={visibleObjects}
             relationships={visibleEdges}
             selection={selection}
+            selectedIds={selectedIds}
             disabled={pending || blocked}
             onSelect={selectObject}
             onEdit={edit}
+            onOpenDetails={(object) => edit(object, false)}
             onSelectRelationship={selectRelationship}
             onFocus={focusObject}
-            onClear={showAll}
+            onClear={clearSelection}
             onReset={() => {
               showAll();
               setStatus('Översikt återställd. Alla objekt visas.');
@@ -1237,6 +1292,7 @@ export function HouseholdMap({
                     id: panel.id,
                     title: selectedObject?.name ?? panel.title,
                     open: openPanels.includes(panel.id),
+                    anchor: panel.anchor,
                     content: (
                       <ObjectWork
                         initial={
@@ -1522,6 +1578,10 @@ export function HouseholdMap({
               <button type="button" onClick={showAll}>
                 Visa hela rymden
               </button>
+              <button type="button" onClick={clearSelection}>
+                Avmarkera alla
+              </button>
+              <p>{selectedIds.length} markerade</p>
               <button
                 type="button"
                 disabled={selection?.kind !== 'object'}
@@ -1561,10 +1621,29 @@ export function HouseholdMap({
                         {object.name}
                       </button>
                       <span> {typeName(object.typeId)}</span>
+                      <div className="access-actions">
+                        <button
+                          type="button"
+                          aria-label={`Markera ${object.name}`}
+                          aria-pressed={selectedIds.includes(object.id)}
+                          disabled={pending || blocked}
+                          onClick={() => selectObject(object, true)}
+                        >
+                          Markera
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Visa detaljer för ${object.name}`}
+                          disabled={pending || blocked}
+                          onClick={() => edit(object, false)}
+                        >
+                          Visa detaljer
+                        </button>
+                      </div>
                       <ProposalSymbol
                         change={state.draft.changes.find((change) => change.id === object.id)}
                       />
-                      {selection?.kind === 'object' && selection.id === object.id && (
+                      {selectedIds.includes(object.id) && (
                         <div className="access-actions">
                           <button
                             type="button"

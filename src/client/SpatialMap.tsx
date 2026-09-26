@@ -8,6 +8,7 @@ import { relationshipLabel } from './RelationshipEditor.js';
 import { SpatialHeightGuide } from './SpatialHeightGuide.js';
 import { SpatialObjectGlyph } from './SpatialObjectGlyph.js';
 import { SpatialOrientation } from './SpatialOrientation.js';
+import { navigationDragThreshold } from './spatial-navigation.js';
 import { type ProjectedPoint, spatialScene } from './spatial-scene.js';
 import { useObjectMovement } from './use-object-movement.js';
 import type { usePersonalView } from './use-personal-view.js';
@@ -61,9 +62,11 @@ export function SpatialMap({
   objects,
   relationships,
   selection,
+  selectedIds = selection?.kind === 'object' ? [selection.id] : [],
   disabled,
   onSelect,
   onEdit = onSelect,
+  onOpenDetails = onEdit,
   onSelectRelationship,
   onFocus,
   onClear,
@@ -78,9 +81,11 @@ export function SpatialMap({
   objects: Map<string, MapObject>;
   relationships: Map<string, MapRelationship>;
   selection: { kind: 'object' | 'relationship'; id: string; previous?: boolean } | null;
+  selectedIds?: string[];
   disabled: boolean;
-  onSelect: (object: MapObject) => void;
+  onSelect: (object: MapObject, additive?: boolean) => void;
   onEdit?: (object: MapObject) => void;
+  onOpenDetails?: (object: MapObject) => void;
   onSelectRelationship: (edge: MapRelationship, previous?: boolean) => void;
   onFocus: (id: string) => void;
   onClear: () => void;
@@ -235,6 +240,14 @@ export function SpatialMap({
     moved: boolean;
     multiple: boolean;
   } | null>(null);
+  useEffect(() => {
+    const cancel = () => {
+      pointer.current = null;
+    };
+    if (!active) cancel();
+    window.addEventListener('blur', cancel);
+    return () => window.removeEventListener('blur', cancel);
+  }, [active]);
   const movement = useObjectMovement(scene, {
     enabled: Boolean(personal?.view) && !personal?.pending && !contextLost,
     active,
@@ -367,7 +380,8 @@ export function SpatialMap({
       const selected =
         selection?.kind === 'relationship'
           ? selection.id === edge.id && Boolean(selection.previous) === previous
-          : selection?.id === edge.sourceId || selection?.id === edge.targetId;
+          : selectedIds.includes(edge.sourceId) ||
+            Boolean(edge.targetId && selectedIds.includes(edge.targetId));
       const kind = previous
         ? 'removed'
         : proposalKind(state.draft.relationships?.find((change) => change.id === edge.id));
@@ -443,7 +457,7 @@ export function SpatialMap({
   // corners of the viewport just to fit another rectangular control.
   const nodePoints = [...locations.values()].sort((a, b) => {
     const priority = (id: string) =>
-      selection?.id === id ? 0 : state.draft.changes.some((change) => change.id === id) ? 1 : 2;
+      selectedIds.includes(id) ? 0 : state.draft.changes.some((change) => change.id === id) ? 1 : 2;
     return priority(a.id) - priority(b.id) || a.id.localeCompare(b.id);
   });
   for (const point of nodePoints) {
@@ -465,7 +479,7 @@ export function SpatialMap({
     ];
     const box = place(
       offsets.map(([x, y]) => ({ ...size, x: point.x + x, y: point.y + y })),
-      selection?.kind === 'object' && selection.id === point.id,
+      selectedIds.includes(point.id),
     );
     if (box) labels.set(point.id, box);
   }
@@ -506,8 +520,8 @@ export function SpatialMap({
           end: guidePosition,
         }
       : null;
-  if (selection?.kind === 'object') {
-    adjacent.add(selection.id);
+  if (selectedIds.length) {
+    for (const id of selectedIds) adjacent.add(id);
     for (const { edge, selected } of edges)
       if (selected) {
         adjacent.add(edge.sourceId);
@@ -612,6 +626,7 @@ export function SpatialMap({
             if (event.ctrlKey && !pointer.current?.moved) onClear();
           }}
           onPointerDown={(event) => {
+            if (event.button !== 0) return;
             if (pointer.current) pointer.current.multiple = true;
             else
               pointer.current = {
@@ -625,7 +640,8 @@ export function SpatialMap({
           onPointerMove={(event) => {
             if (
               pointer.current &&
-              Math.hypot(event.clientX - pointer.current.x, event.clientY - pointer.current.y) > 5
+              Math.hypot(event.clientX - pointer.current.x, event.clientY - pointer.current.y) >=
+                navigationDragThreshold
             )
               pointer.current.moved = true;
           }}
@@ -635,12 +651,16 @@ export function SpatialMap({
               pointer.current.id === event.pointerId &&
               !pointer.current.moved &&
               !pointer.current.multiple &&
-              Math.hypot(event.clientX - pointer.current.x, event.clientY - pointer.current.y) < 5
+              Math.hypot(event.clientX - pointer.current.x, event.clientY - pointer.current.y) <
+                navigationDragThreshold
             )
               onClear();
             pointer.current = null;
           }}
           onPointerCancel={() => {
+            pointer.current = null;
+          }}
+          onLostPointerCapture={() => {
             pointer.current = null;
           }}
         />
@@ -825,7 +845,7 @@ export function SpatialMap({
                   aria-describedby={
                     labels.has(object.id) ? `${labelPrefix}-${object.id}` : undefined
                   }
-                  aria-pressed={selection?.kind === 'object' && selection.id === object.id}
+                  aria-pressed={selectedIds.includes(object.id)}
                   className={`spatial-node ${kind}${adjacent.size && !adjacent.has(object.id) ? ' subdued' : ''}`}
                   style={{ left: point.x, top: point.y }}
                   onContextMenu={(event) => {
@@ -833,7 +853,8 @@ export function SpatialMap({
                     if (event.ctrlKey) {
                       cancelHold();
                       movement.cancel();
-                      onFocus(object.id);
+                      if (event.altKey) onOpenDetails(object);
+                      else onFocus(object.id);
                     } else openMenu(object, event.currentTarget);
                   }}
                   onPointerDown={(event) => {
@@ -867,9 +888,11 @@ export function SpatialMap({
                       held.current = false;
                       return;
                     }
-                    if (event.ctrlKey) onFocus(object.id);
-                    else onSelect(object);
+                    if (event.detail > 1) return;
+                    if ((event.ctrlKey || event.metaKey) && event.altKey) onOpenDetails(object);
+                    else onSelect(object, event.ctrlKey || event.metaKey);
                   }}
+                  onDoubleClick={() => onOpenDetails(object)}
                 >
                   <span
                     className="spatial-orb"

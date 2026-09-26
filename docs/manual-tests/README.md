@@ -137,6 +137,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   tillgång med bevarat innehåll i kartan.
 - [Objekt och samband](map.md): skapa, söka, rätta och ta bort uppgifter,
   skilja lika namn åt och bevara ofullständiga uppgifter.
+- [Markering och detaljer](map-selection.md): flerval, tomrumsgester,
+  textkontroller, aktiv detaljikon och placering nära objektet.
 - [Rymdkarta](spatial-map.md): gemensam redigering och navigering,
   fokus på tidigare och föreslagna samband med läsbara tidigare värden,
   fokus, filter, namn vid runda symboler, sambandsetiketter vid val,

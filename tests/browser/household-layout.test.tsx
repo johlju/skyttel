@@ -264,6 +264,9 @@ test('a smaller desktop keeps the panel reachable and restores its chosen positi
 
 test('panel placement has reversible keyboard and click controls with a reset and focus return', async () => {
   await open(1440);
+  // Leave room below the object's new nearby panel for both movement
+  // directions even while the optional move controls are expanded.
+  await page.viewport(1440, 1400);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page.getByRole('button', { name: 'Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
@@ -315,6 +318,7 @@ test('panel placement has reversible keyboard and click controls with a reset an
 
 test('native panel dragging moves only the held primary pointer and recovers after touch cancellation', async () => {
   await open(1440);
+  await page.viewport(1440, 1400);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page.getByRole('button', { name: 'Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });

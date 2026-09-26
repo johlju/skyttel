@@ -6,7 +6,7 @@ Rymdkartan, listan och detaljerna visar samma hushållskarta och ditt
 privata utkast. Hushållet öppnar rymdkartan som huvudyta på alla enheter.
 Välj **Lista** i verktygen för listor, formulär och utkast. Välj
 **Stäng arbetsytan** för att återgå till hela kartan. På telefon visar
-**Visa verktygens namn** även de kompletterande verktygen.
+**Visa verktygens namn** även de kompletterande verktygen, däribland Tema.
 
 När assistenten visar ett objekt eller samband öppnas dess detaljpanel.
 Kartan och det valda innehållets detaljpanel visas samtidigt innan
@@ -20,9 +20,12 @@ Utgångsläget omfattar alla objekt och samband. **Sök objekt** och
 **Filtrera objekttyp** begränsar både karta och lista. **Sök i kartan**
 i verktygen öppnar sökningen.
 
-Klicka på ett objekts runda symbol för att markera det. Öppna Lista och
-välj objektet där för att öppna dess panel. Symbolen visar objektets
-profilbild eller en ikon för dess typ.
+Klicka på ett objekts runda symbol för att markera det utan att flytta
+kameran eller öppna detaljer. Ett omarkerat objekt ersätter urvalet.
+Ett redan markerat objekt behåller de andra markeringarna. Ctrl-klick
+eller Cmd-klick lägger till eller tar bort objekt. Samtliga markerades
+direkta samband framhävs och antalet visas vid flerval. Symbolen visar
+objektets profilbild eller en ikon för dess typ.
 Namnet visas bredvid symbolen. När du väljer ett objekt visas etiketterna
 för dess samband. **Alla etiketter** visar även de andra sambandsnamnen.
 Klicka på ett sambands etikett för att läsa dess uppgifter. Välj sedan
@@ -30,12 +33,32 @@ Klicka på ett sambands etikett för att läsa dess uppgifter. Välj sedan
 Pilen går från det första objektet till det andra. Okänt och uttryckligen
 inget är uppgifter om ett samband, inte nya objekt.
 
-Ctrl-klick på ett objekt visar dess direkta samband. Du kan också välja
-objektet i listan och använda **Visa objektets kopplingar** med tangentbord.
-Valda samband framhävs; andra linjer tonas ned. Fokus och träffantal visas
-vid sökningen. Klick på tom rymd, Escape utanför formuläret eller
-**Visa hela rymden** lämnar fokus och rensar sökning och typfilter.
-Kamerans vinkel, zoom och panorering behålls.
+I **Lista** har varje objekt separata **Markera** och **Visa detaljer**.
+Markera lägger till eller tar bort objekt utan att öppna paneler.
+**Avmarkera alla** och ett klick på tom rymd släcker markeringar för
+objekt och samband. Kamera, sökning, filter och öppna paneler finns kvar.
+Små rörelser vid klick flyttar inte kameran. Rotation, panorering och
+avbrutna gester behåller urvalet.
+
+Använd **Visa objektets kopplingar** för att begränsa kartan till ett
+objekts direkta samband. Fokus och träffantal visas vid sökningen.
+Escape utanför formuläret eller **Visa hela rymden** lämnar fokus och
+rensar sökning och typfilter. Kamerans vinkel, zoom och panorering behålls.
+
+## Öppna detaljer
+
+Dubbelklick öppnar objektets panel. Det första klickets urval gäller:
+ett redan markerat objekt behåller flervalet, medan ett omarkerat objekt
+ersätter det. Ctrl+Alt-klick öppnar detaljer och lägger till objektet
+utan att avmarkera andra. På Mac fungerar Control+Option och Cmd+Option.
+**Visa detaljer** i verktygen öppnar det senast markerade objektet.
+Listans **Visa detaljer** fungerar även utan kartgrafik och med tangentbord.
+
+En ny panel öppnas nära objektet inom arbetsytan. Paneler som du flyttar
+behåller sin placering när du öppnar dem igen. På telefon väljer
+**Öppna paneler** vilken panel som visas. Detaljverktygets markering visar
+om det senast markerade objektets panel faktiskt visas. Oskickad text
+finns kvar när panelen stängs eller ett annat verktyg öppnas.
 
 Längre listor visar 50 poster per sida. Använd sidvalet eller
 **Föregående sida** och **Nästa sida** för att nå resten. Sökning gäller
@@ -74,7 +97,7 @@ i sidled för att nå alla val utan att minska kartytan.
 
 ## Ändra och granska
 
-Ctrl-klick, även med höger musknapp, visar objektets kopplingar.
+Ctrl-högerklick visar objektets kopplingar.
 Vid ändrade samband visar fokus både tidigare och föreslagna ändpunkter.
 Välj den tidigare, böjda linjen eller dess etikett med × för att läsa det
 sparade sambandet utan att ändra det.

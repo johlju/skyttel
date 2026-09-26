@@ -679,7 +679,7 @@ test('graphics navigation and label modes expose selectable objects and directed
   render(<MapView />);
   const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
   await expect.element(lo).toBeVisible();
-  await lo.click({ modifiers: ['Control'] });
+  await lo.click({ button: 'right', modifiers: ['Control'] });
   await expect.element(page.getByRole('status')).toHaveTextContent('Kopplingar för lo');
   await lo.click();
   await expect.element(page.getByRole('status')).toHaveTextContent('Lo Exempel');

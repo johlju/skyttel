@@ -93,6 +93,10 @@
 .workspace-tools button:hover {
   background: color-mix(in srgb, var(--space-accent), transparent 88%);
 }
+.workspace-tools button[aria-pressed="true"] {
+  border-color: var(--space-accent);
+  background: color-mix(in srgb, var(--space-accent), transparent 88%);
+}
 .household-map.workspace-shell .workspace-tools .workspace-talk {
   background: var(--space-accent);
   color: white;
@@ -111,6 +115,14 @@
   margin-left: 12px;
   color: var(--space-muted);
   font-size: 10px;
+}
+.workspace-context .workspace-selection-count[data-multiple="false"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .workspace-brand > span,
 .workspace-tools button > span {
@@ -510,7 +522,8 @@
     width: 100%;
     flex-direction: column;
   }
-  .workspace-tools.expanded .workspace-theme-control {
+  .workspace-tools.expanded .workspace-theme-control,
+  .workspace-tools.expanded .workspace-theme-tool {
     width: 100%;
   }
   .workspace-context {
@@ -520,6 +533,9 @@
   }
   .workspace-context span {
     display: none;
+  }
+  .workspace-context .workspace-selection-count {
+    display: inline;
   }
   .workspace-guidance {
     right: 12px;
@@ -624,6 +640,12 @@ footer[hidden] {
   background: var(--space-surface);
   color: var(--space-text);
   border-color: var(--space-line);
+}
+.household-map.workspace-shell .spatial-node[aria-pressed="true"] .spatial-orb {
+  background: var(--space-accent);
+  border-color: var(--space-accent);
+  color: var(--space-bg);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--space-accent), transparent 70%);
 }
 .household-map.workspace-shell .workspace-utility .panel {
   padding: 0;
