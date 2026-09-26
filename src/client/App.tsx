@@ -792,6 +792,8 @@ function HouseholdPage({
   onSessionExpired: () => void;
 }) {
   const [revision, setRevision] = useState(0);
+  const [workRevision, setWorkRevision] = useState(0);
+  const retireWork = useCallback(() => setWorkRevision((value) => value + 1), []);
   const result = useResource<{ household: Household }>(
     `/api/households/${encodeURIComponent(id ?? '')}`,
     revision,
@@ -808,9 +810,11 @@ function HouseholdPage({
   useEffect(() => {
     if (sessionExpired) onSessionExpired();
   }, [sessionExpired, onSessionExpired]);
-  if (result.status === 'loading' || content.status === 'loading' || sessionExpired)
-    return active ? <Loading /> : null;
-  if (result.status === 'error' || content.status === 'error') {
+  if (result.status === 'loading' || sessionExpired) return active ? <Loading /> : null;
+  if (
+    result.status === 'error' ||
+    (content.status === 'error' && [401, 403, 409].includes(content.code ?? 0))
+  ) {
     const code =
       result.status === 'error'
         ? result.code
@@ -847,9 +851,11 @@ function HouseholdPage({
         </p>
       )}
       <HouseholdMap
-        key={`${result.data.household.id}:${content.data.contentVersion}`}
+        key={`${result.data.household.id}:${workRevision}`}
         householdId={result.data.household.id}
         active={active}
+        contentVersion={content.status === 'loaded' ? content.data.contentVersion : undefined}
+        onContentReplaced={retireWork}
       />
       <p hidden={!active}>
         <Link to="/assistants">Assistentanslutningar</Link>
