@@ -10,6 +10,70 @@ async function bounds(element: Locator) {
   return rectangle;
 }
 
+test('PANEL-05: a delayed object proposal preserves a newer search focus and the normal return target', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  let releaseResponse = () => {};
+  try {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await signIn(page.request, installation.origin);
+    await createHousehold(page.request, installation.origin);
+    await page.goto(installation.origin);
+    await openWorkspace(page);
+    const newObject = page.getByRole('button', { name: 'Nytt objekt', exact: true });
+    for (const name of ['Cykeln', 'Bilen']) {
+      await newObject.click();
+      await page.getByLabel('Objektets namn').fill(name);
+      await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
+      await expect(newObject).toBeFocused();
+    }
+    const search = page.getByLabel('Sök objekt', { exact: true });
+    await search.fill('Cykeln');
+    await page
+      .getByRole('list', { name: 'Objekt', exact: true })
+      .getByRole('button', { name: 'Cykeln', exact: true })
+      .click();
+    const cycle = page.getByRole('region', { name: 'Cykeln', exact: true });
+    await cycle.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
+    await cycle.getByLabel('Beskrivning').fill('Skickad beskrivning');
+    let responseReady = () => {};
+    const ready = new Promise<void>((resolve) => {
+      responseReady = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      releaseResponse = resolve;
+    });
+    await page.route('**/map/draft', async (route) => {
+      const response = await route.fetch();
+      responseReady();
+      await released;
+      await route.fulfill({ response });
+    });
+    await cycle.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
+    await ready;
+    await openWorkspace(page);
+    await search.fill('Bi');
+    releaseResponse();
+    await expect(cycle).not.toBeVisible();
+    await expect(search).toBeFocused();
+    await page.keyboard.type('len');
+    await expect(search).toHaveValue('Bilen');
+    await expect(
+      page.getByRole('list', { name: 'Objekt', exact: true }).getByRole('button', {
+        name: 'Bilen',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
+      'Skickad beskrivning',
+    );
+  } finally {
+    releaseResponse();
+    await installation.close();
+  }
+});
+
 test('PANEL-01: independent object panels preserve unsent work and reuse each object', async ({
   page,
 }) => {

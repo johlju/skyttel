@@ -167,3 +167,38 @@ testfallet “PANEL-04: map selection preserves unsent relationship and type for
 - Markeringen ändrar inte eller kastar något oskickat formulär.
 - Endast uttrycklig stängning av formuläret kastar den oskickade texten.
 - Inget nytt förslag eller sparande uppstår av navigeringen.
+
+### PANEL-05: fortsätt söka medan ett förslag skickas
+
+**Syfte:** Ett sent svar får inte flytta fokus från ett nytt arbetsval.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Cykeln och Bilen finns i kartan. Använd ett separat
+provhushåll och webbläsarens nätverksbegränsning med hög fördröjning, så att
+du hinner välja sökfältet innan svaret kommer.
+
+**Integrationstest:**
+[workspace-panels.spec.ts](../../tests/integration/workspace-panels.spec.ts),
+testfallet “PANEL-05: a delayed object proposal preserves a newer search
+focus and the normal return target”.
+
+**Steg:**
+
+1. Öppna Lista, sök Cykeln och öppna dess detaljer. Välj
+   **Redigera valt objekt** och skriv **Skickad beskrivning**.
+2. Välj **Lägg i mitt utkast**. Medan svaret väntar, öppna Lista och
+   ersätt sökningen med **Bi**.
+3. Vänta tills förslaget visas i utkastet. Fortsätt skriva **len** utan
+   att välja sökfältet igen.
+4. Stäng av nätverksbegränsningen. Skicka en annan objektändring och stanna
+   i formuläret medan svaret kommer.
+
+**Förväntat resultat:**
+
+- Sökfältet behåller fokus efter det sena svaret. Sökningen blir **Bilen**
+  och objektet går att välja i listan.
+- Den skickade beskrivningen finns i samma privata utkast. Inget sparas
+  automatiskt i den gemensamma kartan.
+- När du stannar i formuläret återgår fokus till **Nytt objekt** efter
+  att förslaget har lagts i utkastet.
