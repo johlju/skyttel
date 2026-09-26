@@ -33,6 +33,11 @@ För [stora kartor](large-map-performance.md) finns en separat mätplan och
 
 ## Områden
 
+- [Bevarat hushållsarbete](household-work.md): oskickad text, samtal,
+  mikrofon, sökning, urval, personlig vy och samma sparförsök vid
+  tillfälliga vybyten; avveckling vid utloggning, återkallad tillgång
+  och ersatt hushållsinnehåll.
+
 - [Månadskostnad](costs.md): separata Render-, Live- och Terra-belopp,
   prisunderlag, månadens antaganden, okända värden, kumulativa mätningar,
   omstart, hämtningsfel och installationens särskilda kostnadsbehörighet.

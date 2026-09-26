@@ -50,6 +50,7 @@ function errorMessage(code: string) {
 }
 
 export function TextAssistant({
+  active: workVisible = true,
   householdId,
   onMapChange,
   onAccessLost,
@@ -58,6 +59,7 @@ export function TextAssistant({
   draftSummary,
   inspector,
 }: {
+  active?: boolean;
   householdId: string;
   onMapChange: () => void;
   onAccessLost: () => void;
@@ -308,7 +310,7 @@ export function TextAssistant({
   const review = session?.review;
   return (
     <section aria-label="Skyttels textassistent" className="assistant-workspace">
-      <section aria-label="Talsamtal" className="assistant-bar">
+      <section aria-label="Talsamtal" className="assistant-bar" hidden={!workVisible && !session}>
         {session ? (
           <VoiceAssistant
             autoStart={startWithVoice}
@@ -379,7 +381,7 @@ export function TextAssistant({
         )}
         {error && <p role="alert">{error}</p>}
       </section>
-      <div className="assistant-layout">
+      <div className="assistant-layout" hidden={!workVisible}>
         {children && <div className="assistant-map-panel">{children}</div>}
         <div className="assistant-side">
           {inspector && <div className="assistant-panel">{inspector}</div>}

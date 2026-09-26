@@ -1,7 +1,17 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
+import {
+  Link,
+  matchPath,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router';
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
+import type { PersonalView } from '../shared/personal-view.js';
 import { Assistants } from './Assistants.js';
 import { ContentOwners } from './ContentOwners.js';
 import { Costs } from './Costs.js';
@@ -48,7 +58,8 @@ function useResource<T>(path: string, revision = 0, refreshAccess = false): Load
               previous.key === key &&
               previous.state.status === 'loaded' &&
               code !== 401 &&
-              code !== 403
+              code !== 403 &&
+              code !== 409
             )
               return previous;
             return { key, state: { status: 'error', code } };
@@ -76,13 +87,13 @@ function useResource<T>(path: string, revision = 0, refreshAccess = false): Load
   return result.key === key ? result.state : { status: 'loading' };
 }
 
-function Heading({ children }: { children: ReactNode }) {
+function Heading({ children, active = true }: { children: ReactNode; active?: boolean }) {
   const ref = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    ref.current?.focus();
-  }, []);
+    if (active) ref.current?.focus();
+  }, [active]);
   return (
-    <h1 ref={ref} tabIndex={-1}>
+    <h1 ref={ref} tabIndex={-1} hidden={!active}>
       {children}
     </h1>
   );
@@ -759,42 +770,93 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
   );
 }
 
-function HouseholdPage({ onSessionExpired }: { onSessionExpired: () => void }) {
-  const { id } = useParams();
+function HouseholdWork({ onSessionExpired }: { onSessionExpired: () => void }) {
+  const { pathname } = useLocation();
+  const routeId = matchPath('/households/:id', pathname)?.params.id;
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  if (routeId && routeId !== currentId) setCurrentId(routeId);
+  const id = routeId ?? currentId;
+  if (!id) return null;
+  return (
+    <HouseholdPage
+      key={id}
+      id={id}
+      active={pathname === `/households/${encodeURIComponent(id)}`}
+      onSessionExpired={onSessionExpired}
+    />
+  );
+}
+
+function HouseholdPage({
+  id,
+  active,
+  onSessionExpired,
+}: {
+  id: string;
+  active: boolean;
+  onSessionExpired: () => void;
+}) {
   const [revision, setRevision] = useState(0);
   const result = useResource<{ household: Household }>(
     `/api/households/${encodeURIComponent(id ?? '')}`,
     revision,
     true,
   );
-  const sessionExpired = result.status === 'error' && result.code === 401;
+  const content = useResource<PersonalView>(
+    `/api/households/${encodeURIComponent(id)}/map/view`,
+    revision,
+    true,
+  );
+  const sessionExpired =
+    (result.status === 'error' && result.code === 401) ||
+    (content.status === 'error' && content.code === 401);
   useEffect(() => {
     if (sessionExpired) onSessionExpired();
   }, [sessionExpired, onSessionExpired]);
-  if (result.status === 'loading' || sessionExpired) return <Loading />;
-  if (result.status === 'error') {
-    return result.code === 403 ? (
+  if (result.status === 'loading' || content.status === 'loading' || sessionExpired)
+    return active ? <Loading /> : null;
+  if (result.status === 'error' || content.status === 'error') {
+    const code =
+      result.status === 'error'
+        ? result.code
+        : content.status === 'error'
+          ? content.code
+          : undefined;
+    if (code === 409)
+      return (
+        <p role="alert">
+          Hushållets innehåll ändras. Kartarbetet och mikrofonen är stoppade tills innehållet är
+          tillgängligt igen.
+        </p>
+      );
+    return code === 403 ? (
       <Forbidden />
     ) : (
       <Failure onRetry={() => setRevision((value) => value + 1)} />
     );
   }
   return (
-    <section className="panel household-panel">
-      <p className="eyebrow">Din privata hushållskarta</p>
-      <Heading>{result.data.household.name}</Heading>
-      <p className="membership">
+    <section className={active ? 'panel household-panel' : 'household-work-background'}>
+      <p className="eyebrow" hidden={!active}>
+        Din privata hushållskarta
+      </p>
+      <Heading active={active}>{result.data.household.name}</Heading>
+      <p className="membership" hidden={!active}>
         {result.data.household.role === 'administrator' ? 'Administratör' : 'Medlem'}
       </p>
       {result.data.household.role === 'administrator' && (
-        <p>
+        <p hidden={!active}>
           <Link to={`/households/${encodeURIComponent(result.data.household.id)}/administration`}>
             Administrera tillgång
           </Link>
         </p>
       )}
-      <HouseholdMap key={result.data.household.id} householdId={result.data.household.id} />
-      <p>
+      <HouseholdMap
+        key={`${result.data.household.id}:${content.data.contentVersion}`}
+        householdId={result.data.household.id}
+        active={active}
+      />
+      <p hidden={!active}>
         <Link to="/assistants">Assistentanslutningar</Link>
       </p>
     </section>
@@ -881,6 +943,7 @@ export function App() {
         {data?.status === 'forbidden' &&
           location.pathname !== '/login-methods' &&
           location.pathname !== '/costs' && <Forbidden />}
+        {data?.status === 'ready' && <HouseholdWork key={data.user.id} onSessionExpired={reload} />}
         {data &&
           location.pathname !== '/login-methods' &&
           location.pathname !== '/costs' &&
@@ -898,7 +961,7 @@ export function App() {
                   )
                 }
               />
-              <Route path="/households/:id" element={<HouseholdPage onSessionExpired={reload} />} />
+              <Route path="/households/:id" element={null} />
               <Route
                 path="/households/:id/administration"
                 element={<AdministrationPage userId={data.user.id} onReload={reload} />}
