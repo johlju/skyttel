@@ -15,11 +15,17 @@ eller den kontrollerade miljön nedan, aldrig verkliga hushållsuppgifter.
    [separat provdatabas](../development/devcontainer.md#disposable-local-database).
    Skapa hushållet och ge Robin tillgång enligt
    [inbjudningsguiden](../user-guide/access.md#bjud-in-en-skyttel-användare).
-2. För samtalsfallen kan den kontrollerade miljön i
-   [röstfallens förberedelse](voice-assistant.md#allmän-förberedelse)
-   användas. Den ersätter taltransporten och provar inte fysiskt ljud.
-   Börja med tomt utkast. Välj medgivandena och **Starta textassistenten**,
-   sedan **Starta röst** när ett fall kräver samtal.
+2. För samtalsfallen används den kontrollerade
+   [kostnadsmiljön](costs.md#controlled-cost-fixture): den har både två
+   identiteter, automatiska textsvar och tyst taltransport. Följ dess
+   start- och stoppanvisningar. Logga in som Alex med Google och skapa
+   ett tomt hushåll. Kör `text known` i startterminalen. För ARBETE-03,
+   kör `identity robin`, logga in med Microsoft i en separat profil och
+   bjud in Robins ID från Alex profil. Acceptera som Robin; behåll rollen
+   medlem. Befintliga sessioner påverkas inte av identitetsvalet.
+   Välj medgivandena och **Starta textassistenten**, sedan **Starta röst**
+   när ett fall kräver samtal. Miljön ersätter taltransporten och provar
+   inte fysiskt ljud.
 3. Börja varje fall med en ny provinstallation eller ett tomt utkast utan
    pågående sparande. Behåll fliken och databasen under varje fall.
 4. Prova ARBETE-01 på dator och mobil. Använd även tangentbord och
@@ -75,8 +81,9 @@ end on logout”.
 
 **Steg:**
 
-1. Skicka en textfråga om cykeln och invänta svaret. Skriv ett nytt svar
-   utan att skicka det.
+1. Skicka en textfråga om cykeln. Den kontrollerade miljön svarar automatiskt
+   **Det kontrollerade kostnadsprovet är klart.** Anteckna svaret och skriv
+   ett nytt svar utan att skicka det.
 2. Besök **Inloggningssätt**. Kontrollera att mikrofonen är på. Välj
    **Pausa mikrofon** och återgå med **Till startsidan**.
 3. Kontrollera samtalets tidigare texter, det oskickade svaret och pausläget.

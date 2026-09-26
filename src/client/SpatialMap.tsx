@@ -114,7 +114,7 @@ export function SpatialMap({
   }
   useEffect(() => {
     if (menuObject && active) menu.current?.showModal();
-    else menu.current?.close();
+    else if (menu.current?.open) menu.current.close();
   }, [menuObject, active]);
   useEffect(() => () => cancelHold(), [cancelHold]);
   const canvas = useRef<HTMLCanvasElement>(null);
