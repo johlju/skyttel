@@ -139,6 +139,15 @@ test('ACCESS-18: the chosen map theme also applies when returning to login', asy
       'color',
       'rgb(237, 242, 249)',
     );
+    for (const path of ['/costs', '/login-methods']) {
+      await page.goto(`${installation.origin}${path}`);
+      await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toHaveCSS(
+        'color',
+        'rgb(237, 242, 249)',
+      );
+      await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+      await expect(page.getByRole('button', { name: 'Fortsätt till Google' })).toBeFocused();
+    }
   } finally {
     await installation.close();
   }

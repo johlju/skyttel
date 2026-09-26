@@ -991,9 +991,12 @@ export function App() {
   }
   const mapActive =
     data?.status === 'ready' && Boolean(matchPath('/households/:id', location.pathname));
+  const accessGate =
+    data?.status === 'anonymous' ||
+    (data && data.status !== 'ready' && !['/costs', '/login-methods'].includes(location.pathname));
   return (
     <div
-      className={`app-shell${mapActive ? ' has-workspace' : ''}${data && data.status !== 'ready' && !['/costs', '/login-methods'].includes(location.pathname) ? ' access-shell' : ''}`}
+      className={`app-shell${mapActive ? ' has-workspace' : ''}${accessGate ? ' access-shell' : ''}`}
       data-theme={theme.theme}
     >
       <a className="skip-link" href="#main">
