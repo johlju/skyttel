@@ -29,7 +29,8 @@ test('SPAR-01: find a committed save after losing its response and reopening on 
     await expect(page.getByRole('alert')).toContainText('Utfallet är okänt');
     await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Kasta hela utkastet' })).toBeDisabled();
-    await page.close();
+    // Retire the original client's request connections before restarting the fixture.
+    await page.context().close();
     await installation.restart();
 
     await signIn(recovered.request, installation.origin);
