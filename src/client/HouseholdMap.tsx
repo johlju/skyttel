@@ -85,12 +85,29 @@ async function readOperations(path: string, householdId: string, current: MapSta
 export function HouseholdMap({
   householdId,
   active = true,
+  contentVersion,
+  onContentReplaced,
 }: {
   householdId: string;
   active?: boolean;
+  contentVersion?: number;
+  onContentReplaced?: () => void;
 }) {
   const path = `/api/households/${encodeURIComponent(householdId)}/map`;
   const [state, setState] = useState<MapState | null>(null);
+  const initialContentVersion = useRef<number | null>(null);
+  const loadedContentVersion = state?.contentVersion;
+  useEffect(() => {
+    if (loadedContentVersion === undefined) return;
+    initialContentVersion.current ??= loadedContentVersion;
+    // The shared map can open before personal positions arrive. Either read
+    // can discover a replacement, which ends this entire work lifetime.
+    if (
+      loadedContentVersion > initialContentVersion.current ||
+      (contentVersion ?? 0) > initialContentVersion.current
+    )
+      onContentReplaced?.();
+  }, [loadedContentVersion, contentVersion, onContentReplaced]);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [mergeGeneration, setMergeGeneration] = useState(1);
   const [editor, setEditor] = useState<Editor | null>(null);
