@@ -196,3 +196,30 @@ hovered in both themes”.
 - Vanliga knappar och primära knappar har tydligt läsbar text i båda teman,
   även när pekaren ligger över dem.
 - Pekarrörelsen utför ingen åtgärd och ändrar inga hushållsuppgifter.
+
+### INST-07: bakåt med tangentbord från mobilprofilen
+
+**Syfte:** Nå verktygen utan att fokus döljs bakom profilen.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Kartan är öppen i mobilvy. Upprepa vid 390 och 320 pixlar.
+
+**Integrationstest:**
+[settings-profile.spec.ts](../../tests/integration/settings-profile.spec.ts),
+testfallen “INST-07: reverse keyboard navigation exposes covered profile
+tools at 390px” och “INST-07: reverse keyboard navigation exposes covered
+profile tools at 320px”.
+
+**Steg:**
+
+1. Öppna Lista och ett nytt objekt. Skriv Behåll mobiltexten i namnfältet.
+2. Välj **Visa verktygens namn** och **Din profil**.
+3. Från profilrubriken: tryck Shift+Tab två gånger.
+4. Kontrollera fokus på **Dölj verktygens namn** och tryck Enter.
+
+**Förväntat resultat:**
+
+- Profilen stängs när den annars skulle täcka det fokuserade verktyget.
+- Verktygets fokus syns och knappen går att använda med tangentbord.
+- Objektets oskickade namn finns kvar när verktygen fällts ihop.

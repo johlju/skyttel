@@ -61,12 +61,14 @@ export function WorkspaceTools({
   useEffect(() => {
     if (!utility) return;
     const dismissWhenLeaving = (event: FocusEvent) => {
-      if (
-        event.target instanceof Node &&
-        !utilityPanel.current?.contains(event.target) &&
-        !tools.current?.contains(event.target)
-      )
-        setUtility(null);
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || utilityPanel.current?.contains(target)) return;
+      if (tools.current?.contains(target)) {
+        const box = target.getBoundingClientRect();
+        const covering = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        if (!utilityPanel.current?.contains(covering)) return;
+      }
+      setUtility(null);
     };
     document.addEventListener('focusin', dismissWhenLeaving);
     return () => document.removeEventListener('focusin', dismissWhenLeaving);

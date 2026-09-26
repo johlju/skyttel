@@ -54,8 +54,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 ## Områden
 
 - [Inställningar och profil](settings-profile.md): helsida, mobilnavigation,
-  återgång med fokus, synligt tangentbordsfokus, läsbara teman och
-  typdefinitioner i kartans samlade utkast.
+  återgång med fokus, synligt tangentbordsfokus i båda riktningar, läsbara
+  teman och typdefinitioner i kartans samlade utkast.
 
 - [Fria paneler](workspace-panels.md): flera objekt och samtal, placering,
   mobil panelväljare, återöppning av nya objekt och bevarade samband och typer.
