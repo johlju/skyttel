@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, openMap, openWorkspace, signIn } from '../support/client.js';
+import {
+  createHousehold,
+  openConversation,
+  openMap,
+  openWorkspace,
+  signIn,
+} from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -73,7 +79,7 @@ for (const viewport of [
           ).ok(),
         ).toBe(true);
         await page.goto(installation.origin);
-        await openWorkspace(page);
+        await openConversation(page);
         const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
         await panel.getByLabel(/Jag tillåter att OpenAI/).check();
         await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
@@ -97,13 +103,15 @@ for (const viewport of [
             );
             const bounds = surface?.getBoundingClientRect();
             const box = node?.getBoundingClientRect();
-            const inspector = document.querySelector('.map-inspector');
-            const details = inspector?.getBoundingClientRect();
+            const inspector = document.querySelector(
+              `.map-inspector[data-selection-kind="${CSS.escape(target.kind)}"][data-selection-id="${CSS.escape(target.id)}"]`,
+            );
+            const detailSurface = inspector?.closest('.workspace-panel-body') ?? inspector;
+            const details = detailSurface?.getBoundingClientRect();
             const summary = inspector?.querySelector('p');
             const summaryBounds = summary?.getBoundingClientRect();
-            const notice = document
-              .querySelector('.assistant-work-indicator.is-working')
-              ?.getBoundingClientRect();
+            const working = document.querySelector('.assistant-work-indicator.is-working');
+            const notice = working?.checkVisibility() ? working.getBoundingClientRect() : undefined;
             const visibleBottom = Math.min(innerHeight, notice?.top ?? innerHeight);
             const unobscured = (element: Element | null | undefined, rect: DOMRect | undefined) =>
               Boolean(
@@ -150,6 +158,7 @@ for (const viewport of [
                 details &&
                   summaryBounds &&
                   inspector?.checkVisibility() &&
+                  detailSurface?.checkVisibility() &&
                   inspector.getAttribute('data-selection-id') === target.id &&
                   details.width > 0 &&
                   details.height > 0 &&
@@ -190,12 +199,13 @@ for (const viewport of [
           await route.continue();
         });
         const send = async (text: string) => {
+          await openConversation(page);
           await panel.getByLabel('Meddelande till textassistenten').fill(text);
           await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
         };
         await openWorkspace(page);
         await send('Visa Lo i kartan.');
-        await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');
+        await expect.poll(() => acknowledgements.length).toBe(1);
         expect(acknowledgements[0]).toMatchObject({
           displayed: true,
           kind: 'object',
@@ -204,9 +214,11 @@ for (const viewport of [
           endpointsVisible: true,
           visible: true,
         });
-        await expect(page.getByRole('region', { name: 'Val och redigering' })).toContainText(
+        await expect(page.getByRole('region', { name: 'Lo Exempel', exact: true })).toContainText(
           'Påhittad uppgift',
         );
+        await openConversation(page);
+        await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');
         await openMap(page);
         await page.getByText('Navigera rymden', { exact: true }).click();
         for (let index = 0; index < 16; index++)
@@ -214,7 +226,6 @@ for (const viewport of [
         await openWorkspace(page);
         await send('Visa sambandet mellan Lo och Molnmusik.');
         await expect.poll(() => acknowledgements.length).toBe(2);
-        await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');
         expect(acknowledgements[1]).toMatchObject({
           displayed: true,
           kind: 'relationship',
@@ -228,6 +239,8 @@ for (const viewport of [
         await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
         await expect(page.getByLabel('Till objekt', { exact: true })).toHaveValue('music');
         await page.getByLabel('Till objekt', { exact: true }).selectOption('lo');
+        await openConversation(page);
+        await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');
         await send('Visa Lo igen.');
         await expect.poll(() => acknowledgements.length).toBe(3);
         expect(acknowledgements[2].displayed).toBe(false);

@@ -49,7 +49,7 @@ relationship reachable”.
 
 **Steg:**
 
-1. Öppna **Samlad vy**. Läs beskedet om färre etiketter och kontrollera
+1. Öppna **Lista**. Läs beskedet om färre etiketter och kontrollera
    att sökning, listor och navigering är tillgängliga.
 2. Bläddra genom objektsidorna och sambandssidorna med sidvalet. Kontrollera
    räknaren och att den sista sidan nås. Välj **Provobjekt 499** genom sökning
@@ -58,8 +58,9 @@ relationship reachable”.
    att det valda objektet återfinns. Välj **Visa objektets kopplingar**
    och läs dess direkta samband.
 4. Skriv **Oskickad text i den täta kartan** i **Beskrivning**. Välj
-   **Visa hela rymden**, växla mellan lista och samlad vy och kontrollera
-   att texten finns kvar. Lägg den i utkastet och granska hela förslaget.
+   **Visa hela rymden**, öppna Lista och välj objektets panel igen med
+   **Öppna paneler**. Kontrollera att texten finns kvar. Lägg den i utkastet
+   och granska hela förslaget.
 5. Spara hela utkastet. Invänta kvittot, ladda om och sök objektet igen.
    Kontrollera den sparade beskrivningen och historiken. Kontrollera också
    att personliga placeringar finns kvar om du ordnade några före provet.

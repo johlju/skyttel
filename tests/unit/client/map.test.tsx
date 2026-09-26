@@ -99,6 +99,36 @@ async function save() {
   await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Sparat:'));
 }
 
+test('closed new objects can be reopened individually and staged together without losing text', async () => {
+  await open();
+  for (const name of ['Cykeln', 'Bilen']) {
+    await userEvent.click(screen.getByRole('button', { name: 'Nytt objekt' }));
+    const panel = within(screen.getByRole('region', { name: 'Nytt objekt' }));
+    await userEvent.type(panel.getByLabelText('Objektets namn'), name);
+    await userEvent.type(panel.getByLabelText('Beskrivning'), `Oskickat om ${name}`);
+    await userEvent.click(screen.getByRole('button', { name: 'Stäng Nytt objekt' }));
+  }
+  for (const name of ['Cykeln', 'Bilen']) {
+    await userEvent.click(screen.getByRole('button', { name: `Fortsätt: ${name}` }));
+    const panel = within(screen.getByRole('region', { name: 'Nytt objekt' }));
+    expect((panel.getByLabelText('Objektets namn') as HTMLInputElement).value).toBe(name);
+    expect((panel.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
+      `Oskickat om ${name}`,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: `Fortsätt: ${name}` })).toBeNull(),
+    );
+  }
+  await save();
+  for (const name of ['Cykeln', 'Bilen']) {
+    await userEvent.click(screen.getByRole('button', { name }));
+    expect(screen.getByRole('region', { name }).textContent).toContain(
+      `Beskrivning: Oskickat om ${name}`,
+    );
+  }
+});
+
 test('workspace theme persists and System follows device preference changes', async () => {
   // jsdom has no device preference; keep its external browser event boundary.
   // YTA-02 also exercises this flow with Chromium's actual media preference.
@@ -1064,7 +1094,7 @@ test('view changes retain unsent object text and filters can clear without chang
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.clear(screen.getByLabelText('Beskrivning'));
   await userEvent.type(screen.getByLabelText('Beskrivning'), 'Oskickad vytext');
-  await userEvent.click(screen.getByRole('button', { name: 'Samlad vy' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
   await userEvent.click(screen.getByRole('button', { name: 'Stäng arbetsytan' }));
   await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
   expect((screen.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
@@ -1072,6 +1102,10 @@ test('view changes retain unsent object text and filters can clear without chang
   );
   await userEvent.click(screen.getByRole('button', { name: 'Stäng arbetsytan' }));
   await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+  await userEvent.selectOptions(
+    screen.getByLabelText(/^Öppna paneler/),
+    screen.getByRole('option', { name: 'Lo Rymdprov' }),
+  );
   await userEvent.click(screen.getByRole('button', { name: 'Stäng utan att skicka texten' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera Lo Rymdprov' }));
   await userEvent.click(screen.getByRole('button', { name: 'Visa objektets kopplingar' }));

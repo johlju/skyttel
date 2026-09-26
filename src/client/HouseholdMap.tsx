@@ -6,7 +6,6 @@ import {
   resolvedRelationshipType,
 } from '../shared/draft-conflicts.js';
 import type {
-  CustomValues,
   MapDraft,
   MapObject,
   MapRelationship,
@@ -26,21 +25,17 @@ import {
 import { mergeFor } from '../shared/object-merge.js';
 import type { MapSelection } from '../shared/text-assistant.js';
 import { buildHeader, notifyOutdatedClient } from './build-guard.js';
-import { FinancialFactsDetails, FinancialFactsEditor } from './FinancialFacts.js';
-import { LifecycleDetails, LifecycleEditor, LifecycleStatus } from './Lifecycle.js';
+import { FinancialFactsDetails } from './FinancialFacts.js';
+import { LifecycleDetails, LifecycleStatus } from './Lifecycle.js';
 import { MapHistory } from './MapHistory.js';
 import { type MapRevealRequest, waitForMapDisplay } from './map-display.js';
 import { MapRequestError, request } from './map-request.js';
 import { MergeSourceDetails, ObjectMerge } from './ObjectMerge.js';
 import { ObjectRemovalNotice } from './ObjectRemovalNotice.js';
-import {
-  CustomFieldsDetails,
-  CustomFieldsEditor,
-  ObjectTypeDetails,
-  ObjectTypeEditor,
-} from './ObjectTypes.js';
+import { CustomFieldsDetails, ObjectTypeDetails, ObjectTypeEditor } from './ObjectTypes.js';
+import { type ObjectEditor, ObjectWork } from './ObjectWork.js';
 import { PagedList } from './PagedList.js';
-import { ProfileImage, ProfileImageEditor } from './ProfileImage.js';
+import { ProfileImage } from './ProfileImage.js';
 import { RelationshipEditor, relationshipLabel } from './RelationshipEditor.js';
 import { RelationshipTypeDetails, RelationshipTypeEditor } from './RelationshipTypes.js';
 import {
@@ -54,21 +49,12 @@ import {
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
 import { TextAssistant } from './TextAssistant.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
+import { WorkspacePanels } from './WorkspacePanels.js';
 import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
 import './workspace.css';
+import './workspace-panels.css';
 import { usePersonalView } from './use-personal-view.js';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
-
-type Editor = {
-  id: string;
-  version: number;
-  contentVersion: number;
-  baseRevision: number | null;
-  typeRevision: number;
-  value: ObjectValue;
-  displacedFields?: { id: string; type: ObjectType; values: CustomValues }[];
-  fieldsHandled?: boolean;
-};
 
 function checkOperations(operations: SaveOperation[], householdId: string, current: MapState) {
   for (const operation of operations)
@@ -122,7 +108,38 @@ export function HouseholdMap({
   }, [loadedContentVersion, contentVersion, onContentReplaced]);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [mergeGeneration, setMergeGeneration] = useState(1);
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [objectPanels, setObjectPanels] = useState<
+    {
+      id: string;
+      title: string;
+      initial: ObjectEditor;
+      editing: number;
+      newObject: boolean;
+      unsentName: string;
+    }[]
+  >([]);
+  const [objectDirty, setObjectDirty] = useState<Record<string, boolean>>({});
+  const [openPanels, setOpenPanels] = useState<string[]>([]);
+  const [activePanel, setActivePanel] = useState<string | null>(null);
+  const [panelFocusRequest, setPanelFocusRequest] = useState(0);
+  const currentPanel = useRef(activePanel);
+  currentPanel.current = activePanel;
+  function openPanel(id: string) {
+    setOpenPanels((previous) => (previous.includes(id) ? previous : [...previous, id]));
+    setActivePanel(id);
+    setPanelFocusRequest((previous) => previous + 1);
+    setPresentation('combined');
+    setRevealRequest(undefined);
+  }
+  function focusTools() {
+    workspace.current
+      ?.querySelector<HTMLButtonElement>('.workspace-tools button[aria-label="Lista"]')
+      ?.focus();
+  }
+  function closePanel(id: string) {
+    setOpenPanels((previous) => previous.filter((entry) => entry !== id));
+  }
+
   const [edgeEditor, setEdgeEditor] = useState<{
     id: string;
     version: number;
@@ -155,7 +172,7 @@ export function HouseholdMap({
   const listModeButton = useRef<HTMLButtonElement>(null);
   const workTrigger = useRef<HTMLElement | null>(null);
   const [guidance, setGuidance] = useState(true);
-  const workOpen = presentation !== 'map' || detailsOpen || editorOpen;
+  const workOpen = openPanels.length > 0 && (presentation !== 'map' || detailsOpen || editorOpen);
   const [narrow, setNarrow] = useState(() => window.innerWidth <= 700);
   useEffect(() => {
     const resize = () => setNarrow(window.innerWidth <= 700);
@@ -166,19 +183,8 @@ export function HouseholdMap({
   function openWork(target: WorkspaceTarget) {
     workTrigger.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setPresentation('combined');
     setFiltersOpen(true);
-    requestAnimationFrame(() => {
-      const selector =
-        target === 'search'
-          ? '#object-search'
-          : target === 'conversation' || target === 'voice'
-            ? '#text-assistant-message, .assistant-bar input, .assistant-bar button'
-            : target === 'draft'
-              ? '#draft-title'
-              : '.map-content button';
-      workspace.current?.querySelector<HTMLElement>(selector)?.focus();
-    });
+    openPanel(target === 'conversation' || target === 'voice' ? 'conversation' : 'work');
   }
   function openGuidedWork(target: WorkspaceTarget) {
     setGuidance(false);
@@ -200,7 +206,8 @@ export function HouseholdMap({
         ?.querySelector<HTMLButtonElement>('.workspace-tools button[aria-label="Lista"]')
         ?.focus();
   }
-  const [dirty, setDirty] = useState(false);
+  const [legacyDirty, setDirty] = useState(false);
+  const dirty = legacyDirty || Object.values(objectDirty).some(Boolean);
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -213,19 +220,26 @@ export function HouseholdMap({
   const [blocked, setBlocked] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  useLayoutEffect(() => {
+    const measure = () => {
+      const feedback = workspace.current?.querySelector<HTMLElement>('.workspace-feedback');
+      workspace.current?.style.setProperty('--feedback-height', `${feedback?.offsetHeight ?? 0}px`);
+    };
+    measure();
+    const feedback = workspace.current?.querySelector<HTMLElement>('.workspace-feedback');
+    const observer = new ResizeObserver(measure);
+    if (feedback) observer.observe(feedback);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     if (!state && error) workspace.current?.focus();
   }, [state, error]);
   const saveAttempt = useRef<SaveAttempt | null>(null);
   const [operations, setOperations] = useState<SaveOperation[]>([]);
-  const nameInput = useRef<HTMLInputElement>(null);
   const hasMap = state !== null;
   useLayoutEffect(() => {
     if (active && editorOpen && hasMap) {
-      (
-        nameInput.current ??
-        editorDialog.current?.querySelector<HTMLSelectElement>('#relationship-source')
-      )?.focus();
+      editorDialog.current?.querySelector<HTMLSelectElement>('#relationship-source')?.focus();
     }
   }, [active, editorOpen, hasMap]);
   useEffect(() => {
@@ -259,7 +273,6 @@ export function HouseholdMap({
     };
   }, [active, workOpen]);
   const newButton = useRef<HTMLButtonElement>(null);
-  const focusAfterClose = useRef(false);
   const [load, setLoad] = useState(0);
 
   const loseAccess = useCallback(() => {
@@ -273,9 +286,12 @@ export function HouseholdMap({
     setQuery('');
     setTypeFilter('');
     setState(null);
+    setObjectPanels([]);
+    setObjectDirty({});
+    setOpenPanels([]);
     setMergeOpen(false);
     setOperations([]);
-    setEditor(null);
+
     setEdgeEditor(null);
     setTypeEditor(null);
     setEdgeTypeEditor(null);
@@ -355,14 +371,9 @@ export function HouseholdMap({
 
   useEffect(() => {
     if (!active) return;
-    if (editor?.id) nameInput.current?.focus();
-    else if (edgeEditor?.id)
+    if (edgeEditor?.id)
       editorDialog.current?.querySelector<HTMLSelectElement>('#relationship-source')?.focus();
-    else if (focusAfterClose.current) {
-      focusAfterClose.current = false;
-      newButton.current?.focus();
-    }
-  }, [editor?.id, edgeEditor?.id, active]);
+  }, [edgeEditor?.id, active]);
 
   async function save(attempt: SaveAttempt, recover = false) {
     if (!state || pending) return;
@@ -412,7 +423,6 @@ export function HouseholdMap({
       // Recovery can happen while an older form has unsent text. Keep that text
       // and let its draft-version check prevent it from overwriting newer work.
       if (!dirty) {
-        setEditor(null);
         setEdgeEditor(null);
         setTypeEditor(null);
         setEdgeTypeEditor(null);
@@ -454,8 +464,8 @@ export function HouseholdMap({
     }
   }
 
-  async function changeImage(file: File | null) {
-    if (!state || !editor || pending || dirty || blocked) return;
+  async function changeImage(editor: ObjectEditor, file: File | null) {
+    if (!state || pending || blocked) return;
     setPending(true);
     setStatus('');
     setError('');
@@ -485,8 +495,9 @@ export function HouseholdMap({
       const value = draft.changes.find((change) => change.id === editor.id)?.after;
       if (!value) throw new Error('invalid_image_result');
       setState({ ...state, draft });
-      setEditor({ ...editor, value, version: draft.version });
+
       setStatus('Bildförslaget finns i ditt privata utkast. Kartan är inte ändrad.');
+      return { ...editor, value, version: draft.version };
     } catch (failure) {
       if (failure instanceof MapRequestError && [401, 403].includes(failure.status)) loseAccess();
       else if (failure instanceof MapRequestError && failure.status === 413)
@@ -522,7 +533,7 @@ export function HouseholdMap({
       | 'discard-change',
     body: unknown,
   ) {
-    if (!state || pending || blocked) return;
+    if (!state || pending || blocked) return false;
     setPending(true);
     setError('');
     setStatus('');
@@ -563,13 +574,14 @@ export function HouseholdMap({
         );
       }
       setMergeOpen(false);
-      setEditor(null);
+
       setEdgeEditor(null);
       setTypeEditor(null);
       setEdgeTypeEditor(null);
       setDirty(false);
       setBlocked(false);
       newButton.current?.focus();
+      return true;
     } catch (failure) {
       if (
         failure instanceof MapRequestError &&
@@ -589,7 +601,7 @@ export function HouseholdMap({
         ].includes(failure.code)
       ) {
         setError(rejectionMessage(failure.code));
-        return;
+        return false;
       }
       setBlocked(true);
       if (
@@ -606,6 +618,7 @@ export function HouseholdMap({
     } finally {
       setPending(false);
     }
+    return false;
   }
 
   const effectiveTypes = useMemo(
@@ -720,21 +733,10 @@ export function HouseholdMap({
     );
   }
 
-  function edit(object?: MapObject) {
-    if (!state) return;
-    if (presentation === 'map') setEditorOpen(true);
-    else setDetailsOpen(true);
-    if (object) setSelection({ kind: 'object', id: object.id });
-    if (object && editor?.id === object.id) {
-      nameInput.current?.focus();
-      nameInput.current?.scrollIntoView({ block: 'nearest' });
-      return;
-    }
-    const proposal = state.draft.changes.find((change) => change.id === object?.id);
-    setTypeEditor(null);
-    setEdgeTypeEditor(null);
-    setEdgeEditor(null);
-    setEditor({
+  function objectEditor(object?: MapObject): ObjectEditor {
+    if (!state) throw new Error('map_not_loaded');
+    const proposal = state?.draft.changes.find((change) => change.id === object?.id);
+    return {
       typeRevision:
         effectiveTypes.find(
           (type) =>
@@ -746,8 +748,31 @@ export function HouseholdMap({
       baseRevision: proposal ? (proposal.before?.revision ?? null) : (object?.revision ?? null),
       value: proposal?.after ??
         object ?? { typeId: effectiveTypes[0]?.id ?? '', name: '', description: '' },
-    });
-    setDirty(false);
+    };
+  }
+  function edit(object?: MapObject, editing = true) {
+    if (!state) return;
+    const initial = objectEditor(object);
+    const id = initial.id;
+    setObjectPanels((previous) =>
+      previous.some((panel) => panel.id === id)
+        ? previous.map((panel) =>
+            panel.id === id ? { ...panel, editing: panel.editing + (editing ? 1 : 0) } : panel,
+          )
+        : [
+            ...previous,
+            {
+              id,
+              initial,
+              title: object?.name ?? 'Nytt objekt',
+              editing: editing ? 1 : 0,
+              newObject: !object,
+              unsentName: '',
+            },
+          ],
+    );
+    if (object) setSelection({ kind: 'object', id });
+    openPanel(id);
   }
   const { displayed, displayedEdges, visibleObjects, visibleEdges } = useMemo(() => {
     const displayed = state
@@ -832,8 +857,8 @@ export function HouseholdMap({
     if (presentation === 'map') setEditorOpen(true);
     else setDetailsOpen(true);
     if (edge) setSelection({ kind: 'relationship', id: edge.id, previous });
+    if (legacyDirty) return;
     if (previous) {
-      setEditor(null);
       setEdgeEditor(null);
       setTypeEditor(null);
       setEdgeTypeEditor(null);
@@ -845,7 +870,7 @@ export function HouseholdMap({
       return;
     }
     const proposal = state.draft.relationships?.find((change) => change.id === edge?.id);
-    setEditor(null);
+
     setTypeEditor(null);
     setEdgeTypeEditor(null);
     setEdgeEditor({
@@ -860,14 +885,14 @@ export function HouseholdMap({
   }
   function selectObject(object: MapObject) {
     setSelection({ kind: 'object', id: object.id });
-    if (editor?.id !== object.id) setEditor(null);
+    if (legacyDirty) return;
     setEdgeEditor(null);
     setTypeEditor(null);
     setEdgeTypeEditor(null);
   }
   function selectRelationship(edge: MapRelationship, previous = false) {
     setSelection({ kind: 'relationship', id: edge.id, previous });
-    setEditor(null);
+    if (legacyDirty) return;
     if (previous || edgeEditor?.id !== edge.id) setEdgeEditor(null);
     setTypeEditor(null);
     setEdgeTypeEditor(null);
@@ -901,8 +926,11 @@ export function HouseholdMap({
     setTypeFilter('');
     setFocusId(null);
     setPresentation('combined');
-    if (object) selectObject(object);
-    else if (edge) selectRelationship(edge);
+    if (object) edit(object, false);
+    else if (edge) {
+      selectRelationship(edge);
+      openPanel('work');
+    }
     setRevealRequest(request);
     try {
       return await waitForMapDisplay(workspace.current, request, target, abort.signal);
@@ -1082,7 +1110,7 @@ export function HouseholdMap({
             objects={visibleObjects}
             relationships={visibleEdges}
             selection={selection}
-            disabled={pending || dirty || blocked}
+            disabled={pending || blocked}
             onSelect={selectObject}
             onEdit={edit}
             onSelectRelationship={selectRelationship}
@@ -1099,10 +1127,124 @@ export function HouseholdMap({
       {state && (
         <TextAssistant
           active={active}
+          conversationVisible={
+            workOpen &&
+            openPanels.includes('conversation') &&
+            (!narrow || activePanel === 'conversation') &&
+            !revealRequest
+          }
           householdId={householdId}
           onMapChange={() => setLoad((value) => value + 1)}
           onAccessLost={loseAccess}
           onSelectItem={revealAssistantItem}
+          renderWorkspace={(work, conversation) => (
+            <WorkspacePanels
+              hidden={!active || !workOpen}
+              activeId={activePanel}
+              focusRequest={panelFocusRequest}
+              onActivate={(id) => {
+                setActivePanel(id);
+                if (id !== activePanel) setRevealRequest(undefined);
+              }}
+              focused={Boolean(revealRequest)}
+              onClose={closePanel}
+              onEmpty={focusTools}
+              windows={[
+                {
+                  id: 'work',
+                  title: 'Lista och utkast',
+                  open: openPanels.includes('work'),
+                  content: work,
+                },
+                {
+                  id: 'conversation',
+                  title: 'Samtal och text',
+                  open: openPanels.includes('conversation'),
+                  content: conversation,
+                },
+                ...objectPanels.map((panel) => {
+                  const selectedObject = displayed.get(panel.id);
+                  return {
+                    id: panel.id,
+                    title: selectedObject?.name ?? panel.title,
+                    open: openPanels.includes(panel.id),
+                    content: (
+                      <ObjectWork
+                        initial={
+                          selectedObject
+                            ? objectEditor(selectedObject)
+                            : { ...panel.initial, version: state.draft.version }
+                        }
+                        object={selectedObject}
+                        state={state}
+                        effectiveTypes={effectiveTypes}
+                        householdId={householdId}
+                        pending={pending}
+                        blocked={blocked || legacyDirty}
+                        editing={panel.editing}
+                        onDirty={(value) =>
+                          setObjectDirty((previous) => ({ ...previous, [panel.id]: value }))
+                        }
+                        onName={(name) => {
+                          if (!panel.newObject) return;
+                          setObjectPanels((previous) =>
+                            previous.map((entry) =>
+                              entry.id === panel.id ? { ...entry, unsentName: name } : entry,
+                            ),
+                          );
+                        }}
+                        onDone={() => {
+                          closePanel(panel.id);
+                          setObjectPanels((previous) =>
+                            previous.filter((entry) => entry.id !== panel.id),
+                          );
+                          openPanel('work');
+                          requestAnimationFrame(() => {
+                            if (currentPanel.current === 'work') newButton.current?.focus();
+                          });
+                        }}
+                        action={(body) => action('draft', body)}
+                        changeImage={changeImage}
+                        details={details(selectedObject ?? panel.initial.value)}
+                        relationships={
+                          selectedObject &&
+                          effectiveState && (
+                            <section aria-label={`Samband för ${selectedObject.name}`}>
+                              <h2>Samband för {selectedObject.name}</h2>
+                              <ul>
+                                {[...displayedEdges.values()]
+                                  .filter(
+                                    (edge) =>
+                                      edge.sourceId === selectedObject.id ||
+                                      edge.targetId === selectedObject.id,
+                                  )
+                                  .map((edge) => (
+                                    <li key={edge.id}>
+                                      <button
+                                        type="button"
+                                        disabled={pending || dirty || blocked}
+                                        onClick={() => selectRelationship(edge)}
+                                      >
+                                        {relationshipLabel(
+                                          edge,
+                                          effectiveState,
+                                          displayed,
+                                          selectedObject.id,
+                                        )}
+                                      </button>
+                                    </li>
+                                  ))}
+                              </ul>
+                            </section>
+                          )
+                        }
+                      />
+                    ),
+                  };
+                }),
+              ]}
+            />
+          )}
           inspector={
             <dialog
               ref={editorDialog}
@@ -1114,44 +1256,27 @@ export function HouseholdMap({
               <section
                 className="map-inspector"
                 aria-label="Val och redigering"
-                data-selection-kind={
-                  selectedObject ? 'object' : selectedEdge ? 'relationship' : undefined
-                }
+                data-selection-kind={selectedEdge ? 'relationship' : undefined}
                 data-selection-id={
-                  !editor && !edgeEditor
-                    ? (selectedObject?.id ?? selectedEdge?.id)
-                    : editor?.version === state.draft.version &&
-                        editor.contentVersion === state.contentVersion
-                      ? editor.id
-                      : edgeEditor?.version === state.draft.version &&
-                          edgeEditor.contentVersion === state.contentVersion
-                        ? edgeEditor.id
-                        : undefined
+                  !edgeEditor
+                    ? selectedEdge?.id
+                    : edgeEditor.version === state.draft.version &&
+                        edgeEditor.contentVersion === state.contentVersion
+                      ? edgeEditor.id
+                      : undefined
                 }
               >
                 <h3>Val och redigering</h3>
-                {(editor || edgeEditor) && (
+                {edgeEditor && (
                   <p className="muted">
                     Skriv inte fullständiga konto- eller kortnummer, lösenord, pinkoder,
                     säkerhetskoder eller återställningskoder.
                   </p>
                 )}
-                {!editor && !edgeEditor && !selection && (
+                {!edgeEditor && !selection && (
                   <p className="muted">
                     Välj ett objekt eller samband för att se uppgifter och samband.
                   </p>
-                )}
-                {!editor && selectedObject && (
-                  <>
-                    {details(selectedObject)}
-                    <button
-                      type="button"
-                      disabled={pending || blocked}
-                      onClick={() => edit(selectedObject)}
-                    >
-                      Redigera valt objekt
-                    </button>
-                  </>
                 )}
                 {!edgeEditor && selectedEdge && (
                   <>
@@ -1165,258 +1290,6 @@ export function HouseholdMap({
                       Redigera valt samband
                     </button>
                   </>
-                )}
-                {editor && (
-                  <form
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      if (editor.displacedFields?.length && !editor.fieldsHandled) return;
-                      void action('draft', editor);
-                    }}
-                  >
-                    <fieldset disabled={pending || blocked}>
-                      <legend>Objektets detaljer</legend>
-                      <ProfileImageEditor
-                        householdId={householdId}
-                        value={editor.value}
-                        disabled={
-                          pending ||
-                          blocked ||
-                          dirty ||
-                          editor.version !== state.draft.version ||
-                          !displayed.has(editor.id)
-                        }
-                        onChange={(file) => void changeImage(file)}
-                      />
-                      <label htmlFor="object-name">Objektets namn</label>
-                      <input
-                        ref={nameInput}
-                        id="object-name"
-                        required
-                        maxLength={200}
-                        value={editor.value.name}
-                        onChange={(event) => {
-                          setDirty(true);
-                          setEditor({
-                            ...editor,
-                            value: { ...editor.value, name: event.target.value },
-                          });
-                        }}
-                      />
-                      <label htmlFor="object-type">Objekttyp</label>
-                      <select
-                        id="object-type"
-                        required
-                        value={editor.value.typeId}
-                        onChange={(event) => {
-                          setDirty(true);
-                          const previousType = effectiveTypes.find(
-                            (type) => type.id === editor.value.typeId,
-                          );
-                          const values = editor.value.customValues ?? {};
-                          const displacedFields = [...(editor.displacedFields ?? [])];
-                          if (previousType && Object.keys(values).length)
-                            displacedFields.push({
-                              id: crypto.randomUUID(),
-                              type: previousType,
-                              values,
-                            });
-                          setEditor({
-                            ...editor,
-                            displacedFields,
-                            fieldsHandled: false,
-                            typeRevision:
-                              effectiveTypes.find((type) => type.id === event.target.value)
-                                ?.revision ?? 0,
-                            value: {
-                              ...editor.value,
-                              typeId: event.target.value,
-                              customValues: {},
-                            },
-                          });
-                        }}
-                      >
-                        {effectiveTypes.map((type) => (
-                          <option key={type.id} value={type.id}>
-                            {type.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p>
-                        Ett typbyte behåller objektet och alla dess samband. Den nya typens fält
-                        börjar obesvarade. Fyll själv i uppgifterna som ska gälla efter bytet.
-                      </p>
-                      {!!editor.displacedFields?.length && (
-                        <section aria-label="Tidigare fältvärden">
-                          <h3>Tidigare fältvärden</h3>
-                          {editor.displacedFields.map(({ id, type, values }) => (
-                            <div key={id}>
-                              <p>Objekttyp: {type.name}</p>
-                              <CustomFieldsDetails type={type} values={values} />
-                            </div>
-                          ))}
-                          <p>
-                            Dessa värden följer inte med till den nya typen. För över de uppgifter
-                            du vill behålla genom att fylla i de nya fälten. Tidigare sparade
-                            uppgifter finns kvar i historiken.
-                          </p>
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={editor.fieldsHandled ?? false}
-                              onChange={(event) =>
-                                setEditor({ ...editor, fieldsHandled: event.target.checked })
-                              }
-                            />
-                            Jag har hanterat tidigare fältvärden för typbytet
-                          </label>
-                        </section>
-                      )}
-                      <label htmlFor="object-identity">Objektets identitet</label>
-                      <select
-                        id="object-identity"
-                        value={editor.value.identity ?? 'identified'}
-                        onChange={(event) => {
-                          setDirty(true);
-                          const value = { ...editor.value };
-                          if (event.target.value === 'identified') delete value.identity;
-                          else value.identity = event.target.value as 'unspecified' | 'unresolved';
-                          setEditor({ ...editor, value });
-                        }}
-                      >
-                        <option value="identified">Identifierat objekt</option>
-                        <option value="unspecified">Ospecificerat objekt</option>
-                        <option value="unresolved">Obesvarad identitetsfråga</option>
-                      </select>
-                      <label htmlFor="object-description">Beskrivning</label>
-                      <textarea
-                        id="object-description"
-                        maxLength={2000}
-                        value={editor.value.description}
-                        onChange={(event) => {
-                          setDirty(true);
-                          setEditor({
-                            ...editor,
-                            value: { ...editor.value, description: event.target.value },
-                          });
-                        }}
-                      />
-                      <CustomFieldsEditor
-                        type={effectiveTypes.find((type) => type.id === editor.value.typeId)}
-                        values={editor.value.customValues}
-                        onChange={(customValues) => {
-                          setDirty(true);
-                          setEditor({ ...editor, value: { ...editor.value, customValues } });
-                        }}
-                      />
-                      <p>Texten i formuläret skickas först när du lägger den i utkastet.</p>
-                      <LifecycleEditor
-                        kind="object"
-                        value={editor.value.lifecycle}
-                        onChange={(lifecycle) => {
-                          setDirty(true);
-                          setEditor({ ...editor, value: { ...editor.value, lifecycle } });
-                        }}
-                      />
-                      <FinancialFactsEditor
-                        key={editor.id}
-                        facts={editor.value.financialFacts}
-                        onChange={(financialFacts) => {
-                          setDirty(true);
-                          const value = { ...editor.value };
-                          if (Object.keys(financialFacts).length)
-                            value.financialFacts = financialFacts;
-                          else delete value.financialFacts;
-                          setEditor({ ...editor, value });
-                        }}
-                      />
-                      {editor.version !== state.draft.version && (
-                        <p role="alert">
-                          Formuläret bygger på ett äldre utkast. Kopiera eventuell text du vill
-                          behålla, stäng formuläret och öppna objektets aktuella förslag innan du
-                          fortsätter.
-                        </p>
-                      )}
-                      <div className="access-actions">
-                        <button
-                          type="submit"
-                          disabled={
-                            editor.version !== state.draft.version ||
-                            (!!editor.displacedFields?.length && !editor.fieldsHandled)
-                          }
-                        >
-                          Lägg i mitt utkast
-                        </button>
-                        {(editor.baseRevision !== null ||
-                          state.draft.changes.some((change) => change.id === editor.id)) && (
-                          <button
-                            type="button"
-                            aria-describedby="editor-removal"
-                            disabled={dirty || editor.version !== state.draft.version}
-                            onClick={() =>
-                              void action('draft', {
-                                version: editor.version,
-                                contentVersion: editor.contentVersion,
-                                id: editor.id,
-                                baseRevision: editor.baseRevision,
-                                value: null,
-                              })
-                            }
-                          >
-                            Ta bort
-                          </button>
-                        )}
-                      </div>
-                      {(editor.baseRevision !== null ||
-                        state.draft.changes.some((change) => change.id === editor.id)) && (
-                        <ObjectRemovalNotice
-                          state={state}
-                          objectId={editor.id}
-                          id="editor-removal"
-                        />
-                      )}
-                    </fieldset>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => {
-                        focusAfterClose.current = true;
-                        setEditor(null);
-                        setDirty(false);
-                      }}
-                    >
-                      Stäng utan att skicka texten
-                    </button>
-                  </form>
-                )}
-                {selectedObject && effectiveState && (
-                  <section aria-label={`Samband för ${selectedObject.name}`}>
-                    <h2>Samband för {selectedObject.name}</h2>
-                    <ul>
-                      {[...displayedEdges.values()]
-                        .filter(
-                          (edge) =>
-                            edge.sourceId === selectedObject.id ||
-                            edge.targetId === selectedObject.id,
-                        )
-                        .map((edge) => (
-                          <li key={edge.id}>
-                            <button
-                              type="button"
-                              disabled={pending || dirty || blocked}
-                              onClick={() => selectRelationship(edge)}
-                            >
-                              {relationshipLabel(
-                                edge,
-                                effectiveState,
-                                displayed,
-                                selectedObject.id,
-                              )}
-                            </button>
-                          </li>
-                        ))}
-                    </ul>
-                  </section>
                 )}
                 {selection?.kind === 'relationship' &&
                   selection.previous &&
@@ -1489,8 +1362,11 @@ export function HouseholdMap({
               <button
                 type="button"
                 onClick={() => {
-                  setDetailsOpen(true);
-                  requestAnimationFrame(() => document.getElementById('draft-title')?.focus());
+                  openPanel('work');
+                  requestAnimationFrame(() => {
+                    if (currentPanel.current === 'work')
+                      document.getElementById('draft-title')?.focus();
+                  });
                 }}
               >
                 Granska utkastet
@@ -1617,8 +1493,8 @@ export function HouseholdMap({
                     <li key={object.id}>
                       <button
                         type="button"
-                        disabled={pending || dirty || blocked}
-                        onClick={() => selectObject(object)}
+                        disabled={pending || blocked}
+                        onClick={() => edit(object, false)}
                       >
                         {object.name}
                       </button>
@@ -1695,16 +1571,36 @@ export function HouseholdMap({
                 <button
                   ref={newButton}
                   type="button"
-                  disabled={pending || dirty || blocked}
+                  disabled={pending || blocked}
                   onClick={() => edit()}
                 >
                   Nytt objekt
                 </button>
+                {objectPanels.some((panel) => panel.newObject && !displayed.has(panel.id)) && (
+                  <section aria-label="Påbörjade objekt">
+                    <h3>Påbörjade objekt</h3>
+                    <p>Dessa formulär är inte skickade till ditt utkast.</p>
+                    <ul>
+                      {objectPanels
+                        .filter((panel) => panel.newObject && !displayed.has(panel.id))
+                        .map((panel, index) => (
+                          <li key={panel.id}>
+                            <button
+                              type="button"
+                              disabled={pending || blocked}
+                              onClick={() => openPanel(panel.id)}
+                            >
+                              Fortsätt: {panel.unsentName || `Nytt objekt ${index + 1}`}
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  </section>
+                )}
                 <button
                   type="button"
                   disabled={pending || dirty || blocked}
                   onClick={() => {
-                    setEditor(null);
                     setEdgeEditor(null);
                     setMergeGeneration(state.contentVersion);
                     setMergeOpen(true);
@@ -1829,7 +1725,7 @@ export function HouseholdMap({
                               const proposal = state.draft.objectTypes?.find(
                                 (item) => item.id === type.id,
                               );
-                              setEditor(null);
+
                               setEdgeEditor(null);
                               setDirty(false);
                               setEdgeTypeEditor(null);
@@ -1853,7 +1749,6 @@ export function HouseholdMap({
                     type="button"
                     disabled={pending || dirty || blocked}
                     onClick={() => {
-                      setEditor(null);
                       setEdgeEditor(null);
                       setDirty(true);
                       setEdgeTypeEditor(null);
@@ -1915,7 +1810,7 @@ export function HouseholdMap({
                               const proposal = state.draft.relationshipTypes?.find(
                                 (item) => item.id === type.id,
                               );
-                              setEditor(null);
+
                               setEdgeEditor(null);
                               setTypeEditor(null);
                               setDirty(false);
@@ -1939,7 +1834,6 @@ export function HouseholdMap({
                     type="button"
                     disabled={pending || dirty || blocked}
                     onClick={() => {
-                      setEditor(null);
                       setEdgeEditor(null);
                       setTypeEditor(null);
                       setDirty(true);

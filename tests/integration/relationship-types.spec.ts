@@ -443,6 +443,7 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     const reverse = page.getByRole('region', { name: 'Samband för Garaget' });
     await expect(reverse).toContainText('Garaget → innehåller → Alex blå cykel');
     await reverse.getByRole('button').click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
     await expect(page.getByLabel('Från objekt')).toHaveValue('bike');
     await expect(page.getByLabel('Till objekt')).toHaveValue('garage');

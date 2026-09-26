@@ -104,17 +104,25 @@ async function open(width = 1280, height = 900, mapState = state) {
     </main>,
   );
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
+  await expect
+    .element(page.getByRole('button', { name: 'Nytt objekt', exact: true }))
+    .toBeEnabled();
+  await page
+    .getByRole('navigation', { name: 'Kartans verktyg' })
+    .getByRole('button', { name: 'Samtal och text', exact: true })
+    .click();
   await page.getByLabelText(/Jag tillåter att OpenAI/).click();
   await page.getByLabelText(/Jag tillåter förslag och sparande/).click();
   await page.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
   await expect.element(page.getByLabelText('Meddelande till textassistenten')).toBeVisible();
-  await expect
-    .element(page.getByRole('button', { name: 'Nytt objekt', exact: true }))
-    .toBeEnabled();
   return {
     acknowledgements,
     async show(item: MapSelection) {
       target = item;
+      await page
+        .getByRole('navigation', { name: 'Kartans verktyg' })
+        .getByRole('button', { name: 'Samtal och text', exact: true })
+        .click();
       await page.getByLabelText('Meddelande till textassistenten').fill('Visa urvalet.');
       await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     },
@@ -136,9 +144,10 @@ test('assistant display shows the map and populated inspector before confirming 
   await expect
     .element(page.getByRole('button', { name: 'Välj objekt: Lo', exact: true }))
     .toHaveAttribute('aria-pressed', 'true');
-  expect(page.getByRole('region', { name: 'Val och redigering' }).element().textContent).toContain(
-    'Los påhittade uppgifter',
-  );
+  expect(
+    document.querySelector('.map-inspector[data-selection-kind="object"][data-selection-id="lo"]')
+      ?.textContent,
+  ).toContain('Los påhittade uppgifter');
   await app.show({ kind: 'relationship', id: 'edge' });
   await expect.poll(() => app.acknowledgements.length).toBe(2);
   expect(app.acknowledgements[1]).toMatchObject({
@@ -148,7 +157,11 @@ test('assistant display shows the map and populated inspector before confirming 
   });
   const edge = document.querySelector('.spatial-edge.selected');
   expect(edge?.checkVisibility()).toBe(true);
-  expect(document.querySelector('.map-inspector')?.getAttribute('data-selection-id')).toBe('edge');
+  expect(
+    document
+      .querySelector('.map-inspector[data-selection-kind="relationship"]')
+      ?.getAttribute('data-selection-id'),
+  ).toBe('edge');
 });
 
 test('a lost graphics context cannot be acknowledged, and canceling its pending reveal prevents a late confirmation', async () => {
@@ -159,6 +172,10 @@ test('a lost graphics context cannot be acknowledged, and canceling its pending 
   extension?.loseContext();
   await expect.element(page.getByText(/Grafiken är tillfälligt avbruten/)).toBeVisible();
   await app.show({ kind: 'object', id: 'lo' });
+  await page
+    .getByRole('navigation', { name: 'Kartans verktyg' })
+    .getByRole('button', { name: 'Samtal och text', exact: true })
+    .click();
   await expect
     .element(page.getByRole('button', { name: 'Avbryt uppdrag', exact: true }))
     .toBeVisible();
@@ -177,7 +194,7 @@ test('an unavailable target is rejected without replacing the current inspector'
   await app.show({ kind: 'object', id: 'absent' });
   await expect.poll(() => app.acknowledgements.length).toBe(1);
   expect(app.acknowledgements[0]).toMatchObject({ id: 'absent', displayed: false });
-  expect(document.querySelector('.map-inspector')?.getAttribute('data-selection-id')).toBeNull();
+  expect(document.querySelector('.map-inspector[data-selection-id]')).toBeNull();
 });
 
 test('a hidden document never reports a visible map selection', async () => {
@@ -218,10 +235,13 @@ test('long phone details remain scrollable beside the visible selection and requ
   await app.show({ kind: 'object', id: 'lo' });
   await expect.poll(() => app.acknowledgements.length).toBe(1);
   expect(app.acknowledgements[0].displayed).toBe(true);
-  const inspector = page.getByRole('region', { name: 'Val och redigering' }).element();
-  expect(inspector.scrollHeight).toBeGreaterThan(inspector.clientHeight);
-  expect(inspector.getBoundingClientRect().bottom).toBeLessThanOrEqual(innerHeight);
+  const objectPanel = page.getByRole('region', { name: 'Lo', exact: true });
+  const inspector = objectPanel.getByRole('region', { name: 'Val och redigering' }).element();
+  const scroller = inspector.closest('.workspace-panel-body');
+  if (!scroller) throw new Error('Object details require a scrollable panel body');
+  expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight);
+  expect(scroller.getBoundingClientRect().bottom).toBeLessThanOrEqual(innerHeight);
   expect(inspector.querySelector('form')).toBeNull();
-  await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
+  await objectPanel.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
   await expect.element(page.getByLabelText('Objektets namn', { exact: true })).toHaveValue('Lo');
 });

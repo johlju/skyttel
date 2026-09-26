@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { activatePanel, createHousehold, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('YTA-05: save results remain readable beside tablet work', async ({ page }) => {
@@ -54,6 +54,7 @@ test('YTA-01: map tools open real household work and preserve it when closed', a
     await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
     await expect(tools.getByRole('button', { name: 'Lista', exact: true })).toBeFocused();
     await tools.getByRole('button', { name: 'Lista', exact: true }).click();
+    await activatePanel(page, 'Nytt objekt');
     await expect(page.getByLabel('Objektets namn')).toHaveValue('Cykeln');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await page.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();

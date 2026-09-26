@@ -1,12 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import { createHousehold, openWorkspace, signIn } from '../support/client.js';
+import { createHousehold, openConversation, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const assistant = (page: Page) =>
   page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
 async function consent(page: Page) {
+  await openConversation(page);
   const panel = assistant(page);
   const start = panel.getByRole('button', { name: 'Starta textassistenten' });
   await expect(start).toBeDisabled();
@@ -20,6 +21,7 @@ async function consent(page: Page) {
   await expect(panel.getByLabel('Meddelande till textassistenten')).toBeVisible();
 }
 async function send(page: Page, text: string) {
+  await openConversation(page);
   await assistant(page).getByLabel('Meddelande till textassistenten').fill(text);
   await assistant(page).getByRole('button', { name: 'Skicka', exact: true }).click();
 }
@@ -393,7 +395,12 @@ test('TEXT-05: markering kräver visning och skyddar oskickad text', async ({ pa
     await arrange(page, app);
     await consent(page);
     await send(page, 'Markera Lo i kartan.');
+    await expect(assistant(page).getByRole('status', { includeHidden: true })).toHaveText(
+      'Markerat i kartan.',
+    );
+    await openConversation(page);
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
+    await openWorkspace(page);
     await expect(
       page.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }),
     ).toBeVisible();
@@ -541,8 +548,8 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await page.reload();
     await openWorkspace(page);
     await consent(page);
-    const listMode = page.getByRole('button', { name: 'Lista och detaljer', exact: true });
-    await listMode.click();
+    await openWorkspace(page);
+    const listPanel = page.getByRole('region', { name: 'Lista och utkast', exact: true });
     const panel = assistant(page);
     const report = panel
       .getByRole('heading', { name: 'Besked från Skyttel', exact: true })
@@ -553,7 +560,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await expect(report).toContainText('Utkast:');
     await expect(report).toContainText('Tonrum (Gäller: aktuellt → upphört)');
     await expect(report).toContainText('Lo Exempel Använder Tonrum → Lo Exempel Betalar Tonrum');
-    await expect(listMode).toHaveAttribute('aria-pressed', 'true');
+    await expect(listPanel).toBeVisible();
     expect(await read()).toEqual(beforeReview);
 
     await send(page, 'Spara hela utkastet nu.');
@@ -573,7 +580,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await expect(report).toContainText('Sparandet:');
     await expect(report).toContainText('Tonrum (Gäller: aktuellt → upphört)');
     await expect(report).toContainText('Lo Exempel Använder Tonrum → Lo Exempel Betalar Tonrum');
-    await expect(listMode).toHaveAttribute('aria-pressed', 'true');
+    await expect(listPanel).toBeVisible();
     expect(await read()).toEqual(saved);
     expect(await (await page.request.get(`${path}/operations`)).json()).toEqual(operations);
     expect(model.requests).toHaveLength(3);

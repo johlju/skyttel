@@ -2,7 +2,14 @@ import { expect, type Page, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import type { PersonalView } from '../../src/shared/personal-view.js';
-import { createHousehold, openMap, openProfile, openWorkspace, signIn } from '../support/client.js';
+import {
+  activatePanel,
+  createHousehold,
+  openMap,
+  openProfile,
+  openWorkspace,
+  signIn,
+} from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 async function arrange(page: Page, origin: string) {
@@ -268,15 +275,35 @@ test('PLACERING-03: synthetic touch gestures handle height, interruption, finger
     await resetView();
     const box = await space(page).locator('canvas').boundingBox();
     if (!box) throw new Error('Canvas must be visible');
-    const empty = { id: 1, x: box.x + 20, y: box.y + box.height - 160 };
+    // The bottom of the canvas also contains floating map controls. Start
+    // background gestures above them and verify the actual hit targets.
+    const empty = { id: 1, x: box.x + box.width / 2 - 75, y: box.y + box.height / 4 };
+    const expectEmptyCanvas = async (points: { x: number; y: number }[]) => {
+      expect(
+        await space(page)
+          .locator('canvas')
+          .evaluate(
+            (canvas, points) =>
+              points.every(({ x, y }) => document.elementFromPoint(x, y) === canvas),
+            points,
+          ),
+      ).toBe(true);
+    };
     const oldPoint = await center(page);
+    await expectEmptyCanvas([empty, { ...empty, x: empty.x + 50 }]);
     await touch('touchStart', [empty]);
     await touch('touchMove', [{ ...empty, x: empty.x + 50 }]);
     await touch('touchEnd', []);
     await expect.poll(async () => (await center(page)).x).not.toBe(oldPoint.x);
     const panBefore = await resetView();
-    const panStart = { id: 1, x: box.x + 70, y: box.y + box.height - 160 };
+    const panStart = empty;
     const second = { id: 2, x: panStart.x + 150, y: panStart.y };
+    await expectEmptyCanvas([
+      panStart,
+      second,
+      { ...panStart, x: panStart.x + 30, y: panStart.y + 20 },
+      { ...second, x: second.x + 30, y: second.y + 20 },
+    ]);
     await touch('touchStart', [panStart, second]);
     await touch('touchMove', [
       { ...panStart, x: panStart.x + 30, y: panStart.y + 20 },
@@ -294,6 +321,12 @@ test('PLACERING-03: synthetic touch gestures handle height, interruption, finger
       .toBeCloseTo(1, 1);
     expect(await read()).toEqual(saved);
     const pinchBefore = await resetView();
+    await expectEmptyCanvas([
+      panStart,
+      second,
+      { ...panStart, x: panStart.x - 35 },
+      { ...second, x: second.x + 35 },
+    ]);
     await touch('touchStart', [panStart, second]);
     await touch('touchMove', [
       { ...panStart, x: panStart.x - 35 },
@@ -398,8 +431,9 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
       .getByRole('list', { name: 'Objekt', exact: true })
       .getByRole('button', { name: 'Lampan', exact: true })
       .click();
-    await page.getByRole('button', { name: 'Redigera Lampan', exact: true }).click();
-    await page.getByLabel('Objektets namn').fill('Oskickad text');
+    const lamp = page.getByRole('region', { name: 'Lampan', exact: true });
+    await lamp.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
+    await lamp.getByLabel('Objektets namn').fill('Oskickad text');
     await openMap(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.setViewportSize({ width: 844, height: 390 });
@@ -409,7 +443,8 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
     expect(axis?.x).toBeGreaterThanOrEqual(0);
     expect((axis?.y ?? 0) + (axis?.height ?? 0)).toBeLessThanOrEqual(390);
     await openWorkspace(page);
-    await expect(page.getByLabel('Objektets namn')).toHaveValue('Oskickad text');
+    await activatePanel(page, 'Lampan');
+    await expect(lamp.getByLabel('Objektets namn')).toHaveValue('Oskickad text');
     expect((await read()).positions).toEqual(placement);
     expect((await (await page.request.get(path)).json()).draft.changes[0].after.name).toBe(
       'Ny sak',

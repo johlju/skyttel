@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { CustomField, CustomValues, ObjectType } from '../shared/map.js';
 
 const kinds: Record<CustomField['kind'], string> = {
@@ -183,6 +183,7 @@ export function CustomFieldsEditor({
   values?: CustomValues;
   onChange: (values: CustomValues) => void;
 }) {
+  const prefix = useId();
   function change(id: string, value: string | number | boolean | undefined) {
     const next = { ...values };
     if (value === undefined) delete next[id];
@@ -193,12 +194,12 @@ export function CustomFieldsEditor({
     <>
       {type?.fields?.map((field) => (
         <div key={field.id}>
-          <label htmlFor={`custom-${field.id}`}>{field.name}</label>
-          {field.description && <p id={`help-${field.id}`}>{field.description}</p>}
+          <label htmlFor={`${prefix}-custom-${field.id}`}>{field.name}</label>
+          {field.description && <p id={`${prefix}-help-${field.id}`}>{field.description}</p>}
           {field.kind === 'boolean' ? (
             <select
-              id={`custom-${field.id}`}
-              aria-describedby={field.description ? `help-${field.id}` : undefined}
+              id={`${prefix}-custom-${field.id}`}
+              aria-describedby={field.description ? `${prefix}-help-${field.id}` : undefined}
               value={values[field.id] === undefined ? '' : String(values[field.id])}
               onChange={(event) =>
                 change(
@@ -213,8 +214,8 @@ export function CustomFieldsEditor({
             </select>
           ) : (
             <input
-              id={`custom-${field.id}`}
-              aria-describedby={field.description ? `help-${field.id}` : undefined}
+              id={`${prefix}-custom-${field.id}`}
+              aria-describedby={field.description ? `${prefix}-help-${field.id}` : undefined}
               type={field.kind === 'text' ? 'text' : field.kind}
               step={field.kind === 'number' ? 'any' : undefined}
               maxLength={field.kind === 'text' ? 2000 : undefined}

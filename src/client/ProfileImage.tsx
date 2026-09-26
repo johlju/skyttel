@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { ObjectValue } from '../shared/map.js';
 
 export function ProfileImage({ householdId, value }: { householdId: string; value: ObjectValue }) {
@@ -32,6 +32,7 @@ export function ProfileImageEditor({
   disabled: boolean;
   onChange: (file: File | null) => void;
 }) {
+  const inputId = useId();
   return (
     <div className="profile-image-editor">
       <h3>Profilbild</h3>
@@ -44,9 +45,9 @@ export function ProfileImageEditor({
         Lägg först objektet och eventuell oskickad text i ditt utkast. Bildvalet blir sedan ett
         privat förslag. Spara hela utkastet för att dela det.
       </p>
-      <label htmlFor="profile-image">Välj profilbild</label>
+      <label htmlFor={inputId}>Välj profilbild</label>
       <input
-        id="profile-image"
+        id={inputId}
         type="file"
         accept="image/jpeg,image/png,image/webp"
         disabled={disabled}

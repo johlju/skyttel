@@ -1,7 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, openMap, openWorkspace, signIn } from '../support/client.js';
+import {
+  activatePanel,
+  createHousehold,
+  openMap,
+  openWorkspace,
+  signIn,
+} from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 async function expectSpatialPortrait(page: Page, imageId: string | null | undefined) {
@@ -72,10 +78,12 @@ test('BILD-01: profile image proposals preserve text, survive restart and undo r
     await openMap(page);
     await expectSpatialPortrait(page, first);
     await openWorkspace(page);
+    await activatePanel(page, 'Lo Exempel');
     await details.getByLabel('Beskrivning', { exact: true }).fill('Oskickad text');
     await expect(details.getByLabel('Välj profilbild')).toBeDisabled();
     await openMap(page);
     await openWorkspace(page);
+    await activatePanel(page, 'Lo Exempel');
     await expect(details.getByLabel('Beskrivning', { exact: true })).toHaveValue('Oskickad text');
     await details.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
@@ -89,6 +97,7 @@ test('BILD-01: profile image proposals preserve text, survive restart and undo r
     await openMap(page);
     await expectSpatialPortrait(page, first);
     await openWorkspace(page);
+    await activatePanel(page, 'Lo Exempel');
     await details.getByLabel('Välj profilbild').setInputFiles({
       name: 'ny.webp',
       mimeType: 'image/webp',

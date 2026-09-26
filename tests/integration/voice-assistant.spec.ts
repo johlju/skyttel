@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import { createHousehold, openWorkspace, signIn } from '../support/client.js';
+import { createHousehold, openConversation, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -9,6 +9,7 @@ import { lastToolResult, modelMessage, modelTool, textModel } from '../support/t
 const assistant = (page: Page) =>
   page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
 async function consent(page: Page) {
+  await openConversation(page);
   const panel = assistant(page);
   await panel.getByLabel(/Jag tillåter att OpenAI/).check();
   await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
@@ -19,6 +20,7 @@ async function startVoice(
   page: Page,
   expected = 'Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.',
 ) {
+  await openConversation(page);
   await assistant(page).getByRole('button', { name: 'Starta röst' }).click();
   await expect(assistant(page).getByText(expected)).toBeVisible();
   await expect
@@ -195,6 +197,10 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
       expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
     }
     speak(live, 'Markera Lo Exempel.');
+    await expect(assistant(page).getByRole('status', { includeHidden: true })).toHaveText(
+      'Markerat i kartan.',
+    );
+    await openConversation(page);
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await expect(object).toHaveAttribute('aria-pressed', 'true');
     await expect(
@@ -482,6 +488,10 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
   try {
     const { path } = await simpleMap(page, app);
     speak(live, 'Markera Lo Exempel.');
+    await expect(assistant(page).getByRole('status', { includeHidden: true })).toHaveText(
+      'Markerat i kartan.',
+    );
+    await openConversation(page);
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await expect(
       page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }),

@@ -7,6 +7,18 @@ export async function openWorkspace(page: Page) {
     .click();
 }
 
+export async function openConversation(page: Page) {
+  await page
+    .getByRole('navigation', { name: 'Kartans verktyg' })
+    .getByRole('button', { name: 'Samtal och text', exact: true })
+    .click();
+}
+
+export async function activatePanel(page: Page, title: string) {
+  await page.getByLabel(/^Öppna paneler/).selectOption({ label: title });
+  await expect(page.getByRole('region', { name: title, exact: true })).toBeVisible();
+}
+
 export async function openMap(page: Page) {
   const close = page.getByRole('button', { name: 'Stäng arbetsytan', exact: true });
   if (await close.isVisible()) await close.click();

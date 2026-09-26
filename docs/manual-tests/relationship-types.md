@@ -89,8 +89,9 @@ objects and edit the shared definition”.
    tillägg i samma utkast och läs beskedet med cykelns och garagets namn.
    Spara hela utkastet och ladda om. Öppna cykeln och läs dess samband.
    Stäng och öppna garaget.
-4. Klicka på garagets samband. Kontrollera att startobjektet fortfarande
-   är cykeln och målobjektet garaget. Stäng sambandsformuläret.
+4. Klicka på garagets samband, öppna Lista och välj **Redigera valt samband**.
+   Kontrollera att startobjektet fortfarande är cykeln och målobjektet
+   garaget. Stäng sambandsformuläret.
 5. Ändra typens namn till Plats, beskrivningen till Hushållets
    förvaringsplatser och startbenämningen till finns i. Granska skillnaden,
    spara och ladda om. Läs kartans samband via HTTP.

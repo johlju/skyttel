@@ -1,6 +1,6 @@
 import { access } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
-import { createHousehold, openProfile, openWorkspace, signIn } from '../support/client.js';
+import { createHousehold, openConversation, openProfile, signIn } from '../support/client.js';
 import { launchManualCosts } from '../support/manual-costs.js';
 
 const assistant = (page: Page) =>
@@ -10,7 +10,7 @@ async function startAssistant(page: Page, origin: string) {
   await signIn(page.request, origin);
   const { household } = await (await createHousehold(page.request, origin, 'Kostnadsprov')).json();
   await page.goto(origin);
-  await openWorkspace(page);
+  await openConversation(page);
   const panel = assistant(page);
   await panel.getByLabel(/Jag tillåter att OpenAI/).check();
   await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
@@ -18,12 +18,14 @@ async function startAssistant(page: Page, origin: string) {
   return household.id as string;
 }
 async function sendText(page: Page) {
+  await openConversation(page);
   const panel = assistant(page);
   await panel.getByLabel('Meddelande till textassistenten').fill('Prova kostnadsunderlaget.');
   await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
   await expect(panel).toContainText('Det kontrollerade kostnadsprovet är klart.');
 }
 async function startVoice(page: Page) {
+  await openConversation(page);
   await assistant(page).getByRole('button', { name: 'Starta röst', exact: true }).click();
   await expect(assistant(page)).toContainText(
     'Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.',
@@ -31,6 +33,8 @@ async function startVoice(page: Page) {
 }
 async function openCosts(page: Page) {
   const link = page.getByRole('link', { name: 'Månadskostnad', exact: true });
+  const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
+  await expect(link.or(tools).first()).toBeVisible();
   if (!(await link.isVisible())) await openProfile(page);
   await link.click();
   await expect(category(page, 'Render – hel månad')).toBeVisible();
