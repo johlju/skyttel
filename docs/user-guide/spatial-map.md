@@ -97,7 +97,7 @@ i sidled för att nå alla val utan att minska kartytan.
 
 ## Ändra och granska
 
-Ctrl-högerklick visar objektets kopplingar.
+Välj **Visa kopplingar** i objektets högerklicksmeny för objektfokus.
 Vid ändrade samband visar fokus både tidigare och föreslagna ändpunkter.
 Välj den tidigare, böjda linjen eller dess etikett med × för att läsa det
 sparade sambandet utan att ändra det.

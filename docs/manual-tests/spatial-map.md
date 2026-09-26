@@ -73,7 +73,8 @@ selection”.
    före och efter rotation och panorering. Välj
    Lo Exempels runda symbol. Kontrollera att sambandets etikett visas.
    Öppna Lista, filtrera på Person och kontrollera att tjänsten döljs.
-2. Välj Visa hela rymden och Ctrl-högerklicka Lo Exempel. Kontrollera
+2. Välj Visa hela rymden, högerklicka Lo Exempel och välj Visa kopplingar.
+   Kontrollera
    fokus utan att objektmenyn öppnas. Rulla lodrätt över tom rymd,
    objektsymbolen och namnet. Kontrollera att alla tre panorerar likadant.
 3. Panorera med knappen under Navigera rymden. Välj Visa hela rymden.
@@ -293,11 +294,11 @@ and opens the saved route read-only”.
 
 **Steg:**
 
-1. Öppna kartan och Ctrl-högerklicka Molnmusik.
+1. Öppna kartan, högerklicka Molnmusik och välj Visa kopplingar.
 2. Kontrollera Lo Exempel och Kim Exempel med båda betalningssambanden.
 3. Välj den tidigare etiketten Lo Exempel → Betalar → Molnmusik med ×.
-4. Läs Tidigare samband. Ctrl-klicka sedan Kim Exempel och välj det
-   föreslagna betalningssambandet.
+4. Läs Tidigare samband. Högerklicka sedan Kim Exempel, välj Visa
+   kopplingar och därefter det föreslagna betalningssambandet.
 
 **Förväntat resultat:**
 

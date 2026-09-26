@@ -220,7 +220,8 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
     await openMap(page);
     await space
       .getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true })
-      .click({ button: 'right', modifiers: ['Control'] });
+      .click({ button: 'right' });
+    await page.getByRole('button', { name: 'Visa kopplingar', exact: true }).click();
     await openWorkspace(page);
     await expect(page.getByText('Fokus: Lo Exempel', { exact: true })).toBeVisible();
     await expect(space.getByRole('dialog')).not.toBeVisible();
@@ -266,7 +267,8 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
     await space.getByText('Navigera rymden', { exact: true }).click();
     await space
       .getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true })
-      .click({ modifiers: ['Control'] });
+      .click({ button: 'right' });
+    await page.getByRole('button', { name: 'Visa kopplingar', exact: true }).click();
     await openWorkspace(page);
     await page.getByLabel('Sök objekt').fill('Lo');
     await page.getByLabel('Filtrera objekttyp').selectOption({ label: 'Person' });
@@ -837,7 +839,8 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     await space
       .getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true })
-      .click({ button: 'right', modifiers: ['Control'] });
+      .click({ button: 'right' });
+    await page.getByRole('button', { name: 'Visa kopplingar', exact: true }).click();
     for (const name of ['Lo Exempel', 'Kim Exempel'])
       await expect(
         space.getByRole('button', { name: `Välj objekt: ${name}`, exact: true }),
@@ -854,7 +857,8 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
     await expect(page.getByText('Fokus: Molnmusik', { exact: true })).toBeVisible();
     await space
       .getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true })
-      .click({ modifiers: ['Control'] });
+      .click({ button: 'right' });
+    await page.getByRole('button', { name: 'Visa kopplingar', exact: true }).click();
     await space
       .getByRole('button', { name: 'Välj samband: Kim Exempel → Betalar → Molnmusik', exact: true })
       .click();
