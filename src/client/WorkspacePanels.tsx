@@ -318,8 +318,11 @@ export function WorkspacePanels({
             data-active={entry.id === activeId}
             data-dragging={entry.id === draggingId}
             style={style}
-            onPointerDownCapture={() => activate(entry.id)}
+            onPointerDownCapture={(event) => {
+              if (event.currentTarget.contains(event.target as Node)) activate(entry.id);
+            }}
             onFocusCapture={(event) => {
+              if (!event.currentTarget.contains(event.target)) return;
               lastFocus.current.set(entry.id, event.target as HTMLElement);
               activate(entry.id);
             }}

@@ -7,6 +7,11 @@ exempelvis en solcellsanläggning och ha samma egna fält för alla objekt
 av den typen. Även förifyllda typer, som Person och Fordon, går att ändra.
 Den som skapar en typ får ingen särskild roll eller ensam rätt till den.
 
+Du når definitionerna genom **Inställningar** → **Typer och egna fält**
+eller från Lista. Oskickad definitionstext följer med mellan vyerna.
+Välj **Tillbaka till kartan** för att granska och spara typförslagen
+med resten av ditt privata utkast.
+
 ## Skapa en typ och ett objekt tillsammans
 
 1. Välj **Ny objekttyp** i kartan. Ange **Typens namn** och en förklarande

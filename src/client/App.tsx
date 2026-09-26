@@ -21,6 +21,7 @@ import { HouseholdExport } from './HouseholdExport.js';
 import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
+import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
 import { useWorkspaceTheme } from './WorkspaceTheme.js';
 import './access.css';
 
@@ -853,15 +854,19 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
 function HouseholdWork({
   onSessionExpired,
   account,
+  typeSettingsTarget,
 }: {
   onSessionExpired: () => void;
   account: ReactNode;
+  typeSettingsTarget: HTMLElement | null;
 }) {
   const { pathname } = useLocation();
   const routeId = matchPath('/households/:id', pathname)?.params.id;
   const [currentId, setCurrentId] = useState<string | null>(null);
-  if (routeId && routeId !== currentId) setCurrentId(routeId);
-  const id = routeId ?? currentId;
+  const settingsId = matchPath('/households/:id/settings/types', pathname)?.params.id;
+  const requestedId = routeId ?? settingsId;
+  if (requestedId && requestedId !== currentId) setCurrentId(requestedId);
+  const id = requestedId ?? currentId;
   if (!id) return null;
   return (
     <HouseholdPage
@@ -870,6 +875,7 @@ function HouseholdWork({
       active={Boolean(routeId)}
       onSessionExpired={onSessionExpired}
       account={account}
+      typeSettingsTarget={typeSettingsTarget}
     />
   );
 }
@@ -879,12 +885,16 @@ function HouseholdPage({
   active,
   onSessionExpired,
   account,
+  typeSettingsTarget,
 }: {
   id: string;
   active: boolean;
   onSessionExpired: () => void;
   account: ReactNode;
+  typeSettingsTarget: HTMLElement | null;
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [revision, setRevision] = useState(0);
   const [workRevision, setWorkRevision] = useState(0);
   const retireWork = useCallback(() => setWorkRevision((value) => value + 1), []);
@@ -943,18 +953,9 @@ function HouseholdPage({
         active={active}
         householdName={result.data.household.name}
         account={account}
-        settings={
-          <>
-            {result.data.household.role === 'administrator' && (
-              <Link
-                to={`/households/${encodeURIComponent(result.data.household.id)}/administration`}
-              >
-                Administrera tillgång
-              </Link>
-            )}
-            <Link to="/assistants">Assistentanslutningar</Link>
-          </>
-        }
+        profileRequested={location.state?.profile === true}
+        onSettings={() => navigate(`/households/${encodeURIComponent(id)}/settings`)}
+        typeSettingsTarget={typeSettingsTarget}
         contentVersion={content.status === 'loaded' ? content.data.contentVersion : undefined}
         onContentReplaced={retireWork}
       />
@@ -966,6 +967,7 @@ export function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useWorkspaceTheme();
+  const [typeSettingsTarget, setTypeSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
@@ -991,141 +993,208 @@ export function App() {
   }
   const mapActive =
     data?.status === 'ready' && Boolean(matchPath('/households/:id', location.pathname));
+  const authenticated = data && data.status !== 'anonymous';
+  const personal = ['/profile', '/login-methods', '/assistants', '/assistant-consent'].includes(
+    location.pathname,
+  );
+  const settingsPage =
+    authenticated &&
+    !mapActive &&
+    (personal ||
+      location.pathname === '/costs' ||
+      (data.status === 'ready' &&
+        Boolean(matchPath('/households/:id/settings/*', location.pathname))) ||
+      (data.status === 'ready' &&
+        Boolean(matchPath('/households/:id/administration', location.pathname))));
+  const household = data?.status === 'ready' ? data.household : undefined;
   const accessGate =
-    data?.status === 'anonymous' ||
-    (data && data.status !== 'ready' && !['/costs', '/login-methods'].includes(location.pathname));
+    data?.status === 'anonymous' || (authenticated && data.status !== 'ready' && !settingsPage);
+  const logout = (
+    <>
+      <button type="button" disabled={signingOut} onClick={() => void signOut()}>
+        {signingOut ? 'Loggar ut…' : 'Logga ut'}
+      </button>
+      {signOutError && (
+        <p className="error" role="alert">
+          Du kunde inte loggas ut. Kontrollera anslutningen och försök igen.
+        </p>
+      )}
+    </>
+  );
+  const account = authenticated && (
+    <>
+      <p className="intro">{data.user.name}</p>
+      {household && <p>{household.role === 'administrator' ? 'Administratör' : 'Medlem'}</p>}
+      <InvitationEntry
+        userId={data.user.id}
+        showInvitation={
+          data.status === 'forbidden' ||
+          (data.status === 'ready' && data.household.role !== 'administrator')
+        }
+        onAccepted={created}
+        onReload={reload}
+      />
+      <h2>Ditt konto</h2>
+      <p>Hantera hur du loggar in och vilka assistenter som får tillgång till din karta.</p>
+      <div className="settings-profile-links">
+        <Link to="/login-methods">Inloggningssätt</Link>
+        <Link to="/assistants">Assistentanslutningar</Link>
+      </div>
+      {logout}
+    </>
+  );
+  const pages = authenticated && (
+    <>
+      {location.pathname === '/login-methods' && <LoginMethods />}
+      {data.status === 'forbidden' &&
+        ['/assistants', '/assistant-consent'].includes(location.pathname) && (
+          <>
+            <Forbidden />
+            <InvitationEntry
+              userId={data.user.id}
+              showInvitation
+              onAccepted={created}
+              onReload={reload}
+            />
+          </>
+        )}
+      {location.pathname === '/profile' &&
+        (data.status === 'ready' ? (
+          <Navigate
+            to={`/households/${encodeURIComponent(data.household.id)}`}
+            state={{ profile: true }}
+            replace
+          />
+        ) : (
+          <section className="panel settings-profile">
+            <Heading>Din profil</Heading>
+            {account}
+          </section>
+        ))}
+      {location.pathname === '/costs' &&
+        (data.operator ? (
+          <Costs key={data.user.id} onAccessLost={reload} />
+        ) : (
+          <section className="panel">
+            <Heading>
+              Endast installationens driftansvarige har tillgång till kostnadsöversikten
+            </Heading>
+            <Link to="/">Till startsidan</Link>
+          </section>
+        ))}
+      {!['/login-methods', '/profile', '/costs'].includes(location.pathname) &&
+        (data.status === 'ready' || data.status === 'setup') && (
+          <Routes>
+            <Route path="/assistant-consent" element={<Assistants consent />} />
+            <Route path="/assistants" element={<Assistants />} />
+            <Route
+              path="/"
+              element={
+                data.status === 'setup' ? (
+                  <Setup onCreated={created} onReload={reload} />
+                ) : (
+                  <Navigate to={`/households/${encodeURIComponent(data.household.id)}`} replace />
+                )
+              }
+            />
+            <Route path="/households/:id" element={null} />
+            <Route
+              path="/households/:id/settings"
+              element={<SettingsOverview entries={settingsEntries(household, data.operator)} />}
+            />
+            <Route
+              path="/households/:id/settings/types"
+              element={
+                <section className="panel">
+                  <Heading>Typer och egna fält</Heading>
+                  <p>
+                    Ändringarna blir förslag i ditt privata utkast. Återgå till kartan för att
+                    granska och spara hela utkastet tillsammans.
+                  </p>
+                  <div ref={setTypeSettingsTarget} />
+                </section>
+              }
+            />
+            <Route
+              path="/households/:id/administration"
+              element={<AdministrationPage userId={data.user.id} onReload={reload} />}
+            />
+            <Route
+              path="*"
+              element={
+                <section className="panel">
+                  <Heading>Sidan finns inte</Heading>
+                  <Link to="/">Till startsidan</Link>
+                </section>
+              }
+            />
+          </Routes>
+        )}
+    </>
+  );
   return (
     <div
-      className={`app-shell${mapActive ? ' has-workspace' : ''}${accessGate ? ' access-shell' : ''}`}
+      className={`app-shell${mapActive ? ' has-workspace' : ''}${settingsPage ? ' has-settings' : ''}${accessGate ? ' access-shell' : ''}`}
       data-theme={theme.theme}
     >
       <a className="skip-link" href="#main">
         Hoppa till innehållet
       </a>
-      <header className="site-header" hidden={mapActive}>
+      <header className="site-header" hidden={mapActive || Boolean(settingsPage)}>
         <Link className="brand" to="/" aria-label="Skyttel, startsida">
           <img className="brand-logo" src={logo} alt="" />
           Skyttel
         </Link>
-        {data && data.status !== 'anonymous' ? (
+        {authenticated ? (
           <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
+            <Link to="/profile">Din profil</Link>
             <Link to="/login-methods">Inloggningssätt</Link>
             {data.operator && <Link to="/costs">Månadskostnad</Link>}
-            <span className="session-name">{data.user?.name}</span>
-            <button type="button" disabled={signingOut} onClick={() => void signOut()}>
-              {signingOut ? 'Loggar ut…' : 'Logga ut'}
-            </button>
+            <span className="session-name">{data.user.name}</span>
+            {logout}
           </div>
         ) : (
           <span className="header-note">Ett hushåll. En gemensam bild.</span>
         )}
       </header>
-      {signOutError && !mapActive && (
-        <p className="error sign-out-error" role="alert">
-          Du kunde inte loggas ut. Kontrollera anslutningen och försök igen.
-        </p>
-      )}
       <main id="main" tabIndex={-1}>
         {bootstrap.status === 'loading' && <Loading />}
         {bootstrap.status === 'error' && <Failure onRetry={reload} />}
         {data?.status === 'anonymous' && <Login providers={data.providers} />}
-        {data && data.status !== 'anonymous' && location.pathname === '/login-methods' && (
-          <LoginMethods />
-        )}
-        {data &&
-          data.status !== 'anonymous' &&
-          location.pathname === '/costs' &&
-          (data.operator ? (
-            <Costs key={data.user.id} onAccessLost={reload} />
-          ) : (
-            <section className="panel">
-              <Heading>
-                Endast installationens driftansvarige har tillgång till kostnadsöversikten
-              </Heading>
-              <Link to="/">Till startsidan</Link>
-            </section>
-          ))}
-        {data?.status === 'forbidden' &&
-          location.pathname !== '/login-methods' &&
-          location.pathname !== '/costs' && <Forbidden />}
         {data?.status === 'ready' && (
           <HouseholdWork
             key={data.user.id}
+            account={account}
             onSessionExpired={reload}
-            account={
-              <>
-                <p>
-                  {data.user.name} ·{' '}
-                  {data.household.role === 'administrator' ? 'Administratör' : 'Medlem'}
-                </p>
-                <InvitationEntry
-                  userId={data.user.id}
-                  showInvitation={data.household.role !== 'administrator'}
-                  onAccepted={created}
-                  onReload={reload}
-                />
-                <Link to="/login-methods">Inloggningssätt</Link>
-                {data.operator && <Link to="/costs">Månadskostnad</Link>}
-                <button type="button" disabled={signingOut} onClick={() => void signOut()}>
-                  {signingOut ? 'Loggar ut…' : 'Logga ut'}
-                </button>
-                {signOutError && (
-                  <p role="alert">
-                    Du kunde inte loggas ut. Kontrollera anslutningen och försök igen.
-                  </p>
-                )}
-              </>
-            }
+            typeSettingsTarget={typeSettingsTarget}
           />
         )}
-        {data &&
-          location.pathname !== '/login-methods' &&
-          location.pathname !== '/costs' &&
-          (data.status === 'setup' || data.status === 'ready') && (
-            <Routes>
-              <Route path="/assistant-consent" element={<Assistants consent />} />
-              <Route path="/assistants" element={<Assistants />} />
-              <Route
-                path="/"
-                element={
-                  data.status === 'setup' ? (
-                    <Setup onCreated={created} onReload={reload} />
-                  ) : (
-                    <Navigate to={`/households/${encodeURIComponent(data.household.id)}`} replace />
-                  )
-                }
-              />
-              <Route path="/households/:id" element={null} />
-              <Route
-                path="/households/:id/administration"
-                element={<AdministrationPage userId={data.user.id} onReload={reload} />}
-              />
-              <Route
-                path="*"
-                element={
-                  <section className="panel">
-                    <Heading>Sidan finns inte</Heading>
-                    <Link to="/">Till startsidan</Link>
-                  </section>
-                }
-              />
-            </Routes>
-          )}
-        {data &&
-          !mapActive &&
-          location.pathname !== '/costs' &&
-          (data.status === 'forbidden' || data.status === 'ready') && (
+        {settingsPage ? (
+          <SettingsScreen
+            household={household}
+            userName={data.user.name}
+            operator={data.operator}
+            personal={personal}
+            signOut={location.pathname === '/profile' ? null : logout}
+          >
+            {pages}
+          </SettingsScreen>
+        ) : (
+          pages
+        )}
+        {data?.status === 'forbidden' && !settingsPage && (
+          <>
+            <Forbidden />
             <InvitationEntry
               userId={data.user.id}
-              showInvitation={
-                data.status === 'forbidden' || data.household.role !== 'administrator'
-              }
+              showInvitation
               onAccepted={created}
               onReload={reload}
             />
-          )}
+          </>
+        )}
       </main>
-      <footer hidden={mapActive}>Det som hör ihop, samlat.</footer>
+      <footer hidden={mapActive || Boolean(settingsPage)}>Det som hör ihop, samlat.</footer>
     </div>
   );
 }

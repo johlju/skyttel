@@ -30,7 +30,7 @@ Kartans vägledning erbjuder **Tala**, **Skriv** och **Öppna listan**.
 Du kan välja **Stäng vägledningen** och använda kartans verktyg direkt.
 Tal börjar först när du själv startar rösten och ger nödvändiga medgivanden.
 
-I **Min profil** finns **Logga ut** och **Inloggningssätt**. Vill du använda
+I **Din profil** finns **Logga ut** och **Inloggningssätt**. Vill du använda
 både Google och Microsoft för samma Skyttel-användare behöver du
 [koppla inloggningarna](access.md#koppla-google-och-microsoft) medan du är
 inloggad. Samma e-postadress kopplar inte ihop dem automatiskt.

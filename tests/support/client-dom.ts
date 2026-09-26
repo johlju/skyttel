@@ -7,6 +7,14 @@ if (typeof HTMLElement.prototype.scrollIntoView !== 'function') {
   });
 }
 
+if (typeof HTMLElement.prototype.scrollTo !== 'function') {
+  Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
+    configurable: true,
+    writable: true,
+    value() {},
+  });
+}
+
 // Geometry and responsive behavior are verified in real Chromium. These defaults
 // allow HTTP-backed jsdom clients to mount the same panels without a layout engine.
 if (typeof window.matchMedia !== 'function') {
