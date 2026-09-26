@@ -547,10 +547,14 @@ to login”.
 
 1. Öppna **Tema** i kartans verktyg och välj **Mörkt**.
 2. Öppna **Min profil** och välj **Logga ut**.
+3. Öppna installationens adresser `/costs` och `/login-methods` direkt
+   medan du är utloggad. Välj Google utan att fortsätta till leverantören.
 
 **Förväntat resultat:**
 
 - Välkomstsidan använder det mörka temat direkt efter utloggningen.
+- Båda de skyddade adresserna visar samma mörka inloggningssida och
+  övergång. Fortsättningsknappen får fokus när Google väljs.
 - Inloggningssätt och felbesked förblir läsbara i det valda temat.
 
 ## Real identity provider preparation
