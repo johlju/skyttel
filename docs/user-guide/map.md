@@ -6,6 +6,25 @@ Objekt och samband bildar hushållets gemensamma karta. Du föreslår
 ändringar i ditt privata utkast och sparar dem tillsammans när du är klar.
 Du kan göra hela arbetet i **Lista och detaljer**.
 
+## Besök andra vyer och fortsätt arbetet
+
+Du kan besöka **Inloggningssätt**, **Assistentanslutningar** eller
+**Administrera tillgång** och återvända utan att förlora formulärtext,
+samtalstext, sökning, urval eller personlig kartvy. Samma sak gäller
+**Månadskostnad** om du har tillgång till den. Ett pågående sparförsök
+fortsätter; följ dess status och kontrollera samma kvitto vid okänt utfall.
+
+Ett pågående samtal behåller mikrofonens läge. Mikrofonkontrollen finns
+kvar i den andra vyn så att du kan pausa eller stänga av rösten.
+Oskickad formulärtext hör fortfarande inte till utkastet; välj
+**Lägg i mitt utkast** för att ta med den i det samlade sparandet.
+
+Bevarandet gäller under pågående användning. Omladdning kan ta bort
+oskickad text; beständiga utkast och sparade personliga vyer finns kvar.
+Utloggning, förlorad tillgång och ersatt hushållsinnehåll avslutar det
+berörda arbetet och mikrofonen. Vid ett administrativt innehållsbyte kan
+kartarbetet vara spärrat tills innehållet är tillgängligt igen.
+
 ## Lägg till ett objekt
 
 1. Välj **Nytt objekt** och ange ett namn som hushållet känner igen.

@@ -113,8 +113,9 @@ export function SpatialMap({
     returnFocus.current?.focus();
   }
   useEffect(() => {
-    if (menuObject) menu.current?.showModal();
-  }, [menuObject]);
+    if (menuObject && active) menu.current?.showModal();
+    else menu.current?.close();
+  }, [menuObject, active]);
   useEffect(() => () => cancelHold(), [cancelHold]);
   const canvas = useRef<HTMLCanvasElement>(null);
   const surface = useRef<HTMLDivElement>(null);

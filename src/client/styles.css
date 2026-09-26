@@ -931,3 +931,9 @@ main:has(.household-panel) {
     order: 3;
   }
 }
+
+.household-intro[hidden],
+.assistant-bar[hidden],
+.assistant-layout[hidden] {
+  display: none;
+}

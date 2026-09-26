@@ -82,7 +82,13 @@ async function readOperations(path: string, householdId: string, current: MapSta
   return result.operations;
 }
 
-export function HouseholdMap({ householdId }: { householdId: string }) {
+export function HouseholdMap({
+  householdId,
+  active = true,
+}: {
+  householdId: string;
+  active?: boolean;
+}) {
   const path = `/api/households/${encodeURIComponent(householdId)}/map`;
   const [state, setState] = useState<MapState | null>(null);
   const [mergeOpen, setMergeOpen] = useState(false);
@@ -124,7 +130,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
   useEffect(() => () => revealAbort.current?.abort(), []);
   const listModeButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (presentation !== 'map') return;
+    if (!active || presentation !== 'map') return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const hidden: { node: HTMLElement; inert: boolean }[] = [];
@@ -143,7 +149,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
       document.body.style.overflow = previous;
       for (const item of hidden) item.node.inert = item.inert;
     };
-  }, [presentation]);
+  }, [presentation, active]);
   const [dirty, setDirty] = useState(false);
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -167,6 +173,10 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
   useLayoutEffect(() => {
     const dialog = editorDialog.current;
     if (!dialog || !hasMap) return;
+    if (!active) {
+      dialog.close();
+      return;
+    }
     if (presentation !== 'map' || (detailsOpen && !editorOpen)) {
       if (dialog.matches(':modal')) dialog.close();
       dialog.open = true;
@@ -184,7 +194,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
       dialog.close();
       if (wasModal) editMapButton.current?.focus();
     }
-  }, [presentation, editorOpen, detailsOpen, hasMap]);
+  }, [presentation, editorOpen, detailsOpen, hasMap, active]);
   useEffect(() => {
     if (!editorOpen || presentation !== 'map') return;
     const viewport = window.visualViewport;
@@ -306,6 +316,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
   }, [path, load, householdId, loseAccess]);
 
   useEffect(() => {
+    if (!active) return;
     if (editor?.id) nameInput.current?.focus();
     else if (edgeEditor?.id)
       editorDialog.current?.querySelector<HTMLSelectElement>('#relationship-source')?.focus();
@@ -313,7 +324,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
       focusAfterClose.current = false;
       newButton.current?.focus();
     }
-  }, [editor?.id, edgeEditor?.id]);
+  }, [editor?.id, edgeEditor?.id, active]);
 
   async function save(attempt: SaveAttempt, recover = false) {
     if (!state || pending) return;
@@ -906,7 +917,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
     <section
       ref={workspace}
       tabIndex={-1}
-      className={`household-map presentation-${presentation}${detailsOpen ? ' map-details-open' : ''}${editorOpen ? ' map-editor-open' : ''}`}
+      className={`household-map presentation-${active ? presentation : 'list'}${detailsOpen ? ' map-details-open' : ''}${editorOpen ? ' map-editor-open' : ''}`}
       aria-label="Hushållskarta"
       onKeyDown={(event) => {
         if (
@@ -919,7 +930,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
           showAll();
       }}
     >
-      <header className="household-intro">
+      <header className="household-intro" hidden={!active}>
         <p className="eyebrow">Från samtal till hushållets karta</p>
         <h2>Berätta. Rätta. Spara med rösten.</h2>
         <p>Följ ändringarna medan du pratar. Du kan också skriva eller använda kartans formulär.</p>
@@ -966,6 +977,7 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
       )}
       {state && (
         <TextAssistant
+          active={active}
           householdId={householdId}
           onMapChange={() => setLoad((value) => value + 1)}
           onAccessLost={loseAccess}
@@ -1487,7 +1499,9 @@ export function HouseholdMap({ householdId }: { householdId: string }) {
               <SpatialMap
                 revealRequest={revealRequest}
                 personal={personal}
-                active={presentation !== 'list' && !(presentation === 'map' && detailsOpen)}
+                active={
+                  active && presentation !== 'list' && !(presentation === 'map' && detailsOpen)
+                }
                 state={effectiveState ?? state}
                 objects={visibleObjects}
                 relationships={visibleEdges}
