@@ -176,6 +176,30 @@ export function HouseholdMap({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const workspace = useRef<HTMLElement>(null);
   const lastWorkFocus = useRef<HTMLElement | null>(null);
+  const lastOutsideFocus = useRef<HTMLElement | string | null>(null);
+  const routeOutsideFocus = useRef<HTMLElement | string | null>(null);
+  const previousActive = useRef(active);
+  function restoreOutsideFocus(target: HTMLElement | string | null) {
+    const element =
+      typeof target === 'string'
+        ? [
+            ...(workspace.current?.querySelectorAll<HTMLButtonElement>('.workspace-tools button') ??
+              []),
+          ].find((button) => button.getAttribute('aria-label') === target)
+        : target;
+    if (!element?.isConnected || !element.offsetHeight || element.closest('[hidden], [inert]'))
+      return false;
+    element.focus();
+    return true;
+  }
+  useLayoutEffect(() => {
+    if (!active) routeOutsideFocus.current = lastOutsideFocus.current;
+  }, [active]);
+  useEffect(() => {
+    const returning = active && !previousActive.current;
+    previousActive.current = active;
+    if (returning && !profileRequested) restoreOutsideFocus(routeOutsideFocus.current);
+  });
   const [revealRequest, setRevealRequest] = useState<MapRevealRequest>();
   const revealAbort = useRef<AbortController | null>(null);
   useEffect(() => () => revealAbort.current?.abort(), []);
@@ -995,13 +1019,27 @@ export function HouseholdMap({
       tabIndex={-1}
       className={`household-map${active ? ' workspace-shell' : ''}${workOpen ? ' workspace-open' : ''}${revealRequest ? ' workspace-revealing' : ''} presentation-${active ? presentation : 'list'}${detailsOpen ? ' map-details-open' : ''}${editorOpen ? ' map-editor-open' : ''}`}
       onFocusCapture={(event) => {
-        if (event.target instanceof HTMLElement && event.target.closest('.workspace-window'))
+        if (
+          !active ||
+          !event.currentTarget.contains(event.target) ||
+          !(event.target instanceof HTMLElement) ||
+          event.target.closest('.workspace-utility, .workspace-tools-footer, [data-secondary]')
+        )
+          return;
+        if (event.target.closest('.workspace-window')) {
           lastWorkFocus.current = event.target;
+          lastOutsideFocus.current = null;
+        } else {
+          lastOutsideFocus.current = event.target.closest('.workspace-tools')
+            ? event.target.getAttribute('aria-label')
+            : event.target;
+        }
       }}
       aria-label="Hushållskarta"
       data-theme={theme.theme}
       onKeyDown={(event) => {
         if (
+          active &&
           event.currentTarget.contains(event.target as Node) &&
           event.key === 'Escape' &&
           !(
@@ -1028,7 +1066,15 @@ export function HouseholdMap({
             account={account}
             profileRequested={profileRequested}
             onReturnWork={() => {
-              if (!activePanel || !lastWorkFocus.current?.isConnected) return false;
+              if (restoreOutsideFocus(lastOutsideFocus.current)) return true;
+              if (
+                !workOpen ||
+                !activePanel ||
+                !openPanels.includes(activePanel) ||
+                !lastWorkFocus.current?.isConnected ||
+                lastWorkFocus.current.closest('[hidden], [inert]')
+              )
+                return false;
               setPanelFocusRequest({ id: activePanel, element: lastWorkFocus.current });
               return true;
             }}
@@ -1161,6 +1207,7 @@ export function HouseholdMap({
           renderWorkspace={(work, conversation) => (
             <WorkspacePanels
               hidden={!active || !workOpen}
+              restoreFocusOnReveal={!profileRequested}
               activeId={activePanel}
               focusRequest={panelFocusRequest}
               onActivate={(id) => {

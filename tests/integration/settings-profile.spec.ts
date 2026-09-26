@@ -148,6 +148,124 @@ test('INST-03: the separate profile returns to the active field and groups perso
     await expect(profile.getByRole('heading', { name: 'Din profil', exact: true })).toBeFocused();
     await profile.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
     await expect(page.getByLabel('Beskrivning', { exact: true })).toBeFocused();
+    await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+    await openProfile(page);
+    await profile.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Lista', exact: true })).toBeFocused();
+    await expect(page.getByLabel('Beskrivning', { exact: true })).not.toBeVisible();
+  } finally {
+    await installation.close();
+  }
+});
+
+test('INST-04: settings and profile restore map and toolbar focus without opening panels', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    await signIn(page.request, installation.origin);
+    await createHousehold(page.request, installation.origin);
+    await page.goto(installation.origin);
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+    await page.getByLabel('Objektets namn').fill('Cykeln');
+    await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
+    await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+    const object = page.getByRole('button', { name: 'Välj objekt: Cykeln', exact: true });
+    const microphone = page.getByRole('button', { name: 'Prata med Skyttel', exact: true });
+    for (const target of [object, microphone]) {
+      await target.focus();
+      await openSettings(page);
+      await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+      await expect(target).toBeFocused();
+      await openProfile(page);
+      await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
+      await expect(target).toBeFocused();
+      await expect(
+        page.getByRole('button', { name: 'Nytt objekt', exact: true }),
+      ).not.toBeVisible();
+    }
+  } finally {
+    await installation.close();
+  }
+});
+
+test('INST-05: leaving the compact profile exposes keyboard focus in the retained work', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await signIn(page.request, installation.origin);
+    await createHousehold(page.request, installation.origin);
+    await page.goto(installation.origin);
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+    await page.getByLabel('Objektets namn').fill('Kvar bakom profilen');
+    await openProfile(page);
+    const profile = page.getByRole('region', { name: 'Din profil', exact: true });
+    await profile.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).focus();
+    await page.keyboard.press('Tab');
+    await expect(profile).not.toBeVisible();
+    expect(
+      await page.evaluate(() => {
+        const focused = document.activeElement;
+        if (!(focused instanceof HTMLElement)) return false;
+        const box = focused.getBoundingClientRect();
+        return (
+          box.width > 0 &&
+          box.height > 0 &&
+          focused.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2))
+        );
+      }),
+    ).toBe(true);
+    await expect(page.getByLabel('Objektets namn')).toHaveValue('Kvar bakom profilen');
+  } finally {
+    await installation.close();
+  }
+});
+
+test('INST-06: settings form buttons retain readable contrast when hovered in both themes', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    await signIn(page.request, installation.origin);
+    await createHousehold(page.request, installation.origin);
+    await page.goto(installation.origin);
+    await openSettings(page);
+    await page.getByRole('link', { name: 'Administrera tillgång', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Administrera tillgång', exact: true }),
+    ).toBeFocused();
+    for (const theme of ['Mörkt', 'Ljust']) {
+      await page.getByRole('button', { name: /Byt tema/ }).click();
+      await page.getByRole('radio', { name: theme, exact: true }).click();
+      for (const label of ['Hämta aktuella innehållskopplingar', 'Skapa inbjudan']) {
+        const button = page.getByRole('button', { name: label, exact: true });
+        await button.hover();
+        expect(
+          await button.evaluate((element) => {
+            const style = getComputedStyle(element);
+            const luminance = (color: string) => {
+              const channels = (color.match(/\d+/g) ?? [])
+                .slice(0, 3)
+                .map(Number)
+                .map((value) => {
+                  const unit = value / 255;
+                  return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+                });
+              return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+            };
+            const foreground = luminance(style.color);
+            const background = luminance(style.backgroundColor);
+            return (
+              (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+            );
+          }),
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   } finally {
     await installation.close();
   }

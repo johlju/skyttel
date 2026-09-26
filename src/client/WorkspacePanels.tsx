@@ -63,6 +63,7 @@ export function WorkspacePanels({
   hidden = false,
   onEmpty,
   focused = false,
+  restoreFocusOnReveal = true,
 }: {
   windows: WorkspacePanel[];
   activeId: string | null;
@@ -72,6 +73,7 @@ export function WorkspacePanels({
   hidden?: boolean;
   onEmpty: () => void;
   focused?: boolean;
+  restoreFocusOnReveal?: boolean;
 }) {
   const prefix = useId();
   const regionRef = useRef<HTMLDivElement>(null);
@@ -168,7 +170,7 @@ export function WorkspacePanels({
     const explicit = explicitFocusCommitted.current;
     previousHidden.current = hidden;
     explicitFocusCommitted.current = false;
-    if (hidden || !reopened || explicit || !visibleId) return;
+    if (hidden || !reopened || explicit || !visibleId || !restoreFocusOnReveal) return;
     const panel = panelRefs.current.get(visibleId);
     if (panel?.contains(document.activeElement)) return;
     const previousFocus = lastFocus.current.get(visibleId);

@@ -69,6 +69,47 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+test('compact profile returns to visible work and dismisses before keyboard focus enters the map', async () => {
+  await open(1440);
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
+  await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+  const name = page.getByLabelText('Objektets namn', { exact: true });
+  await name.fill('Oskickad profiltext');
+  const profileButton = page.getByRole('button', { name: 'Din profil', exact: true });
+  const profile = page.getByRole('region', { name: 'Din profil', exact: true });
+  await profileButton.click();
+  await expect
+    .element(profile.getByRole('heading', { name: 'Din profil', exact: true }))
+    .toHaveFocus();
+  await profile.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
+  await expect.element(name).toHaveFocus();
+  await expect.element(name).toHaveValue('Oskickad profiltext');
+  await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+  for (const target of [
+    page.getByRole('button', { name: 'Välj objekt: Alex', exact: true }),
+    page.getByRole('button', { name: 'Prata med Skyttel', exact: true }),
+  ]) {
+    (target.element() as HTMLElement).focus();
+    await profileButton.click();
+    await profile.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
+    await expect.element(target).toHaveFocus();
+    await expect.element(name).not.toBeVisible();
+  }
+  await profileButton.click();
+  (
+    profile
+      .getByRole('button', { name: 'Tillbaka till arbetet', exact: true })
+      .element() as HTMLElement
+  ).focus();
+  await userEvent.keyboard('{Tab}');
+  await expect.element(profile).not.toBeInTheDocument();
+  const focused = document.activeElement as HTMLElement;
+  const box = focused.getBoundingClientRect();
+  expect(
+    focused.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)),
+  ).toBe(true);
+});
+
 test('desktop keeps the map and bounded conversation, object and list panels available', async () => {
   await open(1440);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();

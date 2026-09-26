@@ -202,6 +202,15 @@
   background: var(--space-accent);
   color: var(--space-surface);
 }
+.settings-screen button:hover:enabled {
+  background: var(--space-surface);
+  border-color: var(--space-accent);
+  color: var(--space-text);
+}
+.settings-screen .primary:hover:enabled {
+  background: var(--space-accent);
+  color: var(--space-surface);
+}
 .settings-screen .workspace-theme-button {
   width: 44px;
   height: 44px;
