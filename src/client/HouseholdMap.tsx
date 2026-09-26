@@ -155,6 +155,13 @@ export function HouseholdMap({
   const workTrigger = useRef<HTMLElement | null>(null);
   const [guidance, setGuidance] = useState(true);
   const workOpen = presentation !== 'map' || detailsOpen || editorOpen;
+  const [narrow, setNarrow] = useState(() => window.innerWidth <= 700);
+  useEffect(() => {
+    const resize = () => setNarrow(window.innerWidth <= 700);
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
+  const mapCovered = narrow && workOpen && !revealRequest;
   function openWork(target: WorkspaceTarget) {
     workTrigger.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -177,7 +184,12 @@ export function HouseholdMap({
     setRevealRequest(undefined);
     setDetailsOpen(false);
     setEditorOpen(false);
-    workTrigger.current?.focus();
+    const trigger = workTrigger.current;
+    if (trigger?.isConnected && trigger.offsetWidth && trigger.offsetHeight) trigger.focus();
+    else
+      workspace.current
+        ?.querySelector<HTMLButtonElement>('.workspace-tools button[aria-label="Lista"]')
+        ?.focus();
   }
   const [dirty, setDirty] = useState(false);
   const [query, setQuery] = useState('');
@@ -1084,12 +1096,12 @@ export function HouseholdMap({
         </button>
       )}
       {state && (
-        <div className="map-space" hidden={!active}>
+        <div className="map-space" hidden={!active} inert={mapCovered} aria-hidden={mapCovered}>
           <SpatialMap
             theme={theme.theme}
             revealRequest={revealRequest}
             personal={personal}
-            active={active}
+            active={active && !mapCovered}
             state={effectiveState ?? state}
             objects={visibleObjects}
             relationships={visibleEdges}

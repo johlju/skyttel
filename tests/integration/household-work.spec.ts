@@ -311,6 +311,7 @@ test('ARBETE-06: selection and personal map view survive navigation and resizing
     await expect(
       page.getByRole('region', { name: 'Val och redigering', exact: true }),
     ).toContainText('Min cykel');
+    await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
     await expect(space.getByLabel('Visa höjdhjälp', { exact: true })).toBeChecked();
     expect(await (await page.request.get(path)).json()).toEqual(view);
   } finally {

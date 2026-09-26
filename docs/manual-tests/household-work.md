@@ -214,6 +214,8 @@ and resizing”.
    personlig vy och markera **Visa höjdhjälp**.
 3. Besök **Inloggningssätt**, minska fönstret till mobilstorlek och
    återgå med **Till startsidan**.
+4. Kontrollera **Samlad vy** och cykelns urval. Välj **Stäng arbetsytan**
+   för att kontrollera kartans höjdhjälp och personliga placering.
 
 **Förväntat resultat:**
 

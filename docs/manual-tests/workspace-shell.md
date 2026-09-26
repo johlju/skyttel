@@ -100,6 +100,8 @@ without graphics”.
    samtalsytan går att nå utan mikrofon.
 4. Upprepa med förstoring och tangentbord; använd hopplänkarna till
    formulär och samtal före kartgrafiken.
+5. Öppna **Sök i kartan** och **Utkast och historik** från de expanderade
+   verktygen. Stäng arbetsytan efter varje val och kontrollera fokus.
 
 **Förväntat resultat:**
 
@@ -107,6 +109,9 @@ without graphics”.
   fokus till hjälpknappen.
 - Formulär och samtal går att nå utan att välja något grafiskt objekt.
 - Innehållet är läsbart och kontrollerna nåbara även med förstoring.
+- Fokus återgår till en synlig verktygsknapp. Täckta kartkontroller går
+  inte att tabba till medan arbetsytan ligger över kartan; stäng
+  arbetsytan för att använda kartans kontroller igen.
 
 ## Återhämtning
 
@@ -139,3 +144,28 @@ action”.
 
 Förlorad tillgång och avslutad mikrofon verifieras i
 [bevarat hushållsarbete](household-work.md#arbete-03-återkallad-tillgång-avvecklar-dolt-arbete).
+
+### YTA-05: läsbart sparbesked på surfplatta
+
+**Syfte:** Läsa sparresultatet och fortsätta arbeta med öppen arbetsyta.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Tom karta på surfplatta i stående läge.
+
+**Integrationstest:**
+[workspace-shell.spec.ts](../../tests/integration/workspace-shell.spec.ts),
+testfallet “YTA-05: save results remain readable beside tablet work”.
+
+**Steg:**
+
+1. Öppna **Lista** och **Nytt objekt**. Skriv
+   **Familjens gemensamma cykel** och välj **Lägg i mitt utkast**.
+2. Välj **Spara hela utkastet** och läs hela sparbeskedet.
+3. Välj **Stäng status** och därefter **Stäng arbetsytan**.
+
+**Förväntat resultat:**
+
+- Sparbeskedet är läsbart medan arbetsytan är öppen.
+- Att stänga beskedet ändrar inte det sparade innehållet. Cykeln finns
+  kvar i kartan när arbetsytan stängs.
