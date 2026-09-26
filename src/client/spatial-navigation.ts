@@ -1,3 +1,5 @@
+export const navigationDragThreshold = 8;
+
 /** Camera gestures on empty space never create object edits. */
 export function cameraGestures(
   canvas: HTMLCanvasElement,
@@ -11,6 +13,7 @@ export function cameraGestures(
   const pointers = new Map<number, { x: number; y: number; button: number }>();
   let enabled = true;
   let multiple = false;
+  let dragging = false;
   function down(event: PointerEvent) {
     if (!enabled || (!pointers.size && event.target !== canvas)) return;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, button: event.button });
@@ -28,6 +31,12 @@ export function cameraGestures(
     const other = pair.find(([id]) => id !== event.pointerId)?.[1];
     const dx = event.clientX - before.x;
     const dy = event.clientY - before.y;
+    // Keep the press origin until motion is deliberate. A tiny click must
+    // neither move the camera nor become a navigation gesture.
+    if (!other && !multiple && !dragging) {
+      if (Math.hypot(dx, dy) < navigationDragThreshold) return;
+      dragging = true;
+    }
     if (other) {
       camera.pan(dx / 2, dy / 2);
       const oldDistance = Math.hypot(before.x - other.x, before.y - other.y);
@@ -45,11 +54,15 @@ export function cameraGestures(
   }
   function end(event: PointerEvent) {
     pointers.delete(event.pointerId);
-    if (!pointers.size) multiple = false;
+    if (!pointers.size) {
+      multiple = false;
+      dragging = false;
+    }
   }
   function cancel() {
     pointers.clear();
     multiple = false;
+    dragging = false;
   }
   function wheel(event: WheelEvent) {
     event.preventDefault();

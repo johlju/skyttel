@@ -602,6 +602,14 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
     await objectRow.focus();
     await page.keyboard.press('Tab');
     await expect(
+      page.getByRole('button', { name: 'Markera Lo Exempel', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      page.getByRole('button', { name: 'Visa detaljer för Lo Exempel', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
       page.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Tab');

@@ -12,6 +12,7 @@ const paths = {
   expand: 'm9 5 7 7-7 7',
   close: 'm6 6 12 12M18 6 6 18',
   draft: 'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',
+  detail: 'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',
 };
 
 export function WorkspaceIcon({ name }: { name: keyof typeof paths }) {
@@ -39,6 +40,9 @@ export function WorkspaceTools({
   profileRequested = false,
   onReturnWork,
   theme,
+  onDetails,
+  detailsAvailable = false,
+  detailsVisible = false,
 }: {
   onOpen: (target: WorkspaceTarget) => void;
   account?: ReactNode;
@@ -46,6 +50,9 @@ export function WorkspaceTools({
   profileRequested?: boolean;
   onReturnWork?: () => boolean;
   theme?: ReactNode;
+  onDetails?: () => void;
+  detailsAvailable?: boolean;
+  detailsVisible?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [utility, setUtility] = useState<'help' | 'profile' | null>(
@@ -123,6 +130,23 @@ export function WorkspaceTools({
             <span>{label}</span>
           </button>
         ))}
+        {onDetails && (
+          <button
+            type="button"
+            title="Visa detaljer"
+            aria-label="Visa detaljer"
+            aria-pressed={detailsVisible}
+            disabled={!detailsAvailable}
+            onClick={() => {
+              setExpanded(false);
+              setUtility(null);
+              onDetails();
+            }}
+          >
+            <WorkspaceIcon name="detail" />
+            <span>Visa detaljer</span>
+          </button>
+        )}
         <div className="workspace-tools-footer">
           {(
             [
@@ -148,7 +172,9 @@ export function WorkspaceTools({
               <span>{label}</span>
             </button>
           ))}
-          {theme}
+          <div className="workspace-theme-tool" data-secondary>
+            {theme}
+          </div>
           <button
             type="button"
             ref={expansionControl}
