@@ -21,6 +21,8 @@ import { HouseholdExport } from './HouseholdExport.js';
 import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
+import { useWorkspaceTheme } from './WorkspaceTheme.js';
+import './access.css';
 
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
@@ -123,64 +125,139 @@ function Failure({ onRetry }: { onRetry: () => void }) {
 
 function Login({ providers }: { providers: Provider[] }) {
   const location = useLocation();
-  const [pending, setPending] = useState<Provider | null>(null);
-  const [error, setError] = useState(
-    new URLSearchParams(location.search).has('authError') ||
-      new URLSearchParams(location.search).has('error'),
-  );
+  const [selected, setSelected] = useState<Provider | null>(null);
+  const [pending, setPending] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
+  const [error, setError] = useState(() => {
+    const query = new URLSearchParams(location.search);
+    return query.get('error') ?? (query.has('authError') ? 'failed' : null);
+  });
+  const options = useRef<HTMLFieldSetElement>(null);
+  const continueButton = useRef<HTMLButtonElement>(null);
+  const attempt = useRef<AbortController | null>(null);
+  const lastProvider = useRef<Provider | null>(null);
+  const label = selected === 'google' ? 'Google' : 'Microsoft';
+  useEffect(() => {
+    if (selected) continueButton.current?.focus();
+    else if (lastProvider.current)
+      options.current
+        ?.querySelector<HTMLButtonElement>(`[data-provider="${lastProvider.current}"]`)
+        ?.focus();
+  }, [selected]);
+  useEffect(() => {
+    const returned = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      attempt.current?.abort();
+      setSelected(null);
+      setPending(false);
+      setCancelled(true);
+    };
+    window.addEventListener('pageshow', returned);
+    return () => {
+      attempt.current?.abort();
+      window.removeEventListener('pageshow', returned);
+    };
+  }, []);
+  function cancel() {
+    attempt.current?.abort();
+    setPending(false);
+    setSelected(null);
+    setCancelled(true);
+  }
   async function signIn(provider: Provider) {
-    setPending(provider);
-    setError(false);
+    const controller = new AbortController();
+    attempt.current = controller;
+    setPending(true);
+    setError(null);
     try {
-      const result = await request<{ url: string }>('/api/auth/sign-in/social', {
-        provider,
-        callbackURL: location.pathname === '/costs' ? '/costs' : '/',
-        ...(location.pathname === '/assistant-consent'
-          ? { oauth_query: location.search.slice(1) }
-          : {}),
-        errorCallbackURL: '/?authError=1',
-      });
+      const result = await request<{ url: string }>(
+        '/api/auth/sign-in/social',
+        {
+          provider,
+          callbackURL: location.pathname === '/costs' ? '/costs' : '/',
+          ...(location.pathname === '/assistant-consent'
+            ? { oauth_query: location.search.slice(1) }
+            : {}),
+          errorCallbackURL: '/?authError=1',
+        },
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
       if (typeof result.url !== 'string') throw new Error('invalid_redirect');
       const url = new URL(result.url, window.location.origin);
       if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid_redirect');
       window.location.assign(url.href);
     } catch {
-      setPending(null);
-      setError(true);
+      if (controller.signal.aborted) return;
+      setPending(false);
+      setSelected(null);
+      setError('failed');
     }
   }
   return (
-    <section className="panel">
-      <p className="eyebrow">Hushållets gemensamma karta</p>
+    <section className="panel access-gate">
+      <p className="eyebrow">Skyttel · ditt hushåll, sammanbundet</p>
       <Heading>Välkommen till Skyttel</Heading>
-      <p className="intro">Samla hushållets digitala och ekonomiska samband på ett ställe.</p>
-      <fieldset className="sign-in-options" aria-label="Inloggningssätt">
-        {providers.map((provider) => {
-          const label = provider === 'google' ? 'Google' : 'Microsoft';
-          return (
+      <p className="intro">
+        En gemensam plats för det som hör ihop. Logga in med ditt eget Google- eller
+        Microsoft-konto.
+      </p>
+      {selected ? (
+        <div className="access-transition">
+          <p className="access-note">
+            Du går vidare till {label}. Efter inloggningen kommer du tillbaka till Skyttel.
+          </p>
+          <div className="access-actions">
+            <button
+              ref={continueButton}
+              type="button"
+              className="primary"
+              disabled={pending}
+              onClick={() => void signIn(selected)}
+            >
+              {pending ? `Öppnar ${label}…` : `Fortsätt till ${label}`}
+              <span aria-hidden="true"> ↗</span>
+            </button>
+            <button type="button" onClick={cancel}>
+              Avbryt
+            </button>
+          </div>
+        </div>
+      ) : (
+        <fieldset ref={options} className="sign-in-options" aria-label="Inloggningssätt">
+          {providers.map((provider) => (
             <button
               type="button"
               key={provider}
-              className="provider"
-              disabled={pending !== null}
-              onClick={() => void signIn(provider)}
+              data-provider={provider}
+              className={provider === 'google' ? 'provider primary' : 'provider'}
+              onClick={() => {
+                lastProvider.current = provider;
+                setCancelled(false);
+                setError(null);
+                setSelected(provider);
+              }}
             >
-              <span className={`provider-mark ${provider}`} aria-hidden="true">
-                {provider === 'google' ? 'G' : '⊞'}
-              </span>
-              {pending === provider ? `Öppnar ${label}…` : `Fortsätt med ${label}`}
+              Fortsätt med {provider === 'google' ? 'Google' : 'Microsoft'}
             </button>
-          );
-        })}
-      </fieldset>
+          ))}
+        </fieldset>
+      )}
       {pending && (
         <p className="muted" role="status">
-          Du skickas vidare för att logga in.
+          Öppnar {label} för att verifiera din inloggning…
         </p>
       )}
+      {cancelled && (
+        <p role="status">Inloggningen avbröts. Välj ett inloggningssätt när du vill fortsätta.</p>
+      )}
       {error && (
-        <p className="error" role="alert">
-          Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.
+        <p className="error access-note" role="alert">
+          {error === 'access_denied'
+            ? 'Inloggningen kunde inte slutföras eftersom den avbröts hos leverantören. Du är tillbaka i Skyttel och kan försöka igen.'
+            : ['state_mismatch', 'state_not_found', 'state_invalid'].includes(error)
+              ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
+              : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
         </p>
       )}
       <p className="muted">
@@ -329,7 +406,8 @@ function Setup({
       <p className="eyebrow">Kom igång</p>
       <Heading>Skapa ditt hushåll</Heading>
       <p className="intro">
-        Du är installationens första administratör. Ge hushållet ett namn för att komma igång.
+        Du är utsedd till installationens första administratör. Börja med hushållets namn. Du kan
+        bjuda in andra när kartan öppnas.
       </p>
       <form onSubmit={(event) => void submit(event)} noValidate aria-busy={pending}>
         <label htmlFor="household-name">Hushållets namn</label>
@@ -390,8 +468,9 @@ function Forbidden() {
       <p className="eyebrow">Privat hushåll</p>
       <Heading>Du har inte tillgång till hushållet</Heading>
       <p>
-        Den här inloggningen har inte tillgång till hushållet. Logga ut för att använda en annan
-        inloggning.
+        Din inloggning fungerar, men du har inte tillgång till hushållet. Be administratören om en
+        inbjudan för ditt Skyttel-användar-ID. Att logga in igen återställer inte ett återkallat
+        medlemskap.
       </p>
       <p className="muted">
         Dela ditt Skyttel-användar-ID nedan med en administratör för att få en inbjudan.
@@ -886,6 +965,7 @@ function HouseholdPage({
 export function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useWorkspaceTheme();
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
@@ -912,7 +992,10 @@ export function App() {
   const mapActive =
     data?.status === 'ready' && Boolean(matchPath('/households/:id', location.pathname));
   return (
-    <div className={`app-shell${mapActive ? ' has-workspace' : ''}`}>
+    <div
+      className={`app-shell${mapActive ? ' has-workspace' : ''}${data && data.status !== 'ready' && !['/costs', '/login-methods'].includes(location.pathname) ? ' access-shell' : ''}`}
+      data-theme={theme.theme}
+    >
       <a className="skip-link" href="#main">
         Hoppa till innehållet
       </a>

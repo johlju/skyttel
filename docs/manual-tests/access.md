@@ -1,7 +1,8 @@
 # Manuella testfall för inloggning och hushållets start
 
 Testfallen omfattar första hushållet, återhämtning vid anslutningsfel,
-utloggning och länkning av Google och Microsoft.
+utloggning, kartans stängbara vägledning och länkning av Google och Microsoft.
+Övergången till vald leverantör visar vad som händer och kan avbrytas.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
 ## Konfigurerade användare
@@ -30,7 +31,10 @@ fallen anger formulär, samtal, profil eller administration.
 2. Återställ till en separat tom testdatabas mellan fall som skapar hushåll.
    Återställ länkade identiteter mellan länkningsfallen; använd separata
    testdatabaser för att undvika att en Microsoft-identitet redan är kopplad.
-3. Använd en webbläsare med utvecklarverktyg för nätverksfel. Ta bort
+3. När ett fall anger **Fortsätt med Google** eller **Fortsätt med Microsoft**,
+   läs övergången och välj sedan **Fortsätt till Google** respektive
+   **Fortsätt till Microsoft**. **Avbryt** återgår till valet av inloggningssätt.
+4. Använd en webbläsare med utvecklarverktyg för nätverksfel. Ta bort
    blockeringar och återställ nätverksanslutningen efter varje fall.
    Använd aldrig felinjicering på en installation med riktiga hushåll.
 
@@ -150,6 +154,8 @@ viewport”. Testet kontrollerar även automatisk anpassning till smal skärm.
 
 1. Öppna installationen. Kontrollera att välkomstrubriken får fokus.
 2. Tryck Tab till **Fortsätt med Google** och aktivera med Enter.
+   Kontrollera att **Fortsätt till Google** får fokus. Läs beskedet om
+   återgången till Skyttel och aktivera med Enter.
 3. Efter inloggningen kontrollerar du att **Skapa ditt hushåll** får fokus.
    Tryck Tab till **Hushållets namn** och skriv **Hushallet Linden**.
 4. Tryck Tab till **Skapa hushåll** och aktivera med Enter.
@@ -412,6 +418,140 @@ closed and allows a successful retry”.
   **Hushållet Linden**.
 - Integrationstesterna kontrollerar även att direkta försök att läsa eller
   skapa hushåll nekas före den lyckade inloggningen.
+
+## Extern övergång och första användning
+
+### ACCESS-14: Övergången förklarar återkomsten och kan avbrytas
+
+**Syfte:** Kontrollera ett begripligt val innan extern inloggning öppnas.
+
+**Användare:** Robin, utloggad och utan medlemskap.
+
+**Förutsättningar:** Installationen saknar hushåll. Använd en smal skärm.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-14: external sign-in explains the return and can be
+cancelled before leaving”.
+
+**Steg:**
+
+1. Välj **Fortsätt med Google**. Läs övergången utan att fortsätta.
+2. Välj **Avbryt** och kontrollera fokus och besked.
+3. Välj Microsoft och fortsätt till leverantören. Logga in som Robin.
+
+**Förväntat resultat:**
+
+- Övergången förklarar att inloggningen sker hos Google och sedan återgår
+  till Skyttel. Fortsättningsknappen får fokus.
+- Avbrottet behåller startsidan och återger fokus till Google-valet.
+  Beskedet om avbrottet kan läsas av hjälpmedel.
+- Robin ser beskedet om saknad tillgång, sitt användar-ID och inbjudningskod.
+  Skapande av hushåll erbjuds inte. Innehållet ryms på den smala skärmen.
+
+### ACCESS-15: Kartans vägledning ger tre frivilliga ingångar
+
+**Syfte:** Börja med tal, text eller lista utan obligatorisk rundtur.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Hushållet finns och kartan är tom.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-15: first-use guidance opens voice, text and list without
+a mandatory tour”.
+
+**Steg:**
+
+1. Öppna kartan och välj **Tala** i vägledningen. Kontrollera samtalets
+   ingångar och medgivanden. Ingen mikrofon ska börja spela in automatiskt.
+2. Ladda om kartan och välj **Skriv** i vägledningen.
+3. Ladda om och välj **Öppna listan**. Kontrollera **Nytt objekt**.
+4. Ladda om och välj **Stäng vägledningen**.
+
+**Förväntat resultat:**
+
+- Tal och text öppnar samtalets riktiga kontroller. Lista öppnar kartarbetet.
+- Vägledningen försvinner efter ett val. Befintliga medgivanden gäller.
+- Stängning ger fokus till kartans verktyg. Alla verktyg kan användas direkt.
+
+### ACCESS-16: Utgånget inloggningsförsök kan ersättas
+
+**Syfte:** Ge en begriplig återgång när verifieringen inte längre gäller.
+
+**Användare:** Alex, utloggad.
+
+**Förutsättningar:** Installationen saknar hushåll. I det automatiserade
+fallet förbereds ett utgånget försök i den tillfälliga testdatabasen.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-16: expired provider verification returns to login and
+a fresh attempt succeeds”.
+
+**Steg:**
+
+1. Fortsätt till Google. Vänta minst elva minuter hos leverantören innan
+   du slutför inloggningen och återkommer till Skyttel.
+2. Läs beskedet och börja ett nytt Google-försök. Slutför det direkt.
+
+**Förväntat resultat:**
+
+- Skyttel säger att försöket har gått ut eller inte kan verifieras.
+  Hushållsformuläret visas inte och skyddad åtkomst är fortsatt stängd.
+- Ett nytt, verifierat försök visar **Skapa ditt hushåll**.
+
+### ACCESS-17: Återkallad tillgång stoppar arbete och bevarar driftåtkomst
+
+**Syfte:** Skilja hushållsmedlemskap från installationens kostnadsbehörighet.
+
+**Användare:** Alex som driftansvarig och en annan administratör.
+
+**Förutsättningar:** Båda har tillgång till hushållet. Alex öppnar kartan.
+Den andra administratören använder en separat webbläsarprofil.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-17: revoked access retires protected work while the
+operator can open costs”.
+
+**Steg:**
+
+1. Öppna **Lista**, välj **Nytt objekt** och skriv ett namn utan att skicka.
+2. Återkalla Alex tillgång med den andra administratören. Vänta på
+   uppdateringen i Alex öppna flik.
+3. Öppna **Månadskostnad** som Alex.
+
+**Förväntat resultat:**
+
+- Kartan och den oskickade redigeringen försvinner inom tio sekunder.
+  Beskedet om saknad tillgång får fokus. Ny inloggning återställer inte
+  medlemskapet.
+- Kostnadsöversikten är tillgänglig för Alex utan hushållsmedlemskap.
+
+### ACCESS-18: Kartans temaval följer med till inloggningen
+
+**Syfte:** Behålla det valda temat när användaren lämnar kartan.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Alex är inloggad och hushållets karta är öppen.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-18: the chosen map theme also applies when returning
+to login”.
+
+**Steg:**
+
+1. Öppna **Tema** i kartans verktyg och välj **Mörkt**.
+2. Öppna **Min profil** och välj **Logga ut**.
+
+**Förväntat resultat:**
+
+- Välkomstsidan använder det mörka temat direkt efter utloggningen.
+- Inloggningssätt och felbesked förblir läsbara i det valda temat.
 
 ## Real identity provider preparation
 

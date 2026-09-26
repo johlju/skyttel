@@ -13,7 +13,11 @@ Börja med några få uppgifter och komplettera när du vet mer.
 2. Välj **Fortsätt med Google** eller **Fortsätt med Microsoft**, beroende
    på vilka alternativ installationen erbjuder. Använd inloggningen som
    hör till din Skyttel-användare.
-3. Om du redan är medlem öppnas hushållets karta. Om du ser
+3. Läs övergången och välj **Fortsätt till Google** eller
+   **Fortsätt till Microsoft**. Du loggar in hos leverantören och kommer
+   sedan tillbaka till Skyttel. **Avbryt** återgår till valet av
+   inloggningssätt. Om försöket går ut börjar du ett nytt försök.
+4. Om du redan är medlem öppnas hushållets karta. Om du ser
    **Du har inte tillgång till hushållet** behöver administratören bjuda
    in dig. Följ [stegen för inbjudan](access.md#bjud-in-en-skyttel-användare).
 
@@ -22,7 +26,11 @@ Om du är utsedd till installationens första administratör och ser
 Namnet ska ha 1–100 tecken. Vid ett oklart resultat väljer du
 **Kontrollera status**. Därefter kan du bjuda in de andra medlemmarna.
 
-I sidhuvudet finns **Logga ut** och **Inloggningssätt**. Vill du använda
+Kartans vägledning erbjuder **Tala**, **Skriv** och **Öppna listan**.
+Du kan välja **Stäng vägledningen** och använda kartans verktyg direkt.
+Tal börjar först när du själv startar rösten och ger nödvändiga medgivanden.
+
+I **Min profil** finns **Logga ut** och **Inloggningssätt**. Vill du använda
 både Google och Microsoft för samma Skyttel-användare behöver du
 [koppla inloggningarna](access.md#koppla-google-och-microsoft) medan du är
 inloggad. Samma e-postadress kopplar inte ihop dem automatiskt.

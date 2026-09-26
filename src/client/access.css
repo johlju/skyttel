@@ -1,0 +1,125 @@
+.access-shell {
+  --access-bg: #eef3f3;
+  --access-surface: #fff;
+  --access-text: #1d3543;
+  --access-muted: #506777;
+  --access-line: #95a6ae;
+  --access-control: #607c89;
+  --access-accent: #1d706b;
+  --access-ink: #fff;
+  background: var(--access-bg);
+  color: var(--access-text);
+  color-scheme: light;
+  font:
+    15px / 1.6 Inter,
+    "Avenir Next",
+    system-ui,
+    sans-serif;
+}
+
+.access-shell[data-theme="dark"] {
+  --access-bg: #101b29;
+  --access-surface: #1a293a;
+  --access-text: #edf2f9;
+  --access-muted: #adbed2;
+  --access-line: #4d647e;
+  --access-control: #8198b3;
+  --access-accent: #8ce4db;
+  --access-ink: #092b2b;
+  color-scheme: dark;
+}
+
+.access-shell .panel {
+  width: min(520px, 100%);
+  padding: 26px;
+  background: var(--access-surface);
+  border: 1px solid var(--access-line);
+  border-radius: 20px;
+  box-shadow:
+    0 12px 45px #233b4817,
+    0 2px 8px #233b4810;
+}
+
+.access-shell h1 {
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.access-shell :is(a, .eyebrow) {
+  color: var(--access-accent);
+}
+
+.access-shell :is(.intro, .muted, .header-note, .privacy-note, footer) {
+  color: var(--access-muted);
+}
+
+.access-shell :is(button, input) {
+  min-height: 44px;
+  background: var(--access-surface);
+  color: var(--access-text);
+  border-color: var(--access-control);
+}
+
+.access-shell button:hover:enabled {
+  background: color-mix(in srgb, var(--access-accent) 10%, var(--access-surface));
+}
+
+.access-shell .primary {
+  background: var(--access-accent);
+  color: var(--access-ink);
+  border-color: var(--access-accent);
+}
+
+.access-shell .primary:hover:enabled {
+  background: var(--access-accent);
+}
+
+.access-shell :focus-visible {
+  outline: 3px solid var(--access-accent);
+  outline-offset: 3px;
+}
+
+.access-shell .error {
+  color: #a72929;
+}
+
+.access-shell[data-theme="dark"] .error {
+  color: #ffb4ab;
+}
+
+.access-shell[data-theme="dark"] .brand-logo {
+  box-sizing: content-box;
+  padding: 4px;
+  border-radius: 10px;
+  background: #dce7ef;
+}
+
+.access-shell .access-note {
+  padding: 16px;
+  border: 1px solid var(--access-line);
+  border-left: 3px solid var(--access-accent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--access-accent) 5%, var(--access-surface));
+}
+
+.access-transition {
+  margin: 24px 0;
+}
+
+.access-shell .session-controls {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .access-shell .panel {
+    padding: 22px;
+  }
+  .access-shell main {
+    padding: 12px 16px 24px;
+    justify-content: flex-start;
+  }
+  .access-shell .site-header {
+    padding: 16px;
+  }
+}

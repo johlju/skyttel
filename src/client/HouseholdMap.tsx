@@ -53,6 +53,7 @@ import {
 } from './SaveOperations.js';
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
 import { TextAssistant } from './TextAssistant.js';
+import { WelcomeGuidance } from './WelcomeGuidance.js';
 import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
 import './workspace.css';
 import { usePersonalView } from './use-personal-view.js';
@@ -178,6 +179,14 @@ export function HouseholdMap({
               : '.map-content button';
       workspace.current?.querySelector<HTMLElement>(selector)?.focus();
     });
+  }
+  function openGuidedWork(target: WorkspaceTarget) {
+    setGuidance(false);
+    openWork(target);
+  }
+  function dismissGuidance() {
+    setGuidance(false);
+    workspace.current?.querySelector<HTMLButtonElement>('.workspace-tools button')?.focus();
   }
   function closeWork() {
     setPresentation('map');
@@ -982,52 +991,19 @@ export function HouseholdMap({
             <span>Gemensam karta</span>
           </div>
           {guidance && !workOpen && Boolean(visibleObjects.size) && (
-            <aside className="workspace-guidance" aria-label="Kom igång med kartan">
-              <button
-                type="button"
-                className="workspace-close"
-                aria-label="Stäng vägledningen"
-                onClick={() => {
-                  setGuidance(false);
-                  workspace.current
-                    ?.querySelector<HTMLButtonElement>('.workspace-tools button')
-                    ?.focus();
-                }}
-              >
-                <WorkspaceIcon name="close" />
-              </button>
-              <h2>Din karta, på ditt sätt</h2>
-              <p>Berätta, skriv eller öppna Lista. Förslag blir gemensamma först när du sparar.</p>
-              <button type="button" onClick={() => openWork('conversation')}>
-                Samtal och text
-              </button>
-            </aside>
+            <WelcomeGuidance onOpen={openGuidedWork} onDismiss={dismissGuidance} />
           )}
           {state && !visibleObjects.size && !query && !typeFilter && !workOpen && (
             <div className="workspace-empty">
               <h2>Din karta börjar här</h2>
               <p>Lägg till ditt första objekt genom Lista eller berätta för Skyttel.</p>
-              {guidance && (
-                <aside aria-label="Kom igång med kartan">
-                  <button
-                    type="button"
-                    className="workspace-close"
-                    aria-label="Stäng vägledningen"
-                    onClick={() => {
-                      setGuidance(false);
-                      workspace.current
-                        ?.querySelector<HTMLButtonElement>('.workspace-tools button')
-                        ?.focus();
-                    }}
-                  >
-                    <WorkspaceIcon name="close" />
-                  </button>
-                  <p>Förslag blir gemensamma först när du sparar.</p>
-                </aside>
+              {guidance ? (
+                <WelcomeGuidance empty onOpen={openGuidedWork} onDismiss={dismissGuidance} />
+              ) : (
+                <button type="button" onClick={() => openWork('list')}>
+                  Öppna Lista
+                </button>
               )}
-              <button type="button" onClick={() => openWork('list')}>
-                Öppna Lista
-              </button>
             </div>
           )}
         </>

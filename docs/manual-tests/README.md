@@ -117,7 +117,8 @@ funktion. **Stäng arbetsytan** återgår till kartan och behåller oskickad tex
   lyckat sparbesked och provar exakta återförsök efter serveromstart.
 
 - [Inloggning och hushållets start](access.md): skapa hushåll, använda
-  tangentbord, återhämta anslutningsfel, logga ut och länka inloggningssätt.
+  tangentbord, avbryta extern inloggning, återhämta utgångna försök, börja
+  med kartans vägledning, hantera förlorad tillgång och länka inloggningssätt.
 - [Tillgång och medlemskap](membership.md): inbjudningar, utgångna och
   ersatta koder, delad administration samt återkallad och återställd
   tillgång med bevarat innehåll i kartan.
