@@ -316,8 +316,9 @@ and opens the saved route read-only”.
 **Användare:** Alex Exempel.
 
 **Förutsättningar:** Skapa och spara åtta objekt med namnen Nära objekt 1
-till Nära objekt 8 utöver Lo Exempel och Molnmusik. Använd personlig
-flyttning så att de ligger nära varandra i ett utsnitt. Använd 390 och
+till Nära objekt 8 utöver Lo Exempel och Molnmusik. Lägg till sambandet
+Nära objekt 7 → Använder → Nära objekt 8. Använd personlig flyttning så att
+de ligger nära varandra i ett utsnitt. Använd 390 och
 320 pixlars bredd. Upprepa med webbläsarens zoom på 200 och 400 procent.
 
 **Integrationstest:**
@@ -330,7 +331,9 @@ selected label priority and text alternatives”.
 1. Öppna rymdkartan. Välj ett tätt placerat objekt med dess namnetikett.
    Kontrollera att samma objekt markeras utan att kartans utsnitt flyttas.
 2. Använd Tab och Enter för att markera ett annat kartobjekt. Kontrollera
-   att dess etikett prioriteras och kan läsas.
+   att dess etikett prioriteras och kan läsas. Välj Nära objekt 8 och
+   därefter dess samband från Nära objekt 7. Sambandets etikett ska vara
+   synlig och valbar utan att täckas av objektnamn eller flytta kartan.
 3. Öppna Lista och markera Nära objekt 1 i listan. Läs och arbeta vidare
    utan att använda kartgrafik, tal eller ljud. Vid ett grafikavbrott ska
    samma listarbete fortfarande fungera.
