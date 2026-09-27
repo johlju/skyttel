@@ -115,14 +115,15 @@ from saved content”.
    Visa utkastet och spara.
 2. Högerklicka Molnmusik och välj Redigera objekt. Lägg en ändrad
    beskrivning i utkastet. Gå tillbaka till kartan.
-3. Kontrollera gul tilde och öppna menyn. Läs att objektet och ett
-   samband läggs som borttagningar i utkastet. Välj Ta bort objekt.
+3. Kontrollera bärnstensfärgad penna och öppna menyn via objektets namnetikett.
+   Läs att objektet och ett samband läggs som borttagningar i utkastet.
+   Välj Ta bort objekt.
 4. Kontrollera objektet, sambandet och hela ändringslistan. Kasta utkastet.
 
 **Förväntat resultat:**
 
-- Nytt innehåll har guldgult plus, ändringar gul tilde och borttagningar
-  korallfärgat kryss. Objektens namn visas bredvid de runda symbolerna.
+- Nytt innehåll har grönt plus, ändringar bärnstensfärgad penna och
+  borttagningar rött kryss. Objektens namn visas bredvid de runda symbolerna.
 - Samband som föreslås tas bort visas med en böjd, streckad linje.
 - Borttagningen omfattar det anslutna sambandet direkt i utkastet.
   Sparad karta och det andra objektet ändras inte.
@@ -269,12 +270,13 @@ draft symbols”.
 
 **Förväntat resultat:**
 
-- Molnmusik visar Upphört vid namnet och plus vid den runda symbolen.
+- Molnmusik visar Upphört vid namnet och grönt plus vid den runda symbolen.
   Sambandets etikett visar både Upphört och plus. Status och förslag har
   olika färger. Lo Exempel visar inget Upphört trots slutdatumet.
 - Namn, typikon och riktning är fortfarande begripliga. Upphört finns
   kvar efter sparande och omstart; plusmarkeringarna försvinner.
-- Sambandets rättelse visar tilde och tar bort dess Upphört-markering.
+- Sambandets rättelse visar amberfärgad penna och tar bort dess
+  Upphört-markering.
   Molnmusiks status påverkas inte.
 
 ### RYMD-08: fokusera och granska tidigare och föreslagna samband

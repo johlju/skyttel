@@ -4,6 +4,9 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "amberfärgad",
+    "historikkvitto",
+    "fokusflytt",
     "felproxy",
     "återvisade",
     "stängikonen",

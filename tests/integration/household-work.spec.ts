@@ -69,6 +69,14 @@ for (const width of [1280, 390, 320]) {
       );
       await expect(page.getByLabel('Sök objekt', { exact: true })).toHaveValue('cykel');
       await expect(page.getByLabel('Objektets namn')).toBeFocused();
+      expect(
+        await page.getByLabel('Objektets namn').evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return element.contains(
+            document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+          );
+        }),
+      ).toBe(true);
       const state = await (
         await page.request.get(`${installation.origin}/api/households/${household.id}/map`)
       ).json();

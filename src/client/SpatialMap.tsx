@@ -41,7 +41,7 @@ export function ProposalSymbol({ change }: { change?: { before: unknown; after: 
             : 'Ändrat förslag'
       }
     >
-      {kind === 'removed' ? '×' : kind === 'added' ? '+' : '~'}
+      {kind === 'removed' ? '×' : kind === 'added' ? '+' : '✎'}
     </span>
   );
 }
@@ -1243,7 +1243,7 @@ export function SpatialMap({
                     {kind === 'added'
                       ? '+ Nytt förslag'
                       : kind === 'changed'
-                        ? '~ Ändrat förslag'
+                        ? '✎ Ändrat förslag'
                         : kind === 'removed'
                           ? '× Föreslås tas bort'
                           : state.types.find((type) => type.id === object.typeId)?.name}

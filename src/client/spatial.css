@@ -150,15 +150,15 @@
   stroke-width: 2;
 }
 .connection.added {
-  stroke: #dba343;
+  stroke: var(--proposal-added, #64dfa0);
   opacity: 0.7;
 }
 .connection.changed {
-  stroke: #eed37c;
+  stroke: var(--proposal-changed, #fbbf24);
   opacity: 0.7;
 }
 .connection.removed {
-  stroke: #d17860;
+  stroke: var(--proposal-removed, #ff858a);
   stroke-dasharray: 6 5;
   opacity: 0.6;
 }
@@ -183,13 +183,13 @@
   color: #dbede3;
 }
 .spatial-labels .spatial-edge.added {
-  color: #e4b450;
+  color: var(--proposal-added, #64dfa0);
 }
 .spatial-labels .spatial-edge.changed {
-  color: #eed37c;
+  color: var(--proposal-changed, #fbbf24);
 }
 .spatial-labels .spatial-edge.removed {
-  color: #df937d;
+  color: var(--proposal-removed, #ff858a);
 }
 .presentation-map .camera-tools {
   position: relative;
@@ -210,15 +210,15 @@
   border-radius: 0.3rem;
 }
 .proposal-symbol.added {
-  color: #67460b;
-  background: #f7e7bb;
+  color: var(--proposal-added, #187747);
+  background: #e0f5e8;
 }
 .proposal-symbol.changed {
-  color: #3a2900;
-  background: #ffdc55;
+  color: var(--proposal-changed, #9b6000);
+  background: #fff0ca;
 }
 .proposal-symbol.removed {
-  color: #b52121;
+  color: var(--proposal-removed, #c83346);
   background: #ffe8e8;
 }
 .spatial-labels,
@@ -336,32 +336,32 @@
   background: #132e25;
 }
 .spatial-node.added .spatial-orb {
-  outline: 1px solid #e4b450;
+  outline: 1px solid var(--proposal-added, #64dfa0);
   outline-offset: 4px;
 }
 .spatial-node.added,
 .spatial-name.added .spatial-type-name,
 .spatial-node .proposal-symbol.added {
-  color: #e4b450;
+  color: var(--proposal-added, #64dfa0);
 }
 .spatial-objects .spatial-node.added {
-  --node-color: #e4b450;
+  --node-color: var(--proposal-added, #64dfa0);
 }
 .spatial-node.changed,
 .spatial-name.changed .spatial-type-name,
 .spatial-node .proposal-symbol.changed {
-  color: #eed37c;
+  color: var(--proposal-changed, #fbbf24);
 }
 .spatial-objects .spatial-node.changed {
-  --node-color: #eed37c;
+  --node-color: var(--proposal-changed, #fbbf24);
 }
 .spatial-node.removed,
 .spatial-name.removed .spatial-type-name,
 .spatial-node .proposal-symbol.removed {
-  color: #df937d;
+  color: var(--proposal-removed, #ff858a);
 }
 .spatial-objects .spatial-node.removed {
-  --node-color: #df937d;
+  --node-color: var(--proposal-removed, #ff858a);
 }
 .spatial-node.removed .spatial-orb {
   border-style: dashed;

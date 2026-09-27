@@ -1,4 +1,7 @@
 .household-map.workspace-shell {
+  --proposal-added: #187747;
+  --proposal-changed: #9b6000;
+  --proposal-removed: #c83346;
   --space-bg: #eef3f3;
   --work-top: min(84px, max(12px, calc(var(--work-height, 100dvh) - 300px)));
   --space-surface: #fff;
@@ -11,6 +14,9 @@
   color-scheme: light;
 }
 .household-map.workspace-shell[data-theme="dark"] {
+  --proposal-added: #64dfa0;
+  --proposal-changed: #fbbf24;
+  --proposal-removed: #ff858a;
   --space-bg: #101b29;
   --space-surface: #1a293a;
   --space-text: #edf2f9;
@@ -631,12 +637,6 @@ footer[hidden] {
   color: var(--space-text);
   border-color: var(--space-line);
 }
-.household-map.workspace-shell .spatial-node[aria-pressed="true"] .spatial-orb {
-  background: var(--space-accent);
-  border-color: var(--space-accent);
-  color: var(--space-bg);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--space-accent), transparent 70%);
-}
 .household-map.workspace-shell .workspace-utility .panel {
   padding: 0;
   border: 0;
@@ -688,11 +688,31 @@ footer[hidden] {
 .household-map.workspace-shell .connection.selected {
   opacity: 1;
 }
-.household-map.workspace-shell[data-theme="light"]
-  :is(.spatial-name.added, .spatial-node.added, .spatial-edge.added, .spatial-edge.changed) {
-  color: #805414;
+.household-map.workspace-shell .added {
+  --proposal-color: var(--proposal-added);
 }
-.household-map.workspace-shell[data-theme="light"]
-  :is(.spatial-name.removed, .spatial-node.removed, .spatial-edge.removed) {
-  color: #a72929;
+.household-map.workspace-shell .changed {
+  --proposal-color: var(--proposal-changed);
+}
+.household-map.workspace-shell .removed {
+  --proposal-color: var(--proposal-removed);
+}
+.household-map.workspace-shell :is(.added, .changed, .removed) .spatial-orb {
+  border-color: var(--proposal-color);
+  color: var(--proposal-color);
+}
+.household-map.workspace-shell :is(.spatial-edge, .spatial-type-name, .proposal-symbol) {
+  color: var(--proposal-color, inherit);
+}
+.household-map.workspace-shell .proposal-symbol {
+  background: var(--space-surface);
+}
+.household-map.workspace-shell .connection:is(.added, .changed, .removed) {
+  stroke: var(--proposal-color);
+  opacity: 1;
+}
+.household-map.workspace-shell .spatial-node[aria-pressed="true"] .spatial-orb {
+  outline: 2px solid var(--space-accent);
+  outline-offset: 5px;
+  box-shadow: none;
 }

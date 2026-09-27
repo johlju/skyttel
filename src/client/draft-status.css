@@ -1,0 +1,208 @@
+.workspace-status-card {
+  padding: 14px;
+  border: 1px solid var(--space-line);
+  border-radius: 16px;
+  background: var(--space-surface);
+  color: var(--space-text);
+  overflow-wrap: anywhere;
+}
+.workspace-status-heading,
+.draft-status-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.workspace-status-heading h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+.workspace-status-card .assistant-bar {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.household-map.workspace-shell .workspace-status-card .primary:hover:enabled {
+  background: var(--space-accent);
+  border-color: var(--space-accent);
+}
+.draft-status-summary {
+  display: grid;
+  gap: 4px;
+}
+.proposal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--space-line);
+  font-size: 0.75rem;
+}
+.proposal-legend p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.proposal-previous::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  margin-inline-end: 4px;
+  border-top: 2px dashed currentColor;
+  vertical-align: middle;
+}
+.proposal-selection::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-inline-end: 4px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+/* Navigation shares the status column; its body scrolls above the live card. */
+.household-map.workspace-shell .map-navigation {
+  max-height: max(
+    124px,
+    calc(
+      100dvh -
+      var(--navigation-top, 24px) -
+      var(--voice-height, 0px) -
+      var(--feedback-height, 0px) -
+      48px
+    )
+  );
+}
+
+@media (min-width: 701px) {
+  .household-map.workspace-shell .spatial-display-tools .spatial-bottom-bar {
+    right: 430px;
+    bottom: calc(12px + var(--feedback-height, 0px));
+  }
+}
+
+@media (max-width: 700px) and (min-height: 451px) {
+  .household-map.workspace-shell .spatial-display-tools .spatial-bottom-bar {
+    top: 142px;
+    bottom: auto;
+  }
+}
+
+@media (max-width: 1000px) and (min-height: 801px) {
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open:not(
+    .workspace-revealing
+  ) {
+    --navigation-space: max(
+      124px,
+      calc((100dvh - 200px - var(--voice-height, 0px) - var(--feedback-height, 0px)) * 0.4)
+    );
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open:not(
+      .workspace-revealing
+    )
+    .workspace-windows {
+    bottom: calc(var(--voice-height, 0px) + var(--feedback-height, 0px) + 24px);
+    height: calc(
+      100dvh -
+      178px -
+      var(--navigation-space) -
+      var(--voice-height, 0px) -
+      var(--feedback-height, 0px)
+    );
+  }
+}
+
+/* Three work surfaces use the same scroll flow when they cannot stack in view. */
+@media (max-width: 1000px) and (max-height: 800px), (max-height: 450px) {
+  .household-map.workspace-shell[data-navigation-open="true"]:not(.workspace-open) {
+    margin: 0;
+    overflow-y: auto;
+    scroll-padding-block: var(--status-flow-top, 142px) 12px;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"]:not(.workspace-open)
+    .workspace-navigation-mount {
+    position: relative;
+    margin: var(--status-flow-top, 142px) 12px 12px;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"]:not(.workspace-open) .map-navigation {
+    position: relative;
+    inset: auto;
+    max-height: min(180px, calc(100dvh - 92px));
+  }
+  .household-map.workspace-shell[data-navigation-open="true"]:not(.workspace-open)
+    .workspace-voice-controls {
+    position: relative;
+    inset: auto;
+    width: calc(100% - 24px);
+    max-height: none;
+    margin: 12px;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open:not(
+    .workspace-revealing
+  ) {
+    overflow-y: auto;
+    padding: var(--status-flow-top, 142px) 12px 12px var(--work-flow-left, 12px);
+    scroll-padding-block: var(--status-flow-top, 142px) 12px;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open:not(
+      .workspace-revealing
+    )
+    :is(
+      .workspace-navigation-mount,
+      .map-navigation,
+      .workspace-windows,
+      .workspace-feedback,
+      .workspace-voice-controls,
+      .workspace-work-close
+    ) {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    margin-block-end: 12px;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open:not(
+      .workspace-revealing
+    )
+    .map-navigation {
+    max-height: 180px;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open:not(
+      .workspace-revealing
+    )
+    .workspace-windows {
+    display: block;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open:not(
+      .workspace-revealing
+    )
+    :is(.workspace-panel.workspace-window, .workspace-panel-body) {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+.household-map.workspace-shell .workspace-guidance {
+  bottom: calc(var(--voice-height, 0px) + var(--feedback-height, 0px) + 36px);
+  max-height: calc(100dvh - var(--voice-height, 0px) - var(--feedback-height, 0px) - 140px);
+  overflow-y: auto;
+}
+
+@media (max-width: 700px) and (max-height: 450px) {
+  .household-map.workspace-shell {
+    --status-flow-top: 80px;
+  }
+  .household-map.workspace-shell .workspace-guidance {
+    position: absolute;
+    top: calc(100dvh + var(--voice-height, 0px) + 24px);
+    bottom: auto;
+    max-height: none;
+  }
+}

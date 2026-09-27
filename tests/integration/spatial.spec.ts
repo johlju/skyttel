@@ -329,8 +329,18 @@ test('RYMD-03: context actions and draft symbols distinguish proposals from save
     await page.getByLabel('Beskrivning', { exact: true }).fill('Syntetiskt musikexempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await openMap(page);
-    await expect(music).toContainText('~');
-    await music.click({ button: 'right' });
+    await expect(music).toContainText('✎');
+    const musicName = space.getByRole('button', { name: 'Markera objekt: Molnmusik', exact: true });
+    await expect(musicName).toBeVisible();
+    expect(
+      await musicName.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return element.contains(
+          document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+        );
+      }),
+    ).toBe(true);
+    await musicName.click({ button: 'right' });
     await expect(
       page.getByRole('button', { name: 'Ta bort objekt', exact: true }),
     ).toHaveAccessibleDescription(
@@ -756,6 +766,10 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
         .getByTitle('Nytt förslag')
         .evaluate((element) => getComputedStyle(element).backgroundColor);
       expect(endedColor).not.toBe(proposalColor);
+      await expect(symbolContainer.getByTitle('Nytt förslag')).toHaveCSS(
+        'color',
+        'rgb(24, 119, 71)',
+      );
     }
     await expect(lo).not.toContainText('Upphört');
     await expect(musicNode).toHaveAccessibleDescription(/Upphört/);
@@ -777,7 +791,7 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
     await page.getByRole('button', { name: 'Lägg sambandet i mitt utkast', exact: true }).click();
     await openMap(page);
     await expect(edge).not.toContainText('Upphört');
-    await expect(edge).toContainText('~');
+    await expect(edge).toContainText('✎');
     await expect(music.getByText('Upphört', { exact: true })).toBeVisible();
   } finally {
     await installation.close();

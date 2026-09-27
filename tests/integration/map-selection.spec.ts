@@ -79,14 +79,17 @@ test('MARKERING-01: ordinary and modified clicks select objects and open details
         }),
       );
     await expect(lo).toBeVisible();
+    await lo.click({ trial: true });
     const before = await positions();
     await lo.click();
     await expect(lo).toHaveAttribute('aria-pressed', 'true');
     expect(
-      await lo.locator('.spatial-orb').evaluate((node) => getComputedStyle(node).backgroundColor),
+      await lo.locator('.spatial-orb').evaluate((node) => getComputedStyle(node).outlineWidth),
     ).not.toBe(
-      await kim.locator('.spatial-orb').evaluate((node) => getComputedStyle(node).backgroundColor),
+      await kim.locator('.spatial-orb').evaluate((node) => getComputedStyle(node).outlineWidth),
     );
+    await expect(lo.locator('.spatial-orb')).toHaveCSS('outline-style', 'solid');
+    await expect(lo.locator('.spatial-orb')).toHaveCSS('outline-offset', '5px');
     await expect(page.getByRole('region', { name: 'Lo Exempel', exact: true })).toHaveCount(0);
     await expect(map.locator('.connection.selected')).toHaveCount(1);
     await alex.click({ modifiers: ['Control'] });
@@ -200,6 +203,7 @@ test('MARKERING-03: text selection and detail controls retain work across deskto
       'dark',
     );
     const mark = work.getByRole('button', { name: 'Markera Lo Exempel', exact: true });
+    await tools.getByRole('button', { name: 'Dölj verktygens namn', exact: true }).click();
     await mark.hover();
     expect(
       await mark.evaluate((button) => {

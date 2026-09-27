@@ -66,7 +66,8 @@ at 320px”.
 
 **Förväntat resultat:**
 
-- Alla tre texter finns kvar efter återgång. Namnfältet får fokus.
+- Alla tre texter finns kvar efter återgång. Namnfältet får synligt fokus
+  och täcks inte av de utfällda verktygen.
 - Inget förslag skapas förrän formuläret uttryckligen skickas.
 - Dolda kontroller stör inte navigationen på den andra sidan.
 
