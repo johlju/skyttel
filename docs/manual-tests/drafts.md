@@ -56,6 +56,12 @@ För UTKAST-02–11 används en separat, tom testinstallation enligt
 4. Använd ett nytt tomt testhushåll inför varje fall. Behåll databasen vid
    omladdning och omstart inom fallet.
 
+UTKAST-12–14 använder ett nytt tomt hushåll utan de två förberedda
+objekten. UTKAST-14 behöver även en inbjuden medlem i en separat
+webbläsarprofil och konfigurerat tal och text enligt
+[samtalsfallen](voice-assistant.md). Externa prov kräver den privata
+konfiguration och de medgivanden som anges där.
+
 ## Privata utkast
 
 ### UTKAST-01: återuppta en konflikt och spara oberoende förslag tillsammans
@@ -455,3 +461,212 @@ recovery choice”.
   med **Osäkert uppgivet**, även om målobjektet saknas i kartan.
 - Valet tar bort förslaget och visar **Inga förslag**. Inget samband
   skapas och det borttagna objektet återkommer inte.
+
+## Status, fokus och samlat sparande
+
+### UTKAST-12: behåll legend och förslag tills samma sparförsök bekräftas
+
+**Syfte:** Följa ett privat förslag med stängda paneler och skilja väntan,
+okänt resultat och verifierat sparande.
+
+**Användare:** Administratören.
+
+**Förutsättningar:** Ett tomt hushåll enligt förberedelsen. Upprepa med
+1440, 390 och 320 pixlars bredd. För ett okänt
+resultat före serverns sparande kan webbläsarens nätverksblockering användas
+för adressen som slutar med `/map/save`, enligt
+[SPAR-02](operations.md#spar-02-återförsöka-ett-väntande-sparande-från-en-annan-klient).
+
+**Integrationstest:**
+[draft-status.spec.ts](../../tests/integration/draft-status.spec.ts),
+testfallet “UTKAST-12: closed panels retain private proposals through an
+unknown save at 1440px/390px/320px and verify the same receipt”.
+
+**Steg:**
+
+1. Lägg objektet **Familjeabonnemanget** i utkastet. Stäng arbetsytan.
+2. Kontrollera statuskortets **1 förslag · privat utkast**, mikrofonens
+   avstängda läge och legenden för grönt plus, amberfärgad penna och rött kryss.
+3. Öppna verktygens namn vid behov. Fokusera **Aktuell status** och tryck
+   Retur. Kontrollera rubrikens fokus och att verktygen fälls ihop.
+4. Blockera sparadressen och välj **Spara hela utkastet** i kortet.
+   Läs **Sparutfall okänt**, det bevarade förslaget och legenden.
+5. Ta bort blockeringen och välj **Hämta samma kvitto igen**. Läs resultatet.
+   Stäng aktuell status och kontrollera fokus. Öppna **Sparförsök och kvitton**.
+
+**Förväntat resultat:**
+
+- Sparandet kräver ingen extra granskningsdialog. Ett obekräftat försök
+  visas aldrig som säkert lyckat eller säkert misslyckat.
+- Kortets knappar kan användas utan att verktygen täcker dem. Stängning
+  återför fokus till **Aktuell status** på dator eller **Visa verktygens
+  namn** när statusknappen är dold i mobilens hopfällda verktyg.
+- Samma försök kontrolleras och får ett verifierat kvitto. Objektet finns
+  en gång i kartan. Legenden försvinner när det bekräftat tomma utkastet
+  hämtas. Sparförsöken innehåller ett enda försök.
+- Det automatiserade provet håller dessutom det riktiga serversvaret
+  efter genomfört sparande. Det kontrollerar **Väntar på sparkvitto** och
+  kvarvarande legend, bryter svaret och jämför samma operations-ID och
+  enda historikkvitto genom det publika API:et. Nätverksblockeringen ovan
+  verifierar inte ett tappat svar efter transaktionen.
+
+### UTKAST-13: sparresultat behåller ett nyare valt textfält
+
+**Syfte:** Statusändringar ska inte avbryta skrivande. Aktuell status ska
+kunna öppnas och stängas med avsiktlig fokusflytt.
+
+**Användare:** Administratören.
+
+**Förutsättningar:** Ett tomt hushåll. Använd webbläsarens långsamma
+nätverksläge så att det går att välja ett annat fält under sparandet.
+
+**Integrationstest:**
+[draft-status.spec.ts](../../tests/integration/draft-status.spec.ts),
+testfallet “UTKAST-13: a verified save keeps a newer field focused and
+current status opens explicitly”.
+
+**Steg:**
+
+1. Lägg **Lo Exempel** i utkastet och välj **Spara hela utkastet**.
+2. Medan svaret väntar, välj **Sök objekt** och skriv **Lo**.
+3. Invänta sparkvittot och fortsätt skriva ett blanksteg och **Exempel**
+   utan att klicka igen.
+4. Öppna verktygens namn vid behov. Fokusera **Aktuell status** och tryck
+   Retur. Läs mikrofonläge och bekräftat kvitto.
+5. Välj **Stäng aktuell status**.
+
+**Förväntat resultat:**
+
+- Sökfältet behåller fokus och innehåller **Lo Exempel** efter sparandet.
+- Den uttryckliga statusöppningen fokuserar rubriken **Aktuell status**.
+  Stängning lämnar fokus på dess verktygsknapp.
+- Det automatiserade provet håller ett verkligt lyckat serversvar för
+  att säkerställa ordningen och kontrollerar att utkastet är tomt innan
+  fortsatt skrivande. Ett manuellt prov där svaret hinner fram före
+  fältbytet verifierar inte fokus under väntan.
+
+### UTKAST-14: formulär, text och tal delar ett beständigt privat utkast
+
+**Syfte:** Spara hela det gemensamma utkastet atomiskt och läsa den sparade
+kartan som en annan medlem efter omstart.
+
+**Användare:** Administratören och den inbjudna medlemmen.
+
+**Förutsättningar:** Tomt hushåll, separat medlemsprofil och samtalsstart
+med båda medgivandena enligt förberedelsen.
+
+**Integrationstest:**
+[draft-status.spec.ts](../../tests/integration/draft-status.spec.ts),
+testfallet “UTKAST-14: manual text and voice proposals share one durable
+private draft and an atomic household save”.
+
+**Steg:**
+
+1. Lägg **Lo Exempel** i utkastet genom formuläret. Påbörja ett nytt objekt
+   **Oskickad cykel**, skriv **Texten ska finnas kvar** i beskrivningen och
+   lämna texten i formuläret.
+2. Starta textassistenten. Skriv **Lägg Molnmusik i utkastet**. Kontrollera
+   två privata förslag i statusen.
+3. Starta rösten och säg **Lo använder Molnmusik**. Kontrollera att sambandet
+   ingår och att statusen visar tre privata förslag.
+4. Skriv ett oskickat samtalsmeddelande. Besök Inställningar och återgå
+   till kartan. Stäng arbetsytan. Läs beskedet om separat oskickad
+   formulärtext. Kontrollera som medlem att den sparade kartan är tom
+   och att administratörens förslag inte visas i medlemmens utkast.
+5. Välj **Fortsätt redigera** i kortet. Kontrollera cykelns namn och
+   beskrivning och lägg dem i utkastet. Stäng arbetsytan och kontrollera
+   fyra förslag. Välj **Spara hela utkastet** direkt i kortet.
+6. Invänta bekräftat kvitto. Stäng klienterna, starta om servern med samma
+   databas och öppna kartan som medlem.
+
+**Förväntat resultat:**
+
+- Samma privata utkast innehåller tre objekt och ett samband från alla
+  tre arbetssätten. Oskickad text räknas först när den läggs i utkastet.
+- Kvittot beskriver alla fyra ändringarna. Förslagslegenden försvinner.
+  Medlemmen ser alla tre objekten och **Lo Exempel → Använder → Molnmusik**
+  efter omstart, men inga privata förslag från administratören.
+- Det automatiserade provet håller den riktiga sparbegäran före
+  genomförandet och kontrollerar oförändrat utkast, tom sparad karta och
+  därefter ett enda kvitto för alla ändringar. En samtidig uppdatering
+  från samtalet får inte ändra ett pågående sparande till okänt utfall.
+  Databasen och servern är riktiga; tal och modellresultat ersätts vid
+  de externa tjänsternas
+  gränser. Provet verifierar inte fysisk mikrofon eller verkligt svenskt tal.
+
+### UTKAST-15: besvara nödvändig fråga före ett nytt sparbesked
+
+**Syfte:** Samma nödvändiga fråga ska hindra sparande från både statuskortet
+och utkastets arbetsyta. Ett svar ska inte i sig spara utkastet.
+
+**Användare:** Administratören.
+
+**Förutsättningar:** Ett tomt hushåll och textassistent med båda medgivandena.
+Provet kräver att samtalet visar en nödvändig fråga. Om tjänsten inte ger
+en sådan fråga, anteckna att den delen inte har verifierats.
+
+**Integrationstest:**
+[draft-status.spec.ts](../../tests/integration/draft-status.spec.ts),
+testfallet “UTKAST-15: a necessary answer gates both save actions until a
+fresh explicit save”.
+
+**Steg:**
+
+1. Lägg **Lo Exempel** i utkastet via formuläret. Starta textassistenten
+   och be den förbereda uppgiften och fråga vilket kort som avses.
+2. Stäng arbetsytan när statusen visar **Nödvändigt svar**. Kontrollera
+   att frågan finns kvar och att kortet inte erbjuder sparande.
+3. Öppna Lista och **Hela mitt utkast**. Kontrollera att **Spara hela
+   utkastet** är inaktiverad även där. Kartan har ännu inga sparade objekt.
+4. Välj **Svara i samtalet**, svara **Kortet Lo Exempel avses** och skicka.
+   Vänta tills frågan är besvarad. Stäng arbetsytan igen.
+5. Kontrollera att sparande nu erbjuds men inte har genomförts. Välj
+   **Spara hela utkastet** uttryckligen och läs det verifierade resultatet.
+
+**Förväntat resultat:**
+
+- Varken statuskortet eller arbetsytan kringgår den nödvändiga frågan.
+  Det privata förslaget finns kvar medan frågan besvaras.
+- Att svara skapar inget sparförsök. Först det nya uttryckliga sparbeskedet
+  ger ett kvitto och gör uppgifterna till sparat kartinnehåll.
+- Integrationstestet styr frågan vid modellgränsen men använder riktig
+  server och SQLite. Det jämför tomma sparförsök före beskedet och ett
+  enda lyckat försök med samma verkliga kvitto i historiken efteråt.
+
+### UTKAST-16: använd Navigation och aktuell status tillsammans
+
+**Syfte:** Behålla åtkomst till personlig placering och sparande när båda
+ytorna är öppna, även när förstoring kräver rullning.
+
+**Användare:** Administratören.
+
+**Förutsättningar:** Lo Exempel är sparad i kartan. Blå cykeln finns som
+nytt privat förslag. Börja med stängd arbetsyta och stängd vägledning.
+
+**Integrationstest:**
+[draft-status.spec.ts](../../tests/integration/draft-status.spec.ts),
+testfallen “UTKAST-16: navigation and current status keep lower controls
+usable in both opening orders at 1440px”, samma titel med “640px” och “320px”.
+
+**Steg:**
+
+1. Markera Lo Exempel i kartan. Öppna **Navigera** och sedan **Aktuell
+   status** från verktygen. Expandera verktygens namn om det behövs.
+2. Kontrollera att statusrubriken får synligt fokus. Använd tangentbord
+   och pekare för att flytta Lo i alla sex riktningar i Navigation.
+   Rulla vid behov till de nedre kontrollerna.
+3. Flytta fokus till **Spara hela utkastet** i statuskortet och kontrollera
+   att knappen går att nå utan att spara. Det privata förslaget ska bestå.
+4. Stäng aktuell status och sedan Navigation. Kontrollera fokus på
+   **Navigera**. Upprepa med aktuell status öppnad före Navigation.
+5. Upprepa på smal skärm och vid hög förstoring.
+
+**Förväntat resultat:**
+
+- Alla personliga flyttriktningar och statusens sparknapp är åtkomliga
+  i båda öppningsordningarna, även när ytorna behöver rullas.
+- Flyttningarna ändrar bara den personliga vyn. Kartans gemensamma
+  innehåll och Blå cykelns privata förslag består utan sparförsök.
+- Fokus följer den uttryckliga handlingen och går tillbaka till verktygen
+  vid stängning. Navigation, status och verktygen täcker inte den kontroll
+  som används.

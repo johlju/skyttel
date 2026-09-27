@@ -215,8 +215,11 @@ profile tools at 320px”.
 
 1. Öppna Lista och ett nytt objekt. Skriv Behåll mobiltexten i namnfältet.
 2. Välj **Visa verktygens namn** och **Din profil**.
-3. Från profilrubriken: tryck Shift+Tab två gånger.
-4. Kontrollera fokus på **Dölj verktygens namn** och tryck Enter.
+3. Från profilrubriken: tryck Shift+Tab till **Dölj verktygens namn**.
+   Om knappen ligger nedanför profilen, fortsätt bakåt till
+   **Tema**, som ligger bakom profilen.
+4. Kontrollera att profilen stängs och att verktygets fokus syns.
+   Gå vid behov framåt med Tab till **Dölj verktygens namn** och tryck Enter.
 
 **Förväntat resultat:**
 

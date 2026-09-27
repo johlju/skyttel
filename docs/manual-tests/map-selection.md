@@ -112,6 +112,7 @@ across desktop and compact panels”.
 5. Avmarkera alla. Upprepa med tangentbord på varje skärmbredd.
 6. På den smala skärmen väljer du Visa verktygens namn och Tema. Välj
    Mörkt och kontrollera tema och fokus tillbaka till temaknappen.
+   Välj Dölj verktygens namn.
    För pekaren över Markera och kontrollera att knapptexten är läsbar.
 
 **Förväntat resultat:**

@@ -68,8 +68,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   laddning och återhämtning efter nätfel.
 
 - [Bevarat hushållsarbete](household-work.md): oskickad text, samtal,
-  mikrofon, sökning, urval, personlig vy och samma sparförsök vid
-  tillfälliga vybyten; avveckling vid utloggning, återkallad tillgång
+  mikrofon, sökning, urval, synligt återställt fokus, personlig vy och samma
+  sparförsök vid tillfälliga vybyten; avveckling vid utloggning, återkallad tillgång
   och ersatt hushållsinnehåll.
 
 - [Månadskostnad](costs.md): separata Render-, Live- och Terra-belopp,
@@ -176,7 +176,11 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   och konfliktval samt granska samtidiga ändringar, dubbletter och
   borttagningar före ett gemensamt sparande. Bevara oberoende status
   och slutdatum i samband vid konfliktval samt rätt typdefinitioner
-  vid borttagning efter typbyten.
+  vid borttagning efter typbyten. Följ status och legend med stängda
+  paneler, samma kvitto vid okänt utfall, bevarat tangentbordsfokus och
+  ett samlat utkast från formulär, text och tal efter omstart. Besvara
+  nödvändiga frågor före ett nytt uttryckligt sparbesked. Använd Navigation
+  och aktuell status tillsammans utan att tappa åtkomst till kontrollerna.
 - [Objekttyper och egna fält](object-types.md): skapa och rätta gemensamma
   definitioner, fyra frivilliga värdeslag, privata förslag, samtidiga
   ändringar i namngivna avsnitt, flytt och döljning utan värdeförlust,

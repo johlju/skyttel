@@ -287,19 +287,32 @@ for (const width of [390, 320]) {
       await openProfile(page);
       const profile = page.getByRole('region', { name: 'Din profil', exact: true });
       await expect(profile.getByRole('heading', { name: 'Din profil', exact: true })).toBeFocused();
-      await page.keyboard.press('Shift+Tab');
-      await page.keyboard.press('Shift+Tab');
       const expansion = page.getByRole('button', { name: 'Dölj verktygens namn', exact: true });
+      const coveredTool = width === 390 ? page.getByRole('button', { name: /^Tema:/ }) : expansion;
+      expect(
+        await coveredTool.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return document
+            .querySelector('.workspace-utility')
+            ?.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+        }),
+      ).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Shift+Tab');
       await expect(expansion).toBeFocused();
+      if (width === 390) await page.keyboard.press('Shift+Tab');
+      await expect(coveredTool).toBeFocused();
       await expect(profile).not.toBeVisible();
       expect(
-        await expansion.evaluate((element) => {
+        await coveredTool.evaluate((element) => {
           const box = element.getBoundingClientRect();
           return element.contains(
             document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
           );
         }),
       ).toBe(true);
+      if (width === 390) await page.keyboard.press('Tab');
+      await expect(expansion).toBeFocused();
       await expansion.press('Enter');
       await expect(page.getByLabel('Objektets namn')).toHaveValue('Behåll mobiltexten');
     } finally {

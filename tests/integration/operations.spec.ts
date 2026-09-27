@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { MapState, SaveOperation, SaveReceipt } from '../../src/shared/map.js';
-import { createHousehold, openWorkspace, signIn } from '../support/client.js';
+import { createHousehold, openMap, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 test('SPAR-01: find a committed save after losing its response and reopening on another client', async ({
@@ -177,6 +177,11 @@ test('SPAR-03: a rejected stale save survives restart without consuming newer pr
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('alert')).toContainText('Avvisat');
     await expect(page.getByRole('alert')).toContainText('Inget sparades');
+    await openMap(page);
+    await expect(page.getByRole('region', { name: 'Aktuell status', exact: true })).toContainText(
+      'Sparandet avvisades · inget sparat av försöket',
+    );
+    await expect(page.getByRole('region', { name: 'Förslag i kartan', exact: true })).toBeVisible();
     await page.close();
     await installation.restart();
     await newer.reload();

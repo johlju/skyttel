@@ -461,9 +461,76 @@ test('panel placement has reversible keyboard and click controls with a reset an
   expect(position()).toEqual(initial);
 });
 
+test('desktop panels reserve only the status column and retain chosen positions as the card changes', async () => {
+  await open(1440);
+  await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
+  const work = page.getByRole('region', { name: 'Lista och utkast', exact: true });
+  const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+  const handle = work.getByRole('button', { name: 'Flytta Lista och utkast', exact: true });
+  const box = () => work.element().getBoundingClientRect();
+  handle.element().focus();
+  await userEvent.keyboard(`{Shift>}${'{ArrowDown}'.repeat(20)}{/Shift}`);
+  expect(box().right).toBeLessThan(status.element().getBoundingClientRect().left);
+  expect(box().bottom).toBeGreaterThan(status.element().getBoundingClientRect().top);
+
+  await userEvent.keyboard(`{Shift>}${'{ArrowRight}'.repeat(25)}{/Shift}`);
+  await expect
+    .poll(() => box().bottom)
+    .toBeLessThanOrEqual(status.element().getBoundingClientRect().top - 12);
+  expect(box().right).toBeGreaterThan(status.element().getBoundingClientRect().left);
+  const body = work.element().querySelector<HTMLElement>('.workspace-panel-body');
+  expect(body?.scrollHeight).toBeGreaterThan(body?.clientHeight ?? 0);
+  const chosen = box().toJSON();
+
+  await page.getByRole('button', { name: 'Aktuell status', exact: true }).click();
+  await expect
+    .poll(() => box().bottom)
+    .toBeLessThanOrEqual(status.element().getBoundingClientRect().top - 12);
+  expect(box().height).toBeLessThan(chosen.height);
+  await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
+  await expect.poll(() => box().toJSON()).toEqual(chosen);
+  await page.viewport(900, 960);
+  await expect.poll(() => box().right).toBeLessThanOrEqual(876);
+  await expect
+    .poll(() => box().bottom)
+    .toBeLessThanOrEqual(status.element().getBoundingClientRect().top - 12);
+  await page.viewport(1440, 960);
+  await expect.poll(() => box().toJSON()).toEqual(chosen);
+  await handle.click();
+  await work.getByRole('button', { name: 'Återställ position', exact: true }).click();
+  expect(box().x).toBe(112);
+  expect(box().y).toBe(110);
+});
+
+test.each([390, 250])(
+  'wide short work at %i pixels keeps panel actions and status reachable',
+  async (height) => {
+    await open(1440);
+    await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
+    await page.getByRole('button', { name: 'Lista', exact: true }).click();
+    const work = page.getByRole('region', { name: 'Lista och utkast', exact: true });
+    work.getByRole('button', { name: 'Flytta Lista och utkast', exact: true }).element().focus();
+    await userEvent.keyboard(`{Shift>}${'{ArrowRight}'.repeat(25)}{/Shift}`);
+    await page.getByRole('button', { name: 'Aktuell status', exact: true }).click();
+    await page.viewport(1440, height);
+    const handle = work.getByRole('button', { name: 'Flytta Lista och utkast', exact: true });
+    await handle.click();
+    await expect.element(handle).toHaveAttribute('aria-expanded', 'true');
+    await handle.click();
+    await work.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+    await page.getByLabelText('Objektets namn').fill('Behåll bred text');
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
+    await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
+    await expect.element(page.getByLabelText('Objektets namn')).toHaveValue('Behåll bred text');
+  },
+);
+
 test('native panel dragging moves only the held primary pointer and recovers after touch cancellation', async () => {
   await open(1440);
-  await page.viewport(1440, 1400);
+  // Leave room for the movement disclosure above the persistent status card.
+  await page.viewport(1440, 1600);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page.getByRole('button', { name: 'Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
@@ -581,6 +648,9 @@ test('native panel dragging moves only the held primary pointer and recovers aft
   expect(position()).toEqual(cancelled);
   await object.getByRole('button', { name: 'Återställ position', exact: true }).click();
   expect(position()).toEqual(before);
+  await userEvent.keyboard('{Escape}');
+  await expect.element(handle).toHaveAttribute('aria-expanded', 'false');
+  expect(position()).toEqual(before);
 });
 
 test('keyboard focus and pointer activation bring an overlapping object panel to the front', async () => {
@@ -592,6 +662,12 @@ test('keyboard focus and pointer activation bring an overlapping object panel to
   await page.getByRole('button', { name: 'Tonmoln', exact: true }).click();
   const alex = page.getByRole('region', { name: 'Alex', exact: true });
   const music = page.getByRole('region', { name: 'Tonmoln', exact: true });
+  const handle = alex.getByRole('button', { name: 'Flytta Alex', exact: true });
+  // Arrange an exposed lower edge even when both panels initially clamp above status.
+  handle.element().focus();
+  await userEvent.keyboard('{Shift>}{ArrowUp}{ArrowUp}{/Shift}');
+  music.getByRole('button', { name: 'Flytta Tonmoln', exact: true }).element().focus();
+  await expect.element(music).toHaveAttribute('data-active', 'true');
   const first = alex.element().getBoundingClientRect();
   const second = music.element().getBoundingClientRect();
   const overlap = {
@@ -602,13 +678,15 @@ test('keyboard focus and pointer activation bring an overlapping object panel to
   expect(overlap.y).toBeLessThan(Math.min(first.bottom, second.bottom));
   const foreground = () => document.elementFromPoint(overlap.x, overlap.y);
   expect(music.element().contains(foreground())).toBe(true);
-  const handle = alex.getByRole('button', { name: 'Flytta Alex', exact: true });
   handle.element().focus();
   await expect.element(handle).toHaveFocus();
   await expect.poll(() => alex.element().contains(foreground())).toBe(true);
 
   // The lower edge is exposed even while the other panel covers its heading.
   expect(second.bottom).toBeGreaterThan(first.bottom);
+  expect(
+    music.element().contains(document.elementFromPoint(second.left + 20, second.bottom - 10)),
+  ).toBe(true);
   const frame = window.frameElement?.getBoundingClientRect();
   const point = { x: second.left + 20 + (frame?.x ?? 0), y: second.bottom - 10 + (frame?.y ?? 0) };
   const session = cdp();
@@ -746,8 +824,13 @@ test('phone opens the list from the map and preserves an edited name through map
   const objectElement = object.element();
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
   await expect
-    .element(page.elementLocator(document.querySelector('.assistant-bar') as HTMLElement))
+    .element(
+      page.getByRole('region', { name: 'Samtal och text', exact: true, includeHidden: true }),
+    )
     .not.toBeVisible();
+  await expect
+    .element(page.getByRole('region', { name: 'Aktuell status', exact: true }))
+    .toBeVisible();
   await expect.element(page.elementLocator(objectElement)).not.toBeVisible();
   const bounds = document.querySelector('.spatial-surface')?.getBoundingClientRect();
   expect(bounds?.height).toBeGreaterThan(500);

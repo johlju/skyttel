@@ -7,16 +7,42 @@ Skyttel-användare och hushåll samlas i ett privat utkast. Andra medlemmar
 ser den gemensamma kartan tills du sparar. Utkastet ingår däremot i
 administratörens [fullständiga export](household-export.md).
 
+## Följ aktuell status i kartan
+
+Statuskortet finns kvar när du stänger arbetspanelerna. Det visar
+mikrofonen, arbetet, frågor och fel samt antalet privata förslag.
+**Aktuell status** i verktygen öppnar även det senaste sparresultatets
+detaljer. **Visa verktygens namn** gör knappen synlig i en hopfälld
+verktygslåda. Statusuppdateringar flyttar inte ditt fokus.
+
+Grönt plus betyder **Föreslås läggas till**, amberfärgad penna betyder
+**Föreslås ändras** och rött kryss betyder **Föreslås tas bort**.
+Tidigare samband är streckade och en separat ring visar ditt urval.
+Legenden finns medan utkastet innehåller ändringar, även under sparande
+och vid ett okänt resultat. När kvittot bekräftar sparandet och det tomma
+utkastet hämtas försvinner förslagsmarkeringarna och legenden.
+
+**Oskickad formulärtext** är skild från utkastet. **Fortsätt redigera**
+öppnar det behållna arbetet. Lägg texten i utkastet eller stäng formuläret
+utan att skicka innan du sparar med kartans knapp. Oskickade
+samtalsmeddelanden finns kvar i samtalet och ingår inte i sparandet.
+
+Besvara nödvändiga frågor i samtalet innan du sparar. Varken statuskortet
+eller utkastets sparknapp kringgår frågan. Ett svar sparar inte i sig
+förslagen; ge ett nytt uttryckligt sparbesked när uppgifterna stämmer.
+
 ## Granska, spara eller kasta förslag
 
 1. Lägg formulärets ändringar i utkastet med **Lägg i mitt utkast** eller
    motsvarande knapp för typen av förslag. Text som fortfarande bara
    finns i formuläret ingår inte i sparandet.
-2. Öppna **Hela mitt utkast** och granska alla tidigare och föreslagna
-   värden. Kontrollera även samband, typer, bilder och borttagningar.
+2. Öppna vid behov **Visa hela utkastet** för tidigare och föreslagna
+   värden, inklusive samband, typer, bilder och borttagningar.
 3. Rätta vid behov ett förslag genom att välja innehållet, öppna dess
    redigering och lägga rättelsen i utkastet.
-4. Välj **Spara hela utkastet** när alla förslag stämmer. Sparandet gäller
+4. Välj **Spara hela utkastet** i statuskortet eller utkastet när förslagen
+   stämmer. Ingen extra granskning krävs för att använda knappen.
+   Sparandet gäller
    allt i utkastet tillsammans. Ett fel eller en konflikt stoppar hela
    sparandet; inget sparas delvis.
 5. Invänta kvittot som visar vad som sparas. Det gemensamma innehållet
@@ -77,6 +103,8 @@ hushållet. Logga in som samma Skyttel-användare på en annan enhet för
 att hitta dem, även efter omstart. Du behöver inte komma ihåg ett
 operations-ID eller ha kvar den ursprungliga fliken.
 
+- **Väntar på sparkvitto** visas medan det aktuella sparandet kontrolleras.
+  Förslagen är fortfarande privata i din visning tills utfallet bekräftas.
 - **Okänt utfall** betyder att klienten saknar ett säkert besked.
   Ett avbrutet svar säger inte om ändringarna sparas. Fortsatt ändring
   blockeras tills försöket kontrolleras. I den ursprungliga fliken kan
@@ -93,3 +121,6 @@ Ett tidigare kvitto bekräftar bara sitt eget sparande. Nya förslag och
 text som ännu bara finns i ett öppet formulär omfattas inte av kvittot.
 Andra hushållsmedlemmar ser de gemensamma ändringarna efter sparandet,
 men kan inte läsa dina privata sparförsök.
+
+Om kvittot är bekräftat men kartan inte kan hämtas är sparandet fortfarande
+genomfört. Välj **Hämta aktuellt underlag** för att uppdatera visningen.

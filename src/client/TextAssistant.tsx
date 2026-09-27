@@ -1,4 +1,12 @@
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { ObjectType, ObjectValue } from '../shared/map.js';
 import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
@@ -50,6 +58,8 @@ function errorMessage(code: string) {
   return 'Assistenten kunde inte slutföra uppdraget. Kontrollera utkastet och tidigare sparförsök. Du kan fortsätta i kartans formulär.';
 }
 
+type AssistantActivity = { working: boolean; needsAnswer: boolean };
+
 export function TextAssistant({
   active: workVisible = true,
   householdId,
@@ -63,7 +73,13 @@ export function TextAssistant({
   conversationVisible = true,
   onOpenConversation,
   onVoiceControl,
+  statusContent,
+  statusOpen = false,
+  onCloseStatus,
 }: {
+  statusContent?: (assistant: AssistantActivity) => ReactNode;
+  statusOpen?: boolean;
+  onCloseStatus?: () => void;
   active?: boolean;
   conversationVisible?: boolean;
   onOpenConversation?: () => void;
@@ -72,10 +88,14 @@ export function TextAssistant({
   onMapChange: () => void;
   onAccessLost: () => void;
   onSelectItem: (target: MapSelection, signal: AbortSignal) => Promise<boolean>;
-  children?: ReactNode;
+  children?: ReactNode | ((assistant: AssistantActivity) => ReactNode);
   draftSummary?: ReactNode;
   inspector?: ReactNode;
-  renderWorkspace?: (work: ReactNode, conversation: ReactNode) => ReactNode;
+  renderWorkspace?: (
+    work: ReactNode,
+    conversation: ReactNode,
+    floatingStatus: RefObject<HTMLDivElement | null>,
+  ) => ReactNode;
 }) {
   const path = `/api/households/${encodeURIComponent(householdId)}/text-assistant`;
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -87,7 +107,12 @@ export function TextAssistant({
   const voiceSlot = useRef<HTMLDivElement>(null);
   const floatingVoice = useRef<HTMLDivElement>(null);
   const workspace = useRef<HTMLElement>(null);
-  const floating = Boolean(renderWorkspace && session && (!workVisible || !conversationVisible));
+  const floating = Boolean(
+    renderWorkspace &&
+      (session || statusContent) &&
+      (statusOpen || !workVisible || !conversationVisible),
+  );
+  const statusHeading = useRef<HTMLHeadingElement>(null);
   useLayoutEffect(() => {
     // Moving one portal host preserves the live microphone transport and its
     // controls when the conversation panel closes or another page is shown.
@@ -105,6 +130,9 @@ export function TextAssistant({
     observer.observe(element);
     return () => observer.disconnect();
   }, [floating, voiceHost, renderWorkspace]);
+  useLayoutEffect(() => {
+    if (statusOpen) statusHeading.current?.focus();
+  }, [statusOpen]);
   const [startWithVoice, setStartWithVoice] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -345,6 +373,8 @@ export function TextAssistant({
         review?.unresolvedIdentities.length ||
         review?.conflicts.length),
   );
+  const activity = { working: session?.phase === 'working', needsAnswer };
+  const work = typeof children === 'function' ? children(activity) : children;
   const conversationControls = session && (
     <div className="conversation-controls">
       <div
@@ -439,7 +469,11 @@ export function TextAssistant({
     </div>
   );
   const voice = (
-    <section aria-label="Talsamtal" className="assistant-bar" hidden={!workVisible && !session}>
+    <section
+      aria-label="Talsamtal"
+      className="assistant-bar"
+      hidden={!workVisible && !session && !statusContent}
+    >
       {session ? (
         <VoiceAssistant
           onControl={onVoiceControl}
@@ -454,6 +488,13 @@ export function TextAssistant({
         >
           {conversationControls}
         </VoiceAssistant>
+      ) : floating ? (
+        <div className="assistant-bar-heading">
+          <span className="microphone-state">Mikrofonen är av</span>
+          <button type="button" onClick={onOpenConversation}>
+            Tala eller skriv
+          </button>
+        </div>
       ) : (
         <>
           <div className="assistant-bar-heading">
@@ -757,25 +798,54 @@ export function TextAssistant({
       id="workspace-work"
       tabIndex={-1}
     >
-      {createPortal(voice, voiceHost)}
+      {createPortal(
+        <section
+          aria-label="Aktuell status"
+          className="workspace-status-card"
+          data-expanded={statusOpen}
+        >
+          {statusOpen && (
+            <div className="workspace-status-heading">
+              <h2 tabIndex={-1} ref={statusHeading}>
+                Aktuell status
+              </h2>
+              <button type="button" onClick={onCloseStatus} aria-label="Stäng aktuell status">
+                ×
+              </button>
+            </div>
+          )}
+          {voice}
+          {statusContent?.(activity)}
+          {statusOpen && text && (
+            <p>
+              Oskickat samtalsmeddelande finns kvar.{' '}
+              <button type="button" onClick={onOpenConversation}>
+                Fortsätt skriva
+              </button>
+            </p>
+          )}
+        </section>,
+        voiceHost,
+      )}
       {renderWorkspace && <div ref={floatingVoice} className="workspace-voice-controls" />}
       {renderWorkspace ? (
         renderWorkspace(
           <>
             {inspector}
-            {children}
+            {work}
           </>,
           <>
             <div ref={voiceSlot} />
             {conversation}
             {changes}
           </>,
+          floatingVoice,
         )
       ) : (
         <>
           <div ref={voiceSlot} />
           <div className="assistant-layout" hidden={!workVisible}>
-            {children && <div className="assistant-map-panel">{children}</div>}
+            {work && <div className="assistant-map-panel">{work}</div>}
             <div className="assistant-side">
               {inspector && <div className="assistant-panel">{inspector}</div>}
               {changes}
