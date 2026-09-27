@@ -50,9 +50,11 @@ export function erasureContent(database: Database.Database, householdId: string,
     .all(householdId) as RelationshipType[];
   for (const type of objectTypes) {
     const row = database
-      .prepare('SELECT fields FROM object_type_fields WHERE typeId = ?')
-      .get(type.id) as { fields: string } | undefined;
+      .prepare('SELECT fields, sections FROM object_type_fields WHERE typeId = ?')
+      .get(type.id) as { fields: string; sections: string | null } | undefined;
     if (row) type.fields = JSON.parse(row.fields);
+    if (row?.sections !== null && row?.sections !== undefined)
+      type.sections = JSON.parse(row.sections);
   }
   for (const type of relationshipTypes) {
     const row = database

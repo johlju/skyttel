@@ -43,6 +43,7 @@ export function MergeSourceDetails({
           />
           <FinancialFactsDetails facts={object.financialFacts} />
           <CustomFieldsDetails
+            showHidden
             type={merge.types.find((type) => type.id === object.typeId)}
             values={object.customValues}
           />
@@ -254,6 +255,7 @@ export function ObjectMerge({
                   />
                   <FinancialFactsDetails facts={object.financialFacts} />
                   <CustomFieldsDetails
+                    showHidden
                     type={types.find((type) => type.id === object.typeId)}
                     values={object.customValues}
                   />

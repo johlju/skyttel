@@ -288,3 +288,57 @@
 .household-map.workspace-shell .workspace-utility .intro {
   color: var(--space-text);
 }
+
+.object-type-editor .type-section-editor,
+.object-type-editor .type-field-editor {
+  margin-block: 20px;
+  padding: 16px;
+  border: 1px solid var(--space-line);
+  border-radius: 12px;
+}
+.object-type-editor .type-section-row {
+  margin-block: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--space-line);
+}
+.object-type-editor .type-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block: 12px;
+}
+.object-type-editor .type-row-actions button {
+  width: auto;
+  min-height: 44px;
+}
+.object-type-editor :is(input, select, textarea) {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-block: 6px 16px;
+  padding: 10px;
+  border: 1px solid var(--space-control);
+  border-radius: 8px;
+  background: var(--space-surface);
+  color: var(--space-text);
+  font: inherit;
+}
+.object-type-editor fieldset {
+  min-width: 0;
+}
+.object-type-editor .type-field-editor > fieldset {
+  border: 0;
+  padding: 0;
+  margin-top: 16px;
+}
+.object-type-editor summary {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.custom-field-section {
+  min-width: 0;
+  margin-block: 16px;
+}

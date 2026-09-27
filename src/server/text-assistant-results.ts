@@ -8,6 +8,7 @@ import type {
   RelationshipValue,
   SaveReceipt,
 } from '../shared/map.js';
+import { objectTypePresentation } from '../shared/map.js';
 import { objectIconLabel } from '../shared/object-icons.js';
 import type { TextAssistantResult, TextAssistantReview } from '../shared/text-assistant.js';
 
@@ -65,9 +66,42 @@ function typeDetails(
     ...(before && after ? difference('namn', before.name, after.name) : []),
     ...difference('beskrivning', description(before?.description), description(after?.description)),
   ];
+  const previousPresentation = objectTypePresentation(before ?? {});
+  const nextPresentation = objectTypePresentation(after ?? {});
+  const placement = (type: ObjectType | null, id: string) => {
+    const presentation = objectTypePresentation(type ?? {});
+    const field = presentation.fields.find((field) => field.id === id);
+    return field
+      ? (presentation.sections.find(({ id }) => id === field.sectionId)?.name ??
+          'Dold, behåll värden')
+      : 'ej angivet';
+  };
+  if (before?.sections || after?.sections) {
+    for (const id of new Set(
+      [...previousPresentation.sections, ...nextPresentation.sections].map(({ id }) => id),
+    ))
+      fields.push(
+        ...difference(
+          'Avsnitt',
+          previousPresentation.sections.find((section) => section.id === id)?.name ?? 'ej angivet',
+          nextPresentation.sections.find((section) => section.id === id)?.name ?? 'ej angivet',
+        ),
+      );
+    if (
+      JSON.stringify(previousPresentation.sections.map(({ id }) => id)) !==
+      JSON.stringify(nextPresentation.sections.map(({ id }) => id))
+    )
+      fields.push(
+        ...difference(
+          'Avsnittens ordning',
+          previousPresentation.sections.map(({ name }) => name).join(', ') || 'inga',
+          nextPresentation.sections.map(({ name }) => name).join(', ') || 'inga',
+        ),
+      );
+  }
   for (const id of new Set(
     [...(before?.fields ?? []), ...(after?.fields ?? [])].map((field) => field.id),
-  ))
+  )) {
     fields.push(
       ...difference(
         'Eget fält',
@@ -75,6 +109,14 @@ function typeDetails(
         fieldDefinition(after?.fields?.find((field) => field.id === id)),
       ),
     );
+    fields.push(
+      ...difference(
+        `Placering av ${after?.fields?.find((field) => field.id === id)?.name ?? before?.fields?.find((field) => field.id === id)?.name}`,
+        placement(before, id),
+        placement(after, id),
+      ),
+    );
+  }
   const oldOrder =
     before?.fields?.filter((field) => after?.fields?.some(({ id }) => id === field.id)) ?? [];
   const newOrder =

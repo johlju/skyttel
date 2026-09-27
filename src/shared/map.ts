@@ -13,9 +13,27 @@ export interface CustomField {
   name: string;
   description: string;
   kind: 'text' | 'number' | 'date' | 'boolean';
+  /** Empty means hidden. Absence belongs to the legacy default presentation. */
+  sectionId?: string;
+}
+export interface TypeSection {
+  id: string;
+  name: string;
 }
 export interface ObjectType extends TypeDefinition {
   fields?: CustomField[];
+  sections?: TypeSection[];
+}
+/** Legacy snapshots remain unchanged; their presentation is deterministic. */
+export function objectTypePresentation(type: Pick<ObjectType, 'sections' | 'fields'>) {
+  const sections = type.sections ?? [{ id: 'custom-fields', name: 'Egna fält' }];
+  return {
+    sections,
+    fields: (type.fields ?? []).map((field) => ({
+      ...field,
+      sectionId: field.sectionId ?? (type.sections === undefined ? 'custom-fields' : ''),
+    })),
+  };
 }
 export interface ObjectTypeChange {
   id: string;

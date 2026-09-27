@@ -171,6 +171,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   vid borttagning efter typbyten.
 - [Objekttyper och egna fält](object-types.md): skapa och rätta gemensamma
   definitioner, fyra frivilliga värdeslag, privata förslag, samtidiga
+  ändringar i namngivna avsnitt, flytt och döljning utan värdeförlust,
+  tangentbord och bevarat arbete på mobil och dator. Samtidiga
   ändringar med bevarade oberoende uppgifter och samma atomiska kvitto
   som objektens innehåll. Typbyten granskar tidigare och nya värden,
   bevarar identitet och samband samt följer historikens ångring.

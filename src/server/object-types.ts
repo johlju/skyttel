@@ -1,11 +1,17 @@
 import { isDeepStrictEqual } from 'node:util';
 import type Database from 'better-sqlite3';
-import type { CustomField, CustomValues, MapDraft, ObjectType } from '../shared/map.js';
+import type {
+  CustomField,
+  CustomValues,
+  MapDraft,
+  ObjectType,
+  TypeSection,
+} from '../shared/map.js';
 import { compatibleCustomFields, proposedObjectTypes } from '../shared/map.js';
 import { definitionUsage } from './definition-usage.js';
 import { MapError } from './map-error.js';
 import { mapTombstones } from './map-tombstones.js';
-import { keepIndependent } from './undo-facts.js';
+import { keepIndependent, resolveObjectType } from './undo-facts.js';
 
 export function readCustomValues(value: unknown, type: ObjectType): CustomValues | undefined {
   if (value === undefined) return undefined;
@@ -32,54 +38,28 @@ export function readCustomValues(value: unknown, type: ObjectType): CustomValues
   return Object.keys(result).length ? result : undefined;
 }
 
-function resolvedDefinition(before: ObjectType | null, after: ObjectType, current: ObjectType) {
-  const revision = current.revision + 1;
-  if (!before) return { ...after, revision };
-  const fields = new Map(current.fields?.map((field) => [field.id, field]));
-  for (const field of before.fields ?? [])
-    if (!after.fields?.some((item) => item.id === field.id)) fields.delete(field.id);
-  for (const proposed of after.fields ?? []) {
-    const original = before.fields?.find((field) => field.id === proposed.id);
-    const saved = fields.get(proposed.id);
-    fields.set(
-      proposed.id,
-      original && saved
-        ? {
-            id: proposed.id,
-            name: proposed.name === original.name ? saved.name : proposed.name,
-            description:
-              proposed.description === original.description
-                ? saved.description
-                : proposed.description,
-            kind: proposed.kind === original.kind ? saved.kind : proposed.kind,
-          }
-        : proposed,
-    );
-  }
-  return {
-    ...after,
-    revision,
-    name: after.name === before.name ? current.name : after.name,
-    description: after.description === before.description ? current.description : after.description,
-    ...(fields.size ? { fields: [...fields.values()] } : {}),
-  };
-}
-
 export function objectTypes(database: Database.Database, householdId: string, userId: string) {
   const tombstones = mapTombstones(database, householdId);
   const usage = definitionUsage(database, householdId, userId);
   function read(includeRemoved = false): ObjectType[] {
     return (
       database
-        .prepare(`SELECT t.*, f.fields FROM object_type t LEFT JOIN object_type_fields f ON f.typeId = t.id
+        .prepare(`SELECT t.*, f.fields, f.sections FROM object_type t LEFT JOIN object_type_fields f ON f.typeId = t.id
       WHERE t.householdId = ? ${includeRemoved ? '' : "AND NOT EXISTS (SELECT 1 FROM removed_type WHERE kind = 'objectType' AND typeId = t.id)"} ORDER BY CASE WHEN t.name = 'Person' THEN 0 ELSE 1 END, t.name, t.id`)
-        .all(householdId) as (ObjectType & { fields: string | null })[]
-    ).map(({ fields, ...type }) => ({
+        .all(householdId) as (Omit<ObjectType, 'fields' | 'sections'> & {
+        fields: string | null;
+        sections: string | null;
+      })[]
+    ).map(({ fields, sections, ...type }) => ({
       ...type,
       ...(fields && fields !== '[]' ? { fields: JSON.parse(fields) } : {}),
+      ...(sections !== null ? { sections: JSON.parse(sections) } : {}),
     }));
   }
-  function validate(value: unknown): Pick<ObjectType, 'name' | 'description' | 'fields'> {
+  function validate(
+    value: unknown,
+    previous?: ObjectType | null,
+  ): Pick<ObjectType, 'name' | 'description' | 'fields' | 'sections'> {
     const type = value as Partial<ObjectType> | null;
     if (
       !type ||
@@ -92,8 +72,38 @@ export function objectTypes(database: Database.Database, householdId: string, us
       type.fields.length > 100
     )
       throw new MapError('invalid_type_definition', 400);
+    const safeId = (id: unknown): id is string =>
+      typeof id === 'string' &&
+      /^[\w-]{1,128}$/.test(id) &&
+      !['__proto__', 'constructor', 'prototype'].includes(id);
+    const sectionIds = new Set<string>();
+    let sections: TypeSection[] | undefined;
+    if (type.sections !== undefined) {
+      if (!Array.isArray(type.sections) || type.sections.length > 100)
+        throw new MapError('invalid_type_definition', 400);
+      sections = type.sections.map((section) => {
+        if (
+          !section ||
+          !safeId(section.id) ||
+          sectionIds.has(section.id) ||
+          typeof section.name !== 'string' ||
+          !section.name.trim() ||
+          section.name.length > 200
+        )
+          throw new MapError('invalid_type_definition', 400);
+        sectionIds.add(section.id);
+        return { id: section.id, name: section.name.trim() };
+      });
+    } else if (previous?.sections !== undefined) {
+      sections = previous.sections;
+      for (const section of sections) sectionIds.add(section.id);
+    }
     const ids = new Set<string>();
-    const fields: CustomField[] = type.fields.map((field) => {
+    const preservePresentation =
+      type.sections === undefined &&
+      (previous?.sections !== undefined ||
+        previous?.fields?.some((field) => field.sectionId !== undefined));
+    let fields: CustomField[] = type.fields.map((field) => {
       if (
         !field ||
         typeof field.id !== 'string' ||
@@ -109,17 +119,37 @@ export function objectTypes(database: Database.Database, householdId: string, us
       )
         throw new MapError('invalid_type_definition', 400);
       ids.add(field.id);
+      const sectionId = preservePresentation
+        ? (previous?.fields?.find((item) => item.id === field.id)?.sectionId ??
+          (sections === undefined ? undefined : (sections[0]?.id ?? '')))
+        : field.sectionId;
+      if (
+        (sections !== undefined && typeof sectionId !== 'string') ||
+        (sectionId !== undefined &&
+          (typeof sectionId !== 'string' || (sectionId !== '' && !sectionIds.has(sectionId))))
+      )
+        throw new MapError('invalid_type_definition', 400);
       return {
         id: field.id,
         name: field.name.trim(),
         description: field.description,
         kind: field.kind,
+        ...(sectionId !== undefined ? { sectionId } : {}),
       };
     });
+    // An older client cannot erase section placement or ordering it never read.
+    if (preservePresentation) {
+      const order = previous?.fields?.map((field) => field.id) ?? [];
+      fields = [
+        ...order.flatMap((id) => fields.filter((field) => field.id === id)),
+        ...fields.filter((field) => !order.includes(field.id)),
+      ];
+    }
     return {
       name: type.name.trim(),
       description: type.description,
       ...(fields.length ? { fields } : {}),
+      ...(sections !== undefined ? { sections } : {}),
     };
   }
   function checkFields(
@@ -209,7 +239,7 @@ export function objectTypes(database: Database.Database, householdId: string, us
             },
           });
       } else if (change.after && current) {
-        const resolved = resolvedDefinition(change.before, change.after, current);
+        const resolved = resolveObjectType(change.before, change.after, current);
         const after = { ...resolved, ...validate({ ...resolved, fields: resolved.fields ?? [] }) };
         checkFields(current, after, draft);
         change.before = current;
@@ -260,7 +290,7 @@ export function objectTypes(database: Database.Database, householdId: string, us
         id: body.id,
         householdId,
         revision: (before?.revision ?? existing?.restoreRevision ?? 0) + 1,
-        ...validate(body.value),
+        ...validate(body.value, existing?.after ?? before),
       };
       checkFields(before, after, draft);
       if (existing?.after)
@@ -321,9 +351,13 @@ export function objectTypes(database: Database.Database, householdId: string, us
           );
         database
           .prepare(
-            'INSERT INTO object_type_fields (typeId, fields) VALUES (?, ?) ON CONFLICT(typeId) DO UPDATE SET fields = excluded.fields',
+            'INSERT INTO object_type_fields (typeId, fields, sections) VALUES (?, ?, ?) ON CONFLICT(typeId) DO UPDATE SET fields = excluded.fields, sections = excluded.sections',
           )
-          .run(change.id, JSON.stringify(change.after.fields ?? []));
+          .run(
+            change.id,
+            JSON.stringify(change.after.fields ?? []),
+            change.after.sections === undefined ? null : JSON.stringify(change.after.sections),
+          );
         tombstones.restoreType('objectType', change.id);
       }
       return draft.objectTypes ?? [];

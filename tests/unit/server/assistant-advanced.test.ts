@@ -909,6 +909,54 @@ test('MCP creates a household solar type with four field kinds and preserves una
   ).toHaveLength(4);
 });
 
+test('MCP catalog and proposals retain ordered sections, hidden fields and negative values', async () => {
+  const value = {
+    name: 'Solkraft',
+    description: '',
+    sections: [
+      { id: 'service', name: 'Service' },
+      { id: 'facts', name: 'Uppgifter' },
+    ],
+    fields: [
+      { id: 'power', name: 'Effekt', description: '', kind: 'number', sectionId: 'facts' },
+      { id: 'battery', name: 'Batteri', description: '', kind: 'boolean', sectionId: '' },
+    ],
+  };
+  let review = await definition('solar-sections', value);
+  expect(
+    (await tool('read_type_catalog')).types.find(
+      (type: { id: string }) => type.id === 'solar-sections',
+    ),
+  ).toMatchObject(value);
+  review = await tool('propose_object', {
+    ...version(review),
+    id: 'panels',
+    baseRevision: null,
+    value: {
+      typeId: 'solar-sections',
+      name: 'Paneler',
+      description: '',
+      customValues: { power: 0, battery: false },
+    },
+  });
+  await definition(
+    'solar-sections',
+    { ...value, fields: [{ ...value.fields[0], sectionId: 'missing' }] },
+    'invalid_type_definition',
+  );
+  expect((await tool('read_my_draft')).version).toBe(review.version);
+  const receipt = await save('sections');
+  expect(receipt.objectTypes[0].after).toMatchObject(value);
+  expect(receipt.changes[0].type).toMatchObject(value);
+  await app.restart();
+  expect(
+    (await tool('read_type_catalog')).types.find(
+      (type: { id: string }) => type.id === 'solar-sections',
+    ),
+  ).toMatchObject(value);
+  expect((await tool('read_map')).objects[0].customValues).toEqual({ power: 0, battery: false });
+});
+
 test('MCP custom relationship types retain both labels, direction, duplicate reuse and whole definition review', async () => {
   let review = await tool('read_my_draft');
   const catalog = await tool('read_type_catalog');

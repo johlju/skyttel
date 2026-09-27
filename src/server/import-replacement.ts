@@ -10,7 +10,7 @@ import { projectDraftScope } from './project-content-scope.js';
 
 const tables = [
   ['objectTypes', 'object_type', []],
-  ['objectTypeFields', 'object_type_fields', ['fields']],
+  ['objectTypeFields', 'object_type_fields', ['fields', 'sections']],
   ['relationshipTypes', 'relationship_type', []],
   ['relationshipTypeLabels', 'relationship_type_labels', []],
   ['removedTypes', 'removed_type', []],
@@ -191,7 +191,8 @@ export function replaceHouseholdContent(
         );
       if ('householdId' in row) row.householdId = householdId;
       for (const field of jsonFields)
-        if (row[field] !== null) row[field] = JSON.stringify(row[field]);
+        if (row[field] !== null && row[field] !== undefined)
+          row[field] = JSON.stringify(row[field]);
       const columns = Object.keys(row);
       database
         .prepare(

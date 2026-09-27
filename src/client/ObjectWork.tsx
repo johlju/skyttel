@@ -252,7 +252,7 @@ export function ObjectWork({
                   {editor.displacedFields.map(({ id, type, values }) => (
                     <div key={id}>
                       <p>Objekttyp: {type.name}</p>
-                      <CustomFieldsDetails type={type} values={values} />
+                      <CustomFieldsDetails type={type} values={values} showHidden />
                     </div>
                   ))}
                   <p>

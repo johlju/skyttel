@@ -222,7 +222,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     'propose_object_type',
     {
       description:
-        'Föreslå en ny objekttyp eller ersätt hela definitionen, även en förifylld typ. value null föreslår borttagning. Ange alla fält som ska finnas kvar. Fält får lämnas obesvarade; utelämnat ja/nej är inte false. Ett använt fälts värdeslag ersätts genom ett nytt fält, aldrig automatisk konvertering. Användning i aktuellt eller upphört innehåll och privata utkast skyddas även vid sparandet. Hela ditt utkast returneras.',
+        'Föreslå en ny objekttyp eller ersätt hela definitionen, även en förifylld typ. value null föreslår borttagning. Ange alla fält som ska finnas kvar. sections anger namngivna avsnitt i visningsordning. Ange sectionId för varje fält: avsnittets ID eller tom sträng för dolt med bevarade värden. Fältordningen gäller inom avsnitten. Utelämnade sections bevarar befintlig placering; äldre definitioner visas i Egna fält. Fält får lämnas obesvarade; utelämnat ja/nej är inte false. Ett använt fälts värdeslag ersätts genom ett nytt fält, aldrig automatisk konvertering. Användning i aktuellt eller upphört innehåll och privata utkast skyddas även vid sparandet. Hela ditt utkast returneras.',
       inputSchema: z
         .object({
           ...versionFields,
@@ -232,6 +232,10 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
             .object({
               name: z.string().min(1).max(200),
               description: z.string().max(2000),
+              sections: z
+                .array(z.object({ id, name: z.string().min(1).max(200) }).strict())
+                .max(100)
+                .optional(),
               fields: z
                 .array(
                   z
@@ -240,6 +244,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
                       name: z.string().min(1).max(200),
                       description: z.string().max(2000),
                       kind: z.enum(['text', 'number', 'date', 'boolean']),
+                      sectionId: z.union([id, z.literal('')]).optional(),
                     })
                     .strict(),
                 )

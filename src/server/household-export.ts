@@ -97,7 +97,7 @@ const collections = [
   [
     'objectTypeFields',
     'SELECT f.* FROM object_type_fields f JOIN object_type t ON t.id = f.typeId WHERE t.householdId = ? ORDER BY f.typeId',
-    ['fields'],
+    ['fields', 'sections'],
   ],
   ['relationshipTypes', 'SELECT * FROM relationship_type WHERE householdId = ? ORDER BY id', []],
   [
