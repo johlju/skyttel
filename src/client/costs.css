@@ -74,6 +74,11 @@
   max-width: 100%;
   overflow-x: auto;
 }
+.cost-table-scroll table {
+  width: 100%;
+  min-width: 36rem;
+  overflow-wrap: normal;
+}
 .costs-panel th,
 .costs-panel td {
   text-align: left;
