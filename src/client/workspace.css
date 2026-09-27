@@ -383,27 +383,8 @@
   background: var(--space-surface);
   color: var(--space-text);
 }
-.household-map.workspace-shell:not(.workspace-open)
-  .assistant-workspace[data-session-active="true"]
-  .assistant-bar {
-  display: block;
-  position: fixed;
-  z-index: 22;
-  right: 24px;
-  bottom: 24px;
-  width: min(380px, calc(100vw - 24px));
-  max-height: 45dvh;
-  overflow-y: auto;
-  background: var(--space-surface);
-  color: var(--space-text);
-  box-shadow: var(--space-shadow);
-}
 .household-map.workspace-shell:has(.assistant-workspace[data-session-active="true"])
   .workspace-guidance {
-  display: none;
-}
-.household-map.workspace-shell:not(.workspace-open)
-  .assistant-bar:has(.voice-assistant[data-voice-state="idle"]):not(:has([role="alert"])) {
   display: none;
 }
 .household-map.workspace-shell .workspace-work-close {

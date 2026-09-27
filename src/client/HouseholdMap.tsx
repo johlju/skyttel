@@ -49,6 +49,7 @@ import {
 } from './SaveOperations.js';
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
 import { TextAssistant } from './TextAssistant.js';
+import type { VoiceControl } from './VoiceAssistant.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
 import { type PanelAnchor, type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
 import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
@@ -83,6 +84,7 @@ export function HouseholdMap({
   account,
   profileRequested,
   onSettings,
+  onReturnToMap,
   typeSettingsTarget,
 }: {
   householdId: string;
@@ -93,6 +95,7 @@ export function HouseholdMap({
   account?: ReactNode;
   profileRequested?: boolean;
   onSettings?: () => void;
+  onReturnToMap?: () => void;
   typeSettingsTarget?: HTMLElement | null;
 }) {
   const theme = useWorkspaceTheme();
@@ -213,6 +216,7 @@ export function HouseholdMap({
   const listModeButton = useRef<HTMLButtonElement>(null);
   const workTrigger = useRef<HTMLElement | null>(null);
   const [guidance, setGuidance] = useState(true);
+  const [voiceControl, setVoiceControl] = useState<VoiceControl | null>(null);
   const workOpen = openPanels.length > 0 && (presentation !== 'map' || detailsOpen || editorOpen);
   const [narrow, setNarrow] = useState(() => window.innerWidth <= 700);
   useEffect(() => {
@@ -1055,6 +1059,7 @@ export function HouseholdMap({
     };
     const abort = new AbortController();
     revealAbort.current = abort;
+    workspace.current.scrollTop = 0;
     const cancel = () => abort.abort();
     signal.addEventListener('abort', cancel, { once: true });
     setQuery('');
@@ -1168,6 +1173,7 @@ export function HouseholdMap({
             Till samtal och text
           </button>
           <WorkspaceTools
+            voiceControl={voiceControl}
             cameraMount={setCameraMount}
             expanded={toolsExpanded}
             onExpandedChange={setToolsExpanded}
@@ -1338,7 +1344,13 @@ export function HouseholdMap({
       )}
       {state && (
         <TextAssistant
+          onVoiceControl={setVoiceControl}
           active={active}
+          onOpenConversation={() => {
+            openWork('conversation');
+            routeOutsideFocus.current = null;
+            if (!active) onReturnToMap?.();
+          }}
           conversationVisible={
             workOpen &&
             openPanels.includes('conversation') &&

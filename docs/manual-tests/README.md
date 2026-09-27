@@ -83,9 +83,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   egna typer och fält, daterade avtal, riktning och typbyte, skyddade
   definitioner, granskad sammanslagning med bilder samt ångring efter import.
 
-- [Skyttels röst](voice-assistant.md): svenska röstuppdrag, avbrott,
+- [Skyttels röst](voice-assistant.md): svenska röstuppdrag, kompakt status,
+  gemensam start, mikrofonpaus, ljudaktivitet, avbrott,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
-  samtalstext och verifierade resultat, löpande dialog, mikrofonpaus och
+  samtalstext och verifierade resultat, löpande dialog och
   synlig arbetstid. Kontrollerat familjeunderlag och
   verkligt tal redovisas separat.
 - [Skyttels textassistent](text-assistant.md): separat AI-val, hela utkast,

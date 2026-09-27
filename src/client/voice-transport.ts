@@ -3,11 +3,13 @@ import type { TranscriptRow } from './ConversationTranscript.js';
 
 export function createVoiceTransport(callbacks: {
   onReady: () => void;
+  onMicrophoneReady?: () => void;
   onClosed: () => void;
   onFailure: (reason: 'network' | 'audio' | 'microphone' | 'provider') => void;
   onPlaybackBlocked: (blocked: boolean) => void;
   onDisconnected: (disconnected: boolean) => void;
   onTranscript?: (row: TranscriptRow) => void;
+  onAudioActivity?: (activity: { microphone: boolean; speaker: boolean }) => void;
 }) {
   const live = new OpenAILiveWebRTC();
   const audio = new Audio();
@@ -19,6 +21,44 @@ export function createVoiceTransport(callbacks: {
   let stopped = false;
   let closed = false;
   let paused = false;
+  const audioContext = new AudioContext();
+  const meters: { source: MediaStreamAudioSourceNode; analyser: AnalyserNode; input: boolean }[] =
+    [];
+  const samples = new Uint8Array(256);
+  let playing = false;
+  let activity = { microphone: false, speaker: false };
+  function meter(stream: MediaStream, input: boolean) {
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = samples.length;
+    source.connect(analyser);
+    meters.push({ source, analyser, input });
+  }
+  // Observe only the already-authorized streams. Incoming audio remains
+  // independent of microphone pause, and transcripts never imply playback.
+  const activityTimer = setInterval(() => {
+    const next = { microphone: false, speaker: false };
+    if (
+      !closed &&
+      !stopped &&
+      connected &&
+      started &&
+      live.peerConnection.connectionState === 'connected' &&
+      audioContext.state === 'running'
+    ) {
+      for (const { analyser, input } of meters) {
+        if (input ? paused : !playing) continue;
+        analyser.getByteTimeDomainData(samples);
+        const audible = samples.some((value) => Math.abs(value - 128) > 3);
+        if (input) next.microphone ||= audible;
+        else next.speaker ||= audible;
+      }
+    }
+    if (next.microphone !== activity.microphone || next.speaker !== activity.speaker) {
+      activity = next;
+      callbacks.onAudioActivity?.(next);
+    }
+  }, 100);
   let startupTimer: ReturnType<typeof setTimeout> | undefined;
   let disconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let userRow: TranscriptRow | undefined;
@@ -79,9 +119,16 @@ export function createVoiceTransport(callbacks: {
     if (closed || stopped) return;
     try {
       await audio.play();
-      if (!closed && !stopped) callbacks.onPlaybackBlocked(false);
+      if (!closed && !stopped) {
+        playing = true;
+        void audioContext.resume().catch(() => {});
+        callbacks.onPlaybackBlocked(false);
+      }
     } catch {
-      if (!closed && !stopped) callbacks.onPlaybackBlocked(true);
+      if (!closed && !stopped) {
+        playing = false;
+        callbacks.onPlaybackBlocked(true);
+      }
     }
   }
   const receiveTrack = (event: RTCTrackEvent) => {
@@ -90,6 +137,7 @@ export function createVoiceTransport(callbacks: {
       return;
     }
     remoteTracks.add(event.track);
+    meter(new MediaStream([event.track]), false);
     audio.srcObject = new MediaStream([...remoteTracks]);
     void playAudio();
   };
@@ -161,6 +209,15 @@ export function createVoiceTransport(callbacks: {
     finish(userRow);
     finish(assistantRow);
     stopped = true;
+    clearInterval(activityTimer);
+    activity = { microphone: false, speaker: false };
+    callbacks.onAudioActivity?.(activity);
+    for (const { source, analyser } of meters) {
+      source.disconnect();
+      analyser.disconnect();
+    }
+    meters.length = 0;
+    if (audioContext.state !== 'closed') void audioContext.close().catch(() => {});
     clearTimeout(startupTimer);
     clearTimeout(disconnectTimer);
     for (const track of microphone?.getTracks() ?? []) {
@@ -196,6 +253,9 @@ export function createVoiceTransport(callbacks: {
           track.addEventListener('ended', microphoneEnded);
           live.peerConnection.addTrack(track, microphone);
         }
+        meter(microphone, true);
+        void audioContext.resume().catch(() => {});
+        callbacks.onMicrophoneReady?.();
         startupTimer = setTimeout(() => {
           if (!closed && !stopped) callbacks.onFailure('network');
         }, 30_000);

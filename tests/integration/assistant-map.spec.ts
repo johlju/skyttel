@@ -14,6 +14,8 @@ for (const viewport of [
   { width: 1440, height: 1000 },
   { width: 1280, height: 720 },
   { width: 390, height: 844 },
+  { width: 640, height: 500 },
+  { width: 320, height: 250 },
 ]) {
   test.describe(`${viewport.width} × ${viewport.height}`, () => {
     test.use({ viewport });

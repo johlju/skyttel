@@ -121,6 +121,9 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    befintliga betalningsroller. Utkastet ska vara tomt, osänd formulärtext
    bevarad och tidigare okända/osäkra uppgifter oförändrade.
 8. Stäng rösten och kontrollera avslutade spår enligt startguiden.
+   Avsluta samtalet, starta en ny textanslutning med båda medgivandena och
+   öppna **Tidigare sparförsök**. Familjens kvitto och sparade karta ska
+   finnas kvar utan ett nytt modelluppdrag.
    Avsluta med `quit` och kontrollera att den tillfälliga katalogen försvinner.
 
 **Steg, verkligt svenskt tal:**
@@ -215,6 +218,9 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
 **Användare:** Alex i den kontrollerade installationen.
 
 **Förutsättningar:** Lo-förslaget finns och rösten är igång.
+Använd en telefonbred vy, 390 × 844 CSS-pixlar i det automatiska provet.
+Markeringen och detaljpanelens sammanfattning ska vara synliga samtidigt
+som röstkortet är öppet; kortet får inte täcka detaljpanelens kontroller.
 
 **Integrationstest:**
 [voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
@@ -391,7 +397,7 @@ tysta mediespår; verkligt tal redovisas separat i TAL-01.
    längst ned med ökande tid. Släpp sedan det hållna anropet med
    `reply REQUEST Vem använder musiken?`, där `REQUEST` är dess ID.
 6. Kräv frågan i dialogen och avslutad arbetsindikering. Stäng rösten:
-   tidigare dialog finns kvar. Välj **Avsluta textassistenten**:
+   tidigare dialog finns kvar. Välj **Avsluta samtalet**:
    dialogen försvinner medan Lo-förslaget finns kvar i utkastet.
 
 **Förväntat resultat:**
@@ -404,6 +410,159 @@ tysta mediespår; verkligt tal redovisas separat i TAL-01.
   ger inga upprepade statusuppläsningar för skärmläsaren.
 - Dialogen är tillfällig och är inte ett sparkvitto. Avslut tar bort
   samtalet men bevarar utkastet.
+
+### TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare förslag
+
+**Syfte:** Nå avbrott utan öppen dialog och bevara redan utfört arbete.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Följ TAL-02:s förberedelse. Lo-förslaget och rösten
+finns kvar. Anteckna utkastets innehåll och version.
+
+**Integrationstest:**
+[voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
+“TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare förslag”.
+
+**Steg:**
+
+1. Skriv **Osänd rättelse** i samtalets textfält utan att skicka.
+   Kör `user Rätta Lo.` och `delegate` i startguiden. Håll modellanropet.
+2. Stäng samtalspanelen. Kräv **Assistenten arbetar** och ökande arbetstid
+   i kortet. Välj **Avbryt uppdrag** där.
+3. Släpp det gamla anropet med ett `propose_object` som försöker byta
+   Lo-förslagets namn till **För sent**. Använd det hållna anropets version,
+   innehållsversion och hela tidigare objektvärde enligt TAL-01:s verktygssteg.
+4. Kräv avbrottsbesked och oförändrat utkast. Välj **Stäng av rösten**,
+   sedan **Öppna samtalet**. **Osänd rättelse** ska finnas kvar.
+5. Välj **Avsluta samtalet**. Samtalet försvinner, Lo-förslaget finns kvar.
+
+**Förväntat resultat:**
+
+- Avbrott stoppar det gamla uppdragets sena ändringar, utan att radera förslag.
+- Röst av, uppdragsavbrott och samtalsavslut är separata handlingar.
+- Röstresurser avslutas vid avstängning; oskickad text behålls tills samtalet avslutas.
+
+### TAL-07: uppmätt ljudaktivitet skiljs från mikrofonpaus och består i Inställningar
+
+**Syfte:** Skilja ljudaktivitet från mikrofonens tillstånd och bevara
+anslutningen vid paus och navigering.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Följ TAL-02:s förberedelse. Använd enbart de
+genererade webbläsarsignalerna nedan. De provar ljudmätningen, inte
+svensk talförståelse, högtalare eller fysisk mikrofon.
+
+**Integrationstest:**
+[voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
+“TAL-07: uppmätt ljudaktivitet skiljs från mikrofonpaus och består i Inställningar”.
+
+**Steg:**
+
+1. Kräv stilla vågform. Kör i webbläsarkonsolen:
+
+   ```javascript
+   window.skyttelVoiceFixture.setSound('microphone', true);
+   ```
+
+2. Kräv **Du talar** och rörlig vågform. Stäng signalen med samma anrop
+   och `false`. Starta sedan `setSound('remote', true)`; kräv **Skyttel talar**.
+3. Aktivera webbläsarens minskade rörelse. Vågformen ska finnas kvar men
+   stå stilla, samtidigt som **Skyttel talar** visas.
+4. Pausa mikrofonen med kartverktygets cirkel och stoppruta. Kräv
+   **Mikrofonen är pausad** och fortsatt **Skyttel talar**. `stats()` ska
+   visa en öppen anslutning, ett ljudobjekt, levande avstängt mikrofonspår och
+   levande påslaget inkommande spår.
+5. Skriv **Kvar i samtalet** utan att skicka. Öppna Inställningar.
+   Återuppta mikrofonen i kortet. Fokusera **Öppna samtalet** med tangentbord
+   och tryck Enter. Kräv kvarvarande text och fokus på samtalspanelens rubrik.
+6. Stoppa den inkommande signalen. **Skyttel talar** försvinner. Stäng
+   rösten: vågformen försvinner och resurserna avslutas.
+
+**Förväntat resultat:**
+
+- Vågformen följer uppmätt ljud i den befintliga anslutningen; tystnad
+  eller transkript startar ingen animation. Minskad rörelse behåller status.
+- Mikrofonpaus stoppar eget ljud utan att stoppa inkommande ljud eller
+  skapa en ny leverantörsanslutning. Tangentbordsfokus följer återgången.
+- Prova även ljust och mörkt tema, smal skärm och faktisk webbläsarzoom
+  200 och 400 procent. Kortets kontroller nås med tangentbord och rullning
+  i kortet eller arbetsytan utan horisontell sidrullning. Prova även
+  kartmarkering och navigering med stängd dialog. Anteckna faktiskt provade storlekar.
+
+### TAL-08: nödvändiga frågor och fel nås med stängd samtalstext
+
+**Syfte:** Visa ett aktuellt svarskrav utan att tolka all frågande modelltext
+som ett hinder eller låta gamla frågor följa ett nytt uppdrag.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Följ TAL-02:s förberedelse med Lo-förslaget.
+
+**Integrationstest:**
+[voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
+“TAL-08: nödvändiga frågor och fel nås med stängd samtalstext”.
+
+**Steg:**
+
+1. Be att rätta Lo och delegera. Släpp anropet med `submit_changes`,
+   `completion: "draft"`, `questions: ["Vem använder tjänsten?"]` och
+   en `propose_object`-operation som behåller Lo men ändrar beskrivningen
+   till **Förslag väntar på svar**. Använd det hållna utkastets versioner.
+2. Stäng dialogen. Kräv **Skyttel behöver ett svar**, den uttryckliga
+   frågan och **Svara i samtalet** i kortet.
+3. Välj **Svara i samtalet**, skriv **Lo använder tjänsten.** och skicka.
+   Håll nästa anrop och stäng dialogen. Den gamla frågan ska vara borta
+   medan aktuell arbetsstatus visas.
+4. Släpp anropet med `reply REQUEST Vill du läsa vidare?`.
+   Det vanliga svaret ska inte skapa ett nytt nödvändigt svarskrav.
+5. Öppna dialogen, skicka **Berätta mer.**, stäng den och kör
+   `fail REQUEST`. Kräv synligt fel i kortet.
+6. Öppna **Samtalskontroller** och välj **Avsluta samtalet**.
+   Beskrivningen **Förslag väntar på svar** ska fortfarande finnas i utkastet.
+
+**Förväntat resultat:**
+
+- Validerade följdfrågor och befintliga identitetsproblem eller konflikter
+  ger ett svarskrav; fri modelltext bekräftar varken krav eller sparande.
+- Nytt uppdrag och avslut rensar tidigare samtalsfrågor. Fel och nästa
+  handling nås även med stängd dialog. Utkastet bevaras vid avslut.
+
+### TAL-09: gemensam start kräver separata medgivanden och återhämtar mikrofonavbrott
+
+**Syfte:** Erbjuda text från samma start och skilja väntan på mikrofonåtkomst
+från anslutning, med återhämtning efter avslag eller avbruten start.
+
+**Användare:** Alex i en ny kontrollerad installation.
+
+**Förutsättningar:** Skapa Talprov. Ingen samtalsanslutning finns.
+
+**Integrationstest:**
+[voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
+“TAL-09: gemensam start kräver separata medgivanden och återhämtar mikrofonavbrott”.
+
+**Steg:**
+
+1. Välj **Prata med Skyttel**. Mikrofonen är av. Prova varje medgivande
+   ensamt: båda startsätten förblir spärrade. Godkänn båda och starta text.
+2. Skicka ett textmeddelande och svara från startguiden. Mikrofonen ska
+   fortfarande vara oanvänd och inga röstanslutningar skapade.
+3. Kör `window.skyttelVoiceFixture.setMicrophone('hold')` i konsolen.
+   Välj **Starta röst**. Kräv **Väntar på mikrofonåtkomst** och mikrofon av.
+   Välj **Avbryt talstart**, kör `releaseMicrophone()` på samma testobjekt
+   och kontrollera att det sena mikrofonspåret avslutas utan röstanslutning.
+4. Välj läget `deny` och starta igen. Kräv fel, bevarad dialog och
+   fungerande textfält. Byt till `allow`, sätt `setAutoStart(false)` och starta.
+5. Kräv **Ansluter rösten** med avstängd mikrofon. Kör `started()` på
+   testobjektet. Först nu får mikrofonen vara på.
+
+**Förväntat resultat:**
+
+- Båda startsätten kräver samma två medgivanden. Att öppna starten eller
+  använda text begär inte mikrofonåtkomst.
+- Sen mikrofonåtkomst återupplivar inte avbruten start. Avslag lämnar
+  samtalet användbart. Klar anslutning och mikrofonåtkomst skiljs åt.
 
 ## Controlled voice fixture
 
