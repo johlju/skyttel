@@ -29,7 +29,7 @@ keep its credentials and personal identity values private.
 Select **Dev Containers: Reopen in Container** and the normal Skyttel
 configuration. Wait for installation and the Codex daemon to finish starting.
 Creation installs the repository's Node.js and npm versions, application
-dependencies, and browser tools, then runs `npm run db:setup`.
+dependencies, browser tools, and Claude Code, then runs `npm run db:setup`.
 Creation and rebuilding apply migrations, remove existing application data
 and sessions, and load the demo household. Ordinary restarts preserve data.
 The application and tests start only when you run them.
@@ -284,6 +284,11 @@ contents also changes the host copies. Both profiles also mount the host's
 `~/.codex/auth.json` as a file. The preparation command creates an empty
 placeholder only when the file is absent; it preserves existing credentials.
 Keep credentials out of the repository and container image.
+
+Creation and rebuilding also install the latest Claude Code release in
+`~/.local/bin`. If you use it, run `claude` in the container and sign in.
+Its sign-in and settings live in the container's `~/.claude` and
+`~/.claude.json`, so sign in again after each rebuild.
 
 ## State and rebuilds
 
