@@ -36,7 +36,12 @@ const objectType = z
   })
   .strict();
 const relationshipType = z
-  .object({ ...definitionShape, forwardLabel: text.optional(), reverseLabel: text.optional() })
+  .object({
+    ...definitionShape,
+    forwardLabel: text.optional(),
+    reverseLabel: text.optional(),
+    fields: z.array(field).max(100).optional(),
+  })
   .strict();
 const fact = z.discriminatedUnion('knowledge', [
   z
@@ -70,6 +75,7 @@ const relationshipValue = z
     knowledge: z.enum(['known', 'unknown', 'none', 'uncertain', 'unresolved']),
     lifecycle: lifecycle.optional(),
     endDate: fact.optional(),
+    customValues: values.optional(),
   })
   .strict();
 const relationship = relationshipValue.extend({ id, ...scope, revision: positive });
@@ -89,6 +95,7 @@ const relationshipChangeShape = {
   before: relationship.nullable(),
   after: z.union([relationshipValue, relationship]).nullable(),
   type: relationshipType,
+  beforeType: relationshipType.optional(),
   objectNames: z.record(id, text).optional(),
 };
 const draftRelationship = z
@@ -188,6 +195,9 @@ export const importContentSchema = z
         .strict(),
     ),
     relationshipTypes: z.array(z.object(definitionShape).strict()),
+    relationshipTypeFields: z
+      .array(z.object({ typeId: id, fields: z.array(field).max(100) }).strict())
+      .default([]),
     relationshipTypeLabels: z.array(
       z.object({ typeId: id, forwardLabel: text, reverseLabel: text }).strict(),
     ),
@@ -222,6 +232,7 @@ export const importContentSchema = z
           deleted: z.union([z.literal(0), z.literal(1)]),
           lifecycle: lifecycle.nullable(),
           endDate: fact.nullable(),
+          customValues: values.nullable().optional(),
         })
         .strict(),
     ),
@@ -315,6 +326,7 @@ export const importManifestSchema = z
       z.literal(16),
       z.literal(17),
       z.literal(18),
+      z.literal(19),
     ]),
     parts: z
       .array(

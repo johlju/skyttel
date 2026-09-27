@@ -1,5 +1,6 @@
 import { type FinancialFact, type FinancialFacts, financialFields } from './financial-facts.js';
 import type {
+  CustomField,
   CustomValues,
   DraftChange,
   MapObject,
@@ -41,6 +42,60 @@ function sameFact(left?: FinancialFact, right?: FinancialFact) {
   );
 }
 
+function resolvedFields(
+  before: CustomField[] = [],
+  after: CustomField[] = [],
+  current: CustomField[] = [],
+) {
+  const keys = ['name', 'description', 'kind', 'sectionId'] as const;
+  const merged = new Map(current.map((field) => [field.id, field]));
+  for (const previous of before)
+    if (!after.some(({ id }) => id === previous.id)) merged.delete(previous.id);
+  for (const field of after) {
+    const previous = before.find(({ id }) => id === field.id);
+    const saved = current.find(({ id }) => id === field.id);
+    if (!previous || !saved) merged.set(field.id, field);
+    else
+      merged.set(
+        field.id,
+        Object.fromEntries([
+          ['id', field.id],
+          ...keys.flatMap((key) => {
+            const value = field[key] === previous[key] ? saved[key] : field[key];
+            return value === undefined ? [] : [[key, value]];
+          }),
+        ]) as unknown as CustomField,
+      );
+  }
+  const reordered =
+    before
+      .filter((field) => after.some(({ id }) => id === field.id))
+      .map(({ id }) => id)
+      .join(',') !==
+    after
+      .filter((field) => before.some(({ id }) => id === field.id))
+      .map(({ id }) => id)
+      .join(',');
+  const order = reordered ? after : current;
+  return [...new Set([...order.map(({ id }) => id), ...after.map(({ id }) => id)])].flatMap((id) =>
+    merged.has(id) ? [merged.get(id) as CustomField] : [],
+  );
+}
+function resolvedValues(
+  before: CustomValues = {},
+  after: CustomValues = {},
+  current: CustomValues = {},
+) {
+  return Object.fromEntries(
+    [...new Set([...Object.keys(before), ...Object.keys(after), ...Object.keys(current)])].flatMap(
+      (key) => {
+        const value = after[key] === before[key] ? current[key] : after[key];
+        return value === undefined ? [] : [[key, value]];
+      },
+    ),
+  );
+}
+
 export function resolvedRelationshipType(
   change: RelationshipTypeChange,
   current: RelationshipType,
@@ -49,8 +104,10 @@ export function resolvedRelationshipType(
   if (!after) return null;
   const field = <K extends 'name' | 'description' | 'forwardLabel' | 'reverseLabel'>(key: K) =>
     before && after[key] === before[key] ? current[key] : after[key];
+  const fields = resolvedFields(before?.fields, after.fields, current.fields);
   return {
     ...after,
+    ...(fields.length ? { fields } : { fields: undefined }),
     revision: current.revision + 1,
     name: field('name'),
     description: field('description'),
@@ -121,10 +178,24 @@ export function resolvedRelationshipValue(
   if (!before || !after || !current) return after;
   // Meaning, endpoints and certainty describe one relationship fact.
   const meaning = ['typeId', 'sourceId', 'targetId', 'knowledge'] as const;
-  const value = meaning.every((key) => after[key] === before[key]) ? current : after;
+  const changingType = before.typeId !== after.typeId || before.typeId !== current.typeId;
+  const valuesUnchanged = [
+    ...new Set([
+      ...Object.keys(before.customValues ?? {}),
+      ...Object.keys(after.customValues ?? {}),
+    ]),
+  ].every((key) => after.customValues?.[key] === before.customValues?.[key]);
+  const value =
+    meaning.every((key) => after[key] === before[key]) && (!changingType || valuesUnchanged)
+      ? current
+      : after;
+  const customValues = changingType
+    ? value.customValues
+    : resolvedValues(before.customValues, after.customValues, current.customValues);
   const lifecycle = after.lifecycle === before.lifecycle ? current.lifecycle : after.lifecycle;
   const endDate = sameFact(after.endDate, before.endDate) ? current.endDate : after.endDate;
   return {
+    ...(customValues && Object.keys(customValues).length ? { customValues } : {}),
     typeId: value.typeId,
     sourceId: value.sourceId,
     targetId: value.targetId,
@@ -197,7 +268,12 @@ export function draftConflicts(state: MapState): DraftConflict[] {
       (after ? edgeTypes : [...edgeTypes, ...state.relationshipTypes]).find(
         (item) => item.id === (after?.typeId ?? current?.typeId ?? change.type.id),
       ) ?? null;
-    const changedType = type?.id !== change.type.id || type?.revision !== change.type.revision;
+    const changedType =
+      type?.id !== change.type.id ||
+      type?.revision !== change.type.revision ||
+      (change.after &&
+        type &&
+        !compatibleCustomFields(change.after.customValues, change.type, type));
     const duplicates = after
       ? [...proposedRelationships(state.relationships, state.draft.relationships).values()].filter(
           (edge) =>

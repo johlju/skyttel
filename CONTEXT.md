@@ -35,8 +35,9 @@ En objekt- eller sambandstyp som finns i hushållets karta från början
 och ingår bland dess redigerbara typdefinitioner.
 
 **Eget fält**:
-En namngiven uppgift som hushållet definierar för en objekttyp,
-exempelvis installationsdatum för en solcellsanläggning.
+En namngiven uppgift som hushållet definierar för en objekt- eller
+sambandstyp, exempelvis installationsdatum för en solcellsanläggning
+eller startdatum för ett ägande.
 
 ## Personer, företag, föreningar och tjänster
 

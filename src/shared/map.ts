@@ -55,6 +55,7 @@ export function compatibleCustomFields(
   });
 }
 export interface RelationshipType extends TypeDefinition {
+  fields?: CustomField[];
   forwardLabel?: string;
   reverseLabel?: string;
 }
@@ -160,6 +161,7 @@ export type SaveOperation = SaveOperationIdentity &
 
 export type Knowledge = 'known' | 'unknown' | 'none' | 'uncertain' | 'unresolved';
 export interface RelationshipValue {
+  customValues?: CustomValues;
   typeId: string;
   sourceId: string;
   targetId: string | null;
@@ -177,6 +179,7 @@ export interface RelationshipChange {
   before: MapRelationship | null;
   after: RelationshipValue | null;
   type: RelationshipType;
+  beforeType?: RelationshipType;
   objectNames?: Record<string, string>;
 }
 export interface DraftRelationshipChange extends RelationshipChange {
@@ -188,7 +191,6 @@ export interface DraftRelationshipChange extends RelationshipChange {
 }
 export interface SavedRelationshipChange extends RelationshipChange {
   after: MapRelationship | null;
-  beforeType?: RelationshipType;
 }
 
 export function proposedRelationships(

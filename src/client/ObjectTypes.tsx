@@ -2,7 +2,7 @@ import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CustomField, CustomValues, ObjectType } from '../shared/map.js';
 import { objectTypePresentation } from '../shared/map.js';
 
-const kinds: Record<CustomField['kind'], string> = {
+export const customFieldKinds: Record<CustomField['kind'], string> = {
   text: 'Text',
   number: 'Tal',
   date: 'Datum',
@@ -13,6 +13,47 @@ function moved<T>(items: T[], from: number, to: number) {
   const [item] = result.splice(from, 1);
   result.splice(to, 0, item);
   return result;
+}
+
+export function CustomFieldDefinition({
+  field,
+  onChange,
+}: {
+  field: CustomField;
+  onChange: (update: Partial<CustomField>) => void;
+}) {
+  return (
+    <>
+      <label htmlFor={`field-name-${field.id}`}>Fältets namn</label>
+      <input
+        id={`field-name-${field.id}`}
+        required
+        pattern=".*\S.*"
+        maxLength={200}
+        value={field.name}
+        onChange={(event) => onChange({ name: event.target.value })}
+      />
+      <label htmlFor={`field-description-${field.id}`}>Fältets beskrivning</label>
+      <textarea
+        id={`field-description-${field.id}`}
+        maxLength={2000}
+        value={field.description}
+        onChange={(event) => onChange({ description: event.target.value })}
+      />
+      <label htmlFor={`field-kind-${field.id}`}>Värdeslag</label>
+      <select
+        id={`field-kind-${field.id}`}
+        value={field.kind}
+        onChange={(event) => onChange({ kind: event.target.value as CustomField['kind'] })}
+      >
+        {Object.entries(customFieldKinds).map(([kind, label]) => (
+          <option key={kind} value={kind}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </>
+  );
 }
 
 export function ObjectTypeDetails({ type }: { type: ObjectType | null }) {
@@ -29,7 +70,7 @@ export function ObjectTypeDetails({ type }: { type: ObjectType | null }) {
       <ul>
         {type.fields?.map((field) => (
           <li key={field.id}>
-            {field.name}: {kinds[field.kind]}
+            {field.name}: {customFieldKinds[field.kind]}
             {field.description && ` — ${field.description}`}
             {' · '}
             {objectTypePresentation(type).sections.find(
@@ -216,41 +257,15 @@ export function ObjectTypeEditor({
         {value.fields.map((field, index) => (
           <details className="type-field-editor" key={field.id} open>
             <summary>
-              {field.name || `Eget fält ${index + 1}`} · {kinds[field.kind]} ·{' '}
+              {field.name || `Eget fält ${index + 1}`} · {customFieldKinds[field.kind]} ·{' '}
               {value.sections.find(({ id }) => id === field.sectionId)?.name || 'Dold'}
             </summary>
             <fieldset>
               <legend>Eget fält {index + 1}</legend>
-              <label htmlFor={`field-name-${field.id}`}>Fältets namn</label>
-              <input
-                id={`field-name-${field.id}`}
-                required
-                pattern=".*\S.*"
-                maxLength={200}
-                value={field.name}
-                onChange={(event) => changeField(field.id, { name: event.target.value })}
+              <CustomFieldDefinition
+                field={field}
+                onChange={(update) => changeField(field.id, update)}
               />
-              <label htmlFor={`field-description-${field.id}`}>Fältets beskrivning</label>
-              <textarea
-                id={`field-description-${field.id}`}
-                maxLength={2000}
-                value={field.description}
-                onChange={(event) => changeField(field.id, { description: event.target.value })}
-              />
-              <label htmlFor={`field-kind-${field.id}`}>Värdeslag</label>
-              <select
-                id={`field-kind-${field.id}`}
-                value={field.kind}
-                onChange={(event) =>
-                  changeField(field.id, { kind: event.target.value as CustomField['kind'] })
-                }
-              >
-                {Object.entries(kinds).map(([kind, label]) => (
-                  <option key={kind} value={kind}>
-                    {label}
-                  </option>
-                ))}
-              </select>
               <label htmlFor={`field-section-${field.id}`}>Visa i avsnitt</label>
               <select
                 id={`field-section-${field.id}`}
@@ -379,7 +394,7 @@ export function CustomFieldsEditor({
   values = {},
   onChange,
 }: {
-  type?: ObjectType;
+  type?: Pick<ObjectType, 'fields' | 'sections'>;
   values?: CustomValues;
   onChange: (values: CustomValues) => void;
 }) {
@@ -460,7 +475,7 @@ export function CustomFieldsDetails({
   values = {},
   showHidden = false,
 }: {
-  type?: ObjectType;
+  type?: Pick<ObjectType, 'fields' | 'sections'>;
   values?: CustomValues;
   showHidden?: boolean;
 }) {

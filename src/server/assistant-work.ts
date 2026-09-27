@@ -305,7 +305,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     'propose_relationship_type',
     {
       description:
-        'Föreslå en ny eller ändrad sambandstyp med namn, beskrivning och benämning i båda riktningarna. Behåll stabilt ID. Inga egna fält stöds. value null föreslår borttagning endast när typen inte används av aktuella eller upphörda samband eller privata utkast; inga samband tas bort automatiskt. Hela ditt utkast returneras.',
+        'Föreslå en ny eller ändrad sambandstyp med namn, beskrivning och benämning i båda riktningarna. Behåll stabila typ- och fält-ID. Valfria fields har text, number, date eller boolean; utelämnade fields behåller tidigare definition, [] tar bort oanvända fält. value null föreslår borttagning endast när typen inte används av aktuella eller upphörda samband eller privata utkast; inga samband tas bort automatiskt. Hela ditt utkast returneras.',
       inputSchema: z
         .object({
           ...versionFields,
@@ -317,6 +317,19 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
               description: z.string().max(2000),
               forwardLabel: z.string().min(1).max(200),
               reverseLabel: z.string().min(1).max(200),
+              fields: z
+                .array(
+                  z
+                    .object({
+                      id,
+                      name: z.string().min(1).max(200),
+                      description: z.string().max(2000),
+                      kind: z.enum(['text', 'number', 'date', 'boolean']),
+                    })
+                    .strict(),
+                )
+                .max(100)
+                .optional(),
             })
             .strict()
             .nullable(),
@@ -334,7 +347,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     'propose_relationship',
     {
       description:
-        'Föreslå eller rätta ett riktat samband med aktuell typ, stabila ändpunkter och typrevision. value null föreslår vanlig borttagning. known/uncertain kräver mål-ID; unknown/none/unresolved har targetId null och betyder olika saker. Hela privata utkastet returneras. Ett upprepat tillägg anger befintligt samband i existingId.',
+        'Föreslå eller rätta ett riktat samband med aktuell typ, stabila ändpunkter och typrevision. value null föreslår vanlig borttagning. known/uncertain kräver mål-ID; unknown/none/unresolved har targetId null och betyder olika saker. Hela privata utkastet returneras. Egna customValues valideras mot typen: utelämnat behåller samma typs värden, {} tömmer dem, saknad nyckel är obesvarat och skiljer sig från 0 och false. Typbyte kräver uttryckliga nya värden och får inte omtolka gamla fält. Ett upprepat tillägg anger befintligt samband i existingId.',
       inputSchema: z
         .object({
           ...proposalFields,
@@ -346,6 +359,9 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
               knowledge: z.enum(['known', 'uncertain', 'unknown', 'none', 'unresolved']),
               lifecycle,
               endDate: fact.optional(),
+              customValues: z
+                .record(id, z.union([z.string().max(2000), z.number(), z.boolean()]))
+                .optional(),
             })
             .strict()
             .nullable(),

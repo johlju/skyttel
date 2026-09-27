@@ -55,6 +55,19 @@ field placement. Older clients that omit section information retain the
 existing placement. Use the database backup and matching image procedure
 above for rollback.
 
+### Relationship fields and archive compatibility
+
+This release stores optional custom field definitions and answers for
+relationships. Existing relationships keep empty answers. New full household
+archives require an upgraded reader; supported older archives remain readable.
+Keep custom answers under the same access and retention controls as other
+household content, including private drafts and recovery copies.
+
+Refresh connected assistants' tool catalogs after rollout. Clients that omit
+custom fields or answers retain existing data when the relationship type is
+unchanged. Clearing answers requires an explicit empty value set. Use the
+database backup and matching image procedure above for rollback.
+
 ### Installation cost measurements
 
 Cost recording starts at upgrade; earlier usage remains unknown. The configured

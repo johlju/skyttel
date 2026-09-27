@@ -163,7 +163,7 @@ test('advanced tools use actual SDK contracts, preserve old read grants and curr
               description: '',
               forwardLabel: 'framåt',
               reverseLabel: 'bakåt',
-              fields: [],
+              fields: [{ id: 'invalid', name: 'Fel', description: '', kind: 'money' }],
             },
           },
         })
@@ -958,6 +958,13 @@ test('MCP catalog and proposals retain ordered sections, hidden fields and negat
 });
 
 test('MCP custom relationship types retain both labels, direction, duplicate reuse and whole definition review', async () => {
+  const fields = ['text', 'number', 'date', 'boolean'].map((kind) => ({
+    id: kind,
+    name: kind,
+    description: '',
+    kind,
+  }));
+  const customValues = { text: 'Övre hyllan', number: 0, date: '2026-09-27', boolean: false };
   let review = await tool('read_my_draft');
   const catalog = await tool('read_type_catalog');
   review = await tool('propose_relationship_type', {
@@ -969,6 +976,7 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
       description: 'Var saken förvaras',
       forwardLabel: 'förvaras i',
       reverseLabel: 'innehåller',
+      fields,
     },
   });
   for (const [id, name] of [
@@ -982,7 +990,13 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
       value: { typeId: catalog.types[0].id, name, description: '' },
     });
   }
-  const edge = { typeId: 'stored', sourceId: 'bike', targetId: 'garage', knowledge: 'known' };
+  const edge = {
+    customValues,
+    typeId: 'stored',
+    sourceId: 'bike',
+    targetId: 'garage',
+    knowledge: 'known',
+  };
   review = await tool('propose_relationship', {
     ...version(review),
     id: 'parking',
@@ -1001,7 +1015,7 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
     ...version(repeated),
     id: 'other-kind',
     baseRevision: null,
-    value: { ...edge, typeId: catalog.relationshipTypes[0].id },
+    value: { ...edge, customValues: {}, typeId: catalog.relationshipTypes[0].id },
   });
   const { receipt } = await tool('save_draft', { ...version(review), operationId: 'custom-edges' });
   expect(receipt.relationshipTypes[0].after).toMatchObject({
@@ -1015,6 +1029,7 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
     sourceId: 'bike',
     targetId: 'garage',
     typeId: 'stored',
+    customValues,
   });
   expect(
     state.relationshipTypes.find((item: { id: string }) => item.id === 'stored'),

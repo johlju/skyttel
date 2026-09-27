@@ -82,6 +82,11 @@ function EdgeDetails({
           {value.targetId !== null && ` till objekt ${value.targetId}`}.
         </p>
       </details>
+      <CustomFieldsDetails
+        type={before ? (change.beforeType ?? change.type) : change.type}
+        values={value.customValues}
+        showHidden
+      />
       <LifecycleDetails value={value} />
     </>
   );
