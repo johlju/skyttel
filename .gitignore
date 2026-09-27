@@ -265,6 +265,7 @@ __pycache__/
 # Claude Code: commit only shared project settings
 .claude/*
 !.claude/settings.json
+!.claude/statusline.sh
 
 # Sandbox runtime artifacts (bwrap copies these into workspace root temporarily)
 .bash_profile
