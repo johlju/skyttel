@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type {
   CostAssumptions,
   CostCategory,
@@ -73,12 +73,25 @@ function Category({ value }: { value: CostCategory }) {
 function Overview({ data }: { data: CostMonth }) {
   return (
     <>
-      <p>
-        Period: {data.month} (UTC). Modellförbrukning hänförs till månaden då försöket startar.
-        Senast hämtat underlag: <time dateTime={data.generatedAt}>{data.generatedAt}</time>.
-      </p>
+      <section className="cost-total" aria-label="Månadens kostnadsöversikt">
+        <span>
+          {data.total.incomplete ? 'Delsumma för beräkningsbara delar' : 'Uppskattad totalsumma'}
+        </span>{' '}
+        <strong>{money(data.total.estimatedSek, 'SEK')}</strong>
+        <span> ({money(data.total.estimatedUsd, 'USD')})</span>{' '}
+        <span>
+          {data.total.incomplete ? 'Ofullständigt underlag' : 'Beräknat från månadens underlag'}
+          {' · ingen slutlig faktura'}
+        </span>
+      </section>
+      {data.total.incomplete && (
+        <p className="cost-notice">
+          Totalsumman är ofullständig. Okända eller ännu inte prissatta delar tillkommer; deras
+          belopp är inte noll.
+        </p>
+      )}
       {data.coverageIncomplete && (
-        <p className="error">
+        <p className="cost-notice">
           Månaden har ofullständig mätning. Registreringen börjar {data.coverageStartedAt}; tidigare
           förbrukning är okänd.
         </p>
@@ -95,70 +108,75 @@ function Overview({ data }: { data: CostMonth }) {
           <p className="cost-amount">
             <Amount {...data.render} />
           </p>
-          <p>
-            Fast månadsantagande: tjänst {money(data.assumptions.computeUsd, 'USD')} +{' '}
-            {number(data.assumptions.diskGb)} GB tilldelad disk ×{' '}
-            {money(data.assumptions.diskUsdPerGb, 'USD')}/GB + arbetsyta{' '}
-            {money(data.assumptions.workspaceUsd, 'USD')}.
-          </p>
-          <p>
-            Gäller en hel månad, även när modellmätningen bara täcker en del av månaden. Extra
-            trafik, byggen, domäner, andra tjänster, skatt och krediter ingår inte.
-          </p>
+          <details>
+            <summary>Visa driftantagandet</summary>
+            <p>
+              Fast månadsantagande: tjänst {money(data.assumptions.computeUsd, 'USD')} +{' '}
+              {number(data.assumptions.diskGb)} GB tilldelad disk ×{' '}
+              {money(data.assumptions.diskUsdPerGb, 'USD')}/GB + arbetsyta{' '}
+              {money(data.assumptions.workspaceUsd, 'USD')}.
+            </p>
+            <p>
+              Gäller en hel månad, även när modellmätningen bara täcker en del av månaden. Extra
+              trafik, byggen, domäner, andra tjänster, skatt och krediter ingår inte.
+            </p>
+          </details>
         </section>
         <section aria-labelledby="live-cost-heading">
           <h2 id="live-cost-heading">Live – uppmätt hittills</h2>
           <Category value={data.live} />
-          <p>
-            <Usage value={data.live.seconds} unit="sekunder rapporterade" />.{' '}
-            {number(data.live.estimatedBillableSeconds)} sekunder i prisuppskattningen.
-          </p>
-          <p>
-            Rapporterad tid och antagen debiterbar tid visas separat. Saknade slutvärden är osäkra,
-            inte bekräftad nollförbrukning.
-          </p>
+          <details>
+            <summary>Visa mätvärden för Live</summary>
+            <p>
+              <Usage value={data.live.seconds} unit="sekunder rapporterade" />.{' '}
+              {number(data.live.estimatedBillableSeconds)} sekunder i prisuppskattningen.
+            </p>
+            <p>
+              Rapporterad tid och antagen debiterbar tid visas separat. Saknade slutvärden är
+              osäkra, inte bekräftad nollförbrukning.
+            </p>
+          </details>
         </section>
         <section aria-labelledby="terra-cost-heading">
           <h2 id="terra-cost-heading">Terra – uppmätt hittills</h2>
           <Category value={data.terra} />
-          <dl>
-            <dt>Indata</dt>
-            <dd>
-              <Usage value={data.terra.usage.input} unit="token" />
-            </dd>
-            <dt>Cacheläsning, del av indata</dt>
-            <dd>
-              <Usage value={data.terra.usage.cached} unit="token" />
-            </dd>
-            <dt>Cacheskrivning, del av indata</dt>
-            <dd>
-              <Usage value={data.terra.usage.cacheWrite} unit="token" />
-            </dd>
-            <dt>Utdata inklusive resonemang</dt>
-            <dd>
-              <Usage value={data.terra.usage.output} unit="token" />
-            </dd>
-            <dt>Resonemang, del av utdata</dt>
-            <dd>
-              <Usage value={data.terra.usage.reasoning} unit="token" />
-            </dd>
-          </dl>
-          <p>
-            Resonemang läggs inte till en gång till. Saknade detaljvärden markeras även när
-            leverantörens totalvärde går att prissätta.
-          </p>
+          <details>
+            <summary>Visa mätvärden för Terra</summary>
+            <dl>
+              <dt>Indata</dt>
+              <dd>
+                <Usage value={data.terra.usage.input} unit="token" />
+              </dd>
+              <dt>Cacheläsning, del av indata</dt>
+              <dd>
+                <Usage value={data.terra.usage.cached} unit="token" />
+              </dd>
+              <dt>Cacheskrivning, del av indata</dt>
+              <dd>
+                <Usage value={data.terra.usage.cacheWrite} unit="token" />
+              </dd>
+              <dt>Utdata inklusive resonemang</dt>
+              <dd>
+                <Usage value={data.terra.usage.output} unit="token" />
+              </dd>
+              <dt>Resonemang, del av utdata</dt>
+              <dd>
+                <Usage value={data.terra.usage.reasoning} unit="token" />
+              </dd>
+            </dl>
+            <p>
+              Resonemang läggs inte till en gång till. Saknade detaljvärden markeras även när
+              leverantörens totalvärde går att prissätta.
+            </p>
+          </details>
         </section>
       </div>
-      <p className="cost-total">
-        {data.total.incomplete ? 'Delsumma för beräkningsbara delar' : 'Uppskattad totalsumma'}:{' '}
-        <Amount {...data.total} />.
+      <p className="cost-period">
+        Period: {data.month} (UTC). Modellförbrukning hänförs till månaden då försöket startar.
+        Senast hämtat underlag: <time dateTime={data.generatedAt}>{data.generatedAt}</time>.
+        Kostnadsunderlaget innehåller tekniska mätvärden, inte karttexter, bilder, ljud eller
+        samtal.
       </p>
-      {data.total.incomplete && (
-        <p>
-          Totalsumman är ofullständig. Okända eller ännu inte prissatta delar tillkommer; deras
-          belopp är inte noll.
-        </p>
-      )}
       <p>
         Detta är en uppskattning, inte leverantörens slutliga faktura. Cirka 200 kronor per månad är
         ett riktmärke; kartarbetet får ingen automatisk budgetspärr.
@@ -189,7 +207,12 @@ function Overview({ data }: { data: CostMonth }) {
               Terra: USD per miljon token. Över {number(rate.terra.threshold)} indatatoken används
               det högre priset för hela anropet.
             </p>
-            <div className="cost-table-scroll">
+            <section
+              className="cost-table-scroll"
+              aria-label={`Terra-priser ${rate.id}, rulla vid behov`}
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: The overflow table needs a keyboard-scroll target at narrow widths.
+              tabIndex={0}
+            >
               <table>
                 <caption>Terra-priser per miljon token</caption>
                 <thead>
@@ -216,7 +239,7 @@ function Overview({ data }: { data: CostMonth }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </section>
             <p>
               Cacheläsning och cacheskrivning ersätter motsvarande vanliga indatapris. Priserna
               gäller Standard; annan eller okänd modell eller servicenivå markeras i underlaget.
@@ -256,6 +279,10 @@ function AssumptionEditor({
   onSave: (values: CostAssumptions, version: number) => void;
   onCancel: () => void;
 }) {
+  const firstField = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    firstField.current?.focus();
+  }, []);
   const [values, setValues] = useState(() => ({
     sekPerUsd: String(initial.sekPerUsd),
     computeUsd: String(initial.computeUsd),
@@ -300,6 +327,7 @@ function AssumptionEditor({
           <label key={key}>
             {label}
             <input
+              ref={key === 'sekPerUsd' ? firstField : undefined}
               type="number"
               inputMode="decimal"
               step="any"
@@ -380,6 +408,16 @@ export function Costs({ onAccessLost }: { onAccessLost: () => void }) {
   const [editor, setEditor] = useState<CostMonth['assumptions'] | null>(null);
   const [locked, setLocked] = useState(false);
   const [status, setStatus] = useState('');
+  const editButton = useRef<HTMLButtonElement>(null);
+  const editorFocus = useRef<Element | null>(null);
+  useLayoutEffect(() => {
+    if (editor) return;
+    const previous = editorFocus.current;
+    editorFocus.current = null;
+    if (previous && !previous.isConnected && document.activeElement === document.body) {
+      editButton.current?.focus();
+    }
+  }, [editor]);
   const lockedRef = useRef(false);
   const pendingRef = useRef<'read' | 'write' | null>(null);
   const epoch = useRef(0);
@@ -393,6 +431,7 @@ export function Costs({ onAccessLost }: { onAccessLost: () => void }) {
   const load = useCallback(
     async (write?: { values: CostAssumptions; version: number }) => {
       if (pendingRef.current === 'write') return;
+      if (write) editorFocus.current = document.activeElement;
       const generation = ++epoch.current;
       controller.current?.abort();
       const current = new AbortController();
@@ -478,8 +517,8 @@ export function Costs({ onAccessLost }: { onAccessLost: () => void }) {
         Månadskostnad
       </h1>
       <p>
-        Hela installationen, oavsett hushåll. Kostnadsunderlaget innehåller tekniska mätvärden, inte
-        karttexter, bilder, ljud eller samtal.
+        Din driftbehörighet är fristående från hushållets medlemskap. Här följer du hela
+        installationens drift; hushållets abonnemang och avtal hör till kartan.
       </p>
       {!denied && (
         <div className="cost-controls">
@@ -526,10 +565,14 @@ export function Costs({ onAccessLost }: { onAccessLost: () => void }) {
               initial={editor}
               disabled={pending === 'write' || locked}
               onSave={(values, version) => void load({ values, version })}
-              onCancel={() => setEditor(null)}
+              onCancel={() => {
+                editorFocus.current = document.activeElement;
+                setEditor(null);
+              }}
             />
           ) : (
             <button
+              ref={editButton}
               type="button"
               disabled={pending !== null || locked}
               onClick={() => {

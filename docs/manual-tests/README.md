@@ -74,7 +74,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 
 - [Månadskostnad](costs.md): separata Render-, Live- och Terra-belopp,
   prisunderlag, månadens antaganden, okända värden, kumulativa mätningar,
-  omstart, hämtningsfel och installationens särskilda kostnadsbehörighet.
+  omstart, hämtningsfel, okänt sparresultat, tangentbordsfokus och
+  installationens särskilda kostnadsbehörighet på mobil och dator.
   En lokal startguide ger kontrollerade leverantörssvar och två identiteter.
 
 - [Återställning och flytt](household-recovery.md): tomma lokala installationer,
