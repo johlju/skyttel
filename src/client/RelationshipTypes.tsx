@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react';
-import type { CustomField, RelationshipType } from '../shared/map.js';
-import { CustomFieldDefinition, customFieldKinds } from './ObjectTypes.js';
+import { useRef, useState } from 'react';
+import type { RelationshipType } from '../shared/map.js';
+import { objectTypePresentation } from '../shared/map.js';
+import { TypeFieldsDefinition, TypeFieldsDetails } from './ObjectTypes.js';
 
 export function RelationshipTypeDetails({ type }: { type: RelationshipType | null }) {
   return type ? (
@@ -9,14 +10,7 @@ export function RelationshipTypeDetails({ type }: { type: RelationshipType | nul
       <p>{type.description || 'Ingen beskrivning'}</p>
       <p>Benämning från startobjektet: {type.forwardLabel ?? type.name}</p>
       <p>Benämning från målobjektet: {type.reverseLabel ?? 'Visar den ursprungliga riktningen'}</p>
-      <ul>
-        {type.fields?.map((field) => (
-          <li key={field.id}>
-            {field.name}: {customFieldKinds[field.kind]}
-            {field.description && ` — ${field.description}`}
-          </li>
-        ))}
-      </ul>
+      <TypeFieldsDetails type={type} />
     </>
   ) : (
     <p>Finns inte i kartan</p>
@@ -38,33 +32,20 @@ export function RelationshipTypeEditor({
   onSubmit: (
     value: Pick<
       RelationshipType,
-      'name' | 'description' | 'forwardLabel' | 'reverseLabel' | 'fields'
+      'name' | 'description' | 'forwardLabel' | 'reverseLabel' | 'fields' | 'sections'
     > | null,
   ) => void;
   onClose: () => void;
 }) {
   const [value, setValue] = useState({
-    fields: initial.fields ?? [],
+    ...objectTypePresentation(initial),
     name: initial.name,
     description: initial.description,
     forwardLabel: initial.forwardLabel ?? initial.name,
     reverseLabel: initial.reverseLabel ?? '',
   });
   const form = useRef<HTMLFormElement>(null);
-  const focusRequest = useRef<string | null>(null);
-  useLayoutEffect(() => {
-    if (!focusRequest.current) return;
-    form.current?.querySelector<HTMLElement>(`[id="${focusRequest.current}"]`)?.focus();
-    focusRequest.current = null;
-  });
-  function changeField(id: string, update: Partial<CustomField>) {
-    onDirty();
-    setValue({
-      ...value,
-      fields: value.fields.map((field) => (field.id === id ? { ...field, ...update } : field)),
-    });
-  }
-  function change(key: Exclude<keyof typeof value, 'fields'>, text: string) {
+  function change(key: Exclude<keyof typeof value, 'fields' | 'sections'>, text: string) {
     onDirty();
     setValue({ ...value, [key]: text });
   }
@@ -125,50 +106,14 @@ export function RelationshipTypeEditor({
           Alla objekt kan kopplas samman. Egna fält får lämnas obesvarade. Lika namn betyder inte
           samma typ. Skapa ett nytt fält om en använd uppgift behöver annat värdeslag.
         </p>
-        {value.fields.map((field, index) => (
-          <details className="type-field-editor" key={field.id} open>
-            <summary>
-              {field.name || `Eget fält ${index + 1}`} · {customFieldKinds[field.kind]}
-            </summary>
-            <fieldset>
-              <legend>Eget fält {index + 1}</legend>
-              <CustomFieldDefinition
-                field={field}
-                onChange={(update) => changeField(field.id, update)}
-              />
-              <button
-                type="button"
-                disabled={stale}
-                onClick={() => {
-                  onDirty();
-                  focusRequest.current = 'add-relationship-field';
-                  setValue({
-                    ...value,
-                    fields: value.fields.filter((item) => item.id !== field.id),
-                  });
-                }}
-              >
-                Ta bort fält: {field.name || `Eget fält ${index + 1}`}
-              </button>
-            </fieldset>
-          </details>
-        ))}
-        <button
-          id="add-relationship-field"
-          type="button"
-          disabled={stale || value.fields.length >= 100}
-          onClick={() => {
+        <TypeFieldsDefinition
+          value={value}
+          stale={stale}
+          onChange={(presentation) => {
             onDirty();
-            const id = crypto.randomUUID();
-            focusRequest.current = `field-name-${id}`;
-            setValue({
-              ...value,
-              fields: [...value.fields, { id, name: '', description: '', kind: 'text' }],
-            });
+            setValue({ ...value, ...presentation });
           }}
-        >
-          Lägg till fält
-        </button>
+        />
         {stale && (
           <p role="alert">
             Formuläret bygger på ett äldre utkast. Kopiera text du vill behålla och öppna

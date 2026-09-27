@@ -281,3 +281,48 @@ about earlier custom answers”.
   samma namn får inte automatiskt samma svar.
 - Den nya typen har Ny betydelse. Historiken behåller Behåll som historik
   med den tidigare typens definition och samma sambandsidentitet.
+
+### STY-08: Avsnitt bevarar dolda svar och privata definitioner
+
+**Syfte:** Ordna sambandens formulär utan att ändra fältidentitet eller svar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Cykeln och Garaget finns i hushållets karta eller utkast.
+Ett nytt provhushåll används för varje skärmbredd.
+
+**Integrationstest:**
+[relationship-sections.spec.ts](../../tests/integration/relationship-sections.spec.ts),
+testfallen “STY-08: relationship sections preserve hidden answers and private
+presentation after restart at 1440px”, samma titel med “390px” och “320px”.
+
+**Steg:**
+
+1. Öppna Inställningar → Typer och egna fält och välj Ny sambandstyp.
+   Ange Förvaring och benämningarna förvaras i och innehåller.
+2. Namnge avsnitten Uppgifter och Service. Flytta Service upp med
+   tangentbordet och kontrollera att fokus följer avsnittet.
+3. Lägg till Leverantör som Text, Effekt som Tal, Datum som Datum samt
+   Batteri och Reserv som Ja/nej. Placera dem i Uppgifter. Kontrollera
+   läsbarhet och åtkomliga kontroller i ljust och mörkt tema.
+4. Lägg definitionen i utkastet. Skapa sambandet Cykeln → Förvaring →
+   Garaget med svaren Exempelsol, 0, 2026-09-01 och Nej. Lämna Reserv
+   obesvarat och lägg sambandet i utkastet.
+5. Ändra definitionen i Inställningar. Dölj Effekt och flytta Leverantör
+   till Service. Lägg förslaget i utkastet och spara hela utkastet.
+6. Starta om testinstallationen och ladda om sidan. Öppna sambandet för
+   redigering. Effekt ska vara dolt, Batteri ska vara Nej och Reserv
+   obesvarat. Stäng formuläret utan att skicka.
+7. Ändra definitionen igen och visa Effekt i Service. Lägg den i utkastet
+   och öppna sambandet. Kontrollera att Effekt är 0 och alla andra svar
+   består redan innan definitionen sparas.
+8. Upprepa på mobil, med tangentbord och med minskad rörelse.
+
+**Förväntat resultat:**
+
+- Avsnittens ordning och fältens placering följer det privata utkastet.
+  Förslagen sparas tillsammans; omstart förlorar inga dolda svar.
+- Återvisning behåller samma fältidentiteter och tidigare värden.
+  Noll, Nej och obesvarat förblir skilda.
+- Fokus går att följa och kontrollerna är nåbara på dator och mobil.
+  Temabyte och intern rullning bevarar pågående redigering.

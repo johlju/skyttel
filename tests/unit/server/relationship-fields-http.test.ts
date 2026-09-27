@@ -175,7 +175,12 @@ test('duplicate selection validates supplied custom answers before retaining the
 });
 
 test('cancelling and undoing object merges preserve relationship answers and original endpoints', async () => {
-  await define();
+  const arranged = {
+    ...definition,
+    sections: [{ id: 'facts', name: 'Uppgifter' }],
+    fields: fields.map((field) => ({ ...field, sectionId: field.id === 'amount' ? '' : 'facts' })),
+  };
+  await define(arranged);
   await edge(values);
   await post('draft', {
     version: (await read()).draft.version,
@@ -203,6 +208,8 @@ test('cancelling and undoing object merges preserve relationship answers and ori
     expect(response.status, await response.clone().text()).toBe(200);
   };
   await merge();
+  expect((await read()).draft.changes[0].merge?.relationshipTypes[0]).toMatchObject(arranged);
+  expect((await read()).draft.relationships?.[0].type).toMatchObject(arranged);
   expect((await read()).draft.relationships?.[0].after).toMatchObject({
     sourceId: 'spare',
     customValues: values,
@@ -217,6 +224,9 @@ test('cancelling and undoing object merges preserve relationship answers and ori
     ).status,
   ).toBe(200);
   expect((await read()).draft.relationships ?? []).toEqual([]);
+  expect((await read()).relationshipTypes.find(({ id }) => id === 'storage')).toMatchObject(
+    arranged,
+  );
   expect((await read()).relationships[0]).toMatchObject({ sourceId: 'bike', customValues: values });
   await merge();
   const { receipt } = await (await save('merged')).json();
@@ -236,6 +246,9 @@ test('cancelling and undoing object merges preserve relationship answers and ori
   expect((await save('undo-merge')).status).toBe(200);
   expect((await read()).relationships[0]).toMatchObject({ sourceId: 'bike', customValues: values });
   expect((await read()).objects.map(({ id }) => id)).toEqual(['bike', 'garage', 'spare']);
+  expect((await read()).relationshipTypes.find(({ id }) => id === 'storage')).toMatchObject(
+    arranged,
+  );
 });
 
 test('used relationship field removal and kind changes are denied without disclosing a private draft', async () => {

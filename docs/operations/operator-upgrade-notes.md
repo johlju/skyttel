@@ -41,12 +41,12 @@ Refresh connected assistants' tool catalogs after rollout. Older clients
 that omit the icon field retain the current selection. An explicit reset
 uses a null value. Icons are bundled locally and need no external service.
 
-### Object type sections
+### Object and relationship type sections
 
 This release stores named sections, field order and hidden field placement
-with object type definitions. Existing definitions and supported older
-archives keep their field order and use a default section. Hidden fields
-retain their values, including in drafts, history and recovery copies.
+with object and relationship type definitions. Existing definitions and
+supported older archives keep their field order and use a default section.
+Hidden fields retain their values, including in drafts, history and recovery copies.
 Hiding a field does not erase its content or limit access to it.
 
 New household archives require an upgraded reader. Refresh connected

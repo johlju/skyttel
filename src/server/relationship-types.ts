@@ -3,7 +3,7 @@ import type Database from 'better-sqlite3';
 import { resolvedRelationshipType } from '../shared/draft-conflicts.js';
 import type { MapDraft, RelationshipType } from '../shared/map.js';
 import { compatibleCustomFields, proposedRelationshipTypes } from '../shared/map.js';
-import { readCustomFields, readCustomValues } from './custom-fields.js';
+import { readCustomValues, readFieldPresentation } from './custom-fields.js';
 import { definitionUsage } from './definition-usage.js';
 import { MapError } from './map-error.js';
 import { mapTombstones } from './map-tombstones.js';
@@ -14,19 +14,20 @@ export function relationshipTypes(database: Database.Database, householdId: stri
   const usage = definitionUsage(database, householdId, userId);
   function read(includeRemoved = false): RelationshipType[] {
     return database
-      .prepare(`SELECT t.*, l.forwardLabel, l.reverseLabel, f.fields FROM relationship_type t
+      .prepare(`SELECT t.*, l.forwardLabel, l.reverseLabel, f.fields, f.sections FROM relationship_type t
         LEFT JOIN relationship_type_labels l ON l.typeId = t.id
         LEFT JOIN relationship_type_fields f ON f.typeId = t.id
         WHERE t.householdId = ? ${includeRemoved ? '' : "AND NOT EXISTS (SELECT 1 FROM removed_type WHERE kind = 'relationshipType' AND typeId = t.id)"} ORDER BY t.name, t.id`)
       .all(householdId)
       .map((row) => {
-        const { forwardLabel, reverseLabel, fields, ...type } = row as Omit<
+        const { forwardLabel, reverseLabel, fields, sections, ...type } = row as Omit<
           RelationshipType,
-          'fields'
-        > & { fields: string | null };
+          'fields' | 'sections'
+        > & { fields: string | null; sections: string | null };
         return {
           ...type,
           ...(fields && fields !== '[]' ? { fields: JSON.parse(fields) } : {}),
+          ...(sections !== null ? { sections: JSON.parse(sections) } : {}),
           ...(forwardLabel ? { forwardLabel } : {}),
           ...(reverseLabel ? { reverseLabel } : {}),
         };
@@ -37,7 +38,10 @@ export function relationshipTypes(database: Database.Database, householdId: stri
     if (
       !type ||
       Object.keys(type).some(
-        (key) => !['name', 'description', 'forwardLabel', 'reverseLabel', 'fields'].includes(key),
+        (key) =>
+          !['name', 'description', 'forwardLabel', 'reverseLabel', 'fields', 'sections'].includes(
+            key,
+          ),
       ) ||
       typeof type.name !== 'string' ||
       !type.name.trim() ||
@@ -52,21 +56,37 @@ export function relationshipTypes(database: Database.Database, householdId: stri
       type.reverseLabel.length > 200
     )
       throw new MapError('invalid_relationship_type', 400);
-    let fields: NonNullable<RelationshipType['fields']>;
+    let presentation: ReturnType<typeof readFieldPresentation>;
     try {
-      fields = readCustomFields(
-        type.fields ?? (Object.hasOwn(type, 'fields') ? null : (previous?.fields ?? [])),
+      presentation = readFieldPresentation(
+        {
+          ...type,
+          fields: Object.hasOwn(type, 'fields') ? type.fields : (previous?.fields ?? []),
+        },
+        previous,
       );
     } catch {
       throw new MapError('invalid_relationship_type', 400);
     }
+    const { fields, sections } = presentation;
     return {
+      ...(sections !== undefined ? { sections } : {}),
       ...(fields.length ? { fields } : {}),
       name: type.name.trim(),
       description: type.description,
       forwardLabel: type.forwardLabel.trim(),
       reverseLabel: type.reverseLabel.trim(),
     };
+  }
+  function validateDefinition(type: RelationshipType) {
+    validate({
+      name: type.name,
+      description: type.description,
+      forwardLabel: type.forwardLabel ?? type.name,
+      reverseLabel: type.reverseLabel ?? type.name,
+      fields: type.fields ?? [],
+      ...(type.sections !== undefined ? { sections: type.sections } : {}),
+    });
   }
   function checkFields(
     before: RelationshipType | null,
@@ -88,6 +108,7 @@ export function relationshipTypes(database: Database.Database, householdId: stri
         if (!change.after) usage.assertUnused('relationshipType', change.id, draft);
         else {
           const current = read().find((type) => type.id === change.id) ?? null;
+          validateDefinition(change.after);
           checkFields(
             current ?? read(true).find((type) => type.id === change.id) ?? null,
             change.after,
@@ -135,6 +156,7 @@ export function relationshipTypes(database: Database.Database, householdId: stri
         choice === 'saved'
           ? (draft.relationshipTypes?.find((item) => item.id === id)?.after ?? current)
           : change.after;
+      if (type) validateDefinition(type);
       for (const proposal of draft.relationships ?? [])
         if (proposal.type.id === id && type) {
           if (
@@ -214,6 +236,7 @@ export function relationshipTypes(database: Database.Database, householdId: stri
           tombstones.removeType('relationshipType', change.id);
           continue;
         }
+        validateDefinition(change.after);
         checkFields(
           current ?? read(true).find((type) => type.id === change.id) ?? null,
           change.after,
@@ -238,9 +261,13 @@ export function relationshipTypes(database: Database.Database, householdId: stri
           database.prepare('DELETE FROM relationship_type_labels WHERE typeId = ?').run(change.id);
         database
           .prepare(
-            'INSERT INTO relationship_type_fields (typeId, fields) VALUES (?, ?) ON CONFLICT(typeId) DO UPDATE SET fields = excluded.fields',
+            'INSERT INTO relationship_type_fields (typeId, fields, sections) VALUES (?, ?, ?) ON CONFLICT(typeId) DO UPDATE SET fields = excluded.fields, sections = excluded.sections',
           )
-          .run(change.id, JSON.stringify(change.after.fields ?? []));
+          .run(
+            change.id,
+            JSON.stringify(change.after.fields ?? []),
+            change.after.sections === undefined ? null : JSON.stringify(change.after.sections),
+          );
         tombstones.restoreType('relationshipType', change.id);
       }
       return draft.relationshipTypes ?? [];
