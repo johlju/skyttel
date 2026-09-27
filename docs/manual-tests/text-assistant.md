@@ -349,7 +349,8 @@ utkastet genom formulären. Stäng formulären utan oskickad text.
 **Integrationstest:**
 [assistant-map.spec.ts](../../tests/integration/assistant-map.spec.ts),
 testfallet “TEXT-08: markering öppnar och centrerar objekt och samband
-före bekräftelsen”, både dator- och telefonvarianten.
+före bekräftelsen”, dator-, telefon- och korta vyer, inklusive
+640 × 500 och 320 × 250 CSS-pixlar.
 
 **Steg:**
 
@@ -380,6 +381,11 @@ före bekräftelsen”, både dator- och telefonvarianten.
 6. Stäng formuläret och upprepa steg 1–5 med ett smalt telefonfönster.
    Detaljpanelen ska synas direkt under kartan. Om uppgifterna är längre
    kan du rulla inuti panelen. Markeringen öppnar inget redigeringsformulär.
+7. Prova också faktisk webbläsarzoom 200 och 400 procent. I ett kort
+   fönster visas kartan och detaljpanelen bredvid varandra. Rulla ned
+   för panelväljare, samtalsstatus och mikrofonkontroller. De ska gå att
+   nå med tangentbord utan horisontell sidrullning. **Visa verktygens namn**
+   visar textingången när verktygsraden är hopfälld.
 
 **Förväntat resultat:**
 

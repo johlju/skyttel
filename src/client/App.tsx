@@ -91,11 +91,19 @@ function useResource<T>(path: string, revision = 0, refreshAccess = false): Load
   return result.key === key ? result.state : { status: 'loading' };
 }
 
-function Heading({ children, active = true }: { children: ReactNode; active?: boolean }) {
+function Heading({
+  children,
+  active = true,
+  focus = true,
+}: {
+  children: ReactNode;
+  active?: boolean;
+  focus?: boolean;
+}) {
   const ref = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    if (active) ref.current?.focus();
-  }, [active]);
+    if (active && focus) ref.current?.focus();
+  }, [active, focus]);
   return (
     <h1 ref={ref} tabIndex={-1} hidden={!active}>
       {children}
@@ -943,7 +951,9 @@ function HouseholdPage({
       <p className="eyebrow" hidden={!active}>
         Din privata hushållskarta
       </p>
-      <Heading active={active}>{result.data.household.name}</Heading>
+      <Heading active={active} focus={location.state?.conversation !== true}>
+        {result.data.household.name}
+      </Heading>
       <p className="membership" hidden={!active}>
         {result.data.household.role === 'administrator' ? 'Administratör' : 'Medlem'}
       </p>
@@ -955,6 +965,9 @@ function HouseholdPage({
         account={account}
         profileRequested={location.state?.profile === true}
         onSettings={() => navigate(`/households/${encodeURIComponent(id)}/settings`)}
+        onReturnToMap={() =>
+          navigate(`/households/${encodeURIComponent(id)}`, { state: { conversation: true } })
+        }
         typeSettingsTarget={typeSettingsTarget}
         contentVersion={content.status === 'loaded' ? content.data.contentVersion : undefined}
         onContentReplaced={retireWork}

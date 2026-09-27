@@ -77,6 +77,7 @@ export function textAssistantRoutes({
     session.input = [];
     session.reply = undefined;
     session.modelReply = undefined;
+    session.questions = undefined;
     session.previousFailure = undefined;
     session.receipt = undefined;
     session.operations = [];
@@ -113,6 +114,7 @@ export function textAssistantRoutes({
       review,
       reply,
       modelReply,
+      questions,
       result,
       error,
       receipt,
@@ -128,6 +130,7 @@ export function textAssistantRoutes({
       review,
       reply,
       modelReply,
+      questions,
       result,
       error,
       receipt,
@@ -304,6 +307,7 @@ export function textAssistantRoutes({
     session.pendingSave = undefined;
     session.reply = 'Sparat. Hela utkastet finns i hushållets karta.';
     session.modelReply = undefined;
+    session.questions = undefined;
     session.error = undefined;
     session.phase = 'ready';
     session.input = [];
@@ -641,6 +645,7 @@ export function textAssistantRoutes({
             guard();
             session.reply = session.result.message;
             session.modelReply = undefined;
+            session.questions = undefined;
             session.phase = 'ready';
             session.input = [];
             return;
@@ -786,6 +791,7 @@ export function textAssistantRoutes({
         if (combined) {
           session.reply = session.result?.message;
           session.modelReply = combined.questions.join(' ') || undefined;
+          session.questions = combined.questions.length ? combined.questions : undefined;
           session.phase = 'ready';
           session.input = [];
           return;
@@ -806,6 +812,7 @@ export function textAssistantRoutes({
       session.previousFailure = assistantFailureMessage(session.error);
       session.reply = undefined;
       session.modelReply = undefined;
+      session.questions = undefined;
       session.input = [];
       try {
         await refresh(session, guard);
@@ -980,6 +987,7 @@ export function textAssistantRoutes({
     session.error = undefined;
     session.reply = undefined;
     session.modelReply = undefined;
+    session.questions = undefined;
     session.receipt = undefined;
     session.result = undefined;
     session.selection = undefined;
@@ -1010,6 +1018,7 @@ export function textAssistantRoutes({
     session.selection = undefined;
     session.reply = 'Uppdraget är avbrutet. Ett redan genomfört sparande är inte ångrat.';
     session.modelReply = undefined;
+    session.questions = undefined;
     session.phase = session.pendingSave ? 'recovery' : 'ready';
     await refresh(session);
     return context.json(view(session));
@@ -1019,6 +1028,7 @@ export function textAssistantRoutes({
     if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
     if (session.phase === 'working') return context.json(view(session));
     session.modelReply = undefined;
+    session.questions = undefined;
     await refresh(session);
     const operation = session.pendingSave
       ? session.operations.find((item) => item.operationId === session.pendingSave?.operationId)

@@ -1,6 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import { createHousehold, openConversation, openWorkspace, signIn } from '../support/client.js';
+import {
+  createHousehold,
+  openConversation,
+  openMap,
+  openSettings,
+  openWorkspace,
+  signIn,
+} from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -48,6 +55,268 @@ function speak(live: ReturnType<typeof liveProvider>, text: string, id = crypto.
     delegation: { id, type: 'delegation', target: 'client' },
   });
 }
+
+test('TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare förslag', async ({
+  page,
+}) => {
+  let release!: (output: unknown[]) => void;
+  let held = false;
+  const model = textModel(
+    () =>
+      new Promise<unknown[]>((resolve) => {
+        held = true;
+        release = resolve;
+      }),
+  );
+  const live = liveProvider();
+  const app = await createInstallation(undefined, {
+    modelFetch: model.provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  try {
+    const { path, value } = await simpleMap(page, app);
+    const before = await (await page.request.get(path)).json();
+    await assistant(page).getByLabel('Meddelande till textassistenten').fill('Osänd rättelse');
+    speak(live, 'Rätta Lo.');
+    await expect.poll(() => held).toBe(true);
+    await openMap(page);
+    await expect(assistant(page).getByRole('status')).toContainText('Assistenten arbetar');
+    await assistant(page).getByRole('button', { name: 'Avbryt uppdrag', exact: true }).click();
+    release([
+      modelTool('propose_object', {
+        version: before.draft.version,
+        contentVersion: before.contentVersion,
+        id: 'lo',
+        baseRevision: null,
+        value: { ...value, name: 'För sent' },
+      }),
+    ]);
+    await expect(assistant(page)).toContainText('Uppdraget är avbrutet');
+    await expect
+      .poll(async () => (await (await page.request.get(path)).json()).draft)
+      .toEqual(before.draft);
+    await assistant(page).getByRole('button', { name: 'Stäng av rösten', exact: true }).click();
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().openPeers))
+      .toBe(0);
+    await assistant(page).getByRole('button', { name: 'Öppna samtalet', exact: true }).click();
+    await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toHaveValue(
+      'Osänd rättelse',
+    );
+    await assistant(page).getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
+    await expect(
+      assistant(page).getByRole('button', { name: 'Starta textassistenten' }),
+    ).toBeVisible();
+    expect((await (await page.request.get(path)).json()).draft).toEqual(before.draft);
+  } finally {
+    await app.close();
+  }
+});
+
+test('TAL-07: uppmätt ljudaktivitet skiljs från mikrofonpaus och består i Inställningar', async ({
+  page,
+}) => {
+  const live = liveProvider();
+  const app = await createInstallation(undefined, {
+    modelFetch: textModel(() => [modelMessage('Samtalet finns kvar.')]).provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  try {
+    await simpleMap(page, app);
+    const voice = assistant(page).getByRole('region', { name: 'Skyttels röst', exact: true });
+    const waveform = voice.locator('.voice-waveform');
+    await expect(waveform).toBeVisible();
+    await expect(waveform.locator('i').first()).toHaveCSS('animation-name', 'none');
+    await page.evaluate(() => window.skyttelVoiceFixture.setSound('microphone', true));
+    await expect(voice.getByText('Du talar', { exact: true })).toBeVisible();
+    await expect(waveform.locator('i').first()).not.toHaveCSS('animation-name', 'none');
+    await page.evaluate(() => window.skyttelVoiceFixture.setSound('microphone', false));
+    await expect(voice.getByText('Du talar', { exact: true })).toHaveCount(0);
+    await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', true));
+    await expect(voice.getByText('Skyttel talar', { exact: true })).toBeVisible();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(waveform).toBeVisible();
+    await expect(waveform.locator('i').first()).toHaveCSS('animation-name', 'none');
+    const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
+    const pause = tools.getByRole('button', { name: 'Pausa mikrofon', exact: true });
+    await expect(pause.locator('svg circle')).toHaveCount(1);
+    await pause.click();
+    await expect(voice.getByText('Mikrofonen är pausad', { exact: true })).toBeVisible();
+    await expect(voice.getByText('Skyttel talar', { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats())).toMatchObject({
+      peers: 1,
+      openPeers: 1,
+      audioElements: 1,
+      microphoneTracks: [{ enabled: false, state: 'live' }],
+      remoteTracks: [{ enabled: true, state: 'live' }],
+    });
+    await assistant(page).getByLabel('Meddelande till textassistenten').fill('Kvar i samtalet');
+    await openSettings(page);
+    await expect(voice.getByText('Mikrofonen är pausad', { exact: true })).toBeVisible();
+    await voice.getByRole('button', { name: 'Återuppta mikrofon' }).click();
+    const open = assistant(page).getByRole('button', { name: 'Öppna samtalet', exact: true });
+    await open.focus();
+    await page.keyboard.press('Enter');
+    await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toHaveValue(
+      'Kvar i samtalet',
+    );
+    await expect(page.getByRole('heading', { name: 'Samtal och text', exact: true })).toBeFocused();
+    await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', false));
+    await expect(voice.getByText('Skyttel talar', { exact: true })).toHaveCount(0);
+    await voice.getByRole('button', { name: 'Stäng av rösten' }).click();
+    await expect(waveform).toHaveCount(0);
+    expect(live.requests).toHaveLength(1);
+  } finally {
+    await app.close();
+  }
+});
+
+test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async ({ page }) => {
+  let stage = 0;
+  let value: Record<string, unknown> = {};
+  let release!: (output: unknown[]) => void;
+  const model = textModel(() => {
+    if (stage++ === 0)
+      return [
+        modelTool('submit_changes', {
+          version: 1,
+          contentVersion: 1,
+          completion: 'draft',
+          questions: ['Vem använder tjänsten?'],
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'lo',
+                baseRevision: null,
+                value: { ...value, description: 'Förslag väntar på svar' },
+              },
+            },
+          ],
+        }),
+      ];
+    if (stage === 2)
+      return new Promise<unknown[]>((resolve) => {
+        release = resolve;
+      });
+    throw new Error('Synthetic provider failure');
+  });
+  const live = liveProvider();
+  const app = await createInstallation(undefined, {
+    modelFetch: model.provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  try {
+    const map = await simpleMap(page, app);
+    value = map.value;
+    const panel = assistant(page);
+    await panel.getByRole('button', { name: 'Stäng av rösten' }).click();
+    await panel.getByLabel('Meddelande till textassistenten').fill('Lägg till uppgiften.');
+    await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
+    await openMap(page);
+    await expect(panel.getByRole('status')).toContainText('Skyttel behöver ett svar');
+    await expect(
+      panel
+        .getByRole('region', { name: 'Nödvändigt svar' })
+        .getByText('Vem använder tjänsten?', { exact: true }),
+    ).toBeVisible();
+    await panel.getByRole('button', { name: 'Svara i samtalet' }).click();
+    await panel.getByLabel('Meddelande till textassistenten').fill('Lo använder tjänsten.');
+    await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
+    await expect.poll(() => stage).toBe(2);
+    await openMap(page);
+    await expect(panel.getByRole('status')).toContainText('Assistenten arbetar');
+    await expect(panel.getByRole('button', { name: 'Svara i samtalet' })).toHaveCount(0);
+    release([modelMessage('Vill du läsa vidare?')]);
+    await expect(panel.getByRole('status')).toContainText('Nya förslag är osparade');
+    await panel.getByRole('button', { name: 'Öppna samtalet' }).click();
+    await panel.getByLabel('Meddelande till textassistenten').fill('Berätta mer.');
+    await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
+    await openMap(page);
+    await expect(panel.getByRole('alert')).toContainText(
+      'Assistenten kunde inte slutföra uppdraget',
+    );
+    await panel.getByText('Samtalskontroller', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Avsluta samtalet' }).click();
+    expect(
+      (await (await page.request.get(map.path)).json()).draft.changes[0].after.description,
+    ).toBe('Förslag väntar på svar');
+  } finally {
+    await app.close();
+  }
+});
+
+test('TAL-09: gemensam start kräver separata medgivanden och återhämtar mikrofonavbrott', async ({
+  page,
+}) => {
+  const live = liveProvider();
+  const app = await createInstallation(undefined, {
+    modelFetch: textModel(() => [modelMessage('Texten fungerar.')]).provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  try {
+    await signIn(page.request, app.origin);
+    await createHousehold(page.request, app.origin);
+    await page.addInitScript({ content: liveBrowserFixtureSource });
+    await page.goto(app.origin);
+    await page.getByRole('button', { name: 'Prata med Skyttel', exact: true }).click();
+    const panel = assistant(page);
+    const startText = panel.getByRole('button', { name: 'Starta textassistenten' });
+    const startVoice = panel.getByRole('button', { name: 'Starta talsamtal' });
+    const external = panel.getByLabel(/Jag tillåter att OpenAI/);
+    const work = panel.getByLabel(/Jag tillåter förslag och sparande/);
+    await external.check();
+    await expect(startText).toBeDisabled();
+    await expect(startVoice).toBeDisabled();
+    await external.uncheck();
+    await work.check();
+    await expect(startText).toBeDisabled();
+    await expect(startVoice).toBeDisabled();
+    await external.check();
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual(
+      [],
+    );
+    await startText.click();
+    await panel.getByLabel('Meddelande till textassistenten').fill('Text utan mikrofon');
+    await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
+    await expect(panel.getByRole('log')).toContainText('Texten fungerar.');
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual(
+      [],
+    );
+    await page.evaluate(() => window.skyttelVoiceFixture.setMicrophone('hold'));
+    await panel.getByRole('button', { name: 'Starta röst' }).click();
+    await expect(panel.getByText(/Väntar på mikrofonåtkomst/)).toBeVisible();
+    await panel.getByRole('button', { name: 'Avbryt talstart' }).click();
+    await page.evaluate(() => window.skyttelVoiceFixture.releaseMicrophone());
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks))
+      .toEqual([{ enabled: false, state: 'ended' }]);
+    expect(live.requests).toHaveLength(0);
+    await page.evaluate(() => window.skyttelVoiceFixture.setMicrophone('deny'));
+    await panel.getByRole('button', { name: 'Starta röst' }).click();
+    await expect(panel.getByRole('alert')).toContainText('mikrofon');
+    await expect(panel.getByLabel('Meddelande till textassistenten')).toBeEditable();
+    await expect(panel.getByRole('log')).toContainText('Texten fungerar.');
+    await page.evaluate(() => {
+      window.skyttelVoiceFixture.setMicrophone('allow');
+      window.skyttelVoiceFixture.setAutoStart(false);
+    });
+    await panel.getByRole('button', { name: 'Starta röst' }).click();
+    await expect(panel.getByText(/Ansluter rösten/)).toBeVisible();
+    await expect.poll(() => live.requests.length).toBe(1);
+    expect(
+      await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks.at(-1)),
+    ).toEqual({ enabled: false, state: 'live' });
+    await page.evaluate(() => window.skyttelVoiceFixture.started());
+    await expect(panel.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
 
 test('TAL-05: dialog, mikrofonpaus och arbetstid finns kvar under samtalet', async ({ page }) => {
   let release!: (output: unknown[]) => void;
@@ -132,7 +401,7 @@ test('TAL-05: dialog, mikrofonpaus och arbetstid finns kvar under samtalet', asy
     await expect(elapsed).toHaveCount(0);
     await assistant(page).getByRole('button', { name: 'Stäng av rösten' }).click();
     await expect(log).toContainText('Kim betalar för musiken.');
-    await assistant(page).getByRole('button', { name: 'Avsluta textassistenten' }).click();
+    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
     await expect(log).toHaveCount(0);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Lo Exempel',
@@ -341,6 +610,16 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
           .microphoneTracks.every((track) => track.state === 'ended'),
       ),
     ).toBe(true);
+    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
+    await consent(page);
+    await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
+    await expect(
+      assistant(page).locator('details').filter({ hasText: 'Tidigare sparförsök' }),
+    ).toContainText('Familjens Molnmusik');
+    expect(
+      await (await page.request.get(`${app.origin}/api/households/${household.id}/map`)).json(),
+    ).toEqual(map);
+    expect(model.requests).toHaveLength(4);
   } finally {
     await app.close();
   }
@@ -468,6 +747,7 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
 test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röstomstart', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   let step = 0;
   const model = textModel(() => {
     step++;
@@ -491,11 +771,17 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     await expect(assistant(page).getByRole('status', { includeHidden: true })).toHaveText(
       'Markerat i kartan.',
     );
-    await openConversation(page);
-    await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await expect(
       page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }),
     ).toHaveAttribute('aria-pressed', 'true');
+    await page
+      .getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true })
+      .click({ trial: true });
+    await expect(
+      page.getByRole('region', { name: 'Lo Exempel', exact: true }).getByText('Namn: Lo Exempel'),
+    ).toBeVisible();
+    await openConversation(page);
+    await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await expect
       .poll(
         () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,

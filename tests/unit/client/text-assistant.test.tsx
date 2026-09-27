@@ -230,7 +230,7 @@ test('a pending save is recovered with the same operation and a durable receipt 
   expect((screen.getByRole('button', { name: 'Skicka' }) as HTMLButtonElement).disabled).toBe(
     false,
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Avsluta textassistenten' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Avsluta samtalet' }));
   expect(screen.queryByLabelText('Meddelande till textassistenten')).toBeNull();
   expect(
     (screen.getByRole('button', { name: 'Starta textassistenten' }) as HTMLButtonElement).disabled,
@@ -346,7 +346,7 @@ test('closing the panel during connection creation stops the late session', asyn
   expect(stopped).toHaveBeenCalledExactlyOnceWith(`${path}/session/stop`);
 });
 
-test.each(['Avbryt uppdrag', 'Avsluta textassistenten'])(
+test.each(['Avbryt uppdrag', 'Avsluta samtalet'])(
   'a delayed working poll cannot restore a task or select an object after %s',
   async (action) => {
     let release!: (response: Response) => void;
@@ -390,7 +390,7 @@ test.each(['Avbryt uppdrag', 'Avsluta textassistenten'])(
     expect(selected).not.toHaveBeenCalled();
     expect(screen.queryByText('Ett gammalt svar')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Avbryt uppdrag' })).toBeNull();
-    if (action === 'Avsluta textassistenten')
+    if (action === 'Avsluta samtalet')
       expect(screen.getByRole('button', { name: 'Starta textassistenten' })).toBeDefined();
     else expect(screen.getByRole('status').textContent).toContain('Nya förslag är osparade');
   },

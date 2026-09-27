@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
 import { voiceErrorMessage } from './voice-error.js';
 import { createVoiceTransport, type VoiceTransport } from './voice-transport.js';
+import { WorkspaceIcon } from './WorkspaceTools.js';
+
+export type VoiceControl = {
+  label: string;
+  microphone: 'off' | 'on' | 'paused';
+  disabled: boolean;
+  activate: () => void;
+};
 
 type Attempt = {
   path: string;
@@ -37,7 +45,10 @@ export function VoiceAssistant(props: {
   onAccessLost: () => void;
   onRecoveryNeeded?: () => void;
   autoStart?: boolean;
+  compact?: boolean;
+  children?: ReactNode;
   onTranscript?: (row: TranscriptRow) => void;
+  onControl?: (control: VoiceControl | null) => void;
 }) {
   const path = `/api/households/${encodeURIComponent(props.householdId)}/text-assistant/${encodeURIComponent(props.assistant.id)}/voice`;
   const latest = useRef(props);
@@ -45,12 +56,15 @@ export function VoiceAssistant(props: {
   const current = useRef<Attempt | null>(null);
   const epoch = useRef(0);
   const mounted = useRef(true);
-  const [state, setState] = useState<'idle' | 'connecting' | 'listening' | 'closing'>('idle');
+  const [state, setState] = useState<
+    'idle' | 'permission' | 'connecting' | 'listening' | 'closing'
+  >('idle');
   const [voice, setVoice] = useState<VoiceAssistantView | null>(null);
   const [error, setError] = useState('');
   const [playbackBlocked, setPlaybackBlocked] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [activity, setActivity] = useState({ microphone: false, speaker: false });
   const apply = useCallback((view: TextAssistantView) => {
     const shown = latest.current.assistant;
     if (
@@ -111,7 +125,7 @@ export function VoiceAssistant(props: {
     const attempt: Attempt = { path, controller: new AbortController() };
     current.current = attempt;
     epoch.current++;
-    setState('connecting');
+    setState('permission');
     setPaused(false);
     setDisconnected(false);
     setVoice(null);
@@ -168,6 +182,9 @@ export function VoiceAssistant(props: {
       if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === 'undefined')
         throw new DOMException('Voice is not supported', 'NotSupportedError');
       attempt.transport = createVoiceTransport({
+        onMicrophoneReady: () => {
+          if (active()) setState('connecting');
+        },
         onReady: () => {
           if (active()) setState('listening');
         },
@@ -186,6 +203,9 @@ export function VoiceAssistant(props: {
         },
         onTranscript: (row) => {
           if (active()) latest.current.onTranscript?.(row);
+        },
+        onAudioActivity: (value) => {
+          if (active()) setActivity(value);
         },
       });
       await attempt.transport.connect(async (sdp, options) => {
@@ -218,8 +238,69 @@ export function VoiceAssistant(props: {
   useEffect(() => {
     if (props.autoStart) void start();
   }, [props.autoStart, start]);
+  const toggleMicrophone = useCallback(() => {
+    current.current?.transport?.setMicrophonePaused(!paused);
+    setPaused(!paused);
+  }, [paused]);
+  const activate = useCallback(() => {
+    if (state === 'idle') void start();
+    else if (state === 'listening') toggleMicrophone();
+    else if (state === 'connecting' || state === 'permission') void stop();
+  }, [state, start, stop, toggleMicrophone]);
+  const microphone = state !== 'listening' || disconnected ? 'off' : paused ? 'paused' : 'on';
+  const label =
+    state === 'connecting' || state === 'permission'
+      ? 'Avbryt talstart'
+      : state === 'closing'
+        ? 'Stänger rösten'
+        : state === 'listening'
+          ? paused
+            ? 'Återuppta mikrofon'
+            : 'Pausa mikrofon'
+          : 'Prata med Skyttel';
+  const controlDisabled =
+    state === 'closing' || (state === 'idle' && props.assistant.phase === 'working');
+  useEffect(() => {
+    props.onControl?.({ label, microphone, disabled: controlDisabled, activate });
+  }, [props.onControl, label, microphone, controlDisabled, activate]);
+  useEffect(() => () => props.onControl?.(null), [props.onControl]);
   return (
     <section aria-label="Skyttels röst" className="voice-assistant" data-voice-state={state}>
+      <span
+        className={`microphone-state${state === 'listening' && !disconnected && !paused ? ' connected' : ''}`}
+      >
+        {state === 'listening' && !disconnected
+          ? paused
+            ? 'Mikrofonen är pausad'
+            : 'Mikrofonen är på'
+          : 'Mikrofonen är av'}
+      </span>
+      {state === 'listening' && (
+        <div className="voice-activity">
+          <span
+            aria-hidden="true"
+            className={`voice-waveform${activity.microphone || activity.speaker ? ' has-sound' : ''}`}
+          >
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+          <span>
+            {activity.speaker
+              ? 'Skyttel talar'
+              : activity.microphone && microphone === 'on'
+                ? 'Du talar'
+                : microphone === 'on'
+                  ? 'Lyssnar'
+                  : 'Du kan fortfarande höra Skyttel'}
+          </span>
+        </div>
+      )}
+      {props.children}
       <div className="voice-controls">
         {state === 'idle' ? (
           <button
@@ -235,52 +316,52 @@ export function VoiceAssistant(props: {
             Stäng av rösten
           </button>
         )}
-        {state === 'listening' && (
+        {(state === 'listening' || state === 'connecting' || state === 'permission') && (
           <button
             type="button"
-            aria-pressed={paused}
-            onClick={() => {
-              current.current?.transport?.setMicrophonePaused(!paused);
-              setPaused(!paused);
-            }}
+            aria-pressed={state === 'listening' ? paused : undefined}
+            onClick={activate}
           >
-            {paused ? 'Återuppta mikrofon' : 'Pausa mikrofon'}
+            <WorkspaceIcon name={microphone === 'on' ? 'stop' : 'mic'} />
+            {label}
           </button>
         )}
-        <span
-          className={`microphone-state${state === 'listening' && !disconnected && !paused ? ' connected' : ''}`}
-        >
-          {state === 'listening' && !disconnected
-            ? paused
-              ? 'Mikrofonen är pausad'
-              : 'Mikrofonen är på'
-            : 'Mikrofonen är av'}
-        </span>
       </div>
-      <p>
-        Rösten använder samma samtal och hela ditt utkast. OpenAI behandlar ljudet. Text och kartans
-        formulär finns kvar.
-      </p>
-      <p>
-        AI-rösten kan innehålla fel. Skyttels status och kvitton bekräftar vad som faktiskt har
-        sparats eller markerats.
-      </p>
-      <p className="voice-status" aria-live="polite">
-        {state === 'connecting'
-          ? 'Ansluter rösten… Mikrofonen är avstängd tills tjänsten är klar.'
-          : state === 'closing'
-            ? 'Stänger rösten… Mikrofonen är avstängd.'
-            : state === 'idle'
-              ? 'Rösten är avstängd.'
-              : disconnected
-                ? 'Anslutningen är tillfälligt bruten. Mikrofonen är avstängd medan anslutningen kontrolleras.'
-                : voice?.phase === 'working'
-                  ? 'Assistenten arbetar…'
-                  : voice?.phase === 'recovery'
-                    ? 'Kontrollera det tidigare sparförsöket innan nya ändringar.'
-                    : paused
-                      ? 'Mikrofonen är pausad. Samtalet är kvar och du kan fortfarande höra Skyttel.'
-                      : 'Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.'}
+      <details className="voice-information" hidden={props.compact}>
+        <summary>Om rösten</summary>
+        <p>
+          Rösten använder samma samtal och hela ditt utkast. OpenAI behandlar ljudet. Text och
+          kartans formulär finns kvar.
+        </p>
+        <p>
+          AI-rösten kan innehålla fel. Skyttels status och kvitton bekräftar vad som faktiskt har
+          sparats eller markerats.
+        </p>
+      </details>
+      <p
+        className="voice-status"
+        aria-live="polite"
+        hidden={
+          props.compact && state === 'listening' && !disconnected && voice?.phase !== 'recovery'
+        }
+      >
+        {state === 'permission'
+          ? 'Väntar på mikrofonåtkomst. Mikrofonen är av tills du tillåter den och anslutningen är klar.'
+          : state === 'connecting'
+            ? 'Ansluter rösten… Mikrofonen är avstängd tills tjänsten är klar.'
+            : state === 'closing'
+              ? 'Stänger rösten… Mikrofonen är avstängd.'
+              : state === 'idle'
+                ? 'Rösten är avstängd.'
+                : disconnected
+                  ? 'Anslutningen är tillfälligt bruten. Mikrofonen är avstängd medan anslutningen kontrolleras.'
+                  : voice?.phase === 'working'
+                    ? 'Assistenten arbetar…'
+                    : voice?.phase === 'recovery'
+                      ? 'Kontrollera det tidigare sparförsöket innan nya ändringar.'
+                      : paused
+                        ? 'Mikrofonen är pausad. Samtalet är kvar och du kan fortfarande höra Skyttel.'
+                        : 'Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.'}
       </p>
       {error && <p role="alert">{error}</p>}
       {playbackBlocked && (

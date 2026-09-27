@@ -23,6 +23,8 @@ export interface TextAssistantView {
   reply?: string;
   /** Provider conversation is never evidence of a saved or displayed result. */
   modelReply?: string;
+  /** Explicit follow-up questions from a validated assistant action, never a save receipt. */
+  questions?: string[];
   result?: TextAssistantResult;
   error?: string;
   receipt?: SaveReceipt;

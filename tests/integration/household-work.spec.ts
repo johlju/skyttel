@@ -100,7 +100,10 @@ test('ARBETE-02: conversation and microphone survive navigation and end on logou
     await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Pausa mikrofon', exact: true }).click();
+    await page
+      .getByRole('region', { name: 'Skyttels röst', exact: true })
+      .getByRole('button', { name: 'Pausa mikrofon', exact: true })
+      .click();
     await expect(page.getByText('Mikrofonen är pausad', { exact: true })).toBeVisible();
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
       { enabled: false, state: 'live' },
@@ -111,7 +114,10 @@ test('ARBETE-02: conversation and microphone survive navigation and end on logou
       'Vem använder cykeln?',
     );
     await expect(page.getByText('Mikrofonen är pausad', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Återuppta mikrofon', exact: true }).click();
+    await page
+      .getByRole('region', { name: 'Skyttels röst', exact: true })
+      .getByRole('button', { name: 'Återuppta mikrofon', exact: true })
+      .click();
     await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.getByRole('button', { name: 'Logga ut', exact: true }).click();

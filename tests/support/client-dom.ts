@@ -41,3 +41,30 @@ if (typeof globalThis.ResizeObserver !== 'function') {
     },
   });
 }
+
+// Real stream activity is covered in Chromium using generated audio tracks.
+// jsdom has no Web Audio processing; provide the browser boundary there.
+if (typeof globalThis.AudioContext !== 'function') {
+  Object.defineProperty(globalThis, 'AudioContext', {
+    configurable: true,
+    value: class {
+      state = 'running';
+      createMediaStreamSource() {
+        return { connect() {}, disconnect() {} };
+      }
+      createAnalyser() {
+        return {
+          fftSize: 256,
+          getByteTimeDomainData(samples: Uint8Array) {
+            samples.fill(128);
+          },
+          disconnect() {},
+        };
+      }
+      async resume() {}
+      async close() {
+        this.state = 'closed';
+      }
+    },
+  });
+}

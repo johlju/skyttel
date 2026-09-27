@@ -11,7 +11,7 @@ import { CustomFieldsDetails, ObjectTypeDetails } from './ObjectTypes.js';
 import { ProfileImage } from './ProfileImage.js';
 import { RelationshipTypeDetails } from './RelationshipTypes.js';
 import { receiptMessage, rejectionMessage } from './SaveOperations.js';
-import { VoiceAssistant } from './VoiceAssistant.js';
+import { VoiceAssistant, type VoiceControl } from './VoiceAssistant.js';
 import './voice.css';
 import { AssistantWorkTime } from './AssistantWorkTime.js';
 import { DraftChangeSummary } from './DraftChangeSummary.js';
@@ -61,9 +61,13 @@ export function TextAssistant({
   inspector,
   renderWorkspace,
   conversationVisible = true,
+  onOpenConversation,
+  onVoiceControl,
 }: {
   active?: boolean;
   conversationVisible?: boolean;
+  onOpenConversation?: () => void;
+  onVoiceControl?: (control: VoiceControl | null) => void;
   householdId: string;
   onMapChange: () => void;
   onAccessLost: () => void;
@@ -87,7 +91,8 @@ export function TextAssistant({
   useLayoutEffect(() => {
     // Moving one portal host preserves the live microphone transport and its
     // controls when the conversation panel closes or another page is shown.
-    (floating ? floatingVoice.current : voiceSlot.current)?.append(voiceHost);
+    const target = floating ? floatingVoice.current : voiceSlot.current;
+    if (target && voiceHost.parentElement !== target) target.append(voiceHost);
     if (!renderWorkspace) return;
     const element = floatingVoice.current;
     if (!element) return;
@@ -334,10 +339,110 @@ export function TextAssistant({
     return () => abort.abort();
   }, [selectionKey, pending, command]);
   const review = session?.review;
+  const needsAnswer = Boolean(
+    session?.phase !== 'working' &&
+      (session?.questions?.length ||
+        review?.unresolvedIdentities.length ||
+        review?.conflicts.length),
+  );
+  const conversationControls = session && (
+    <div className="conversation-controls">
+      <div
+        className={`assistant-work-indicator${session.phase === 'working' ? ' is-working' : ''}`}
+      >
+        <p
+          role="status"
+          className={`assistant-work-status${session.phase === 'working' ? ' is-working' : ''}`}
+        >
+          {session.phase === 'working'
+            ? 'Assistenten arbetar… Du kan avbryta eller ge ett nytt uppdrag.'
+            : session.phase === 'recovery'
+              ? 'Kontrollera det tidigare sparförsöket innan du fortsätter.'
+              : needsAnswer
+                ? 'Skyttel behöver ett svar. Red ut frågorna före sparande.'
+                : session.receipt
+                  ? 'Sparat. Hela utkastet finns i hushållets karta.'
+                  : session.displayedSelection || session.displayedItem
+                    ? 'Markerat i kartan.'
+                    : 'Nya förslag är osparade tills du uttryckligen ber om ett samlat sparande.'}
+        </p>
+        {session.phase === 'working' && (
+          <AssistantWorkTime key={`${session.id}-${session.revision}`} />
+        )}
+      </div>
+      {session.reply &&
+        !session.receipt &&
+        !session.displayedSelection &&
+        !session.displayedItem && (
+          <div>
+            <h4>Besked från Skyttel</h4>
+            <p>{session.reply}</p>
+          </div>
+        )}
+      {session.error && <p role="alert">{errorMessage(session.error)}</p>}
+      {error && <p role="alert">{error}</p>}
+      {needsAnswer && (
+        <section aria-label="Nödvändigt svar" className="conversation-question">
+          {session.questions?.map((question) => (
+            <p key={question}>{question}</p>
+          ))}
+          {Boolean(review?.unresolvedIdentities.length) && (
+            <p>Vilka objekt avses? Utkastets obesvarade identiteter behöver redas ut.</p>
+          )}
+          {Boolean(review?.conflicts.length) && (
+            <p>Utkastet har konflikter. Red ut dem före ett nytt sparbesked.</p>
+          )}
+          {onOpenConversation && (
+            <button type="button" onClick={onOpenConversation}>
+              Svara i samtalet
+            </button>
+          )}
+        </section>
+      )}
+      <div className="voice-controls">
+        {session.phase === 'working' && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => void command('cancel', { revision: session.revision })}
+          >
+            Avbryt uppdrag
+          </button>
+        )}
+        {floating && onOpenConversation && (
+          <button type="button" onClick={onOpenConversation}>
+            Öppna samtalet
+          </button>
+        )}
+        {(unknown || session.phase === 'recovery') && (
+          <button type="button" disabled={pending} onClick={() => void command('recover')}>
+            Kontrollera sparresultat
+          </button>
+        )}
+      </div>
+      <details className="conversation-more" open={!floating}>
+        <summary>Samtalskontroller</summary>
+        <div className="voice-controls">
+          {!unknown && session.phase !== 'recovery' && (
+            <button type="button" disabled={pending} onClick={() => void command('recover')}>
+              Kontrollera sparresultat
+            </button>
+          )}
+          <button type="button" disabled={pending} onClick={() => void stop()}>
+            Avsluta samtalet
+          </button>
+        </div>
+        <p className="conversation-retention">
+          Avslut tar bort samtalsminnet. Utkast och sparresultat finns kvar.
+        </p>
+      </details>
+    </div>
+  );
   const voice = (
     <section aria-label="Talsamtal" className="assistant-bar" hidden={!workVisible && !session}>
       {session ? (
         <VoiceAssistant
+          onControl={onVoiceControl}
           autoStart={startWithVoice}
           householdId={householdId}
           assistant={session}
@@ -345,7 +450,10 @@ export function TextAssistant({
           onAccessLost={() => fail(new MapRequestError(403))}
           onTranscript={showTranscript}
           onRecoveryNeeded={() => setUnknown(true)}
-        />
+          compact={floating}
+        >
+          {conversationControls}
+        </VoiceAssistant>
       ) : (
         <>
           <div className="assistant-bar-heading">
@@ -404,7 +512,7 @@ export function TextAssistant({
           )}
         </>
       )}
-      {error && <p role="alert">{error}</p>}
+      {!session && error && <p role="alert">{error}</p>}
     </section>
   );
   const changes = (
@@ -573,38 +681,7 @@ export function TextAssistant({
       )}
       {session && (
         <>
-          <div
-            className={`assistant-work-indicator${session.phase === 'working' ? ' is-working' : ''}`}
-          >
-            <p
-              role="status"
-              className={`assistant-work-status${session.phase === 'working' ? ' is-working' : ''}`}
-            >
-              {session.phase === 'working'
-                ? 'Assistenten arbetar… Du kan avbryta eller ge ett nytt uppdrag.'
-                : session.phase === 'recovery'
-                  ? 'Kontrollera det tidigare sparförsöket innan du fortsätter.'
-                  : session.receipt
-                    ? 'Sparat. Hela utkastet finns i hushållets karta.'
-                    : session.displayedSelection || session.displayedItem
-                      ? 'Markerat i kartan.'
-                      : 'Nya förslag är osparade tills du uttryckligen ber om ett samlat sparande.'}
-            </p>
-            {session.phase === 'working' && (
-              <AssistantWorkTime key={`${session.id}-${session.revision}`} />
-            )}
-          </div>
-          {session.reply &&
-            !session.receipt &&
-            !session.displayedSelection &&
-            !session.displayedItem && (
-              <div>
-                <h4>Besked från Skyttel</h4>
-                <p>{session.reply}</p>
-              </div>
-            )}
           {transcript.length > 0 && <ConversationTranscript rows={transcript} />}
-          {session.error && <p role="alert">{errorMessage(session.error)}</p>}
           <form
             className="assistant-message-form"
             onSubmit={(event) => {
@@ -627,21 +704,6 @@ export function TextAssistant({
               Skicka
             </button>
           </form>
-          {session.phase === 'working' && (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => void command('cancel', { revision: session.revision })}
-            >
-              Avbryt uppdrag
-            </button>
-          )}
-          <button type="button" disabled={pending} onClick={() => void command('recover')}>
-            Kontrollera sparresultat
-          </button>
-          <button type="button" disabled={pending} onClick={() => void stop()}>
-            Avsluta textassistenten
-          </button>
           {session.receipt && (
             <details>
               <summary>Visa kvittot</summary>

@@ -8,10 +8,7 @@ export async function openWorkspace(page: Page) {
 }
 
 export async function openConversation(page: Page) {
-  await page
-    .getByRole('navigation', { name: 'Kartans verktyg' })
-    .getByRole('button', { name: 'Samtal och text', exact: true })
-    .click();
+  await (await utilityButton(page, 'Samtal och text')).click();
 }
 
 export async function activatePanel(page: Page, title: string) {

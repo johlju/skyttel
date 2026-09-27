@@ -76,12 +76,17 @@ export function waitForMapDisplay(
           visibleViewport?.height ?? window.innerHeight,
         );
         // The working notice is opaque even though it lets pointer events through.
+        // A status card beside the map does not obscure the map's lower half.
         const indicator = root.querySelector('.assistant-work-indicator.is-working');
-        if (rendered(indicator))
-          viewport.height = Math.max(
-            0,
-            Math.min(viewport.bottom, indicator.getBoundingClientRect().top - 8) - viewport.top,
-          );
+        if (rendered(indicator)) {
+          const indicatorBox = indicator.getBoundingClientRect();
+          const mapBox = surface.getBoundingClientRect();
+          if (indicatorBox.left < mapBox.right && indicatorBox.right > mapBox.left)
+            viewport.height = Math.max(
+              0,
+              Math.min(viewport.bottom, indicatorBox.top - 8) - viewport.top,
+            );
+        }
         const nodes = request.objectIds.map((id) =>
           surface.querySelector(`.spatial-node[data-object-id="${CSS.escape(id)}"]`),
         );
