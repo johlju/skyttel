@@ -13,6 +13,9 @@ const paths = {
   close: 'm6 6 12 12M18 6 6 18',
   draft: 'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',
   detail: 'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',
+  focus: 'M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+  overview: 'M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M8 12h8M12 8v8',
+  returnView: 'm9 4-5 5 5 5M4 9h10a6 6 0 0 1 0 12h-4',
 };
 
 export function WorkspaceIcon({ name }: { name: keyof typeof paths }) {
@@ -43,6 +46,9 @@ export function WorkspaceTools({
   onDetails,
   detailsAvailable = false,
   detailsVisible = false,
+  cameraMount,
+  expanded,
+  onExpandedChange,
 }: {
   onOpen: (target: WorkspaceTarget) => void;
   account?: ReactNode;
@@ -53,8 +59,10 @@ export function WorkspaceTools({
   onDetails?: () => void;
   detailsAvailable?: boolean;
   detailsVisible?: boolean;
+  cameraMount?: (element: HTMLDivElement | null) => void;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [utility, setUtility] = useState<'help' | 'profile' | null>(
     profileRequested ? 'profile' : null,
   );
@@ -121,7 +129,7 @@ export function WorkspaceTools({
             data-secondary={target === 'draft' || target === 'search' || undefined}
             className={target === 'voice' ? 'workspace-talk' : undefined}
             onClick={() => {
-              setExpanded(false);
+              onExpandedChange(false);
               setUtility(null);
               onOpen(target);
             }}
@@ -138,7 +146,7 @@ export function WorkspaceTools({
             aria-pressed={detailsVisible}
             disabled={!detailsAvailable}
             onClick={() => {
-              setExpanded(false);
+              onExpandedChange(false);
               setUtility(null);
               onDetails();
             }}
@@ -147,6 +155,7 @@ export function WorkspaceTools({
             <span>Visa detaljer</span>
           </button>
         )}
+        <div className="workspace-camera-tools" ref={cameraMount} />
         <div className="workspace-tools-footer">
           {(
             [
@@ -180,7 +189,7 @@ export function WorkspaceTools({
             ref={expansionControl}
             aria-label={expanded ? 'Dölj verktygens namn' : 'Visa verktygens namn'}
             aria-expanded={expanded}
-            onClick={() => setExpanded(!expanded)}
+            onClick={() => onExpandedChange(!expanded)}
           >
             <WorkspaceIcon name="expand" />
             <span>Fäll ihop</span>
