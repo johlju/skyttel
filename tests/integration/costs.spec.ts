@@ -368,9 +368,21 @@ for (const width of [1280, 390, 320]) {
         '18',
       ]);
       await table.focus();
-      if (await table.evaluate((element) => element.scrollWidth > element.clientWidth)) {
+      if (width <= 390) {
+        expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+          true,
+        );
         await page.keyboard.press('ArrowRight');
         await expect.poll(() => table.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+        for (const cell of await table.getByRole('cell').all()) {
+          expect(
+            await cell.evaluate((element) => {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              return range.getClientRects().length;
+            }),
+          ).toBe(1);
+        }
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
