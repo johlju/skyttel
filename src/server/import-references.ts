@@ -70,6 +70,9 @@ export function validateImportReferences(
       {
         ...row,
         fields: content.relationshipTypeFields.find((fields) => fields.typeId === row.id)?.fields,
+        sections:
+          content.relationshipTypeFields.find((fields) => fields.typeId === row.id)?.sections ??
+          undefined,
       },
     ]),
   );
@@ -156,6 +159,9 @@ export function validateImportReferences(
 
   function definition(type: ObjectType) {
     identity('objectType', type.id);
+    presentation(type);
+  }
+  function presentation(type: Pick<ObjectType, 'fields' | 'sections'>) {
     unique(type.fields ?? [], (field) => field.id);
     unique(type.sections ?? [], (section) => section.id);
     for (const section of type.sections ?? [])
@@ -171,8 +177,7 @@ export function validateImportReferences(
   }
   function edgeDefinition(type: RelationshipType) {
     identity('relationshipType', type.id);
-    unique(type.fields ?? [], (field) => field.id);
-    requireReference(type.fields?.every((field) => field.sectionId === undefined) ?? true);
+    presentation(type);
   }
   function names(values: Record<string, string> | undefined) {
     for (const id of Object.keys(values ?? {})) requireReference(objects.has(id));

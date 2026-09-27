@@ -48,28 +48,29 @@ test('relationship field definitions and answers use the same visible map draft 
   const user = userEvent.setup();
   await open();
   await userEvent.click(screen.getByRole('button', { name: 'Ny sambandstyp' }));
+  const editor = within(screen.getByRole('group', { name: 'Sambandstypens definition' }));
   for (const [label, text] of [
     ['Sambandstypens namn', 'Förvaring'],
     ['Sambandstypens beskrivning', 'Var saker finns'],
     ['Benämning från startobjektet', 'förvaras i'],
     ['Benämning från målobjektet', 'innehåller'],
   ]) {
-    await user.click(screen.getByLabelText(label));
+    await user.click(editor.getByLabelText(label));
     await user.paste(text);
   }
-  await userEvent.click(screen.getByRole('button', { name: 'Lägg till fält' }));
-  expect(document.activeElement).toBe(screen.getByLabelText('Fältets namn'));
-  await userEvent.click(screen.getByRole('button', { name: 'Ta bort fält: Eget fält 1' }));
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Lägg till fält' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Lägg till fält' }));
+  expect(document.activeElement).toBe(editor.getByLabelText('Fältets namn'));
+  await userEvent.click(editor.getByRole('button', { name: 'Ta bort fält: Eget fält 1' }));
+  expect(document.activeElement).toBe(editor.getByRole('button', { name: 'Lägg till fält' }));
   for (const [name, kind] of [
     ['Anteckning', 'text'],
     ['Belopp', 'number'],
     ['Datum', 'date'],
     ['Bekräftat', 'boolean'],
   ]) {
-    await userEvent.click(screen.getByRole('button', { name: 'Lägg till fält' }));
+    await userEvent.click(editor.getByRole('button', { name: 'Lägg till fält' }));
     const field = within(
-      screen.getAllByRole('group', { name: /^Eget fält/ }).at(-1) as HTMLElement,
+      editor.getAllByRole('group', { name: /^Eget fält/ }).at(-1) as HTMLElement,
     );
     await user.click(field.getByLabelText('Fältets namn'));
     await user.paste(name);
@@ -77,7 +78,7 @@ test('relationship field definitions and answers use the same visible map draft 
     await user.paste('Valfri uppgift');
     await userEvent.selectOptions(field.getByLabelText('Värdeslag'), kind);
   }
-  await userEvent.click(screen.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' }));
   await screen.findByText('Förslaget finns i ditt privata utkast. Kartan är inte ändrad.');
   await userEvent.click(screen.getByRole('button', { name: 'Nytt samband' }));
   await userEvent.selectOptions(screen.getByLabelText('Från objekt'), 'bike');

@@ -65,9 +65,11 @@ export function erasureContent(database: Database.Database, householdId: string,
   }
   for (const type of relationshipTypes) {
     const fields = database
-      .prepare('SELECT fields FROM relationship_type_fields WHERE typeId = ?')
-      .get(type.id) as { fields: string } | undefined;
+      .prepare('SELECT fields, sections FROM relationship_type_fields WHERE typeId = ?')
+      .get(type.id) as { fields: string; sections: string | null } | undefined;
     if (fields) type.fields = JSON.parse(fields.fields);
+    if (fields?.sections !== null && fields?.sections !== undefined)
+      type.sections = JSON.parse(fields.sections);
     const row = database
       .prepare('SELECT forwardLabel, reverseLabel FROM relationship_type_labels WHERE typeId = ?')
       .get(type.id) as { forwardLabel: string; reverseLabel: string } | undefined;

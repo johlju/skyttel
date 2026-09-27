@@ -12,7 +12,7 @@ const tables = [
   ['objectTypes', 'object_type', []],
   ['objectTypeFields', 'object_type_fields', ['fields', 'sections']],
   ['relationshipTypes', 'relationship_type', []],
-  ['relationshipTypeFields', 'relationship_type_fields', ['fields']],
+  ['relationshipTypeFields', 'relationship_type_fields', ['fields', 'sections']],
   ['relationshipTypeLabels', 'relationship_type_labels', []],
   ['removedTypes', 'removed_type', []],
   ['objects', 'map_object', ['financialFacts', 'customValues']],

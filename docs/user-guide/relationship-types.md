@@ -54,6 +54,25 @@ samband återställs kan nödvändiga äldre fält behöva återställas och
 granskas mot dagens definition. Vid sammanslagning följer värdena det
 samband du väljer att behålla; dubbletters värden slås inte ihop automatiskt.
 
+## Ordna avsnitt och fält
+
+Öppna **Inställningar → Typer och egna fält → Sambandstyper och riktning**
+och ändra sambandstypen. Namnge avsnitten och använd **Upp** och **Ned**
+för deras visningsordning. Välj **Visa i avsnitt** för varje fält och
+flytta det uppåt eller nedåt bland fälten i samma avsnitt. Ett tomt
+avsnitt kan tas bort.
+
+**Dölj** tar bort fältet från vanliga formulär och detaljer men behåller
+fältets identitet och alla svar. Välj ett avsnitt igen för att återvisa
+uppgiften, även efter omstart. Att dölja är varken radering eller ett
+åtkomstskydd. Utkastets granskning och historiken visar bevarade dolda svar.
+
+Lägg definitionen i ditt privata utkast. Sambandsformulär och detaljer
+följer förslaget direkt. Använd **Spara hela utkastet** för att dela
+definitionen och övriga förslag med hushållet. Namnbyte, flytt och
+synlighet ändrar inga svar; obesvarat skiljer sig fortfarande från Noll
+och Nej. Äldre definitioner visas först under **Egna fält**.
+
 ## Läs och rätta från båda objekten
 
 Öppna cykelns detaljer och välj **Visa samband i listan** för att se

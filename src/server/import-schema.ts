@@ -41,6 +41,7 @@ const relationshipType = z
     forwardLabel: text.optional(),
     reverseLabel: text.optional(),
     fields: z.array(field).max(100).optional(),
+    sections: sections.optional(),
   })
   .strict();
 const fact = z.discriminatedUnion('knowledge', [
@@ -196,7 +197,15 @@ export const importContentSchema = z
     ),
     relationshipTypes: z.array(z.object(definitionShape).strict()),
     relationshipTypeFields: z
-      .array(z.object({ typeId: id, fields: z.array(field).max(100) }).strict())
+      .array(
+        z
+          .object({
+            typeId: id,
+            fields: z.array(field).max(100),
+            sections: sections.nullable().optional(),
+          })
+          .strict(),
+      )
       .default([]),
     relationshipTypeLabels: z.array(
       z.object({ typeId: id, forwardLabel: text, reverseLabel: text }).strict(),
@@ -327,6 +336,7 @@ export const importManifestSchema = z
       z.literal(17),
       z.literal(18),
       z.literal(19),
+      z.literal(20),
     ]),
     parts: z
       .array(

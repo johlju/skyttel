@@ -1,6 +1,5 @@
 import { type FinancialFact, type FinancialFacts, financialFields } from './financial-facts.js';
 import type {
-  CustomField,
   CustomValues,
   DraftChange,
   MapObject,
@@ -20,6 +19,7 @@ import {
   proposedRelationships,
   proposedRelationshipTypes,
 } from './map.js';
+import { resolveTypeDefinition } from './type-definition.js';
 
 export type DraftConflict = {
   id: string;
@@ -42,45 +42,6 @@ function sameFact(left?: FinancialFact, right?: FinancialFact) {
   );
 }
 
-function resolvedFields(
-  before: CustomField[] = [],
-  after: CustomField[] = [],
-  current: CustomField[] = [],
-) {
-  const keys = ['name', 'description', 'kind', 'sectionId'] as const;
-  const merged = new Map(current.map((field) => [field.id, field]));
-  for (const previous of before)
-    if (!after.some(({ id }) => id === previous.id)) merged.delete(previous.id);
-  for (const field of after) {
-    const previous = before.find(({ id }) => id === field.id);
-    const saved = current.find(({ id }) => id === field.id);
-    if (!previous || !saved) merged.set(field.id, field);
-    else
-      merged.set(
-        field.id,
-        Object.fromEntries([
-          ['id', field.id],
-          ...keys.flatMap((key) => {
-            const value = field[key] === previous[key] ? saved[key] : field[key];
-            return value === undefined ? [] : [[key, value]];
-          }),
-        ]) as unknown as CustomField,
-      );
-  }
-  const reordered =
-    before
-      .filter((field) => after.some(({ id }) => id === field.id))
-      .map(({ id }) => id)
-      .join(',') !==
-    after
-      .filter((field) => before.some(({ id }) => id === field.id))
-      .map(({ id }) => id)
-      .join(',');
-  const order = reordered ? after : current;
-  return [...new Set([...order.map(({ id }) => id), ...after.map(({ id }) => id)])].flatMap((id) =>
-    merged.has(id) ? [merged.get(id) as CustomField] : [],
-  );
-}
 function resolvedValues(
   before: CustomValues = {},
   after: CustomValues = {},
@@ -102,18 +63,7 @@ export function resolvedRelationshipType(
 ): RelationshipType | null {
   const { before, after } = change;
   if (!after) return null;
-  const field = <K extends 'name' | 'description' | 'forwardLabel' | 'reverseLabel'>(key: K) =>
-    before && after[key] === before[key] ? current[key] : after[key];
-  const fields = resolvedFields(before?.fields, after.fields, current.fields);
-  return {
-    ...after,
-    ...(fields.length ? { fields } : { fields: undefined }),
-    revision: current.revision + 1,
-    name: field('name'),
-    description: field('description'),
-    forwardLabel: field('forwardLabel'),
-    reverseLabel: field('reverseLabel'),
-  };
+  return resolveTypeDefinition('relationshipType', before, after, current);
 }
 
 export function resolvedObjectValue(

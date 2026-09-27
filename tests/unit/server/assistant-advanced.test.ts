@@ -958,11 +958,16 @@ test('MCP catalog and proposals retain ordered sections, hidden fields and negat
 });
 
 test('MCP custom relationship types retain both labels, direction, duplicate reuse and whole definition review', async () => {
+  const sections = [
+    { id: 'facts', name: 'Uppgifter' },
+    { id: 'service', name: 'Service' },
+  ];
   const fields = ['text', 'number', 'date', 'boolean'].map((kind) => ({
     id: kind,
     name: kind,
     description: '',
     kind,
+    sectionId: kind === 'boolean' ? '' : 'facts',
   }));
   const customValues = { text: 'Övre hyllan', number: 0, date: '2026-09-27', boolean: false };
   let review = await tool('read_my_draft');
@@ -977,6 +982,7 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
       forwardLabel: 'förvaras i',
       reverseLabel: 'innehåller',
       fields,
+      sections,
     },
   });
   for (const [id, name] of [
@@ -1021,6 +1027,8 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
   expect(receipt.relationshipTypes[0].after).toMatchObject({
     forwardLabel: 'förvaras i',
     reverseLabel: 'innehåller',
+    sections,
+    fields,
   });
   await app.restart();
   const state = await tool('read_map', { objectId: 'garage' });
@@ -1033,5 +1041,5 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
   });
   expect(
     state.relationshipTypes.find((item: { id: string }) => item.id === 'stored'),
-  ).toMatchObject({ forwardLabel: 'förvaras i', reverseLabel: 'innehåller' });
+  ).toMatchObject({ forwardLabel: 'förvaras i', reverseLabel: 'innehåller', sections, fields });
 });

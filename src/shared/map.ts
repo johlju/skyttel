@@ -56,6 +56,7 @@ export function compatibleCustomFields(
 }
 export interface RelationshipType extends TypeDefinition {
   fields?: CustomField[];
+  sections?: TypeSection[];
   forwardLabel?: string;
   reverseLabel?: string;
 }

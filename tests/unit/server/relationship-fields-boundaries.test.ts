@@ -13,12 +13,34 @@ const definition = {
   description: 'Förvaringsplats',
   forwardLabel: 'förvaras i',
   reverseLabel: 'innehåller',
+  sections: [
+    { id: 'facts', name: 'Uppgifter' },
+    { id: 'service', name: 'Service' },
+  ],
   fields: [
-    { id: 'note', name: 'Anteckning', description: '', kind: 'text' as const },
-    { id: 'amount', name: 'Belopp', description: '', kind: 'number' as const },
-    { id: 'start', name: 'Startdatum', description: '', kind: 'date' as const },
-    { id: 'active', name: 'Bekräftat', description: '', kind: 'boolean' as const },
-    { id: 'unanswered', name: 'Obesvarat', description: '', kind: 'boolean' as const },
+    { id: 'note', name: 'Anteckning', description: '', kind: 'text' as const, sectionId: 'facts' },
+    { id: 'amount', name: 'Belopp', description: '', kind: 'number' as const, sectionId: '' },
+    {
+      id: 'start',
+      name: 'Startdatum',
+      description: '',
+      kind: 'date' as const,
+      sectionId: 'service',
+    },
+    {
+      id: 'active',
+      name: 'Bekräftat',
+      description: '',
+      kind: 'boolean' as const,
+      sectionId: 'facts',
+    },
+    {
+      id: 'unanswered',
+      name: 'Obesvarat',
+      description: '',
+      kind: 'boolean' as const,
+      sectionId: 'facts',
+    },
   ],
 };
 const values = { note: 'Låst skåp', amount: 0, start: '2026-09-27', active: false };
@@ -164,12 +186,13 @@ async function populatedArchive() {
   return archive();
 }
 
-test('archive 19 preserves relationship fields and zero/false answers through private, saved and merged snapshots', async () => {
+test('archive 20 preserves relationship sections, fields and zero/false answers through private, saved and merged snapshots', async () => {
   const source = await populatedArchive();
-  expect(source.manifest.schemaVersion).toBe(19);
+  expect(source.manifest.schemaVersion).toBe(20);
   expect(source.content.relationshipTypeFields).toContainEqual({
     typeId: 'storage',
     fields: definition.fields,
+    sections: definition.sections,
   });
   expect(source.content.relationships.find(({ id }) => id === 'edge')).toMatchObject({
     sourceId: 'spare',
@@ -189,7 +212,8 @@ test('archive 19 preserves relationship fields and zero/false answers through pr
       .find(({ operationId }) => operationId === 'merged')
       ?.changes.find(({ merge }) => merge)?.merge?.relationshipTypes[0],
   ];
-  for (const snapshot of snapshots) expect(snapshot).toMatchObject({ fields: definition.fields });
+  for (const snapshot of snapshots)
+    expect(snapshot).toMatchObject({ fields: definition.fields, sections: definition.sections });
   expect(original?.receipt.relationships?.[0].after?.customValues).toEqual(values);
   expect(mergeSnapshot?.relationships[0].customValues).toEqual(values);
   expect(source.content.drafts[0].relationships[0].after?.customValues).toEqual({
@@ -240,6 +264,16 @@ test('malformed current and nested relationship fields or values cannot replace 
     expect(await read()).toEqual(before);
     expect(await (await client.request('/api/bootstrap')).json()).toEqual(access);
     snapshot.fields[1].id = id;
+    const placement = snapshot.fields[0].sectionId;
+    snapshot.fields[0].sectionId = 'missing-section';
+    expect((await upload(source)).status).toBe(400);
+    expect(await read()).toEqual(before);
+    snapshot.fields[0].sectionId = placement;
+    if (!snapshot.sections) throw new Error('The definition must retain sections.');
+    snapshot.sections.push({ ...snapshot.sections[0] });
+    expect((await upload(source)).status).toBe(400);
+    expect(await read()).toEqual(before);
+    snapshot.sections.pop();
   }
   const answers = [
     source.content.relationships.find(({ id }) => id === 'edge')?.customValues,
@@ -268,7 +302,7 @@ test('malformed current and nested relationship fields or values cannot replace 
 test.each([14, 15, 16, 17, 18])(
   'legacy archive %i imports genuinely absent relationship field storage and answers without rewriting snapshots',
   async (schemaVersion) => {
-    const { fields: _fields, ...legacy } = definition;
+    const { fields: _fields, sections: _sections, ...legacy } = definition;
     await define(legacy);
     await edge({});
     await save('legacy');
@@ -316,7 +350,10 @@ test('erasing a former relationship type removes its values and snapshots while 
   const oldDefinition = {
     ...definition,
     name: 'ERASE-DEFINITION-SENTINEL',
-    fields: [{ id: 'note', name: 'ERASE-FIELD-SENTINEL', description: '', kind: 'text' }],
+    sections: [{ id: 'old', name: 'ERASE-SECTION-SENTINEL' }],
+    fields: [
+      { id: 'note', name: 'ERASE-FIELD-SENTINEL', description: '', kind: 'text', sectionId: 'old' },
+    ],
   };
   await define();
   await define(oldDefinition, 'old-storage');
@@ -408,6 +445,7 @@ test('erasing a former relationship type removes its values and snapshots while 
   expect(exported.content.relationshipTypeFields).toContainEqual({
     typeId: 'storage',
     fields: definition.fields,
+    sections: definition.sections,
   });
   expect(exported.content.relationships[0].customValues).toEqual(values);
   const mergeSnapshots = [
@@ -426,4 +464,42 @@ test('erasing a former relationship type removes its values and snapshots while 
   await restore(exported);
   expect((await read()).draft.relationships).toEqual(remaining.draft.relationships);
   expect((await read()).relationships).toEqual(remaining.relationships);
+});
+
+test('archive 19 preserves genuine absence of relationship sections and placement, including private and historical snapshots', async () => {
+  const { sections: _sections, ...base } = definition;
+  const legacy = {
+    ...base,
+    fields: base.fields.map(({ sectionId: _placement, ...field }) => field),
+  };
+  await define(legacy);
+  await edge();
+  await save('legacy-fields');
+  await edge({ ...values, note: 'Privat anteckning' });
+  await define({ ...legacy, description: 'Äldre privat definition' });
+  const source = await archive();
+  source.manifest.schemaVersion = 19;
+  for (const row of source.content.relationshipTypeFields) delete row.sections;
+  const snapshots = [
+    source.content.drafts[0].relationships[0].type,
+    source.content.drafts[0].relationshipTypes[0].before,
+    source.content.drafts[0].relationshipTypes[0].after,
+    source.content.saves.find(({ operationId }) => operationId === 'legacy-fields')?.receipt
+      .relationshipTypes?.[0].after,
+  ];
+  for (const snapshot of snapshots) {
+    expect(snapshot).toBeTruthy();
+    expect(snapshot).not.toHaveProperty('sections');
+    for (const field of snapshot?.fields ?? []) expect(field).not.toHaveProperty('sectionId');
+  }
+  await restore(source);
+  expect((await read()).relationshipTypes.find(({ id }) => id === 'storage')).toMatchObject(legacy);
+  expect((await read()).relationshipTypes.find(({ id }) => id === 'storage')).not.toHaveProperty(
+    'sections',
+  );
+  expect((await read()).relationships[0].customValues).toEqual(values);
+  const exported = await archive();
+  expect(exported.content.drafts).toEqual(source.content.drafts);
+  expect(exported.content.saves).toEqual(source.content.saves);
+  expect(exported.content.history).toEqual(source.content.history);
 });
