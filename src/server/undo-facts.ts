@@ -3,7 +3,7 @@ import type { CustomField, ObjectType, TypeSection } from '../shared/map.js';
 import { MapError } from './map-error.js';
 
 type Kind = 'object' | 'relationship' | 'objectType' | 'relationshipType';
-type FactKind = Kind | 'typedObject';
+type FactKind = Kind | 'typedObject' | 'typedRelationship';
 type Facts = Map<string, unknown>;
 type Change<T> = { before: T | null; after: T | null };
 const scalarFields = {
@@ -17,26 +17,32 @@ const meaningFields = ['typeId', 'sourceId', 'targetId', 'knowledge'];
 function scalars(kind: FactKind) {
   return kind === 'typedObject'
     ? scalarFields.object.filter((key) => key !== 'typeId')
-    : scalarFields[kind];
+    : scalarFields[kind === 'typedRelationship' ? 'relationship' : kind];
 }
 function groups(kind: FactKind) {
-  return kind === 'object' ? ['financialFacts', 'customValues'] : ['financialFacts'];
+  return kind === 'object'
+    ? ['financialFacts', 'customValues']
+    : kind === 'relationship'
+      ? ['customValues']
+      : kind === 'typedRelationship'
+        ? []
+        : ['financialFacts'];
 }
 function facts(kind: FactKind, value: object): Facts {
   const record = value as Record<string, unknown>;
   const result: Facts = new Map(scalars(kind).map((key) => [key, record[key]]));
   if (kind === 'typedObject')
     result.set('objectMeaning', [record.typeId, record.customValues ?? {}]);
-  if (kind === 'relationship')
-    result.set(
-      'meaning',
-      meaningFields.map((key) => record[key]),
-    );
-  if (kind === 'object' || kind === 'typedObject')
+  if (kind === 'relationship' || kind === 'typedRelationship')
+    result.set(kind === 'typedRelationship' ? 'relationshipMeaning' : 'meaning', [
+      ...meaningFields.map((key) => record[key]),
+      ...(kind === 'typedRelationship' ? [record.customValues ?? {}] : []),
+    ]);
+  if (kind === 'object' || kind === 'typedObject' || kind === 'relationship')
     for (const group of groups(kind))
       for (const [key, item] of Object.entries(record[group] ?? {}))
         result.set(`${group}:${key}`, item);
-  if (kind === 'objectType') {
+  if (kind === 'objectType' || kind === 'relationshipType') {
     result.set(
       'fieldOrder',
       ((record.fields ?? []) as CustomField[]).map(({ id }) => id),
@@ -70,13 +76,19 @@ function apply<T extends object>(kind: FactKind, base: T, values: Facts): T {
     if (Object.keys(customValues).length) result.customValues = customValues;
     else delete result.customValues;
   }
-  if (kind === 'relationship') {
-    const meaning = values.get('meaning') as unknown[];
+  if (kind === 'relationship' || kind === 'typedRelationship') {
+    const meaning = values.get(
+      kind === 'typedRelationship' ? 'relationshipMeaning' : 'meaning',
+    ) as unknown[];
     meaningFields.forEach((key, index) => {
       result[key] = meaning[index];
     });
+    if (kind === 'typedRelationship') {
+      if (Object.keys(meaning[4] as object).length) result.customValues = meaning[4];
+      else delete result.customValues;
+    }
   }
-  if (kind === 'object' || kind === 'typedObject')
+  if (kind === 'object' || kind === 'typedObject' || kind === 'relationship')
     for (const group of groups(kind)) {
       const entries = [...values].filter(
         ([key, value]) => key.startsWith(`${group}:`) && value !== undefined,
@@ -87,7 +99,7 @@ function apply<T extends object>(kind: FactKind, base: T, values: Facts): T {
         );
       else delete result[group];
     }
-  if (kind === 'objectType') {
+  if (kind === 'objectType' || kind === 'relationshipType') {
     function ordered<T extends { id: string }>(items: T[], key: string) {
       const order = (values.get(key) ?? []) as string[];
       const result = order.flatMap((id) => items.filter((item) => item.id === id));
@@ -208,14 +220,14 @@ export function inverseChange<T extends object>(
   // A field ID has meaning only within its type. Reversing a type change
   // must not carry later target-type fields into the restored source type.
   if (
-    kind === 'object' &&
+    (kind === 'object' || kind === 'relationship') &&
     new Set(
       [expected, desired, current, own?.before, own?.after]
         .filter((value) => value != null)
         .map((value) => (value as { typeId: string }).typeId),
     ).size > 1
   )
-    kind = 'typedObject';
+    kind = kind === 'object' ? 'typedObject' : 'typedRelationship';
   const keys = expected && desired ? changed(facts(kind, expected), facts(kind, desired)) : null;
   const ownKeys =
     own?.before && own.after ? changed(facts(kind, own.before), facts(kind, own.after)) : null;
@@ -276,21 +288,24 @@ export function keepIndependent<T extends object>(
 ): Change<T> | null {
   if (!change.undo || !change.undoFields || !change.before || !change.after) return null;
   if (
-    kind === 'object' &&
+    (kind === 'object' || kind === 'relationship') &&
     (change.undoFields.includes('objectMeaning') ||
+      change.undoFields.includes('relationshipMeaning') ||
       new Set(
         [change.before, change.after, current]
           .filter((value) => value != null)
           .map((value) => (value as { typeId: string }).typeId),
       ).size > 1)
   )
-    kind = 'typedObject';
+    kind = kind === 'object' ? 'typedObject' : 'typedRelationship';
   // Older drafts can describe undo with separate type/field keys. Apply
   // those keys to the same grouped meaning when their types now differ.
   const undoFields = change.undoFields.map((key) =>
     kind === 'typedObject' && (key === 'typeId' || key.startsWith('customValues:'))
       ? 'objectMeaning'
-      : key,
+      : kind === 'typedRelationship' && (key === 'meaning' || key.startsWith('customValues:'))
+        ? 'relationshipMeaning'
+        : key,
   );
   const before = facts(kind, change.before),
     after = facts(kind, change.after);

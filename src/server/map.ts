@@ -331,7 +331,11 @@ export function householdMap(database: Database.Database, actorId: string, house
             const before = change.before;
             change.after = resolvedRelationshipValue(change, conflict.current);
             change.before = conflict.current;
+            change.beforeType = edgeTypes
+              .read()
+              .find((type) => type.id === conflict.current?.typeId);
             if (conflict.type) change.type = conflict.type;
+            if (change.after) readCustomValues(change.after.customValues, change.type);
             // Keep triggers from draft edits, but drop dependencies on detached saved endpoints.
             if (change.removedWithObjects)
               change.removedWithObjects = change.removedWithObjects.filter(
@@ -342,6 +346,9 @@ export function householdMap(database: Database.Database, actorId: string, house
               );
           }
         }
+        for (const change of current.relationships ?? [])
+          if (change.after && change.id === conflict.id)
+            readCustomValues(change.after.customValues, change.type);
         return writeDraft({ ...current, version: current.version + 1 });
       });
     },

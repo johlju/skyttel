@@ -64,6 +64,11 @@ export function MergeSourceDetails({
             Identitet: {edge.id}. Från {edge.sourceId} till{' '}
             {edge.targetId ?? 'okänd eller ingen ändpunkt'}.
           </p>
+          <CustomFieldsDetails
+            type={merge.relationshipTypes.find((type) => type.id === edge.typeId)}
+            values={edge.customValues}
+            showHidden
+          />
           <LifecycleDetails value={edge} />
         </div>
       ))}
@@ -310,6 +315,11 @@ export function ObjectMerge({
                   <p>
                     {relationshipLabel(edge, effective, objects)}. Identitet: {edge.id}.
                   </p>
+                  <CustomFieldsDetails
+                    type={effective.relationshipTypes.find((type) => type.id === edge.typeId)}
+                    values={edge.customValues}
+                    showHidden
+                  />
                   <LifecycleDetails value={edge} />
                   <p>
                     Från identitet {edge.sourceId} till{' '}

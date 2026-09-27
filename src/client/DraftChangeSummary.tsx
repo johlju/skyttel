@@ -153,6 +153,19 @@ export function DraftChangeSummary({ review }: { review: MapDraft }) {
             {change.before &&
               change.after &&
               lines([
+                ...[
+                  ...new Map(
+                    [...(change.beforeType?.fields ?? []), ...(change.type.fields ?? [])].map(
+                      (field) => [field.id, field],
+                    ),
+                  ).values(),
+                ].flatMap((field) =>
+                  difference(
+                    field.name,
+                    valueText(change.before?.customValues?.[field.id]),
+                    valueText(change.after?.customValues?.[field.id]),
+                  ),
+                ),
                 ...difference(
                   'Gäller',
                   change.before.lifecycle === 'ended' ? 'Upphört' : 'Aktuellt',

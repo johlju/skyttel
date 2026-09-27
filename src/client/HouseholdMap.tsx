@@ -736,7 +736,14 @@ export function HouseholdMap({
           </p>
         )}
         {conflict.kind === 'relationship' && conflict.current && (
-          <LifecycleDetails value={conflict.current} />
+          <>
+            <CustomFieldsDetails
+              type={state?.relationshipTypes.find((type) => type.id === conflict.current?.typeId)}
+              values={conflict.current.customValues}
+              showHidden
+            />
+            <LifecycleDetails value={conflict.current} />
+          </>
         )}
         <p>Välj vilket värde du vill behålla. Valet ändrar bara ditt utkast.</p>
         {conflict.type !== undefined && (
@@ -1528,6 +1535,10 @@ export function HouseholdMap({
                 {!edgeEditor && selectedEdge && (
                   <>
                     <p>{relationshipLabel(selectedEdge, effectiveState ?? state, displayed)}</p>
+                    <CustomFieldsDetails
+                      type={effectiveEdgeTypes.find((type) => type.id === selectedEdge.typeId)}
+                      values={selectedEdge.customValues}
+                    />
                     <LifecycleDetails value={selectedEdge} />
                     <button
                       type="button"
@@ -1549,6 +1560,15 @@ export function HouseholdMap({
                         <h2>Tidigare samband</h2>
                         <p>× Ersätts i utkastet. Detta är det sparade sambandet före ändringen.</p>
                         <p>{relationshipLabel(before, effectiveState ?? state, displayed)}</p>
+                        <CustomFieldsDetails
+                          type={
+                            state.draft.relationships?.find((change) => change.id === before.id)
+                              ?.beforeType ??
+                            state.relationshipTypes.find((type) => type.id === before.typeId)
+                          }
+                          values={before.customValues}
+                          showHidden
+                        />
                         <LifecycleDetails value={before} />
                         <button type="button" onClick={() => setSelection(null)}>
                           Stäng tidigare samband
@@ -2428,7 +2448,22 @@ export function HouseholdMap({
                             )
                           : 'Finns inte i kartan'}
                       </p>
-                      {change.before && <LifecycleDetails value={change.before} />}
+                      {change.before && (
+                        <>
+                          <CustomFieldsDetails
+                            type={
+                              change.beforeType ??
+                              state.relationshipTypes.find(
+                                (type) => type.id === change.before?.typeId,
+                              ) ??
+                              change.type
+                            }
+                            values={change.before.customValues}
+                            showHidden
+                          />
+                          <LifecycleDetails value={change.before} />
+                        </>
+                      )}
                       <h4>Förslag</h4>
                       <p>
                         {change.after
@@ -2444,7 +2479,16 @@ export function HouseholdMap({
                             )
                           : 'Borttaget'}
                       </p>
-                      {change.after && <LifecycleDetails value={change.after} />}
+                      {change.after && (
+                        <>
+                          <CustomFieldsDetails
+                            type={change.type}
+                            values={change.after.customValues}
+                            showHidden
+                          />
+                          <LifecycleDetails value={change.after} />
+                        </>
+                      )}
                       <button
                         type="button"
                         disabled={pending || blocked || dirty}

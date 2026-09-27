@@ -82,7 +82,9 @@ Du kan föreslå egna typer, ändra förifyllda typer och ange fält för text,
 tal, datum och ja/nej. Obesvarat ja/nej är inte nej. Ett använt fälts
 värdeslag ändras genom ett nytt fält; tidigare värden finns kvar tills
 du hanterar dem. Egna samband har benämningar från båda hållen och en
-tydlig riktning, men inga egna fält.
+tydlig riktning. Sambandstyper kan ha valfria egna fält med text, tal,
+datum och ja/nej. Assistenten använder samma definitioner, värden och
+privata utkast som formulären. Obesvarat är skilt från noll och Nej.
 
 Ett typbyte behåller objektets identitet och samband. Granska både gamla
 och nya fältvärden; lika fältnamn överför inte uppgifter automatiskt.

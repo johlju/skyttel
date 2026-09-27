@@ -58,6 +58,7 @@ export function erasureProjection(content: Content, scope: ErasureScope) {
     sourceId: value.sourceId,
     targetId: value.targetId,
     knowledge: value.knowledge,
+    customValues: value.customValues,
   });
   const facts = (value: object) =>
     Object.fromEntries(
@@ -114,7 +115,12 @@ export function erasureProjection(content: Content, scope: ErasureScope) {
         after: { ...change.after, ...edgeMeaning(current) },
         type,
       };
-      if (next.undoFields) next.undoFields = next.undoFields.filter((key) => key !== 'meaning');
+      delete next.beforeType;
+      if (next.undoFields)
+        next.undoFields = next.undoFields.filter(
+          (key) =>
+            key !== 'meaning' && key !== 'relationshipMeaning' && !key.startsWith('customValues:'),
+        );
       if (isDeepStrictEqual(facts(next.before as MapRelationship), facts(next.after as object)))
         return [];
     }
@@ -245,7 +251,8 @@ export function erasurePredicates(scope: ErasureScope) {
       relationships.has(change.id) ||
       edgeValue(change.before) ||
       edgeValue(change.after) ||
-      relationshipTypes.has(change.type.id)
+      relationshipTypes.has(change.type.id) ||
+      Boolean(change.beforeType && relationshipTypes.has(change.beforeType.id))
     );
   }
   function objectChange(change: Change): boolean {

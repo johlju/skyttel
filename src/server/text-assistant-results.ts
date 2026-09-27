@@ -248,6 +248,19 @@ function details(
         ? `${beforeDescription} → ${afterDescription}`
         : afterDescription;
     const fields: string[] = [];
+    for (const field of new Map(
+      [...(beforeType?.fields ?? []), ...(change.type.fields ?? [])].map((field) => [
+        field.id,
+        field,
+      ]),
+    ).values())
+      fields.push(
+        ...difference(
+          field.name,
+          customValue(change.before?.customValues?.[field.id]),
+          customValue(change.after?.customValues?.[field.id]),
+        ),
+      );
     if (change.before && change.after && change.before.typeId !== change.after.typeId)
       fields.push(`sambandstyp: ${beforeType?.name ?? 'okänd sambandstyp'} → ${change.type.name}`);
     if (change.before?.lifecycle !== change.after?.lifecycle)

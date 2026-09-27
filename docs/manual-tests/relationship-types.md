@@ -1,7 +1,7 @@
 # Manuella testfall för sambandstyper
 
 Testfallen omfattar riktning, gemensamma definitioner, privata utkast,
-dubbletter och samtidiga ändringar.
+dubbletter, samtidiga ändringar samt egna fält och sambandsvärden.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
 ## Konfigurerade användare
@@ -126,7 +126,7 @@ and household boundaries stay protected”.
    benämningarna. Spara, ladda om och öppna Nytt samband.
 3. Alex skapar och sparar en separat typ som också heter Förvaring.
 4. Kopiera Alex vanliga typbegäran i nätverkspanelen. Prova tomt namn,
-   tom benämning från respektive håll och ett extra `fields: []` i
+   tom benämning från respektive håll och ogiltiga `fields: null` i
    definitionen. Använd aktuell utkastversion för varje försök.
 5. Kim försöker läsa kartan och skicka en typbegäran till samma adress.
 
@@ -135,7 +135,7 @@ and household boundaries stay protected”.
 - Privata definitioner röjs inte. Vanliga medlemmar får skapa typer och
   rätta förifyllda definitioner; formuläret visar aktuellt namn.
 - Lika namn ger två separata identiteter. Ogiltiga definitioner ger
-  HTTP 400 och ändrar inget utkast. Sambandstyper har inga egna fält.
+  HTTP 400 och ändrar inget utkast.
 - Kim får HTTP 403 för både läsning och ändring.
 
 ## Samtidighet och dubbletter
@@ -210,3 +210,72 @@ identity and reject every partial write”.
   Efter konfliktval finns Los samband kvar utan Alex dubblett.
 - Historiken bevarar tidigare typ, riktning och ändpunkter. Status och
   slutdatum hör till samma samband efter rättelsen.
+
+## Egna sambandsuppgifter
+
+### STY-06: Fyra valfria fältslag sparas med sambandet
+
+**Syfte:** Kontrollera att definition och egna svar delar utkast och sparande.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Cykeln och Garaget finns i utkastet med olika objekttyper.
+
+**Integrationstest:**
+[relationship-fields.spec.ts](../../tests/integration/relationship-fields.spec.ts),
+testfallen “STY-06: optional relationship fields share definitions, editing
+and durable save at 1440px” och “STY-06: optional relationship fields share
+definitions, editing and durable save at 390px”.
+
+**Steg:**
+
+1. Öppna Ny sambandstyp. Ange Förvaring, beskrivningen Var saker finns
+   och benämningarna förvaras i och innehåller.
+2. Lägg till Anteckning som Text, Belopp som Tal, Startdatum som Datum
+   samt Bekräftat och Obesvarat som Ja/nej. Kontrollera att fokus hamnar
+   på det nya fältets namn. Lägg definitionen i utkastet.
+3. Skapa ett samband från Cykeln till Garaget med Förvaring. Ange
+   Låst skåp, 0, 2026-09-27 och Nej. Lämna Obesvarat utan svar.
+4. Lägg sambandet i utkastet, läs värdena och spara hela utkastet.
+   Starta om testinstallationen och ladda om sidan.
+5. Välj sambandet i listan och öppna Redigera valt samband. Kontrollera
+   samtliga svar. Ändra Anteckning till Övre hyllan och spara utkastet.
+6. Upprepa på mobil och med tangentbord. Kontrollera att kontrollerna
+   går att nå genom intern rullning och har synligt fokus.
+
+**Förväntat resultat:**
+
+- Definition, riktning och svar sparas tillsammans och återläses efter
+  omstart. Noll och Nej består; Obesvarat förblir obesvarat.
+- Ändring av Anteckning behåller övriga svar och samma sambandsidentitet.
+- Fältnamn och kontroller går att läsa och använda på dator och mobil.
+
+### STY-07: Typbyte kräver beslut om tidigare egna svar
+
+**Syfte:** Förhindra att ett typbyte omtolkar eller tappar egna svar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Förvaring och Tillgång har varsitt textfält Anteckning.
+Ett sparat samband av typen Förvaring har svaret Behåll som historik.
+
+**Integrationstest:**
+[relationship-fields.spec.ts](../../tests/integration/relationship-fields.spec.ts),
+testfallet “STY-07: relationship type changes require an explicit decision
+about earlier custom answers”.
+
+**Steg:**
+
+1. Välj sambandet i listan och öppna Redigera valt samband.
+2. Byt typ till Tillgång. Läs Tidigare egna sambandsvärden och kontrollera
+   att den nya typens Anteckning är tom.
+3. Skriv Ny betydelse. Bekräfta borttagning av tidigare egna värden från
+   förslaget och lägg sambandet i utkastet.
+4. Läs tidigare värde och förslag. Spara hela utkastet och läs historiken.
+
+**Förväntat resultat:**
+
+- Förslaget kan inte skickas före det uttryckliga beslutet. Fält med
+  samma namn får inte automatiskt samma svar.
+- Den nya typen har Ny betydelse. Historiken behåller Behåll som historik
+  med den tidigare typens definition och samma sambandsidentitet.

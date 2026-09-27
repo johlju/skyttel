@@ -159,7 +159,7 @@ test('archive 18 preserves section order and hidden values in current, private, 
   await object('first', 'solar', 'Privat text');
   await define({ ...definition, name: 'Privat typnamn' });
   const source = await archive();
-  expect(source.manifest.schemaVersion).toBe(18);
+  expect(source.manifest.schemaVersion).toBe(19);
   expect(source.content.objectTypeFields.find(({ typeId }) => typeId === 'solar')).toMatchObject({
     fields: definition.fields,
     sections: definition.sections,

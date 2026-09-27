@@ -189,7 +189,7 @@ test('STY-03: members share editable prefills while private definitions and hous
     for (const invalid of [
       { ...value, forwardLabel: '' },
       { ...value, reverseLabel: '' },
-      { ...value, fields: [] },
+      { ...value, fields: null },
       { ...value, name: '' },
     ]) {
       expect(

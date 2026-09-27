@@ -1,4 +1,5 @@
 import type {
+  CustomField,
   CustomValues,
   MapDraft,
   MapState,
@@ -17,9 +18,15 @@ function restoreFields(
   type: ObjectType,
   historical: ObjectType,
   values: CustomValues = {},
+  kind: 'objectType' | 'relationshipType' = 'objectType',
 ) {
-  const current = state.types.find((item) => item.id === type.id) ?? null;
-  const privateType = state.draft.objectTypes?.find((item) => item.id === type.id);
+  const definitions = kind === 'objectType' ? 'objectTypes' : 'relationshipTypes';
+  const changes = kind === 'objectType' ? 'changes' : 'relationships';
+  const current =
+    (kind === 'objectType' ? state.types : state.relationshipTypes).find(
+      (item) => item.id === type.id,
+    ) ?? null;
+  const privateType = state.draft[definitions]?.find((item) => item.id === type.id);
   const required = Object.keys(values).flatMap((id) => {
     const field = historical.fields?.find((item) => item.id === id);
     const effective = type.fields?.find((item) => item.id === id);
@@ -33,11 +40,11 @@ function restoreFields(
     return field && effective?.kind !== field.kind ? [field] : [];
   });
   if (!required.length) return;
-  const own = draft.objectTypes?.find((item) => item.id === type.id);
+  const own = draft[definitions]?.find((item) => item.id === type.id);
   const fields = new Map((current ?? type).fields?.map((field) => [field.id, field]));
   for (const field of required) {
     if (
-      state.draft.changes.some(
+      (state.draft[changes] ?? []).some(
         (change) =>
           change.after?.typeId === type.id &&
           Object.hasOwn(change.after.customValues ?? {}, field.id) &&
@@ -49,7 +56,10 @@ function restoreFields(
     if (current && saved?.kind === field.kind) throw new MapError('undo_draft_overlap');
     fields.set(field.id, saved ? { ...saved, kind: field.kind } : field);
   }
-  const desired = { ...(current ?? type), fields: [...fields.values()] };
+  const desired: ObjectType & { fields: CustomField[] } = {
+    ...(current ?? type),
+    fields: [...fields.values()],
+  };
   if (desired.sections !== undefined || required.some((field) => field.sectionId !== undefined)) {
     desired.fields = desired.fields.map((field) => ({
       ...field,
@@ -67,13 +77,13 @@ function restoreFields(
     if (section) desired.sections = [...(desired.sections ?? []), section];
   }
   const change = current
-    ? inverseChange('objectType', { before: desired, after: current }, current, own)
+    ? inverseChange(kind, { before: desired, after: current }, current, own)
     : { ...own, before: null, after: desired };
   if (!change?.after) throw new MapError('undo_unavailable');
   const after = { ...change.after, revision: type.revision };
   if (current) after.revision = current.revision + 1;
-  draft.objectTypes = [
-    ...(draft.objectTypes ?? []).filter((item) => item.id !== type.id),
+  draft[definitions] = [
+    ...(draft[definitions] ?? []).filter((item) => item.id !== type.id),
     {
       ...own,
       ...change,
@@ -84,7 +94,7 @@ function restoreFields(
       undo: true,
     },
   ];
-  for (const proposal of draft.changes)
+  for (const proposal of draft[changes] ?? [])
     if (proposal.type.id === type.id && proposal.type.revision === type.revision)
       proposal.type = after;
 }
@@ -196,6 +206,10 @@ export function undoSave(
   }
   for (const { type, historical, values } of restoredFields.values())
     restoreFields(state, draft, type, historical, values);
+  const restoredEdgeFields = new Map<
+    string,
+    { type: RelationshipType; historical: RelationshipType; values: CustomValues }
+  >();
   for (const saved of receipt.relationships ?? []) {
     const current = state.relationships.find((item) => item.id === saved.id) ?? null;
     const own = draft.relationships?.find((item) => item.id === saved.id);
@@ -217,12 +231,31 @@ export function undoSave(
       ];
       edgeTypes.push(type);
     }
+    if (change.after) {
+      const restoredValues = Object.fromEntries(
+        Object.entries(change.after.customValues ?? {}).filter(
+          ([id]) =>
+            !current ||
+            !change.undoFields ||
+            change.undoFields.includes('relationshipMeaning') ||
+            change.undoFields.includes(`customValues:${id}`),
+        ),
+      );
+      const historical = saved.beforeType ?? saved.type;
+      if (historical.id === typeId)
+        restoredEdgeFields.set(typeId, {
+          type,
+          historical,
+          values: { ...restoredEdgeFields.get(typeId)?.values, ...restoredValues },
+        });
+    }
     draft.relationships = [
       ...(draft.relationships ?? []).filter((item) => item.id !== saved.id),
       {
         ...change,
         id: saved.id,
         type,
+        beforeType: state.relationshipTypes.find((item) => item.id === change.before?.typeId),
         undo: true,
         objectNames: saved.objectNames,
         ...(!current && change.after
@@ -231,6 +264,8 @@ export function undoSave(
       },
     ];
   }
+  for (const { type, historical, values } of restoredEdgeFields.values())
+    restoreFields(state, draft, type, historical, values, 'relationshipType');
   for (const change of draft.changes) {
     if (
       !change.after &&

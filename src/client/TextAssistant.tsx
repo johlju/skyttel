@@ -566,7 +566,16 @@ export function TextAssistant({
                           )
                         : 'Borttaget'}
                     </p>
-                    {value && <LifecycleDetails value={value} />}
+                    {value && (
+                      <>
+                        <CustomFieldsDetails
+                          type={index === 0 ? (change.beforeType ?? change.type) : change.type}
+                          values={value.customValues}
+                          showHidden
+                        />
+                        <LifecycleDetails value={value} />
+                      </>
+                    )}
                   </div>
                 ))}
               </article>
