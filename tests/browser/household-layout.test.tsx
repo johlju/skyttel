@@ -4,7 +4,7 @@ import { cdp, page, userEvent } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import '../../src/client/styles.css';
 import type { MapState } from '../../src/shared/map.js';
-import { defaultViewSettings } from '../../src/shared/personal-view.js';
+import { defaultViewSettings, type PersonalView } from '../../src/shared/personal-view.js';
 
 const state: MapState = {
   userId: 'alex',
@@ -36,7 +36,7 @@ const state: MapState = {
   draft: { version: 0, changes: [] },
 };
 
-async function open(width: number, mapState = state) {
+async function open(width: number, mapState = state, positions: PersonalView['positions'] = []) {
   await page.viewport(width, 960);
   await expect.poll(() => window.innerWidth).toBe(width);
   await expect
@@ -46,7 +46,7 @@ async function open(width: number, mapState = state) {
     if (url.endsWith('/view'))
       return Response.json({
         contentVersion: 1,
-        positions: [],
+        positions,
         settings: { ...defaultViewSettings, version: 0 },
       });
     if (url.endsWith('/operations')) return Response.json({ operations: [] });
@@ -67,6 +67,92 @@ async function open(width: number, mapState = state) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+test('camera focus includes previous direct neighbors and preserves work through overview and compact tool expansion', async () => {
+  const mapState = structuredClone(state);
+  const type = { ...state.types[0], id: 'uses', name: 'Använder' };
+  const edge = {
+    id: 'edge',
+    householdId: 'home',
+    revision: 1,
+    typeId: type.id,
+    sourceId: 'alex',
+    targetId: 'music',
+    knowledge: 'known' as const,
+  };
+  mapState.relationshipTypes = [type];
+  mapState.objects.push({ ...state.objects[1], id: 'far', name: 'Långt borta' });
+  mapState.relationships = [
+    edge,
+    { ...edge, id: 'second-hop', sourceId: 'music', targetId: 'far' },
+  ];
+  mapState.draft.relationships = [
+    {
+      id: edge.id,
+      before: edge,
+      after: { ...edge, targetId: null, knowledge: 'unknown' },
+      type,
+    },
+  ];
+  await open(1440, mapState, [
+    { id: 'alex', x: 8, y: 4, z: 10, version: 1 },
+    { id: 'music', x: -4, y: -6, z: 3, version: 1 },
+    { id: 'far', x: -60, y: 20, z: -40, version: 1 },
+  ]);
+  await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
+  const alex = page.getByRole('button', { name: 'Välj objekt: Alex', exact: true });
+  const music = page.getByRole('button', { name: 'Välj objekt: Tonmoln', exact: true });
+  const focus = page.getByRole('button', { name: 'Fokusera markering', exact: true });
+  const position = (node: typeof alex) => {
+    const box = node.element().getBoundingClientRect();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const separation = () =>
+    Math.hypot(position(alex).x - position(music).x, position(alex).y - position(music).y);
+  await expect.element(focus).toBeDisabled();
+  await alex.click();
+  const initialSeparation = separation();
+  await page.getByRole('button', { name: 'Visa detaljer', exact: true }).click();
+  const panel = page.getByRole('region', { name: 'Alex', exact: true });
+  await panel.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
+  const description = panel.getByLabelText('Beskrivning', { exact: true });
+  await description.fill('Oskickat under kamerafokus');
+  const panelBox = panel.element().getBoundingClientRect().toJSON();
+  await focus.click();
+  await expect.poll(separation).toBeGreaterThan(initialSeparation * 2);
+  expect(panel.element().getBoundingClientRect().toJSON()).toEqual(panelBox);
+  for (const node of [alex, music]) {
+    expect(position(node).x).toBeGreaterThan(112);
+    expect(position(node).x).toBeLessThan(1360);
+    expect(position(node).y).toBeGreaterThan(90);
+    expect(position(node).y).toBeLessThan(830);
+  }
+  await expect.element(music).toHaveAttribute('aria-pressed', 'false');
+  const focused = position(alex);
+  await page.getByRole('button', { name: 'Visa hela kartan', exact: true }).click();
+  await focus.click();
+  await page.getByRole('button', { name: 'Återgå till föregående vy', exact: true }).click();
+  await expect
+    .element(page.getByRole('button', { name: 'Visa hela kartan', exact: true }))
+    .toBeVisible();
+  expect(position(alex)).toEqual(focused);
+  await expect.element(description).toHaveValue('Oskickat under kamerafokus');
+  await expect.element(alex).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+  await page.viewport(320, 250);
+  await page.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
+  (focus.element() as HTMLElement).focus();
+  await userEvent.keyboard('{Enter}');
+  await expect.element(focus).toHaveFocus();
+  await expect
+    .element(page.getByRole('button', { name: 'Visa verktygens namn', exact: true }))
+    .toBeVisible();
+  for (const node of [alex, music]) {
+    await expect.poll(() => position(node).y).toBeGreaterThanOrEqual(110);
+    await expect.poll(() => position(node).y).toBeLessThanOrEqual(172);
+    await node.hover();
+  }
 });
 
 test('compact profile returns to visible work and dismisses before keyboard focus enters the map', async () => {
@@ -688,7 +774,7 @@ test('phone opens the list from the map and preserves an edited name through map
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
 });
 
-test('landscape toolbar overflow preserves canvas height and reachable controls', async ({
+test('landscape display options preserve canvas height and reachable controls', async ({
   onTestFinished,
 }) => {
   const session = cdp();
@@ -700,8 +786,9 @@ test('landscape toolbar overflow preserves canvas height and reachable controls'
   });
   await open(640);
   await page.viewport(640, 390);
+  await page.getByText('Visningsval', { exact: true }).click();
   const toolbar = document.querySelector('.spatial-bottom-bar') as HTMLElement;
-  await expect.poll(() => toolbar.scrollWidth > toolbar.clientWidth).toBe(true);
+  await expect.poll(() => toolbar.scrollWidth <= toolbar.clientWidth).toBe(true);
   const height = () => document.querySelector('canvas')?.getBoundingClientRect().height;
   await expect.poll(height).toBeGreaterThan(200);
   const heightHelp = page.getByLabelText('Visa höjdhjälp', { exact: true });

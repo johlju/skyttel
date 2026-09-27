@@ -647,7 +647,9 @@ test('painted stars respond to rotation and zoom while panning and object moveme
     const { data } = context.getImageData(0, 0, sample.width, sample.height);
     const bounds = canvas.getBoundingClientRect();
     const overlays = [
-      ...document.querySelectorAll('.spatial-labels > *, .spatial-node, .spatial-axis'),
+      ...document.querySelectorAll(
+        '.spatial-labels > *, .spatial-node, .spatial-axis, .spatial-view-actions',
+      ),
     ].map((element) => element.getBoundingClientRect());
     const visible = (pixel: number) => {
       const x = bounds.x + (pixel % sample.width);
@@ -690,6 +692,31 @@ test('painted stars respond to rotation and zoom while panning and object moveme
 });
 
 afterEach(cleanup);
+
+test('standalone focus controls keep direct neighbors separate from the selected rotation center', async () => {
+  render(<MapView />);
+  const focus = page.getByRole('button', { name: 'Fokusera markering', exact: true });
+  await expect.element(focus).toBeDisabled();
+  const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
+  await lo.click();
+  await focus.click();
+  await expect.element(lo).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .element(page.getByRole('button', { name: 'Välj objekt: Musikspelaren', exact: true }))
+    .toHaveAttribute('aria-pressed', 'false');
+  const position = () =>
+    document.querySelector<HTMLElement>('[data-object-id="lo"].spatial-node')?.style.cssText;
+  const focused = position();
+  await page.getByText('Navigera rymden', { exact: true }).click();
+  await page.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
+  expect(position()).toBe(focused);
+  await page.getByRole('button', { name: 'Visa hela kartan', exact: true }).click();
+  await page.getByRole('button', { name: 'Återgå till föregående vy', exact: true }).click();
+  await expect
+    .element(page.getByRole('button', { name: 'Visa hela kartan', exact: true }))
+    .toBeVisible();
+  expect(position()).toBe(focused);
+});
 
 test('graphics navigation and label modes expose selectable objects and directed facts', async () => {
   render(<MapView />);

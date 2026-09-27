@@ -143,6 +143,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   skilja lika namn åt och bevara ofullständiga uppgifter.
 - [Markering och detaljer](map-selection.md): flerval, tomrumsgester,
   textkontroller, aktiv detaljikon och placering nära objektet.
+- [Kamerans urvalsfokus](map-camera.md): personlig rotationspunkt, direkta
+  grannar, återgångsvy, mus, tangentbord och pekskärm i smala och korta vyer.
 - [Rymdkarta](spatial-map.md): gemensam redigering och navigering,
   fokus på tidigare och föreslagna samband med läsbara tidigare värden,
   fokus, filter, namn vid runda symboler, sambandsetiketter vid val,

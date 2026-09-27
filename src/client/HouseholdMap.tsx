@@ -202,6 +202,12 @@ export function HouseholdMap({
     if (returning && !profileRequested) restoreOutsideFocus(routeOutsideFocus.current);
   });
   const [revealRequest, setRevealRequest] = useState<MapRevealRequest>();
+  const [cameraFocusRequest, setCameraFocusRequest] = useState<{
+    id: string;
+    objectIds: string[];
+  }>();
+  const [cameraMount, setCameraMount] = useState<HTMLDivElement | null>(null);
+  const [toolsExpanded, setToolsExpanded] = useState(false);
   const revealAbort = useRef<AbortController | null>(null);
   useEffect(() => () => revealAbort.current?.abort(), []);
   const listModeButton = useRef<HTMLButtonElement>(null);
@@ -345,6 +351,7 @@ export function HouseholdMap({
     setFiltersOpen(false);
     setSelection(null);
     setFocusId(null);
+    setCameraFocusRequest(undefined);
     setQuery('');
     setTypeFilter('');
     setState(null);
@@ -919,6 +926,28 @@ export function HouseholdMap({
   function clearSelection() {
     setSelection(null);
   }
+  function focusSelection(ids = selectedIds) {
+    const neighbors = new Set(ids);
+    const edges = [
+      ...displayedEdges.values(),
+      ...(state?.draft.relationships ?? []).flatMap((change) =>
+        change.before ? [change.before] : [],
+      ),
+    ];
+    for (const edge of edges) {
+      if (!ids.includes(edge.sourceId) && (!edge.targetId || !ids.includes(edge.targetId)))
+        continue;
+      neighbors.add(edge.sourceId);
+      if (edge.targetId) neighbors.add(edge.targetId);
+    }
+    setQuery('');
+    setTypeFilter('');
+    setFocusId(null);
+    setCameraFocusRequest({
+      id: crypto.randomUUID(),
+      objectIds: [...neighbors].filter((id) => displayed.has(id)),
+    });
+  }
   function focusObject(id: string) {
     setFocusId(id);
     setQuery('');
@@ -1138,6 +1167,9 @@ export function HouseholdMap({
             Till samtal och text
           </button>
           <WorkspaceTools
+            cameraMount={setCameraMount}
+            expanded={toolsExpanded}
+            onExpandedChange={setToolsExpanded}
             onOpen={openWork}
             account={account}
             profileRequested={profileRequested}
@@ -1270,8 +1302,17 @@ export function HouseholdMap({
       {state && (
         <div className="map-space" hidden={!active} inert={mapCovered} aria-hidden={mapCovered}>
           <SpatialMap
+            cameraMount={cameraMount}
+            onCameraAction={() => setToolsExpanded(false)}
             theme={theme.theme}
             revealRequest={revealRequest}
+            focusRequest={cameraFocusRequest}
+            onFocusSelection={() => focusSelection()}
+            onShowOverview={() => {
+              setQuery('');
+              setTypeFilter('');
+              setFocusId(null);
+            }}
             personal={personal}
             active={active && !mapCovered}
             state={effectiveState ?? state}
