@@ -81,22 +81,23 @@ test('relationship field definitions and answers use the same visible map draft 
   await userEvent.click(editor.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' }));
   await screen.findByText('Förslaget finns i ditt privata utkast. Kartan är inte ändrad.');
   await userEvent.click(screen.getByRole('button', { name: 'Nytt samband' }));
-  await userEvent.selectOptions(screen.getByLabelText('Från objekt'), 'bike');
-  await userEvent.selectOptions(screen.getByLabelText('Till objekt'), 'garage');
+  const relationship = within(screen.getByRole('group', { name: 'Sambandets detaljer' }));
+  await userEvent.selectOptions(relationship.getByLabelText('Från objekt'), 'bike');
+  await userEvent.selectOptions(relationship.getByLabelText('Till objekt'), 'garage');
   await userEvent.selectOptions(
-    screen.getByLabelText('Sambandstyp', { exact: true }),
-    screen.getByRole('option', { name: 'Förvaring' }),
+    relationship.getByLabelText('Sambandstyp', { exact: true }),
+    relationship.getByRole('option', { name: 'Förvaring' }),
   );
-  await userEvent.type(screen.getByLabelText('Anteckning', { exact: true }), 'Låst');
-  await userEvent.type(screen.getByLabelText('Belopp', { exact: true }), '0');
-  await userEvent.type(screen.getByLabelText('Datum', { exact: true }), '2026-09-27');
-  await userEvent.selectOptions(screen.getByLabelText('Bekräftat', { exact: true }), 'false');
-  await userEvent.click(screen.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+  await userEvent.type(relationship.getByLabelText('Anteckning', { exact: true }), 'Låst');
+  await userEvent.type(relationship.getByLabelText('Belopp', { exact: true }), '0');
+  await userEvent.type(relationship.getByLabelText('Datum', { exact: true }), '2026-09-27');
+  await userEvent.selectOptions(relationship.getByLabelText('Bekräftat', { exact: true }), 'false');
+  await userEvent.click(relationship.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
   const review = within(screen.getByRole('region', { name: 'Hela mitt utkast' }));
   await review.findByText('Anteckning: Låst');
   expect(review.getByText('Belopp: 0')).toBeTruthy();
   expect(review.getByText('Bekräftat: Nej')).toBeTruthy();
-  await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
+  await userEvent.click(review.getByRole('button', { name: 'Spara hela utkastet' }));
   await screen.findByText(/^Sparat:/);
   expect(Object.values((await read()).relationships[0].customValues ?? {})).toEqual([
     'Låst',
