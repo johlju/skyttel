@@ -288,8 +288,9 @@ test('relationship type forms review both labels and show one edge from either o
   expect(screen.getByRole('status').textContent).toContain('Förvaring (sambandstyp)');
   await userEvent.click(screen.getByRole('button', { name: 'Garaget' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Visa samband i listan' }));
   await userEvent.click(
-    within(screen.getByRole('region', { name: 'Samband för Garaget' })).getByRole('button', {
+    within(screen.getByRole('list', { name: /^Samband$/ })).getByRole('button', {
       name: 'Garaget → innehåller → Cykeln',
     }),
   );

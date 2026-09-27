@@ -77,11 +77,11 @@ selection”.
    Kontrollera
    fokus utan att objektmenyn öppnas. Rulla lodrätt över tom rymd,
    objektsymbolen och namnet. Kontrollera att alla tre panorerar likadant.
-3. Panorera med knappen under Navigera rymden. Välj Visa hela rymden.
+3. Panorera med knappen under Navigera. Välj Visa hela rymden.
 4. Sök efter Lo. Flytta tangentbordsfokus till en kameraknapp och tryck
    Escape.
 5. Fokusera Lo Exempel igen, sök efter Lo och filtrera på Person. Välj
-   Återställ vy och fäll ihop Navigera rymden. Välj Alla etiketter och
+   Återställ vy och fäll ihop Navigera. Välj Alla etiketter och
    sedan användningssambandets etikett.
 
 **Förväntat resultat:**

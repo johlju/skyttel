@@ -198,11 +198,11 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
     ).toBeVisible();
     await expect(fullMap.locator('.spatial-edge')).toHaveCount(0);
     await expectVisibleDirection(fullMap);
-    await fullMap.getByText('Navigera rymden', { exact: true }).click();
-    await fullMap.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
-    await fullMap.getByRole('button', { name: 'Panorera höger', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
+    await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
     await expectVisibleDirection(fullMap);
-    await fullMap.getByText('Navigera rymden', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     await space.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }).click();
     await expect(
@@ -243,7 +243,7 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
       expect((await loIcon.boundingBox())?.x).toBeCloseTo(before?.x ?? 0, 0);
     }
 
-    await page.getByText('Navigera rymden', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
     const position = async () => {
       const label = await space
@@ -257,14 +257,15 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
     await page.getByRole('button', { name: 'Visa hela rymden', exact: true }).click();
     expect(await position()).toEqual(beforeClear);
     await page.getByLabel('Sök objekt').fill('Lo');
-    await space.getByRole('button', { name: 'Zooma in', exact: true }).focus();
+    await page.getByRole('button', { name: 'Zooma in', exact: true }).focus();
     await page.keyboard.press('Escape');
+    await expect(page.getByLabel('Sök objekt')).toHaveValue('Lo');
+    await space.locator('canvas').press('Escape');
     await expect(page.getByLabel('Sök objekt')).toHaveValue('');
     await expect(
       space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }),
     ).toBeVisible();
     await openMap(page);
-    await space.getByText('Navigera rymden', { exact: true }).click();
     await space
       .getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true })
       .click({ button: 'right' });
@@ -567,8 +568,8 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
       space.getByText('Närmare utsnitt. Panorera för att se fler etiketter.', { exact: true }),
     ).toBeVisible();
     const beforePan = await geometry();
-    await space.getByText('Navigera rymden', { exact: true }).click();
-    await space.getByRole('button', { name: 'Panorera höger', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
     await expect
       .poll(async () =>
         Math.abs(objectPoints(await geometry())[0].anchor.x - objectPoints(beforePan)[0].anchor.x),

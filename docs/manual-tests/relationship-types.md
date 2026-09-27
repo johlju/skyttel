@@ -87,9 +87,11 @@ objects and edit the shared definition”.
    kopplingen i utkastet utan typ. Välj sedan Förvaring och lägg till.
 3. Granska definition och koppling tillsammans. Prova ett identiskt
    tillägg i samma utkast och läs beskedet med cykelns och garagets namn.
-   Spara hela utkastet och ladda om. Öppna cykeln och läs dess samband.
-   Stäng och öppna garaget.
-4. Klicka på garagets samband, öppna Lista och välj **Redigera valt samband**.
+   Spara hela utkastet och ladda om. Öppna cykeln och välj
+   **Visa samband i listan**. Läs cykelns benämning, stäng cykelns
+   formulär och öppna garaget.
+4. Välj **Visa samband i listan** även från garaget. Läs och klicka på
+   garagets benämning och välj **Redigera valt samband**.
    Kontrollera att startobjektet fortfarande är cykeln och målobjektet
    garaget. Stäng sambandsformuläret.
 5. Ändra typens namn till Plats, beskrivningen till Hushållets

@@ -780,6 +780,27 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     await expect(
       page.getByRole('region', { name: 'Lo Exempel', exact: true }).getByText('Namn: Lo Exempel'),
     ).toBeVisible();
+    for (const [width, height] of [
+      [640, 500],
+      [320, 250],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+      const navigation = page.getByRole('region', { name: 'Navigation', exact: true });
+      await navigation.getByRole('button', { name: 'Panorera vänster', exact: true }).click();
+      await navigation.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Navigera', exact: true })).toBeFocused();
+      await page
+        .getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true })
+        .click({ trial: true });
+      await expect(
+        page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      await expect(
+        page.getByRole('region', { name: 'Lo Exempel', exact: true }).getByText('Namn: Lo Exempel'),
+      ).toBeVisible();
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
     await openConversation(page);
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await expect

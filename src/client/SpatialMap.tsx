@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import type { MapObject, MapRelationship, MapState } from '../shared/map.js';
 import { defaultViewSettings, type Position, type ViewSettings } from '../shared/personal-view.js';
 import { LifecycleStatus } from './Lifecycle.js';
+import { MapNavigation } from './MapNavigation.js';
 import { ObjectRemovalNotice } from './ObjectRemovalNotice.js';
 import { relationshipLabel } from './RelationshipEditor.js';
 import { SpatialHeightGuide } from './SpatialHeightGuide.js';
@@ -38,19 +39,6 @@ export function ProposalSymbol({ change }: { change?: { before: unknown; after: 
 function proposalKind(change?: { before: unknown; after: unknown }) {
   return change ? (!change.after ? 'removed' : !change.before ? 'added' : 'changed') : 'existing';
 }
-const cameraActions = [
-  ['left', 'Panorera vänster'],
-  ['right', 'Panorera höger'],
-  ['up', 'Panorera uppåt'],
-  ['down', 'Panorera nedåt'],
-  ['rotate-left', 'Rotera vänster'],
-  ['rotate-right', 'Rotera höger'],
-  ['tilt-up', 'Luta uppåt'],
-  ['tilt-down', 'Luta nedåt'],
-  ['in', 'Zooma in'],
-  ['out', 'Zooma ut'],
-] as const;
-
 function arrowTip(source: { x: number; y: number }, target: { x: number; y: number }, radius = 28) {
   const dx = source.x - target.x;
   const dy = source.y - target.y;
@@ -82,6 +70,9 @@ export function SpatialMap({
   onShowOverview,
   cameraMount,
   onCameraAction,
+  navigationMount,
+  onNavigationChange,
+  openWork,
 }: {
   theme?: 'light' | 'dark';
   state: MapState;
@@ -106,8 +97,18 @@ export function SpatialMap({
   onShowOverview?: () => void;
   cameraMount?: HTMLElement | null;
   onCameraAction?: () => void;
+  navigationMount?: HTMLElement | null;
+  onNavigationChange?: (open: boolean) => void;
+  openWork?: readonly string[];
 }) {
   const labelPrefix = useId();
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const navigationTrigger = useRef<HTMLButtonElement>(null);
+  function changeNavigation(open: boolean) {
+    setNavigationOpen(open);
+    onNavigationChange?.(open);
+    if (!open) navigationTrigger.current?.focus();
+  }
   const [activated, setActivated] = useState(active);
   useEffect(() => {
     if (active) setActivated(true);
@@ -348,24 +349,27 @@ export function SpatialMap({
       personalReady &&
       !contextLost &&
       revealRequest.objectIds.every((id) => objects.has(id)) &&
-      (!revealRequest.relationshipId || relationships.has(revealRequest.relationshipId)) &&
-      scene.current?.reveal(revealRequest.objectIds)
+      (!revealRequest.relationshipId || relationships.has(revealRequest.relationshipId))
     ) {
-      for (const tools of surface.current?.parentElement?.querySelectorAll<HTMLDetailsElement>(
-        '.camera-tools[open]',
-      ) ?? [])
-        tools.open = false;
-      setCompletedRevealId(revealRequest.id);
+      if (navigationOpen) {
+        // Framing uses the committed canvas dimensions after navigation closes.
+        setNavigationOpen(false);
+        onNavigationChange?.(false);
+        return;
+      }
+      if (scene.current?.reveal(revealRequest.objectIds)) setCompletedRevealId(revealRequest.id);
     }
   }, [
     revealRequest,
     completedRevealId,
+    navigationOpen,
     active,
     activated,
     personalReady,
     contextLost,
     objects,
     relationships,
+    onNavigationChange,
   ]);
   const focusObjects = useCallback((ids: string[]) => {
     const element = canvas.current;
@@ -377,7 +381,7 @@ export function SpatialMap({
     const overlays = element
       .closest('.household-map')
       ?.querySelectorAll(
-        '.workspace-tools, .workspace-context, .workspace-feedback, .workspace-voice-controls, .spatial-tools, .spatial-bottom-bar, .spatial-display-tools, .spatial-view-actions',
+        '.workspace-tools, .workspace-context, .workspace-feedback, .workspace-voice-controls, .spatial-tools, .map-navigation, .spatial-bottom-bar, .spatial-display-tools, .spatial-view-actions',
       );
     for (const overlay of overlays ?? []) {
       const closedTools = overlay.closest('details:not([open])');
@@ -645,6 +649,20 @@ export function SpatialMap({
     <nav className="spatial-view-actions" aria-label="Kameravy">
       <button
         type="button"
+        ref={navigationTrigger}
+        title="Navigera"
+        aria-label="Navigera"
+        aria-expanded={navigationOpen}
+        onClick={() => {
+          onCameraAction?.();
+          changeNavigation(!navigationOpen);
+        }}
+      >
+        <WorkspaceIcon name="navigate" />
+        <span>Navigera</span>
+      </button>
+      <button
+        type="button"
         title="Fokusera markering"
         aria-label="Fokusera markering"
         disabled={!selectedIds.length || !active || !personalReady || unavailable || contextLost}
@@ -685,6 +703,69 @@ export function SpatialMap({
       </button>
     </nav>
   );
+  const navigation = (
+    <MapNavigation
+      open={navigationOpen}
+      openWork={openWork}
+      onClose={() => changeNavigation(false)}
+      onNavigate={(command) => scene.current?.navigate(command)}
+      object={selectedIds.length === 1 ? objects.get(selectedIds[0]) : undefined}
+      disabled={!personalReady || unavailable || contextLost}
+      movementDisabled={
+        !personal?.view || personal.pending || disabled || unavailable || contextLost
+      }
+      onMove={(id, axis, step) => {
+        const position = scene.current?.position(id);
+        if (!position) return;
+        const next = { ...position, [axis]: position[axis] + step };
+        const end = scene.current?.place(id, next) ?? next;
+        movement.recordMove(id, position, end, axis === 'y');
+        if (axis === 'y') setHeightHelp(true);
+        void personal?.move(id, end);
+      }}
+    >
+      <details className="navigation-settings">
+        <summary>Ordna min vy</summary>
+        <fieldset disabled={personal && (!personal.view || personal.pending)}>
+          <legend>Personliga visningsval</legend>
+          {(
+            [
+              ['invertX', 'Vänd panorering i sidled'],
+              ['invertY', 'Vänd panorering i höjdled'],
+              ['axisPinned', 'Visa axlar hela tiden'],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key}>
+              <input
+                type="checkbox"
+                checked={preferences[key]}
+                onChange={(event) => configure({ [key]: event.target.checked })}
+              />
+              {label}
+            </label>
+          ))}
+          <label htmlFor="personal-axis-corner">Axelvisarens hörn</label>
+          <select
+            id="personal-axis-corner"
+            value={preferences.axisCorner}
+            onChange={(event) =>
+              configure({ axisCorner: event.target.value as ViewSettings['axisCorner'] })
+            }
+          >
+            <option value="bottom-right">Nere till höger</option>
+            <option value="bottom-left">Nere till vänster</option>
+            <option value="top-right">Uppe till höger</option>
+            <option value="top-left">Uppe till vänster</option>
+          </select>
+        </fieldset>
+        {personal && (
+          <button type="button" disabled={personal.pending} onClick={() => void personal.refresh()}>
+            Läs in min aktuella vy
+          </button>
+        )}
+      </details>
+    </MapNavigation>
+  );
   return (
     <section
       className={`spatial-map${!allLabels && hiddenLabels > 0 ? ' crowded' : ''}`}
@@ -692,6 +773,7 @@ export function SpatialMap({
     >
       <h2>Rymdkarta</h2>
       {cameraMount ? createPortal(cameraTools, cameraMount) : cameraTools}
+      {navigationMount ? createPortal(navigation, navigationMount) : navigation}
       <dialog
         ref={menu}
         className="spatial-menu"
@@ -1080,102 +1162,6 @@ export function SpatialMap({
         {(moving || preferences.axisPinned) && (
           <SpatialOrientation orientation={orientation} corner={preferences.axisCorner} />
         )}
-      </div>
-      <div className="spatial-tools">
-        <details className="camera-tools">
-          <summary>Navigera rymden</summary>
-          <p>
-            Dra tom rymd för att rotera. Två fingrar panorerar och nypzoomar. Använd också
-            knapparna.
-          </p>
-          <div className="access-actions">
-            {cameraActions.map(([command, label]) => (
-              <button key={command} type="button" onClick={() => scene.current?.navigate(command)}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </details>
-        <details className="camera-tools personal-tools">
-          <summary>Ordna min vy</summary>
-          <p>
-            Placeringarna är bara dina. Dra objektet för att flytta. Shift eller ett andra stilla
-            finger ger höjdled. Avbruten gest återställer placeringen.
-          </p>
-          <fieldset disabled={!personal?.view || personal.pending}>
-            <legend>Flytta valt objekt</legend>
-            {(
-              [
-                ['x', -1, 'vänster i rummet'],
-                ['x', 1, 'höger i rummet'],
-                ['y', 1, 'uppåt i rummet'],
-                ['y', -1, 'nedåt i rummet'],
-                ['z', -1, 'inåt i rummet'],
-                ['z', 1, 'utåt i rummet'],
-              ] as const
-            ).map(([axis, step, label]) => (
-              <button
-                key={label}
-                type="button"
-                disabled={selection?.kind !== 'object'}
-                onClick={() => {
-                  if (selection?.kind !== 'object') return;
-                  const position = scene.current?.position(selection.id);
-                  if (position) {
-                    const next = { ...position, [axis]: position[axis] + step };
-                    const end = scene.current?.place(selection.id, next) ?? next;
-                    movement.recordMove(selection.id, position, end, axis === 'y');
-                    if (axis === 'y') setHeightHelp(true);
-                    void personal?.move(selection.id, end);
-                  }
-                }}
-              >
-                Flytta {label}
-              </button>
-            ))}
-          </fieldset>
-          <fieldset disabled={personal && (!personal.view || personal.pending)}>
-            <legend>Personliga visningsval</legend>
-            {(
-              [
-                ['invertX', 'Vänd panorering i sidled'],
-                ['invertY', 'Vänd panorering i höjdled'],
-                ['axisPinned', 'Visa axlar hela tiden'],
-              ] as const
-            ).map(([key, label]) => (
-              <label key={key}>
-                <input
-                  type="checkbox"
-                  checked={preferences[key]}
-                  onChange={(event) => configure({ [key]: event.target.checked })}
-                />
-                {label}
-              </label>
-            ))}
-            <label htmlFor="personal-axis-corner">Axelvisarens hörn</label>
-            <select
-              id="personal-axis-corner"
-              value={preferences.axisCorner}
-              onChange={(event) =>
-                configure({ axisCorner: event.target.value as ViewSettings['axisCorner'] })
-              }
-            >
-              <option value="bottom-right">Nere till höger</option>
-              <option value="bottom-left">Nere till vänster</option>
-              <option value="top-right">Uppe till höger</option>
-              <option value="top-left">Uppe till vänster</option>
-            </select>
-          </fieldset>
-          {personal && (
-            <button
-              type="button"
-              disabled={personal.pending}
-              onClick={() => void personal.refresh()}
-            >
-              Läs in min aktuella vy
-            </button>
-          )}
-        </details>
       </div>
       {personal?.message && (
         <p aria-live="polite" className="personal-view-status">

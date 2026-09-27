@@ -45,10 +45,10 @@ reload, clients and server restart”.
 
 1. Dra Lampan åt sidan och nedåt. Håll Shift och dra uppåt. Kontrollera
    höjdhjälpens start och riktning under draget.
-2. Välj Lampan i listan och öppna kartan. Öppna Ordna min vy, fokusera
-   Flytta nedåt i rummet och håll Shift utan att dra. Släpp Shift och
+2. Välj Lampan i listan och öppna kartan. Öppna Navigera, fokusera
+   Flytta [objektets namn]: nedåt och håll Shift utan att dra. Släpp Shift och
    välj Visa höjdhjälp för att granska flyttningens start. Tryck Enter på
-   Flytta nedåt i rummet. Slå av och på höjdhjälpen och kontrollera att
+   Flytta [objektets namn]: nedåt. Slå av och på höjdhjälpen och kontrollera att
    starten behålls. Aktivera Visa stjärnhimmel.
 3. Ladda om, starta om servern och öppna samma hushåll i en annan klient
    med Alex inloggning.
@@ -152,7 +152,8 @@ viewport changes preserve existing placement and unsent text”.
 
 **Steg:**
 
-1. Flytta Lampan. Aktivera Visa axlar hela tiden och välj hörnet uppe
+1. Flytta Lampan. Öppna Ordna min vy i Navigera. Aktivera Visa axlar hela
+   tiden och välj hörnet uppe
    till vänster. Vänd panorering separat i sidled och höjdled.
 2. Kontrollera att stjärnhimlen är avstängd och reglaget inaktivt. Stäng
    av systemets minskade rörelse och aktivera stjärnhimlen. Slå på
@@ -257,8 +258,8 @@ later refreshes preserve the camera”.
 
 **Steg:**
 
-1. Välj Lampan via Lista och stäng arbetsytan. Öppna Ordna
-   min vy. Använd Flytta höger i rummet upprepade gånger tills Lampan
+1. Välj Lampan via Lista och stäng arbetsytan. Öppna Navigera. Använd
+   Flytta [objektets namn]: höger upprepade gånger tills Lampan
    ligger helt utanför den ursprungliga vyn. Vänta på beskedet att din
    personliga vy är sparad. Gör samma sak med Cykeln, utan att ändra kameran.
 2. Aktivera långsam anslutning i webbläsarens nätverksinställningar och
@@ -267,7 +268,7 @@ later refreshes preserve the camera”.
    placeringarna. Använd inte Återställ vy eller kameraknapparna.
 3. Vänta tills Visa stjärnhimmel går att använda och kontrollera att båda
    objekten syns. Återgå till normal anslutning.
-4. Öppna Navigera rymden och använd Panorera höger så att objekten hamnar
+4. Öppna Navigera och använd Panorera höger så att objekten hamnar
    tydligt vid sidan av sina första lägen på skärmen. Behåll dem synliga
    och lägg märke till utsnittet.
 5. Välj Läs in min aktuella vy under Ordna min vy. Vänta tills läsningen

@@ -1,0 +1,236 @@
+.map-navigation {
+  position: fixed;
+  z-index: 20;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  width: 350px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - var(--navigation-top, 24px) - 24px);
+  overflow: hidden;
+  border: 1px solid var(--space-control, #607c89);
+  border-radius: 16px;
+  background: var(--space-surface, #fff);
+  color: var(--space-text, #173744);
+  box-shadow: var(--space-shadow);
+}
+.map-navigation[hidden] {
+  display: none;
+}
+.map-navigation .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.map-navigation-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--space-line, #607c89);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.map-navigation[data-dragging="true"] .map-navigation-header {
+  cursor: grabbing;
+}
+.map-navigation-header h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}
+.map-navigation button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--space-control, #607c89);
+  border-radius: 10px;
+  background: var(--space-surface, #fff);
+  color: inherit;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.map-navigation button:hover:enabled {
+  background: color-mix(in srgb, var(--space-accent, #126760) 12%, var(--space-surface, #fff));
+}
+.map-navigation svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
+.map-navigation-header button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-color: transparent;
+}
+.map-navigation :focus-visible {
+  outline: 2px solid var(--space-accent, #126760);
+  outline-offset: -3px;
+}
+.map-navigation-body {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 16px;
+  scroll-padding: 12px;
+}
+.map-navigation-description {
+  margin: 0;
+  color: var(--space-muted, #395561);
+  font-size: 12px;
+}
+.map-navigation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.map-navigation-placement {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--space-line, #607c89);
+}
+.map-navigation-placement h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.navigation-settings summary {
+  min-height: 44px;
+  padding-block: 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.navigation-settings fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0 0 12px;
+}
+.navigation-settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.navigation-settings select {
+  min-width: 0;
+  max-width: 100%;
+}
+.navigation-settings input[type="checkbox"] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
+.map-navigation[data-mini="true"] {
+  width: 226px;
+}
+.map-navigation[data-mini="true"] .map-navigation-body {
+  padding: 10px;
+  gap: 10px;
+}
+.map-navigation[data-mini="true"] .map-navigation-placement .map-navigation-grid {
+  grid-template-columns: repeat(3, 44px);
+  gap: 6px;
+}
+.map-navigation[data-mini="true"] .map-navigation-camera {
+  grid-template-columns: repeat(4, 44px);
+}
+.map-navigation[data-mini="true"] .map-navigation-camera button:nth-child(9) {
+  grid-column: 1;
+}
+.map-navigation[data-mini="true"] :is(.map-navigation-camera, .map-navigation-placement) button {
+  width: 44px;
+  height: 44px;
+}
+.map-navigation[data-mini="true"] :is(.map-navigation-grid button > span, h3) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.map-navigation[data-mini="true"] .map-navigation-description {
+  display: none;
+}
+/* The navigation and ordinary work use separate default areas in either
+   opening order. WorkspacePanels remembers unclamped desktop positions. */
+@media (min-width: 1001px) {
+  .household-map.workspace-shell.workspace-open .map-navigation {
+    --navigation-top: 76px;
+    top: var(--navigation-top);
+  }
+  .household-map.workspace-shell[data-navigation-open="true"] .workspace-windows {
+    right: 390px;
+  }
+}
+@media (max-width: 1000px) {
+  .map-navigation {
+    --navigation-top: 142px;
+    top: var(--navigation-top);
+    left: 12px;
+    right: auto;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open {
+    --navigation-space: max(124px, calc((100dvh - 200px) * 0.4));
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open .map-navigation {
+    max-height: var(--navigation-space);
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open .workspace-windows {
+    inset: calc(154px + var(--navigation-space)) 12px 12px;
+    height: calc(100dvh - 166px - var(--navigation-space));
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open
+    .workspace-window-selector {
+    position: static;
+  }
+}
+@media (max-width: 700px) and (max-height: 450px) {
+  .workspace-tools:has(.workspace-camera-tools):not(.expanded) .workspace-brand {
+    display: none;
+  }
+  .map-navigation {
+    --navigation-top: 80px;
+    top: var(--navigation-top);
+    max-height: calc(100dvh - var(--navigation-top) - 12px);
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open
+    .workspace-navigation-mount {
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open:not(
+      .workspace-revealing
+    )
+    .workspace-work-close {
+    z-index: 10;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open .map-navigation {
+    position: relative;
+    inset: auto;
+    max-height: 180px;
+  }
+  .household-map.workspace-shell[data-navigation-open="true"].workspace-open .workspace-windows {
+    inset: auto;
+    height: auto;
+  }
+}

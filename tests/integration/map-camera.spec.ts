@@ -94,8 +94,8 @@ test('KAMERA-01: rotation keeps the selected personal position fixed on screen w
     const content = await read();
     await lo.click();
     expect(await center(lo)).toEqual(initial);
-    await map.getByText('Navigera rymden', { exact: true }).click();
-    const rotate = map.getByRole('button', { name: 'Rotera vänster', exact: true });
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    const rotate = page.getByRole('button', { name: 'Rotera vänster', exact: true });
     await rotate.click();
     expect((await center(lo)).x).toBeCloseTo(initial.x, 5);
     expect((await center(lo)).y).toBeCloseTo(initial.y, 5);
@@ -105,12 +105,11 @@ test('KAMERA-01: rotation keeps the selected personal position fixed on screen w
     expect((await center(lo)).y).toBeCloseTo(initial.y, 5);
     await expect(lo).toHaveAttribute('aria-pressed', 'true');
     expect(await read()).toEqual(content);
-    await map.getByText('Ordna min vy', { exact: true }).click();
-    await map.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
+    await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
     await expect(map.getByText('Din personliga vy är sparad.', { exact: true })).toBeVisible();
     const moved = await center(lo);
     expect(moved).not.toEqual(initial);
-    await map.getByRole('button', { name: 'Luta nedåt', exact: true }).click();
+    await page.getByRole('button', { name: 'Luta nedåt', exact: true }).click();
     expect(await center(lo)).toEqual(moved);
     expect(await read()).toEqual(content);
   } finally {
@@ -158,10 +157,10 @@ test('KAMERA-02: focus fits only selection and direct neighbors while overview r
     await expect(
       page.getByRole('button', { name: 'Återgå till föregående vy', exact: true }),
     ).toBeVisible();
-    await map.getByText('Navigera rymden', { exact: true }).click();
-    await map.getByRole('button', { name: 'Panorera höger', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
     await focus.click();
-    await map.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
+    await page.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
     await page.getByRole('button', { name: 'Återgå till föregående vy', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Visa hela kartan', exact: true })).toBeVisible();
     expect(await center(lo)).toEqual(beforeOverview);
@@ -301,9 +300,9 @@ test('KAMERA-04: short viewports retain a usable focus rectangle and reachable c
     await map.getByLabel('Alla etiketter', { exact: true }).check();
     await map.getByLabel('Alla etiketter', { exact: true }).uncheck();
     await map.getByText('Visningsval', { exact: true }).click();
-    await map.getByText('Navigera rymden', { exact: true }).click();
-    await map.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
-    await map.getByText('Navigera rymden', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     await expand.click();
     await page.getByRole('button', { name: 'Samtal och text', exact: true }).click({ trial: true });
     await page.getByRole('button', { name: 'Visa detaljer', exact: true }).click({ trial: true });

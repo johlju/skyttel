@@ -97,6 +97,7 @@ async function open() {
   await page.getByRole('button', { name: 'Lampan', exact: true }).click();
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
   await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   await page.getByText('Ordna min vy', { exact: true }).click();
 }
 afterEach(() => {
@@ -107,12 +108,12 @@ afterEach(() => {
 test('the public household editor saves personal movement and settings and reloads its latest view', async () => {
   const server = service();
   await open();
-  await page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
+  await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
   await expect
     .element(page.getByText('Din personliga vy är sparad.', { exact: true }))
     .toBeVisible();
   expect(server.read().positions).toHaveLength(1);
-  await page.getByRole('button', { name: 'Flytta höger i rummet', exact: true }).click();
+  await page.getByRole('button', { name: /^Flytta .+: höger$/ }).click();
   await expect.poll(() => server.read().positions[0].version).toBe(2);
   await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
   await expect.poll(() => server.read().settings.stars).toBe(true);
@@ -120,6 +121,7 @@ test('the public household editor saves personal movement and settings and reloa
   await expect
     .element(page.getByText('Aktuell personlig vy är inläst.', { exact: true }))
     .toBeVisible();
+  await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
   await page.getByRole('button', { name: 'Återställ vy', exact: true }).click();
   expect(server.read().settings.version).toBe(1);
 });
@@ -130,8 +132,7 @@ test.each(['position', 'settings'] as const)(
     const server = service();
     await open();
     server.fail('conflict');
-    if (kind === 'position')
-      await page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
+    if (kind === 'position') await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
     else await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
     await expect.element(page.getByText(/Din äldre ändring sparades inte/)).toBeVisible();
     await expect
@@ -141,7 +142,7 @@ test.each(['position', 'settings'] as const)(
       .element(page.getByLabelText('Visa stjärnhimmel', { exact: true }))
       .not.toBeChecked();
     server.fail(null);
-    await page.getByRole('button', { name: 'Flytta nedåt i rummet', exact: true }).click();
+    await page.getByRole('button', { name: /^Flytta .+: nedåt$/ }).click();
     await expect
       .poll(() => server.read().positions[0])
       .toEqual({ id: 'lamp', x: 1, y: 3, z: -2, version: 3 });
@@ -154,7 +155,7 @@ test.each(['network', 'uncertain', 'denied'] as const)(
     const server = service();
     await open();
     server.fail(failure);
-    await page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
+    await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
     if (failure === 'denied') {
       await expect
         .element(page.getByRole('alert'))
@@ -166,14 +167,10 @@ test.each(['network', 'uncertain', 'denied'] as const)(
         .not.toBeInTheDocument();
     } else if (failure === 'network') {
       await expect.element(page.getByText(/Din vy kunde inte sparas/)).toBeVisible();
-      await expect
-        .element(page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }))
-        .toBeDisabled();
+      await expect.element(page.getByRole('button', { name: /^Flytta .+: uppåt$/ })).toBeDisabled();
       server.fail(null);
       await page.getByRole('button', { name: 'Läs in min aktuella vy', exact: true }).click();
-      await expect
-        .element(page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }))
-        .toBeEnabled();
+      await expect.element(page.getByRole('button', { name: /^Flytta .+: uppåt$/ })).toBeEnabled();
     } else await expect.element(page.getByText(/Ändringen kunde inte bekräftas/)).toBeVisible();
     expect(server.read().positions).toEqual([]);
   },
@@ -208,10 +205,8 @@ test('leaving the editor during an in-flight personal write does not render a la
     }),
   );
   await open();
-  await page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
-  await expect
-    .element(page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }))
-    .toBeDisabled();
+  await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
+  await expect.element(page.getByRole('button', { name: /^Flytta .+: uppåt$/ })).toBeDisabled();
   cleanup();
   finish();
   await expect

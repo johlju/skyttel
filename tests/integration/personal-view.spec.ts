@@ -69,12 +69,16 @@ async function drag(page: Page, dx: number, dy: number, height = false) {
 }
 async function selectAndArrange(page: Page, name = 'Lampan') {
   await openWorkspace(page);
+  await page.getByRole('button', { name: 'Avmarkera alla', exact: true }).click();
   await page
     .getByRole('list', { name: 'Objekt', exact: true })
-    .getByRole('button', { name, exact: true })
+    .getByRole('button', { name: `Markera ${name}`, exact: true })
     .click();
   await openMap(page);
-  await space(page).getByText('Ordna min vy', { exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+  const choices = page.getByText('Ordna min vy', { exact: true });
+  if (!(await choices.evaluate((summary) => (summary.parentElement as HTMLDetailsElement).open)))
+    await choices.click();
 }
 
 test('PLACERING-01: mouse, height and keyboard movement persist across reload, clients and server restart', async ({
@@ -96,13 +100,13 @@ test('PLACERING-01: mouse, height and keyboard movement persist across reload, c
     expect(raised.z).toBe(first.z);
     expect(raised.y).toBeGreaterThan(first.y);
     await selectAndArrange(page);
-    await space(page).getByRole('button', { name: 'Flytta nedåt i rummet', exact: true }).focus();
+    await page.getByRole('button', { name: /^Flytta .+: nedåt$/ }).focus();
     await page.keyboard.down('Shift');
     await expect(space(page).getByText('Höjdflyttning · personlig vy')).toBeVisible();
     await page.keyboard.up('Shift');
     await space(page).getByLabel('Visa höjdhjälp', { exact: true }).check();
     await expect(space(page).getByText(/^↑ .* steg högre än start$/)).toBeVisible();
-    const down = space(page).getByRole('button', { name: 'Flytta nedåt i rummet', exact: true });
+    const down = page.getByRole('button', { name: /^Flytta .+: nedåt$/ });
     await down.focus();
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await read()).positions[0].version).toBe(3);
@@ -123,7 +127,7 @@ test('PLACERING-01: mouse, height and keyboard movement persist across reload, c
     const secondPage = await other.newPage();
     await secondPage.goto(installation.origin);
     await openMap(secondPage);
-    await space(secondPage).getByText('Ordna min vy', { exact: true }).click();
+    await secondPage.getByRole('button', { name: 'Navigera', exact: true }).click();
     await expect(space(secondPage).getByLabel('Visa stjärnhimmel', { exact: true })).toBeChecked();
   } finally {
     await other.close();
@@ -145,25 +149,25 @@ test('PLACERING-02: concurrent clients retain independent moves and visibly reje
     await openMap(second);
     await selectAndArrange(page);
     await selectAndArrange(second);
-    await space(page).getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
+    await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
     await expect.poll(async () => (await read()).positions[0]?.version).toBe(1);
-    await space(second).getByRole('button', { name: 'Flytta nedåt i rummet', exact: true }).click();
+    await second.getByRole('button', { name: /^Flytta .+: nedåt$/ }).click();
     await expect(space(second).getByText(/Din äldre ändring sparades inte/)).toBeVisible();
     expect((await read()).positions[0].version).toBe(1);
-    await space(second).getByRole('button', { name: 'Flytta nedåt i rummet', exact: true }).click();
+    await second.getByRole('button', { name: /^Flytta .+: nedåt$/ }).click();
     await expect.poll(async () => (await read()).positions[0].version).toBe(2);
     const sharedPosition = (await read()).positions[0];
     // The first client still holds lamp version1, but moving bike is independent.
-    await space(page).getByText('Ordna min vy', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     await selectAndArrange(page, 'Cykeln');
-    await space(page).getByRole('button', { name: 'Flytta utåt i rummet', exact: true }).click();
+    await page.getByRole('button', { name: /^Flytta .+: framåt$/ }).click();
     await expect.poll(async () => (await read()).positions.length).toBe(2);
     expect((await read()).positions.find(({ id }) => id === 'lamp')).toEqual(sharedPosition);
-    await space(page).getByLabel('Visa axlar hela tiden', { exact: true }).check();
+    await page.getByLabel('Visa axlar hela tiden', { exact: true }).check();
     await expect.poll(async () => (await read()).settings.version).toBe(1);
     await space(second).getByLabel('Visa stjärnhimmel', { exact: true }).click();
     await expect(space(second).getByText(/Din äldre ändring sparades inte/)).toBeVisible();
-    await expect(space(second).getByLabel('Visa axlar hela tiden', { exact: true })).toBeChecked();
+    await expect(second.getByLabel('Visa axlar hela tiden', { exact: true })).toBeChecked();
     await expect(space(second).getByLabel('Visa stjärnhimmel', { exact: true })).not.toBeChecked();
     expect((await (await page.request.get(path)).json()).draft.changes).toEqual([]);
   } finally {
@@ -356,17 +360,17 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
     await drag(page, 25, -20);
     const placement = (await read()).positions;
     await selectAndArrange(page);
-    await space(page).getByLabel('Visa axlar hela tiden', { exact: true }).check();
+    await page.getByLabel('Visa axlar hela tiden', { exact: true }).check();
     await expect.poll(async () => (await read()).settings.axisPinned).toBe(true);
-    await space(page).getByLabel('Axelvisarens hörn', { exact: true }).selectOption('top-left');
+    await page.getByLabel('Axelvisarens hörn', { exact: true }).selectOption('top-left');
     await expect.poll(async () => (await read()).settings.axisCorner).toBe('top-left');
     for (const label of ['Vänd panorering i sidled', 'Vänd panorering i höjdled']) {
-      await space(page).getByLabel(label, { exact: true }).check();
+      await page.getByLabel(label, { exact: true }).check();
       await expect(
-        space(page).getByRole('button', { name: 'Läs in min aktuella vy', exact: true }),
+        page.getByRole('button', { name: 'Läs in min aktuella vy', exact: true }),
       ).toBeEnabled();
     }
-    await space(page).getByText('Ordna min vy', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     const canvas = space(page).locator('canvas');
     const bounds = await canvas.boundingBox();
     if (!bounds) throw new Error('The map background must be visible');
@@ -386,14 +390,14 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
         .raw()
         .toBuffer();
     const dark = await background();
-    await space(page).getByText('Ordna min vy', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     const starControl = space(page).getByLabel('Visa stjärnhimmel', { exact: true });
     await expect(starControl).not.toBeChecked();
     await expect(starControl).toBeDisabled();
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await starControl.check();
     await expect.poll(async () => (await read()).settings.stars).toBe(true);
-    await space(page).getByText('Ordna min vy', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     const stars = await background();
     expect(stars.equals(dark)).toBe(false);
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -489,7 +493,7 @@ test('PLACERING-06: delayed initial personal positions frame once and later refr
     await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Objekt', exact: true })).toBeVisible();
     await openMap(page);
-    await space(page).getByText('Ordna min vy', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     const stars = space(page).getByLabel('Visa stjärnhimmel', { exact: true });
     await expect(stars).toBeDisabled();
     // Let the initial shared-map render finish while the personal response waits.
@@ -498,7 +502,7 @@ test('PLACERING-06: delayed initial personal positions frame once and later refr
     );
     releaseView();
     await expect(stars).toBeEnabled();
-    await space(page).getByText('Ordna min vy', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     await canvas.scrollIntoViewIfNeeded();
     for (const name of ['Lampan', 'Cykeln']) {
       await expect(
@@ -513,12 +517,12 @@ test('PLACERING-06: delayed initial personal positions frame once and later refr
           y: line.y1.baseVal.value,
         }));
     const framed = await projection();
-    await space(page).getByText('Navigera rymden', { exact: true }).click();
-    await space(page).getByRole('button', { name: 'Panorera höger', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
     await expect.poll(projection).not.toEqual(framed);
     const navigated = await projection();
-    await space(page).getByText('Ordna min vy', { exact: true }).click();
-    await space(page).getByRole('button', { name: 'Läs in min aktuella vy', exact: true }).click();
+    await page.getByText('Ordna min vy', { exact: true }).click();
+    await page.getByRole('button', { name: 'Läs in min aktuella vy', exact: true }).click();
     await expect(space(page).getByText('Aktuell personlig vy är inläst.')).toBeVisible();
     expect(await projection()).toEqual(navigated);
     await stars.check();
@@ -605,7 +609,8 @@ test('PLACERING-05: personal views stay private and revocation denies further re
     const memberPage = await member.newPage();
     await memberPage.goto(installation.origin);
     await openMap(memberPage);
-    await space(memberPage).getByText('Ordna min vy', { exact: true }).click();
+    await memberPage.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await memberPage.getByText('Ordna min vy', { exact: true }).click();
     expect(
       (
         await page.request.post(`${path.replace('/map', '')}/members/${user.id}/revoke`, {
@@ -614,9 +619,7 @@ test('PLACERING-05: personal views stay private and revocation denies further re
         })
       ).ok(),
     ).toBe(true);
-    await space(memberPage)
-      .getByRole('button', { name: 'Läs in min aktuella vy', exact: true })
-      .click();
+    await memberPage.getByRole('button', { name: 'Läs in min aktuella vy', exact: true }).click();
     await openProfile(memberPage);
     await expect(memberPage.getByRole('button', { name: 'Logga ut', exact: true })).toBeVisible();
     expect((await member.request.get(`${path}/view`)).status()).toBe(403);

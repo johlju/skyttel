@@ -211,7 +211,7 @@ and resizing”.
 **Steg:**
 
 1. Skapa och spara **Min cykel**. Välj cykeln i listan och öppna Lista igen.
-2. Öppna **Ordna min vy**. Välj **Flytta höger i rummet**, invänta sparad
+2. Öppna **Navigera**. Välj **Flytta [objektets namn]: höger**, invänta sparad
    personlig vy och markera **Visa höjdhjälp**.
 3. Besök **Inloggningssätt**, minska fönstret till mobilstorlek och
    återgå med **Till startsidan**.
