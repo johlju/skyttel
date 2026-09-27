@@ -23,10 +23,18 @@ Välj **Månad (UTC)**. Ett modellförsök räknas till månaden när det starta
   för textassistenten, även när den arbetar bakom ett talärende.
   Resonemang ingår i utdata och läggs inte till en gång till.
 
+Månadens summa visas först, följd av separata rader för Render, Live och
+Terra. Öppna **Visa driftantagandet** eller **Visa mätvärden för Live**
+och **Visa mätvärden för Terra** för hela beräkningen. Okända belopp och
+antal försök med osäkert underlag visas även när detaljerna är stängda.
+Hushållets abonnemang och avtal hör till kartan, inte till driftöversikten.
+
 Beloppen visas i SEK och USD. **Prisunderlag** visar använda modellpriser,
 kontrolldatum, källor och valutakurs. Öppna detaljerna för att se priserna
 för cache och långa anrop. Sparade modellpriser följer respektive anrop;
 månadens valutakurs används för den visade omräkningen.
+På en smal skärm kan pristabellen rullas i sidled. Med tangentbord når du
+tabellen med Tab och rullar med piltangenterna.
 Om leverantören inte anger modell eller servicenivå visar vyn att begärd
 Terra-modell respektive Standardnivå används som prisantagande.
 
