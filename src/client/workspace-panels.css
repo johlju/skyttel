@@ -375,3 +375,38 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* At high browser zoom, keep the whole work flow scrollable below the tools.
+   Fixed selectors, feedback and voice controls would consume the panel body. */
+@media (max-width: 700px) and (max-height: 450px) {
+  .household-map.workspace-shell.workspace-open:not(.workspace-revealing) {
+    overflow-y: auto;
+    padding: 80px 12px 12px;
+    scroll-padding-block: 80px 12px;
+  }
+  .household-map.workspace-shell.workspace-open:not(.workspace-revealing)
+    :is(.workspace-windows, .workspace-feedback, .workspace-voice-controls, .workspace-work-close) {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    margin-block-end: 12px;
+  }
+  .household-map.workspace-shell.workspace-open:not(.workspace-revealing) .workspace-windows {
+    display: block;
+  }
+  .household-map.workspace-shell.workspace-open:not(.workspace-revealing)
+    .workspace-window-selector {
+    margin-block-end: 10px;
+  }
+  .household-map.workspace-shell.workspace-open:not(.workspace-revealing)
+    .workspace-panel.workspace-window {
+    max-height: none;
+    overflow: visible;
+  }
+  .household-map.workspace-shell.workspace-open:not(.workspace-revealing) .workspace-panel-body {
+    overflow: visible;
+  }
+}

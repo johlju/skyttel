@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react';
+import { ObjectIconGlyph } from './ObjectIconGlyph.js';
 
 const typeShapes: Record<string, ReactNode> = {
   Person: (
@@ -85,11 +86,13 @@ export function SpatialObjectGlyph({
   name,
   householdId,
   profileImageId,
+  iconId,
 }: {
   typeName: string;
   name: string;
   householdId: string;
   profileImageId?: string | null;
+  iconId?: string;
 }) {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const imageUrl = profileImageId
@@ -106,6 +109,8 @@ export function SpatialObjectGlyph({
       />
     );
   }
+
+  if (iconId) return <ObjectIconGlyph iconId={iconId} className="spatial-type-icon" />;
 
   return (
     <svg

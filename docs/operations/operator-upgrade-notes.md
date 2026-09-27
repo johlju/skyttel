@@ -28,6 +28,19 @@ and retention restrictions to these records and their recovery copies. Ordinary
 removal and undo do not permanently erase retained information. Follow the
 [permanent erasure runbook](permanent-erasure.md) for that operation.
 
+### Object icon and archive compatibility
+
+This release stores each object's selected icon with its other content.
+Objects without a selection use their type's default icon. Full household
+archives from this release need an upgraded reader. The upgraded application
+also accepts supported older archives and uses default icons where no
+selection exists. Use the database backup and matching image procedure above
+for rollback; changing the image alone does not remove icon storage.
+
+Refresh connected assistants' tool catalogs after rollout. Older clients
+that omit the icon field retain the current selection. An explicit reset
+uses a null value. Icons are bundled locally and need no external service.
+
 ### Installation cost measurements
 
 Cost recording starts at upgrade; earlier usage remains unknown. The configured

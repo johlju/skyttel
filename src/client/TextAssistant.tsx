@@ -24,7 +24,7 @@ function ObjectDetails({ value, type }: { value: ObjectValue | null; type: Objec
         {value.name} · {type.name}
       </p>
       <p>{value.description}</p>
-      <ProfileImage householdId={type.householdId} value={value} />
+      <ProfileImage householdId={type.householdId} value={value} typeName={type.name} />
       <FinancialFactsDetails facts={value.financialFacts} />
       <CustomFieldsDetails type={type} values={value.customValues} />
       <LifecycleDetails value={value} />

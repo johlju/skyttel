@@ -29,7 +29,7 @@ function ObjectDetails({
   return value ? (
     <>
       <p>Namn: {value.name}.</p>
-      <ProfileImage householdId={householdId} value={value} />
+      <ProfileImage householdId={householdId} value={value} typeName={type.name} />
       <details>
         <summary>Objektets identitet</summary>
         <p>{value.id}</p>

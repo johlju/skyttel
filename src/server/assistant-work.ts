@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { draftConflicts } from '../shared/draft-conflicts.js';
 import { financialFields } from '../shared/financial-facts.js';
 import { proposedObjectTypes, proposedRelationshipTypes } from '../shared/map.js';
+import { isObjectIconId, searchObjectIcons } from '../shared/object-icons.js';
 import {
   mergeConnections,
   mergeFacts,
@@ -176,6 +177,27 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     }
   }
   server.registerTool(
+    'search_object_icons',
+    {
+      description:
+        'Sök hela Lucide-katalogen med svenska sökord eller engelska ikonnamn. Alla ikoner kan användas för alla objekt. Använd ett returnerat stabilt ID i propose_object. Profilbilden visas före ikonen.',
+      inputSchema: z
+        .object({ query: z.string().max(200), offset: z.number().int().nonnegative().optional() })
+        .strict(),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ query, offset = 0 }) =>
+      run((domain) => {
+        domain.read();
+        const icons = searchObjectIcons(query);
+        return {
+          total: icons.length,
+          offset,
+          icons: icons.slice(offset, offset + 24).map(({ id, label }) => ({ id, label })),
+        };
+      }),
+  );
+  server.registerTool(
     'read_type_catalog',
     {
       description:
@@ -239,7 +261,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     'propose_object',
     {
       description:
-        'Föreslå ett nytt objekt, ersätt hela dess förslagsvärde eller föreslå vanlig borttagning med value null. Behåll alla fakta som inte ska ändras. Använd aktuella typ-ID, typrevision och stabila objekt-ID. Bara eget utkast ändras; hela utkastet returneras. Olöst identitet måste anges som unresolved; unspecified kräver användarens uttryckliga val.',
+        'Föreslå ett nytt objekt, ersätt hela dess förslagsvärde eller föreslå vanlig borttagning med value null. Behåll alla fakta som inte ska ändras. Använd aktuella typ-ID, typrevision och stabila objekt-ID. Bara eget utkast ändras; hela utkastet returneras. iconId väljs från search_object_icons: ett ID sätter ikonen, null återgår till typens standardikon och utelämnat fält behåller valet. Bildbyte och typbyte behåller ikonen. Olöst identitet måste anges som unresolved; unspecified kräver användarens uttryckliga val.',
       inputSchema: z
         .object({
           ...proposalFields,
@@ -260,6 +282,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
                 .optional(),
               lifecycle,
               profileImageId: z.string().optional(),
+              iconId: z.string().refine(isObjectIconId).nullable().optional(),
             })
             .strict()
             .nullable(),

@@ -10,6 +10,7 @@ RUN npm ci
 FROM dependencies AS build
 COPY tsconfig.json tsconfig.server.json vite.config.ts index.html ./
 COPY src ./src
+COPY docs/images/shuttle-logo-transparent-small.png ./docs/images/
 ARG SKYTTEL_VERSION=development
 ARG SKYTTEL_COMMIT=development
 RUN node --input-type=module -e "import { writeFileSync } from 'node:fs'; writeFileSync('src/shared/build-identity.ts', 'export const buildIdentity = ' + JSON.stringify({ version: process.env.SKYTTEL_VERSION, commit: process.env.SKYTTEL_COMMIT }) + ';\n');"

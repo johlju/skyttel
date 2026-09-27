@@ -44,7 +44,12 @@ beforeEach(async () => {
     id: 'person',
     version: 0,
     baseRevision: null,
-    value: { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Befintlig text' },
+    value: {
+      typeId: state.types[0].id,
+      name: 'Lo Exempel',
+      description: 'Befintlig text',
+      iconId: 'bike',
+    },
   });
   failure = 0;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
@@ -95,11 +100,15 @@ test('an image uploads to the real private draft, renders its reference and can 
   expect(
     details.getByText('Profilbilden kunde inte hämtas. Hämta aktuellt underlag.'),
   ).toBeTruthy();
+  expect(details.getByText('Ikon: Cykel')).toBeTruthy();
   await userEvent.upload(details.getByLabelText('Välj profilbild'), await file());
   await details.findByRole('img');
   await userEvent.click(details.getByRole('button', { name: 'Ta bort profilbild' }));
   await details.findByText('Ingen profilbild');
-  expect((await read()).draft.changes[0].after).toMatchObject({ description: 'Befintlig text' });
+  expect((await read()).draft.changes[0].after).toMatchObject({
+    description: 'Befintlig text',
+    iconId: 'bike',
+  });
   expect((await read()).draft.changes[0].after?.profileImageId).toBeUndefined();
 });
 

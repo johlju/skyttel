@@ -840,10 +840,16 @@ test('an old endpoint is removed from another owner’s private proposal without
 });
 
 test('merged identities and image copies are explicitly reviewed and erased across all owners while neighbours survive', async () => {
-  for (const id of ['a', 'b', 'neighbour']) await object(id, { name: 'Lo' });
+  for (const [id, iconId] of [
+    ['a', 'bike'],
+    ['b', 'music'],
+    ['neighbour', 'house'],
+  ])
+    await object(id, { name: 'Lo', iconId });
   const original = await upload('b');
   await save('images');
   const { actor } = await invite();
+  await object('b', { iconId: 'telescope' }, actor);
   const hidden = await upload('b', actor);
   let state = await readMap();
   await client.json(`${path}/map/relationship`, {
@@ -858,7 +864,7 @@ test('merged identities and image copies are explicitly reviewed and erased acro
     },
   });
   await save('edge');
-  await proposeMerge({ profileImageId: 'absorbed' });
+  await proposeMerge({ profileImageId: 'absorbed', iconId: 'absorbed' });
   const copied = (await readMap()).draft.changes.find((change) => change.id === 'a')?.after
     ?.profileImageId;
   expect(copied).not.toBe(original);
@@ -906,6 +912,15 @@ test('merged identities and image copies are explicitly reviewed and erased acro
   for (const id of [original, copied, hidden])
     expect((await client.request(`${path}/profile-images/${id}`)).status).toBe(404);
   expect(await (await client.request(`${path}/map/history`)).text()).not.toContain('"merge"');
+  expect((await readMap()).objects[0].iconId).toBe('house');
+  const exported = await (await client.json(`${path}/exports`, {})).json();
+  const parts = unzipSync(
+    new Uint8Array(await (await client.request(`${path}/exports/${exported.id}`)).arrayBuffer()),
+  );
+  const content = Buffer.from(parts['content.json']).toString();
+  for (const iconId of ['bike', 'music', 'telescope'])
+    expect(content).not.toContain(`"iconId":"${iconId}"`);
+  expect(content).toContain('"iconId":"house"');
 });
 
 test('erasing a type removes private dependent identities without exposing their identifiers or pictures', async () => {
