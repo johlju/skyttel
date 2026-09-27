@@ -150,6 +150,7 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Kamerans urvalsfokus](map-camera.md): personlig rotationspunkt, direkta
   grannar, återgångsvy, mus, tangentbord och pekskärm i smala och korta vyer.
 - [Rymdkarta](spatial-map.md): gemensam redigering och navigering,
+  täta mobilutsnitt med valbara etiketter och alternativ utan grafik,
   fokus på tidigare och föreslagna samband med läsbara tidigare värden,
   fokus, filter, namn vid runda symboler, sambandsetiketter vid val,
   bevarat etikettläge vid återställning, pekmenyer, uttrycklig redigering
@@ -158,7 +159,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   grafikavbrott samt fungerande navigation när tillgången återkallas i helskärm.
 - [Stora kartor](large-map.md): åtkomst till 500 objekt och 1 500 samband
   genom sidvisning, sökning och fokus, med bevarad text och placering.
-- [Personliga placeringar](personal-view.md): flyttning med mus, pekgester
+- [Personliga placeringar](personal-view.md): stjärnval i Rymdkartans
+  inställningar, minskad rörelse, flyttning med mus, pekgester
   och tangentbord, stabila fingerpar och kameraväxling, systemets minskade
   rörelse, visningsval, samtidighetskonflikter, bevarad text,
   beständighet och avskildhet mellan användare samt inramning vid sen

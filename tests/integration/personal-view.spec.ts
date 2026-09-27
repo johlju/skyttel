@@ -7,6 +7,7 @@ import {
   createHousehold,
   openMap,
   openProfile,
+  openSettings,
   openWorkspace,
   signIn,
 } from '../support/client.js';
@@ -49,6 +50,17 @@ async function arrange(page: Page, origin: string) {
   return { path, read };
 }
 const space = (page: Page) => page.getByRole('region', { name: 'Rymdkarta', exact: true });
+async function openMapSettings(page: Page) {
+  await openSettings(page);
+  await page
+    .locator('.settings-cards')
+    .getByRole('link', { name: /^Rymdkartan/ })
+    .click();
+}
+async function returnToMap(page: Page) {
+  await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+  await expect(space(page)).toBeVisible();
+}
 async function center(page: Page, name = 'Lampan') {
   const box = await space(page)
     .getByRole('button', { name: `Välj objekt: ${name}`, exact: true })
@@ -115,9 +127,11 @@ test('PLACERING-01: mouse, height and keyboard movement persist across reload, c
     await space(page).getByLabel('Visa höjdhjälp', { exact: true }).uncheck();
     await space(page).getByLabel('Visa höjdhjälp', { exact: true }).check();
     await expect(space(page).getByText('Höjdflyttning · personlig vy')).toBeVisible();
-    await space(page).getByLabel('Visa stjärnhimmel', { exact: true }).check();
+    await openMapSettings(page);
+    await page.getByLabel('Visa stjärnhimmel', { exact: true }).check();
     await expect.poll(async () => (await read()).settings.stars).toBe(true);
     const expected = await read();
+    await returnToMap(page);
     expect(await (await page.request.get(path)).json()).toEqual(mapBefore);
     await installation.restart();
     await page.reload();
@@ -127,8 +141,8 @@ test('PLACERING-01: mouse, height and keyboard movement persist across reload, c
     const secondPage = await other.newPage();
     await secondPage.goto(installation.origin);
     await openMap(secondPage);
-    await secondPage.getByRole('button', { name: 'Navigera', exact: true }).click();
-    await expect(space(secondPage).getByLabel('Visa stjärnhimmel', { exact: true })).toBeChecked();
+    await openMapSettings(secondPage);
+    await expect(secondPage.getByLabel('Visa stjärnhimmel', { exact: true })).toBeChecked();
   } finally {
     await other.close();
     await installation.close();
@@ -165,10 +179,14 @@ test('PLACERING-02: concurrent clients retain independent moves and visibly reje
     expect((await read()).positions.find(({ id }) => id === 'lamp')).toEqual(sharedPosition);
     await page.getByLabel('Visa axlar hela tiden', { exact: true }).check();
     await expect.poll(async () => (await read()).settings.version).toBe(1);
-    await space(second).getByLabel('Visa stjärnhimmel', { exact: true }).click();
-    await expect(space(second).getByText(/Din äldre ändring sparades inte/)).toBeVisible();
+    await openMapSettings(second);
+    await second.getByLabel('Visa stjärnhimmel', { exact: true }).click();
+    await expect(
+      second.locator('.map-settings').getByText(/Din äldre ändring sparades inte/),
+    ).toBeVisible();
+    await expect(second.getByLabel('Visa stjärnhimmel', { exact: true })).not.toBeChecked();
+    await returnToMap(second);
     await expect(second.getByLabel('Visa axlar hela tiden', { exact: true })).toBeChecked();
-    await expect(space(second).getByLabel('Visa stjärnhimmel', { exact: true })).not.toBeChecked();
     expect((await (await page.request.get(path)).json()).draft.changes).toEqual([]);
   } finally {
     await other.close();
@@ -390,23 +408,27 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
         .raw()
         .toBuffer();
     const dark = await background();
-    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
-    const starControl = space(page).getByLabel('Visa stjärnhimmel', { exact: true });
+    await openMapSettings(page);
+    const starControl = page.getByLabel('Visa stjärnhimmel', { exact: true });
     await expect(starControl).not.toBeChecked();
     await expect(starControl).toBeDisabled();
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await starControl.check();
     await expect.poll(async () => (await read()).settings.stars).toBe(true);
-    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await returnToMap(page);
     const stars = await background();
     expect(stars.equals(dark)).toBe(false);
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openMapSettings(page);
     await expect(starControl).not.toBeChecked();
     await expect(starControl).toBeDisabled();
+    await returnToMap(page);
     expect((await background()).equals(dark)).toBe(true);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await openMapSettings(page);
     await expect(starControl).toBeEnabled();
     await expect(starControl).toBeChecked();
+    await returnToMap(page);
     const projection = () =>
       space(page)
         .locator('line[data-object-id="lamp"]')
@@ -493,8 +515,8 @@ test('PLACERING-06: delayed initial personal positions frame once and later refr
     await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Objekt', exact: true })).toBeVisible();
     await openMap(page);
-    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
-    const stars = space(page).getByLabel('Visa stjärnhimmel', { exact: true });
+    await openMapSettings(page);
+    const stars = page.getByLabel('Visa stjärnhimmel', { exact: true });
     await expect(stars).toBeDisabled();
     // Let the initial shared-map render finish while the personal response waits.
     await page.evaluate(
@@ -502,7 +524,7 @@ test('PLACERING-06: delayed initial personal positions frame once and later refr
     );
     releaseView();
     await expect(stars).toBeEnabled();
-    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await returnToMap(page);
     await canvas.scrollIntoViewIfNeeded();
     for (const name of ['Lampan', 'Cykeln']) {
       await expect(
@@ -525,8 +547,12 @@ test('PLACERING-06: delayed initial personal positions frame once and later refr
     await page.getByRole('button', { name: 'Läs in min aktuella vy', exact: true }).click();
     await expect(space(page).getByText('Aktuell personlig vy är inläst.')).toBeVisible();
     expect(await projection()).toEqual(navigated);
+    await openMapSettings(page);
     await stars.check();
-    await expect(space(page).getByText('Din personliga vy är sparad.')).toBeVisible();
+    await expect(
+      page.locator('.map-settings').getByText('Din personliga vy är sparad.', { exact: true }),
+    ).toBeVisible();
+    await returnToMap(page);
     expect(await projection()).toEqual(navigated);
   } finally {
     releaseView();
@@ -639,6 +665,55 @@ test('PLACERING-05: personal views stay private and revocation denies further re
   } finally {
     await member.close();
     await anonymous.close();
+    await installation.close();
+  }
+});
+
+test('PLACERING-07: map settings retain the personal star choice through navigation, reduced motion and restart', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    const { read } = await arrange(page, installation.origin);
+    await selectAndArrange(page);
+    await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
+    await expect.poll(async () => (await read()).positions.length).toBe(1);
+    await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
+    const marker = space(page).getByRole('button', { name: 'Välj objekt: Lampan', exact: true });
+    const before = await marker.getAttribute('style');
+    await openSettings(page);
+    await page
+      .getByRole('link', { name: /^Rymdkartan/ })
+      .first()
+      .click();
+    await expect(page.getByRole('heading', { name: 'Rymdkartan', exact: true })).toBeFocused();
+    const stars = page.getByLabel('Visa stjärnhimmel', { exact: true });
+    await stars.check();
+    await expect(
+      page.locator('.map-settings').getByText('Din personliga vy är sparad.', { exact: true }),
+    ).toBeVisible();
+    await expect.poll(async () => (await read()).settings.stars).toBe(true);
+    const saved = await read();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(stars).toBeDisabled();
+    await expect(stars).not.toBeChecked();
+    expect(await read()).toEqual(saved);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect(stars).toBeChecked();
+    await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+    await expect(marker).toHaveAttribute('aria-pressed', 'true');
+    await expect(marker).toHaveAttribute('style', before ?? '');
+    await expect(space(page).getByLabel('Visa stjärnhimmel', { exact: true })).toHaveCount(0);
+    await installation.restart();
+    await page.reload();
+    await openSettings(page);
+    await page
+      .getByRole('link', { name: /^Rymdkartan/ })
+      .first()
+      .click();
+    await expect(stars).toBeChecked();
+    expect(await read()).toEqual(saved);
+  } finally {
     await installation.close();
   }
 });

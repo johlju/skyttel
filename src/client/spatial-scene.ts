@@ -171,8 +171,10 @@ export function spatialScene(
   function draw() {
     if (lost || rotating) return;
     camera.updateMatrixWorld();
-    // The distant sky uses orientation and zoom only, so neither camera
-    // translation nor object placement gives it parallax or domain meaning.
+    // A bounded translation gives the distant sky gentle pan parallax without
+    // ever leaving its sphere. Personal object movement does not move the sky.
+    skyCamera.position.copy(controls.target).multiplyScalar(30 / overviewDistance);
+    skyCamera.position.multiplyScalar(150 / (150 + skyCamera.position.length()));
     skyCamera.quaternion.copy(camera.quaternion);
     skyCamera.aspect = camera.aspect;
     skyCamera.fov = Math.max(15, Math.min(110, 45 * Math.sqrt(controls.getDistance() / 30)));

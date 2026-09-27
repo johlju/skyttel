@@ -308,3 +308,39 @@ and opens the saved route read-only”.
 - Det föreslagna sambandet visar Kim som betalare. Redigera valt samband
   öppnar formuläret med Kim som Från objekt. Granskningen ändrar inga
   uppgifter i utkastet eller den sparade kartan.
+
+### RYMD-09: täta mobilutsnitt och valbara etiketter
+
+**Syfte:** Välja tätt placerade objekt utan att flytta dem eller kameran.
+
+**Användare:** Alex Exempel.
+
+**Förutsättningar:** Skapa och spara åtta objekt med namnen Nära objekt 1
+till Nära objekt 8 utöver Lo Exempel och Molnmusik. Använd personlig
+flyttning så att de ligger nära varandra i ett utsnitt. Använd 390 och
+320 pixlars bredd. Upprepa med webbläsarens zoom på 200 och 400 procent.
+
+**Integrationstest:**
+[spatial.spec.ts](../../tests/integration/spatial.spec.ts), testfallet
+“RYMD-09: dense mobile maps offer separate pointer and keyboard targets with
+selected label priority and text alternatives”.
+
+**Steg:**
+
+1. Öppna rymdkartan. Välj ett tätt placerat objekt med dess namnetikett.
+   Kontrollera att samma objekt markeras utan att kartans utsnitt flyttas.
+2. Använd Tab och Enter för att markera ett annat kartobjekt. Kontrollera
+   att dess etikett prioriteras och kan läsas.
+3. Öppna Lista och markera Nära objekt 1 i listan. Läs och arbeta vidare
+   utan att använda kartgrafik, tal eller ljud. Vid ett grafikavbrott ska
+   samma listarbete fortfarande fungera.
+4. Återgå till kartan och kontrollera att alla objekt finns kvar och att
+   deras placeringar består. Upprepa vid den andra bredden och med zoom.
+
+**Förväntat resultat:**
+
+- Etiketter ger separata träffytor med linjer till objektens riktiga lägen.
+- Urval prioriteras när alla namn inte ryms. Listan ger tillgång till alla
+  objekt och urval även utan grafik.
+- Varken valet eller de nya etikettlägena ändrar objektens personliga
+  placeringar, hushållets information eller kamerans utsnitt.

@@ -115,6 +115,7 @@ function MapView({
   active?: boolean;
   revealRequest?: { id: string; objectIds: string[]; relationshipId?: string };
 } = {}) {
+  const [settingsMount, setSettingsMount] = useState<HTMLDivElement | null>(null);
   const [view, setView] = useState<PersonalView>({
     contentVersion: 1,
     positions: [],
@@ -133,7 +134,9 @@ function MapView({
     <>
       <p role="status">{message}</p>
       <pre data-placement>{JSON.stringify(view.positions)}</pre>
+      <div ref={setSettingsMount} />
       <SpatialMap
+        settingsMount={settingsMount}
         personal={{
           view,
           pending: false,
@@ -628,7 +631,7 @@ test('native empty-space mouse, wheel and touch navigation changes the camera wi
   window.dispatchEvent(new Event('blur'));
 });
 
-test('painted stars respond to rotation and zoom while panning and object movement leave the distant sky fixed', async () => {
+test('painted stars respond to panning, rotation and zoom while object movement leaves the distant sky fixed', async () => {
   render(<MapView relationships={[]} />);
   await page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }).click();
   await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
@@ -684,7 +687,7 @@ test('painted stars respond to rotation and zoom while panning and object moveme
   expect(original.pixels.size).toBeGreaterThan(15);
   await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
   const panned = await starPixels();
-  expect(common(original, panned)).toBeGreaterThan(0.85);
+  expect(common(original, panned)).toBeLessThan(0.3);
   await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
   await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
   await page.getByLabelText('Visa höjdhjälp', { exact: true }).click();
@@ -902,6 +905,31 @@ test('dense labels remain readable and explicit all-label mode retains access to
     .toBe(true);
   await page.getByLabelText('Alla etiketter', { exact: true }).click();
   await expect.poll(() => document.querySelectorAll('.spatial-name').length).toBe(100);
+});
+
+test('a selected relationship keeps its directed label readable in a dense map', async () => {
+  const objects = Array.from({ length: 100 }, (_, index) => ({
+    ...state.objects[0],
+    id: `dense-${index}`,
+    name: `Tätt objekt ${index}`,
+  }));
+  const edge = { ...state.relationships[0], sourceId: 'dense-5', targetId: 'dense-6' };
+  render(
+    <MapView
+      mapState={{ ...state, objects, relationships: [edge], draft: { version: 0, changes: [] } }}
+    />,
+  );
+  const marker = page.getByRole('button', { name: 'Välj objekt: Tätt objekt 5', exact: true });
+  await expect.element(marker).toBeVisible();
+  (marker.element() as HTMLButtonElement).focus();
+  await userEvent.keyboard('{Enter}');
+  const label = page.getByRole('button', {
+    name: 'Välj samband: Tätt objekt 5 → använder → Tätt objekt 6',
+    exact: true,
+  });
+  await label.click();
+  await expect.element(page.getByRole('status')).toHaveTextContent('Samband: known');
+  await expect.element(label).toBeVisible();
 });
 
 test('all labels only opens a closer view when needed and retains an already close camera', async () => {

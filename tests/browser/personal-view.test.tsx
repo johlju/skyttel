@@ -1,4 +1,5 @@
 import { cleanup, render } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
@@ -91,8 +92,29 @@ function service() {
     },
   };
 }
+function PersonalMap() {
+  const [settingsMount, setSettingsMount] = useState<HTMLDivElement | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  return (
+    <>
+      <HouseholdMap
+        householdId="home"
+        active={!settingsOpen}
+        onSettings={() => setSettingsOpen(true)}
+        mapSettingsTarget={settingsOpen ? settingsMount : null}
+      />
+      <section hidden={!settingsOpen} className="settings-screen">
+        <h1>Rymdkartan</h1>
+        <div ref={setSettingsMount} />
+        <button type="button" onClick={() => setSettingsOpen(false)}>
+          Tillbaka till kartan
+        </button>
+      </section>
+    </>
+  );
+}
 async function open() {
-  render(<HouseholdMap householdId="home" />);
+  render(<PersonalMap />);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page.getByRole('button', { name: 'Lampan', exact: true }).click();
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
@@ -115,8 +137,12 @@ test('the public household editor saves personal movement and settings and reloa
   expect(server.read().positions).toHaveLength(1);
   await page.getByRole('button', { name: /^Flytta .+: höger$/ }).click();
   await expect.poll(() => server.read().positions[0].version).toBe(2);
+  await page.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
+  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
   await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
   await expect.poll(() => server.read().settings.stars).toBe(true);
+  await page.getByRole('button', { name: 'Tillbaka till kartan', exact: true }).click();
+  await page.getByRole('button', { name: 'Dölj verktygens namn', exact: true }).click();
   await page.getByRole('button', { name: 'Läs in min aktuella vy', exact: true }).click();
   await expect
     .element(page.getByText('Aktuell personlig vy är inläst.', { exact: true }))
@@ -133,14 +159,27 @@ test.each(['position', 'settings'] as const)(
     await open();
     server.fail('conflict');
     if (kind === 'position') await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
-    else await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
-    await expect.element(page.getByText(/Din äldre ändring sparades inte/)).toBeVisible();
+    else {
+      await page.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
+      await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+      await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
+    }
+    if (kind === 'settings')
+      await expect
+        .poll(() => page.getByRole('status').element().textContent)
+        .toContain('Din äldre ändring sparades inte');
+    else await expect.element(page.getByText(/Din äldre ändring sparades inte/)).toBeVisible();
+    if (kind === 'settings') {
+      await expect
+        .element(page.getByLabelText('Visa stjärnhimmel', { exact: true }))
+        .not.toBeChecked();
+      await page.getByRole('button', { name: 'Tillbaka till kartan', exact: true }).click();
+      await page.getByRole('button', { name: 'Dölj verktygens namn', exact: true }).click();
+    }
     await expect
       .element(page.getByLabelText('Visa axlar hela tiden', { exact: true }))
       .toBeChecked();
-    await expect
-      .element(page.getByLabelText('Visa stjärnhimmel', { exact: true }))
-      .not.toBeChecked();
+    expect(server.read().settings.stars).toBe(false);
     server.fail(null);
     await page.getByRole('button', { name: /^Flytta .+: nedåt$/ }).click();
     await expect

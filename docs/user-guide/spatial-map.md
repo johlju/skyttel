@@ -94,7 +94,7 @@ zoomar eller fokuserar markeringen innan du återgår. Urval och oskickad
 paneltext behålls.
 
 I en mycket kort och smal vy samlas återställning, etiketter och
-stjärnhimmel under **Visningsval**. **Navigera** finns i verktygsfältet.
+höjdhjälp under **Visningsval**. **Navigera** finns i verktygsfältet.
 **Visa verktygens namn** öppnar hela
 verktygsfältet med samtal och detaljer.
 Kamerans fokus, översikt och återgång fäller ihop verktygsnamnen så kartan
@@ -122,7 +122,7 @@ kartans placeringar. Valet **Alla etiketter** behålls. Det ändrar inga
 hushållsuppgifter.
 Översikten visar de etiketter som får plats utan överlappning. Valda objekt
 och samband, deras kopplingar och utkast prioriteras. Ett besked anger hur
-många etiketter som visas; innehållet och dina personliga placeringar ändras
+många etiketter som döljs; innehållet och dina personliga placeringar ändras
 inte. Sök, välj i listan och använd fokus för att följa ett tätt sammanhang.
 Bakgrundens samband tonas ned mer i täta vyer; valda samband framhävs.
 
@@ -219,11 +219,17 @@ Under **Ordna min vy** i navigeringsfönstret kan du vända panoreringen
 separat i sidled och
 höjdled. Axelvisaren visas under rörelse och en kort stund efteråt.
 Välj mellan fyra hörn eller **Visa axlar hela tiden**. **Visa stjärnhimmel**
-finns direkt under kartan. Stjärnhimlen följer rotation och zoom men ligger
-still vid panorering
-och objektflyttning. Systemets minskade rörelse stänger av stjärnorna och
+finns under **Inställningar → Rymdkartan**. Stjärnhimlen följer panorering,
+rotation och zoom. Objektflyttning ändrar inte bakgrunden. Systemets minskade
+rörelse stänger av stjärnorna och
 inaktiverar reglaget, även om ditt sparade val är på. Om systemvalet
 stängs av igen kan stjärnhimlen användas enligt ditt personliga val.
+I täta utsnitt kan du välja ett objekt genom dess namnetikett eller markör.
+Etiketterna får egna träffytor och linjer till objektens verkliga lägen.
+Markerade objekt får etikettutrymme först. Använd **Lista** och sökningen
+för objekt vars etiketter inte ryms. Listan fungerar även när kartgrafiken
+inte kan visas. Tangentbordets Tab och Enter kan också markera objekten.
+
 Hjälpvisare, avstånd och placeringar är presentation;
 de tillför inga uppgifter om hushållet.
 

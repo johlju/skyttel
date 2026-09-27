@@ -863,15 +863,17 @@ function HouseholdWork({
   onSessionExpired,
   account,
   typeSettingsTarget,
+  mapSettingsTarget,
 }: {
   onSessionExpired: () => void;
   account: ReactNode;
   typeSettingsTarget: HTMLElement | null;
+  mapSettingsTarget: HTMLElement | null;
 }) {
   const { pathname } = useLocation();
   const routeId = matchPath('/households/:id', pathname)?.params.id;
   const [currentId, setCurrentId] = useState<string | null>(null);
-  const settingsId = matchPath('/households/:id/settings/types', pathname)?.params.id;
+  const settingsId = matchPath('/households/:id/settings/*', pathname)?.params.id;
   const requestedId = routeId ?? settingsId;
   if (requestedId && requestedId !== currentId) setCurrentId(requestedId);
   const id = requestedId ?? currentId;
@@ -884,6 +886,7 @@ function HouseholdWork({
       onSessionExpired={onSessionExpired}
       account={account}
       typeSettingsTarget={typeSettingsTarget}
+      mapSettingsTarget={mapSettingsTarget}
     />
   );
 }
@@ -894,12 +897,14 @@ function HouseholdPage({
   onSessionExpired,
   account,
   typeSettingsTarget,
+  mapSettingsTarget,
 }: {
   id: string;
   active: boolean;
   onSessionExpired: () => void;
   account: ReactNode;
   typeSettingsTarget: HTMLElement | null;
+  mapSettingsTarget: HTMLElement | null;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -969,6 +974,7 @@ function HouseholdPage({
           navigate(`/households/${encodeURIComponent(id)}`, { state: { conversation: true } })
         }
         typeSettingsTarget={typeSettingsTarget}
+        mapSettingsTarget={mapSettingsTarget}
         contentVersion={content.status === 'loaded' ? content.data.contentVersion : undefined}
         onContentReplaced={retireWork}
       />
@@ -980,6 +986,7 @@ export function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useWorkspaceTheme();
+  const [mapSettingsTarget, setMapSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [typeSettingsTarget, setTypeSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
@@ -1116,6 +1123,16 @@ export function App() {
               element={<SettingsOverview entries={settingsEntries(household, data.operator)} />}
             />
             <Route
+              path="/households/:id/settings/map"
+              element={
+                <section className="panel">
+                  <Heading>Rymdkartan</Heading>
+                  <p>Välj bakgrund för din personliga vy. Hushållets karta påverkas inte.</p>
+                  <div ref={setMapSettingsTarget} />
+                </section>
+              }
+            />
+            <Route
               path="/households/:id/settings/types"
               element={
                 <section className="panel">
@@ -1180,6 +1197,7 @@ export function App() {
             account={account}
             onSessionExpired={reload}
             typeSettingsTarget={typeSettingsTarget}
+            mapSettingsTarget={mapSettingsTarget}
           />
         )}
         {settingsPage ? (
