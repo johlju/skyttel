@@ -899,6 +899,24 @@ test('RYMD-09: dense mobile maps offer separate pointer and keyboard targets wit
     }
     expect(
       (
+        await page.request.post(`${path}/relationship`, {
+          headers: { origin: installation.origin },
+          data: {
+            version: (await read()).draft.version,
+            id: 'dense-edge',
+            baseRevision: null,
+            value: {
+              typeId: initial.relationshipTypes[0].id,
+              sourceId: 'dense-6',
+              targetId: 'dense-7',
+              knowledge: 'known',
+            },
+          },
+        })
+      ).ok(),
+    ).toBe(true);
+    expect(
+      (
         await page.request.post(`${path}/save`, {
           headers: { origin: installation.origin },
           data: { version: (await read()).draft.version, operationId: 'dense-map' },
@@ -976,6 +994,39 @@ test('RYMD-09: dense mobile maps offer separate pointer and keyboard targets wit
       await expect(
         space.getByRole('button', { name: 'Markera objekt: Nära objekt 8', exact: true }),
       ).toBeInViewport({ ratio: 1 });
+      const relationship = space.getByRole('button', {
+        name: 'Välj samband: Nära objekt 7 → Använder → Nära objekt 8',
+        exact: true,
+      });
+      await relationship.click();
+      await expect(relationship).toHaveClass(/selected/);
+      await expect(relationship).toBeInViewport({ ratio: 1 });
+      expect(
+        await relationship.evaluate((label) => {
+          const box = label.getBoundingClientRect();
+          return (
+            label.contains(
+              document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+            ) &&
+            [...document.querySelectorAll('.spatial-name')].every((name) => {
+              const other = name.getBoundingClientRect();
+              return (
+                box.right <= other.left ||
+                box.left >= other.right ||
+                box.bottom <= other.top ||
+                box.top >= other.bottom
+              );
+            })
+          );
+        }),
+      ).toBe(true);
+      expect(
+        await space
+          .locator('button[data-object-id]')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => [node.getAttribute('data-object-id'), node.getAttribute('style')]),
+          ),
+      ).toEqual(before);
       await space.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
         const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
         if (!extension) throw new Error('Native graphics loss must be available');

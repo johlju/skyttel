@@ -150,7 +150,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Kamerans urvalsfokus](map-camera.md): personlig rotationspunkt, direkta
   grannar, återgångsvy, mus, tangentbord och pekskärm i smala och korta vyer.
 - [Rymdkarta](spatial-map.md): gemensam redigering och navigering,
-  täta mobilutsnitt med valbara etiketter och alternativ utan grafik,
+  täta mobilutsnitt med prioriterade objekt- och sambandsetiketter samt
+  alternativ utan grafik,
   fokus på tidigare och föreslagna samband med läsbara tidigare värden,
   fokus, filter, namn vid runda symboler, sambandsetiketter vid val,
   bevarat etikettläge vid återställning, pekmenyer, uttrycklig redigering

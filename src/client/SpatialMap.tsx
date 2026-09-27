@@ -555,10 +555,46 @@ export function SpatialMap({
   );
   const surfaceWidth = canvas.current?.clientWidth ?? 0;
   const surfaceHeight = canvas.current?.clientHeight ?? 0;
-  const occupied = [
-    ...reservedBoxes,
-    ...[...locations.values()].map((point) => ({ x: point.x, y: point.y, width: 48, height: 48 })),
-  ];
+  function labelSize(id: string, fallback: { width: number; height: number }) {
+    const size = labelSizes.get(id) ?? fallback;
+    // A narrower canvas must permit the label to render before its observer
+    // can replace a size measured in the previous, wider viewport.
+    return { ...size, width: Math.min(size.width, Math.max(0, surfaceWidth - 16)) };
+  }
+  const occupied = new Map<string, LabelBox[]>();
+  function cells(box: LabelBox, margin = 0) {
+    const keys: string[] = [];
+    for (
+      let x = Math.floor((box.x - box.width / 2 - margin) / 64);
+      x <= Math.floor((box.x + box.width / 2 + margin) / 64);
+      x += 1
+    )
+      for (
+        let y = Math.floor((box.y - box.height / 2 - margin) / 64);
+        y <= Math.floor((box.y + box.height / 2 + margin) / 64);
+        y += 1
+      )
+        keys.push(`${x},${y}`);
+    return keys;
+  }
+  function reserve(box: LabelBox) {
+    for (const key of cells(box)) {
+      const boxes = occupied.get(key);
+      if (boxes) boxes.push(box);
+      else occupied.set(key, [box]);
+    }
+  }
+  function nearby(box: LabelBox) {
+    // Candidate checks depend on nearby geometry, not the entire graph.
+    return new Set(cells(box, 5).flatMap((key) => occupied.get(key) ?? []));
+  }
+  for (const box of reservedBoxes) reserve(box);
+  for (const point of locations.values()) {
+    // Match the native target and the depth-scaled orb. The collision gap
+    // also protects their focus and proposal outlines.
+    const diameter = Math.max(44, 34 * point.scale);
+    reserve({ ...point, width: diameter, height: diameter });
+  }
   const previousEdges = (state.draft.relationships ?? []).flatMap(({ before, after }) => {
     if (
       !before ||
@@ -593,7 +629,7 @@ export function SpatialMap({
         ? 'removed'
         : proposalKind(state.draft.relationships?.find((change) => change.id === edge.id));
       const length = Math.hypot(tip.x - start.x, tip.y - start.y) || 1;
-      occupied.push({
+      reserve({
         x: tip.x - ((tip.x - start.x) / length) * 7,
         y: tip.y - ((tip.y - start.y) / length) * 7,
         width: 26,
@@ -624,7 +660,7 @@ export function SpatialMap({
         candidate.y + candidate.height / 2 > surfaceHeight - 8
       )
         continue;
-      const overlap = occupied.reduce((sum, other) => {
+      const overlap = [...nearby(candidate)].reduce((sum, other) => {
         const width =
           Math.min(other.x + other.width / 2, candidate.x + candidate.width / 2) -
           Math.max(other.x - other.width / 2, candidate.x - candidate.width / 2) +
@@ -636,7 +672,7 @@ export function SpatialMap({
         return sum + Math.max(0, width) * Math.max(0, height);
       }, 0);
       if (overlap === 0) {
-        occupied.push(candidate);
+        reserve(candidate);
         return candidate;
       }
       if (overlap < leastOverlap) {
@@ -653,7 +689,7 @@ export function SpatialMap({
           y: Math.max(box.height / 2 + 8, Math.min(surfaceHeight - box.height / 2 - 8, box.y)),
         };
       }
-      if (box) occupied.push(box);
+      if (box) reserve(box);
       return box ?? null;
     }
     if (selected && candidates[0]) {
@@ -672,6 +708,30 @@ export function SpatialMap({
     }
     return null;
   }
+  const labelEdges = edges.filter(({ selected }) => allLabels || selected);
+  function placeEdges(candidates: typeof labelEdges) {
+    return candidates.flatMap((edge) => {
+      const type = state.relationshipTypes.find((type) => type.id === edge.edge.typeId);
+      const size = labelSize(`relationship-${edge.key}`, {
+        width: Math.min(230, (type?.forwardLabel ?? type?.name ?? '').length * 7 + 24),
+        height: 30,
+      });
+      const positions = [0, 22, -22, 44, -44, 66, -66, 88, -88, 110, -110, 132, -132].flatMap(
+        (offset) =>
+          [0.5, 0.3, 0.7].map((fraction) => ({
+            ...size,
+            x: edge.source.x + (edge.end.x - edge.source.x) * fraction,
+            y: edge.source.y + (edge.end.y - edge.source.y) * fraction + offset,
+          })),
+      );
+      const label = place(positions, edge.selected);
+      return label ? [{ ...edge, ...label }] : [];
+    });
+  }
+  const primaryEdges =
+    selection?.kind === 'relationship' ? labelEdges.filter(({ selected }) => selected) : [];
+  // A selected relationship gets space before unrelated object names.
+  const labeledEdges = placeEdges(primaryEdges);
   const labels = new Map<string, LabelBox>();
   // Prefer names beside their pictograms; selected names get first use of space.
   const nodePoints = [...locations.values()].sort((a, b) => {
@@ -682,10 +742,10 @@ export function SpatialMap({
   for (const point of nodePoints) {
     const object = objects.get(point.id);
     if (!object) continue;
-    const size = labelSizes.get(`object-${point.id}`) ?? {
+    const size = labelSize(`object-${point.id}`, {
       width: Math.min(230, Math.max(70, object.name.length * 7 + 12)),
       height: 44,
-    };
+    });
     const offsets = [
       [0, 30 + size.height / 2],
       [0, -30 - size.height / 2],
@@ -712,24 +772,7 @@ export function SpatialMap({
     const box = place(candidates, selectedIds.includes(point.id));
     if (box) labels.set(point.id, box);
   }
-  const labelEdges = edges.filter(({ selected }) => allLabels || selected);
-  const labeledEdges = labelEdges.flatMap((edge) => {
-    const type = state.relationshipTypes.find((type) => type.id === edge.edge.typeId);
-    const size = labelSizes.get(`relationship-${edge.key}`) ?? {
-      width: Math.min(230, (type?.forwardLabel ?? type?.name ?? '').length * 7 + 24),
-      height: 30,
-    };
-    const positions = [0, 22, -22, 44, -44, 66, -66, 88, -88, 110, -110, 132, -132].flatMap(
-      (offset) =>
-        [0.5, 0.3, 0.7].map((fraction) => ({
-          ...size,
-          x: edge.source.x + (edge.end.x - edge.source.x) * fraction,
-          y: edge.source.y + (edge.end.y - edge.source.y) * fraction + offset,
-        })),
-    );
-    const label = place(positions, edge.selected);
-    return label ? [{ ...edge, ...label }] : [];
-  });
+  labeledEdges.push(...placeEdges(labelEdges.filter((edge) => !primaryEdges.includes(edge))));
   const hiddenLabels = locations.size - labels.size + labelEdges.length - labeledEdges.length;
   const adjacent = new Set<string>();
   const guideId = movement.heightActive
