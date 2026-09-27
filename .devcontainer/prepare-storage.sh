@@ -6,6 +6,7 @@ set -euo pipefail
 owner="$(id -u):$(id -g)"
 storage=(
   /data
+  "$HOME/.claude"
   "$HOME/.codex"
   "$HOME/.codex/tmp"
   "$HOME/.config"

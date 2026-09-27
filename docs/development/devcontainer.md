@@ -287,8 +287,8 @@ Keep credentials out of the repository and container image.
 
 Creation and rebuilding also install the latest Claude Code release in
 `~/.local/bin`. If you use it, run `claude` in the container and sign in.
-Its sign-in and settings live in the container's `~/.claude` and
-`~/.claude.json`, so sign in again after each rebuild.
+Its sign-in, settings, and history stay in the container's `~/.claude`,
+including its `.claude.json`. The host's Claude Code files are not shared.
 
 ## State and rebuilds
 
@@ -298,7 +298,8 @@ The database volume remains mounted, but its application contents reset.
 A normal container stop/start or application restart preserves those contents.
 
 The same Compose project retains dependencies, editor state, `~/.config`,
-and `/home/vscode/worktrees` in named volumes across rebuilds.
+Claude Code's `~/.claude`, and `/home/vscode/worktrees` in named volumes
+across rebuilds.
 Keep additional Git worktrees outside the checkout and install dependencies
 for each. Changing profiles or the Compose project name selects different
 volumes; removing volumes deletes their contents.
