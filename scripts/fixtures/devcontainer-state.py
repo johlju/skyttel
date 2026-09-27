@@ -16,8 +16,9 @@ CONFIG = HOME / '.codex/config.toml'
 MARKERS = [
     HOME / path / 'persistence-sentinel.txt'
     for path in (
-        '.codex/sqlite', '.codex/tmp', '.codex/sessions', '.codex/plugins',
-        '.codex/skills', '.codex/rules', '.config', '.vscode-server', 'worktrees',
+        '.claude', '.codex/sqlite', '.codex/tmp', '.codex/sessions',
+        '.codex/plugins', '.codex/skills', '.codex/rules', '.config',
+        '.vscode-server', 'worktrees',
     )
 ] + [Path('/workspace/node_modules/persistence-sentinel.txt')]
 PERSONAL = '''model = "personal-sentinel"

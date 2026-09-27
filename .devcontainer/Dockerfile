@@ -46,8 +46,8 @@ RUN install -d -o vscode -g vscode -m 0755 /home/vscode/.codex && \
 FROM codex-ready AS development
 
 # SQLite data and developer state are mounted separately from the checkout.
-RUN mkdir -p /data /workspace/node_modules /home/vscode/.config \
-        /home/vscode/.vscode-server /home/vscode/worktrees && \
+RUN mkdir -p /data /workspace/node_modules /home/vscode/.claude \
+        /home/vscode/.config /home/vscode/.vscode-server /home/vscode/worktrees && \
     chown -R vscode:vscode /data /workspace /home/vscode
 
 # Set the working directory

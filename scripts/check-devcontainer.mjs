@@ -122,6 +122,7 @@ async function checkProfile(profile, composePath) {
   for (const required of [
     'bash .devcontainer/prepare-storage.sh',
     'python3 .devcontainer/merge-codex-config.py .devcontainer/codex-config.toml /home/vscode/.codex/config.toml',
+    'bash .devcontainer/install-claude-code.sh',
     'npm run db:setup',
   ]) {
     assert.ok(hook.includes(required), `${profile}: creation must run ${required}`);
@@ -135,6 +136,7 @@ async function checkProfile(profile, composePath) {
   const targets = original.services.app.volumes.map(({ target }) => target);
   const persistent = {
     '/data': 'skyttel-data',
+    '/home/vscode/.claude': 'claude-state',
     '/home/vscode/.codex/sqlite': 'codex-state',
     '/home/vscode/.codex/tmp': 'codex-tmp',
     '/home/vscode/.config': 'config',
@@ -170,6 +172,11 @@ async function checkProfile(profile, composePath) {
   }
   assert.deepEqual(targets.toSorted(), [...Object.keys(persistent), ...shared].toSorted());
   assert.equal(original.services.app.environment.SKYTTEL_DATABASE_PATH, '/data/skyttel.sqlite');
+  assert.equal(
+    original.services.app.environment.CLAUDE_CONFIG_DIR,
+    '/home/vscode/.claude',
+    `${profile}: Claude Code's global configuration must stay in its persistent volume`,
+  );
   assert.equal(original.services.app.build.dockerfile, '.devcontainer/Dockerfile');
   const volumes = Object.fromEntries(
     targets.map((_, index) => [`storage-${index}`, { name: `${project}-storage-${index}` }]),
