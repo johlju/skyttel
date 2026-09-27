@@ -170,6 +170,7 @@
     "oavgränsade",
     "obetrodda",
     "områdesfil",
+    "oneline",
     "onrender",
     "oskickad",
     "passwordless",
@@ -336,7 +337,7 @@
   ],
   "overrides": [
     {
-      "filename": ".github/skills/triage/AGENT-BRIEF.md",
+      "filename": ".agents/skills/triage/AGENT-BRIEF.md",
       "ignoreRegExpList": ["Use when the user wants to confi"]
     }
   ],
