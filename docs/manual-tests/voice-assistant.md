@@ -221,6 +221,7 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
 Använd en telefonbred vy, 390 × 844 CSS-pixlar i det automatiska provet.
 Markeringen och detaljpanelens sammanfattning ska vara synliga samtidigt
 som röstkortet är öppet; kortet får inte täcka detaljpanelens kontroller.
+Prova även navigationen vid 640 × 500 och 320 × 250 CSS-pixlar.
 
 **Integrationstest:**
 [voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
@@ -236,6 +237,9 @@ databasens sparande; redovisa inte det som ett prov av förlorat sådant svar.
    från `held`. Släpp med `tool REQUEST show_map_object {"objectId":"LO-ID"}`.
    Nästa `held` ska visa `displayed:true`. Avsluta med
    `reply REQUEST Objektet visas.`. Kräv synlig markering i kartan.
+   Öppna **Navigera**, panorera och välj **Stäng navigering** även i de
+   korta vyerna. Stängknappen ska gå att klicka på och lämna fokus på
+   **Navigera**. Lo ska fortfarande vara vald, synlig och åtkomlig i kartan.
 2. Skriv `user Spara.` och `delegate`. Släpp det hållna anropet med
    `tool REQUEST prepare_save {"version":VERSION,"contentVersion":CONTENT,"operationId":"tal-prov"}`.
    Avsluta nästa anrop med `reply REQUEST Försöket är förberett.`.

@@ -53,6 +53,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 
 ## Områden
 
+- [Navigeringsfönstret](map-navigation.md): normal- och miniläge, oberoende
+  fönsterflytt, samtidiga detaljer och sex beständiga personliga riktningar.
+
 - [Inställningar och profil](settings-profile.md): helsida, mobilnavigation,
   återgång med fokus, synligt tangentbordsfokus i båda riktningar, läsbara
   teman och typdefinitioner i kartans samlade utkast.

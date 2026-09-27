@@ -222,7 +222,7 @@ for (const viewport of [
         await openConversation(page);
         await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');
         await openMap(page);
-        await page.getByText('Navigera rymden', { exact: true }).click();
+        await page.getByRole('button', { name: 'Navigera', exact: true }).click();
         for (let index = 0; index < 16; index++)
           await page.getByRole('button', { name: 'Panorera vänster', exact: true }).click();
         await openWorkspace(page);

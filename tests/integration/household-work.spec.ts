@@ -311,8 +311,8 @@ test('ARBETE-06: selection and personal map view survive navigation and resizing
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     await expect(page.getByRole('region', { name: 'Lista och utkast', exact: true })).toBeVisible();
     await expect(space).toBeVisible();
-    await space.getByText('Ordna min vy', { exact: true }).click();
-    await space.getByRole('button', { name: 'Flytta höger i rummet', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: /^Flytta .+: höger$/ }).click();
     await expect(space.getByText('Din personliga vy är sparad.', { exact: true })).toBeVisible();
     await space.getByLabel('Visa höjdhjälp', { exact: true }).check();
     const view = await (await page.request.get(path)).json();

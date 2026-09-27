@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, openWorkspace, signIn } from '../support/client.js';
+import { activatePanel, createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('STY-01: a directed definition and arbitrary endpoints share a durable draft, save and history', async ({
@@ -434,15 +434,19 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     await openWorkspace(page);
     await page.getByRole('button', { name: 'Alex blå cykel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Samband för Alex blå cykel' })).toContainText(
-      'Alex blå cykel → förvaras i → Garaget',
-    );
+    await page.getByRole('button', { name: 'Visa samband i listan', exact: true }).click();
+    const relationships = page.getByRole('list', { name: 'Samband', exact: true });
+    await expect(relationships).toContainText('Alex blå cykel → förvaras i → Garaget');
+    await activatePanel(page, 'Alex blå cykel');
     await page.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Garaget', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
-    const reverse = page.getByRole('region', { name: 'Samband för Garaget' });
-    await expect(reverse).toContainText('Garaget → innehåller → Alex blå cykel');
-    await reverse.getByRole('button').click();
+    await page.getByRole('button', { name: 'Visa samband i listan', exact: true }).click();
+    await expect(relationships).toContainText('Garaget → innehåller → Alex blå cykel');
+    await relationships
+      .getByRole('button', { name: 'Garaget → innehåller → Alex blå cykel', exact: true })
+      .click();
     await openWorkspace(page);
     await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
     await expect(page.getByLabel('Från objekt')).toHaveValue('bike');

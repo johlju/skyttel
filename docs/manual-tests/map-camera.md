@@ -38,10 +38,10 @@ on screen without a selection jump”.
 **Steg:**
 
 1. Markera Lo och kontrollera att kameran ligger kvar utan hopp.
-2. Öppna **Navigera rymden** och välj **Rotera vänster**.
+2. Öppna **Navigera** och välj **Rotera vänster**.
 3. Fokusera samma knapp med tangentbord och tryck Enter.
-4. Flytta Lo uppåt med **Ordna min vy**. Vänta på bekräftad personlig
-   placering och välj **Luta nedåt** under **Navigera rymden**.
+4. Flytta Lo uppåt med **Navigera**. Vänta på bekräftad personlig
+   placering och välj **Luta nedåt** under **Navigera**.
 
 **Förväntat resultat:**
 
@@ -134,7 +134,7 @@ CSS-mått; riktig webbläsarzoom provas separat.
 2. Kontrollera Lo och Kim mellan övre och nedre verktyg. Välj översikt
    och återgå till den föregående vyn.
 3. Öppna **Visningsval**, slå på och av **Alla etiketter** och stäng valet.
-4. Öppna **Navigera rymden**, rotera och stäng navigeringen.
+4. Öppna **Navigera**, rotera och stäng navigeringen.
 5. Välj **Visa verktygens namn** och kontrollera att **Samtal och text**
    samt **Visa detaljer** går att nå.
 6. Aktivera kamerafokus med tangentbord från det utökade verktygsfältet.

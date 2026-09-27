@@ -104,7 +104,7 @@
     z-index: 4;
     bottom: 12px;
     right: 12px;
-    width: calc(33.333% - 4px);
+    width: calc(100% - 24px);
   }
   .household-map.workspace-shell .spatial-display-tools[open] {
     width: calc(100% - 24px);

@@ -3,6 +3,21 @@ import logo from '../../docs/images/shuttle-logo-transparent-small.png';
 import type { VoiceControl } from './VoiceAssistant.js';
 
 const paths = {
+  navigate: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0M16 8l-2 6-6 2 2-6 6-2',
+  minimize: 'M3 3h18v18H3zM13 13h6v6h-6zM6 6l5 5M7 11h4V7',
+  maximize: 'M3 3h18v18H3zM13 13l5 5m-5 0h5v-5M11 11 6 6m0 5V6h5',
+  panLeft: 'M20 12H4m6-6-6 6 6 6',
+  panRight: 'M4 12h16m-6-6 6 6-6 6',
+  panUp: 'M12 20V4m-6 6 6-6 6 6',
+  panDown: 'M12 4v16m-6-6 6 6 6-6',
+  rotateLeft: 'M4 4v6h6M4 10a8 8 0 1 1 1 8',
+  rotateRight: 'M20 4v6h-6M20 10a8 8 0 1 0-1 8',
+  tiltUp: 'M4 18h16M7 14V9a5 5 0 0 1 10 0v5m-4-4 4 4 4-4',
+  tiltDown: 'M4 6h16M7 10v5a5 5 0 0 0 10 0v-5m-4 4 4-4 4 4',
+  zoomIn: 'M20 20l-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M7 10h6M10 7v6',
+  zoomOut: 'M20 20l-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M7 10h6',
+  depthForward: 'M5 17h10v4H5zM10 16V3m-4 4 4-4 4 4M18 9l3 3-3 3',
+  depthBackward: 'M5 3h10v4H5zM10 8v13m-4-4 4 4 4-4M18 9l3 3-3 3',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8',
   stop: '',
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',

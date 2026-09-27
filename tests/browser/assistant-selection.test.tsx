@@ -219,6 +219,12 @@ test('a panel covering the actual inspector prevents a successful display acknow
   document.head.append(cover);
   try {
     await app.show({ kind: 'object', id: 'lo' });
+    await expect.element(page.getByRole('region', { name: 'Lo', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await expect
+      .element(page.getByRole('region', { name: 'Navigation', exact: true }))
+      .toBeVisible();
+    expect(app.acknowledgements).toEqual([]);
     await expect.poll(() => app.acknowledgements.length, { timeout: 7_000 }).toBe(1);
     expect(app.acknowledgements[0].displayed).toBe(false);
   } finally {

@@ -364,7 +364,7 @@ före bekräftelsen”, dator-, telefon- och korta vyer, inklusive
    Nästa `held` ska innehålla `displayed: true`. Släpp det svaret med
    `reply NUMMER Här är urvalet.`, välj **Samtal och text** i panelväljaren
    och kontrollera **Markerat i kartan**.
-3. Öppna **Navigera rymden** och panorera tills objekten inte syns.
+3. Öppna **Navigera** och panorera tills objekten inte syns.
    Öppna samtalspanelen och skriv **Visa sambandet mellan Lo och Molnmusik**.
    Kopiera sambandets
    ID från `held` och svara med

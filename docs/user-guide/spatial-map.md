@@ -72,7 +72,7 @@ Dra i tom rymd för att rotera. Rullning med mushjul eller styrplatta
 panorerar i båda riktningarna, även över symboler och etiketter. Håll Ctrl
 med mushjulet eller nyp med två fingrar för att zooma. På pekskärm
 panorerar två fingrar tillsammans; med mus kan du dra med höger knapp.
-Under **Navigera rymden** finns också knappar för panorering, rotation,
+Välj **Navigera** i kartans verktyg för knappar för panorering, rotation,
 lutning och zoom. Kartdrag markerar inte etiketternas text.
 
 Med ett markerat objekt roterar du kring dess aktuella personliga
@@ -94,11 +94,28 @@ zoomar eller fokuserar markeringen innan du återgår. Urval och oskickad
 paneltext behålls.
 
 I en mycket kort och smal vy samlas återställning, etiketter och
-stjärnhimmel under **Visningsval**. **Navigera rymden** och **Ordna min vy**
-går fortfarande att öppna nedtill. **Visa verktygens namn** öppnar hela
+stjärnhimmel under **Visningsval**. **Navigera** finns i verktygsfältet.
+**Visa verktygens namn** öppnar hela
 verktygsfältet med samtal och detaljer.
 Kamerans fokus, översikt och återgång fäller ihop verktygsnamnen så kartan
 får plats. Öppna arbetspaneler behålls.
+
+Navigeringsfönstret har normal- och miniläge. Miniikonen i titelraden
+växlar till ikoner med verktygstips; alla knappar har tillgängliga namn.
+Dra titelraden eller fokusera den och använd piltangenterna för att flytta
+fönstret. Skift och piltangent flyttar ett större steg. Escape avbryter
+pågående dragning; annars stängs navigationen och fokus återgår till
+**Navigera**. Fönsterflytt ändrar varken kamera eller objektplaceringar.
+Under **Fönstrets placering** finns också knappar för att flytta och
+återställa fönstret utan dragning.
+
+Navigation och detaljer kan vara öppna samtidigt. På dator reserveras
+utrymme bredvid panelerna. På smala skärmar får de skilda ytor och
+innehållet rullas inuti respektive yta. **Visa samband i listan** i
+objektdetaljerna öppnar dess kopplingar i det redigerbara textalternativet.
+En flyttad navigation återgår till sin reserverade yta när arbete öppnas,
+eller när fönsterstorlek eller navigeringsläge ändras medan arbete är öppet.
+Detaljpanelernas egna placeringar behålls.
 
 **Återställ vy** rensar fokus, sökning och typfilter och ramar in hela
 kartans placeringar. Valet **Alla etiketter** behålls. Det ändrar inga
@@ -194,10 +211,12 @@ Om ankarfingret flyttas återgår objektet till placeringen före hela
 draget, och fingrarna fortsätter med panorering och nypzoom utan hopp.
 En avbruten objektgest återställer placeringen.
 Ett långtryck öppnar menyn utan flyttning. Du kan välja objektet i listan,
-öppna kartan och använda **Ordna min vy** för att flytta i alla sex
-riktningar med knappar och tangentbord.
+öppna **Navigera** och använda **Flytta [objektets namn]** i alla sex
+riktningar med knappar och tangentbord. Bara ett markerat objekt visar
+flyttknapparna; kameraknapparna finns kvar även vid tomt urval eller flerval.
 
-Under **Ordna min vy** kan du vända panoreringen separat i sidled och
+Under **Ordna min vy** i navigeringsfönstret kan du vända panoreringen
+separat i sidled och
 höjdled. Axelvisaren visas under rörelse och en kort stund efteråt.
 Välj mellan fyra hörn eller **Visa axlar hela tiden**. **Visa stjärnhimmel**
 finns direkt under kartan. Stjärnhimlen följer rotation och zoom men ligger
