@@ -50,6 +50,22 @@ function restoreFields(
     fields.set(field.id, saved ? { ...saved, kind: field.kind } : field);
   }
   const desired = { ...(current ?? type), fields: [...fields.values()] };
+  if (desired.sections !== undefined || required.some((field) => field.sectionId !== undefined)) {
+    desired.fields = desired.fields.map((field) => ({
+      ...field,
+      sectionId: field.sectionId ?? 'custom-fields',
+    }));
+    if (
+      desired.fields.some((field) => field.sectionId === 'custom-fields') &&
+      !desired.sections?.some(({ id }) => id === 'custom-fields')
+    )
+      desired.sections = [...(desired.sections ?? []), { id: 'custom-fields', name: 'Egna fält' }];
+  }
+  for (const field of desired.fields) {
+    if (!field.sectionId || desired.sections?.some(({ id }) => id === field.sectionId)) continue;
+    const section = historical.sections?.find(({ id }) => id === field.sectionId);
+    if (section) desired.sections = [...(desired.sections ?? []), section];
+  }
   const change = current
     ? inverseChange('objectType', { before: desired, after: current }, current, own)
     : { ...own, before: null, after: desired };

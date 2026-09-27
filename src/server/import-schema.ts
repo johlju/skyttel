@@ -24,10 +24,16 @@ const field = z
     name,
     description,
     kind: z.enum(['text', 'number', 'date', 'boolean']),
+    sectionId: z.union([id, z.literal('')]).optional(),
   })
   .strict();
+const sections = z.array(z.object({ id, name }).strict()).max(100);
 const objectType = z
-  .object({ ...definitionShape, fields: z.array(field).max(100).optional() })
+  .object({
+    ...definitionShape,
+    fields: z.array(field).max(100).optional(),
+    sections: sections.optional(),
+  })
   .strict();
 const relationshipType = z
   .object({ ...definitionShape, forwardLabel: text.optional(), reverseLabel: text.optional() })
@@ -172,7 +178,15 @@ export const importContentSchema = z
     household: z.object({ id, name: text, createdAt: text, contentVersion: positive }).strict(),
     identities: z.array(z.object({ id, name: text }).strict()),
     objectTypes: z.array(z.object(definitionShape).strict()),
-    objectTypeFields: z.array(z.object({ typeId: id, fields: z.array(field).max(100) }).strict()),
+    objectTypeFields: z.array(
+      z
+        .object({
+          typeId: id,
+          fields: z.array(field).max(100),
+          sections: sections.nullable().optional(),
+        })
+        .strict(),
+    ),
     relationshipTypes: z.array(z.object(definitionShape).strict()),
     relationshipTypeLabels: z.array(
       z.object({ typeId: id, forwardLabel: text, reverseLabel: text }).strict(),
@@ -295,7 +309,13 @@ export const importManifestSchema = z
     version: z.literal(1),
     createdAt: text,
     householdId: id,
-    schemaVersion: z.union([z.literal(14), z.literal(15), z.literal(16), z.literal(17)]),
+    schemaVersion: z.union([
+      z.literal(14),
+      z.literal(15),
+      z.literal(16),
+      z.literal(17),
+      z.literal(18),
+    ]),
     parts: z
       .array(
         z

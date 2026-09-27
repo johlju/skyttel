@@ -43,7 +43,7 @@ function ObjectDetails({
         </p>
       )}
       <FinancialFactsDetails facts={value.financialFacts} />
-      <CustomFieldsDetails type={type} values={value.customValues} />
+      <CustomFieldsDetails type={type} values={value.customValues} showHidden />
       <LifecycleDetails value={value} />
     </>
   ) : (

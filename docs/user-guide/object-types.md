@@ -35,6 +35,31 @@ Skriv aldrig lösenord, fullständiga konto- eller kortnummer, pinkoder,
 säkerhetskoder eller återställningskoder. Egna fält är inte ett undantag
 från regeln att hemliga uppgifter inte hör hemma i Skyttel.
 
+## Ordna fälten i avsnitt
+
+Öppna en egen eller förifylld objekttyp i **Inställningar** →
+**Typer och egna fält**. Under **Avsnitt** kan du namnge avsnitten,
+välja **Lägg till avsnitt** och ändra ordningen med **Upp** och **Ned**.
+Äldre typer visar sina egna fält i avsnittet **Egna fält**.
+
+Varje fält har **Visa i avsnitt**. Välj ett avsnitt eller
+**Dold, behåll värden**. Fältets **Upp** och **Ned** ändrar ordningen
+inom det valda avsnittet. Flytt och döljning behåller fältets identitet,
+värdeslag och alla svar, även noll och nej. Välj ett avsnitt igen för
+att återvisa fältet med dess tidigare värden. Ett dolt fält är fortfarande
+en del av definitionen; döljning är inte borttagning eller permanent radering.
+
+Ett avsnitt kan tas bort när alla dess fält har flyttats eller dolts.
+Fältets namn, beskrivning, värdeslag och separata borttagningskontroll
+finns kvar i den öppningsbara fältdefinitionen. Användningsskydden gäller
+även dolda fält. Formulär och detaljer följer din aktuella definition.
+Utkast, konflikter och historik visar även bevarade dolda värden för granskning.
+
+Lägg typförslaget i ditt privata utkast. Granska och spara det tillsammans
+med objektens uppgifter. Andra medlemmar ser ändringen först efter samma
+gemensamma sparande. Oskickade ändringar följer med mellan Inställningar
+och kartan, men måste läggas i utkastet för att klara omladdning och omstart.
+
 ## Rätta definitioner och värden
 
 Öppna **Objekttyper och egna fält** och välj **Ändra typ** för rätt typ.

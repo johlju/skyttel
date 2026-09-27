@@ -41,6 +41,20 @@ Refresh connected assistants' tool catalogs after rollout. Older clients
 that omit the icon field retain the current selection. An explicit reset
 uses a null value. Icons are bundled locally and need no external service.
 
+### Object type sections
+
+This release stores named sections, field order and hidden field placement
+with object type definitions. Existing definitions and supported older
+archives keep their field order and use a default section. Hidden fields
+retain their values, including in drafts, history and recovery copies.
+Hiding a field does not erase its content or limit access to it.
+
+New household archives require an upgraded reader. Refresh connected
+assistants' tool catalogs after rollout so they can change sections and
+field placement. Older clients that omit section information retain the
+existing placement. Use the database backup and matching image procedure
+above for rollback.
+
 ### Installation cost measurements
 
 Cost recording starts at upgrade; earlier usage remains unknown. The configured

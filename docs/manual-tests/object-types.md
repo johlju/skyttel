@@ -2,7 +2,7 @@
 
 Testfallen hjälper den som provar Skyttel att kontrollera gemensamma
 definitioner, privata förslag, frivilliga fält, typbyten och samtidiga
-ändringar.
+ändringar samt namngivna avsnitt med bevarade fältvärden.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
 ## Konfigurerade användare
@@ -269,6 +269,91 @@ entire draft and map”.
   Felet säger att ett nytt fält behövs utan att avslöja Los privata innehåll.
 - Ingen del sparas, inte heller Person-objektet. Tidigare fältdefinition,
   hela utkastet och historiken är oförändrade.
+
+## Avsnitt och visning av egna fält
+
+### TYP-08: Flytta och dölj fält utan värdeförlust genom sparande och omstart
+
+**Syfte:** Kontrollera avsnitt, fältidentiteter och atomiskt sparande med
+obesvarat, noll och nej som olika uppgifter.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Solcellsanläggning saknas. Starta ett tomt testhushåll.
+
+**Integrationstest:**
+[object-sections.spec.ts](../../tests/integration/object-sections.spec.ts),
+testfallet “TYP-08: sections move and hide fields in the shared draft without
+losing values after restart”.
+
+**Steg:**
+
+1. Öppna Inställningar och Typer och egna fält. Skapa Solcellsanläggning.
+   Byt avsnittets namn till Uppgifter. Lägg till Service och flytta det upp.
+2. Lägg till Leverantör som text, Effekt som tal, Datum som datum och
+   Batteri samt Reserv som ja/nej. Välj Uppgifter för samtliga fält.
+   Lägg typförslaget i utkastet.
+3. Återgå till kartan och skapa Paneler av den nya typen. Ange Exempelsol,
+   `0`, `2026-09-01` och **Nej** för Batteri. Lämna Reserv obesvarat.
+   Lägg objektet i samma utkast.
+4. Öppna typdefinitionen igen. Dölj Effekt och flytta Leverantör till
+   Service. Lägg typförslaget i utkastet. Granska definition och objekt;
+   de finns ännu inte i den gemensamma kartan.
+5. Spara hela utkastet. Starta om testinstallationen och ladda om sidan.
+   Öppna Paneler för redigering. Kontrollera att Effekt inte visas,
+   Batteri är Nej och Reserv är Obesvarat. Stäng utan att skicka.
+6. Återvisa Effekt i Service genom typdefinitionen och lägg förslaget
+   i utkastet. Öppna objektformuläret igen.
+
+**Förväntat resultat:**
+
+- Service visas före Uppgifter. Fälten ligger i sina valda avsnitt.
+- Effekt återkommer med `0`; Leverantör, Datum och Batteri behåller sina
+  exakta svar. Reserv är fortfarande obesvarat. Inget fält byter identitet.
+- Definition och värden sparas tillsammans. Döljning tar inte bort värden.
+
+### TYP-09: Medlemmar ordnar förifyllda typer med tangentbord och bevarat arbete
+
+**Syfte:** Kontrollera standardpresentation, fokus och oskickade
+definitionsändringar i Inställningar på mobil och dator.
+
+**Användare:** Lo, vanlig medlem. Alex förbereder den gemensamma typen.
+
+**Förutsättningar:** Person har textfältet Anteckning i Egna fält.
+Använd dator och smala fönster motsvarande 390 och 320 CSS-pixlar.
+
+**Integrationstest:**
+[object-sections.spec.ts](../../tests/integration/object-sections.spec.ts),
+testfallen “TYP-09: ordinary members retain prefilled section work and
+keyboard controls at 1280px”, samma titel med “390px” respektive “320px”.
+
+**Steg:**
+
+1. Lo öppnar Inställningar, Typer och egna fält och Ändra typ: Person.
+   Kontrollera att Anteckning visas i Egna fält.
+2. Byt avsnittets namn till Personuppgifter. Aktivera Lägg till avsnitt
+   med tangentbord och skriv Kontakt direkt i det fokuserade namnfältet.
+3. Aktivera Flytta avsnittet Kontakt upp med tangentbord. Kontrollera
+   fokus på det flyttade namnfältet. Välj Kontakt för Anteckning och
+   ändra fältbeskrivningen till Bevara även oskickad beskrivning.
+4. Återgå till kartan och tillbaka till typinställningarna. Kontrollera
+   att ordningen, placeringen och oskickad beskrivning finns kvar.
+5. Dölj Anteckning. Kontrollera fokus på Visa i avsnitt. Ta bort det
+   tomma Personuppgifter; fokus ska gå till Lägg till avsnitt.
+6. Lägg till ett avsnitt med bara mellanslag i namnet. Fäll ihop Avsnitt
+   och försök lägga förslaget i utkastet. Avsnitt öppnas och namnfältet
+   får fokus. Ge det namnet Tillfälligt och ta sedan bort det tomma avsnittet.
+7. Prova ljust och mörkt tema och navigera kontrollerna med tangentbord.
+   Lägg förslaget i utkastet. Alex kontrollerar sin egen karta.
+
+**Förväntat resultat:**
+
+- Vanliga medlemmar kan redigera förifyllda typer. Ett upptaget avsnitt
+  kan inte tas bort; ett tomt avsnitt kan tas bort.
+- Kontroller och synligt fokus går att nå utan vågrät sidrullning.
+  Flytt och döljning har tangentbordsalternativ. Arbete bevaras mellan vyer.
+- Los utkast behåller Antecknings identitet, beskrivning och dold placering.
+  Alex ser fortfarande den sparade definitionen tills Lo sparar hela utkastet.
 
 ## Byte av objekttyp
 

@@ -26,7 +26,7 @@ function ObjectDetails({ value, type }: { value: ObjectValue | null; type: Objec
       <p>{value.description}</p>
       <ProfileImage householdId={type.householdId} value={value} typeName={type.name} />
       <FinancialFactsDetails facts={value.financialFacts} />
-      <CustomFieldsDetails type={type} values={value.customValues} />
+      <CustomFieldsDetails type={type} values={value.customValues} showHidden />
       <LifecycleDetails value={value} />
       {value.identity && (
         <p>

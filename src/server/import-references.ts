@@ -56,6 +56,9 @@ export function validateImportReferences(
       {
         ...row,
         fields: content.objectTypeFields.find((fields) => fields.typeId === row.id)?.fields,
+        sections:
+          content.objectTypeFields.find((fields) => fields.typeId === row.id)?.sections ??
+          undefined,
       },
     ]),
   );
@@ -83,8 +86,10 @@ export function validateImportReferences(
   unique(content.positions, (row) => `${row.userId}:${row.objectId}`);
   unique(content.removedTypes, (row) => `${row.kind}:${row.typeId}`);
   for (const row of content.objectTypeFields) {
-    requireReference(objectTypes.has(row.typeId));
+    const type = objectTypes.get(row.typeId);
+    requireReference(type);
     unique(row.fields, (field) => field.id);
+    definition(type);
   }
   for (const row of content.relationshipTypeLabels)
     requireReference(relationshipTypes.has(row.typeId));
@@ -133,6 +138,17 @@ export function validateImportReferences(
   function definition(type: ObjectType) {
     identity('objectType', type.id);
     unique(type.fields ?? [], (field) => field.id);
+    unique(type.sections ?? [], (section) => section.id);
+    for (const section of type.sections ?? [])
+      requireReference(!['__proto__', 'constructor', 'prototype'].includes(section.id));
+    for (const field of type.fields ?? []) {
+      requireReference(type.sections === undefined || field.sectionId !== undefined);
+      requireReference(
+        field.sectionId === undefined ||
+          field.sectionId === '' ||
+          type.sections?.some((section) => section.id === field.sectionId),
+      );
+    }
   }
   function names(values: Record<string, string> | undefined) {
     for (const id of Object.keys(values ?? {})) requireReference(objects.has(id));
