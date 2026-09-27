@@ -8,6 +8,7 @@ import type {
   RelationshipValue,
   SaveReceipt,
 } from '../shared/map.js';
+import { objectIconLabel } from '../shared/object-icons.js';
 import type { TextAssistantResult, TextAssistantReview } from '../shared/text-assistant.js';
 
 function fact(value: FinancialFact | undefined) {
@@ -138,6 +139,10 @@ function details(
       );
     if (change.before?.identity !== change.after?.identity)
       fields.push(`Identitet: ${identity(change.before)} → ${identity(change.after)}`);
+    if (change.before?.iconId !== change.after?.iconId)
+      fields.push(
+        `Ikon: ${objectIconLabel(change.before?.iconId, beforeType?.name)} → ${objectIconLabel(change.after?.iconId, change.type.name)}`,
+      );
     if (change.before?.profileImageId !== change.after?.profileImageId)
       fields.push(
         `Profilbild: ${change.before?.profileImageId ? 'bild finns' : 'ingen bild'} → ${change.after?.profileImageId ? 'ny bild' : 'ingen bild'}`,

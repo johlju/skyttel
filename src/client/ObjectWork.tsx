@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } f
 import type { CustomValues, MapObject, MapState, ObjectType, ObjectValue } from '../shared/map.js';
 import { FinancialFactsEditor } from './FinancialFacts.js';
 import { LifecycleEditor } from './Lifecycle.js';
+import { ObjectIconPicker } from './ObjectIconPicker.js';
 import { ObjectRemovalNotice } from './ObjectRemovalNotice.js';
 import { CustomFieldsDetails, CustomFieldsEditor } from './ObjectTypes.js';
 import { ProfileImageEditor } from './ProfileImage.js';
@@ -31,6 +32,7 @@ export function ObjectWork({
   onDone,
   action,
   changeImage,
+  stageObject,
   details,
   relationships,
 }: {
@@ -47,10 +49,12 @@ export function ObjectWork({
   onDone: () => void;
   action: (body: unknown) => Promise<boolean>;
   changeImage: (editor: ObjectEditor, file: File | null) => Promise<ObjectEditor | undefined>;
+  stageObject: (editor: ObjectEditor) => Promise<ObjectEditor | undefined>;
   details: ReactNode;
   relationships: ReactNode;
 }) {
   const prefix = useId();
+  const form = useRef<HTMLFormElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
   const focusNameOnOpen = useRef(false);
   const [editor, setEditor] = useState<ObjectEditor | null>(editing ? initial : null);
@@ -129,6 +133,7 @@ export function ObjectWork({
             eller återställningskoder.
           </p>
           <form
+            ref={form}
             onSubmit={(event) => {
               event.preventDefault();
               if (editor.displacedFields?.length && !editor.fieldsHandled) return;
@@ -140,6 +145,7 @@ export function ObjectWork({
               <ProfileImageEditor
                 householdId={householdId}
                 value={editor.value}
+                typeName={effectiveTypes.find((type) => type.id === editor.value.typeId)?.name}
                 disabled={
                   pending || blocked || dirty || editor.version !== state.draft.version || !object
                 }
@@ -148,6 +154,39 @@ export function ObjectWork({
                     if (next) setEditor(next);
                   })
                 }
+              />
+              <ObjectIconPicker
+                value={editor.value.iconId}
+                name={editor.value.name}
+                hasImage={Boolean(editor.value.profileImageId)}
+                disabled={
+                  pending ||
+                  blocked ||
+                  editor.version !== state.draft.version ||
+                  editor.contentVersion !== state.contentVersion
+                }
+                needsText={dirty || !object}
+                onStageText={async () => {
+                  if (
+                    !form.current?.reportValidity() ||
+                    (editor.displacedFields?.length && !editor.fieldsHandled)
+                  )
+                    return false;
+                  const next = await stageObject(editor);
+                  if (!next) return false;
+                  setEditor(next);
+                  setDirty(false);
+                  return true;
+                }}
+                onChange={async (iconId) => {
+                  const value = { ...editor.value };
+                  if (iconId) value.iconId = iconId;
+                  else delete value.iconId;
+                  const next = await stageObject({ ...editor, value });
+                  if (!next) return false;
+                  setEditor(next);
+                  return true;
+                }}
               />
               <label htmlFor={`${prefix}-object-name`}>Objektets namn</label>
               <input

@@ -1,5 +1,6 @@
 import { type FinancialFact, financialFields } from '../shared/financial-facts.js';
 import type { DraftChange, MapDraft, ObjectType, RelationshipType } from '../shared/map.js';
+import { objectIconLabel } from '../shared/object-icons.js';
 import { relationshipDetails } from './relationship-description.js';
 
 function valueText(value: string | number | boolean | undefined) {
@@ -34,6 +35,11 @@ function objectDifferences({ before, after, type, beforeType }: DraftChange) {
   );
   return [
     ...difference('Namn', before.name, after.name),
+    ...difference(
+      'Ikon',
+      objectIconLabel(before.iconId, (beforeType ?? type).name),
+      objectIconLabel(after.iconId, type.name),
+    ),
     ...difference('Beskrivning', valueText(before.description), valueText(after.description)),
     ...difference('Objekttyp', (beforeType ?? type).name, type.name),
     ...financialFields.flatMap(({ key, label }) =>

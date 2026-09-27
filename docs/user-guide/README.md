@@ -21,7 +21,7 @@ med ett [familjeabonnemang](family-subscription.md).
   på en annan enhet och lösa konflikter eller oklara sparresultat.
 - [Rymdkarta och personlig vy](spatial-map.md): navigera, filtrera, flytta
   objekt och anpassa visningen på dator, telefon och platta.
-- [Profilbilder](profile-images.md): lägga till, byta och ta bort bilder.
+- [Profilbilder och ikoner](profile-images.md): lägga till, byta och ta bort bilder.
 
 ### Beskriv hushållets innehåll
 

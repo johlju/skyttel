@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { financialFields } from '../shared/financial-facts.js';
 import type { MapState, ObjectMerge as Merge } from '../shared/map.js';
 import { proposedObjectTypes, proposedRelationshipTypes } from '../shared/map.js';
+import { objectIconLabel } from '../shared/object-icons.js';
 import {
   mergeConnections,
   mergeFacts,
@@ -35,7 +36,11 @@ export function MergeSourceDetails({
             Objekttyp: {merge.types.find((type) => type.id === object.typeId)?.name}. Beskrivning:{' '}
             {object.description || 'Ingen beskrivning'}
           </p>
-          <ProfileImage householdId={householdId ?? object.householdId} value={object} />
+          <ProfileImage
+            householdId={householdId ?? object.householdId}
+            value={object}
+            typeName={merge.types.find((type) => type.id === object.typeId)?.name}
+          />
           <FinancialFactsDetails facts={object.financialFacts} />
           <CustomFieldsDetails
             type={merge.types.find((type) => type.id === object.typeId)}
@@ -121,11 +126,13 @@ export function ObjectMerge({
           lifecycle: 'Status',
           identity: 'Identitetsstatus',
           profileImageId: 'Profilbild',
+          iconId: 'Ikon',
         } as Record<string, string>
       )[key] ?? key
     );
   }
   function fact(key: string, value: unknown) {
+    if (key === 'iconId') return objectIconLabel(typeof value === 'string' ? value : undefined);
     if (key === 'identity')
       return value === 'unspecified'
         ? 'Ospecificerat objekt'
@@ -240,7 +247,11 @@ export function ObjectMerge({
                         : 'Obesvarad identitetsfråga'}
                     </p>
                   )}
-                  <ProfileImage householdId={object.householdId} value={object} />
+                  <ProfileImage
+                    householdId={object.householdId}
+                    value={object}
+                    typeName={types.find((type) => type.id === object.typeId)?.name}
+                  />
                   <FinancialFactsDetails facts={object.financialFacts} />
                   <CustomFieldsDetails
                     type={types.find((type) => type.id === object.typeId)}

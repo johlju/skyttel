@@ -148,6 +148,18 @@ test('a corrected object type retains the historical names of removed custom fie
   expect(result.message).toContain('Sista siffror: 1234 → ej angivet');
 });
 
+test('icon descriptions use catalog labels and historical type defaults when resetting a choice', () => {
+  const before = card({ iconId: 'bike' });
+  const after = card();
+  const result = historyResult(receipt({ changes: [{ type: cardType, before, after }] }));
+  expect(result.message).toContain('Ikon: Cykel → Typens standardikon (Kort)');
+  const proposal = draftResult({
+    version: 1,
+    changes: [{ id: before.id, before: after, after: before, type: cardType }],
+  });
+  expect(proposal.message).toContain('Ikon: Typens standardikon (Kort) → Cykel');
+});
+
 test('history details distinguish missing facts, unknown facts and explicitly no value', () => {
   const before = card({
     financialFacts: {

@@ -74,6 +74,22 @@ const state: MapState = {
   draft: { version: 0, changes: [] },
 };
 
+test('an own icon paints ahead of the type and remains the fallback for an unavailable profile image', async () => {
+  const icons = structuredClone(state);
+  icons.draft = { version: 0, changes: [] };
+  icons.objects[0].iconId = 'bike';
+  icons.objects[1].iconId = 'telescope';
+  icons.objects[1].profileImageId = 'unavailable';
+  render(<MapView mapState={icons} />);
+  const cycle = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
+  const telescope = page.getByRole('button', { name: 'Välj objekt: Musikspelaren', exact: true });
+  await expect.poll(() => cycle.element().querySelector('[data-icon-id="bike"]')).not.toBeNull();
+  await expect
+    .poll(() => telescope.element().querySelector('[data-icon-id="telescope"]'))
+    .not.toBeNull();
+  expect(telescope.element().querySelector('img')).toBeNull();
+});
+
 state.draft.changes = state.objects.map((object, index) => ({
   id: object.id,
   before: index === 1 ? null : object,

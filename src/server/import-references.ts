@@ -7,6 +7,7 @@ import type {
   SavedRelationshipChange,
   SaveReceipt,
 } from '../shared/map.js';
+import { isObjectIconId } from '../shared/object-icons.js';
 import { readFinancialFacts } from './financial-facts.js';
 import type { ImportContent } from './import-schema.js';
 import { MapError } from './map-error.js';
@@ -150,6 +151,7 @@ export function validateImportReferences(
     requireReference(type);
     if (!deleted) readCustomValues(value.customValues, type);
     readFinancialFacts(value.financialFacts);
+    requireReference(value.iconId === undefined || isObjectIconId(value.iconId));
     if (value.profileImageId) requireReference(images.get(value.profileImageId)?.objectId === id);
   }
   function relationship(
@@ -238,13 +240,15 @@ export function validateImportReferences(
       for (const id of change.removedWithObjects ?? []) requireReference(objects.has(id));
   }
   for (const row of content.objects) {
-    const { customValues, financialFacts, profileImageId, lifecycle, identity, ...value } = row;
+    const { customValues, financialFacts, profileImageId, iconId, lifecycle, identity, ...value } =
+      row;
     object(
       {
         ...value,
         ...(customValues ? { customValues } : {}),
         ...(financialFacts ? { financialFacts } : {}),
         ...(profileImageId ? { profileImageId } : {}),
+        ...(iconId ? { iconId } : {}),
         ...(lifecycle ? { lifecycle } : {}),
         ...(identity ? { identity } : {}),
       },

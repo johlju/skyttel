@@ -257,6 +257,31 @@ export function HouseholdMap({
   const [blocked, setBlocked] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  const failedProposalOrigin = useRef<HTMLElement | null>(null);
+  const [proposalRecoveryFocus, setProposalRecoveryFocus] = useState<{
+    origin: Element | null;
+    target: HTMLElement | null;
+  } | null>(null);
+  useLayoutEffect(() => {
+    if (!proposalRecoveryFocus || pending) return;
+    setProposalRecoveryFocus(null);
+    if (!error) failedProposalOrigin.current = null;
+    if (
+      !active ||
+      !state ||
+      (document.activeElement !== proposalRecoveryFocus.origin &&
+        document.activeElement !== document.body)
+    )
+      return;
+    const target = error
+      ? workspace.current?.querySelector<HTMLButtonElement>('.workspace-feedback button')
+      : proposalRecoveryFocus.target;
+    if (target && !target.matches(':disabled') && restoreOutsideFocus(target)) return;
+    restoreOutsideFocus(
+      workspace.current?.querySelector<HTMLElement>('.workspace-window[data-active="true"] h2') ??
+        null,
+    );
+  });
   useLayoutEffect(() => {
     const measure = () => {
       const feedback = workspace.current?.querySelector<HTMLElement>('.workspace-feedback');
@@ -569,6 +594,7 @@ export function HouseholdMap({
       | 'undo'
       | 'discard-change',
     body: unknown,
+    retainObject?: (draft: MapDraft) => void,
   ) {
     if (!state || pending || blocked) return false;
     const submittedFocus = document.activeElement;
@@ -611,17 +637,25 @@ export function HouseholdMap({
               : 'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.',
         );
       }
-      setMergeOpen(false);
+      failedProposalOrigin.current = null;
+      if (retainObject) retainObject(draft);
+      else {
+        setMergeOpen(false);
 
-      setEdgeEditor(null);
-      setTypeEditor(null);
-      setEdgeTypeEditor(null);
-      setDirty(false);
-      setBlocked(false);
-      if (document.activeElement === submittedFocus || document.activeElement === document.body)
-        newButton.current?.focus();
+        setEdgeEditor(null);
+        setTypeEditor(null);
+        setEdgeTypeEditor(null);
+        setDirty(false);
+        setBlocked(false);
+        if (document.activeElement === submittedFocus || document.activeElement === document.body)
+          newButton.current?.focus();
+      }
       return true;
     } catch (failure) {
+      if (retainObject && submittedFocus instanceof HTMLElement) {
+        failedProposalOrigin.current = submittedFocus;
+        setProposalRecoveryFocus({ origin: submittedFocus, target: null });
+      }
       if (
         failure instanceof MapRequestError &&
         [
@@ -1029,7 +1063,11 @@ export function HouseholdMap({
     return value ? (
       <>
         <p>Namn: {value.name}</p>
-        <ProfileImage householdId={householdId} value={value} />
+        <ProfileImage
+          householdId={householdId}
+          value={value}
+          typeName={definition?.name ?? typeName(value.typeId)}
+        />
         <p>Objekttyp: {definition?.name ?? typeName(value.typeId)}</p>
         <p>Beskrivning: {value.description || 'Ingen beskrivning'}</p>
         <FinancialFactsDetails facts={value.financialFacts} />
@@ -1186,7 +1224,14 @@ export function HouseholdMap({
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
+            onClick={(event) => {
+              if (failedProposalOrigin.current) {
+                setProposalRecoveryFocus({
+                  origin: event.currentTarget,
+                  target: failedProposalOrigin.current,
+                });
+                setPending(true);
+              }
               setLoad((value) => value + 1);
             }}
           >
@@ -1336,6 +1381,23 @@ export function HouseholdMap({
                         }}
                         action={(body) => action('draft', body)}
                         changeImage={changeImage}
+                        stageObject={async (editor) => {
+                          let next: ObjectEditor | undefined;
+                          await action(
+                            'draft',
+                            {
+                              ...editor,
+                              value: { ...editor.value, iconId: editor.value.iconId ?? null },
+                            },
+                            (draft) => {
+                              const value = draft.changes.find(
+                                (change) => change.id === editor.id,
+                              )?.after;
+                              if (value) next = { ...editor, value, version: draft.version };
+                            },
+                          );
+                          return next;
+                        }}
                         details={details(selectedObject ?? panel.initial.value)}
                         relationships={
                           selectedObject &&
@@ -1630,6 +1692,14 @@ export function HouseholdMap({
                         {object.name}
                       </button>
                       <span> {typeName(object.typeId)}</span>
+                      <div className="object-list-appearance">
+                        <ProfileImage
+                          householdId={householdId}
+                          value={object}
+                          typeName={typeName(object.typeId)}
+                          compact
+                        />
+                      </div>
                       <div className="access-actions">
                         <button
                           type="button"

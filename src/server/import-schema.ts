@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { DraftChange, ObjectMerge } from '../shared/map.js';
+import { isObjectIconId } from '../shared/object-icons.js';
 
 const id = z.string().regex(/^[\w-]{1,128}$/);
 const text = z.string().max(10000);
@@ -37,6 +38,7 @@ const fact = z.discriminatedUnion('knowledge', [
     .strict(),
   z.object({ knowledge: z.enum(['none', 'unknown']), reportedOn: text.optional() }).strict(),
 ]);
+const iconId = z.string().refine(isObjectIconId);
 const lifecycle = z.enum(['active', 'ended']);
 const values = z.record(id, z.union([text, z.number(), z.boolean()]));
 const financialFacts = z.record(id, fact);
@@ -50,6 +52,7 @@ const objectValue = z
     customValues: values.optional(),
     lifecycle: lifecycle.optional(),
     profileImageId: id.optional(),
+    iconId: iconId.optional(),
   })
   .strict();
 const object = objectValue.extend({ id, ...scope, revision: positive });
@@ -188,6 +191,7 @@ export const importContentSchema = z
           customValues: values.nullable(),
           lifecycle: lifecycle.nullable(),
           profileImageId: id.nullable(),
+          iconId: iconId.nullable().optional(),
         })
         .strict(),
     ),
@@ -291,7 +295,7 @@ export const importManifestSchema = z
     version: z.literal(1),
     createdAt: text,
     householdId: id,
-    schemaVersion: z.union([z.literal(14), z.literal(15), z.literal(16)]),
+    schemaVersion: z.union([z.literal(14), z.literal(15), z.literal(16), z.literal(17)]),
     parts: z
       .array(
         z

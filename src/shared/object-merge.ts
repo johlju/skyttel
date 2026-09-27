@@ -18,7 +18,15 @@ export function mergeObjects(state: MapState) {
 export function mergeFacts(value: ObjectValue): Record<string, unknown> {
   const { financialFacts, customValues, ...simple } = value;
   const facts: Record<string, unknown> = {};
-  for (const key of ['typeId', 'name', 'description', 'identity', 'lifecycle', 'profileImageId'])
+  for (const key of [
+    'typeId',
+    'name',
+    'description',
+    'identity',
+    'lifecycle',
+    'profileImageId',
+    'iconId',
+  ])
     facts[key] = simple[key as keyof typeof simple];
   for (const [key, fact] of Object.entries(financialFacts ?? {}))
     facts[`financialFacts:${key}`] = fact;
