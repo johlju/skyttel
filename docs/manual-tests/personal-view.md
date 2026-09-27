@@ -49,7 +49,9 @@ reload, clients and server restart”.
    Flytta [objektets namn]: nedåt och håll Shift utan att dra. Släpp Shift och
    välj Visa höjdhjälp för att granska flyttningens start. Tryck Enter på
    Flytta [objektets namn]: nedåt. Slå av och på höjdhjälpen och kontrollera att
-   starten behålls. Aktivera Visa stjärnhimmel.
+   starten behålls. Öppna Inställningar → Rymdkartan och aktivera Visa
+   stjärnhimmel.
+   Återgå med Tillbaka till kartan.
 3. Ladda om, starta om servern och öppna samma hushåll i en annan klient
    med Alex inloggning.
 
@@ -82,7 +84,8 @@ visibly reject stale placement and settings”.
 2. Läs konfliktbeskedet i den andra klienten och flytta nedåt igen.
 3. Flytta Cykeln från den första klienten utan att läsa om Lampan.
 4. Aktivera Visa axlar hela tiden i den första klienten. Försök aktivera
-   Visa stjärnhimmel från den andra klientens äldre inställningar.
+   Visa stjärnhimmel från den andra klientens äldre inställningar under
+   Inställningar → Rymdkartan. Återgå till kartan för att kontrollera axlarna.
 
 **Förväntat resultat:**
 
@@ -155,10 +158,12 @@ viewport changes preserve existing placement and unsent text”.
 1. Flytta Lampan. Öppna Ordna min vy i Navigera. Aktivera Visa axlar hela
    tiden och välj hörnet uppe
    till vänster. Vänd panorering separat i sidled och höjdled.
-2. Kontrollera att stjärnhimlen är avstängd och reglaget inaktivt. Stäng
+2. Öppna Inställningar → Rymdkartan. Kontrollera att stjärnhimlen är
+   avstängd och reglaget inaktivt. Stäng
    av systemets minskade rörelse och aktivera stjärnhimlen. Slå på
    minskad rörelse igen utan omladdning och granska samma reglage och
-   bakgrund. Stäng av minskad rörelse igen.
+   bakgrund genom att växla mellan inställningarna och kartan. Stäng av
+   minskad rörelse igen och välj Tillbaka till kartan.
 3. Skapa Ny sak i listan och lägg i utkastet. Öppna kartan igen.
 4. Välj Lampan och **Redigera valt objekt**. Skriv Oskickad text som nytt namn
    utan att skicka texten.
@@ -264,16 +269,18 @@ later refreshes preserve the camera”.
    personliga vy är sparad. Gör samma sak med Cykeln, utan att ändra kameran.
 2. Aktivera långsam anslutning i webbläsarens nätverksinställningar och
    ladda om sidan. Kontrollera att lista och rymdkarta visas. Kontrollera
-   Visa stjärnhimmel under kartan medan valet är inaktivt i väntan på de personliga
-   placeringarna. Använd inte Återställ vy eller kameraknapparna.
-3. Vänta tills Visa stjärnhimmel går att använda och kontrollera att båda
-   objekten syns. Återgå till normal anslutning.
+   Visa stjärnhimmel under Inställningar → Rymdkartan medan valet är
+   inaktivt i väntan på de personliga placeringarna. Använd inte Återställ vy
+   eller kameraknapparna.
+3. Vänta tills Visa stjärnhimmel går att använda. Välj Tillbaka till kartan
+   och kontrollera att båda objekten syns. Återgå till normal anslutning.
 4. Öppna Navigera och använd Panorera höger så att objekten hamnar
    tydligt vid sidan av sina första lägen på skärmen. Behåll dem synliga
    och lägg märke till utsnittet.
 5. Välj Läs in min aktuella vy under Ordna min vy. Vänta tills läsningen
    är klar och jämför utsnittet med det du valde i föregående steg.
-6. Aktivera Visa stjärnhimmel. Vänta på beskedet att vyn är sparad och
+6. Öppna Inställningar → Rymdkartan och aktivera Visa stjärnhimmel.
+   Återgå med Tillbaka till kartan. Vänta på beskedet att vyn är sparad och
    jämför utsnittet igen.
 
 **Förväntat resultat:**
@@ -286,3 +293,35 @@ later refreshes preserve the camera”.
   tillbaka eller zoomar om.
 - Stjärnhimlen visas. Även efter att valet sparas ligger objekten kvar
   på samma ställen i utsnittet och kameran bevaras.
+
+### PLACERING-07: stjärnval i Rymdkartans inställningar
+
+**Syfte:** Anpassa bakgrunden utan att förlora urval eller personlig vy.
+
+**Användare:** Alex Exempel.
+
+**Förutsättningar:** Lampan och Cykeln är sparade enligt förberedelsen.
+
+**Integrationstest:**
+[personal-view.spec.ts](../../tests/integration/personal-view.spec.ts),
+testfallet “PLACERING-07: map settings retain the personal star choice through
+navigation, reduced motion and restart”.
+
+**Steg:**
+
+1. Markera Lampan. Öppna Navigera och flytta den uppåt. Stäng navigeringen
+   och lägg märke till urval och utsnitt.
+2. Öppna Inställningar → Rymdkartan. Aktivera Visa stjärnhimmel och vänta
+   på beskedet att din personliga vy är sparad.
+3. Slå på systemets minskade rörelse. Kontrollera att reglaget är avstängt
+   och inaktivt. Stäng av minskad rörelse och kontrollera att valet återkommer.
+4. Välj Tillbaka till kartan. Kontrollera samma urval och utsnitt.
+5. Starta om testinstallationen och ladda om sidan. Öppna Rymdkartans
+   inställningar och kontrollera att stjärnvalet består.
+
+**Förväntat resultat:**
+
+- Valet sparas personligt och återkommer efter omstart.
+- Minskad rörelse stänger av stjärnorna utan att radera det sparade valet.
+- Kartans urval, kamera och tidigare placeringar består genom vybytet.
+- Reglaget finns i inställningarna och går att nå med tangentbord.

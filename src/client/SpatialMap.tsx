@@ -1,6 +1,14 @@
 import './spatial.css';
 import './spatial-camera.css';
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type ButtonHTMLAttributes,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { MapObject, MapRelationship, MapState } from '../shared/map.js';
 import { defaultViewSettings, type Position, type ViewSettings } from '../shared/personal-view.js';
@@ -16,6 +24,8 @@ import { type ProjectedPoint, spatialScene } from './spatial-scene.js';
 import { useObjectMovement } from './use-object-movement.js';
 import type { usePersonalView } from './use-personal-view.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
+
+type LabelBox = { x: number; y: number; width: number; height: number };
 
 export function ProposalSymbol({ change }: { change?: { before: unknown; after: unknown } }) {
   if (!change) return null;
@@ -69,6 +79,7 @@ export function SpatialMap({
   onFocusSelection,
   onShowOverview,
   cameraMount,
+  settingsMount,
   onCameraAction,
   navigationMount,
   onNavigationChange,
@@ -96,6 +107,7 @@ export function SpatialMap({
   onFocusSelection?: () => void;
   onShowOverview?: () => void;
   cameraMount?: HTMLElement | null;
+  settingsMount?: HTMLElement | null;
   onCameraAction?: () => void;
   navigationMount?: HTMLElement | null;
   onNavigationChange?: (open: boolean) => void;
@@ -148,6 +160,32 @@ export function SpatialMap({
     labelObserver.current?.observe(element);
     return () => labelObserver.current?.unobserve(element);
   }, []);
+  const [reservedBoxes, setReservedBoxes] = useState<LabelBox[]>([]);
+  useLayoutEffect(() => {
+    const bounds = canvas.current?.getBoundingClientRect();
+    const root =
+      surface.current?.closest('.household-map') ?? surface.current?.closest('.spatial-map');
+    if (!bounds || !root) return;
+    const boxes = [
+      ...root.querySelectorAll(
+        '.workspace-tools, .workspace-context, .workspace-feedback, .workspace-voice-controls, .workspace-status-card, .map-navigation, .spatial-bottom-bar, .label-note, .spatial-display-tools > summary, .spatial-view-actions',
+      ),
+    ].flatMap((element) => {
+      const box = element.getBoundingClientRect();
+      if (!box.width || !box.height) return [];
+      return [
+        {
+          x: box.x + box.width / 2 - bounds.x,
+          y: box.y + box.height / 2 - bounds.y,
+          width: box.width,
+          height: box.height,
+        },
+      ];
+    });
+    setReservedBoxes((previous) =>
+      JSON.stringify(previous) === JSON.stringify(boxes) ? previous : boxes,
+    );
+  });
   const [labelSizes, setLabelSizes] = useState(
     new Map<string, { width: number; height: number }>(),
   );
@@ -458,17 +496,69 @@ export function SpatialMap({
     scene.current?.reset();
     setResetRequested(false);
   }, [resetRequested]);
+  function objectEvents(object: MapObject): ButtonHTMLAttributes<HTMLButtonElement> {
+    return {
+      onContextMenu: (event) => {
+        event.preventDefault();
+        if (event.ctrlKey) {
+          cancelHold();
+          movement.cancel();
+          contextClick.current = object.id;
+          if (event.altKey) onOpenDetails(object);
+          else onSelect(object, true);
+        } else openMenu(object, event.currentTarget);
+      },
+      onPointerDown: (event) => {
+        contextClick.current = null;
+        cancelHold();
+        held.current = false;
+        movement.start(object.id, event);
+        if (event.pointerType === 'touch' && event.isPrimary) {
+          const target = event.currentTarget;
+          hold.current = {
+            x: event.clientX,
+            y: event.clientY,
+            timer: window.setTimeout(() => {
+              held.current = true;
+              openMenu(object, target);
+            }, 550),
+          };
+        }
+      },
+      onPointerMove: (event) => {
+        if (
+          hold.current &&
+          Math.hypot(event.clientX - hold.current.x, event.clientY - hold.current.y) > 8
+        )
+          cancelHold();
+      },
+      onPointerUp: cancelHold,
+      onPointerCancel: cancelHold,
+      onPointerLeave: cancelHold,
+      onClick: (event) => {
+        const pairedContextClick = contextClick.current === object.id && event.detail > 0;
+        contextClick.current = null;
+        if (pairedContextClick) return;
+        if (held.current) {
+          held.current = false;
+          return;
+        }
+        if (event.detail > 1) return;
+        if ((event.ctrlKey || event.metaKey) && event.altKey) onOpenDetails(object);
+        else onSelect(object, event.ctrlKey || event.metaKey);
+      },
+      onDoubleClick: () => onOpenDetails(object),
+    };
+  }
   const locations = new Map(
     points.filter((point) => point.visible).map((point) => [point.id, point]),
   );
   const surfaceWidth = canvas.current?.clientWidth ?? 0;
   const surfaceHeight = canvas.current?.clientHeight ?? 0;
-  const occupied = [...locations.values()].map((point) => ({
-    x: point.x,
-    y: point.y,
-    width: 48,
-    height: 48,
-  }));
+  const occupied = [
+    ...reservedBoxes,
+    ...[...locations.values()].map((point) => ({ x: point.x, y: point.y, width: 48, height: 48 })),
+  ];
   const previousEdges = (state.draft.relationships ?? []).flatMap(({ before, after }) => {
     if (
       !before ||
@@ -523,8 +613,7 @@ export function SpatialMap({
         },
       ];
     });
-  type LabelBox = { x: number; y: number; width: number; height: number };
-  function place(candidates: LabelBox[], selected = false) {
+  function place(candidates: LabelBox[], selected = false): LabelBox | null {
     let fallback: LabelBox | undefined;
     let leastOverlap = Number.POSITIVE_INFINITY;
     for (const candidate of candidates) {
@@ -555,7 +644,7 @@ export function SpatialMap({
         fallback = candidate;
       }
     }
-    if (allLabels || selected) {
+    if (allLabels) {
       let box = fallback ?? candidates[0];
       if (box && selected) {
         box = {
@@ -567,11 +656,24 @@ export function SpatialMap({
       if (box) occupied.push(box);
       return box ?? null;
     }
+    if (selected && candidates[0]) {
+      // A dense cluster may fill every nearby slot. Find the nearest free
+      // name target without moving the marker, camera or fixed controls.
+      const origin = candidates[0];
+      const available: LabelBox[] = [];
+      for (let y = origin.height / 2 + 8; y <= surfaceHeight - origin.height / 2 - 8; y += 24)
+        for (let x = origin.width / 2 + 8; x <= surfaceWidth - origin.width / 2 - 8; x += 24)
+          available.push({ ...origin, x, y });
+      available.sort(
+        (a, b) =>
+          Math.hypot(a.x - origin.x, a.y - origin.y) - Math.hypot(b.x - origin.x, b.y - origin.y),
+      );
+      return place(available);
+    }
     return null;
   }
   const labels = new Map<string, LabelBox>();
-  // Names belong beside their pictograms. Never scatter them into unused
-  // corners of the viewport just to fit another rectangular control.
+  // Prefer names beside their pictograms; selected names get first use of space.
   const nodePoints = [...locations.values()].sort((a, b) => {
     const priority = (id: string) =>
       selectedIds.includes(id) ? 0 : state.draft.changes.some((change) => change.id === id) ? 1 : 2;
@@ -582,7 +684,7 @@ export function SpatialMap({
     if (!object) continue;
     const size = labelSizes.get(`object-${point.id}`) ?? {
       width: Math.min(230, Math.max(70, object.name.length * 7 + 12)),
-      height: 38,
+      height: 44,
     };
     const offsets = [
       [0, 30 + size.height / 2],
@@ -594,10 +696,20 @@ export function SpatialMap({
       [size.width / 3, -35 - size.height / 2],
       [-size.width / 3, -35 - size.height / 2],
     ];
-    const box = place(
-      offsets.map(([x, y]) => ({ ...size, x: point.x + x, y: point.y + y })),
-      selectedIds.includes(point.id),
-    );
+    const candidates = offsets.map(([x, y]) => ({ ...size, x: point.x + x, y: point.y + y }));
+    // Keep crowded objects selectable without changing their spatial positions.
+    // A short leader connects each name to its true marker. The
+    // selected names receive first use of the available label space.
+    for (const distance of [90, 145, 200]) {
+      for (const direction of [-1, 1]) {
+        candidates.push({
+          ...size,
+          x: Math.max(size.width / 2 + 8, Math.min(surfaceWidth - size.width / 2 - 8, point.x)),
+          y: point.y + direction * distance,
+        });
+      }
+    }
+    const box = place(candidates, selectedIds.includes(point.id));
     if (box) labels.set(point.id, box);
   }
   const labelEdges = edges.filter(({ selected }) => allLabels || selected);
@@ -615,10 +727,7 @@ export function SpatialMap({
           y: edge.source.y + (edge.end.y - edge.source.y) * fraction + offset,
         })),
     );
-    const label = place(
-      positions,
-      selection?.kind === 'relationship' && selection.id === edge.edge.id,
-    );
+    const label = place(positions, edge.selected);
     return label ? [{ ...edge, ...label }] : [];
   });
   const hiddenLabels = locations.size - labels.size + labelEdges.length - labeledEdges.length;
@@ -772,6 +881,35 @@ export function SpatialMap({
       aria-label="Rymdkarta"
     >
       <h2>Rymdkarta</h2>
+      {settingsMount &&
+        createPortal(
+          <div className="map-settings">
+            <label>
+              <input
+                type="checkbox"
+                checked={preferences.stars && !reducedMotion}
+                disabled={
+                  reducedMotion || Boolean(personal && (!personal.view || personal.pending))
+                }
+                onChange={(event) => configure({ stars: event.target.checked })}
+              />
+              Visa stjärnhimmel
+            </label>
+            {reducedMotion && <span>Minskad rörelse: stjärnhimlen är avstängd.</span>}
+            <p>Stjärnhimlen följer panorering, rotation och zoom. Ditt val sparas direkt.</p>
+            {personal?.message && <p role="status">{personal.message}</p>}
+            {personal && (
+              <button
+                type="button"
+                disabled={personal.pending}
+                onClick={() => void personal.refresh()}
+              >
+                Läs in min aktuella vy
+              </button>
+            )}
+          </div>,
+          settingsMount,
+        )}
       {cameraMount ? createPortal(cameraTools, cameraMount) : cameraTools}
       {navigationMount ? createPortal(navigation, navigationMount) : navigation}
       <dialog
@@ -1042,27 +1180,34 @@ export function SpatialMap({
             if (!object) return null;
             const kind = proposalKind(state.draft.changes.find((change) => change.id === id));
             return (
-              <span
+              <button
+                type="button"
+                disabled={disabled}
+                aria-label={`Markera objekt: ${object.name}`}
+                aria-pressed={selectedIds.includes(id)}
+                {...objectEvents(object)}
                 key={id}
-                id={`${labelPrefix}-${id}`}
+                aria-describedby={`${labelPrefix}-${id}`}
                 data-layout-id={`object-${id}`}
                 data-object-label={id}
                 ref={observeLabel}
                 className={`spatial-name ${kind}${adjacent.size && !adjacent.has(id) ? ' subdued' : ''}`}
                 style={{ left: label.x, top: label.y }}
               >
-                <span className="spatial-caption">{object.name}</span>
-                <span className="spatial-type-name">
-                  {kind === 'added'
-                    ? '+ Nytt förslag'
-                    : kind === 'changed'
-                      ? '~ Ändrat förslag'
-                      : kind === 'removed'
-                        ? '× Föreslås tas bort'
-                        : state.types.find((type) => type.id === object.typeId)?.name}
+                <span id={`${labelPrefix}-${id}`}>
+                  <span className="spatial-caption">{object.name}</span>
+                  <span className="spatial-type-name">
+                    {kind === 'added'
+                      ? '+ Nytt förslag'
+                      : kind === 'changed'
+                        ? '~ Ändrat förslag'
+                        : kind === 'removed'
+                          ? '× Föreslås tas bort'
+                          : state.types.find((type) => type.id === object.typeId)?.name}
+                  </span>
+                  <LifecycleStatus value={object} />
                 </span>
-                <LifecycleStatus value={object} />
-              </span>
+              </button>
             );
           })}
         </div>
@@ -1088,57 +1233,7 @@ export function SpatialMap({
                   aria-pressed={selectedIds.includes(object.id)}
                   className={`spatial-node ${kind}${adjacent.size && !adjacent.has(object.id) ? ' subdued' : ''}`}
                   style={{ left: point.x, top: point.y }}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    if (event.ctrlKey) {
-                      cancelHold();
-                      movement.cancel();
-                      contextClick.current = object.id;
-                      if (event.altKey) onOpenDetails(object);
-                      else onSelect(object, true);
-                    } else openMenu(object, event.currentTarget);
-                  }}
-                  onPointerDown={(event) => {
-                    contextClick.current = null;
-                    cancelHold();
-                    held.current = false;
-                    movement.start(object.id, event);
-                    if (event.pointerType === 'touch' && event.isPrimary) {
-                      const target = event.currentTarget;
-                      hold.current = {
-                        x: event.clientX,
-                        y: event.clientY,
-                        timer: window.setTimeout(() => {
-                          held.current = true;
-                          openMenu(object, target);
-                        }, 550),
-                      };
-                    }
-                  }}
-                  onPointerMove={(event) => {
-                    if (
-                      hold.current &&
-                      Math.hypot(event.clientX - hold.current.x, event.clientY - hold.current.y) > 8
-                    )
-                      cancelHold();
-                  }}
-                  onPointerUp={cancelHold}
-                  onPointerCancel={cancelHold}
-                  onPointerLeave={cancelHold}
-                  onClick={(event) => {
-                    const pairedContextClick =
-                      contextClick.current === object.id && event.detail > 0;
-                    contextClick.current = null;
-                    if (pairedContextClick) return;
-                    if (held.current) {
-                      held.current = false;
-                      return;
-                    }
-                    if (event.detail > 1) return;
-                    if ((event.ctrlKey || event.metaKey) && event.altKey) onOpenDetails(object);
-                    else onSelect(object, event.ctrlKey || event.metaKey);
-                  }}
-                  onDoubleClick={() => onOpenDetails(object)}
+                  {...objectEvents(object)}
                 >
                   <span
                     className="spatial-orb"
@@ -1200,16 +1295,6 @@ export function SpatialMap({
             />
             Visa höjdhjälp
           </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={preferences.stars && !reducedMotion}
-              disabled={reducedMotion || Boolean(personal && (!personal.view || personal.pending))}
-              onChange={(event) => configure({ stars: event.target.checked })}
-            />
-            Visa stjärnhimmel
-          </label>
-          {reducedMotion && <span>Minskad rörelse: stjärnhimlen är avstängd.</span>}
         </div>
         {!allLabels && hiddenLabels > 0 && (
           <p className="label-note">

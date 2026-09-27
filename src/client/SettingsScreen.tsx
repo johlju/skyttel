@@ -15,6 +15,12 @@ export function settingsEntries(
     ...(householdPath
       ? [
           {
+            to: `${householdPath}/settings/map`,
+            title: 'Rymdkartan',
+            description: 'Stjärnhimmel och minskad rörelse i din personliga vy.',
+            group: 'Hushållets karta',
+          },
+          {
             to: `${householdPath}/settings/types`,
             title: 'Typer och egna fält',
             description:

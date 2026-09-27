@@ -870,3 +870,139 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
     await installation.close();
   }
 });
+
+test('RYMD-09: dense mobile maps offer separate pointer and keyboard targets with selected label priority and text alternatives', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    const { path, read } = await arrange(page, installation.origin);
+    const initial = await read();
+    for (let index = 0; index < 8; index += 1) {
+      expect(
+        (
+          await page.request.post(`${path}/draft`, {
+            headers: { origin: installation.origin },
+            data: {
+              version: (await read()).draft.version,
+              id: `dense-${index}`,
+              baseRevision: null,
+              value: {
+                name: `Nära objekt ${index + 1}`,
+                description: '',
+                typeId: initial.types[0].id,
+              },
+            },
+          })
+        ).ok(),
+      ).toBe(true);
+    }
+    expect(
+      (
+        await page.request.post(`${path}/save`, {
+          headers: { origin: installation.origin },
+          data: { version: (await read()).draft.version, operationId: 'dense-map' },
+        })
+      ).ok(),
+    ).toBe(true);
+    const saved = await read();
+    for (const [index, object] of saved.objects.entries()) {
+      expect(
+        (
+          await page.request.post(`${path}/view/position`, {
+            headers: { origin: installation.origin },
+            data: {
+              id: object.id,
+              version: 0,
+              position: { x: index * 0.04, y: index * 0.03, z: index * 0.04 },
+            },
+          })
+        ).ok(),
+      ).toBe(true);
+    }
+    const personal = await (await page.request.get(`${path}/view`)).json();
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(installation.origin);
+      await openMap(page);
+      const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
+      await expect(space.locator('button[data-object-id]')).toHaveCount(saved.objects.length);
+      const names = space.getByRole('button', { name: /^Markera objekt:/ });
+      await expect.poll(() => names.count()).toBeGreaterThanOrEqual(4);
+      const first = names.nth(3);
+      const name = (await first.getAttribute('aria-label'))?.replace('Markera objekt: ', '');
+      const marker = space.getByRole('button', { name: `Välj objekt: ${name}`, exact: true });
+      const before = await space
+        .locator('button[data-object-id]')
+        .evaluateAll((nodes) =>
+          nodes.map((node) => [node.getAttribute('data-object-id'), node.getAttribute('style')]),
+        );
+      await first.click();
+      await expect(marker).toHaveAttribute('aria-pressed', 'true');
+      expect(
+        await space
+          .locator('button[data-object-id]')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => [node.getAttribute('data-object-id'), node.getAttribute('style')]),
+          ),
+      ).toEqual(before);
+      const selectedName = space.getByRole('button', {
+        name: `Markera objekt: ${name}`,
+        exact: true,
+      });
+      await expect(selectedName).toBeInViewport({ ratio: 1 });
+      const targets = await names.evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const box = node.getBoundingClientRect();
+          return {
+            width: box.width,
+            height: box.height,
+            hit: node.contains(
+              document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+            ),
+          };
+        }),
+      );
+      expect(
+        targets.every((target) => target.width >= 24 && target.height >= 24 && target.hit),
+      ).toBe(true);
+      const keyboardTarget = space.getByRole('button', {
+        name: 'Välj objekt: Nära objekt 8',
+        exact: true,
+      });
+      await keyboardTarget.focus();
+      await page.keyboard.press('Enter');
+      await expect(keyboardTarget).toHaveAttribute('aria-pressed', 'true');
+      await expect(
+        space.getByRole('button', { name: 'Markera objekt: Nära objekt 8', exact: true }),
+      ).toBeInViewport({ ratio: 1 });
+      await space.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+        const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
+        if (!extension) throw new Error('Native graphics loss must be available');
+        extension.loseContext();
+      });
+      await expect(
+        space.getByText('Grafiken är tillfälligt avbruten. Ditt utkast finns kvar.'),
+      ).toBeVisible();
+      await openWorkspace(page);
+      await expect(
+        page
+          .getByRole('list', { name: 'Objekt', exact: true })
+          .getByRole('button', { name: 'Markera Nära objekt 1', exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole('list', { name: 'Objekt', exact: true })
+        .getByRole('button', { name: 'Markera Nära objekt 1', exact: true })
+        .click();
+      await expect(
+        page
+          .getByRole('list', { name: 'Objekt', exact: true })
+          .getByRole('button', { name: 'Markera Nära objekt 1', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      expect(await (await page.request.get(`${path}/view`)).json()).toEqual(personal);
+      expect(await read()).toEqual(saved);
+    }
+  } finally {
+    await installation.close();
+  }
+});

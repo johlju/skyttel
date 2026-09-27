@@ -232,10 +232,16 @@
   position: absolute;
   transform: translate(-50%, -50%);
 }
-.spatial-name {
+.spatial-labels .spatial-name {
   display: block;
-  max-width: 15rem;
+  max-width: min(15rem, calc(100% - 16px));
+  min-height: 44px;
   padding: 2px 5px;
+  border: 0;
+  border-radius: 5px;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
   color: #e4eee8;
   background: #132e25e8;
   text-align: center;
@@ -360,7 +366,6 @@
 .spatial-node.removed .spatial-orb {
   border-style: dashed;
 }
-.spatial-name.subdued,
 .spatial-node.subdued {
   opacity: 0.48;
 }
@@ -580,4 +585,13 @@
 .spatial-tools > details {
   flex: 1;
   min-width: 0;
+}
+
+.spatial-labels .spatial-name[aria-pressed="true"],
+.spatial-labels .spatial-name:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.spatial-node:focus-visible {
+  z-index: 1;
 }

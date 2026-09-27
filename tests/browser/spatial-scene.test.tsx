@@ -124,7 +124,7 @@ test('projected symbols expose perspective size and depth while their canvas rem
   expect([...pixel]).toEqual([19, 46, 37, 255]);
 });
 
-test('the varied universe sky rotates and zooms but stays fixed during pan and personal placement', () => {
+test('the varied universe sky follows pan, rotation and zoom but stays fixed during personal placement', () => {
   const { scene, canvas } = openScene();
   scene.update(['home']);
   const context = canvas.getContext('webgl2') as WebGL2RenderingContext;
@@ -151,13 +151,14 @@ test('the varied universe sky rotates and zooms but stays fixed during pan and p
   expect(colours.get('16,27,41')).toBeGreaterThan(canvas.width * canvas.height * 0.95);
   expect(colours.size).toBeGreaterThan(15);
   scene.navigate('left');
-  expect(pixels()).toEqual(first);
+  const panned = pixels();
+  expect(panned).not.toEqual(first);
   scene.place('home', { x: 8, y: 9, z: 10 });
-  expect(pixels()).toEqual(first);
+  expect(pixels()).toEqual(panned);
   scene.navigate('rotate-left');
   expect(pixels()).not.toEqual(first);
   scene.navigate('rotate-right');
-  expect(pixels()).toEqual(first);
+  expect(pixels()).toEqual(panned);
   scene.navigate('in');
   expect(pixels()).not.toEqual(first);
   scene.configure(defaultViewSettings);
