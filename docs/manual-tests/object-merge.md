@@ -65,7 +65,8 @@ restart, lost receipt and whole-save undo”.
 7. Rätta det kvarvarande objektets namn till Senare namn och spara.
    Lägg Eget senare objekt i utkastet. Starta om installationen.
 8. Öppna den andra webbläsaren. Välj **Visa historik**, hitta
-   sammanslagningen och granska identiteter och upphörd status.
+   sammanslagningen och välj **Visa ändringarna**. Öppna **Granskade objekt
+   före sammanslagningen** och granska identiteter och upphörd status.
 9. Välj **Ångra sparandet**, granska hela förslaget och spara.
 
 **Förväntat resultat:**

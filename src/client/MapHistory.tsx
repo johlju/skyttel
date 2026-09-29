@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type {
   MapObject,
   ObjectType,
@@ -14,6 +14,93 @@ import { CustomFieldsDetails, ObjectTypeDetails } from './ObjectTypes.js';
 import { ProfileImage } from './ProfileImage.js';
 import { relationshipLabel } from './RelationshipEditor.js';
 import { RelationshipTypeDetails } from './RelationshipTypes.js';
+import './map-history.css';
+
+function ReceiptOverview({ receipt }: { receipt: SaveReceipt }) {
+  const counts = [
+    [receipt.changes.length, 'objekt', 'objekt'],
+    [receipt.relationships?.length ?? 0, 'samband', 'samband'],
+    [receipt.objectTypes?.length ?? 0, 'objekttyp', 'objekttyper'],
+    [receipt.relationshipTypes?.length ?? 0, 'sambandstyp', 'sambandstyper'],
+  ] as const;
+  return (
+    <div className="history-overview">
+      <p className="history-counts">
+        {counts
+          .filter(([count]) => count > 0)
+          .map(([count, singular, plural]) => `${count} ${count === 1 ? singular : plural}`)
+          .join(' · ')}
+      </p>
+      <ul>
+        {receipt.changes.map((change) => (
+          <li key={`object:${change.after?.id ?? change.before?.id}`}>
+            <span>
+              {change.merge
+                ? 'Sammanslagning'
+                : !change.before
+                  ? 'Tillagt objekt'
+                  : !change.after
+                    ? 'Borttaget objekt'
+                    : 'Ändrat objekt'}
+            </span>
+            <strong>{change.after?.name ?? change.before?.name}</strong>
+          </li>
+        ))}
+        {receipt.relationships?.map((change) => {
+          const value = change.after ?? change.before;
+          return (
+            <li key={`relationship:${change.id}`}>
+              <span>
+                {!change.before
+                  ? 'Tillagt samband'
+                  : !change.after
+                    ? 'Borttaget samband'
+                    : 'Ändrat samband'}
+              </span>
+              <strong>
+                {value
+                  ? relationshipLabel(
+                      value,
+                      {
+                        relationshipTypes: [
+                          change.after ? change.type : (change.beforeType ?? change.type),
+                        ],
+                      },
+                      new Map(
+                        Object.entries(change.objectNames ?? {}).map(([id, name]) => [
+                          id,
+                          { name },
+                        ]),
+                      ),
+                    )
+                  : change.type.name}
+              </strong>
+            </li>
+          );
+        })}
+        {(
+          [
+            ['object', receipt.objectTypes ?? []],
+            ['relationship', receipt.relationshipTypes ?? []],
+          ] as const
+        ).flatMap(([kind, changes]) =>
+          changes.map((change) => (
+            <li key={`${kind}:${change.id}`}>
+              <span>
+                {!change.before
+                  ? 'Tillagd typdefinition'
+                  : !change.after
+                    ? 'Borttagen typdefinition'
+                    : 'Ändrad typdefinition'}
+              </span>
+              <strong>{change.after?.name ?? change.before?.name}</strong>
+            </li>
+          )),
+        )}
+      </ul>
+    </div>
+  );
+}
 
 function ObjectDetails({
   value,
@@ -104,6 +191,8 @@ export function MapHistory({
   onUndo: (receipt: SaveReceipt, generation: number) => void;
   onAccessLost: () => void;
 }) {
+  const contentId = useId();
+  const title = useRef<HTMLHeadingElement>(null);
   const householdId = decodeURIComponent(path.split('/')[3]);
   const [loadedGeneration, setLoadedGeneration] = useState(generation);
   const [open, setOpen] = useState(false);
@@ -140,42 +229,66 @@ export function MapHistory({
     return () => controller.abort();
   }, [open, path, version, generation, reload, onAccessLost]);
   return (
-    <section aria-labelledby="map-history-title" className="draft-review">
-      <h2 id="map-history-title">Ändringshistorik</h2>
+    <section aria-labelledby="map-history-title" className="map-history">
+      <h2 id="map-history-title" ref={title} tabIndex={-1}>
+        Ändringshistorik
+      </h2>
       <p>
-        Genomförda sparanden i hushållet. Ångra sparandet skapar ett nytt privat förslag mot dagens
-        karta. Granska och spara hela utkastet för att genomföra det. Saknade typer som behövs för
-        återställningen följer med som synliga definitionsförslag.
+        Hushållets sparade ändringar, med det senaste sparandet först. Privata utkast visas inte
+        här.
       </p>
-      <button type="button" onClick={() => setOpen(!open)}>
+      <p>Ångring blir ett privat förslag. Du väljer sedan om du vill spara hela utkastet.</p>
+      <details className="history-help">
+        <summary>Så fungerar ångring</summary>
+        <p>
+          Ångra sparandet skapar ett nytt privat förslag mot dagens karta. Oberoende senare
+          ändringar bevaras. Spara hela utkastet när du vill genomföra förslaget. Saknade typer som
+          behövs för återställningen följer med som synliga definitionsförslag.
+        </p>
+      </details>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={() => setOpen(!open)}
+      >
         {open ? 'Dölj historik' : 'Visa historik'}
       </button>
-      {open && (
-        <>
-          {loading && <p>Hämtar historik…</p>}
-          {error && (
-            <>
-              <p role="alert">{error}</p>
-              <button type="button" onClick={() => setReload(reload + 1)}>
-                Hämta historik igen
-              </button>
-            </>
-          )}
-          {history?.length === 0 && <p>Inga genomförda sparanden.</p>}
-          {[...(history ?? [])].reverse().map((receipt) => (
-            <article key={`${receipt.userId}:${receipt.operationId}`}>
-              <h3>
-                <time dateTime={receipt.savedAt}>
-                  {new Date(receipt.savedAt).toLocaleString('sv-SE')}
-                </time>{' '}
-                — {receipt.actorName ?? 'Skyttel-användare'}
-              </h3>
-              <details>
-                <summary>Identifiera sparandet och användaren</summary>
-                <p>Sparande: {receipt.operationId}</p>
-                <p>Skyttel-användare: {receipt.userId}.</p>
-                <p>Tidpunkt: {receipt.savedAt}</p>
-              </details>
+      <div id={contentId} className="history-content" hidden={!open}>
+        <p aria-live="polite" className="history-state">
+          {loading ? 'Hämtar historik…' : history?.length === 0 ? 'Inga genomförda sparanden.' : ''}
+        </p>
+        {error && (
+          <>
+            <p role="alert">{error}</p>
+            <button
+              type="button"
+              onClick={() => {
+                title.current?.focus();
+                setReload(reload + 1);
+              }}
+            >
+              Hämta historik igen
+            </button>
+          </>
+        )}
+        {[...(history ?? [])].reverse().map((receipt) => (
+          <article className="history-receipt" key={`${receipt.userId}:${receipt.operationId}`}>
+            <h3>
+              <time dateTime={receipt.savedAt}>
+                {new Date(receipt.savedAt).toLocaleString('sv-SE')}
+              </time>{' '}
+              — {receipt.actorName ?? 'Skyttel-användare'}
+            </h3>
+            <ReceiptOverview receipt={receipt} />
+            <details>
+              <summary>Identifiera sparandet och användaren</summary>
+              <p>Sparande: {receipt.operationId}</p>
+              <p>Skyttel-användare: {receipt.userId}.</p>
+              <p>Tidpunkt: {receipt.savedAt}</p>
+            </details>
+            <details className="history-changes">
+              <summary>Visa ändringarna</summary>
               {receipt.objectTypes?.map((change) => (
                 <div key={change.id}>
                   <h4>Objekttyp: {change.after?.name ?? change.before?.name}</h4>
@@ -247,17 +360,17 @@ export function MapHistory({
                   <EdgeDetails value={change.after} change={change} absent="Borttaget" />
                 </div>
               ))}
-              <button
-                type="button"
-                disabled={disabled || loading}
-                onClick={() => onUndo(receipt, loadedGeneration)}
-              >
-                Ångra sparandet
-              </button>
-            </article>
-          ))}
-        </>
-      )}
+            </details>
+            <button
+              type="button"
+              disabled={disabled || loading}
+              onClick={() => onUndo(receipt, loadedGeneration)}
+            >
+              Ångra sparandet
+            </button>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }

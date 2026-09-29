@@ -316,9 +316,9 @@ hiding, type changes, history and undo at 1280px”, samma titel med “390px”
    ekonomiska uppgifter. Granska det tidigare egna värdet och bekräfta
    **Jag har hanterat tidigare fältvärden för typbytet**. Lägg i utkastet
    och spara genom Lista.
-7. Öppna Visa historik. Granska typbytet, tidigare Anteckning och skuldens
-   säkerhet och datum. Välj Ångra sparandet, granska och spara förslaget.
-   Starta om och kontrollera Husets lån igen.
+7. Öppna Visa historik och Visa ändringarna för typbytet. Granska typbytet,
+   tidigare Anteckning och skuldens säkerhet och datum. Välj Ångra sparandet,
+   granska och spara förslaget. Starta om och kontrollera Husets lån igen.
 
 **Förväntat resultat:**
 
@@ -447,7 +447,8 @@ identity, edges and history through restart and undo”.
    förslag. Spara hela utkastet och kontrollera cykelns och sambandets ID.
 4. Byt typdefinitionens namn från Cykel till Trampcykel och dess fältnamn
    till Tidigare Nummer och Tidigare Försäkrad. Spara. Starta om och öppna
-   **Visa historik**. Hitta typbytet från Cykel till Motorfordon.
+   **Visa historik**. Välj **Visa ändringarna** vid typbytet från Cykel
+   till Motorfordon.
 5. Kontrollera tidigare typnamn, Nummer `SYNTH-42`, sparande användare
    och tidpunkt. Välj **Ångra sparandet** för typbytet och granska förslaget.
    Spara hela utkastet, starta om och läs kartan igen.

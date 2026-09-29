@@ -129,8 +129,16 @@ test('SAMMANSLAGNING-01: explicit identities and edge choices survive restart, l
         .getByRole('region', { name: 'Ändringshistorik' })
         .getByRole('article')
         .filter({ hasText: `Sparande: ${merged.operationId}` });
+      await group.getByText('Visa ändringarna', { exact: true }).click();
+      await group.getByText('Granskade objekt före sammanslagningen', { exact: true }).click();
       await expect(group).toContainText('Sammanslagning: identitet b tas in i a');
       await expect(group).toContainText('Manuellt upphört');
+      await expect(
+        group.getByText('Sammanslagning: identitet b tas in i a', { exact: false }),
+      ).toBeVisible();
+      await expect(
+        group.getByText('Status: Manuellt upphört', { exact: true }).first(),
+      ).toBeVisible();
       await group.getByRole('button', { name: 'Ångra sparandet' }).click();
       await expect(other.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
         'Eget senare objekt',

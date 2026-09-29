@@ -183,10 +183,20 @@ for (const { width, height } of [
         .getByRole('region', { name: 'Ändringshistorik' })
         .getByRole('article')
         .filter({ hasText: `Sparande: ${changed.operationId}` });
+      await history.getByText('Visa ändringarna', { exact: true }).click();
       await expect(history).toContainText(
         'Senast uppgiven skuld: 12 300 (Osäkert uppgivet) — datum för uppgiften: 2026-09-01',
       );
       await expect(history).toContainText('Anteckning: Eget värde');
+      await expect(
+        history
+          .getByText(
+            'Senast uppgiven skuld: 12 300 (Osäkert uppgivet) — datum för uppgiften: 2026-09-01',
+            { exact: true },
+          )
+          .first(),
+      ).toBeVisible();
+      await expect(history.getByText('Anteckning: Eget värde', { exact: true })).toBeVisible();
       await history.getByRole('button', { name: 'Ångra sparandet' }).click();
       await save();
       await installation.restart();

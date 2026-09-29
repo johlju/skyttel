@@ -213,6 +213,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   privata ångringsförslag, bevara oberoende arbete, granska överlapp och
   återställa borttagna objekt och samband med samma identiteter samt
   granska äldre fält mot dagens definitioner före återställning.
+  Omfattar historikkort, tangentbord, mobil, återförsök och fokus under
+  fördröjd hämtning och ångring.
 - [Upphört och borttaget](lifecycle.md): markera och rätta status, följa
   kända slutdatum och granska, kasta eller spara vanlig borttagning med
   bevarade anslutna objekt och historikunderlag, även efter privata typbyten.

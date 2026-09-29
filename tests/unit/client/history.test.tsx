@@ -189,14 +189,22 @@ test('saved history shows definitions, historical direction labels and ended con
   await save('removed');
   const history = await open();
   const changed = await group('changed-direction');
-  expect(changed.getByText('Lo → stödjer → Rosen').textContent).toContain('stödjer');
+  const disclosure = changed.getByText('Visa ändringarna', { selector: 'summary' });
+  expect(disclosure.closest('details')?.open).toBe(false);
+  expect(changed.getByText('1 samband')).toBeDefined();
+  await userEvent.click(disclosure);
+  expect(disclosure.closest('details')?.open).toBe(true);
+  const changedValues = within(disclosure.parentElement as HTMLElement);
+  expect(changedValues.getByText('Lo → stödjer → Rosen').textContent).toContain('stödjer');
   expect(
-    changed.getByText(`Lo → ${state.relationshipTypes[0].name} → Rosen`).textContent,
+    changedValues.getByText(`Lo → ${state.relationshipTypes[0].name} → Rosen`).textContent,
   ).toContain(state.relationshipTypes[0].name);
   const retyped = await group('changed-object-type');
+  await userEvent.click(retyped.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(retyped.getByText(/Objekttyp: Växt/)).toBeDefined();
   expect(retyped.getByText(/Färg/).textContent).toContain('röd');
   const removed = await group('removed');
+  await userEvent.click(removed.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(removed.getAllByText('Borttagen definition')).toHaveLength(2);
   expect(removed.getAllByText('Borttaget').length).toBeGreaterThan(0);
   await userEvent.click(removed.getByRole('button', { name: 'Ångra sparandet' }));
@@ -220,6 +228,7 @@ test('empty history and a failed read can be retried without a fabricated result
   expect((await screen.findByRole('alert')).textContent).toContain('Historiken kunde inte hämtas');
   historyFailure = 0;
   await userEvent.click(screen.getByRole('button', { name: 'Hämta historik igen' }));
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Ändringshistorik' }));
   expect(await screen.findByText('Inga genomförda sparanden.')).toBeDefined();
 });
 

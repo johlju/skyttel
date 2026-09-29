@@ -155,8 +155,13 @@ test('TYP-06: type changes review displaced values and preserve identity, edges 
       .filter({ hasText: 'Objekttyp: Motorfordon' })
       .filter({ hasText: 'Nummer: 42' });
     await expect(selected).toHaveCount(1);
+    await selected.getByText('Visa ändringarna', { exact: true }).click();
     await expect(selected).toContainText('Objekttyp: Cykel');
     await expect(selected).toContainText('Nummer: SYNTH-42');
+    await expect(selected.getByText('Objekttyp: Cykel', { exact: false })).toBeVisible();
+    await expect(selected.getByText('Objekttyp: Motorfordon', { exact: false })).toBeVisible();
+    await expect(selected.getByText('Nummer: SYNTH-42', { exact: true })).toBeVisible();
+    await expect(selected.getByText('Nummer: 42', { exact: true })).toBeVisible();
     await expect(selected).toContainText('Alex Exempel');
     await expect(selected.locator('time')).toHaveAttribute('datetime', /T/);
     await selected.getByRole('button', { name: 'Ångra sparandet' }).click();

@@ -81,9 +81,15 @@ test('KATALOG-01: unused fields and custom and prefilled types are reviewed, dis
     expect(final.types).toHaveLength(initial.types.length);
     expect(final.relationshipTypes).toHaveLength(initial.relationshipTypes.length - 1);
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
+    const latest = page
+      .getByRole('region', { name: 'Ändringshistorik' })
+      .getByRole('article')
+      .first();
+    await latest.getByText('Visa ändringarna', { exact: true }).click();
     await expect(page.getByRole('region', { name: 'Ändringshistorik' })).toContainText(
       'Borttagen definition',
     );
+    await expect(latest.getByText('Borttagen definition', { exact: true }).first()).toBeVisible();
   } finally {
     await installation.close();
   }
@@ -315,9 +321,13 @@ test('KATALOG-03: history restores missing definitions and content together only
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
     const history = page.getByRole('region', { name: 'Ändringshistorik' });
     const group = history.getByRole('article').filter({ hasText: 'Sparande: delete-content' });
+    await group.getByText('Visa ändringarna', { exact: true }).click();
     await expect(group).toContainText('Lo Exempel');
     await expect(group).toContainText(`Objekttyp: ${type.name}`);
     await expect(group).toContainText(`Samband: ${edgeType.name}`);
+    await expect(group.getByText('Namn: Lo Exempel.', { exact: true })).toBeVisible();
+    await expect(group.getByText(`Objekttyp: ${type.name}`, { exact: false })).toBeVisible();
+    await expect(group.getByRole('heading', { name: `Samband: ${edgeType.name}` })).toBeVisible();
     await group.getByRole('button', { name: 'Ångra sparandet' }).click();
     const draft = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(draft).toContainText(`Återställ objekttyp: ${type.name}`);

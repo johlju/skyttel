@@ -49,6 +49,7 @@ reviewed, discarded or saved without automatic cleanup”.
 4. Välj **Kasta hela utkastet**. Kontrollera att definitionerna finns kvar.
 5. Upprepa borttagningarna och välj **Spara hela utkastet**. Starta om
    appservern med samma databas, ladda om och läs katalogerna och historiken.
+   Välj **Visa ändringarna** vid borttagningen för att läsa definitionerna.
 
 **Förväntat resultat:**
 
@@ -115,7 +116,7 @@ together only after review and a new save”.
 **Steg:**
 
 1. Visa historik och hitta sparandet där Lo Exempel och sambandet tas bort.
-   Kontrollera tidigare namn och typbetydelser.
+   Välj **Visa ändringarna** och kontrollera tidigare namn och typbetydelser.
 2. Välj **Ångra sparandet**. Granska Lo Exempel, sambandet, **Återställ
    objekttyp: Person**, **Återställ sambandstyp: Använder** och det redan
    befintliga oberoende förslaget i hela utkastet.

@@ -84,8 +84,8 @@ and undo replacement”.
 3. Starta om servern normalt och ladda om sidan. Kontrollera bilden i
    detaljerna och rymdkartan. Öppna Lo och byt bilden till WebP. Stäng
    formuläret och spara hela utkastet.
-4. Öppna historiken. Läs och se bilderna före och efter senaste sparandet.
-   Ångra sparandet och spara hela utkastet.
+4. Öppna historiken och välj **Visa ändringarna** vid senaste sparandet.
+   Läs och se bilderna före och efter. Ångra sparandet och spara hela utkastet.
 
 **Förväntat resultat:**
 
@@ -176,8 +176,9 @@ current household access”.
    den som Robin och utloggad. Spara som Alex och öppna samma adress som Robin.
 2. Byt till PNG-bilden i Alex utkast. Prova den nya bildadressen som Robin:
    den ska ännu nekas. Stäng formuläret och spara hela utkastet som Alex.
-   Kontrollera att objektets aktuella bild är PNG-bilden. Öppna historiken
-   och jämför bilderna före och efter bytet. Den första WebP-bilden ska nu
+   Kontrollera att objektets aktuella bild är PNG-bilden. Öppna historiken,
+   välj **Visa ändringarna** och jämför bilderna före och efter bytet.
+   Den första WebP-bilden ska nu
    bara finnas i historiken. Robin ska kunna öppna både dess gamla adress
    och den aktuella PNG-bildens adress.
 3. Lägg JPEG-bilden som ett nytt privat bildförslag utan att spara.

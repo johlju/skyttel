@@ -109,7 +109,14 @@ test('BILD-01: profile image proposals preserve text, survive restart and undo r
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.getByRole('button', { name: 'Visa historik', exact: true }).click();
     const history = page.getByRole('region', { name: 'Ändringshistorik' });
+    await history
+      .getByRole('article')
+      .first()
+      .getByText('Visa ändringarna', { exact: true })
+      .click();
     await expect(history.getByRole('article').first().getByRole('img')).toHaveCount(2);
+    await expect(history.getByRole('article').first().getByRole('img').first()).toBeVisible();
+    await expect(history.getByRole('article').first().getByRole('img').last()).toBeVisible();
     await history
       .getByRole('article')
       .first()

@@ -713,8 +713,10 @@ export function HouseholdMap({
         setEdgeTypeEditor(null);
         setDirty(false);
         setBlocked(false);
-        if (document.activeElement === submittedFocus || document.activeElement === document.body)
-          newButton.current?.focus();
+        if (document.activeElement === submittedFocus || document.activeElement === document.body) {
+          if (kind === 'undo') openPanel('work', document.getElementById('draft-title'));
+          else newButton.current?.focus();
+        }
       }
       return true;
     } catch (failure) {
@@ -740,6 +742,12 @@ export function HouseholdMap({
         ].includes(failure.code)
       ) {
         setError(rejectionMessage(failure.code));
+        if (
+          kind === 'undo' &&
+          submittedFocus instanceof HTMLElement &&
+          (document.activeElement === submittedFocus || document.activeElement === document.body)
+        )
+          openPanel('work', submittedFocus);
         return false;
       }
       setBlocked(true);

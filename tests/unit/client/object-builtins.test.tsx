@@ -240,6 +240,7 @@ test('legacy custom placement remains visible once while canonical presentation 
   expect((await read()).types.find(({ id }) => id === 'legacy')).not.toHaveProperty('sections');
   await userEvent.click(screen.getByRole('button', { name: 'Visa historik' }));
   const history = within(await screen.findByRole('region', { name: 'Ändringshistorik' }));
+  await userEvent.click(await history.findByText('Visa ändringarna', { exact: true }));
   await history.findByText('Tidigare fält: 0');
   expect(history.getAllByText('Tidigare fält: 0')).toHaveLength(1);
   expect(history.getByText('Dolt fält: Nej')).toBeTruthy();
