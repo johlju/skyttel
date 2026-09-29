@@ -118,8 +118,9 @@ preserves unrelated work after restart”.
 7. Öppna lampans sparade bildadress i en ny flik i samma profil. Ladda om
    adressen så att en ny begäran görs; kontrollera HTTP-status 404 i
    utvecklarverktygens **Network**, utan någon bild.
-8. Öppna **Administrera tillgång**, välj **Förbered fullständig export**
-   och sedan **Hämta ZIP-fil**. Öppna ZIP-filen och `content.json`. Sök efter
+8. Öppna **Inställningar → Fullständig export**, välj
+   **Förbered fullständig export** och sedan **Hämta ZIP-fil**.
+   Öppna ZIP-filen och `content.json`. Sök efter
    **Lampan att radera**; namnet ska saknas i hela filen. Stolen och
    **Oberoende privat förslag** ska finnas. `images` ska vara en tom lista
    och `images.bin` ska vara tom. Se även
@@ -298,7 +299,8 @@ completes only after the reader releases”.
    läsning är öppen.
 2. Kontrollera beskedet **Raderingen är inte slutförd**. Öppna
    **Till hushållet** i en ny flik och försök läsa kartan. På den kvarvarande
-   administrationssidan väljer du **Förbered fullständig export**.
+   administrationssidan öppnar du länken **Fullständig export** i en ny
+   flik och väljer **Förbered fullständig export**.
    Båda försöken ska avvisas; ingen karta eller export ska lämnas ut.
 3. Starta om enligt **Ny lokal provdatabas och omstart** ovan i serverns
    terminal. Låt läsarens andra terminal vara kvar. Ladda om

@@ -851,12 +851,36 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
           ))}
         </ul>
       )}
-      <HouseholdExport key={`export-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
+      <p>
+        <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/export`}>
+          Fullständig export
+        </Link>
+        {' av hushållets information finns på en egen sida i Inställningar.'}
+      </p>
       <HouseholdErasure key={`erasure-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
       <HouseholdImport key={`import-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
       <ContentOwners key={`owners-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
     </section>
   );
+}
+
+function HouseholdExportPage({
+  household,
+  onReload,
+}: {
+  household: Household | undefined;
+  onReload: () => void;
+}) {
+  const { id } = useParams();
+  if (household?.id !== id || household?.role !== 'administrator')
+    return (
+      <section className="panel">
+        <Heading>Du kan inte administrera hushållet</Heading>
+        <p>Endast aktuella administratörer kan göra en fullständig export.</p>
+        <Link to="/">Till startsidan</Link>
+      </section>
+    );
+  return <HouseholdExport key={household.id} householdId={household.id} onAccessLost={onReload} />;
 }
 
 function HouseholdWork({
@@ -1144,6 +1168,10 @@ export function App() {
                   <div ref={setTypeSettingsTarget} />
                 </section>
               }
+            />
+            <Route
+              path="/households/:id/settings/export"
+              element={<HouseholdExportPage household={household} onReload={reload} />}
             />
             <Route
               path="/households/:id/administration"

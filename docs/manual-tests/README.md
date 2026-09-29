@@ -118,8 +118,11 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   lokalt prov med tappat sparbesked, avvisade gamla sparbegäranden,
   ny förberedelse efter omstart och ångring med aktuellt underlag.
 
-- [Fullständig export](household-export.md): privata uppgifter före
-  export, nedladdning, avbrott, återkallad aktiv hämtning, giltighetstid samt
+- [Fullständig export](household-export.md): egen sida i Inställningar,
+  privata uppgifter före export, tangentbord, fokus, bevarat kartarbete,
+  nedladdning, verklig återimport av den hämtade filen efter omstart,
+  avbrott med oklart rensningsresultat, sidbyte under hämtning,
+  återkallad aktiv hämtning, giltighetstid samt
   bevarade identiteter, bildversioner, utkast och placeringar efter
   sammanslagning. En lokal kontrollklient pausar en stor HTTP-överföring,
   mäter olästa byte i serverns källfil och kontrollerar borttagna exportfiler.

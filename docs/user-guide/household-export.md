@@ -3,8 +3,8 @@
 [Till användarguidens innehåll](README.md)
 
 En aktuell administratör kan hämta hushållets fullständiga information
-som en ZIP-fil. Öppna **Administrera tillgång** och gå till
-**Fullständig export**. Vanliga medlemmar och externa assistenter kan
+som en ZIP-fil. Öppna **Inställningar** och välj **Fullständig export**
+under Administration. Vanliga medlemmar och externa assistenter kan
 inte göra en fullständig export.
 
 ## Läs detta före exporten
@@ -14,6 +14,10 @@ Exporten innehåller hushållets gemensamma karta, typdefinitioner,
 utkast, personliga placeringar och visningsval ingår, tillsammans med
 bilder som behövs för innehållet och dess historik. Administratören kan
 alltså läsa andras privata information i filen.
+
+Oskickad formulärtext ingår ännu inte. Lägg först ändringarna i ditt
+privata utkast om de ska följa med i exporten; du behöver inte spara dem
+i den gemensamma kartan.
 
 Förvara filen säkert. Dela den bara med personer som ska få läsa hela
 innehållet. Tänk även på vem som kommer åt mappen där webbläsaren sparar
@@ -48,8 +52,14 @@ aktiva OAuth-token eller serverhemligheter.
 
 Välj **Avbryt export** för att avbryta förberedelsen eller hämtningen.
 Du kan också avbryta en färdig export innan du hämtar den. Hushållets
-information påverkas inte. Om du lämnar sidan avbryts pågående arbete
-och Skyttel försöker ta bort den förberedda kopian.
+information påverkas inte. Om du lämnar exportsidan avbryts pågående
+arbete och Skyttel försöker ta bort den förberedda kopian. Du kan återgå
+till kartan med ditt pågående kartarbete kvar.
+
+Om förberedelsen avbryts innan svaret kommer fram kan Skyttel inte
+bekräfta att en färdig kopia tas bort. En sådan tillfällig kopia kan finnas
+kvar tills giltighetstiden går ut. Ingen fil erbjuds från det avbrutna
+försöket; välj **Förbered fullständig export** om du vill börja om.
 
 En förberedd fil kan hämtas en gång. Om anslutningen avbryts, filen inte
 kan kontrolleras eller giltighetstiden går ut väljer du

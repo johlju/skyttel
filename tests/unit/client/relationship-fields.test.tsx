@@ -2,7 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { HouseholdMap } from '../../../src/client/HouseholdMap.js';
-import type { MapState } from '../../../src/shared/map.js';
+import type { MapState, SaveReceipt } from '../../../src/shared/map.js';
 import { applicationFixture } from '../server/fixture.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
@@ -46,8 +46,9 @@ async function open() {
   return work;
 }
 
-test('relationship field definitions and answers use the same visible map draft and retain focus after removal', async () => {
+test('relationship field definitions retain removal focus and enter the private draft with all four kinds', async () => {
   const user = userEvent.setup();
+  const before = await read();
   const work = await open();
   await userEvent.click(work.getByRole('button', { name: 'Ny sambandstyp' }));
   const editor = within(screen.getByRole('group', { name: 'Sambandstypens definition' }));
@@ -82,6 +83,65 @@ test('relationship field definitions and answers use the same visible map draft 
   }
   await userEvent.click(editor.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' }));
   await screen.findByText('Förslaget finns i ditt privata utkast. Kartan är inte ändrad.');
+  const proposed = await read();
+  expect(proposed.relationshipTypes).toEqual(before.relationshipTypes);
+  expect(proposed.objects).toEqual(before.objects);
+  expect(proposed.relationships).toEqual(before.relationships);
+  expect(proposed.draft.changes).toEqual(before.draft.changes);
+  expect(proposed.draft.relationshipTypes).toHaveLength(1);
+  expect(proposed.draft.relationshipTypes?.[0]).toMatchObject({
+    before: null,
+    after: {
+      name: 'Förvaring',
+      description: 'Var saker finns',
+      forwardLabel: 'förvaras i',
+      reverseLabel: 'innehåller',
+      sections: [{ id: 'custom-fields', name: 'Egna fält' }],
+      fields: [
+        { name: 'Anteckning', description: 'Valfri uppgift', kind: 'text' },
+        { name: 'Belopp', description: 'Valfri uppgift', kind: 'number' },
+        { name: 'Datum', description: 'Valfri uppgift', kind: 'date' },
+        { name: 'Bekräftat', description: 'Valfri uppgift', kind: 'boolean' },
+      ],
+    },
+  });
+  expect((await (await client.request(`${path}/history`)).json()).history).toEqual([]);
+});
+
+test('a draft-only relationship definition supplies four answer kinds and saves atomically with its objects', async () => {
+  const before = await read();
+  const definition = {
+    name: 'Förvaring',
+    description: 'Var saker finns',
+    forwardLabel: 'förvaras i',
+    reverseLabel: 'innehåller',
+    sections: [{ id: 'custom-fields', name: 'Egna fält' }],
+    fields: [
+      { id: 'note', name: 'Anteckning', description: 'Valfri uppgift', kind: 'text' },
+      { id: 'amount', name: 'Belopp', description: 'Valfri uppgift', kind: 'number' },
+      { id: 'date', name: 'Datum', description: 'Valfri uppgift', kind: 'date' },
+      { id: 'confirmed', name: 'Bekräftat', description: 'Valfri uppgift', kind: 'boolean' },
+    ].map((field) => ({ ...field, sectionId: 'custom-fields' })),
+  };
+  expect(
+    (
+      await post('relationship-type', {
+        version: before.draft.version,
+        id: 'storage-fields',
+        baseRevision: null,
+        value: definition,
+      })
+    ).status,
+  ).toBe(200);
+  const proposed = await read();
+  expect(proposed.relationshipTypes).toEqual(before.relationshipTypes);
+  expect(proposed.draft.changes).toEqual(before.draft.changes);
+  expect(proposed.draft.relationshipTypes?.[0]).toMatchObject({
+    id: 'storage-fields',
+    before: null,
+    after: definition,
+  });
+  const work = await open();
   await userEvent.click(work.getByRole('button', { name: 'Nytt samband' }));
   const relationship = within(screen.getByRole('group', { name: 'Sambandets detaljer' }));
   await userEvent.selectOptions(relationship.getByLabelText('Från objekt'), 'bike');
@@ -101,12 +161,30 @@ test('relationship field definitions and answers use the same visible map draft 
   expect(review.getByText('Bekräftat: Nej')).toBeTruthy();
   await userEvent.click(review.getByRole('button', { name: 'Spara hela utkastet' }));
   await screen.findByText(/^Sparat:/);
-  expect(Object.values((await read()).relationships[0].customValues ?? {})).toEqual([
+  const saved = await read();
+  expect(Object.values(saved.relationships[0].customValues ?? {})).toEqual([
     'Låst',
     0,
     '2026-09-27',
     false,
   ]);
+  expect(saved.objects.map(({ id }) => id).sort()).toEqual(['bike', 'garage']);
+  expect(saved.relationshipTypes.find(({ id }) => id === 'storage-fields')).toMatchObject(
+    definition,
+  );
+  expect(saved.relationships).toHaveLength(1);
+  expect(saved.relationships[0]).toMatchObject({
+    typeId: 'storage-fields',
+    sourceId: 'bike',
+    targetId: 'garage',
+  });
+  const { history }: { history: SaveReceipt[] } = await (
+    await client.request(`${path}/history`)
+  ).json();
+  expect(history).toHaveLength(1);
+  expect(history[0].changes.map(({ after }) => after?.id).sort()).toEqual(['bike', 'garage']);
+  expect(history[0].relationshipTypes?.map(({ id }) => id)).toEqual(['storage-fields']);
+  expect(history[0].relationships?.map(({ id }) => id)).toEqual([saved.relationships[0].id]);
 });
 
 test('relationship type changes keep previous answers visible until the user makes an explicit choice', async () => {

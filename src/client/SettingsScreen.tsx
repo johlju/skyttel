@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import logo from '../../docs/images/shuttle-logo-transparent-small.png';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
@@ -34,7 +34,13 @@ export function settingsEntries(
           {
             to: `${householdPath}/administration`,
             title: 'Administrera tillgång',
-            description: 'Medlemmar och inbjudningar, export, återimport och permanent radering.',
+            description: 'Medlemmar och inbjudningar, återimport och permanent radering.',
+            group: 'Administration',
+          },
+          {
+            to: `${householdPath}/settings/export`,
+            title: 'Fullständig export',
+            description: 'Hämta hela hushållets information, inklusive privata uppgifter.',
             group: 'Administration',
           },
         ]
@@ -107,6 +113,7 @@ export function SettingsScreen({
   const location = useLocation();
   const theme = useWorkspaceTheme();
   const content = useRef<HTMLDivElement>(null);
+  const focusedPath = useRef<string | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(() => window.innerWidth > 800);
   const mapPath = household ? `/households/${encodeURIComponent(household.id)}` : '/';
   const entries = personal
@@ -127,12 +134,17 @@ export function SettingsScreen({
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Each destination needs its heading and mobile navigation reset.
-  useEffect(() => {
-    content.current?.querySelector<HTMLElement>('h1')?.focus();
-    if (window.innerWidth <= 800) setNavigationOpen(false);
+  useLayoutEffect(() => {
+    if (focusedPath.current === location.pathname) return;
+    if (window.innerWidth <= 800 && navigationOpen) {
+      setNavigationOpen(false);
+      return;
+    }
+    // Focus against the collapsed layout so the browser scrolls to the final heading position.
+    focusedPath.current = location.pathname;
     content.current?.scrollTo(0, 0);
-  }, [location.pathname]);
+    content.current?.querySelector<HTMLElement>('h1')?.focus();
+  }, [location.pathname, navigationOpen]);
   return (
     <section className="settings-screen">
       <header className="settings-header">

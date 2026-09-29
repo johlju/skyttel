@@ -142,7 +142,9 @@ test('canceling during preparation keeps a late server reply from reopening the 
   await act(async () => finish(Response.json(prepared(), { status: 201 })));
   expect(canceled).toBe(true);
   expect(screen.queryByRole('button', { name: 'Hämta ZIP-fil' })).toBeNull();
-  expect(screen.getByRole('status').textContent).toBe('Exporten har avbrutits.');
+  expect(screen.getByRole('status').textContent).toBe(
+    'Förberedelsen har avbrutits i webbläsaren. En tillfällig kopia kan finnas kvar tills giltighetstiden går ut.',
+  );
   expect(downloads).toEqual([]);
 });
 

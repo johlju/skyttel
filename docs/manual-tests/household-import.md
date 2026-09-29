@@ -95,8 +95,8 @@ restart”.
    Välj därefter **Spara hela utkastet** utan att ladda om sidan. Invänta
    kvittot och konsolbeskedet **IMPORT-06: merge sparat**.
 3. Lägg den andra provbilden som privat bildförslag på kvarvarande objekt.
-   Låt förslaget vara osparat. Hämta en fullständig export i Administration
-   och behåll ZIP-filen privat.
+   Låt förslaget vara osparat. Hämta en fullständig export i
+   **Inställningar → Fullständig export** och behåll ZIP-filen privat.
 4. I profil A: skapa **Senare objekt** och lägg det i utkastet. Kör samma
    fångstkod igen, ange `later` och välj **Spara hela utkastet**. Kontrollera
    konsolbeskedet **IMPORT-06: later sparat** och gränssnittets
