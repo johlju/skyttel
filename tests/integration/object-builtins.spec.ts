@@ -152,7 +152,7 @@ for (const { width, height } of [
       await returnToWork();
       await page
         .getByRole('list', { name: 'Objekt', exact: true })
-        .getByRole('button', { name: 'Husets lån', exact: true })
+        .getByRole('button', { name: 'Uppgifter för Husets lån', exact: true })
         .click();
       const details = page.getByRole('region', { name: 'Husets lån', exact: true });
       await expect(
@@ -163,7 +163,7 @@ for (const { width, height } of [
       await save();
       await page
         .getByRole('list', { name: 'Objekt', exact: true })
-        .getByRole('button', { name: 'Husets lån', exact: true })
+        .getByRole('button', { name: 'Uppgifter för Husets lån', exact: true })
         .click();
       await details.getByRole('button', { name: 'Redigera valt objekt' }).click();
       await form.getByLabel('Objekttyp', { exact: true }).selectOption('other');

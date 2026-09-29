@@ -32,6 +32,7 @@ import { LifecycleDetails, LifecycleStatus } from './Lifecycle.js';
 import { MapHistory } from './MapHistory.js';
 import { type MapRevealRequest, waitForMapDisplay } from './map-display.js';
 import { MapRequestError, request } from './map-request.js';
+import { initialObjectBrowsing, ObjectList, objectListResults } from './ObjectList.js';
 import { MergeSourceDetails, ObjectMerge } from './ObjectMerge.js';
 import { ObjectPropertiesDetails } from './ObjectProperties.js';
 import { ObjectRemovalNotice } from './ObjectRemovalNotice.js';
@@ -181,8 +182,8 @@ export function HouseholdMap({
   const [editorOpen, setEditorOpen] = useState(false);
   const editorDialog = useRef<HTMLDialogElement>(null);
   const editMapButton = useRef<HTMLButtonElement>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const workspace = useRef<HTMLElement>(null);
+  const resumeListFocus = useRef<() => boolean>(() => false);
   const lastWorkFocus = useRef<HTMLElement | null>(null);
   const lastOutsideFocus = useRef<HTMLElement | string | null>(null);
   const routeOutsideFocus = useRef<HTMLElement | string | null>(null);
@@ -209,6 +210,8 @@ export function HouseholdMap({
     if (returning && !profileRequested) restoreOutsideFocus(routeOutsideFocus.current);
   });
   const [revealRequest, setRevealRequest] = useState<MapRevealRequest>();
+  const [mapAvailable, setMapAvailable] = useState(true);
+  const [mapUnfiltered, setMapUnfiltered] = useState(false);
   const [cameraFocusRequest, setCameraFocusRequest] = useState<{
     id: string;
     objectIds: string[];
@@ -239,8 +242,12 @@ export function HouseholdMap({
   function openWork(target: WorkspaceTarget) {
     workTrigger.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setFiltersOpen(true);
-    openPanel(target === 'conversation' || target === 'voice' ? 'conversation' : 'work');
+    openPanel(
+      target === 'conversation' || target === 'voice' ? 'conversation' : 'work',
+      target === 'search'
+        ? workspace.current?.querySelector<HTMLInputElement>('.object-browser input[type="search"]')
+        : undefined,
+    );
   }
   function openGuidedWork(target: WorkspaceTarget) {
     setGuidance(false);
@@ -265,8 +272,8 @@ export function HouseholdMap({
   }
   const [legacyDirty, setDirty] = useState(false);
   const dirty = legacyDirty || Object.values(objectDirty).some(Boolean);
-  const [query, setQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const [browsing, setBrowsing] = useState(initialObjectBrowsing);
+  const { query, types: typeFilter } = browsing;
   const [focusId, setFocusId] = useState<string | null>(null);
   const [selection, setSelection] = useState<{
     kind: 'object' | 'relationship';
@@ -331,12 +338,15 @@ export function HouseholdMap({
     if (!active || !workOpen) return;
     const viewport = window.visualViewport;
     let frame = 0;
-    const resize = () => {
+    const measure = () => {
       workspace.current?.style.setProperty(
         '--work-height',
         `${viewport?.height ?? window.innerHeight}px`,
       );
       workspace.current?.style.setProperty('--work-offset', `${viewport?.offsetTop ?? 0}px`);
+    };
+    const resize = () => {
+      measure();
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const field = document.activeElement;
@@ -346,7 +356,7 @@ export function HouseholdMap({
         }
       });
     };
-    resize();
+    measure();
     window.addEventListener('resize', resize);
     viewport?.addEventListener('resize', resize);
     viewport?.addEventListener('scroll', resize);
@@ -365,12 +375,11 @@ export function HouseholdMap({
     setPresentation('list');
     setDetailsOpen(false);
     setEditorOpen(false);
-    setFiltersOpen(false);
     setSelection(null);
     setFocusId(null);
     setCameraFocusRequest(undefined);
-    setQuery('');
-    setTypeFilter('');
+    setBrowsing(initialObjectBrowsing);
+    setMapUnfiltered(false);
     setState(null);
     setObjectPanels([]);
     setObjectDirty({});
@@ -922,7 +931,15 @@ export function HouseholdMap({
     if (object) selectObject(object, 'include');
     openPanel(id);
   }
-  const { displayed, displayedEdges, visibleObjects, visibleEdges } = useMemo(() => {
+  const {
+    displayed,
+    displayedEdges,
+    visibleObjects,
+    visibleEdges,
+    listObjects,
+    listResults,
+    listEdges,
+  } = useMemo(() => {
     const displayed = state
       ? new Map(state.objects.map((object) => [object.id, object]))
       : new Map<string, MapObject>();
@@ -953,29 +970,39 @@ export function HouseholdMap({
         connected.add(edge.targetId);
       }
     }
+    const listObjects = [...displayed.values()].filter(
+      (object) => !focusId || connected.has(object.id),
+    );
+    const listResults = objectListResults(listObjects, effectiveTypes, browsing, selectedIds);
     const visibleObjects = new Map(
-      [...displayed].filter(
-        ([, object]) =>
-          (!focusId || connected.has(object.id)) &&
-          (!typeFilter || object.typeId === typeFilter) &&
-          `${object.name} ${effectiveTypes.find((type) => type.id === object.typeId)?.name ?? ''}`
-            .toLocaleLowerCase('sv')
-            .includes(query.toLocaleLowerCase('sv')),
-      ),
+      (mapUnfiltered ? listObjects : listResults.items).map((object) => [object.id, object]),
     );
-    const visibleEdges = new Map(
-      [...spatialEdges].filter(
-        ([, edge]) =>
-          visibleObjects.has(edge.sourceId) &&
-          (!edge.targetId || visibleObjects.has(edge.targetId)) &&
-          (!focusId || edge.sourceId === focusId || edge.targetId === focusId),
-      ),
-    );
-    return { displayed, displayedEdges, visibleObjects, visibleEdges };
-  }, [state, householdId, effectiveTypes, focusId, typeFilter, query]);
+    const listIds = new Set(listResults.items.map((object) => object.id));
+    function edgesFor(ids: Set<string>) {
+      return new Map(
+        [...spatialEdges].filter(
+          ([, edge]) =>
+            ids.has(edge.sourceId) &&
+            (!edge.targetId || ids.has(edge.targetId)) &&
+            (!focusId || edge.sourceId === focusId || edge.targetId === focusId),
+        ),
+      );
+    }
+    const listEdges = edgesFor(listIds);
+    const visibleEdges = mapUnfiltered ? edgesFor(new Set(visibleObjects.keys())) : listEdges;
+    return {
+      displayed,
+      displayedEdges,
+      visibleObjects,
+      visibleEdges,
+      listObjects,
+      listResults,
+      listEdges,
+    };
+  }, [state, householdId, effectiveTypes, focusId, browsing, selectedIds, mapUnfiltered]);
   function showAll() {
-    setQuery('');
-    setTypeFilter('');
+    setBrowsing(initialObjectBrowsing);
+    setMapUnfiltered(false);
     setFocusId(null);
     setSelection(null);
     setStatus('Hela rymden visas. Kameran behåller sin vinkel, zoom och panorering.');
@@ -997,18 +1024,36 @@ export function HouseholdMap({
       neighbors.add(edge.sourceId);
       if (edge.targetId) neighbors.add(edge.targetId);
     }
-    setQuery('');
-    setTypeFilter('');
+    setMapUnfiltered(true);
     setFocusId(null);
     setCameraFocusRequest({
       id: crypto.randomUUID(),
       objectIds: [...neighbors].filter((id) => displayed.has(id)),
     });
   }
+  function showListObject(object: MapObject) {
+    if (!mapAvailable) return;
+    selectObject(object, 'replace');
+    focusSelection([object.id]);
+    closePanel('work');
+    setRevealRequest(undefined);
+    if (narrow) {
+      setPresentation('map');
+      setDetailsOpen(false);
+      setEditorOpen(false);
+    }
+    focusTools();
+  }
   function focusObject(id: string) {
     setFocusId(id);
-    setQuery('');
-    setTypeFilter('');
+    setMapUnfiltered(false);
+    setBrowsing((previous) => ({
+      ...previous,
+      query: '',
+      types: [],
+      onlySelected: false,
+      page: 0,
+    }));
     setSelection({ kind: 'object', id });
     setStatus(
       `Visar direkta samband för ${displayed.get(id)?.name}. Visa hela rymden lämnar fokus.`,
@@ -1057,20 +1102,17 @@ export function HouseholdMap({
     });
     setDirty(true);
   }
-  function selectObject(object: MapObject, mode: 'select' | 'toggle' | 'include' = 'select') {
+  function selectObject(
+    object: MapObject,
+    mode: 'select' | 'toggle' | 'include' | 'replace' = 'select',
+  ) {
     setSelection((previous) => {
       const ids = previous?.kind === 'object' ? (previous.ids ?? [previous.id]) : [];
       const selected = ids.includes(object.id);
-      const next =
-        mode !== 'select'
-          ? selected
-            ? mode === 'toggle'
-              ? ids.filter((id) => id !== object.id)
-              : ids
-            : [...ids, object.id]
-          : selected
-            ? ids
-            : [object.id];
+      let next = ids;
+      if (mode === 'replace' || (mode === 'select' && !selected)) next = [object.id];
+      else if (!selected) next = [...ids, object.id];
+      else if (mode === 'toggle') next = ids.filter((id) => id !== object.id);
       if (!next.length) return null;
       return {
         kind: 'object',
@@ -1115,8 +1157,7 @@ export function HouseholdMap({
     revealAbort.current = abort;
     const cancel = () => abort.abort();
     signal.addEventListener('abort', cancel, { once: true });
-    setQuery('');
-    setTypeFilter('');
+    setMapUnfiltered(true);
     setFocusId(null);
     setPresentation('combined');
     if (object) edit(object, false);
@@ -1276,7 +1317,7 @@ export function HouseholdMap({
           {guidance && !workOpen && Boolean(visibleObjects.size) && (
             <WelcomeGuidance onOpen={openGuidedWork} onDismiss={dismissGuidance} />
           )}
-          {state && !visibleObjects.size && !query && !typeFilter && !workOpen && (
+          {state && !visibleObjects.size && !query && !typeFilter.length && !workOpen && (
             <div className="workspace-empty">
               <h2>Din karta börjar här</h2>
               <p>Lägg till ditt första objekt genom Lista eller berätta för Skyttel.</p>
@@ -1367,10 +1408,10 @@ export function HouseholdMap({
             focusRequest={cameraFocusRequest}
             onFocusSelection={() => focusSelection()}
             onShowOverview={() => {
-              setQuery('');
-              setTypeFilter('');
+              setMapUnfiltered(true);
               setFocusId(null);
             }}
+            onAvailabilityChange={setMapAvailable}
             personal={personal}
             settingsMount={mapSettingsTarget}
             active={active && !mapCovered}
@@ -1500,6 +1541,7 @@ export function HouseholdMap({
                   title: 'Lista och utkast',
                   open: openPanels.includes('work'),
                   content: work,
+                  resumeFocus: () => resumeListFocus.current(),
                 },
                 {
                   id: 'conversation',
@@ -1786,106 +1828,79 @@ export function HouseholdMap({
                   </button>
                 )}
               </nav>
-              <details
-                className="map-filter-panel"
-                open={presentation !== 'map' || filtersOpen}
-                onToggle={(event) => {
-                  if (presentation === 'map') setFiltersOpen(event.currentTarget.open);
-                }}
-              >
-                <summary>Sök och fokus</summary>
-                <div className="map-filters">
-                  <label htmlFor="object-search">Sök objekt</label>
-                  <input
-                    id="object-search"
-                    type="search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                  <label htmlFor="map-type-filter">Filtrera objekttyp</label>
-                  <select
-                    id="map-type-filter"
-                    value={typeFilter}
-                    onChange={(event) => setTypeFilter(event.target.value)}
-                  >
-                    <option value="">Alla typer</option>
-                    {effectiveTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={showAll}>
-                    Visa hela rymden
-                  </button>
-                  <button type="button" onClick={clearSelection}>
-                    Avmarkera alla
-                  </button>
-                  <p>{selectedIds.length} markerade</p>
-                  <button
-                    type="button"
-                    disabled={selection?.kind !== 'object'}
-                    onClick={() => {
-                      if (selection?.kind === 'object') focusObject(selection.id);
-                    }}
-                  >
-                    Visa objektets kopplingar
-                  </button>
-                  <p aria-live="polite">
-                    {visibleObjects.size} objekt och {visibleEdges.size} samband
-                    {focusId && (
-                      <>
-                        {' '}
-                        · <span>Fokus: {displayed.get(focusId)?.name}</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </details>
               <div className="map-workspace">
                 <div className="map-content" hidden={!workOpen}>
                   <div className="map-management">
-                    <PagedList
-                      label="Objekt"
-                      className="access-list"
-                      key={`objects-${query}-${typeFilter}-${focusId}`}
-                      items={[...visibleObjects.values()]}
+                    <ObjectList
+                      objects={listObjects}
+                      resumeFocus={resumeListFocus}
+                      types={effectiveTypes}
+                      results={listResults}
+                      browsing={browsing}
+                      onBrowse={(next) => {
+                        if (
+                          next.query !== browsing.query ||
+                          next.types !== browsing.types ||
+                          next.onlySelected !== browsing.onlySelected
+                        )
+                          setMapUnfiltered(false);
+                        setBrowsing(next);
+                      }}
+                      active={
+                        active && workOpen && openPanels.includes('work') && activePanel === 'work'
+                      }
+                      selectedIds={selectedIds}
+                      mapAvailable={mapAvailable}
+                      onClearSelection={clearSelection}
                       selectedId={selection?.kind === 'object' ? selection.id : undefined}
                       renderItem={(object) => (
                         <li key={object.id}>
-                          <button
-                            type="button"
-                            disabled={pending || blocked}
-                            onClick={() => edit(object, false)}
-                          >
-                            {object.name}
-                          </button>
-                          <span> {typeName(object.typeId)}</span>
-                          <div className="object-list-appearance">
-                            <ProfileImage
-                              householdId={householdId}
-                              value={object}
-                              typeName={typeName(object.typeId)}
-                              compact
-                            />
-                          </div>
-                          <div className="access-actions">
+                          <div className="object-list-row">
                             <button
                               type="button"
+                              className="object-list-mark"
                               aria-label={`Markera ${object.name}`}
                               aria-pressed={selectedIds.includes(object.id)}
                               disabled={pending || blocked}
                               onClick={() => selectObject(object, 'toggle')}
                             >
-                              Markera
+                              <span aria-hidden="true">
+                                {selectedIds.includes(object.id) ? '✓' : '□'}
+                              </span>
+                            </button>
+                            <span className="object-list-appearance">
+                              <ProfileImage
+                                householdId={householdId}
+                                value={object}
+                                typeName={typeName(object.typeId)}
+                                compact
+                              />
+                            </span>
+                            <button
+                              type="button"
+                              className="object-list-name"
+                              aria-label={`Visa ${object.name} i kartan`}
+                              title={
+                                !mapAvailable
+                                  ? 'Kartan kan inte visas. Använd Uppgifter.'
+                                  : undefined
+                              }
+                              disabled={pending || blocked || !mapAvailable}
+                              onClick={() => showListObject(object)}
+                            >
+                              <span>
+                                <strong>{object.name}</strong>
+                                <small>{typeName(object.typeId)}</small>
+                              </span>
                             </button>
                             <button
                               type="button"
-                              aria-label={`Visa detaljer för ${object.name}`}
+                              className="object-list-details"
+                              aria-label={`Uppgifter för ${object.name}`}
                               disabled={pending || blocked}
                               onClick={() => edit(object, false)}
                             >
-                              Visa detaljer
+                              Uppgifter
                             </button>
                           </div>
                           <ProposalSymbol
@@ -1957,6 +1972,29 @@ export function HouseholdMap({
                         </li>
                       )}
                     />
+                    <div className="map-list-context">
+                      <button type="button" onClick={showAll}>
+                        Visa hela rymden
+                      </button>
+                      <button
+                        type="button"
+                        disabled={selection?.kind !== 'object'}
+                        onClick={() => {
+                          if (selection?.kind === 'object') focusObject(selection.id);
+                        }}
+                      >
+                        Visa objektets kopplingar
+                      </button>
+                      <p aria-live="polite">
+                        {listResults.items.length} objekt och {listEdges.size} samband
+                        {focusId && (
+                          <>
+                            {' '}
+                            · <span>Fokus: {displayed.get(focusId)?.name}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
                     <button
                       ref={newButton}
                       type="button"
@@ -2019,9 +2057,7 @@ export function HouseholdMap({
                     <PagedList
                       label="Samband"
                       key={`edges-${query}-${typeFilter}-${focusId}`}
-                      items={[...displayedEdges.values()].filter((edge) =>
-                        visibleEdges.has(edge.id),
-                      )}
+                      items={[...displayedEdges.values()].filter((edge) => listEdges.has(edge.id))}
                       selectedId={selection?.kind === 'relationship' ? selection.id : undefined}
                       renderItem={(edge) => (
                         <li key={edge.id}>

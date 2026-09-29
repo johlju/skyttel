@@ -41,13 +41,15 @@ afterEach(() => {
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
   await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
-  await screen.findByRole('button', { name: 'Nytt samband' });
+  const work = within(await screen.findByRole('region', { name: 'Lista och utkast' }));
+  await work.findByRole('button', { name: 'Nytt samband' });
+  return work;
 }
 
 test('relationship field definitions and answers use the same visible map draft and retain focus after removal', async () => {
   const user = userEvent.setup();
-  await open();
-  await userEvent.click(screen.getByRole('button', { name: 'Ny sambandstyp' }));
+  const work = await open();
+  await userEvent.click(work.getByRole('button', { name: 'Ny sambandstyp' }));
   const editor = within(screen.getByRole('group', { name: 'Sambandstypens definition' }));
   for (const [label, text] of [
     ['Sambandstypens namn', 'Förvaring'],
@@ -80,7 +82,7 @@ test('relationship field definitions and answers use the same visible map draft 
   }
   await userEvent.click(editor.getByRole('button', { name: 'Lägg sambandstypen i mitt utkast' }));
   await screen.findByText('Förslaget finns i ditt privata utkast. Kartan är inte ändrad.');
-  await userEvent.click(screen.getByRole('button', { name: 'Nytt samband' }));
+  await userEvent.click(work.getByRole('button', { name: 'Nytt samband' }));
   const relationship = within(screen.getByRole('group', { name: 'Sambandets detaljer' }));
   await userEvent.selectOptions(relationship.getByLabelText('Från objekt'), 'bike');
   await userEvent.selectOptions(relationship.getByLabelText('Till objekt'), 'garage');

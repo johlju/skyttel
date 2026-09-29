@@ -71,7 +71,7 @@ test('TYP-08: sections move and hide fields in the shared draft without losing v
     await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Paneler', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Paneler', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Effekt', { exact: true })).toHaveCount(0);
@@ -91,7 +91,7 @@ test('TYP-08: sections move and hide fields in the shared draft without losing v
     await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Paneler', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Paneler', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Effekt', { exact: true })).toHaveValue('0');

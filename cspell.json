@@ -4,6 +4,11 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "fokusmål",
+    "fokusregler",
+    "fokusbyten",
+    "rulläge",
+    "rulläget",
     "amberfärgad",
     "historikkvitto",
     "fokusflytt",
@@ -333,7 +338,8 @@
     "ikonförslag",
     "fokusval",
     "talstart",
-    "döljning"
+    "döljning",
+    "tabbordningen"
   ],
   "overrides": [
     {

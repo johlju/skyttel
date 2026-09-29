@@ -177,7 +177,9 @@ test('MEDLEM-06: revocation preserves shared objects and only a new invitation r
     await page.getByRole('link', { name: 'Till hushållet' }).click();
     await openWorkspace(page);
     await page.getByLabel('Sök objekt').fill('Robin i kartan');
-    await expect(page.getByRole('button', { name: 'Robin i kartan', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Uppgifter för Robin i kartan', exact: true }),
+    ).toBeVisible();
 
     await openSettings(page);
 
@@ -193,7 +195,7 @@ test('MEDLEM-06: revocation preserves shared objects and only a new invitation r
     await openWorkspace(recipientPage);
     await recipientPage.getByLabel('Sök objekt').fill('Robin i kartan');
     await expect(
-      recipientPage.getByRole('button', { name: 'Robin i kartan', exact: true }),
+      recipientPage.getByRole('button', { name: 'Uppgifter för Robin i kartan', exact: true }),
     ).toBeVisible();
   } finally {
     await recipient.close();

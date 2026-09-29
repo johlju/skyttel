@@ -194,7 +194,7 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
     await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Kim Exempel', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Kim Exempel', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
@@ -318,7 +318,7 @@ test('TEXT-03: nekade sparbesked och modellfel lämnar formulärarbetet tillgän
     );
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Lo Exempel', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn', { exact: true }).fill('Lo Lind');
@@ -406,7 +406,7 @@ test('TEXT-05: markering kräver visning och skyddar oskickad text', async ({ pa
     ).toBeVisible();
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Lo Exempel', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd uppgift');

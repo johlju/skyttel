@@ -52,8 +52,8 @@ relationship reachable”.
 1. Öppna **Lista**. Läs beskedet om färre etiketter och kontrollera
    att sökning, listor och navigering är tillgängliga.
 2. Bläddra genom objektsidorna och sambandssidorna med sidvalet. Kontrollera
-   räknaren och att den sista sidan nås. Välj **Provobjekt 499** genom sökning
-   och kontrollera namnet i detaljerna.
+   räknaren och att den sista sidan nås. Sök efter **Provobjekt 499**,
+   välj **Uppgifter** vid träffen och kontrollera namnet i detaljerna.
 3. Rensa sökningen. Använd **Visa valt innehåll i listan** och kontrollera
    att det valda objektet återfinns. Välj **Visa objektets kopplingar**
    och läs dess direkta samband.

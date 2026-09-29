@@ -564,7 +564,7 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Kim Exempel', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Kim Exempel', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');

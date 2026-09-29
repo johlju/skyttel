@@ -21,7 +21,7 @@ test('refreshing after a conflict preserves text without authorizing a stale for
     await tab.goto(installation.origin);
     await openWorkspace(tab);
     for (const editor of [page, tab]) {
-      await editor.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+      await editor.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
       await editor.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     }
     await page.getByLabel('Objektets namn').fill('Lo gammalt förslag');
@@ -36,7 +36,7 @@ test('refreshing after a conflict preserves text without authorizing a stale for
     await expect(page.getByLabel('Objektets namn')).toHaveValue('Lo gammalt förslag');
     await expect(page.getByRole('button', { name: 'Lägg i mitt utkast' })).toBeDisabled();
     await page.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
-    await page.getByRole('button', { name: 'Lo nytt förslag', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo nytt förslag', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Objektets namn')).toHaveValue('Lo nytt förslag');
     await expect(page.getByRole('button', { name: 'Lägg i mitt utkast' })).toBeEnabled();
@@ -65,7 +65,7 @@ test('an uncertain save recovers its receipt and stale tabs cannot save newer dr
     await tab.goto(installation.origin);
     await openWorkspace(tab);
     await expect(tab.getByRole('region', { name: 'Hela mitt utkast' })).toContainText('Lo Exempel');
-    await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Lind');
     await page.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
@@ -135,7 +135,7 @@ test('KARTA-06: objects move from a persistent private proposal to the shared ma
         'Inga förslag',
       );
       await reopened.getByLabel('Sök objekt').fill('Lo');
-      await reopened.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+      await reopened.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
       await reopened.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
       await reopened.getByLabel('Objektets namn').fill('Lo Lind');
       await reopened.getByRole('button', { name: 'Lägg i mitt utkast' }).click();
@@ -143,7 +143,7 @@ test('KARTA-06: objects move from a persistent private proposal to the shared ma
       await expect(review).toContainText('Lo Exempel');
       await expect(review).toContainText('Lo Lind');
       await reopened.getByRole('button', { name: 'Kasta hela utkastet' }).click();
-      await reopened.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+      await reopened.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
       await reopened.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
       await reopened.getByRole('button', { name: 'Ta bort', exact: true }).click();
       await expect(review).toContainText('Borttagning');

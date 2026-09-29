@@ -135,7 +135,7 @@ test('editing visible values preserves hidden zero and no answers in the same ob
   });
   render(<HouseholdMap householdId={householdId} />);
   await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Paneler' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Uppgifter för Paneler' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   expect(screen.queryByLabelText('Effekt', { exact: true })).toBeNull();
   expect(screen.queryByLabelText('Batteri', { exact: true })).toBeNull();

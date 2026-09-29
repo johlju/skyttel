@@ -38,7 +38,8 @@ fallens formulär, listor, typer, historik och utkast. Välj **Samtal och text**
 före samtalsfallen. På telefon öppnar **Visa verktygens namn** även de
 kompletterande verktygen.
 
-Välj ett objekt i Lista för att öppna dess panel. När ett fall återvänder
+Välj **Uppgifter** vid objektet i Lista för att öppna dess panel. Namnet
+visar i stället objektet i kartan. När ett fall återvänder
 till ett redan öppet objekt, välj objektet i **Öppna paneler**. Stäng
 arbetsytan inför kartgester om panelerna täcker kartan eller dess reglage;
 öppna Lista igen för sökning, filter, samband och utkast.
@@ -52,6 +53,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 **Stäng arbetsytan** återgår till kartan och behåller oskickad text.
 
 ## Områden
+
+- [Objektlistor](object-lists.md): typgrupper, flera typfilter, markeringar,
+  separat sortering, sidval, bevarat rulläge, första klicket i en inaktiv
+  lista och uttryckligt kartfokus.
 
 - [Navigeringsfönstret](map-navigation.md): normal- och miniläge, oberoende
   fönsterflytt, samtidiga detaljer och sex beständiga personliga riktningar.

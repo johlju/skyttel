@@ -60,7 +60,7 @@ test('BILD-01: profile image proposals preserve text, survive restart and undo r
     });
     await page.goto(installation.origin);
     await openWorkspace(page);
-    await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     const details = page.getByRole('group', { name: 'Objektets detaljer' });
     const source = await sharp({
@@ -91,7 +91,7 @@ test('BILD-01: profile image proposals preserve text, survive restart and undo r
     await installation.restart();
     await page.reload();
     await openWorkspace(page);
-    await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(details.getByAltText('Profilbild för Lo Exempel')).toBeVisible();
     await openMap(page);
@@ -147,7 +147,7 @@ test('BILD-02: invalid images retain proposals and interrupted removal recovers 
     });
     await page.goto(installation.origin);
     await openWorkspace(page);
-    await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     const details = page.getByRole('group', { name: 'Objektets detaljer' });
     const source = await sharp({
@@ -175,7 +175,7 @@ test('BILD-02: invalid images retain proposals and interrupted removal recovers 
     await page.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
-    await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await details.getByRole('button', { name: 'Ta bort profilbild' }).click();
     await expect(page.getByRole('status')).toContainText('Bildförslaget finns');
@@ -251,7 +251,7 @@ test('BILD-03: private, historical and known image addresses enforce current hou
     });
     await page.goto(installation.origin);
     await openWorkspace(page);
-    await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     const input = page.getByLabel('Välj profilbild');
     const source = await sharp({
@@ -268,7 +268,7 @@ test('BILD-03: private, historical and known image addresses enforce current hou
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     expect((await second.request.get(`${images}/${first}`)).status()).toBe(200);
-    await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await input.setInputFiles({
       name: 'andra.webp',
@@ -293,7 +293,7 @@ test('BILD-03: private, historical and known image addresses enforce current hou
     // The old image is retained only through history; the replacement is current.
     for (const id of [first, replacementId])
       expect((await second.request.get(`${images}/${id}`)).status()).toBe(200);
-    await page.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await input.setInputFiles({
       name: 'tredje.webp',

@@ -122,7 +122,7 @@ test('KARTA-05: manual forms preserve incomplete meanings and block an unanswere
     await expect(page.getByRole('list', { name: 'Samband', exact: true })).toContainText(
       'Osäkert uppgivet',
     );
-    await page.getByRole('button', { name: 'Betalkonto', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Betalkonto', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Objektets identitet')).toHaveValue('unspecified');
     await page.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
@@ -176,7 +176,9 @@ test('UTKAST-01: demo seed resumes a conflict and preserves independent proposal
     await expect(review).toContainText('Spelar piano i musikföreningen.');
     await expect(review).toContainText('familjen@example.test');
     await expect(review).toContainText('musik@example.test');
-    await page.getByRole('button', { name: 'Familjens musikkonto', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Uppgifter för Familjens musikkonto', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Familjens rättade konto');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();

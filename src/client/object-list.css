@@ -1,0 +1,136 @@
+.household-map .object-browser {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.household-map .object-browser > label {
+  display: grid;
+  gap: 4px;
+}
+.household-map .object-list-filters {
+  padding: 8px;
+  border: 1px solid var(--space-line);
+  border-radius: 8px;
+}
+.household-map .object-list-filters summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.household-map .object-list-filters fieldset {
+  border: 0;
+  margin: 8px 0;
+  padding: 0;
+  min-width: 0;
+}
+.household-map .object-list-types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-block: 8px;
+}
+.household-map .object-list-types label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--space-control);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.household-map .object-list-types label[data-checked="true"] {
+  border-color: var(--space-accent);
+  background: color-mix(in srgb, var(--space-accent) 9%, var(--space-surface));
+}
+.household-map .object-list-selected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.household-map .object-list-count {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.household-map .object-list-hint {
+  margin: 0;
+  color: var(--space-muted);
+}
+.household-map .object-list-groups,
+.household-map .object-list-group > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.household-map .object-list-group {
+  border: 1px solid var(--space-line);
+  border-radius: 8px;
+  margin-block-end: 12px;
+  overflow: hidden;
+}
+.household-map .object-list-group h3 {
+  margin: 0;
+  padding: 8px;
+  font-size: 0.875rem;
+  background: color-mix(in srgb, var(--space-accent) 8%, var(--space-surface));
+}
+.household-map .object-list-group > ul > li {
+  padding: 8px;
+  border-top: 1px solid var(--space-line);
+}
+.household-map .object-list-row {
+  display: grid;
+  grid-template-columns: 44px 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+}
+.household-map .object-list-row > button {
+  min-height: 44px;
+  padding-inline: 4px;
+  border: 0;
+}
+.household-map .object-list-row .object-list-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.household-map .object-list-name span {
+  min-width: 0;
+}
+.household-map .object-list-name small {
+  display: block;
+}
+.household-map .object-list-name:disabled {
+  opacity: 1;
+}
+.household-map .object-list-details {
+  color: var(--space-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.household-map .object-list-mark[aria-pressed="true"] {
+  border: 1px solid var(--space-accent);
+  background: color-mix(in srgb, var(--space-accent) 9%, var(--space-surface));
+}
+.household-map .object-list-pages {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.household-map .object-list-pages p {
+  flex-basis: 100%;
+}
+.household-map .object-list-pages label {
+  display: grid;
+  gap: 4px;
+}

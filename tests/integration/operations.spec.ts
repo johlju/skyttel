@@ -168,7 +168,7 @@ test('SPAR-03: a rejected stale save survives restart without consuming newer pr
     const newer = await second.newPage();
     await newer.goto(installation.origin);
     await openWorkspace(newer);
-    await newer.getByRole('button', { name: 'Lo Exempel', exact: true }).click();
+    await newer.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }).click();
     await newer.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await newer.getByLabel('Objektets namn').fill('Lo Lind');
     await newer.getByRole('button', { name: 'Lägg i mitt utkast' }).click();

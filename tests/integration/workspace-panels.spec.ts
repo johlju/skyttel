@@ -32,7 +32,7 @@ test('PANEL-05: a delayed object proposal preserves a newer search focus and the
     await search.fill('Cykeln');
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Cykeln', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Cykeln', exact: true })
       .click();
     const cycle = page.getByRole('region', { name: 'Cykeln', exact: true });
     await cycle.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
@@ -61,7 +61,7 @@ test('PANEL-05: a delayed object proposal preserves a newer search focus and the
     await expect(search).toHaveValue('Bilen');
     await expect(
       page.getByRole('list', { name: 'Objekt', exact: true }).getByRole('button', {
-        name: 'Bilen',
+        name: 'Uppgifter för Bilen',
         exact: true,
       }),
     ).toBeVisible();
@@ -103,7 +103,7 @@ test('PANEL-01: independent object panels preserve unsent work and reuse each ob
     const objects = page.getByRole('list', { name: 'Objekt', exact: true });
     for (const name of ['Cykeln', 'Bilen', 'Garaget']) {
       await openWorkspace(page);
-      await objects.getByRole('button', { name, exact: true }).click();
+      await objects.getByRole('button', { name: `Uppgifter för ${name}`, exact: true }).click();
       const panel = page.getByRole('region', { name, exact: true });
       await expect(panel.getByRole('heading', { name, exact: true })).toBeFocused();
       await panel.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
@@ -121,13 +121,13 @@ test('PANEL-01: independent object panels preserve unsent work and reuse each ob
     await page.getByRole('button', { name: 'Stäng Cykeln', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Cykeln', exact: true })).not.toBeVisible();
     await openWorkspace(page);
-    await objects.getByRole('button', { name: 'Cykeln', exact: true }).click();
+    await objects.getByRole('button', { name: 'Uppgifter för Cykeln', exact: true }).click();
     const cycle = page.getByRole('region', { name: 'Cykeln', exact: true });
     await expect(cycle.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Oskickat om Cykeln',
     );
     await openWorkspace(page);
-    await objects.getByRole('button', { name: 'Cykeln', exact: true }).click();
+    await objects.getByRole('button', { name: 'Uppgifter för Cykeln', exact: true }).click();
     await expect(cycle).toHaveCount(1);
     await expect(cycle.getByRole('heading', { name: 'Cykeln', exact: true })).toBeFocused();
     await expect(
@@ -147,7 +147,7 @@ test('PANEL-01: independent object panels preserve unsent work and reuse each ob
     await page.reload();
     for (const name of ['Cykeln', 'Bilen', 'Garaget']) {
       await openWorkspace(page);
-      await objects.getByRole('button', { name, exact: true }).click();
+      await objects.getByRole('button', { name: `Uppgifter för ${name}`, exact: true }).click();
       await expect(page.getByRole('region', { name, exact: true })).toContainText(
         `Beskrivning: Oskickat om ${name}`,
       );
@@ -176,7 +176,7 @@ test('PANEL-02: mobile panel choice retains conversation, object text and deskto
     await page.getByRole('button', { name: 'Stäng status', exact: true }).click();
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Cykeln', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Cykeln', exact: true })
       .click();
     const panel = page.getByRole('region', { name: 'Cykeln', exact: true });
     await panel.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
@@ -243,7 +243,7 @@ test('PANEL-02: mobile panel choice retains conversation, object text and deskto
       await openWorkspace(page);
       await page
         .getByRole('list', { name: 'Objekt', exact: true })
-        .getByRole('button', { name: 'Cykeln', exact: true })
+        .getByRole('button', { name: 'Uppgifter för Cykeln', exact: true })
         .click();
       await expect(panel.getByRole('heading', { name: 'Cykeln', exact: true })).toBeFocused();
       await chooser.selectOption({ label: 'Samtal och text' });
@@ -317,7 +317,7 @@ test('PANEL-03: an intervening proposal for the same object preserves text and b
     version = state.draft.version;
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Cykeln', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Cykeln', exact: true })
       .click();
     const object = page.getByRole('region', { name: 'Cykeln', exact: true });
     await object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
@@ -350,7 +350,7 @@ test('PANEL-03: an intervening proposal for the same object preserves text and b
     await object.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Cykeln', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Cykeln', exact: true })
       .click();
     await object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(object.getByLabel('Beskrivning', { exact: true })).toHaveValue(

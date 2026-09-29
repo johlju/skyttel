@@ -116,7 +116,7 @@ function PersonalMap() {
 async function open() {
   render(<PersonalMap />);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
-  await page.getByRole('button', { name: 'Lampan', exact: true }).click();
+  await page.getByRole('button', { name: 'Uppgifter för Lampan', exact: true }).click();
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
   await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
   await page.getByRole('button', { name: 'Navigera', exact: true }).click();

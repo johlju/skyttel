@@ -176,9 +176,7 @@ test('MARKERING-03: text selection and detail controls retain work across deskto
       await panel.getByLabel('Beskrivning', { exact: true }).fill(`Oskickat ${width}`);
       await openWorkspace(page);
       await expect(details).toHaveAttribute('aria-pressed', width > 700 ? 'true' : 'false');
-      await work
-        .getByRole('button', { name: 'Visa detaljer för Kim Exempel', exact: true })
-        .click();
+      await work.getByRole('button', { name: 'Uppgifter för Kim Exempel', exact: true }).click();
       await expect(panel.getByLabel('Beskrivning', { exact: true })).toHaveValue(
         `Oskickat ${width}`,
       );

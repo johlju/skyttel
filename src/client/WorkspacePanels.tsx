@@ -4,6 +4,7 @@ import {
   type PointerEvent,
   type ReactNode,
   type RefObject,
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -17,6 +18,7 @@ export type WorkspacePanel = {
   content: ReactNode;
   open: boolean;
   anchor?: PanelAnchor;
+  resumeFocus?: () => boolean;
 };
 export type PanelFocusRequest = { id: string; element?: HTMLElement | null };
 export type PanelAnchor = { x: number; y: number };
@@ -122,6 +124,10 @@ export function WorkspacePanels({
   const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 700px)').matches);
   const opened = windows.filter((entry) => entry.open);
   const visibleId = opened.some((entry) => entry.id === activeId) ? activeId : opened[0]?.id;
+  const resumeFocus = useCallback(
+    (id: string) => !focused && Boolean(windows.find((entry) => entry.id === id)?.resumeFocus?.()),
+    [focused, windows],
+  );
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px)');
@@ -189,8 +195,9 @@ export function WorkspacePanels({
     explicitFocusCommitted.current = true;
     const element = focusRequest.element;
     if (element?.isConnected && panel.contains(element) && element.offsetHeight) element.focus();
-    else panel.querySelector('h2')?.focus();
-  }, [focusRequest, hidden, visibleId]);
+    else if (element !== undefined || !resumeFocus(focusRequest.id))
+      panel.querySelector('h2')?.focus();
+  }, [focusRequest, hidden, visibleId, resumeFocus]);
 
   useLayoutEffect(() => {
     if (!transitionFocus || appliedTransition.current === transitionFocus) return;
@@ -199,8 +206,9 @@ export function WorkspacePanels({
     explicitFocusCommitted.current = true;
     if (transitionFocus.kind === 'empty') transitionFocus.focus();
     else if (transitionFocus.kind === 'selector') selectorRef.current?.focus();
-    else panelRefs.current.get(transitionFocus.id)?.querySelector('h2')?.focus();
-  }, [transitionFocus, hidden, visibleId]);
+    else if (!resumeFocus(transitionFocus.id))
+      panelRefs.current.get(transitionFocus.id)?.querySelector('h2')?.focus();
+  }, [transitionFocus, hidden, visibleId, resumeFocus]);
 
   // Route return follows the application's heading effect. Explicit panel
   // transitions already focused during their commit and must not run again.
@@ -212,6 +220,7 @@ export function WorkspacePanels({
     if (hidden || !reopened || explicit || !visibleId || !restoreFocusOnReveal) return;
     const panel = panelRefs.current.get(visibleId);
     if (panel?.contains(document.activeElement)) return;
+    if (resumeFocus(visibleId)) return;
     const previousFocus = lastFocus.current.get(visibleId);
     if (previousFocus?.isConnected && previousFocus.offsetHeight) previousFocus.focus();
     else panel?.querySelector('h2')?.focus();

@@ -16,9 +16,22 @@ kartan; rulla i panelen för att läsa längre uppgifter. Välj
 
 ## Hitta innehåll
 
-Utgångsläget omfattar alla objekt och samband. **Sök objekt** och
-**Filtrera objekttyp** begränsar både karta och lista. **Sök i kartan**
-i verktygen öppnar sökningen.
+Utgångsläget omfattar alla objekt och samband. **Sök i kartan** eller
+**Lista** i verktygen öppnar sökningen. **Sök objekt** hittar namn, typ
+och beskrivning utan att flytta kameran. Träffarna grupperas efter typ
+med antal för varje grupp.
+
+Öppna **Filter** och välj en eller flera objekttyper. Objekt av någon
+vald typ visas. Utan typval visas alla typer; **Alla typer** tar bort
+bara typfiltret och behåller objektmarkeringarna. **Bara markerade** och
+sökningen begränsar resultatet ytterligare. Antalen i typkatalogen följer
+sökningen och markeringarna. Filter ligger öppet medan du väljer.
+**Visa … objekt** stänger filtret och flyttar fokus till träffarna.
+Den stängda filterraden visar dina typval.
+
+**Sortering** väljer namnordning eller typ följt av namn. Samma objekt
+finns kvar i resultatet. Namnordningen fördelar träffarna över sidorna;
+varje sida visar sedan sina träffar i typgrupper.
 
 Klicka på ett objekts runda symbol för att markera det utan att flytta
 kameran eller öppna detaljer. Ett omarkerat objekt ersätter urvalet.
@@ -33,8 +46,11 @@ Klicka på ett sambands etikett för att läsa dess uppgifter. Välj sedan
 Pilen går från det första objektet till det andra. Okänt och uttryckligen
 inget är uppgifter om ett samband, inte nya objekt.
 
-I **Lista** har varje objekt separata **Markera** och **Visa detaljer**.
-Markera lägger till eller tar bort objekt utan att öppna paneler.
+I **Lista** har varje objekt separata kontroller för markering, visning
+i kartan och **Uppgifter**. Markera lägger till eller tar bort objekt
+utan att öppna paneler. Namnet visar objektet i kartan: objektet markeras
+och kameran fokuserar det och dess direkta grannar. Grannarna blir inte
+markerade. Endast söklistan stängs och ingen ny detaljpanel öppnas.
 **Avmarkera alla** och ett klick på tom rymd släcker markeringar för
 objekt och samband. Kamera, sökning, filter och öppna paneler finns kvar.
 Små rörelser vid klick flyttar inte kameran. Rotation, panorering och
@@ -52,7 +68,8 @@ ett redan markerat objekt behåller flervalet, medan ett omarkerat objekt
 ersätter det. Ctrl+Alt-klick öppnar detaljer och lägger till objektet
 utan att avmarkera andra. På Mac fungerar Control+Option och Cmd+Option.
 **Visa detaljer** i verktygen öppnar det senast markerade objektet.
-Listans **Visa detaljer** fungerar även utan kartgrafik och med tangentbord.
+Listans **Uppgifter** fungerar även utan kartgrafik och med tangentbord.
+När grafiken inte kan visas består listan och namnets kartknapp är inaktiv.
 
 En ny panel öppnas nära objektet inom arbetsytan. Paneler som du flyttar
 behåller sin placering när du öppnar dem igen. På telefon väljer
@@ -64,7 +81,11 @@ Längre listor visar 50 poster per sida. Använd sidvalet eller
 **Föregående sida** och **Nästa sida** för att nå resten. Sökning gäller
 alla objekt, oavsett listsida. **Visa valt innehåll i listan** återgår till
 sidan med ditt valda objekt eller samband. Formulärtexten behålls när du
-byter sida. Sökning och ändrat fokus börjar på första sidan igen.
+byter sida. Ändrad sökning, filtrering eller sortering börjar på första
+sidan igen. Sökning, filter, sortering, sida och rulläge finns kvar när
+du lämnar listan för uppgifter, samtal, Inställningar eller en kartträff.
+Om inga objekt matchar kan du välja **Rensa sökning och filter** utan
+att förlora objektmarkeringarna.
 
 ## Navigera rymden
 
@@ -146,8 +167,8 @@ sparade sambandet utan att ändra det.
 
 Högerklick eller långtryck på ett objekt ger **Redigera objekt**,
 **Visa kopplingar** och **Ta bort objekt**. I listan finns också
-**Redigera** och **Ta bort** vid det valda objektet. Ett objektval i listan öppnar
-objektets panel med rubrikfokus. Valet visar uppgifterna utan att öppna
+**Redigera** och **Ta bort** vid det valda objektet. **Uppgifter** i listan
+öppnar objektets panel med rubrikfokus och visar uppgifterna utan att öppna
 formuläret. **Redigera valt objekt** flyttar fokus till formuläret.
 
 Formulärtext skickas först när du lägger den i utkastet. Val och

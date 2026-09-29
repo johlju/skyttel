@@ -67,7 +67,9 @@ test('LIVSCYKEL-01: ended objects and relationships stay visible and independent
     await openWorkspace(page);
     const objects = page.getByRole('list', { name: 'Objekt', exact: true });
     const subscription = objects.getByRole('listitem').filter({ hasText: 'Familjemusik' });
-    await subscription.getByRole('button', { name: 'Familjemusik', exact: true }).click();
+    await subscription
+      .getByRole('button', { name: 'Uppgifter för Familjemusik', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets status').selectOption('ended');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
@@ -107,7 +109,9 @@ test('LIVSCYKEL-01: ended objects and relationships stay visible and independent
     await expect(edges.getByRole('listitem').filter({ hasText: 'Molnmusik' })).not.toContainText(
       'Upphört',
     );
-    await subscription.getByRole('button', { name: 'Familjemusik', exact: true }).click();
+    await subscription
+      .getByRole('button', { name: 'Uppgifter för Familjemusik', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets status').selectOption('active');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
@@ -252,7 +256,9 @@ test('LIVSCYKEL-02: only a known elapsed end date ends content and dates or stat
     await expect(objects.getByRole('listitem').filter({ hasText: 'Molnmusik' })).not.toContainText(
       'Upphört',
     );
-    await subscription.getByRole('button', { name: 'Familjemusik', exact: true }).click();
+    await subscription
+      .getByRole('button', { name: 'Uppgifter för Familjemusik', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByText('Ekonomiska uppgifter och avtalsvillkor', { exact: true }).click();
     await page.getByLabel('Slutdatum', { exact: true }).fill('2031-03-20');

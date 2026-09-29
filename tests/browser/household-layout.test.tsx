@@ -271,7 +271,7 @@ test('desktop keeps the map and bounded conversation, object and list panels ava
   const speech = page.getByRole('region', { name: 'Talsamtal' }).element().getBoundingClientRect();
   expect(speech.height).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
-  await list.getByRole('button', { name: 'Alex', exact: true }).click();
+  await list.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
   await expect.element(object.getByText('Namn: Alex', { exact: true })).toBeVisible();
   for (const panel of [
@@ -300,14 +300,14 @@ test.each([320, 390, 1440])(
     const listButton = page.getByRole('button', { name: 'Lista', exact: true });
     const list = page.getByRole('region', { name: 'Lista och utkast', exact: true });
     await listButton.click();
-    await list.getByRole('button', { name: 'Alex', exact: true }).click();
+    await list.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
     const object = page.getByRole('region', { name: 'Alex', exact: true });
     await object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     const name = object.getByLabelText('Objektets namn', { exact: true });
     await name.fill('Alex oskickat');
     await expect.element(name).toHaveFocus();
     await listButton.click();
-    const entry = list.getByRole('button', { name: 'Alex', exact: true });
+    const entry = list.getByRole('button', { name: 'Uppgifter för Alex', exact: true });
     entry.element().focus();
     await userEvent.keyboard('{Enter}');
     await expect.element(object.getByRole('heading', { name: 'Alex', exact: true })).toHaveFocus();
@@ -324,7 +324,7 @@ test('opening an editor does not redirect typing after the user chooses another 
 }) => {
   await open(1440);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
-  await page.getByRole('button', { name: 'Alex', exact: true }).click();
+  await page.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
   const panel = object.element();
   // Choose the description as soon as it appears, before the next paint.
@@ -354,12 +354,12 @@ test.each(['chooser', 'close', 'finish'] as const)(
   async (transition) => {
     await open(390);
     await page.getByRole('button', { name: 'Lista', exact: true }).click();
-    await page.getByRole('button', { name: 'Alex', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
     const object = page.getByRole('region', { name: 'Alex', exact: true });
     if (transition === 'finish')
       await object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     const work = document.querySelector<HTMLElement>('.workspace-window[data-window-id="work"]');
-    const search = document.querySelector<HTMLInputElement>('#object-search');
+    const search = page.getByLabelText('Sök objekt', { exact: true }).element();
     if (!work || !search) throw new Error('The retained list and search must exist');
     const observer = new MutationObserver(() => {
       if (work.hidden) return;
@@ -387,10 +387,48 @@ test.each(['chooser', 'close', 'finish'] as const)(
   },
 );
 
+test('short list flow restores the used result and yields to an explicit search request', async () => {
+  await open(320, {
+    ...state,
+    objects: Array.from({ length: 50 }, (_, index) => ({
+      ...state.objects[0],
+      id: `object-${index}`,
+      name: `Objekt ${String(index).padStart(2, '0')}`,
+    })),
+  });
+  await page.viewport(320, 250);
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
+  const work = page.getByRole('region', { name: 'Lista och utkast', exact: true });
+  const details = work.getByRole('button', { name: 'Uppgifter för Objekt 45', exact: true });
+  details.element().scrollIntoView({ block: 'center' });
+  details.element().focus();
+  const flow = page.getByRole('region', { name: 'Hushållskarta', exact: true }).element();
+  const remembered = flow.scrollTop;
+  expect(remembered).toBeGreaterThan(500);
+  await details.click();
+  await page.getByLabelText(/^Öppna paneler/).selectOptions('work');
+  expect(flow.scrollTop).toBe(remembered);
+  await expect.element(details).toHaveFocus();
+  const bounds = details.element().getBoundingClientRect();
+  expect(bounds.top).toBeGreaterThanOrEqual(0);
+  expect(bounds.bottom).toBeLessThanOrEqual(innerHeight);
+  expect(
+    details
+      .element()
+      .contains(
+        document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2),
+      ),
+  ).toBe(true);
+  const tools = page.getByRole('navigation', { name: 'Kartans verktyg', exact: true });
+  await tools.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
+  await tools.getByRole('button', { name: 'Sök i kartan', exact: true }).click();
+  await expect.element(work.getByLabelText('Sök objekt', { exact: true })).toHaveFocus();
+});
+
 test('a smaller desktop keeps the panel reachable and restores its chosen position when widened', async () => {
   await open(1440);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
-  await page.getByRole('button', { name: 'Alex', exact: true }).click();
+  await page.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
   const handle = object.getByRole('button', { name: 'Flytta Alex', exact: true });
   handle.element().focus();
@@ -413,7 +451,7 @@ test('panel placement has reversible keyboard and click controls with a reset an
   // directions even while the optional move controls are expanded.
   await page.viewport(1440, 1400);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
-  await page.getByRole('button', { name: 'Alex', exact: true }).click();
+  await page.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
   const handle = object.getByRole('button', { name: 'Flytta Alex', exact: true });
   const position = () => {
@@ -532,7 +570,7 @@ test('native panel dragging moves only the held primary pointer and recovers aft
   // Leave room for the movement disclosure above the persistent status card.
   await page.viewport(1440, 1600);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
-  await page.getByRole('button', { name: 'Alex', exact: true }).click();
+  await page.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
   const handle = object.getByRole('button', { name: 'Flytta Alex', exact: true });
   const position = () => {
@@ -657,9 +695,9 @@ test('keyboard focus and pointer activation bring an overlapping object panel to
   await open(900);
   const list = page.getByRole('button', { name: 'Lista', exact: true });
   await list.click();
-  await page.getByRole('button', { name: 'Alex', exact: true }).click();
+  await page.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
   await list.click();
-  await page.getByRole('button', { name: 'Tonmoln', exact: true }).click();
+  await page.getByRole('button', { name: 'Uppgifter för Tonmoln', exact: true }).click();
   const alex = page.getByRole('region', { name: 'Alex', exact: true });
   const music = page.getByRole('region', { name: 'Tonmoln', exact: true });
   const handle = alex.getByRole('button', { name: 'Flytta Alex', exact: true });
@@ -714,9 +752,9 @@ test.each([390, 900])(
     const listButton = page.getByRole('button', { name: 'Lista', exact: true });
     const list = page.getByRole('region', { name: 'Lista och utkast', exact: true });
     await listButton.click();
-    await list.getByRole('button', { name: 'Alex', exact: true }).click();
+    await list.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
     await listButton.click();
-    await list.getByRole('button', { name: 'Tonmoln', exact: true }).click();
+    await list.getByRole('button', { name: 'Uppgifter för Tonmoln', exact: true }).click();
     const chooser = page.getByLabelText(/^Öppna paneler/);
     await chooser.selectOptions(page.getByRole('option', { name: 'Alex', exact: true }));
     await page.getByRole('button', { name: 'Stäng Alex', exact: true }).click();
@@ -814,7 +852,7 @@ test('phone opens the list from the map and preserves an edited name through map
     .element(page.getByRole('button', { name: 'Nytt objekt', exact: true }))
     .not.toBeInTheDocument();
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
-  await page.getByRole('button', { name: 'Alex', exact: true }).click();
+  await page.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
   await expect.element(object.getByRole('heading', { name: 'Alex', exact: true })).toHaveFocus();
   object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).element().focus();
@@ -898,7 +936,7 @@ test('full map fills the available desktop and landscape phone area', async () =
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page
     .getByRole('region', { name: 'Lista och utkast', exact: true })
-    .getByRole('button', { name: 'Alex', exact: true })
+    .getByRole('button', { name: 'Uppgifter för Alex', exact: true })
     .click();
   const object = page.getByRole('region', { name: 'Alex', exact: true });
   await object.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();

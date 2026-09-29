@@ -83,8 +83,10 @@ export function SpatialMap({
   onCameraAction,
   navigationMount,
   onNavigationChange,
+  onAvailabilityChange,
   openWork,
 }: {
+  onAvailabilityChange?: (available: boolean) => void;
   theme?: 'light' | 'dark';
   state: MapState;
   active: boolean;
@@ -269,6 +271,9 @@ export function SpatialMap({
   const [overviewRequested, setOverviewRequested] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [contextLost, setContextLost] = useState(false);
+  useEffect(() => {
+    onAvailabilityChange?.(!unavailable && !contextLost);
+  }, [unavailable, contextLost, onAvailabilityChange]);
   const allLabels = preferences.allLabels;
   const previousLabels = useRef(false);
   const [closerLabels, setCloserLabels] = useState(false);

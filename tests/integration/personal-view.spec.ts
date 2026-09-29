@@ -455,7 +455,7 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
     await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Lampan', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Lampan', exact: true })
       .click();
     const lamp = page.getByRole('region', { name: 'Lampan', exact: true });
     await lamp.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();

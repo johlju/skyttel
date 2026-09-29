@@ -81,8 +81,9 @@ selection”.
 4. Sök efter Lo. Flytta tangentbordsfokus till en kameraknapp och tryck
    Escape.
 5. Fokusera Lo Exempel igen, sök efter Lo och filtrera på Person. Välj
-   Återställ vy och fäll ihop Navigera. Välj Alla etiketter och
-   sedan användningssambandets etikett.
+   Återställ vy och fäll ihop Navigera. Öppna Lista och Filter och
+   kontrollera tom sökning och avmarkerad Person. Återgå till kartan,
+   välj Alla etiketter och sedan användningssambandets etikett.
 
 **Förväntat resultat:**
 
@@ -191,8 +192,11 @@ changes”.
    typikoner och sambandets etikett. Välj Alla etiketter, slå av och på
    valet igen och kontrollera att kameran står kvar. Panorera och välj
    Återställ vy.
-2. Öppna Lista och välj Lo Exempel i objektlistan med tangentbord.
-   Kontrollera rubrikfokus i objektpanelen. Välj **Redigera valt objekt**,
+2. Öppna Lista och välj **Uppgifter** för Lo Exempel med tangentbord.
+   Kontrollera rubrikfokus i objektpanelen. Återgå till Lista och prova
+   tabbordningen markering, namn, Uppgifter, Redigera och Ta bort; gå även
+   bakåt från Uppgifter till markeringen. Återgå till objektpanelen.
+   Välj **Redigera valt objekt**,
    läs att objektet och ett samband läggs som borttagningar i utkastet.
    Kontrollera rätt formulär och stäng utan ändring.
 3. Välj sambandet i listan med tangentbord och välj Redigera. Ange känt slutdatum

@@ -313,7 +313,7 @@ test('ARBETE-06: selection and personal map view survive navigation and resizing
     await expect(page.getByRole('status')).toContainText('Sparat: Min cykel');
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Min cykel', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Min cykel', exact: true })
       .click();
     await openWorkspace(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });

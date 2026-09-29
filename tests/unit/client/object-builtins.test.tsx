@@ -138,7 +138,7 @@ test('section editors keep complete financial facts and shared description throu
   );
   render(<HouseholdMap householdId={householdId} />);
   await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Mitt lån' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Uppgifter för Mitt lån' }));
   const details = within(screen.getByRole('region', { name: 'Mitt lån' }));
   expect(
     details.getByText(

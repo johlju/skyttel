@@ -199,15 +199,15 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
     await expect(
       page
         .getByRole('list', { name: 'Objekt', exact: true })
-        .getByRole('listitem')
-        .locator(':scope > button'),
+        .getByRole('button', { name: /^Visa .+ i kartan$/ })
+        .locator('strong'),
     ).toHaveText(['Bostadshyra']);
-    await page.getByRole('button', { name: 'Bostadshyra', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Bostadshyra', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Hyran på Björkbacken');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await page.getByLabel('Sök objekt').fill('');
-    await page.getByRole('button', { name: 'Betalkontot', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Betalkontot', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Objektets identitet')).toHaveValue('unspecified');
     await page.getByLabel('Objektets identitet').selectOption('identified');

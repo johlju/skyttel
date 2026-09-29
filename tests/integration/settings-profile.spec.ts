@@ -65,7 +65,7 @@ test('INST-02: type settings retain unsent definitions and save with the same ma
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Cykel i samma utkast', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Cykel i samma utkast', exact: true })
       .click();
     await openSettings(page);
     await page.getByRole('link', { name: 'Typer och egna fält', exact: true }).click();

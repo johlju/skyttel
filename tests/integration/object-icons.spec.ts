@@ -67,7 +67,7 @@ test('IKON-01: icon choice survives type and image changes, save and restart bef
       description: 'Bevara mer text',
     });
     await openWorkspace(page);
-    await page.getByRole('button', { name: 'Min cykel', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Min cykel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await picker.getByRole('button', { name: 'Typens standardikon', exact: true }).click();
     await expect.poll(async () => (await read()).draft.changes[0].after?.iconId).toBeUndefined();
@@ -100,7 +100,7 @@ test('IKON-02: full catalog search, empty results and keyboard pagination work i
     });
     await page.goto(installation.origin);
     await openWorkspace(page);
-    await page.getByRole('button', { name: 'Lo', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     const picker = page.getByRole('region', { name: 'Ikon', exact: true });
     const search = picker.getByRole('searchbox', { name: 'Sök ikon' });
@@ -292,7 +292,7 @@ test('IKON-05: a failed icon request focuses recovery and a successful retry ret
     await expect(reset).toBeDisabled();
     await expect(page.getByRole('alert')).toContainText('äldre utkast');
     await page.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
-    await page.getByRole('button', { name: 'Lo', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Lo', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(reset).toHaveAttribute('aria-pressed', 'true');
     await picker.getByRole('searchbox').fill('cykel');
