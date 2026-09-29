@@ -98,7 +98,7 @@ function changed(before: Facts, after: Facts) {
 }
 function sameFact(key: string, left: unknown, right: unknown) {
   if (
-    (key === 'fieldOrder' || key === 'sectionOrder') &&
+    ['fieldOrder', 'sectionOrder', 'propertyOrder'].includes(key) &&
     Array.isArray(left) &&
     Array.isArray(right)
   ) {
@@ -151,7 +151,7 @@ export function inverseChange<T extends object>(
       keys.some(
         (key) =>
           ownKeys.includes(key) &&
-          (!['fieldOrder', 'sectionOrder'].includes(key) ||
+          (!['fieldOrder', 'sectionOrder', 'propertyOrder'].includes(key) ||
             (!sameFact(
               key,
               facts(kind, expected ?? {}).get(key),

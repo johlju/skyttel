@@ -78,8 +78,11 @@ behövs. Behåll samma fordonsobjekt när finansiering eller användning ändras
 ## Lägg till frivilliga belopp och villkor
 
 Välj objektet, **Redigera valt objekt** i detaljpanelen och sedan
-**Ekonomiska uppgifter och avtalsvillkor** i formuläret.
-Avsnittet finns för alla objekttyper, även hushållets egna typer. Du kan
+**Ekonomiska uppgifter och avtalsvillkor** i formuläret. Gemensamma
+egenskaper kan också placeras i
+[objekttypens egna avsnitt](object-types.md#placera-gemensamma-uppgifter).
+Uppgifter utanför dessa avsnitt finns kvar och går att rätta även efter
+typbyte. Du kan
 ange **Pris**, **Valuta**, **Betalningsintervall**, **Startdatum**,
 **Slutdatum** och **Avtalsvillkor** när du känner till dem. Beskriv
 exempelvis priset som `7 500`, valutan som `SEK`, intervallet som

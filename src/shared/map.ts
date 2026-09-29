@@ -1,4 +1,4 @@
-import type { FinancialFact, FinancialFacts } from './financial-facts.js';
+import type { FinancialFact, FinancialFacts, FinancialField } from './financial-facts.js';
 import type { Lifecycle } from './lifecycle.js';
 
 export interface TypeDefinition {
@@ -23,6 +23,15 @@ export interface TypeSection {
 export interface ObjectType extends TypeDefinition {
   fields?: CustomField[];
   sections?: TypeSection[];
+  builtins?: BuiltinProperty[];
+  /** Stable, namespaced references: field:<id> or builtin:<key>. */
+  propertyOrder?: string[];
+}
+export interface BuiltinProperty {
+  key: 'description' | FinancialField;
+  name: string;
+  /** Empty means outside the type's sections; existing values stay accessible. */
+  sectionId: string;
 }
 /** Legacy snapshots remain unchanged; their presentation is deterministic. */
 export function objectTypePresentation(type: Pick<ObjectType, 'sections' | 'fields'>) {

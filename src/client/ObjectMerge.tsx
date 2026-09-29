@@ -11,8 +11,8 @@ import {
   mergeObjects,
   mergeValues,
 } from '../shared/object-merge.js';
-import { FinancialFactsDetails } from './FinancialFacts.js';
 import { LifecycleDetails } from './Lifecycle.js';
+import { ObjectPropertiesDetails } from './ObjectProperties.js';
 import { CustomFieldsDetails } from './ObjectTypes.js';
 import { ProfileImage } from './ProfileImage.js';
 import { relationshipLabel } from './RelationshipEditor.js';
@@ -32,20 +32,16 @@ export function MergeSourceDetails({
           <p>
             {object.name} · Identitet: {object.id}
           </p>
-          <p>
-            Objekttyp: {merge.types.find((type) => type.id === object.typeId)?.name}. Beskrivning:{' '}
-            {object.description || 'Ingen beskrivning'}
-          </p>
+          <p>Objekttyp: {merge.types.find((type) => type.id === object.typeId)?.name}.</p>
           <ProfileImage
             householdId={householdId ?? object.householdId}
             value={object}
             typeName={merge.types.find((type) => type.id === object.typeId)?.name}
           />
-          <FinancialFactsDetails facts={object.financialFacts} />
-          <CustomFieldsDetails
+          <ObjectPropertiesDetails
             showHidden
             type={merge.types.find((type) => type.id === object.typeId)}
-            values={object.customValues}
+            value={object}
           />
           <LifecycleDetails value={object} />
         </div>
@@ -245,7 +241,6 @@ export function ObjectMerge({
                     Identitet: {object.id}. Typ:{' '}
                     {types.find((type) => type.id === object.typeId)?.name}.
                   </p>
-                  <p>{object.description || 'Ingen beskrivning'}</p>
                   {object.identity && (
                     <p>
                       {object.identity === 'unspecified'
@@ -258,11 +253,10 @@ export function ObjectMerge({
                     value={object}
                     typeName={types.find((type) => type.id === object.typeId)?.name}
                   />
-                  <FinancialFactsDetails facts={object.financialFacts} />
-                  <CustomFieldsDetails
+                  <ObjectPropertiesDetails
                     showHidden
                     type={types.find((type) => type.id === object.typeId)}
-                    values={object.customValues}
+                    value={object}
                   />
                   <LifecycleDetails value={object} />
                 </article>

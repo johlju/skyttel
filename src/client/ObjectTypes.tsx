@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CustomField, CustomValues, ObjectType } from '../shared/map.js';
 import { objectTypePresentation } from '../shared/map.js';
+import { builtinProperties, objectProperties } from '../shared/object-properties.js';
 
 export const customFieldKinds: Record<CustomField['kind'], string> = {
   text: 'Text',
@@ -68,7 +69,11 @@ export function ObjectTypeDetails({ type }: { type: ObjectType | null }) {
   );
 }
 
-export function TypeFieldsDetails({ type }: { type: Pick<ObjectType, 'fields' | 'sections'> }) {
+export function TypeFieldsDetails({
+  type,
+}: {
+  type: Pick<ObjectType, 'fields' | 'sections' | 'builtins' | 'propertyOrder'>;
+}) {
   return (
     <>
       <p>
@@ -78,14 +83,18 @@ export function TypeFieldsDetails({ type }: { type: Pick<ObjectType, 'fields' | 
           .join(' → ') || 'Inga'}
       </p>
       <ul>
-        {type.fields?.map((field) => (
-          <li key={field.id}>
-            {field.name}: {customFieldKinds[field.kind]}
-            {field.description && ` — ${field.description}`}
+        {objectProperties(type).map((property) => (
+          <li key={property.ref}>
+            {property.name}:{' '}
+            {property.kind === 'custom'
+              ? customFieldKinds[property.field.kind]
+              : `Gemensam egenskap: ${builtinProperties.find(({ key }) => key === property.field.key)?.label}`}
+            {property.kind === 'custom' &&
+              property.field.description &&
+              ` — ${property.field.description}`}
             {' · '}
-            {objectTypePresentation(type).sections.find(
-              ({ id }) => id === (field.sectionId ?? 'custom-fields'),
-            )?.name ?? 'Dold, behåll värden'}
+            {objectTypePresentation(type).sections.find(({ id }) => id === property.sectionId)
+              ?.name ?? 'Dold, behåll värden'}
           </li>
         ))}
       </ul>
@@ -106,7 +115,10 @@ export function ObjectTypeEditor({
   stale: boolean;
   onDirty: () => void;
   onSubmit: (
-    value: Pick<ObjectType, 'name' | 'description' | 'fields' | 'sections'> | null,
+    value: Pick<
+      ObjectType,
+      'name' | 'description' | 'fields' | 'sections' | 'builtins' | 'propertyOrder'
+    > | null,
   ) => void;
   onClose: () => void;
 }) {
@@ -114,6 +126,8 @@ export function ObjectTypeEditor({
     name: initial.name,
     description: initial.description,
     ...objectTypePresentation(initial),
+    ...(initial.builtins !== undefined ? { builtins: initial.builtins } : {}),
+    ...(initial.propertyOrder !== undefined ? { propertyOrder: initial.propertyOrder } : {}),
   });
   const form = useRef<HTMLFormElement>(null);
   return (
@@ -161,6 +175,7 @@ export function ObjectTypeEditor({
           fält. Namn som liknar varandra kopplas inte ihop.
         </p>
         <TypeFieldsDefinition
+          allowBuiltins
           value={value}
           stale={stale}
           onChange={(presentation) => {
@@ -194,14 +209,19 @@ export function ObjectTypeEditor({
   );
 }
 
+type FieldPresentation = ReturnType<typeof objectTypePresentation> &
+  Pick<ObjectType, 'builtins' | 'propertyOrder'>;
+
 export function TypeFieldsDefinition({
   value,
+  allowBuiltins = false,
   stale,
   onChange: setValue,
 }: {
-  value: ReturnType<typeof objectTypePresentation>;
+  value: FieldPresentation;
+  allowBuiltins?: boolean;
   stale: boolean;
-  onChange: (value: ReturnType<typeof objectTypePresentation>) => void;
+  onChange: (value: FieldPresentation) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const focusRequest = useRef<string | null>(null);
@@ -210,10 +230,29 @@ export function TypeFieldsDefinition({
     container.current?.querySelector<HTMLElement>(`[id="${focusRequest.current}"]`)?.focus();
     focusRequest.current = null;
   });
-  function changeField(id: string, update: Partial<CustomField>) {
+  const properties = objectProperties(value);
+  function changeField(ref: string, update: Partial<CustomField>) {
+    setValue(
+      ref.startsWith('builtin:')
+        ? {
+            ...value,
+            builtins: value.builtins?.map((field) =>
+              `builtin:${field.key}` === ref ? { ...field, ...update } : field,
+            ),
+          }
+        : {
+            ...value,
+            fields: value.fields.map((field) =>
+              `field:${field.id}` === ref ? { ...field, ...update } : field,
+            ),
+          },
+    );
+  }
+  function reorder(order: string[]) {
     setValue({
       ...value,
-      fields: value.fields.map((field) => (field.id === id ? { ...field, ...update } : field)),
+      fields: order.flatMap((ref) => value.fields.filter((field) => ref === `field:${field.id}`)),
+      ...(value.propertyOrder !== undefined ? { propertyOrder: order } : {}),
     });
   }
   return (
@@ -224,7 +263,7 @@ export function TypeFieldsDefinition({
         </summary>
         <p>Avsnitten visas i denna ordning i formulär och detaljer.</p>
         {value.sections.map((section, index) => {
-          const count = value.fields.filter((field) => field.sectionId === section.id).length;
+          const count = properties.filter((field) => field.sectionId === section.id).length;
           return (
             <div className="type-section-row" key={section.id}>
               <label htmlFor={`section-${section.id}`}>Avsnitt {index + 1}</label>
@@ -303,86 +342,126 @@ export function TypeFieldsDefinition({
       <p>
         Ordningen gäller inom varje avsnitt. Dolda fält behåller sina värden och kan visas igen.
       </p>
-      {value.fields.map((field, index) => (
-        <details className="type-field-editor" key={field.id} open>
-          <summary>
-            {field.name || `Eget fält ${index + 1}`} · {customFieldKinds[field.kind]} ·{' '}
-            {value.sections.find(({ id }) => id === field.sectionId)?.name || 'Dold'}
-          </summary>
-          <fieldset>
-            <legend>Eget fält {index + 1}</legend>
-            <CustomFieldDefinition
-              field={field}
-              onChange={(update) => changeField(field.id, update)}
-            />
-            <label htmlFor={`field-section-${field.id}`}>Visa i avsnitt</label>
-            <select
-              id={`field-section-${field.id}`}
-              value={field.sectionId}
-              onChange={(event) => changeField(field.id, { sectionId: event.target.value })}
-            >
-              <option value="">Dold, behåll värden</option>
-              {value.sections.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.name || 'Namnlöst avsnitt'}
-                </option>
-              ))}
-            </select>
-            <div className="type-row-actions">
-              {([-1, 1] as const).map((direction) => {
-                const siblings = value.fields.filter((item) => item.sectionId === field.sectionId);
-                const position = siblings.findIndex((item) => item.id === field.id);
-                const target = siblings[position + direction];
-                return (
-                  <button
-                    key={direction}
-                    type="button"
-                    disabled={stale || !target}
-                    aria-label={`Flytta fältet ${field.name} ${direction === -1 ? 'upp' : 'ned'}`}
-                    onClick={() => {
-                      focusRequest.current = `field-name-${field.id}`;
-                      setValue({
-                        ...value,
-                        fields: moved(
-                          value.fields,
-                          index,
-                          value.fields.findIndex((item) => item.id === target.id),
-                        ),
-                      });
-                    }}
-                  >
-                    {direction === -1 ? '↑ Upp' : '↓ Ned'}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                disabled={stale || !field.sectionId}
-                aria-label={`Dölj ${field.name}, behåll värden`}
-                onClick={() => {
-                  focusRequest.current = `field-section-${field.id}`;
-                  changeField(field.id, { sectionId: '' });
-                }}
+      {properties.map((property, index) => {
+        const builtin = property.kind === 'builtin' ? property.field : undefined;
+        const field =
+          property.kind === 'custom'
+            ? property.field
+            : {
+                id: `builtin:${property.field.key}`,
+                name: property.name,
+                sectionId: property.sectionId,
+              };
+        const canonical = builtinProperties.find(({ key }) => key === builtin?.key)?.label;
+        return (
+          <details className="type-field-editor" key={property.ref} open>
+            <summary>
+              {field.name || `Eget fält ${index + 1}`} ·{' '}
+              {property.kind === 'builtin'
+                ? 'Gemensam egenskap'
+                : customFieldKinds[property.field.kind]}{' '}
+              · {value.sections.find(({ id }) => id === field.sectionId)?.name || 'Dold'}
+            </summary>
+            <fieldset>
+              <legend>
+                {builtin ? `Gemensam egenskap: ${canonical}` : `Eget fält ${index + 1}`}
+              </legend>
+              {builtin ? (
+                <>
+                  <p>Gemensam egenskap: {canonical}. Befintliga värden följer med.</p>
+                  <label htmlFor={`field-name-${field.id}`}>Fältets namn</label>
+                  <input
+                    id={`field-name-${field.id}`}
+                    required
+                    pattern=".*\S.*"
+                    maxLength={200}
+                    value={field.name}
+                    onChange={(event) => changeField(property.ref, { name: event.target.value })}
+                  />
+                </>
+              ) : property.kind === 'custom' ? (
+                <CustomFieldDefinition
+                  field={property.field}
+                  onChange={(update) => changeField(property.ref, update)}
+                />
+              ) : null}
+              <label htmlFor={`field-section-${field.id}`}>Visa i avsnitt</label>
+              <select
+                id={`field-section-${field.id}`}
+                value={field.sectionId}
+                onChange={(event) => changeField(property.ref, { sectionId: event.target.value })}
               >
-                Dölj
-              </button>
-            </div>
-            <button
-              type="button"
-              disabled={stale}
-              onClick={() => {
-                focusRequest.current = 'add-type-field';
-                setValue({
-                  ...value,
-                  fields: value.fields.filter((item) => item.id !== field.id),
-                });
-              }}
-            >
-              Ta bort fält: {field.name || `Eget fält ${index + 1}`}
-            </button>
-          </fieldset>
-        </details>
-      ))}
+                <option value="">Dold, behåll värden</option>
+                {value.sections.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name || 'Namnlöst avsnitt'}
+                  </option>
+                ))}
+              </select>
+              <div className="type-row-actions">
+                {([-1, 1] as const).map((direction) => {
+                  const siblings = properties.filter((item) => item.sectionId === field.sectionId);
+                  const position = siblings.findIndex((item) => item.ref === property.ref);
+                  const target = siblings[position + direction];
+                  return (
+                    <button
+                      key={direction}
+                      type="button"
+                      disabled={stale || !target}
+                      aria-label={`Flytta fältet ${field.name} ${direction === -1 ? 'upp' : 'ned'}`}
+                      onClick={() => {
+                        focusRequest.current = `field-name-${field.id}`;
+                        reorder(
+                          moved(
+                            properties.map(({ ref }) => ref),
+                            index,
+                            properties.findIndex((item) => item.ref === target.ref),
+                          ),
+                        );
+                      }}
+                    >
+                      {direction === -1 ? '↑ Upp' : '↓ Ned'}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  disabled={stale || !field.sectionId}
+                  aria-label={`Dölj ${field.name}, behåll värden`}
+                  onClick={() => {
+                    focusRequest.current = `field-section-${field.id}`;
+                    changeField(property.ref, { sectionId: '' });
+                  }}
+                >
+                  Dölj
+                </button>
+              </div>
+              {property.kind === 'custom' && (
+                <button
+                  type="button"
+                  disabled={stale}
+                  onClick={() => {
+                    focusRequest.current = 'add-type-field';
+                    setValue({
+                      ...value,
+                      fields: value.fields.filter((item) => property.ref !== `field:${item.id}`),
+                      ...(value.propertyOrder !== undefined
+                        ? {
+                            propertyOrder: value.propertyOrder.filter(
+                              (ref) => ref !== property.ref,
+                            ),
+                          }
+                        : {}),
+                    });
+                  }}
+                >
+                  Ta bort fält: {field.name || `Eget fält ${index + 1}`}
+                </button>
+              )}
+            </fieldset>
+          </details>
+        );
+      })}
       <button
         id="add-type-field"
         type="button"
@@ -392,6 +471,9 @@ export function TypeFieldsDefinition({
           focusRequest.current = `field-name-${id}`;
           setValue({
             ...value,
+            ...(value.propertyOrder !== undefined
+              ? { propertyOrder: [...value.propertyOrder, `field:${id}`] }
+              : {}),
             fields: [
               ...value.fields,
               {
@@ -407,6 +489,42 @@ export function TypeFieldsDefinition({
       >
         Lägg till fält
       </button>
+      {allowBuiltins && (
+        <>
+          <label htmlFor="add-builtin-property">Lägg till gemensam egenskap</label>
+          <select
+            id="add-builtin-property"
+            value=""
+            disabled={stale || value.builtins?.length === builtinProperties.length}
+            onChange={(event) => {
+              const definition = builtinProperties.find(({ key }) => key === event.target.value);
+              if (!definition) return;
+              focusRequest.current = `field-name-builtin:${definition.key}`;
+              setValue({
+                ...value,
+                builtins: [
+                  ...(value.builtins ?? []),
+                  {
+                    key: definition.key,
+                    name: definition.label,
+                    sectionId: value.sections[0]?.id ?? '',
+                  },
+                ],
+                propertyOrder: [...properties.map(({ ref }) => ref), `builtin:${definition.key}`],
+              });
+            }}
+          >
+            <option value="">Välj gemensam egenskap</option>
+            {builtinProperties
+              .filter(({ key }) => !value.builtins?.some((field) => field.key === key))
+              .map(({ key, label }) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+          </select>
+        </>
+      )}
     </div>
   );
 }
@@ -420,7 +538,6 @@ export function CustomFieldsEditor({
   values?: CustomValues;
   onChange: (values: CustomValues) => void;
 }) {
-  const prefix = useId();
   const presentation = objectTypePresentation(type ?? {});
   function change(id: string, value: string | number | boolean | undefined) {
     const next = { ...values };
@@ -438,52 +555,12 @@ export function CustomFieldsEditor({
               {presentation.fields
                 .filter((field) => field.sectionId === section.id)
                 .map((field) => (
-                  <div key={field.id}>
-                    <label htmlFor={`${prefix}-custom-${field.id}`}>{field.name}</label>
-                    {field.description && (
-                      <p id={`${prefix}-help-${field.id}`}>{field.description}</p>
-                    )}
-                    {field.kind === 'boolean' ? (
-                      <select
-                        id={`${prefix}-custom-${field.id}`}
-                        aria-describedby={
-                          field.description ? `${prefix}-help-${field.id}` : undefined
-                        }
-                        value={values[field.id] === undefined ? '' : String(values[field.id])}
-                        onChange={(event) =>
-                          change(
-                            field.id,
-                            event.target.value === '' ? undefined : event.target.value === 'true',
-                          )
-                        }
-                      >
-                        <option value="">Obesvarat</option>
-                        <option value="true">Ja</option>
-                        <option value="false">Nej</option>
-                      </select>
-                    ) : (
-                      <input
-                        id={`${prefix}-custom-${field.id}`}
-                        aria-describedby={
-                          field.description ? `${prefix}-help-${field.id}` : undefined
-                        }
-                        type={field.kind === 'text' ? 'text' : field.kind}
-                        step={field.kind === 'number' ? 'any' : undefined}
-                        maxLength={field.kind === 'text' ? 2000 : undefined}
-                        value={String(values[field.id] ?? '')}
-                        onChange={(event) =>
-                          change(
-                            field.id,
-                            event.target.value === ''
-                              ? undefined
-                              : field.kind === 'number'
-                                ? Number(event.target.value)
-                                : event.target.value,
-                          )
-                        }
-                      />
-                    )}
-                  </div>
+                  <CustomFieldValueEditor
+                    key={field.id}
+                    field={field}
+                    value={values[field.id]}
+                    onChange={(value) => change(field.id, value)}
+                  />
                 ))}
             </fieldset>
           ),
@@ -516,20 +593,80 @@ export function CustomFieldsDetails({
               {presentation.fields
                 .filter((field) => field.sectionId === section.id)
                 .map((field) => (
-                  <p key={field.id}>
-                    {field.name}:{' '}
-                    {values[field.id] === undefined
-                      ? 'Obesvarat'
-                      : values[field.id] === true
-                        ? 'Ja'
-                        : values[field.id] === false
-                          ? 'Nej'
-                          : values[field.id]}
-                  </p>
+                  <CustomFieldValueDetails
+                    key={field.id}
+                    name={field.name}
+                    value={values[field.id]}
+                  />
                 ))}
             </section>
           ),
       )}
     </>
+  );
+}
+
+export function CustomFieldValueDetails({
+  name,
+  value,
+}: {
+  name: string;
+  value: CustomValues[string] | undefined;
+}) {
+  return (
+    <p>
+      {name}:{' '}
+      {value === undefined ? 'Obesvarat' : value === true ? 'Ja' : value === false ? 'Nej' : value}
+    </p>
+  );
+}
+
+export function CustomFieldValueEditor({
+  field,
+  value,
+  onChange,
+}: {
+  field: CustomField;
+  value: string | number | boolean | undefined;
+  onChange: (value: string | number | boolean | undefined) => void;
+}) {
+  const prefix = useId();
+  return (
+    <div>
+      <label htmlFor={`${prefix}-custom-${field.id}`}>{field.name}</label>
+      {field.description && <p id={`${prefix}-help-${field.id}`}>{field.description}</p>}
+      {field.kind === 'boolean' ? (
+        <select
+          id={`${prefix}-custom-${field.id}`}
+          aria-describedby={field.description ? `${prefix}-help-${field.id}` : undefined}
+          value={value === undefined ? '' : String(value)}
+          onChange={(event) =>
+            onChange(event.target.value === '' ? undefined : event.target.value === 'true')
+          }
+        >
+          <option value="">Obesvarat</option>
+          <option value="true">Ja</option>
+          <option value="false">Nej</option>
+        </select>
+      ) : (
+        <input
+          id={`${prefix}-custom-${field.id}`}
+          aria-describedby={field.description ? `${prefix}-help-${field.id}` : undefined}
+          type={field.kind === 'text' ? 'text' : field.kind}
+          step={field.kind === 'number' ? 'any' : undefined}
+          maxLength={field.kind === 'text' ? 2000 : undefined}
+          value={String(value ?? '')}
+          onChange={(event) =>
+            onChange(
+              event.target.value === ''
+                ? undefined
+                : field.kind === 'number'
+                  ? Number(event.target.value)
+                  : event.target.value,
+            )
+          }
+        />
+      )}
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { type FinancialFact, financialFields } from '../shared/financial-facts.js';
 import type { DraftChange, MapDraft, ObjectType, RelationshipType } from '../shared/map.js';
 import { objectIconLabel } from '../shared/object-icons.js';
+import { builtinPresentationChanges } from '../shared/object-properties.js';
 import { relationshipDetails } from './relationship-description.js';
 
 function valueText(value: string | number | boolean | undefined) {
@@ -80,11 +81,10 @@ function typeDifferences(
   before: ObjectType & RelationshipType,
   after: ObjectType & RelationshipType,
 ) {
-  const changes = difference(
-    'Beskrivning',
-    valueText(before.description),
-    valueText(after.description),
-  );
+  const changes = [
+    ...builtinPresentationChanges(before, after),
+    ...difference('Beskrivning', valueText(before.description), valueText(after.description)),
+  ];
   if ('fields' in before || 'fields' in after) {
     const oldFields = before.fields ?? [];
     const newFields = after.fields ?? [];

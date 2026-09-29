@@ -1,4 +1,16 @@
-import { type APIRequestContext, expect, type Page } from '@playwright/test';
+import { type APIRequestContext, expect, type Page, request } from '@playwright/test';
+
+// These HTTP-only clients use default context options. Keep their authenticated
+// session across a deliberate server restart, but retire the old socket pool.
+export async function restartWithSession(
+  client: APIRequestContext,
+  restart: () => Promise<unknown>,
+) {
+  const storageState = await client.storageState();
+  await client.dispose();
+  await restart();
+  return request.newContext({ storageState });
+}
 
 export async function openWorkspace(page: Page) {
   await page

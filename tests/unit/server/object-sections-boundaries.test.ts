@@ -4,7 +4,8 @@ import { unzipSync, zipSync } from 'fflate';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import type { ImportContent } from '../../../src/server/import-schema.js';
 import type { MapState, SaveReceipt } from '../../../src/shared/map.js';
-import { createHousehold, signIn } from '../../support/client.js';
+import { mergeObjects } from '../../../src/shared/object-merge.js';
+import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { createInstallation } from '../../support/installation.js';
 
 let installation: Awaited<ReturnType<typeof createInstallation>>;
@@ -16,6 +17,19 @@ const post = (route: string, data: unknown) =>
 const definition = {
   name: 'Solkraft',
   description: '',
+  builtins: [
+    { key: 'description' as const, name: 'Avtalstext', sectionId: 'facts' },
+    { key: 'debt' as const, name: 'Skuld', sectionId: 'service' },
+    { key: 'price' as const, name: 'Pris', sectionId: '' },
+  ],
+  propertyOrder: [
+    'builtin:description',
+    'field:note',
+    'builtin:debt',
+    'field:power',
+    'field:battery',
+    'builtin:price',
+  ],
   sections: [
     { id: 'service', name: 'Service' },
     { id: 'facts', name: 'Uppgifter' },
@@ -31,6 +45,12 @@ const definition = {
       sectionId: 'service',
     },
   ],
+};
+const financialFacts = {
+  debt: { knowledge: 'uncertain', value: '12 300', reportedOn: '2026-09-01' },
+  price: { knowledge: 'unknown' },
+  currency: { knowledge: 'none' },
+  startDate: { knowledge: 'known', value: '2026-08-01' },
 };
 const values = { note: 'Behåll uppgiften', power: 0, battery: false };
 beforeEach(async () => {
@@ -71,6 +91,7 @@ async function object(id: string, typeId = 'solar', description = '') {
           typeId,
           name: 'Solpaneler',
           description,
+          financialFacts,
           iconId: 'bike',
           ...(typeId === 'solar' ? { customValues: values } : {}),
         },
@@ -131,7 +152,83 @@ async function restore(source: Awaited<ReturnType<typeof archive>>) {
   ).toBe(200);
 }
 
-test('archive 18 preserves section order and hidden values in current, private, history and merged snapshots', async () => {
+test('cancelled and saved merges preserve whole canonical facts and undo keeps an independent presentation edit', async () => {
+  await define();
+  await object('first', 'solar', 'Första texten');
+  await object('second', 'solar', 'Andra texten');
+  await save('originals');
+  const originals = (await read()).objects;
+  await object('first', 'solar', 'Privat text');
+  const privateState = await read();
+  async function merge() {
+    const state = await read();
+    return post('map/merge', {
+      version: state.draft.version,
+      survivorId: 'first',
+      absorbedId: 'second',
+      identityConfirmed: true,
+      reviewed: {
+        objects: ['first', 'second'].map((id) => mergeObjects(state).get(id)),
+        relationships: [],
+        types: state.types.filter(({ id }) => id === 'solar'),
+        relationshipTypes: [],
+      },
+      relationships: [],
+      choices: { description: 'absorbed' },
+    });
+  }
+  expect((await merge()).status()).toBe(200);
+  let state = await read();
+  const proposed = state.draft.changes.find(({ id }) => id === 'first');
+  expect(proposed?.after).toMatchObject({ description: 'Andra texten', financialFacts });
+  expect(proposed?.merge?.types[0]).toMatchObject(definition);
+  expect(
+    (
+      await post('map/discard-change', {
+        version: state.draft.version,
+        kind: 'object',
+        id: 'second',
+      })
+    ).status(),
+  ).toBe(200);
+  expect((await read()).draft.changes).toEqual(privateState.draft.changes);
+  expect((await merge()).status()).toBe(200);
+  const receipt = await save('merged');
+  expect(receipt.changes.find(({ after }) => after?.id === 'first')?.after?.financialFacts).toEqual(
+    financialFacts,
+  );
+  await define({
+    ...definition,
+    builtins: definition.builtins.map((field) =>
+      field.key === 'debt' ? { ...field, sectionId: '' } : field,
+    ),
+  });
+  await save('hide-debt');
+  state = await read();
+  expect(
+    (
+      await post('map/undo', {
+        version: state.draft.version,
+        userId: receipt.userId,
+        operationId: receipt.operationId,
+      })
+    ).status(),
+  ).toBe(200);
+  await save('undo-merge');
+  client = await restartWithSession(client, () => installation.restart());
+  state = await read();
+  for (const original of originals) {
+    const { revision: _revision, ...value } = original;
+    expect(state.objects.find(({ id }) => id === value.id)).toMatchObject(value);
+  }
+  expect(state.types.find(({ id }) => id === 'solar')?.builtins).toContainEqual({
+    key: 'debt',
+    name: 'Skuld',
+    sectionId: '',
+  });
+});
+
+test('archive 21 preserves canonical property placement, sections and hidden values in current, private, history and merged snapshots', async () => {
   await define();
   await object('first');
   await object('second');
@@ -159,10 +256,12 @@ test('archive 18 preserves section order and hidden values in current, private, 
   await object('first', 'solar', 'Privat text');
   await define({ ...definition, name: 'Privat typnamn' });
   const source = await archive();
-  expect(source.manifest.schemaVersion).toBe(20);
+  expect(source.manifest.schemaVersion).toBe(21);
   expect(source.content.objectTypeFields.find(({ typeId }) => typeId === 'solar')).toMatchObject({
     fields: definition.fields,
     sections: definition.sections,
+    builtins: definition.builtins,
+    propertyOrder: definition.propertyOrder,
   });
   const snapshots = [
     source.content.drafts[0].changes[0].type,
@@ -175,7 +274,12 @@ test('archive 18 preserves section order and hidden values in current, private, 
       .merge?.types[0],
   ];
   for (const snapshot of snapshots)
-    expect(snapshot).toMatchObject({ fields: definition.fields, sections: definition.sections });
+    expect(snapshot).toMatchObject({
+      fields: definition.fields,
+      sections: definition.sections,
+      builtins: definition.builtins,
+      propertyOrder: definition.propertyOrder,
+    });
   const before = await read();
   // Invalid placements must be rejected in every nested type, without replacing live content.
   for (const snapshot of snapshots) {
@@ -185,6 +289,17 @@ test('archive 18 preserves section order and hidden values in current, private, 
     expect((await upload(source)).status()).toBe(400);
     expect(await read()).toEqual(before);
     snapshot.fields[0].sectionId = placement;
+    if (!snapshot.builtins || !snapshot.propertyOrder)
+      throw new Error('Canonical presentation must survive each nested snapshot.');
+    const key = snapshot.builtins[0].key;
+    snapshot.builtins[0].key = 'name' as typeof key;
+    expect((await upload(source)).status()).toBe(400);
+    expect(await read()).toEqual(before);
+    snapshot.builtins[0].key = key;
+    snapshot.propertyOrder.push(snapshot.propertyOrder[0]);
+    expect((await upload(source)).status()).toBe(400);
+    expect(await read()).toEqual(before);
+    snapshot.propertyOrder.pop();
   }
   const row = source.content.objectTypeFields.find(({ typeId }) => typeId === 'solar');
   if (!row?.sections) throw new Error('The current type must retain its sections.');
@@ -192,16 +307,28 @@ test('archive 18 preserves section order and hidden values in current, private, 
   expect((await upload(source)).status()).toBe(400);
   expect(await read()).toEqual(before);
   row.sections.pop();
+  if (!row.builtins || !row.propertyOrder)
+    throw new Error('Raw canonical presentation is required.');
+  row.builtins.push({ ...row.builtins[0] });
+  expect((await upload(source)).status()).toBe(400);
+  expect(await read()).toEqual(before);
+  row.builtins.pop();
+  const reference = row.propertyOrder[0];
+  row.propertyOrder[0] = 'builtin:name';
+  expect((await upload(source)).status()).toBe(400);
+  expect(await read()).toEqual(before);
+  row.propertyOrder[0] = reference;
   await restore(source);
-  await installation.restart();
+  client = await restartWithSession(client, () => installation.restart());
   const imported = await read();
   expect(imported.types.find(({ id }) => id === 'solar')).toMatchObject(definition);
   expect(imported.objects.find(({ id }) => id === 'first')).toMatchObject({
     customValues: values,
+    financialFacts,
     iconId: 'bike',
   });
   expect(imported.draft.changes[0]).toMatchObject({
-    after: { description: 'Privat text', customValues: values, iconId: 'bike' },
+    after: { description: 'Privat text', financialFacts, customValues: values, iconId: 'bike' },
     type: { fields: definition.fields, sections: definition.sections },
   });
   const exported = await archive();
@@ -210,7 +337,7 @@ test('archive 18 preserves section order and hidden values in current, private, 
   ).toEqual(source.content.saves.map(({ receipt }) => receipt.changes.map(({ type }) => type)));
 });
 
-test.each([14, 15, 16, 17])(
+test.each([14, 15, 16, 17, 18, 19, 20])(
   'legacy archive %i keeps absent presentation metadata and original snapshot field order',
   async (version) => {
     const legacy = {
@@ -223,7 +350,11 @@ test.each([14, 15, 16, 17])(
     await save('legacy');
     const source = await archive();
     source.manifest.schemaVersion = version;
-    for (const row of source.content.objectTypeFields) delete row.sections;
+    for (const row of source.content.objectTypeFields) {
+      delete row.sections;
+      delete row.builtins;
+      delete row.propertyOrder;
+    }
     if (version < 17) {
       for (const object of source.content.objects) delete object.iconId;
       for (const entry of source.content.history)
@@ -241,6 +372,8 @@ test.each([14, 15, 16, 17])(
     const imported = (await read()).types.find(({ id }) => id === 'solar');
     expect(imported).toMatchObject(legacy);
     expect(imported).not.toHaveProperty('sections');
+    expect(imported).not.toHaveProperty('builtins');
+    expect(imported).not.toHaveProperty('propertyOrder');
     for (const field of imported?.fields ?? []) expect(field).not.toHaveProperty('sectionId');
     const exported = await archive();
     expect(exported.content.history.map(({ changes }) => changes.map(({ type }) => type))).toEqual(
@@ -273,6 +406,7 @@ test('erasing an unrelated object preserves section metadata and hidden answers 
   const state = await read();
   expect(state.objects.map(({ id }) => id)).toEqual(['keep']);
   expect(state.types.find(({ id }) => id === 'solar')).toMatchObject(definition);
+  expect(state.objects[0].financialFacts).toEqual(financialFacts);
   expect(state.draft.changes[0]).toMatchObject({
     type: definition,
     after: { customValues: values, iconId: 'bike', description: 'Privat bevarad text' },
@@ -291,4 +425,40 @@ test('erasing an unrelated object preserves section metadata and hidden answers 
     fields: definition.fields,
   });
   expect(exported.content.objects.some(({ id }) => id === 'erase')).toBe(false);
+});
+
+test('archive validation rejects object property metadata in raw and historical relationship definitions', async () => {
+  expect(
+    (
+      await post('map/relationship-type', {
+        version: 0,
+        id: 'edge',
+        baseRevision: null,
+        value: {
+          name: 'Använder',
+          description: '',
+          forwardLabel: 'använder',
+          reverseLabel: 'används av',
+          fields: [],
+          sections: [],
+        },
+      })
+    ).status(),
+  ).toBe(200);
+  await save('edge-definition');
+  const source = await archive();
+  const before = await read();
+  const raw = source.content.relationshipTypeFields.find(({ typeId }) => typeId === 'edge');
+  const nested = source.content.saves[0].receipt.relationshipTypes?.[0].after;
+  for (const record of [raw, nested]) {
+    if (!record)
+      throw new Error('The relationship definition must exist in raw storage and its receipt.');
+    const candidate = record as unknown as Record<string, unknown>;
+    candidate.builtins = [{ key: 'debt', name: 'Skuld', sectionId: '' }];
+    expect((await upload(source)).status()).toBe(400);
+    expect(await read()).toEqual(before);
+    delete candidate.builtins;
+  }
+  await restore(source);
+  expect((await read()).relationshipTypes.find(({ id }) => id === 'edge')?.sections).toEqual([]);
 });

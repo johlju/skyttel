@@ -1043,3 +1043,73 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
     state.relationshipTypes.find((item: { id: string }) => item.id === 'stored'),
   ).toMatchObject({ forwardLabel: 'förvaras i', reverseLabel: 'innehåller', sections, fields });
 });
+
+test('MCP catalogs and proposals keep canonical property layout separate from complete object facts', async () => {
+  const sdk = new Client({ name: 'Gemensamma egenskaper', version: '1' });
+  try {
+    await sdk.connect(
+      new StreamableHTTPClientTransport(new URL(`${app.origin}/mcp`), {
+        requestInit: { headers: { authorization: `Bearer ${token}` } },
+      }),
+    );
+    const catalog = (await sdk.listTools()).tools;
+    const objectSchema = JSON.stringify(
+      catalog.find(({ name }) => name === 'propose_object_type')?.inputSchema,
+    );
+    expect(objectSchema).toContain('"builtins"');
+    expect(objectSchema).toContain('"propertyOrder"');
+    expect(
+      JSON.stringify(catalog.find(({ name }) => name === 'propose_relationship_type')?.inputSchema),
+    ).not.toContain('"builtins"');
+    let review = await tool('read_my_draft');
+    const value = {
+      name: 'Avtalsuppgifter',
+      description: '',
+      fields: [],
+      sections: [{ id: 'facts', name: 'Uppgifter' }],
+      builtins: [{ key: 'debt', name: 'Återstående skuld', sectionId: 'facts' }],
+      propertyOrder: ['builtin:debt'],
+    };
+    const { fields: _fields, ...stored } = value;
+    for (const invalid of [
+      { ...value, builtins: [{ key: 'name', name: 'Namn', sectionId: 'facts' }] },
+      { ...value, builtins: [{ key: 'debt', name: 'Skuld', sectionId: 'facts', kind: 'number' }] },
+    ]) {
+      const result = await sdk.callTool({
+        name: 'propose_object_type',
+        arguments: { ...version(review), id: 'canonical', baseRevision: null, value: invalid },
+      });
+      expect(result.isError).toBe(true);
+      expect(await tool('read_my_draft')).toEqual(review);
+    }
+    review = await definition('canonical', value);
+    const types = await tool('read_type_catalog');
+    expect(types.types.find((type: { id: string }) => type.id === 'canonical')).toMatchObject(
+      stored,
+    );
+    const financialFacts = {
+      debt: { knowledge: 'uncertain', value: '12 300', reportedOn: '2026-09-01' },
+      price: { knowledge: 'unknown' },
+      currency: { knowledge: 'none' },
+    };
+    review = await tool('propose_object', {
+      ...version(review),
+      id: 'loan',
+      baseRevision: null,
+      typeRevision: 1,
+      value: { typeId: 'canonical', name: 'Lånet', description: 'Gemensam text', financialFacts },
+    });
+    const receipt = await save('canonical');
+    expect(receipt.objectTypes[0].after).toMatchObject(stored);
+    expect(receipt.changes[0]).toMatchObject({ type: stored, after: { financialFacts } });
+    await app.restart();
+    expect((await tool('read_map')).objects[0].financialFacts).toEqual(financialFacts);
+    expect(
+      (await tool('read_type_catalog')).types.find(
+        (type: { id: string }) => type.id === 'canonical',
+      ),
+    ).toMatchObject(stored);
+  } finally {
+    await sdk.close();
+  }
+});

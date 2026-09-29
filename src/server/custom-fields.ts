@@ -36,6 +36,9 @@ export function readCustomFields(value: unknown): CustomField[] {
   return value.map((field) => {
     if (
       !field ||
+      Object.keys(field).some(
+        (key) => !['id', 'name', 'description', 'kind', 'sectionId'].includes(key),
+      ) ||
       typeof field.id !== 'string' ||
       !/^[\w-]{1,128}$/.test(field.id) ||
       ['__proto__', 'constructor', 'prototype'].includes(field.id) ||

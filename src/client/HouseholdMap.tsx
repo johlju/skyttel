@@ -28,12 +28,12 @@ import type { MapSelection } from '../shared/text-assistant.js';
 import { buildHeader, notifyOutdatedClient } from './build-guard.js';
 import { DraftStatus } from './DraftStatus.js';
 import './draft-status.css';
-import { FinancialFactsDetails } from './FinancialFacts.js';
 import { LifecycleDetails, LifecycleStatus } from './Lifecycle.js';
 import { MapHistory } from './MapHistory.js';
 import { type MapRevealRequest, waitForMapDisplay } from './map-display.js';
 import { MapRequestError, request } from './map-request.js';
 import { MergeSourceDetails, ObjectMerge } from './ObjectMerge.js';
+import { ObjectPropertiesDetails } from './ObjectProperties.js';
 import { ObjectRemovalNotice } from './ObjectRemovalNotice.js';
 import { CustomFieldsDetails, ObjectTypeDetails, ObjectTypeEditor } from './ObjectTypes.js';
 import { type ObjectEditor, ObjectWork } from './ObjectWork.js';
@@ -1156,12 +1156,10 @@ export function HouseholdMap({
           typeName={definition?.name ?? typeName(value.typeId)}
         />
         <p>Objekttyp: {definition?.name ?? typeName(value.typeId)}</p>
-        <p>Beskrivning: {value.description || 'Ingen beskrivning'}</p>
-        <FinancialFactsDetails facts={value.financialFacts} />
-        <CustomFieldsDetails
+        <ObjectPropertiesDetails
           showHidden={showHidden}
           type={definition ?? effectiveTypes.find((type) => type.id === value.typeId)}
-          values={value.customValues}
+          value={value}
         />
         <LifecycleDetails value={value} />
         {value.identity && (

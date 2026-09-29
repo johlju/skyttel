@@ -1,4 +1,11 @@
-import type { CustomField, ObjectType, RelationshipType, TypeSection } from './map.js';
+import type {
+  BuiltinProperty,
+  CustomField,
+  ObjectType,
+  RelationshipType,
+  TypeSection,
+} from './map.js';
+import { objectProperties, orderedReferences } from './object-properties.js';
 
 export const definitionScalarFields = {
   objectType: ['name', 'description'],
@@ -27,6 +34,15 @@ export function typeDefinitionFacts(kind: DefinitionKind, value: object): Facts 
     for (const key of ['name', 'description', 'kind', 'sectionId'] as const)
       result.set(`field:${field.id}:${key}`, field[key]);
   }
+  if (kind === 'objectType') {
+    result.set('builtins', record.builtins === undefined ? undefined : true);
+    result.set('propertyOrder', record.propertyOrder);
+    for (const field of (record.builtins ?? []) as BuiltinProperty[]) {
+      result.set(`builtin:${field.key}`, true);
+      result.set(`builtin:${field.key}:name`, field.name);
+      result.set(`builtin:${field.key}:sectionId`, field.sectionId);
+    }
+  }
   return result;
 }
 
@@ -42,23 +58,14 @@ export function applyTypeDefinitionFacts<T extends object>(
   }
   function ordered<T extends { id: string }>(items: T[], key: string) {
     const order = (values.get(key) ?? []) as string[];
-    const result = order.flatMap((id) => items.filter((item) => item.id === id));
     const original = ((base as ObjectType)[key === 'fieldOrder' ? 'fields' : 'sections'] ?? []).map(
       ({ id }) => id,
     );
-    for (const item of items.filter((item) => !order.includes(item.id))) {
-      const previous = original
-        .slice(0, original.indexOf(item.id))
-        .reverse()
-        .find((id) => result.some((entry) => entry.id === id));
-      const index = previous
-        ? result.findIndex(({ id }) => id === previous) + 1
-        : original.includes(item.id)
-          ? 0
-          : result.length;
-      result.splice(index, 0, item);
-    }
-    return result;
+    return orderedReferences(
+      order,
+      items.map(({ id }) => id),
+      original,
+    ).flatMap((id) => items.filter((item) => item.id === id));
   }
   const fields = [...values]
     .filter(
@@ -75,6 +82,32 @@ export function applyTypeDefinitionFacts<T extends object>(
     }));
   if (fields.length) result.fields = ordered(fields, 'fieldOrder');
   else delete result.fields;
+  const builtins =
+    kind === 'objectType'
+      ? [...values]
+          .filter(
+            ([key, value]) =>
+              key.startsWith('builtin:') && key.split(':').length === 2 && value === true,
+          )
+          .map(([key]) => ({
+            key: key.slice(8),
+            name: values.get(`${key}:name`),
+            sectionId: values.get(`${key}:sectionId`),
+          }))
+      : [];
+  if (kind === 'objectType') {
+    if (values.get('builtins') !== undefined || builtins.length) result.builtins = builtins;
+    else delete result.builtins;
+    const available = objectProperties(result as unknown as ObjectType).map(({ ref }) => ref);
+    const original = objectProperties(base as ObjectType).map(({ ref }) => ref);
+    if (values.get('propertyOrder') !== undefined || builtins.length)
+      result.propertyOrder = orderedReferences(
+        (values.get('propertyOrder') ?? []) as string[],
+        available,
+        original,
+      );
+    else delete result.propertyOrder;
+  }
   const sections = [...values]
     .filter(
       ([key, value]) => key.startsWith('section:') && key.split(':').length === 2 && value === true,
@@ -82,7 +115,7 @@ export function applyTypeDefinitionFacts<T extends object>(
     .map(([key]) => ({ id: key.slice(8), name: values.get(`${key}:name`) }));
   // Keep a section required by an independent field edit while reversing
   // another presentation fact. Hiding never removes the field or its value.
-  for (const field of fields) {
+  for (const field of [...fields, ...builtins]) {
     if (!field.sectionId || sections.some(({ id }) => id === field.sectionId)) continue;
     const section = ((base as ObjectType).sections ?? []).find(({ id }) => id === field.sectionId);
     if (section) sections.push(section);
@@ -114,7 +147,7 @@ export function resolveTypeDefinition<T extends ObjectType | RelationshipType>(
     if (!equal) merged.set(key, right);
   }
   const result = applyTypeDefinitionFacts(kind, current, merged);
-  for (const field of result.fields ?? []) {
+  for (const field of [...(result.fields ?? []), ...((result as ObjectType).builtins ?? [])]) {
     if (!field.sectionId || result.sections?.some(({ id }) => id === field.sectionId)) continue;
     const section = after.sections?.find(({ id }) => id === field.sectionId);
     if (section) result.sections = [...(result.sections ?? []), section];

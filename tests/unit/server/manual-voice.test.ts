@@ -3,7 +3,7 @@ import { access } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { request } from '@playwright/test';
 import { expect, test } from 'vitest';
-import { createHousehold, signIn } from '../../support/client.js';
+import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 
 function launch() {
   const child = spawn(process.execPath, ['--import', 'tsx', 'scripts/manual-voice.ts']);
@@ -47,7 +47,7 @@ function launch() {
 
 test('manual voice controls drive real delegation and MCP, preserve provisional usage and remove their disposable app', async () => {
   const { child, lines, exit, next, command, output } = launch();
-  const browser = await request.newContext();
+  let browser = await request.newContext();
   try {
     const ready = await next('ready');
     const origin = ready.origin as string;
@@ -116,7 +116,7 @@ test('manual voice controls drive real delegation and MCP, preserve provisional 
     await expect.poll(async () => (await (await poll()).json()).voice.seconds).toBe(15);
     const stopped = await browser.post(`${voicePath}/stop`, { headers: { origin }, data: {} });
     expect(await stopped.json()).toMatchObject({ voice: { seconds: 15, usageFinal: false } });
-    await command('restart', 'restarted');
+    browser = await restartWithSession(browser, () => command('restart', 'restarted'));
     expect(
       (await browser.post(`${voicePath}/poll`, { headers: { origin }, data: {} })).status(),
     ).toBe(404);

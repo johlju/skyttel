@@ -34,6 +34,8 @@ test.each(['draft', 'latest_save'])(
           { id: 'service', name: 'Service' },
         ],
         fields,
+        builtins: [{ key: 'debt', name: 'Skuld', sectionId: 'facts' }],
+        propertyOrder: ['field:note', 'builtin:debt', 'field:power'],
       };
       await post('map/object-type', {
         version: 0,
@@ -48,6 +50,8 @@ test.each(['draft', 'latest_save'])(
         baseRevision: 1,
         value: {
           ...definition,
+          builtins: [{ key: 'debt', name: 'Återstående skuld', sectionId: '' }],
+          propertyOrder: ['builtin:debt', 'field:power', 'field:note'],
           sections: [
             { id: 'service', name: 'Underhåll' },
             { id: 'facts', name: 'Fakta' },
@@ -80,6 +84,12 @@ test.each(['draft', 'latest_save'])(
       expect(view.reply).toContain('Placering av Anteckning: Uppgifter → Dold, behåll värden');
       expect(view.reply).toContain('Placering av Effekt: Uppgifter → Underhåll');
       expect(view.reply).toContain('Fältordning: Anteckning, Effekt → Effekt, Anteckning');
+      expect(view.reply).toContain(
+        'Placering av gemensam egenskap Senast uppgiven skuld: Skuld · Uppgifter → Återstående skuld · Dold, behåll värden',
+      );
+      expect(view.reply).toContain(
+        'Egenskapernas ordning: Anteckning, Skuld, Effekt → Återstående skuld, Effekt, Anteckning',
+      );
       expect(view.receipt).toBeUndefined();
     } finally {
       await browser.dispose();

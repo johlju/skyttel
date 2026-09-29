@@ -10,6 +10,7 @@ import type {
 } from '../shared/map.js';
 import { objectTypePresentation } from '../shared/map.js';
 import { objectIconLabel } from '../shared/object-icons.js';
+import { builtinPresentationChanges } from '../shared/object-properties.js';
 import type { TextAssistantResult, TextAssistantReview } from '../shared/text-assistant.js';
 
 function fact(value: FinancialFact | undefined) {
@@ -63,6 +64,7 @@ function typeDetails(
   after: (ObjectType & RelationshipType) | null,
 ) {
   const fields = [
+    ...builtinPresentationChanges(before, after),
     ...(before && after ? difference('namn', before.name, after.name) : []),
     ...difference('beskrivning', description(before?.description), description(after?.description)),
   ];

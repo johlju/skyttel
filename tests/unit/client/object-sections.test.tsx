@@ -38,39 +38,40 @@ async function open() {
 
 test('section and field controls retain focus, descriptions and placement through the actual map draft', async () => {
   await open();
-  const first = screen.getByLabelText('Avsnitt 1');
+  const editor = within(screen.getByRole('group', { name: 'Objekttypens definition' }));
+  const first = editor.getByLabelText('Avsnitt 1');
   await userEvent.clear(first);
   await userEvent.type(first, 'Uppgifter');
-  await userEvent.click(screen.getByRole('button', { name: 'Lägg till avsnitt' }));
-  expect(document.activeElement).toBe(screen.getByLabelText('Avsnitt 2'));
-  await userEvent.type(screen.getByLabelText('Avsnitt 2'), 'Service');
-  await userEvent.click(screen.getByRole('button', { name: 'Flytta avsnittet Service upp' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Lägg till avsnitt' }));
+  expect(document.activeElement).toBe(editor.getByLabelText('Avsnitt 2'));
+  await userEvent.type(editor.getByLabelText('Avsnitt 2'), 'Service');
+  await userEvent.click(editor.getByRole('button', { name: 'Flytta avsnittet Service upp' }));
   expect((document.activeElement as HTMLInputElement).value).toBe('Service');
-  await userEvent.click(screen.getByRole('button', { name: 'Flytta avsnittet Service ned' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Flytta avsnittet Service ned' }));
   for (const name of ['Effekt', 'Anteckning']) {
-    await userEvent.click(screen.getByRole('button', { name: 'Lägg till fält' }));
-    const groups = screen.getAllByRole('group', { name: /^Eget fält/ });
+    await userEvent.click(editor.getByRole('button', { name: 'Lägg till fält' }));
+    const groups = editor.getAllByRole('group', { name: /^Eget fält/ });
     const field = within(groups[groups.length - 1]);
     expect(document.activeElement).toBe(field.getByLabelText('Fältets namn'));
     await userEvent.type(field.getByLabelText('Fältets namn'), name);
     await userEvent.type(field.getByLabelText('Fältets beskrivning'), 'kW');
   }
   await userEvent.selectOptions(
-    within(screen.getByRole('group', { name: 'Eget fält 1' })).getByLabelText('Värdeslag'),
+    within(editor.getByRole('group', { name: 'Eget fält 1' })).getByLabelText('Värdeslag'),
     'number',
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Flytta fältet Anteckning upp' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Flytta fältet Anteckning upp' }));
   expect((document.activeElement as HTMLInputElement).value).toBe('Anteckning');
-  await userEvent.click(screen.getByRole('button', { name: 'Flytta fältet Anteckning ned' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Dölj Effekt, behåll värden' }));
-  const power = within(screen.getByRole('group', { name: 'Eget fält 1' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Flytta fältet Anteckning ned' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Dölj Effekt, behåll värden' }));
+  const power = within(editor.getByRole('group', { name: 'Eget fält 1' }));
   expect(document.activeElement).toBe(power.getByLabelText('Visa i avsnitt'));
   expect((power.getByLabelText('Visa i avsnitt') as HTMLSelectElement).value).toBe('');
   await userEvent.selectOptions(
     power.getByLabelText('Visa i avsnitt'),
-    screen.getAllByRole('option', { name: 'Service' })[0],
+    power.getByRole('option', { name: 'Service' }),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }));
   await screen.findByText('Förslaget finns i ditt privata utkast. Kartan är inte ändrad.');
   const state = await read();
   const type = state.draft.objectTypes?.[0].after;

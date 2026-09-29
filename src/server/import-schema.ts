@@ -27,12 +27,39 @@ const field = z
     sectionId: z.union([id, z.literal('')]).optional(),
   })
   .strict();
+const builtinProperties = z
+  .array(
+    z
+      .object({
+        key: z.enum([
+          'description',
+          'price',
+          'currency',
+          'paymentInterval',
+          'startDate',
+          'endDate',
+          'terms',
+          'debt',
+          'creditLimit',
+          'usedCredit',
+        ]),
+        name,
+        sectionId: z.union([id, z.literal('')]),
+      })
+      .strict(),
+  )
+  .max(10);
+const propertyOrder = z
+  .array(z.string().regex(/^(field:[\w-]{1,128}|builtin:[a-zA-Z]+)$/))
+  .max(110);
 const sections = z.array(z.object({ id, name }).strict()).max(100);
 const objectType = z
   .object({
     ...definitionShape,
     fields: z.array(field).max(100).optional(),
     sections: sections.optional(),
+    builtins: builtinProperties.optional(),
+    propertyOrder: propertyOrder.optional(),
   })
   .strict();
 const relationshipType = z
@@ -192,6 +219,8 @@ export const importContentSchema = z
           typeId: id,
           fields: z.array(field).max(100),
           sections: sections.nullable().optional(),
+          builtins: builtinProperties.nullable().optional(),
+          propertyOrder: propertyOrder.nullable().optional(),
         })
         .strict(),
     ),
@@ -337,6 +366,7 @@ export const importManifestSchema = z
       z.literal(18),
       z.literal(19),
       z.literal(20),
+      z.literal(21),
     ]),
     parts: z
       .array(

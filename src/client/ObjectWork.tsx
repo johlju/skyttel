@@ -1,10 +1,10 @@
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CustomValues, MapObject, MapState, ObjectType, ObjectValue } from '../shared/map.js';
-import { FinancialFactsEditor } from './FinancialFacts.js';
 import { LifecycleEditor } from './Lifecycle.js';
 import { ObjectIconPicker } from './ObjectIconPicker.js';
+import { ObjectPropertiesEditor } from './ObjectProperties.js';
 import { ObjectRemovalNotice } from './ObjectRemovalNotice.js';
-import { CustomFieldsDetails, CustomFieldsEditor } from './ObjectTypes.js';
+import { CustomFieldsDetails } from './ObjectTypes.js';
 import { ProfileImageEditor } from './ProfileImage.js';
 
 export type ObjectEditor = {
@@ -134,6 +134,13 @@ export function ObjectWork({
           </p>
           <form
             ref={form}
+            onInvalidCapture={(event) => {
+              let parent = (event.target as HTMLElement).parentElement;
+              while (parent && parent !== form.current) {
+                if (parent instanceof HTMLDetailsElement) parent.open = true;
+                parent = parent.parentElement;
+              }
+            }}
             onSubmit={(event) => {
               event.preventDefault();
               if (editor.displacedFields?.length && !editor.fieldsHandled) return;
@@ -288,25 +295,12 @@ export function ObjectWork({
                 <option value="unspecified">Ospecificerat objekt</option>
                 <option value="unresolved">Obesvarad identitetsfråga</option>
               </select>
-              <label htmlFor={`${prefix}-object-description`}>Beskrivning</label>
-              <textarea
-                id={`${prefix}-object-description`}
-                maxLength={2000}
-                value={editor.value.description}
-                onChange={(event) => {
-                  setDirty(true);
-                  setEditor({
-                    ...editor,
-                    value: { ...editor.value, description: event.target.value },
-                  });
-                }}
-              />
-              <CustomFieldsEditor
+              <ObjectPropertiesEditor
                 type={effectiveTypes.find((type) => type.id === editor.value.typeId)}
-                values={editor.value.customValues}
-                onChange={(customValues) => {
+                value={editor.value}
+                onChange={(value) => {
                   setDirty(true);
-                  setEditor({ ...editor, value: { ...editor.value, customValues } });
+                  setEditor({ ...editor, value });
                 }}
               />
               <p>Texten i formuläret skickas först när du lägger den i utkastet.</p>
@@ -316,17 +310,6 @@ export function ObjectWork({
                 onChange={(lifecycle) => {
                   setDirty(true);
                   setEditor({ ...editor, value: { ...editor.value, lifecycle } });
-                }}
-              />
-              <FinancialFactsEditor
-                key={editor.id}
-                facts={editor.value.financialFacts}
-                onChange={(financialFacts) => {
-                  setDirty(true);
-                  const value = { ...editor.value };
-                  if (Object.keys(financialFacts).length) value.financialFacts = financialFacts;
-                  else delete value.financialFacts;
-                  setEditor({ ...editor, value });
                 }}
               />
               {editor.version !== state.draft.version && (

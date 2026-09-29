@@ -10,7 +10,7 @@ import { projectDraftScope } from './project-content-scope.js';
 
 const tables = [
   ['objectTypes', 'object_type', []],
-  ['objectTypeFields', 'object_type_fields', ['fields', 'sections']],
+  ['objectTypeFields', 'object_type_fields', ['fields', 'sections', 'builtins', 'propertyOrder']],
   ['relationshipTypes', 'relationship_type', []],
   ['relationshipTypeFields', 'relationship_type_fields', ['fields', 'sections']],
   ['relationshipTypeLabels', 'relationship_type_labels', []],

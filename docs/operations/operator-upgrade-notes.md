@@ -49,10 +49,18 @@ supported older archives keep their field order and use a default section.
 Hidden fields retain their values, including in drafts, history and recovery copies.
 Hiding a field does not erase its content or limit access to it.
 
+Object types can also store the placement and order of built-in description
+and financial properties. These settings do not change the financial values,
+their certainty or their reported dates. Existing common values remain
+accessible outside type sections, including after a type change. Older
+definitions and archives keep their original presentation until it is changed.
+
 New household archives require an upgraded reader. Refresh connected
 assistants' tool catalogs after rollout so they can change sections and
-field placement. Older clients that omit section information retain the
-existing placement. Use the database backup and matching image procedure
+field placement. Older clients that omit section or built-in property
+information retain the existing placement. Custom answers and built-in
+property references remain separate contracts. Use the database backup
+and matching image procedure
 above for rollback.
 
 ### Relationship fields and archive compatibility

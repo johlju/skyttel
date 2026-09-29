@@ -2,7 +2,7 @@ import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test, vi } from 'vitest';
 import type { TextModelAttempt, TextModelUsage } from '../../../src/server/text-assistant-model.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
-import { createHousehold, signIn } from '../../support/client.js';
+import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { createInstallation } from '../../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
@@ -318,7 +318,7 @@ test('a provider discovers the actual MCP catalog and makes a persistent proposa
     });
     expect(call.tools.some((tool) => tool.name === 'export_household')).toBe(false);
   }
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   expect(
     (await (await browser.get(path.replace('/text-assistant', '/map'))).json()).draft.changes,
   ).toMatchObject([{ id: 'subscription' }]);
@@ -425,7 +425,7 @@ test.each([
     const map = await (await browser.get(path.replace('/text-assistant', '/map'))).json();
     expect(map.objects).toMatchObject([{ id: 'web-object', ...correction }]);
     expect(map.draft.changes).toEqual([]);
-    await app.restart();
+    browser = await restartWithSession(browser, () => app.restart());
     const reconnected = await start();
     expect(reconnected.operations).toContainEqual(
       expect.objectContaining({ status: 'succeeded', operationId: status.receipt.operationId }),
@@ -1115,7 +1115,7 @@ test('a new authorized session finds an interrupted persistent save before accep
     data: { operationId: 'interrupted-save', version: 1, contentVersion: 1 },
   });
   expect(registered.status(), await registered.text()).toBe(200);
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   const session = await start();
   expect(session).toMatchObject({
     phase: 'recovery',
@@ -1152,7 +1152,7 @@ test('a new authorized session finds an interrupted persistent save before accep
   });
   // Deliberately disregard a successful retry response and recover after a
   // real server/database restart through a newly consented MCP connection.
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   const recovered = await start();
   expect(recovered.operations).toMatchObject([
     { status: 'succeeded', operationId: 'interrupted-save' },

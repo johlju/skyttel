@@ -6,10 +6,10 @@ import type {
   SavedRelationshipChange,
   SaveReceipt,
 } from '../shared/map.js';
-import { FinancialFactsDetails } from './FinancialFacts.js';
 import { LifecycleDetails } from './Lifecycle.js';
 import { MapRequestError, request } from './map-request.js';
 import { MergeSourceDetails } from './ObjectMerge.js';
+import { ObjectPropertiesDetails } from './ObjectProperties.js';
 import { CustomFieldsDetails, ObjectTypeDetails } from './ObjectTypes.js';
 import { ProfileImage } from './ProfileImage.js';
 import { relationshipLabel } from './RelationshipEditor.js';
@@ -34,16 +34,13 @@ function ObjectDetails({
         <summary>Objektets identitet</summary>
         <p>{value.id}</p>
       </details>
-      <p>
-        Objekttyp: {type.name}. Beskrivning: {value.description || 'Ingen beskrivning'}
-      </p>
+      <p>Objekttyp: {type.name}.</p>
       {value.identity && (
         <p>
           {value.identity === 'unspecified' ? 'Ospecificerat objekt' : 'Obesvarad identitetsfråga'}
         </p>
       )}
-      <FinancialFactsDetails facts={value.financialFacts} />
-      <CustomFieldsDetails type={type} values={value.customValues} showHidden />
+      <ObjectPropertiesDetails type={type} value={value} showHidden />
       <LifecycleDetails value={value} />
     </>
   ) : (

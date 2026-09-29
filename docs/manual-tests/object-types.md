@@ -272,6 +272,66 @@ entire draft and map”.
 
 ## Avsnitt och visning av egna fält
 
+### TYP-10: Gemensamma egenskaper behåller värden genom placering och typbyte
+
+**Syfte:** Placera inbyggda uppgifter utan att förlora ekonomisk betydelse,
+säkerhet, datum eller tidigare egna värden.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Börja med ett tomt hushåll. Skapa och spara Annan typ
+utan avsnitt eller egna fält. Använd dator samt 390 och 320 pixlars bredd.
+Pröva även ett kort fönster på 640 × 456 pixlar och verklig webbläsarzoom.
+
+**Integrationstest:**
+[object-builtins.spec.ts](../../tests/integration/object-builtins.spec.ts),
+testfallen “TYP-10: canonical properties retain meaning through sections,
+hiding, type changes, history and undo at 1280px”, samma titel med “390px”,
+“320px” respektive “640px”.
+
+**Steg:**
+
+1. Öppna Inställningar → Typer och egna fält. Skapa Husavtal och avsnittet
+   Avtalet. Lägg till gemensamma Beskrivning och Senast uppgiven skuld samt
+   ett eget textfält Anteckning. Ändra skuldens visningsnamn till Skuld.
+2. Flytta Skuld upp med tangentbordet, dölj den och återvisa i Avtalet.
+   Kontrollera fokus efter varje handling. Lägg till gemensamma Startdatum
+   och placera i ett nytt avsnitt Datum. Kontrollera ljust och mörkt tema.
+   Lägg typförslaget i utkastet.
+3. Skapa Husets lån av typen Husavtal. Försök först lägga ett namnlöst
+   objekt i utkastet: namnfältet ska få fokus. Ange Gemensam avtalstext som
+   beskrivning och Eget värde som Anteckning. Ange Skuld `12 300` som
+   **Osäkert uppgivet**, med uppgiftsdatum `2026-09-01`, och Startdatum
+   `2026-08-01` som känt.
+4. Under Ekonomiska uppgifter och avtalsvillkor, välj **Okänt** för Pris
+   och **Uttryckligen inget** för Valuta. Välj **Känt** för Beviljat
+   kreditutrymme utan belopp. Fäll ihop avsnittet och försök lägga i
+   utkastet. Det ska öppnas och det tomma beloppet få fokus. Välj därefter
+   **Ej uppgivet** för kreditutrymmet och lägg objektet i utkastet.
+5. Öppna Lista och spara hela utkastet. Starta om installationen och ladda
+   om. Dölj Skuld i typdefinitionen och lägg förslaget i utkastet. Öppna
+   Husets lån och läs skulden under Uppgifter utanför typens avsnitt.
+   Öppna Lista och spara ändringen.
+6. Redigera Husets lån och välj Annan typ. Kontrollera beskrivning och
+   ekonomiska uppgifter. Granska det tidigare egna värdet och bekräfta
+   **Jag har hanterat tidigare fältvärden för typbytet**. Lägg i utkastet
+   och spara genom Lista.
+7. Öppna Visa historik. Granska typbytet, tidigare Anteckning och skuldens
+   säkerhet och datum. Välj Ångra sparandet, granska och spara förslaget.
+   Starta om och kontrollera Husets lån igen.
+
+**Förväntat resultat:**
+
+- Egenskapernas ordning och placering kan ändras utan att deras betydelse
+  ändras. En gemensam egenskap kan inte läggas till två gånger.
+- Saknat namn och känt belopp utan värde stoppas med synligt fokus.
+- I korta fönster går det att rulla till Nytt objekt, formulär och sparande
+  även när privat förslag, status och återkoppling visas samtidigt.
+- Beskrivning, skuld, säkerhet och datum består efter döljning och typbyte.
+  Okänt, uttryckligen inget och ej uppgivet förblir olika tillstånd.
+- Typbytet kräver hantering av det gamla egna värdet. Ångring återför
+  Husavtal och Anteckning, med samma gemensamma uppgifter efter omstart.
+
 ### TYP-08: Flytta och dölj fält utan värdeförlust genom sparande och omstart
 
 **Syfte:** Kontrollera avsnitt, fältidentiteter och atomiskt sparande med

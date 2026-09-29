@@ -222,7 +222,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     'propose_object_type',
     {
       description:
-        'Föreslå en ny objekttyp eller ersätt hela definitionen, även en förifylld typ. value null föreslår borttagning. Ange alla fält som ska finnas kvar. sections anger namngivna avsnitt i visningsordning. Ange sectionId för varje fält: avsnittets ID eller tom sträng för dolt med bevarade värden. Fältordningen gäller inom avsnitten. Utelämnade sections bevarar befintlig placering; äldre definitioner visas i Egna fält. Fält får lämnas obesvarade; utelämnat ja/nej är inte false. Ett använt fälts värdeslag ersätts genom ett nytt fält, aldrig automatisk konvertering. Användning i aktuellt eller upphört innehåll och privata utkast skyddas även vid sparandet. Hela ditt utkast returneras.',
+        'Föreslå en ny objekttyp eller ersätt hela definitionen, även en förifylld typ. value null föreslår borttagning. Ange alla fält som ska finnas kvar. sections anger namngivna avsnitt i visningsordning. Ange sectionId för varje fält: avsnittets ID eller tom sträng för dolt med bevarade värden. Fältordningen gäller inom avsnitten. Utelämnade sections bevarar befintlig placering; äldre definitioner visas i Egna fält. builtins placerar description och de ekonomiska uppgifternas stabila nycklar i avsnitt med visningsnamn; tomt sectionId döljer bara placeringen och befintliga gemensamma värden förblir åtkomliga. propertyOrder anger hela ordningen med field:<fält-ID> och builtin:<nyckel>. Utelämnade builtins och propertyOrder behåller befintlig presentation. Dessa referenser är aldrig customValues; ekonomiska fakta behåller säkerhet, textvärde och tillåtna datum. Fält får lämnas obesvarade; utelämnat ja/nej är inte false. Ett använt fälts värdeslag ersätts genom ett nytt fält, aldrig automatisk konvertering. Användning i aktuellt eller upphört innehåll och privata utkast skyddas även vid sparandet. Hela ditt utkast returneras.',
       inputSchema: z
         .object({
           ...versionFields,
@@ -235,6 +235,33 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
               sections: z
                 .array(z.object({ id, name: z.string().min(1).max(200) }).strict())
                 .max(100)
+                .optional(),
+              builtins: z
+                .array(
+                  z
+                    .object({
+                      key: z.enum([
+                        'description',
+                        'price',
+                        'currency',
+                        'paymentInterval',
+                        'startDate',
+                        'endDate',
+                        'terms',
+                        'debt',
+                        'creditLimit',
+                        'usedCredit',
+                      ]),
+                      name: z.string().min(1).max(200),
+                      sectionId: z.union([id, z.literal('')]),
+                    })
+                    .strict(),
+                )
+                .max(10)
+                .optional(),
+              propertyOrder: z
+                .array(z.string().regex(/^(field:[\w-]{1,128}|builtin:[a-zA-Z]+)$/))
+                .max(110)
                 .optional(),
               fields: z
                 .array(

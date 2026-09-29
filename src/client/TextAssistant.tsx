@@ -11,10 +11,10 @@ import { createPortal } from 'react-dom';
 import type { ObjectType, ObjectValue } from '../shared/map.js';
 import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
 import { ConversationTranscript, type TranscriptRow } from './ConversationTranscript.js';
-import { FinancialFactsDetails } from './FinancialFacts.js';
 import { LifecycleDetails } from './Lifecycle.js';
 import { MapRequestError, request } from './map-request.js';
 import { MergeSourceDetails } from './ObjectMerge.js';
+import { ObjectPropertiesDetails } from './ObjectProperties.js';
 import { CustomFieldsDetails, ObjectTypeDetails } from './ObjectTypes.js';
 import { ProfileImage } from './ProfileImage.js';
 import { RelationshipTypeDetails } from './RelationshipTypes.js';
@@ -31,10 +31,8 @@ function ObjectDetails({ value, type }: { value: ObjectValue | null; type: Objec
       <p>
         {value.name} · {type.name}
       </p>
-      <p>{value.description}</p>
       <ProfileImage householdId={type.householdId} value={value} typeName={type.name} />
-      <FinancialFactsDetails facts={value.financialFacts} />
-      <CustomFieldsDetails type={type} values={value.customValues} showHidden />
+      <ObjectPropertiesDetails type={type} value={value} showHidden />
       <LifecycleDetails value={value} />
       {value.identity && (
         <p>

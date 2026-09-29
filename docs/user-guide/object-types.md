@@ -60,6 +60,27 @@ med objektens uppgifter. Andra medlemmar ser ändringen först efter samma
 gemensamma sparande. Oskickade ändringar följer med mellan Inställningar
 och kartan, men måste läggas i utkastet för att klara omladdning och omstart.
 
+## Placera gemensamma uppgifter
+
+Välj **Lägg till gemensam egenskap** i objekttypens definition för att
+placera beskrivning, belopp, avtalsdatum eller villkor i ett avsnitt.
+Varje gemensam egenskap kan placeras en gång. Använd **Visa i avsnitt**,
+**Upp**, **Ned** och **Dölj** på samma sätt som för egna fält. Gemensamma
+egenskaper och egna fält kan blandas i samma ordning. Namnet får anpassas,
+men texten **Gemensam egenskap** visar vilken uppgift som avses.
+
+Placeringen ändrar inte uppgiftens betydelse. Skuld, kreditutrymme och
+utnyttjad kredit är fortfarande separata uppgifter med egen säkerhet och
+frivilligt datum. Okänt, uttryckligen inget och obesvarat förblir olika.
+Namn, objekttyp och objektets identitet ligger utanför dessa avsnitt.
+
+Befintliga gemensamma värden som inte visas i typens avsnitt finns under
+**Uppgifter utanför typens avsnitt**. Där kan du läsa och rätta dem även
+efter ett typbyte. Döljning är ingen åtkomstbegränsning eller radering.
+Äldre typer behåller beskrivningen och formulärets ekonomiska uppgifter
+tills du väljer en egen placering. Historik, ångring och återimport behåller
+värden, säkerhet och datum tillsammans med rätt typdefinition.
+
 ## Rätta definitioner och värden
 
 Öppna **Objekttyper och egna fält** och välj **Ändra typ** för rätt typ.

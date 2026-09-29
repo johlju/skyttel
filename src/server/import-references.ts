@@ -13,6 +13,7 @@ import { isObjectIconId } from '../shared/object-icons.js';
 import { readFinancialFacts } from './financial-facts.js';
 import type { ImportContent } from './import-schema.js';
 import { MapError } from './map-error.js';
+import { readObjectProperties } from './object-properties.js';
 import { readCustomValues } from './object-types.js';
 
 function requireReference(condition: unknown): asserts condition {
@@ -58,6 +59,12 @@ export function validateImportReferences(
       {
         ...row,
         fields: content.objectTypeFields.find((fields) => fields.typeId === row.id)?.fields,
+        builtins:
+          content.objectTypeFields.find((fields) => fields.typeId === row.id)?.builtins ??
+          undefined,
+        propertyOrder:
+          content.objectTypeFields.find((fields) => fields.typeId === row.id)?.propertyOrder ??
+          undefined,
         sections:
           content.objectTypeFields.find((fields) => fields.typeId === row.id)?.sections ??
           undefined,
@@ -160,6 +167,7 @@ export function validateImportReferences(
   function definition(type: ObjectType) {
     identity('objectType', type.id);
     presentation(type);
+    readObjectProperties(type);
   }
   function presentation(type: Pick<ObjectType, 'fields' | 'sections'>) {
     unique(type.fields ?? [], (field) => field.id);
