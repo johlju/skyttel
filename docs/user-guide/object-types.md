@@ -115,11 +115,18 @@ Lämna **Obesvarat** för uppgifter du inte känner till; det är skilt från
 **Nej**. Bekräfta **Jag har hanterat tidigare fältvärden för typbytet** när
 du har rättat de nya fälten eller valt att lämna dem obesvarade.
 
+Om du byter typ flera gånger under redigeringen visas de tidigare svaren
+i skilda grupper med sin ursprungliga typ. Även när du byter tillbaka
+börjar de nya fälten tomma. Bekräfta hanteringen på nytt efter varje byte.
+Gemensamma ekonomiska uppgifter behåller belopp, säkerhet och datum;
+profilbilden och ditt ikonval finns också kvar.
+
 Välj **Lägg i mitt utkast**. I **Hela mitt utkast** ser du tidigare typ och
 värden samt den nya typen och dess värden. Typbytet och fälträttelserna
 sparas tillsammans med resten av utkastet. Ett fel stoppar hela sparandet.
-Tidigare sparade värden finns kvar i historiken. Oskickade formulärvärden
-försvinner om du stänger formuläret utan att lägga förslaget i utkastet.
+Tidigare sparade värden finns kvar i historiken. **Stäng utan att skicka
+texten** tar bort oskickade formulärvärden. Panelens kryss behåller i stället
+texten så att du kan fortsätta i samma objekt senare.
 
 Ett typbyte gäller ett objekt. Ett namnbyte på typdefinitionen ändrar
 benämningen för alla objekt av den typen. Sammanslagning gäller flera

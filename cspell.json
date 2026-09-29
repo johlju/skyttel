@@ -4,6 +4,7 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "Södertak",
     "historikkort",
     "historikresultat",
     "historikhämtning",

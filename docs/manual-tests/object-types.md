@@ -462,6 +462,63 @@ identity, edges and history through restart and undo”.
   texten `SYNTH-42` och uttryckligt **Nej**.
 - Sparat utkast och historik finns kvar efter normal omstart.
 
+### TYP-11: Upprepade typbyten bevarar gemensamma uppgifter och gamla svar
+
+**Syfte:** Byt mellan typer med lika egna fält utan automatisk överföring
+eller förlust av gemensamma uppgifter, bild, ikon och samband.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Skapa Cykel och Motorfordon med avsnittet Egenskaper
+och samma egna fältnamn och värdeslag: Nummer som text, Antal som tal
+och Försäkrad som ja/nej. Spara Alex blå cykel av typen Cykel med
+Nummer `A-42`, Antal `0`, Försäkrad **Nej**, identiteten
+**Ospecificerat objekt** och beskrivningen **Gemensamma uppgifter som
+ska finnas kvar**. Välj ikonen Cykel och en påhittad profilbild. Spara
+Garaget och ett osäkert uppgivet samband från cykeln till garaget.
+På cykeln ska följande gemensamma ekonomiska uppgifter finnas:
+
+- Senast uppgiven skuld: `125 000,50`, **Osäkert uppgivet**, datum `2026-09-01`.
+- Beviljat kreditutrymme: **Uttryckligen inget**, datum `2026-09-02`.
+- Utnyttjad kredit: `0`, **Känt**, datum `2026-09-03`.
+- Pris: **Okänt**.
+
+**Integrationstest:**
+[type-change.spec.ts](../../tests/integration/type-change.spec.ts),
+testfallen “TYP-11: repeated type changes keep distinct former answers and
+complete common values through save and restart at 1280px in light”, samma
+titel med “390px” eller “320px” och “dark”. Kör varje bredd i båda temana.
+
+**Steg:**
+
+1. Öppna cykelns redigering och byt till Motorfordon. Kontrollera att
+   alla nya egna fält är tomma och de tidigare svaren visas separat.
+   Ange Nummer `B-84`, Antal `8` och Försäkrad **Ja**. Bekräfta att
+   tidigare fältvärden är hanterade utan att lägga förslaget i utkastet.
+2. Byt tillbaka till Cykel. Kontrollera tomma nya fält, två tidigare
+   grupper och att bekräftelsen måste göras på nytt. Ange Nummer
+   `A-126`, Antal `0` och Försäkrad **Nej**. Bekräfta hanteringen igen.
+3. Byt åter till Motorfordon. Kontrollera tre tidigare grupper, inklusive
+   båda grupperna från Cykel med sina egna svar. Fyll bara i Nummer
+   `B-final`, lämna Antal och Försäkrad obesvarade och bekräfta hanteringen.
+4. Kontrollera namn, identitet, beskrivning, profilbild och ekonomiska
+   uppgifter under **Uppgifter utanför typens avsnitt**. Lägg i utkastet.
+   Kontrollera att den sparade kartan fortfarande visar den gamla typen.
+5. Starta om installationen, ladda om och granska förslaget. Spara hela
+   utkastet uttryckligen. Starta om och granska cykeln och sambandet igen.
+
+**Förväntat resultat:**
+
+- Varje typbyte börjar med obesvarade egna fält, även när namn och
+  värdeslag stämmer. Tidigare noll och Nej blandas inte ihop med obesvarat.
+  Gamla grupper behåller sina typer och svar under redigeringen.
+- Varje byte kräver en ny uttrycklig bekräftelse före placering i utkastet.
+  Namn, identitet, beskrivning, hela ekonomiska uppgifter, bild och ikon
+  finns kvar. Sambandet behåller sina ändpunkter och sin osäkerhet.
+- Efter omstart och uttryckligt sparande har samma objekt typen Motorfordon
+  och bara Nummer `B-final` bland de egna svaren. Gemensamma uppgifter,
+  bild, ikon och samband är oförändrade. Ingen dubblett skapas.
+
 ### TYP-07: Fel och samtidiga ändringar stoppar hela typbytet
 
 **Syfte:** Kontrollera atomiskt sparande, nytt sparbesked och eget utkast.

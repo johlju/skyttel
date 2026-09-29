@@ -65,6 +65,13 @@ kartarbetet vara spärrat tills innehållet är tillgängligt igen.
 5. Välj **Lägg i mitt utkast**. Objektet kan nu användas i andra förslag,
    exempelvis ett nytt samband, före det gemensamma sparandet.
 
+Du kan börja skriva objektet innan dess typ finns. Besök **Inställningar →
+Typer och egna fält**, skapa typen och lägg typförslaget i utkastet. När du
+väljer **Tillbaka till kartan** finns den oskickade objekttexten kvar och
+den nya typen går att välja. Även en ny sambandstyp kan användas direkt
+mellan objekt i samma privata utkast. Definitioner, objekt och samband
+blir gemensamma först när du sparar hela utkastet.
+
 Samma namn betyder inte att två objekt är samma sak. Läs beskrivningen
 och identiteten innan du väljer ett befintligt objekt. Bekräftade
 dubbletter kan [slås samman](object-merge.md).
@@ -86,6 +93,13 @@ dubbletter kan [slås samman](object-merge.md).
 En **Obesvarad identitetsfråga** kan finnas i utkastet men måste lösas
 innan det kan sparas. Den betyder inte samma sak som ett avsiktligt
 ospecificerat objekt eller en osäker uppgift.
+
+Välj **Red ut identiteter i utkastet** i **Aktuell status** även om
+objektets panel är stängd. Vid objektets förslag väljer du **Red ut
+identiteten för** följt av objektets namn. Formuläret behåller eventuell
+oskickad text. Besvara identitetsfrågan och lägg rättelsen i utkastet.
+Andra formulär behåller sin text; lägg också den i utkastet eller stäng
+utan att skicka innan du uttryckligen sparar hela utkastet.
 
 Ett upprepat tillägg med samma typ, riktning och ändpunkter visar det
 befintliga sambandet. Olika betydelser mellan samma objekt går bra.

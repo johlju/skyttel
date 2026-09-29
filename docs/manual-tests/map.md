@@ -119,6 +119,53 @@ identified without changing its links”.
   Familjemusik → Betalas med → Hushållskontot. Bankkontot visar
   Identifierat objekt och Gemensamt bankkonto. Ingen dubblett skapas.
 
+### KARTA-08: rätta obesvarad identitet från status med stängda formulär
+
+**Syfte:** Nå rätt objekt från ett blockerande identitetsbesked och bevara
+oskickad text i både det objektet och ett annat formulär.
+
+**Användare:** Den konfigurerade administratören.
+
+**Förutsättningar:** Spara abonnemanget **Familjemusik** med beskrivningen
+**Sparad beskrivning**. Behåll databasen under omstarten.
+
+**Integrationstest:**
+[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts),
+testfallen “KARTA-08: a closed-panel identity blocker opens the exact
+retained object without sending other text at 1280px in light”, samma titel
+med “390px” eller “320px” och “dark”. Kör varje bredd i båda temana.
+
+**Steg:**
+
+1. Lägg bankkontot **Betalkonto** i utkastet med identiteten
+   **Obesvarad identitetsfråga**. Lägg också sambandet
+   **Familjemusik → Betalas med → Betalkonto** i utkastet.
+2. Öppna Betalkontos redigering, skriv **Oskickat om Betalkonto** som
+   beskrivning och stäng panelen med **Stäng Betalkonto**.
+3. Öppna Familjemusiks redigering, skriv **Oskickat om Familjemusik**
+   som beskrivning och stäng panelen med **Stäng Familjemusik**.
+   Välj **Stäng arbetsytan**.
+4. Använd tangentbordet för att aktivera **Red ut identiteter i utkastet**
+   i **Aktuell status**. Aktivera **Red ut identiteten för Betalkonto**
+   vid objektets förslag. Kontrollera fokus och beskrivning.
+5. Välj **Ospecificerat objekt** och **Lägg i mitt utkast**.
+   Öppna Familjemusik igen och kontrollera dess oskickade text.
+   Välj **Stäng utan att skicka texten** i det formuläret.
+6. Spara hela utkastet uttryckligen. Starta om installationen, ladda om
+   sidan och kontrollera båda objekten och sambandet.
+
+**Förväntat resultat:**
+
+- Status förklarar både identitetsfrågan och den oskickade texten.
+  Tangentbordet når utkastet och därefter Betalkontos bevarade redigering
+  med synligt fokus. Beskrivningen **Oskickat om Betalkonto** finns kvar.
+- Rättelsen ändrar bara Betalkontos förslag. Sparandet är fortfarande
+  blockerat medan Familjemusiks oskickade text finns kvar.
+- Den gemensamma kartan ändras först efter det uttryckliga sparandet.
+  Efter omstart är Betalkonto ospecificerat med den rättade beskrivningen.
+  Familjemusik behåller **Sparad beskrivning**. Sambandet går fortfarande
+  till samma Betalkonto utan en dubblett.
+
 ### KARTA-05: skilj på obesvarat, osäkert, okänt och uttryckligen inget
 
 **Syfte:** Kontrollera att sambandsuppgifter bevarar sin betydelse och att
@@ -243,6 +290,58 @@ and can be discarded”.
   Det enda kvarvarande sambandet är Kim → Använder → Molnmusik.
 
 ## Skapa och spara kartans innehåll
+
+### KARTA-09: skapa typer, objekt och samband i samma privata utkast
+
+**Syfte:** Behåll ett påbörjat objekt medan dess typ skapas i Inställningar
+och spara nya definitioner, objekt och samband tillsammans.
+
+**Användare:** Den konfigurerade administratören.
+
+**Förutsättningar:** Tom karta och tomt utkast. Behåll databasen vid omstart.
+
+**Integrationstest:**
+[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts),
+testfallen “KARTA-09: unsent creation uses new draft types and objects in
+one durable relationship save at 1280px in light”, samma titel med “390px”
+eller “320px” och “dark”. Kör varje bredd i båda temana.
+
+**Steg:**
+
+1. Välj **Nytt objekt** och försök lägga det i utkastet utan namn.
+   Kontrollera fokus. Ange sedan **Paneler på taket** och beskrivningen
+   **Oskickat före den nya typen** utan att lägga objektet i utkastet.
+2. Öppna **Inställningar → Typer och egna fält**. Skapa objekttypen
+   **Solutrustning** med beskrivningen **Hushållets elproduktion** och
+   avsnittet **Uppgifter**. Lägg till **Placering** som text och
+   **Reserv** som ja/nej. Lägg typförslaget i utkastet.
+3. Välj **Tillbaka till kartan**. Kontrollera det påbörjade objektets namn
+   och beskrivning. Välj typen Solutrustning. Kontrollera att fälten i
+   Uppgifter är obesvarade. Ange Placering **Södertak** och Reserv **Nej**
+   och lägg objektet i utkastet med **Identifierat objekt**.
+4. Skapa **Batteriet** av samma nya typ. Välj **Ospecificerat objekt**,
+   lämna de egna fälten obesvarade och lägg objektet i utkastet.
+5. Skapa sambandstypen **Komplettering**, beskrivningen **Delar som används
+   ihop**, benämningen **kompletteras av** från startobjektet och
+   **kompletterar** från målobjektet. Lägg definitionen i utkastet.
+6. Skapa ett samband av den nya typen från Paneler på taket till Batteriet.
+   Välj **Osäkert uppgivet** och lägg sambandet i utkastet. Granska alla
+   fem förslag utan att spara dem.
+7. Starta om installationen och ladda om. Granska samma utkast och välj
+   **Spara hela utkastet**. Invänta kvittot. Starta om och ladda om igen.
+
+**Förväntat resultat:**
+
+- Ett tomt namn stoppar förslaget och får fokus. Det påbörjade objektets
+  namn och beskrivning finns kvar när den nya typen väljs efter Inställningar.
+- Typens valfria fält visas i Uppgifter. **Nej** på panelerna är skilt
+  från Batteriets obesvarade Reserv. Identifierat och ospecificerat består.
+- Nya objekt- och sambandstyper samt båda objekten kan användas i sambandet
+  innan något sparas gemensamt. De fem förslagen finns kvar efter omstart.
+- Ett uttryckligt sparande omfattar båda definitionerna, de två objekten
+  och deras riktade, osäkra samband. Efter nästa omstart finns samma
+  identiteter, uppgifter och samband; utkastet är tomt. Integrationstestet
+  kontrollerar dessutom att allt ingår i ett enda verkligt kvitto.
 
 ### KARTA-06: återuppta, rätta och kasta ett beständigt objektförslag
 
