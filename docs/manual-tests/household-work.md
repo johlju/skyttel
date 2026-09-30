@@ -354,6 +354,172 @@ and resizing”.
 - De öppna panelerna, cykelns urval och **Visa höjdhjälp** består.
 - Den personliga placeringen är densamma efter återgång.
 
+## Sammanhängande familjearbete
+
+### ARBETE-08: familjeabonnemang från inloggning till delad karta
+
+**Syfte:** Prova ett oavbrutet arbete genom inloggning, text, kontrollerat
+tal, privata förslag, oberoende paneler, rättelse, Inställningar, gemensamt
+sparande, omstart och en annan medlems vy.
+
+**Användare:** Alex och Robin i separata webbläsarprofiler.
+
+**Förutsättningar:** Starta en ny tom installation enligt den
+[kontrollerade röstguiden](voice-assistant.md#controlled-voice-fixture).
+Använd inte `seed-family`. Miljön ersätter inloggningsleverantörer, modell,
+mikrofon och ljudtransport. Den provar inte externa konton eller verkligt tal.
+Behåll samma flikar och databas fram till den uttryckliga omstarten.
+
+Modellsvaren släpps i startterminalen med guidens `tool` och `reply`.
+Använd alltid det aktuella `held`-anropets ID. Kopiera `version` och
+`contentVersion` från dess `draft`; efter ett ändrande verktyg används
+nästa `held.lastToolResult`. Läs typers ID och revisioner från katalogen.
+Använd nya identifierare `family-subscription`, `family-person` och
+`family-payment` för detta tomma prov. I automationen används nya slump-ID
+och sedan de faktiskt returnerade identifierarna.
+
+**Integrationstest:**
+[connected-work.spec.ts](../../tests/integration/connected-work.spec.ts),
+testfallet “ARBETE-08: familjeabonnemanget går från inloggning och samtal
+till gemensamt kvitto och privat fortsatt arbete”.
+
+**Steg:**
+
+1. Börja utloggad. Använd Tab och Enter för **Fortsätt med Google** och
+   **Fortsätt till Google**. Kontrollera rubrikfokus, skriv
+   **Hushållet Linden** och välj **Skapa hushåll**. I terminalen, kör
+   `identity robin`. Logga in med Microsoft i Robins separata profil.
+   Kopiera Robins användar-ID från **Din profil**. Kör `identity alex`
+   efter inloggningen. Följ
+   [inbjudningsguiden](../user-guide/access.md#bjud-in-en-skyttel-användare)
+   för att bjuda in och acceptera som Robin. Som Robin, välj **Lista →
+   Nytt objekt**, skriv **Robins notering** och **Lägg i mitt utkast**.
+   Spara inte. Den gemensamma kartan ska fortfarande vara tom.
+2. Som Alex, öppna **Samtal och text**. Kontrollera att start kräver både
+   AI-valet och valet för förslag och sparande. Starta textassistenten och
+   skicka **Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK
+   per månad.** Släpp `read_type_catalog` med `{}`. Nästa resultat ska ge
+   typerna **Abonnemang**, **Person** och **Betalar**. Släpp därefter
+   `propose_object` med katalogens Abonnemang-ID, dess `typeRevision`,
+   aktuell utkastversion och `contentVersion`, objektets nya `id`,
+   `baseRevision: null` samt följande `value` (ersätt typ-ID):
+
+   ```json
+   {
+     "typeId": "Abonnemang-ID från katalogen",
+     "name": "Familjens Molnmusik",
+     "description": "",
+     "financialFacts": {
+       "price": { "knowledge": "known", "value": "179" },
+       "currency": { "knowledge": "known", "value": "SEK" },
+       "paymentInterval": { "knowledge": "known", "value": "månad" }
+     }
+   }
+   ```
+
+   Släpp sedan ett vanligt `reply`. Kontrollera ett privat objekt,
+   inget sparat objekt eller kvitto och Robins oförändrade privata notering.
+3. Välj **Starta röst**. Kör `user Kim Exempel betalar familjens Molnmusik.`
+   och `delegate` i terminalen. Släpp `propose_object` för **Kim Exempel**,
+   typen **Person**, tom beskrivning och `baseRevision: null`.
+   Använd aktuell version och typrevision. Nästa verktygsresultat ger
+   personens ID och den nya versionen. Släpp `propose_relationship` med
+   den nya versionen, katalogens Betalar-ID och typrevision,
+   `baseRevision: null`, `sourceId` för Kim, `targetId` för abonnemanget
+   och `knowledge: "known"`. Släpp sedan ett vanligt `reply`.
+   Hela utkastet ska visa två objekt och exakt **Kim Exempel → Betalar →
+   Familjens Molnmusik**. Inget ska vara gemensamt sparat.
+4. Öppna abonnemangets **Uppgifter** från Lista och **Redigera valt objekt**.
+   Öppna **Ekonomiska uppgifter och avtalsvillkor**, rätta **Pris** till
+   **189** och beskrivningen till **Rättad för hand**. Lägg i utkastet och
+   invänta avslutat formulär. Öppna abonnemangets uppgifter igen och behåll
+   panelen. Öppna Kims uppgifter och redigera beskrivningen till
+   **Oskickat om Kim**, utan att lägga i utkastet. Välj **Stäng Kim Exempel**,
+   öppna samma uppgifter från Lista och kontrollera texten samt en enda
+   panel för Kim. Använd inte åtgärden som kastar oskickad text.
+5. Skriv **Oskickat i samtalet** utan att skicka. Pausa mikrofonen och
+   öppna **Inställningar**. Rubriken ska få fokus och kartarbetet döljas.
+   Återuppta mikrofonen där. Välj **Tillbaka till kartan** och välj
+   abonnemanget, Kim och samtalet genom **Öppna paneler**. Kontrollera
+   rubrikfokus, samma beskrivningar, samma dialog och båda oskickade texter.
+   Robins notering ska fortfarande vara privat. Automationen kontrollerar
+   att samma levande mediespår och anslutning används vid återupptagningen.
+6. Öppna **Visa hela utkastets detaljer** i samtalet. Granska två objekt,
+   ett samband och **189 / SEK / månad**, med **Rättad för hand**.
+   Ersätt samtalets oskickade text med **Spara hela utkastet nu.** och skicka.
+   Släpp exakt ett `save_draft` med den aktuella granskningens version,
+   innehållsversion och `operationId: "family-save"`. Servern tilldelar
+   sparandets beständiga identifierare; anteckna den från **Visa kvittot**.
+   Kontrollera ett kvitto för båda objekten och sambandet, tomt Alex-utkast
+   och att **Oskickat om Kim** fortfarande finns i formuläret men inte i
+   sparad beskrivning. Robins privata notering ingår inte i kvittot.
+7. Välj **Stäng av rösten**. Kör `restart` i terminalen och ladda sedan om
+   Alex flik. Öppna **Lista → Visa historik → Visa ändringarna** för samma
+   kvitto. Kontrollera namn, rättad beskrivning, hela prisuppgiften,
+   riktningen Kim till abonnemanget och **Betalar**. Oskickad lokal text
+   behöver inte överleva den uttryckliga omladdningen.
+8. Som Alex, redigera abonnemangets beskrivning till **Alex privat efteråt**
+   och lägg i utkastet utan att spara. Ladda om Robin. Robin ska se det
+   gemensamma abonnemanget med **Rättad för hand**, **189 / SEK / månad**,
+   Kim och Betalar-sambandet, samt enbart sin egen privata notering.
+   Kontrollera samma historikkvitto även som Robin. Alex ska inte se
+   Robins notering. Avsluta provmiljön med `quit` enligt röstguiden.
+
+**Förväntat resultat:**
+
+- Ett enda oavbrutet arbete går från tom installation till två gemensamma
+  objekt och ett samband, med exakt ett sparande och samma kvitto efter omstart.
+- Vanlig navigation bevarar paneler, dialog, oskickad text och mikrofonläge.
+  Endast det uttryckligen granskade utkastet sparas; lokala oskickade
+  uppgifter och en annan medlems privata förslag ingår aldrig.
+- Båda medlemmarna ser samma sparade information men skilda privata utkast.
+  Automationen jämför hela kvittot, historiken och båda kartornas publika
+  svar; enbart modellens text räknas inte som sparbevis.
+
+### ARBETE-09: samma familjearbete med text och listor utan grafik eller ljud
+
+**Syfte:** Genomföra samma arbete utan tal, ljuduppspelning eller grafisk karta.
+
+**Användare:** Alex och Robin enligt ARBETE-08.
+
+**Förutsättningar:** Ny tom kontrollerad installation enligt ARBETE-08.
+Använd dess identiteter, faktiska verktygssvar och samma åtta steg.
+
+**Integrationstest:**
+[connected-work.spec.ts](../../tests/integration/connected-work.spec.ts),
+testfallet “ARBETE-09: samma familjearbete fungerar med text och listor
+utan grafik eller ljud”.
+
+**Steg:**
+
+1. Följ ARBETE-08. Välj aldrig **Starta röst**. I steg 3 skriver och skickar
+   du **Kim Exempel betalar familjens Molnmusik.** i textfältet i stället
+   för terminalens `user` och `delegate`. Släpp samma två verktyg i ordning.
+   Hoppa över mikrofonens paus, återupptagning och avstängning.
+2. När hushållet är öppet, skapa ett verkligt grafikavbrott i båda profilerna
+   genom webbläsarkonsolen. Upprepa efter omladdning vid omstarten:
+
+   ```js
+   document.querySelector('canvas').getContext('webgl2')
+     .getExtension('WEBGL_lose_context').loseContext();
+   ```
+
+   Kontrollera **Grafiken är tillfälligt avbruten. Ditt utkast finns kvar.**
+   Gör allt fortsatt arbete genom **Lista**, formulär och samtalets text.
+3. Fullfölj rättelse, panelbyten, Inställningar, uttryckligt sparande,
+   historik, omstart och båda privata utkasten enligt ARBETE-08.
+   Kör även med tangentbord och tillgänglig skärmläsare. Anteckna den
+   faktiska miljön separat från automatiserade kontroller.
+
+**Förväntat resultat:**
+
+- Samma fullständiga slutresultat och privata gränser som ARBETE-08.
+- Grafikavbrottet hindrar inte listor, formulär, text, historik eller kvitto.
+  Ingen mikrofonbegäran, röstanslutning eller ljuduppspelning behövs.
+  Automationen räknar dessa medieanrop och kräver noll.
+- Listans namngivna åtgärder ersätter grafisk träffning och dragning.
+  Ett kontrollerat grafikavbrott är inte ett verkligt skärmläsarprov.
+
 ## Bedömning och återstående manuella prov
 
 Referensen 87ddb01, alternativ D i administrationsprovet, kräver att

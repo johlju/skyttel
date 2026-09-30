@@ -77,7 +77,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   sparförsök vid tillfälliga vybyten; avveckling vid utloggning, återkallad tillgång
   och ersatt hushållsinnehåll. Väntande permanent radering stoppar mikrofon,
   dolt formulär och registrerat sparförsök före omladdning; oberoende privat
-  arbete finns kvar efter uttryckligt slutförande.
+  arbete finns kvar efter uttryckligt slutförande. Ett sammanhängande
+  familjeärende går från synlig inloggning, text och tal till rättelse,
+  Inställningar, samlat kvitto, omstart och två medlemmars skilda utkast;
+  samma fullständiga arbete provas med text och listor utan grafik eller ljud.
 
 - [Månadskostnad](costs.md): separata Render-, Live- och Terra-belopp,
   prisunderlag, månadens antaganden, okända värden, kumulativa mätningar,
