@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import type { MapState, ObjectType, RelationshipType, SaveReceipt } from '../../src/shared/map.js';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import {
@@ -24,6 +24,17 @@ function required<T>(value: T | undefined): T {
   if (value === undefined)
     throw new Error('The actual response must contain the requested family value');
   return value;
+}
+
+async function loseGraphics(page: Page) {
+  await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+    const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
+    if (!extension) throw new Error('The browser must support actual graphics context loss');
+    extension.loseContext();
+  });
+  await expect(
+    page.getByText('Grafiken är tillfälligt avbruten. Ditt utkast finns kvar.', { exact: true }),
+  ).toBeVisible();
 }
 
 for (const mode of ['voice', 'text'] as const) {
@@ -168,6 +179,7 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(page.getByRole('button', { name: 'Skapa hushåll', exact: true })).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(page.getByRole('heading', { name: 'Hushållet Linden' })).toBeFocused();
+      if (mode === 'text') await loseGraphics(page);
       const identity = await (await page.request.get(`${app.origin}/api/bootstrap`)).json();
       const householdId = identity.household.id;
       const path = `${app.origin}/api/households/${householdId}/map`;
@@ -195,25 +207,11 @@ for (const mode of ['voice', 'text'] as const) {
         ).status(),
       ).toBe(200);
       await member.goto(app.origin);
+      if (mode === 'text') await loseGraphics(member);
       await openWorkspace(member);
       await member.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
       await member.getByLabel('Objektets namn').fill('Robins notering');
       await member.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
-      if (mode === 'text') {
-        for (const client of [page, member]) {
-          await client.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
-            const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
-            if (!extension)
-              throw new Error('The browser must support actual graphics context loss');
-            extension.loseContext();
-          });
-          await expect(
-            client.getByText('Grafiken är tillfälligt avbruten. Ditt utkast finns kvar.', {
-              exact: true,
-            }),
-          ).toBeVisible();
-        }
-      }
       const robinPrivate = (await readMember()).draft;
       expect(robinPrivate.changes).toHaveLength(1);
       expect((await read()).draft.changes).toEqual([]);
@@ -469,18 +467,7 @@ for (const mode of ['voice', 'text'] as const) {
       }
       await app.restart();
       await page.reload();
-      if (mode === 'text') {
-        await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
-          const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
-          if (!extension) throw new Error('The browser must support actual graphics context loss');
-          extension.loseContext();
-        });
-        await expect(
-          page.getByText('Grafiken är tillfälligt avbruten. Ditt utkast finns kvar.', {
-            exact: true,
-          }),
-        ).toBeVisible();
-      }
+      if (mode === 'text') await loseGraphics(page);
       expect((await (await page.request.get(`${app.origin}/api/bootstrap`)).json()).user.id).toBe(
         identity.user.id,
       );
@@ -511,18 +498,7 @@ for (const mode of ['voice', 'text'] as const) {
       await subscription.getByLabel('Beskrivning', { exact: true }).fill('Alex privat efteråt');
       await subscription.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
       await member.reload();
-      if (mode === 'text') {
-        await member.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
-          const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
-          if (!extension) throw new Error('The browser must support actual graphics context loss');
-          extension.loseContext();
-        });
-        await expect(
-          member.getByText('Grafiken är tillfälligt avbruten. Ditt utkast finns kvar.', {
-            exact: true,
-          }),
-        ).toBeVisible();
-      }
+      if (mode === 'text') await loseGraphics(member);
       await openWorkspace(member);
       const memberObjects = member.getByRole('list', { name: 'Objekt', exact: true });
       for (const name of ['Familjens Molnmusik', 'Kim Exempel', 'Robins notering'])
