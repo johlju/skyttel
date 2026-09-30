@@ -163,16 +163,21 @@
 .workspace-brand {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-height: 49px;
-  padding: 5px;
+  padding: 4px;
   text-decoration: none;
   font-size: 22px;
   font-weight: 700;
 }
+.workspace-tools.expanded .workspace-brand {
+  justify-content: flex-start;
+}
 .workspace-brand img {
-  width: 30px;
+  width: 36px;
   height: 36px;
+  flex: none;
   object-fit: contain;
 }
 .workspace-tools-footer {
@@ -513,8 +518,8 @@
     flex-shrink: 0;
   }
   .workspace-brand img {
-    width: 24px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
   }
   .workspace-tools.expanded {
     width: 296px;
@@ -678,7 +683,6 @@ footer[hidden] {
 }
 
 .household-map.workspace-shell[data-theme="dark"] .workspace-brand img {
-  box-sizing: content-box;
   padding: 4px;
   border-radius: 10px;
   background: #dce7ef;
