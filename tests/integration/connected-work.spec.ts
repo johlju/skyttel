@@ -463,9 +463,11 @@ for (const mode of ['voice', 'text'] as const) {
       );
       await assistant.getByText('Visa kvittot', { exact: true }).click();
       await expect(assistant).toContainText('Familjens Molnmusik');
+      await activatePanel(page, 'Kim Exempel');
       await expect(person.getByLabel('Beskrivning', { exact: true })).toHaveValue(
         'Oskickat om Kim',
       );
+      await openConversation(page);
       const receipts = await history();
       expect(receipts).toHaveLength(1);
       const receipt = receipts[0];

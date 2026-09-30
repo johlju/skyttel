@@ -31,6 +31,7 @@ export function HouseholdImport({
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [storageError, setStorageError] = useState('');
   const [cancelled, setCancelled] = useState(false);
   const knownAttempt = useRef(attempt);
   const [discoveryNeeded, setDiscoveryNeeded] = useState(!attempt);
@@ -54,13 +55,32 @@ export function HouseholdImport({
   }, [busy, result?.status]);
   useEffect(() => () => active.current?.abort(), []);
   const remember = useCallback(
-    (value: Attempt | null) => {
+    (value: Attempt | null, blockedAction = '') => {
+      try {
+        if (value) sessionStorage.setItem(storageKey, JSON.stringify(value));
+        else sessionStorage.removeItem(storageKey);
+      } catch {
+        setStorageError(
+          `Webbläsarens återhämtningsminne kunde inte uppdateras. ${blockedAction} Behåll sidan öppen. Kontrollera webbläsarens lagringsinställningar och försök igen. Återhämtning efter omladdning kan inte garanteras.`,
+        );
+        return false;
+      }
       knownAttempt.current = value;
       setAttempt(value);
-      if (value) sessionStorage.setItem(storageKey, JSON.stringify(value));
-      else sessionStorage.removeItem(storageKey);
+      setStorageError('');
+      return true;
     },
     [storageKey],
+  );
+  const observeAttempt = useCallback(
+    (value: Attempt) => {
+      if (!remember(value)) {
+        // Keep the real server identity available for exact status reads.
+        knownAttempt.current = value;
+        setAttempt(value);
+      }
+    },
+    [remember],
   );
   const discover = useCallback(() => {
     if (knownAttempt.current) return;
@@ -78,7 +98,7 @@ export function HouseholdImport({
         setResult(found);
         setConfirmed(false);
         if (found && ['ready', 'cancel-cleanup', 'prepared', 'cleanup'].includes(found.status))
-          remember({ id: found.id, contentVersion: found.confirmationContentVersion });
+          observeAttempt({ id: found.id, contentVersion: found.confirmationContentVersion });
         setDiscoveryNeeded(false);
       })
       .catch((failure: unknown) => {
@@ -93,7 +113,7 @@ export function HouseholdImport({
         if (!controller.signal.aborted) setBusy(false);
       });
     return () => controller.abort();
-  }, [path, remember, onAccessLost]);
+  }, [path, observeAttempt, onAccessLost]);
   useEffect(() => {
     // A locally known uncertain attempt must be checked by that exact ID.
     // A newer operation cannot resolve its outcome.
@@ -127,7 +147,7 @@ export function HouseholdImport({
     );
   }
   async function prepare() {
-    if (!file || busy) return;
+    if (!file || busy || !remember(null, 'Ingen filkontroll har startats.')) return;
     submittedFocus.current = document.activeElement;
     const controller = new AbortController();
     active.current = controller;
@@ -136,7 +156,6 @@ export function HouseholdImport({
     setCancelled(false);
     setConfirmed(false);
     setResult(null);
-    remember(null);
     let submitted = false;
     try {
       const state = await request<MapState>(`${path}/map`, undefined, controller.signal);
@@ -160,7 +179,7 @@ export function HouseholdImport({
         throw new MapRequestError(response.status, value.error);
       }
       setResult(value as ImportStatus);
-      remember({ id: value.id, contentVersion: state.contentVersion });
+      observeAttempt({ id: value.id, contentVersion: state.contentVersion });
     } catch (failure) {
       if (!controller.signal.aborted) {
         if (submitted && (!(failure instanceof MapRequestError) || failure.status >= 500)) {
@@ -176,6 +195,7 @@ export function HouseholdImport({
   }
   async function recover(confirm = false) {
     if (!attempt || busy) return;
+    if (confirm && !remember(attempt, 'Ingen ersättning har startats eller fortsatt.')) return;
     submittedFocus.current = document.activeElement;
     const controller = new AbortController();
     active.current = controller;
@@ -191,6 +211,7 @@ export function HouseholdImport({
       if (controller.signal.aborted) return;
       setResult(value);
       if (value.status === 'completed' || value.status === 'failed') remember(null);
+      else remember(attempt);
     } catch (failure) {
       if (!controller.signal.aborted) fail(failure, confirm);
     } finally {
@@ -272,11 +293,15 @@ export function HouseholdImport({
           accept=".zip,application/zip"
           disabled={busy || uncertain}
           onChange={(event) => {
+            if (!remember(null)) {
+              setFile(null);
+              event.target.value = '';
+              return;
+            }
             setFile(event.target.files?.[0] ?? null);
             setResult(null);
             setConfirmed(false);
             setCancelled(false);
-            remember(null);
           }}
         />
       </label>
@@ -413,6 +438,11 @@ export function HouseholdImport({
         </p>
       )}
       {busy && <p role="status">Behandlar importen…</p>}
+      {storageError && (
+        <p role="alert" className="error">
+          {storageError}
+        </p>
+      )}
       {error && (
         <p role="alert" className="error">
           {error}

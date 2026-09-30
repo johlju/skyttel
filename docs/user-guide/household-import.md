@@ -49,6 +49,15 @@ hämtar just det försöket; ett annat resultat används inte som besked för
 det. Ett nätfel lämnar utfallet oklart och blockerar en ny import tills
 status går att läsa.
 
+Om **Webbläsarens återhämtningsminne** inte kan uppdateras visas ett
+separat meddelande. Behåll sidan öppen och kontrollera webbläsarens
+lagringsinställningar. Blockerad filkontroll lämnar den valda filen kvar.
+Ersättning eller fortsatt rensning skickas först när försökets identifierare
+kan sparas. Verklig granskning och bekräftat serverresultat visas fortfarande;
+lagringsfelet gör dem inte okända. Hämta samma försöks status eller försök
+samma åtgärd igen när lagring fungerar. Återhämtning efter omladdning kan
+inte garanteras medan felet kvarstår.
+
 Identiteter i exporten ger ingen ny åtkomst. Privata uppgifter från samma
 hushåll återkopplas endast när en verifierad koppling redan finns. Privata
 uppgifter från en annan installation förblir utan inloggad ägare tills en

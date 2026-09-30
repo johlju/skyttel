@@ -407,3 +407,104 @@ describe('cancellation through the real HTTP application', () => {
     expect(requests.some((request) => request.endsWith('/confirm'))).toBe(false);
   });
 });
+
+test('blocked storage clearing leaves a selected archive retryable without a preparation request', async () => {
+  const posted: string[] = [];
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') posted.push(url);
+    if (url === `${path}/map`) return Response.json({ contentVersion: 3 });
+    return Response.json(init?.method === 'POST' ? ready : { attempt: null });
+  });
+  render(<HouseholdImport householdId="linden" onAccessLost={vi.fn()} />);
+  await waitFor(() => expect(fileInput().disabled).toBe(false));
+  await userEvent.upload(fileInput(), uploaded());
+  const removal = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    throw new DOMException('Blocked', 'SecurityError');
+  });
+  await userEvent.click(prepareButton());
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Ingen filkontroll har startats',
+  );
+  expect(prepareButton().disabled).toBe(false);
+  expect(fileInput().files?.[0].name).toBe('hushall.zip');
+  expect(
+    screen.getByRole('region', { name: 'Återimportera hushållet' }).getAttribute('aria-busy'),
+  ).toBe('false');
+  expect(posted).toEqual([]);
+  removal.mockRestore();
+  await userEvent.click(prepareButton());
+  expect(await screen.findByRole('group', { name: 'Granska ersättningen' })).toBeDefined();
+  expect(posted).toEqual([`${path}/imports`]);
+});
+
+test('an observed review stays known but cannot replace content until its recovery identity is stored', async () => {
+  const replacements: unknown[] = [];
+  network(async (url, init) => {
+    if (!url.endsWith('/confirm')) {
+      expect(url).toBe(`${path}/imports/${ready.id}`);
+      return Response.json(ready);
+    }
+    replacements.push(JSON.parse(String(init?.body)));
+    return Response.json({ ...ready, status: 'completed' });
+  });
+  const writing = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('Full', 'QuotaExceededError');
+  });
+  render(<HouseholdImport householdId="linden" onAccessLost={vi.fn()} />);
+  await prepare();
+  expect(screen.getByText(ready.id)).toBeDefined();
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Webbläsarens återhämtningsminne',
+  );
+  await confirm();
+  expect((await screen.findByRole('alert')).textContent).toContain('Ingen ersättning har startats');
+  expect(replacements).toEqual([]);
+  await userEvent.click(screen.getByRole('button', { name: 'Hämta importens status' }));
+  expect(await screen.findByRole('group', { name: 'Granska ersättningen' })).toBeDefined();
+  writing.mockRestore();
+  const removal = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    throw new DOMException('Blocked', 'SecurityError');
+  });
+  await userEvent.click(confirmButton());
+  expect(await screen.findByText(/Hushållets innehåll är ersatt/)).toBeDefined();
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Webbläsarens återhämtningsminne',
+  );
+  expect(replacements).toEqual([{ confirmed: true, contentVersion: 3 }]);
+  expect(screen.getByText(ready.id)).toBeDefined();
+  expect(prepareButton().disabled).toBe(true);
+  removal.mockRestore();
+});
+
+test('a discovered preparation and actual cancellation remain truthful when persistence is denied', async () => {
+  const requests: string[] = [];
+  vi.stubGlobal('fetch', async (url: string) => {
+    requests.push(url);
+    if (url === `${path}/imports`)
+      return Response.json({ attempt: null, ready: { ...ready, confirmationContentVersion: 3 } });
+    expect(url).toBe(`${path}/imports/${ready.id}/cancel`);
+    return Response.json({ cancelled: true });
+  });
+  const writing = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('Full', 'QuotaExceededError');
+  });
+  render(<HouseholdImport householdId="linden" onAccessLost={vi.fn()} />);
+  expect(await screen.findByRole('group', { name: 'Granska ersättningen' })).toBeDefined();
+  expect(screen.getByText(ready.id)).toBeDefined();
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Webbläsarens återhämtningsminne',
+  );
+  writing.mockRestore();
+  vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    throw new DOMException('Blocked', 'SecurityError');
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Avbryt förberedelsen' }));
+  expect(
+    await screen.findByText('Förberedelsen är avbruten och tillfälliga filer är borttagna.'),
+  ).toBeDefined();
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Webbläsarens återhämtningsminne',
+  );
+  expect(requests).toEqual([`${path}/imports`, `${path}/imports/${ready.id}/cancel`]);
+  expect(prepareButton().disabled).toBe(true);
+});

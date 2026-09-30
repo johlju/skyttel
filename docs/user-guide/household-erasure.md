@@ -50,6 +50,14 @@ administratör slutför en senare radering. Resultatets antal hör till det
 visade försöket. Ett nytt urval och en ny uttrycklig bekräftelse startar
 ett separat försök.
 
+Om **Webbläsarens återhämtningsminne** inte kan uppdateras visas ett
+separat meddelande. Behåll sidan öppen och kontrollera webbläsarens
+lagringsinställningar. En ny radering eller fortsättning skickas först
+när identifieraren kan sparas; granskning och bekräftelsetext finns kvar
+vid ett blockerat nytt försök. Ett redan läst serverresultat behåller sin
+identifierare och status. Återhämtning efter omladdning kan inte garanteras
+medan lagringsfelet kvarstår. Försök samma åtgärd igen när lagring fungerar.
+
 En ny flik utan ett känt försök visar det senaste sparade ärendet. Jämför
 identifierarna innan du drar slutsatser om en tidigare radering. Om ett
 känt försök inte kan återfinnas är utfallet fortfarande oklart. Kontrollera

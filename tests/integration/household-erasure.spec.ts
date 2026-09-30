@@ -7,6 +7,7 @@ import type { ErasureStatus } from '../../src/shared/household-erasure.js';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openSettings, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { denyRecoveryStorage, restoreRecoveryStorage } from '../support/recovery-storage.js';
 
 async function arrange(page: Page, formerImageType = false) {
   const installation = await createInstallation();
@@ -1431,6 +1432,98 @@ test('RADERING-10: a retired status reply cannot replace a newer reviewed erasur
     });
   } finally {
     release();
+    await fixture.installation.close();
+  }
+});
+
+test('RADERING-11: unavailable recovery storage preserves review and the exact pending cleanup without another erasure', async ({
+  page,
+}) => {
+  const fixture = await arrange(page);
+  const reader = new Database(join(fixture.installation.directory, 'skyttel.db'), {
+    readonly: true,
+  });
+  try {
+    const before = await fixture.read();
+    let executions = 0;
+    const resumes: unknown[] = [];
+    page.on('request', (request) => {
+      if (request.url().endsWith('/erasure/execute')) executions += 1;
+      if (request.url().endsWith('/erasure/resume')) resumes.push(request.postDataJSON());
+    });
+    await page.goto(fixture.administration.replace(/\/administration$/, '/settings/erasure'));
+    const section = page.getByRole('region', { name: 'Permanent radering', exact: true });
+    const lamp = section.getByRole('checkbox', { name: 'Lampan att radera', exact: true });
+    await expect(lamp).toBeEnabled();
+    await denyRecoveryStorage(page, 'skyttel-erasure:', 'removeItem');
+    await lamp.click();
+    await expect(section.getByRole('alert')).toContainText('Webbläsarens återhämtningsminne');
+    await expect(lamp).not.toBeChecked();
+    await expect(section).toHaveAttribute('aria-busy', 'false');
+    expect(await fixture.read()).toEqual(before);
+    await restoreRecoveryStorage(page);
+    await lamp.check();
+    await section.getByRole('button', { name: 'Granska raderingen', exact: true }).click();
+    const review = section.getByRole('region', { name: 'Omfattning att bekräfta' });
+    await expect(review).toBeVisible();
+    const confirmation = section.getByLabel('Skriv RADERA PERMANENT', { exact: true });
+    await confirmation.fill('RADERA PERMANENT');
+    await denyRecoveryStorage(page, 'skyttel-erasure:', 'setItem');
+    await section.getByRole('button', { name: 'Radera permanent', exact: true }).click();
+    await expect(section.getByRole('alert')).toContainText('Ingen ny radering har startats');
+    await expect(review).toBeVisible();
+    await expect(confirmation).toHaveValue('RADERA PERMANENT');
+    await expect(section.getByText('Raderingsförsök', { exact: true })).toHaveCount(0);
+    expect(executions).toBe(0);
+    expect(await fixture.read()).toEqual(before);
+    await restoreRecoveryStorage(page);
+    reader.exec('BEGIN');
+    reader.prepare('SELECT id FROM map_object LIMIT 1').get();
+    const executed = page.waitForResponse((response) =>
+      response.url().endsWith('/erasure/execute'),
+    );
+    await section.getByRole('button', { name: 'Radera permanent', exact: true }).click();
+    const response = await executed;
+    expect(response.status()).toBe(202);
+    const pending: ErasureStatus = (await response.json()).status;
+    expect(pending.phase).toBe('cleanup');
+    await expect(section.getByText(pending.operationId, { exact: true })).toBeVisible();
+    await denyRecoveryStorage(page, 'skyttel-erasure:', 'setItem');
+    await page.getByRole('link', { name: 'Översikt', exact: true }).click();
+    await page.getByRole('link', { name: 'Permanent radering', exact: true }).click();
+    await expect(section.getByText(pending.operationId, { exact: true })).toBeVisible();
+    await expect(section.getByRole('alert')).toContainText('Webbläsarens återhämtningsminne');
+    await expect(section.getByRole('alert')).not.toContainText('status kunde inte hämtas');
+    await expect(
+      section.getByText(/Hushållets innehåll är tillfälligt otillgängligt/),
+    ).toBeVisible();
+    const resume = section.getByRole('button', { name: 'Försök slutföra raderingen', exact: true });
+    await resume.click();
+    await expect(section.getByRole('alert')).toContainText('Ingen fortsättning har skickats');
+    expect(resumes).toEqual([]);
+    expect(executions).toBe(1);
+    expect(
+      (await (await page.request.get(`${fixture.path}/erasure/${pending.operationId}`)).json())
+        .status,
+    ).toEqual(pending);
+    await restoreRecoveryStorage(page);
+    reader.exec('ROLLBACK');
+    await resume.click();
+    await expect(
+      section.getByText('Den permanenta raderingen är slutförd.', { exact: true }),
+    ).toBeVisible();
+    await expect(section.getByText(pending.operationId, { exact: true })).toBeVisible();
+    expect(resumes).toEqual([{ operationId: pending.operationId }]);
+    expect(executions).toBe(1);
+    const after = await fixture.read();
+    expect(after.objects.map(({ id }) => id)).toEqual(['chair']);
+    expect(after.draft).toEqual(before.draft);
+    expect(
+      (await page.request.get(`${fixture.path}/profile-images/${fixture.imageId}`)).status(),
+    ).toBe(404);
+  } finally {
+    if (reader.inTransaction) reader.exec('ROLLBACK');
+    reader.close();
     await fixture.installation.close();
   }
 });

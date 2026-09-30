@@ -930,3 +930,85 @@ window.fetch = async (...args) => {
   Omladdning följs av uttrycklig läsning av rätt, lokalt känt ID.
 - Statusläsningen varken ändrar hushållsinnehåll eller upprepar avbrottet.
   Den nya granskningen kräver fortfarande ett uttryckligt eget val.
+
+### IMPORT-21: Lagringsfel bevarar filen, granskningen och serverresultatet
+
+**Syfte:** Stoppa filkontroll eller ersättning när återhämtningsuppgifterna
+inte kan hanteras, utan att kalla ett verkligt svar för okänt.
+
+**Användare:** Alex som aktuell administratör.
+
+**Förutsättningar:** Ett eget provhushåll med objektet **Lampan i exporten**.
+Spara och exportera hela hushållet till en privat ZIP-fil. Ändra sedan
+objektets namn till **Senare namn** och spara. Öppna
+**Inställningar → Återimportera hushållet** och välj den tidigare ZIP-filen.
+Installera följande utdrag en gång genom Chromiums **Sources → Snippets**
+efter filvalet. Det blockerar bara importens lagring i denna flik.
+Stäng utvecklarverktygen. Alt+Skift+S blockerar skrivning,
+Alt+Skift+R blockerar borttagning och Alt+Skift+A tillåter båda igen.
+Ladda om efter fallet för att återställa webbläsarens vanliga funktioner.
+
+```js
+(() => {
+  const prefix = 'skyttel-import:';
+  const originalSet = Storage.prototype.setItem;
+  const originalRemove = Storage.prototype.removeItem;
+  let blocked = 'removeItem';
+  window.addEventListener('keydown', (event) => {
+    if (!event.altKey || !event.shiftKey) return;
+    if (event.code === 'KeyS') blocked = 'setItem';
+    else if (event.code === 'KeyR') blocked = 'removeItem';
+    else if (event.code === 'KeyA') blocked = '';
+    else return;
+    event.preventDefault();
+  });
+  Storage.prototype.setItem = function (key, value) {
+    if (key.startsWith(prefix) && blocked === 'setItem')
+      throw new DOMException('Kontrollerat lagringsfel', 'QuotaExceededError');
+    return originalSet.call(this, key, value);
+  };
+  Storage.prototype.removeItem = function (key) {
+    if (key.startsWith(prefix) && blocked === 'removeItem')
+      throw new DOMException('Kontrollerat lagringsfel', 'SecurityError');
+    return originalRemove.call(this, key);
+  };
+})();
+```
+
+**Integrationstest:**
+[household-import-ui.spec.ts](../../tests/integration/household-import-ui.spec.ts),
+testfallet “IMPORT-21: unavailable recovery storage preserves the file,
+exact review and confirmed server result”.
+
+**Steg:**
+
+1. Välj **Kontrollera importfil**. Läs meddelandet om
+   **Webbläsarens återhämtningsminne**. Den valda filen och den användbara
+   knappen ska finnas kvar; sidan får inte fastna i **Behandlar importen**.
+   Ingen filkontroll eller ersättning ska skickas i **Network**.
+2. Tryck Alt+Skift+A och sedan Alt+Skift+S. Välj
+   **Kontrollera importfil** igen. En verklig granskning med identifierare
+   ska visas. Lagringsfelet visas separat; filkontrollens svar saknas inte.
+3. Markera **Jag vill ersätta allt hushållsinnehåll** och välj
+   **Ersätt hushållets innehåll**. Läs att ingen ersättning har startats.
+   Ingen begäran till `/confirm` skickas och **Senare namn** finns kvar
+   i kartan. Välj **Hämta importens status**; samma identifierare och
+   granskning ska återkomma.
+4. Tryck Alt+Skift+A och sedan Alt+Skift+R. Välj
+   **Ersätt hushållets innehåll**. Nu ska den verkliga ersättningen
+   slutföras. Bekräftelsen **Hushållets innehåll är ersatt** ska visas
+   tillsammans med det separata lagringsfelet. Det är inte ett okänt utfall.
+5. Tryck Alt+Skift+A och välj **Hämta importens status**.
+   Lagringsfelet ska försvinna och samma slutförda resultat finnas kvar.
+   Välj **Läs in det återställda hushållet** och kontrollera
+   **Lampan i exporten**. Ingen andra filkontroll eller ersättning ska ske.
+
+**Förväntat resultat:**
+
+- Fil och hushåll bevaras medan lagring blockerar filkontroll eller
+  ersättning. Återställd lagring låter användaren fortsätta uttryckligen.
+- En verklig granskning och ett bekräftat serverresultat behåller rätt
+  identifierare även när lokal lagring misslyckas. Status hämtas för samma
+  försök och en ny destruktiv begäran skickas inte automatiskt.
+- Automationen jämför hela kartan före ersättningen och verifierar exakt
+  en filkontroll, en ersättning och den återställda objektinformationen.

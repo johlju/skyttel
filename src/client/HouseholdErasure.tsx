@@ -47,12 +47,22 @@ export function HouseholdErasure({
     }
   });
   const knownOperation = useRef(operationId);
+  const [storageError, setStorageError] = useState<string | null>(null);
   const remember = useCallback(
-    (id: string | null) => {
+    (id: string | null, blockedAction = '') => {
+      try {
+        if (id) sessionStorage.setItem(storageKey, id);
+        else sessionStorage.removeItem(storageKey);
+      } catch {
+        setStorageError(
+          `Webbläsarens återhämtningsminne kunde inte uppdateras. ${blockedAction} Behåll sidan öppen. Kontrollera webbläsarens lagringsinställningar och försök igen. Återhämtning efter omladdning kan inte garanteras.`,
+        );
+        return false;
+      }
       knownOperation.current = id;
       setOperationId(id);
-      if (id) sessionStorage.setItem(storageKey, id);
-      else sessionStorage.removeItem(storageKey);
+      setStorageError(null);
+      return true;
     },
     [storageKey],
   );
@@ -85,6 +95,17 @@ export function HouseholdErasure({
   const [review, setReview] = useState<ErasureReview | null>(null);
   const [confirmation, setConfirmation] = useState('');
   const [status, setStatus] = useState<ErasureStatus | null>(null);
+  const observeStatus = useCallback(
+    (value: ErasureStatus | null) => {
+      setStatus(value);
+      if (!remember(value?.operationId ?? null) && value) {
+        // A real server result remains known even when this tab cannot persist it.
+        knownOperation.current = value.operationId;
+        setOperationId(value.operationId);
+      }
+    },
+    [remember],
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accessLost, setAccessLost] = useState(false);
@@ -126,8 +147,7 @@ export function HouseholdErasure({
       .then((result) => {
         if (controller.signal.aborted) return;
         setCatalog(result.catalog);
-        setStatus(result.status);
-        remember(result.status?.operationId ?? null);
+        observeStatus(result.status);
         setUncertain(false);
         if (result.catalogUnavailable)
           setError(
@@ -149,9 +169,9 @@ export function HouseholdErasure({
       alive.current = false;
       controller.abort();
     };
-  }, [readCurrent, denied, remember]);
+  }, [readCurrent, denied, observeStatus]);
   function select(kind: ErasureKind, id: string, checked: boolean) {
-    remember(null);
+    if (!remember(null)) return;
     setSelection((previous) =>
       checked
         ? [...previous, { kind, id }]
@@ -187,8 +207,7 @@ export function HouseholdErasure({
       const result = await readCurrent();
       if (!alive.current) return;
       setCatalog(result.catalog);
-      setStatus(result.status);
-      remember(result.status?.operationId ?? null);
+      observeStatus(result.status);
       setSelection([]);
       setAttempt(null);
       setUncertain(false);
@@ -211,7 +230,7 @@ export function HouseholdErasure({
   }
   async function resume() {
     if (!status) return;
-    remember(status.operationId);
+    if (!remember(status.operationId, 'Ingen fortsättning har skickats.')) return;
     submittedFocus.current = document.activeElement;
     setBusy(true);
     setError(null);
@@ -241,7 +260,7 @@ export function HouseholdErasure({
       operationId: crypto.randomUUID(),
       confirmation,
     };
-    remember(body.operationId);
+    if (!remember(body.operationId, 'Ingen ny radering har startats.')) return;
     setAttempt(body);
     setBusy(true);
     setError(null);
@@ -309,6 +328,11 @@ export function HouseholdErasure({
       {error && (
         <p role="alert" className="error">
           {error}
+        </p>
+      )}
+      {storageError && (
+        <p role="alert" className="error">
+          {storageError}
         </p>
       )}
       {operationId && (

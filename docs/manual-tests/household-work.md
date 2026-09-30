@@ -456,8 +456,10 @@ till gemensamt kvitto och privat fortsatt arbete”.
    innehållsversion och `operationId: "family-save"`. Servern tilldelar
    sparandets beständiga identifierare; anteckna den från **Visa kvittot**.
    Kontrollera ett kvitto för båda objekten och sambandet, tomt Alex-utkast
-   och att **Oskickat om Kim** fortfarande finns i formuläret men inte i
-   sparad beskrivning. Robins privata notering ingår inte i kvittot.
+   och öppna **Öppna paneler → Kim Exempel**. Kontrollera att
+   **Oskickat om Kim** fortfarande finns i formuläret men inte i sparad
+   beskrivning. Återvänd till **Samtal och text** för kvittot och röstens
+   kontroller. Robins privata notering ingår inte i kvittot.
 7. Välj **Stäng av rösten**. Kör `restart` i terminalen och ladda sedan om
    Alex flik. Öppna **Lista → Visa historik → Visa ändringarna** för samma
    kvitto. Kontrollera namn, rättad beskrivning, hela prisuppgiften,

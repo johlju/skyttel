@@ -126,6 +126,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   oberoende privat arbete. Ett saknat känt resultat är fortsatt okänt även
   efter omladdning och ett annat ärendes slutförande.
   Sena statussvar från en lämnad sida ändrar inte ett nyare försök eller fokus.
+  Lagringsfel bevarar granskningen och verklig status för samma väntande
+  ärende och blockerar nya åtgärder innan återhämtningen kan säkras.
   Hela granskningen och resultatet behåller läsbara identifierare och synligt
   tangentbordsfokus i båda teman, också på smala och korta fönster.
   Radering av en tidigare typ tar bort dess
@@ -142,7 +144,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   filfel, granskning, uttryckligt avbrott av obekräftad förberedelse,
   avbrottets rensningsfel och tappade svar, flera samtidiga granskningar
   och fördröjda avbrotts- och statussvar efter navigering. Ersättning och
-  innehållskoppling följs i båda teman.
+  innehållskoppling följs i båda teman. Fel i webbläsarens återhämtningsminne
+  bevarar vald fil, faktisk granskning och bekräftat serverresultat.
 
 - [Fullständig export](household-export.md): egen sida i Inställningar,
   privata uppgifter före export, tangentbord, fokus, bevarat kartarbete,

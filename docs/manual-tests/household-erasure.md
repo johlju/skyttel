@@ -731,3 +731,88 @@ Om fallet avbryts: tryck Alt+Skift+R och ladda om sidan innan nästa fall.
   en sida ångrar ingen serveråtgärd och utlöser ingen ny destruktiv begäran.
 - Automationen jämför hela det kvarvarande privata utkastet, objekt,
   typer och personliga vyer samt bekräftar att lampans bild ger HTTP 404.
+
+### RADERING-11: Lagringsfel bevarar granskningen och samma väntande radering
+
+**Syfte:** Skilja ett fel i webbläsarens återhämtningsminne från ett
+verkligt serverresultat och stoppa nya åtgärder innan deras identifierare
+kan sparas.
+
+**Användare:** Alex som administratör i profil A.
+
+**Förutsättningar:** Ny provkarta med lampans bild och stolens privata
+förslag enligt allmän förberedelse. Använd Chromium och en andra terminal
+för SQLite-läsaren i RADERING-04. Installera följande utdrag en gång genom
+**Sources → Snippets** efter att raderingssidan har laddats. Det blockerar
+bara raderingsärendets lagring i denna flik. Stäng utvecklarverktygen.
+Alt+Skift+S blockerar skrivning, Alt+Skift+R blockerar borttagning och
+Alt+Skift+A tillåter båda igen. Ladda om efter fallet för att återställa
+webbläsarens vanliga funktioner.
+
+```js
+(() => {
+  const prefix = 'skyttel-erasure:';
+  const originalSet = Storage.prototype.setItem;
+  const originalRemove = Storage.prototype.removeItem;
+  let blocked = 'removeItem';
+  window.addEventListener('keydown', (event) => {
+    if (!event.altKey || !event.shiftKey) return;
+    if (event.code === 'KeyS') blocked = 'setItem';
+    else if (event.code === 'KeyR') blocked = 'removeItem';
+    else if (event.code === 'KeyA') blocked = '';
+    else return;
+    event.preventDefault();
+  });
+  Storage.prototype.setItem = function (key, value) {
+    if (key.startsWith(prefix) && blocked === 'setItem')
+      throw new DOMException('Kontrollerat lagringsfel', 'QuotaExceededError');
+    return originalSet.call(this, key, value);
+  };
+  Storage.prototype.removeItem = function (key) {
+    if (key.startsWith(prefix) && blocked === 'removeItem')
+      throw new DOMException('Kontrollerat lagringsfel', 'SecurityError');
+    return originalRemove.call(this, key);
+  };
+})();
+```
+
+**Integrationstest:**
+[household-erasure.spec.ts](../../tests/integration/household-erasure.spec.ts),
+testfallet “RADERING-11: unavailable recovery storage preserves review
+and the exact pending cleanup without another erasure”.
+
+**Steg:**
+
+1. Försök markera **Lampan att radera**. Ett meddelande om
+   **Webbläsarens återhämtningsminne** ska visas. Lampan ska förbli
+   omarkerad och sidan ska gå att använda; ingen radering skickas.
+2. Tryck Alt+Skift+A, markera lampan och välj **Granska raderingen**.
+   Skriv **RADERA PERMANENT**. Tryck Alt+Skift+S och välj
+   **Radera permanent**. Läs att ingen ny radering har startats.
+   Granskningen och bekräftelsetexten ska finnas kvar, utan en ny
+   identifierare för ett påstått raderingsförsök.
+3. Starta den oberoende SQLite-läsaren enligt RADERING-04 och låt den
+   behålla sin lästransaktion. Tryck Alt+Skift+A och bekräfta samma
+   granskning. Invänta verklig väntande städning och anteckna hela
+   identifieraren. Kartan är tillfälligt låst.
+4. Tryck Alt+Skift+S. Besök **Översikt** och återvänd till
+   **Permanent radering**. Samma identifierare och väntande städning ska
+   visas tillsammans med det separata lagringsfelet. Sidan får inte säga
+   att den framgångsrika statusläsningen misslyckades.
+5. Välj **Försök slutföra raderingen**. Läs att ingen fortsättning har
+   skickats. I **Network** ska ingen ny `/erasure/execute` eller
+   `/erasure/resume` ha skickats av detta försök.
+6. Tryck Alt+Skift+A och avsluta lästransaktionen enligt RADERING-04.
+   Välj samma fortsättningsknapp. Invänta slutförd radering med samma
+   identifierare. Läs in kartan och kontrollera stolen och dess privata
+   förslag. Lampan och dess tidigare bild ska vara borta.
+
+**Förväntat resultat:**
+
+- Lagringsfel blir synliga och lämnar granskning och kontroller användbara.
+  Ett blockerat nytt försök skapar ingen falsk identifierare.
+- Ett faktiskt väntande serverärende behåller sin identitet och status.
+  Endast den uttryckliga fortsättningen efter återställd lagring skickas;
+  ingen ersättande radering skapas.
+- Automationen jämför det oförändrade innehållet före den enda raderingen,
+  dess exakta identifierare, det oberoende privata utkastet och bildens HTTP 404.
