@@ -30,6 +30,9 @@ kontroller beskrivs tillsammans med respektive områdesfall.
 
 För [stora kartor](large-map-performance.md) finns en separat mätplan och
 [uppmätta resultat](large-map-results.md).
+Den samlade kartupplevelsens
+[verifieringsrapport](connected-experience-verification.md) redovisar hela
+familjeflöden, verklig webbläsarzoom, granskade bilder och miljöbegränsningar.
 
 ## Öppna arbetsytor
 

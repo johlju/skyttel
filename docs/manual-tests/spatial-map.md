@@ -24,6 +24,8 @@ fallen anger formulär, samtal, profil eller administration.
    behov till sambandet Lo Exempel → Använder → Molnmusik. Lämna förslagen
    osparade om fallet inte uttryckligen säger annat.
 
+RYMD-10 använder i stället sin egen förberedelse med ett nytt provhushåll.
+
 ## Gemensam redigering
 
 ### RYMD-01: samma utkast och beständiga sparande i båda vyerna
