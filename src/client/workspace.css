@@ -64,6 +64,15 @@
   position: fixed;
   z-index: 100;
 }
+.app-shell[data-theme] > .skip-link,
+.household-map.workspace-shell .skip-link {
+  color: var(--space-text, var(--access-text, #1d3543));
+  background: var(--space-surface, var(--access-surface, #fff));
+}
+.app-shell.has-workspace[data-theme="dark"] > .skip-link {
+  color: #edf2f9;
+  background: #1a293a;
+}
 .workspace-tools {
   position: fixed;
   z-index: 30;

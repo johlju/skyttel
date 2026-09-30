@@ -69,11 +69,16 @@ device”.
 1. Öppna **Tema** och välj **Mörkt**. Kontrollera kartan och verktygen.
 2. Ladda om och kontrollera att valet består. Välj sedan **Ljust**.
 3. Välj **System** och ändra enhetens tema till mörkt och sedan ljust.
-4. Öppna temavalet med tangentbordet och tryck Escape.
+4. I varje temaläge, flytta tangentbordsfokus till **Hoppa till innehållet**,
+   **Till verktygen**, **Till lista och formulär** och **Till samtal och text**.
+   Kontrollera att länkarna och knapparna går att läsa och har synligt fokus.
+5. Öppna temavalet med tangentbordet och tryck Escape.
 
 **Förväntat resultat:**
 
-- Kartans bakgrund, text och verktyg följer det valda temat.
+- Kartans bakgrund, text och verktyg följer det valda temat. Hopplänkarna
+  är läsbara med synligt, oskymt tangentbordsfokus i ljust, mörkt och
+  systemstyrt tema.
 - Fokus återgår till temaknappen efter val och Escape.
 - System följer enheten utan omladdning; ett uttryckligt val består efter
   omladdning när webbläsaren tillåter lagring.

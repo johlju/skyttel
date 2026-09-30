@@ -182,23 +182,73 @@ test('YTA-02: theme choice returns focus and System follows the device', async (
     await page.goto(installation.origin);
     const workspace = page.getByRole('region', { name: 'Hushållskarta', exact: true });
     const themeButton = page.getByRole('button', { name: /^Tema:/ });
+    const checkSkipLinks = async () => {
+      await page.getByRole('link', { name: 'Hoppa till innehållet', exact: true }).focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      for (const [role, name] of [
+        ['link', 'Hoppa till innehållet'],
+        ['link', 'Till verktygen'],
+        ['button', 'Till lista och formulär'],
+        ['button', 'Till samtal och text'],
+      ] as const) {
+        const control = page.getByRole(role, { name, exact: true });
+        await expect(control).toBeFocused();
+        const appearance = await control.evaluate((element) => {
+          const style = getComputedStyle(element);
+          const luminance = (color: string) => {
+            if (!/^rgb\(\d+, \d+, \d+\)$/.test(color))
+              throw new Error(`Expected an opaque RGB skip-link color, received ${color}`);
+            const channels = (color.match(/\d+/g) ?? [])
+              .slice(0, 3)
+              .map(Number)
+              .map((value) => {
+                const unit = value / 255;
+                return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+              });
+            return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+          };
+          const foreground = luminance(style.color);
+          const background = luminance(style.backgroundColor);
+          const rect = element.getBoundingClientRect();
+          return {
+            contrast:
+              (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
+            outline: style.outlineStyle,
+            focusVisible: element.matches(':focus-visible'),
+            unobscured: element.contains(
+              document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2),
+            ),
+          };
+        });
+        expect(appearance.contrast, name).toBeGreaterThanOrEqual(4.5);
+        expect(appearance.focusVisible, name).toBe(true);
+        expect(appearance.outline, name).not.toBe('none');
+        expect(appearance.unobscured, name).toBe(true);
+        await page.keyboard.press('Tab');
+      }
+    };
     await themeButton.click();
     await page.getByRole('radio', { name: 'Mörkt', exact: true }).click();
     await expect(themeButton).toBeFocused();
     await expect(workspace).toHaveAttribute('data-theme', 'dark');
+    await checkSkipLinks();
     await page.reload();
     await expect(workspace).toHaveAttribute('data-theme', 'dark');
     await themeButton.click();
     await page.getByRole('radio', { name: 'Ljust', exact: true }).click();
     await expect(themeButton).toBeFocused();
     await expect(workspace).toHaveAttribute('data-theme', 'light');
+    await checkSkipLinks();
     await themeButton.click();
     await page.getByRole('radio', { name: 'System', exact: true }).click();
     await expect(themeButton).toBeFocused();
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect(workspace).toHaveAttribute('data-theme', 'dark');
+    await checkSkipLinks();
     await page.emulateMedia({ colorScheme: 'light' });
     await expect(workspace).toHaveAttribute('data-theme', 'light');
+    await checkSkipLinks();
     await themeButton.click();
     await page.keyboard.press('Escape');
     await expect(themeButton).toBeFocused();
