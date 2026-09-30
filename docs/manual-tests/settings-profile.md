@@ -191,6 +191,7 @@ hovered in both themes”.
    inställningsmenyn. För pekaren över **Hämta aktuella innehållskopplingar**
    utan att trycka.
 3. Återgå till **Administrera tillgång** genom inställningsmenyn.
+   Välj **Jag har personens användar-ID** för att öppna skapandesteget.
    För pekaren över **Skapa inbjudan** utan att trycka.
 4. Upprepa båda sidornas knappkontroller med ljust tema.
 

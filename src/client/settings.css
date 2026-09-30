@@ -220,6 +220,31 @@
 .settings-screen .workspace-theme-button .workspace-label {
   display: none;
 }
+.settings-screen .invitation-flow {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--space-line);
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+}
+.invitation-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  padding-left: 24px;
+  color: var(--space-muted);
+}
+.invitation-steps [aria-current] {
+  color: var(--space-text);
+  font-weight: 700;
+}
+.settings-screen .invitation-result {
+  background: var(--space-bg);
+}
+.invitation-result > button {
+  margin-top: 12px;
+  margin-right: 8px;
+}
 .has-settings .household-work-background {
   width: 100%;
 }

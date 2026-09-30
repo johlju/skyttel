@@ -135,6 +135,7 @@ describe('household administration interface', () => {
     expect(await screen.findByRole('heading', { name: 'Administrera tillgång' })).toBeDefined();
     expect(member('Alex Exempel (du)').getByText('Administratör')).toBeDefined();
     expect(member('Lo Exempel').getByText('Medlem')).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: 'Inbjudningar' }));
     expect(screen.getByText('Inga inbjudningar ännu.')).toBeDefined();
   });
 
@@ -176,6 +177,9 @@ describe('household administration interface', () => {
       ],
     });
     mount();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Jag har personens användar-ID' }),
+    );
     await userEvent.type(
       await screen.findByRole('textbox', { name: 'Skyttel-användar-ID att bjuda in' }),
       '  sam  ',
@@ -183,7 +187,16 @@ describe('household administration interface', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Skapa inbjudan' }));
     const code = await screen.findByRole('textbox', { name: 'Inbjudningskod att dela' });
     expect((code as HTMLInputElement).value).toBe('synthetic-invitation-code');
+    await userEvent.click(screen.getByRole('button', { name: 'Inbjudningar' }));
     expect(screen.getByText('Väntar på svar')).toBeDefined();
+    const [, request] =
+      fetch.mock.calls.find(([path]) => path === '/api/households/linden/invitations') ?? [];
+    expect(JSON.parse((request as RequestInit).body as string)).toEqual({ userId: 'sam' });
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(await screen.findByText('Accepterad')).toBeDefined();
+    expect(screen.queryByRole('textbox', { name: 'Inbjudningskod att dela' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Klar med inbjudan' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Jag har personens användar-ID' }));
     expect(
       (
         screen.getByRole('textbox', {
@@ -191,12 +204,6 @@ describe('household administration interface', () => {
         }) as HTMLInputElement
       ).value,
     ).toBe('');
-    const [, request] =
-      fetch.mock.calls.find(([path]) => path === '/api/households/linden/invitations') ?? [];
-    expect(JSON.parse((request as RequestInit).body as string)).toEqual({ userId: 'sam' });
-    await act(async () => window.dispatchEvent(new Event('focus')));
-    expect(await screen.findByText('Accepterad')).toBeDefined();
-    expect(screen.queryByRole('textbox', { name: 'Inbjudningskod att dela' })).toBeNull();
   });
 
   test.each([
@@ -212,6 +219,9 @@ describe('household administration interface', () => {
         '/api/households/linden/invitations': [{ status: Number(status), data: { error } }],
       });
       mount();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Jag har personens användar-ID' }),
+      );
       const recipient = await screen.findByRole('textbox', {
         name: 'Skyttel-användar-ID att bjuda in',
       });
@@ -239,6 +249,9 @@ describe('household administration interface', () => {
       ],
     });
     mount();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Jag har personens användar-ID' }),
+    );
     await userEvent.type(
       await screen.findByRole('textbox', { name: 'Skyttel-användar-ID att bjuda in' }),
       'sam',
@@ -267,6 +280,9 @@ describe('household administration interface', () => {
       '/api/households/linden/invitations': [{ status }],
     });
     mount();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Jag har personens användar-ID' }),
+    );
     await userEvent.type(
       await screen.findByRole('textbox', { name: 'Skyttel-användar-ID att bjuda in' }),
       'sam',
@@ -437,6 +453,7 @@ describe('household administration interface', () => {
       '/api/households/linden/invitations/invitation-sam/revoke': [{ data: {} }],
     });
     mount();
+    await userEvent.click(await screen.findByRole('button', { name: 'Inbjudningar' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Återkalla inbjudan' }));
     expect(
       screen.getByRole('group', { name: 'Återkalla inbjudan till Sam Exempel' }).textContent,

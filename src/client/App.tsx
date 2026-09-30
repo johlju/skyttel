@@ -618,7 +618,16 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
   const [revision, setRevision] = useState(0);
   const result = useResource<Administration>(`${path}/administration`, revision, true);
   const [recipient, setRecipient] = useState('');
-  const [code, setCode] = useState<{ invitationId: string; value: string } | null>(null);
+  const [code, setCode] = useState<{
+    invitationId: string;
+    value: string;
+    copyNotice?: string;
+  } | null>(null);
+  const [invitationStep, setInvitationStep] = useState<'identity' | 'create' | 'share'>('identity');
+  const [accessList, setAccessList] = useState<'members' | 'invitations'>('members');
+  const administrationHeading = useRef<HTMLHeadingElement>(null);
+  const invitationHeading = useRef<HTMLHeadingElement>(null);
+  const invitationFocusFrom = useRef<Element | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -628,8 +637,36 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
   useEffect(() => {
     if (sessionExpired) onReload();
   }, [sessionExpired, onReload]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Explicit step transitions must place focus after their new controls mount.
+  useEffect(() => {
+    if (result.status !== 'loaded') return;
+    if (!invitationFocusFrom.current) administrationHeading.current?.focus();
+    else if (
+      document.activeElement === document.body ||
+      document.activeElement === invitationFocusFrom.current
+    )
+      invitationHeading.current?.focus();
+    invitationFocusFrom.current = null;
+  }, [invitationStep, result.status]);
+  function moveInvitationStep(step: 'identity' | 'create') {
+    invitationFocusFrom.current = document.activeElement;
+    setInvitationStep(step);
+  }
+  async function copyCode() {
+    if (!code) return;
+    const issued = code;
+    let copyNotice: string;
+    try {
+      await navigator.clipboard.writeText(issued.value);
+      copyNotice = 'Koden är kopierad. Dela den privat med rätt person.';
+    } catch {
+      copyNotice = 'Koden kunde inte kopieras. Markera och kopiera koden i fältet själv.';
+    }
+    setCode((current) => (current === issued ? { ...current, copyNotice } : current));
+  }
   async function invite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const submittedFrom = document.activeElement;
     setPending(true);
     setError(null);
     setNotice(null);
@@ -643,6 +680,8 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
       );
       setCode({ invitationId: created.invitation.id, value: created.code });
       setRecipient('');
+      invitationFocusFrom.current = submittedFrom;
+      setInvitationStep('share');
       setRevision((value) => value + 1);
     } catch (failure) {
       if (failure instanceof RequestError && [401, 403].includes(failure.status)) onReload();
@@ -691,33 +730,121 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
     ) : (
       <Failure onRetry={() => setRevision((value) => value + 1)} />
     );
+  const currentInvitation = code
+    ? result.data.invitations.find(
+        (invitation) => invitation.id === code.invitationId && invitation.status === 'pending',
+      )
+    : undefined;
   return (
     <section className="panel administration-panel">
       <Link to={`/households/${encodeURIComponent(id ?? '')}`}>Till hushållet</Link>
-      <Heading>Administrera tillgång</Heading>
+      <h1 ref={administrationHeading} tabIndex={-1}>
+        Administrera tillgång
+      </h1>
       <p>
         Alla medlemmar har samma insyn i hushållets gemensamma karta. Administratörer hanterar
         tillgången.
       </p>
-      <form onSubmit={(event) => void invite(event)} aria-busy={pending}>
+      <section className="invitation-flow" aria-label="Bjud in en Skyttel-användare">
         <h2>Bjud in en Skyttel-användare</h2>
-        <label htmlFor="recipient-id">Skyttel-användar-ID att bjuda in</label>
-        <input
-          id="recipient-id"
-          autoComplete="off"
-          value={recipient}
-          onChange={(event) => setRecipient(event.target.value)}
-          required
-          readOnly={pending}
-        />
-        <p className="muted">
-          Be mottagaren logga in och dela sitt ID från Skyttel. Inbjudan gäller i sju dagar. En ny
-          inbjudan ersätter tidigare väntande inbjudan till samma användare.
-        </p>
-        <button type="submit" className="primary" disabled={pending}>
-          {pending ? 'Skapar inbjudan…' : 'Skapa inbjudan'}
-        </button>
-      </form>
+        <ol className="invitation-steps" aria-label="Inbjudans steg">
+          <li aria-current={invitationStep === 'identity' ? 'step' : undefined}>
+            Be om användar-ID
+          </li>
+          <li aria-current={invitationStep === 'create' ? 'step' : undefined}>Skapa inbjudan</li>
+          <li aria-current={invitationStep === 'share' ? 'step' : undefined}>
+            Kopiera och dela koden
+          </li>
+        </ol>
+        <h3 ref={invitationHeading} tabIndex={-1}>
+          {invitationStep === 'identity'
+            ? 'Be om användar-ID'
+            : invitationStep === 'create'
+              ? 'Skapa inbjudan'
+              : 'Kopiera och dela koden'}
+        </h3>
+        {invitationStep === 'identity' && (
+          <>
+            <p>Be personen logga in i Skyttel och dela sitt Skyttel-användar-ID privat med dig.</p>
+            <p>
+              Ett namn eller en e-postadress identifierar inte säkert rätt Skyttel-användare.
+              Kontrollera ID:t tillsammans.
+            </p>
+            <button type="button" className="primary" onClick={() => moveInvitationStep('create')}>
+              Jag har personens användar-ID
+            </button>
+          </>
+        )}
+        {invitationStep === 'create' && (
+          <form onSubmit={(event) => void invite(event)} aria-busy={pending}>
+            <label htmlFor="recipient-id">Skyttel-användar-ID att bjuda in</label>
+            <input
+              id="recipient-id"
+              autoComplete="off"
+              value={recipient}
+              onChange={(event) => setRecipient(event.target.value)}
+              required
+              readOnly={pending}
+            />
+            <p className="muted">
+              Be mottagaren logga in och dela sitt ID från Skyttel. Inbjudan gäller i sju dagar. En
+              ny inbjudan ersätter tidigare väntande inbjudan till samma användare.
+            </p>
+            <div className="access-actions">
+              <button type="submit" className="primary" disabled={pending}>
+                {pending ? 'Skapar inbjudan…' : 'Skapa inbjudan'}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => moveInvitationStep('identity')}
+              >
+                Tillbaka
+              </button>
+            </div>
+          </form>
+        )}
+        {invitationStep === 'share' && (
+          <div className="invitation-result">
+            {code && currentInvitation ? (
+              <>
+                <p role="status">
+                  {code.copyNotice ??
+                    'Inbjudan är skapad. Dela koden med den avsedda mottagaren. Koden visas bara nu.'}
+                </p>
+                <p>
+                  Koden visas bara här, en gång. Inbjudan gäller i sju dagar och kan användas en
+                  gång.
+                </p>
+                <p>
+                  Skicka koden privat till <strong>{currentInvitation.userId}</strong>. Skyttel
+                  skickar ingen e-post.
+                </p>
+                <label htmlFor="created-code">Inbjudningskod att dela</label>
+                <input id="created-code" readOnly value={code.value} />
+                <button type="button" onClick={() => void copyCode()}>
+                  Kopiera koden
+                </button>
+              </>
+            ) : (
+              <p>
+                Inbjudan väntar inte längre på svar. Kontrollera dess aktuella status under
+                Inbjudningar.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setCode(null);
+                setRecipient('');
+                moveInvitationStep('identity');
+              }}
+            >
+              Klar med inbjudan
+            </button>
+          </div>
+        )}
+      </section>
       {pending && (
         <p className="form-status" role="status">
           Sparar ändringen…
@@ -733,152 +860,168 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
           {error}
         </p>
       )}
-      {code &&
-        result.data.invitations.some(
-          (invitation) => invitation.id === code.invitationId && invitation.status === 'pending',
-        ) && (
-          <div className="invitation-result">
-            <p role="status">
-              Inbjudan är skapad. Dela koden med den avsedda mottagaren. Koden visas bara nu.
-            </p>
-            <label htmlFor="created-code">Inbjudningskod att dela</label>
-            <input id="created-code" readOnly value={code.value} />
-          </div>
-        )}
-      <h2 className="section-heading">Medlemmar</h2>
-      <ul className="access-list" aria-label="Medlemmar">
-        {result.data.members.map((member) => (
-          <li
-            key={member.userId}
-            className={member.userId === userId ? 'own-membership' : undefined}
-          >
-            <h3>
-              {member.name}
-              {member.userId === userId ? ' (du)' : ''}
-            </h3>
-            <p className="muted">{member.userId}</p>
-            <p>{member.role === 'administrator' ? 'Administratör' : 'Medlem'}</p>
-            <div className="access-actions">
-              <button
-                type="button"
-                disabled={pending || member.userId === userId}
-                aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
-                onClick={() =>
-                  void changeAccess(
-                    `members/${encodeURIComponent(member.userId)}/role`,
-                    { role: member.role === 'administrator' ? 'member' : 'administrator' },
-                    'Rollen har ändrats.',
-                  )
-                }
+      <fieldset className="access-actions section-heading" aria-label="Visa tillgång">
+        <button
+          type="button"
+          aria-pressed={accessList === 'members'}
+          onClick={() => setAccessList('members')}
+        >
+          Medlemmar
+        </button>
+        <button
+          type="button"
+          aria-pressed={accessList === 'invitations'}
+          onClick={() => setAccessList('invitations')}
+        >
+          Inbjudningar
+        </button>
+      </fieldset>
+      {accessList === 'members' && (
+        <>
+          <h2 className="section-heading">Medlemmar</h2>
+          <ul className="access-list" aria-label="Medlemmar">
+            {result.data.members.map((member) => (
+              <li
+                key={member.userId}
+                className={member.userId === userId ? 'own-membership' : undefined}
               >
-                {member.role === 'administrator' ? 'Gör till medlem' : 'Gör till administratör'}
-              </button>
-              <button
-                type="button"
-                disabled={pending || member.userId === userId}
-                aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
-                onClick={() => setConfirmMember(member.userId)}
-              >
-                Återkalla tillgång
-              </button>
-            </div>
-            {member.userId === userId && (
-              <p id="own-access-hint" className="muted">
-                Din roll och tillgång ändras av en annan administratör.
-              </p>
-            )}
-            {confirmMember === member.userId && (
-              <fieldset
-                className="confirmation"
-                aria-label={`Återkalla tillgång för ${member.name}`}
-              >
-                <p>
-                  Återkalla tillgång för {member.name}? Alla befintliga sessioner förlorar tillgång.
-                  Personer och innehåll i kartan finns kvar.
-                </p>
+                <h3>
+                  {member.name}
+                  {member.userId === userId ? ' (du)' : ''}
+                </h3>
+                <p className="muted">{member.userId}</p>
+                <p>{member.role === 'administrator' ? 'Administratör' : 'Medlem'}</p>
                 <div className="access-actions">
                   <button
                     type="button"
-                    disabled={pending}
+                    disabled={pending || member.userId === userId}
+                    aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
                     onClick={() =>
                       void changeAccess(
-                        `members/${encodeURIComponent(member.userId)}/revoke`,
-                        {},
-                        'Tillgången har återkallats.',
+                        `members/${encodeURIComponent(member.userId)}/role`,
+                        { role: member.role === 'administrator' ? 'member' : 'administrator' },
+                        'Rollen har ändrats.',
                       )
                     }
                   >
-                    Bekräfta återkallelse
+                    {member.role === 'administrator' ? 'Gör till medlem' : 'Gör till administratör'}
                   </button>
-                  <button type="button" disabled={pending} onClick={() => setConfirmMember(null)}>
-                    Avbryt
-                  </button>
-                </div>
-              </fieldset>
-            )}
-          </li>
-        ))}
-      </ul>
-      <h2 className="section-heading">Inbjudningar</h2>
-      {result.data.invitations.length === 0 ? (
-        <p>Inga inbjudningar ännu.</p>
-      ) : (
-        <ul className="access-list" aria-label="Inbjudningar">
-          {result.data.invitations.map((invitation) => (
-            <li key={invitation.id}>
-              <h3>{invitation.name}</h3>
-              <p className="muted">{invitation.userId}</p>
-              <p>{invitationStatuses[invitation.status]}</p>
-              <p className="muted">
-                Gäller till{' '}
-                <time dateTime={invitation.expiresAt}>
-                  {new Date(invitation.expiresAt).toLocaleString('sv-SE')}
-                </time>
-              </p>
-              {invitation.status === 'pending' && (
-                <>
                   <button
                     type="button"
-                    disabled={pending}
-                    onClick={() => setConfirmInvitation(invitation.id)}
+                    disabled={pending || member.userId === userId}
+                    aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
+                    onClick={() => setConfirmMember(member.userId)}
                   >
-                    Återkalla inbjudan
+                    Återkalla tillgång
                   </button>
-                  {confirmInvitation === invitation.id && (
-                    <fieldset
-                      className="confirmation"
-                      aria-label={`Återkalla inbjudan till ${invitation.name}`}
-                    >
-                      <p>Återkalla inbjudan till {invitation.name}? Koden slutar fungera.</p>
-                      <div className="access-actions">
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() =>
-                            void changeAccess(
-                              `invitations/${encodeURIComponent(invitation.id)}/revoke`,
-                              {},
-                              'Inbjudan har återkallats.',
-                            )
-                          }
+                </div>
+                {member.userId === userId && (
+                  <p id="own-access-hint" className="muted">
+                    Din roll och tillgång ändras av en annan administratör.
+                  </p>
+                )}
+                {confirmMember === member.userId && (
+                  <fieldset
+                    className="confirmation"
+                    aria-label={`Återkalla tillgång för ${member.name}`}
+                  >
+                    <p>
+                      Återkalla tillgång för {member.name}? Alla befintliga sessioner förlorar
+                      tillgång. Personer och innehåll i kartan finns kvar.
+                    </p>
+                    <div className="access-actions">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() =>
+                          void changeAccess(
+                            `members/${encodeURIComponent(member.userId)}/revoke`,
+                            {},
+                            'Tillgången har återkallats.',
+                          )
+                        }
+                      >
+                        Bekräfta återkallelse
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setConfirmMember(null)}
+                      >
+                        Avbryt
+                      </button>
+                    </div>
+                  </fieldset>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {accessList === 'invitations' && (
+        <>
+          <h2 className="section-heading">Inbjudningar</h2>
+          {result.data.invitations.length === 0 ? (
+            <p>Inga inbjudningar ännu.</p>
+          ) : (
+            <ul className="access-list" aria-label="Inbjudningar">
+              {result.data.invitations.map((invitation) => (
+                <li key={invitation.id}>
+                  <h3>{invitation.name}</h3>
+                  <p className="muted">{invitation.userId}</p>
+                  <p>{invitationStatuses[invitation.status]}</p>
+                  <p className="muted">
+                    Gäller till{' '}
+                    <time dateTime={invitation.expiresAt}>
+                      {new Date(invitation.expiresAt).toLocaleString('sv-SE')}
+                    </time>
+                  </p>
+                  {invitation.status === 'pending' && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setConfirmInvitation(invitation.id)}
+                      >
+                        Återkalla inbjudan
+                      </button>
+                      {confirmInvitation === invitation.id && (
+                        <fieldset
+                          className="confirmation"
+                          aria-label={`Återkalla inbjudan till ${invitation.name}`}
                         >
-                          Bekräfta återkallelse
-                        </button>
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => setConfirmInvitation(null)}
-                        >
-                          Avbryt
-                        </button>
-                      </div>
-                    </fieldset>
+                          <p>Återkalla inbjudan till {invitation.name}? Koden slutar fungera.</p>
+                          <div className="access-actions">
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() =>
+                                void changeAccess(
+                                  `invitations/${encodeURIComponent(invitation.id)}/revoke`,
+                                  {},
+                                  'Inbjudan har återkallats.',
+                                )
+                              }
+                            >
+                              Bekräfta återkallelse
+                            </button>
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => setConfirmInvitation(null)}
+                            >
+                              Avbryt
+                            </button>
+                          </div>
+                        </fieldset>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
       <p>
         <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/export`}>

@@ -250,6 +250,10 @@ test('INST-06: settings form buttons retain readable contrast when hovered in bo
           .getByRole('link', { name: destination, exact: true })
           .click();
         await expect(page.getByRole('heading', { name: destination, exact: true })).toBeFocused();
+        if (destination === 'Administrera tillgång')
+          await page
+            .getByRole('button', { name: 'Jag har personens användar-ID', exact: true })
+            .click();
         const button = page.getByRole('button', { name: label, exact: true });
         await button.hover();
         expect(

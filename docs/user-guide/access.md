@@ -64,13 +64,18 @@ Du behöver vara administratör för att bjuda in någon.
 2. Be personen kopiera **Ditt Skyttel-användar-ID** och skicka det privat
    till dig. Kontrollera tillsammans att det är rätt persons ID; namn
    och e-postadresser kan vara lika för olika identiteter.
-3. Öppna hushållet och **Administrera tillgång**. Fyll i
+3. Öppna **Inställningar → Administrera tillgång**. Läs **Be om användar-ID**
+   och välj **Jag har personens användar-ID**. Fyll i
    **Skyttel-användar-ID att bjuda in** och välj **Skapa inbjudan**.
-4. Kopiera **Inbjudningskod att dela** och skicka koden privat till
-   personen. Skyttel skickar ingen e-post. Koden visas bara när du skapar
-   inbjudan och kan inte hämtas igen efter att du lämnar eller laddar om
-   sidan.
-5. Personen ska vara inloggad med identiteten som visar det inbjudna
+   **Tillbaka** återgår till förberedelsen utan att skapa någon inbjudan.
+4. Kontrollera mottagarens ID under **Kopiera och dela koden**. Välj
+   **Kopiera koden** och skicka kopian privat till personen. Om webbläsaren
+   inte tillåter kopiering kan du markera och kopiera texten i
+   **Inbjudningskod att dela** själv. Skyttel skickar ingen e-post.
+5. Välj **Klar med inbjudan** när du har kopierat koden. Då försvinner
+   koden och du återgår till första steget. Koden kan inte hämtas igen
+   efter att du avslutar inbjudan, lämnar sidan eller laddar om den.
+6. Personen ska vara inloggad med identiteten som visar det inbjudna
    användar-ID:t. Personen fyller i **Inbjudningskod** och väljer
    **Acceptera inbjudan**. Hushållet öppnas med rollen **Medlem**.
 
@@ -88,7 +93,9 @@ tidigare koden ogiltig.
 
 ## Följ inbjudningar och dela administrationen
 
-Under **Administrera tillgång** finns **Inbjudningar** och **Medlemmar**.
+Under **Administrera tillgång** väljer du mellan vyerna **Inbjudningar**
+och **Medlemmar**. Listbytet behåller den aktuella engångskoden tills du
+väljer **Klar med inbjudan**; det skapar inte en ny inbjudan.
 En ny inbjudan visar **Väntar på svar**. När personen ansluter visas
 **Accepterad** och personen finns bland medlemmarna. Listan visar också
 när en inbjudan går ut eller återkallas.

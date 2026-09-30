@@ -36,6 +36,13 @@ fallen anger formulär, samtal, profil eller administration.
    Skapa den minst sju dagar före körningen, anteckna koden privat och
    kontrollera att dess **Gäller till** har passerat. Ersätt eller
    återkalla inte inbjudan under väntetiden. Logga in på nytt vid körning.
+4. När ett fall ber dig skapa en inbjudan, öppna **Administrera tillgång**
+   och välj **Jag har personens användar-ID** för att visa ID-fältet.
+   Vid en ny inbjudan efter kopieringssteget väljer du först
+   **Klar med inbjudan**. En omladdning börjar också från första steget.
+5. Välj **Medlemmar** eller **Inbjudningar** för den lista som steget
+   anger. Bara en lista visas åt gången. Byte av lista behåller den
+   aktuella koden och avslutar inte kopieringssteget.
 
 ## Bjuda in och ansluta
 
@@ -55,10 +62,11 @@ joins by keyboard on a phone”.
 
 **Steg:**
 
-1. Välj **Administrera tillgång** som Alex. Ange Robins ID i
+1. Välj **Administrera tillgång** och **Jag har personens användar-ID**
+   som Alex. Ange Robins ID i
    **Skyttel-användar-ID att bjuda in** och välj **Skapa inbjudan**.
-2. Kopiera **Inbjudningskod att dela**. Kontrollera **Väntar på svar**
-   under **Inbjudningar**.
+2. Kopiera **Inbjudningskod att dela**. Välj **Inbjudningar** och
+   kontrollera **Väntar på svar**.
 3. Fokusera **Inbjudningskod** som Robin och skriv koden. Tryck Tab och
    kontrollera att **Acceptera inbjudan** får fokus. Tryck Enter.
 4. Kontrollera hushållets namn och rollen **Medlem** som Robin. Ladda om
@@ -87,11 +95,13 @@ code cannot grant access”.
 
 **Steg:**
 
-1. Öppna **Administrera tillgång** som Alex. Skriv `unknown-user` i
+1. Öppna **Administrera tillgång** och **Jag har personens användar-ID**
+   som Alex. Skriv `unknown-user` i
    **Skyttel-användar-ID att bjuda in** och välj **Skapa inbjudan**.
 2. Kontrollera felmeddelandet och ersätt värdet med Robins faktiska ID.
    Välj **Skapa inbjudan** och kopiera koden.
-3. Välj **Återkalla inbjudan** och **Bekräfta återkallelse**.
+3. Välj **Inbjudningar**, **Återkalla inbjudan** och
+   **Bekräfta återkallelse**.
 4. Ange den kopierade koden som Robin och välj **Acceptera inbjudan**.
 
 **Förväntat resultat:**
@@ -158,7 +168,8 @@ fresh invitation restores the join flow”.
 
 **Steg:**
 
-1. Öppna **Administrera tillgång** som Alex. Granska den gamla inbjudan.
+1. Öppna **Administrera tillgång** och välj **Inbjudningar** som Alex.
+   Granska den gamla inbjudan.
 2. Ange den gamla koden som Robin och välj **Acceptera inbjudan**.
 3. Skapa en ny inbjudan till Robins ID som Alex. Kopiera den nya koden.
 4. Ersätt den gamla koden som Robin med den nya och acceptera.
@@ -234,7 +245,8 @@ lose revoked access without disrupting input”.
 **Steg:**
 
 1. Välj **Gör till administratör** på Robins rad som Alex.
-2. Skriv `påbörjat-id` i **Skyttel-användar-ID att bjuda in** och behåll
+2. Välj **Jag har personens användar-ID**. Skriv `påbörjat-id` i
+   **Skyttel-användar-ID att bjuda in** och behåll
    fokus där under nästa automatiska uppdatering av listorna.
 3. Öppna **Administrera tillgång** som Robin. Kontrollera knapparna
    **Gör till medlem** och **Återkalla tillgång** på raden märkt **(du)**.
@@ -300,3 +312,115 @@ new invitation restores membership”.
   återkallelsen.
 - En ny kod ger Robin rollen **Medlem** igen, med tillgång till samma
   sparade objekt.
+
+## Stegvis inbjudan och öppna arbetsytor
+
+### MEDLEM-08: Kopiera en engångskod och återkalla en öppen arbetsyta
+
+**Syfte:** Följ en stegvis inbjudan till faktisk acceptans och kontrollera
+att återkallad tillgång stoppar mottagarens redan öppna, oskickade arbete.
+
+**Användare:** Alex som administratör i profil A och Robin utan tillgång
+i profil B. Använd bara påhittade uppgifter och en separat provinstallation.
+
+**Förutsättningar:** Följ allmän förberedelse. Alex skapar **Bevarad cykel**
+och sparar hela utkastet. Redigera sedan cykeln, skriv **Alex privata förslag**
+i beskrivningen och lägg i utkastet utan att spara. Robin loggar in och
+kopierar sitt faktiska **Ditt Skyttel-användar-ID** från sidan utan tillgång.
+Tillåt webbläsarens urklipp vid kopieringen; ett nekat urklipp provas separat.
+
+**Integrationstest:**
+[membership-ui.spec.ts](../../tests/integration/membership-ui.spec.ts),
+testfallet “MEDLEM-08: staged invitation copies its one-time code and
+revocation retires an open recipient workspace”.
+
+**Steg:**
+
+1. Alex öppnar **Nytt objekt** och skriver **Alex oskickade arbete** utan
+   att lägga texten i utkastet. Öppna **Inställningar → Administrera tillgång**.
+   Huvudrubriken får fokus; kartans oskickade formulär är dolt.
+2. Läs **Be om användar-ID** och förklaringen om att namn eller e-postadress
+   inte säkert identifierar rätt Skyttel-användare. Fältet för mottagarens ID
+   visas först när Alex väljer **Jag har personens användar-ID**.
+3. Fyll i Robins faktiska ID, kontrollera det tillsammans och välj
+   **Skapa inbjudan**. Läs mottagarens ID och uppgifterna om sju dagar,
+   engångsanvändning och att koden bara visas nu.
+4. Välj **Kopiera koden** och invänta **Koden är kopierad**. Kontrollera
+   kopian genom att klistra in den i Robins **Inbjudningskod** utan att
+   acceptera ännu. Dela inte provkoden i skärmbilder eller supportärenden.
+5. Alex väljer vyn **Inbjudningar**. Kontrollera **Väntar på svar** och
+   att medlemslistan är dold. Den aktuella koden finns fortfarande kvar;
+   byte mellan listvyer avslutar inte inbjudans sista steg.
+6. Välj **Klar med inbjudan**. Koden försvinner och det första steget visas
+   igen. Det sparade objektet och Alex privata förslag är oförändrade.
+7. Robin väljer **Acceptera inbjudan** med den kopierade koden och får
+   hushållet med rollen **Medlem**. Öppna **Nytt objekt** och skriv
+   **Robins oskickade arbete** utan att lägga det i utkastet. Behåll sidan öppen.
+8. Alex inväntar **Accepterad**, väljer **Medlemmar** och kontrollerar att
+   inbjudningslistan är dold. Kontrollera Robins namn och fullständiga ID.
+   Välj **Återkalla tillgång**, läs att befintliga sessioner förlorar tillgång
+   medan personer och kartinnehåll finns kvar, och bekräfta återkallelsen.
+9. Utan omladdning ska Robins sida inom tio sekunder visa
+   **Du har inte tillgång till hushållet**. Det oskickade formuläret ska
+   vara borta och Robin ska försvinna från Alex medlemslista.
+10. Alex väljer **Tillbaka till kartan**. **Alex oskickade arbete** och
+    fokus i namnfältet finns kvar. Cykeln och dess privata förslag finns kvar.
+11. Öppna **Administrera tillgång** igen och ladda om sidan. Den tidigare
+    koden ska inte kunna hämtas; den stegvisa inbjudan börjar från första steget.
+
+**Förväntat resultat:**
+
+- En inbjudan följer rätt användar-ID genom förberedelse, skapande och
+  uttrycklig kopiering. Skyttel skickar inget meddelande automatiskt.
+- Medlemmar och inbjudningar visas separat. Den aktuella engångskoden
+  bevaras vid listbyte men rensas när inbjudan avslutas eller sidan lämnas.
+- En verklig andra klient accepterar koden. Återkallelse gäller även den
+  redan öppna arbetsytan och avvecklar skyddat oskickat arbete före omladdning.
+- Alex behåller sparad information, eget privat förslag och oskickad text.
+  Automationen jämför hela kartsvaret och verifierar nekad HTTP-åtkomst för Robin.
+
+### MEDLEM-09: Kopiera koden manuellt när urklippsknappen misslyckas
+
+**Syfte:** Kontrollera att ett misslyckat kopieringsförsök behåller rätt
+engångskod och ger en användbar väg till faktisk acceptans.
+
+**Användare:** Alex som administratör i profil A och Robin utan tillgång
+i profil B.
+
+**Förutsättningar:** Lägg **Privat under kopiering** med beskrivningen
+**Alex behåller sitt eget förslag** i Alex utkast utan att spara.
+Robin visar sitt faktiska Skyttel-användar-ID. Ordna ett nekat försök att
+skriva till urklipp för Alex sida genom webbläsarens platsinställningar.
+Manuell markering och tangentbordets kopiering ska fortfarande vara tillåtna.
+
+**Integrationstest:**
+[membership-ui.spec.ts](../../tests/integration/membership-ui.spec.ts),
+testfallet “MEDLEM-09: failed clipboard writing keeps the real code usable
+by manual copy and acceptance”. Automationen ersätter endast webbläsarens
+skrivning till urklipp med ett kontrollerat fel. Den verifierar felvägen,
+inte webbläsarens verkliga behörighetsbeslut. Tangentbordets kopiering,
+inklistringen och inbjudningstjänsten används på riktigt.
+
+**Steg:**
+
+1. Öppna **Administrera tillgång**, välj **Jag har personens användar-ID**,
+   ange Robins faktiska ID och välj **Skapa inbjudan**.
+2. Välj **Kopiera koden**. Kontrollera beskedet om att koden inte kunde
+   kopieras och uppmaningen att markera och kopiera fältets text själv.
+3. Kontrollera att **Inbjudningskod att dela** och mottagarens fullständiga
+   ID finns kvar. Markera hela koden och tryck Ctrl+C, eller Cmd+C på Mac.
+4. Fokusera Robins **Inbjudningskod** i den andra profilen. Klistra in med
+   Ctrl+V eller Cmd+V och kontrollera att hela koden stämmer. Välj
+   **Acceptera inbjudan**.
+5. Kontrollera Robins hushåll och roll. Återgå till Alex sida och kontrollera
+   att den accepterade koden försvinner. Välj **Klar med inbjudan**.
+
+**Förväntat resultat:**
+
+- Felet lämnar exakt samma kod och avsedda mottagare tillgängliga för
+  manuell kopiering. Ingen extra inbjudan skapas av kopieringsförsöket.
+- Den manuellt kopierade koden öppnar hushållet som **Medlem** för Robin.
+  Samma inbjudan går från väntande till accepterad, och koden döljs för Alex.
+- Alex privata förslag och den gemensamma kartan är oförändrade. Robin får
+  ett eget tomt utkast och ser inte Alex privata förslag. Automationen
+  jämför hela Alex kartunderlag före och efter flödet.
