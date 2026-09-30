@@ -306,6 +306,9 @@
   position: relative;
   padding-inline-end: 68px;
 }
+.has-settings .household-work-background .assistant-bar p {
+  color: var(--space-text);
+}
 .has-settings .household-work-background .assistant-work-status {
   background: var(--space-surface);
   color: var(--space-text);

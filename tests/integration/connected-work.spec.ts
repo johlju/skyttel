@@ -375,12 +375,9 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(
         page.getByText('Oskickat samtalsmeddelande finns kvar.', { exact: false }),
       ).toBeVisible();
-      const retainedWorkStatus = page.getByRole('status').filter({
-        hasText: 'Nya förslag är osparade tills du uttryckligen ber om ett samlat sparande.',
-      });
-      expect(
-        await retainedWorkStatus.evaluate((element) => {
-          const style = getComputedStyle(element);
+      const retainedText = await page
+        .getByRole('region', { name: 'Aktuell status', exact: true })
+        .evaluate((status) => {
           const luminance = (color: string) => {
             if (!/^rgb\(\d+, \d+, \d+\)$/.test(color))
               throw new Error(`Expected opaque RGB, received ${color}`);
@@ -390,13 +387,29 @@ for (const mode of ['voice', 'text'] as const) {
             });
             return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
           };
-          const foreground = luminance(style.color),
-            background = luminance(style.backgroundColor);
-          return (
-            (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
-          );
-        }),
-      ).toBeGreaterThanOrEqual(4.5);
+          return [...status.querySelectorAll('p, .microphone-state')]
+            .filter((element) => element.getClientRects().length > 0)
+            .map((element) => {
+              let backgroundOwner: Element | null = element;
+              while (
+                backgroundOwner &&
+                getComputedStyle(backgroundOwner).backgroundColor === 'rgba(0, 0, 0, 0)'
+              )
+                backgroundOwner = backgroundOwner.parentElement;
+              if (!backgroundOwner) throw new Error('Missing opaque status surface');
+              const foreground = luminance(getComputedStyle(element).color);
+              const background = luminance(getComputedStyle(backgroundOwner).backgroundColor);
+              return {
+                text: element.textContent,
+                contrast:
+                  (Math.max(foreground, background) + 0.05) /
+                  (Math.min(foreground, background) + 0.05),
+              };
+            });
+        });
+      expect(retainedText.length).toBeGreaterThan(0);
+      for (const text of retainedText)
+        expect(text.contrast, text.text ?? '').toBeGreaterThanOrEqual(4.5);
       await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
       await expect(statusDetails).toBeFocused();
       const voice = assistant.getByRole('region', { name: 'Skyttels röst', exact: true });
