@@ -277,7 +277,7 @@ export function HouseholdMap({
   const [legacyDirty, setDirty] = useState(false);
   const dirty = legacyDirty || Object.values(objectDirty).some(Boolean);
   const [browsing, setBrowsing] = useState(initialObjectBrowsing);
-  const { query, types: typeFilter } = browsing;
+  const { query, types: typeFilter, onlySelected, sort } = browsing;
   const [focusId, setFocusId] = useState<string | null>(null);
   const [selection, setSelection] = useState<{
     kind: 'object' | 'relationship';
@@ -285,7 +285,10 @@ export function HouseholdMap({
     ids?: string[];
     previous?: boolean;
   } | null>(null);
-  const selectedIds = selection?.kind === 'object' ? (selection.ids ?? [selection.id]) : [];
+  const selectedIds = useMemo(
+    () => (selection?.kind === 'object' ? (selection.ids ?? [selection.id]) : []),
+    [selection],
+  );
   const [pending, setPending] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [errorDetails, setErrorDetails] = useState<{
@@ -1049,7 +1052,12 @@ export function HouseholdMap({
     const listObjects = [...displayed.values()].filter(
       (object) => !focusId || connected.has(object.id),
     );
-    const listResults = objectListResults(listObjects, effectiveTypes, browsing, selectedIds);
+    const listResults = objectListResults(
+      listObjects,
+      effectiveTypes,
+      { query, types: typeFilter, onlySelected, sort },
+      selectedIds,
+    );
     const visibleObjects = new Map(
       (mapUnfiltered ? listObjects : listResults.items).map((object) => [object.id, object]),
     );
@@ -1075,7 +1083,18 @@ export function HouseholdMap({
       listResults,
       listEdges,
     };
-  }, [state, householdId, effectiveTypes, focusId, browsing, selectedIds, mapUnfiltered]);
+  }, [
+    state,
+    householdId,
+    effectiveTypes,
+    focusId,
+    query,
+    typeFilter,
+    onlySelected,
+    sort,
+    selectedIds,
+    mapUnfiltered,
+  ]);
   function showAll() {
     setBrowsing(initialObjectBrowsing);
     setMapUnfiltered(false);

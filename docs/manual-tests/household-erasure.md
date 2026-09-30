@@ -167,12 +167,14 @@ light och dark.
    På smala fönster öppnar du **Välj inställning** med Enter.
    Kontrollera att den valda sidans länk är läsbar innan menyn stängs igen.
 3. Välj **Lampan att radera** och **Granska raderingen**. Kontrollera
-   lampans namn, bildversionens hela ID och antalet personliga placeringar.
+   att **Omfattning att bekräfta** får fokus och att hela fokusringen syns.
+   Kontrollera lampans namn, bildversionens hela ID och antalet personliga placeringar.
    Stolen och dess privata förslag ska inte ingå i granskningens omfattning.
 4. Kontrollera att **Radera permanent** är inaktiverad. Skriv först
    **RADERA permanent**: knappen ska fortfarande vara inaktiverad. Skriv
    **RADERA PERMANENT**, men välj sedan **Avbryt** med tangentbordet.
-   Granskningen stängs, valrubriken får fokus och lampans val finns kvar.
+   Granskningen stängs, valrubriken får fokus med hela fokusringen synlig
+   och lampans val finns kvar.
    Ingen radering genomförs.
 5. Välj **Tillbaka till kartan**. Den oskickade texten och fokus i
    **Objektets namn** finns kvar. De sparade objekten, deras placeringar

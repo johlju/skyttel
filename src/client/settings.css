@@ -194,7 +194,7 @@
   min-height: 44px;
   padding: 10px;
 }
-.settings-screen h1[tabindex],
+.settings-screen :is(h1, h2, legend)[tabindex],
 .settings-screen :is(a, button, input, select, textarea, summary) {
   color: var(--space-text);
   scroll-margin-block: 24px;

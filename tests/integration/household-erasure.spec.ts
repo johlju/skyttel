@@ -131,11 +131,19 @@ async function expectErasureFocus(control: Locator) {
       control.evaluate((element) => {
         const box = element.getBoundingClientRect();
         const style = getComputedStyle(element);
+        const scrollport = element.closest('.settings-screen')?.getBoundingClientRect();
+        const outline =
+          Number.parseFloat(style.outlineWidth) +
+          Math.max(0, Number.parseFloat(style.outlineOffset));
         return (
           box.top >= 0 &&
           box.left >= 0 &&
           box.bottom <= innerHeight &&
           box.right <= innerWidth &&
+          box.top - outline >= Math.max(0, scrollport?.top ?? 0) &&
+          box.bottom + outline <= Math.min(innerHeight, scrollport?.bottom ?? innerHeight) &&
+          box.left - outline >= Math.max(0, scrollport?.left ?? 0) &&
+          box.right + outline <= Math.min(innerWidth, scrollport?.right ?? innerWidth) &&
           element.contains(
             document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
           ) &&

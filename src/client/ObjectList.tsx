@@ -23,7 +23,7 @@ export const initialObjectBrowsing: ObjectBrowsing = {
 export function objectListResults(
   objects: MapObject[],
   types: ObjectType[],
-  browsing: ObjectBrowsing,
+  browsing: Pick<ObjectBrowsing, 'query' | 'types' | 'onlySelected' | 'sort'>,
   selectedIds: string[],
 ) {
   const names = new Map(types.map((type) => [type.id, type.name]));
