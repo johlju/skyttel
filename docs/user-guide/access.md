@@ -44,6 +44,12 @@ kvar. Ett nekat medgivande, fel hos inloggningstjänsten, fel befintlig
 identitet eller utgången verifiering ändrar inte tidigare inloggningar
 eller tillgång. Börja om från ditt befintliga inloggningssätt.
 
+Om verifieringen har gått ut visar sidan ett besked om det efter omladdning
+eller när ett nytt kopplingsförsök avvisas på en redan öppen sida.
+Välj **Verifiera Google** eller **Verifiera Microsoft** för att bevisa din
+befintliga identitet på nytt. Ditt privata utkast och tidigare tillgång
+finns kvar. En redan slutförd koppling fortsätter att gälla.
+
 En identitet som redan hör till en annan Skyttel-användare kan inte tas
 över eller slås ihop automatiskt. Att logga in separat med den andra
 tjänsten före kopplingen kan skapa en sådan separat användare.

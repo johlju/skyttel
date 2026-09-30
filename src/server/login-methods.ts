@@ -49,9 +49,13 @@ export function createLoginMethods(database: Database.Database, auth: Auth, orig
     const attempt = database
       .prepare('SELECT * FROM login_link WHERE sessionId = ?')
       .get(session.session.id) as LinkAttempt | undefined;
+    const stage =
+      attempt && attempt.stage !== 'complete' && attempt.expiresAt <= Date.now()
+        ? 'expired'
+        : (attempt?.stage ?? null);
     return context.json({
       providers: providers.map(({ providerId }) => providerId),
-      stage: attempt && attempt.expiresAt > Date.now() ? attempt.stage : null,
+      stage,
     });
   });
   routes.post('/login-methods/:step', async (context) => {

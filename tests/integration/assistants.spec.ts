@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { beginAssistant, callAssistant } from '../support/assistant.js';
-import { createHousehold, openWorkspace, signIn } from '../support/client.js';
+import {
+  activatePanel,
+  createHousehold,
+  openProfile,
+  openWorkspace,
+  signIn,
+} from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 test('AI-03: medgivandet kräver val av hushåll och AI-behandling', async ({ page }) => {
@@ -37,6 +43,120 @@ test('AI-03: medgivandet kräver val av hushåll och AI-behandling', async ({ pa
     await page.getByRole('link', { name: 'Till kartan', exact: true }).click();
     await openWorkspace(page);
     await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
+
+test('AI-13: profile navigation focuses assistant connections and preserves unsent and private work', async ({
+  page,
+}) => {
+  const app = await createInstallation();
+  try {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.emulateMedia({ colorScheme: 'light' });
+    await signIn(page.request, app.origin);
+    const { household } = await (await createHousehold(page.request, app.origin)).json();
+    const bootstrap = await (await page.request.get(`${app.origin}/api/bootstrap`)).json();
+    const path = `${app.origin}/api/households/${household.id}/map`;
+    const read = async (): Promise<MapState> => (await page.request.get(path)).json();
+    const post = (suffix: string, data: unknown) =>
+      page.request.post(`${path}/${suffix}`, { headers: { origin: app.origin }, data });
+    const initial = await read();
+    const typeId = initial.types.find((type) => type.name === 'Fordon')?.id;
+    for (const [id, name] of [
+      ['cycle', 'Cykeln'],
+      ['car', 'Bilen'],
+    ]) {
+      expect(
+        (
+          await post('draft', {
+            version: (await read()).draft.version,
+            id,
+            baseRevision: null,
+            value: { typeId, name, description: `Sparat om ${name}` },
+          })
+        ).status(),
+      ).toBe(200);
+    }
+    expect(
+      (
+        await post('save', {
+          version: (await read()).draft.version,
+          operationId: 'profile-preservation',
+        })
+      ).status(),
+    ).toBe(200);
+    const saved = await read();
+    const car = saved.objects.find((object) => object.id === 'car');
+    expect(
+      (
+        await post('draft', {
+          version: saved.draft.version,
+          id: 'car',
+          baseRevision: car?.revision,
+          value: { ...car, description: 'Bilens oberoende privata förslag' },
+        })
+      ).status(),
+    ).toBe(200);
+    const before = await read();
+    const connectionsBefore = await (
+      await page.request.get(`${app.origin}/api/assistants/context`)
+    ).json();
+    await page.goto(app.origin);
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Uppgifter för Cykeln', exact: true }).click();
+    const cycle = page.getByRole('region', { name: 'Cykeln', exact: true });
+    await cycle.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
+    await cycle.getByLabel('Beskrivning', { exact: true }).fill('Cykelns oskickade profiltext');
+    const viewBefore = await (await page.request.get(`${path}/view`)).json();
+    await openProfile(page);
+    const connections = page.getByRole('link', { name: 'Assistentanslutningar', exact: true });
+    await page.keyboard.press('Tab');
+    await connections.focus();
+    await page.keyboard.press('Enter');
+    await expect(
+      page.getByText(`Inloggad som Alex Exempel (${bootstrap.user.id}).`, { exact: true }),
+    ).toBeVisible();
+    const heading = page.getByRole('heading', { name: 'Assistentanslutningar', exact: true });
+    await expect(heading).toBeVisible();
+    await expect(heading).toBeFocused();
+    await expect
+      .poll(() =>
+        heading.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+          const style = getComputedStyle(element);
+          return (
+            box.x >= 0 &&
+            box.y >= 0 &&
+            box.right <= innerWidth &&
+            box.bottom <= innerHeight &&
+            (hit === element || element.contains(hit)) &&
+            style.outlineStyle !== 'none' &&
+            Number.parseFloat(style.outlineWidth) >= 2 &&
+            document.documentElement.scrollWidth === innerWidth
+          );
+        }),
+      )
+      .toBe(true);
+    await expect(
+      page.getByText('Inga aktiva assistentanslutningar.', { exact: true }),
+    ).toBeVisible();
+    expect(await read()).toEqual(before);
+    expect(await (await page.request.get(`${app.origin}/api/assistants/context`)).json()).toEqual(
+      connectionsBefore,
+    );
+    const returnToMap = page.getByRole('link', { name: 'Tillbaka till kartan', exact: true });
+    await returnToMap.focus();
+    await page.keyboard.press('Enter');
+    await activatePanel(page, 'Cykeln');
+    await expect(cycle.getByLabel('Beskrivning', { exact: true })).toHaveValue(
+      'Cykelns oskickade profiltext',
+    );
+    expect(await read()).toEqual(before);
+    expect(await (await page.request.get(`${path}/view`)).json()).toEqual(viewBefore);
+    expect(await (await page.request.get(`${app.origin}/api/bootstrap`)).json()).toEqual(bootstrap);
   } finally {
     await app.close();
   }
