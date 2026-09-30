@@ -823,7 +823,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
     await post('save', { operationId: 'after-downloaded-copy' });
     await page
       .getByRole('navigation', { name: 'Inställningarnas sidor' })
-      .getByRole('link', { name: 'Administrera tillgång', exact: true })
+      .getByRole('link', { name: 'Återimportera hushållet', exact: true })
       .click();
     await page.getByLabel('Skyttel-export (ZIP)').setInputFiles({
       name: 'skyttel-hushall.zip',

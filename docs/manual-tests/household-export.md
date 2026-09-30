@@ -403,8 +403,8 @@ private and historical content after restart”.
    och medlemskap, och varje gemensamt objekt ska finnas en gång.
 2. Ändra ett gemensamt objektnamn och spara hela utkastet. Anteckna det nya
    namnet så att det går att skilja den nuvarande kartan från exporten.
-3. Öppna Administrera tillgång och välj den hämtade filen under
-   Återimportera hushållet. Kontrollera filen. Kontrollera att den nya
+3. Öppna **Inställningar → Återimportera hushållet** och välj den hämtade
+   filen. Kontrollera filen. Kontrollera att den nya
    kartan är kvar och att ersättningsknappen kräver uttrycklig bekräftelse.
 4. Markera bekräftelsen och välj Ersätt hushållets innehåll.
    Kontrollera beskedet om ersättning och bevarad åtkomst.

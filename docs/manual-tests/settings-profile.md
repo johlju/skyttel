@@ -175,7 +175,7 @@ in the retained work”.
 
 **Syfte:** Läsa inställningarnas knappar även när pekaren ligger över dem.
 
-**Användare:** Alex.
+**Användare:** Alex som aktuell administratör.
 
 **Förutsättningar:** Kartan är öppen.
 
@@ -187,14 +187,18 @@ hovered in both themes”.
 **Steg:**
 
 1. Öppna Inställningar och **Administrera tillgång**.
-2. Välj mörkt tema. För pekaren över **Hämta aktuella innehållskopplingar**
-   och **Skapa inbjudan** utan att trycka.
-3. Upprepa med ljust tema.
+2. Välj mörkt tema. Öppna **Koppla historiskt innehåll** genom
+   inställningsmenyn. För pekaren över **Hämta aktuella innehållskopplingar**
+   utan att trycka.
+3. Återgå till **Administrera tillgång** genom inställningsmenyn.
+   För pekaren över **Skapa inbjudan** utan att trycka.
+4. Upprepa båda sidornas knappkontroller med ljust tema.
 
 **Förväntat resultat:**
 
 - Vanliga knappar och primära knappar har tydligt läsbar text i båda teman,
   även när pekaren ligger över dem.
+- Sidans rubrik får fokus efter varje byte genom inställningsmenyn.
 - Pekarrörelsen utför ingen åtgärd och ändrar inga hushållsuppgifter.
 
 ### INST-07: bakåt med tangentbord från mobilprofilen

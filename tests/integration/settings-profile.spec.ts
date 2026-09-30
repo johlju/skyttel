@@ -241,7 +241,15 @@ test('INST-06: settings form buttons retain readable contrast when hovered in bo
     for (const theme of ['Mörkt', 'Ljust']) {
       await page.getByRole('button', { name: /Byt tema/ }).click();
       await page.getByRole('radio', { name: theme, exact: true }).click();
-      for (const label of ['Hämta aktuella innehållskopplingar', 'Skapa inbjudan']) {
+      for (const [destination, label] of [
+        ['Koppla historiskt innehåll', 'Hämta aktuella innehållskopplingar'],
+        ['Administrera tillgång', 'Skapa inbjudan'],
+      ]) {
+        await page
+          .getByRole('navigation', { name: 'Inställningarnas sidor' })
+          .getByRole('link', { name: destination, exact: true })
+          .click();
+        await expect(page.getByRole('heading', { name: destination, exact: true })).toBeFocused();
         const button = page.getByRole('button', { name: label, exact: true });
         await button.hover();
         expect(

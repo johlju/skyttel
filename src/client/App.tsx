@@ -858,8 +858,16 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
         {' av hushållets information finns på en egen sida i Inställningar.'}
       </p>
       <HouseholdErasure key={`erasure-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
-      <HouseholdImport key={`import-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
-      <ContentOwners key={`owners-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
+      <p>
+        <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/import`}>
+          Återimportera hushållet
+        </Link>
+        {' och '}
+        <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/content-owners`}>
+          Koppla historiskt innehåll
+        </Link>
+        {' finns på egna sidor i Inställningar.'}
+      </p>
     </section>
   );
 }
@@ -881,6 +889,31 @@ function HouseholdExportPage({
       </section>
     );
   return <HouseholdExport key={household.id} householdId={household.id} onAccessLost={onReload} />;
+}
+
+function HouseholdRecoveryPage({
+  household,
+  onReload,
+  page,
+}: {
+  household: Household | undefined;
+  onReload: () => void;
+  page: 'import' | 'owners';
+}) {
+  const { id } = useParams();
+  if (household?.id !== id || household?.role !== 'administrator')
+    return (
+      <section className="panel">
+        <Heading>Du kan inte administrera hushållet</Heading>
+        <p>Endast aktuella administratörer kan återimportera och koppla historiskt innehåll.</p>
+        <Link to="/">Till startsidan</Link>
+      </section>
+    );
+  return page === 'import' ? (
+    <HouseholdImport key={household.id} householdId={household.id} onAccessLost={onReload} />
+  ) : (
+    <ContentOwners key={household.id} householdId={household.id} onAccessLost={onReload} />
+  );
 }
 
 function HouseholdWork({
@@ -1174,6 +1207,18 @@ export function App() {
             <Route
               path="/households/:id/settings/export"
               element={<HouseholdExportPage household={household} onReload={reload} />}
+            />
+            <Route
+              path="/households/:id/settings/import"
+              element={
+                <HouseholdRecoveryPage household={household} onReload={reload} page="import" />
+              }
+            />
+            <Route
+              path="/households/:id/settings/content-owners"
+              element={
+                <HouseholdRecoveryPage household={household} onReload={reload} page="owners" />
+              }
             />
             <Route
               path="/households/:id/administration"

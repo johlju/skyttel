@@ -216,11 +216,18 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Gammal oskickad cykel');
     await openSettings(page);
-    await page.getByRole('link', { name: 'Administrera tillgång', exact: true }).click();
+    await page
+      .getByRole('navigation', { name: 'Inställningarnas sidor' })
+      .getByRole('link', { name: 'Återimportera hushållet', exact: true })
+      .click();
+    await expect(
+      page.getByRole('heading', { name: 'Återimportera hushållet', level: 1 }),
+    ).toBeFocused();
     await page
       .getByLabel('Skyttel-export (ZIP)')
       .setInputFiles({ name: 'skyttel.zip', mimeType: 'application/zip', buffer: archive });
     await page.getByRole('button', { name: 'Kontrollera importfil' }).click();
+    await expect(page.getByRole('group', { name: 'Granska ersättningen' })).toBeVisible();
     await page.getByRole('checkbox', { name: 'Jag vill ersätta allt hushållsinnehåll' }).check();
     await page.getByRole('button', { name: 'Ersätt hushållets innehåll' }).click();
     await expect(
@@ -232,7 +239,11 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
       })
       .toEqual([{ enabled: false, state: 'ended' }]);
     await expect(page.getByLabel('Objektets namn')).toHaveCount(0, { timeout: 10000 });
-    await page.getByRole('link', { name: 'Till hushållet', exact: true }).click();
+    await Promise.all([
+      page.waitForEvent('load'),
+      page.getByRole('button', { name: 'Läs in det återställda hushållet' }).click(),
+    ]);
+    await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
     await openConversation(page);
     await expect(
       page.getByRole('button', { name: 'Starta textassistenten', exact: true }),

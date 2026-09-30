@@ -79,7 +79,7 @@ during the move.
 ## Import the complete archive
 
 As the destination administrator, follow
-[household import](../user-guide/household-import.md): open **Administrera tillgång**,
+[household import](../user-guide/household-import.md): open **Inställningar**,
 choose **Återimportera hushållet**, select the ZIP and choose
 **Kontrollera importfil**. Read the counts and replacement warning, then
 confirm **Ersätt hushållets innehåll**. Import replaces the destination
@@ -92,6 +92,17 @@ previous content intact. If cleanup is pending, content is already replaced
 and the map stays closed; use **Slutför importens rensning** or correct the
 storage problem and restart. Do not delete the database to clear this state.
 After completion, choose **Läs in det återställda hushållet**.
+
+A current administrator can open the import page in another browser to find
+the same durable attempt, including after restart or loss of the original
+administrator's role. Compare the attempt ID before you continue cleanup.
+Cleanup does not apply the archive again. A browser with a known uncertain
+attempt checks that exact ID before it permits another upload.
+
+An unconfirmed preparation is available only to the administrator who
+uploaded it. That administrator can retrieve its review from another browser
+for up to ten minutes. It does not survive restart. If no valid preparation
+remains, upload and review the file again; no replacement has occurred.
 
 ## Establish current access and private ownership
 
@@ -107,7 +118,7 @@ The administrator then assigns historical private content explicitly:
    Match that current member ID with the intended historical identity using
    your knowledge of the household and its source records. Do not use name,
    email or a coincidentally equal identifier as automatic proof.
-2. In **Administrera tillgång → Koppla historiskt innehåll**, choose
+2. In **Inställningar → Koppla historiskt innehåll**, choose
    **Hämta aktuella innehållskopplingar**. Select the historical name and ID
    under **Historisk innehållsidentitet**, then the verified destination
    member under **Aktuell verifierad medlem**.

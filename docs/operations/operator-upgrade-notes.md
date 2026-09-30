@@ -128,6 +128,19 @@ use the [recovery runbook](recovery.md) to establish fresh authentication and
 verified private-content ownership. Keep only one writable installation after
 cutover. Historical save attempts cannot authorize retries at the destination.
 
+A current administrator can find a confirmed import from another browser,
+including after restart or loss of the original administrator's role. Compare
+the attempt ID and finish cleanup through that attempt; cleanup does not repeat
+the replacement. An unconfirmed review remains available only to its uploader
+for ten minutes and does not survive restart. Review the archive again when
+that temporary preparation is no longer available.
+
+Cancellation of an unconfirmed review removes its temporary files. If removal
+fails, that review cannot replace content. Its uploader can follow the same
+attempt and retry cleanup while household content remains available. Resolve
+storage permissions before retrying. This cleanup is separate from cleanup
+after a committed replacement, which keeps household content unavailable.
+
 ### Permanent household erasure
 
 Allow free persistent disk space for database reconstruction and normal journal

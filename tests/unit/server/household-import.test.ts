@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { unzipSync, zipSync } from 'fflate';
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { applicationFixture } from './fixture.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
@@ -176,15 +176,27 @@ test('a failed replacement rolls back the entire household and returns a durable
   expect((await (await client.request(`${path}/imports/${ready.id}`)).json()).status).toBe(
     'failed',
   );
+  expect((await client.json(`${path}/imports/${ready.id}/cancel`, {})).status).toBe(409);
+  expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
+  expect(await (await client.request(`${path}/imports`)).json()).toMatchObject({
+    attempt: { id: ready.id, status: 'failed', contentVersion: 1, confirmationContentVersion: 1 },
+    ready: null,
+  });
 });
 
 test('upload, confirmation and status require current administrator access to the selected household', async () => {
+  expect(await (await client.request(`${path}/imports`)).json()).toEqual({
+    attempt: null,
+    ready: null,
+  });
   const ready = await (await upload()).json();
+  expect(ready.confirmationContentVersion).toBe(1);
   const body = { contentVersion: 1, confirmed: true };
   fixture.setSubject('robin');
   const member = fixture.client();
   await member.signIn();
   const { user } = await (await member.request('/api/bootstrap')).json();
+  expect((await member.request(`${path}/imports`)).status).toBe(403);
   const { code } = await (await client.json(`${path}/invitations`, { userId: user.id })).json();
   expect((await member.json('/api/invitations/accept', { code })).status).toBe(200);
   for (const [actor, expected] of [
@@ -193,22 +205,165 @@ test('upload, confirmation and status require current administrator access to th
   ] as const) {
     expect((await upload(archive, actor)).status).toBe(expected);
     expect((await actor.json(`${path}/imports/${ready.id}/confirm`, body)).status).toBe(expected);
+    expect((await actor.json(`${path}/imports/${ready.id}/cancel`, {})).status).toBe(expected);
     expect((await actor.request(`${path}/imports/${ready.id}`)).status).toBe(expected);
+    expect((await actor.request(`${path}/imports`)).status).toBe(expected);
   }
   expect((await upload(archive, client, '/api/households/another')).status).toBe(403);
   expect(
     (await client.json(`/api/households/another/imports/${ready.id}/confirm`, body)).status,
   ).toBe(403);
   expect((await client.request(`/api/households/another/imports/${ready.id}`)).status).toBe(403);
+  expect((await client.request('/api/households/another/imports')).status).toBe(403);
+  expect((await client.json(`/api/households/another/imports/${ready.id}/cancel`, {})).status).toBe(
+    403,
+  );
   expect(
     (await client.json(`${path}/members/${user.id}/role`, { role: 'administrator' })).status,
   ).toBe(200);
+  expect(await (await member.request(`${path}/imports`)).json()).toEqual({
+    attempt: null,
+    ready: null,
+  });
   const memberReady = await (await upload(archive, member)).json();
+  expect(await (await member.request(`${path}/imports`)).json()).toEqual({
+    attempt: null,
+    ready: memberReady,
+  });
+  expect(await (await client.request(`${path}/imports`)).json()).toEqual({ attempt: null, ready });
+  expect((await member.request(`${path}/imports/${ready.id}`)).status).toBe(404);
+  expect((await member.json(`${path}/imports/${ready.id}/confirm`, body)).status).toBe(404);
+  expect((await member.json(`${path}/imports/${ready.id}/cancel`, {})).status).toBe(404);
+  for (const origin of [undefined, 'https://foreign.example']) {
+    expect(
+      (
+        await client.request(`${path}/imports/${ready.id}/cancel`, {
+          method: 'POST',
+          headers: origin ? { origin } : {},
+        })
+      ).status,
+    ).toBe(403);
+  }
+  expect(Object.keys(ready).sort()).toEqual([
+    'confirmationContentVersion',
+    'contentVersion',
+    'counts',
+    'expiresAt',
+    'id',
+    'sourceHouseholdId',
+    'status',
+  ]);
+  expect(JSON.stringify(ready)).not.toContain('Lampa');
   expect((await client.json(`${path}/members/${user.id}/revoke`, {})).status).toBe(200);
   expect((await upload(archive, member)).status).toBe(403);
   expect((await member.json(`${path}/imports/${memberReady.id}/confirm`, body)).status).toBe(403);
+  expect((await member.json(`${path}/imports/${memberReady.id}/cancel`, {})).status).toBe(403);
   expect((await member.request(`${path}/imports/${memberReady.id}`)).status).toBe(403);
+  expect((await member.request(`${path}/imports`)).status).toBe(403);
   expect((await (await client.request(`${path}/map`)).json()).contentVersion).toBe(1);
+});
+
+test('cancelled preparation cleanup stays actor-bound and recoverable past expiry without a content gate', async () => {
+  const ready = await (await upload()).json();
+  const directory = join(dirname(fixture.config.databasePath), '.skyttel-imports', ready.id);
+  const before = await (await client.request(`${path}/map`)).json();
+  chmodSync(directory, 0o500);
+  try {
+    const result = await (await client.json(`${path}/imports/${ready.id}/cancel`, {})).json();
+    expect(result).toEqual({ ...ready, status: 'cancel-cleanup' });
+    expect(existsSync(directory)).toBe(true);
+    // A newer ready review must not hide the cleanup that still retains files.
+    const newer = await (await upload()).json();
+    expect(newer.status).toBe('ready');
+    expect(await (await client.request(`${path}/imports`)).json()).toEqual({
+      attempt: null,
+      ready: result,
+    });
+    const now = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now + 11 * 60 * 1000);
+    try {
+      expect(await (await client.request(`${path}/imports/${ready.id}`)).json()).toEqual(result);
+      expect(await (await client.request(`${path}/imports`)).json()).toEqual({
+        attempt: null,
+        ready: result,
+      });
+      expect(
+        (
+          await client.json(`${path}/imports/${ready.id}/confirm`, {
+            confirmed: true,
+            contentVersion: 1,
+          })
+        ).status,
+      ).toBe(409);
+      expect((await client.json(`${path}/imports/${newer.id}/cancel`, {})).status).toBe(404);
+    } finally {
+      clock.mockRestore();
+    }
+    expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
+    expect((await client.json(`${path}/exports`, {})).status).toBe(201);
+    chmodSync(directory, 0o700);
+    expect(await (await client.json(`${path}/imports/${ready.id}/cancel`, {})).json()).toEqual({
+      cancelled: true,
+    });
+    expect(existsSync(directory)).toBe(false);
+    expect((await client.request(`${path}/imports/${ready.id}`)).status).toBe(404);
+    expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
+  } finally {
+    if (existsSync(directory)) chmodSync(directory, 0o700);
+  }
+});
+
+test('simultaneous cancellation and confirmation choose one owner before asynchronous file removal', async () => {
+  const ready = await (await upload()).json();
+  const directory = join(dirname(fixture.config.databasePath), '.skyttel-imports', ready.id);
+  const before = await (await client.request(`${path}/map`)).json();
+  chmodSync(directory, 0o500);
+  try {
+    const [cancellation, confirmation] = await Promise.all([
+      client.json(`${path}/imports/${ready.id}/cancel`, {}),
+      client.json(`${path}/imports/${ready.id}/confirm`, { confirmed: true, contentVersion: 1 }),
+    ]);
+    const status = await (await client.request(`${path}/imports/${ready.id}`)).json();
+    if (status.status === 'cancel-cleanup') {
+      expect(cancellation.status).toBe(200);
+      expect(await cancellation.json()).toEqual(status);
+      expect(confirmation.status).toBe(409);
+      expect(await confirmation.json()).toEqual({ error: 'import_cancelled' });
+      expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
+      chmodSync(directory, 0o700);
+      expect(await (await client.json(`${path}/imports/${ready.id}/cancel`, {})).json()).toEqual({
+        cancelled: true,
+      });
+      expect(await (await client.request(`${path}/imports`)).json()).toEqual({
+        attempt: null,
+        ready: null,
+      });
+    } else {
+      expect(status.status).toBe('cleanup');
+      expect(cancellation.status).toBe(409);
+      expect(await cancellation.json()).toEqual({ error: 'operation_conflict' });
+      expect(confirmation.status).toBe(200);
+      expect(await confirmation.json()).toEqual(status);
+      expect(status.contentVersion).toBe(2);
+      expect((await client.request(`${path}/map`)).status).toBe(409);
+      chmodSync(directory, 0o700);
+      expect(
+        await (
+          await client.json(`${path}/imports/${ready.id}/confirm`, {
+            confirmed: true,
+            contentVersion: 1,
+          })
+        ).json(),
+      ).toMatchObject({ status: 'completed', contentVersion: 2 });
+    }
+    expect(existsSync(directory)).toBe(false);
+    expect(await (await client.request(`${path}/map`)).json()).toEqual({
+      ...before,
+      contentVersion: status.contentVersion,
+    });
+  } finally {
+    if (existsSync(directory)) chmodSync(directory, 0o700);
+  }
 });
 
 test('foreign archive identities never bind by matching login IDs or names and their immutable history remains undoable', async () => {
@@ -349,6 +504,7 @@ test('losing administrator authority during cancellation fails the prepared impo
   expect((await client.request(`${path}/map`)).status).toBe(409);
   expect((await client.json(`${path}/exports`, {})).status).toBe(409);
   expect((await upload()).status).toBe(409);
+  expect((await client.json(`${path}/imports/${ready.id}/cancel`, {})).status).toBe(409);
   expect(
     await (
       await client.json(`${path}/imports/${ready.id}/confirm`, {
@@ -357,6 +513,10 @@ test('losing administrator authority during cancellation fails the prepared impo
       })
     ).json(),
   ).toMatchObject({ status: 'prepared' });
+  expect(await (await other.request(`${path}/imports`)).json()).toMatchObject({
+    attempt: { id: ready.id, status: 'prepared', contentVersion: 1, confirmationContentVersion: 1 },
+    ready: null,
+  });
   expect((await other.json(`${path}/members/${owner.id}/role`, { role: 'member' })).status).toBe(
     200,
   );
@@ -429,14 +589,128 @@ test('failed removal of an aborted upload prevents false completion and a later 
   expect(existsSync(blockedDirectory)).toBe(false);
 });
 
+test('startup discovers the same interrupted prepared import from its committed gate without replacing content', async () => {
+  const before = await (await client.request(`${path}/map`)).json();
+  const ready = await (await upload()).json();
+  let entered = () => {};
+  const reading = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  let cancelled = () => {};
+  const cancelling = new Promise<void>((resolve) => {
+    cancelled = resolve;
+  });
+  let resume = () => {};
+  const released = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  let restored: Awaited<ReturnType<typeof applicationFixture>> | undefined;
+  const uploading = client.request(`${path}/imports`, {
+    method: 'POST',
+    headers: {
+      origin: fixture.config.origin,
+      'content-type': 'application/zip',
+      'X-Skyttel-Content-Version': '1',
+    },
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(archive.slice(0, 1));
+      },
+      pull() {
+        entered();
+        return new Promise<void>(() => {});
+      },
+      cancel() {
+        cancelled();
+        return released;
+      },
+    }),
+    duplex: 'half',
+  } as RequestInit);
+  await reading;
+  const confirmation = client.json(`${path}/imports/${ready.id}/confirm`, {
+    confirmed: true,
+    contentVersion: 1,
+  });
+  try {
+    await cancelling;
+    expect((await client.request(`${path}/map`)).status).toBe(409);
+    expect(await (await client.request(`${path}/imports`)).json()).toMatchObject({
+      attempt: {
+        id: ready.id,
+        status: 'prepared',
+        contentVersion: 1,
+        confirmationContentVersion: 1,
+      },
+      ready: null,
+    });
+    const snapshot = join(dirname(fixture.config.databasePath), 'prepared-backup.sqlite');
+    await fixture.database.backup(snapshot);
+    restored = await applicationFixture({ databaseSnapshot: snapshot });
+    const fresh = restored.client();
+    await fresh.signIn();
+    const discovery = await (await fresh.request(`${path}/imports`)).json();
+    expect(discovery).toEqual({
+      attempt: {
+        id: ready.id,
+        status: 'failed',
+        contentVersion: 1,
+        confirmationContentVersion: 1,
+        counts: {},
+        error: 'import_interrupted',
+      },
+      ready: null,
+    });
+    expect(await (await fresh.request(`${path}/imports/${ready.id}`)).json()).toEqual(
+      discovery.attempt,
+    );
+    expect(await (await fresh.request(`${path}/map`)).json()).toEqual(before);
+    expect((await fresh.json(`${path}/exports`, {})).status).toBe(201);
+    expect(
+      await (
+        await fresh.json(`${path}/imports/${ready.id}/confirm`, {
+          confirmed: true,
+          contentVersion: 1,
+        })
+      ).json(),
+    ).toEqual(discovery.attempt);
+    expect(await (await fresh.request(`${path}/map`)).json()).toEqual(before);
+    expect(readdirSync(join(dirname(restored.config.databasePath), '.skyttel-imports'))).toEqual(
+      [],
+    );
+  } finally {
+    resume();
+    await confirmation;
+    await uploading;
+    restored?.close();
+  }
+});
+
 test('completed outcomes survive repeated confirmation and reject altered confirmation identity', async () => {
   const ready = await (await upload()).json();
   const body = { confirmed: true, contentVersion: 1 };
   const first = await (await client.json(`${path}/imports/${ready.id}/confirm`, body)).json();
-  expect(first).toMatchObject({ status: 'completed', contentVersion: 2 });
+  expect(first).toMatchObject({
+    status: 'completed',
+    contentVersion: 2,
+    confirmationContentVersion: 1,
+  });
+  expect(await (await client.request(`${path}/imports`)).json()).toEqual({
+    attempt: first,
+    ready: null,
+  });
+  expect(Object.keys(first).sort()).toEqual([
+    'confirmationContentVersion',
+    'contentVersion',
+    'counts',
+    'id',
+    'status',
+  ]);
   expect(await (await client.json(`${path}/imports/${ready.id}/confirm`, body)).json()).toEqual(
     first,
   );
+  expect(await (await client.request(`${path}/imports/${ready.id}`)).json()).toEqual(first);
+  expect((await client.json(`${path}/imports/${ready.id}/cancel`, {})).status).toBe(409);
   expect(await (await client.request(`${path}/imports/${ready.id}`)).json()).toEqual(first);
   expect(
     (await client.json(`${path}/imports/${ready.id}/confirm`, { ...body, contentVersion: 2 }))
@@ -450,6 +724,46 @@ test('completed outcomes survive repeated confirmation and reject altered confir
     (await client.json(`${path}/imports/${ready.id}/confirm`, { ...body, extra: true })).status,
   ).toBe(400);
   expect((await client.request(`${path}/imports/missing`)).status).toBe(404);
+  const another = await applicationFixture();
+  try {
+    const administrator = another.client();
+    await administrator.signIn();
+    const created = await administrator.json('/api/households', { name: 'Annat hushåll' });
+    expect(created.status).toBe(201);
+    const { household } = await created.json();
+    const foreignPath = `/api/households/${household.id}/imports`;
+    const discovery = await administrator.request(foreignPath);
+    expect(discovery.status).toBe(200);
+    expect(await discovery.json()).toEqual({ attempt: null, ready: null });
+    expect((await administrator.request(`${foreignPath}/${ready.id}`)).status).toBe(404);
+    expect((await administrator.json(`${foreignPath}/${ready.id}/cancel`, {})).status).toBe(404);
+  } finally {
+    another.close();
+  }
+});
+
+test('discovery never offers an expired unconfirmed archive and leaves household content unchanged', async () => {
+  const ready = await (await upload()).json();
+  const before = await (await client.request(`${path}/map`)).json();
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.parse(ready.expiresAt) + 1);
+  try {
+    expect(await (await client.request(`${path}/imports`)).json()).toEqual({
+      attempt: null,
+      ready: null,
+    });
+    expect((await client.request(`${path}/imports/${ready.id}`)).status).toBe(404);
+    expect(
+      (
+        await client.json(`${path}/imports/${ready.id}/confirm`, {
+          confirmed: true,
+          contentVersion: 1,
+        })
+      ).status,
+    ).toBe(404);
+    expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
+  } finally {
+    clock.mockRestore();
+  }
 });
 
 test('custom definitions, ended facts, removed catalog entries and unsaved private work roundtrip together', async () => {

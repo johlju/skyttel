@@ -9,7 +9,7 @@ koppla varje persons historiska innehåll till rätt nuvarande medlem.
 1. Låt personen logga in på den nya installationen och acceptera en vanlig
    inbjudan. Kontrollera personens aktuella användar-ID tillsammans med
    personen; samma namn eller e-postadress bevisar ingen koppling.
-2. Öppna **Administrera tillgång**, **Koppla historiskt innehåll** och
+2. Öppna **Inställningar → Koppla historiskt innehåll** och
    **Hämta aktuella innehållskopplingar**.
 3. Välj rätt **Historisk innehållsidentitet** med dess stabila ID och rätt
    **Aktuell verifierad medlem**. Läs vem som redan är kopplad och vilka

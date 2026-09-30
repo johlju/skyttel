@@ -149,10 +149,11 @@ microphone”.
 
 1. Starta samtal och mikrofon. Öppna **Nytt objekt** och skriv
    **Gammal oskickad cykel** utan att skicka texten.
-2. Besök **Administrera tillgång**. Välj exportfilen under
-   **Återimportera hushållet**, kontrollera filen och bekräfta uttryckligen
-   att innehållet ska ersättas.
-3. Invänta bekräftad ersättning och mikrofonstopp. Välj **Till hushållet**.
+2. Öppna **Inställningar** och välj **Återimportera hushållet** i
+   sidnavigationen. Välj exportfilen och **Kontrollera importfil**.
+   Granska ersättningen och bekräfta uttryckligen att innehållet ska ersättas.
+3. Invänta bekräftad ersättning och mikrofonstopp. Välj
+   **Läs in det återställda hushållet** och sedan **Tillbaka till kartan**.
 
 **Förväntat resultat:**
 

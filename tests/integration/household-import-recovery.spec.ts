@@ -17,7 +17,7 @@ test('IMPORT-08: an unavailable prepared archive allows fresh review after resta
     const archive = await (
       await page.request.get(`${path}/exports/${(await exported.json()).id}`)
     ).body();
-    await page.goto(`${installation.origin}/households/${household.id}/administration`);
+    await page.goto(`${installation.origin}/households/${household.id}/settings/import`);
     const input = page.getByLabel('Skyttel-export (ZIP)');
     const file = { name: 'skyttel.zip', mimeType: 'application/zip', buffer: archive };
     await input.setInputFiles(file);

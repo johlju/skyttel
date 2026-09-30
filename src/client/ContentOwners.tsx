@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { ContentOwners as OwnerState } from '../shared/content-owners.js';
 import { MapRequestError, request } from './map-request.js';
+import './household-recovery.css';
 
 export function ContentOwners({
   householdId,
@@ -18,6 +19,18 @@ export function ContentOwners({
   const [uncertain, setUncertain] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
+  const loadAction = useRef<HTMLButtonElement>(null);
+  const submittedFocus = useRef<Element | null>(null);
+  useLayoutEffect(() => {
+    if (pending) return;
+    const previous = submittedFocus.current;
+    submittedFocus.current = null;
+    if (
+      previous &&
+      (document.activeElement === previous || document.activeElement === document.body)
+    )
+      loadAction.current?.focus();
+  }, [pending]);
   function fail(failure: unknown, writing: boolean) {
     if (failure instanceof MapRequestError && [401, 403].includes(failure.status)) {
       setState(null);
@@ -43,6 +56,7 @@ export function ContentOwners({
   }
   async function load() {
     if (pending) return;
+    submittedFocus.current = document.activeElement;
     setPending(true);
     setError('');
     setStatus('');
@@ -63,6 +77,7 @@ export function ContentOwners({
   }
   async function assign() {
     if (!state || !identityId || !confirmed || pending || uncertain) return;
+    submittedFocus.current = document.activeElement;
     setPending(true);
     setError('');
     setStatus('');
@@ -90,11 +105,15 @@ export function ContentOwners({
   const memberName = (id: string | null) =>
     state?.members.find((item) => item.userId === id)?.name ?? 'Ingen aktuell medlem';
   return (
-    <section aria-labelledby="content-owners-heading" aria-busy={pending}>
-      <h2 id="content-owners-heading" className="section-heading">
+    <section
+      className="panel content-owners"
+      aria-labelledby="content-owners-heading"
+      aria-busy={pending}
+    >
+      <h1 id="content-owners-heading" tabIndex={-1}>
         Koppla historiskt innehåll
-      </h2>
-      <p>
+      </h1>
+      <p className="recovery-note">
         En importerad identitet ger ingen åtkomst. Koppla dess privata utkast och personliga vy till
         en identifierad medlem som redan har loggat in och fått tillgång här. Jämför personens
         aktuella användar-ID med den historiska identiteten; samma namn eller e-postadress är inget
@@ -104,7 +123,7 @@ export function ContentOwners({
         Medlemskap och inloggningssätt hanteras separat. Den gamla inloggningen behöver inte bevisas
         för denna innehållskoppling. Historiska författare och kvitton ändras inte.
       </p>
-      <button type="button" disabled={pending} onClick={() => void load()}>
+      <button ref={loadAction} type="button" disabled={pending} onClick={() => void load()}>
         Hämta aktuella innehållskopplingar
       </button>
       {state && (
@@ -148,7 +167,15 @@ export function ContentOwners({
           </label>
           {selected && (
             <>
-              <p>
+              <dl className="recovery-facts" aria-label="Vald innehållskoppling">
+                <dt>Vald historisk identitet</dt>
+                <dd>
+                  {selected.name} ({selected.id})
+                </dd>
+                <dt>Avsedd koppling till aktuell medlem</dt>
+                <dd>{userId ? `${memberName(userId)} (${userId})` : 'Ingen aktuell ägare'}</dd>
+              </dl>
+              <p className="recovery-facts">
                 Nuvarande koppling: {memberName(selected.userId)}
                 {selected.userId ? ` (${selected.userId})` : ''}. Den historiska identiteten har{' '}
                 {selected.draftChanges} privata förslag och {selected.positions} personliga
@@ -169,7 +196,7 @@ export function ContentOwners({
                 väntande sparförsök blir ogiltiga; deras utkast och tidigare beständiga kvitton
                 bevaras.
               </p>
-              <label>
+              <label className="recovery-confirmation">
                 <input
                   type="checkbox"
                   checked={confirmed}
@@ -178,7 +205,12 @@ export function ContentOwners({
                 Jag har identifierat rätt person och vill ändra denna innehållskoppling med de
                 visade följderna.
               </label>
-              <button type="button" disabled={!confirmed} onClick={() => void assign()}>
+              <button
+                type="button"
+                className="primary"
+                disabled={!confirmed}
+                onClick={() => void assign()}
+              >
                 Bekräfta innehållskopplingen
               </button>
             </>

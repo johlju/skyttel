@@ -85,6 +85,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 
 - [Återställning och flytt](household-recovery.md): tomma lokala installationer,
   uttrycklig verifierad ägarkoppling, bevarat undanträngt privat arbete,
+  fullständiga valda identiteter utanför vallistorna och förnyad bekräftelse,
+  tappat svar vid identitetskoppling, oberoende privata tillstånd,
   gamla sessioner och sparförsök, omstart och fortsatt export till en tredje
   installation utan gammal databas eller inloggningsbehörighet.
 
@@ -113,10 +115,18 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   återhämtning efter omstart. Radering av en tidigare typ tar bort dess
   sista historiska bildversion utan att ta bort objektets nuvarande bild.
 
-- [Fullständig återimport](household-import.md): uttrycklig ersättning,
+- [Fullständig återimport](household-import.md): egna inställningssidor,
+  bevarat oskickat arbete före innehållsbyte, uttrycklig ersättning,
   bevarad åtkomst, privata uppgifter, bildhistorik, äldre fältbetydelser,
   lokalt prov med tappat sparbesked, avvisade gamla sparbegäranden,
-  ny förberedelse efter omstart och ångring med aktuellt underlag.
+  ny förberedelse efter omstart, samma importförsök i en annan
+  administratörs webbläsare, tappat förberedelsesvar, väntande rensning
+  efter rolländring, uppföljning av rätt försök trots en senare ersättning
+  och ångring med aktuellt underlag. Tangentbord och fokus följs genom
+  filfel, granskning, uttryckligt avbrott av obekräftad förberedelse,
+  avbrottets rensningsfel och tappade svar, flera samtidiga granskningar
+  och fördröjda avbrotts- och statussvar efter navigering. Ersättning och
+  innehållskoppling följs i båda teman.
 
 - [Fullständig export](household-export.md): egen sida i Inställningar,
   privata uppgifter före export, tangentbord, fokus, bevarat kartarbete,

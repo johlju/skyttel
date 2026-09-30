@@ -44,7 +44,7 @@ test('IMPORT-01: an administrator reviews and explicitly replaces household cont
         })
       ).status(),
     ).toBe(200);
-    await page.goto(`${installation.origin}/households/${household.id}/administration`);
+    await page.goto(`${installation.origin}/households/${household.id}/settings/import`);
     await expect(page.getByRole('heading', { name: 'Återimportera hushållet' })).toBeVisible();
     await page
       .getByLabel('Skyttel-export (ZIP)')
