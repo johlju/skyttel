@@ -363,6 +363,7 @@ for (const mode of ['voice', 'text'] as const) {
         name: 'Visa samtals- och utkastdetaljer',
         exact: true,
       });
+      await expect(page.locator('.household-work-background')).toBeInViewport({ ratio: 1 });
       await expect(statusDetails).toBeVisible();
       await expect(page.getByRole('region', { name: 'Aktuell status', exact: true })).toContainText(
         '3 förslag · privat utkast',
@@ -374,6 +375,28 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(
         page.getByText('Oskickat samtalsmeddelande finns kvar.', { exact: false }),
       ).toBeVisible();
+      const retainedWorkStatus = page.getByRole('status').filter({
+        hasText: 'Nya förslag är osparade tills du uttryckligen ber om ett samlat sparande.',
+      });
+      expect(
+        await retainedWorkStatus.evaluate((element) => {
+          const style = getComputedStyle(element);
+          const luminance = (color: string) => {
+            if (!/^rgb\(\d+, \d+, \d+\)$/.test(color))
+              throw new Error(`Expected opaque RGB, received ${color}`);
+            const channels = (color.match(/\d+/g) ?? []).map(Number).map((value) => {
+              const unit = value / 255;
+              return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+            });
+            return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+          };
+          const foreground = luminance(style.color),
+            background = luminance(style.backgroundColor);
+          return (
+            (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+          );
+        }),
+      ).toBeGreaterThanOrEqual(4.5);
       await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
       await expect(statusDetails).toBeFocused();
       const voice = assistant.getByRole('region', { name: 'Skyttels röst', exact: true });

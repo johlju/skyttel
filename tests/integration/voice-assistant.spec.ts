@@ -154,7 +154,11 @@ test('TAL-07: uppmätt ljudaktivitet skiljs från mikrofonpaus och består i Ins
     });
     await assistant(page).getByLabel('Meddelande till textassistenten').fill('Kvar i samtalet');
     await openSettings(page);
+    await expect(
+      page.getByRole('heading', { name: 'Inställningar', level: 1, exact: true }),
+    ).toBeFocused();
     await expect(voice.getByText('Mikrofonen är pausad', { exact: true })).toBeVisible();
+    await expect(voice.getByText('Skyttel talar', { exact: true })).toBeVisible();
     await voice.getByRole('button', { name: 'Återuppta mikrofon' }).click();
     const open = assistant(page).getByRole('button', { name: 'Öppna samtalet', exact: true });
     await open.focus();

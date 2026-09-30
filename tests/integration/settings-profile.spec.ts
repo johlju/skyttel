@@ -45,6 +45,27 @@ for (const width of [1280, 390, 320]) {
       await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
       await expect(name).toHaveValue('Oskickad cykel');
       await expect(name).toBeFocused();
+      await openSettings(page);
+      await page
+        .getByRole('button', { name: 'Visa samtals- och utkastdetaljer', exact: true })
+        .click();
+      await page.getByRole('button', { name: 'Fortsätt redigera', exact: true }).click();
+      await expect(page).toHaveURL(/\/households\/[^/]+$/);
+      await expect(name).toHaveValue('Oskickad cykel');
+      await expect(name).toBeFocused();
+      await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
+      await openSettings(page);
+      await page
+        .getByRole('button', { name: 'Visa samtals- och utkastdetaljer', exact: true })
+        .click();
+      await page.getByRole('button', { name: 'Visa hela utkastet', exact: true }).click();
+      await expect(page).toHaveURL(/\/households\/[^/]+$/);
+      await expect(
+        page.getByRole('heading', { name: 'Hela mitt utkast', exact: true }),
+      ).toBeFocused();
+      await expect(
+        page.getByRole('region', { name: 'Hela mitt utkast', exact: true }),
+      ).toContainText('Oskickad cykel');
     } finally {
       await installation.close();
     }

@@ -45,12 +45,19 @@ editor and focus at 320px”.
 4. På mobil: välj **Välj inställning** och kontrollera att **Översikt**
    är aktuell sida. Kontrollera hushållets och administrationens ingångar.
 5. Välj **Tillbaka till kartan** och fortsätt i samma namnfält.
+6. Besök Inställningar igen. Välj **Visa samtals- och utkastdetaljer**,
+   sedan **Fortsätt redigera**. Kontrollera samma namnfält och fokus.
+7. Lägg cykeln i ditt utkast. Besök Inställningar, öppna statusdetaljerna
+   och välj **Visa hela utkastet**. Kontrollera utkastets rubrikfokus och
+   cykeln; spara inte.
 
 **Förväntat resultat:**
 
 - Inställningar fyller sidan och har egen översikt och sidnavigation.
 - Mobilnavigationen börjar hopfälld och går att öppna med tangentbord.
-- Samma objektpanel, oskickade namn och fältfokus återkommer.
+- Samma objektpanel, oskickade namn och fältfokus återkommer. Även
+  statusytans åtgärder återgår till synligt kartarbete: rätt formulär
+  eller hela det fortfarande privata utkastet.
 
 ### INST-02: typdefinitioner följer kartans samlade sparande
 

@@ -478,7 +478,9 @@ svensk talförståelse, högtalare eller fysisk mikrofon.
    **Mikrofonen är pausad** och fortsatt **Skyttel talar**. `stats()` ska
    visa en öppen anslutning, ett ljudobjekt, levande avstängt mikrofonspår och
    levande påslaget inkommande spår.
-5. Skriv **Kvar i samtalet** utan att skicka. Öppna Inställningar.
+5. Skriv **Kvar i samtalet** utan att skicka. Öppna Inställningar och
+   invänta sidrubrikens fokus. Kräv både **Mikrofonen är pausad** och
+   **Skyttel talar** i den kompakta statusytan.
    Återuppta mikrofonen i kortet. Fokusera **Öppna samtalet** med tangentbord
    och tryck Enter. Kräv kvarvarande text och fokus på samtalspanelens rubrik.
 6. Stoppa den inkommande signalen. **Skyttel talar** försvinner. Stäng

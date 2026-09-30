@@ -298,6 +298,11 @@ export function HouseholdMap({
   }, []);
   const [status, setStatus] = useState('');
   const [statusOpen, setStatusOpen] = useState(false);
+  function returnFromStatus() {
+    setStatusOpen(false);
+    routeOutsideFocus.current = null;
+    if (!active) onReturnToMap?.();
+  }
   const failedProposalOrigin = useRef<HTMLElement | null>(null);
   const [proposalRecoveryFocus, setProposalRecoveryFocus] = useState<{
     origin: Element | null;
@@ -1642,20 +1647,20 @@ export function HouseholdMap({
               }
               onSave={saveDraft}
               onDraft={() => {
-                setStatusOpen(false);
+                returnFromStatus();
                 openPanel(
                   'work',
                   document.getElementById(hasChanges ? 'draft-title' : 'save-operations-title'),
                 );
               }}
               onConflict={(id) => {
-                setStatusOpen(false);
+                returnFromStatus();
                 openPanel('work', document.getElementById(id));
               }}
               onContinue={() => {
-                setStatusOpen(false);
+                returnFromStatus();
                 const objectId = Object.keys(objectDirty).find((id) => objectDirty[id]);
-                if (objectId) openPanel(objectId);
+                if (objectId) openPanel(objectId, lastWorkFocus.current);
                 else openWork('list');
               }}
             />

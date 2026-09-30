@@ -23,6 +23,12 @@
   color-scheme: dark;
 }
 .app-shell.has-settings > main {
+  flex: none;
+  min-height: 0;
+  max-height: 100dvh;
+  gap: 0;
+  align-items: stretch;
+  justify-content: flex-start;
   display: flex;
   flex-direction: column;
   height: 100dvh;
@@ -296,6 +302,15 @@
   background: var(--space-accent);
   color: var(--space-surface);
 }
+.has-settings .household-work-background .workspace-feedback {
+  position: relative;
+  padding-inline-end: 68px;
+}
+.has-settings .household-work-background .assistant-work-status {
+  background: var(--space-surface);
+  color: var(--space-text);
+  border-color: var(--space-line);
+}
 .has-settings .workspace-status-card {
   border: 0;
   border-radius: 0;
@@ -310,7 +325,7 @@
   flex-wrap: wrap;
   gap: 8px 16px;
 }
-.has-settings .workspace-status-card[data-compact="true"] .voice-activity {
+.has-settings .workspace-status-card[data-compact="true"] .voice-waveform {
   display: none;
 }
 .has-settings .workspace-status-card[data-compact="true"] :is(p, .voice-controls) {

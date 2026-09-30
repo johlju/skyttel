@@ -571,6 +571,10 @@ describe('current household access', () => {
       ),
     );
     expect(screen.getByRole('heading', { name: 'Inställningar', level: 1 })).toBeDefined();
+    await userEvent.click(status.getByRole('button', { name: 'Visa samtals- och utkastdetaljer' }));
+    await userEvent.click(status.getByRole('button', { name: 'Sparförsök och kvitton' }));
+    expect(await screen.findByRole('heading', { name: 'Mina sparförsök' })).toBeDefined();
+    expect(screen.queryByRole('heading', { name: 'Inställningar', level: 1 })).toBeNull();
   });
 
   test('keeps loaded membership visible after a temporary background failure', async () => {
