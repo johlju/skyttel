@@ -372,6 +372,11 @@ export function HouseholdMap({
     };
   }, [active, workOpen]);
   const newButton = useRef<HTMLButtonElement>(null);
+  const mergeButton = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (mergeOpen)
+      setPanelFocusRequest({ id: 'work', element: document.getElementById('merge-title') });
+  }, [mergeOpen]);
   const [load, setLoad] = useState(0);
 
   const loseAccess = useCallback(() => {
@@ -718,7 +723,7 @@ export function HouseholdMap({
         setDirty(false);
         setBlocked(false);
         if (document.activeElement === submittedFocus || document.activeElement === document.body) {
-          if (kind === 'undo' || kind === 'resolve')
+          if (kind === 'undo' || kind === 'resolve' || kind === 'merge')
             openPanel('work', document.getElementById('draft-title'));
           else newButton.current?.focus();
         }
@@ -2146,8 +2151,9 @@ export function HouseholdMap({
                       </section>
                     )}
                     <button
+                      ref={mergeButton}
                       type="button"
-                      disabled={pending || dirty || blocked}
+                      disabled={pending || legacyDirty || blocked}
                       onClick={() => {
                         setEdgeEditor(null);
                         setMergeGeneration(state.contentVersion);
@@ -2171,6 +2177,7 @@ export function HouseholdMap({
                         onClose={() => {
                           setMergeOpen(false);
                           setDirty(false);
+                          openPanel('work', mergeButton.current);
                         }}
                       />
                     )}

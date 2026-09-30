@@ -48,17 +48,35 @@ tas inte bort utan ditt val för att kringgå regeln.
 
 ## Rätta eller avstå
 
+Granskningen och andra oskickade formulär finns kvar när du växlar panel
+eller besöker Inställningar. **Stäng sammanslagningen utan att skicka**
+avslutar bara den öppna granskningen; ett redan skickat privat förslag
+finns kvar i utkastet.
+
 Välj **Kasta sammanslagningen för att rätta** om du behöver ändra ett val.
 Dina berörda förslag från före sammanslagningen återkommer och oberoende
 förslag finns kvar. Välj objekten igen, granska aktuella uppgifter och
 lägg ett nytt sammanslagningsförslag i utkastet. Kastning ändrar inte
 den gemensamma kartan.
 
+Om ett berört objekt redan har oskickad text behålls texten, men ett
+äldre formulär får inte skriva över sammanslagningen. Kopiera text du vill
+använda senare innan du väljer **Stäng utan att skicka texten**.
+Att bara stänga objektpanelen kastar inte texten. Hela sparandet och
+kastning av sammanslagningen väntar tills oskickade formulär hanterats.
+
 Om någon ändrar berörda uppgifter eller samband under tiden kan sparandet
 stoppas. Ingen del av sammanslagningen eller resten av utkastet sparas då.
 Hämta aktuellt underlag, hantera beskedet och granska hela resultatet
 innan du ger ett nytt sparbesked. Vid ett oklart resultat kontrollerar
 du det tidigare sparförsöket innan du försöker igen.
+
+Om hämtningen ändrar något av de granskade objekten, sambanden eller deras
+typdefinitioner töms formulärets tidigare uppgiftsval, sambandsval och
+identitetsbekräftelse. Granska det nya underlaget och välj på nytt; ett
+tidigare val får inte automatiskt gälla en ändrad uppgift. Oberoende
+ändringar på andra objekt tömmer inte granskningen. Ditt befintliga
+privata utkast ändras inte av hämtningen eller de nya formulärvalen.
 
 ## Ångra en sparad sammanslagning
 
