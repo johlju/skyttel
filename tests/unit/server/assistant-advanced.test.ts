@@ -163,7 +163,7 @@ test('advanced tools use actual SDK contracts, preserve old read grants and curr
               description: '',
               forwardLabel: 'framåt',
               reverseLabel: 'bakåt',
-              fields: [],
+              fields: [{ id: 'invalid', name: 'Fel', description: '', kind: 'money' }],
             },
           },
         })
@@ -909,7 +909,67 @@ test('MCP creates a household solar type with four field kinds and preserves una
   ).toHaveLength(4);
 });
 
+test('MCP catalog and proposals retain ordered sections, hidden fields and negative values', async () => {
+  const value = {
+    name: 'Solkraft',
+    description: '',
+    sections: [
+      { id: 'service', name: 'Service' },
+      { id: 'facts', name: 'Uppgifter' },
+    ],
+    fields: [
+      { id: 'power', name: 'Effekt', description: '', kind: 'number', sectionId: 'facts' },
+      { id: 'battery', name: 'Batteri', description: '', kind: 'boolean', sectionId: '' },
+    ],
+  };
+  let review = await definition('solar-sections', value);
+  expect(
+    (await tool('read_type_catalog')).types.find(
+      (type: { id: string }) => type.id === 'solar-sections',
+    ),
+  ).toMatchObject(value);
+  review = await tool('propose_object', {
+    ...version(review),
+    id: 'panels',
+    baseRevision: null,
+    value: {
+      typeId: 'solar-sections',
+      name: 'Paneler',
+      description: '',
+      customValues: { power: 0, battery: false },
+    },
+  });
+  await definition(
+    'solar-sections',
+    { ...value, fields: [{ ...value.fields[0], sectionId: 'missing' }] },
+    'invalid_type_definition',
+  );
+  expect((await tool('read_my_draft')).version).toBe(review.version);
+  const receipt = await save('sections');
+  expect(receipt.objectTypes[0].after).toMatchObject(value);
+  expect(receipt.changes[0].type).toMatchObject(value);
+  await app.restart();
+  expect(
+    (await tool('read_type_catalog')).types.find(
+      (type: { id: string }) => type.id === 'solar-sections',
+    ),
+  ).toMatchObject(value);
+  expect((await tool('read_map')).objects[0].customValues).toEqual({ power: 0, battery: false });
+});
+
 test('MCP custom relationship types retain both labels, direction, duplicate reuse and whole definition review', async () => {
+  const sections = [
+    { id: 'facts', name: 'Uppgifter' },
+    { id: 'service', name: 'Service' },
+  ];
+  const fields = ['text', 'number', 'date', 'boolean'].map((kind) => ({
+    id: kind,
+    name: kind,
+    description: '',
+    kind,
+    sectionId: kind === 'boolean' ? '' : 'facts',
+  }));
+  const customValues = { text: 'Övre hyllan', number: 0, date: '2026-09-27', boolean: false };
   let review = await tool('read_my_draft');
   const catalog = await tool('read_type_catalog');
   review = await tool('propose_relationship_type', {
@@ -921,6 +981,8 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
       description: 'Var saken förvaras',
       forwardLabel: 'förvaras i',
       reverseLabel: 'innehåller',
+      fields,
+      sections,
     },
   });
   for (const [id, name] of [
@@ -934,7 +996,13 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
       value: { typeId: catalog.types[0].id, name, description: '' },
     });
   }
-  const edge = { typeId: 'stored', sourceId: 'bike', targetId: 'garage', knowledge: 'known' };
+  const edge = {
+    customValues,
+    typeId: 'stored',
+    sourceId: 'bike',
+    targetId: 'garage',
+    knowledge: 'known',
+  };
   review = await tool('propose_relationship', {
     ...version(review),
     id: 'parking',
@@ -953,12 +1021,14 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
     ...version(repeated),
     id: 'other-kind',
     baseRevision: null,
-    value: { ...edge, typeId: catalog.relationshipTypes[0].id },
+    value: { ...edge, customValues: {}, typeId: catalog.relationshipTypes[0].id },
   });
   const { receipt } = await tool('save_draft', { ...version(review), operationId: 'custom-edges' });
   expect(receipt.relationshipTypes[0].after).toMatchObject({
     forwardLabel: 'förvaras i',
     reverseLabel: 'innehåller',
+    sections,
+    fields,
   });
   await app.restart();
   const state = await tool('read_map', { objectId: 'garage' });
@@ -967,8 +1037,79 @@ test('MCP custom relationship types retain both labels, direction, duplicate reu
     sourceId: 'bike',
     targetId: 'garage',
     typeId: 'stored',
+    customValues,
   });
   expect(
     state.relationshipTypes.find((item: { id: string }) => item.id === 'stored'),
-  ).toMatchObject({ forwardLabel: 'förvaras i', reverseLabel: 'innehåller' });
+  ).toMatchObject({ forwardLabel: 'förvaras i', reverseLabel: 'innehåller', sections, fields });
+});
+
+test('MCP catalogs and proposals keep canonical property layout separate from complete object facts', async () => {
+  const sdk = new Client({ name: 'Gemensamma egenskaper', version: '1' });
+  try {
+    await sdk.connect(
+      new StreamableHTTPClientTransport(new URL(`${app.origin}/mcp`), {
+        requestInit: { headers: { authorization: `Bearer ${token}` } },
+      }),
+    );
+    const catalog = (await sdk.listTools()).tools;
+    const objectSchema = JSON.stringify(
+      catalog.find(({ name }) => name === 'propose_object_type')?.inputSchema,
+    );
+    expect(objectSchema).toContain('"builtins"');
+    expect(objectSchema).toContain('"propertyOrder"');
+    expect(
+      JSON.stringify(catalog.find(({ name }) => name === 'propose_relationship_type')?.inputSchema),
+    ).not.toContain('"builtins"');
+    let review = await tool('read_my_draft');
+    const value = {
+      name: 'Avtalsuppgifter',
+      description: '',
+      fields: [],
+      sections: [{ id: 'facts', name: 'Uppgifter' }],
+      builtins: [{ key: 'debt', name: 'Återstående skuld', sectionId: 'facts' }],
+      propertyOrder: ['builtin:debt'],
+    };
+    const { fields: _fields, ...stored } = value;
+    for (const invalid of [
+      { ...value, builtins: [{ key: 'name', name: 'Namn', sectionId: 'facts' }] },
+      { ...value, builtins: [{ key: 'debt', name: 'Skuld', sectionId: 'facts', kind: 'number' }] },
+    ]) {
+      const result = await sdk.callTool({
+        name: 'propose_object_type',
+        arguments: { ...version(review), id: 'canonical', baseRevision: null, value: invalid },
+      });
+      expect(result.isError).toBe(true);
+      expect(await tool('read_my_draft')).toEqual(review);
+    }
+    review = await definition('canonical', value);
+    const types = await tool('read_type_catalog');
+    expect(types.types.find((type: { id: string }) => type.id === 'canonical')).toMatchObject(
+      stored,
+    );
+    const financialFacts = {
+      debt: { knowledge: 'uncertain', value: '12 300', reportedOn: '2026-09-01' },
+      price: { knowledge: 'unknown' },
+      currency: { knowledge: 'none' },
+    };
+    review = await tool('propose_object', {
+      ...version(review),
+      id: 'loan',
+      baseRevision: null,
+      typeRevision: 1,
+      value: { typeId: 'canonical', name: 'Lånet', description: 'Gemensam text', financialFacts },
+    });
+    const receipt = await save('canonical');
+    expect(receipt.objectTypes[0].after).toMatchObject(stored);
+    expect(receipt.changes[0]).toMatchObject({ type: stored, after: { financialFacts } });
+    await app.restart();
+    expect((await tool('read_map')).objects[0].financialFacts).toEqual(financialFacts);
+    expect(
+      (await tool('read_type_catalog')).types.find(
+        (type: { id: string }) => type.id === 'canonical',
+      ),
+    ).toMatchObject(stored);
+  } finally {
+    await sdk.close();
+  }
 });

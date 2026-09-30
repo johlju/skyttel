@@ -32,9 +32,6 @@ function serve(routes: Record<string, Reply[]>) {
     },
   ];
   routes['/api/households/linden/map/operations'] ??= [{ data: { operations: [] } }];
-  routes['/api/households/linden/map/view'] ??= [
-    { data: { positions: [], settings: { ...defaultViewSettings, version: 0 } } },
-  ];
   const fetch = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
     const path =
       typeof input === 'string'
@@ -42,7 +39,17 @@ function serve(routes: Record<string, Reply[]>) {
         : input instanceof URL
           ? input.pathname
           : new URL(input.url).pathname;
-    const reply = routes[path]?.shift();
+    const reply =
+      routes[path]?.shift() ??
+      (path === '/api/households/linden/map/view'
+        ? {
+            data: {
+              contentVersion: 1,
+              positions: [],
+              settings: { ...defaultViewSettings, version: 0 },
+            },
+          }
+        : undefined);
     if (!reply) {
       unexpectedRequests.push(path);
       throw new Error(`Unexpected synthetic HTTP request: ${path}`);
@@ -123,6 +130,7 @@ describe('Skyttel application interface', () => {
       serve({ '/api/bootstrap': [{ data: anonymous }], '/api/auth/sign-in/social': [reply] });
       mount();
       await userEvent.click(await screen.findByRole('button', { name: 'Fortsätt med Google' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Fortsätt till Google' }));
       expect((await screen.findByRole('alert')).textContent).toContain(
         'Inloggningen kunde inte slutföras',
       );
@@ -144,8 +152,9 @@ describe('Skyttel application interface', () => {
       await userEvent.click(
         await screen.findByRole('button', { name: `Fortsätt med ${provider}` }),
       );
+      await userEvent.click(screen.getByRole('button', { name: `Fortsätt till ${provider}` }));
       expect((await screen.findByRole('status')).textContent).toBe(
-        'Du skickas vidare för att logga in.',
+        `Öppnar ${provider} för att verifiera din inloggning…`,
       );
       expect(
         (screen.getByRole('button', { name: `Öppnar ${provider}…` }) as HTMLButtonElement).disabled,
@@ -251,6 +260,7 @@ describe('Skyttel application interface', () => {
       mount();
       expect(await screen.findByRole('heading', { name: 'Hushållet Linden' })).toBeDefined();
       expect(screen.getByText(role === 'administrator' ? 'Administratör' : 'Medlem')).toBeDefined();
+      await userEvent.click(screen.getByRole('button', { name: 'Din profil' }));
       expect(screen.getByRole('heading', { name: 'Din Skyttel-användare' })).toBeDefined();
       const userId = screen.getByRole('textbox', { name: 'Ditt Skyttel-användar-ID' });
       expect((userId as HTMLInputElement).value).toBe('alex');
@@ -265,6 +275,11 @@ describe('Skyttel application interface', () => {
         expect(invitationHint).not.toBeNull();
         expect(userId.getAttribute('aria-describedby')).toBe(invitationHint?.id);
       }
+      await userEvent.click(screen.getByRole('button', { name: 'Tillbaka till arbetet' }));
+      expect(screen.queryByRole('region', { name: 'Din profil' })).toBeNull();
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Visa verktygens namn' }),
+      );
     },
   );
 

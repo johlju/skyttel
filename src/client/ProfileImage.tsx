@@ -1,11 +1,39 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { ObjectValue } from '../shared/map.js';
+import { objectIconLabel } from '../shared/object-icons.js';
+import { SpatialObjectGlyph } from './SpatialObjectGlyph.js';
 
-export function ProfileImage({ householdId, value }: { householdId: string; value: ObjectValue }) {
+export function ProfileImage({
+  householdId,
+  value,
+  typeName,
+  compact = false,
+}: {
+  compact?: boolean;
+  householdId: string;
+  value: ObjectValue;
+  typeName?: string;
+}) {
   const [failed, setFailed] = useState<string | null>(null);
+  const fallback = (
+    <div className="object-appearance">
+      <SpatialObjectGlyph
+        householdId={householdId}
+        name={value.name}
+        typeName={typeName ?? ''}
+        iconId={value.iconId}
+      />
+      <span className={compact ? 'object-icon-text' : undefined}>
+        Ikon: {objectIconLabel(value.iconId, typeName)}
+      </span>
+    </div>
+  );
   return value.profileImageId ? (
     failed === value.profileImageId ? (
-      <p>Profilbilden kunde inte hämtas. Hämta aktuellt underlag.</p>
+      <>
+        <p>Profilbilden kunde inte hämtas. Hämta aktuellt underlag.</p>
+        {fallback}
+      </>
     ) : (
       <img
         className="profile-image"
@@ -17,7 +45,10 @@ export function ProfileImage({ householdId, value }: { householdId: string; valu
       />
     )
   ) : (
-    <p>Ingen profilbild</p>
+    <>
+      {!compact && <p>Ingen profilbild</p>}
+      {fallback}
+    </>
   );
 }
 
@@ -26,16 +57,19 @@ export function ProfileImageEditor({
   value,
   disabled,
   onChange,
+  typeName,
 }: {
   householdId: string;
   value: ObjectValue;
   disabled: boolean;
+  typeName?: string;
   onChange: (file: File | null) => void;
 }) {
+  const inputId = useId();
   return (
     <div className="profile-image-editor">
       <h3>Profilbild</h3>
-      <ProfileImage householdId={householdId} value={value} />
+      <ProfileImage householdId={householdId} value={value} typeName={typeName} />
       <p>
         JPEG, PNG eller WebP, högst 10 MB och 40 miljoner bildpunkter. Bilden blir högst 300 × 300
         bildpunkter. En animerad bild blir en stillbild.
@@ -44,9 +78,9 @@ export function ProfileImageEditor({
         Lägg först objektet och eventuell oskickad text i ditt utkast. Bildvalet blir sedan ett
         privat förslag. Spara hela utkastet för att dela det.
       </p>
-      <label htmlFor="profile-image">Välj profilbild</label>
+      <label htmlFor={inputId}>Välj profilbild</label>
       <input
-        id="profile-image"
+        id={inputId}
         type="file"
         accept="image/jpeg,image/png,image/webp"
         disabled={disabled}

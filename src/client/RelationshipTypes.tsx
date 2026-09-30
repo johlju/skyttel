@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { RelationshipType } from '../shared/map.js';
+import { objectTypePresentation } from '../shared/map.js';
+import { TypeFieldsDefinition, TypeFieldsDetails } from './ObjectTypes.js';
 
 export function RelationshipTypeDetails({ type }: { type: RelationshipType | null }) {
   return type ? (
@@ -8,6 +10,7 @@ export function RelationshipTypeDetails({ type }: { type: RelationshipType | nul
       <p>{type.description || 'Ingen beskrivning'}</p>
       <p>Benämning från startobjektet: {type.forwardLabel ?? type.name}</p>
       <p>Benämning från målobjektet: {type.reverseLabel ?? 'Visar den ursprungliga riktningen'}</p>
+      <TypeFieldsDetails type={type} />
     </>
   ) : (
     <p>Finns inte i kartan</p>
@@ -27,22 +30,36 @@ export function RelationshipTypeEditor({
   stale: boolean;
   onDirty: () => void;
   onSubmit: (
-    value: Pick<RelationshipType, 'name' | 'description' | 'forwardLabel' | 'reverseLabel'> | null,
+    value: Pick<
+      RelationshipType,
+      'name' | 'description' | 'forwardLabel' | 'reverseLabel' | 'fields' | 'sections'
+    > | null,
   ) => void;
   onClose: () => void;
 }) {
   const [value, setValue] = useState({
+    ...objectTypePresentation(initial),
     name: initial.name,
     description: initial.description,
     forwardLabel: initial.forwardLabel ?? initial.name,
     reverseLabel: initial.reverseLabel ?? '',
   });
-  function change(key: keyof typeof value, text: string) {
+  const form = useRef<HTMLFormElement>(null);
+  function change(key: Exclude<keyof typeof value, 'fields' | 'sections'>, text: string) {
     onDirty();
     setValue({ ...value, [key]: text });
   }
   return (
     <form
+      ref={form}
+      className="object-type-editor"
+      onInvalidCapture={(event) => {
+        let parent = (event.target as HTMLElement).parentElement;
+        while (parent && parent !== form.current) {
+          if (parent instanceof HTMLDetailsElement) parent.open = true;
+          parent = parent.parentElement;
+        }
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit(value);
@@ -86,9 +103,17 @@ export function RelationshipTypeEditor({
           onChange={(event) => change('reverseLabel', event.target.value)}
         />
         <p>
-          Alla objekt kan kopplas samman. Typen har inga egna fält. Lika namn betyder inte samma
-          typ.
+          Alla objekt kan kopplas samman. Egna fält får lämnas obesvarade. Lika namn betyder inte
+          samma typ. Skapa ett nytt fält om en använd uppgift behöver annat värdeslag.
         </p>
+        <TypeFieldsDefinition
+          value={value}
+          stale={stale}
+          onChange={(presentation) => {
+            onDirty();
+            setValue({ ...value, ...presentation });
+          }}
+        />
         {stale && (
           <p role="alert">
             Formuläret bygger på ett äldre utkast. Kopiera text du vill behålla och öppna
@@ -99,8 +124,8 @@ export function RelationshipTypeEditor({
           Lägg sambandstypen i mitt utkast
         </button>
         <p>
-          En använd typ kan inte tas bort. Ta bort eller byt typ på sambanden först, även upphörda
-          samband och förslag i privata utkast. Objekten kan finnas kvar.
+          Använda typer och fält kan inte tas bort. Ta bort eller byt typ på sambanden först, även
+          upphörda samband och förslag i privata utkast. Objekten kan finnas kvar.
         </p>
         {initial.revision > 0 && (
           <button type="button" disabled={stale} onClick={() => onSubmit(null)}>

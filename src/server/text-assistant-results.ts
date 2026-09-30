@@ -8,6 +8,9 @@ import type {
   RelationshipValue,
   SaveReceipt,
 } from '../shared/map.js';
+import { objectTypePresentation } from '../shared/map.js';
+import { objectIconLabel } from '../shared/object-icons.js';
+import { builtinPresentationChanges } from '../shared/object-properties.js';
 import type { TextAssistantResult, TextAssistantReview } from '../shared/text-assistant.js';
 
 function fact(value: FinancialFact | undefined) {
@@ -61,12 +64,46 @@ function typeDetails(
   after: (ObjectType & RelationshipType) | null,
 ) {
   const fields = [
+    ...builtinPresentationChanges(before, after),
     ...(before && after ? difference('namn', before.name, after.name) : []),
     ...difference('beskrivning', description(before?.description), description(after?.description)),
   ];
+  const previousPresentation = objectTypePresentation(before ?? {});
+  const nextPresentation = objectTypePresentation(after ?? {});
+  const placement = (type: ObjectType | null, id: string) => {
+    const presentation = objectTypePresentation(type ?? {});
+    const field = presentation.fields.find((field) => field.id === id);
+    return field
+      ? (presentation.sections.find(({ id }) => id === field.sectionId)?.name ??
+          'Dold, behåll värden')
+      : 'ej angivet';
+  };
+  if (before?.sections || after?.sections) {
+    for (const id of new Set(
+      [...previousPresentation.sections, ...nextPresentation.sections].map(({ id }) => id),
+    ))
+      fields.push(
+        ...difference(
+          'Avsnitt',
+          previousPresentation.sections.find((section) => section.id === id)?.name ?? 'ej angivet',
+          nextPresentation.sections.find((section) => section.id === id)?.name ?? 'ej angivet',
+        ),
+      );
+    if (
+      JSON.stringify(previousPresentation.sections.map(({ id }) => id)) !==
+      JSON.stringify(nextPresentation.sections.map(({ id }) => id))
+    )
+      fields.push(
+        ...difference(
+          'Avsnittens ordning',
+          previousPresentation.sections.map(({ name }) => name).join(', ') || 'inga',
+          nextPresentation.sections.map(({ name }) => name).join(', ') || 'inga',
+        ),
+      );
+  }
   for (const id of new Set(
     [...(before?.fields ?? []), ...(after?.fields ?? [])].map((field) => field.id),
-  ))
+  )) {
     fields.push(
       ...difference(
         'Eget fält',
@@ -74,6 +111,14 @@ function typeDetails(
         fieldDefinition(after?.fields?.find((field) => field.id === id)),
       ),
     );
+    fields.push(
+      ...difference(
+        `Placering av ${after?.fields?.find((field) => field.id === id)?.name ?? before?.fields?.find((field) => field.id === id)?.name}`,
+        placement(before, id),
+        placement(after, id),
+      ),
+    );
+  }
   const oldOrder =
     before?.fields?.filter((field) => after?.fields?.some(({ id }) => id === field.id)) ?? [];
   const newOrder =
@@ -138,6 +183,10 @@ function details(
       );
     if (change.before?.identity !== change.after?.identity)
       fields.push(`Identitet: ${identity(change.before)} → ${identity(change.after)}`);
+    if (change.before?.iconId !== change.after?.iconId)
+      fields.push(
+        `Ikon: ${objectIconLabel(change.before?.iconId, beforeType?.name)} → ${objectIconLabel(change.after?.iconId, change.type.name)}`,
+      );
     if (change.before?.profileImageId !== change.after?.profileImageId)
       fields.push(
         `Profilbild: ${change.before?.profileImageId ? 'bild finns' : 'ingen bild'} → ${change.after?.profileImageId ? 'ny bild' : 'ingen bild'}`,
@@ -201,6 +250,19 @@ function details(
         ? `${beforeDescription} → ${afterDescription}`
         : afterDescription;
     const fields: string[] = [];
+    for (const field of new Map(
+      [...(beforeType?.fields ?? []), ...(change.type.fields ?? [])].map((field) => [
+        field.id,
+        field,
+      ]),
+    ).values())
+      fields.push(
+        ...difference(
+          field.name,
+          customValue(change.before?.customValues?.[field.id]),
+          customValue(change.after?.customValues?.[field.id]),
+        ),
+      );
     if (change.before && change.after && change.before.typeId !== change.after.typeId)
       fields.push(`sambandstyp: ${beforeType?.name ?? 'okänd sambandstyp'} → ${change.type.name}`);
     if (change.before?.lifecycle !== change.after?.lifecycle)

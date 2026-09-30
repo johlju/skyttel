@@ -93,7 +93,9 @@ test('separates full-month hosting from reported AI usage and labels missing val
   expect(terra.textContent).toContain(
     'Begärd Terra-modell antas eftersom leverantörens modelluppgift saknas: 1',
   );
-  expect(screen.getByText(/Delsumma för beräkningsbara delar/).textContent).toContain('75,83 SEK');
+  expect(screen.getByRole('region', { name: 'Månadens kostnadsöversikt' }).textContent).toContain(
+    '75,83 SEK',
+  );
   expect(screen.getByText(/inte leverantörens slutliga faktura/)).toBeDefined();
   expect(screen.getByText(/200 kronor/)).toBeDefined();
   expect(
@@ -321,9 +323,13 @@ test('changing the month clears the previous display and ignores its delayed rep
   render(<Costs onAccessLost={vi.fn()} />);
   fireEvent.change(screen.getByLabelText('Månad (UTC)'), { target: { value: '2001-02' } });
   expect(await screen.findByText(/Månaden har ofullständig mätning/)).toBeDefined();
-  expect(screen.getByText(/Delsumma för beräkningsbara delar/).textContent).toContain('99,00 SEK');
+  expect(screen.getByRole('region', { name: 'Månadens kostnadsöversikt' }).textContent).toContain(
+    '99,00 SEK',
+  );
   await act(async () => release(Response.json(sample)));
-  expect(screen.getByText(/Delsumma för beräkningsbara delar/).textContent).toContain('99,00 SEK');
+  expect(screen.getByRole('region', { name: 'Månadens kostnadsöversikt' }).textContent).toContain(
+    '99,00 SEK',
+  );
   expect(paths).toContain('/api/operator/costs?month=2001-02');
 });
 

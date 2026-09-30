@@ -2,14 +2,26 @@
 
 [Till användarguidens innehåll](README.md)
 
-Öppna **Skyttels textassistent** i hushållets karta. Godkänn separat att
+Välj **Prata med Skyttel** eller **Samtal och text** i hushållets karta.
+Den gemensamma starten erbjuder både **Starta talsamtal** och
+**Starta textassistenten**. Godkänn separat att
 OpenAI behandlar uppgifter och att assistenten får föreslå ändringar och
 spara när du ber om det. Detta är skilt från cookieval och andra klienters
 medgivanden. Om assistenten inte är tillgänglig fungerar kartans formulär.
 
-Assistenten finns i kartans detaljdel. I rymdkartans helskärmsvy väljer du
-**Visa detaljer och utkast** för att öppna den. Samtalet och oskickad text
-finns kvar när du växlar tillbaka till kartan.
+Samtalspanelen kan stängas utan att samtalet avslutas. Det kompakta kortet
+visar fortfarande status, nödvändiga frågor och fel. **Öppna samtalet**
+tar dig tillbaka till dialogen, även från Inställningar. Samtalet och
+oskickad text finns kvar när du växlar tillbaka till kartan.
+I korta fönster kan du rulla ned till samtalskortet och panelväljaren.
+Vid en begärd kartmarkering visas kartan och uppgifterna bredvid varandra
+så att kortet inte täcker dem. Verktygsradens mikrofonkontroll finns kvar.
+
+På Inställningar har sidans innehåll och samtalets kompakta status var sitt
+utrymme. Mikrofonkontroller, nödvändiga frågor, fel och sparstatus finns
+kvar. Välj **Visa samtals- och utkastdetaljer** för ytterligare uppgifter
+om samtalet och ditt privata arbete. **Stäng aktuell status** återgår
+till den kompakta vyn. I korta fönster kan båda områdena rullas var för sig.
 
 Beskriv vad du vill hitta, lägga till eller rätta. Assistenten använder
 hushållets egna typer och ditt befintliga privata utkast. Förslag från
@@ -30,9 +42,16 @@ Om rösten inte startar visar felmeddelandet vad du kan prova. Om det visar
 felsökning. Du kan fortsätta med text och formulär under tiden.
 
 **Lyssnar** betyder att rösten är ansluten. **Assistenten arbetar** visar
-att ett uppdrag pågår, med ökande tid längst ned på skärmen.
+att ett uppdrag pågår, med ökande tid i samtalskortet.
 Om ett sparresultat är oklart visas att det tidigare
 sparförsöket måste kontrolleras innan nya ändringar.
+
+Mikrofonen visas separat som **av**, **på** eller **pausad**.
+Vågformen rör sig när anslutningen bär ljud och står stilla i tystnad.
+**Du talar** respektive **Skyttel talar** följer mikrofonens och
+uppspelningens ljudaktivitet. Med minskad rörelse står vågformen stilla
+även under ljud; statusen finns kvar. En nödvändig fråga visas med
+**Svara i samtalet** så att du kan öppna dialogen och svara.
 
 Skyttel ger korta resultatbesked, exempelvis **Utkastet är uppdaterat**
 eller **Sparat**, utan att läsa upp ändringarna efter varje steg.
@@ -116,7 +135,8 @@ avslutas. Ett oklart sparresultat behöver kontrolleras innan ett nytt
 uppdrag kan börja.
 
 **Stäng av rösten** behåller den synliga dialogen i det pågående samtalet.
-**Avsluta textassistenten** tar bort anslutningen och samtalsminnet.
+**Avsluta samtalet**, under **Samtalskontroller** i det kompakta kortet,
+tar bort anslutningen och samtalsminnet.
 Dialogen försvinner också vid omladdning eller när åtkomsten upphör.
 Anslutningen upphör senast efter 30 minuter eller när dess medgivande
 återkallas. Utkast, sparade uppgifter och kvitton finns kvar. Återimport

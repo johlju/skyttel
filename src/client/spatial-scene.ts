@@ -44,13 +44,43 @@ export function spatialScene(
   // adapter; Three retains camera projection and public orbit mathematics.
   controls.disconnect();
   let settings: Pick<ViewSettings, 'invertX' | 'invertY'> = { invertX: false, invertY: false };
+  let selection: string[] = [];
+  let rotating = false;
+  function rotate(x: number, y: number) {
+    const selected = selection.flatMap((id) =>
+      locations.has(id) ? [locations.get(id) as Vector3] : [],
+    );
+    const pivot = new Vector3();
+    for (const position of selected) pivot.add(position);
+    if (selected.length) pivot.divideScalar(selected.length);
+    // Rotate the entire camera frame about the personal selection center.
+    // Retain its camera-space coordinates, including depth, so changing the
+    // selection never recenters the image or creates a jump at gesture start.
+    const offset = pivot
+      .clone()
+      .sub(camera.position)
+      .applyQuaternion(camera.quaternion.clone().invert());
+    rotating = true;
+    controls.rotateLeft(x);
+    controls.rotateUp(y);
+    controls.update();
+    if (selected.length) {
+      const translation = pivot
+        .clone()
+        .sub(offset.applyQuaternion(camera.quaternion))
+        .sub(camera.position);
+      camera.position.add(translation);
+      controls.target.add(translation);
+      controls.update();
+    }
+    rotating = false;
+    draw();
+  }
   const gestures = cameraGestures(
     canvas,
     {
       rotate(x, y) {
-        controls.rotateLeft(x);
-        controls.rotateUp(y);
-        controls.update();
+        rotate(x, y);
         onMotion();
       },
       pan(x, y) {
@@ -137,11 +167,14 @@ export function spatialScene(
   let lost = false;
   let needsFrame = true;
   let overviewDistance = 30;
+  let overviewReturn: { position: Vector3; target: Vector3; distance: number } | null = null;
   function draw() {
-    if (lost) return;
+    if (lost || rotating) return;
     camera.updateMatrixWorld();
-    // The distant sky uses orientation and zoom only, so neither camera
-    // translation nor object placement gives it parallax or domain meaning.
+    // A bounded translation gives the distant sky gentle pan parallax without
+    // ever leaving its sphere. Personal object movement does not move the sky.
+    skyCamera.position.copy(controls.target).multiplyScalar(30 / overviewDistance);
+    skyCamera.position.multiplyScalar(150 / (150 + skyCamera.position.length()));
     skyCamera.quaternion.copy(camera.quaternion);
     skyCamera.aspect = camera.aspect;
     skyCamera.fov = Math.max(15, Math.min(110, 45 * Math.sqrt(controls.getDistance() / 30)));
@@ -305,6 +338,81 @@ export function spatialScene(
       else draw();
     },
     reset,
+    select(ids: string[]) {
+      selection = [...ids];
+    },
+    toggleOverview() {
+      if (overviewReturn) {
+        camera.position.copy(overviewReturn.position);
+        controls.target.copy(overviewReturn.target);
+        overviewDistance = overviewReturn.distance;
+        overviewReturn = null;
+        controls.update();
+        draw();
+      } else {
+        overviewReturn = {
+          position: camera.position.clone(),
+          target: controls.target.clone(),
+          distance: overviewDistance,
+        };
+        reset();
+      }
+      onMotion();
+      return Boolean(overviewReturn);
+    },
+    focus(ids: string[], area: { left: number; right: number; top: number; bottom: number }) {
+      const values = ids.flatMap((id) =>
+        nodes.has(id) && locations.has(id) ? [locations.get(id) as Vector3] : [],
+      );
+      if (
+        !values.length ||
+        !canvas.clientWidth ||
+        !canvas.clientHeight ||
+        !Object.values(area).every(Number.isFinite) ||
+        area.right <= area.left ||
+        area.bottom <= area.top
+      )
+        return false;
+      needsFrame = false;
+      camera.aspect = canvas.clientWidth / canvas.clientHeight;
+      camera.updateProjectionMatrix();
+      const inverse = camera.quaternion.clone().invert();
+      const oriented = values.map((position) => position.clone().applyQuaternion(inverse));
+      const center = new Box3().setFromPoints(oriented).getCenter(new Vector3());
+      const tangent = Math.tan((camera.fov * Math.PI) / 360);
+      const left = ((2 * area.left) / canvas.clientWidth - 1) * tangent * camera.aspect;
+      const right = ((2 * area.right) / canvas.clientWidth - 1) * tangent * camera.aspect;
+      const top = (1 - (2 * area.top) / canvas.clientHeight) * tangent;
+      const bottom = (1 - (2 * area.bottom) / canvas.clientHeight) * tangent;
+      const offsetX = (left + right) / 2;
+      const offsetY = (top + bottom) / 2;
+      const distance = Math.max(
+        5,
+        ...oriented.map((position) => {
+          const point = position.clone().sub(center);
+          return Math.max(
+            point.z + 2,
+            (point.x + point.z * right) / (right - offsetX),
+            (-point.x - point.z * left) / (offsetX - left),
+            (point.y + point.z * top) / (top - offsetY),
+            (-point.y - point.z * bottom) / (offsetY - bottom),
+          );
+        }),
+      );
+      // Aim at the free rectangle's center without changing camera direction.
+      const target = center
+        .clone()
+        .sub(new Vector3(offsetX * distance, offsetY * distance, 0))
+        .applyQuaternion(camera.quaternion);
+      controls.target.copy(target);
+      camera.position
+        .copy(target)
+        .add(new Vector3(0, 0, distance).applyQuaternion(camera.quaternion));
+      controls.update();
+      draw();
+      onMotion();
+      return true;
+    },
     openLabelView() {
       if (!canvas.clientWidth || !canvas.clientHeight) return false;
       const bounds = new Box3().setFromPoints([...nodes].map((id) => locations.get(id) as Vector3));
@@ -343,10 +451,10 @@ export function spatialScene(
       onMotion();
       return true;
     },
-    configure(value: ViewSettings) {
+    configure(value: ViewSettings, theme: 'light' | 'dark' = 'dark') {
       settings = value;
       stars.visible = value.stars;
-      sky.background = new Color(value.stars ? '#09121f' : '#132e25');
+      sky.background = new Color(theme === 'light' ? '#eef3f3' : '#101b29');
       draw();
     },
     beginCameraGesture: gestures.beginTouch,
@@ -382,10 +490,10 @@ export function spatialScene(
       if (command === 'right') controls.pan(-50 * (settings.invertX ? -1 : 1), 0);
       if (command === 'up') controls.pan(0, 50 * (settings.invertY ? -1 : 1));
       if (command === 'down') controls.pan(0, -50 * (settings.invertY ? -1 : 1));
-      if (command === 'rotate-left') controls.rotateLeft(0.15);
-      if (command === 'rotate-right') controls.rotateLeft(-0.15);
-      if (command === 'tilt-up') controls.rotateUp(0.15);
-      if (command === 'tilt-down') controls.rotateUp(-0.15);
+      if (command === 'rotate-left') rotate(0.15, 0);
+      if (command === 'rotate-right') rotate(-0.15, 0);
+      if (command === 'tilt-up') rotate(0, 0.15);
+      if (command === 'tilt-down') rotate(0, -0.15);
       if (command === 'in') controls.dollyIn(0.8);
       if (command === 'out') controls.dollyOut(0.8);
       controls.update();

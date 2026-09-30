@@ -17,24 +17,69 @@ privata utkast, tillsammans med objekt och samband du föreslår.
 1. Välj **Ny sambandstyp**. Ange ett namn som hjälper hushållet att välja
    rätt betydelse och en förklarande beskrivning.
 2. Ange benämningarna från startobjektet och målobjektet, till exempel
-   **förvaras i** och **innehåller**. Lägg sambandstypen i ditt utkast.
+   **förvaras i** och **innehåller**. Lägg vid behov till egna fält med
+   namn, beskrivning och värdeslaget Text, Tal, Datum eller Ja/nej.
+   Lägg sambandstypen i ditt utkast.
 3. Välj **Nytt samband**, startobjekt, sambandstyp och målobjekt. Alla
    objekt kan väljas, oavsett deras objekttyper. Typen är obligatorisk.
 4. Lägg sambandet i ditt utkast. Granska definitionen, riktningen och
    objekten i **Hela mitt utkast**. Välj **Spara hela utkastet** när allt
    stämmer. Kvittot omfattar definitionen och kopplingen tillsammans.
 
-Sambandstyper har inga egna fält. Sambandets säkerhet, status och slutdatum
+Sambandets säkerhet, status och slutdatum
 följer de vanliga reglerna för [upphört och borttaget](lifecycle.md).
 Lika namn betyder inte samma typ; kontrollera beskrivningen och riktningen
 innan du väljer. Skyttel slår inte ihop typer för att namnen liknar varandra.
 
+## Egna uppgifter på samband
+
+Förifyllda och egna sambandstyper kan ha valfria egna fält. Fyll i dem i
+sambandets formulär. Lämna ett fält tomt eller välj **Obesvarat** om
+uppgiften är obesvarad. Noll och Nej är uttryckliga svar och sparas som
+sådana. Definitioner och värden kan läggas i samma utkast och sparas ihop.
+
+Läs uppgifterna genom att välja sambandet i kartan eller listan. Välj
+**Redigera valt samband** för att rätta dem. Vid typbyte börjar den nya
+typens egna fält tomma. Tidigare egna värden visas separat och måste
+hanteras uttryckligen innan förslaget kan skickas. Lika fältnamn flyttar
+eller omtolkar aldrig svar automatiskt.
+
+Använda fält kan inte tas bort eller få annat värdeslag. Skyddet gäller
+även upphörda samband och andra medlemmars privata utkast. Ett avslag
+visar inte vem som använder fältet eller några privata värden. Skapa
+ett nytt fält om uppgiften behöver ett annat värdeslag.
+
+Historik och ångring behåller uppgifternas betydelse. När ett borttaget
+samband återställs kan nödvändiga äldre fält behöva återställas och
+granskas mot dagens definition. Vid sammanslagning följer värdena det
+samband du väljer att behålla; dubbletters värden slås inte ihop automatiskt.
+
+## Ordna avsnitt och fält
+
+Öppna **Inställningar → Typer och egna fält → Sambandstyper och riktning**
+och ändra sambandstypen. Namnge avsnitten och använd **Upp** och **Ned**
+för deras visningsordning. Välj **Visa i avsnitt** för varje fält och
+flytta det uppåt eller nedåt bland fälten i samma avsnitt. Ett tomt
+avsnitt kan tas bort.
+
+**Dölj** tar bort fältet från vanliga formulär och detaljer men behåller
+fältets identitet och alla svar. Välj ett avsnitt igen för att återvisa
+uppgiften, även efter omstart. Att dölja är varken radering eller ett
+åtkomstskydd. Utkastets granskning och historiken visar bevarade dolda svar.
+
+Lägg definitionen i ditt privata utkast. Sambandsformulär och detaljer
+följer förslaget direkt. Använd **Spara hela utkastet** för att dela
+definitionen och övriga förslag med hushållet. Namnbyte, flytt och
+synlighet ändrar inga svar; obesvarat skiljer sig fortfarande från Noll
+och Nej. Äldre definitioner visas först under **Egna fält**.
+
 ## Läs och rätta från båda objekten
 
-Öppna cykelns detaljer för att se **Cykeln → förvaras i → Garaget**.
-Öppna garaget för att se **Garaget → innehåller → Cykeln**. Klicka på
-sambandet från valfritt håll för att öppna samma koppling. Formuläret
-visar alltid dess startobjekt och målobjekt i den sparade riktningen.
+Öppna cykelns detaljer och välj **Visa samband i listan** för att se
+**Cykeln → förvaras i → Garaget**. Gör samma sak från garagets detaljer
+för att se **Garaget → innehåller → Cykeln**. Klicka på sambandet från
+valfritt håll för att öppna samma koppling. Formuläret visar alltid dess
+startobjekt och målobjekt i den sparade riktningen.
 
 Du kan ändra typ eller ändpunkter och lägga till fler samband. Andra
 betydelser mellan samma objekt är tillåtna. Ett upprepat tillägg med

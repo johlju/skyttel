@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -57,9 +57,6 @@ function serve(routes: Record<string, Reply[]>) {
     },
   ];
   routes['/api/households/linden/map/operations'] ??= [{ data: { operations: [] } }];
-  routes['/api/households/linden/map/view'] ??= [
-    { data: { positions: [], settings: { ...defaultViewSettings, version: 0 } } },
-  ];
   const fetch = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
     const path =
       typeof input === 'string'
@@ -67,7 +64,17 @@ function serve(routes: Record<string, Reply[]>) {
         : input instanceof URL
           ? input.pathname
           : new URL(input.url).pathname;
-    const reply = routes[path]?.shift();
+    const reply =
+      routes[path]?.shift() ??
+      (path === '/api/households/linden/map/view'
+        ? {
+            data: {
+              contentVersion: 1,
+              positions: [],
+              settings: { ...defaultViewSettings, version: 0 },
+            },
+          }
+        : undefined);
     if (!reply) {
       unexpectedRequests.push(path);
       throw new Error(`Unexpected synthetic HTTP request: ${path}`);
@@ -128,6 +135,7 @@ describe('household administration interface', () => {
     expect(await screen.findByRole('heading', { name: 'Administrera tillgång' })).toBeDefined();
     expect(member('Alex Exempel (du)').getByText('Administratör')).toBeDefined();
     expect(member('Lo Exempel').getByText('Medlem')).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: 'Inbjudningar' }));
     expect(screen.getByText('Inga inbjudningar ännu.')).toBeDefined();
   });
 
@@ -169,6 +177,9 @@ describe('household administration interface', () => {
       ],
     });
     mount();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Jag har personens användar-ID' }),
+    );
     await userEvent.type(
       await screen.findByRole('textbox', { name: 'Skyttel-användar-ID att bjuda in' }),
       '  sam  ',
@@ -176,7 +187,16 @@ describe('household administration interface', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Skapa inbjudan' }));
     const code = await screen.findByRole('textbox', { name: 'Inbjudningskod att dela' });
     expect((code as HTMLInputElement).value).toBe('synthetic-invitation-code');
+    await userEvent.click(screen.getByRole('button', { name: 'Inbjudningar' }));
     expect(screen.getByText('Väntar på svar')).toBeDefined();
+    const [, request] =
+      fetch.mock.calls.find(([path]) => path === '/api/households/linden/invitations') ?? [];
+    expect(JSON.parse((request as RequestInit).body as string)).toEqual({ userId: 'sam' });
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(await screen.findByText('Accepterad')).toBeDefined();
+    expect(screen.queryByRole('textbox', { name: 'Inbjudningskod att dela' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Klar med inbjudan' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Jag har personens användar-ID' }));
     expect(
       (
         screen.getByRole('textbox', {
@@ -184,12 +204,6 @@ describe('household administration interface', () => {
         }) as HTMLInputElement
       ).value,
     ).toBe('');
-    const [, request] =
-      fetch.mock.calls.find(([path]) => path === '/api/households/linden/invitations') ?? [];
-    expect(JSON.parse((request as RequestInit).body as string)).toEqual({ userId: 'sam' });
-    await act(async () => window.dispatchEvent(new Event('focus')));
-    expect(await screen.findByText('Accepterad')).toBeDefined();
-    expect(screen.queryByRole('textbox', { name: 'Inbjudningskod att dela' })).toBeNull();
   });
 
   test.each([
@@ -205,6 +219,9 @@ describe('household administration interface', () => {
         '/api/households/linden/invitations': [{ status: Number(status), data: { error } }],
       });
       mount();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Jag har personens användar-ID' }),
+      );
       const recipient = await screen.findByRole('textbox', {
         name: 'Skyttel-användar-ID att bjuda in',
       });
@@ -232,6 +249,9 @@ describe('household administration interface', () => {
       ],
     });
     mount();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Jag har personens användar-ID' }),
+    );
     await userEvent.type(
       await screen.findByRole('textbox', { name: 'Skyttel-användar-ID att bjuda in' }),
       'sam',
@@ -260,6 +280,9 @@ describe('household administration interface', () => {
       '/api/households/linden/invitations': [{ status }],
     });
     mount();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Jag har personens användar-ID' }),
+    );
     await userEvent.type(
       await screen.findByRole('textbox', { name: 'Skyttel-användar-ID att bjuda in' }),
       'sam',
@@ -430,6 +453,7 @@ describe('household administration interface', () => {
       '/api/households/linden/invitations/invitation-sam/revoke': [{ data: {} }],
     });
     mount();
+    await userEvent.click(await screen.findByRole('button', { name: 'Inbjudningar' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Återkalla inbjudan' }));
     expect(
       screen.getByRole('group', { name: 'Återkalla inbjudan till Sam Exempel' }).textContent,
@@ -527,6 +551,32 @@ describe('invitation acceptance interface', () => {
 });
 
 describe('current household access', () => {
+  test('opens retained work details deliberately in Settings and returns keyboard focus', async () => {
+    serve({
+      '/api/bootstrap': [{ data: ready }],
+      '/api/households/linden': [{ data: { household } }],
+    });
+    mount('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Inställningar' }));
+    const status = within(screen.getByRole('region', { name: 'Aktuell status' }));
+    expect(status.getByText('Inga osparade förslag')).toBeDefined();
+    expect(status.queryByRole('heading', { name: 'Aktuell status' })).toBeNull();
+    await userEvent.click(status.getByRole('button', { name: 'Visa samtals- och utkastdetaljer' }));
+    expect(document.activeElement).toBe(status.getByRole('heading', { name: 'Aktuell status' }));
+    expect(status.getByRole('button', { name: 'Sparförsök och kvitton' })).toBeDefined();
+    await userEvent.click(status.getByRole('button', { name: 'Stäng aktuell status' }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        status.getByRole('button', { name: 'Visa samtals- och utkastdetaljer' }),
+      ),
+    );
+    expect(screen.getByRole('heading', { name: 'Inställningar', level: 1 })).toBeDefined();
+    await userEvent.click(status.getByRole('button', { name: 'Visa samtals- och utkastdetaljer' }));
+    await userEvent.click(status.getByRole('button', { name: 'Sparförsök och kvitton' }));
+    expect(await screen.findByRole('heading', { name: 'Mina sparförsök' })).toBeDefined();
+    expect(screen.queryByRole('heading', { name: 'Inställningar', level: 1 })).toBeNull();
+  });
+
   test('keeps loaded membership visible after a temporary background failure', async () => {
     serve({
       '/api/bootstrap': [{ data: ready }, { status: 503 }],
@@ -554,12 +604,20 @@ describe('current household access', () => {
       ],
     });
     await act(async () => mount('/'));
+    await act(async () => screen.getByRole('button', { name: 'Inställningar' }).click());
     expect(screen.getByRole('link', { name: 'Administrera tillgång' })).toBeDefined();
+    await act(async () => screen.getByRole('link', { name: 'Tillbaka till kartan' }).click());
+    await act(async () => screen.getByRole('button', { name: 'Din profil' }).click());
     expect(screen.getByRole('heading', { name: 'Din Skyttel-användare' })).toBeDefined();
     expect(screen.queryByRole('textbox', { name: 'Inbjudningskod' })).toBeNull();
     await act(async () => vi.advanceTimersByTimeAsync(5_000));
-    expect(screen.getByText('Medlem')).toBeDefined();
+    expect(
+      within(screen.getByRole('region', { name: 'Din profil' })).getByText('Medlem'),
+    ).toBeDefined();
+    await act(async () => screen.getByRole('button', { name: 'Inställningar' }).click());
     expect(screen.queryByRole('link', { name: 'Administrera tillgång' })).toBeNull();
+    await act(async () => screen.getByRole('link', { name: 'Tillbaka till kartan' }).click());
+    await act(async () => screen.getByRole('button', { name: 'Din profil' }).click());
     expect(screen.getByRole('textbox', { name: 'Inbjudningskod' })).toBeDefined();
     await act(async () => vi.advanceTimersByTimeAsync(5_000));
     expect(
@@ -576,9 +634,12 @@ describe('current household access', () => {
       '/api/households/linden': [{ data: { household } }, { status: 403 }],
     });
     mount('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Inställningar' }));
     expect(await screen.findByRole('link', { name: 'Administrera tillgång' })).toBeDefined();
     await act(async () => window.dispatchEvent(new Event('focus')));
-    expect(screen.getByRole('heading', { name: 'Hushållet Linden' })).toBeDefined();
+    expect(
+      screen.getByRole('navigation', { name: 'Inställningarnas sidor' }).textContent,
+    ).toContain('Hushållet Linden');
     visibility.mockReturnValue('visible');
     await act(async () => document.dispatchEvent(new Event('visibilitychange')));
     expect(

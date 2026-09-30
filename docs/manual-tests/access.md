@@ -1,7 +1,8 @@
 # Manuella testfall för inloggning och hushållets start
 
 Testfallen omfattar första hushållet, återhämtning vid anslutningsfel,
-utloggning och länkning av Google och Microsoft.
+utloggning, kartans stängbara vägledning och länkning av Google och Microsoft.
+Övergången till vald leverantör visar vad som händer och kan avbrytas.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
 ## Konfigurerade användare
@@ -20,6 +21,9 @@ Verkliga leverantörer kontrolleras separat enligt
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Använd en isolerad installation enligt
    [installationsguiden](../operations/installation.md). För ACCESS-01 till
    ACCESS-04 ska installationen sakna hushåll. För övriga fall får Alex
@@ -27,7 +31,10 @@ Verkliga leverantörer kontrolleras separat enligt
 2. Återställ till en separat tom testdatabas mellan fall som skapar hushåll.
    Återställ länkade identiteter mellan länkningsfallen; använd separata
    testdatabaser för att undvika att en Microsoft-identitet redan är kopplad.
-3. Använd en webbläsare med utvecklarverktyg för nätverksfel. Ta bort
+3. När ett fall anger **Fortsätt med Google** eller **Fortsätt med Microsoft**,
+   läs övergången och välj sedan **Fortsätt till Google** respektive
+   **Fortsätt till Microsoft**. **Avbryt** återgår till valet av inloggningssätt.
+4. Använd en webbläsare med utvecklarverktyg för nätverksfel. Ta bort
    blockeringar och återställ nätverksanslutningen efter varje fall.
    Använd aldrig felinjicering på en installation med riktiga hushåll.
 
@@ -147,6 +154,8 @@ viewport”. Testet kontrollerar även automatisk anpassning till smal skärm.
 
 1. Öppna installationen. Kontrollera att välkomstrubriken får fokus.
 2. Tryck Tab till **Fortsätt med Google** och aktivera med Enter.
+   Kontrollera att **Fortsätt till Google** får fokus. Läs beskedet om
+   återgången till Skyttel och aktivera med Enter.
 3. Efter inloggningen kontrollerar du att **Skapa ditt hushåll** får fokus.
    Tryck Tab till **Hushållets namn** och skriv **Hushallet Linden**.
 4. Tryck Tab till **Skapa hushåll** och aktivera med Enter.
@@ -276,17 +285,25 @@ household”.
 
 **Steg:**
 
-1. Öppna **Inloggningssätt** och välj **Verifiera Google**. Bevisa samma
-   Google-identitet som Alex redan använder.
-2. Välj **Koppla Microsoft** och logga in med Alex Microsoft-identitet
-   inom tio minuter. Kontrollera resultatet.
+1. Öppna **Inloggningssätt**. Kontrollera statusen för Google och Microsoft,
+   vilket av länkningens två steg som är aktuellt och informationen om
+   övergången till Google och återgången hit. Välj **Verifiera Google**
+   och bevisa samma Google-identitet som Alex redan använder.
+2. Kontrollera att det andra steget är aktuellt och att övergången till
+   Microsoft förklaras. Välj **Koppla Microsoft** och logga in med Alex
+   Microsoft-identitet inom tio minuter. Kontrollera resultatet.
 3. Starta om applikationen med samma databas. Logga ut och logga sedan in
    med Microsoft. Kontrollera användar-ID och hushållets adress.
 
 **Förväntat resultat:**
 
+- Före länkningen visas **Google – kopplat** och **Microsoft – inte kopplat**.
+  Stegen visar först verifiering av befintlig inloggning och sedan koppling
+  av den andra. Inför varje övergång framgår vilken tjänst som öppnas
+  och att användaren kommer tillbaka till Skyttel.
 - En verifierad bekräftelse visas tillsammans med **Google – kopplat** och
-  **Microsoft – kopplat** efter att båda identiteterna bevisas.
+  **Microsoft – kopplat** efter att båda identiteterna bevisas. Den avslutade
+  länkningen visar inte längre ett aktuellt verifieringssteg.
 - Microsoft-inloggningen når samma Skyttel-användare och hushåll efter
   omstart. Både lika och olika e-postadresser täcks av integrationstesterna.
 
@@ -307,12 +324,17 @@ preserves household access”.
 
 1. Öppna **Inloggningssätt**, välj **Verifiera Google** och bevisa Alex
    befintliga identitet. Kontrollera att **Koppla Microsoft** visas.
-2. Välj **Avbryt länkning**. Kontrollera knapparna och ladda om sidan.
+2. Välj **Avbryt länkning**. Kontrollera beskedet att länkningen är avbruten,
+   att tidigare inloggningar och tillgång finns kvar och att en ny verifiering
+   behövs för att börja igen. Kontrollera knapparna och ladda om sidan.
 3. Välj **Till startsidan** och kontrollera hushållet.
 4. Öppna **Inloggningssätt** igen och verifiera Alex Google-identitet på nytt.
 
 **Förväntat resultat:**
 
+- Ett bekräftat avbrytande ger ett tydligt statusbesked. Om den nya
+  identiteten redan har verifierats färdigt visas det verifierade resultatet,
+  inte ett felaktigt besked om avbrytande.
 - Efter avbrytandet visas **Verifiera Google**. **Koppla Microsoft** och
   **Avbryt länkning** försvinner. Endast Google är kopplat efter omladdning.
 - Samma hushåll är tillgängligt. Ny verifiering visar **Koppla Microsoft**.
@@ -344,6 +366,82 @@ without changing access”.
   **Koppla Microsoft** visas inte innan korrekt identitet bevisas.
 - Den korrekta verifieringen tar bort felet och visar **Koppla Microsoft**.
   Alex når samma hushåll och behåller sin Skyttel-användare.
+
+### ACCESS-19: Utgången länkning förklarar ny verifiering
+
+**Syfte:** Kontrollera att utgången verifiering har en begriplig fortsättning
+utan att ändra användaren, hushållet eller privata förslag.
+
+**Användare:** Alex med Google.
+
+**Förutsättningar:** Endast Google är kopplat. Anteckna Skyttel-användar-ID
+och hushållets adress. Lägg ett nytt objekt **Cykeln** med beskrivningen
+**Privat förslag före utgången verifiering** i det egna utkastet utan att spara.
+
+**Integrationstest:**
+[linking.spec.ts](../../tests/integration/linking.spec.ts),
+testfallet “ACCESS-19: expired linking explains fresh proof and preserves
+identity and private work”. Det automatiserade fallet flyttar endast den
+verkliga testserverns klocka framåt och återställer den före ny verifiering
+och vid avslut. Webbläsarens klocka och testets tidsgränser ändras inte.
+Identitetsleverantören är en lokal testadapter, inte ett verkligt konto.
+
+**Steg:**
+
+1. Öppna **Inloggningssätt**, välj **Verifiera Google** och bevisa Alex
+   befintliga identitet. Kontrollera att **Koppla Microsoft** visas.
+2. Vänta minst elva minuter utan att koppla Microsoft. Ladda om sidan.
+   Kontrollera beskedet om utgången verifiering och vägen till ett nytt försök.
+3. Välj **Verifiera Google** och bevisa samma identitet på nytt.
+4. Välj **Till startsidan**. Kontrollera användar-ID, hushåll och eget utkast.
+
+**Förväntat resultat:**
+
+- Ett tydligt statusbesked förklarar att verifieringen har gått ut och att
+  tidigare inloggningar och tillgång finns kvar. **Verifiera Google** går
+  att använda; **Koppla Microsoft** visas inte innan ny verifiering.
+- Endast Google är kopplat. Ny verifiering tar bort utgångsbeskedet och
+  visar **Koppla Microsoft** utan att automatiskt koppla eller spara något.
+- Samma Skyttel-användare och hushåll finns kvar. Cykeln och dess beskrivning
+  ligger oförändrade i det privata utkastet.
+
+### ACCESS-20: Utgången länkning på öppen sida får en begriplig fortsättning
+
+**Syfte:** Kontrollera att ett försök från en gammal verifierad sida förklarar
+utgången verifiering utan att koppla en identitet eller ändra privata förslag.
+
+**Användare:** Alex med Google.
+
+**Förutsättningar:** Endast Google är kopplat. Anteckna Skyttel-användar-ID
+och hushållets adress. Lägg **Bilen** med beskrivningen **Privat förslag medan
+verifieringen går ut** i det egna utkastet utan att spara.
+
+**Integrationstest:**
+[linking.spec.ts](../../tests/integration/linking.spec.ts),
+testfallet “ACCESS-20: an expired link on an open page explains fresh proof
+after the real rejection”. Samma lokala leverantörsadapter och begränsade
+serverklocka som i ACCESS-19 används; klockan återställs före ny verifiering
+och vid avslut. Webbläsarens klocka och testets tidsgränser ändras inte.
+
+**Steg:**
+
+1. Öppna **Inloggningssätt**, verifiera Alex Google-identitet och kontrollera
+   att **Koppla Microsoft** går att använda.
+2. Låt sidan stå öppen i minst elva minuter utan omladdning. Välj sedan
+   **Koppla Microsoft** och kontrollera beskedet.
+3. Välj **Verifiera Google** och bevisa samma befintliga identitet på nytt.
+4. Välj **Till startsidan**. Kontrollera användar-ID, hushåll och eget utkast.
+
+**Förväntat resultat:**
+
+- Försöket avvisas och sidan förklarar att verifieringen har gått ut.
+  Tidigare inloggningar och tillgång finns kvar; **Verifiera Google** ersätter
+  **Koppla Microsoft**. Inget ogrundat fel om identitet eller leverantör visas.
+- Ingen extern övergång eller automatisk koppling sker efter avvisandet.
+  Endast Google är kopplat. Ny uttrycklig verifiering tar bort beskedet och
+  visar **Koppla Microsoft** igen.
+- Återgången visar samma hushåll och Skyttel-användare. Bilen och hela det
+  privata utkastet är oförändrade; inget sparas automatiskt.
 
 ## Avbruten inloggning
 
@@ -409,6 +507,144 @@ closed and allows a successful retry”.
   **Hushållet Linden**.
 - Integrationstesterna kontrollerar även att direkta försök att läsa eller
   skapa hushåll nekas före den lyckade inloggningen.
+
+## Extern övergång och första användning
+
+### ACCESS-14: Övergången förklarar återkomsten och kan avbrytas
+
+**Syfte:** Kontrollera ett begripligt val innan extern inloggning öppnas.
+
+**Användare:** Robin, utloggad och utan medlemskap.
+
+**Förutsättningar:** Installationen saknar hushåll. Använd en smal skärm.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-14: external sign-in explains the return and can be
+cancelled before leaving”.
+
+**Steg:**
+
+1. Välj **Fortsätt med Google**. Läs övergången utan att fortsätta.
+2. Välj **Avbryt** och kontrollera fokus och besked.
+3. Välj Microsoft och fortsätt till leverantören. Logga in som Robin.
+
+**Förväntat resultat:**
+
+- Övergången förklarar att inloggningen sker hos Google och sedan återgår
+  till Skyttel. Fortsättningsknappen får fokus.
+- Avbrottet behåller startsidan och återger fokus till Google-valet.
+  Beskedet om avbrottet kan läsas av hjälpmedel.
+- Robin ser beskedet om saknad tillgång, sitt användar-ID och inbjudningskod.
+  Skapande av hushåll erbjuds inte. Innehållet ryms på den smala skärmen.
+
+### ACCESS-15: Kartans vägledning ger tre frivilliga ingångar
+
+**Syfte:** Börja med tal, text eller lista utan obligatorisk rundtur.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Hushållet finns och kartan är tom.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-15: first-use guidance opens voice, text and list without
+a mandatory tour”.
+
+**Steg:**
+
+1. Öppna kartan och välj **Tala** i vägledningen. Kontrollera samtalets
+   ingångar och medgivanden. Ingen mikrofon ska börja spela in automatiskt.
+2. Ladda om kartan och välj **Skriv** i vägledningen.
+3. Ladda om och välj **Öppna listan**. Kontrollera **Nytt objekt**.
+4. Ladda om och välj **Stäng vägledningen**.
+
+**Förväntat resultat:**
+
+- Tal och text öppnar samtalets riktiga kontroller. Lista öppnar kartarbetet.
+- Vägledningen försvinner efter ett val. Befintliga medgivanden gäller.
+- Stängning ger fokus till kartans verktyg. Alla verktyg kan användas direkt.
+
+### ACCESS-16: Utgånget inloggningsförsök kan ersättas
+
+**Syfte:** Ge en begriplig återgång när verifieringen inte längre gäller.
+
+**Användare:** Alex, utloggad.
+
+**Förutsättningar:** Installationen saknar hushåll. I det automatiserade
+fallet förbereds ett utgånget försök i den tillfälliga testdatabasen.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-16: expired provider verification returns to login and
+a fresh attempt succeeds”.
+
+**Steg:**
+
+1. Fortsätt till Google. Vänta minst elva minuter hos leverantören innan
+   du slutför inloggningen och återkommer till Skyttel.
+2. Läs beskedet och börja ett nytt Google-försök. Slutför det direkt.
+
+**Förväntat resultat:**
+
+- Skyttel säger att försöket har gått ut eller inte kan verifieras.
+  Hushållsformuläret visas inte och skyddad åtkomst är fortsatt stängd.
+- Ett nytt, verifierat försök visar **Skapa ditt hushåll**.
+
+### ACCESS-17: Återkallad tillgång stoppar arbete och bevarar driftåtkomst
+
+**Syfte:** Skilja hushållsmedlemskap från installationens kostnadsbehörighet.
+
+**Användare:** Alex som driftansvarig och en annan administratör.
+
+**Förutsättningar:** Båda har tillgång till hushållet. Alex öppnar kartan.
+Den andra administratören använder en separat webbläsarprofil.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-17: revoked access retires protected work while the
+operator can open costs”.
+
+**Steg:**
+
+1. Öppna **Lista**, välj **Nytt objekt** och skriv ett namn utan att skicka.
+2. Återkalla Alex tillgång med den andra administratören. Vänta på
+   uppdateringen i Alex öppna flik.
+3. Öppna **Månadskostnad** som Alex.
+
+**Förväntat resultat:**
+
+- Kartan och den oskickade redigeringen försvinner inom tio sekunder.
+  Beskedet om saknad tillgång får fokus. Ny inloggning återställer inte
+  medlemskapet.
+- Kostnadsöversikten är tillgänglig för Alex utan hushållsmedlemskap.
+
+### ACCESS-18: Kartans temaval följer med till inloggningen
+
+**Syfte:** Behålla det valda temat när användaren lämnar kartan.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Alex är inloggad och hushållets karta är öppen.
+
+**Integrationstest:**
+[access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
+testfallet “ACCESS-18: the chosen map theme also applies when returning
+to login”.
+
+**Steg:**
+
+1. Öppna **Tema** i kartans verktyg och välj **Mörkt**.
+2. Öppna **Din profil** och välj **Logga ut**.
+3. Öppna installationens adresser `/costs` och `/login-methods` direkt
+   medan du är utloggad. Välj Google utan att fortsätta till leverantören.
+
+**Förväntat resultat:**
+
+- Välkomstsidan använder det mörka temat direkt efter utloggningen.
+- Båda de skyddade adresserna visar samma mörka inloggningssida och
+  övergång. Fortsättningsknappen får fokus när Google väljs.
+- Inloggningssätt och felbesked förblir läsbara i det valda temat.
 
 ## Real identity provider preparation
 

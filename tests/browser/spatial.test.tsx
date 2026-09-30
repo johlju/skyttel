@@ -74,6 +74,22 @@ const state: MapState = {
   draft: { version: 0, changes: [] },
 };
 
+test('an own icon paints ahead of the type and remains the fallback for an unavailable profile image', async () => {
+  const icons = structuredClone(state);
+  icons.draft = { version: 0, changes: [] };
+  icons.objects[0].iconId = 'bike';
+  icons.objects[1].iconId = 'telescope';
+  icons.objects[1].profileImageId = 'unavailable';
+  render(<MapView mapState={icons} />);
+  const cycle = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
+  const telescope = page.getByRole('button', { name: 'Välj objekt: Musikspelaren', exact: true });
+  await expect.poll(() => cycle.element().querySelector('[data-icon-id="bike"]')).not.toBeNull();
+  await expect
+    .poll(() => telescope.element().querySelector('[data-icon-id="telescope"]'))
+    .not.toBeNull();
+  expect(telescope.element().querySelector('img')).toBeNull();
+});
+
 state.draft.changes = state.objects.map((object, index) => ({
   id: object.id,
   before: index === 1 ? null : object,
@@ -99,6 +115,7 @@ function MapView({
   active?: boolean;
   revealRequest?: { id: string; objectIds: string[]; relationshipId?: string };
 } = {}) {
+  const [settingsMount, setSettingsMount] = useState<HTMLDivElement | null>(null);
   const [view, setView] = useState<PersonalView>({
     contentVersion: 1,
     positions: [],
@@ -117,7 +134,9 @@ function MapView({
     <>
       <p role="status">{message}</p>
       <pre data-placement>{JSON.stringify(view.positions)}</pre>
+      <div ref={setSettingsMount} />
       <SpatialMap
+        settingsMount={settingsMount}
         personal={{
           view,
           pending: false,
@@ -225,7 +244,7 @@ test('an explicit reveal opens an inactive scene and brings requested objects in
     return b.left >= a.left && b.right <= a.right && b.top >= a.top && b.bottom <= a.bottom;
   };
   await expect.poll(inside).toBe(true);
-  await page.getByText('Navigera rymden', { exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   for (let index = 0; index < 10; index++)
     await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
   expect(inside()).toBe(false);
@@ -285,16 +304,18 @@ test('personal placement buttons move the selected object in three dimensions wi
   await expect.element(page.getByText('Startläge', { exact: true })).toBeVisible();
   await userEvent.keyboard('{/Shift}');
   await expect.element(page.getByText('Startläge', { exact: true })).not.toBeInTheDocument();
-  await page.getByText('Ordna min vy', { exact: true }).click();
-  await page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+  await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
   await expect.element(page.getByLabelText('Visa höjdhjälp', { exact: true })).toBeChecked();
   await expect.element(page.getByText('↑ 1 steg högre än start', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
   await page.getByLabelText('Visa höjdhjälp', { exact: true }).click();
   await page.getByLabelText('Visa höjdhjälp', { exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   await expect.element(page.getByText('↑ 1 steg högre än start', { exact: true })).toBeVisible();
   const first = JSON.parse(document.querySelector('[data-placement]')?.textContent ?? '[]');
   expect(first).toHaveLength(1);
-  await page.getByRole('button', { name: 'Flytta nedåt i rummet', exact: true }).click();
+  await page.getByRole('button', { name: /^Flytta .+: nedåt$/ }).click();
   const second = JSON.parse(document.querySelector('[data-placement]')?.textContent ?? '[]');
   expect(second[0].y).toBeCloseTo(first[0].y - 1);
   expect(second[0].x).toBe(first[0].x);
@@ -433,6 +454,7 @@ test('a moving height anchor restores the object and hands the stable pair to pa
 test('personal display controls retain corner choices, independent pan inversions and all movement alternatives', async () => {
   render(<MapView />);
   await page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   await page.getByText('Ordna min vy', { exact: true }).click();
   await page.getByLabelText('Visa axlar hela tiden', { exact: true }).click();
   for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
@@ -441,17 +463,16 @@ test('personal display controls retain corner choices, independent pan inversion
       .element(page.getByRole('img', { name: 'Rummets axlar: sidled X, höjd Y, djup Z' }))
       .toHaveClass(new RegExp(corner));
   }
-  for (const label of [
-    'Vänd panorering i sidled',
-    'Vänd panorering i höjdled',
-    'Visa stjärnhimmel',
-  ]) {
+  for (const label of ['Vänd panorering i sidled', 'Vänd panorering i höjdled']) {
     await page.getByLabelText(label, { exact: true }).click();
     await expect.element(page.getByLabelText(label, { exact: true })).toBeChecked();
   }
-  for (const label of ['vänster', 'höger', 'uppåt', 'nedåt', 'inåt', 'utåt'])
-    await page.getByRole('button', { name: `Flytta ${label} i rummet`, exact: true }).click();
-  await page.getByText('Navigera rymden', { exact: true }).click();
+  await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
+  await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
+  await expect.element(page.getByLabelText('Visa stjärnhimmel', { exact: true })).toBeChecked();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+  for (const label of ['vänster', 'höger', 'uppåt', 'nedåt', 'bakåt', 'framåt'])
+    await page.getByRole('button', { name: `Flytta Lo Exempel: ${label}`, exact: true }).click();
   for (const label of ['Panorera vänster', 'Panorera höger', 'Panorera uppåt', 'Panorera nedåt'])
     await page.getByRole('button', { name: label, exact: true }).click();
 });
@@ -495,6 +516,7 @@ test('wheel pan follows both system axes over canvas, icons and labels; Ctrl alo
   const pageScroll = position();
   canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 0.01, deltaMode: 2, bubbles: true }));
   await expect.poll(() => position().y).toBeCloseTo(pageScroll.y - canvas.clientHeight * 0.01, 0);
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   await page.getByText('Ordna min vy', { exact: true }).click();
   await page.getByLabelText('Vänd panorering i höjdled', { exact: true }).click();
   const inverted = position();
@@ -609,13 +631,13 @@ test('native empty-space mouse, wheel and touch navigation changes the camera wi
   window.dispatchEvent(new Event('blur'));
 });
 
-test('painted stars respond to rotation and zoom while panning and object movement leave the distant sky fixed', async () => {
+test('painted stars respond to panning, rotation and zoom while object movement leaves the distant sky fixed', async () => {
   render(<MapView relationships={[]} />);
   await page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }).click();
-  await page.getByText('Ordna min vy', { exact: true }).click();
   await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
-  await page.getByText('Navigera rymden', { exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   const starPixels = async () => {
+    await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
     const canvas = document.querySelector('canvas');
     if (!canvas) throw new Error('Visible map required');
     const screenshot = await page.screenshot({ element: canvas, base64: true });
@@ -631,7 +653,9 @@ test('painted stars respond to rotation and zoom while panning and object moveme
     const { data } = context.getImageData(0, 0, sample.width, sample.height);
     const bounds = canvas.getBoundingClientRect();
     const overlays = [
-      ...document.querySelectorAll('.spatial-labels > *, .spatial-node, .spatial-axis'),
+      ...document.querySelectorAll(
+        '.spatial-labels > *, .spatial-node, .spatial-axis, .spatial-view-actions, .map-navigation',
+      ),
     ].map((element) => element.getBoundingClientRect());
     const visible = (pixel: number) => {
       const x = bounds.x + (pixel % sample.width);
@@ -649,6 +673,7 @@ test('painted stars respond to rotation and zoom while panning and object moveme
       if (data[index + 2] > 55 && data[index + 2] > data[index] * 1.04 && visible(index / 4))
         pixels.add(index / 4);
     }
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     return { pixels, visible };
   };
   const common = (
@@ -662,9 +687,11 @@ test('painted stars respond to rotation and zoom while panning and object moveme
   expect(original.pixels.size).toBeGreaterThan(15);
   await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
   const panned = await starPixels();
-  expect(common(original, panned)).toBeGreaterThan(0.85);
-  await page.getByRole('button', { name: 'Flytta uppåt i rummet', exact: true }).click();
+  expect(common(original, panned)).toBeLessThan(0.3);
+  await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
+  await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
   await page.getByLabelText('Visa höjdhjälp', { exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   expect(common(panned, await starPixels())).toBeGreaterThan(0.85);
   await page.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
   const rotated = await starPixels();
@@ -675,15 +702,121 @@ test('painted stars respond to rotation and zoom while panning and object moveme
 
 afterEach(cleanup);
 
+test('navigation title movement, resize and cancellation preserve the camera and button focus', async ({
+  onTestFinished,
+}) => {
+  const viewport = { width: window.innerWidth, height: window.innerHeight };
+  onTestFinished(() => page.viewport(viewport.width, viewport.height));
+  await page.viewport(1280, 1000);
+  render(<MapView />);
+  const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
+  await lo.click();
+  const projected = (lo.element() as HTMLElement).style.cssText;
+  const trigger = page.getByRole('button', { name: 'Navigera', exact: true });
+  await trigger.click();
+  const navigation = page.getByRole('region', { name: 'Navigation', exact: true });
+  const handle = navigation.getByRole('group', { name: 'Navigation', exact: true });
+  const bounds = () => navigation.element().getBoundingClientRect().toJSON();
+  await expect.element(handle).toHaveFocus();
+  const initial = bounds();
+  await userEvent.keyboard('{Shift>}{ArrowLeft}{/Shift}{ArrowDown}');
+  expect(bounds().x).toBe(initial.x - 40);
+  expect(bounds().y).toBe(initial.y + 12);
+  const moved = bounds();
+  await userEvent.keyboard('{Control>}{ArrowRight}{/Control}a');
+  expect(bounds()).toEqual(moved);
+  const minimize = navigation.getByRole('button', { name: 'Visa mininavigering', exact: true });
+  await minimize.click();
+  await expect
+    .element(navigation.getByRole('button', { name: 'Visa normal navigering', exact: true }))
+    .toHaveFocus();
+  await userEvent.keyboard('{ArrowLeft}');
+  expect(bounds().x).toBe(moved.x);
+  await navigation.getByRole('button', { name: 'Visa normal navigering', exact: true }).click();
+  const session = cdp();
+  const drag = async (dx: number, dy: number) => {
+    const title = handle.element().getBoundingClientRect();
+    const frame = window.frameElement?.getBoundingClientRect();
+    const x = title.x + title.width / 2 + (frame?.x ?? 0);
+    const y = title.y + title.height / 2 + (frame?.y ?? 0);
+    await session.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x,
+      y,
+      button: 'left',
+      buttons: 1,
+      clickCount: 1,
+    });
+    await session.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: x + dx,
+      y: y + dy,
+      button: 'left',
+      buttons: 1,
+    });
+    return { x: x + dx, y: y + dy };
+  };
+  const release = (point: { x: number; y: number }) =>
+    session.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      ...point,
+      button: 'left',
+      buttons: 0,
+      clickCount: 1,
+    });
+  await release(await drag(-2, 0));
+  expect(bounds()).toEqual(moved);
+  const cancelled = await drag(-60, 50);
+  await expect.poll(() => bounds().x).toBe(moved.x - 60);
+  window.dispatchEvent(new Event('blur'));
+  await expect.poll(bounds).toEqual(moved);
+  await release(cancelled);
+  await release(await drag(-80, 30));
+  await expect.poll(() => bounds().x).toBe(moved.x - 80);
+  expect(bounds().y).toBe(moved.y + 30);
+  expect((lo.element() as HTMLElement).style.cssText).toBe(projected);
+  await page.viewport(390, 500);
+  await expect.poll(() => bounds().right <= 378 && bounds().y >= 12).toBe(true);
+  await handle.element().focus();
+  await userEvent.keyboard('{Escape}');
+  await expect.element(navigation).not.toBeInTheDocument();
+  await expect.element(trigger).toHaveFocus();
+});
+
+test('standalone focus controls keep direct neighbors separate from the selected rotation center', async () => {
+  render(<MapView />);
+  const focus = page.getByRole('button', { name: 'Fokusera markering', exact: true });
+  await expect.element(focus).toBeDisabled();
+  const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
+  await lo.click();
+  await focus.click();
+  await expect.element(lo).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .element(page.getByRole('button', { name: 'Välj objekt: Musikspelaren', exact: true }))
+    .toHaveAttribute('aria-pressed', 'false');
+  const position = () =>
+    document.querySelector<HTMLElement>('[data-object-id="lo"].spatial-node')?.style.cssText;
+  const focused = position();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+  await page.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
+  expect(position()).toBe(focused);
+  await page.getByRole('button', { name: 'Visa hela kartan', exact: true }).click();
+  await page.getByRole('button', { name: 'Återgå till föregående vy', exact: true }).click();
+  await expect
+    .element(page.getByRole('button', { name: 'Visa hela kartan', exact: true }))
+    .toBeVisible();
+  expect(position()).toBe(focused);
+});
+
 test('graphics navigation and label modes expose selectable objects and directed facts', async () => {
   render(<MapView />);
   const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
   await expect.element(lo).toBeVisible();
-  await lo.click({ modifiers: ['Control'] });
-  await expect.element(page.getByRole('status')).toHaveTextContent('Kopplingar för lo');
+  await lo.click({ button: 'right', modifiers: ['Control'] });
+  await expect.element(page.getByRole('status')).toHaveTextContent('Lo Exempel');
   await lo.click();
   await expect.element(page.getByRole('status')).toHaveTextContent('Lo Exempel');
-  await page.getByText('Navigera rymden', { exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   for (const name of [
     'Panorera höger',
     'Panorera vänster',
@@ -699,6 +832,7 @@ test('graphics navigation and label modes expose selectable objects and directed
     await page.getByRole('button', { name, exact: true }).click();
     await expect.element(lo).toBeInTheDocument();
   }
+  await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
   await page.getByLabelText('Alla etiketter', { exact: true }).click();
   await expect
     .element(page.getByText('Närmare utsnitt. Panorera för att se fler etiketter.'))
@@ -769,8 +903,81 @@ test('dense labels remain readable and explicit all-label mode retains access to
       );
     })
     .toBe(true);
+  await expect
+    .element(
+      page.getByText(
+        `${100 - document.querySelectorAll('.spatial-name').length} etiketter döljs för läsbarhet. Alla objekt och samband finns i listan. Sök eller välj ett objekt och visa dess kopplingar.`,
+        { exact: true },
+      ),
+    )
+    .toBeVisible();
   await page.getByLabelText('Alla etiketter', { exact: true }).click();
   await expect.poll(() => document.querySelectorAll('.spatial-name').length).toBe(100);
+});
+
+test('hidden labels do not change the emphasis of unselected relationship lines', async () => {
+  const objects = Array.from({ length: 100 }, (_, index) => ({
+    ...state.objects[0],
+    id: `dense-${index}`,
+    name: `Tätt objekt ${index}`,
+  }));
+  const edges = [1, 2, 3].map((index) => ({
+    ...state.relationships[0],
+    id: `dense-edge-${index}`,
+    sourceId: `dense-${index}`,
+    targetId: `dense-${index + 10}`,
+  }));
+  render(
+    <SpatialMap
+      state={{ ...state, objects, relationships: edges, draft: { version: 0, changes: [] } }}
+      active
+      objects={new Map(objects.map((object) => [object.id, object]))}
+      relationships={new Map(edges.map((edge) => [edge.id, edge]))}
+      selection={{ kind: 'object', id: 'dense-99' }}
+      disabled={false}
+      onSelect={() => {}}
+      onSelectRelationship={() => {}}
+      onFocus={() => {}}
+      onClear={() => {}}
+      onReset={() => {}}
+      onRemove={() => {}}
+    />,
+  );
+  const opacity = () =>
+    [...document.querySelectorAll('line.connection')].map((line) => getComputedStyle(line).opacity);
+  // Hidden labels depend on the camera angle, so they must not restyle lines
+  // while the map turns.
+  await expect.poll(() => document.querySelector('.label-note-count')).not.toBeNull();
+  const withHiddenLabels = opacity();
+  expect(withHiddenLabels).toHaveLength(3);
+  await page.getByLabelText('Alla etiketter', { exact: true }).click();
+  await expect.poll(() => document.querySelectorAll('.spatial-name').length).toBe(100);
+  expect(opacity()).toEqual(withHiddenLabels);
+});
+
+test('a selected relationship keeps its directed label readable in a dense map', async () => {
+  const objects = Array.from({ length: 100 }, (_, index) => ({
+    ...state.objects[0],
+    id: `dense-${index}`,
+    name: `Tätt objekt ${index}`,
+  }));
+  const edge = { ...state.relationships[0], sourceId: 'dense-5', targetId: 'dense-6' };
+  render(
+    <MapView
+      mapState={{ ...state, objects, relationships: [edge], draft: { version: 0, changes: [] } }}
+    />,
+  );
+  const marker = page.getByRole('button', { name: 'Välj objekt: Tätt objekt 5', exact: true });
+  await expect.element(marker).toBeVisible();
+  (marker.element() as HTMLButtonElement).focus();
+  await userEvent.keyboard('{Enter}');
+  const label = page.getByRole('button', {
+    name: 'Välj samband: Tätt objekt 5 → använder → Tätt objekt 6',
+    exact: true,
+  });
+  await label.click();
+  await expect.element(page.getByRole('status')).toHaveTextContent('Samband: known');
+  await expect.element(label).toBeVisible();
 });
 
 test('all labels only opens a closer view when needed and retains an already close camera', async () => {
@@ -786,9 +993,10 @@ test('all labels only opens a closer view when needed and retains an already clo
   await toggle.click();
   expect(location()).toBe(working);
   await toggle.click();
-  await page.getByText('Navigera rymden', { exact: true }).click();
+  await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   await page.getByRole('button', { name: 'Zooma in', exact: true }).click();
   const close = location();
+  await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
   await toggle.click();
   expect(location()).toBe(close);
 });
@@ -832,7 +1040,7 @@ test('context menu edits, focuses, cancels and removes only the chosen object', 
   render(<MapView />);
   const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
   await lo.click({ button: 'right', modifiers: ['Control'] });
-  await expect.element(page.getByRole('status')).toHaveTextContent('Kopplingar för lo');
+  await expect.element(page.getByRole('status')).toHaveTextContent('Lo Exempel');
   expect(document.querySelector('dialog')?.open).toBe(false);
   await lo.click({ button: 'right' });
   await page.getByRole('button', { name: 'Redigera objekt', exact: true }).click();
@@ -942,8 +1150,8 @@ test('reduced motion overrides a saved star choice and follows system changes', 
   const context = sample.getContext('2d');
   if (!context) throw new Error('Pixel sampling unavailable');
   context.drawImage(picture, 0, 0);
-  // Empty corners use the flat green sky, not the dark blue star sky.
-  expect([...context.getImageData(30, 30, 1, 1).data]).toEqual([19, 46, 37, 255]);
+  // Reduced motion keeps the flat background of the selected dark theme.
+  expect([...context.getImageData(30, 30, 1, 1).data]).toEqual([16, 27, 41, 255]);
   await session.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }],
   });

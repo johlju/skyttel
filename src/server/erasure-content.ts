@@ -40,8 +40,15 @@ export function erasureContent(database: Database.Database, householdId: string,
   const relationships: MapRelationship[] = (
     database
       .prepare('SELECT * FROM map_relationship WHERE householdId = ? ORDER BY id')
-      .all(householdId) as (MapRelationship & { endDate: string })[]
-  ).map((row) => ({ ...row, endDate: row.endDate ? JSON.parse(row.endDate) : undefined }));
+      .all(householdId) as (Omit<MapRelationship, 'endDate' | 'customValues'> & {
+      endDate: string;
+      customValues: string | null;
+    })[]
+  ).map((row) => ({
+    ...row,
+    endDate: row.endDate ? JSON.parse(row.endDate) : undefined,
+    customValues: row.customValues ? JSON.parse(row.customValues) : undefined,
+  }));
   const objectTypes = database
     .prepare('SELECT * FROM object_type WHERE householdId = ? ORDER BY id')
     .all(householdId) as ObjectType[];
@@ -50,11 +57,30 @@ export function erasureContent(database: Database.Database, householdId: string,
     .all(householdId) as RelationshipType[];
   for (const type of objectTypes) {
     const row = database
-      .prepare('SELECT fields FROM object_type_fields WHERE typeId = ?')
-      .get(type.id) as { fields: string } | undefined;
+      .prepare(
+        'SELECT fields, sections, builtins, propertyOrder FROM object_type_fields WHERE typeId = ?',
+      )
+      .get(type.id) as
+      | {
+          fields: string;
+          sections: string | null;
+          builtins: string | null;
+          propertyOrder: string | null;
+        }
+      | undefined;
     if (row) type.fields = JSON.parse(row.fields);
+    if (row?.sections !== null && row?.sections !== undefined)
+      type.sections = JSON.parse(row.sections);
+    if (row?.builtins != null) type.builtins = JSON.parse(row.builtins);
+    if (row?.propertyOrder != null) type.propertyOrder = JSON.parse(row.propertyOrder);
   }
   for (const type of relationshipTypes) {
+    const fields = database
+      .prepare('SELECT fields, sections FROM relationship_type_fields WHERE typeId = ?')
+      .get(type.id) as { fields: string; sections: string | null } | undefined;
+    if (fields) type.fields = JSON.parse(fields.fields);
+    if (fields?.sections !== null && fields?.sections !== undefined)
+      type.sections = JSON.parse(fields.sections);
     const row = database
       .prepare('SELECT forwardLabel, reverseLabel FROM relationship_type_labels WHERE typeId = ?')
       .get(type.id) as { forwardLabel: string; reverseLabel: string } | undefined;
@@ -116,8 +142,8 @@ export function erasureContent(database: Database.Database, householdId: string,
           allEdges.set(edge.id, edge);
         if (publicChange) visible.relationship.add(edge.id);
       }
-    if (change.type)
-      allEdgeTypes.set(change.type.id, allEdgeTypes.get(change.type.id) ?? change.type);
+    for (const type of [change.type, change.beforeType])
+      if (type) allEdgeTypes.set(type.id, allEdgeTypes.get(type.id) ?? type);
   }
   function objectChange(change: Change, publicChange: boolean) {
     const id = 'id' in change ? change.id : (change.after?.id ?? change.before?.id);

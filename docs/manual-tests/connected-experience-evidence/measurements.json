@@ -1,0 +1,924 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Portable actual observation summary for issue151; repeated samples are not unique controls or complete WCAG conformance. Historical phases retain actual source pins.",
+  "platform": {
+    "os": "Linux",
+    "architecture": "arm64",
+    "browser": "Chromium153.0.8010.12"
+  },
+  "limits": {
+    "nativeTimeoutMs": 30000,
+    "assertionTimeoutMs": 5000,
+    "ciWorkers": 2,
+    "retries": 0,
+    "coreNativeAssertionsPerBody": 113,
+    "settingsOriginalAssertionsAcross8Bodies": 208,
+    "zoomMethod": "Real extension chrome.tabs.setZoom/getZoom for both independent members;1280x1000backing, measured640x500or320x250; reference is viewport width only",
+    "images": "Original CDP viewport captures, captureBeyondViewport=false, checked nonblank; no crops, CSSzoom or DPR substitution",
+    "contrast": "Supported actual computed text colors/backgrounds only; normal4.5large3; unsupported/inactive/clipped/occluded separately unmeasured",
+    "targets": "Below24 rectangles are review flags, not automatic failures; associated labels/spacing exceptions not a full evaluation",
+    "keyboard": "Original6sequentialactions plus named realTab checks and heightcontrol sequence; DOMorder is not screen-reader proof"
+  },
+  "phases": [
+    {
+      "phase": "core-reference",
+      "status": "PASS",
+      "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+      "sourceTree": "733878dcc1588f71ae4978380dd372d483559558",
+      "manifestSha256": "fd40a7d5f3e74b6ceb27190d609299fb54c2b2de628e560d83837bfd21b2a85c",
+      "caseCount": 18,
+      "cases": [
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 1280px dark",
+          "status": "passed",
+          "width": 1280,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 1280px light",
+          "status": "passed",
+          "width": 1280,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 1280px system",
+          "status": "passed",
+          "width": 1280,
+          "height": 900,
+          "zoom": 1,
+          "theme": "system",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 320px system",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "system",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 390px dark",
+          "status": "passed",
+          "width": 390,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 390px light",
+          "status": "passed",
+          "width": 390,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 390px system",
+          "status": "passed",
+          "width": 390,
+          "height": 900,
+          "zoom": 1,
+          "theme": "system",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 1280px dark",
+          "status": "passed",
+          "width": 1280,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 1280px light",
+          "status": "passed",
+          "width": 1280,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 1280px system",
+          "status": "passed",
+          "width": 1280,
+          "height": 900,
+          "zoom": 1,
+          "theme": "system",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 320px system",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "system",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 390px dark",
+          "status": "passed",
+          "width": 390,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 390px light",
+          "status": "passed",
+          "width": 390,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 390px system",
+          "status": "passed",
+          "width": 390,
+          "height": 900,
+          "zoom": 1,
+          "theme": "system",
+          "contexts": 2
+        }
+      ],
+      "browserVersions": [
+        "Chrome/153.0.8010.12"
+      ],
+      "actualZoomValues": [
+        1
+      ],
+      "measuredCssViewports": [
+        {
+          "width": 320,
+          "height": 900
+        },
+        {
+          "width": 390,
+          "height": 900
+        },
+        {
+          "width": 1280,
+          "height": 900
+        }
+      ],
+      "repeatedObservationCounts": {
+        "actual-zoom": 72,
+        "added-keyboard-target": 90,
+        "below24TargetReviewFlags": 1440,
+        "contrast_measured": 11193,
+        "contrast_skippedDisabled": 87,
+        "contrast_skippedUnsupportedBackground": 0,
+        "dom-order": 612,
+        "focus": 612,
+        "fullyClippedSemanticDescriptions": 1674,
+        "nonblankViewportImages": 648,
+        "readability": 612,
+        "settings-feedback-fragments": 612,
+        "system-transition": 36,
+        "theme-selection": 36,
+        "unmeasuredClippedOrOccludedTextSamples": 4775,
+        "viewport-shot": 648
+      },
+      "lowestMeasuredTextContrast": 5.163687790866848
+    },
+    {
+      "phase": "core-zoom",
+      "status": "PASS",
+      "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+      "sourceTree": "733878dcc1588f71ae4978380dd372d483559558",
+      "manifestSha256": "52b3f7b0ee73453b4de406ec8f0bf96e087c391917ebe00a4ebf6a0757a97fea",
+      "caseCount": 12,
+      "cases": [
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 320px system",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "system",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 640px dark",
+          "status": "passed",
+          "width": 640,
+          "height": 500,
+          "zoom": 2,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 640px light",
+          "status": "passed",
+          "width": 640,
+          "height": 500,
+          "zoom": 2,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-08: familjeabonnemanget går från inloggning och samtal till gemensamt kvitto och privat fortsatt arbete at 640px system",
+          "status": "passed",
+          "width": 640,
+          "height": 500,
+          "zoom": 2,
+          "theme": "system",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 320px system",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "system",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 640px dark",
+          "status": "passed",
+          "width": 640,
+          "height": 500,
+          "zoom": 2,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 640px light",
+          "status": "passed",
+          "width": 640,
+          "height": 500,
+          "zoom": 2,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "ARBETE-09: samma familjearbete fungerar med text och listor utan grafik eller ljud at 640px system",
+          "status": "passed",
+          "width": 640,
+          "height": 500,
+          "zoom": 2,
+          "theme": "system",
+          "contexts": 2
+        }
+      ],
+      "browserVersions": [
+        "Chrome/153.0.8010.12"
+      ],
+      "actualZoomValues": [
+        2,
+        3.9999999999999996
+      ],
+      "measuredCssViewports": [
+        {
+          "width": 320,
+          "height": 250
+        },
+        {
+          "width": 640,
+          "height": 500
+        }
+      ],
+      "repeatedObservationCounts": {
+        "actual-zoom": 48,
+        "added-keyboard-target": 60,
+        "below24TargetReviewFlags": 214,
+        "contrast_measured": 2815,
+        "contrast_skippedDisabled": 18,
+        "contrast_skippedUnsupportedBackground": 0,
+        "dom-order": 408,
+        "focus": 408,
+        "fullyClippedSemanticDescriptions": 1116,
+        "nonblankViewportImages": 432,
+        "readability": 408,
+        "settings-feedback-fragments": 408,
+        "system-transition": 24,
+        "theme-selection": 24,
+        "unmeasuredClippedOrOccludedTextSamples": 1329,
+        "viewport-shot": 432
+      },
+      "lowestMeasuredTextContrast": 5.163687790866848
+    },
+    {
+      "phase": "settings-reference",
+      "status": "PASS",
+      "sourceCommit": "c57c714d3fd2f911addf805a8e0674d5342f7472",
+      "sourceTree": "bb9840c8de4f25bddbfd3ae1ea865e83403adbeb",
+      "manifestSha256": "ad1bffff7afbd826761cff99d17e68fde4507cb1a745eacf6eeeb7758a2b931c",
+      "caseCount": 16,
+      "cases": [
+        {
+          "case": "ACCESS-09: the interface verifies the result and lists both login methods at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "ACCESS-09: the interface verifies the result and lists both login methods at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "AI-03: medgivandet kräver val av hushåll och AI-behandling at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "AI-03: medgivandet kräver val av hushåll och AI-behandling at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "AI-13: profile navigation focuses assistant connections and preserves unsent and private work at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "AI-13: profile navigation focuses assistant connections and preserves unsent and private work at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "IMPORT-21: unavailable recovery storage preserves the file, exact review and confirmed server result at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "IMPORT-21: unavailable recovery storage preserves the file, exact review and confirmed server result at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "KOST-04: okänt sparresultat återläses med fokus och fullständiga detaljer (390px) at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "KOST-04: okänt sparresultat återläses med fokus och fullständiga detaljer (320px) at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "MEDLEM-08: staged invitation copies its one-time code and revocation retires an open recipient workspace at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "MEDLEM-08: staged invitation copies its one-time code and revocation retires an open recipient workspace at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "RADERING-07: a known erasure survives Settings navigation and reload despite a newer result at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "RADERING-07: a known erasure survives Settings navigation and reload despite a newer result at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "RADERING-11: unavailable recovery storage preserves review and the exact pending cleanup without another erasure at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "RADERING-11: unavailable recovery storage preserves review and the exact pending cleanup without another erasure at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 900,
+          "zoom": 1,
+          "theme": "light",
+          "contexts": 1
+        }
+      ],
+      "browserVersions": [
+        "Chrome/153.0.8010.12"
+      ],
+      "actualZoomValues": [
+        1
+      ],
+      "measuredCssViewports": [
+        {
+          "width": 320,
+          "height": 900
+        }
+      ],
+      "repeatedObservationCounts": {
+        "actual-zoom": 26,
+        "below24TargetReviewFlags": 16,
+        "contrast_measured": 1012,
+        "contrast_skippedDisabled": 44,
+        "contrast_skippedUnsupportedBackground": 0,
+        "dom-order": 134,
+        "focus": 134,
+        "fullyClippedSemanticDescriptions": 0,
+        "nonblankViewportImages": 168,
+        "partialOrOffscreenTextFragments": 6,
+        "readability": 134,
+        "settings-control-clipping": 50,
+        "settings-feedback-fragments": 134,
+        "settings-input-focus": 14,
+        "settings-shell": 36,
+        "settings-text-clipping": 52,
+        "settings-text-fragment-scope": 52,
+        "unmeasuredClippedOrOccludedTextSamples": 310,
+        "viewport-shot": 168
+      },
+      "lowestMeasuredTextContrast": 5.2852651643665345
+    },
+    {
+      "phase": "settings-zoom",
+      "status": "PASS",
+      "sourceCommit": "c57c714d3fd2f911addf805a8e0674d5342f7472",
+      "sourceTree": "bb9840c8de4f25bddbfd3ae1ea865e83403adbeb",
+      "manifestSha256": "2c13dec35dce582001a0e30674cd6602996c22dfdfe91bcddea8e5a4ab2424a9",
+      "caseCount": 16,
+      "cases": [
+        {
+          "case": "ACCESS-09: the interface verifies the result and lists both login methods at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "ACCESS-09: the interface verifies the result and lists both login methods at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "AI-03: medgivandet kräver val av hushåll och AI-behandling at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "AI-03: medgivandet kräver val av hushåll och AI-behandling at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "AI-13: profile navigation focuses assistant connections and preserves unsent and private work at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "AI-13: profile navigation focuses assistant connections and preserves unsent and private work at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "IMPORT-21: unavailable recovery storage preserves the file, exact review and confirmed server result at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "IMPORT-21: unavailable recovery storage preserves the file, exact review and confirmed server result at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "KOST-04: okänt sparresultat återläses med fokus och fullständiga detaljer (390px) at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "KOST-04: okänt sparresultat återläses med fokus och fullständiga detaljer (320px) at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 1
+        },
+        {
+          "case": "MEDLEM-08: staged invitation copies its one-time code and revocation retires an open recipient workspace at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "MEDLEM-08: staged invitation copies its one-time code and revocation retires an open recipient workspace at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "RADERING-07: a known erasure survives Settings navigation and reload despite a newer result at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 2
+        },
+        {
+          "case": "RADERING-07: a known erasure survives Settings navigation and reload despite a newer result at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 2
+        },
+        {
+          "case": "RADERING-11: unavailable recovery storage preserves review and the exact pending cleanup without another erasure at 320px dark",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "dark",
+          "contexts": 1
+        },
+        {
+          "case": "RADERING-11: unavailable recovery storage preserves review and the exact pending cleanup without another erasure at 320px light",
+          "status": "passed",
+          "width": 320,
+          "height": 250,
+          "zoom": 4,
+          "theme": "light",
+          "contexts": 1
+        }
+      ],
+      "browserVersions": [
+        "Chrome/153.0.8010.12"
+      ],
+      "actualZoomValues": [
+        3.9999999999999996
+      ],
+      "measuredCssViewports": [
+        {
+          "width": 320,
+          "height": 250
+        }
+      ],
+      "repeatedObservationCounts": {
+        "actual-zoom": 26,
+        "below24TargetReviewFlags": 10,
+        "contrast_measured": 402,
+        "contrast_skippedDisabled": 4,
+        "contrast_skippedUnsupportedBackground": 0,
+        "dom-order": 134,
+        "focus": 134,
+        "fullyClippedSemanticDescriptions": 0,
+        "nonblankViewportImages": 168,
+        "partialOrOffscreenTextFragments": 176,
+        "readability": 134,
+        "settings-control-clipping": 50,
+        "settings-feedback-fragments": 134,
+        "settings-input-focus": 14,
+        "settings-shell": 36,
+        "settings-text-clipping": 52,
+        "settings-text-fragment-scope": 52,
+        "unmeasuredClippedOrOccludedTextSamples": 118,
+        "viewport-shot": 168
+      },
+      "lowestMeasuredTextContrast": 5.2852651643665345
+    }
+  ],
+  "heightHelp": {
+    "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "viewport": {
+      "width": 320,
+      "height": 900
+    },
+    "results": {
+      "light": {
+        "state": "PASS",
+        "manualHorizontalScrollNeeded": false,
+        "initialLabelWithin": true,
+        "finalLabelWithin": true,
+        "originalCheckboxStateRestored": true
+      },
+      "dark": {
+        "state": "PASS",
+        "manualHorizontalScrollNeeded": false,
+        "initialLabelWithin": true,
+        "finalLabelWithin": true,
+        "originalCheckboxStateRestored": true
+      }
+    },
+    "limits": "Actual sequentialTab from reset through labels to height-help, nativeSpace toggle/restore, focused target/label viewport and center hit; no full contrast/target-size/AT claim"
+  },
+  "layoutLoopDiagnostic": {
+    "redSource": "9f253e2bd130f51aba24fd5133bbeb1f0f880d17",
+    "redMeasurementRounds": 59,
+    "redPageError": "Maximum update depth exceeded",
+    "greenSource": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "greenMeasurementRounds": 9,
+    "greenPageErrors": [],
+    "stableNoticeWidth": 330,
+    "stableNoticeHeight": 73.5859375,
+    "actualZoom": 2,
+    "measuredViewport": {
+      "width": 640,
+      "height": 500
+    },
+    "method": "Exact fictional IDs from real failed connected case recreated through public draft/save APIs;real browser/server/SQLite;read-only DOM rectangle diagnostic, no app debug changes"
+  },
+  "sourceCarry": {
+    "presentationProductCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "verificationCandidateCommit": "14818c57345d2abc7fccc340ac3a08bf11b7c2f9",
+    "verificationCandidateTree": "ad6ba8e802d586f4ee01f20ce132119beadadf3c",
+    "productionSourcesAndBuildUnchanged": true,
+    "changedSincePresentation": [
+      "tests/unit/client/object-icons.test.tsx",
+      "tests/integration/profile-image-work.spec.ts",
+      "docs/manual-tests/profile-images.md"
+    ],
+    "scope": "Only public icon helper queries and an explicit public Settings details-expansion step in BILD05; original assertions/deadlines retained. Historical presentation pins remain unchanged.",
+    "verifiedBuildFileCount": 85
+  },
+  "operatorAssessment": {
+    "base": "c555ab80adc22140c4ff7d458dc6c7f61145dacc",
+    "candidate": "14818c57345d2abc7fccc340ac3a08bf11b7c2f9",
+    "result": "No operator notes needed for Operator Upgrade Impact.",
+    "scope": "Client presentation, browser-local persistence error reporting and user tests/manuals; no server, migration, configuration, API, container, export-format or deployment changes."
+  },
+  "fullVerification": {
+    "state": "PASS",
+    "command": "CI=1 npm run check",
+    "source_commit": "14818c57345d2abc7fccc340ac3a08bf11b7c2f9",
+    "source_tree": "ad6ba8e802d586f4ee01f20ce132119beadadf3c",
+    "cwd": "/tmp/skyttel-worktrees/batch-121/issue-151",
+    "started_utc": "2026-09-30T12:52:18.886356+00:00",
+    "limits": "unchanged default public workers, 90 percent branch threshold, native CI2 workers, zero retries, original timeouts",
+    "visual_source_pin": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "visual_application_and_build_unchanged": true,
+    "preceding_failure": "/tmp/issue-151-final-3d928fe/full-run.json",
+    "repair": "BILD05 uses actual compact Settings details disclosure before unchanged pending-image save guard; paired manual updated",
+    "exit_code": 0,
+    "finished_utc": "2026-09-30T13:01:42.599603+00:00",
+    "check_log_sha256": "0ea01a7838fb18a88d8c6b105a047c36488e947a88f14743ab5f550d2eb4b1a8",
+    "results": {
+      "types": "PASS",
+      "lint": {
+        "status": "PASS",
+        "files": 389
+      },
+      "documentation": {
+        "status": "PASS",
+        "files": 158
+      },
+      "gates": {
+        "passed": 138,
+        "failed": 0
+      },
+      "build": "PASS",
+      "public": {
+        "passed": 1102,
+        "failed": 0,
+        "files": 83,
+        "durationSeconds": 95.83,
+        "coverage": {
+          "statementsPercent": 93.42,
+          "branchesPercent": 90.17,
+          "functionsPercent": 93.41,
+          "linesPercent": 95.54,
+          "lcovTotals": {
+            "LF": 9273,
+            "LH": 8860,
+            "BRF": 9887,
+            "BRH": 8916,
+            "FNF": 2550,
+            "FNH": 2382
+          },
+          "branchThresholdPercent": 90
+        }
+      },
+      "native": {
+        "passed": 409,
+        "failed": 0,
+        "duration": "7.7m",
+        "workers": 2,
+        "retries": 0
+      }
+    }
+  },
+  "containerVerification": {
+    "state": "PASS",
+    "source_commit": "14818c57345d2abc7fccc340ac3a08bf11b7c2f9",
+    "source_tree": "ad6ba8e802d586f4ee01f20ce132119beadadf3c",
+    "command": "DOCKER_CONFIG=/tmp/issue-140-docker-config npm run test:container",
+    "started_utc": "2026-09-30T13:02:16.289032+00:00",
+    "scope": "All nine unchanged production container scenarios; default build, no supplied image; controlled providers, no model calls",
+    "exit_code": 0,
+    "finished_utc": "2026-09-30T13:02:51.157592+00:00",
+    "pass_lines": [
+      "PASS: fresh volume, non-root runtime, readiness, and production authentication boundary",
+      "PASS: identity, household, private draft, objects, encoded profile image, history, and receipt survive restart and replacement",
+      "PASS: failed migration exits without readiness or private diagnostic values",
+      "PASS: pending erasure survives container restart, resumes physical cleanup, rejects stale recovery, and preserves unrelated content",
+      "PASS: production OAuth map consent, read-only isolation, types, scoped history, whole MCP undo, restart receipt recovery, and revocation",
+      "PASS: production text-assistant consent, private MCP review, secret isolation, grant cleanup and restart receipt recovery without model calls",
+      "PASS: production voice access, consent and stale-offer denial with shared receipt recovery; no Live or Terra calls",
+      "PASS: production cost access, monthly assumptions, unknown coverage and SQLite restart persistence; no model calls",
+      "PASS: full archive restores private encoded image and personal view, explicit ownership survives restart, and fresh saving rejects retired operations"
+    ],
+    "container_log_sha256": "342717ac7e9486fa8cc9c5ebd9c196890d764b962ac8ff6429b5e73f5a502740"
+  },
+  "reportValidation": {
+    "documentation": {
+      "command": "npm run lint:docs",
+      "status": "PASS",
+      "files": 159,
+      "logSha256": "ab7e8c6cd96af6fd1065f93741d658b6aa7e6f290f190be19d579b1153744de7"
+    },
+    "lint": {
+      "command": "npm run lint",
+      "status": "PASS",
+      "files": 389,
+      "logSha256": "e9cb59bffff903e771bc7868bda21a7956fd90a6b54628f4fb6f89f888ce74ca"
+    },
+    "relativeLinks": "All report targets exist",
+    "images": "All nine original PNG byte identities, SHA256 and dimensions verified",
+    "caseTitles": "ARBETE-08, ARBETE-09 and RYMD-10 match exact native titles",
+    "firstFormattingResult": "Initial dictionary serialization needed repository formatting; corrected with scoped formatter before passing checks"
+  }
+}

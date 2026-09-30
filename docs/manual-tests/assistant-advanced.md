@@ -19,11 +19,14 @@ De länkade integrationstesterna verifierar verktygsreglerna. Stegen här
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 När ett befintligt objekt eller samband ska ändras, välj det först i
-kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+kartan eller listan och öppna dess detaljpanel. För objekt i listan använder
+du **Uppgifter**; i kartverktygen väljer du **Visa detaljer**. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna
-formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
-objektet eller sambandet öppnar inte formuläret.
+formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 
 1. Följ [den kontrollerade klientens startguide](#controlled-mcp-client)
    för en ny tillfällig databas på `http://localhost:3301`, privat
@@ -331,9 +334,9 @@ testfallet “MCP-06: importerad historik ångras med färskt underlag”.
 
    Anteckna lampans sparandes `operationId` och historiska `userId`.
    Namnet är ett syntetiskt provobjekt; Person ger ingen inloggning.
-2. Öppna hushållets administration och **Fullständig export**. Bekräfta
+2. Öppna **Inställningar → Fullständig export**. Läs informationen om
    insynen i privata uppgifter, skapa och ladda ned ZIP-filen. Följ
-   [exportens användarsteg](household-export.md) om panelen är obekant.
+   [exportens användarsteg](household-export.md) om sidan är obekant.
 3. Återkalla terminalanslutningen, avsluta den och stoppa servern. Behåll
    exporten. Städa den första provdatabasen enligt startguiden. Skapa en
    ny tom tillfällig databas med samma guide, logga in i ett nytt privat

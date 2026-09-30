@@ -4,7 +4,51 @@
 
 Objekt och samband bildar hushållets gemensamma karta. Du föreslår
 ändringar i ditt privata utkast och sparar dem tillsammans när du är klar.
-Du kan göra hela arbetet i **Lista och detaljer**.
+Öppna **Lista** i kartans verktyg för att göra hela arbetet med formulär.
+**Samtal och text** öppnar assistenten. På telefon visar
+**Visa verktygens namn** även de kompletterande verktygen.
+
+**Tema** ger valen **Ljust**, **Mörkt** och **System**. System följer
+inställningen på din enhet. **Information och hjälp** förklarar verktygen.
+Den korta första vägledningen kan stängas. Hopplänkarna når verktyg,
+formulär och text med tangentbord före kartgrafiken.
+
+## Besök andra vyer och fortsätt arbetet
+
+Öppna **Din profil** för kontouppgifter, **Inloggningssätt**, användar-ID,
+inbjudningar, **Assistentanslutningar** eller **Logga ut**. Profilen har en
+egen ikon och **Tillbaka till arbetet** återgår till ditt aktiva formulär.
+
+**Inställningar** öppnar en egen sida med **Typer och egna fält** och,
+för administratören, **Administrera tillgång**. Driftansvariga når även
+**Månadskostnad**. På mobil fäller **Välj inställning** ut sidnavigeringen.
+Kartan är dold medan du besöker sidan. **Tillbaka till kartan** återger
+ditt pågående arbete och fokus. Typförslag hör till samma privata utkast
+som objekt och samband; granska och spara hela utkastet i kartan.
+
+Du kan besöka **Inloggningssätt**, **Assistentanslutningar** eller
+**Administrera tillgång** och återvända utan att förlora formulärtext,
+samtalstext, sökning, urval eller personlig kartvy. Samma sak gäller
+**Månadskostnad** om du har tillgång till den. Ett pågående sparförsök
+fortsätter; följ dess status och kontrollera samma kvitto vid okänt utfall.
+
+Ett pågående samtal behåller mikrofonens läge. Mikrofonkontrollen finns
+kvar i den andra vyn så att du kan pausa eller stänga av rösten.
+Oskickad formulärtext hör fortfarande inte till utkastet; välj
+**Lägg i mitt utkast** för att ta med den i det samlade sparandet.
+
+**Stäng arbetsytan** återgår till kartan och behåller oskickad text.
+Öppna **Lista** eller **Samtal och text** och välj din panel i
+**Öppna paneler** för att fortsätta. Ett kryss stänger bara den panelen;
+objektets oskickade text finns kvar när du öppnar samma objekt igen.
+Ett nytt objekt som ännu inte finns i utkastet öppnar du med **Fortsätt**
+under **Påbörjade objekt** i Lista. Du kan ha flera sådana formulär samtidigt.
+
+Bevarandet gäller under pågående användning. Omladdning kan ta bort
+oskickad text; beständiga utkast och sparade personliga vyer finns kvar.
+Utloggning, förlorad tillgång och ersatt hushållsinnehåll avslutar det
+berörda arbetet och mikrofonen. Vid ett administrativt innehållsbyte kan
+kartarbetet vara spärrat tills innehållet är tillgängligt igen.
 
 ## Lägg till ett objekt
 
@@ -20,6 +64,13 @@ Du kan göra hela arbetet i **Lista och detaljer**.
    exempelvis bankkontot som betalar hyran utan att veta vilken bank det är.
 5. Välj **Lägg i mitt utkast**. Objektet kan nu användas i andra förslag,
    exempelvis ett nytt samband, före det gemensamma sparandet.
+
+Du kan börja skriva objektet innan dess typ finns. Besök **Inställningar →
+Typer och egna fält**, skapa typen och lägg typförslaget i utkastet. När du
+väljer **Tillbaka till kartan** finns den oskickade objekttexten kvar och
+den nya typen går att välja. Även en ny sambandstyp kan användas direkt
+mellan objekt i samma privata utkast. Definitioner, objekt och samband
+blir gemensamma först när du sparar hela utkastet.
 
 Samma namn betyder inte att två objekt är samma sak. Läs beskrivningen
 och identiteten innan du väljer ett befintligt objekt. Bekräftade
@@ -43,6 +94,13 @@ En **Obesvarad identitetsfråga** kan finnas i utkastet men måste lösas
 innan det kan sparas. Den betyder inte samma sak som ett avsiktligt
 ospecificerat objekt eller en osäker uppgift.
 
+Välj **Red ut identiteter i utkastet** i **Aktuell status** även om
+objektets panel är stängd. Vid objektets förslag väljer du **Red ut
+identiteten för** följt av objektets namn. Formuläret behåller eventuell
+oskickad text. Besvara identitetsfrågan och lägg rättelsen i utkastet.
+Andra formulär behåller sin text; lägg också den i utkastet eller stäng
+utan att skicka innan du uttryckligen sparar hela utkastet.
+
 Ett upprepat tillägg med samma typ, riktning och ändpunkter visar det
 befintliga sambandet. Olika betydelser mellan samma objekt går bra.
 Läs [sambandstyper och riktning](relationship-types.md) för egna typer
@@ -51,8 +109,10 @@ och förklaringar som går att läsa från båda objekten.
 ## Hitta och rätta uppgifter
 
 Använd **Sök objekt** och **Filtrera objekttyp**. Sökningen gäller hela
-kartan, även objekt som finns på andra listsidor. Välj objektet för att
-läsa detaljerna och dess samband. Längre listor har sidval samt
+kartan, även objekt som finns på andra listsidor. **Markera** ändrar
+urvalet; **Visa detaljer** öppnar objektets uppgifter och samband.
+**Avmarkera alla** behåller sökning och öppna paneler.
+Längre listor har sidval samt
 **Föregående sida** och **Nästa sida**.
 
 Välj **Redigera valt objekt** eller **Redigera valt samband** i

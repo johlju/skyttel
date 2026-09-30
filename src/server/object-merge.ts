@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import type { MapDraft, MapState, ObjectMerge } from '../shared/map.js';
 import { proposedRelationshipTypes } from '../shared/map.js';
+import { isObjectIconId } from '../shared/object-icons.js';
 import { mergeConnections, mergeFor, mergeObjects, mergeValues } from '../shared/object-merge.js';
 import { readFinancialFacts } from './financial-facts.js';
 import { readLifecycle } from './lifecycle.js';
@@ -74,6 +75,8 @@ export function proposeMerge(
   readCustomValues(value.customValues, type);
   readFinancialFacts(value.financialFacts);
   readLifecycle(value.lifecycle);
+  if (value.iconId !== undefined && !isObjectIconId(value.iconId))
+    throw new MapError('invalid_request', 400);
   if (!body.identityConfirmed) value.identity = 'unresolved';
   const merge: ObjectMerge = {
     survivorId: left.id,

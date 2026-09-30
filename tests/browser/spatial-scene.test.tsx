@@ -13,14 +13,21 @@ function openScene() {
   canvas.style.height = '600px';
   document.body.append(canvas);
   let points: ProjectedPoint[] = [];
-  const scene = spatialScene(canvas, (value) => {
-    points = value;
-  });
+  let axes: Position[] = [];
+  const scene = spatialScene(
+    canvas,
+    (value) => {
+      points = value;
+    },
+    (value) => {
+      axes = value;
+    },
+  );
   cleanups.push(() => {
     scene.dispose();
     canvas.remove();
   });
-  return { scene, canvas, points: () => points };
+  return { scene, canvas, points: () => points, axes: () => axes };
 }
 
 function distance(a: Position, b: Position) {
@@ -117,7 +124,7 @@ test('projected symbols expose perspective size and depth while their canvas rem
   expect([...pixel]).toEqual([19, 46, 37, 255]);
 });
 
-test('the varied universe sky rotates and zooms but stays fixed during pan and personal placement', () => {
+test('the varied universe sky follows pan, rotation and zoom but stays fixed during personal placement', () => {
   const { scene, canvas } = openScene();
   scene.update(['home']);
   const context = canvas.getContext('webgl2') as WebGL2RenderingContext;
@@ -141,20 +148,21 @@ test('the varied universe sky rotates and zooms but stays fixed during pan and p
     const colour = [...first.slice(index, index + 3)].join(',');
     colours.set(colour, (colours.get(colour) ?? 0) + 1);
   }
-  expect(colours.get('9,18,31')).toBeGreaterThan(canvas.width * canvas.height * 0.95);
+  expect(colours.get('16,27,41')).toBeGreaterThan(canvas.width * canvas.height * 0.95);
   expect(colours.size).toBeGreaterThan(15);
   scene.navigate('left');
-  expect(pixels()).toEqual(first);
+  const panned = pixels();
+  expect(panned).not.toEqual(first);
   scene.place('home', { x: 8, y: 9, z: 10 });
-  expect(pixels()).toEqual(first);
+  expect(pixels()).toEqual(panned);
   scene.navigate('rotate-left');
   expect(pixels()).not.toEqual(first);
   scene.navigate('rotate-right');
-  expect(pixels()).toEqual(first);
+  expect(pixels()).toEqual(panned);
   scene.navigate('in');
   expect(pixels()).not.toEqual(first);
   scene.configure(defaultViewSettings);
-  expect([...pixels().slice(0, 4)]).toEqual([19, 46, 37, 255]);
+  expect([...pixels().slice(0, 4)]).toEqual([16, 27, 41, 255]);
 });
 
 test('restarting with reordered household content retains spacious three-dimensional defaults', () => {
@@ -184,4 +192,111 @@ test('restarting with reordered household content retains spacious three-dimensi
       Math.max(...initial.map((p) => p[axis])) - Math.min(...initial.map((p) => p[axis])),
     ).toBeGreaterThan(10);
   expect(first.points().every((point) => point.visible)).toBe(true);
+});
+
+test('selection rotation fixes the three-dimensional mean and follows current personal placements', async () => {
+  const { scene, canvas, points } = openScene();
+  await expect.poll(() => canvas.width).toBe(960);
+  scene.update(
+    ['a', 'b', 'neighbor'],
+    [
+      { id: 'a', x: 10, y: 8, z: 6, version: 1 },
+      { id: 'b', x: -2, y: -4, z: -8, version: 1 },
+      { id: 'neighbor', x: -40, y: 30, z: -50, version: 1 },
+    ],
+  );
+  scene.navigate('right');
+  const before = points();
+  scene.select(['a', 'b']);
+  expect(points()).toEqual(before);
+  const mean = { x: 4, y: 2, z: -1 };
+  const pivot = scene.project(mean);
+  for (const command of ['rotate-left', 'tilt-up', 'rotate-right', 'tilt-down']) {
+    scene.navigate(command);
+    expect(scene.project(mean).x).toBeCloseTo(pivot.x, 9);
+    expect(scene.project(mean).y).toBeCloseTo(pivot.y, 9);
+  }
+  scene.place('a', { x: 16, y: 14, z: 12 });
+  const movedMean = { x: 7, y: 5, z: 2 };
+  const movedPivot = scene.project(movedMean);
+  scene.navigate('tilt-up');
+  expect(scene.project(movedMean).x).toBeCloseTo(movedPivot.x, 9);
+  expect(scene.project(movedMean).y).toBeCloseTo(movedPivot.y, 9);
+  scene.select(['a']);
+  const single = scene.project({ x: 16, y: 14, z: 12 });
+  scene.navigate('rotate-left');
+  expect(scene.project({ x: 16, y: 14, z: 12 }).x).toBeCloseTo(single.x, 9);
+  expect(scene.project({ x: 16, y: 14, z: 12 }).y).toBeCloseTo(single.y, 9);
+  scene.select([]);
+  scene.navigate('rotate-left');
+  expect(scene.project({ x: 16, y: 14, z: 12 }).x).not.toBeCloseTo(single.x, 3);
+});
+
+test('focus fits deep positions inside the free tool rectangle without turning the camera or changing the pivot', async () => {
+  const { scene, canvas, axes, points } = openScene();
+  await expect.poll(() => canvas.width).toBe(960);
+  scene.update(
+    ['a', 'b', 'far'],
+    [
+      { id: 'a', x: 10, y: 8, z: 25, version: 1 },
+      { id: 'b', x: -2, y: -4, z: -18, version: 1 },
+      { id: 'far', x: -1000, y: 300, z: 400, version: 1 },
+    ],
+  );
+  scene.select(['a']);
+  scene.navigate('rotate-left');
+  scene.navigate('tilt-up');
+  const direction = axes();
+  expect(scene.focus(['a', 'b'], { left: 180, right: 800, top: 80, bottom: 400 })).toBe(true);
+  for (const [index, axis] of axes().entries())
+    for (const key of ['x', 'y', 'z'] as const)
+      expect(axis[key]).toBeCloseTo(direction[index][key], 12);
+  for (const point of points().filter((point) => point.id !== 'far')) {
+    expect(point.x).toBeGreaterThanOrEqual(180 - 1e-9);
+    expect(point.x).toBeLessThanOrEqual(800 + 1e-9);
+    expect(point.y).toBeGreaterThanOrEqual(80 - 1e-9);
+    expect(point.y).toBeLessThanOrEqual(400 + 1e-9);
+    expect(point.visible).toBe(true);
+  }
+  const pivot = scene.project({ x: 10, y: 8, z: 25 });
+  scene.navigate('rotate-left');
+  expect(scene.project({ x: 10, y: 8, z: 25 }).x).toBeCloseTo(pivot.x, 9);
+  expect(scene.project({ x: 10, y: 8, z: 25 }).y).toBeCloseTo(pivot.y, 9);
+  expect(scene.focus(['missing'], { left: 0, right: 960, top: 0, bottom: 600 })).toBe(false);
+  const fitted = points();
+  for (const area of [
+    { left: 10, right: 10, top: 0, bottom: 600 },
+    { left: 0, right: 960, top: 60, bottom: 20 },
+    { left: Number.NaN, right: 960, top: 0, bottom: 600 },
+  ]) {
+    expect(scene.focus(['a', 'b'], area)).toBe(false);
+    expect(points()).toEqual(fitted);
+  }
+});
+
+test('overview restores the saved complete camera after intervening navigation and focus', async () => {
+  const { scene, canvas, points, axes } = openScene();
+  await expect.poll(() => canvas.width).toBe(960);
+  scene.update(['a', 'b']);
+  scene.navigate('rotate-left');
+  scene.navigate('up');
+  scene.navigate('in');
+  const initial = points();
+  const direction = axes();
+  expect(scene.toggleOverview()).toBe(true);
+  scene.navigate('left');
+  scene.navigate('out');
+  scene.focus(['a'], { left: 80, right: 800, top: 60, bottom: 450 });
+  scene.select(['a']);
+  scene.navigate('tilt-up');
+  expect(scene.toggleOverview()).toBe(false);
+  for (const [index, point] of points().entries()) {
+    expect(point.x).toBeCloseTo(initial[index].x, 9);
+    expect(point.y).toBeCloseTo(initial[index].y, 9);
+    expect(point.depth).toBeCloseTo(initial[index].depth, 9);
+    expect(point.scale).toBeCloseTo(initial[index].scale, 9);
+  }
+  for (const [index, axis] of axes().entries())
+    for (const key of ['x', 'y', 'z'] as const)
+      expect(axis[key]).toBeCloseTo(direction[index][key], 12);
 });

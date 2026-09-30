@@ -175,6 +175,9 @@ test('retained definitions, generic merge history, revoked owners, all private d
   expect(content.objectTypeFields).toContainEqual({
     typeId: type.id,
     fields: [{ id: 'enabled', name: 'På', kind: 'boolean' }],
+    sections: null,
+    builtins: null,
+    propertyOrder: null,
   });
   expect(content.removedTypes).toContainEqual({ kind: 'objectType', typeId: state.types[1].id });
   expect(content.objects.find((row: { id: string }) => row.id === 'absorbed').deleted).toBe(1);

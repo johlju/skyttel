@@ -13,7 +13,11 @@ Börja med några få uppgifter och komplettera när du vet mer.
 2. Välj **Fortsätt med Google** eller **Fortsätt med Microsoft**, beroende
    på vilka alternativ installationen erbjuder. Använd inloggningen som
    hör till din Skyttel-användare.
-3. Om du redan är medlem öppnas hushållets karta. Om du ser
+3. Läs övergången och välj **Fortsätt till Google** eller
+   **Fortsätt till Microsoft**. Du loggar in hos leverantören och kommer
+   sedan tillbaka till Skyttel. **Avbryt** återgår till valet av
+   inloggningssätt. Om försöket går ut börjar du ett nytt försök.
+4. Om du redan är medlem öppnas hushållets karta. Om du ser
    **Du har inte tillgång till hushållet** behöver administratören bjuda
    in dig. Följ [stegen för inbjudan](access.md#bjud-in-en-skyttel-användare).
 
@@ -22,7 +26,11 @@ Om du är utsedd till installationens första administratör och ser
 Namnet ska ha 1–100 tecken. Vid ett oklart resultat väljer du
 **Kontrollera status**. Därefter kan du bjuda in de andra medlemmarna.
 
-I sidhuvudet finns **Logga ut** och **Inloggningssätt**. Vill du använda
+Kartans vägledning erbjuder **Tala**, **Skriv** och **Öppna listan**.
+Du kan välja **Stäng vägledningen** och använda kartans verktyg direkt.
+Tal börjar först när du själv startar rösten och ger nödvändiga medgivanden.
+
+I **Din profil** finns **Logga ut** och **Inloggningssätt**. Vill du använda
 både Google och Microsoft för samma Skyttel-användare behöver du
 [koppla inloggningarna](access.md#koppla-google-och-microsoft) medan du är
 inloggad. Samma e-postadress kopplar inte ihop dem automatiskt.
@@ -47,7 +55,7 @@ innehåller även privata utkast och personliga vyer; läs
 
 ## Gör din första ändring
 
-1. Välj **Lista och detaljer** om du vill börja med formulären.
+1. Välj **Lista** i kartans verktyg för att börja med formulären.
 2. Välj **Nytt objekt**. Ange ett namn, exempelvis `Alex cykel`, välj
    objekttypen **Fordon** och fyll vid behov i en beskrivning.
 3. Välj **Lägg i mitt utkast**. Förslaget finns nu kvar även efter
@@ -63,9 +71,18 @@ ett [familjeabonnemang](family-subscription.md). Du kan också öppna
 
 ## Välj arbetssätt
 
-**Lista och detaljer** ger tillgång till kartans uppgifter och formulär.
-**Öppna rymdkartan** visar den rumsliga kartan över hela den tillgängliga
-webbytan. **Samlad vy** visar karta och lista tillsammans.
+**Lista** ger tillgång till kartans uppgifter och formulär.
+På dator öppnas objekt och samtal i egna paneler över kartan. Välj samma
+objekt igen för att återvända till dess panel. **Öppna paneler** väljer en
+panel och lyfter den framför andra; på telefon visas bara den valda panelen.
+
+Flytta datorpanelen genom att dra rubriken, använda piltangenter på
+flyttkontrollen eller öppna dess flyttknappar. Panelernas kryss stänger dem
+utan att kasta oskickad text. **Stäng arbetsytan** döljer panelerna för att
+visa hela kartan. Öppna ett verktyg och välj din panel för att fortsätta.
+Nya objekt som ännu inte skickats till utkastet kan öppnas igen med
+**Fortsätt** under **Påbörjade objekt** i Lista.
+Placeringar och oskickad text bevaras vid skärmbyte under samma session.
 Läs om [navigering och personlig vy](spatial-map.md) för att söka,
 fokusera på ett objekt och ordna placeringarna så att de passar dig.
 

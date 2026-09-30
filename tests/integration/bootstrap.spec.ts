@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openProfile } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('a new installation offers login and protects direct household requests', async ({
@@ -25,6 +26,7 @@ test('ACCESS-01: the configured administrator creates a private household and re
   try {
     await page.goto(installation.origin);
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Google' }).click();
     await expect(page.getByRole('heading', { name: 'Skapa ditt hushåll' })).toBeVisible();
     await page.getByLabel('Hushållets namn').fill('  Hushållet Linden  ');
     await page.getByRole('button', { name: 'Skapa hushåll', exact: true }).click();
@@ -38,8 +40,10 @@ test('ACCESS-01: the configured administrator creates a private household and re
       page.getByRole('heading', { name: 'Hushållet Linden', exact: true }),
     ).toBeVisible();
     expect(page.url()).toBe(address);
+    await openProfile(page);
     await page.getByRole('button', { name: 'Logga ut' }).click();
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Google' }).click();
     await expect(
       page.getByRole('heading', { name: 'Hushållet Linden', exact: true }),
     ).toBeVisible();
@@ -56,6 +60,7 @@ test('ACCESS-02: an invalid household name receives focus and can be corrected',
   try {
     await page.goto(installation.origin);
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Google' }).click();
     const name = page.getByLabel('Hushållets namn');
     await name.fill('   ');
     await page.getByRole('button', { name: 'Skapa hushåll', exact: true }).click();
@@ -85,6 +90,7 @@ test('ACCESS-03: checking an uncertain creation recovers the committed household
   try {
     await page.goto(installation.origin);
     await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
+    await page.getByRole('button', { name: 'Fortsätt till Google' }).click();
     await page.route('**/api/households', async (route) => {
       submissions += 1;
       const response = await route.fetch();

@@ -1,15 +1,19 @@
 import { isDeepStrictEqual } from 'node:util';
 import type {
+  CustomValues,
   DraftChange,
   DraftRelationshipChange,
   ObjectType,
   ObjectValue,
+  RelationshipType,
   SavedRelationshipChange,
   SaveReceipt,
 } from '../shared/map.js';
+import { isObjectIconId } from '../shared/object-icons.js';
 import { readFinancialFacts } from './financial-facts.js';
 import type { ImportContent } from './import-schema.js';
 import { MapError } from './map-error.js';
+import { readObjectProperties } from './object-properties.js';
 import { readCustomValues } from './object-types.js';
 
 function requireReference(condition: unknown): asserts condition {
@@ -55,10 +59,30 @@ export function validateImportReferences(
       {
         ...row,
         fields: content.objectTypeFields.find((fields) => fields.typeId === row.id)?.fields,
+        builtins:
+          content.objectTypeFields.find((fields) => fields.typeId === row.id)?.builtins ??
+          undefined,
+        propertyOrder:
+          content.objectTypeFields.find((fields) => fields.typeId === row.id)?.propertyOrder ??
+          undefined,
+        sections:
+          content.objectTypeFields.find((fields) => fields.typeId === row.id)?.sections ??
+          undefined,
       },
     ]),
   );
-  const relationshipTypes = new Set(content.relationshipTypes.map((row) => row.id));
+  const relationshipTypes = new Map(
+    content.relationshipTypes.map((row) => [
+      row.id,
+      {
+        ...row,
+        fields: content.relationshipTypeFields.find((fields) => fields.typeId === row.id)?.fields,
+        sections:
+          content.relationshipTypeFields.find((fields) => fields.typeId === row.id)?.sections ??
+          undefined,
+      },
+    ]),
+  );
   const images = new Map(content.images.map((row) => [row.id, row]));
   for (const name of [
     'identities',
@@ -70,7 +94,11 @@ export function validateImportReferences(
     'history',
   ] as const)
     unique(content[name] as { id: string | number }[], (row) => String(row.id));
-  for (const rows of [content.objectTypeFields, content.relationshipTypeLabels])
+  for (const rows of [
+    content.objectTypeFields,
+    content.relationshipTypeLabels,
+    content.relationshipTypeFields,
+  ])
     unique<{ typeId: string }>(rows, (row) => row.typeId);
   for (const rows of [content.drafts, content.viewSettings])
     unique<{ userId: string }>(rows, (row) => row.userId);
@@ -82,8 +110,15 @@ export function validateImportReferences(
   unique(content.positions, (row) => `${row.userId}:${row.objectId}`);
   unique(content.removedTypes, (row) => `${row.kind}:${row.typeId}`);
   for (const row of content.objectTypeFields) {
-    requireReference(objectTypes.has(row.typeId));
+    const type = objectTypes.get(row.typeId);
+    requireReference(type);
     unique(row.fields, (field) => field.id);
+    definition(type);
+  }
+  for (const row of content.relationshipTypeFields) {
+    const type = relationshipTypes.get(row.typeId);
+    requireReference(type);
+    edgeDefinition(type);
   }
   for (const row of content.relationshipTypeLabels)
     requireReference(relationshipTypes.has(row.typeId));
@@ -131,7 +166,26 @@ export function validateImportReferences(
 
   function definition(type: ObjectType) {
     identity('objectType', type.id);
+    presentation(type);
+    readObjectProperties(type);
+  }
+  function presentation(type: Pick<ObjectType, 'fields' | 'sections'>) {
     unique(type.fields ?? [], (field) => field.id);
+    unique(type.sections ?? [], (section) => section.id);
+    for (const section of type.sections ?? [])
+      requireReference(!['__proto__', 'constructor', 'prototype'].includes(section.id));
+    for (const field of type.fields ?? []) {
+      requireReference(type.sections === undefined || field.sectionId !== undefined);
+      requireReference(
+        field.sectionId === undefined ||
+          field.sectionId === '' ||
+          type.sections?.some((section) => section.id === field.sectionId),
+      );
+    }
+  }
+  function edgeDefinition(type: RelationshipType) {
+    identity('relationshipType', type.id);
+    presentation(type);
   }
   function names(values: Record<string, string> | undefined) {
     for (const id of Object.keys(values ?? {})) requireReference(objects.has(id));
@@ -150,6 +204,7 @@ export function validateImportReferences(
     requireReference(type);
     if (!deleted) readCustomValues(value.customValues, type);
     readFinancialFacts(value.financialFacts);
+    requireReference(value.iconId === undefined || isObjectIconId(value.iconId));
     if (value.profileImageId) requireReference(images.get(value.profileImageId)?.objectId === id);
   }
   function relationship(
@@ -160,8 +215,10 @@ export function validateImportReferences(
       targetId: string | null;
       knowledge: string;
       endDate?: unknown;
+      customValues?: CustomValues;
     },
-    types: Set<string>,
+    types: Map<string, RelationshipType>,
+    deleted = false,
   ) {
     identity('relationshipType', value.typeId);
     if (value.id) identity('relationship', value.id);
@@ -174,12 +231,16 @@ export function validateImportReferences(
         ? value.targetId !== null
         : value.targetId === null,
     );
+    const type = types.get(value.typeId);
+    requireReference(type);
+    edgeDefinition(type);
+    if (!deleted) readCustomValues(value.customValues, type);
     if (value.endDate) readFinancialFacts({ endDate: value.endDate });
   }
   function changes(
     changes: DraftChange[] | SaveReceipt['changes'],
     types: ObjectType[],
-    edgeTypes: Set<string>,
+    edgeTypes: Map<string, RelationshipType>,
   ) {
     for (const change of changes) {
       const id = 'id' in change ? change.id : (change.before?.id ?? change.after?.id);
@@ -201,9 +262,9 @@ export function validateImportReferences(
       );
       for (const value of merge.objects) object(value, value.id, merge.types);
       names(merge.objectNames);
-      const mergedTypes = new Set([
+      const mergedTypes = new Map<string, RelationshipType>([
         ...edgeTypes,
-        ...merge.relationshipTypes.map((item) => item.id),
+        ...merge.relationshipTypes.map((item): [string, RelationshipType] => [item.id, item]),
       ]);
       for (const value of merge.relationships) relationship(value, mergedTypes);
       if (merge.imageCopy) {
@@ -221,30 +282,35 @@ export function validateImportReferences(
   const changesNested = changes;
   function edgeChange(
     change: DraftRelationshipChange | SavedRelationshipChange,
-    types: Set<string>,
+    types: Map<string, RelationshipType>,
   ) {
     identity('relationship', change.id);
     requireReference(!change.before || change.before.id === change.id);
     if (change.after && 'id' in change.after) requireReference(change.after.id === change.id);
-    const meanings = new Set([
-      ...types,
-      change.type.id,
-      ...('beforeType' in change && change.beforeType ? [change.beforeType.id] : []),
-    ]);
-    if (change.before) relationship(change.before, meanings);
+    edgeDefinition(change.type);
+    const beforeType = 'beforeType' in change ? change.beforeType : undefined;
+    if (beforeType) edgeDefinition(beforeType);
+    const meanings = new Map([...types, [change.type.id, change.type]]);
+    if (change.before)
+      relationship(
+        change.before,
+        new Map([...meanings, ...(beforeType ? [[beforeType.id, beforeType] as const] : [])]),
+      );
     if (change.after) relationship(change.after, meanings);
     names(change.objectNames);
     if ('removedWithObjects' in change)
       for (const id of change.removedWithObjects ?? []) requireReference(objects.has(id));
   }
   for (const row of content.objects) {
-    const { customValues, financialFacts, profileImageId, lifecycle, identity, ...value } = row;
+    const { customValues, financialFacts, profileImageId, iconId, lifecycle, identity, ...value } =
+      row;
     object(
       {
         ...value,
         ...(customValues ? { customValues } : {}),
         ...(financialFacts ? { financialFacts } : {}),
         ...(profileImageId ? { profileImageId } : {}),
+        ...(iconId ? { iconId } : {}),
         ...(lifecycle ? { lifecycle } : {}),
         ...(identity ? { identity } : {}),
       },
@@ -254,7 +320,11 @@ export function validateImportReferences(
     );
   }
   for (const row of content.relationships)
-    relationship({ ...row, endDate: row.endDate ?? undefined }, relationshipTypes);
+    relationship(
+      { ...row, endDate: row.endDate ?? undefined, customValues: row.customValues ?? undefined },
+      relationshipTypes,
+      Boolean(row.deleted),
+    );
   for (const draft of content.drafts) {
     for (const change of draft.objectTypes) {
       identity('objectType', change.id);
@@ -267,6 +337,8 @@ export function validateImportReferences(
     }
     for (const change of draft.relationshipTypes) {
       identity('relationshipType', change.id);
+      if (change.before) edgeDefinition(change.before);
+      if (change.after) edgeDefinition(change.after);
       requireReference(
         (!change.before || change.before.id === change.id) &&
           (!change.after || change.after.id === change.id),
@@ -275,9 +347,13 @@ export function validateImportReferences(
     const types = draft.objectTypes.flatMap((change) =>
       [change.before, change.after].filter((value) => value !== null),
     );
-    const edgeTypes = new Set([
+    const edgeTypes = new Map<string, RelationshipType>([
       ...relationshipTypes,
-      ...draft.relationshipTypes.map((change) => change.id),
+      ...draft.relationshipTypes.flatMap((change) =>
+        [change.before, change.after]
+          .filter((type) => type !== null)
+          .map((type): [string, RelationshipType] => [type.id, type]),
+      ),
     ]);
     changes(draft.changes, types, edgeTypes);
     for (const change of draft.relationships) edgeChange(change, edgeTypes);
@@ -296,6 +372,8 @@ export function validateImportReferences(
     }
     for (const change of receipt.relationshipTypes ?? []) {
       identity('relationshipType', change.id);
+      if (change.before) edgeDefinition(change.before);
+      if (change.after) edgeDefinition(change.after);
       requireReference(
         (!change.before || change.before.id === change.id) &&
           (!change.after || change.after.id === change.id),

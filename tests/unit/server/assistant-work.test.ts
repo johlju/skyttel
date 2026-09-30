@@ -54,6 +54,41 @@ async function post(route: string, data: unknown) {
   return response.json();
 }
 
+test('assistant icon search and set/reset proposals share the private object and reject unknown IDs', async () => {
+  const token = await connect();
+  const found = await tool(token, 'search_object_icons', { query: 'cykel' });
+  expect(found.value.icons).toContainEqual({ id: 'bike', label: 'Cykel' });
+  const scientific = await tool(token, 'search_object_icons', { query: 'vetenskap telescope' });
+  expect(scientific.value.icons).toContainEqual({ id: 'telescope', label: 'telescope' });
+  const state = await (await browser.get(path)).json();
+  const value = { typeId: state.types[0].id, name: 'Cykel', description: '', iconId: 'bike' };
+  const proposal = {
+    version: 0,
+    contentVersion: state.contentVersion,
+    id: 'cycle',
+    baseRevision: null,
+    value,
+  };
+  const proposed = await tool(token, 'propose_object', proposal);
+  expect(proposed.error).toBe(false);
+  expect(proposed.value.changes[0].after.iconId).toBe('bike');
+  const invalid = await callAssistant(app.origin, token, 'propose_object', {
+    ...proposal,
+    version: 1,
+    value: { ...value, iconId: 'invalid-icon' },
+  });
+  const invalidBody = await invalid.json();
+  expect(invalidBody.result?.isError || invalidBody.error).toBeTruthy();
+  const reset = await tool(token, 'propose_object', {
+    ...proposal,
+    version: 1,
+    value: { ...value, iconId: null },
+  });
+  expect(reset.error).toBe(false);
+  expect(reset.value.changes[0].after).not.toHaveProperty('iconId');
+  expect((await (await browser.get(path)).json()).objects).toEqual([]);
+});
+
 test('explicit write consent permits proposals while an earlier read grant stays read-only', async () => {
   const readToken = await connect(false);
   const state = await (await browser.get(path)).json();

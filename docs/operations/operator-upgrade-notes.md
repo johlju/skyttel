@@ -28,6 +28,54 @@ and retention restrictions to these records and their recovery copies. Ordinary
 removal and undo do not permanently erase retained information. Follow the
 [permanent erasure runbook](permanent-erasure.md) for that operation.
 
+### Object icon and archive compatibility
+
+This release stores each object's selected icon with its other content.
+Objects without a selection use their type's default icon. Full household
+archives from this release need an upgraded reader. The upgraded application
+also accepts supported older archives and uses default icons where no
+selection exists. Use the database backup and matching image procedure above
+for rollback; changing the image alone does not remove icon storage.
+
+Refresh connected assistants' tool catalogs after rollout. Older clients
+that omit the icon field retain the current selection. An explicit reset
+uses a null value. Icons are bundled locally and need no external service.
+
+### Object and relationship type sections
+
+This release stores named sections, field order and hidden field placement
+with object and relationship type definitions. Existing definitions and
+supported older archives keep their field order and use a default section.
+Hidden fields retain their values, including in drafts, history and recovery copies.
+Hiding a field does not erase its content or limit access to it.
+
+Object types can also store the placement and order of built-in description
+and financial properties. These settings do not change the financial values,
+their certainty or their reported dates. Existing common values remain
+accessible outside type sections, including after a type change. Older
+definitions and archives keep their original presentation until it is changed.
+
+New household archives require an upgraded reader. Refresh connected
+assistants' tool catalogs after rollout so they can change sections and
+field placement. Older clients that omit section or built-in property
+information retain the existing placement. Custom answers and built-in
+property references remain separate contracts. Use the database backup
+and matching image procedure
+above for rollback.
+
+### Relationship fields and archive compatibility
+
+This release stores optional custom field definitions and answers for
+relationships. Existing relationships keep empty answers. New full household
+archives require an upgraded reader; supported older archives remain readable.
+Keep custom answers under the same access and retention controls as other
+household content, including private drafts and recovery copies.
+
+Refresh connected assistants' tool catalogs after rollout. Clients that omit
+custom fields or answers retain existing data when the relationship type is
+unchanged. Clearing answers requires an explicit empty value set. Use the
+database backup and matching image procedure above for rollback.
+
 ### Installation cost measurements
 
 Cost recording starts at upgrade; earlier usage remains unknown. The configured
@@ -80,14 +128,34 @@ use the [recovery runbook](recovery.md) to establish fresh authentication and
 verified private-content ownership. Keep only one writable installation after
 cutover. Historical save attempts cannot authorize retries at the destination.
 
+A current administrator can find a confirmed import from another browser,
+including after restart or loss of the original administrator's role. Compare
+the attempt ID and finish cleanup through that attempt; cleanup does not repeat
+the replacement. An unconfirmed review remains available only to its uploader
+for ten minutes and does not survive restart. Review the archive again when
+that temporary preparation is no longer available.
+
+Cancellation of an unconfirmed review removes its temporary files. If removal
+fails, that review cannot replace content. Its uploader can follow the same
+attempt and retry cleanup while household content remains available. Resolve
+storage permissions before retrying. This cleanup is separate from cleanup
+after a committed replacement, which keeps household content unavailable.
+
 ### Permanent household erasure
 
 Allow free persistent disk space for database reconstruction and normal journal
 use. A pending erasure can block content access across the whole installation
 while a database reader or storage error delays cleanup. Keep the recorded
-operation and resume it from household administration. Follow the
+operation and resume it from **Inställningar → Permanent radering**. Follow the
 [pending erasure runbook](permanent-erasure.md) after an interruption.
 Old content generations cannot submit edits or retry saves after an erasure.
+
+Keep the recorded operation identifier after a lost reply. Status checks in
+the original browser tab follow that operation after navigation or reload;
+a newer result does not resolve an earlier attempt. A new browser tab can show
+the latest operation instead. Compare identifiers and keep an unavailable
+attempt unresolved until its own status can be read. Do not start another
+erasure merely because the previous response is missing.
 
 Downloaded exports and provider snapshots remain separate recovery copies.
 Import or restoration of an older copy can restore erased information. Apply

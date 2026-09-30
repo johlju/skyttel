@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { mkdir, open, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type Database from 'better-sqlite3';
+import type { ImportDiscovery, ImportStatus } from '../shared/household-import.js';
 import {
   assertContentAvailable,
   assertContentVersion,
@@ -29,6 +30,7 @@ type ReadyImport = {
   fingerprint: string;
   content: ImportContent;
   expiresAt: string;
+  cancelling?: boolean;
   timer?: NodeJS.Timeout;
 };
 type Store = {
@@ -77,23 +79,56 @@ function counts(content: ImportContent) {
       .map(([name, value]) => [name, (value as unknown[]).length]),
   );
 }
-function readyStatus(job: ReadyImport) {
+function readyStatus(job: ReadyImport): ImportStatus {
   return {
     id: job.id,
-    status: 'ready' as const,
+    status: job.cancelling ? 'cancel-cleanup' : 'ready',
     contentVersion: job.contentVersion,
+    confirmationContentVersion: job.contentVersion,
     sourceHouseholdId: job.content.household.id,
     counts: counts(job.content),
     expiresAt: job.expiresAt,
   };
 }
-function durableStatus(job: ContentMaintenance) {
+function durableStatus(job: ContentMaintenance): ImportStatus {
   return {
     id: job.id,
     status: job.phase,
     contentVersion: job.contentVersion,
+    // Applying a replacement advances the row's generation once. Repeated
+    // confirmation is still bound to the original reviewed request identity.
+    confirmationContentVersion:
+      job.contentVersion - (job.phase === 'cleanup' || job.phase === 'completed' ? 1 : 0),
     counts: JSON.parse(job.counts) as Record<string, number>,
     ...(job.error ? { error: job.error } : {}),
+  };
+}
+
+/** Discover metadata only; uploaded review material remains actor-bound. */
+export function discoverHouseholdImport(
+  database: Database.Database,
+  actorId: string,
+  householdId: string,
+): ImportDiscovery {
+  authorize(database, actorId, householdId);
+  const store = storeFor(database);
+  const job = database
+    .prepare(`SELECT * FROM content_maintenance WHERE householdId = ? AND kind = 'import'
+      ORDER BY phase IN ('prepared', 'cleanup') DESC, createdAt DESC, rowid DESC LIMIT 1`)
+    .get(householdId) as ContentMaintenance | undefined;
+  const reviews = [...store.jobs.values()]
+    .reverse()
+    .filter(
+      (candidate) =>
+        candidate.actorId === actorId &&
+        candidate.householdId === householdId &&
+        (candidate.cancelling || Date.parse(candidate.expiresAt) > Date.now()) &&
+        !storedImport(database, householdId, candidate.id),
+    );
+  const ready = reviews.find((candidate) => candidate.cancelling) ?? reviews[0];
+  return {
+    attempt: job ? durableStatus(job) : null,
+    ready: ready ? readyStatus(ready) : null,
   };
 }
 function storedImport(database: Database.Database, householdId: string, id: string) {
@@ -260,10 +295,36 @@ export function householdImportStatus(
     !job ||
     job.actorId !== actorId ||
     job.householdId !== householdId ||
-    Date.parse(job.expiresAt) <= Date.now()
+    (!job.cancelling && Date.parse(job.expiresAt) <= Date.now())
   )
     throw new MapError('import_unavailable', 404);
   return readyStatus(job);
+}
+
+export async function cancelHouseholdImport(
+  database: Database.Database,
+  actorId: string,
+  householdId: string,
+  id: string,
+): Promise<{ cancelled: true } | ImportStatus> {
+  authorize(database, actorId, householdId);
+  const status = householdImportStatus(database, actorId, householdId, id);
+  if (status.status !== 'ready' && status.status !== 'cancel-cleanup')
+    throw new MapError('operation_conflict');
+  const store = storeFor(database);
+  const job = store.jobs.get(id) as ReadyImport;
+  // Claim this unconfirmed preparation before the first filesystem await.
+  // Confirmation commits its durable gate synchronously before its own await.
+  job.cancelling = true;
+  clearTimeout(job.timer);
+  try {
+    await discard(store, job);
+  } catch {
+    authorize(database, actorId, householdId);
+    return readyStatus(job);
+  }
+  authorize(database, actorId, householdId);
+  return { cancelled: true };
 }
 
 export async function confirmHouseholdImport(
@@ -286,6 +347,7 @@ export async function confirmHouseholdImport(
     .update(JSON.stringify({ confirmed: true, contentVersion: body.contentVersion }))
     .digest('hex');
   const status = householdImportStatus(database, actorId, householdId, id);
+  if (status.status === 'cancel-cleanup') throw new MapError('import_cancelled');
   if (status.status !== 'ready') {
     const durable = maintenance.read(id);
     if (durable.requestHash !== requestHash || durable.kind !== 'import')

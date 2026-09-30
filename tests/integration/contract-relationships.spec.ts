@@ -11,7 +11,7 @@ import type {
   RelationshipValue,
   SaveReceipt,
 } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 async function addRelationship(
@@ -80,6 +80,7 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
       state = await read();
     }
     await page.goto(installation.origin);
+    await openWorkspace(page);
     const relationships: [string, string, string | null, Knowledge][] = [
       ['home-rent', 'Gäller', 'home', 'known'],
       ['garage-rent', 'Gäller', 'garage', 'known'],
@@ -113,6 +114,8 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
       await addRelationship(page, sourceId, type, targetId, knowledge);
 
     await page.reload();
+
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Björkbacken → Används av → Okänt');
     await expect(review).toContainText('Garaget → Används av → Uttryckligen inget');
@@ -133,6 +136,8 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
     expect(await history()).toEqual({ history: [] });
 
     await page.reload();
+
+    await openWorkspace(page);
     await page
       .getByRole('button', { name: 'Bostadshyra → Betalas med → Obesvarad identitetsfråga' })
       .click();
@@ -187,18 +192,22 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
 
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     expect((await read()).objects).toEqual(saved.objects);
     expect((await read()).relationships).toEqual(saved.relationships);
     await page.getByLabel('Sök objekt').fill('bostadshyra');
     await expect(
-      page.getByRole('list', { name: 'Objekt', exact: true }).getByRole('button'),
+      page
+        .getByRole('list', { name: 'Objekt', exact: true })
+        .getByRole('button', { name: /^Visa .+ i kartan$/ })
+        .locator('strong'),
     ).toHaveText(['Bostadshyra']);
-    await page.getByRole('button', { name: 'Bostadshyra', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Bostadshyra', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Hyran på Björkbacken');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await page.getByLabel('Sök objekt').fill('');
-    await page.getByRole('button', { name: 'Betalkontot', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppgifter för Betalkontot', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Objektets identitet')).toHaveValue('unspecified');
     await page.getByLabel('Objektets identitet').selectOption('identified');
@@ -216,6 +225,7 @@ test('AVTAL-05: contract relationships preserve separate roles and identities th
     await expect(page.getByRole('status')).toContainText('Sparat');
     await expect(review).toContainText('Inga förslag');
     await page.reload();
+    await openWorkspace(page);
     const corrected = await read();
     expect(corrected.objects).toHaveLength(saved.objects.length);
     expect(corrected.objects.find((object) => object.id === 'home-rent')?.name).toBe(

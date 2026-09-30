@@ -2,7 +2,7 @@
 
 Testfallen hjälper den som provar Skyttel att kontrollera gemensamma
 definitioner, privata förslag, frivilliga fält, typbyten och samtidiga
-ändringar.
+ändringar samt namngivna avsnitt med bevarade fältvärden.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
 ## Konfigurerade användare
@@ -15,11 +15,14 @@ Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 När ett befintligt objekt eller samband ska ändras, välj det först i
-kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+kartan eller listan och öppna dess detaljpanel. För objekt i listan använder
+du **Uppgifter**; i kartverktygen väljer du **Visa detaljer**. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna
-formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
-objektet eller sambandet öppnar inte formuläret.
+formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 
 1. Starta appen enligt [provförberedelsen](../development/devcontainer.md#disposable-local-database).
    Börja varje fall i ett nytt testhushåll utan privata förslag.
@@ -267,6 +270,151 @@ entire draft and map”.
 - Ingen del sparas, inte heller Person-objektet. Tidigare fältdefinition,
   hela utkastet och historiken är oförändrade.
 
+## Avsnitt och visning av egna fält
+
+### TYP-10: Gemensamma egenskaper behåller värden genom placering och typbyte
+
+**Syfte:** Placera inbyggda uppgifter utan att förlora ekonomisk betydelse,
+säkerhet, datum eller tidigare egna värden.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Börja med ett tomt hushåll. Skapa och spara Annan typ
+utan avsnitt eller egna fält. Använd dator samt 390 och 320 pixlars bredd.
+Pröva även ett kort fönster på 640 × 456 pixlar och verklig webbläsarzoom.
+
+**Integrationstest:**
+[object-builtins.spec.ts](../../tests/integration/object-builtins.spec.ts),
+testfallen “TYP-10: canonical properties retain meaning through sections,
+hiding, type changes, history and undo at 1280px”, samma titel med “390px”,
+“320px” respektive “640px”.
+
+**Steg:**
+
+1. Öppna Inställningar → Typer och egna fält. Skapa Husavtal och avsnittet
+   Avtalet. Lägg till gemensamma Beskrivning och Senast uppgiven skuld samt
+   ett eget textfält Anteckning. Ändra skuldens visningsnamn till Skuld.
+2. Flytta Skuld upp med tangentbordet, dölj den och återvisa i Avtalet.
+   Kontrollera fokus efter varje handling. Lägg till gemensamma Startdatum
+   och placera i ett nytt avsnitt Datum. Kontrollera ljust och mörkt tema.
+   Lägg typförslaget i utkastet.
+3. Skapa Husets lån av typen Husavtal. Försök först lägga ett namnlöst
+   objekt i utkastet: namnfältet ska få fokus. Ange Gemensam avtalstext som
+   beskrivning och Eget värde som Anteckning. Ange Skuld `12 300` som
+   **Osäkert uppgivet**, med uppgiftsdatum `2026-09-01`, och Startdatum
+   `2026-08-01` som känt.
+4. Under Ekonomiska uppgifter och avtalsvillkor, välj **Okänt** för Pris
+   och **Uttryckligen inget** för Valuta. Välj **Känt** för Beviljat
+   kreditutrymme utan belopp. Fäll ihop avsnittet och försök lägga i
+   utkastet. Det ska öppnas och det tomma beloppet få fokus. Välj därefter
+   **Ej uppgivet** för kreditutrymmet och lägg objektet i utkastet.
+5. Öppna Lista och spara hela utkastet. Starta om installationen och ladda
+   om. Dölj Skuld i typdefinitionen och lägg förslaget i utkastet. Öppna
+   Husets lån och läs skulden under Uppgifter utanför typens avsnitt.
+   Öppna Lista och spara ändringen.
+6. Redigera Husets lån och välj Annan typ. Kontrollera beskrivning och
+   ekonomiska uppgifter. Granska det tidigare egna värdet och bekräfta
+   **Jag har hanterat tidigare fältvärden för typbytet**. Lägg i utkastet
+   och spara genom Lista.
+7. Öppna Visa historik och Visa ändringarna för typbytet. Granska typbytet,
+   tidigare Anteckning och skuldens säkerhet och datum. Välj Ångra sparandet,
+   granska och spara förslaget. Starta om och kontrollera Husets lån igen.
+
+**Förväntat resultat:**
+
+- Egenskapernas ordning och placering kan ändras utan att deras betydelse
+  ändras. En gemensam egenskap kan inte läggas till två gånger.
+- Saknat namn och känt belopp utan värde stoppas med synligt fokus.
+- I korta fönster går det att rulla till Nytt objekt, formulär och sparande
+  även när privat förslag, status och återkoppling visas samtidigt.
+- Beskrivning, skuld, säkerhet och datum består efter döljning och typbyte.
+  Okänt, uttryckligen inget och ej uppgivet förblir olika tillstånd.
+- Typbytet kräver hantering av det gamla egna värdet. Ångring återför
+  Husavtal och Anteckning, med samma gemensamma uppgifter efter omstart.
+
+### TYP-08: Flytta och dölj fält utan värdeförlust genom sparande och omstart
+
+**Syfte:** Kontrollera avsnitt, fältidentiteter och atomiskt sparande med
+obesvarat, noll och nej som olika uppgifter.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Solcellsanläggning saknas. Starta ett tomt testhushåll.
+
+**Integrationstest:**
+[object-sections.spec.ts](../../tests/integration/object-sections.spec.ts),
+testfallet “TYP-08: sections move and hide fields in the shared draft without
+losing values after restart”.
+
+**Steg:**
+
+1. Öppna Inställningar och Typer och egna fält. Skapa Solcellsanläggning.
+   Byt avsnittets namn till Uppgifter. Lägg till Service och flytta det upp.
+2. Lägg till Leverantör som text, Effekt som tal, Datum som datum och
+   Batteri samt Reserv som ja/nej. Välj Uppgifter för samtliga fält.
+   Lägg typförslaget i utkastet.
+3. Återgå till kartan och skapa Paneler av den nya typen. Ange Exempelsol,
+   `0`, `2026-09-01` och **Nej** för Batteri. Lämna Reserv obesvarat.
+   Lägg objektet i samma utkast.
+4. Öppna typdefinitionen igen. Dölj Effekt och flytta Leverantör till
+   Service. Lägg typförslaget i utkastet. Granska definition och objekt;
+   de finns ännu inte i den gemensamma kartan.
+5. Spara hela utkastet. Starta om testinstallationen och ladda om sidan.
+   Öppna Paneler för redigering. Kontrollera att Effekt inte visas,
+   Batteri är Nej och Reserv är Obesvarat. Stäng utan att skicka.
+6. Återvisa Effekt i Service genom typdefinitionen och lägg förslaget
+   i utkastet. Öppna objektformuläret igen.
+
+**Förväntat resultat:**
+
+- Service visas före Uppgifter. Fälten ligger i sina valda avsnitt.
+- Effekt återkommer med `0`; Leverantör, Datum och Batteri behåller sina
+  exakta svar. Reserv är fortfarande obesvarat. Inget fält byter identitet.
+- Definition och värden sparas tillsammans. Döljning tar inte bort värden.
+
+### TYP-09: Medlemmar ordnar förifyllda typer med tangentbord och bevarat arbete
+
+**Syfte:** Kontrollera standardpresentation, fokus och oskickade
+definitionsändringar i Inställningar på mobil och dator.
+
+**Användare:** Lo, vanlig medlem. Alex förbereder den gemensamma typen.
+
+**Förutsättningar:** Person har textfältet Anteckning i Egna fält.
+Använd dator och smala fönster motsvarande 390 och 320 CSS-pixlar.
+
+**Integrationstest:**
+[object-sections.spec.ts](../../tests/integration/object-sections.spec.ts),
+testfallen “TYP-09: ordinary members retain prefilled section work and
+keyboard controls at 1280px”, samma titel med “390px” respektive “320px”.
+
+**Steg:**
+
+1. Lo öppnar Inställningar, Typer och egna fält och Ändra typ: Person.
+   Kontrollera att Anteckning visas i Egna fält.
+2. Byt avsnittets namn till Personuppgifter. Aktivera Lägg till avsnitt
+   med tangentbord och skriv Kontakt direkt i det fokuserade namnfältet.
+3. Aktivera Flytta avsnittet Kontakt upp med tangentbord. Kontrollera
+   fokus på det flyttade namnfältet. Välj Kontakt för Anteckning och
+   ändra fältbeskrivningen till Bevara även oskickad beskrivning.
+4. Återgå till kartan och tillbaka till typinställningarna. Kontrollera
+   att ordningen, placeringen och oskickad beskrivning finns kvar.
+5. Dölj Anteckning. Kontrollera fokus på Visa i avsnitt. Ta bort det
+   tomma Personuppgifter; fokus ska gå till Lägg till avsnitt.
+6. Lägg till ett avsnitt med bara mellanslag i namnet. Fäll ihop Avsnitt
+   och försök lägga förslaget i utkastet. Avsnitt öppnas och namnfältet
+   får fokus. Ge det namnet Tillfälligt och ta sedan bort det tomma avsnittet.
+7. Prova ljust och mörkt tema och navigera kontrollerna med tangentbord.
+   Lägg förslaget i utkastet. Alex kontrollerar sin egen karta.
+
+**Förväntat resultat:**
+
+- Vanliga medlemmar kan redigera förifyllda typer. Ett upptaget avsnitt
+  kan inte tas bort; ett tomt avsnitt kan tas bort.
+- Kontroller och synligt fokus går att nå utan vågrät sidrullning.
+  Flytt och döljning har tangentbordsalternativ. Arbete bevaras mellan vyer.
+- Los utkast behåller Antecknings identitet, beskrivning och dold placering.
+  Alex ser fortfarande den sparade definitionen tills Lo sparar hela utkastet.
+
 ## Byte av objekttyp
 
 ### TYP-06: Typbyte bevarar objekt, samband och tidigare fältbetydelse
@@ -299,7 +447,8 @@ identity, edges and history through restart and undo”.
    förslag. Spara hela utkastet och kontrollera cykelns och sambandets ID.
 4. Byt typdefinitionens namn från Cykel till Trampcykel och dess fältnamn
    till Tidigare Nummer och Tidigare Försäkrad. Spara. Starta om och öppna
-   **Visa historik**. Hitta typbytet från Cykel till Motorfordon.
+   **Visa historik**. Välj **Visa ändringarna** vid typbytet från Cykel
+   till Motorfordon.
 5. Kontrollera tidigare typnamn, Nummer `SYNTH-42`, sparande användare
    och tidpunkt. Välj **Ångra sparandet** för typbytet och granska förslaget.
    Spara hela utkastet, starta om och läs kartan igen.
@@ -312,6 +461,63 @@ identity, edges and history through restart and undo”.
   Typbytet sparar talet `42` och obesvarat Försäkrad; ångring återför
   texten `SYNTH-42` och uttryckligt **Nej**.
 - Sparat utkast och historik finns kvar efter normal omstart.
+
+### TYP-11: Upprepade typbyten bevarar gemensamma uppgifter och gamla svar
+
+**Syfte:** Byt mellan typer med lika egna fält utan automatisk överföring
+eller förlust av gemensamma uppgifter, bild, ikon och samband.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Skapa Cykel och Motorfordon med avsnittet Egenskaper
+och samma egna fältnamn och värdeslag: Nummer som text, Antal som tal
+och Försäkrad som ja/nej. Spara Alex blå cykel av typen Cykel med
+Nummer `A-42`, Antal `0`, Försäkrad **Nej**, identiteten
+**Ospecificerat objekt** och beskrivningen **Gemensamma uppgifter som
+ska finnas kvar**. Välj ikonen Cykel och en påhittad profilbild. Spara
+Garaget och ett osäkert uppgivet samband från cykeln till garaget.
+På cykeln ska följande gemensamma ekonomiska uppgifter finnas:
+
+- Senast uppgiven skuld: `125 000,50`, **Osäkert uppgivet**, datum `2026-09-01`.
+- Beviljat kreditutrymme: **Uttryckligen inget**, datum `2026-09-02`.
+- Utnyttjad kredit: `0`, **Känt**, datum `2026-09-03`.
+- Pris: **Okänt**.
+
+**Integrationstest:**
+[type-change.spec.ts](../../tests/integration/type-change.spec.ts),
+testfallen “TYP-11: repeated type changes keep distinct former answers and
+complete common values through save and restart at 1280px in light”, samma
+titel med “390px” eller “320px” och “dark”. Kör varje bredd i båda temana.
+
+**Steg:**
+
+1. Öppna cykelns redigering och byt till Motorfordon. Kontrollera att
+   alla nya egna fält är tomma och de tidigare svaren visas separat.
+   Ange Nummer `B-84`, Antal `8` och Försäkrad **Ja**. Bekräfta att
+   tidigare fältvärden är hanterade utan att lägga förslaget i utkastet.
+2. Byt tillbaka till Cykel. Kontrollera tomma nya fält, två tidigare
+   grupper och att bekräftelsen måste göras på nytt. Ange Nummer
+   `A-126`, Antal `0` och Försäkrad **Nej**. Bekräfta hanteringen igen.
+3. Byt åter till Motorfordon. Kontrollera tre tidigare grupper, inklusive
+   båda grupperna från Cykel med sina egna svar. Fyll bara i Nummer
+   `B-final`, lämna Antal och Försäkrad obesvarade och bekräfta hanteringen.
+4. Kontrollera namn, identitet, beskrivning, profilbild och ekonomiska
+   uppgifter under **Uppgifter utanför typens avsnitt**. Lägg i utkastet.
+   Kontrollera att den sparade kartan fortfarande visar den gamla typen.
+5. Starta om installationen, ladda om och granska förslaget. Spara hela
+   utkastet uttryckligen. Starta om och granska cykeln och sambandet igen.
+
+**Förväntat resultat:**
+
+- Varje typbyte börjar med obesvarade egna fält, även när namn och
+  värdeslag stämmer. Tidigare noll och Nej blandas inte ihop med obesvarat.
+  Gamla grupper behåller sina typer och svar under redigeringen.
+- Varje byte kräver en ny uttrycklig bekräftelse före placering i utkastet.
+  Namn, identitet, beskrivning, hela ekonomiska uppgifter, bild och ikon
+  finns kvar. Sambandet behåller sina ändpunkter och sin osäkerhet.
+- Efter omstart och uttryckligt sparande har samma objekt typen Motorfordon
+  och bara Nummer `B-final` bland de egna svaren. Gemensamma uppgifter,
+  bild, ikon och samband är oförändrade. Ingen dubblett skapas.
 
 ### TYP-07: Fel och samtidiga ändringar stoppar hela typbytet
 

@@ -1,7 +1,7 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import { beginAssistant, callAssistant } from '../support/assistant.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 
 async function connect(actor: APIRequestContext, origin: string, householdId: string) {
@@ -125,6 +125,7 @@ test('MCP-05: bildval och sammanslagning ångras med senare arbete kvar', async 
     });
     await mcp.propose('propose_merge', proposal());
     await page.goto(app.origin);
+    await openWorkspace(page);
     const draft = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(draft).toContainText('Identiteten är inte bekräftad');
     await expect(page.getByRole('button', { name: 'Spara hela utkastet' })).toBeDisabled();
@@ -132,6 +133,7 @@ test('MCP-05: bildval och sammanslagning ångras med senare arbete kvar', async 
     merge = await mcp.tool('read_merge_review', { survivorId: 'a', absorbedId: 'b' });
     await mcp.propose('propose_merge', { ...proposal(), identityConfirmed: true });
     await page.reload();
+    await openWorkspace(page);
     await expect(draft).toContainText('Samma företeelse är uttryckligen bekräftad');
     const merged = await mcp.save('merge-approved');
     const current = (await mcp.tool('read_map', { objectId: 'a' })).objects[0];
@@ -149,10 +151,12 @@ test('MCP-05: bildval och sammanslagning ångras med senare arbete kvar', async 
     await mcp.propose('propose_undo', { operationId: merged.operationId, userId: merged.userId });
     await app.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(draft).toContainText('Eget senare objekt');
     await expect(draft).toContainText('Första uppgiften');
     await mcp.save('undo-merge');
     await page.reload();
+    await openWorkspace(page);
     const objects = page.getByRole('list', { name: 'Objekt', exact: true });
     await expect(objects).toContainText('Senare namn');
     await expect(objects).toContainText('Lo Exempel');
@@ -225,7 +229,10 @@ test('MCP-06: importerad historik ångras med färskt underlag', async ({ page }
     ).toBe('completed');
     await target.restart();
     await page.goto(target.origin);
-    await expect(page.getByRole('button', { name: 'Historisk lampa', exact: true })).toBeVisible();
+    await openWorkspace(page);
+    await expect(
+      page.getByRole('button', { name: 'Uppgifter för Historisk lampa', exact: true }),
+    ).toBeVisible();
     const selected = await targetMcp.tool('read_history', {
       operationId: saved.operationId,
       userId: saved.userId,
@@ -257,6 +264,7 @@ test('MCP-06: importerad historik ångras med färskt underlag', async ({ page }
       userId: saved.userId,
     });
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Borttagning',
     );
@@ -264,6 +272,7 @@ test('MCP-06: importerad historik ångras med färskt underlag', async ({ page }
     expect(receipt.contentVersion).toBe(2);
     expect(receipt.userId).not.toBe(saved.userId);
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Objekt', exact: true })).not.toContainText(
       'Historisk lampa',
     );
@@ -330,6 +339,7 @@ test('MCP-03: typbyte och riktade samband återställs med äldre typer', async 
       customValues: { serial: 42 },
     });
     await page.goto(app.origin);
+    await openWorkspace(page);
     const draft = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(draft).toContainText('Objekttyp: Cykel');
     await expect(draft).toContainText('Objekttyp: Motorfordon');
@@ -352,6 +362,7 @@ test('MCP-03: typbyte och riktade samband återställs med äldre typer', async 
     });
     expect(undo.objectTypes[0]).toMatchObject({ id: 'cycle', before: null });
     await page.reload();
+    await openWorkspace(page);
     await expect(draft).toContainText('Cykel');
     await expect(draft).toContainText('SYNTH-42');
     await mcp.save('restore-type-and-object');
@@ -369,11 +380,13 @@ test('MCP-03: typbyte och riktade samband återställs med äldre typer', async 
     expect(restore.relationshipTypes[0]).toMatchObject({ id: 'stored', before: null });
     await app.restart();
     await page.reload();
+    await openWorkspace(page);
     await expect(draft).toContainText('Alex blå cykel');
     await expect(draft).toContainText('Förvaring');
     await mcp.save('restore-bike');
     await page.reload();
-    await page.getByRole('button', { name: 'Alex blå cykel', exact: true }).click();
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Uppgifter för Alex blå cykel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Nummer', { exact: true })).toHaveValue('SYNTH-42');
     await expect(page.getByText('förvaras i', { exact: false }).first()).toBeVisible();
@@ -446,6 +459,7 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
     });
     await mcp.propose('save_draft', { operationId: 'blocked-removal' }, 'definition_in_use');
     await page.goto(app.origin);
+    await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Objekt', exact: true })).toContainText(
       'Upphört testobjekt',
     );
@@ -455,6 +469,7 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
     );
     const otherPage = await other.newPage();
     await otherPage.goto(app.origin);
+    await openWorkspace(otherPage);
     await expect(otherPage.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Andras privata namn',
     );
@@ -463,6 +478,7 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
     );
     await app.restart();
     await otherPage.reload();
+    await openWorkspace(otherPage);
     await expect(otherPage.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Andras privata namn',
     );
@@ -508,6 +524,7 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
       customValues: { battery: false },
     });
     await page.goto(app.origin);
+    await openWorkspace(page);
     const draft = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(draft).toContainText('Batteri: Obesvarat');
     await expect(draft).toContainText('Batteri: Nej');
@@ -541,7 +558,8 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
     await mcp.save('catalog-changes');
     await app.restart();
     await page.reload();
-    await page.getByRole('button', { name: 'Paneler på taket', exact: true }).click();
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Uppgifter för Paneler på taket', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Leverantör', { exact: true })).toHaveValue('Exempelsol');
     await expect(page.getByLabel('Effekt', { exact: true })).toHaveValue('12.5');
@@ -549,7 +567,9 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
     await expect(page.getByLabel('Batteri', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('Effektanteckning', { exact: true })).toHaveValue('');
     await page.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
-    await page.getByRole('button', { name: 'Paneler på garaget', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Uppgifter för Paneler på garaget', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Batteri', { exact: true })).toHaveValue('false');
     expect(
@@ -653,6 +673,7 @@ test('MCP-02: daterade avtal kan rättas utan påhittade uppgifter', async ({ pa
       },
     });
     await page.goto(app.origin);
+    await openWorkspace(page);
     const draft = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(draft).toContainText('125 000,50 (Osäkert uppgivet)');
     await expect(draft).toContainText('Avtalsvillkor: Uttryckligen inget');
@@ -671,7 +692,8 @@ test('MCP-02: daterade avtal kan rättas utan påhittade uppgifter', async ({ pa
     const receipt = await mcp.save('correct-used-credit');
     await app.restart();
     await page.reload();
-    await page.getByRole('button', { name: 'Exempelkredit', exact: true }).click();
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Uppgifter för Exempelkredit', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByText('Ekonomiska uppgifter och avtalsvillkor', { exact: true }).click();
     await expect(page.getByLabel('Beviljat kreditutrymme', { exact: true })).toHaveValue('80 000');
@@ -692,7 +714,9 @@ test('MCP-02: daterade avtal kan rättas utan påhittade uppgifter', async ({ pa
       'Exempellån',
       'Bilens avbetalning',
     ])
-      await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: `Uppgifter för ${name}`, exact: true }),
+      ).toBeVisible();
     await expect(page.getByRole('list', { name: 'Samband', exact: true })).toContainText(
       'Bilens avbetalning → Finansierar → Familjens bil',
     );

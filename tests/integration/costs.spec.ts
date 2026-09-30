@@ -1,6 +1,12 @@
 import { access } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import {
+  createHousehold,
+  openConversation,
+  openProfile,
+  openSettings,
+  signIn,
+} from '../support/client.js';
 import { launchManualCosts } from '../support/manual-costs.js';
 
 const assistant = (page: Page) =>
@@ -10,6 +16,7 @@ async function startAssistant(page: Page, origin: string) {
   await signIn(page.request, origin);
   const { household } = await (await createHousehold(page.request, origin, 'Kostnadsprov')).json();
   await page.goto(origin);
+  await openConversation(page);
   const panel = assistant(page);
   await panel.getByLabel(/Jag tillåter att OpenAI/).check();
   await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
@@ -17,19 +24,25 @@ async function startAssistant(page: Page, origin: string) {
   return household.id as string;
 }
 async function sendText(page: Page) {
+  await openConversation(page);
   const panel = assistant(page);
   await panel.getByLabel('Meddelande till textassistenten').fill('Prova kostnadsunderlaget.');
   await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
   await expect(panel).toContainText('Det kontrollerade kostnadsprovet är klart.');
 }
 async function startVoice(page: Page) {
+  await openConversation(page);
   await assistant(page).getByRole('button', { name: 'Starta röst', exact: true }).click();
   await expect(assistant(page)).toContainText(
     'Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.',
   );
 }
 async function openCosts(page: Page) {
-  await page.getByRole('link', { name: 'Månadskostnad', exact: true }).click();
+  const link = page.getByRole('link', { name: 'Månadskostnad', exact: true });
+  const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
+  await expect(link.or(tools).first()).toBeVisible();
+  if (!(await link.isVisible())) await openSettings(page);
+  await link.click();
   await expect(category(page, 'Render – hel månad')).toBeVisible();
 }
 
@@ -46,8 +59,17 @@ test('KOST-01: separata kostnader och månadens antaganden återläses efter oms
     await assistant(page).getByRole('button', { name: 'Stäng av rösten' }).click();
     await expect(assistant(page)).toContainText('Rösten är avstängd.');
     await openCosts(page);
+    const overview = category(page, 'Månadens kostnadsöversikt');
+    await expect(overview).toContainText('75,54 SEK');
+    const totalBounds = await overview.boundingBox();
+    const renderBounds = await category(page, 'Render – hel månad').boundingBox();
+    expect(
+      totalBounds && renderBounds && totalBounds.y + totalBounds.height <= renderBounds.y,
+    ).toBe(true);
     await expect(category(page, 'Render – hel månad')).toContainText('72,50 SEK (7,25 USD)');
     await expect(category(page, 'Live – uppmätt hittills')).toContainText('0,75 SEK (0,075 USD)');
+    await page.getByText('Visa mätvärden för Live', { exact: true }).click();
+    await page.getByText('Visa mätvärden för Terra', { exact: true }).click();
     await expect(category(page, 'Live – uppmätt hittills')).toContainText(
       '90 sekunder rapporterade',
     );
@@ -94,6 +116,8 @@ test('KOST-01: separata kostnader och månadens antaganden återläses efter oms
     await expect(page.locator('.cost-total')).toContainText('83,09 SEK');
     await app.command('restart', 'restarted');
     await page.reload();
+    await page.getByText('Visa mätvärden för Live', { exact: true }).click();
+    await page.getByText('Visa mätvärden för Terra', { exact: true }).click();
     await expect(page.locator('.cost-total')).toContainText('83,09 SEK (7,554 USD)');
     await expect(category(page, 'Prisunderlag')).toContainText('1 USD = 11 SEK');
     await expect(category(page, 'Render – hel månad')).toContainText('79,75 SEK (7,25 USD)');
@@ -201,6 +225,7 @@ test('KOST-03: endast driftansvarig har åtkomst oberoende av hushållets roller
     ).toBe(200);
     const otherPage = await robin.newPage();
     await otherPage.goto(app.origin);
+    await openProfile(otherPage);
     await expect(otherPage.getByRole('link', { name: 'Månadskostnad' })).toHaveCount(0);
     const month = new Date().toISOString().slice(0, 7);
     expect(
@@ -242,3 +267,128 @@ test('KOST-03: endast driftansvarig har åtkomst oberoende av hushållets roller
     await app.close();
   }
 });
+
+for (const width of [1280, 390, 320]) {
+  test(`KOST-04: okänt sparresultat återläses med fokus och fullständiga detaljer (${width}px)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const app = await launchManualCosts();
+    try {
+      await signIn(page.request, app.origin);
+      await page.goto(`${app.origin}/costs`);
+      await expect(category(page, 'Månadens kostnadsöversikt')).toContainText('72,50 SEK');
+      await expect(
+        page.getByText('Din driftbehörighet är fristående', { exact: false }),
+      ).toBeVisible();
+      const edit = page.getByRole('button', { name: 'Ändra månadens antaganden', exact: true });
+      await edit.click();
+      const rate = page.getByLabel('SEK per USD', { exact: true });
+      await expect(rate).toBeFocused();
+      await rate.fill('12');
+      await page.getByRole('button', { name: 'Uppdatera underlaget' }).click();
+      await expect(rate).toHaveValue('12');
+      let writes = 0;
+      await page.route('**/api/operator/costs/assumptions', async (route) => {
+        writes++;
+        const response = await route.fetch();
+        expect(response.ok()).toBe(true);
+        await route.abort('failed');
+      });
+      const save = page.getByRole('button', { name: 'Spara månadens antaganden' });
+      await save.click();
+      await expect(page.getByRole('alert')).toContainText('Sparresultatet är okänt');
+      await expect(save).toBeDisabled();
+      await expect(category(page, 'Månadens kostnadsöversikt')).toContainText('72,50 SEK');
+      await page.getByRole('button', { name: 'Uppdatera underlaget' }).click();
+      await expect(page.getByRole('status')).toContainText('Aktuella antaganden är hämtade');
+      await expect(category(page, 'Månadens kostnadsöversikt')).toContainText('87,00 SEK');
+      expect(writes).toBe(1);
+      await page.unroute('**/api/operator/costs/assumptions');
+      await app.command('restart', 'restarted');
+      await page.reload();
+      await expect(category(page, 'Månadens kostnadsöversikt')).toContainText('87,00 SEK');
+      await page.getByText('Tidigare antaganden för månaden', { exact: true }).click();
+      const history = category(page, 'Månadens antaganden');
+      await expect(history).toContainText('Version 1');
+      await expect(history).toContainText('1 USD = 10 SEK');
+      await expect(history).toContainText('Version 2');
+      await expect(history).toContainText('1 USD = 12 SEK');
+      await edit.click();
+      await expect(rate).toBeFocused();
+      await rate.fill('13');
+      await save.click();
+      await expect(page.getByRole('status')).toHaveText('Månadens antaganden är sparade.');
+      await expect(edit).toBeFocused();
+      await edit.click();
+      await page.getByRole('button', { name: 'Stäng redigering' }).click();
+      await expect(edit).toBeFocused();
+      await edit.click();
+      await rate.fill('14');
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route('**/api/operator/costs/assumptions', async (route) => {
+        const response = await route.fetch();
+        await held;
+        await route.fulfill({ response });
+      });
+      await save.click();
+      await expect(page.getByRole('status')).toHaveText('Sparar antaganden…');
+      const themeButton = page.getByRole('button', { name: /Tema:.*Byt tema/ });
+      await themeButton.click();
+      await page
+        .getByRole('radio', { name: width === 390 ? 'Mörkt' : 'Ljust', exact: true })
+        .click();
+      await expect(themeButton).toBeFocused();
+      release();
+      await expect(page.getByRole('status')).toHaveText('Månadens antaganden är sparade.');
+      await expect(themeButton).toBeFocused();
+      await category(page, 'Prisunderlag')
+        .getByText(/Modellpriser kontrollerade/)
+        .click();
+      const table = page.getByRole('region', { name: /Terra-priser .*rulla vid behov/ });
+      await expect(table.getByRole('table')).toBeVisible();
+      await expect(table.getByRole('columnheader')).toHaveText([
+        'Indata i anropet',
+        'Vanlig indata',
+        'Cacheläsning',
+        'Cacheskrivning',
+        'Utdata',
+      ]);
+      await expect(table.getByRole('cell')).toHaveText([
+        '2',
+        '0,2',
+        '2,5',
+        '12',
+        '4',
+        '0,4',
+        '5',
+        '18',
+      ]);
+      await table.focus();
+      if (width <= 390) {
+        expect(await table.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+          true,
+        );
+        await page.keyboard.press('ArrowRight');
+        await expect.poll(() => table.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+        for (const cell of await table.getByRole('cell').all()) {
+          expect(
+            await cell.evaluate((element) => {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              return range.getClientRects().length;
+            }),
+          ).toBe(1);
+        }
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    } finally {
+      await app.close();
+    }
+  });
+}

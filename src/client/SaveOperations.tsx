@@ -68,7 +68,7 @@ export function rejectionMessage(code: string) {
   if (code === 'field_in_use')
     return 'Fältet används fortfarande i kartan eller privata utkast, även om innehållet är upphört. Ta bort fältvärdena och hantera berörda typförslag först. Ingen ändring genomfördes.';
   if (code === 'invalid_relationship_type')
-    return 'Ange sambandstypens namn, beskrivning och benämningar från båda hållen. Sambandstyper har inga egna fält.';
+    return 'Ange sambandstypens namn, beskrivning, benämningar från båda hållen och giltiga egna fält.';
   if (code === 'duplicate_relationship')
     return 'Samma samband finns redan. Inget sparades. Hämta aktuellt underlag och använd det befintliga sambandet eller ändra ditt förslag.';
   if (code === 'invalid_custom_value')

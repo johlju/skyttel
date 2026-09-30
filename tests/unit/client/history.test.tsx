@@ -36,6 +36,7 @@ async function save(operationId: string): Promise<SaveReceipt> {
 }
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Visa historik' }));
   return screen.getByRole('region', { name: 'Ändringshistorik' });
 }
@@ -74,7 +75,7 @@ afterEach(() => {
   fixture.close();
 });
 
-test('saved history shows definitions, historical direction labels and ended content, then restores the whole removal', async () => {
+async function prepareRemovedHistory() {
   const state = await read();
   const defineObject = {
     name: 'Växt',
@@ -186,18 +187,40 @@ test('saved history shows definitions, historical direction labels and ended con
     ).status,
   ).toBe(200);
   await save('removed');
+  return state;
+}
+
+test('saved history shows definitions, historical direction labels and removed content', async () => {
+  const state = await prepareRemovedHistory();
   const history = await open();
   const changed = await group('changed-direction');
-  expect(changed.getByText('Lo → stödjer → Rosen').textContent).toContain('stödjer');
+  const disclosure = changed.getByText('Visa ändringarna', { selector: 'summary' });
+  expect(disclosure.closest('details')?.open).toBe(false);
+  expect(changed.getByText('1 samband')).toBeDefined();
+  await userEvent.click(disclosure);
+  expect(disclosure.closest('details')?.open).toBe(true);
+  const changedValues = within(disclosure.parentElement as HTMLElement);
+  expect(changedValues.getByText('Lo → stödjer → Rosen').textContent).toContain('stödjer');
   expect(
-    changed.getByText(`Lo → ${state.relationshipTypes[0].name} → Rosen`).textContent,
+    changedValues.getByText(`Lo → ${state.relationshipTypes[0].name} → Rosen`).textContent,
   ).toContain(state.relationshipTypes[0].name);
   const retyped = await group('changed-object-type');
+  await userEvent.click(retyped.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(retyped.getByText(/Objekttyp: Växt/)).toBeDefined();
   expect(retyped.getByText(/Färg/).textContent).toContain('röd');
   const removed = await group('removed');
+  await userEvent.click(removed.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(removed.getAllByText('Borttagen definition')).toHaveLength(2);
   expect(removed.getAllByText('Borttaget').length).toBeGreaterThan(0);
+  await userEvent.click(within(history).getByRole('button', { name: 'Dölj historik' }));
+  expect(within(history).queryAllByRole('article')).toHaveLength(0);
+});
+
+test('history undo restores the whole removal and its lifecycle values after an explicit save', async () => {
+  await prepareRemovedHistory();
+  await open();
+  const removed = await group('removed');
+  await userEvent.click(removed.getByText('Visa ändringarna', { selector: 'summary' }));
   await userEvent.click(removed.getByRole('button', { name: 'Ångra sparandet' }));
   await waitFor(() =>
     expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain('Rosen'),
@@ -209,8 +232,6 @@ test('saved history shows definitions, historical direction labels and ended con
     lifecycle: 'ended',
     customValues: { color: 'röd' },
   });
-  await userEvent.click(within(history).getByRole('button', { name: 'Dölj historik' }));
-  expect(within(history).queryAllByRole('article')).toHaveLength(0);
 });
 
 test('empty history and a failed read can be retried without a fabricated result', async () => {
@@ -219,6 +240,7 @@ test('empty history and a failed read can be retried without a fabricated result
   expect((await screen.findByRole('alert')).textContent).toContain('Historiken kunde inte hämtas');
   historyFailure = 0;
   await userEvent.click(screen.getByRole('button', { name: 'Hämta historik igen' }));
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Ändringshistorik' }));
   expect(await screen.findByText('Inga genomförda sparanden.')).toBeDefined();
 });
 
@@ -227,6 +249,7 @@ test('a history request after revoked access clears the household content', asyn
   await save('saved');
   historyFailure = 403;
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Visa historik' }));
   await waitFor(() =>
     expect(screen.getByRole('alert').textContent).toContain('inte längre tillgång'),

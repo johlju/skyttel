@@ -20,10 +20,10 @@ Följande användare gäller AI-01 till AI-06:
 ## Allmän förberedelse
 
 När ett befintligt objekt eller samband ska ändras, välj det först i
-kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+kartan eller listan och öppna dess detaljpanel. För objekt i listan använder
+du **Uppgifter**; i kartverktygen väljer du **Visa detaljer**. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna
-formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
-objektet eller sambandet öppnar inte formuläret.
+formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 
 Följande förberedelser gäller AI-01 till AI-06. För AI-07 används i stället
 den isolerade installation som anges i testfallet.
@@ -605,3 +605,48 @@ Anteckna klient, modell, datum och faktiskt utfall vid verklig körning.
 Avvikande klientbeteende får inte döljas av godkända deterministiska
 serverprov. Automatisk körning ger en rapport med modell- och
 verktygsresultat; den påstår inte att ett mänskligt prov är genomfört.
+
+## Profilens anslutningar
+
+### AI-13: Öppna assistentanslutningar och återgå till pågående arbete
+
+**Syfte:** Ge tangentbordsfokus till profilens destination och behålla
+oskickad text och oberoende privata förslag vid återgången.
+
+**Användare:** Alex Exempel, inloggad medlem i ett provhushåll.
+
+**Förutsättningar:** Använd ljust tema och ett 390 pixlar brett fönster.
+Skapa och spara två fordon, **Cykeln** och **Bilen**, med beskrivningarna
+**Sparat om Cykeln** och **Sparat om Bilen**. Ändra sedan Bilens beskrivning
+till **Bilens oberoende privata förslag** och lägg ändringen i ditt privata
+utkast utan att spara. Inga assistentanslutningar ska finnas. Anteckna ditt
+Skyttel-ID från profilen.
+
+**Integrationstest:**
+[assistants.spec.ts](../../tests/integration/assistants.spec.ts), testfallet
+“AI-13: profile navigation focuses assistant connections and preserves
+unsent and private work”.
+
+**Steg:**
+
+1. Öppna **Lista**, Cykelns uppgifter och **Redigera valt objekt**. Skriv
+   **Cykelns oskickade profiltext** som beskrivning utan att skicka den.
+2. Öppna **Din profil**. Använd tangentbordet för att välja länken
+   **Assistentanslutningar**.
+3. Kontrollera att sidans rubrik har synligt tangentbordsfokus och att
+   texten visar Alex Exempel med samma Skyttel-ID. Kontrollera beskedet
+   **Inga aktiva assistentanslutningar.**
+4. Välj **Tillbaka till kartan** med tangentbordet och öppna Cykelns panel.
+   Kontrollera den oskickade beskrivningen. Kontrollera också att Bilens
+   privata förslag finns kvar och att de sparade beskrivningarna är samma.
+
+**Förväntat resultat:**
+
+- Destinationens rubrik får synligt fokus och går att läsa utan att sidan
+  behöver rullas i sidled. Kontrollen av rubrikens placering och träffyta
+  ingår i automationen.
+- Återgången behåller Cykelns exakta oskickade text, Bilens privata förslag,
+  den sparade kartan, kartvyn och användarens Skyttel-ID.
+- Profilnavigeringen skapar ingen assistentanslutning, inget medgivande
+  och inget nytt förslag eller sparande. Automationen jämför kartans och
+  anslutningarnas faktiska serverunderlag före och efter flödet.

@@ -4,12 +4,11 @@
 .costs-panel {
   width: min(100%, 72rem);
 }
-.cost-controls,
-.cost-categories {
+.cost-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-block: 1.5rem;
 }
 .cost-controls {
   align-items: end;
@@ -17,17 +16,53 @@
 .cost-controls label {
   flex: 1 1 12rem;
 }
-.cost-categories > section {
-  flex: 1 1 16rem;
-  min-width: 0;
-  padding: 1rem;
-  border: 1px solid #dae3de;
-  border-radius: 0.75rem;
-}
-.cost-amount,
 .cost-total {
-  font-size: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: var(--space-accent, #1d706b);
+  color: var(--space-surface, #fff);
+}
+.cost-total strong {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+.cost-notice {
+  border-inline-start: 3px solid var(--space-accent, #1d706b);
+  padding-inline-start: 1rem;
+}
+.cost-categories > section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  padding-block: 1.25rem;
+  border-bottom: 1px solid var(--space-line, #95a6ae);
+}
+.cost-categories h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.cost-categories .cost-amount {
+  margin: 0;
   font-weight: 650;
+  text-align: end;
+}
+.cost-categories section > :not(h2, .cost-amount) {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.cost-categories details {
+  width: 100%;
+}
+.cost-period {
+  color: var(--space-muted, #506777);
+  font-size: 0.875rem;
 }
 .costs-panel dd {
   margin: 0 0 0.5rem;
@@ -36,18 +71,42 @@
   font-weight: 600;
 }
 .cost-table-scroll {
+  max-width: 100%;
   overflow-x: auto;
+}
+.cost-table-scroll table {
+  width: 100%;
+  min-width: 36rem;
+  overflow-wrap: normal;
 }
 .costs-panel th,
 .costs-panel td {
   text-align: left;
   padding: 0.5rem;
-  border-bottom: 1px solid #dae3de;
+  border-bottom: 1px solid var(--space-line, #95a6ae);
 }
 .costs-panel details {
   margin: 1rem 0;
 }
 .costs-panel summary {
   cursor: pointer;
+  min-height: 44px;
+  padding-block: 10px;
   font-weight: 600;
+}
+.costs-panel :is(input, select, button) {
+  min-height: 44px;
+  max-width: 100%;
+}
+.costs-panel fieldset {
+  min-width: 0;
+  border-color: var(--space-line, #95a6ae);
+}
+@media (max-width: 600px) {
+  .cost-categories > section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cost-categories .cost-amount {
+    text-align: start;
+  }
 }

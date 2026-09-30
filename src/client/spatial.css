@@ -140,34 +140,42 @@
   pointer-events: none;
   overflow: visible;
 }
+.connection,
+.connection-arrow {
+  --connection-color: #8dbba5;
+}
+:is(.connection, .connection-arrow).added {
+  --connection-color: var(--proposal-added, #64dfa0);
+}
+:is(.connection, .connection-arrow).changed {
+  --connection-color: var(--proposal-changed, #fbbf24);
+}
+:is(.connection, .connection-arrow).removed {
+  --connection-color: var(--proposal-removed, #ff858a);
+}
 .connection {
-  stroke: #8dbba5;
+  stroke: var(--connection-color);
   stroke-width: 1.4;
   opacity: 0.25;
+}
+/* The line's opacity already applies to its marker. */
+.connection-arrow {
+  fill: var(--connection-color);
 }
 .connection.selected {
   opacity: 0.95;
   stroke-width: 2;
 }
-.connection.added {
-  stroke: #dba343;
-  opacity: 0.7;
-}
-.connection.changed {
-  stroke: #eed37c;
+.connection:is(.added, .changed) {
   opacity: 0.7;
 }
 .connection.removed {
-  stroke: #d17860;
   stroke-dasharray: 6 5;
   opacity: 0.6;
 }
-.spatial-map.crowded .connection.existing:not(.selected) {
-  opacity: 0.12;
-}
 .spatial-labels .spatial-edge {
   min-height: 30px;
-  max-width: 15rem;
+  max-width: min(15rem, calc(100% - 16px));
   padding: 3px 7px;
   border: 0;
   border-radius: 4px;
@@ -183,13 +191,13 @@
   color: #dbede3;
 }
 .spatial-labels .spatial-edge.added {
-  color: #e4b450;
+  color: var(--proposal-added, #64dfa0);
 }
 .spatial-labels .spatial-edge.changed {
-  color: #eed37c;
+  color: var(--proposal-changed, #fbbf24);
 }
 .spatial-labels .spatial-edge.removed {
-  color: #df937d;
+  color: var(--proposal-removed, #ff858a);
 }
 .presentation-map .camera-tools {
   position: relative;
@@ -210,15 +218,15 @@
   border-radius: 0.3rem;
 }
 .proposal-symbol.added {
-  color: #67460b;
-  background: #f7e7bb;
+  color: var(--proposal-added, #187747);
+  background: #e0f5e8;
 }
 .proposal-symbol.changed {
-  color: #3a2900;
-  background: #ffdc55;
+  color: var(--proposal-changed, #9b6000);
+  background: #fff0ca;
 }
 .proposal-symbol.removed {
-  color: #b52121;
+  color: var(--proposal-removed, #c83346);
   background: #ffe8e8;
 }
 .spatial-labels,
@@ -232,10 +240,16 @@
   position: absolute;
   transform: translate(-50%, -50%);
 }
-.spatial-name {
+.spatial-labels .spatial-name {
   display: block;
-  max-width: 15rem;
+  max-width: min(15rem, calc(100% - 16px));
+  min-height: 44px;
   padding: 2px 5px;
+  border: 0;
+  border-radius: 5px;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
   color: #e4eee8;
   background: #132e25e8;
   text-align: center;
@@ -330,37 +344,36 @@
   background: #132e25;
 }
 .spatial-node.added .spatial-orb {
-  outline: 1px solid #e4b450;
+  outline: 1px solid var(--proposal-added, #64dfa0);
   outline-offset: 4px;
 }
 .spatial-node.added,
 .spatial-name.added .spatial-type-name,
 .spatial-node .proposal-symbol.added {
-  color: #e4b450;
+  color: var(--proposal-added, #64dfa0);
 }
 .spatial-objects .spatial-node.added {
-  --node-color: #e4b450;
+  --node-color: var(--proposal-added, #64dfa0);
 }
 .spatial-node.changed,
 .spatial-name.changed .spatial-type-name,
 .spatial-node .proposal-symbol.changed {
-  color: #eed37c;
+  color: var(--proposal-changed, #fbbf24);
 }
 .spatial-objects .spatial-node.changed {
-  --node-color: #eed37c;
+  --node-color: var(--proposal-changed, #fbbf24);
 }
 .spatial-node.removed,
 .spatial-name.removed .spatial-type-name,
 .spatial-node .proposal-symbol.removed {
-  color: #df937d;
+  color: var(--proposal-removed, #ff858a);
 }
 .spatial-objects .spatial-node.removed {
-  --node-color: #df937d;
+  --node-color: var(--proposal-removed, #ff858a);
 }
 .spatial-node.removed .spatial-orb {
   border-style: dashed;
 }
-.spatial-name.subdued,
 .spatial-node.subdued {
   opacity: 0.48;
 }
@@ -506,6 +519,19 @@
   margin: 0;
   font-size: 0.8rem;
 }
+.label-note-reservation {
+  display: grid;
+}
+.label-note-reservation > span {
+  grid-area: 1 / 1;
+}
+.label-note-size,
+.label-note-reservation.inactive {
+  visibility: hidden;
+}
+.label-note-count {
+  font-variant-numeric: tabular-nums;
+}
 .connection {
   pointer-events: stroke;
   cursor: pointer;
@@ -580,4 +606,13 @@
 .spatial-tools > details {
   flex: 1;
   min-width: 0;
+}
+
+.spatial-labels .spatial-name[aria-pressed="true"],
+.spatial-labels .spatial-name:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.spatial-node:focus-visible {
+  z-index: 1;
 }

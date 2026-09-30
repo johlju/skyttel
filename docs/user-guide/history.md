@@ -5,23 +5,37 @@
 Även en [sammanslagning av objekt](object-merge.md) kan ångras genom
 samma flöde, med ursprungliga identiteter och samband bevarade.
 
-Alla hushållets medlemmar kan läsa **Ändringshistorik**. Välj **Visa
-historik** för att se sparade ändringsgrupper. Varje grupp hör till ett
-helt sparande och visar tidigare och nya värden, objekt, samband och
-berörda typdefinitioner. Rubriken visar tidpunkten och den som sparar.
+Alla hushållets medlemmar kan läsa **Ändringshistorik** från **Lista**.
+Välj **Visa historik** för att se sparade ändringsgrupper, med den senaste
+först. Varje kort hör till ett helt sparande. Rubriken visar tidpunkten
+och den som sparar. Översikten visar vilka objekt, samband och
+typdefinitioner som berörs och hur många de är.
+
+Öppna **Visa ändringarna** på ett kort för att läsa värdena före och efter
+sparandet. Äldre värden visas med sina dåvarande typdefinitioner och
+benämningar, även om definitionerna ändras senare.
 Öppna **Identifiera sparandet och användaren** när du behöver deras ID:n.
 Äldre grupper kan sakna användarens namn; användarens ID finns ändå kvar.
+**Dölj historik** bevarar öppnade kort när du visar historiken igen.
+
+Alla öppningsbara rubriker fungerar med tangentbord. Om historiken inte
+kan hämtas visas ett fel och **Hämta historik igen**. Ett nytt försök
+för fokus till historikens rubrik. Du kan fortsätta arbeta medan historiken
+hämtas; svaret flyttar inte fokus från ett senare val.
 
 Privata utkast ingår inte i historiken. Ett nytt förslag, ett konfliktval
 eller **Kasta hela utkastet** skapar ingen sparad ändringsgrupp.
 
 ## Ångra en ändringsgrupp
 
-1. Hitta rätt grupp under **Ändringshistorik**. Läs tidigare och nya värden,
+1. Hitta rätt grupp under **Ändringshistorik**. Öppna **Visa ändringarna**
+   när du behöver läsa tidigare och nya värden. Kontrollera
    tidpunkten och den som sparar för att skilja liknande ändringar åt.
 2. Välj **Ångra sparandet** i gruppen. Skyttel räknar fram ett nytt privat
    förslag mot den karta som gäller nu. Den gemensamma kartan ändras inte.
-3. Granska **Hela mitt utkast**. Ångringen omfattar hela det valda sparandet,
+3. **Hela mitt utkast** får fokus när ångringsförslaget är klart, om du
+   inte går vidare till något annat medan det skapas. Granska förslagen.
+   Ångringen omfattar hela det valda sparandet,
    tillsammans med de oberoende förslag som redan finns i ditt utkast.
 4. Gör eventuella konfliktval och granska hela resultatet igen.
 5. Välj **Spara hela utkastet** när du vill göra ändringarna gemensamma.

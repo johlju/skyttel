@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { DraftChange, ObjectMerge } from '../shared/map.js';
+import { isObjectIconId } from '../shared/object-icons.js';
 
 const id = z.string().regex(/^[\w-]{1,128}$/);
 const text = z.string().max(10000);
@@ -23,13 +24,52 @@ const field = z
     name,
     description,
     kind: z.enum(['text', 'number', 'date', 'boolean']),
+    sectionId: z.union([id, z.literal('')]).optional(),
   })
   .strict();
+const builtinProperties = z
+  .array(
+    z
+      .object({
+        key: z.enum([
+          'description',
+          'price',
+          'currency',
+          'paymentInterval',
+          'startDate',
+          'endDate',
+          'terms',
+          'debt',
+          'creditLimit',
+          'usedCredit',
+        ]),
+        name,
+        sectionId: z.union([id, z.literal('')]),
+      })
+      .strict(),
+  )
+  .max(10);
+const propertyOrder = z
+  .array(z.string().regex(/^(field:[\w-]{1,128}|builtin:[a-zA-Z]+)$/))
+  .max(110);
+const sections = z.array(z.object({ id, name }).strict()).max(100);
 const objectType = z
-  .object({ ...definitionShape, fields: z.array(field).max(100).optional() })
+  .object({
+    ...definitionShape,
+    fields: z.array(field).max(100).optional(),
+    sections: sections.optional(),
+    builtins: builtinProperties.optional(),
+    propertyOrder: propertyOrder.optional(),
+  })
   .strict();
 const relationshipType = z
-  .object({ ...definitionShape, forwardLabel: text.optional(), reverseLabel: text.optional() })
+  .object({
+    ...definitionShape,
+    forwardLabel: text.optional(),
+    reverseLabel: text.optional(),
+    fields: z.array(field).max(100).optional(),
+    sections: sections.optional(),
+  })
   .strict();
 const fact = z.discriminatedUnion('knowledge', [
   z
@@ -37,6 +77,7 @@ const fact = z.discriminatedUnion('knowledge', [
     .strict(),
   z.object({ knowledge: z.enum(['none', 'unknown']), reportedOn: text.optional() }).strict(),
 ]);
+const iconId = z.string().refine(isObjectIconId);
 const lifecycle = z.enum(['active', 'ended']);
 const values = z.record(id, z.union([text, z.number(), z.boolean()]));
 const financialFacts = z.record(id, fact);
@@ -50,6 +91,7 @@ const objectValue = z
     customValues: values.optional(),
     lifecycle: lifecycle.optional(),
     profileImageId: id.optional(),
+    iconId: iconId.optional(),
   })
   .strict();
 const object = objectValue.extend({ id, ...scope, revision: positive });
@@ -61,6 +103,7 @@ const relationshipValue = z
     knowledge: z.enum(['known', 'unknown', 'none', 'uncertain', 'unresolved']),
     lifecycle: lifecycle.optional(),
     endDate: fact.optional(),
+    customValues: values.optional(),
   })
   .strict();
 const relationship = relationshipValue.extend({ id, ...scope, revision: positive });
@@ -80,6 +123,7 @@ const relationshipChangeShape = {
   before: relationship.nullable(),
   after: z.union([relationshipValue, relationship]).nullable(),
   type: relationshipType,
+  beforeType: relationshipType.optional(),
   objectNames: z.record(id, text).optional(),
 };
 const draftRelationship = z
@@ -169,8 +213,29 @@ export const importContentSchema = z
     household: z.object({ id, name: text, createdAt: text, contentVersion: positive }).strict(),
     identities: z.array(z.object({ id, name: text }).strict()),
     objectTypes: z.array(z.object(definitionShape).strict()),
-    objectTypeFields: z.array(z.object({ typeId: id, fields: z.array(field).max(100) }).strict()),
+    objectTypeFields: z.array(
+      z
+        .object({
+          typeId: id,
+          fields: z.array(field).max(100),
+          sections: sections.nullable().optional(),
+          builtins: builtinProperties.nullable().optional(),
+          propertyOrder: propertyOrder.nullable().optional(),
+        })
+        .strict(),
+    ),
     relationshipTypes: z.array(z.object(definitionShape).strict()),
+    relationshipTypeFields: z
+      .array(
+        z
+          .object({
+            typeId: id,
+            fields: z.array(field).max(100),
+            sections: sections.nullable().optional(),
+          })
+          .strict(),
+      )
+      .default([]),
     relationshipTypeLabels: z.array(
       z.object({ typeId: id, forwardLabel: text, reverseLabel: text }).strict(),
     ),
@@ -188,6 +253,7 @@ export const importContentSchema = z
           customValues: values.nullable(),
           lifecycle: lifecycle.nullable(),
           profileImageId: id.nullable(),
+          iconId: iconId.nullable().optional(),
         })
         .strict(),
     ),
@@ -204,6 +270,7 @@ export const importContentSchema = z
           deleted: z.union([z.literal(0), z.literal(1)]),
           lifecycle: lifecycle.nullable(),
           endDate: fact.nullable(),
+          customValues: values.nullable().optional(),
         })
         .strict(),
     ),
@@ -291,7 +358,16 @@ export const importManifestSchema = z
     version: z.literal(1),
     createdAt: text,
     householdId: id,
-    schemaVersion: z.union([z.literal(14), z.literal(15), z.literal(16)]),
+    schemaVersion: z.union([
+      z.literal(14),
+      z.literal(15),
+      z.literal(16),
+      z.literal(17),
+      z.literal(18),
+      z.literal(19),
+      z.literal(20),
+      z.literal(21),
+    ]),
     parts: z
       .array(
         z

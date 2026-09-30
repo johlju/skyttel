@@ -1,0 +1,70 @@
+:is(.workspace-shell, .settings-screen) .workspace-theme-control {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-popup {
+  position: fixed;
+  z-index: 30;
+  width: min(248px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--space-control);
+  border-radius: 16px;
+  color: var(--space-text);
+  background: var(--space-surface);
+  box-shadow: var(--space-shadow);
+  text-align: left;
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-popup fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-popup legend {
+  padding: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-option {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-option:has(input:checked) {
+  border-color: var(--space-accent);
+  background: color-mix(in srgb, var(--space-accent), var(--space-surface) 90%);
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-option:hover {
+  background: color-mix(in srgb, var(--space-accent), var(--space-surface) 88%);
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-option input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--space-accent);
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-popup p {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--space-muted);
+}

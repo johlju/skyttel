@@ -67,13 +67,13 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
-test('type and label validation keeps the private draft unchanged and forbids fields', async () => {
+test('type and label validation keeps the private draft unchanged and rejects malformed fields', async () => {
   const unchanged = await read();
   for (const value of [
     'not a definition',
     [],
     {},
-    { ...definition, fields: [] },
+    { ...definition, fields: null },
     ...['name', 'forwardLabel', 'reverseLabel'].flatMap((key) =>
       [null, ' ', 'x'.repeat(201)].map((invalid) => ({ ...definition, [key]: invalid })),
     ),

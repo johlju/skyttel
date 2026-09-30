@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { financialFields } from '../shared/financial-facts.js';
 import type { MapState, ObjectMerge as Merge } from '../shared/map.js';
 import { proposedObjectTypes, proposedRelationshipTypes } from '../shared/map.js';
+import { objectIconLabel } from '../shared/object-icons.js';
 import {
   mergeConnections,
   mergeFacts,
@@ -10,8 +11,8 @@ import {
   mergeObjects,
   mergeValues,
 } from '../shared/object-merge.js';
-import { FinancialFactsDetails } from './FinancialFacts.js';
 import { LifecycleDetails } from './Lifecycle.js';
+import { ObjectPropertiesDetails } from './ObjectProperties.js';
 import { CustomFieldsDetails } from './ObjectTypes.js';
 import { ProfileImage } from './ProfileImage.js';
 import { relationshipLabel } from './RelationshipEditor.js';
@@ -31,15 +32,16 @@ export function MergeSourceDetails({
           <p>
             {object.name} · Identitet: {object.id}
           </p>
-          <p>
-            Objekttyp: {merge.types.find((type) => type.id === object.typeId)?.name}. Beskrivning:{' '}
-            {object.description || 'Ingen beskrivning'}
-          </p>
-          <ProfileImage householdId={householdId ?? object.householdId} value={object} />
-          <FinancialFactsDetails facts={object.financialFacts} />
-          <CustomFieldsDetails
+          <p>Objekttyp: {merge.types.find((type) => type.id === object.typeId)?.name}.</p>
+          <ProfileImage
+            householdId={householdId ?? object.householdId}
+            value={object}
+            typeName={merge.types.find((type) => type.id === object.typeId)?.name}
+          />
+          <ObjectPropertiesDetails
+            showHidden
             type={merge.types.find((type) => type.id === object.typeId)}
-            values={object.customValues}
+            value={object}
           />
           <LifecycleDetails value={object} />
         </div>
@@ -58,6 +60,11 @@ export function MergeSourceDetails({
             Identitet: {edge.id}. Från {edge.sourceId} till{' '}
             {edge.targetId ?? 'okänd eller ingen ändpunkt'}.
           </p>
+          <CustomFieldsDetails
+            type={merge.relationshipTypes.find((type) => type.id === edge.typeId)}
+            values={edge.customValues}
+            showHidden
+          />
           <LifecycleDetails value={edge} />
         </div>
       ))}
@@ -87,6 +94,7 @@ export function ObjectMerge({
   const [confirmed, setConfirmed] = useState(false);
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [edges, setEdges] = useState<Record<string, string>>({});
+  const [reviewChanged, setReviewChanged] = useState(false);
   const left = objects.get(survivorId);
   const right = objects.get(absorbedId);
   const validPair = left && right && survivorId !== absorbedId;
@@ -99,6 +107,25 @@ export function ObjectMerge({
       state.draft.relationshipTypes,
     ),
   };
+  const reviewed = {
+    objects: validPair ? [left, right] : [],
+    relationships: connections,
+    types: types.filter((type) => [left?.typeId, right?.typeId].includes(type.id)),
+    relationshipTypes: effective.relationshipTypes.filter((type) =>
+      connections.some((edge) => edge.typeId === type.id),
+    ),
+  };
+  const snapshot = JSON.stringify(reviewed);
+  const [previousReview, setPreviousReview] = useState({ survivorId, absorbedId, snapshot });
+  if (previousReview.snapshot !== snapshot) {
+    setPreviousReview({ survivorId, absorbedId, snapshot });
+    // Choices belong to these reviewed sources, not a later fetched value.
+    // An unrelated map or draft refresh keeps the same source snapshot.
+    if (previousReview.survivorId === survivorId && previousReview.absorbedId === absorbedId) {
+      reset();
+      setReviewChanged(true);
+    }
+  }
   const a = left ? mergeFacts(left) : {};
   const b = right ? mergeFacts(right) : {};
   const differing = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((key) =>
@@ -121,11 +148,13 @@ export function ObjectMerge({
           lifecycle: 'Status',
           identity: 'Identitetsstatus',
           profileImageId: 'Profilbild',
+          iconId: 'Ikon',
         } as Record<string, string>
       )[key] ?? key
     );
   }
   function fact(key: string, value: unknown) {
+    if (key === 'iconId') return objectIconLabel(typeof value === 'string' ? value : undefined);
     if (key === 'identity')
       return value === 'unspecified'
         ? 'Ospecificerat objekt'
@@ -153,14 +182,23 @@ export function ObjectMerge({
     setChoices({});
     setEdges({});
     setConfirmed(false);
+    setReviewChanged(false);
   }
   return (
     <section aria-label="Sammanslagning">
-      <h2>Slå samman objekt</h2>
+      <h2 id="merge-title" tabIndex={-1}>
+        Slå samman objekt
+      </h2>
       <p>
         Lika namn eller e-postadresser visar inte att det är samma företeelse. Granska båda
         identiteterna, uppgifterna och varje samband.
       </p>
+      {reviewChanged && (
+        <p role="status">
+          Underlaget för sammanslagningen har ändrats. Granska objekten, uppgifterna och sambanden
+          igen. Tidigare val och identitetsbekräftelsen är tömda; inget nytt förslag har skickats.
+        </p>
+      )}
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -171,14 +209,7 @@ export function ObjectMerge({
             absorbedId,
             identityConfirmed: confirmed,
             choices,
-            reviewed: {
-              objects: [left, right],
-              relationships: connections,
-              types: types.filter((type) => [left.typeId, right.typeId].includes(type.id)),
-              relationshipTypes: effective.relationshipTypes.filter((type) =>
-                connections.some((edge) => edge.typeId === type.id),
-              ),
-            },
+            reviewed,
             relationships: connections.map((edge) => ({ id: edge.id, action: edges[edge.id] })),
           });
         }}
@@ -232,7 +263,6 @@ export function ObjectMerge({
                     Identitet: {object.id}. Typ:{' '}
                     {types.find((type) => type.id === object.typeId)?.name}.
                   </p>
-                  <p>{object.description || 'Ingen beskrivning'}</p>
                   {object.identity && (
                     <p>
                       {object.identity === 'unspecified'
@@ -240,11 +270,15 @@ export function ObjectMerge({
                         : 'Obesvarad identitetsfråga'}
                     </p>
                   )}
-                  <ProfileImage householdId={object.householdId} value={object} />
-                  <FinancialFactsDetails facts={object.financialFacts} />
-                  <CustomFieldsDetails
+                  <ProfileImage
+                    householdId={object.householdId}
+                    value={object}
+                    typeName={types.find((type) => type.id === object.typeId)?.name}
+                  />
+                  <ObjectPropertiesDetails
+                    showHidden
                     type={types.find((type) => type.id === object.typeId)}
-                    values={object.customValues}
+                    value={object}
                   />
                   <LifecycleDetails value={object} />
                 </article>
@@ -297,6 +331,11 @@ export function ObjectMerge({
                   <p>
                     {relationshipLabel(edge, effective, objects)}. Identitet: {edge.id}.
                   </p>
+                  <CustomFieldsDetails
+                    type={effective.relationshipTypes.find((type) => type.id === edge.typeId)}
+                    values={edge.customValues}
+                    showHidden
+                  />
                   <LifecycleDetails value={edge} />
                   <p>
                     Från identitet {edge.sourceId} till{' '}

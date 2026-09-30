@@ -1,4 +1,4 @@
-import type { FinancialFact, FinancialFacts } from './financial-facts.js';
+import type { FinancialFact, FinancialFacts, FinancialField } from './financial-facts.js';
 import type { Lifecycle } from './lifecycle.js';
 
 export interface TypeDefinition {
@@ -13,9 +13,36 @@ export interface CustomField {
   name: string;
   description: string;
   kind: 'text' | 'number' | 'date' | 'boolean';
+  /** Empty means hidden. Absence belongs to the legacy default presentation. */
+  sectionId?: string;
+}
+export interface TypeSection {
+  id: string;
+  name: string;
 }
 export interface ObjectType extends TypeDefinition {
   fields?: CustomField[];
+  sections?: TypeSection[];
+  builtins?: BuiltinProperty[];
+  /** Stable, namespaced references: field:<id> or builtin:<key>. */
+  propertyOrder?: string[];
+}
+export interface BuiltinProperty {
+  key: 'description' | FinancialField;
+  name: string;
+  /** Empty means outside the type's sections; existing values stay accessible. */
+  sectionId: string;
+}
+/** Legacy snapshots remain unchanged; their presentation is deterministic. */
+export function objectTypePresentation(type: Pick<ObjectType, 'sections' | 'fields'>) {
+  const sections = type.sections ?? [{ id: 'custom-fields', name: 'Egna fält' }];
+  return {
+    sections,
+    fields: (type.fields ?? []).map((field) => ({
+      ...field,
+      sectionId: field.sectionId ?? (type.sections === undefined ? 'custom-fields' : ''),
+    })),
+  };
 }
 export interface ObjectTypeChange {
   id: string;
@@ -37,6 +64,8 @@ export function compatibleCustomFields(
   });
 }
 export interface RelationshipType extends TypeDefinition {
+  fields?: CustomField[];
+  sections?: TypeSection[];
   forwardLabel?: string;
   reverseLabel?: string;
 }
@@ -51,6 +80,7 @@ export interface RelationshipTypeChange {
 
 export interface ObjectValue {
   profileImageId?: string;
+  iconId?: string;
   typeId: string;
   name: string;
   description: string;
@@ -141,6 +171,7 @@ export type SaveOperation = SaveOperationIdentity &
 
 export type Knowledge = 'known' | 'unknown' | 'none' | 'uncertain' | 'unresolved';
 export interface RelationshipValue {
+  customValues?: CustomValues;
   typeId: string;
   sourceId: string;
   targetId: string | null;
@@ -158,6 +189,7 @@ export interface RelationshipChange {
   before: MapRelationship | null;
   after: RelationshipValue | null;
   type: RelationshipType;
+  beforeType?: RelationshipType;
   objectNames?: Record<string, string>;
 }
 export interface DraftRelationshipChange extends RelationshipChange {
@@ -169,7 +201,6 @@ export interface DraftRelationshipChange extends RelationshipChange {
 }
 export interface SavedRelationshipChange extends RelationshipChange {
   after: MapRelationship | null;
-  beforeType?: RelationshipType;
 }
 
 export function proposedRelationships(

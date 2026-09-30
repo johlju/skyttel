@@ -9,7 +9,7 @@ Nuvarande medlemmar, administratörer, inbjudningar och inloggningar behålls.
 
 1. Hämta först en [egen export](household-export.md) om du behöver behålla
    det nuvarande innehållet. Be användarna avsluta pågående ändringar.
-2. Öppna **Administrera tillgång** och **Återimportera hushållet**.
+2. Öppna **Inställningar → Återimportera hushållet**.
    Välj den privata ZIP-filen och **Kontrollera importfil**.
 3. Läs sammanställningen. Ännu har inget ersatts. Markera bekräftelsen
    först när du vill ersätta allt innehåll i det valda hushållet.
@@ -23,9 +23,41 @@ Nuvarande medlemmar, administratörer, inbjudningar och inloggningar behålls.
 
 Om någon ändrar innehållet under förberedelsen måste filen förberedas igen.
 En trasig, ofullständig eller okänd export avvisas före ersättning. Stöd
-finns för formatversion 1 från databasversion 14, 15 och 16. Gränserna är cirka
+finns för formatversion 1 från databasversion 14–21. Gränserna är cirka
 1,1 GB för ZIP-filen, 32 MiB för innehållsfilen och 1 GiB för bilddelen.
 Förberedda kopior rensas efter tio minuter eller vid serverns nästa start.
+
+Om filkontrollens svar försvinner kan samma administratör hämta sin
+obekräftade granskning igen, även i en annan webbläsare. Välj
+**Hämta importens status** innan du försöker ladda upp på nytt.
+En annan administratör får inte bekräfta din obekräftade förberedelse.
+Efter omstart eller utgången tid behöver filen granskas på nytt.
+
+Du kan välja **Avbryt förberedelsen** innan du bekräftar ersättningen.
+Ett lyckat avbrott tar bort den tillfälliga kopian och lämnar hushållets
+innehåll kvar. Om svaret saknas, hämta samma försöks status först. Att filen
+inte längre är tillgänglig betyder att granskningen inte kan användas;
+det är inte ett kvitto på avbrottet. Om tillfälliga filer finns kvar, välj
+**Slutför förberedelsens rensning**. Kartan kan användas under denna
+rensning eftersom ingen ersättning har bekräftats.
+
+Ett bekräftat importförsök har ett beständigt ID. När en aktuell
+administratör öppnar importen i en ny webbläsare visas pågående eller
+senaste bekräftade försök automatiskt, även efter omstart. Jämför ID när
+du följer upp ett tappat svar. En webbläsare med ett känt oklart försök
+hämtar just det försöket; ett annat resultat används inte som besked för
+det. Ett nätfel lämnar utfallet oklart och blockerar en ny import tills
+status går att läsa.
+
+Om **Webbläsarens återhämtningsminne** inte kan uppdateras visas ett
+separat meddelande. Behåll sidan öppen och kontrollera webbläsarens
+lagringsinställningar. Blockerad filkontroll lämnar den valda filen kvar.
+Ersättning eller fortsatt rensning efter bekräftad ersättning skickas först
+när försökets identifierare kan sparas. Verklig granskning och bekräftat
+serverresultat visas fortfarande;
+lagringsfelet gör dem inte okända. Hämta samma försöks status eller försök
+samma åtgärd igen när lagring fungerar. Återhämtning efter omladdning kan
+inte garanteras medan felet kvarstår.
 
 Identiteter i exporten ger ingen ny åtkomst. Privata uppgifter från samma
 hushåll återkopplas endast när en verifierad koppling redan finns. Privata
@@ -35,7 +67,10 @@ verifierat konto. Att namn eller andra uppgifter råkar stämma räcker inte.
 Följ [guiden för innehållskopplingar](household-recovery.md) för att granska
 och bekräfta kopplingen utan att skriva över något privat arbete.
 
-Om rensningen inte är klar är innehållet redan ersatt, men kartan hålls
-stängd tills rensningen lyckas. Välj **Slutför importens rensning** eller
-kontakta driftansvarig. Vid ett uttryckligt misslyckat resultat är det
+Om rensningen efter en bekräftad ersättning inte är klar hålls kartan
+stängd tills rensningen lyckas. En aktuell administratör kan välja
+**Slutför importens rensning** för samma försök, även om den ursprungliga
+administratören inte längre har rollen. Åtgärden gör ingen ny ersättning.
+Vid fortsatta problem, kontakta driftansvarig. Välj inte en ny fil för att
+lösa väntande rensning. Vid ett uttryckligt misslyckat resultat är det
 föregående innehållet kvar.

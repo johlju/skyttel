@@ -13,10 +13,13 @@ testmiljön; inga verkliga inloggningsuppgifter behövs.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 När ett befintligt objekt eller samband ska ändras, välj det först i
 kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna
-formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
+formuläret. Från hel kartvy öppnar du först **Lista**. Att bara välja
 objektet eller sambandet öppnar inte formuläret.
 
 1. Installera projektets beroenden och Chromium enligt
@@ -46,17 +49,18 @@ relationship reachable”.
 
 **Steg:**
 
-1. Öppna **Samlad vy**. Läs beskedet om färre etiketter och kontrollera
+1. Öppna **Lista**. Läs beskedet om färre etiketter och kontrollera
    att sökning, listor och navigering är tillgängliga.
 2. Bläddra genom objektsidorna och sambandssidorna med sidvalet. Kontrollera
-   räknaren och att den sista sidan nås. Välj **Provobjekt 499** genom sökning
-   och kontrollera namnet i detaljerna.
+   räknaren och att den sista sidan nås. Sök efter **Provobjekt 499**,
+   välj **Uppgifter** vid träffen och kontrollera namnet i detaljerna.
 3. Rensa sökningen. Använd **Visa valt innehåll i listan** och kontrollera
    att det valda objektet återfinns. Välj **Visa objektets kopplingar**
    och läs dess direkta samband.
 4. Skriv **Oskickad text i den täta kartan** i **Beskrivning**. Välj
-   **Visa hela rymden**, växla mellan lista och samlad vy och kontrollera
-   att texten finns kvar. Lägg den i utkastet och granska hela förslaget.
+   **Visa hela rymden**, öppna Lista och välj objektets panel igen med
+   **Öppna paneler**. Kontrollera att texten finns kvar. Lägg den i utkastet
+   och granska hela förslaget.
 5. Spara hela utkastet. Invänta kvittot, ladda om och sök objektet igen.
    Kontrollera den sparade beskrivningen och historiken. Kontrollera också
    att personliga placeringar finns kvar om du ordnade några före provet.

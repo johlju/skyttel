@@ -3,7 +3,7 @@ import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test, vi } from 'vitest';
 import type { LiveUsage, LiveUsageAttempt } from '../../../src/server/live-provider.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
-import { createHousehold, signIn } from '../../support/client.js';
+import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { createInstallation, robin } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
@@ -494,7 +494,7 @@ test('restart expires the voice session while its household draft and exact dura
   });
   const voice = await scene.start();
   scene.live.configure({ seconds: 15 });
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   expect(scene.live.channels.size).toBe(0);
   for (const action of ['poll', 'stop']) {
     const old = await voice.post(action, voice.startBody);

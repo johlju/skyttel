@@ -73,7 +73,7 @@ test('expired existing proof cannot authorize linking', async () => {
   expect((await client.json('/api/login-methods/add', { provider: 'microsoft' })).status).toBe(409);
   expect(await (await client.request('/api/login-methods')).json()).toEqual({
     providers: ['google'],
-    stage: null,
+    stage: 'expired',
   });
 });
 

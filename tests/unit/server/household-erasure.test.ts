@@ -30,6 +30,7 @@ afterEach(() => fixture.close());
 
 const readMap = async (actor = client): Promise<MapState> =>
   (await actor.request(`${path}/map`)).json();
+
 async function object(id: string, value: Partial<ObjectValue> = {}, actor = client) {
   const state = await readMap(actor);
   const own = state.draft.changes.find((change) => change.id === id);
@@ -840,10 +841,16 @@ test('an old endpoint is removed from another owner’s private proposal without
 });
 
 test('merged identities and image copies are explicitly reviewed and erased across all owners while neighbours survive', async () => {
-  for (const id of ['a', 'b', 'neighbour']) await object(id, { name: 'Lo' });
+  for (const [id, iconId] of [
+    ['a', 'bike'],
+    ['b', 'music'],
+    ['neighbour', 'house'],
+  ])
+    await object(id, { name: 'Lo', iconId });
   const original = await upload('b');
   await save('images');
   const { actor } = await invite();
+  await object('b', { iconId: 'telescope' }, actor);
   const hidden = await upload('b', actor);
   let state = await readMap();
   await client.json(`${path}/map/relationship`, {
@@ -858,7 +865,7 @@ test('merged identities and image copies are explicitly reviewed and erased acro
     },
   });
   await save('edge');
-  await proposeMerge({ profileImageId: 'absorbed' });
+  await proposeMerge({ profileImageId: 'absorbed', iconId: 'absorbed' });
   const copied = (await readMap()).draft.changes.find((change) => change.id === 'a')?.after
     ?.profileImageId;
   expect(copied).not.toBe(original);
@@ -906,6 +913,15 @@ test('merged identities and image copies are explicitly reviewed and erased acro
   for (const id of [original, copied, hidden])
     expect((await client.request(`${path}/profile-images/${id}`)).status).toBe(404);
   expect(await (await client.request(`${path}/map/history`)).text()).not.toContain('"merge"');
+  expect((await readMap()).objects[0].iconId).toBe('house');
+  const exported = await (await client.json(`${path}/exports`, {})).json();
+  const parts = unzipSync(
+    new Uint8Array(await (await client.request(`${path}/exports/${exported.id}`)).arrayBuffer()),
+  );
+  const content = Buffer.from(parts['content.json']).toString();
+  for (const iconId of ['bike', 'music', 'telescope'])
+    expect(content).not.toContain(`"iconId":"${iconId}"`);
+  expect(content).toContain('"iconId":"house"');
 });
 
 test('erasing a type removes private dependent identities without exposing their identifiers or pictures', async () => {
@@ -1368,4 +1384,52 @@ test('failed deletion of a cancelled upload keeps erasure prepared until the pro
     (await client.json(`${path}/erasure/resume`, { operationId: request.operationId })).status,
   ).toBe(200);
   expect(readdirSync(directory)).toEqual([]);
+});
+
+test('an exact erasure read retains older metadata and checks the current administrator', async () => {
+  for (const id of ['first', 'later', 'keep']) await object(id);
+  await save('original');
+  await object('keep', { description: 'PRIVATE-UNCHANGED-SENTINEL' });
+  const privateDraft = (await readMap()).draft;
+  for (const id of ['first', 'later'])
+    expect(
+      (
+        await client.json(
+          `${path}/erasure/execute`,
+          await reviewed([{ kind: 'object', id }], `erase-${id}`),
+        )
+      ).status,
+    ).toBe(200);
+  expect((await (await client.request(`${path}/erasure`)).json()).status.operationId).toBe(
+    'erase-later',
+  );
+  const expected = {
+    status: {
+      operationId: 'erase-first',
+      phase: 'completed',
+      counts: { objects: 1, relationships: 0, objectTypes: 0, relationshipTypes: 0, images: 0 },
+    },
+  };
+  const exact = `${path}/erasure/erase-first`;
+  const response = await client.request(exact);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual(expected);
+  expect((await client.request(`${path}/erasure/missing`)).status).toBe(404);
+  expect((await client.request('/api/households/another/erasure/erase-first')).status).toBe(403);
+  expect((await fixture.client().request(exact)).status).toBe(401);
+  const { actor, userId } = await invite();
+  expect((await actor.request(exact)).status).toBe(403);
+  expect(
+    (await client.json(`${path}/members/${userId}/role`, { role: 'administrator' })).status,
+  ).toBe(200);
+  expect(await (await actor.request(exact)).json()).toEqual(expected);
+  const { user } = await (await client.request('/api/bootstrap')).json();
+  expect((await actor.json(`${path}/members/${user.id}/role`, { role: 'member' })).status).toBe(
+    200,
+  );
+  expect((await client.request(exact)).status).toBe(403);
+  expect(await (await actor.request(exact)).json()).toEqual(expected);
+  const retained = await readMap();
+  expect(retained.objects.map(({ id }) => id)).toEqual(['keep']);
+  expect(retained.draft).toEqual(privateDraft);
 });

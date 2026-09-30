@@ -1,12 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openConversation, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const assistant = (page: Page) =>
   page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
 async function consent(page: Page) {
+  await openConversation(page);
   const panel = assistant(page);
   const start = panel.getByRole('button', { name: 'Starta textassistenten' });
   await expect(start).toBeDisabled();
@@ -20,6 +21,7 @@ async function consent(page: Page) {
   await expect(panel.getByLabel('Meddelande till textassistenten')).toBeVisible();
 }
 async function send(page: Page, text: string) {
+  await openConversation(page);
   await assistant(page).getByLabel('Meddelande till textassistenten').fill(text);
   await assistant(page).getByRole('button', { name: 'Skicka', exact: true }).click();
 }
@@ -34,6 +36,7 @@ async function arrange(page: Page, app: Awaited<ReturnType<typeof createInstalla
     data: { version: 0, contentVersion: 1, id: 'lo', baseRevision: null, value },
   });
   await page.goto(app.origin);
+  await openWorkspace(page);
   return { path, value };
 }
 
@@ -111,6 +114,7 @@ test('TEXT-07: hela ändringslistan visar samband, typer och verkliga före- och
       },
     });
     await page.goto(app.origin);
+    await openWorkspace(page);
     await consent(page);
     const summary = assistant(page).getByRole('list', { name: 'Alla föreslagna ändringar' });
     await expect(summary.getByRole('listitem')).toHaveCount(4);
@@ -187,9 +191,10 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
     const household = app.seedDemo();
     await signIn(page.request, app.origin);
     await page.goto(app.origin);
+    await openWorkspace(page);
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Kim Exempel', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Kim Exempel', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
@@ -313,7 +318,7 @@ test('TEXT-03: nekade sparbesked och modellfel lämnar formulärarbetet tillgän
     );
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Lo Exempel', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn', { exact: true }).fill('Lo Lind');
@@ -365,6 +370,7 @@ test('TEXT-04: ett tappat sparbesked återfinns efter omstart utan dubbelt spara
     await app.restart();
     await page.unroute('**/text-assistant/*/messages');
     await page.reload();
+    await openWorkspace(page);
     await consent(page);
     await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
     await expect(assistant(page)).toContainText('Sparat:');
@@ -389,13 +395,18 @@ test('TEXT-05: markering kräver visning och skyddar oskickad text', async ({ pa
     await arrange(page, app);
     await consent(page);
     await send(page, 'Markera Lo i kartan.');
+    await expect(assistant(page).getByRole('status', { includeHidden: true })).toHaveText(
+      'Markerat i kartan.',
+    );
+    await openConversation(page);
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
+    await openWorkspace(page);
     await expect(
       page.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }),
     ).toBeVisible();
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Lo Exempel', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true })
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd uppgift');
@@ -535,9 +546,10 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
       value: { ...relationship, typeId: paymentType.id },
     });
     await page.reload();
+    await openWorkspace(page);
     await consent(page);
-    const listMode = page.getByRole('button', { name: 'Lista och detaljer', exact: true });
-    await listMode.click();
+    await openWorkspace(page);
+    const listPanel = page.getByRole('region', { name: 'Lista och utkast', exact: true });
     const panel = assistant(page);
     const report = panel
       .getByRole('heading', { name: 'Besked från Skyttel', exact: true })
@@ -548,7 +560,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await expect(report).toContainText('Utkast:');
     await expect(report).toContainText('Tonrum (Gäller: aktuellt → upphört)');
     await expect(report).toContainText('Lo Exempel Använder Tonrum → Lo Exempel Betalar Tonrum');
-    await expect(listMode).toHaveAttribute('aria-pressed', 'true');
+    await expect(listPanel).toBeVisible();
     expect(await read()).toEqual(beforeReview);
 
     await send(page, 'Spara hela utkastet nu.');
@@ -568,7 +580,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await expect(report).toContainText('Sparandet:');
     await expect(report).toContainText('Tonrum (Gäller: aktuellt → upphört)');
     await expect(report).toContainText('Lo Exempel Använder Tonrum → Lo Exempel Betalar Tonrum');
-    await expect(listMode).toHaveAttribute('aria-pressed', 'true');
+    await expect(listPanel).toBeVisible();
     expect(await read()).toEqual(saved);
     expect(await (await page.request.get(`${path}/operations`)).json()).toEqual(operations);
     expect(model.requests).toHaveLength(3);

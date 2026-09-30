@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Knowledge, MapObject, MapState, RelationshipValue } from '../shared/map.js';
 import { LifecycleEditor, RelationshipEndDate } from './Lifecycle.js';
+import { CustomFieldsDetails, CustomFieldsEditor } from './ObjectTypes.js';
 
 export const knowledgeLabels: Record<Knowledge, string> = {
   known: 'Känt',
@@ -42,6 +43,9 @@ export function RelationshipEditor({
   const [typeRevisions] = useState(
     () => new Map(state.relationshipTypes.map((type) => [type.id, type.revision])),
   );
+  const [previousValues, setPreviousValues] = useState<
+    { id: string; typeId: string; values: RelationshipValue['customValues'] }[]
+  >([]);
   const stale = initial.version !== state.draft.version;
   const choices = [...objects.values()].filter(
     (object) => !state.draft.changes.some((change) => change.id === object.id && !change.after),
@@ -89,7 +93,14 @@ export function RelationshipEditor({
           id="relationship-type"
           required
           value={value.typeId}
-          onChange={(event) => setValue({ ...value, typeId: event.target.value })}
+          onChange={(event) => {
+            if (Object.keys(value.customValues ?? {}).length)
+              setPreviousValues([
+                ...previousValues,
+                { id: crypto.randomUUID(), typeId: value.typeId, values: value.customValues },
+              ]);
+            setValue({ ...value, typeId: event.target.value, customValues: {} });
+          }}
         >
           <option value="">Välj sambandstyp</option>
           {state.relationshipTypes.map((type) => (
@@ -131,6 +142,32 @@ export function RelationshipEditor({
             </select>
           </>
         )}
+        {previousValues.length > 0 && (
+          <section aria-label="Tidigare egna sambandsvärden">
+            <p>
+              Typbytet lämnar den nya typens egna fält tomma. Läs tidigare värden och bekräfta att
+              de får tas bort från förslaget.
+            </p>
+            {previousValues.map((previous) => (
+              <div key={previous.id}>
+                <p>{state.relationshipTypes.find((type) => type.id === previous.typeId)?.name}</p>
+                <CustomFieldsDetails
+                  type={state.relationshipTypes.find((type) => type.id === previous.typeId)}
+                  values={previous.values}
+                  showHidden
+                />
+              </div>
+            ))}
+            <button type="button" onClick={() => setPreviousValues([])}>
+              Bekräfta borttagning av tidigare egna värden
+            </button>
+          </section>
+        )}
+        <CustomFieldsEditor
+          type={state.relationshipTypes.find((type) => type.id === value.typeId)}
+          values={value.customValues}
+          onChange={(customValues) => setValue({ ...value, customValues })}
+        />
         <LifecycleEditor
           kind="relationship"
           value={value.lifecycle}
@@ -140,7 +177,9 @@ export function RelationshipEditor({
           value={value.endDate}
           onChange={(endDate) => setValue({ ...value, endDate })}
         />
-        <button type="submit">Lägg sambandet i mitt utkast</button>
+        <button type="submit" disabled={previousValues.length > 0}>
+          Lägg sambandet i mitt utkast
+        </button>
         {(initial.baseRevision !== null ||
           state.draft.relationships?.some((change) => change.id === initial.id)) && (
           <button type="button" onClick={() => onSubmit({ ...initial, value: null })}>

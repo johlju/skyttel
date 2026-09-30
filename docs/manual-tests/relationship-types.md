@@ -1,7 +1,7 @@
 # Manuella testfall för sambandstyper
 
 Testfallen omfattar riktning, gemensamma definitioner, privata utkast,
-dubbletter och samtidiga ändringar.
+dubbletter, samtidiga ändringar samt egna fält och sambandsvärden.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
 ## Konfigurerade användare
@@ -14,11 +14,14 @@ Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 När ett befintligt objekt eller samband ska ändras, välj det först i
-kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+kartan eller listan och öppna dess detaljpanel. För objekt i listan använder
+du **Uppgifter**; i kartverktygen väljer du **Visa detaljer**. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna
-formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
-objektet eller sambandet öppnar inte formuläret.
+formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 
 1. Starta appen enligt
    [provförberedelsen](../development/devcontainer.md#disposable-local-database)
@@ -84,10 +87,13 @@ objects and edit the shared definition”.
    kopplingen i utkastet utan typ. Välj sedan Förvaring och lägg till.
 3. Granska definition och koppling tillsammans. Prova ett identiskt
    tillägg i samma utkast och läs beskedet med cykelns och garagets namn.
-   Spara hela utkastet och ladda om. Öppna cykeln och läs dess samband.
-   Stäng och öppna garaget.
-4. Klicka på garagets samband. Kontrollera att startobjektet fortfarande
-   är cykeln och målobjektet garaget. Stäng sambandsformuläret.
+   Spara hela utkastet och ladda om. Öppna cykeln och välj
+   **Visa samband i listan**. Läs cykelns benämning, stäng cykelns
+   formulär och öppna garaget.
+4. Välj **Visa samband i listan** även från garaget. Läs och klicka på
+   garagets benämning och välj **Redigera valt samband**.
+   Kontrollera att startobjektet fortfarande är cykeln och målobjektet
+   garaget. Stäng sambandsformuläret.
 5. Ändra typens namn till Plats, beskrivningen till Hushållets
    förvaringsplatser och startbenämningen till finns i. Granska skillnaden,
    spara och ladda om. Läs kartans samband via HTTP.
@@ -122,7 +128,7 @@ and household boundaries stay protected”.
    benämningarna. Spara, ladda om och öppna Nytt samband.
 3. Alex skapar och sparar en separat typ som också heter Förvaring.
 4. Kopiera Alex vanliga typbegäran i nätverkspanelen. Prova tomt namn,
-   tom benämning från respektive håll och ett extra `fields: []` i
+   tom benämning från respektive håll och ogiltiga `fields: null` i
    definitionen. Använd aktuell utkastversion för varje försök.
 5. Kim försöker läsa kartan och skicka en typbegäran till samma adress.
 
@@ -131,7 +137,7 @@ and household boundaries stay protected”.
 - Privata definitioner röjs inte. Vanliga medlemmar får skapa typer och
   rätta förifyllda definitioner; formuläret visar aktuellt namn.
 - Lika namn ger två separata identiteter. Ogiltiga definitioner ger
-  HTTP 400 och ändrar inget utkast. Sambandstyper har inga egna fält.
+  HTTP 400 och ändrar inget utkast.
 - Kim får HTTP 403 för både läsning och ändring.
 
 ## Samtidighet och dubbletter
@@ -206,3 +212,117 @@ identity and reject every partial write”.
   Efter konfliktval finns Los samband kvar utan Alex dubblett.
 - Historiken bevarar tidigare typ, riktning och ändpunkter. Status och
   slutdatum hör till samma samband efter rättelsen.
+
+## Egna sambandsuppgifter
+
+### STY-06: Fyra valfria fältslag sparas med sambandet
+
+**Syfte:** Kontrollera att definition och egna svar delar utkast och sparande.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Cykeln och Garaget finns i utkastet med olika objekttyper.
+
+**Integrationstest:**
+[relationship-fields.spec.ts](../../tests/integration/relationship-fields.spec.ts),
+testfallen “STY-06: optional relationship fields share definitions, editing
+and durable save at 1440px” och “STY-06: optional relationship fields share
+definitions, editing and durable save at 390px”.
+
+**Steg:**
+
+1. Öppna Ny sambandstyp. Ange Förvaring, beskrivningen Var saker finns
+   och benämningarna förvaras i och innehåller.
+2. Lägg till Anteckning som Text, Belopp som Tal, Startdatum som Datum
+   samt Bekräftat och Obesvarat som Ja/nej. Kontrollera att fokus hamnar
+   på det nya fältets namn. Lägg definitionen i utkastet.
+3. Skapa ett samband från Cykeln till Garaget med Förvaring. Ange
+   Låst skåp, 0, 2026-09-27 och Nej. Lämna Obesvarat utan svar.
+4. Lägg sambandet i utkastet, läs värdena och spara hela utkastet.
+   Starta om testinstallationen och ladda om sidan.
+5. Välj sambandet i listan och öppna Redigera valt samband. Kontrollera
+   samtliga svar. Ändra Anteckning till Övre hyllan och spara utkastet.
+6. Upprepa på mobil och med tangentbord. Kontrollera att kontrollerna
+   går att nå genom intern rullning och har synligt fokus.
+
+**Förväntat resultat:**
+
+- Definition, riktning och svar sparas tillsammans och återläses efter
+  omstart. Noll och Nej består; Obesvarat förblir obesvarat.
+- Ändring av Anteckning behåller övriga svar och samma sambandsidentitet.
+- Fältnamn och kontroller går att läsa och använda på dator och mobil.
+
+### STY-07: Typbyte kräver beslut om tidigare egna svar
+
+**Syfte:** Förhindra att ett typbyte omtolkar eller tappar egna svar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Förvaring och Tillgång har varsitt textfält Anteckning.
+Ett sparat samband av typen Förvaring har svaret Behåll som historik.
+
+**Integrationstest:**
+[relationship-fields.spec.ts](../../tests/integration/relationship-fields.spec.ts),
+testfallet “STY-07: relationship type changes require an explicit decision
+about earlier custom answers”.
+
+**Steg:**
+
+1. Välj sambandet i listan och öppna Redigera valt samband.
+2. Byt typ till Tillgång. Läs Tidigare egna sambandsvärden och kontrollera
+   att den nya typens Anteckning är tom.
+3. Skriv Ny betydelse. Bekräfta borttagning av tidigare egna värden från
+   förslaget och lägg sambandet i utkastet.
+4. Läs tidigare värde och förslag. Spara hela utkastet och läs historiken.
+
+**Förväntat resultat:**
+
+- Förslaget kan inte skickas före det uttryckliga beslutet. Fält med
+  samma namn får inte automatiskt samma svar.
+- Den nya typen har Ny betydelse. Historiken behåller Behåll som historik
+  med den tidigare typens definition och samma sambandsidentitet.
+
+### STY-08: Avsnitt bevarar dolda svar och privata definitioner
+
+**Syfte:** Ordna sambandens formulär utan att ändra fältidentitet eller svar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Cykeln och Garaget finns i hushållets karta eller utkast.
+Ett nytt provhushåll används för varje skärmbredd.
+
+**Integrationstest:**
+[relationship-sections.spec.ts](../../tests/integration/relationship-sections.spec.ts),
+testfallen “STY-08: relationship sections preserve hidden answers and private
+presentation after restart at 1440px”, samma titel med “390px” och “320px”.
+
+**Steg:**
+
+1. Öppna Inställningar → Typer och egna fält och välj Ny sambandstyp.
+   Ange Förvaring och benämningarna förvaras i och innehåller.
+2. Namnge avsnitten Uppgifter och Service. Flytta Service upp med
+   tangentbordet och kontrollera att fokus följer avsnittet.
+3. Lägg till Leverantör som Text, Effekt som Tal, Datum som Datum samt
+   Batteri och Reserv som Ja/nej. Placera dem i Uppgifter. Kontrollera
+   läsbarhet och åtkomliga kontroller i ljust och mörkt tema.
+4. Lägg definitionen i utkastet. Skapa sambandet Cykeln → Förvaring →
+   Garaget med svaren Exempelsol, 0, 2026-09-01 och Nej. Lämna Reserv
+   obesvarat och lägg sambandet i utkastet.
+5. Ändra definitionen i Inställningar. Dölj Effekt och flytta Leverantör
+   till Service. Lägg förslaget i utkastet och spara hela utkastet.
+6. Starta om testinstallationen och ladda om sidan. Öppna sambandet för
+   redigering. Effekt ska vara dolt, Batteri ska vara Nej och Reserv
+   obesvarat. Stäng formuläret utan att skicka.
+7. Ändra definitionen igen och visa Effekt i Service. Lägg den i utkastet
+   och öppna sambandet. Kontrollera att Effekt är 0 och alla andra svar
+   består redan innan definitionen sparas.
+8. Upprepa på mobil, med tangentbord och med minskad rörelse.
+
+**Förväntat resultat:**
+
+- Avsnittens ordning och fältens placering följer det privata utkastet.
+  Förslagen sparas tillsammans; omstart förlorar inga dolda svar.
+- Återvisning behåller samma fältidentiteter och tidigare värden.
+  Noll, Nej och obesvarat förblir skilda.
+- Fokus går att följa och kontrollerna är nåbara på dator och mobil.
+  Temabyte och intern rullning bevarar pågående redigering.

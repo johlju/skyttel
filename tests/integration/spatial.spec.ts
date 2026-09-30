@@ -1,7 +1,14 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import {
+  activatePanel,
+  createHousehold,
+  openMap,
+  openProfile,
+  openWorkspace,
+  signIn,
+} from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 async function arrange(page: Page, origin: string) {
@@ -125,17 +132,23 @@ test('RYMD-01: spatial and list editing share private proposals and one durable 
   try {
     const { read } = await arrange(page, installation.origin);
     await page.goto(installation.origin);
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     await space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }).click();
     await expect(
       space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }),
     ).toBeVisible();
     await expect(page.getByLabel('Objektets namn')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Redigera val', exact: true }).click();
+    await openWorkspace(page);
+    await page
+      .getByRole('list', { name: 'Objekt', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Molnmusik', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Molnmusik familj');
-    await page.getByRole('button', { name: 'Till kartan', exact: true }).click();
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+    await openMap(page);
+    await openWorkspace(page);
+    await activatePanel(page, 'Molnmusik');
     await expect(page.getByLabel('Objektets namn')).toHaveValue('Molnmusik familj');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     expect((await read()).objects).toHaveLength(0);
@@ -143,7 +156,7 @@ test('RYMD-01: spatial and list editing share private proposals and one durable 
     await expect(page.getByRole('status')).toContainText('Sparat');
     await installation.restart();
     await page.reload();
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     await expect(
       space.getByRole('button', { name: 'Välj objekt: Molnmusik familj', exact: true }),
     ).toBeVisible();
@@ -178,20 +191,18 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
       },
     });
     await page.goto(installation.origin);
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     const fullMap = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     await expect(
       fullMap.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }),
     ).toBeVisible();
     await expect(fullMap.locator('.spatial-edge')).toHaveCount(0);
     await expectVisibleDirection(fullMap);
-    await fullMap.getByText('Navigera rymden', { exact: true }).click();
-    await fullMap.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
-    await fullMap.getByRole('button', { name: 'Panorera höger', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
+    await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
     await expectVisibleDirection(fullMap);
-    await fullMap.getByText('Navigera rymden', { exact: true }).click();
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
-    await page.getByRole('button', { name: 'Samlad vy', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     await space.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }).click();
     await expect(
@@ -200,16 +211,22 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
         exact: true,
       }),
     ).toBeVisible();
-    await page.getByLabel('Filtrera objekttyp').selectOption({ label: 'Person' });
+    await openWorkspace(page);
+    await page.getByText('Filter', { exact: true }).click();
+    await page.getByRole('checkbox', { name: 'Person', exact: true }).check();
     await expect(
       space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }),
     ).toHaveCount(0);
     await page.getByRole('button', { name: 'Visa hela rymden', exact: true }).click();
+    await openMap(page);
     await space
       .getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true })
-      .click({ button: 'right', modifiers: ['Control'] });
+      .click({ button: 'right' });
+    await page.getByRole('button', { name: 'Visa kopplingar', exact: true }).click();
+    await openWorkspace(page);
     await expect(page.getByText('Fokus: Lo Exempel', { exact: true })).toBeVisible();
     await expect(space.getByRole('dialog')).not.toBeVisible();
+    await openMap(page);
     const loIcon = space.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
     for (const hit of [
       space.locator('canvas'),
@@ -227,7 +244,7 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
       expect((await loIcon.boundingBox())?.x).toBeCloseTo(before?.x ?? 0, 0);
     }
 
-    await page.getByText('Navigera rymden', { exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
     const position = async () => {
       const label = await space
@@ -237,24 +254,35 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
       return { x: (label?.x ?? 0) - (surface?.x ?? 0), y: (label?.y ?? 0) - (surface?.y ?? 0) };
     };
     const beforeClear = await position();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Visa hela rymden', exact: true }).click();
     expect(await position()).toEqual(beforeClear);
     await page.getByLabel('Sök objekt').fill('Lo');
-    await space.getByRole('button', { name: 'Zooma in', exact: true }).focus();
+    await page.getByRole('button', { name: 'Zooma in', exact: true }).focus();
     await page.keyboard.press('Escape');
+    await expect(page.getByLabel('Sök objekt')).toHaveValue('Lo');
+    await space.locator('canvas').press('Escape');
     await expect(page.getByLabel('Sök objekt')).toHaveValue('');
     await expect(
       space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }),
     ).toBeVisible();
+    await openMap(page);
     await space
       .getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true })
-      .click({ modifiers: ['Control'] });
+      .click({ button: 'right' });
+    await page.getByRole('button', { name: 'Visa kopplingar', exact: true }).click();
+    await openWorkspace(page);
     await page.getByLabel('Sök objekt').fill('Lo');
-    await page.getByLabel('Filtrera objekttyp').selectOption({ label: 'Person' });
+    await page.getByText('Filter', { exact: true }).click();
+    await page.getByRole('checkbox', { name: 'Person', exact: true }).check();
+    await openMap(page);
     await space.getByRole('button', { name: 'Återställ vy', exact: true }).click();
+    await openWorkspace(page);
     await expect(page.getByLabel('Sök objekt')).toHaveValue('');
-    await expect(page.getByLabel('Filtrera objekttyp')).toHaveValue('');
+    await page.getByText('Filter', { exact: true }).click();
+    await expect(page.getByRole('checkbox', { name: 'Person', exact: true })).not.toBeChecked();
     await expect(page.getByText('Fokus: Lo Exempel', { exact: true })).toHaveCount(0);
+    await openMap(page);
     await space.getByLabel('Alla etiketter', { exact: true }).check();
     await expect(
       space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }),
@@ -262,6 +290,7 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
     await space
       .getByRole('button', { name: 'Välj samband: Lo Exempel → Använder → Molnmusik', exact: true })
       .click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
     await expect(page.getByLabel('Till objekt')).toHaveValue('music');
   } finally {
@@ -291,22 +320,32 @@ test('RYMD-03: context actions and draft symbols distinguish proposals from save
       },
     });
     await page.goto(installation.origin);
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     const music = space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true });
     await space.getByLabel('Alla etiketter', { exact: true }).check();
     await expect(music).toContainText('+');
-    await page.getByRole('button', { name: 'Visa detaljer och utkast' }).click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
-    await page.getByRole('button', { name: 'Till kartan', exact: true }).click();
+    await openMap(page);
     await music.click({ button: 'right' });
     await page.getByRole('button', { name: 'Redigera objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Syntetiskt musikexempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
-    await page.getByRole('button', { name: 'Till kartan', exact: true }).click();
-    await expect(music).toContainText('~');
-    await music.click({ button: 'right' });
+    await openMap(page);
+    await expect(music).toContainText('✎');
+    const musicName = space.getByRole('button', { name: 'Markera objekt: Molnmusik', exact: true });
+    await expect(musicName).toBeVisible();
+    expect(
+      await musicName.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return element.contains(
+          document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+        );
+      }),
+    ).toBe(true);
+    await musicName.click({ button: 'right' });
     await expect(
       page.getByRole('button', { name: 'Ta bort objekt', exact: true }),
     ).toHaveAccessibleDescription(
@@ -343,7 +382,7 @@ test('RYMD-03: context actions and draft symbols distinguish proposals from save
     expect(state.draft.changes.map((change) => [change.id, change.after])).toEqual([
       ['music', null],
     ]);
-    await page.getByRole('button', { name: 'Visa detaljer och utkast' }).click();
+    await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Borttagning av samband',
     );
@@ -368,10 +407,9 @@ test('RYMD-04: touch menus, viewport changes and graphics recovery retain unsent
   try {
     const { read } = await arrange(page, installation.origin);
     await page.goto(installation.origin);
-    await expect(
-      page.getByRole('button', { name: 'Lista och detaljer', exact: true }),
-    ).toHaveAttribute('aria-pressed', 'true');
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await expect(page.getByRole('navigation', { name: 'Kartans verktyg' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).not.toBeVisible();
+    await openMap(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     const music = space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true });
     const box = await music.boundingBox();
@@ -388,10 +426,11 @@ test('RYMD-04: touch menus, viewport changes and graphics recovery retain unsent
     await page.getByRole('button', { name: 'Redigera objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Oskickad mobiltext');
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.getByRole('button', { name: 'Till kartan', exact: true }).click();
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
+    await openMap(page);
+    await openWorkspace(page);
+    await activatePanel(page, 'Molnmusik');
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue('Oskickad mobiltext');
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     await expect
       .poll(async () => (await space.locator('canvas').boundingBox())?.height)
       .toBeGreaterThan(200);
@@ -409,7 +448,8 @@ test('RYMD-04: touch menus, viewport changes and graphics recovery retain unsent
     await expect(
       page.getByText('Grafiken är tillfälligt avbruten. Ditt utkast finns kvar.', { exact: true }),
     ).toHaveCount(0);
-    await page.getByRole('button', { name: 'Visa detaljer och utkast' }).click();
+    await openWorkspace(page);
+    await activatePanel(page, 'Molnmusik');
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue('Oskickad mobiltext');
     expect(
       (await read()).draft.changes.find((change) => change.id === 'music')?.after?.description,
@@ -448,8 +488,9 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
       },
     });
     await page.goto(installation.origin);
-    await page.getByRole('button', { name: 'Samlad vy', exact: true }).click();
+    await openMap(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
+    await space.getByRole('button', { name: 'Återställ vy', exact: true }).click();
     await space.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }).click();
     const geometry = () =>
       space.evaluate((region) => {
@@ -542,8 +583,8 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
       space.getByText('Närmare utsnitt. Panorera för att se fler etiketter.', { exact: true }),
     ).toBeVisible();
     const beforePan = await geometry();
-    await space.getByText('Navigera rymden', { exact: true }).click();
-    await space.getByRole('button', { name: 'Panorera höger', exact: true }).click();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    await page.getByRole('button', { name: 'Panorera höger', exact: true }).click();
     await expect
       .poll(async () =>
         Math.abs(objectPoints(await geometry())[0].anchor.x - objectPoints(beforePan)[0].anchor.x),
@@ -562,15 +603,37 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
         ),
       ).toBeLessThan(2);
     }
+    await openWorkspace(page);
     const relationship = page
       .getByRole('list', { name: 'Samband', exact: true })
       .getByRole('button', { name: 'Lo Exempel → Använder → Molnmusik', exact: true });
     const objectRow = page
       .getByRole('list', { name: 'Objekt', exact: true })
-      .getByRole('button', { name: 'Lo Exempel', exact: true });
+      .getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true });
     await objectRow.focus();
     await page.keyboard.press('Enter');
-    await expect(objectRow).toBeFocused();
+    const objectPanel = page.getByRole('region', { name: 'Lo Exempel', exact: true });
+    await expect(
+      objectPanel.getByRole('heading', { name: 'Lo Exempel', exact: true }),
+    ).toBeFocused();
+    await openWorkspace(page);
+    await objectRow.focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(
+      page.getByRole('button', { name: 'Visa Lo Exempel i kartan', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(
+      page.getByRole('button', { name: 'Markera Lo Exempel', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      page.getByRole('button', { name: 'Visa Lo Exempel i kartan', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }),
+    ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(
       page.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }),
@@ -584,7 +647,8 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
     ).toHaveAccessibleDescription(
       /Objektet och dess 1 samband läggs som borttagningar i ditt utkast/,
     );
-    await page.keyboard.press('Shift+Tab');
+    await activatePanel(page, 'Lo Exempel');
+    await objectPanel.getByRole('button', { name: 'Redigera valt objekt', exact: true }).focus();
     await page.keyboard.press('Enter');
     await expect(page.getByLabel('Objektets namn')).toBeFocused();
     await expect(
@@ -603,9 +667,9 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
       .getByLabel('Sambandets slutdatum: uppgiftens säkerhet', { exact: true })
       .selectOption('known');
     await page.getByLabel('Sambandets slutdatum', { exact: true }).fill('2026-12-31');
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     await page.setViewportSize({ width: 900, height: 600 });
-    await page.getByRole('button', { name: 'Visa detaljer och utkast', exact: true }).click();
+    await openWorkspace(page);
     await expect(page.getByLabel('Sambandets slutdatum', { exact: true })).toHaveValue(
       '2026-12-31',
     );
@@ -626,13 +690,19 @@ test('RYMD-06: losing household access in fullscreen restores login navigation',
     const { read } = await arrange(page, installation.origin);
     const state = await read();
     await page.goto(installation.origin);
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     await page.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }).click();
-    await page.getByRole('button', { name: 'Redigera val', exact: true }).click();
+    await openWorkspace(page);
+    await page
+      .getByRole('list', { name: 'Objekt', exact: true })
+      .getByRole('button', { name: 'Uppgifter för Molnmusik', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Syntetisk text före åtkomstbyte');
     installation.revokeMembership(state.userId);
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Du har inte längre tillgång');
+    await openProfile(page);
     await expect(page.getByRole('button', { name: 'Logga ut', exact: true })).toBeVisible({
       timeout: 1000,
     });
@@ -686,7 +756,7 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
       ).ok(),
     ).toBe(true);
     await page.goto(installation.origin);
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     await space.getByLabel('Alla etiketter', { exact: true }).check();
     const musicNode = space.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true });
@@ -709,27 +779,32 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
         .getByTitle('Nytt förslag')
         .evaluate((element) => getComputedStyle(element).backgroundColor);
       expect(endedColor).not.toBe(proposalColor);
+      await expect(symbolContainer.getByTitle('Nytt förslag')).toHaveCSS(
+        'color',
+        'rgb(24, 119, 71)',
+      );
     }
     await expect(lo).not.toContainText('Upphört');
     await expect(musicNode).toHaveAccessibleDescription(/Upphört/);
-    await page.getByRole('button', { name: 'Visa detaljer och utkast', exact: true }).click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     await installation.restart();
     await page.reload();
-    await page.getByRole('button', { name: 'Öppna rymdkartan', exact: true }).click();
+    await openMap(page);
     await expect(music.getByText('Upphört', { exact: true })).toBeVisible();
     await expect(musicNode).toHaveAccessibleDescription(/Upphört/);
     await expect(edge.getByText('Upphört', { exact: true })).toBeVisible();
     await expect(lo).not.toContainText('Upphört');
     await expect(space.getByTitle('Nytt förslag')).toHaveCount(0);
     await edge.click();
-    await page.getByRole('button', { name: 'Redigera val', exact: true }).click();
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
     await page.getByLabel('Sambandets status').selectOption('active');
     await page.getByRole('button', { name: 'Lägg sambandet i mitt utkast', exact: true }).click();
-    await page.getByRole('button', { name: 'Till kartan', exact: true }).click();
+    await openMap(page);
     await expect(edge).not.toContainText('Upphört');
-    await expect(edge).toContainText('~');
+    await expect(edge).toContainText('✎');
     await expect(music.getByText('Upphört', { exact: true })).toBeVisible();
   } finally {
     await installation.close();
@@ -788,11 +863,12 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
       },
     });
     await page.goto(installation.origin);
-    await page.getByRole('button', { name: 'Samlad vy', exact: true }).click();
+    await openWorkspace(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     await space
       .getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true })
-      .click({ button: 'right', modifiers: ['Control'] });
+      .click({ button: 'right' });
+    await page.getByRole('button', { name: 'Visa kopplingar', exact: true }).click();
     for (const name of ['Lo Exempel', 'Kim Exempel'])
       await expect(
         space.getByRole('button', { name: `Välj objekt: ${name}`, exact: true }),
@@ -809,7 +885,8 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
     await expect(page.getByText('Fokus: Molnmusik', { exact: true })).toBeVisible();
     await space
       .getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true })
-      .click({ modifiers: ['Control'] });
+      .click({ button: 'right' });
+    await page.getByRole('button', { name: 'Visa kopplingar', exact: true }).click();
     await space
       .getByRole('button', { name: 'Välj samband: Kim Exempel → Betalar → Molnmusik', exact: true })
       .click();
@@ -818,5 +895,330 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
     expect((await read()).draft.version).toBe(state.draft.version + 1);
   } finally {
     await installation.close();
+  }
+});
+
+test('RYMD-09: dense mobile maps offer separate pointer and keyboard targets with selected label priority and text alternatives', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    const { path, read } = await arrange(page, installation.origin);
+    const initial = await read();
+    for (let index = 0; index < 8; index += 1) {
+      expect(
+        (
+          await page.request.post(`${path}/draft`, {
+            headers: { origin: installation.origin },
+            data: {
+              version: (await read()).draft.version,
+              id: `dense-${index}`,
+              baseRevision: null,
+              value: {
+                name: `Nära objekt ${index + 1}`,
+                description: '',
+                typeId: initial.types[0].id,
+              },
+            },
+          })
+        ).ok(),
+      ).toBe(true);
+    }
+    expect(
+      (
+        await page.request.post(`${path}/relationship`, {
+          headers: { origin: installation.origin },
+          data: {
+            version: (await read()).draft.version,
+            id: 'dense-edge',
+            baseRevision: null,
+            value: {
+              typeId: initial.relationshipTypes[0].id,
+              sourceId: 'dense-6',
+              targetId: 'dense-7',
+              knowledge: 'known',
+            },
+          },
+        })
+      ).ok(),
+    ).toBe(true);
+    expect(
+      (
+        await page.request.post(`${path}/save`, {
+          headers: { origin: installation.origin },
+          data: { version: (await read()).draft.version, operationId: 'dense-map' },
+        })
+      ).ok(),
+    ).toBe(true);
+    const saved = await read();
+    for (const [index, object] of saved.objects.entries()) {
+      expect(
+        (
+          await page.request.post(`${path}/view/position`, {
+            headers: { origin: installation.origin },
+            data: {
+              id: object.id,
+              version: 0,
+              position: { x: index * 0.04, y: index * 0.03, z: index * 0.04 },
+            },
+          })
+        ).ok(),
+      ).toBe(true);
+    }
+    const personal = await (await page.request.get(`${path}/view`)).json();
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(installation.origin);
+      await openMap(page);
+      const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
+      await expect(space.locator('button[data-object-id]')).toHaveCount(saved.objects.length);
+      const names = space.getByRole('button', { name: /^Markera objekt:/ });
+      await expect.poll(() => names.count()).toBeGreaterThanOrEqual(4);
+      const first = names.nth(3);
+      const name = (await first.getAttribute('aria-label'))?.replace('Markera objekt: ', '');
+      const marker = space.getByRole('button', { name: `Välj objekt: ${name}`, exact: true });
+      const before = await space
+        .locator('button[data-object-id]')
+        .evaluateAll((nodes) =>
+          nodes.map((node) => [node.getAttribute('data-object-id'), node.getAttribute('style')]),
+        );
+      await first.click();
+      await expect(marker).toHaveAttribute('aria-pressed', 'true');
+      expect(
+        await space
+          .locator('button[data-object-id]')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => [node.getAttribute('data-object-id'), node.getAttribute('style')]),
+          ),
+      ).toEqual(before);
+      const selectedName = space.getByRole('button', {
+        name: `Markera objekt: ${name}`,
+        exact: true,
+      });
+      await expect(selectedName).toBeInViewport({ ratio: 1 });
+      const targets = await names.evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const box = node.getBoundingClientRect();
+          return {
+            width: box.width,
+            height: box.height,
+            hit: node.contains(
+              document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+            ),
+          };
+        }),
+      );
+      expect(
+        targets.every((target) => target.width >= 24 && target.height >= 24 && target.hit),
+      ).toBe(true);
+      const keyboardTarget = space.getByRole('button', {
+        name: 'Välj objekt: Nära objekt 8',
+        exact: true,
+      });
+      await keyboardTarget.focus();
+      await page.keyboard.press('Enter');
+      await expect(keyboardTarget).toHaveAttribute('aria-pressed', 'true');
+      await expect(
+        space.getByRole('button', { name: 'Markera objekt: Nära objekt 8', exact: true }),
+      ).toBeInViewport({ ratio: 1 });
+      const relationship = space.getByRole('button', {
+        name: 'Välj samband: Nära objekt 7 → Använder → Nära objekt 8',
+        exact: true,
+      });
+      await relationship.click();
+      await expect(relationship).toHaveClass(/selected/);
+      await expect(relationship).toBeInViewport({ ratio: 1 });
+      expect(
+        await relationship.evaluate((label) => {
+          const box = label.getBoundingClientRect();
+          return (
+            label.contains(
+              document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+            ) &&
+            [...document.querySelectorAll('.spatial-name')].every((name) => {
+              const other = name.getBoundingClientRect();
+              return (
+                box.right <= other.left ||
+                box.left >= other.right ||
+                box.bottom <= other.top ||
+                box.top >= other.bottom
+              );
+            })
+          );
+        }),
+      ).toBe(true);
+      expect(
+        await space
+          .locator('button[data-object-id]')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => [node.getAttribute('data-object-id'), node.getAttribute('style')]),
+          ),
+      ).toEqual(before);
+      await space.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+        const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
+        if (!extension) throw new Error('Native graphics loss must be available');
+        extension.loseContext();
+      });
+      await expect(
+        space.getByText('Grafiken är tillfälligt avbruten. Ditt utkast finns kvar.'),
+      ).toBeVisible();
+      await openWorkspace(page);
+      await expect(
+        page
+          .getByRole('list', { name: 'Objekt', exact: true })
+          .getByRole('button', { name: 'Markera Nära objekt 1', exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole('list', { name: 'Objekt', exact: true })
+        .getByRole('button', { name: 'Markera Nära objekt 1', exact: true })
+        .click();
+      await expect(
+        page
+          .getByRole('list', { name: 'Objekt', exact: true })
+          .getByRole('button', { name: 'Markera Nära objekt 1', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      expect(await (await page.request.get(`${path}/view`)).json()).toEqual(personal);
+      expect(await read()).toEqual(saved);
+    }
+  } finally {
+    await installation.close();
+  }
+});
+
+test('RYMD-10: label notices remain stable while a compact map opens its saved and private list', async ({
+  page,
+}) => {
+  const app = await createInstallation();
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  try {
+    await page.setViewportSize({ width: 640, height: 500 });
+    // These fictional IDs reproduce the default positions of the connected
+    // family workflow that exposed an unstable hidden-label notice.
+    await signIn(page.request, app.origin);
+    const { household } = await (await createHousehold(page.request, app.origin)).json();
+    const path = `${app.origin}/api/households/${household.id}/map`;
+    const read = async (): Promise<MapState> => (await page.request.get(path)).json();
+    const initial = await read();
+    const person = initial.types.find((item) => item.name === 'Person');
+    const subscription = initial.types.find((item) => item.name === 'Abonnemang');
+    if (!person || !subscription) throw new Error('The real household catalog is incomplete');
+    for (const [id, value] of [
+      [
+        '131b9df9-be76-4fc4-af0e-f8bfcf2589e4',
+        {
+          name: 'Familjens Molnmusik',
+          description: 'Rättad för hand',
+          typeId: subscription.id,
+          financialFacts: {
+            price: { knowledge: 'known', value: '189' },
+            currency: { knowledge: 'known', value: 'SEK' },
+            paymentInterval: { knowledge: 'known', value: 'månad' },
+          },
+        },
+      ],
+      [
+        '882e85e4-be1d-45a8-941a-93faf8ee99dc',
+        { name: 'Kim Exempel', description: '', typeId: person.id },
+      ],
+    ]) {
+      const response = await page.request.post(`${path}/draft`, {
+        headers: { origin: app.origin },
+        data: { version: (await read()).draft.version, id, baseRevision: null, value },
+      });
+      expect(response.ok(), await response.text()).toBe(true);
+    }
+    const relationship = await page.request.post(`${path}/relationship`, {
+      headers: { origin: app.origin },
+      data: {
+        version: (await read()).draft.version,
+        id: '482eba24-34c3-43e9-a71d-1b91cc343d17',
+        baseRevision: null,
+        value: {
+          typeId: initial.relationshipTypes.find((item) => item.name === 'Betalar')?.id,
+          sourceId: '882e85e4-be1d-45a8-941a-93faf8ee99dc',
+          targetId: '131b9df9-be76-4fc4-af0e-f8bfcf2589e4',
+          knowledge: 'known',
+        },
+      },
+    });
+    expect(relationship.ok(), await relationship.text()).toBe(true);
+    const save = await page.request.post(`${path}/save`, {
+      headers: { origin: app.origin },
+      data: { version: (await read()).draft.version, operationId: 'layout-regression' },
+    });
+    expect(save.ok(), await save.text()).toBe(true);
+    const privateProposal = await page.request.post(`${path}/draft`, {
+      headers: { origin: app.origin },
+      data: {
+        version: (await read()).draft.version,
+        id: '4a363b9b-5e73-4c60-9a9c-4624cd687255',
+        baseRevision: null,
+        value: { name: 'Robins notering', description: '', typeId: person.id },
+      },
+    });
+    expect(privateProposal.ok(), await privateProposal.text()).toBe(true);
+
+    await page.goto(app.origin);
+    await openMap(page);
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Kartans verktyg' })).toBeVisible();
+    await openWorkspace(page);
+    const objects = page.getByRole('list', { name: 'Objekt', exact: true });
+    await expect(objects).toBeVisible();
+    await objects
+      .getByRole('button', { name: 'Uppgifter för Familjens Molnmusik', exact: true })
+      .click();
+    await expect(
+      page.getByRole('region', { name: 'Familjens Molnmusik', exact: true }),
+    ).toContainText('Rättad för hand');
+    await openWorkspace(page);
+    await activatePanel(page, 'Lista och utkast');
+    await expect(objects).toContainText('Robins notering');
+    expect((await read()).objects).toHaveLength(2);
+    expect((await read()).draft.changes.map((change) => change.after?.name)).toEqual([
+      'Robins notering',
+    ]);
+    await openMap(page);
+    const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
+    await space.getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true }).click();
+    await expect(
+      space.getByRole('button', { name: 'Markera objekt: Kim Exempel', exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        space.evaluate((element) => {
+          const note = element.querySelector('.label-note');
+          if (!note || getComputedStyle(note).visibility === 'hidden') return true;
+          const obstacle = note.getBoundingClientRect();
+          return [...element.querySelectorAll('.spatial-name')].every((label) => {
+            const box = label.getBoundingClientRect();
+            return (
+              box.right <= obstacle.left ||
+              box.left >= obstacle.right ||
+              box.bottom <= obstacle.top ||
+              box.top >= obstacle.bottom
+            );
+          });
+        }),
+      )
+      .toBe(true);
+    await page.setViewportSize({ width: 320, height: 250 });
+    const display = space.getByText('Visningsval', { exact: true });
+    await display.click();
+    const allLabels = space.getByLabel('Alla etiketter', { exact: true });
+    await allLabels.check();
+    await expect(space.getByRole('button', { name: /^Markera objekt:/ })).toHaveCount(3);
+    await allLabels.uncheck();
+    await display.click();
+    await expect(allLabels).not.toBeVisible();
+    await page.setViewportSize({ width: 640, height: 500 });
+    await expect(allLabels).toBeVisible();
+    await openWorkspace(page);
+    await expect(objects).toContainText('Familjens Molnmusik');
+    await expect(objects).toContainText('Robins notering');
+    expect(errors).toEqual([]);
+  } finally {
+    await app.close();
   }
 });

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { activatePanel, createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('STY-01: a directed definition and arbitrary endpoints share a durable draft, save and history', async ({
@@ -161,6 +161,7 @@ test('STY-03: members share editable prefills while private definitions and hous
     ).toBe(200);
     const memberPage = await member.newPage();
     await memberPage.goto(installation.origin);
+    await openWorkspace(memberPage);
     await memberPage.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await expect(
       memberPage
@@ -188,7 +189,7 @@ test('STY-03: members share editable prefills while private definitions and hous
     for (const invalid of [
       { ...value, forwardLabel: '' },
       { ...value, reverseLabel: '' },
-      { ...value, fields: [] },
+      { ...value, fields: null },
       { ...value, name: '' },
     ]) {
       expect(
@@ -335,6 +336,7 @@ test('STY-04: stale definitions stop the whole save and explicit resolution pres
     expect((await read()).objects).toEqual([]);
     expect((await read()).draft).toEqual(before.draft);
     await page.goto(installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Konflikt: sparad sambandstyp');
     await expect(review).toContainText('Los nya förklaring');
@@ -399,6 +401,7 @@ test('STY-02: forms show the same directed relationship from both objects and ed
       ).toBe(200);
     }
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Ny sambandstyp', exact: true }).click();
     await page.getByLabel('Sambandstypens namn').fill('Förvaring');
     await page.getByLabel('Sambandstypens beskrivning').fill('Var hushållets saker finns');
@@ -428,17 +431,23 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     await expect(page.getByRole('status')).toContainText('Förvaring (sambandstyp)');
     const originalRelationship = (await (await page.request.get(path)).json()).relationships[0];
     await page.reload();
-    await page.getByRole('button', { name: 'Alex blå cykel', exact: true }).click();
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Uppgifter för Alex blå cykel', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Samband för Alex blå cykel' })).toContainText(
-      'Alex blå cykel → förvaras i → Garaget',
-    );
+    await page.getByRole('button', { name: 'Visa samband i listan', exact: true }).click();
+    const relationships = page.getByRole('list', { name: 'Samband', exact: true });
+    await expect(relationships).toContainText('Alex blå cykel → förvaras i → Garaget');
+    await activatePanel(page, 'Alex blå cykel');
     await page.getByRole('button', { name: 'Stäng utan att skicka texten' }).click();
-    await page.getByRole('button', { name: 'Garaget', exact: true }).click();
+    await openWorkspace(page);
+    await page.getByRole('button', { name: 'Uppgifter för Garaget', exact: true }).click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
-    const reverse = page.getByRole('region', { name: 'Samband för Garaget' });
-    await expect(reverse).toContainText('Garaget → innehåller → Alex blå cykel');
-    await reverse.getByRole('button').click();
+    await page.getByRole('button', { name: 'Visa samband i listan', exact: true }).click();
+    await expect(relationships).toContainText('Garaget → innehåller → Alex blå cykel');
+    await relationships
+      .getByRole('button', { name: 'Garaget → innehåller → Alex blå cykel', exact: true })
+      .click();
+    await openWorkspace(page);
     await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
     await expect(page.getByLabel('Från objekt')).toHaveValue('bike');
     await expect(page.getByLabel('Till objekt')).toHaveValue('garage');
@@ -454,6 +463,7 @@ test('STY-02: forms show the same directed relationship from both objects and ed
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
     await expect(page.getByRole('status')).toContainText('Sparat');
     await page.reload();
+    await openWorkspace(page);
     await expect(page.getByRole('list', { name: 'Samband', exact: true })).toContainText(
       'Alex blå cykel → finns i → Garaget',
     );
@@ -598,6 +608,7 @@ test('STY-05: duplicate adds, edits and concurrent saves preserve identity and r
       false,
     );
     await page.goto(installation.origin);
+    await openWorkspace(page);
     const review = page.getByRole('region', { name: 'Hela mitt utkast' });
     await expect(review).toContainText('Samma samband finns redan');
     await page.getByRole('button', { name: 'Använd sparat värde', exact: true }).click();

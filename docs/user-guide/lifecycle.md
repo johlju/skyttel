@@ -8,6 +8,10 @@ Det finns kvar i kartan, går att söka efter och kan redigeras. Texten
 **Förslag i ditt utkast** eller **Borttagning i ditt utkast** visar
 osparade ändringar.
 
+Du kan nå kartans samband med tangentbordet. Markeringen **Upphört** ingår
+även i kontrollens beskrivning för hjälpmedel. Välj sambandet och öppna
+**Lista** för att läsa status och slutdatum under **Val och redigering**.
+
 ## Ange och rätta status
 
 Välj objektet eller sambandet och sedan **Redigera valt objekt** eller

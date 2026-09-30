@@ -109,10 +109,12 @@ function setup() {
     }),
   );
   const changed = vi.fn();
+  const control = vi.fn();
   const accessLost = vi.fn();
   const recoveryNeeded = vi.fn();
   const component = render(
     <VoiceAssistant
+      onControl={control}
       householdId="linden"
       assistant={view}
       onAssistant={changed}
@@ -125,6 +127,7 @@ function setup() {
     getUserMedia,
     calls,
     changed,
+    control,
     accessLost,
     recoveryNeeded,
     component,
@@ -138,6 +141,84 @@ afterEach(async () => {
   Reflect.deleteProperty(navigator, 'mediaDevices');
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+test('measured incoming audio continues during microphone pause and releases its observers on stop', async () => {
+  const signals = new Map<Track, boolean>();
+  const disconnects: ReturnType<typeof vi.fn>[] = [];
+  const close = vi.fn().mockResolvedValue(undefined);
+  let state = 'running';
+  vi.stubGlobal(
+    'AudioContext',
+    class {
+      get state() {
+        return state;
+      }
+      close = close;
+      resume = vi.fn().mockResolvedValue(undefined);
+      createMediaStreamSource(stream: Stream) {
+        const disconnect = vi.fn();
+        disconnects.push(disconnect);
+        return {
+          connect: (node: { stream?: Stream }) => {
+            node.stream = stream;
+          },
+          disconnect,
+        };
+      }
+      createAnalyser() {
+        const disconnect = vi.fn();
+        disconnects.push(disconnect);
+        return {
+          stream: undefined as Stream | undefined,
+          disconnect,
+          getByteTimeDomainData(data: Uint8Array) {
+            data.fill(this.stream?.getTracks().some((track) => signals.get(track)) ? 150 : 128);
+          },
+        };
+      }
+    },
+  );
+  const { track, control, component } = setup();
+  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+  const peer = Peer.all[0];
+  const remote = new Track();
+  await act(async () => {
+    peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
+    const event = new Event('track');
+    Object.assign(event, { track: remote });
+    peer.dispatchEvent(event);
+  });
+  expect(control.mock.lastCall?.[0]).toMatchObject({ label: 'Pausa mikrofon', microphone: 'on' });
+  signals.set(track, true);
+  await screen.findByText('Du talar');
+  signals.set(remote, true);
+  await screen.findByText('Skyttel talar');
+  await userEvent.click(screen.getByRole('button', { name: 'Pausa mikrofon' }));
+  expect(control.mock.lastCall?.[0]).toMatchObject({
+    label: 'Återuppta mikrofon',
+    microphone: 'paused',
+  });
+  expect(track.enabled).toBe(false);
+  expect(remote.stop).not.toHaveBeenCalled();
+  expect(screen.getByText('Skyttel talar')).toBeDefined();
+  signals.set(remote, false);
+  await waitFor(() => expect(screen.queryByText('Skyttel talar')).toBeNull());
+  expect(screen.queryByText('Du talar')).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Återuppta mikrofon' }));
+  await screen.findByText('Du talar');
+  state = 'suspended';
+  await waitFor(() => expect(screen.queryByText('Du talar')).toBeNull());
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+  await screen.findByText('Rösten är avstängd.');
+  expect(close).toHaveBeenCalled();
+  expect(disconnects).toHaveLength(4);
+  for (const disconnect of disconnects) expect(disconnect).toHaveBeenCalled();
+  expect(track.stop).toHaveBeenCalled();
+  expect(remote.stop).toHaveBeenCalled();
+  component.unmount();
+  expect(control.mock.lastCall).toEqual([null]);
 });
 
 test('pausing the microphone preserves the session and remains paused after reconnection', async () => {
@@ -226,7 +307,7 @@ test.each(['stop', 'revoked'])(
       await fragment('output', 'För sent.', 7000, 7500);
       expect(log.textContent).not.toContain('För sent.');
       expect(log.textContent).toContain('Kim betalar för musiken.');
-      await userEvent.click(screen.getByRole('button', { name: 'Avsluta textassistenten' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Avsluta samtalet' }));
     } else {
       await userEvent.type(screen.getByLabelText('Meddelande till textassistenten'), 'Privat text');
       await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));

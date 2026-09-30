@@ -76,12 +76,17 @@ export function waitForMapDisplay(
           visibleViewport?.height ?? window.innerHeight,
         );
         // The working notice is opaque even though it lets pointer events through.
+        // A status card beside the map does not obscure the map's lower half.
         const indicator = root.querySelector('.assistant-work-indicator.is-working');
-        if (rendered(indicator))
-          viewport.height = Math.max(
-            0,
-            Math.min(viewport.bottom, indicator.getBoundingClientRect().top - 8) - viewport.top,
-          );
+        if (rendered(indicator)) {
+          const indicatorBox = indicator.getBoundingClientRect();
+          const mapBox = surface.getBoundingClientRect();
+          if (indicatorBox.left < mapBox.right && indicatorBox.right > mapBox.left)
+            viewport.height = Math.max(
+              0,
+              Math.min(viewport.bottom, indicatorBox.top - 8) - viewport.top,
+            );
+        }
         const nodes = request.objectIds.map((id) =>
           surface.querySelector(`.spatial-node[data-object-id="${CSS.escape(id)}"]`),
         );
@@ -92,6 +97,10 @@ export function waitForMapDisplay(
         );
         if (!scrolled && nodes.every(rendered) && rendered(selected)) {
           inspector.scrollTop = 0;
+          // The shell keeps conversation text and details in a scrolling work
+          // surface. Reveal the populated inspector there before acknowledging it.
+          const workSurface = inspector.closest('.workspace-panel-body, .assistant-workspace');
+          if (workSurface instanceof HTMLElement) workSurface.scrollTop = 0;
           const mapBox = surface.getBoundingClientRect();
           const detailsBox = inspector.getBoundingClientRect();
           let top = Math.min(mapBox.top, detailsBox.top);
@@ -119,16 +128,20 @@ export function waitForMapDisplay(
           );
         });
         const summary = inspector.querySelector('p');
+        const panelBody = inspector.closest('.workspace-panel-body');
+        const detailsBounds =
+          panelBody instanceof HTMLElement
+            ? panelBody.getBoundingClientRect()
+            : inspector.getBoundingClientRect();
         if (
           nodesVisible &&
           rendered(selected) &&
           contained(selected, bounds) &&
           contained(selected, viewport) &&
           uncovered(selected) &&
-          contained(inspector, viewport) &&
-          uncovered(inspector) &&
           rendered(summary) &&
-          contained(summary, inspector.getBoundingClientRect()) &&
+          contained(summary, viewport) &&
+          contained(summary, detailsBounds) &&
           uncovered(summary)
         ) {
           finish(true);

@@ -10,10 +10,18 @@ export const liveBrowserFixtureSource = `
   let microphone = 'allow';
   let playback = 'allow';
   let autoStart = true;
+  let releaseMicrophone;
+  const signals = new Map();
 
   function silentStream(tracks) {
     const context = new AudioContext();
     const destination = context.createMediaStreamDestination();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    gain.gain.value = 0;
+    oscillator.connect(gain).connect(destination);
+    oscillator.start();
+    signals.set(tracks, { context, gain });
     for (const track of destination.stream.getTracks()) {
       tracks.push(track);
       const stop = track.stop.bind(track);
@@ -92,6 +100,7 @@ export const liveBrowserFixtureSource = `
     value: async () => {
       if (microphone === 'deny') throw new DOMException('Synthetic denied microphone', 'NotAllowedError');
       if (microphone === 'error') throw new DOMException('Synthetic missing microphone', 'NotFoundError');
+      if (microphone === 'hold') await new Promise(resolve => { releaseMicrophone = resolve; });
       return silentStream(microphoneTracks);
     }
   });
@@ -113,8 +122,15 @@ export const liveBrowserFixtureSource = `
     remoteTrack: () => latest()?.remoteTrack(),
     audioError: () => { for (const element of audioElements) element.dispatchEvent(new Event('error')); },
     setMicrophone: (value) => { microphone = value; },
+    releaseMicrophone: () => releaseMicrophone?.(),
     setPlayback: (value) => { playback = value; },
     setAutoStart: (value) => { autoStart = value; },
+    setSound: (source, active) => {
+      const signal = signals.get(source === 'microphone' ? microphoneTracks : remoteTracks);
+      if (!signal) throw new Error('Missing media signal');
+      signal.gain.gain.value = active ? 0.2 : 0;
+      void signal.context.resume();
+    },
     stats: () => ({
       peers: peers.length,
       openPeers: peers.filter(peer => peer.connectionState !== 'closed').length,
@@ -137,9 +153,11 @@ declare global {
       close(): void;
       remoteTrack(): void;
       audioError(): void;
-      setMicrophone(value: 'allow' | 'deny' | 'error'): void;
+      setMicrophone(value: 'allow' | 'deny' | 'error' | 'hold'): void;
+      releaseMicrophone(): void;
       setPlayback(value: 'allow' | 'blocked' | 'error'): void;
       setAutoStart(value: boolean): void;
+      setSound(source: 'microphone' | 'remote', active: boolean): void;
       stats(): {
         peers: number;
         openPeers: number;

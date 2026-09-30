@@ -7,6 +7,11 @@ exempelvis en solcellsanläggning och ha samma egna fält för alla objekt
 av den typen. Även förifyllda typer, som Person och Fordon, går att ändra.
 Den som skapar en typ får ingen särskild roll eller ensam rätt till den.
 
+Du når definitionerna genom **Inställningar** → **Typer och egna fält**
+eller från Lista. Oskickad definitionstext följer med mellan vyerna.
+Välj **Tillbaka till kartan** för att granska och spara typförslagen
+med resten av ditt privata utkast.
+
 ## Skapa en typ och ett objekt tillsammans
 
 1. Välj **Ny objekttyp** i kartan. Ange **Typens namn** och en förklarande
@@ -29,6 +34,52 @@ ingen del av ett oförenligt utkast sparas.
 Skriv aldrig lösenord, fullständiga konto- eller kortnummer, pinkoder,
 säkerhetskoder eller återställningskoder. Egna fält är inte ett undantag
 från regeln att hemliga uppgifter inte hör hemma i Skyttel.
+
+## Ordna fälten i avsnitt
+
+Öppna en egen eller förifylld objekttyp i **Inställningar** →
+**Typer och egna fält**. Under **Avsnitt** kan du namnge avsnitten,
+välja **Lägg till avsnitt** och ändra ordningen med **Upp** och **Ned**.
+Äldre typer visar sina egna fält i avsnittet **Egna fält**.
+
+Varje fält har **Visa i avsnitt**. Välj ett avsnitt eller
+**Dold, behåll värden**. Fältets **Upp** och **Ned** ändrar ordningen
+inom det valda avsnittet. Flytt och döljning behåller fältets identitet,
+värdeslag och alla svar, även noll och nej. Välj ett avsnitt igen för
+att återvisa fältet med dess tidigare värden. Ett dolt fält är fortfarande
+en del av definitionen; döljning är inte borttagning eller permanent radering.
+
+Ett avsnitt kan tas bort när alla dess fält har flyttats eller dolts.
+Fältets namn, beskrivning, värdeslag och separata borttagningskontroll
+finns kvar i den öppningsbara fältdefinitionen. Användningsskydden gäller
+även dolda fält. Formulär och detaljer följer din aktuella definition.
+Utkast, konflikter och historik visar även bevarade dolda värden för granskning.
+
+Lägg typförslaget i ditt privata utkast. Granska och spara det tillsammans
+med objektens uppgifter. Andra medlemmar ser ändringen först efter samma
+gemensamma sparande. Oskickade ändringar följer med mellan Inställningar
+och kartan, men måste läggas i utkastet för att klara omladdning och omstart.
+
+## Placera gemensamma uppgifter
+
+Välj **Lägg till gemensam egenskap** i objekttypens definition för att
+placera beskrivning, belopp, avtalsdatum eller villkor i ett avsnitt.
+Varje gemensam egenskap kan placeras en gång. Använd **Visa i avsnitt**,
+**Upp**, **Ned** och **Dölj** på samma sätt som för egna fält. Gemensamma
+egenskaper och egna fält kan blandas i samma ordning. Namnet får anpassas,
+men texten **Gemensam egenskap** visar vilken uppgift som avses.
+
+Placeringen ändrar inte uppgiftens betydelse. Skuld, kreditutrymme och
+utnyttjad kredit är fortfarande separata uppgifter med egen säkerhet och
+frivilligt datum. Okänt, uttryckligen inget och obesvarat förblir olika.
+Namn, objekttyp och objektets identitet ligger utanför dessa avsnitt.
+
+Befintliga gemensamma värden som inte visas i typens avsnitt finns under
+**Uppgifter utanför typens avsnitt**. Där kan du läsa och rätta dem även
+efter ett typbyte. Döljning är ingen åtkomstbegränsning eller radering.
+Äldre typer behåller beskrivningen och formulärets ekonomiska uppgifter
+tills du väljer en egen placering. Historik, ångring och återimport behåller
+värden, säkerhet och datum tillsammans med rätt typdefinition.
 
 ## Rätta definitioner och värden
 
@@ -64,11 +115,18 @@ Lämna **Obesvarat** för uppgifter du inte känner till; det är skilt från
 **Nej**. Bekräfta **Jag har hanterat tidigare fältvärden för typbytet** när
 du har rättat de nya fälten eller valt att lämna dem obesvarade.
 
+Om du byter typ flera gånger under redigeringen visas de tidigare svaren
+i skilda grupper med sin ursprungliga typ. Även när du byter tillbaka
+börjar de nya fälten tomma. Bekräfta hanteringen på nytt efter varje byte.
+Gemensamma ekonomiska uppgifter behåller belopp, säkerhet och datum;
+profilbilden och ditt ikonval finns också kvar.
+
 Välj **Lägg i mitt utkast**. I **Hela mitt utkast** ser du tidigare typ och
 värden samt den nya typen och dess värden. Typbytet och fälträttelserna
 sparas tillsammans med resten av utkastet. Ett fel stoppar hela sparandet.
-Tidigare sparade värden finns kvar i historiken. Oskickade formulärvärden
-försvinner om du stänger formuläret utan att lägga förslaget i utkastet.
+Tidigare sparade värden finns kvar i historiken. **Stäng utan att skicka
+texten** tar bort oskickade formulärvärden. Panelens kryss behåller i stället
+texten så att du kan fortsätta i samma objekt senare.
 
 Ett typbyte gäller ett objekt. Ett namnbyte på typdefinitionen ändrar
 benämningen för alla objekt av den typen. Sammanslagning gäller flera

@@ -140,7 +140,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         }),
       )
       .toBe(true);
-    await panel.getByRole('button', { name: 'Avsluta textassistenten' }).click();
+    await panel.getByRole('button', { name: 'Avsluta samtalet' }).click();
     await app.restart();
     const recovered = (await (await page.request.get(`${mapUrl}/history`)).json())
       .history as SaveReceipt[];

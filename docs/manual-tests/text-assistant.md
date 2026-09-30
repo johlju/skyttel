@@ -16,11 +16,14 @@ Stegen här är stöd för felsökning; #97 kräver ingen manuell upprepning.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 När ett befintligt objekt eller samband ska ändras, välj det först i
-kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+kartan eller listan och öppna dess detaljpanel. För objekt i listan använder
+du **Uppgifter**; i kartverktygen väljer du **Visa detaljer**. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna
-formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
-objektet eller sambandet öppnar inte formuläret.
+formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 
 1. TEXT-01 använder den
    [verkliga modellens isolerade setup](../development/devcontainer.md#optional-assistant-access).
@@ -346,11 +349,12 @@ utkastet genom formulären. Stäng formulären utan oskickad text.
 **Integrationstest:**
 [assistant-map.spec.ts](../../tests/integration/assistant-map.spec.ts),
 testfallet “TEXT-08: markering öppnar och centrerar objekt och samband
-före bekräftelsen”, både dator- och telefonvarianten.
+före bekräftelsen”, dator-, telefon- och korta vyer, inklusive
+640 × 500 och 320 × 250 CSS-pixlar.
 
 **Steg:**
 
-1. Välj **Lista och detaljer**. Skriv **Visa Lo i kartan** i assistenten.
+1. Öppna **Samtal och text**. Skriv **Visa Lo i kartan** i assistenten.
    Kopiera Lo-förslagets ID från terminalens `held`. Svara med
    `tool NUMMER show_map_item {"kind":"object","id":"LO-ID"}`;
    byt `NUMMER` och `LO-ID` mot provets verkliga värden.
@@ -358,9 +362,11 @@ före bekräftelsen”, både dator- och telefonvarianten.
    Detaljpanelen ska samtidigt synas med Lo och beskrivningen
    **Påhittad uppgift**, utan att du behöver rulla sidan för att hitta den.
    Nästa `held` ska innehålla `displayed: true`. Släpp det svaret med
-   `reply NUMMER Här är urvalet.` och kontrollera **Markerat i kartan**.
-3. Öppna **Navigera rymden** och panorera tills objekten inte syns.
-   Skriv **Visa sambandet mellan Lo och Molnmusik**. Kopiera sambandets
+   `reply NUMMER Här är urvalet.`, välj **Samtal och text** i panelväljaren
+   och kontrollera **Markerat i kartan**.
+3. Öppna **Navigera** och panorera tills objekten inte syns.
+   Öppna samtalspanelen och skriv **Visa sambandet mellan Lo och Molnmusik**.
+   Kopiera sambandets
    ID från `held` och svara med
    `tool NUMMER show_map_item {"kind":"relationship","id":"SAMBANDS-ID"}`.
 4. Kontrollera att båda objekten och det valda sambandet syns igen.
@@ -368,12 +374,18 @@ före bekräftelsen”, både dator- och telefonvarianten.
    Kontrollera `displayed: true` och släpp sluttexten.
 5. Välj **Redigera valt samband**. Ändra **Till objekt** i formuläret
    utan att lägga ändringen i utkastet.
-   Skriv **Visa Lo igen** och upprepa visningsanropet från steg 1.
+   Välj samtalspanelen, skriv **Visa Lo igen** och upprepa
+   visningsanropet från steg 1.
    Kontrollera `displayed: false`, släpp sluttexten och kontrollera att
    formulärets oskickade ändring finns kvar.
 6. Stäng formuläret och upprepa steg 1–5 med ett smalt telefonfönster.
    Detaljpanelen ska synas direkt under kartan. Om uppgifterna är längre
    kan du rulla inuti panelen. Markeringen öppnar inget redigeringsformulär.
+7. Prova också faktisk webbläsarzoom 200 och 400 procent. I ett kort
+   fönster visas kartan och detaljpanelen bredvid varandra. Rulla ned
+   för panelväljare, samtalsstatus och mikrofonkontroller. De ska gå att
+   nå med tangentbord utan horisontell sidrullning. **Visa verktygens namn**
+   visar textingången när verktygsraden är hopfälld.
 
 **Förväntat resultat:**
 
@@ -407,7 +419,8 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
 2. Redigera sambandet och byt typen till **Betalar**. Lägg rättelsen i
    utkastet. Redigera sedan Tonrum, välj statusen **Upphört** och lägg
    även den rättelsen i utkastet. Lämna båda osparade.
-3. Välj **Lista och detaljer** och skicka **Läs upp hela utkastet.** i
+3. Öppna **Lista** och välj sedan samtalspanelen. Skicka
+   **Läs upp hela utkastet.** i
    assistenten. Ersätt `NUMMER` med det aktuella `held`-numret i terminalen:
 
    ```text
@@ -417,7 +430,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
 4. Under **Besked från Skyttel**, kräv **Utkast:**, **Gäller: aktuellt →
    upphört** för Tonrum och **Lo Exempel Använder Tonrum → Lo Exempel
    Betalar Tonrum**. Kontrollera att båda rättelserna fortfarande ligger
-   i utkastet och att **Lista och detaljer** förblir valt.
+   i utkastet och att **Lista och utkast** fortfarande finns i panelväljaren.
 5. Skicka **Spara hela utkastet nu.** Läs `version` och `contentVersion`
    från det nya `held.draft`. Ersätt `NUMMER`, `VERSION` och `CONTENT`:
 
@@ -437,7 +450,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
 8. Kräv **Sparandet:** och samma tidigare och nya status respektive
    sambandstyp under **Besked från Skyttel**. Kontrollera att utkastet
    förblir tomt och att inget nytt sparförsök tillkommer under **Tidigare
-   sparförsök**. **Lista och detaljer** ska fortfarande vara valt.
+   sparförsök**. Listpanelen ska fortfarande finnas i panelväljaren.
 
 **Förväntat resultat:**
 

@@ -1,5 +1,7 @@
 import { type FinancialFact, financialFields } from '../shared/financial-facts.js';
 import type { DraftChange, MapDraft, ObjectType, RelationshipType } from '../shared/map.js';
+import { objectIconLabel } from '../shared/object-icons.js';
+import { builtinPresentationChanges } from '../shared/object-properties.js';
 import { relationshipDetails } from './relationship-description.js';
 
 function valueText(value: string | number | boolean | undefined) {
@@ -34,6 +36,11 @@ function objectDifferences({ before, after, type, beforeType }: DraftChange) {
   );
   return [
     ...difference('Namn', before.name, after.name),
+    ...difference(
+      'Ikon',
+      objectIconLabel(before.iconId, (beforeType ?? type).name),
+      objectIconLabel(after.iconId, type.name),
+    ),
     ...difference('Beskrivning', valueText(before.description), valueText(after.description)),
     ...difference('Objekttyp', (beforeType ?? type).name, type.name),
     ...financialFields.flatMap(({ key, label }) =>
@@ -74,11 +81,10 @@ function typeDifferences(
   before: ObjectType & RelationshipType,
   after: ObjectType & RelationshipType,
 ) {
-  const changes = difference(
-    'Beskrivning',
-    valueText(before.description),
-    valueText(after.description),
-  );
+  const changes = [
+    ...builtinPresentationChanges(before, after),
+    ...difference('Beskrivning', valueText(before.description), valueText(after.description)),
+  ];
   if ('fields' in before || 'fields' in after) {
     const oldFields = before.fields ?? [];
     const newFields = after.fields ?? [];
@@ -147,6 +153,19 @@ export function DraftChangeSummary({ review }: { review: MapDraft }) {
             {change.before &&
               change.after &&
               lines([
+                ...[
+                  ...new Map(
+                    [...(change.beforeType?.fields ?? []), ...(change.type.fields ?? [])].map(
+                      (field) => [field.id, field],
+                    ),
+                  ).values(),
+                ].flatMap((field) =>
+                  difference(
+                    field.name,
+                    valueText(change.before?.customValues?.[field.id]),
+                    valueText(change.after?.customValues?.[field.id]),
+                  ),
+                ),
                 ...difference(
                   'Gäller',
                   change.before.lifecycle === 'ended' ? 'Upphört' : 'Aktuellt',

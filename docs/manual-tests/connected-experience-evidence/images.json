@@ -1,0 +1,119 @@
+[
+  {
+    "file": "map-desktop.png",
+    "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "phase": "core-reference",
+    "originalArtifact": "issue-151-reference-15b1424-01/evidence/ARBETE-08-reference-1280-dark/alex/26-21-restart-map.png",
+    "sha256": "3730b5cd3bfbc2cb88375b0dbb7522228d011d6b261a482a1dc0b2b0e675694c",
+    "pngDimensions": {
+      "width": 1280,
+      "height": 900
+    },
+    "scope": "Shared map after actual save/restart;1280x900,dark",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  },
+  {
+    "file": "retained-panels.png",
+    "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "phase": "core-reference",
+    "originalArtifact": "issue-151-reference-15b1424-01/evidence/ARBETE-08-reference-1280-dark/alex/14-14-retained-unsent-person.png",
+    "sha256": "12c3e8ae244866617b4aa998e7d373f343937cd76e2d02c111d8fbc04c98aee1",
+    "pngDimensions": {
+      "width": 1280,
+      "height": 900
+    },
+    "scope": "Retained Kim form,subscription and conversation panels;1280x900,dark",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  },
+  {
+    "file": "conversation-mobile.png",
+    "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "phase": "core-reference",
+    "originalArtifact": "issue-151-reference-15b1424-01/evidence/ARBETE-08-reference-390-dark/alex/25-20-real-save-receipt.png",
+    "sha256": "0c04dc4c44199fcada1eeae60c37e48f693f70b4f9343338ca419940e19bef96",
+    "pngDimensions": {
+      "width": 390,
+      "height": 900
+    },
+    "scope": "Visible conversation status after actual whole save;390x900,dark,remaining dialogue scrolls",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  },
+  {
+    "file": "settings-mobile.png",
+    "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "phase": "core-reference",
+    "originalArtifact": "issue-151-reference-15b1424-01/evidence/ARBETE-08-reference-390-dark/alex/15-15-full-page-settings-focus.png",
+    "sha256": "6c82ff3d5476529d2de624dbb56d954c2c210948d1e6786b821ccdb6b0178b4b",
+    "pngDimensions": {
+      "width": 390,
+      "height": 900
+    },
+    "scope": "Full-page Settings hierarchy and retained paused voice;390x900,dark",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  },
+  {
+    "file": "settings-400.png",
+    "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "phase": "core-zoom",
+    "originalArtifact": "issue-151-zoom-15b1424-01/evidence/ARBETE-08-zoom-320-light/alex/15-15-full-page-settings-focus.png",
+    "sha256": "a4f8385792baf445ecbaafc35084342134e991cfa044c7f1fe7238d6ffad5cdb",
+    "pngDimensions": {
+      "width": 1280,
+      "height": 1000
+    },
+    "scope": "Actual400percent;320x250CSS,1280x1000capture;portions of separate Settings and status scrollports",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  },
+  {
+    "file": "history-text-400.png",
+    "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "phase": "core-zoom",
+    "originalArtifact": "issue-151-zoom-15b1424-01/evidence/ARBETE-09-zoom-320-dark/alex/27-22-restarted-history.png",
+    "sha256": "6e4d1a8d6a28c564cc65aedee74f97d3042c1b729ebe6f8d2f82d3ee50f447bb",
+    "pngDimensions": {
+      "width": 1280,
+      "height": 1000
+    },
+    "scope": "Text-only actual graphics loss;restarted history opened through public disclosure;actual400percent,dark,visible portion",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  },
+  {
+    "file": "import-result.png",
+    "sourceCommit": "c57c714d3fd2f911addf805a8e0674d5342f7472",
+    "phase": "settings-reference",
+    "originalArtifact": "issue-151-settings-reference-c57c714-05/evidence/IMPORT-21-reference-320-dark/alex/09-confirmed-import-storage-error.png",
+    "sha256": "69ee92ccb16cbda42a6328d4da182570d6ad9e9e4d1696e85465153bc1ec5042",
+    "pngDimensions": {
+      "width": 320,
+      "height": 900
+    },
+    "scope": "Actual completed import and separate controlled Storage warning;320x900,dark",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  },
+  {
+    "file": "erasure-recovery.png",
+    "sourceCommit": "c57c714d3fd2f911addf805a8e0674d5342f7472",
+    "phase": "settings-reference",
+    "originalArtifact": "issue-151-settings-reference-c57c714-05/evidence/RADERING-11-reference-320-dark/alex/08-observed-cleanup-storage-error.png",
+    "sha256": "f01c150d18ec41e3f890eee134c375a1701354e86d095bc33e5f61d976814c73",
+    "pngDimensions": {
+      "width": 320,
+      "height": 900
+    },
+    "scope": "Actual same pending cleanup ID and separate controlled Storage warning;320x900,dark",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  },
+  {
+    "file": "empty-map-keyboard.png",
+    "sourceCommit": "15b1424b8624b1dcb62fe70717522d517fdd862b",
+    "phase": "height-help",
+    "originalArtifact": "issue-151-height-help-15b1424-02/evidence/dark/01-keyboard-focus.png",
+    "sha256": "0345febbd592e86ed983b3c4af16439ede17fd9c813de95645cab1e97e40271f",
+    "pngDimensions": {
+      "width": 320,
+      "height": 900
+    },
+    "scope": "Actual sequentialTab keyboard focus/full height-help label without horizontal scroll;320x900,dark",
+    "imageEditing": "none; byte-identical original viewport PNG"
+  }
+]

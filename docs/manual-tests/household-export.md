@@ -49,11 +49,12 @@ archive by keyboard”.
 
 **Steg:**
 
-1. Kontrollera som Robin att **Administrera tillgång** saknas. Öppna samma
-   administrationsadress som Alex använder och kontrollera att ingen
+1. Kontrollera som Robin att **Fullständig export** saknas i Inställningar.
+   Öppna samma exportadress som Alex använder och kontrollera att ingen
    export erbjuds.
-2. Öppna **Administrera tillgång** som Alex. Läs **Fullständig export**
-   innan du trycker på någon exportknapp.
+2. Öppna **Inställningar** som Alex. Använd tangentbordet till
+   **Fullständig export** i sidnavigationen och tryck Enter. Kontrollera
+   fokus på sidrubriken och läs informationen före exportknapparna.
 3. Använd Tab till **Förbered fullständig export** och tryck Enter.
    Vänta tills exporten är klar och kontrollera den visade sluttiden.
 4. Använd tangentbordet till **Hämta ZIP-fil** och tryck Enter. Spara
@@ -66,8 +67,12 @@ archive by keyboard”.
 
 - Endast administratören kan förbereda export. Före starten framgår att
   andras privata utkast, personliga vyer, bilder och historik ingår,
-  att filen behöver förvaras säkert och att senare ändringar kan gå
-  förlorade vid ett större driftfel.
+  att administratören kan läsa det privata innehållet, att filen inte är
+  lösenordsskyddad och behöver förvaras säkert. Inloggningssessioner,
+  aktiva token och serverhemligheter ingår inte. Senare ändringar kan
+  gå förlorade vid ett större driftfel.
+- Exporten har en egen sida med fokus på rubriken. Kartan är dold och
+  dess kontroller går inte att nå med tangentbordet från exportsidan.
 - Förberedelsen startar ingen nedladdning. En färdig export visar en
   sluttid och kan hämtas med tangentbordet.
 - Webbläsaren erbjuder en ZIP-fil först efter att hela filen tas emot.
@@ -83,7 +88,7 @@ att en ny export kan förberedas.
 
 **Användare:** Alex som administratör.
 
-**Förutsättningar:** Administrationssidan är öppen.
+**Förutsättningar:** Inställningar → Fullständig export är öppen.
 
 **Integrationstest:**
 [household-export-ui.spec.ts](../../tests/integration/household-export-ui.spec.ts),
@@ -154,7 +159,7 @@ clears the ready download”.
 2. Välj **Gör till medlem** för Alex som Robin i profil B.
 3. Återgå till Alex profil. Om **Hämta ZIP-fil** fortfarande visas,
    välj den direkt. Annars kontrollera att exportflödet redan stängs.
-4. Ladda om administrationsadressen som Alex och kontrollera tillgången.
+4. Ladda om exportadressen som Alex och kontrollera tillgången.
 
 **Förväntat resultat:**
 
@@ -291,6 +296,169 @@ and removes its private copy”.
 - Den tillfälliga serverkopian tas bort och samma hämtning kan inte
   återupptas. Redan mottagna data eller data i nätverkets buffertar kan
   inte återkallas.
+
+### EXPORT-08: Avbryt förberedelsen innan svaret kommer fram
+
+**Syfte:** Skilj avbruten förberedelse i webbläsaren från bekräftad
+borttagning av en färdig tillfällig kopia.
+
+**Användare:** Alex som administratör.
+
+**Förutsättningar:** Fullständig export är öppen. Använd webbläsarens
+nätverksverktyg för att fördröja svaret från förberedelsen. Integrationstestet
+håller svaret från en verklig färdig export innan webbläsaren får det.
+
+**Integrationstest:**
+[household-export-ui.spec.ts](../../tests/integration/household-export-ui.spec.ts),
+testfallet “EXPORT-08: canceling preparation with an unseen ready response
+explains cleanup uncertainty”.
+
+**Steg:**
+
+1. Välj **Förbered fullständig export** och kontrollera väntemeddelandet.
+2. Innan svaret kommer fram, använd tangentbordet till **Avbryt export**.
+3. Läs beskedet och återställ nätverket. Kontrollera att ingen fil erbjuds
+   från det avbrutna försöket.
+4. Förbered en ny export och hämta ZIP-filen. Kontrollera att hushållets
+   karta och privata utkast finns kvar oförändrade.
+
+**Förväntat resultat:**
+
+- Förberedelsen är avbruten i webbläsaren. Beskedet förklarar att en
+  tillfällig kopia kan finnas kvar tills giltighetstiden går ut.
+- Ett sent svar återöppnar inte den avbrutna exporten. Nästa förberedelse
+  ersätter den tidigare kopian och erbjuder en ny fungerande hämtning.
+- Avbrottet eller exporten ändrar inte hushållets innehåll.
+
+### EXPORT-09: Tangentbord, tema och bevarat kartarbete
+
+**Syfte:** Behålla användbart fokus genom exporten och återgå till
+oskickad redigering utan att hushållets karta ändras.
+
+**Användare:** Alex som administratör.
+
+**Förutsättningar:** Upprepa på dator, med 390 och 320 pixlars bredd samt
+i ett kort fönster på 640 × 500 pixlar, i ljust och mörkt tema. Välj
+minskad rörelse i systemet. Fördröj vid behov en förberedelse med
+webbläsarens nätverksverktyg.
+
+**Integrationstest:**
+[household-export-ui.spec.ts](../../tests/integration/household-export-ui.spec.ts),
+testfallet “EXPORT-09: keyboard export controls retain focus and unsent map
+work at 1280px”, samma titel med “390px”, “320px” och “640px”.
+
+**Steg:**
+
+1. Öppna Lista, välj Nytt objekt och skriv namn och beskrivning. Låt
+   formuläret vara oskickat med fokus i beskrivningen.
+2. Öppna Inställningar och Fullständig export. På mobil, fäll först ut
+   Välj inställning. Kontrollera att exportens fokuserade rubrik syns
+   även efter att navigationen fälls ihop.
+3. Använd tangentbordet för att förbereda en export. Kontrollera fokus
+   på Hämta ZIP-fil när filen blir klar. Avbryt med tangentbordet och
+   kontrollera fokus på Förbered fullständig export.
+4. Upprepa med det andra temat. Kontrollera läsbar text, synligt fokus,
+   åtkomliga knappar och att sidan inte behöver rullas i sidled.
+5. Förbered igen och flytta under väntan fokus till Tillbaka till kartan.
+   Kontrollera att svaret låter ditt nya fokus vara kvar.
+6. Hämta ZIP-filen med tangentbordet. Kontrollera fokus på knappen för
+   ny förberedelse och återgå sedan till kartan.
+
+**Förväntat resultat:**
+
+- Förberedelse, avbrott och hämtning lämnar fokus på nästa användbara
+  exportkontroll. Ett senare eget fokusval skrivs inte över.
+- Kartans kontroller är dolda i Inställningar. Vid återgång finns namn
+  och beskrivning kvar, med fokus i beskrivningen. Ingenting är sparat.
+- Den hämtade filen innehåller hushållets sparade information och privata
+  utkast. Oskickad text i formulär är ännu inte del av exporten.
+
+### EXPORT-10: Återimportera den hämtade filen och kontrollera efter omstart
+
+**Syfte:** Kontrollera att ZIP-filen som webbläsaren hämtar är användbar
+för fullständig återimport av gemensamma, privata och historiska uppgifter.
+
+**Användare:** Alex som administratör.
+
+**Förutsättningar:** Använd ett separat testhushåll som får ersättas.
+Förbered två objekt och ett samband med egna fält för text, tal, datum
+och ja/nej. Ange bland annat noll och nej. Ordna beskrivning och egna fält
+i typavsnitt, dölj ett eget fält och en osäkert uppgiven skuld med datum.
+Spara uppgifterna och två olika profilbilder i separata sparanden.
+Lägg därefter ett nytt objekt i det privata utkastet utan att spara det
+gemensamt. Flytta ett objekt personligen och slå på stjärnor.
+Anteckna innehåll, bildversioner, historik, utkast och användarnas roller.
+En driftansvarig ska kunna starta om testinstallationen.
+
+**Integrationstest:**
+[household-export-ui.spec.ts](../../tests/integration/household-export-ui.spec.ts),
+testfallet “EXPORT-10: the downloaded current-format archive restores shared,
+private and historical content after restart”.
+
+**Steg:**
+
+1. Öppna Inställningar och Fullständig export. Förbered och hämta ZIP-filen.
+   Kontrollera med ett ZIP-verktyg att filen innehåller `manifest.json`,
+   `content.json` och `images.bin`. Innehållet ska sakna inloggningshemligheter
+   och medlemskap, och varje gemensamt objekt ska finnas en gång.
+2. Ändra ett gemensamt objektnamn och spara hela utkastet. Anteckna det nya
+   namnet så att det går att skilja den nuvarande kartan från exporten.
+3. Öppna **Inställningar → Återimportera hushållet** och välj den hämtade
+   filen. Kontrollera filen. Kontrollera att den nya
+   kartan är kvar och att ersättningsknappen kräver uttrycklig bekräftelse.
+4. Markera bekräftelsen och välj Ersätt hushållets innehåll.
+   Kontrollera beskedet om ersättning och bevarad åtkomst.
+5. Låt den driftansvariga starta om testinstallationen och ladda om sidan.
+   Återgå till kartan och jämför med anteckningarna före exporten.
+
+**Förväntat resultat:**
+
+- Den hämtade filen går att återimportera. Ursprungliga namn, samband,
+  typavsnitt, ordning, egna värden, noll, nej och dolda uppgifter består.
+- Historiken och båda bildversionerna finns kvar. Det privata förslaget
+  återkommer i utkastet och blir inte ett gemensamt objekt.
+- Personliga placeringar och stjärnval består efter omstart. Nuvarande
+  användare och roller behåller sin åtkomst.
+
+### EXPORT-11: Lämna en färdig export eller en pågående hämtning
+
+**Syfte:** Kontrollera att sidbyte avbryter exporten utan att kasta
+oskickad redigering eller erbjuda en sen fil.
+
+**Användare:** Alex som administratör.
+
+**Förutsättningar:** Hushållet har ett sparat objekt. Använd webbläsarens
+nätverksverktyg för att fördröja filhämtningen i den andra omgången.
+Integrationstestet håller leveransen av ett verkligt färdigt ZIP-svar;
+serverns aktiva överföring och rensning provas separat i EXPORT-07.
+
+**Integrationstest:**
+[household-export-ui.spec.ts](../../tests/integration/household-export-ui.spec.ts),
+testfallen “EXPORT-11: leaving a ready export retires the copy and preserves
+unsent map work” och “EXPORT-11: leaving a downloading export retires the copy
+and preserves unsent map work”.
+
+**Steg:**
+
+1. Öppna Lista, välj Nytt objekt och skriv ett namn och en beskrivning.
+   Låt formuläret vara oskickat med fokus i beskrivningen.
+2. Öppna Inställningar och Fullständig export. Förbered en export.
+3. Välj Tillbaka till kartan innan hämtningen startar. Kontrollera att
+   formulärets namn, beskrivning och fokus finns kvar utan nedladdning.
+4. Öppna Fullständig export igen. Kontrollera att ingen tidigare hämtning
+   eller resultat visas. Förbered och hämta en ny export.
+5. Upprepa steg 1–4, men starta den fördröjda hämtningen innan sidbytet.
+   Kontrollera väntemeddelandet och återgå sedan till kartan. Återställ
+   nätverket och kontrollera att ingen fil erbjuds från den lämnade exporten.
+
+**Förväntat resultat:**
+
+- Sidbytet bevarar oskickat arbete och fokus. Exporten ändrar inte kartan
+  eller det privata utkastet och skapar inget sparande.
+- Ingen fil erbjuds efter sidbytet, inte heller när ett sent svar kommer
+  fram. Den kända exportens avbrott bekräftas och samma kopia kan inte hämtas.
+- Återbesöket börjar med en ny förberedelse. Dess ZIP-fil innehåller det
+  sparade innehållet; den oskickade redigeringen är ännu inte del av utkastet.
 
 ## Controlled export fixture
 

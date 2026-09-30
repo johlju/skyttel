@@ -134,7 +134,7 @@ test('FLYTT-01: a fresh installation restores an archive, explicitly assigns pri
     ).toBe(401);
     expect((await callAssistant(destination.origin, access_token, 'read_map')).status).toBe(401);
     await destinationPage.goto(
-      `${destination.origin}/households/${restoredHousehold.id}/administration`,
+      `${destination.origin}/households/${restoredHousehold.id}/settings/import`,
     );
     await destinationPage
       .getByLabel('Skyttel-export (ZIP)')
@@ -145,7 +145,9 @@ test('FLYTT-01: a fresh installation restores an archive, explicitly assigns pri
       .check();
     await destinationPage.getByRole('button', { name: 'Ersätt hushållets innehåll' }).click();
     await expect(destinationPage.getByText(/Hushållets innehåll är ersatt/)).toBeVisible();
-    await destinationPage.reload();
+    await destinationPage.goto(
+      `${destination.origin}/households/${restoredHousehold.id}/settings/content-owners`,
+    );
     let restored = await read(destinationClient, destinationPath);
     const destinationUserId = (
       await (await destinationClient.get(`${destination.origin}/api/bootstrap`)).json()

@@ -1,7 +1,18 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
+import {
+  Link,
+  matchPath,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router';
+import logo from '../../docs/images/shuttle-logo-transparent-small.png';
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
+import type { PersonalView } from '../shared/personal-view.js';
 import { Assistants } from './Assistants.js';
 import { ContentOwners } from './ContentOwners.js';
 import { Costs } from './Costs.js';
@@ -10,6 +21,9 @@ import { HouseholdExport } from './HouseholdExport.js';
 import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
+import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
+import { useWorkspaceTheme } from './WorkspaceTheme.js';
+import './access.css';
 
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
@@ -48,7 +62,8 @@ function useResource<T>(path: string, revision = 0, refreshAccess = false): Load
               previous.key === key &&
               previous.state.status === 'loaded' &&
               code !== 401 &&
-              code !== 403
+              code !== 403 &&
+              code !== 409
             )
               return previous;
             return { key, state: { status: 'error', code } };
@@ -76,13 +91,21 @@ function useResource<T>(path: string, revision = 0, refreshAccess = false): Load
   return result.key === key ? result.state : { status: 'loading' };
 }
 
-function Heading({ children }: { children: ReactNode }) {
+function Heading({
+  children,
+  active = true,
+  focus = true,
+}: {
+  children: ReactNode;
+  active?: boolean;
+  focus?: boolean;
+}) {
   const ref = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    ref.current?.focus();
-  }, []);
+    if (active && focus) ref.current?.focus();
+  }, [active, focus]);
   return (
-    <h1 ref={ref} tabIndex={-1}>
+    <h1 ref={ref} tabIndex={-1} hidden={!active}>
       {children}
     </h1>
   );
@@ -111,64 +134,139 @@ function Failure({ onRetry }: { onRetry: () => void }) {
 
 function Login({ providers }: { providers: Provider[] }) {
   const location = useLocation();
-  const [pending, setPending] = useState<Provider | null>(null);
-  const [error, setError] = useState(
-    new URLSearchParams(location.search).has('authError') ||
-      new URLSearchParams(location.search).has('error'),
-  );
+  const [selected, setSelected] = useState<Provider | null>(null);
+  const [pending, setPending] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
+  const [error, setError] = useState(() => {
+    const query = new URLSearchParams(location.search);
+    return query.get('error') ?? (query.has('authError') ? 'failed' : null);
+  });
+  const options = useRef<HTMLFieldSetElement>(null);
+  const continueButton = useRef<HTMLButtonElement>(null);
+  const attempt = useRef<AbortController | null>(null);
+  const lastProvider = useRef<Provider | null>(null);
+  const label = selected === 'google' ? 'Google' : 'Microsoft';
+  useEffect(() => {
+    if (selected) continueButton.current?.focus();
+    else if (lastProvider.current)
+      options.current
+        ?.querySelector<HTMLButtonElement>(`[data-provider="${lastProvider.current}"]`)
+        ?.focus();
+  }, [selected]);
+  useEffect(() => {
+    const returned = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      attempt.current?.abort();
+      setSelected(null);
+      setPending(false);
+      setCancelled(true);
+    };
+    window.addEventListener('pageshow', returned);
+    return () => {
+      attempt.current?.abort();
+      window.removeEventListener('pageshow', returned);
+    };
+  }, []);
+  function cancel() {
+    attempt.current?.abort();
+    setPending(false);
+    setSelected(null);
+    setCancelled(true);
+  }
   async function signIn(provider: Provider) {
-    setPending(provider);
-    setError(false);
+    const controller = new AbortController();
+    attempt.current = controller;
+    setPending(true);
+    setError(null);
     try {
-      const result = await request<{ url: string }>('/api/auth/sign-in/social', {
-        provider,
-        callbackURL: location.pathname === '/costs' ? '/costs' : '/',
-        ...(location.pathname === '/assistant-consent'
-          ? { oauth_query: location.search.slice(1) }
-          : {}),
-        errorCallbackURL: '/?authError=1',
-      });
+      const result = await request<{ url: string }>(
+        '/api/auth/sign-in/social',
+        {
+          provider,
+          callbackURL: location.pathname === '/costs' ? '/costs' : '/',
+          ...(location.pathname === '/assistant-consent'
+            ? { oauth_query: location.search.slice(1) }
+            : {}),
+          errorCallbackURL: '/?authError=1',
+        },
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
       if (typeof result.url !== 'string') throw new Error('invalid_redirect');
       const url = new URL(result.url, window.location.origin);
       if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid_redirect');
       window.location.assign(url.href);
     } catch {
-      setPending(null);
-      setError(true);
+      if (controller.signal.aborted) return;
+      setPending(false);
+      setSelected(null);
+      setError('failed');
     }
   }
   return (
-    <section className="panel">
-      <p className="eyebrow">Hushållets gemensamma karta</p>
+    <section className="panel access-gate">
+      <p className="eyebrow">Skyttel · ditt hushåll, sammanbundet</p>
       <Heading>Välkommen till Skyttel</Heading>
-      <p className="intro">Samla hushållets digitala och ekonomiska samband på ett ställe.</p>
-      <fieldset className="sign-in-options" aria-label="Inloggningssätt">
-        {providers.map((provider) => {
-          const label = provider === 'google' ? 'Google' : 'Microsoft';
-          return (
+      <p className="intro">
+        En gemensam plats för det som hör ihop. Logga in med ditt eget Google- eller
+        Microsoft-konto.
+      </p>
+      {selected ? (
+        <div className="access-transition">
+          <p className="access-note">
+            Du går vidare till {label}. Efter inloggningen kommer du tillbaka till Skyttel.
+          </p>
+          <div className="access-actions">
+            <button
+              ref={continueButton}
+              type="button"
+              className="primary"
+              disabled={pending}
+              onClick={() => void signIn(selected)}
+            >
+              {pending ? `Öppnar ${label}…` : `Fortsätt till ${label}`}
+              <span aria-hidden="true"> ↗</span>
+            </button>
+            <button type="button" onClick={cancel}>
+              Avbryt
+            </button>
+          </div>
+        </div>
+      ) : (
+        <fieldset ref={options} className="sign-in-options" aria-label="Inloggningssätt">
+          {providers.map((provider) => (
             <button
               type="button"
               key={provider}
-              className="provider"
-              disabled={pending !== null}
-              onClick={() => void signIn(provider)}
+              data-provider={provider}
+              className={provider === 'google' ? 'provider primary' : 'provider'}
+              onClick={() => {
+                lastProvider.current = provider;
+                setCancelled(false);
+                setError(null);
+                setSelected(provider);
+              }}
             >
-              <span className={`provider-mark ${provider}`} aria-hidden="true">
-                {provider === 'google' ? 'G' : '⊞'}
-              </span>
-              {pending === provider ? `Öppnar ${label}…` : `Fortsätt med ${label}`}
+              Fortsätt med {provider === 'google' ? 'Google' : 'Microsoft'}
             </button>
-          );
-        })}
-      </fieldset>
+          ))}
+        </fieldset>
+      )}
       {pending && (
         <p className="muted" role="status">
-          Du skickas vidare för att logga in.
+          Öppnar {label} för att verifiera din inloggning…
         </p>
       )}
+      {cancelled && (
+        <p role="status">Inloggningen avbröts. Välj ett inloggningssätt när du vill fortsätta.</p>
+      )}
       {error && (
-        <p className="error" role="alert">
-          Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.
+        <p className="error access-note" role="alert">
+          {error === 'access_denied'
+            ? 'Inloggningen kunde inte slutföras eftersom den avbröts hos leverantören. Du är tillbaka i Skyttel och kan försöka igen.'
+            : ['state_mismatch', 'state_not_found', 'state_invalid'].includes(error)
+              ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
+              : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
         </p>
       )}
       <p className="muted">
@@ -192,18 +290,35 @@ function LoginMethods() {
     revision,
   );
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState(new URLSearchParams(useLocation().search).has('failed'));
+  const [error, setError] = useState<'request' | 'verification' | null>(
+    new URLSearchParams(useLocation().search).has('failed') ? 'request' : null,
+  );
+  const [cancelled, setCancelled] = useState(false);
   async function action(step: string, provider?: Provider) {
     setPending(true);
-    setError(false);
+    setError(null);
+    setCancelled(false);
     try {
-      const response = await request<{ url?: string }>(`/api/login-methods/${step}`, { provider });
-      if (step === 'cancel') setRevision((value) => value + 1);
-      else if (response.url && ['http:', 'https:'].includes(new URL(response.url).protocol))
+      const response = await request<{ url?: string; status?: string }>(
+        `/api/login-methods/${step}`,
+        { provider },
+      );
+      if (step === 'cancel') {
+        setCancelled(response.status === 'cancelled');
+        setRevision((value) => value + 1);
+      } else if (response.url && ['http:', 'https:'].includes(new URL(response.url).protocol))
         window.location.assign(response.url);
       else throw new Error('invalid_redirect');
-    } catch {
-      setError(true);
+    } catch (cause) {
+      if (
+        step === 'add' &&
+        cause instanceof RequestError &&
+        cause.status === 409 &&
+        cause.code === 'verification_required'
+      ) {
+        setError('verification');
+        setRevision((value) => value + 1);
+      } else setError('request');
     } finally {
       setPending(false);
     }
@@ -214,16 +329,20 @@ function LoginMethods() {
   const { providers, stage } = result.data;
   const labels = { google: 'Google', microsoft: 'Microsoft' };
   return (
-    <section className="panel">
+    <section className="panel login-methods">
       <Heading>Inloggningssätt</Heading>
       <p>
         Verifiera först en kopplad inloggning och sedan den nya. Ditt Skyttel-användar-ID, innehåll
         och din tillgång till hushållet bevaras. Samma e-postadress länkar aldrig inloggningar
         automatiskt.
       </p>
-      <ul>
-        {providers.map((provider) => (
-          <li key={provider}>{labels[provider]} – kopplat</li>
+      <ul className="login-method-providers" aria-label="Status för inloggningssätt">
+        {(['google', 'microsoft'] as Provider[]).map((provider) => (
+          <li key={provider}>
+            <strong>
+              {labels[provider]} – {providers.includes(provider) ? 'kopplat' : 'inte kopplat'}
+            </strong>
+          </li>
         ))}
       </ul>
       {stage === 'complete' && providers.length === 2 && (
@@ -231,8 +350,28 @@ function LoginMethods() {
           Länkningen är verifierad. Båda inloggningssätten når samma Skyttel-användare.
         </p>
       )}
+      {stage === 'expired' && (
+        <p role="status">
+          Verifieringen har gått ut. Dina tidigare inloggningar och din tillgång finns kvar.
+          Verifiera på nytt när du vill koppla ett inloggningssätt.
+        </p>
+      )}
+      {cancelled && stage !== 'complete' && (
+        <p role="status">
+          Länkningen är avbruten. Dina tidigare inloggningar och din tillgång finns kvar. Verifiera
+          på nytt när du vill koppla ett inloggningssätt.
+        </p>
+      )}
       {providers.length < 2 && (
         <>
+          <ol className="login-method-steps" aria-label="Länkningens steg">
+            <li aria-current={stage !== 'verified' ? 'step' : undefined}>
+              Verifiera befintlig inloggning
+            </li>
+            <li aria-current={stage === 'verified' ? 'step' : undefined}>
+              Koppla det andra inloggningssättet
+            </li>
+          </ol>
           <p>
             {stage === 'verified'
               ? 'Din befintliga inloggning är verifierad. Koppla nu den andra inom tio minuter.'
@@ -244,14 +383,23 @@ function LoginMethods() {
               )
             : providers
           ).map((provider) => (
-            <button
-              key={provider}
-              type="button"
-              disabled={pending}
-              onClick={() => void action(stage === 'verified' ? 'add' : 'prove', provider)}
-            >
-              {stage === 'verified' ? 'Koppla' : 'Verifiera'} {labels[provider]}
-            </button>
+            <div className="login-method-action" key={provider}>
+              <p>
+                Du går till {labels[provider]}{' '}
+                {stage === 'verified'
+                  ? 'för att bevisa din andra inloggning.'
+                  : 'för att verifiera inloggningen som redan hör till dig.'}{' '}
+                Därefter kommer du tillbaka hit.
+              </p>
+              <button
+                type="button"
+                className="primary"
+                disabled={pending}
+                onClick={() => void action(stage === 'verified' ? 'add' : 'prove', provider)}
+              >
+                {stage === 'verified' ? 'Koppla' : 'Verifiera'} {labels[provider]}
+              </button>
+            </div>
           ))}
         </>
       )}
@@ -261,7 +409,7 @@ function LoginMethods() {
         </button>
       )}
       {pending && <p role="status">Kontrollerar inloggningen…</p>}
-      {(error || stage === 'failed') && (
+      {((error && (error !== 'verification' || stage !== 'expired')) || stage === 'failed') && (
         <p role="alert">
           Länkningen kunde inte slutföras. Åtkomst kan ha nekats, fel identitet valts eller
           leverantören kan ha ett fel. En inloggning som tillhör en annan Skyttel-användare kan inte
@@ -317,7 +465,8 @@ function Setup({
       <p className="eyebrow">Kom igång</p>
       <Heading>Skapa ditt hushåll</Heading>
       <p className="intro">
-        Du är installationens första administratör. Ge hushållet ett namn för att komma igång.
+        Du är utsedd till installationens första administratör. Börja med hushållets namn. Du kan
+        bjuda in andra när kartan öppnas.
       </p>
       <form onSubmit={(event) => void submit(event)} noValidate aria-busy={pending}>
         <label htmlFor="household-name">Hushållets namn</label>
@@ -378,8 +527,9 @@ function Forbidden() {
       <p className="eyebrow">Privat hushåll</p>
       <Heading>Du har inte tillgång till hushållet</Heading>
       <p>
-        Den här inloggningen har inte tillgång till hushållet. Logga ut för att använda en annan
-        inloggning.
+        Din inloggning fungerar, men du har inte tillgång till hushållet. Be administratören om en
+        inbjudan för ditt Skyttel-användar-ID. Att logga in igen återställer inte ett återkallat
+        medlemskap.
       </p>
       <p className="muted">
         Dela ditt Skyttel-användar-ID nedan med en administratör för att få en inbjudan.
@@ -489,7 +639,16 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
   const [revision, setRevision] = useState(0);
   const result = useResource<Administration>(`${path}/administration`, revision, true);
   const [recipient, setRecipient] = useState('');
-  const [code, setCode] = useState<{ invitationId: string; value: string } | null>(null);
+  const [code, setCode] = useState<{
+    invitationId: string;
+    value: string;
+    copyNotice?: string;
+  } | null>(null);
+  const [invitationStep, setInvitationStep] = useState<'identity' | 'create' | 'share'>('identity');
+  const [accessList, setAccessList] = useState<'members' | 'invitations'>('members');
+  const administrationHeading = useRef<HTMLHeadingElement>(null);
+  const invitationHeading = useRef<HTMLHeadingElement>(null);
+  const invitationFocusFrom = useRef<Element | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -499,8 +658,36 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
   useEffect(() => {
     if (sessionExpired) onReload();
   }, [sessionExpired, onReload]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Explicit step transitions must place focus after their new controls mount.
+  useEffect(() => {
+    if (result.status !== 'loaded') return;
+    if (!invitationFocusFrom.current) administrationHeading.current?.focus();
+    else if (
+      document.activeElement === document.body ||
+      document.activeElement === invitationFocusFrom.current
+    )
+      invitationHeading.current?.focus();
+    invitationFocusFrom.current = null;
+  }, [invitationStep, result.status]);
+  function moveInvitationStep(step: 'identity' | 'create') {
+    invitationFocusFrom.current = document.activeElement;
+    setInvitationStep(step);
+  }
+  async function copyCode() {
+    if (!code) return;
+    const issued = code;
+    let copyNotice: string;
+    try {
+      await navigator.clipboard.writeText(issued.value);
+      copyNotice = 'Koden är kopierad. Dela den privat med rätt person.';
+    } catch {
+      copyNotice = 'Koden kunde inte kopieras. Markera och kopiera koden i fältet själv.';
+    }
+    setCode((current) => (current === issued ? { ...current, copyNotice } : current));
+  }
   async function invite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const submittedFrom = document.activeElement;
     setPending(true);
     setError(null);
     setNotice(null);
@@ -514,6 +701,8 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
       );
       setCode({ invitationId: created.invitation.id, value: created.code });
       setRecipient('');
+      invitationFocusFrom.current = submittedFrom;
+      setInvitationStep('share');
       setRevision((value) => value + 1);
     } catch (failure) {
       if (failure instanceof RequestError && [401, 403].includes(failure.status)) onReload();
@@ -562,33 +751,121 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
     ) : (
       <Failure onRetry={() => setRevision((value) => value + 1)} />
     );
+  const currentInvitation = code
+    ? result.data.invitations.find(
+        (invitation) => invitation.id === code.invitationId && invitation.status === 'pending',
+      )
+    : undefined;
   return (
     <section className="panel administration-panel">
       <Link to={`/households/${encodeURIComponent(id ?? '')}`}>Till hushållet</Link>
-      <Heading>Administrera tillgång</Heading>
+      <h1 ref={administrationHeading} tabIndex={-1}>
+        Administrera tillgång
+      </h1>
       <p>
         Alla medlemmar har samma insyn i hushållets gemensamma karta. Administratörer hanterar
         tillgången.
       </p>
-      <form onSubmit={(event) => void invite(event)} aria-busy={pending}>
+      <section className="invitation-flow" aria-label="Bjud in en Skyttel-användare">
         <h2>Bjud in en Skyttel-användare</h2>
-        <label htmlFor="recipient-id">Skyttel-användar-ID att bjuda in</label>
-        <input
-          id="recipient-id"
-          autoComplete="off"
-          value={recipient}
-          onChange={(event) => setRecipient(event.target.value)}
-          required
-          readOnly={pending}
-        />
-        <p className="muted">
-          Be mottagaren logga in och dela sitt ID från Skyttel. Inbjudan gäller i sju dagar. En ny
-          inbjudan ersätter tidigare väntande inbjudan till samma användare.
-        </p>
-        <button type="submit" className="primary" disabled={pending}>
-          {pending ? 'Skapar inbjudan…' : 'Skapa inbjudan'}
-        </button>
-      </form>
+        <ol className="invitation-steps" aria-label="Inbjudans steg">
+          <li aria-current={invitationStep === 'identity' ? 'step' : undefined}>
+            Be om användar-ID
+          </li>
+          <li aria-current={invitationStep === 'create' ? 'step' : undefined}>Skapa inbjudan</li>
+          <li aria-current={invitationStep === 'share' ? 'step' : undefined}>
+            Kopiera och dela koden
+          </li>
+        </ol>
+        <h3 ref={invitationHeading} tabIndex={-1}>
+          {invitationStep === 'identity'
+            ? 'Be om användar-ID'
+            : invitationStep === 'create'
+              ? 'Skapa inbjudan'
+              : 'Kopiera och dela koden'}
+        </h3>
+        {invitationStep === 'identity' && (
+          <>
+            <p>Be personen logga in i Skyttel och dela sitt Skyttel-användar-ID privat med dig.</p>
+            <p>
+              Ett namn eller en e-postadress identifierar inte säkert rätt Skyttel-användare.
+              Kontrollera ID:t tillsammans.
+            </p>
+            <button type="button" className="primary" onClick={() => moveInvitationStep('create')}>
+              Jag har personens användar-ID
+            </button>
+          </>
+        )}
+        {invitationStep === 'create' && (
+          <form onSubmit={(event) => void invite(event)} aria-busy={pending}>
+            <label htmlFor="recipient-id">Skyttel-användar-ID att bjuda in</label>
+            <input
+              id="recipient-id"
+              autoComplete="off"
+              value={recipient}
+              onChange={(event) => setRecipient(event.target.value)}
+              required
+              readOnly={pending}
+            />
+            <p className="muted">
+              Be mottagaren logga in och dela sitt ID från Skyttel. Inbjudan gäller i sju dagar. En
+              ny inbjudan ersätter tidigare väntande inbjudan till samma användare.
+            </p>
+            <div className="access-actions">
+              <button type="submit" className="primary" disabled={pending}>
+                {pending ? 'Skapar inbjudan…' : 'Skapa inbjudan'}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => moveInvitationStep('identity')}
+              >
+                Tillbaka
+              </button>
+            </div>
+          </form>
+        )}
+        {invitationStep === 'share' && (
+          <div className="invitation-result">
+            {code && currentInvitation ? (
+              <>
+                <p role="status">
+                  {code.copyNotice ??
+                    'Inbjudan är skapad. Dela koden med den avsedda mottagaren. Koden visas bara nu.'}
+                </p>
+                <p>
+                  Koden visas bara här, en gång. Inbjudan gäller i sju dagar och kan användas en
+                  gång.
+                </p>
+                <p>
+                  Skicka koden privat till <strong>{currentInvitation.userId}</strong>. Skyttel
+                  skickar ingen e-post.
+                </p>
+                <label htmlFor="created-code">Inbjudningskod att dela</label>
+                <input id="created-code" readOnly value={code.value} />
+                <button type="button" onClick={() => void copyCode()}>
+                  Kopiera koden
+                </button>
+              </>
+            ) : (
+              <p>
+                Inbjudan väntar inte längre på svar. Kontrollera dess aktuella status under
+                Inbjudningar.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setCode(null);
+                setRecipient('');
+                moveInvitationStep('identity');
+              }}
+            >
+              Klar med inbjudan
+            </button>
+          </div>
+        )}
+      </section>
       {pending && (
         <p className="form-status" role="status">
           Sparar ändringen…
@@ -604,199 +881,367 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
           {error}
         </p>
       )}
-      {code &&
-        result.data.invitations.some(
-          (invitation) => invitation.id === code.invitationId && invitation.status === 'pending',
-        ) && (
-          <div className="invitation-result">
-            <p role="status">
-              Inbjudan är skapad. Dela koden med den avsedda mottagaren. Koden visas bara nu.
-            </p>
-            <label htmlFor="created-code">Inbjudningskod att dela</label>
-            <input id="created-code" readOnly value={code.value} />
-          </div>
-        )}
-      <h2 className="section-heading">Medlemmar</h2>
-      <ul className="access-list" aria-label="Medlemmar">
-        {result.data.members.map((member) => (
-          <li
-            key={member.userId}
-            className={member.userId === userId ? 'own-membership' : undefined}
-          >
-            <h3>
-              {member.name}
-              {member.userId === userId ? ' (du)' : ''}
-            </h3>
-            <p className="muted">{member.userId}</p>
-            <p>{member.role === 'administrator' ? 'Administratör' : 'Medlem'}</p>
-            <div className="access-actions">
-              <button
-                type="button"
-                disabled={pending || member.userId === userId}
-                aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
-                onClick={() =>
-                  void changeAccess(
-                    `members/${encodeURIComponent(member.userId)}/role`,
-                    { role: member.role === 'administrator' ? 'member' : 'administrator' },
-                    'Rollen har ändrats.',
-                  )
-                }
+      <fieldset className="access-actions section-heading" aria-label="Visa tillgång">
+        <button
+          type="button"
+          aria-pressed={accessList === 'members'}
+          onClick={() => setAccessList('members')}
+        >
+          Medlemmar
+        </button>
+        <button
+          type="button"
+          aria-pressed={accessList === 'invitations'}
+          onClick={() => setAccessList('invitations')}
+        >
+          Inbjudningar
+        </button>
+      </fieldset>
+      {accessList === 'members' && (
+        <>
+          <h2 className="section-heading">Medlemmar</h2>
+          <ul className="access-list" aria-label="Medlemmar">
+            {result.data.members.map((member) => (
+              <li
+                key={member.userId}
+                className={member.userId === userId ? 'own-membership' : undefined}
               >
-                {member.role === 'administrator' ? 'Gör till medlem' : 'Gör till administratör'}
-              </button>
-              <button
-                type="button"
-                disabled={pending || member.userId === userId}
-                aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
-                onClick={() => setConfirmMember(member.userId)}
-              >
-                Återkalla tillgång
-              </button>
-            </div>
-            {member.userId === userId && (
-              <p id="own-access-hint" className="muted">
-                Din roll och tillgång ändras av en annan administratör.
-              </p>
-            )}
-            {confirmMember === member.userId && (
-              <fieldset
-                className="confirmation"
-                aria-label={`Återkalla tillgång för ${member.name}`}
-              >
-                <p>
-                  Återkalla tillgång för {member.name}? Alla befintliga sessioner förlorar tillgång.
-                  Personer och innehåll i kartan finns kvar.
-                </p>
+                <h3>
+                  {member.name}
+                  {member.userId === userId ? ' (du)' : ''}
+                </h3>
+                <p className="muted">{member.userId}</p>
+                <p>{member.role === 'administrator' ? 'Administratör' : 'Medlem'}</p>
                 <div className="access-actions">
                   <button
                     type="button"
-                    disabled={pending}
+                    disabled={pending || member.userId === userId}
+                    aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
                     onClick={() =>
                       void changeAccess(
-                        `members/${encodeURIComponent(member.userId)}/revoke`,
-                        {},
-                        'Tillgången har återkallats.',
+                        `members/${encodeURIComponent(member.userId)}/role`,
+                        { role: member.role === 'administrator' ? 'member' : 'administrator' },
+                        'Rollen har ändrats.',
                       )
                     }
                   >
-                    Bekräfta återkallelse
+                    {member.role === 'administrator' ? 'Gör till medlem' : 'Gör till administratör'}
                   </button>
-                  <button type="button" disabled={pending} onClick={() => setConfirmMember(null)}>
-                    Avbryt
-                  </button>
-                </div>
-              </fieldset>
-            )}
-          </li>
-        ))}
-      </ul>
-      <h2 className="section-heading">Inbjudningar</h2>
-      {result.data.invitations.length === 0 ? (
-        <p>Inga inbjudningar ännu.</p>
-      ) : (
-        <ul className="access-list" aria-label="Inbjudningar">
-          {result.data.invitations.map((invitation) => (
-            <li key={invitation.id}>
-              <h3>{invitation.name}</h3>
-              <p className="muted">{invitation.userId}</p>
-              <p>{invitationStatuses[invitation.status]}</p>
-              <p className="muted">
-                Gäller till{' '}
-                <time dateTime={invitation.expiresAt}>
-                  {new Date(invitation.expiresAt).toLocaleString('sv-SE')}
-                </time>
-              </p>
-              {invitation.status === 'pending' && (
-                <>
                   <button
                     type="button"
-                    disabled={pending}
-                    onClick={() => setConfirmInvitation(invitation.id)}
+                    disabled={pending || member.userId === userId}
+                    aria-describedby={member.userId === userId ? 'own-access-hint' : undefined}
+                    onClick={() => setConfirmMember(member.userId)}
                   >
-                    Återkalla inbjudan
+                    Återkalla tillgång
                   </button>
-                  {confirmInvitation === invitation.id && (
-                    <fieldset
-                      className="confirmation"
-                      aria-label={`Återkalla inbjudan till ${invitation.name}`}
-                    >
-                      <p>Återkalla inbjudan till {invitation.name}? Koden slutar fungera.</p>
-                      <div className="access-actions">
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() =>
-                            void changeAccess(
-                              `invitations/${encodeURIComponent(invitation.id)}/revoke`,
-                              {},
-                              'Inbjudan har återkallats.',
-                            )
-                          }
-                        >
-                          Bekräfta återkallelse
-                        </button>
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => setConfirmInvitation(null)}
-                        >
-                          Avbryt
-                        </button>
-                      </div>
-                    </fieldset>
-                  )}
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
+                </div>
+                {member.userId === userId && (
+                  <p id="own-access-hint" className="muted">
+                    Din roll och tillgång ändras av en annan administratör.
+                  </p>
+                )}
+                {confirmMember === member.userId && (
+                  <fieldset
+                    className="confirmation"
+                    aria-label={`Återkalla tillgång för ${member.name}`}
+                  >
+                    <p>
+                      Återkalla tillgång för {member.name}? Alla befintliga sessioner förlorar
+                      tillgång. Personer och innehåll i kartan finns kvar.
+                    </p>
+                    <div className="access-actions">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() =>
+                          void changeAccess(
+                            `members/${encodeURIComponent(member.userId)}/revoke`,
+                            {},
+                            'Tillgången har återkallats.',
+                          )
+                        }
+                      >
+                        Bekräfta återkallelse
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setConfirmMember(null)}
+                      >
+                        Avbryt
+                      </button>
+                    </div>
+                  </fieldset>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
-      <HouseholdExport key={`export-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
-      <HouseholdErasure key={`erasure-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
-      <HouseholdImport key={`import-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
-      <ContentOwners key={`owners-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
+      {accessList === 'invitations' && (
+        <>
+          <h2 className="section-heading">Inbjudningar</h2>
+          {result.data.invitations.length === 0 ? (
+            <p>Inga inbjudningar ännu.</p>
+          ) : (
+            <ul className="access-list" aria-label="Inbjudningar">
+              {result.data.invitations.map((invitation) => (
+                <li key={invitation.id}>
+                  <h3>{invitation.name}</h3>
+                  <p className="muted">{invitation.userId}</p>
+                  <p>{invitationStatuses[invitation.status]}</p>
+                  <p className="muted">
+                    Gäller till{' '}
+                    <time dateTime={invitation.expiresAt}>
+                      {new Date(invitation.expiresAt).toLocaleString('sv-SE')}
+                    </time>
+                  </p>
+                  {invitation.status === 'pending' && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setConfirmInvitation(invitation.id)}
+                      >
+                        Återkalla inbjudan
+                      </button>
+                      {confirmInvitation === invitation.id && (
+                        <fieldset
+                          className="confirmation"
+                          aria-label={`Återkalla inbjudan till ${invitation.name}`}
+                        >
+                          <p>Återkalla inbjudan till {invitation.name}? Koden slutar fungera.</p>
+                          <div className="access-actions">
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() =>
+                                void changeAccess(
+                                  `invitations/${encodeURIComponent(invitation.id)}/revoke`,
+                                  {},
+                                  'Inbjudan har återkallats.',
+                                )
+                              }
+                            >
+                              Bekräfta återkallelse
+                            </button>
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => setConfirmInvitation(null)}
+                            >
+                              Avbryt
+                            </button>
+                          </div>
+                        </fieldset>
+                      )}
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+      <p>
+        <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/export`}>
+          Fullständig export
+        </Link>
+        {' av hushållets information finns på en egen sida i Inställningar.'}
+      </p>
+      <p>
+        <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/erasure`}>
+          Permanent radering
+        </Link>
+        {' har en egen sida för granskning och uppföljning i Inställningar.'}
+      </p>
+      <p>
+        <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/import`}>
+          Återimportera hushållet
+        </Link>
+        {' och '}
+        <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/content-owners`}>
+          Koppla historiskt innehåll
+        </Link>
+        {' finns på egna sidor i Inställningar.'}
+      </p>
     </section>
   );
 }
 
-function HouseholdPage({ onSessionExpired }: { onSessionExpired: () => void }) {
+function HouseholdExportPage({
+  household,
+  onReload,
+}: {
+  household: Household | undefined;
+  onReload: () => void;
+}) {
   const { id } = useParams();
+  if (household?.id !== id || household?.role !== 'administrator')
+    return (
+      <section className="panel">
+        <Heading>Du kan inte administrera hushållet</Heading>
+        <p>Endast aktuella administratörer kan göra en fullständig export.</p>
+        <Link to="/">Till startsidan</Link>
+      </section>
+    );
+  return <HouseholdExport key={household.id} householdId={household.id} onAccessLost={onReload} />;
+}
+
+function HouseholdRecoveryPage({
+  household,
+  onReload,
+  page,
+}: {
+  household: Household | undefined;
+  onReload: () => void;
+  page: 'import' | 'owners' | 'erasure';
+}) {
+  const { id } = useParams();
+  if (household?.id !== id || household?.role !== 'administrator')
+    return (
+      <section className="panel">
+        <Heading>Du kan inte administrera hushållet</Heading>
+        <p>
+          Endast aktuella administratörer kan återimportera, koppla historiskt innehåll och radera
+          permanent.
+        </p>
+        <Link to="/">Till startsidan</Link>
+      </section>
+    );
+  if (page === 'erasure')
+    return (
+      <HouseholdErasure key={household.id} householdId={household.id} onAccessLost={onReload} />
+    );
+  return page === 'import' ? (
+    <HouseholdImport key={household.id} householdId={household.id} onAccessLost={onReload} />
+  ) : (
+    <ContentOwners key={household.id} householdId={household.id} onAccessLost={onReload} />
+  );
+}
+
+function HouseholdWork({
+  onSessionExpired,
+  account,
+  typeSettingsTarget,
+  mapSettingsTarget,
+}: {
+  onSessionExpired: () => void;
+  account: ReactNode;
+  typeSettingsTarget: HTMLElement | null;
+  mapSettingsTarget: HTMLElement | null;
+}) {
+  const { pathname } = useLocation();
+  const routeId = matchPath('/households/:id', pathname)?.params.id;
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const settingsId = matchPath('/households/:id/settings/*', pathname)?.params.id;
+  const requestedId = routeId ?? settingsId;
+  if (requestedId && requestedId !== currentId) setCurrentId(requestedId);
+  const id = requestedId ?? currentId;
+  if (!id) return null;
+  return (
+    <HouseholdPage
+      key={id}
+      id={id}
+      active={Boolean(routeId)}
+      onSessionExpired={onSessionExpired}
+      account={account}
+      typeSettingsTarget={typeSettingsTarget}
+      mapSettingsTarget={mapSettingsTarget}
+    />
+  );
+}
+
+function HouseholdPage({
+  id,
+  active,
+  onSessionExpired,
+  account,
+  typeSettingsTarget,
+  mapSettingsTarget,
+}: {
+  id: string;
+  active: boolean;
+  onSessionExpired: () => void;
+  account: ReactNode;
+  typeSettingsTarget: HTMLElement | null;
+  mapSettingsTarget: HTMLElement | null;
+}) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [revision, setRevision] = useState(0);
+  const [workRevision, setWorkRevision] = useState(0);
+  const retireWork = useCallback(() => setWorkRevision((value) => value + 1), []);
   const result = useResource<{ household: Household }>(
     `/api/households/${encodeURIComponent(id ?? '')}`,
     revision,
     true,
   );
-  const sessionExpired = result.status === 'error' && result.code === 401;
+  const content = useResource<PersonalView>(
+    `/api/households/${encodeURIComponent(id)}/map/view`,
+    revision,
+    true,
+  );
+  const sessionExpired =
+    (result.status === 'error' && result.code === 401) ||
+    (content.status === 'error' && content.code === 401);
   useEffect(() => {
     if (sessionExpired) onSessionExpired();
   }, [sessionExpired, onSessionExpired]);
-  if (result.status === 'loading' || sessionExpired) return <Loading />;
-  if (result.status === 'error') {
-    return result.code === 403 ? (
+  if (result.status === 'loading' || sessionExpired) return active ? <Loading /> : null;
+  if (
+    result.status === 'error' ||
+    (content.status === 'error' && [401, 403, 409].includes(content.code ?? 0))
+  ) {
+    const code =
+      result.status === 'error'
+        ? result.code
+        : content.status === 'error'
+          ? content.code
+          : undefined;
+    if (code === 409)
+      return (
+        <p role="alert">
+          Hushållets innehåll ändras. Kartarbetet och mikrofonen är stoppade tills innehållet är
+          tillgängligt igen.
+        </p>
+      );
+    return code === 403 ? (
       <Forbidden />
     ) : (
       <Failure onRetry={() => setRevision((value) => value + 1)} />
     );
   }
   return (
-    <section className="panel household-panel">
-      <p className="eyebrow">Din privata hushållskarta</p>
-      <Heading>{result.data.household.name}</Heading>
-      <p className="membership">
+    <section className={active ? 'panel household-panel' : 'household-work-background'}>
+      <p className="eyebrow" hidden={!active}>
+        Din privata hushållskarta
+      </p>
+      <Heading active={active} focus={location.state?.conversation !== true}>
+        {result.data.household.name}
+      </Heading>
+      <p className="membership" hidden={!active}>
         {result.data.household.role === 'administrator' ? 'Administratör' : 'Medlem'}
       </p>
-      {result.data.household.role === 'administrator' && (
-        <p>
-          <Link to={`/households/${encodeURIComponent(result.data.household.id)}/administration`}>
-            Administrera tillgång
-          </Link>
-        </p>
-      )}
-      <HouseholdMap key={result.data.household.id} householdId={result.data.household.id} />
-      <p>
-        <Link to="/assistants">Assistentanslutningar</Link>
-      </p>
+      <HouseholdMap
+        key={`${result.data.household.id}:${workRevision}`}
+        householdId={result.data.household.id}
+        active={active}
+        householdName={result.data.household.name}
+        account={account}
+        profileRequested={location.state?.profile === true}
+        onSettings={(section) =>
+          navigate(`/households/${encodeURIComponent(id)}/settings${section ? `/${section}` : ''}`)
+        }
+        onReturnToMap={() =>
+          navigate(`/households/${encodeURIComponent(id)}`, { state: { conversation: true } })
+        }
+        typeSettingsTarget={typeSettingsTarget}
+        mapSettingsTarget={mapSettingsTarget}
+        contentVersion={content.status === 'loaded' ? content.data.contentVersion : undefined}
+        onContentReplaced={retireWork}
+      />
     </section>
   );
 }
@@ -804,6 +1249,9 @@ function HouseholdPage({ onSessionExpired }: { onSessionExpired: () => void }) {
 export function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useWorkspaceTheme();
+  const [mapSettingsTarget, setMapSettingsTarget] = useState<HTMLDivElement | null>(null);
+  const [typeSettingsTarget, setTypeSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
@@ -827,107 +1275,243 @@ export function App() {
     navigate(`/households/${encodeURIComponent(household.id)}`, { replace: true });
     reload();
   }
+  const mapActive =
+    data?.status === 'ready' && Boolean(matchPath('/households/:id', location.pathname));
+  const authenticated = data && data.status !== 'anonymous';
+  const personal = ['/profile', '/login-methods', '/assistants', '/assistant-consent'].includes(
+    location.pathname,
+  );
+  const settingsPage =
+    authenticated &&
+    !mapActive &&
+    (personal ||
+      location.pathname === '/costs' ||
+      (data.status === 'ready' &&
+        Boolean(matchPath('/households/:id/settings/*', location.pathname))) ||
+      (data.status === 'ready' &&
+        Boolean(matchPath('/households/:id/administration', location.pathname))));
+  const household = data?.status === 'ready' ? data.household : undefined;
+  const accessGate =
+    data?.status === 'anonymous' || (authenticated && data.status !== 'ready' && !settingsPage);
+  const logout = (
+    <>
+      <button type="button" disabled={signingOut} onClick={() => void signOut()}>
+        {signingOut ? 'Loggar ut…' : 'Logga ut'}
+      </button>
+      {signOutError && (
+        <p className="error" role="alert">
+          Du kunde inte loggas ut. Kontrollera anslutningen och försök igen.
+        </p>
+      )}
+    </>
+  );
+  const account = authenticated && (
+    <>
+      <p className="intro">{data.user.name}</p>
+      {household && <p>{household.role === 'administrator' ? 'Administratör' : 'Medlem'}</p>}
+      <InvitationEntry
+        userId={data.user.id}
+        showInvitation={
+          data.status === 'forbidden' ||
+          (data.status === 'ready' && data.household.role !== 'administrator')
+        }
+        onAccepted={created}
+        onReload={reload}
+      />
+      <h2>Ditt konto</h2>
+      <p>Hantera hur du loggar in och vilka assistenter som får tillgång till din karta.</p>
+      <div className="settings-profile-links">
+        <Link to="/login-methods">Inloggningssätt</Link>
+        <Link to="/assistants">Assistentanslutningar</Link>
+      </div>
+      {logout}
+    </>
+  );
+  const pages = authenticated && (
+    <>
+      {location.pathname === '/login-methods' && <LoginMethods />}
+      {data.status === 'forbidden' &&
+        ['/assistants', '/assistant-consent'].includes(location.pathname) && (
+          <>
+            <Forbidden />
+            <InvitationEntry
+              userId={data.user.id}
+              showInvitation
+              onAccepted={created}
+              onReload={reload}
+            />
+          </>
+        )}
+      {location.pathname === '/profile' &&
+        (data.status === 'ready' ? (
+          <Navigate
+            to={`/households/${encodeURIComponent(data.household.id)}`}
+            state={{ profile: true }}
+            replace
+          />
+        ) : (
+          <section className="panel settings-profile">
+            <Heading>Din profil</Heading>
+            {account}
+          </section>
+        ))}
+      {location.pathname === '/costs' &&
+        (data.operator ? (
+          <Costs key={`costs-${data.user.id}`} onAccessLost={reload} />
+        ) : (
+          <section className="panel">
+            <Heading>
+              Endast installationens driftansvarige har tillgång till kostnadsöversikten
+            </Heading>
+            <Link to="/">Till startsidan</Link>
+          </section>
+        ))}
+      {!['/login-methods', '/profile', '/costs'].includes(location.pathname) &&
+        (data.status === 'ready' || data.status === 'setup') && (
+          <Routes>
+            <Route path="/assistant-consent" element={<Assistants consent />} />
+            <Route path="/assistants" element={<Assistants />} />
+            <Route
+              path="/"
+              element={
+                data.status === 'setup' ? (
+                  <Setup onCreated={created} onReload={reload} />
+                ) : (
+                  <Navigate to={`/households/${encodeURIComponent(data.household.id)}`} replace />
+                )
+              }
+            />
+            <Route path="/households/:id" element={null} />
+            <Route
+              path="/households/:id/settings"
+              element={<SettingsOverview entries={settingsEntries(household, data.operator)} />}
+            />
+            <Route
+              path="/households/:id/settings/map"
+              element={
+                <section className="panel">
+                  <Heading>Rymdkartan</Heading>
+                  <p>Välj bakgrund för din personliga vy. Hushållets karta påverkas inte.</p>
+                  <div ref={setMapSettingsTarget} />
+                </section>
+              }
+            />
+            <Route
+              path="/households/:id/settings/types"
+              element={
+                <section className="panel">
+                  <Heading>Typer och egna fält</Heading>
+                  <p>
+                    Ändringarna blir förslag i ditt privata utkast. Återgå till kartan för att
+                    granska och spara hela utkastet tillsammans.
+                  </p>
+                  <div ref={setTypeSettingsTarget} />
+                </section>
+              }
+            />
+            <Route
+              path="/households/:id/settings/export"
+              element={<HouseholdExportPage household={household} onReload={reload} />}
+            />
+            <Route
+              path="/households/:id/settings/import"
+              element={
+                <HouseholdRecoveryPage household={household} onReload={reload} page="import" />
+              }
+            />
+            <Route
+              path="/households/:id/settings/content-owners"
+              element={
+                <HouseholdRecoveryPage household={household} onReload={reload} page="owners" />
+              }
+            />
+            <Route
+              path="/households/:id/settings/erasure"
+              element={
+                <HouseholdRecoveryPage household={household} onReload={reload} page="erasure" />
+              }
+            />
+            <Route
+              path="/households/:id/administration"
+              element={<AdministrationPage userId={data.user.id} onReload={reload} />}
+            />
+            <Route
+              path="*"
+              element={
+                <section className="panel">
+                  <Heading>Sidan finns inte</Heading>
+                  <Link to="/">Till startsidan</Link>
+                </section>
+              }
+            />
+          </Routes>
+        )}
+    </>
+  );
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell${mapActive ? ' has-workspace' : ''}${settingsPage ? ' has-settings' : ''}${accessGate ? ' access-shell' : ''}`}
+      data-theme={theme.theme}
+    >
       <a className="skip-link" href="#main">
         Hoppa till innehållet
       </a>
-      <header className="site-header">
+      <header className="site-header" hidden={mapActive || Boolean(settingsPage)}>
         <Link className="brand" to="/" aria-label="Skyttel, startsida">
-          <svg viewBox="0 0 32 32" aria-hidden="true">
-            <path d="M6 8h12a8 8 0 0 1 0 16H6M26 8H14a8 8 0 0 0 0 16h12" />
-            <path d="m20 3-8 26" />
-          </svg>
+          <img className="brand-logo" src={logo} alt="" />
           Skyttel
         </Link>
-        {data && data.status !== 'anonymous' ? (
+        {authenticated ? (
           <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
+            <Link to="/profile">Din profil</Link>
             <Link to="/login-methods">Inloggningssätt</Link>
             {data.operator && <Link to="/costs">Månadskostnad</Link>}
-            <span className="session-name">{data.user?.name}</span>
-            <button type="button" disabled={signingOut} onClick={() => void signOut()}>
-              {signingOut ? 'Loggar ut…' : 'Logga ut'}
-            </button>
+            <span className="session-name">{data.user.name}</span>
+            {logout}
           </div>
         ) : (
           <span className="header-note">Ett hushåll. En gemensam bild.</span>
         )}
       </header>
-      {signOutError && (
-        <p className="error sign-out-error" role="alert">
-          Du kunde inte loggas ut. Kontrollera anslutningen och försök igen.
-        </p>
-      )}
       <main id="main" tabIndex={-1}>
         {bootstrap.status === 'loading' && <Loading />}
         {bootstrap.status === 'error' && <Failure onRetry={reload} />}
         {data?.status === 'anonymous' && <Login providers={data.providers} />}
-        {data && data.status !== 'anonymous' && location.pathname === '/login-methods' && (
-          <LoginMethods />
+        {settingsPage ? (
+          <SettingsScreen
+            household={household}
+            userName={data.user.name}
+            operator={data.operator}
+            personal={personal}
+            signOut={location.pathname === '/profile' ? null : logout}
+          >
+            {pages}
+          </SettingsScreen>
+        ) : (
+          pages
         )}
-        {data &&
-          data.status !== 'anonymous' &&
-          location.pathname === '/costs' &&
-          (data.operator ? (
-            <Costs key={data.user.id} onAccessLost={reload} />
-          ) : (
-            <section className="panel">
-              <Heading>
-                Endast installationens driftansvarige har tillgång till kostnadsöversikten
-              </Heading>
-              <Link to="/">Till startsidan</Link>
-            </section>
-          ))}
-        {data?.status === 'forbidden' &&
-          location.pathname !== '/login-methods' &&
-          location.pathname !== '/costs' && <Forbidden />}
-        {data &&
-          location.pathname !== '/login-methods' &&
-          location.pathname !== '/costs' &&
-          (data.status === 'setup' || data.status === 'ready') && (
-            <Routes>
-              <Route path="/assistant-consent" element={<Assistants consent />} />
-              <Route path="/assistants" element={<Assistants />} />
-              <Route
-                path="/"
-                element={
-                  data.status === 'setup' ? (
-                    <Setup onCreated={created} onReload={reload} />
-                  ) : (
-                    <Navigate to={`/households/${encodeURIComponent(data.household.id)}`} replace />
-                  )
-                }
-              />
-              <Route path="/households/:id" element={<HouseholdPage onSessionExpired={reload} />} />
-              <Route
-                path="/households/:id/administration"
-                element={<AdministrationPage userId={data.user.id} onReload={reload} />}
-              />
-              <Route
-                path="*"
-                element={
-                  <section className="panel">
-                    <Heading>Sidan finns inte</Heading>
-                    <Link to="/">Till startsidan</Link>
-                  </section>
-                }
-              />
-            </Routes>
-          )}
-        {data &&
-          location.pathname !== '/costs' &&
-          (data.status === 'forbidden' || data.status === 'ready') && (
+        {data?.status === 'ready' && (
+          <HouseholdWork
+            key={data.user.id}
+            account={account}
+            onSessionExpired={reload}
+            typeSettingsTarget={typeSettingsTarget}
+            mapSettingsTarget={mapSettingsTarget}
+          />
+        )}
+        {data?.status === 'forbidden' && !settingsPage && (
+          <>
+            <Forbidden />
             <InvitationEntry
               userId={data.user.id}
-              showInvitation={
-                data.status === 'forbidden' || data.household.role !== 'administrator'
-              }
+              showInvitation
               onAccepted={created}
               onReload={reload}
             />
-          )}
+          </>
+        )}
       </main>
-      <footer>Det som hör ihop, samlat.</footer>
+      <footer hidden={mapActive || Boolean(settingsPage)}>Det som hör ihop, samlat.</footer>
     </div>
   );
 }

@@ -97,9 +97,14 @@ const collections = [
   [
     'objectTypeFields',
     'SELECT f.* FROM object_type_fields f JOIN object_type t ON t.id = f.typeId WHERE t.householdId = ? ORDER BY f.typeId',
-    ['fields'],
+    ['fields', 'sections', 'builtins', 'propertyOrder'],
   ],
   ['relationshipTypes', 'SELECT * FROM relationship_type WHERE householdId = ? ORDER BY id', []],
+  [
+    'relationshipTypeFields',
+    'SELECT f.* FROM relationship_type_fields f JOIN relationship_type t ON t.id = f.typeId WHERE t.householdId = ? ORDER BY f.typeId',
+    ['fields', 'sections'],
+  ],
   [
     'relationshipTypeLabels',
     'SELECT l.* FROM relationship_type_labels l JOIN relationship_type t ON t.id = l.typeId WHERE t.householdId = ? ORDER BY l.typeId',
@@ -120,7 +125,7 @@ const collections = [
   [
     'relationships',
     'SELECT * FROM map_relationship WHERE householdId = ? ORDER BY id',
-    ['endDate'],
+    ['endDate', 'customValues'],
   ],
   [
     'drafts',

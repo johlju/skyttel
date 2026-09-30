@@ -32,6 +32,15 @@ describe('public application HTTP interface', () => {
       });
       expect(response.status).toBe(409);
       expect(await response.json()).toEqual({ error: 'client_outdated' });
+      const cancel = await client.request('/api/households/missing/imports/missing/cancel', {
+        method: 'POST',
+        headers: {
+          origin: 'http://localhost:3000',
+          ...(header ? { 'X-Skyttel-Build': header } : {}),
+        },
+      });
+      expect(cancel.status).toBe(409);
+      expect(await cancel.json()).toEqual({ error: 'client_outdated' });
       expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
         status: 'setup',
       });

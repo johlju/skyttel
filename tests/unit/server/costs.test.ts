@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { afterEach, expect, test, vi } from 'vitest';
-import { createHousehold, signIn } from '../../support/client.js';
+import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { costProvider } from '../../support/cost-provider.js';
 import { createInstallation, robin } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
@@ -119,7 +119,7 @@ test('an aborted Terra request remains a durable unknown attempt', async () => {
   });
   expect(cancelled.status(), await cancelled.text()).toBe(200);
   await scene.settled();
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   expect((await costs()).terra).toMatchObject({
     attempts: 1,
     uncertainAttempts: 1,
@@ -146,7 +146,7 @@ test('a failed Live creation retains unknown duration without inventing the mini
     estimatedBillableSeconds: 0,
   });
   expect(JSON.stringify(measured)).not.toContain('synthetic private provider failure');
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   expect((await costs()).live).toEqual(measured.live);
 });
 
@@ -218,7 +218,7 @@ test('permanent household erasure and restart retain the global cost ledger and 
   expect(after.terra).toEqual(before.terra);
   expect(after.assumptionHistory).toEqual(before.assumptionHistory);
   expect(after.coverageStartedAt).toBe(before.coverageStartedAt);
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   expect((await costs()).terra).toEqual(before.terra);
 });
 
@@ -273,7 +273,7 @@ test('the operator reads separate measured Terra cost and Render assumptions aft
   expect(costs.live.attempts).toBe(0);
   expect(costs.total.estimatedUsd).toBeCloseTo(7.250564, 9);
   expect(JSON.stringify(costs)).not.toMatch(/Privat syntetisk|synthetic-model-key|access_token/);
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   const restored = await (await browser.get(costPath)).json();
   expect(restored.terra).toEqual(costs.terra);
   expect(restored.coverageStartedAt).toBe(costs.coverageStartedAt);
@@ -383,7 +383,7 @@ test('monthly operator assumptions retain their revisions, reject stale and inva
     data: { ...body, version: 2, sekPerUsd: 12 },
   });
   expect(second.status()).toBe(200);
-  await app.restart();
+  browser = await restartWithSession(browser, () => app.restart());
   const restored = await costs();
   expect(restored.assumptionHistory).toMatchObject([
     { version: 3, sekPerUsd: 12 },
@@ -424,7 +424,7 @@ test.each([true, false])(
       estimatedUsd: 0.0125,
       uncertainAttempts: finalize ? 0 : 1,
     });
-    await app.restart();
+    browser = await restartWithSession(browser, () => app.restart());
     expect((await costs()).live).toEqual(saved.live);
   },
 );
@@ -745,7 +745,7 @@ test('a failed terminal ledger write preserves the initial unknown attempt and t
     ).not.toMatch(/Privat karttext|private synthetic|synthetic-model-key|Spara hela/);
     expect(JSON.stringify(logs.mock.calls)).not.toMatch(/private synthetic|Privat karttext/);
     fault.exec('DROP TRIGGER fail_cost_finish');
-    await app.restart();
+    browser = await restartWithSession(browser, () => app.restart());
     expect((await costs()).terra).toMatchObject({
       attempts: 1,
       uncertainAttempts: 1,

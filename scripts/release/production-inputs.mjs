@@ -14,6 +14,7 @@ export const productionInputs = [
   'tsconfig.server.json',
   'vite.config.ts',
   'index.html',
+  'docs/images/shuttle-logo-transparent-small.png',
 ];
 
 export function isProductionInput(path) {

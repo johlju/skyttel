@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReadyExport } from '../shared/household-export.js';
 import { MapRequestError, request } from './map-request.js';
+import './household-export.css';
 
 export function HouseholdExport({
   householdId,
@@ -19,6 +20,18 @@ export function HouseholdExport({
   const blobTimer = useRef<number | undefined>(undefined);
   const active = useRef<AbortController | null>(null);
   const knownExport = useRef<ReadyExport | null>(null);
+  const primary = useRef<HTMLButtonElement>(null);
+  const submittedFocus = useRef<Element | null>(null);
+  useLayoutEffect(() => {
+    if (busy) return;
+    const previous = submittedFocus.current;
+    submittedFocus.current = null;
+    if (
+      previous &&
+      (document.activeElement === previous || document.activeElement === document.body)
+    )
+      primary.current?.focus();
+  }, [busy]);
   const releaseBlob = useCallback(() => {
     window.clearTimeout(blobTimer.current);
     if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
@@ -71,6 +84,7 @@ export function HouseholdExport({
   }
 
   async function prepare() {
+    submittedFocus.current = document.activeElement;
     discardKnownExport();
     releaseBlob();
     const controller = new AbortController();
@@ -95,6 +109,7 @@ export function HouseholdExport({
 
   async function download() {
     if (!ready) return;
+    submittedFocus.current = document.activeElement;
     const controller = new AbortController();
     active.current = controller;
     setBusy('downloading');
@@ -138,6 +153,8 @@ export function HouseholdExport({
   }
 
   async function cancel() {
+    submittedFocus.current = document.activeElement;
+    const exportToCancel = knownExport.current;
     active.current?.abort();
     const controller = new AbortController();
     active.current = controller;
@@ -145,16 +162,20 @@ export function HouseholdExport({
     setError(null);
     setReady(null);
     try {
-      if (knownExport.current)
+      if (exportToCancel)
         await request(
-          `${path}/${encodeURIComponent(knownExport.current.id)}/cancel`,
+          `${path}/${encodeURIComponent(exportToCancel.id)}/cancel`,
           {},
           controller.signal,
         );
       if (controller.signal.aborted) return;
       knownExport.current = null;
       setReady(null);
-      setNotice('Exporten har avbrutits.');
+      setNotice(
+        exportToCancel
+          ? 'Exporten har avbrutits.'
+          : 'Förberedelsen har avbrutits i webbläsaren. En tillfällig kopia kan finnas kvar tills giltighetstiden går ut.',
+      );
     } catch (failure) {
       if (!controller.signal.aborted) fail(failure, 'canceling');
     } finally {
@@ -164,44 +185,50 @@ export function HouseholdExport({
 
   if (accessLost) return null;
   return (
-    <section aria-labelledby="household-export-heading" aria-busy={busy !== null}>
-      <h2 id="household-export-heading" className="section-heading">
+    <section
+      className="panel household-export"
+      aria-labelledby="household-export-heading"
+      aria-busy={busy !== null}
+    >
+      <h1 id="household-export-heading" tabIndex={-1}>
         Fullständig export
-      </h2>
-      <p>
-        Exporten innehåller hela hushållets information, inklusive andra användares privata utkast
-        och personliga vyer, bilder och ändringshistorik. Som administratör kan du läsa även detta
-        privata innehåll i exporten.
-      </p>
-      <p>
-        Förvara filen säkert och dela den bara med personer som ska få läsa allt innehåll. Vid ett
-        större driftfel kan ändringar sedan din senaste egna export gå förlorade.
-      </p>
-      {ready ? (
-        <>
-          {!busy && (
-            <p role="status">
-              Exporten är klar att hämta. Hämta den före{' '}
-              <time dateTime={ready.expiresAt}>
-                {new Date(ready.expiresAt).toLocaleString('sv-SE')}
-              </time>
-              . Filen kan hämtas en gång.
-            </p>
-          )}
-          <button type="button" disabled={busy !== null} onClick={() => void download()}>
-            Hämta ZIP-fil
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          className="primary"
-          disabled={busy !== null}
-          onClick={() => void prepare()}
-        >
-          Förbered fullständig export
-        </button>
+      </h1>
+      <p className="eyebrow">Fullständig kopia</p>
+      <h2>Ta med hela hushållets information</h2>
+      <div className="export-private-content">
+        <p>
+          Exporten innehåller även andra användares privata utkast och personliga vyer. Som
+          administratör kan du läsa även detta privata innehåll i exporten.
+        </p>
+        <p>
+          Filen är inte lösenordsskyddad. Förvara filen säkert och dela den bara med personer som
+          ska få läsa allt innehåll.
+        </p>
+      </div>
+      <ul className="export-contents">
+        <li>Gemensam karta, typdefinitioner, bilder och ändringshistorik</li>
+        <li>Privata utkast, personliga placeringar och visningsval, sparförsök och kvitton</li>
+        <li>Inga inloggningssessioner, aktiva token eller serverhemligheter</li>
+      </ul>
+      <p>Vid ett större driftfel kan ändringar sedan din senaste egna export gå förlorade.</p>
+      {ready && !busy && (
+        <p role="status">
+          Exporten är klar att hämta. Hämta den före{' '}
+          <time dateTime={ready.expiresAt}>
+            {new Date(ready.expiresAt).toLocaleString('sv-SE')}
+          </time>
+          . Filen kan hämtas en gång.
+        </p>
       )}
+      <button
+        ref={primary}
+        type="button"
+        className="primary"
+        disabled={busy !== null}
+        onClick={() => void (ready ? download() : prepare())}
+      >
+        {ready ? 'Hämta ZIP-fil' : 'Förbered fullständig export'}
+      </button>
       {(ready || busy) && (
         <button type="button" disabled={busy === 'canceling'} onClick={() => void cancel()}>
           Avbryt export
@@ -222,6 +249,11 @@ export function HouseholdExport({
           {error}
         </p>
       )}
+      <p className="muted export-cleanup">
+        När du lämnar exportsidan avbryts pågående arbete och Skyttel försöker ta bort den
+        tillfälliga kopian. Om borttagningen inte kan bekräftas kan kopian finnas kvar tills
+        giltighetstiden går ut. Efter avbrott eller utgången tid förbereder du en ny export.
+      </p>
     </section>
   );
 }

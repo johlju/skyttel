@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { BuildNotice } from '../../../src/client/build-guard.js';
 import { HouseholdMap } from '../../../src/client/HouseholdMap.js';
 import type { MapState, ObjectValue, RelationshipValue } from '../../../src/shared/map.js';
+import { seedLargeMap } from '../../support/large-map.js';
 import { applicationFixture } from '../server/fixture.js';
 
 // These full form workflows use the real HTTP app and SQLite; coverage on
@@ -72,6 +73,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   cleanup();
+  localStorage.removeItem('skyttel-theme');
   vi.unstubAllGlobals();
   dialogMethods.forEach((name, index) => {
     const original = originalDialogMethods[index];
@@ -83,7 +85,10 @@ afterEach(() => {
 
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
-  await screen.findByRole('button', { name: 'Nytt objekt' });
+  const tools = within(await screen.findByRole('navigation', { name: 'Kartans verktyg' }));
+  await userEvent.click(tools.getByLabelText('Lista', { selector: 'button' }));
+  const list = within(await screen.findByRole('region', { name: 'Lista och utkast' }));
+  await list.findByText('Nytt objekt', { selector: 'button' });
 }
 async function add(name = 'Lo Exempel') {
   await userEvent.click(screen.getByRole('button', { name: 'Nytt objekt' }));
@@ -96,6 +101,177 @@ async function save() {
   await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
   await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Sparat:'));
 }
+
+test('grouped browsing combines type identities, description search and marks without changing household data', async () => {
+  const { user } = await (await client.request('/api/bootstrap')).json();
+  seedLargeMap(fixture.database, user.id, householdId);
+  const initial = await (await client.request(path)).json();
+  await open();
+  const list = within(screen.getByRole('region', { name: 'Lista och utkast' }));
+  expect(list.getByRole('button', { name: 'Uppgifter för Provobjekt 000' }).textContent).toBe(
+    'Uppgifter',
+  );
+  const search = list.getByLabelText('Sök objekt');
+  await userEvent.type(search, 'sammanhang 0.');
+  expect(list.getByText('25 av 500 objekt')).toBeTruthy();
+  await userEvent.click(list.getByRole('button', { name: 'Markera Provobjekt 000' }));
+  await userEvent.click(list.getByRole('button', { name: 'Markera Provobjekt 001' }));
+  await userEvent.click(list.getByText('Filter', { exact: true }));
+  await userEvent.click(list.getByRole('checkbox', { name: 'Person' }));
+  await userEvent.click(list.getByRole('checkbox', { name: 'Tjänst' }));
+  expect(list.getByText('10 av 500 objekt')).toBeTruthy();
+  await userEvent.click(list.getByRole('checkbox', { name: /^Bara markerade/ }));
+  expect(list.getByText('2 av 500 objekt')).toBeTruthy();
+  await userEvent.click(list.getByRole('checkbox', { name: 'Tjänst' }));
+  expect(list.getByText('1 av 500 objekt')).toBeTruthy();
+  await userEvent.click(list.getByRole('button', { name: /^Alla typer/ }));
+  expect(list.getByText('2 av 500 objekt')).toBeTruthy();
+  await userEvent.click(list.getByRole('button', { name: 'Visa 2 objekt' }));
+  expect(document.activeElement).toBe(list.getByRole('region', { name: 'Sökträffar' }));
+  await userEvent.selectOptions(list.getByRole('combobox', { name: 'Sortering' }), 'type');
+  expect(list.getByText('2 av 500 objekt')).toBeTruthy();
+  await userEvent.click(list.getByRole('button', { name: 'Avmarkera alla' }));
+  expect(list.getByRole('heading', { name: 'Inga objekt matchar' })).toBeTruthy();
+  await userEvent.click(list.getByRole('button', { name: 'Rensa sökning och filter' }));
+  expect(list.getByText('500 av 500 objekt')).toBeTruthy();
+  expect(await (await client.request(path)).json()).toEqual(initial);
+});
+
+test('object pages retain sorting and selected-item access through panel closure', async () => {
+  const { user } = await (await client.request('/api/bootstrap')).json();
+  seedLargeMap(fixture.database, user.id, householdId);
+  await open();
+  const list = within(screen.getByRole('region', { name: 'Lista och utkast' }));
+  const pages = () => within(list.getByRole('navigation', { name: 'Bläddra bland objekt' }));
+  await userEvent.click(pages().getByRole('button', { name: 'Nästa sida' }));
+  expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('2');
+  await userEvent.click(list.getByLabelText('Markera Provobjekt 050', { selector: 'button' }));
+  await userEvent.selectOptions(pages().getByRole('combobox'), '10');
+  await userEvent.click(pages().getByRole('button', { name: 'Visa valt innehåll i listan' }));
+  expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('2');
+  await userEvent.click(pages().getByRole('button', { name: 'Föregående sida' }));
+  expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('1');
+  await userEvent.selectOptions(list.getByRole('combobox', { name: 'Sortering' }), 'type');
+  await userEvent.selectOptions(pages().getByRole('combobox'), '7');
+  await userEvent.click(list.getByLabelText('Stäng Lista och utkast', { selector: 'button' }));
+  await userEvent.click(
+    within(screen.getByRole('navigation', { name: 'Kartans verktyg' })).getByLabelText('Lista', {
+      selector: 'button',
+    }),
+  );
+  expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('7');
+  expect((list.getByRole('combobox', { name: 'Sortering' }) as HTMLSelectElement).value).toBe(
+    'type',
+  );
+  await userEvent.selectOptions(list.getByRole('combobox', { name: 'Sortering' }), 'name');
+  expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('1');
+  await userEvent.type(list.getByLabelText('Sök objekt'), 'Provobjekt 050');
+  expect(list.queryByRole('navigation', { name: 'Bläddra bland objekt' })).toBeNull();
+  expect(
+    list
+      .getByLabelText('Markera Provobjekt 050', { selector: 'button' })
+      .getAttribute('aria-pressed'),
+  ).toBe('true');
+});
+
+test('current status distinguishes a previous verified receipt from newly staged private proposals', async () => {
+  await open();
+  await add('Lo Exempel');
+  await save();
+  await add('Blå cykeln');
+  const status = screen.getByRole('region', { name: 'Aktuell status' });
+  expect(status.textContent).toContain('1 förslag · privat utkast');
+  expect(status.textContent).toContain('Tidigare sparande · kvitto bekräftat');
+  expect(screen.getByRole('region', { name: 'Förslag i kartan' })).toBeTruthy();
+  const state: MapState = await (await client.request(path)).json();
+  expect(state.objects.map((object) => object.name)).toEqual(['Lo Exempel']);
+  expect(state.draft.changes.map((change) => change.after?.name)).toEqual(['Blå cykeln']);
+});
+
+test('closed new objects can be reopened individually and staged together without losing text', async () => {
+  await open();
+  for (const name of ['Cykeln', 'Bilen']) {
+    await userEvent.click(screen.getByRole('button', { name: 'Nytt objekt' }));
+    const panel = within(screen.getByRole('region', { name: 'Nytt objekt' }));
+    await userEvent.type(panel.getByLabelText('Objektets namn'), name);
+    await userEvent.type(panel.getByLabelText('Beskrivning'), `Oskickat om ${name}`);
+    await userEvent.click(screen.getByRole('button', { name: 'Stäng Nytt objekt' }));
+  }
+  for (const name of ['Cykeln', 'Bilen']) {
+    await userEvent.click(screen.getByRole('button', { name: `Fortsätt: ${name}` }));
+    const panel = within(screen.getByRole('region', { name: 'Nytt objekt' }));
+    expect((panel.getByLabelText('Objektets namn') as HTMLInputElement).value).toBe(name);
+    expect((panel.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
+      `Oskickat om ${name}`,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: `Fortsätt: ${name}` })).toBeNull(),
+    );
+  }
+  await save();
+  for (const name of ['Cykeln', 'Bilen']) {
+    await userEvent.click(screen.getByRole('button', { name: `Uppgifter för ${name}` }));
+    expect(screen.getByRole('region', { name }).textContent).toContain(
+      `Beskrivning: Oskickat om ${name}`,
+    );
+  }
+});
+
+test('workspace theme persists and System follows device preference changes', async () => {
+  // jsdom has no device preference; keep its external browser event boundary.
+  // YTA-02 also exercises this flow with Chromium's actual media preference.
+  const device = Object.assign(new EventTarget(), { matches: false });
+  vi.stubGlobal('matchMedia', () => device);
+  await open();
+  const workspace = () => screen.getByRole('region', { name: 'Hushållskarta' });
+  const button = () => screen.getByRole('button', { name: /^Tema:/ });
+  expect(workspace().getAttribute('data-theme')).toBe('light');
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'Mörkt' }));
+  expect(document.activeElement).toBe(button());
+  expect(workspace().getAttribute('data-theme')).toBe('dark');
+  cleanup();
+  await open();
+  expect(button().getAttribute('aria-label')).toBe('Tema: Mörkt. Byt tema');
+  expect(workspace().getAttribute('data-theme')).toBe('dark');
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'Ljust' }));
+  expect(workspace().getAttribute('data-theme')).toBe('light');
+  cleanup();
+  await open();
+  expect(button().getAttribute('aria-label')).toBe('Tema: Ljust. Byt tema');
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'System' }));
+  device.matches = true;
+  device.dispatchEvent(new Event('change'));
+  await waitFor(() => expect(workspace().getAttribute('data-theme')).toBe('dark'));
+  device.matches = false;
+  device.dispatchEvent(new Event('change'));
+  await waitFor(() => expect(workspace().getAttribute('data-theme')).toBe('light'));
+});
+
+test('workspace theme restores focus after choice or Escape and permits leaving by Tab or pointer', async () => {
+  await open();
+  const button = () => screen.getByRole('button', { name: /^Tema:/ });
+  const popup = () => screen.queryByRole('dialog', { name: 'Tema' });
+  await userEvent.click(button());
+  expect(document.activeElement).toBe(screen.getByRole('radio', { name: 'System' }));
+  await userEvent.keyboard('{Escape}');
+  expect(popup()).toBeNull();
+  expect(document.activeElement).toBe(button());
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'System' }));
+  expect(popup()).toBeNull();
+  expect(document.activeElement).toBe(button());
+  await userEvent.click(button());
+  await userEvent.tab();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Visa verktygens namn' }));
+  expect(popup()).toBeNull();
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('region', { name: 'Hushållskarta' }));
+  expect(popup()).toBeNull();
+});
 
 test('changing type shows displaced values and requires handling them without copying matching field IDs', async () => {
   for (const [version, id, name, kind] of [
@@ -133,7 +309,7 @@ test('changing type shows displaced values and requires handling them without co
   });
   await client.json(`${path}/save`, { version: 3, operationId: 'setup' });
   await open();
-  await userEvent.click(screen.getByRole('button', { name: 'Alex blå cykel' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Alex blå cykel' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.selectOptions(screen.getByLabelText('Objekttyp'), 'vehicle');
   expect((screen.getByLabelText('Nummer') as HTMLInputElement).value).toBe('');
@@ -199,10 +375,11 @@ test('relationship type forms review both labels and show one edge from either o
   );
   await save();
   expect(screen.getByRole('status').textContent).toContain('Förvaring (sambandstyp)');
-  await userEvent.click(screen.getByRole('button', { name: 'Garaget' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Garaget' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Visa samband i listan' }));
   await userEvent.click(
-    within(screen.getByRole('region', { name: 'Samband för Garaget' })).getByRole('button', {
+    within(screen.getByRole('list', { name: /^Samband$/ })).getByRole('button', {
       name: 'Garaget → innehåller → Cykeln',
     }),
   );
@@ -325,7 +502,7 @@ test('an update rejects an open form, preserves unsent text and explains how to 
 test('review, search, correction, discard and deletion use the real persistent map', async () => {
   await open();
   await add();
-  await userEvent.click(screen.getByRole('button', { name: 'Lo Exempel' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Lo Exempel' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.clear(screen.getByLabelText('Objektets namn'));
   await userEvent.type(screen.getByLabelText('Objektets namn'), 'Lo Lind');
@@ -338,7 +515,7 @@ test('review, search, correction, discard and deletion use the real persistent m
   await userEvent.type(screen.getByLabelText('Sök objekt'), 'No match');
   expect(within(screen.getByRole('list', { name: 'Objekt' })).queryByRole('button')).toBeNull();
   await userEvent.clear(screen.getByLabelText('Sök objekt'));
-  await userEvent.click(screen.getByRole('button', { name: 'Lo Lind' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Lo Lind' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.clear(screen.getByLabelText('Objektets namn'));
   await userEvent.type(screen.getByLabelText('Objektets namn'), 'Lo Berg');
@@ -352,7 +529,7 @@ test('review, search, correction, discard and deletion use the real persistent m
   await waitFor(() =>
     expect(screen.getByRole('status').textContent).toContain('Utkastet är kastat'),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Lo Lind' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Lo Lind' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.click(
     within(screen.getByRole('group', { name: 'Objektets detaljer' })).getByRole('button', {
@@ -367,6 +544,7 @@ test('review, search, correction, discard and deletion use the real persistent m
 test('lost responses remain uncertain and the same receipt can be recovered', async () => {
   failRead = true;
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   expect((await screen.findByRole('alert')).textContent).toContain('kunde inte hämtas');
   failRead = false;
   await userEvent.click(screen.getByRole('button', { name: 'Hämta aktuellt underlag' }));
@@ -459,6 +637,10 @@ test.each([
   await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
   expect((await screen.findByRole('alert')).textContent).toContain('Utfallet är okänt');
   expect(screen.getByRole('status').textContent).not.toContain('Sparat:');
+  expect(screen.getByRole('region', { name: 'Aktuell status' }).textContent).toContain(
+    'Sparutfall okänt',
+  );
+  expect(screen.getByRole('region', { name: 'Förslag i kartan' })).toBeTruthy();
   expect((screen.getByRole('button', { name: 'Nytt objekt' }) as HTMLButtonElement).disabled).toBe(
     true,
   );
@@ -515,6 +697,12 @@ test('a confirmed receipt remains successful when refreshing the map fails', asy
   await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
   expect((await screen.findByRole('alert')).textContent).toContain('sparade enligt kvittot');
   expect(screen.getByRole('status').textContent).toContain('Sparat: Lo Exempel');
+  expect(screen.getByRole('region', { name: 'Aktuell status' }).textContent).toContain(
+    'Sparat · kvitto bekräftat',
+  );
+  expect(screen.getByRole('region', { name: 'Aktuell status' }).textContent).not.toContain(
+    'Sparutfall okänt',
+  );
   expect(screen.queryByRole('button', { name: 'Hämta samma kvitto igen' })).toBeNull();
   failRead = false;
   await userEvent.click(screen.getByRole('button', { name: 'Hämta aktuellt underlag' }));
@@ -638,11 +826,11 @@ test('object identity can be explicitly unspecified and later identified', async
   await userEvent.type(screen.getByLabelText('Objektets namn'), 'Betalkonto');
   await userEvent.selectOptions(screen.getByLabelText('Objektets identitet'), 'unresolved');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
-  await screen.findByRole('button', { name: 'Betalkonto' });
+  await screen.findByRole('button', { name: 'Uppgifter för Betalkonto' });
   expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain(
     'Obesvarad identitetsfråga',
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Betalkonto' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Betalkonto' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.selectOptions(screen.getByLabelText('Objektets identitet'), 'unspecified');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
@@ -651,7 +839,7 @@ test('object identity can be explicitly unspecified and later identified', async
     'Ospecificerat objekt',
   );
   await save();
-  await userEvent.click(screen.getByRole('button', { name: 'Betalkonto' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Betalkonto' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   expect((screen.getByLabelText('Objektets identitet') as HTMLSelectElement).value).toBe(
     'unspecified',
@@ -899,7 +1087,7 @@ test('custom type forms use four optional field kinds and keep errors editable w
     'Batteri: Nej',
   );
   await save();
-  await userEvent.click(screen.getByRole('button', { name: 'Paneler' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Paneler' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.clear(screen.getByLabelText('Leverantör'));
   await userEvent.clear(screen.getByLabelText('Effekt'));
@@ -913,7 +1101,7 @@ test('custom type forms use four optional field kinds and keep errors editable w
     'Batteri: Ja',
   );
   await save();
-  await userEvent.click(screen.getByRole('button', { name: 'Paneler' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Paneler' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.selectOptions(screen.getByLabelText('Batteri'), '');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i mitt utkast' }));
@@ -1002,18 +1190,22 @@ test('view changes retain unsent object text and filters can clear without chang
   await add('Kim Rymdprov');
   await save();
   const original = await (await client.request(path)).json();
-  await userEvent.click(screen.getByRole('button', { name: 'Lo Rymdprov' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Uppgifter för Lo Rymdprov' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
   await userEvent.clear(screen.getByLabelText('Beskrivning'));
   await userEvent.type(screen.getByLabelText('Beskrivning'), 'Oskickad vytext');
-  await userEvent.click(screen.getByRole('button', { name: 'Samlad vy' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Öppna rymdkartan' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Visa detaljer och utkast' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng arbetsytan' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
   expect((screen.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
     'Oskickad vytext',
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Till kartan' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Lista och detaljer' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng arbetsytan' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+  await userEvent.selectOptions(
+    screen.getByLabelText(/^Öppna paneler/),
+    screen.getByRole('option', { name: 'Lo Rymdprov' }),
+  );
   await userEvent.click(screen.getByRole('button', { name: 'Stäng utan att skicka texten' }));
   await userEvent.click(screen.getByRole('button', { name: 'Redigera Lo Rymdprov' }));
   await userEvent.click(screen.getByRole('button', { name: 'Visa objektets kopplingar' }));
@@ -1023,10 +1215,8 @@ test('view changes retain unsent object text and filters can clear without chang
   ).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Visa hela rymden' }));
   await userEvent.type(screen.getByLabelText('Sök objekt'), 'Lo');
-  await userEvent.selectOptions(
-    screen.getByLabelText('Filtrera objekttyp'),
-    original.types.find((type: { name: string }) => type.name === 'Abonnemang').id,
-  );
+  await userEvent.click(screen.getByText('Filter', { exact: true }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Abonnemang' }));
   expect(within(screen.getByRole('list', { name: 'Objekt' })).queryByRole('listitem')).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Visa hela rymden' }));
   await userEvent.keyboard('{Escape}');
@@ -1034,4 +1224,198 @@ test('view changes retain unsent object text and filters can clear without chang
     within(screen.getByRole('list', { name: 'Objekt' })).getAllByRole('listitem'),
   ).toHaveLength(2);
   expect((await (await client.request(path)).json()).objects).toEqual(original.objects);
+});
+
+test('text-only multi-selection leaves the shared draft unchanged and reopens retained object work', async () => {
+  await open();
+  await add('Lo Urval');
+  await add('Kim Urval');
+  await save();
+  const original = await (await client.request(path)).json();
+  const list = within(screen.getByRole('list', { name: 'Objekt' }));
+  const lo = list.getByRole('button', { name: 'Markera Lo Urval' });
+  const kim = list.getByRole('button', { name: 'Markera Kim Urval' });
+  const details = within(screen.getByRole('navigation', { name: 'Kartans verktyg' })).getByRole(
+    'button',
+    { name: 'Visa detaljer' },
+  );
+  await userEvent.click(lo);
+  await userEvent.click(kim);
+  expect(lo.getAttribute('aria-pressed')).toBe('true');
+  expect(kim.getAttribute('aria-pressed')).toBe('true');
+  expect(screen.queryByRole('region', { name: 'Kim Urval' })).toBeNull();
+  await userEvent.click(lo);
+  expect(lo.getAttribute('aria-pressed')).toBe('false');
+  await userEvent.click(kim);
+  expect(details.hasAttribute('disabled')).toBe(true);
+  await userEvent.click(list.getByRole('button', { name: 'Uppgifter för Lo Urval' }));
+  const panel = within(screen.getByRole('region', { name: 'Lo Urval' }));
+  await userEvent.click(panel.getByRole('button', { name: 'Redigera valt objekt' }));
+  await userEvent.clear(panel.getByLabelText('Beskrivning'));
+  await userEvent.type(panel.getByLabelText('Beskrivning'), 'Behåll utan kartgrafik');
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+  await userEvent.click(kim);
+  await userEvent.click(list.getByRole('button', { name: 'Uppgifter för Lo Urval' }));
+  expect(lo.getAttribute('aria-pressed')).toBe('true');
+  expect(kim.getAttribute('aria-pressed')).toBe('true');
+  await userEvent.click(panel.getByRole('button', { name: 'Stäng Lo Urval' }));
+  await userEvent.click(details);
+  expect((panel.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
+    'Behåll utan kartgrafik',
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Avmarkera alla' }));
+  expect(details.hasAttribute('disabled')).toBe(true);
+  const after = await (await client.request(path)).json();
+  expect(after.objects).toEqual(original.objects);
+  expect(after.draft).toEqual(original.draft);
+});
+
+test('relationship lifecycle corrections preserve uncertain dates through private review and explicit saves', async () => {
+  const user = userEvent.setup();
+  const read = async (): Promise<MapState> => (await client.request(path)).json();
+  const initial = await read();
+  for (const [id, name, type] of [
+    ['person', 'Lo Exempel', 'Person'],
+    ['subscription', 'Familjemusik', 'Abonnemang'],
+  ]) {
+    expect(
+      (
+        await client.json(`${path}/draft`, {
+          version: (await read()).draft.version,
+          id,
+          baseRevision: null,
+          value: {
+            typeId: initial.types.find((item) => item.name === type)?.id,
+            name,
+            description: '',
+          },
+        })
+      ).status,
+    ).toBe(200);
+  }
+  expect(
+    (
+      await client.json(`${path}/relationship`, {
+        version: (await read()).draft.version,
+        id: 'incoming',
+        baseRevision: null,
+        value: {
+          sourceId: 'person',
+          targetId: 'subscription',
+          typeId: initial.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+          knowledge: 'known',
+          lifecycle: 'ended',
+          endDate: { knowledge: 'known', value: '2000-01-01' },
+        },
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await client.json(`${path}/save`, {
+        version: (await read()).draft.version,
+        operationId: 'initial-lifecycle',
+      })
+    ).status,
+  ).toBe(200);
+  const saved = await read();
+  await open();
+  const edges = within(screen.getByRole('list', { name: 'Samband' }));
+  await user.click(edges.getByRole('button', { name: /^Lo Exempel → Använder → Familjemusik/ }));
+  const details = within(screen.getByRole('region', { name: 'Val och redigering' }));
+  expect(details.getByText('Status: Manuellt upphört')).toBeTruthy();
+  expect(details.getByText('Slutdatum: 2000-01-01')).toBeTruthy();
+  expect(details.getByText('Upphört', { exact: true })).toBeTruthy();
+  await user.click(details.getByRole('button', { name: 'Redigera valt samband' }));
+  await user.selectOptions(details.getByLabelText('Sambandets status'), 'active');
+  await user.selectOptions(
+    details.getByLabelText('Sambandets slutdatum: uppgiftens säkerhet'),
+    'uncertain',
+  );
+  expect(
+    (details.getByLabelText('Sambandets slutdatum', { exact: true }) as HTMLInputElement).value,
+  ).toBe('2000-01-01');
+  await user.click(details.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+  const review = within(screen.getByRole('region', { name: 'Hela mitt utkast' }));
+  await review.findByText('Status: Gäller fortfarande');
+  expect(review.getByText('Status: Manuellt upphört')).toBeTruthy();
+  expect(review.getByText('Slutdatum: 2000-01-01')).toBeTruthy();
+  expect(review.getByText('Slutdatum: 2000-01-01 (Osäkert uppgivet)')).toBeTruthy();
+  const staged = await read();
+  expect(staged.objects).toEqual(saved.objects);
+  expect(staged.relationships).toEqual(saved.relationships);
+  expect(staged.draft.relationships).toHaveLength(1);
+  expect(staged.draft.relationships?.[0]).toMatchObject({
+    id: 'incoming',
+    before: saved.relationships[0],
+    after: {
+      sourceId: 'person',
+      targetId: 'subscription',
+      lifecycle: 'active',
+      endDate: { knowledge: 'uncertain', value: '2000-01-01' },
+    },
+  });
+  await save();
+  const active = await read();
+  expect(active.objects).toEqual(saved.objects);
+  expect(active.relationships).toHaveLength(1);
+  expect(active.relationships[0]).toMatchObject({
+    id: 'incoming',
+    sourceId: 'person',
+    targetId: 'subscription',
+    lifecycle: 'active',
+    endDate: { knowledge: 'uncertain', value: '2000-01-01' },
+  });
+  expect(active.draft.relationships ?? []).toEqual([]);
+  expect(active.draft.changes).toEqual([]);
+  const history = await (await client.request(`${path}/history`)).json();
+  expect(history.history).toHaveLength(2);
+  expect(history.history[0].operationId).toBe('initial-lifecycle');
+  expect(history.history[1].relationships).toEqual([
+    expect.objectContaining({
+      id: 'incoming',
+      before: saved.relationships[0],
+      after: active.relationships[0],
+    }),
+  ]);
+  await user.click(edges.getByRole('button', { name: /^Lo Exempel → Använder → Familjemusik/ }));
+  expect(details.getByText('Status: Gäller fortfarande')).toBeTruthy();
+  expect(details.queryByText('Upphört', { exact: true })).toBeNull();
+  await user.click(details.getByRole('button', { name: 'Redigera valt samband' }));
+  await user.selectOptions(details.getByLabelText('Sambandets status'), '');
+  expect(
+    (details.getByLabelText('Sambandets slutdatum', { exact: true }) as HTMLInputElement).value,
+  ).toBe('2000-01-01');
+  expect(
+    (details.getByLabelText('Sambandets slutdatum: uppgiftens säkerhet') as HTMLSelectElement)
+      .value,
+  ).toBe('uncertain');
+  await user.click(details.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+  await review.findByText('Status: Följ slutdatum');
+  const following = await read();
+  expect(following.relationships).toEqual(active.relationships);
+  expect(following.draft.relationships?.[0].before).toEqual(active.relationships[0]);
+  expect(following.draft.relationships?.[0].after).not.toHaveProperty('lifecycle');
+  expect(following.draft.relationships?.[0].after?.endDate).toEqual({
+    knowledge: 'uncertain',
+    value: '2000-01-01',
+  });
+  await save();
+  const final = await read();
+  expect(final.objects).toEqual(saved.objects);
+  expect(final.relationships).toHaveLength(1);
+  expect(final.relationships[0]).toMatchObject({
+    id: 'incoming',
+    sourceId: 'person',
+    targetId: 'subscription',
+    endDate: { knowledge: 'uncertain', value: '2000-01-01' },
+  });
+  expect(final.relationships[0]).not.toHaveProperty('lifecycle');
+  expect(final.draft.relationships ?? []).toEqual([]);
+  expect(final.draft.changes).toEqual([]);
+  await user.click(edges.getByRole('button', { name: /^Lo Exempel → Använder → Familjemusik/ }));
+  expect(details.getByText('Status: Följ slutdatum')).toBeTruthy();
+  expect(details.getByText('Slutdatum: 2000-01-01 (Osäkert uppgivet)')).toBeTruthy();
+  expect(details.queryByText('Upphört', { exact: true })).toBeNull();
 });

@@ -61,6 +61,7 @@ test('merge choices remain private, missing identity blocks save, and correction
   await save('initial');
   await object('independent', { name: 'Robin' });
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Slå samman objekt' }));
   await userEvent.selectOptions(screen.getByLabelText('Objekt som behåller sin identitet'), 'a');
   await userEvent.selectOptions(screen.getByLabelText('Objekt som tas in i det första'), 'b');
@@ -117,6 +118,7 @@ test('type-specific custom fields and uncertain financial facts are visible and 
   });
   await save('initial');
   render(<HouseholdMap householdId={householdId} />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Slå samman objekt' }));
   await userEvent.selectOptions(screen.getByLabelText('Objekt som behåller sin identitet'), 'a');
   await userEvent.selectOptions(screen.getByLabelText('Objekt som tas in i det första'), 'b');

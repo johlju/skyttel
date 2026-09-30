@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import type { MapState } from '../../src/shared/map.js';
+import { createHousehold, openProfile, signIn } from '../support/client.js';
 import { alex, createInstallation } from '../support/installation.js';
 
 async function linkStep(
@@ -197,9 +198,33 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await page.goto(installation.origin);
+    await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Inloggningssätt', exact: true })).toBeVisible();
+    await expect(page.getByText('Google – kopplat', { exact: true })).toBeVisible();
+    await expect(page.getByText('Microsoft – inte kopplat', { exact: true })).toBeVisible();
+    const steps = page.getByRole('list', { name: 'Länkningens steg' });
+    await expect(
+      steps.getByRole('listitem').filter({ hasText: 'Verifiera befintlig inloggning' }),
+    ).toHaveAttribute('aria-current', 'step');
+    await expect(
+      page.getByText(
+        'Du går till Google för att verifiera inloggningen som redan hör till dig. Därefter kommer du tillbaka hit.',
+        { exact: true },
+      ),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Verifiera Google' }).click();
     await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    await expect(
+      steps.getByRole('listitem').filter({ hasText: 'Koppla det andra inloggningssättet' }),
+    ).toHaveAttribute('aria-current', 'step');
+    await expect(page.getByText('Microsoft – inte kopplat', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(
+        'Du går till Microsoft för att bevisa din andra inloggning. Därefter kommer du tillbaka hit.',
+        { exact: true },
+      ),
+    ).toBeVisible();
     installation.setIdentity({ ...alex, subject: 'alex-microsoft', email: 'other@example.test' });
     await page.getByRole('button', { name: 'Koppla Microsoft' }).click();
     await expect(page.getByRole('status')).toHaveText(
@@ -207,6 +232,8 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     );
     await expect(page.getByText('Microsoft – kopplat', { exact: true })).toBeVisible();
     await expect(page.getByText('Google – kopplat', { exact: true })).toBeVisible();
+    await expect(page.getByText('Microsoft – inte kopplat', { exact: true })).toHaveCount(0);
+    await expect(steps).toHaveCount(0);
   } finally {
     await installation.close();
   }
@@ -223,7 +250,18 @@ test('ACCESS-10: cancelling a verified link requires fresh proof and preserves h
     await page.goto(`${installation.origin}/login-methods`);
     await page.getByRole('button', { name: 'Verifiera Google' }).click();
     await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    const cancellation = page.waitForResponse(
+      (response) =>
+        response.url() === `${installation.origin}/api/login-methods/cancel` &&
+        response.request().method() === 'POST',
+    );
     await page.getByRole('button', { name: 'Avbryt länkning' }).click();
+    const cancelled = await cancellation;
+    expect(cancelled.status()).toBe(200);
+    expect(await cancelled.json()).toEqual({ status: 'cancelled' });
+    await expect(page.getByRole('status')).toHaveText(
+      'Länkningen är avbruten. Dina tidigare inloggningar och din tillgång finns kvar. Verifiera på nytt när du vill koppla ett inloggningssätt.',
+    );
     await expect(page.getByRole('button', { name: 'Verifiera Google' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Avbryt länkning' })).toHaveCount(0);
@@ -237,6 +275,7 @@ test('ACCESS-10: cancelling a verified link requires fresh proof and preserves h
     expect(await (await page.request.get(`${installation.origin}/api/bootstrap`)).json()).toEqual(
       before,
     );
+    await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.getByRole('button', { name: 'Verifiera Google' }).click();
     await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
@@ -272,6 +311,174 @@ test('ACCESS-11: the wrong existing identity leaves linking retryable without ch
       page.getByRole('heading', { name: before.household.name, exact: true }),
     ).toBeVisible();
   } finally {
+    await installation.close();
+  }
+});
+
+test('ACCESS-19: expired linking explains fresh proof and preserves identity and private work', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  const originalNow = Date.now;
+  const { origin } = installation;
+  try {
+    await signIn(page.request, origin);
+    const { household } = await (await createHousehold(page.request, origin)).json();
+    const before = await (await page.request.get(`${origin}/api/bootstrap`)).json();
+    const mapPath = `${origin}/api/households/${household.id}/map`;
+    const read = async (): Promise<MapState> => (await page.request.get(mapPath)).json();
+    const initial = await read();
+    expect(
+      (
+        await page.request.post(`${mapPath}/draft`, {
+          headers: { origin },
+          data: {
+            version: initial.draft.version,
+            id: 'expiry-private',
+            baseRevision: null,
+            value: {
+              typeId: initial.types.find((type) => type.name === 'Fordon')?.id,
+              name: 'Cykeln',
+              description: 'Privat förslag före utgången verifiering',
+            },
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    const privateMap = await read();
+    await page.goto(`${origin}/login-methods`);
+    await page.getByRole('button', { name: 'Verifiera Google' }).click();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    expect(await (await page.request.get(`${origin}/api/login-methods`)).json()).toEqual({
+      providers: ['google'],
+      stage: 'verified',
+    });
+
+    // The real server shares this worker. Keep time progressing; browser time and
+    // Playwright's monotonic deadlines are unchanged. Restore before fresh proof.
+    Date.now = () => originalNow() + 11 * 60_000;
+    const expired = await page.request.post(`${origin}/api/login-methods/add`, {
+      headers: { origin },
+      data: { provider: 'microsoft' },
+    });
+    expect(expired.status()).toBe(409);
+    expect(await expired.json()).toEqual({ error: 'verification_required' });
+    const reloaded = page.waitForResponse(
+      (response) =>
+        response.url() === `${origin}/api/login-methods` && response.request().method() === 'GET',
+    );
+    await page.reload();
+    const current = await reloaded;
+    expect(current.status()).toBe(200);
+    expect((await current.json()).providers).toEqual(['google']);
+    await expect(page.getByRole('status')).toHaveText(
+      'Verifieringen har gått ut. Dina tidigare inloggningar och din tillgång finns kvar. Verifiera på nytt när du vill koppla ett inloggningssätt.',
+    );
+    await expect(page.getByRole('button', { name: 'Verifiera Google' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toHaveCount(0);
+    await expect(page.getByText('Google – kopplat', { exact: true })).toBeVisible();
+    await expect(page.getByText('Microsoft – kopplat', { exact: true })).toHaveCount(0);
+    expect(await (await page.request.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
+    expect(await read()).toEqual(privateMap);
+
+    Date.now = originalNow;
+    await page.getByRole('button', { name: 'Verifiera Google' }).click();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    await expect(page.getByRole('status')).toHaveCount(0);
+    expect(await (await page.request.get(`${origin}/api/login-methods`)).json()).toEqual({
+      providers: ['google'],
+      stage: 'verified',
+    });
+    await page.getByRole('link', { name: 'Till startsidan' }).click();
+    await expect(page.getByRole('heading', { name: household.name, exact: true })).toBeVisible();
+    expect(await (await page.request.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
+    expect(await read()).toEqual(privateMap);
+  } finally {
+    Date.now = originalNow;
+    await installation.close();
+  }
+});
+
+test('ACCESS-20: an expired link on an open page explains fresh proof after the real rejection', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  const originalNow = Date.now;
+  const { origin } = installation;
+  try {
+    await signIn(page.request, origin);
+    const { household } = await (await createHousehold(page.request, origin)).json();
+    const before = await (await page.request.get(`${origin}/api/bootstrap`)).json();
+    const mapPath = `${origin}/api/households/${household.id}/map`;
+    const read = async (): Promise<MapState> => (await page.request.get(mapPath)).json();
+    const initial = await read();
+    expect(
+      (
+        await page.request.post(`${mapPath}/draft`, {
+          headers: { origin },
+          data: {
+            version: initial.draft.version,
+            id: 'open-expiry-private',
+            baseRevision: null,
+            value: {
+              typeId: initial.types.find((type) => type.name === 'Fordon')?.id,
+              name: 'Bilen',
+              description: 'Privat förslag medan verifieringen går ut',
+            },
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    const privateMap = await read();
+    await page.goto(`${origin}/login-methods`);
+    await page.getByRole('button', { name: 'Verifiera Google' }).click();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeEnabled();
+    expect(await (await page.request.get(`${origin}/api/login-methods`)).json()).toEqual({
+      providers: ['google'],
+      stage: 'verified',
+    });
+
+    // Advance only the real server worker clock while this verified page stays open.
+    // Restore before fresh proof and in finally; browser time/deadlines stay unchanged.
+    Date.now = () => originalNow() + 11 * 60_000;
+    const addition = page.waitForResponse(
+      (response) =>
+        response.url() === `${origin}/api/login-methods/add` &&
+        response.request().method() === 'POST',
+    );
+    await page.getByRole('button', { name: 'Koppla Microsoft' }).click();
+    const rejected = await addition;
+    expect(rejected.status()).toBe(409);
+    expect(await rejected.json()).toEqual({ error: 'verification_required' });
+    await expect(page.getByRole('status')).toHaveText(
+      'Verifieringen har gått ut. Dina tidigare inloggningar och din tillgång finns kvar. Verifiera på nytt när du vill koppla ett inloggningssätt.',
+    );
+    await expect(page.getByRole('button', { name: 'Verifiera Google' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toHaveCount(0);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page).toHaveURL(`${origin}/login-methods`);
+    expect(await (await page.request.get(`${origin}/api/login-methods`)).json()).toEqual({
+      providers: ['google'],
+      stage: 'expired',
+    });
+    expect(await (await page.request.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
+    expect(await read()).toEqual(privateMap);
+
+    Date.now = originalNow;
+    await page.getByRole('button', { name: 'Verifiera Google' }).click();
+    await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    await expect(page.getByRole('status')).toHaveCount(0);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    expect(await (await page.request.get(`${origin}/api/login-methods`)).json()).toEqual({
+      providers: ['google'],
+      stage: 'verified',
+    });
+    await page.getByRole('link', { name: 'Till startsidan' }).click();
+    await expect(page.getByRole('heading', { name: household.name, exact: true })).toBeVisible();
+    expect(await (await page.request.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
+    expect(await read()).toEqual(privateMap);
+  } finally {
+    Date.now = originalNow;
     await installation.close();
   }
 });

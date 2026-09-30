@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, signIn } from '../support/client.js';
+import { activatePanel, createHousehold, openWorkspace, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 
 test('STORKARTA-01: dense overview keeps readable labels and every object and relationship reachable', async ({
@@ -27,6 +27,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
     const personal = await (await page.request.get(`${path}/view`)).json();
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(installation.origin);
+    await openWorkspace(page);
     await expect(page.getByText('500 objekt och 1500 samband', { exact: true })).toBeVisible();
     const labels = page.locator('.spatial-labels [data-layout-id]');
     await expect(labels.first()).toBeVisible();
@@ -45,13 +46,24 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
         }),
       )
       .toBe(true);
-    await expect(page.getByText(/Alla objekt och samband finns i listan/)).toBeVisible();
+    await expect(
+      page.getByText(/Alla objekt och samband finns i listan/).filter({ visible: true }),
+    ).toBeVisible();
     const objects = page.getByRole('list', { name: 'Objekt', exact: true });
     await expect(objects.getByRole('listitem')).toHaveCount(50);
     const names = new Set<string>();
     for (let index = 1; index <= 10; index += 1) {
-      await page.getByLabel('Sida för objekt', { exact: true }).selectOption(String(index));
-      for (const name of await objects.getByRole('button').allTextContents()) names.add(name);
+      await page
+        .getByRole('combobox', { name: 'Sida för objekt', exact: true })
+        .selectOption(String(index));
+      for (const name of await objects
+        .getByRole('button', { name: /^Uppgifter för/ })
+        .evaluateAll((buttons) =>
+          buttons.map(
+            (button) => button.getAttribute('aria-label')?.replace('Uppgifter för ', '') ?? '',
+          ),
+        ))
+        names.add(name);
     }
     expect([...names].filter((name) => name.startsWith('Provobjekt '))).toHaveLength(500);
     const relationships = page.getByRole('list', { name: 'Samband', exact: true });
@@ -64,7 +76,9 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
     expect([...connections].filter((name) => name.startsWith('Provobjekt '))).toHaveLength(1500);
     await page.getByLabel('Sök objekt', { exact: true }).fill('Provobjekt 499');
     await expect(objects.getByRole('listitem')).toHaveCount(1);
-    await objects.getByRole('button', { name: 'Provobjekt 499', exact: true }).click();
+    await objects
+      .getByRole('button', { name: 'Uppgifter för Provobjekt 499', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await expect(page.getByLabel('Objektets namn', { exact: true })).toHaveValue('Provobjekt 499');
     await page.getByLabel('Sök objekt', { exact: true }).fill('');
@@ -73,7 +87,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
       .getByRole('button', { name: 'Visa valt innehåll i listan' })
       .click();
     await expect(
-      objects.getByRole('button', { name: 'Provobjekt 499', exact: true }),
+      objects.getByRole('button', { name: 'Uppgifter för Provobjekt 499', exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Visa objektets kopplingar', exact: true }).click();
     await expect(relationships.getByRole('listitem')).not.toHaveCount(0);
@@ -83,8 +97,8 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Oskickad text i den täta kartan',
     );
-    await page.getByRole('button', { name: 'Lista och detaljer', exact: true }).click();
-    await page.getByRole('button', { name: 'Samlad vy', exact: true }).click();
+    await openWorkspace(page);
+    await activatePanel(page, 'Provobjekt 499');
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Oskickad text i den täta kartan',
     );
@@ -96,6 +110,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
     await expect(page.getByRole('status')).toContainText('Sparat');
     await installation.restart();
     await page.reload();
+    await openWorkspace(page);
     const saved: MapState = await (await page.request.get(path)).json();
     expect(saved.objects).toHaveLength(500);
     expect(saved.relationships).toHaveLength(1500);

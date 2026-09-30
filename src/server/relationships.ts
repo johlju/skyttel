@@ -7,7 +7,8 @@ import type {
   RelationshipValue,
   SavedRelationshipChange,
 } from '../shared/map.js';
-import { proposedRelationships } from '../shared/map.js';
+import { compatibleCustomFields, proposedRelationships } from '../shared/map.js';
+import { readCustomValues } from './custom-fields.js';
 import { readFinancialFacts } from './financial-facts.js';
 import { readLifecycle } from './lifecycle.js';
 import { MapError } from './map-error.js';
@@ -21,19 +22,21 @@ export function relationships(database: Database.Database, householdId: string) 
   function read(): MapRelationship[] {
     return database
       .prepare(
-        'SELECT id, householdId, typeId, revision, sourceId, targetId, knowledge, lifecycle, endDate FROM map_relationship WHERE householdId = ? AND deleted = 0 ORDER BY id',
+        'SELECT id, householdId, typeId, revision, sourceId, targetId, knowledge, lifecycle, endDate, customValues FROM map_relationship WHERE householdId = ? AND deleted = 0 ORDER BY id',
       )
       .all(householdId)
       .map((row) => {
-        const { lifecycle, endDate, ...value } = row as Omit<
+        const { lifecycle, endDate, customValues, ...value } = row as Omit<
           MapRelationship,
-          'lifecycle' | 'endDate'
+          'lifecycle' | 'endDate' | 'customValues'
         > & {
           lifecycle: MapRelationship['lifecycle'] | null;
           endDate: string | null;
+          customValues: string | null;
         };
         return {
           ...value,
+          ...(customValues ? { customValues: JSON.parse(customValues) } : {}),
           ...(lifecycle ? { lifecycle } : {}),
           ...(endDate ? { endDate: JSON.parse(endDate) } : {}),
         };
@@ -111,6 +114,8 @@ export function relationships(database: Database.Database, householdId: string) 
             before,
             after: null,
             removedWithObjects: [id],
+            beforeType:
+              existing?.beforeType ?? definitions.read().find((type) => type.id === before.typeId),
             objectNames: existing?.objectNames ?? objectNames(draft, before, null),
             type:
               existing?.type.id === before.typeId
@@ -161,8 +166,33 @@ export function relationships(database: Database.Database, householdId: string) 
           (after.targetId !== null && !endpoint(after.targetId, draft))
         )
           throw new MapError('invalid_endpoint', 400);
+      }
+      const type = definitions
+        .effective(draft)
+        .find((type) => type.id === (after?.typeId ?? before?.typeId ?? existing?.type.id));
+      if (!type) throw new MapError('invalid_type', 400);
+      if (after) {
+        const value = body.value as RelationshipValue;
+        const previous = existing?.after ?? before;
+        if (
+          value.customValues === undefined &&
+          previous?.typeId !== after.typeId &&
+          Object.keys(previous?.customValues ?? {}).length
+        )
+          throw new MapError('invalid_custom_value', 400);
+        const customValues = readCustomValues(
+          value.customValues === undefined && previous?.typeId === after.typeId
+            ? previous.customValues
+            : value.customValues,
+          type,
+        );
+        if (customValues) after.customValues = customValues;
+      }
+      if (body.typeRevision !== undefined && body.typeRevision !== type.revision)
+        throw new MapError('type_conflict');
+      if (after) {
         const duplicate = effective(draft).find(
-          (value) => value.id !== body.id && sameEndpoints(value, after as RelationshipValue),
+          (value) => value.id !== body.id && sameEndpoints(value, after),
         );
         if (duplicate) {
           // An add selects the existing relationship; an edit must not erase another one.
@@ -170,12 +200,8 @@ export function relationships(database: Database.Database, householdId: string) 
           return { draft, existingId: duplicate.id };
         }
       }
-      const type = definitions
-        .effective(draft)
-        .find((type) => type.id === (after?.typeId ?? before?.typeId ?? existing?.type.id));
-      if (!type) throw new MapError('invalid_type', 400);
-      if (body.typeRevision !== undefined && body.typeRevision !== type.revision)
-        throw new MapError('type_conflict');
+      const beforeType =
+        existing?.beforeType ?? definitions.read().find((item) => item.id === before?.typeId);
       const changes = (draft.relationships ?? []).filter((change) => change.id !== body.id);
       if (before || after)
         changes.push({
@@ -183,6 +209,7 @@ export function relationships(database: Database.Database, householdId: string) 
           before,
           after,
           type,
+          ...(beforeType ? { beforeType } : {}),
           objectNames: objectNames(draft, before, after, existing?.objectNames),
           ...(existing?.restoreRevision !== undefined
             ? { restoreRevision: existing.restoreRevision }
@@ -225,6 +252,12 @@ export function relationships(database: Database.Database, householdId: string) 
           )
         )
           throw new MapError('type_conflict');
+        if (change.after) {
+          const type = types().find((type) => type.id === change.after?.typeId);
+          if (!type || !compatibleCustomFields(change.after.customValues, change.type, type))
+            throw new MapError('type_conflict');
+          readCustomValues(change.after.customValues, type);
+        }
         if (!saved) tombstones.assertCreation('relationship', change.id, change.restoreRevision);
       }
       // Temporarily remove changed edges so endpoint swaps do not violate the unique index.
@@ -243,8 +276,8 @@ export function relationships(database: Database.Database, householdId: string) 
           : null;
         if (after)
           database
-            .prepare(`INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, knowledge, lifecycle, endDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, sourceId = excluded.sourceId, targetId = excluded.targetId, knowledge = excluded.knowledge, lifecycle = excluded.lifecycle, endDate = excluded.endDate, deleted = 0`)
+            .prepare(`INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, knowledge, lifecycle, endDate, customValues) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET typeId = excluded.typeId, revision = excluded.revision, sourceId = excluded.sourceId, targetId = excluded.targetId, knowledge = excluded.knowledge, lifecycle = excluded.lifecycle, endDate = excluded.endDate, customValues = excluded.customValues, deleted = 0`)
             .run(
               after.id,
               householdId,
@@ -255,6 +288,7 @@ export function relationships(database: Database.Database, householdId: string) 
               after.knowledge,
               after.lifecycle ?? null,
               after.endDate ? JSON.stringify(after.endDate) : null,
+              after.customValues ? JSON.stringify(after.customValues) : null,
             );
         else
           database

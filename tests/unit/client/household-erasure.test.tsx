@@ -40,6 +40,8 @@ const completed = (operationId: string): ErasureStatus => ({
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
+  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -141,6 +143,10 @@ test.each([true, false])(
           ...catalog,
           status: attempts.length && registered ? completed(String(attempts[0].operationId)) : null,
         });
+      if (url === `${path}/${String(attempts[0]?.operationId)}`)
+        return registered
+          ? Response.json({ status: completed(String(attempts[0].operationId)) })
+          : Response.json({ error: 'maintenance_unavailable' }, { status: 404 });
       if (url.endsWith('/review')) return Response.json(reviewed);
       if (url.endsWith('/execute')) {
         attempts.push(JSON.parse(String(init?.body)));
@@ -272,7 +278,8 @@ test('changing selection removes the old scope and confirmation', async () => {
   await userEvent.click(lamp);
   await userEvent.click(screen.getByRole('button', { name: 'Granska raderingen' }));
   await userEvent.type(await screen.findByLabelText('Skriv RADERA PERMANENT'), 'RADERA PERMANENT');
-  await userEvent.click(lamp);
+  await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Lampan' }));
   expect(screen.queryByRole('region', { name: 'Omfattning att bekräfta' })).toBeNull();
   expect(
     (screen.getByRole('button', { name: 'Granska raderingen' }) as HTMLButtonElement).disabled,
@@ -367,3 +374,100 @@ test('objects, relationships and both definition kinds can be selected independe
   for (const name of ['Äger lampan', 'Lampa', 'Äger'])
     expect(within(review).getByText(name, { exact: true })).toBeDefined();
 });
+
+test('blocked recovery storage preserves selection and review before sending any erasure', async () => {
+  const executions: unknown[] = [];
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === path) return Response.json(catalog);
+    if (url.endsWith('/review')) return Response.json(reviewed);
+    const body = JSON.parse(String(init?.body));
+    executions.push(body);
+    return Response.json({ status: completed(body.operationId) });
+  });
+  render(<HouseholdErasure householdId="linden" onAccessLost={vi.fn()} />);
+  const lamp = (await screen.findByRole('checkbox', { name: 'Lampan' })) as HTMLInputElement;
+  const removal = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    throw new DOMException('Blocked', 'SecurityError');
+  });
+  await userEvent.click(lamp);
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Webbläsarens återhämtningsminne',
+  );
+  expect(lamp.checked).toBe(false);
+  removal.mockRestore();
+  await userEvent.click(lamp);
+  await userEvent.click(screen.getByRole('button', { name: 'Granska raderingen' }));
+  const confirmation = (await screen.findByLabelText('Skriv RADERA PERMANENT')) as HTMLInputElement;
+  await userEvent.type(confirmation, 'RADERA PERMANENT');
+  const writing = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('Full', 'QuotaExceededError');
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Radera permanent' }));
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'Ingen ny radering har startats',
+  );
+  expect(confirmation.value).toBe('RADERA PERMANENT');
+  expect(screen.getByRole('region', { name: 'Omfattning att bekräfta' })).toBeDefined();
+  expect(screen.queryByText('Raderingsförsök')).toBeNull();
+  expect(executions).toEqual([]);
+  writing.mockRestore();
+  await userEvent.click(screen.getByRole('button', { name: 'Radera permanent' }));
+  expect(await screen.findByText('Den permanenta raderingen är slutförd.')).toBeDefined();
+  expect(executions).toHaveLength(1);
+});
+
+test.each(['cleanup', 'completed'] as const)(
+  'a fetched %s remains truthful when its exact recovery record cannot be stored',
+  async (phase) => {
+    const observed = { ...completed('server-owned'), phase };
+    const resumes: unknown[] = [];
+    const reads: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      reads.push(url);
+      if (url === path) return Response.json({ ...catalog, status: observed });
+      if (url.endsWith('/resume')) {
+        resumes.push(JSON.parse(String(init?.body)));
+        return Response.json({ status: completed('server-owned') });
+      }
+      expect(url).toBe(`${path}/server-owned`);
+      return Response.json({ status: observed });
+    });
+    const writing = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Full', 'QuotaExceededError');
+    });
+    render(<HouseholdErasure householdId="linden" onAccessLost={vi.fn()} />);
+    expect(await screen.findByText('server-owned')).toBeDefined();
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Webbläsarens återhämtningsminne',
+    );
+    if (phase === 'cleanup') {
+      await userEvent.click(screen.getByRole('button', { name: 'Försök slutföra raderingen' }));
+      expect((await screen.findByRole('alert')).textContent).toContain(
+        'Ingen fortsättning har skickats',
+      );
+      expect(resumes).toEqual([]);
+    } else expect(screen.getByText('Den permanenta raderingen är slutförd.')).toBeDefined();
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Kontrollera raderingsstatus och läs in aktuellt innehåll',
+      }),
+    );
+    expect(await screen.findByText('server-owned')).toBeDefined();
+    expect(reads).toContain(`${path}/server-owned`);
+    writing.mockRestore();
+    if (phase === 'cleanup') {
+      await userEvent.click(screen.getByRole('button', { name: 'Försök slutföra raderingen' }));
+      expect(await screen.findByText('Den permanenta raderingen är slutförd.')).toBeDefined();
+      expect(resumes).toEqual([{ operationId: 'server-owned' }]);
+    } else {
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: 'Kontrollera raderingsstatus och läs in aktuellt innehåll',
+        }),
+      );
+      expect(await screen.findByText('Den permanenta raderingen är slutförd.')).toBeDefined();
+    }
+    expect(sessionStorage.getItem('skyttel-erasure:linden')).toBe('server-owned');
+    expect(screen.queryByRole('alert')).toBeNull();
+  },
+);

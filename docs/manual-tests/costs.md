@@ -2,8 +2,7 @@
 
 Fallen provar installationens kostnadsöversikt, mätningarnas osäkerhet,
 månadens antaganden och åtkomst. Anteckna commit, webbläsare och godkänt
-eller underkänt resultat. De länkade integrationstesterna verifierar fallen;
-manuell körning är stöd för felsökning och krävs inte i #97.
+eller underkänt resultat. De länkade integrationstesterna verifierar fallen.
 
 ## Konfigurerade användare
 
@@ -15,6 +14,9 @@ manuell körning är stöd för felsökning och krävs inte i #97.
 
 ## Allmän förberedelse
 
+Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
+fallen anger formulär, samtal, profil eller administration.
+
 1. Starta den [kontrollerade installationen](#controlled-cost-fixture).
    Följ portkopplingen och använd exakt den utskrivna adressen. Inga verkliga
    leverantörskonton, modellnycklar eller mikrofoner behövs.
@@ -22,7 +24,7 @@ manuell körning är stöd för felsökning och krävs inte i #97.
    webbläsarfönster inom ett falls omstartsprov.
 3. KOST-01 och KOST-02 börjar med Google-inloggning som Alex. Skapa
    **Kostnadsprov**, godkänn textassistentens båda val och välj
-   **Starta textassistenten**. KOST-03 börjar utan hushåll.
+   **Starta textassistenten**. KOST-03 och KOST-04 börjar utan hushåll.
 4. Terminalkommandon nedan skrivs i startguidens terminal. Avsluta varje
    fall med `quit` och kontrollera borttagen tillfällig katalog enligt guiden.
 
@@ -50,9 +52,11 @@ månadsantaganden utan att förväxla uppskattning med faktura.
    **Stäng av rösten**. Vänta på avstängd röst.
 3. Öppna **Månadskostnad**. Kontrollera aktuell månad i UTC, Render
    **72,50 SEK (7,25 USD)**, Live **0,75 SEK (0,075 USD)** och Terra
-   **2,29 SEK (0,229 USD)**. Live visar 90 rapporterade sekunder.
+   **2,29 SEK (0,229 USD)**. Öppna **Visa mätvärden för Live** och
+   **Visa mätvärden för Terra**. Live visar 90 rapporterade sekunder.
    Terra visar 100 000 indatatoken med cache och resonemang separat.
-4. Kräv delsumman **75,54 SEK (7,554 USD)**. Läs att Render avser hel
+4. Kräv delsumman **75,54 SEK (7,554 USD)** före de tre raderna.
+   Öppna **Visa driftantagandet**. Läs att Render avser hel
    månad, tidigare förbrukning är okänd och cirka 200 kronor är ett
    riktmärke utan automatisk spärr.
 5. Öppna modellpriserna under **Prisunderlag**. Kontrollera datum,
@@ -62,8 +66,9 @@ månadsantaganden utan att förväxla uppskattning med faktura.
    och välj **Spara månadens antaganden**. Kräv **83,09 SEK (7,554 USD)**.
 7. Välj föregående månad. Dess förval är fortfarande 10 SEK per USD och
    tidigare förbrukning är okänd. Återgå till aktuell månad; den har 11.
-8. Kör `restart`, ladda om webbläsaren och kontrollera samma uppdelning,
-   ändrade valutantagande och delsumman **83,09 SEK (7,554 USD)**.
+8. Kör `restart`, ladda om webbläsaren och öppna mätvärdena igen.
+   Kontrollera samma uppdelning, ändrade valutantagande och delsumman
+   **83,09 SEK (7,554 USD)**.
 
 **Förväntat resultat:**
 
@@ -92,7 +97,8 @@ månadsantaganden utan att förväxla uppskattning med faktura.
 2. Starta rösten och vänta på **Lyssnar**. Kör `usage 12`, `usage 15`,
    `usage 15` och `finalize off`, en rad i taget. Stäng rösten och vänta
    på avstängd status.
-3. Öppna **Månadskostnad**. Live ska visa ett försök, 15 rapporterade
+3. Öppna **Månadskostnad** och **Visa mätvärden för Live** samt
+   **Visa mätvärden för Terra**. Live ska visa ett försök, 15 rapporterade
    sekunder, osäkert slutunderlag och **0,13 SEK (0,0125 USD)**.
    Terra ska visa **Belopp saknas** och saknade mätvärden.
 4. Läs texten om ofullständig delsumma. Anteckna delsumman. Kör
@@ -108,6 +114,56 @@ månadsantaganden utan att förväxla uppskattning med faktura.
   Okänt belopp presenteras inte som säker nollkostnad.
 - Ett hämtningsfel bevarar kända värden med synlig felstatus. Återhämtning
   tar bort felstatus utan extra registrerad förbrukning.
+
+### KOST-04: okänt sparresultat återläses med fokus och fullständiga detaljer
+
+**Syfte:** Återhämta ett sparat antagande efter tappat svar utan en extra
+skrivning och nå hela flödet med tangentbord på mobil och dator.
+
+**Användare:** Alex, utan hushåll.
+
+**Förutsättningar:** Ny installation. Prova dator, 390 och 320 pixlars bredd,
+ljust och mörkt tema samt verklig webbläsarzoom på 200 och 400 procent.
+För tappat svar behövs en lokal felproxy som låter servern slutföra
+`POST /api/operator/costs/assumptions` men släpper svaret. Att blockera
+anropet före servern provar inte samma fall. Det länkade testet ordnar detta
+automatiskt mot den riktiga servern och dess tillfälliga databas.
+
+**Integrationstest:**
+[costs.spec.ts](../../tests/integration/costs.spec.ts),
+“KOST-04: okänt sparresultat återläses med fokus och fullständiga detaljer”
+med tilläggen “(1280px)”, “(390px)” och “(320px)”.
+
+**Steg:**
+
+1. Logga in som Alex och öppna `/costs` utan att skapa hushåll. Kräv
+   delsumman 72,50 SEK och texten om separat driftbehörighet.
+2. Öppna **Ändra månadens antaganden**. Fokus ska stå i **SEK per USD**.
+   Ange 12, välj **Uppdatera underlaget** och kontrollera att 12 står kvar.
+3. Aktivera det tappade svaret och välj **Spara månadens antaganden**.
+   Kräv **Sparresultatet är okänt**, spärrat sparande och äldre känd summa.
+4. Välj **Uppdatera underlaget**. Kräv 87,00 SEK och besked att aktuella
+   antaganden är hämtade. Inget nytt sparande ska behövas.
+5. Återställ svaret, kör `restart` och ladda om. Öppna **Tidigare
+   antaganden för månaden**. Version 1 har kurs 10 och version 2 kurs 12.
+6. Öppna redigeringen, ange 13 och spara. Fokus återgår till **Ändra
+   månadens antaganden**. Öppna och stäng redigeringen; fokus återgår igen.
+7. Spara 14 med ett fördröjt svar. Välj tema medan sparandet pågår;
+   temaknappens fokus ska bestå när kvittot kommer.
+8. Öppna mätvärden och hela prisunderlaget. Använd Tab och piltangenter
+   för pristabellen. Kontrollera läsbarhet, synligt fokus och att övrigt
+   innehåll inte kräver rullning i sidled.
+
+**Förväntat resultat:**
+
+- Ett okänt svar presenteras varken som säker framgång eller säkert fel.
+  Den verkliga sparade versionen och dess historik återläses efter omstart.
+- Driftbehörighet fungerar utan hushåll. Månadens antaganden är fristående
+  från hushållets karta och byter inga leverantörstjänster.
+- Öppning, sparande och stängning behåller ett begripligt tangentbordsfokus.
+  Belopp, osäkerhet, mätvärden och fullständiga priser går att läsa på alla
+  provade bredder och zoomnivåer. Fysiska enheter och skärmläsare dokumenteras
+  separat; automatiska prov innebär inte fullständig WCAG-överensstämmelse.
 
 ## Åtkomst
 
@@ -260,6 +316,6 @@ user in an existing session. To sign in again as Alex, enter
 and sign-out; all changes affect only this disposable installation.
 
 The exact browser workflows are in
-[KOST-01–KOST-03](costs.md). Current operator configuration,
+[KOST-01–KOST-04](costs.md). Current operator configuration,
 rate maintenance and limits are described in the
 [operator runbook](../operations/costs.md).

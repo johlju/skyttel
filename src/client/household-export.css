@@ -1,0 +1,27 @@
+.settings-content .household-export {
+  max-width: 760px;
+}
+.household-export .export-private-content {
+  border: 1px solid var(--space-line);
+  border-left: 4px solid var(--space-accent);
+  border-radius: 12px;
+  padding: 8px 20px;
+  margin-block: 24px;
+  background: var(--space-surface);
+}
+.household-export .export-contents {
+  padding-left: 24px;
+  margin-block: 24px;
+}
+.household-export .export-contents li {
+  margin-block: 12px;
+}
+.household-export .export-cleanup {
+  margin-top: 28px;
+}
+.household-export button {
+  min-height: 44px;
+  max-width: 100%;
+  margin: 8px 8px 8px 0;
+  white-space: normal;
+}

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import Database from 'better-sqlite3';
-import { createInstallation } from '../tests/support/installation.js';
+import { alex, createInstallation, robin } from '../tests/support/installation.js';
 import { liveBrowserFixtureSource } from '../tests/support/live-browser.js';
 import { liveProvider } from '../tests/support/live-provider.js';
 import {
@@ -87,6 +87,7 @@ async function main() {
           emit('help', {
             commands: [
               'seed-family',
+              'identity alex|robin',
               'sessions',
               'user TEXT',
               'assistant TEXT',
@@ -107,6 +108,12 @@ async function main() {
         }
         if (command === 'sessions') {
           emit('sessions', { sessions: [...live.channels.keys()], sent: live.sent });
+          continue;
+        }
+        if (command === 'identity') {
+          if (id !== 'alex' && id !== 'robin') throw new Error('Use identity alex or robin.');
+          app.setIdentity(id === 'alex' ? alex : robin);
+          emit('identity', { name: id });
           continue;
         }
         if (command === 'seed-family') {

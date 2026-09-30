@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../../../src/server/app.js';
@@ -24,12 +24,15 @@ export function configurationEnvironment(databasePath = '/synthetic/skyttel.sqli
 export async function applicationFixture({
   migrationsDirectory,
   identity,
+  databaseSnapshot,
 }: {
   migrationsDirectory?: string;
   identity?: { version: string; commit: string };
+  databaseSnapshot?: string;
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-unit-'));
   const config = readConfig(configurationEnvironment(join(directory, 'skyttel.sqlite')));
+  if (databaseSnapshot) copyFileSync(databaseSnapshot, config.databasePath);
   const database = openDatabase(config.databasePath, { migrationsDirectory });
   const hasOAuth = database
     .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'oauthClient'")

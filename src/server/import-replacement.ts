@@ -10,12 +10,13 @@ import { projectDraftScope } from './project-content-scope.js';
 
 const tables = [
   ['objectTypes', 'object_type', []],
-  ['objectTypeFields', 'object_type_fields', ['fields']],
+  ['objectTypeFields', 'object_type_fields', ['fields', 'sections', 'builtins', 'propertyOrder']],
   ['relationshipTypes', 'relationship_type', []],
+  ['relationshipTypeFields', 'relationship_type_fields', ['fields', 'sections']],
   ['relationshipTypeLabels', 'relationship_type_labels', []],
   ['removedTypes', 'removed_type', []],
   ['objects', 'map_object', ['financialFacts', 'customValues']],
-  ['relationships', 'map_relationship', ['endDate']],
+  ['relationships', 'map_relationship', ['endDate', 'customValues']],
   ['drafts', 'map_draft', ['changes', 'relationships', 'objectTypes', 'relationshipTypes']],
   ['saves', 'map_save', ['receipt']],
   ['history', 'map_history', ['changes']],
@@ -25,7 +26,11 @@ const tables = [
 ] as const;
 
 function scopedRows(database: Database.Database, table: string, householdId: string) {
-  if (table === 'object_type_fields' || table === 'relationship_type_labels') {
+  if (
+    table === 'object_type_fields' ||
+    table === 'relationship_type_labels' ||
+    table === 'relationship_type_fields'
+  ) {
     const parent = table === 'object_type_fields' ? 'object_type' : 'relationship_type';
     return database
       .prepare(
@@ -191,7 +196,8 @@ export function replaceHouseholdContent(
         );
       if ('householdId' in row) row.householdId = householdId;
       for (const field of jsonFields)
-        if (row[field] !== null) row[field] = JSON.stringify(row[field]);
+        if (row[field] !== null && row[field] !== undefined)
+          row[field] = JSON.stringify(row[field]);
       const columns = Object.keys(row);
       database
         .prepare(
