@@ -252,3 +252,7 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Upphört och borttaget](lifecycle.md): markera och rätta status, följa
   kända slutdatum och granska, kasta eller spara vanlig borttagning med
   bevarade anslutna objekt och historikunderlag, även efter privata typbyten.
+  Kartans samband visar samma status med text och tillgänglig beskrivning
+  vid tangentbordsarbete och efter omstart. Objekt och samband behåller
+  sina egna namn, typer och statusuppgifter även när identifierare liknar varandra.
+  Det gäller även tidigare samband som visas tillsammans med aktuella förslag.

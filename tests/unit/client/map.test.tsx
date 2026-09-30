@@ -1262,3 +1262,152 @@ test('text-only multi-selection leaves the shared draft unchanged and reopens re
   expect(after.objects).toEqual(original.objects);
   expect(after.draft).toEqual(original.draft);
 });
+
+test('relationship lifecycle corrections preserve uncertain dates through private review and explicit saves', async () => {
+  const user = userEvent.setup();
+  const read = async (): Promise<MapState> => (await client.request(path)).json();
+  const initial = await read();
+  for (const [id, name, type] of [
+    ['person', 'Lo Exempel', 'Person'],
+    ['subscription', 'Familjemusik', 'Abonnemang'],
+  ]) {
+    expect(
+      (
+        await client.json(`${path}/draft`, {
+          version: (await read()).draft.version,
+          id,
+          baseRevision: null,
+          value: {
+            typeId: initial.types.find((item) => item.name === type)?.id,
+            name,
+            description: '',
+          },
+        })
+      ).status,
+    ).toBe(200);
+  }
+  expect(
+    (
+      await client.json(`${path}/relationship`, {
+        version: (await read()).draft.version,
+        id: 'incoming',
+        baseRevision: null,
+        value: {
+          sourceId: 'person',
+          targetId: 'subscription',
+          typeId: initial.relationshipTypes.find((item) => item.name === 'Använder')?.id,
+          knowledge: 'known',
+          lifecycle: 'ended',
+          endDate: { knowledge: 'known', value: '2000-01-01' },
+        },
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await client.json(`${path}/save`, {
+        version: (await read()).draft.version,
+        operationId: 'initial-lifecycle',
+      })
+    ).status,
+  ).toBe(200);
+  const saved = await read();
+  await open();
+  const edges = within(screen.getByRole('list', { name: 'Samband' }));
+  await user.click(edges.getByRole('button', { name: /^Lo Exempel → Använder → Familjemusik/ }));
+  const details = within(screen.getByRole('region', { name: 'Val och redigering' }));
+  expect(details.getByText('Status: Manuellt upphört')).toBeTruthy();
+  expect(details.getByText('Slutdatum: 2000-01-01')).toBeTruthy();
+  expect(details.getByText('Upphört', { exact: true })).toBeTruthy();
+  await user.click(details.getByRole('button', { name: 'Redigera valt samband' }));
+  await user.selectOptions(details.getByLabelText('Sambandets status'), 'active');
+  await user.selectOptions(
+    details.getByLabelText('Sambandets slutdatum: uppgiftens säkerhet'),
+    'uncertain',
+  );
+  expect(
+    (details.getByLabelText('Sambandets slutdatum', { exact: true }) as HTMLInputElement).value,
+  ).toBe('2000-01-01');
+  await user.click(details.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+  const review = within(screen.getByRole('region', { name: 'Hela mitt utkast' }));
+  await review.findByText('Status: Gäller fortfarande');
+  expect(review.getByText('Status: Manuellt upphört')).toBeTruthy();
+  expect(review.getByText('Slutdatum: 2000-01-01')).toBeTruthy();
+  expect(review.getByText('Slutdatum: 2000-01-01 (Osäkert uppgivet)')).toBeTruthy();
+  const staged = await read();
+  expect(staged.objects).toEqual(saved.objects);
+  expect(staged.relationships).toEqual(saved.relationships);
+  expect(staged.draft.relationships).toHaveLength(1);
+  expect(staged.draft.relationships?.[0]).toMatchObject({
+    id: 'incoming',
+    before: saved.relationships[0],
+    after: {
+      sourceId: 'person',
+      targetId: 'subscription',
+      lifecycle: 'active',
+      endDate: { knowledge: 'uncertain', value: '2000-01-01' },
+    },
+  });
+  await save();
+  const active = await read();
+  expect(active.objects).toEqual(saved.objects);
+  expect(active.relationships).toHaveLength(1);
+  expect(active.relationships[0]).toMatchObject({
+    id: 'incoming',
+    sourceId: 'person',
+    targetId: 'subscription',
+    lifecycle: 'active',
+    endDate: { knowledge: 'uncertain', value: '2000-01-01' },
+  });
+  expect(active.draft.relationships ?? []).toEqual([]);
+  expect(active.draft.changes).toEqual([]);
+  const history = await (await client.request(`${path}/history`)).json();
+  expect(history.history).toHaveLength(2);
+  expect(history.history[0].operationId).toBe('initial-lifecycle');
+  expect(history.history[1].relationships).toEqual([
+    expect.objectContaining({
+      id: 'incoming',
+      before: saved.relationships[0],
+      after: active.relationships[0],
+    }),
+  ]);
+  await user.click(edges.getByRole('button', { name: /^Lo Exempel → Använder → Familjemusik/ }));
+  expect(details.getByText('Status: Gäller fortfarande')).toBeTruthy();
+  expect(details.queryByText('Upphört', { exact: true })).toBeNull();
+  await user.click(details.getByRole('button', { name: 'Redigera valt samband' }));
+  await user.selectOptions(details.getByLabelText('Sambandets status'), '');
+  expect(
+    (details.getByLabelText('Sambandets slutdatum', { exact: true }) as HTMLInputElement).value,
+  ).toBe('2000-01-01');
+  expect(
+    (details.getByLabelText('Sambandets slutdatum: uppgiftens säkerhet') as HTMLSelectElement)
+      .value,
+  ).toBe('uncertain');
+  await user.click(details.getByRole('button', { name: 'Lägg sambandet i mitt utkast' }));
+  await review.findByText('Status: Följ slutdatum');
+  const following = await read();
+  expect(following.relationships).toEqual(active.relationships);
+  expect(following.draft.relationships?.[0].before).toEqual(active.relationships[0]);
+  expect(following.draft.relationships?.[0].after).not.toHaveProperty('lifecycle');
+  expect(following.draft.relationships?.[0].after?.endDate).toEqual({
+    knowledge: 'uncertain',
+    value: '2000-01-01',
+  });
+  await save();
+  const final = await read();
+  expect(final.objects).toEqual(saved.objects);
+  expect(final.relationships).toHaveLength(1);
+  expect(final.relationships[0]).toMatchObject({
+    id: 'incoming',
+    sourceId: 'person',
+    targetId: 'subscription',
+    endDate: { knowledge: 'uncertain', value: '2000-01-01' },
+  });
+  expect(final.relationships[0]).not.toHaveProperty('lifecycle');
+  expect(final.draft.relationships ?? []).toEqual([]);
+  expect(final.draft.changes).toEqual([]);
+  await user.click(edges.getByRole('button', { name: /^Lo Exempel → Använder → Familjemusik/ }));
+  expect(details.getByText('Status: Följ slutdatum')).toBeTruthy();
+  expect(details.getByText('Slutdatum: 2000-01-01 (Osäkert uppgivet)')).toBeTruthy();
+  expect(details.queryByText('Upphört', { exact: true })).toBeNull();
+});

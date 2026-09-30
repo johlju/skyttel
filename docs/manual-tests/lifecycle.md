@@ -105,6 +105,126 @@ dates or status can correct it”.
 - Automationen kontrollerar dessutom via HTTP att ett ogiltigt kalenderdatum
   och ett datumvärde märkt som okänt avvisas utan nya förslag.
 
+### LIVSCYKEL-04: kartans sambandsstatus är åtkomlig med tangentbord
+
+**Syfte:** Kontrollera att kartans samband förmedlar samma status genom
+synlig text och kontrollens tillgängliga beskrivning.
+
+**Användare:** Den konfigurerade administratören.
+
+**Förutsättningar:** De sparade objekten och sambanden ovan. Ange ett känt
+slutdatum **2000-01-01** för båda sambanden. Behåll **Följ slutdatum** för
+sambandet från Lo till Familjemusik, men välj **Gäller fortfarande** för
+sambandet från Familjemusik till Molnmusik. Spara hela utkastet.
+
+**Integrationstest:**
+[lifecycle.spec.ts](../../tests/integration/lifecycle.spec.ts),
+testfallet “LIVSCYKEL-04: keyboard relationship targets expose ended status
+without changing saved facts”.
+
+**Steg:**
+
+1. Öppna kartan och välj **Alla etiketter**. Kontrollera de två sambanden.
+2. Använd Tab och Skift+Tab för att nå sambandet från Lo till Familjemusik.
+   Kontrollera synligt fokus och sambandets tillgängliga beskrivning med
+   webbläsarens tillgänglighetsinspektör eller skärmläsare.
+3. Tryck Enter på sambandet och öppna **Lista**. Läs dess uppgifter under
+   **Val och redigering** utan att redigera eller spara något.
+4. Starta om appen med samma databas, ladda om sidan och öppna kartan igen.
+   Kontrollera båda sambandens status och tillgängliga beskrivningar.
+
+**Förväntat resultat:**
+
+- Sambandet från Lo visar **Upphört** med text och samma uppgift finns i
+  kontrollens tillgängliga beskrivning. Dess namn behåller båda objekten
+  och riktningen **Lo Exempel → Använder → Familjemusik**.
+- Sambandet till Molnmusik saknar markeringen Upphört eftersom det
+  uttryckliga statusvalet åsidosätter det passerade slutdatumet.
+- Tangentbordets fokus är synligt och kontrollen går att aktivera.
+  Detaljerna visar **Följ slutdatum**, **2000-01-01** och **Upphört**.
+- Samma status består efter omstart. Inget nytt förslag eller sparande
+  uppstår av visningen. Automationen jämför hela kartunderlaget via HTTP.
+- Automationen kontrollerar webbläsarens tillgängliga beskrivning och
+  fokus. Faktiska skärmläsarprov dokumenteras separat när de utförs.
+
+### LIVSCYKEL-05: objekt och samband behåller sina egna beskrivningar
+
+**Syfte:** Kontrollera att namn, typ och status för ett objekt inte ersätts
+av ett annat sambands uppgifter i hjälpmedel.
+
+**Användare:** Den konfigurerade administratören.
+
+**Förutsättningar:** De sparade objekten och sambanden ovan. Lägg till
+personen **Kim Exempel** med känt slutdatum **2000-01-01** och status
+**Gäller fortfarande**. Ange **Upphört** för sambandet från Lo till
+Familjemusik och spara hela utkastet. Automationen väljer de giltiga
+identifierarna `relationship-incoming` för Kim och `incoming` för sambandet
+genom det publika API:et för att prova att beskrivningarna hålls åtskilda.
+
+**Integrationstest:**
+[lifecycle.spec.ts](../../tests/integration/lifecycle.spec.ts),
+testfallet “LIVSCYKEL-05: object and relationship descriptions remain
+distinct for valid overlapping identities”.
+
+**Steg:**
+
+1. Öppna kartan och välj **Alla etiketter**. Kontrollera Kim och sambandet
+   från Lo till Familjemusik.
+2. Läs den tillgängliga beskrivningen för Kims namnetikett och objektsymbol
+   med webbläsarens tillgänglighetsinspektör eller skärmläsare.
+3. Läs motsvarande beskrivning för sambandet från Lo till Familjemusik.
+4. Starta om appen med samma databas, ladda om kartan och kontrollera igen.
+
+**Förväntat resultat:**
+
+- Båda kontrollerna för Kim beskriver **Kim Exempel** och typen **Person**.
+  De anger inte Upphört och visar inte det andra sambandets uppgifter.
+- Sambandet visar **Upphört** både med text och i sin tillgängliga beskrivning.
+- Samma namn, typ och status består efter omstart. Visningen ändrar inga
+  sparade uppgifter eller privata förslag; automationen jämför hela underlaget.
+- Automationen kontrollerar tillgängliga beskrivningar i webbläsaren.
+  Faktiska skärmläsarprov dokumenteras separat när de utförs.
+
+### LIVSCYKEL-06: aktuella och tidigare samband behåller sin egen status
+
+**Syfte:** Kontrollera att ett tidigare sambands beskrivning behåller dess
+namn och status när utkastet ändrar sambandet och andra samband visas samtidigt.
+
+**Användare:** Den konfigurerade administratören.
+
+**Förutsättningar:** De sparade objekten och sambanden ovan. Ange känt
+slutdatum **2000-01-01** och status **Upphört** för sambandet från Lo till
+Familjemusik. Lägg till **Molnmusik → Betalar → Lo Exempel** med samma
+slutdatum och status **Gäller fortfarande**. Spara hela utkastet.
+Automationen använder de giltiga identifierarna `incoming` och
+`previous-incoming` via det publika API:et för att prova åtskilda beskrivningar.
+
+**Integrationstest:**
+[lifecycle.spec.ts](../../tests/integration/lifecycle.spec.ts),
+testfallet “LIVSCYKEL-06: current and previous relationships retain their
+own accessible status”.
+
+**Steg:**
+
+1. Redigera sambandet från Lo till Familjemusik. Välj typen **Betalar** och
+   status **Gäller fortfarande**. Lägg sambandet i ditt utkast utan att spara.
+2. Öppna kartan och välj **Alla etiketter**. Granska det tidigare sambandet
+   från Lo, det föreslagna sambandet och det sparade sambandet från Molnmusik.
+3. Läs kontrollernas tillgängliga beskrivningar med webbläsarens
+   tillgänglighetsinspektör eller skärmläsare.
+4. Starta om appen med samma databas, ladda om kartan och kontrollera igen.
+
+**Förväntat resultat:**
+
+- Det tidigare sambandet från Lo visar **Använder** och **Upphört** både
+  med text och i sin tillgängliga beskrivning.
+- Det föreslagna sambandet och sambandet från Molnmusik visar **Betalar**
+  utan Upphört. Deras beskrivningar anger inte att de har upphört.
+- Samma skillnad består efter omstart. Förslaget är fortfarande privat och
+  de sparade sambanden är oförändrade; automationen jämför hela underlaget.
+- Automationen kontrollerar tillgängliga beskrivningar i webbläsaren.
+  Faktiska skärmläsarprov dokumenteras separat när de utförs.
+
 ## Borttagning
 
 ### LIVSCYKEL-03: direkt borttagning bevarar anslutna objekt och historik

@@ -116,6 +116,7 @@ export function SpatialMap({
   openWork?: readonly string[];
 }) {
   const labelPrefix = useId();
+  const relationshipLabelPrefix = useId();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const navigationTrigger = useRef<HTMLButtonElement>(null);
   function changeNavigation(open: boolean) {
@@ -1205,22 +1206,27 @@ export function SpatialMap({
               disabled={disabled}
               className={`spatial-edge ${kind}${selected ? ' selected' : ''}`}
               aria-label={`Välj ${previous ? 'tidigare samband' : 'samband'}: ${relationshipLabel(edge, state, objects)}`}
+              aria-describedby={`${relationshipLabelPrefix}-${previous ? 'previous' : 'current'}-${edge.id}`}
               style={{ left: x, top: y }}
               onClick={() => onSelectRelationship(edge, previous)}
             >
-              <span className="spatial-caption">
-                <ProposalSymbol
-                  change={
-                    previous
-                      ? { before: edge, after: null }
-                      : state.draft.relationships?.find((change) => change.id === edge.id)
-                  }
-                />{' '}
-                →{' '}
-                {state.relationshipTypes.find((type) => type.id === edge.typeId)?.forwardLabel ??
-                  state.relationshipTypes.find((type) => type.id === edge.typeId)?.name}
+              <span
+                id={`${relationshipLabelPrefix}-${previous ? 'previous' : 'current'}-${edge.id}`}
+              >
+                <span className="spatial-caption">
+                  <ProposalSymbol
+                    change={
+                      previous
+                        ? { before: edge, after: null }
+                        : state.draft.relationships?.find((change) => change.id === edge.id)
+                    }
+                  />{' '}
+                  →{' '}
+                  {state.relationshipTypes.find((type) => type.id === edge.typeId)?.forwardLabel ??
+                    state.relationshipTypes.find((type) => type.id === edge.typeId)?.name}
+                </span>
+                <LifecycleStatus value={edge} />
               </span>
-              <LifecycleStatus value={edge} />
             </button>
           ))}
           {[...labels].map(([id, label]) => {
