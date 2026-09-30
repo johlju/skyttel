@@ -188,6 +188,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Inloggning och hushållets start](access.md): skapa hushåll, använda
   tangentbord, avbryta extern inloggning, återhämta utgångna försök, börja
   med kartans vägledning, hantera förlorad tillgång och länka inloggningssätt.
+  Länkningens två steg visar aktuell verifiering, båda tjänsternas status
+  och övergången till respektive tjänst.
   Avbruten länkning bekräftas med bevarad tillgång och krav på ny verifiering.
   Utgången länkning förklarar ny verifiering och bevarar eget utkast och identitet.
   Även en redan öppen sida hanterar avvisad utgången verifiering utan ny koppling.

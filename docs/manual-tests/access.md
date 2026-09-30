@@ -285,17 +285,25 @@ household”.
 
 **Steg:**
 
-1. Öppna **Inloggningssätt** och välj **Verifiera Google**. Bevisa samma
-   Google-identitet som Alex redan använder.
-2. Välj **Koppla Microsoft** och logga in med Alex Microsoft-identitet
-   inom tio minuter. Kontrollera resultatet.
+1. Öppna **Inloggningssätt**. Kontrollera statusen för Google och Microsoft,
+   vilket av länkningens två steg som är aktuellt och informationen om
+   övergången till Google och återgången hit. Välj **Verifiera Google**
+   och bevisa samma Google-identitet som Alex redan använder.
+2. Kontrollera att det andra steget är aktuellt och att övergången till
+   Microsoft förklaras. Välj **Koppla Microsoft** och logga in med Alex
+   Microsoft-identitet inom tio minuter. Kontrollera resultatet.
 3. Starta om applikationen med samma databas. Logga ut och logga sedan in
    med Microsoft. Kontrollera användar-ID och hushållets adress.
 
 **Förväntat resultat:**
 
+- Före länkningen visas **Google – kopplat** och **Microsoft – inte kopplat**.
+  Stegen visar först verifiering av befintlig inloggning och sedan koppling
+  av den andra. Inför varje övergång framgår vilken tjänst som öppnas
+  och att användaren kommer tillbaka till Skyttel.
 - En verifierad bekräftelse visas tillsammans med **Google – kopplat** och
-  **Microsoft – kopplat** efter att båda identiteterna bevisas.
+  **Microsoft – kopplat** efter att båda identiteterna bevisas. Den avslutade
+  länkningen visar inte längre ett aktuellt verifieringssteg.
 - Microsoft-inloggningen når samma Skyttel-användare och hushåll efter
   omstart. Både lika och olika e-postadresser täcks av integrationstesterna.
 

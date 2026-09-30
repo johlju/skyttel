@@ -200,8 +200,31 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     await page.goto(installation.origin);
     await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Inloggningssätt', exact: true })).toBeVisible();
+    await expect(page.getByText('Google – kopplat', { exact: true })).toBeVisible();
+    await expect(page.getByText('Microsoft – inte kopplat', { exact: true })).toBeVisible();
+    const steps = page.getByRole('list', { name: 'Länkningens steg' });
+    await expect(
+      steps.getByRole('listitem').filter({ hasText: 'Verifiera befintlig inloggning' }),
+    ).toHaveAttribute('aria-current', 'step');
+    await expect(
+      page.getByText(
+        'Du går till Google för att verifiera inloggningen som redan hör till dig. Därefter kommer du tillbaka hit.',
+        { exact: true },
+      ),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Verifiera Google' }).click();
     await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    await expect(
+      steps.getByRole('listitem').filter({ hasText: 'Koppla det andra inloggningssättet' }),
+    ).toHaveAttribute('aria-current', 'step');
+    await expect(page.getByText('Microsoft – inte kopplat', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(
+        'Du går till Microsoft för att bevisa din andra inloggning. Därefter kommer du tillbaka hit.',
+        { exact: true },
+      ),
+    ).toBeVisible();
     installation.setIdentity({ ...alex, subject: 'alex-microsoft', email: 'other@example.test' });
     await page.getByRole('button', { name: 'Koppla Microsoft' }).click();
     await expect(page.getByRole('status')).toHaveText(
@@ -209,6 +232,8 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     );
     await expect(page.getByText('Microsoft – kopplat', { exact: true })).toBeVisible();
     await expect(page.getByText('Google – kopplat', { exact: true })).toBeVisible();
+    await expect(page.getByText('Microsoft – inte kopplat', { exact: true })).toHaveCount(0);
+    await expect(steps).toHaveCount(0);
   } finally {
     await installation.close();
   }
