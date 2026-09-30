@@ -359,7 +359,9 @@ revocation retires an open recipient workspace”.
 8. Alex inväntar **Accepterad**, väljer **Medlemmar** och kontrollerar att
    inbjudningslistan är dold. Kontrollera Robins namn och fullständiga ID.
    Välj **Återkalla tillgång**, läs att befintliga sessioner förlorar tillgång
-   medan personer och kartinnehåll finns kvar, och bekräfta återkallelsen.
+   medan personer och kartinnehåll finns kvar. Kontrollera att hela varningstexten
+   är läsbar i både ljust och mörkt systemtema. Återställ
+   det tidigare temat och bekräfta återkallelsen.
 9. Utan omladdning ska Robins sida inom tio sekunder visa
    **Du har inte tillgång till hushållet**. Det oskickade formuläret ska
    vara borta och Robin ska försvinna från Alex medlemslista.
