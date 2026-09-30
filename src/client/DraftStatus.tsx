@@ -12,6 +12,7 @@ export function DraftStatus({
   conflicts,
   expanded,
   error,
+  imageError,
   working,
   onRefresh,
   onRecover,
@@ -32,6 +33,7 @@ export function DraftStatus({
   conflicts: { id: string; label: string }[];
   expanded: boolean;
   error: string;
+  imageError?: { name: string; onReturn: () => void };
   working: boolean;
   pending: boolean;
   onRefresh: (origin: HTMLElement) => void;
@@ -94,6 +96,11 @@ export function DraftStatus({
       )}
       {unknown && <p>Kontrollera samma sparförsök innan du ändrar eller sparar mer.</p>}
       <div className="draft-status-actions">
+        {imageError && (
+          <button type="button" onClick={imageError.onReturn}>
+            Återgå till bilden för {imageError.name}
+          </button>
+        )}
         {onRecover && (
           <button type="button" disabled={pending} onClick={onRecover}>
             Hämta samma kvitto igen

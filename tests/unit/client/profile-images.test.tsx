@@ -1,7 +1,9 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import sharp from 'sharp';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { App } from '../../../src/client/App.js';
 import { HouseholdMap } from '../../../src/client/HouseholdMap.js';
 import type { MapState } from '../../../src/shared/map.js';
 import { applicationFixture } from '../server/fixture.js';
@@ -147,3 +149,273 @@ test.each([401, 403, 409, 503])(
     else expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
   },
 );
+
+test('an image error returns to the retained object and expires before an unrelated draft rejection', async () => {
+  const user = userEvent.setup();
+  let details = await open();
+  await userEvent.upload(details.getByLabelText('Välj profilbild'), await file());
+  await screen.findByText('Bildförslaget finns i ditt privata utkast. Kartan är inte ändrad.');
+  const before = await read();
+  await userEvent.upload(
+    details.getByLabelText('Välj profilbild'),
+    new File(['invalid'], 'bad.png', { type: 'image/png' }),
+  );
+  await screen.findByText(/Bilden kunde inte behandlas/);
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng Lo Exempel' }));
+  expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
+  const returnName = 'Återgå till bilden för Lo Exempel';
+  await userEvent.click(screen.getByRole('button', { name: returnName }));
+  expect(screen.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
+  expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
+  expect(await read()).toEqual(before);
+  await user.clear(details.getByLabelText('Beskrivning', { exact: true }));
+  await user.paste('Kasta denna text');
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng utan att skicka texten' }));
+  expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
+  expect(await read()).toEqual(before);
+  await userEvent.click(screen.getByRole('button', { name: returnName }));
+  expect(screen.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
+  details = within(screen.getByRole('group', { name: 'Objektets detaljer' }));
+  expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
+  expect(details.getByRole('img').getAttribute('src')).toContain(
+    `/profile-images/${before.draft.changes[0].after?.profileImageId}`,
+  );
+  expect(await read()).toEqual(before);
+  await userEvent.click(screen.getByRole('button', { name: 'Hämta aktuellt underlag' }));
+  await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+  expect(screen.queryByRole('button', { name: returnName })).toBeNull();
+  const description = details.getByLabelText('Beskrivning', { exact: true });
+  await user.clear(description);
+  await user.paste('Ny oskickad text');
+  const current = await read();
+  expect(
+    (
+      await client.json(`${path}/draft`, {
+        id: 'independent',
+        version: current.draft.version,
+        contentVersion: current.contentVersion,
+        baseRevision: null,
+        value: { typeId: current.types[0].id, name: 'Annat förslag', description: '' },
+      })
+    ).status,
+  ).toBe(200);
+  await userEvent.click(details.getByRole('button', { name: 'Lägg i mitt utkast' }));
+  const alert = await screen.findByRole('alert');
+  expect(alert.textContent).toContain('Avvisat:');
+  expect(screen.queryByRole('button', { name: returnName })).toBeNull();
+  expect(details.getByDisplayValue('Ny oskickad text')).toBeTruthy();
+  const after = await read();
+  expect(after.objects).toEqual([]);
+  expect(after.draft.changes.find((change) => change.id === 'person')).toEqual(
+    before.draft.changes[0],
+  );
+  expect(after.draft.changes.find((change) => change.id === 'independent')?.after?.name).toBe(
+    'Annat förslag',
+  );
+});
+
+async function openInApp(name = 'Lo Exempel') {
+  render(
+    <MemoryRouter initialEntries={[`/households/${householdId}`]}>
+      <App />
+    </MemoryRouter>,
+  );
+  const tools = within(await screen.findByRole('navigation', { name: 'Kartans verktyg' }));
+  await userEvent.click(tools.getByLabelText('Lista', { selector: 'button' }));
+  const list = within(await screen.findByRole('region', { name: 'Lista och utkast' }));
+  await userEvent.click(list.getByLabelText(`Uppgifter för ${name}`, { selector: 'button' }));
+  const panel = within(await screen.findByRole('region', { name }));
+  await userEvent.click(panel.getByRole('button', { name: 'Redigera valt objekt' }));
+  return within(panel.getByRole('group', { name: 'Objektets detaljer' }));
+}
+
+test('a real image rejection preserves Settings focus until explicit return to the same image work', async () => {
+  const user = userEvent.setup();
+  const initial = await read();
+  expect(
+    (
+      await client.json(`${path}/draft`, {
+        id: 'garage',
+        version: initial.draft.version,
+        contentVersion: initial.contentVersion,
+        baseRevision: null,
+        value: { typeId: initial.types[0].id, name: 'Garaget', description: '' },
+      })
+    ).status,
+  ).toBe(200);
+  const independent = await openInApp('Garaget');
+  await user.click(independent.getByLabelText('Beskrivning', { exact: true }));
+  await user.paste('Oskickat under bildförsöket');
+  await user.click(
+    within(screen.getByRole('region', { name: 'Garaget' })).getByLabelText('Stäng Garaget', {
+      selector: 'button',
+    }),
+  );
+  await user.click(
+    within(screen.getByRole('region', { name: 'Lista och utkast' })).getByLabelText(
+      'Uppgifter för Lo Exempel',
+      { selector: 'button' },
+    ),
+  );
+  const target = within(screen.getByRole('region', { name: 'Lo Exempel' }));
+  await user.click(target.getByRole('button', { name: 'Redigera valt objekt' }));
+  const details = within(target.getByRole('group', { name: 'Objektets detaljer' }));
+  await user.upload(details.getByLabelText('Välj profilbild'), await file());
+  await screen.findByText('Bildförslaget finns i ditt privata utkast. Kartan är inte ändrad.');
+  const before = await read();
+  const request = globalThis.fetch;
+  let received: (response: Response) => void = () => {};
+  const ready = new Promise<Response>((resolve) => {
+    received = resolve;
+  });
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    const response = await request(url, init);
+    if (url.includes('/profile-images/') && init?.method === 'POST') {
+      received(response.clone());
+      await held;
+    }
+    return response;
+  });
+  try {
+    expect(details.getByLabelText('Välj profilbild')).toHaveProperty('disabled', false);
+    await user.upload(
+      details.getByLabelText('Välj profilbild'),
+      new File(['invalid'], 'bad.png', { type: 'image/png' }),
+    );
+    expect((await ready).status).toBe(400);
+    await user.click(target.getByLabelText('Stäng Lo Exempel', { selector: 'button' }));
+    await user.click(
+      within(screen.getByRole('navigation', { name: 'Kartans verktyg' })).getByLabelText(
+        'Inställningar',
+        { selector: 'button' },
+      ),
+    );
+    const settings = await screen.findByRole('heading', { name: 'Inställningar', level: 1 });
+    expect(settings).toBe(document.activeElement);
+    const settingsReturn = screen.getByRole('link', { name: 'Tillbaka till kartan' });
+    settingsReturn.focus();
+    release();
+    expect((await screen.findByRole('alert')).textContent).toContain('Bilden kunde inte behandlas');
+    expect(settingsReturn).toBe(document.activeElement);
+    expect(screen.getByRole('heading', { name: 'Inställningar', level: 1 })).toBe(settings);
+    expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
+    expect(await read()).toEqual(before);
+    await user.click(
+      within(screen.getByRole('region', { name: 'Aktuell status' })).getByRole('button', {
+        name: 'Återgå till bilden för Lo Exempel',
+      }),
+    );
+    expect(screen.queryByRole('heading', { name: 'Inställningar', level: 1 })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
+    expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
+    expect(
+      within(details.getByRole('region', { name: 'Ikon' })).getByText('Cykel', {
+        selector: 'strong',
+      }),
+    ).toBeTruthy();
+    expect(details.getByRole('img').getAttribute('src')).toContain(
+      `/profile-images/${before.draft.changes.find((change) => change.id === 'person')?.after?.profileImageId}`,
+    );
+    expect(await read()).toEqual(before);
+    const panels = screen.getByRole('combobox', { name: /^Öppna paneler/ });
+    await user.selectOptions(
+      panels,
+      within(panels).getByRole('option', { name: 'Lista och utkast' }),
+    );
+    await user.click(
+      within(screen.getByRole('region', { name: 'Lista och utkast' })).getByLabelText(
+        'Uppgifter för Garaget',
+        { selector: 'button' },
+      ),
+    );
+    expect(
+      within(screen.getByRole('region', { name: 'Garaget' })).getByDisplayValue(
+        'Oskickat under bildförsöket',
+      ),
+    ).toBeTruthy();
+    expect(await read()).toEqual(before);
+  } finally {
+    release();
+  }
+});
+
+test('the whole image and description proposal saves once with an exact expanded receipt', async () => {
+  const user = userEvent.setup();
+  const details = await openInApp();
+  await user.upload(details.getByLabelText('Välj profilbild'), await file());
+  await screen.findByText('Bildförslaget finns i ditt privata utkast. Kartan är inte ändrad.');
+  const image = (await read()).draft.changes[0].after?.profileImageId;
+  expect(image).toEqual(expect.any(String));
+  expect(image).not.toBe('');
+  await user.clear(details.getByLabelText('Beskrivning', { exact: true }));
+  await user.paste('Text och bild i samma förslag');
+  await user.click(details.getByRole('button', { name: 'Lägg i mitt utkast' }));
+  await waitFor(() =>
+    expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull(),
+  );
+  const proposed = await read();
+  expect(proposed.objects).toEqual([]);
+  expect(proposed.draft.changes).toHaveLength(1);
+  expect(proposed.draft.changes[0].after).toMatchObject({
+    name: 'Lo Exempel',
+    description: 'Text och bild i samma förslag',
+    iconId: 'bike',
+    profileImageId: image,
+  });
+  const request = globalThis.fetch;
+  let received: (response: Response) => void = () => {};
+  const saved = new Promise<Response>((resolve) => {
+    received = resolve;
+  });
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let saveRequests = 0;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === `${path}/save` && init?.method === 'POST') saveRequests += 1;
+    const response = await request(url, init);
+    if (url === `${path}/save` && init?.method === 'POST') {
+      received(response.clone());
+      await held;
+    }
+    return response;
+  });
+  try {
+    const review = within(screen.getByRole('region', { name: 'Hela mitt utkast' }));
+    await user.click(review.getByRole('button', { name: 'Spara hela utkastet' }));
+    const response = await saved;
+    expect(response.status).toBe(200);
+    const { receipt } = await response.json();
+    expect(receipt).toMatchObject({
+      householdId,
+      draftVersion: proposed.draft.version,
+      changes: [{ before: null, after: proposed.draft.changes[0].after }],
+    });
+    expect(receipt.changes).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Aktuell status' }));
+    const status = within(screen.getByRole('region', { name: 'Aktuell status' }));
+    expect(await status.findByText('Väntar på sparkvitto')).toBeTruthy();
+    expect(
+      status.getByText(`Sparförsök: ${receipt.operationId}. Slutresultatet är inte bekräftat.`),
+    ).toBeTruthy();
+    expect(status.queryByText(/^Sparat:/)).toBeNull();
+    expect(status.queryByText('Sparat · kvitto bekräftat')).toBeNull();
+    release();
+    await screen.findByText('Sparat · kvitto bekräftat');
+    expect(
+      await status.findByText(`Sparat: Lo Exempel. Kvitto: ${receipt.operationId}.`),
+    ).toBeTruthy();
+    const shared = await read();
+    expect(shared.objects).toHaveLength(1);
+    expect(shared.objects[0]).toMatchObject(proposed.draft.changes[0].after ?? {});
+    expect(shared.draft.changes).toEqual([]);
+    expect(saveRequests).toBe(1);
+  } finally {
+    release();
+  }
+});

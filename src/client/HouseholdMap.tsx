@@ -288,7 +288,14 @@ export function HouseholdMap({
   const selectedIds = selection?.kind === 'object' ? (selection.ids ?? [selection.id]) : [];
   const [pending, setPending] = useState(false);
   const [blocked, setBlocked] = useState(false);
-  const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState<{
+    message: string;
+    imageObjectId?: string;
+  }>({ message: '' });
+  const error = errorDetails.message;
+  const setError = useCallback((message: string, imageObjectId?: string) => {
+    setErrorDetails({ message, imageObjectId });
+  }, []);
   const [status, setStatus] = useState('');
   const [statusOpen, setStatusOpen] = useState(false);
   const failedProposalOrigin = useRef<HTMLElement | null>(null);
@@ -403,7 +410,7 @@ export function HouseholdMap({
     saveAttempt.current = null;
     setStatus('');
     setError('Du har inte längre tillgång. Logga in och kontrollera din tillgång till hushållet.');
-  }, []);
+  }, [setError]);
   const personal = usePersonalView(path, loseAccess);
 
   useEffect(() => {
@@ -471,7 +478,7 @@ export function HouseholdMap({
     return () => {
       active = false;
     };
-  }, [path, load, householdId, loseAccess]);
+  }, [path, load, householdId, loseAccess, setError]);
 
   useEffect(() => {
     if (!active) return;
@@ -638,18 +645,23 @@ export function HouseholdMap({
     } catch (failure) {
       if (failure instanceof MapRequestError && [401, 403].includes(failure.status)) loseAccess();
       else if (failure instanceof MapRequestError && failure.status === 413)
-        setError('Bilden är för stor. Välj en bild på högst 10 MB. Dina förslag är kvar.');
+        setError(
+          'Bilden är för stor. Välj en bild på högst 10 MB. Dina förslag är kvar.',
+          editor.id,
+        );
       else if (
         failure instanceof MapRequestError &&
         ['invalid_image', 'image_processing_failed', 'image_size'].includes(failure.code)
       )
         setError(
           'Bilden kunde inte behandlas. Välj en hel JPEG-, PNG- eller WebP-bild inom gränserna. Dina förslag är kvar.',
+          editor.id,
         );
       else {
         setBlocked(true);
         setError(
           'Bildändringen kunde inte bekräftas. Hämta aktuellt underlag innan du försöker igen.',
+          editor.id,
         );
       }
     } finally {
@@ -1584,6 +1596,28 @@ export function HouseholdMap({
               }))}
               expanded={statusOpen}
               error={error}
+              imageError={
+                errorDetails.imageObjectId
+                  ? {
+                      name:
+                        displayed.get(errorDetails.imageObjectId)?.name ??
+                        objectPanels.find((panel) => panel.id === errorDetails.imageObjectId)
+                          ?.title ??
+                        'objektet',
+                      onReturn: () => {
+                        setStatusOpen(false);
+                        const id = errorDetails.imageObjectId;
+                        if (id && objectPanels.some((panel) => panel.id === id)) openPanel(id);
+                        else {
+                          const object = id ? displayed.get(id) : undefined;
+                          if (object) edit(object);
+                        }
+                        routeOutsideFocus.current = null;
+                        if (!active) onReturnToMap?.();
+                      },
+                    }
+                  : undefined
+              }
               working={pending && !saveAttempt.current}
               onRefresh={(origin) => reloadMap(origin)}
               onRecover={

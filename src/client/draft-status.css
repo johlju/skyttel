@@ -25,6 +25,11 @@
   background: transparent;
   box-shadow: none;
 }
+.household-map.workspace-shell .workspace-status-card button:not(.primary):hover:enabled {
+  background: var(--space-surface);
+  border-color: var(--space-accent);
+  color: var(--space-text);
+}
 .household-map.workspace-shell .workspace-status-card .primary:hover:enabled {
   background: var(--space-accent);
   border-color: var(--space-accent);

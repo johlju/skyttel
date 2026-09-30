@@ -501,6 +501,9 @@
   .household-map.workspace-shell.workspace-open:not(.workspace-revealing) .workspace-windows {
     display: block;
   }
+  .household-map.workspace-shell.workspace-open:not(.workspace-revealing) .workspace-work-close {
+    z-index: 20;
+  }
   .household-map.workspace-shell.workspace-open:not(.workspace-revealing)
     .workspace-window-selector {
     position: relative;

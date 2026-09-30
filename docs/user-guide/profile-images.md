@@ -12,8 +12,17 @@ Bildval, byte och borttagning blir privata förslag. Du ser bilden i
 detaljerna och kan granska bilden före och efter i hela utkastet.
 Andra medlemmar ser den när du väljer **Spara hela utkastet** och får ett
 bekräftat kvitto. Utkastbilden finns kvar efter omladdning och normal omstart.
-Ett ogiltigt bildval lämnar tidigare bild och övriga förslag kvar.
+Om du avbryter filväljaren ändras inget. Ett ogiltigt bildval lämnar den
+senaste giltiga bilden, vald ikon och övriga förslag kvar. Medan bilden
+behandlas är hela sparandet tillfälligt spärrat.
 Vid ett oklart resultat hämtar du aktuellt underlag innan du försöker igen.
+
+Du kan stänga objektpanelen medan bilden behandlas. Ett bildfel visas i
+den gemensamma statusen utan att flytta dig från ditt pågående arbete.
+Välj **Återgå till bilden för** följt av objektets namn för att öppna
+rätt objekt igen. När felet är avslutat försvinner den återgången.
+Om du tar bort en ny bild som ännu är privat föreslår du ingen bild;
+en äldre sparad bild kommer inte tillbaka automatiskt.
 
 ## Välj ikon
 
