@@ -74,7 +74,7 @@ export function Assistants({ consent = false }: { consent?: boolean }) {
   }
 
   return (
-    <section className="panel">
+    <section className={consent ? 'panel assistant-consent' : 'panel'}>
       <h1 tabIndex={-1}>{consent ? 'Anslut extern assistent' : 'Assistentanslutningar'}</h1>
       <p>
         En extern assistent kan läsa valt hushålls gemensamma karta och ditt eget privata utkast.
