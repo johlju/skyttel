@@ -55,6 +55,33 @@ for (const width of [1280, 390, 320]) {
       await expect(name).toBeFocused();
       await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
       await openSettings(page);
+      const feedback = page.locator('.household-work-background .workspace-feedback');
+      const status = feedback.getByRole('status');
+      await expect(status).toHaveText(
+        'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.',
+      );
+      const fragments = await status.evaluate((element) => {
+        const close = element.parentElement?.querySelector('button')?.getBoundingClientRect();
+        if (!close) throw new Error('Expected the visible status close control');
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const lines: boolean[] = [];
+        while (walker.nextNode()) {
+          if (!walker.currentNode.textContent?.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(walker.currentNode);
+          for (const box of range.getClientRects())
+            if (box.width && box.height)
+              lines.push(
+                box.right <= close.left ||
+                  box.left >= close.right ||
+                  box.bottom <= close.top ||
+                  box.top >= close.bottom,
+              );
+        }
+        return lines;
+      });
+      expect(fragments.length).toBeGreaterThan(0);
+      expect(fragments.every(Boolean)).toBe(true);
       await page
         .getByRole('button', { name: 'Visa samtals- och utkastdetaljer', exact: true })
         .click();

@@ -304,7 +304,6 @@
 }
 .has-settings .household-work-background .workspace-feedback {
   position: relative;
-  padding-inline-end: 68px;
 }
 .has-settings .household-work-background .assistant-bar p {
   color: var(--space-text);
@@ -343,6 +342,9 @@
   background: var(--space-surface);
   border-bottom: 1px solid var(--space-line);
   color: var(--space-text);
+}
+.has-settings .household-work-background .workspace-feedback:has(> .workspace-close) {
+  padding-inline-end: 68px;
 }
 @media (max-width: 800px) {
   .settings-header {

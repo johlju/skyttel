@@ -12,7 +12,8 @@ kostnader krävs installationens särskilda driftbehörighet.
 ## Allmän förberedelse
 
 1. Förbered en
-   [separat provdatabas](../development/devcontainer.md#disposable-local-database)
+   [separat
+   provdatabas](../development/devcontainer.md#disposable-local-database)
    och logga in. Börja varje fall utan utkast eller oskickad text.
 2. Behåll fliken under fallet. Upprepa navigeringen med tangentbord på
    dator och telefon, med ljust, mörkt och systemstyrt tema.
@@ -47,8 +48,10 @@ editor and focus at 320px”.
 5. Välj **Tillbaka till kartan** och fortsätt i samma namnfält.
 6. Besök Inställningar igen. Välj **Visa samtals- och utkastdetaljer**,
    sedan **Fortsätt redigera**. Kontrollera samma namnfält och fokus.
-7. Lägg cykeln i ditt utkast. Besök Inställningar, öppna statusdetaljerna
-   och välj **Visa hela utkastet**. Kontrollera utkastets rubrikfokus och
+7. Lägg cykeln i ditt utkast. Besök Inställningar och läs hela beskedet
+   om att förslaget finns i ditt privata utkast. **Stäng status** får inte
+   täcka texten. Öppna statusdetaljerna och välj **Visa hela utkastet**.
+   Kontrollera utkastets rubrikfokus och
    cykeln; spara inte.
 
 **Förväntat resultat:**

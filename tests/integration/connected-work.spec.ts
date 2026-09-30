@@ -301,8 +301,43 @@ for (const mode of ['voice', 'text'] as const) {
       await subscription.getByLabel('Pris', { exact: true }).fill('189');
       await subscription.getByLabel('Beskrivning', { exact: true }).fill('Rättad för hand');
       const correction = page.waitForResponse(`${path}/draft`);
+      const correctionDraft = correction.then(
+        (response) => response.json() as Promise<MapState['draft']>,
+      );
+      // The mounted conversation polls its review and reloads the map when its
+      // draft version changes. Wait for this correction, not an earlier poll.
+      const correctedMap = page.waitForResponse(
+        async (response) => {
+          const url = new URL(response.url());
+          if (
+            `${url.origin}${url.pathname}` !== path ||
+            !url.searchParams.has('reload') ||
+            response.request().method() !== 'GET' ||
+            response.status() !== 200
+          )
+            return false;
+          const draft = await correctionDraft;
+          const refreshed = (await response.json()) as MapState;
+          const changed = draft.changes.find(({ id }) => id === subscriptionId)?.after;
+          return (
+            refreshed.draft.version === draft.version &&
+            changed?.description === 'Rättad för hand' &&
+            changed.financialFacts?.price?.value === '189' &&
+            JSON.stringify(
+              refreshed.draft.changes.find(({ id }) => id === subscriptionId)?.after,
+            ) === JSON.stringify(changed)
+          );
+        },
+        { timeout: 5000 },
+      );
       await subscription.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
       expect((await correction).status()).toBe(200);
+      const refreshedMap = await correctedMap;
+      expect(refreshedMap.status()).toBe(200);
+      await refreshedMap.finished();
+      await expect(page.locator('.workspace-feedback').getByRole('status')).toHaveText(
+        'Förslaget finns i ditt privata utkast. Kartan är inte ändrad.',
+      );
       await expect(subscription).not.toBeVisible();
       await openWorkspace(page);
       await objects

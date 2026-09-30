@@ -15,7 +15,8 @@ Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
 fallen anger formulär, samtal, profil eller administration.
 
 1. Förbered en
-   [separat provdatabas](../development/devcontainer.md#disposable-local-database).
+   [separat
+   provdatabas](../development/devcontainer.md#disposable-local-database).
    Skapa hushållet och ge Robin tillgång enligt
    [inbjudningsguiden](../user-guide/access.md#bjud-in-en-skyttel-användare).
 2. För samtalsfallen används den kontrollerade
@@ -432,8 +433,10 @@ till gemensamt kvitto och privat fortsatt arbete”.
 4. Öppna abonnemangets **Uppgifter** från Lista och **Redigera valt objekt**.
    Öppna **Ekonomiska uppgifter och avtalsvillkor**, rätta **Pris** till
    **189** och beskrivningen till **Rättad för hand**. Lägg i utkastet och
-   invänta avslutat formulär. Öppna abonnemangets uppgifter igen och behåll
-   panelen. Öppna Kims uppgifter och redigera beskrivningen till
+   invänta avslutat formulär och beskedet att förslaget finns i ditt
+   privata utkast när kartans inläsning är klar. Öppna abonnemangets
+   uppgifter igen och behåll panelen. Öppna Kims uppgifter och redigera
+   beskrivningen till
    **Oskickat om Kim**, utan att lägga i utkastet. Välj **Stäng Kim Exempel**,
    öppna samma uppgifter från Lista och kontrollera texten samt en enda
    panel för Kim. Använd inte åtgärden som kastar oskickad text.
