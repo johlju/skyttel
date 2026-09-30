@@ -12,8 +12,7 @@ kostnader krävs installationens särskilda driftbehörighet.
 ## Allmän förberedelse
 
 1. Förbered en
-   [separat
-   provdatabas](../development/devcontainer.md#disposable-local-database)
+   [separat provdatabas](../development/devcontainer.md#disposable-local-database)
    och logga in. Börja varje fall utan utkast eller oskickad text.
 2. Behåll fliken under fallet. Upprepa navigeringen med tangentbord på
    dator och telefon, med ljust, mörkt och systemstyrt tema.

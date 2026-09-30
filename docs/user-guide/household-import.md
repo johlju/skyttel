@@ -52,8 +52,9 @@ status går att läsa.
 Om **Webbläsarens återhämtningsminne** inte kan uppdateras visas ett
 separat meddelande. Behåll sidan öppen och kontrollera webbläsarens
 lagringsinställningar. Blockerad filkontroll lämnar den valda filen kvar.
-Ersättning eller fortsatt rensning skickas först när försökets identifierare
-kan sparas. Verklig granskning och bekräftat serverresultat visas fortfarande;
+Ersättning eller fortsatt rensning efter bekräftad ersättning skickas först
+när försökets identifierare kan sparas. Verklig granskning och bekräftat
+serverresultat visas fortfarande;
 lagringsfelet gör dem inte okända. Hämta samma försöks status eller försök
 samma åtgärd igen när lagring fungerar. Återhämtning efter omladdning kan
 inte garanteras medan felet kvarstår.

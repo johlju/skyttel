@@ -1084,3 +1084,141 @@ test('RYMD-09: dense mobile maps offer separate pointer and keyboard targets wit
     await installation.close();
   }
 });
+
+test('RYMD-10: label notices remain stable while a compact map opens its saved and private list', async ({
+  page,
+}) => {
+  const app = await createInstallation();
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  try {
+    await page.setViewportSize({ width: 640, height: 500 });
+    // These fictional IDs reproduce the default positions of the connected
+    // family workflow that exposed an unstable hidden-label notice.
+    await signIn(page.request, app.origin);
+    const { household } = await (await createHousehold(page.request, app.origin)).json();
+    const path = `${app.origin}/api/households/${household.id}/map`;
+    const read = async (): Promise<MapState> => (await page.request.get(path)).json();
+    const initial = await read();
+    const person = initial.types.find((item) => item.name === 'Person');
+    const subscription = initial.types.find((item) => item.name === 'Abonnemang');
+    if (!person || !subscription) throw new Error('The real household catalog is incomplete');
+    for (const [id, value] of [
+      [
+        '131b9df9-be76-4fc4-af0e-f8bfcf2589e4',
+        {
+          name: 'Familjens Molnmusik',
+          description: 'Rättad för hand',
+          typeId: subscription.id,
+          financialFacts: {
+            price: { knowledge: 'known', value: '189' },
+            currency: { knowledge: 'known', value: 'SEK' },
+            paymentInterval: { knowledge: 'known', value: 'månad' },
+          },
+        },
+      ],
+      [
+        '882e85e4-be1d-45a8-941a-93faf8ee99dc',
+        { name: 'Kim Exempel', description: '', typeId: person.id },
+      ],
+    ]) {
+      const response = await page.request.post(`${path}/draft`, {
+        headers: { origin: app.origin },
+        data: { version: (await read()).draft.version, id, baseRevision: null, value },
+      });
+      expect(response.ok(), await response.text()).toBe(true);
+    }
+    const relationship = await page.request.post(`${path}/relationship`, {
+      headers: { origin: app.origin },
+      data: {
+        version: (await read()).draft.version,
+        id: '482eba24-34c3-43e9-a71d-1b91cc343d17',
+        baseRevision: null,
+        value: {
+          typeId: initial.relationshipTypes.find((item) => item.name === 'Betalar')?.id,
+          sourceId: '882e85e4-be1d-45a8-941a-93faf8ee99dc',
+          targetId: '131b9df9-be76-4fc4-af0e-f8bfcf2589e4',
+          knowledge: 'known',
+        },
+      },
+    });
+    expect(relationship.ok(), await relationship.text()).toBe(true);
+    const save = await page.request.post(`${path}/save`, {
+      headers: { origin: app.origin },
+      data: { version: (await read()).draft.version, operationId: 'layout-regression' },
+    });
+    expect(save.ok(), await save.text()).toBe(true);
+    const privateProposal = await page.request.post(`${path}/draft`, {
+      headers: { origin: app.origin },
+      data: {
+        version: (await read()).draft.version,
+        id: '4a363b9b-5e73-4c60-9a9c-4624cd687255',
+        baseRevision: null,
+        value: { name: 'Robins notering', description: '', typeId: person.id },
+      },
+    });
+    expect(privateProposal.ok(), await privateProposal.text()).toBe(true);
+
+    await page.goto(app.origin);
+    await openMap(page);
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Kartans verktyg' })).toBeVisible();
+    await openWorkspace(page);
+    const objects = page.getByRole('list', { name: 'Objekt', exact: true });
+    await expect(objects).toBeVisible();
+    await objects
+      .getByRole('button', { name: 'Uppgifter för Familjens Molnmusik', exact: true })
+      .click();
+    await expect(
+      page.getByRole('region', { name: 'Familjens Molnmusik', exact: true }),
+    ).toContainText('Rättad för hand');
+    await openWorkspace(page);
+    await activatePanel(page, 'Lista och utkast');
+    await expect(objects).toContainText('Robins notering');
+    expect((await read()).objects).toHaveLength(2);
+    expect((await read()).draft.changes.map((change) => change.after?.name)).toEqual([
+      'Robins notering',
+    ]);
+    await openMap(page);
+    const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
+    await space.getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true }).click();
+    await expect(
+      space.getByRole('button', { name: 'Markera objekt: Kim Exempel', exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        space.evaluate((element) => {
+          const note = element.querySelector('.label-note');
+          if (!note || getComputedStyle(note).visibility === 'hidden') return true;
+          const obstacle = note.getBoundingClientRect();
+          return [...element.querySelectorAll('.spatial-name')].every((label) => {
+            const box = label.getBoundingClientRect();
+            return (
+              box.right <= obstacle.left ||
+              box.left >= obstacle.right ||
+              box.bottom <= obstacle.top ||
+              box.top >= obstacle.bottom
+            );
+          });
+        }),
+      )
+      .toBe(true);
+    await page.setViewportSize({ width: 320, height: 250 });
+    const display = space.getByText('Visningsval', { exact: true });
+    await display.click();
+    const allLabels = space.getByLabel('Alla etiketter', { exact: true });
+    await allLabels.check();
+    await expect(space.getByRole('button', { name: /^Markera objekt:/ })).toHaveCount(3);
+    await allLabels.uncheck();
+    await display.click();
+    await expect(allLabels).not.toBeVisible();
+    await page.setViewportSize({ width: 640, height: 500 });
+    await expect(allLabels).toBeVisible();
+    await openWorkspace(page);
+    await expect(objects).toContainText('Familjens Molnmusik');
+    await expect(objects).toContainText('Robins notering');
+    expect(errors).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});

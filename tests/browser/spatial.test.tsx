@@ -903,6 +903,14 @@ test('dense labels remain readable and explicit all-label mode retains access to
       );
     })
     .toBe(true);
+  await expect
+    .element(
+      page.getByText(
+        `${100 - document.querySelectorAll('.spatial-name').length} etiketter döljs för läsbarhet. Alla objekt och samband finns i listan. Sök eller välj ett objekt och visa dess kopplingar.`,
+        { exact: true },
+      ),
+    )
+    .toBeVisible();
   await page.getByLabelText('Alla etiketter', { exact: true }).click();
   await expect.poll(() => document.querySelectorAll('.spatial-name').length).toBe(100);
 });

@@ -511,6 +511,19 @@
   margin: 0;
   font-size: 0.8rem;
 }
+.label-note-reservation {
+  display: grid;
+}
+.label-note-reservation > span {
+  grid-area: 1 / 1;
+}
+.label-note-size,
+.label-note-reservation.inactive {
+  visibility: hidden;
+}
+.label-note-count {
+  font-variant-numeric: tabular-nums;
+}
 .connection {
   pointer-events: stroke;
   cursor: pointer;

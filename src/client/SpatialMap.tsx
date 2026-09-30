@@ -164,7 +164,7 @@ export function SpatialMap({
     return () => labelObserver.current?.unobserve(element);
   }, []);
   const [reservedBoxes, setReservedBoxes] = useState<LabelBox[]>([]);
-  useLayoutEffect(() => {
+  const measureReservedBoxes = useCallback(() => {
     const bounds = canvas.current?.getBoundingClientRect();
     const root =
       surface.current?.closest('.household-map') ?? surface.current?.closest('.spatial-map');
@@ -174,6 +174,7 @@ export function SpatialMap({
         '.workspace-tools, .workspace-context, .workspace-feedback, .workspace-voice-controls, .workspace-status-card, .map-navigation, .spatial-bottom-bar, .label-note, .spatial-display-tools > summary, .spatial-view-actions',
       ),
     ].flatMap((element) => {
+      if (element.closest('details:not([open])') && !element.matches('summary')) return [];
       const box = element.getBoundingClientRect();
       if (!box.width || !box.height) return [];
       return [
@@ -188,7 +189,8 @@ export function SpatialMap({
     setReservedBoxes((previous) =>
       JSON.stringify(previous) === JSON.stringify(boxes) ? previous : boxes,
     );
-  });
+  }, []);
+  useLayoutEffect(measureReservedBoxes);
   const [labelSizes, setLabelSizes] = useState(
     new Map<string, { width: number; height: number }>(),
   );
@@ -1317,7 +1319,11 @@ export function SpatialMap({
           {personal.message}
         </p>
       )}
-      <details className="spatial-display-tools" open={!shortViewport}>
+      <details
+        className="spatial-display-tools"
+        open={!shortViewport}
+        onToggle={measureReservedBoxes}
+      >
         <summary>Visningsval</summary>
         <div className="spatial-bottom-bar">
           <button
@@ -1350,10 +1356,21 @@ export function SpatialMap({
             Visa höjdhjälp
           </label>
         </div>
-        {!allLabels && hiddenLabels > 0 && (
-          <p className="label-note">
-            {hiddenLabels} etiketter döljs för läsbarhet. Alla objekt och samband finns i listan.
-            Sök eller välj ett objekt och visa dess kopplingar.
+        {!allLabels && objects.size > 0 && (
+          <p className={`label-note label-note-reservation${hiddenLabels ? '' : ' inactive'}`}>
+            {/* Size the obstacle independently of the labels it displaces. */}
+            <span aria-hidden="true" className="label-note-size">
+              <span className="label-note-count">{objects.size + edges.length}</span> etiketter
+              döljs för läsbarhet. Alla objekt och samband finns i listan. Sök eller välj ett objekt
+              och visa dess kopplingar.
+            </span>
+            {hiddenLabels > 0 && (
+              <span className="label-note-message">
+                <span className="label-note-count">{hiddenLabels}</span> etiketter döljs för
+                läsbarhet. Alla objekt och samband finns i listan. Sök eller välj ett objekt och
+                visa dess kopplingar.
+              </span>
+            )}
           </p>
         )}
         {allLabels && closerLabels && (

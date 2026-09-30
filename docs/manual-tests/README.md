@@ -216,6 +216,7 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Kamerans urvalsfokus](map-camera.md): personlig rotationspunkt, direkta
   grannar, återgångsvy, mus, tangentbord och pekskärm i smala och korta vyer.
 - [Rymdkarta](spatial-map.md): gemensam redigering och navigering,
+  stabil etikettinformation vid växling mellan kompakt karta och lista,
   täta mobilutsnitt med prioriterade objekt- och sambandsetiketter samt
   alternativ utan grafik,
   fokus på tidigare och föreslagna samband med läsbara tidigare värden,

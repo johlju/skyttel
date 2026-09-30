@@ -106,7 +106,7 @@ across desktop and compact panels”.
 2. Markera också Kim och kontrollera antalet. Välj Visa detaljer i
    verktygen. Kontrollera rubrikfokus och aktiv detaljikon för Kim.
 3. Välj Redigera valt objekt och skriv en oskickad beskrivning.
-   Återgå till Lista och välj Visa detaljer för Kim Exempel.
+   Återgå till Lista och välj **Uppgifter för Kim Exempel**.
 4. Växla mellan Lista och Kim i Öppna paneler. Stäng Kims panel och
    öppna den igen. Kontrollera text och detaljikon vid varje steg.
 5. Avmarkera alla. Upprepa med tangentbord på varje skärmbredd.

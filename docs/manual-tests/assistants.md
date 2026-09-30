@@ -20,10 +20,10 @@ Följande användare gäller AI-01 till AI-06:
 ## Allmän förberedelse
 
 När ett befintligt objekt eller samband ska ändras, välj det först i
-kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+kartan eller listan och öppna dess detaljpanel. För objekt i listan använder
+du **Uppgifter**; i kartverktygen väljer du **Visa detaljer**. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna
-formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
-objektet eller sambandet öppnar inte formuläret.
+formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 
 Följande förberedelser gäller AI-01 till AI-06. För AI-07 används i stället
 den isolerade installation som anges i testfallet.

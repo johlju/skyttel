@@ -42,10 +42,10 @@ durable save”.
 **Steg:**
 
 1. Öppna rymdkartan och välj Molnmusik. Kontrollera att kartan ligger
-   kvar. Öppna Lista och välj Redigera valt objekt. Skriv Molnmusik familj
-   som namn i formuläret.
-2. Välj Stäng arbetsytan och öppna Lista igen. Kontrollera texten
-   och lägg den i utkastet.
+   kvar. Öppna Lista, välj **Uppgifter för Molnmusik** och sedan
+   **Redigera valt objekt**. Skriv **Molnmusik familj** som namn.
+2. Välj **Stäng arbetsytan** och öppna Lista igen. Välj **Molnmusik**
+   genom **Öppna paneler**. Kontrollera texten och lägg den i utkastet.
 3. Granska och spara hela utkastet. Starta om appen och öppna kartan igen.
 
 **Förväntat resultat:**
@@ -79,7 +79,8 @@ selection”.
    objektsymbolen och namnet. Kontrollera att alla tre panorerar likadant.
 3. Panorera med knappen under Navigera. Välj Visa hela rymden.
 4. Sök efter Lo. Flytta tangentbordsfokus till en kameraknapp och tryck
-   Escape.
+   Escape. Kontrollera att sökningen finns kvar. Flytta fokus till själva
+   kartytan och tryck Escape; kontrollera att sökningen nu är tom.
 5. Fokusera Lo Exempel igen, sök efter Lo och filtrera på Person. Välj
    Återställ vy och fäll ihop Navigera. Öppna Lista och Filter och
    kontrollera tom sökning och avmarkerad Person. Återgå till kartan,
@@ -92,8 +93,8 @@ selection”.
   anslutet objekt väljs eller Alla etiketter är på. Fokus visar direkta
   samband.
 - Visa hela rymden rensar filter och fokus med bibehållen kamera.
-- Escape rensar sökningen utanför formuläret. Sambandet öppnar rätt
-  detaljer med Molnmusik som mål.
+- Escape från en kameraknapp bevarar sökningen. Escape på kartytan
+  rensar den. Sambandet öppnar rätt detaljer med Molnmusik som mål.
 - Återställ vy rensar även fokus, sökning och typfilter och ramar in hela
   kartan.
 
@@ -353,3 +354,47 @@ selected label priority and text alternatives”.
   objekt och urval även utan grafik.
 - Varken valet eller de nya etikettlägena ändrar objektens personliga
   placeringar, hushållets information eller kamerans utsnitt.
+
+### RYMD-10: etikettinformation bevarar karta och lista vid vybyte
+
+**Syfte:** Prova att information om dolda etiketter förblir läsbar utan
+att hindra fortsatt arbete i en kompakt karta.
+
+**Användare:** Alex Exempel.
+
+**Förutsättningar:** Använd ett nytt provhushåll. Skapa och spara personen
+Kim Exempel, abonnemanget Familjens Molnmusik med beskrivningen Rättad för
+hand och sambandet Kim Exempel → Betalar → Familjens Molnmusik. Skapa sedan
+personen Robins notering i ditt privata utkast utan att spara. Använd en
+kompakt vy, exempelvis 640 × 500 CSS-pixlar eller motsvarande verklig
+webbläsarzoom. Olika automatiska placeringar kan ge olika antal dolda namn.
+
+**Integrationstest:**
+[spatial.spec.ts](../../tests/integration/spatial.spec.ts),
+testfallet “RYMD-10: label notices remain stable while a compact map opens
+its saved and private list”.
+
+**Steg:**
+
+1. Öppna kartan, stäng eventuell vägledning och ladda om sidan. Öppna
+   Lista och välj **Uppgifter för Familjens Molnmusik**. Läs beskrivningen.
+2. Öppna Lista igen och välj **Lista och utkast** i **Öppna paneler** om
+   detaljpanelen fortfarande är aktiv. Kontrollera Robins notering.
+3. Stäng arbetsytan och välj Kim Exempel i kartan. Kontrollera att namnet
+   går att läsa och välja. Om information om dolda etiketter visas får den
+   inte täcka namnens träffytor.
+4. Minska vyn till ungefär 320 × 250 CSS-pixlar. Öppna **Visningsval**,
+   slå på **Alla etiketter** och kontrollera att samtliga tre namn finns.
+   Slå av valet och stäng Visningsval. Återställ den större vyn och öppna
+   Lista igen.
+
+**Förväntat resultat:**
+
+- Karta, detaljer och lista fortsätter att fungera utan en tom sida eller
+  växlande etikettinformation som hindrar arbetet.
+- Den synliga informationen anger antalet dolda etiketter. När ingen
+  information behövs visas ingen tom informationsruta.
+- Visningsval går att öppna och stänga i den korta vyn. Vid återgång blir
+  visningskontrollerna åtkomliga igen.
+- De två sparade objekten och sambandet består. Robins notering förblir
+  ett privat förslag och den sparade beskrivningen ändras inte.

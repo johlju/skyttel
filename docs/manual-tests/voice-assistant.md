@@ -19,10 +19,10 @@ Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
 fallen anger formulär, samtal, profil eller administration.
 
 När ett befintligt objekt eller samband ska ändras, välj det först i
-kartan eller listan. Detaljpanelen visar uppgifterna. Välj sedan
+kartan eller listan och öppna dess detaljpanel. För objekt i listan använder
+du **Uppgifter**; i kartverktygen väljer du **Visa detaljer**. Välj sedan
 **Redigera valt objekt** eller **Redigera valt samband** för att öppna
-formuläret. I hel kartvy heter knappen **Redigera val**. Att bara välja
-objektet eller sambandet öppnar inte formuläret.
+formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 
 1. Välj den kontrollerade vägen eller det verkliga talprovet i TAL-01.
    TAL-02 och TAL-03 använder den
@@ -618,7 +618,7 @@ the normal form. Use only invented information.
 
 Open **Skyttels textassistent**, approve its separate AI and map-work choices,
 and select **Starta textassistenten**. Then choose **Starta röst** under
-**Tala med Skyttel**. In fullscreen map mode, open **Visa detaljer och utkast**
+**Tala med Skyttel**. Open **Samtal och text** from the map tools
 to reach these controls. The fixture needs no hardware microphone permission.
 Keep the tab open and active: its normal status requests maintain the server's
 voice connection. Closing the tab is a connection-loss check, not a pause.

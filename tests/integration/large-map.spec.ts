@@ -46,7 +46,9 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
         }),
       )
       .toBe(true);
-    await expect(page.getByText(/Alla objekt och samband finns i listan/)).toBeVisible();
+    await expect(
+      page.getByText(/Alla objekt och samband finns i listan/).filter({ visible: true }),
+    ).toBeVisible();
     const objects = page.getByRole('list', { name: 'Objekt', exact: true });
     await expect(objects.getByRole('listitem')).toHaveCount(50);
     const names = new Set<string>();

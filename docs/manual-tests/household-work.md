@@ -15,8 +15,7 @@ Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
 fallen anger formulär, samtal, profil eller administration.
 
 1. Förbered en
-   [separat
-   provdatabas](../development/devcontainer.md#disposable-local-database).
+   [separat provdatabas](../development/devcontainer.md#disposable-local-database).
    Skapa hushållet och ge Robin tillgång enligt
    [inbjudningsguiden](../user-guide/access.md#bjud-in-en-skyttel-användare).
 2. För samtalsfallen används den kontrollerade
