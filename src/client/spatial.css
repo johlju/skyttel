@@ -140,25 +140,36 @@
   pointer-events: none;
   overflow: visible;
 }
+.connection,
+.connection-arrow {
+  --connection-color: #8dbba5;
+}
+:is(.connection, .connection-arrow).added {
+  --connection-color: var(--proposal-added, #64dfa0);
+}
+:is(.connection, .connection-arrow).changed {
+  --connection-color: var(--proposal-changed, #fbbf24);
+}
+:is(.connection, .connection-arrow).removed {
+  --connection-color: var(--proposal-removed, #ff858a);
+}
 .connection {
-  stroke: #8dbba5;
+  stroke: var(--connection-color);
   stroke-width: 1.4;
   opacity: 0.25;
+}
+/* The line's opacity already applies to its marker. */
+.connection-arrow {
+  fill: var(--connection-color);
 }
 .connection.selected {
   opacity: 0.95;
   stroke-width: 2;
 }
-.connection.added {
-  stroke: var(--proposal-added, #64dfa0);
-  opacity: 0.7;
-}
-.connection.changed {
-  stroke: var(--proposal-changed, #fbbf24);
+.connection:is(.added, .changed) {
   opacity: 0.7;
 }
 .connection.removed {
-  stroke: var(--proposal-removed, #ff858a);
   stroke-dasharray: 6 5;
   opacity: 0.6;
 }

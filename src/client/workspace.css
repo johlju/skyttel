@@ -694,8 +694,10 @@ footer[hidden] {
 .household-map.workspace-shell .spatial-type-name {
   color: var(--space-muted);
 }
+.household-map.workspace-shell :is(.connection, .connection-arrow) {
+  --connection-color: var(--space-accent);
+}
 .household-map.workspace-shell .connection {
-  stroke: var(--space-accent);
   opacity: 0.7;
 }
 .household-map.workspace-shell .connection.selected {
@@ -720,8 +722,10 @@ footer[hidden] {
 .household-map.workspace-shell .proposal-symbol {
   background: var(--space-surface);
 }
+.household-map.workspace-shell :is(.connection, .connection-arrow):is(.added, .changed, .removed) {
+  --connection-color: var(--proposal-color);
+}
 .household-map.workspace-shell .connection:is(.added, .changed, .removed) {
-  stroke: var(--proposal-color);
   opacity: 1;
 }
 .household-map.workspace-shell .spatial-node[aria-pressed="true"] .spatial-orb {

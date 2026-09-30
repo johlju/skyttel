@@ -46,6 +46,7 @@ export function ProposalSymbol({ change }: { change?: { before: unknown; after: 
   );
 }
 
+const connectionKinds = ['existing', 'added', 'changed', 'removed'] as const;
 function proposalKind(change?: { before: unknown; after: unknown }) {
   return change ? (!change.after ? 'removed' : !change.before ? 'added' : 'changed') : 'existing';
 }
@@ -1095,17 +1096,21 @@ export function SpatialMap({
         />
         <svg className="spatial-lines" aria-hidden="true">
           <defs>
-            <marker
-              id="spatial-arrow"
-              viewBox="0 0 10 10"
-              refX="10"
-              refY="5"
-              markerWidth="7"
-              markerHeight="7"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
-            </marker>
+            {/* WebKit ignores context-stroke, so each kind colours its own arrowhead. */}
+            {connectionKinds.map((kind) => (
+              <marker
+                key={kind}
+                id={`spatial-arrow-${kind}`}
+                viewBox="0 0 10 10"
+                refX="10"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" className={`connection-arrow ${kind}`} />
+              </marker>
+            ))}
           </defs>
           {heightGuide && (
             <SpatialHeightGuide
@@ -1175,7 +1180,7 @@ export function SpatialMap({
                   <path
                     d={geometry}
                     fill="none"
-                    markerEnd="url(#spatial-arrow)"
+                    markerEnd={`url(#spatial-arrow-${kind})`}
                     className={`connection ${kind}${previous ? ' previous' : ''}${selected ? ' selected' : ''}`}
                     data-previous-relationship={previous ? edge.id : undefined}
                   >
@@ -1190,7 +1195,7 @@ export function SpatialMap({
                     y1={start.y}
                     x2={tip.x}
                     y2={tip.y}
-                    markerEnd="url(#spatial-arrow)"
+                    markerEnd={`url(#spatial-arrow-${kind})`}
                     className={`connection ${kind}${selected ? ' selected' : ''}`}
                   />
                 )}
