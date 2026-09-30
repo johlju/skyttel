@@ -5,6 +5,8 @@ export default defineConfig({
   test: {
     projects: [
       {
+        // Discover these browser imports before tests start to avoid a Vite reload.
+        optimizeDeps: { include: ['react-dom/client', 'react-router'] },
         test: {
           name: 'graphics',
           include: ['tests/browser/**/*.test.tsx'],

@@ -190,7 +190,7 @@ test('an image error returns to the retained object and expires before an unrela
   expect(await read()).toEqual(before);
   await userEvent.click(status.getByRole('button', { name: 'Hämta aktuellt underlag' }));
   await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
-  expect(screen.queryByRole('button', { name: returnName })).toBeNull();
+  expect(screen.queryByText(returnName, { selector: 'button' })).toBeNull();
   const description = details.getByLabelText('Beskrivning', { exact: true });
   await user.clear(description);
   await user.paste('Ny oskickad text');
@@ -209,7 +209,7 @@ test('an image error returns to the retained object and expires before an unrela
   await userEvent.click(details.getByRole('button', { name: 'Lägg i mitt utkast' }));
   const alert = await screen.findByRole('alert');
   expect(alert.textContent).toContain('Avvisat:');
-  expect(screen.queryByRole('button', { name: returnName })).toBeNull();
+  expect(screen.queryByText(returnName, { selector: 'button' })).toBeNull();
   expect(details.getByDisplayValue('Ny oskickad text')).toBeTruthy();
   const after = await read();
   expect(after.objects).toEqual([]);
@@ -303,7 +303,7 @@ test('a real image rejection preserves Settings focus until explicit return to t
     );
     const settings = await screen.findByRole('heading', { name: 'Inställningar', level: 1 });
     expect(settings).toBe(document.activeElement);
-    const settingsReturn = screen.getByRole('link', { name: 'Tillbaka till kartan' });
+    const settingsReturn = screen.getByText('Tillbaka till kartan', { selector: 'a' });
     settingsReturn.focus();
     release();
     expect((await screen.findByRole('alert')).textContent).toContain('Bilden kunde inte behandlas');
@@ -328,7 +328,7 @@ test('a real image rejection preserves Settings focus until explicit return to t
       `/profile-images/${before.draft.changes.find((change) => change.id === 'person')?.after?.profileImageId}`,
     );
     expect(await read()).toEqual(before);
-    const panels = screen.getByRole('combobox', { name: /^Öppna paneler/ });
+    const panels = screen.getByLabelText(/^Öppna paneler/, { selector: 'select' });
     await user.selectOptions(
       panels,
       within(panels).getByRole('option', { name: 'Lista och utkast' }),

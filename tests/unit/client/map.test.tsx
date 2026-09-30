@@ -85,8 +85,10 @@ afterEach(() => {
 
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
-  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
-  await screen.findByRole('button', { name: 'Nytt objekt' });
+  const tools = within(await screen.findByRole('navigation', { name: 'Kartans verktyg' }));
+  await userEvent.click(tools.getByLabelText('Lista', { selector: 'button' }));
+  const list = within(await screen.findByRole('region', { name: 'Lista och utkast' }));
+  await list.findByText('Nytt objekt', { selector: 'button' });
 }
 async function add(name = 'Lo Exempel') {
   await userEvent.click(screen.getByRole('button', { name: 'Nytt objekt' }));
@@ -143,7 +145,7 @@ test('object pages retain sorting and selected-item access through panel closure
   const pages = () => within(list.getByRole('navigation', { name: 'Bläddra bland objekt' }));
   await userEvent.click(pages().getByRole('button', { name: 'Nästa sida' }));
   expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('2');
-  await userEvent.click(list.getByRole('button', { name: 'Markera Provobjekt 050' }));
+  await userEvent.click(list.getByLabelText('Markera Provobjekt 050', { selector: 'button' }));
   await userEvent.selectOptions(pages().getByRole('combobox'), '10');
   await userEvent.click(pages().getByRole('button', { name: 'Visa valt innehåll i listan' }));
   expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('2');
@@ -151,8 +153,12 @@ test('object pages retain sorting and selected-item access through panel closure
   expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('1');
   await userEvent.selectOptions(list.getByRole('combobox', { name: 'Sortering' }), 'type');
   await userEvent.selectOptions(pages().getByRole('combobox'), '7');
-  await userEvent.click(list.getByRole('button', { name: 'Stäng Lista och utkast' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Lista' }));
+  await userEvent.click(list.getByLabelText('Stäng Lista och utkast', { selector: 'button' }));
+  await userEvent.click(
+    within(screen.getByRole('navigation', { name: 'Kartans verktyg' })).getByLabelText('Lista', {
+      selector: 'button',
+    }),
+  );
   expect((pages().getByRole('combobox') as HTMLSelectElement).value).toBe('7');
   expect((list.getByRole('combobox', { name: 'Sortering' }) as HTMLSelectElement).value).toBe(
     'type',
@@ -162,7 +168,9 @@ test('object pages retain sorting and selected-item access through panel closure
   await userEvent.type(list.getByLabelText('Sök objekt'), 'Provobjekt 050');
   expect(list.queryByRole('navigation', { name: 'Bläddra bland objekt' })).toBeNull();
   expect(
-    list.getByRole('button', { name: 'Markera Provobjekt 050' }).getAttribute('aria-pressed'),
+    list
+      .getByLabelText('Markera Provobjekt 050', { selector: 'button' })
+      .getAttribute('aria-pressed'),
   ).toBe('true');
 });
 
