@@ -395,7 +395,8 @@
     "fokusval",
     "talstart",
     "döljning",
-    "tabbordningen"
+    "tabbordningen",
+    "trackpad"
   ],
   "overrides": [
     {

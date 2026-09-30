@@ -1,6 +1,7 @@
 # Manuella testfall för navigeringsfönstret
 
-Fallen omfattar navigering, personlig objektflyttning och samtidiga detaljer.
+Fallen omfattar navigering, personlig objektflyttning, samtidiga detaljer
+och nypzoom med styrplatta.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 Fysiska enheter och skärmläsare provas och redovisas separat.
 
@@ -150,3 +151,37 @@ access and editing through the list”.
 - Formuläret anger Lo som **Från objekt**, Kim som **Till objekt** och
   låter användaren lägga ändringen i samma privata utkast som tidigare.
 - Objektpanelen innehåller ingen upprepad lista över direkta samband.
+
+## Zoom med styrplatta
+
+### NAVIGATION-05: Nypzoom följer fingrarnas hastighet
+
+**Syfte:** Nypzoom med styrplatta är snabb nog och följer fingrarnas
+hastighet. Ett hack med Ctrl och mushjul zoomar begränsat.
+
+**Användare:** Alex Exempel.
+
+**Förutsättningar:** En Mac med styrplatta och en mus med hjul. Prova
+fallet i Chrome och i Safari. Lo och Kim syns i kartan.
+
+**Integrationstest:**
+[map-navigation.spec.ts](../../tests/integration/map-navigation.spec.ts),
+testfallet “NAVIGATION-05: trackpad pinch zoom follows pinch speed while a
+Ctrl mouse-wheel notch stays limited”.
+
+**Steg:**
+
+1. Välj **Återställ vy**. Håll pekaren över tom rymd.
+2. Nyp långsamt isär med två fingrar på styrplattan. Nyp sedan långsamt
+   ihop.
+3. Välj **Återställ vy**. Nyp snabbt isär med samma fingeravstånd som i
+   steg 2. Nyp sedan snabbt ihop.
+4. Välj **Återställ vy**. Håll Ctrl och rulla mushjulet ett hack.
+
+**Förväntat resultat:**
+
+- Ett långsamt nyp zoomar lugnt och går att styra noga.
+- Ett snabbt nyp zoomar tydligt mer än ett långsamt nyp.
+- Ett nyp isär zoomar in och ett nyp ihop zoomar ut.
+- Ett hack med Ctrl och mushjul zoomar ett begränsat steg utan hopp.
+- Webbläsaren förstorar inte hela sidan. Objektens placeringar ändras inte.

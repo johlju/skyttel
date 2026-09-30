@@ -298,3 +298,56 @@ test('NAVIGATION-03: six personal directions persist after restart while empty a
     await installation.close();
   }
 });
+
+test('NAVIGATION-05: trackpad pinch zoom follows pinch speed while a Ctrl mouse-wheel notch stays limited', async ({
+  page,
+}) => {
+  const installation = await createInstallation();
+  try {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const { lo, read } = await arrange(page, installation.origin);
+    const shared = await read();
+    const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
+    const kim = page.getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true });
+    const separation = async () => {
+      const [a, b] = [await center(lo), await center(kim)];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const canvas = space.locator('canvas');
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error('Canvas must be visible');
+    // Stay above the floating map controls and on empty space.
+    const empty = { x: box.x + box.width / 2 - 75, y: box.y + box.height / 4 };
+    expect(
+      await canvas.evaluate((node, { x, y }) => document.elementFromPoint(x, y) === node, empty),
+    ).toBe(true);
+    const baseline = await separation();
+    expect(baseline).toBeGreaterThan(20);
+    const reset = async () => {
+      await space.getByRole('button', { name: 'Återställ vy', exact: true }).click();
+      await expect.poll(separation).toBeCloseTo(baseline, 0);
+    };
+    // Browsers send a trackpad pinch as Ctrl + wheel events with small deltas.
+    const pinch = async (deltaY: number, events: number) => {
+      await page.mouse.move(empty.x, empty.y);
+      await page.keyboard.down('Control');
+      for (let index = 0; index < events; index += 1) await page.mouse.wheel(0, deltaY);
+      await page.keyboard.up('Control');
+    };
+    const ratioAfter = async (deltaY: number, events: number, expected: number) => {
+      await reset();
+      await pinch(deltaY, events);
+      await expect.poll(async () => (await separation()) / baseline).toBeCloseTo(expected, 1);
+      return (await separation()) / baseline;
+    };
+    const slow = await ratioAfter(-2, 5, Math.exp(0.1));
+    const fast = await ratioAfter(-10, 5, Math.exp(0.5));
+    expect(fast).toBeGreaterThan(slow * 1.3);
+    // One mouse notch is far larger than a pinch event and stops at the limit.
+    await ratioAfter(200, 1, Math.exp(-0.5));
+    expect(await page.evaluate(() => window.visualViewport?.scale)).toBe(1);
+    expect(await read()).toEqual(shared);
+  } finally {
+    await installation.close();
+  }
+});

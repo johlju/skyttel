@@ -1,4 +1,8 @@
 export const navigationDragThreshold = 8;
+/** Zoom per pixel of Ctrl + wheel delta, which browsers send for trackpad pinch. */
+export const pinchZoomRate = 0.01;
+/** Largest delta one wheel event may zoom, so a mouse notch stays controlled. */
+export const pinchZoomDeltaLimit = 50;
 
 /** Camera gestures on empty space never create object edits. */
 export function cameraGestures(
@@ -68,8 +72,13 @@ export function cameraGestures(
     event.preventDefault();
     if (!enabled) return;
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? surface.clientHeight : 1;
-    if (event.ctrlKey) camera.zoom(Math.exp(event.deltaY * unit * 0.002));
-    else camera.pan(-event.deltaX * unit, -event.deltaY * unit);
+    if (event.ctrlKey) {
+      const delta = Math.max(
+        -pinchZoomDeltaLimit,
+        Math.min(pinchZoomDeltaLimit, event.deltaY * unit),
+      );
+      camera.zoom(Math.exp(delta * pinchZoomRate));
+    } else camera.pan(-event.deltaX * unit, -event.deltaY * unit);
   }
   function context(event: Event) {
     event.preventDefault();

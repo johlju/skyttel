@@ -62,7 +62,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   lista och uttryckligt kartfokus.
 
 - [Navigeringsfönstret](map-navigation.md): normal- och miniläge, oberoende
-  fönsterflytt, samtidiga detaljer och sex beständiga personliga riktningar.
+  fönsterflytt, samtidiga detaljer, sex beständiga personliga riktningar och
+  nypzoom med styrplatta.
 
 - [Inställningar och profil](settings-profile.md): helsida, mobilnavigation,
   återgång med fokus, synligt tangentbordsfokus i båda riktningar, läsbara
