@@ -38,10 +38,15 @@ afterEach(() => {
 });
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
-  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Uppgifter för Lo Exempel' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
-  return within(screen.getByRole('group', { name: 'Objektets detaljer' }));
+  const tools = within(await screen.findByRole('navigation', { name: 'Kartans verktyg' }));
+  await userEvent.click(tools.getByLabelText('Lista', { selector: 'button' }));
+  const list = within(await screen.findByRole('region', { name: 'Lista och utkast' }));
+  await userEvent.click(
+    await list.findByLabelText('Uppgifter för Lo Exempel', { selector: 'button' }),
+  );
+  const panel = within(await screen.findByRole('region', { name: 'Lo Exempel' }));
+  await userEvent.click(panel.getByRole('button', { name: 'Redigera valt objekt' }));
+  return within(panel.getByRole('group', { name: 'Objektets detaljer' }));
 }
 test('Swedish and canonical searches stage an icon into the same object proposal and preserve unsent text', async () => {
   const details = await open();
