@@ -1477,15 +1477,6 @@ export function App() {
         {bootstrap.status === 'loading' && <Loading />}
         {bootstrap.status === 'error' && <Failure onRetry={reload} />}
         {data?.status === 'anonymous' && <Login providers={data.providers} />}
-        {data?.status === 'ready' && (
-          <HouseholdWork
-            key={data.user.id}
-            account={account}
-            onSessionExpired={reload}
-            typeSettingsTarget={typeSettingsTarget}
-            mapSettingsTarget={mapSettingsTarget}
-          />
-        )}
         {settingsPage ? (
           <SettingsScreen
             household={household}
@@ -1498,6 +1489,15 @@ export function App() {
           </SettingsScreen>
         ) : (
           pages
+        )}
+        {data?.status === 'ready' && (
+          <HouseholdWork
+            key={data.user.id}
+            account={account}
+            onSessionExpired={reload}
+            typeSettingsTarget={typeSettingsTarget}
+            mapSettingsTarget={mapSettingsTarget}
+          />
         )}
         {data?.status === 'forbidden' && !settingsPage && (
           <>

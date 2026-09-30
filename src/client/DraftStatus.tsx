@@ -3,6 +3,7 @@ import { receiptMessage, rejectionMessage } from './SaveOperations.js';
 import { ProposalSymbol } from './SpatialMap.js';
 
 export function DraftStatus({
+  compact = false,
   draft,
   operation,
   saving,
@@ -24,6 +25,7 @@ export function DraftStatus({
   onConflict,
   onContinue,
 }: {
+  compact?: boolean;
   draft: MapDraft;
   operation?: SaveOperation;
   saving: boolean;
@@ -73,7 +75,7 @@ export function DraftStatus({
           {error}
         </p>
       )}
-      {dirty && <p>Oskickad formulärtext finns kvar. Den ingår inte i utkastet.</p>}
+      {!compact && dirty && <p>Oskickad formulärtext finns kvar. Den ingår inte i utkastet.</p>}
       {unresolved && <p>Vilka objekt avses? Red ut obesvarade identiteter före sparande.</p>}
       {conflicts.length > 0 && (
         <>
@@ -121,22 +123,25 @@ export function DraftStatus({
             Red ut identiteter i utkastet
           </button>
         )}
-        {dirty ? (
-          <button type="button" onClick={onContinue}>
-            Fortsätt redigera
-          </button>
-        ) : unresolved || conflicts.length > 0 ? (
+        {!compact &&
+          (dirty ? (
+            <button type="button" onClick={onContinue}>
+              Fortsätt redigera
+            </button>
+          ) : unresolved || conflicts.length > 0 ? (
+            <button type="button" onClick={onDraft}>
+              {conflicts.length ? 'Lös konflikter i utkastet' : 'Red ut identiteter i utkastet'}
+            </button>
+          ) : showSave && count ? (
+            <button type="button" className="primary" disabled={disabled} onClick={onSave}>
+              Spara hela utkastet
+            </button>
+          ) : null)}
+        {!compact && (
           <button type="button" onClick={onDraft}>
-            {conflicts.length ? 'Lös konflikter i utkastet' : 'Red ut identiteter i utkastet'}
+            {count ? 'Visa hela utkastet' : 'Sparförsök och kvitton'}
           </button>
-        ) : showSave && count ? (
-          <button type="button" className="primary" disabled={disabled} onClick={onSave}>
-            Spara hela utkastet
-          </button>
-        ) : null}
-        <button type="button" onClick={onDraft}>
-          {count ? 'Visa hela utkastet' : 'Sparförsök och kvitton'}
-        </button>
+        )}
       </div>
       {expanded && operation && (
         <p className="draft-status-receipt">
@@ -147,7 +152,7 @@ export function DraftStatus({
               : `Sparförsök: ${operation.operationId}. Slutresultatet är inte bekräftat.`}
         </p>
       )}
-      {count > 0 && (
+      {!compact && count > 0 && (
         <section aria-label="Förslag i kartan" className="proposal-legend">
           <p>Privata förslag</p>
           <span>

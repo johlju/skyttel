@@ -439,7 +439,12 @@ till gemensamt kvitto och privat fortsatt arbete”.
    panel för Kim. Använd inte åtgärden som kastar oskickad text.
 5. Skriv **Oskickat i samtalet** utan att skicka. Pausa mikrofonen och
    öppna **Inställningar**. Rubriken ska få fokus och kartarbetet döljas.
-   Återuppta mikrofonen där. Välj **Tillbaka till kartan** och välj
+   Inställningarnas innehåll ska komma före den kompakta statusytan.
+   Läs de tre privata förslagens status och välj
+   **Visa samtals- och utkastdetaljer**. Kontrollera rubrikfokus och beskedet
+   om oskickat samtalsmeddelande. Välj **Stäng aktuell status** och kontrollera
+   att fokus återgår till detaljknappen. Återuppta mikrofonen där.
+   Välj **Tillbaka till kartan** och välj
    abonnemanget, Kim och samtalet genom **Öppna paneler**. Kontrollera
    rubrikfokus, samma beskrivningar, samma dialog och båda oskickade texter.
    Robins notering ska fortfarande vara privat. Automationen kontrollerar

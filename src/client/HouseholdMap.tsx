@@ -1566,6 +1566,7 @@ export function HouseholdMap({
       {state && (
         <TextAssistant
           statusOpen={statusOpen}
+          onOpenStatus={() => setStatusOpen(true)}
           onCloseStatus={() => {
             setStatusOpen(false);
             const trigger = workspace.current?.querySelector<HTMLButtonElement>(
@@ -1579,8 +1580,9 @@ export function HouseholdMap({
                 )
                 ?.focus();
           }}
-          statusContent={({ working, needsAnswer }) => (
+          statusContent={({ working, needsAnswer, compact }) => (
             <DraftStatus
+              compact={compact}
               draft={state.draft}
               operation={pendingOperation ?? operations[0]}
               saving={Boolean(pending && saveAttempt.current)}

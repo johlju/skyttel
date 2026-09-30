@@ -79,7 +79,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   dolt formulär och registrerat sparförsök före omladdning; oberoende privat
   arbete finns kvar efter uttryckligt slutförande. Ett sammanhängande
   familjeärende går från synlig inloggning, text och tal till rättelse,
-  Inställningar, samlat kvitto, omstart och två medlemmars skilda utkast;
+  Inställningar med kompakt status och valda detaljer, samlat kvitto, omstart
+  och två medlemmars skilda utkast;
   samma fullständiga arbete provas med text och listor utan grafik eller ljud.
 
 - [Månadskostnad](costs.md): separata Render-, Live- och Terra-belopp,

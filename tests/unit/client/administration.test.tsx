@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -551,6 +551,28 @@ describe('invitation acceptance interface', () => {
 });
 
 describe('current household access', () => {
+  test('opens retained work details deliberately in Settings and returns keyboard focus', async () => {
+    serve({
+      '/api/bootstrap': [{ data: ready }],
+      '/api/households/linden': [{ data: { household } }],
+    });
+    mount('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Inställningar' }));
+    const status = within(screen.getByRole('region', { name: 'Aktuell status' }));
+    expect(status.getByText('Inga osparade förslag')).toBeDefined();
+    expect(status.queryByRole('heading', { name: 'Aktuell status' })).toBeNull();
+    await userEvent.click(status.getByRole('button', { name: 'Visa samtals- och utkastdetaljer' }));
+    expect(document.activeElement).toBe(status.getByRole('heading', { name: 'Aktuell status' }));
+    expect(status.getByRole('button', { name: 'Sparförsök och kvitton' })).toBeDefined();
+    await userEvent.click(status.getByRole('button', { name: 'Stäng aktuell status' }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        status.getByRole('button', { name: 'Visa samtals- och utkastdetaljer' }),
+      ),
+    );
+    expect(screen.getByRole('heading', { name: 'Inställningar', level: 1 })).toBeDefined();
+  });
+
   test('keeps loaded membership visible after a temporary background failure', async () => {
     serve({
       '/api/bootstrap': [{ data: ready }, { status: 503 }],

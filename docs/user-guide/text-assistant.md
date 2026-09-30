@@ -17,6 +17,12 @@ I korta fönster kan du rulla ned till samtalskortet och panelväljaren.
 Vid en begärd kartmarkering visas kartan och uppgifterna bredvid varandra
 så att kortet inte täcker dem. Verktygsradens mikrofonkontroll finns kvar.
 
+På Inställningar har sidans innehåll och samtalets kompakta status var sitt
+utrymme. Mikrofonkontroller, nödvändiga frågor, fel och sparstatus finns
+kvar. Välj **Visa samtals- och utkastdetaljer** för ytterligare uppgifter
+om samtalet och ditt privata arbete. **Stäng aktuell status** återgår
+till den kompakta vyn. I korta fönster kan båda områdena rullas var för sig.
+
 Beskriv vad du vill hitta, lägga till eller rätta. Assistenten använder
 hushållets egna typer och ditt befintliga privata utkast. Förslag från
 andra klienter ingår också. Oskickad formulärtext ligger kvar i formuläret

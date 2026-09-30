@@ -74,10 +74,12 @@ export function TextAssistant({
   statusContent,
   statusOpen = false,
   onCloseStatus,
+  onOpenStatus,
 }: {
-  statusContent?: (assistant: AssistantActivity) => ReactNode;
+  statusContent?: (assistant: AssistantActivity & { compact: boolean }) => ReactNode;
   statusOpen?: boolean;
   onCloseStatus?: () => void;
+  onOpenStatus?: () => void;
   active?: boolean;
   conversationVisible?: boolean;
   onOpenConversation?: () => void;
@@ -111,6 +113,8 @@ export function TextAssistant({
       (statusOpen || !workVisible || !conversationVisible),
   );
   const statusHeading = useRef<HTMLHeadingElement>(null);
+  const statusToggle = useRef<HTMLButtonElement>(null);
+  const compactStatus = !workVisible && !statusOpen;
   useLayoutEffect(() => {
     // Moving one portal host preserves the live microphone transport and its
     // controls when the conversation panel closes or another page is shown.
@@ -398,7 +402,8 @@ export function TextAssistant({
           <AssistantWorkTime key={`${session.id}-${session.revision}`} />
         )}
       </div>
-      {session.reply &&
+      {!compactStatus &&
+        session.reply &&
         !session.receipt &&
         !session.displayedSelection &&
         !session.displayedItem && (
@@ -448,7 +453,7 @@ export function TextAssistant({
           </button>
         )}
       </div>
-      <details className="conversation-more" open={!floating}>
+      <details className="conversation-more" open={!floating} hidden={compactStatus}>
         <summary>Samtalskontroller</summary>
         <div className="voice-controls">
           {!unknown && session.phase !== 'recovery' && (
@@ -801,19 +806,32 @@ export function TextAssistant({
           aria-label="Aktuell status"
           className="workspace-status-card"
           data-expanded={statusOpen}
+          data-compact={compactStatus}
         >
           {statusOpen && (
             <div className="workspace-status-heading">
               <h2 tabIndex={-1} ref={statusHeading}>
                 Aktuell status
               </h2>
-              <button type="button" onClick={onCloseStatus} aria-label="Stäng aktuell status">
+              <button
+                type="button"
+                onClick={() => {
+                  onCloseStatus?.();
+                  if (!workVisible) requestAnimationFrame(() => statusToggle.current?.focus());
+                }}
+                aria-label="Stäng aktuell status"
+              >
                 ×
               </button>
             </div>
           )}
           {voice}
-          {statusContent?.(activity)}
+          {statusContent?.({ ...activity, compact: compactStatus })}
+          {!workVisible && !statusOpen && (
+            <button type="button" ref={statusToggle} onClick={onOpenStatus} aria-expanded={false}>
+              Visa samtals- och utkastdetaljer
+            </button>
+          )}
           {statusOpen && text && (
             <p>
               Oskickat samtalsmeddelande finns kvar.{' '}

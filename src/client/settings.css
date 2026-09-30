@@ -23,12 +23,17 @@
   color-scheme: dark;
 }
 .app-shell.has-settings > main {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
   padding: 0;
 }
 .settings-screen {
-  min-height: 100dvh;
+  flex: 1;
+  min-height: 0;
   width: 100%;
+  overflow-y: auto;
   padding-bottom: 36px;
 }
 .settings-header {
@@ -259,7 +264,60 @@
   margin-right: 8px;
 }
 .has-settings .household-work-background {
+  flex-shrink: 0;
   width: 100%;
+  max-height: 40dvh;
+  overflow-y: auto;
+  background: var(--space-surface);
+  border-top: 1px solid var(--space-line);
+}
+.has-settings .household-work-background :is(a, button, input, select, textarea, summary) {
+  color: var(--space-text);
+  scroll-margin-block: 12px;
+}
+.has-settings .household-work-background :is(button, input, select, textarea) {
+  background: var(--space-surface);
+  border-color: var(--space-control);
+}
+.has-settings .household-work-background :is(.muted, .microphone-state) {
+  color: var(--space-muted);
+}
+.has-settings .household-work-background :focus-visible {
+  outline: 3px solid var(--space-accent);
+  outline-offset: 3px;
+}
+.has-settings .household-work-background button:hover:enabled {
+  background: var(--space-surface);
+  border-color: var(--space-accent);
+  color: var(--space-text);
+}
+.has-settings .household-work-background .primary,
+.has-settings .household-work-background .primary:hover:enabled {
+  background: var(--space-accent);
+  color: var(--space-surface);
+}
+.has-settings .workspace-status-card {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+.has-settings .workspace-status-card[data-compact="true"],
+.has-settings .workspace-status-card[data-compact="true"] .voice-assistant,
+.has-settings .workspace-status-card[data-compact="true"] .conversation-controls,
+.has-settings .workspace-status-card[data-compact="true"] .voice-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.has-settings .workspace-status-card[data-compact="true"] .voice-activity {
+  display: none;
+}
+.has-settings .workspace-status-card[data-compact="true"] :is(p, .voice-controls) {
+  margin: 0;
+}
+.has-settings .workspace-status-card[data-compact="true"] .draft-status-actions:empty {
+  display: none;
 }
 .has-settings .household-work-background .workspace-feedback:has(> :not(:empty)),
 .has-settings .workspace-voice-controls:not(:empty) {

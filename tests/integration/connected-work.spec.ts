@@ -351,9 +351,31 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(
         page.getByRole('heading', { level: 1, name: 'Inställningar', exact: true }),
       ).toBeFocused();
+      const settingsPosition = await page.locator('.settings-screen').boundingBox();
+      const retainedStatusPosition = await page
+        .getByRole('region', { name: 'Aktuell status', exact: true })
+        .boundingBox();
+      expect(required(settingsPosition?.y)).toBeLessThan(required(retainedStatusPosition?.y));
       await expect(person).not.toBeVisible();
       await expect(subscription).not.toBeVisible();
       await expect(message).not.toBeVisible();
+      const statusDetails = page.getByRole('button', {
+        name: 'Visa samtals- och utkastdetaljer',
+        exact: true,
+      });
+      await expect(statusDetails).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Aktuell status', exact: true })).toContainText(
+        '3 förslag · privat utkast',
+      );
+      await statusDetails.click();
+      await expect(
+        page.getByRole('heading', { name: 'Aktuell status', exact: true }),
+      ).toBeFocused();
+      await expect(
+        page.getByText('Oskickat samtalsmeddelande finns kvar.', { exact: false }),
+      ).toBeVisible();
+      await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
+      await expect(statusDetails).toBeFocused();
       const voice = assistant.getByRole('region', { name: 'Skyttels röst', exact: true });
       if (mode === 'voice') {
         expect(await page.evaluate(() => window.skyttelVoiceFixture.stats())).toMatchObject({
