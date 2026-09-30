@@ -86,13 +86,17 @@ afterEach(() => {
 });
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
-  const tools = within(await screen.findByRole('navigation', { name: 'Kartans verktyg' }));
+  const tools = within(await screen.findByLabelText('Kartans verktyg', { selector: 'nav' }));
   await userEvent.click(tools.getByLabelText('Lista', { selector: 'button' }));
-  const list = within(await screen.findByRole('region', { name: 'Lista och utkast' }));
+  const list = within(
+    await screen.findByLabelText('Lista och utkast', { selector: 'section:not([hidden])' }),
+  );
   await userEvent.click(
     await list.findByLabelText('Uppgifter för Lo Exempel', { selector: 'button' }),
   );
-  const panel = within(await screen.findByRole('region', { name: 'Lo Exempel' }));
+  const panel = within(
+    await screen.findByLabelText('Lo Exempel', { selector: 'section:not([hidden])' }),
+  );
   await userEvent.click(panel.getByRole('button', { name: 'Redigera valt objekt' }));
   return within(panel.getByRole('group', { name: 'Objektets detaljer' }));
 }
@@ -155,24 +159,29 @@ test.each([401, 403, 409, 503])(
   },
 );
 
+// Allow the complete real-image, repeated-return and draft-rejection workflow to run under coverage.
 test('an image error returns to the retained object and expires before an unrelated draft rejection', async () => {
   const user = userEvent.setup();
   let details = await open();
   await userEvent.upload(details.getByLabelText('Välj profilbild'), await file());
-  await screen.findByText('Bildförslaget finns i ditt privata utkast. Kartan är inte ändrad.');
+  await screen.findByText('Bildförslaget finns i ditt privata utkast. Kartan är inte ändrad.', {
+    selector: '[role="status"]',
+  });
   const before = await read();
   await userEvent.upload(
     details.getByLabelText('Välj profilbild'),
     new File(['invalid'], 'bad.png', { type: 'image/png' }),
   );
-  await screen.findByText(/Bilden kunde inte behandlas/);
-  const panel = within(screen.getByRole('region', { name: 'Lo Exempel' }));
-  const status = within(screen.getByRole('region', { name: 'Aktuell status' }));
+  await screen.findByText(/Bilden kunde inte behandlas/, { selector: '[role="alert"]' });
+  const panel = within(screen.getByLabelText('Lo Exempel', { selector: 'section:not([hidden])' }));
+  const status = within(
+    screen.getByLabelText('Aktuell status', { selector: 'section:not([hidden])' }),
+  );
   await userEvent.click(panel.getByLabelText('Stäng Lo Exempel', { selector: 'button' }));
   expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
   const returnName = 'Återgå till bilden för Lo Exempel';
   await userEvent.click(status.getByRole('button', { name: returnName }));
-  expect(screen.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
+  expect(panel.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
   expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
   expect(await read()).toEqual(before);
   await user.clear(details.getByLabelText('Beskrivning', { exact: true }));
@@ -181,8 +190,11 @@ test('an image error returns to the retained object and expires before an unrela
   expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
   expect(await read()).toEqual(before);
   await userEvent.click(status.getByRole('button', { name: returnName }));
-  expect(screen.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
-  details = within(screen.getByRole('group', { name: 'Objektets detaljer' }));
+  const reopened = within(
+    screen.getByLabelText('Lo Exempel', { selector: 'section:not([hidden])' }),
+  );
+  expect(reopened.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
+  details = within(reopened.getByRole('group', { name: 'Objektets detaljer' }));
   expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
   expect(details.getByRole('img').getAttribute('src')).toContain(
     `/profile-images/${before.draft.changes[0].after?.profileImageId}`,
@@ -206,7 +218,7 @@ test('an image error returns to the retained object and expires before an unrela
       })
     ).status,
   ).toBe(200);
-  await userEvent.click(details.getByRole('button', { name: 'Lägg i mitt utkast' }));
+  await userEvent.click(details.getByText('Lägg i mitt utkast', { selector: 'button' }));
   const alert = await screen.findByRole('alert');
   expect(alert.textContent).toContain('Avvisat:');
   expect(screen.queryByText(returnName, { selector: 'button' })).toBeNull();
@@ -219,7 +231,7 @@ test('an image error returns to the retained object and expires before an unrela
   expect(after.draft.changes.find((change) => change.id === 'independent')?.after?.name).toBe(
     'Annat förslag',
   );
-});
+}, 15_000);
 
 async function openInApp(name = 'Lo Exempel') {
   render(
@@ -227,15 +239,18 @@ async function openInApp(name = 'Lo Exempel') {
       <App />
     </MemoryRouter>,
   );
-  const tools = within(await screen.findByRole('navigation', { name: 'Kartans verktyg' }));
+  const tools = within(await screen.findByLabelText('Kartans verktyg', { selector: 'nav' }));
   await userEvent.click(tools.getByLabelText('Lista', { selector: 'button' }));
-  const list = within(await screen.findByRole('region', { name: 'Lista och utkast' }));
+  const list = within(
+    await screen.findByLabelText('Lista och utkast', { selector: 'section:not([hidden])' }),
+  );
   await userEvent.click(list.getByLabelText(`Uppgifter för ${name}`, { selector: 'button' }));
-  const panel = within(await screen.findByRole('region', { name }));
+  const panel = within(await screen.findByLabelText(name, { selector: 'section:not([hidden])' }));
   await userEvent.click(panel.getByRole('button', { name: 'Redigera valt objekt' }));
   return within(panel.getByRole('group', { name: 'Objektets detaljer' }));
 }
 
+// This budget includes real image processing, the held response and the complete Settings round trip.
 test('a real image rejection preserves Settings focus until explicit return to the same image work', async () => {
   const user = userEvent.setup();
   const initial = await read();
@@ -254,21 +269,25 @@ test('a real image rejection preserves Settings focus until explicit return to t
   await user.click(independent.getByLabelText('Beskrivning', { exact: true }));
   await user.paste('Oskickat under bildförsöket');
   await user.click(
-    within(screen.getByRole('region', { name: 'Garaget' })).getByLabelText('Stäng Garaget', {
-      selector: 'button',
-    }),
-  );
-  await user.click(
-    within(screen.getByRole('region', { name: 'Lista och utkast' })).getByLabelText(
-      'Uppgifter för Lo Exempel',
-      { selector: 'button' },
+    within(screen.getByLabelText('Garaget', { selector: 'section:not([hidden])' })).getByLabelText(
+      'Stäng Garaget',
+      {
+        selector: 'button',
+      },
     ),
   );
-  const target = within(screen.getByRole('region', { name: 'Lo Exempel' }));
+  await user.click(
+    within(
+      screen.getByLabelText('Lista och utkast', { selector: 'section:not([hidden])' }),
+    ).getByLabelText('Uppgifter för Lo Exempel', { selector: 'button' }),
+  );
+  const target = within(screen.getByLabelText('Lo Exempel', { selector: 'section:not([hidden])' }));
   await user.click(target.getByRole('button', { name: 'Redigera valt objekt' }));
   const details = within(target.getByRole('group', { name: 'Objektets detaljer' }));
   await user.upload(details.getByLabelText('Välj profilbild'), await file());
-  await screen.findByText('Bildförslaget finns i ditt privata utkast. Kartan är inte ändrad.');
+  await screen.findByText('Bildförslaget finns i ditt privata utkast. Kartan är inte ändrad.', {
+    selector: '[role="status"]',
+  });
   const before = await read();
   const request = globalThis.fetch;
   let received: (response: Response) => void = () => {};
@@ -296,7 +315,7 @@ test('a real image rejection preserves Settings focus until explicit return to t
     expect((await ready).status).toBe(400);
     await user.click(target.getByLabelText('Stäng Lo Exempel', { selector: 'button' }));
     await user.click(
-      within(screen.getByRole('navigation', { name: 'Kartans verktyg' })).getByLabelText(
+      within(screen.getByLabelText('Kartans verktyg', { selector: 'nav' })).getByLabelText(
         'Inställningar',
         { selector: 'button' },
       ),
@@ -312,12 +331,14 @@ test('a real image rejection preserves Settings focus until explicit return to t
     expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
     expect(await read()).toEqual(before);
     await user.click(
-      within(screen.getByRole('region', { name: 'Aktuell status' })).getByRole('button', {
+      within(
+        screen.getByLabelText('Aktuell status', { selector: 'section:not([hidden])' }),
+      ).getByRole('button', {
         name: 'Återgå till bilden för Lo Exempel',
       }),
     );
     expect(screen.queryByRole('heading', { name: 'Inställningar', level: 1 })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
+    expect(target.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
     expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
     expect(
       within(details.getByRole('region', { name: 'Ikon' })).getByText('Cykel', {
@@ -334,21 +355,20 @@ test('a real image rejection preserves Settings focus until explicit return to t
       within(panels).getByRole('option', { name: 'Lista och utkast' }),
     );
     await user.click(
-      within(screen.getByRole('region', { name: 'Lista och utkast' })).getByLabelText(
-        'Uppgifter för Garaget',
-        { selector: 'button' },
-      ),
+      within(
+        screen.getByLabelText('Lista och utkast', { selector: 'section:not([hidden])' }),
+      ).getByLabelText('Uppgifter för Garaget', { selector: 'button' }),
     );
     expect(
-      within(screen.getByRole('region', { name: 'Garaget' })).getByDisplayValue(
-        'Oskickat under bildförsöket',
-      ),
+      within(
+        screen.getByLabelText('Garaget', { selector: 'section:not([hidden])' }),
+      ).getByDisplayValue('Oskickat under bildförsöket'),
     ).toBeTruthy();
     expect(await read()).toEqual(before);
   } finally {
     release();
   }
-});
+}, 15_000);
 
 test('the whole image and description proposal saves once with an exact expanded receipt', async () => {
   const user = userEvent.setup();
