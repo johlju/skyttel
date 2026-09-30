@@ -76,22 +76,24 @@ export function Assistants({ consent = false }: { consent?: boolean }) {
   return (
     <section className={consent ? 'panel assistant-consent' : 'panel'}>
       <h1 tabIndex={-1}>{consent ? 'Anslut extern assistent' : 'Assistentanslutningar'}</h1>
-      <p>
-        En extern assistent kan läsa valt hushålls gemensamma karta och ditt eget privata utkast.
-        {consent && !wantsWrite
-          ? ' Den kan inte ändra eller spara något genom denna läsanslutning.'
-          : ' Kartarbete kräver ett särskilt medgivande för förslag i ditt utkast och sparande på ditt uttryckliga besked.'}
-      </p>
-      <p>
-        Uppgifter som assistenten hämtar behandlas av den externa AI-tjänsten enligt ditt avtal och
-        dina inställningar där. Databasen i EU garanterar inte att extern AI-behandling sker enbart
-        i EU. Undvik lösenord och andra hemligheter i kartan.
-      </p>
-      <p>
-        Valet gäller AI-behandling och är skilt från cookies och annan lagring. Ett nej lämnar
-        formulär och manuellt kartarbete tillgängliga. Återkallelse stoppar nya anrop; den raderar
-        inte uppgifter som klienten redan har fått.
-      </p>
+      <div className="assistant-privacy">
+        <p>
+          En extern assistent kan läsa valt hushålls gemensamma karta och ditt eget privata utkast.
+          {consent && !wantsWrite
+            ? ' Den kan inte ändra eller spara något genom denna läsanslutning.'
+            : ' Kartarbete kräver ett särskilt medgivande för förslag i ditt utkast och sparande på ditt uttryckliga besked.'}
+        </p>
+        <p>
+          Uppgifter som assistenten hämtar behandlas av den externa AI-tjänsten enligt ditt avtal
+          och dina inställningar där. Databasen i EU garanterar inte att extern AI-behandling sker
+          enbart i EU. Undvik lösenord och andra hemligheter i kartan.
+        </p>
+        <p>
+          Valet gäller AI-behandling och är skilt från cookies och annan lagring. Ett nej lämnar
+          formulär och manuellt kartarbete tillgängliga. Återkallelse stoppar nya anrop; den raderar
+          inte uppgifter som klienten redan har fått.
+        </p>
+      </div>
       {!data && !error && <p role="status">Hämtar anslutningar…</p>}
       {data && (
         <>
@@ -100,15 +102,17 @@ export function Assistants({ consent = false }: { consent?: boolean }) {
           </p>
           {consent && (
             <>
-              <p>
-                Klient: {data.client?.name ?? 'Okänd klient'} ({clientId}). Namnet är klientens egen
-                uppgift.
-              </p>
-              <p>
-                Begärd åtkomst: läsa karta och eget utkast
-                {wantsWrite ? ', föreslå och rätta uppgifter samt spara hela ditt utkast' : ''}
-                {scopes.includes('offline_access') ? ', även när denna webbsida är stängd' : ''}.
-              </p>
+              <div className="assistant-request">
+                <p>
+                  Klient: {data.client?.name ?? 'Okänd klient'} ({clientId}). Namnet är klientens
+                  egen uppgift.
+                </p>
+                <p>
+                  Begärd åtkomst: läsa karta och eget utkast
+                  {wantsWrite ? ', föreslå och rätta uppgifter samt spara hela ditt utkast' : ''}
+                  {scopes.includes('offline_access') ? ', även när denna webbsida är stängd' : ''}.
+                </p>
+              </div>
               <label htmlFor="assistant-household">Välj hushåll</label>
               <select
                 id="assistant-household"
@@ -122,13 +126,15 @@ export function Assistants({ consent = false }: { consent?: boolean }) {
                   </option>
                 ))}
               </select>
-              <label>
+              <label className="assistant-consent-choice">
                 <input
                   type="checkbox"
                   checked={externalAi}
                   onChange={(event) => setExternalAi(event.target.checked)}
                 />
-                Jag tillåter extern AI-behandling av uppgifterna som denna anslutning hämtar.
+                <span>
+                  Jag tillåter extern AI-behandling av uppgifterna som denna anslutning hämtar.
+                </span>
               </label>
               {wantsWrite && (
                 <>
@@ -138,20 +144,23 @@ export function Assistants({ consent = false }: { consent?: boolean }) {
                     dina andra klienter. Versioner och konfliktkontroller bevisar inte vad du har
                     sagt.
                   </p>
-                  <label>
+                  <label className="assistant-consent-choice">
                     <input
                       type="checkbox"
                       checked={mapWork}
                       onChange={(event) => setMapWork(event.target.checked)}
                     />
-                    Jag tillåter förslag och sparande av hela mitt utkast på mitt uttryckliga
-                    besked.
+                    <span>
+                      Jag tillåter förslag och sparande av hela mitt utkast på mitt uttryckliga
+                      besked.
+                    </span>
                   </label>
                 </>
               )}
               <div className="access-actions">
                 <button
                   type="button"
+                  className="primary"
                   disabled={
                     pending ||
                     !externalAi ||

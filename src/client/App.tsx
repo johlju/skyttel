@@ -329,16 +329,20 @@ function LoginMethods() {
   const { providers, stage } = result.data;
   const labels = { google: 'Google', microsoft: 'Microsoft' };
   return (
-    <section className="panel">
+    <section className="panel login-methods">
       <Heading>Inloggningssätt</Heading>
       <p>
         Verifiera först en kopplad inloggning och sedan den nya. Ditt Skyttel-användar-ID, innehåll
         och din tillgång till hushållet bevaras. Samma e-postadress länkar aldrig inloggningar
         automatiskt.
       </p>
-      <ul>
-        {providers.map((provider) => (
-          <li key={provider}>{labels[provider]} – kopplat</li>
+      <ul className="login-method-providers" aria-label="Status för inloggningssätt">
+        {(['google', 'microsoft'] as Provider[]).map((provider) => (
+          <li key={provider}>
+            <strong>
+              {labels[provider]} – {providers.includes(provider) ? 'kopplat' : 'inte kopplat'}
+            </strong>
+          </li>
         ))}
       </ul>
       {stage === 'complete' && providers.length === 2 && (
@@ -360,6 +364,14 @@ function LoginMethods() {
       )}
       {providers.length < 2 && (
         <>
+          <ol className="login-method-steps" aria-label="Länkningens steg">
+            <li aria-current={stage !== 'verified' ? 'step' : undefined}>
+              Verifiera befintlig inloggning
+            </li>
+            <li aria-current={stage === 'verified' ? 'step' : undefined}>
+              Koppla det andra inloggningssättet
+            </li>
+          </ol>
           <p>
             {stage === 'verified'
               ? 'Din befintliga inloggning är verifierad. Koppla nu den andra inom tio minuter.'
@@ -371,14 +383,23 @@ function LoginMethods() {
               )
             : providers
           ).map((provider) => (
-            <button
-              key={provider}
-              type="button"
-              disabled={pending}
-              onClick={() => void action(stage === 'verified' ? 'add' : 'prove', provider)}
-            >
-              {stage === 'verified' ? 'Koppla' : 'Verifiera'} {labels[provider]}
-            </button>
+            <div className="login-method-action" key={provider}>
+              <p>
+                Du går till {labels[provider]}{' '}
+                {stage === 'verified'
+                  ? 'för att bevisa din andra inloggning.'
+                  : 'för att verifiera inloggningen som redan hör till dig.'}{' '}
+                Därefter kommer du tillbaka hit.
+              </p>
+              <button
+                type="button"
+                className="primary"
+                disabled={pending}
+                onClick={() => void action(stage === 'verified' ? 'add' : 'prove', provider)}
+              >
+                {stage === 'verified' ? 'Koppla' : 'Verifiera'} {labels[provider]}
+              </button>
+            </div>
           ))}
         </>
       )}

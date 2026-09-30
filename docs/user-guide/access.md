@@ -25,8 +25,10 @@ innan den sista administratörens tillgång återkallas eller roll ändras.
 
 ## Koppla Google och Microsoft
 
-1. Öppna **Inloggningssätt** medan du är inloggad. Här visas dina
-   anslutna inloggningssätt.
+1. Öppna **Inloggningssätt** medan du är inloggad. Här visas om Google
+   och Microsoft är kopplade samt vilket av länkningens två steg som
+   är aktuellt. Inför varje verifiering förklaras övergången till tjänsten
+   och återgången till Skyttel.
 2. Välj **Verifiera Google** eller **Verifiera Microsoft** och logga in
    igen med den identitet som redan hör till din Skyttel-användare.
 3. Välj **Koppla Microsoft** eller **Koppla Google** och genomför den

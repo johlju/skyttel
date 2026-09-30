@@ -192,6 +192,34 @@
   background: var(--space-surface);
   border-color: var(--space-control);
 }
+.settings-screen .login-method-providers {
+  display: grid;
+  gap: 16px;
+  margin-block: 24px;
+  padding: 0;
+  list-style: none;
+}
+.settings-screen .login-method-providers li {
+  padding: 16px;
+  border: 1px solid var(--space-line);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+.settings-screen .login-method-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  padding-left: 24px;
+  color: var(--space-muted);
+}
+.settings-screen .login-method-steps [aria-current] {
+  color: var(--space-text);
+  font-weight: 700;
+}
+.settings-screen .login-method-action .primary {
+  width: 100%;
+  margin-block: 8px;
+}
 .settings-screen .assistant-consent select {
   width: 100%;
   min-width: 0;
@@ -200,6 +228,42 @@
   border: 1px solid var(--space-control);
   border-radius: 10px;
   font: inherit;
+}
+.settings-screen .assistant-consent :is(.assistant-privacy, .assistant-request) {
+  margin-block: 20px;
+  padding: 16px;
+  border: 1px solid var(--space-line);
+  border-left: 4px solid var(--space-accent);
+  border-radius: 12px;
+  background: var(--space-surface);
+  overflow-wrap: anywhere;
+}
+.settings-screen .assistant-consent :is(.assistant-privacy, .assistant-request) > :first-child {
+  margin-top: 0;
+}
+.settings-screen .assistant-consent :is(.assistant-privacy, .assistant-request) > :last-child {
+  margin-bottom: 0;
+}
+.settings-screen .assistant-consent-choice {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  margin-block: 16px;
+  padding: 16px;
+  min-height: 44px;
+  border: 1px solid var(--space-control);
+  border-radius: 12px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.settings-screen .assistant-consent-choice input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--space-accent);
 }
 .settings-screen :is(.muted, .eyebrow) {
   color: var(--space-muted);
