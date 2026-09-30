@@ -338,6 +338,8 @@ for (const mode of ['voice', 'text'] as const) {
 
       // 6. Settings hides work, retains its exact values and resumes the same microphone.
       await openConversation(page);
+      const dialogue = assistant.getByRole('log', { name: 'Samtalets dialog' });
+      const dialogueBeforeSettings = await dialogue.innerText();
       await message.fill('Oskickat i samtalet');
       if (mode === 'voice') {
         await page
@@ -382,6 +384,7 @@ for (const mode of ['voice', 'text'] as const) {
         page.getByRole('heading', { name: 'Samtal och text', exact: true }),
       ).toBeFocused();
       await expect(message).toHaveValue('Oskickat i samtalet');
+      await expect(dialogue).toHaveText(dialogueBeforeSettings, { useInnerText: true });
       expect(await read()).toEqual(corrected);
       expect((await readMember()).draft).toEqual(robinPrivate);
       expect(await history()).toEqual([]);
