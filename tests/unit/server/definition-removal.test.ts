@@ -369,6 +369,32 @@ test.each(['object-type', 'relationship-type'] as const)(
   },
 );
 
+test.each(['object-type', 'relationship-type'] as const)(
+  "another member's pending %s edit keeps the definition and its retained field in use",
+  async (kind) => {
+    const defined = {
+      name: 'Egen typ',
+      description: '',
+      ...(kind === 'relationship-type' ? { forwardLabel: 'binder', reverseLabel: 'hör till' } : {}),
+      fields: [{ id: 'serial', name: 'Serienummer', description: '', kind: 'text' }],
+    };
+    expect((await definition(kind, 'shared-type', defined)).status).toBe(200);
+    await save('define-type');
+    const actor = await member();
+    expect(
+      (await definition(kind, 'shared-type', { ...defined, name: 'Nytt namn' }, actor)).status,
+    ).toBe(200);
+    const before = await read();
+    const field = await definition(kind, 'shared-type', { ...defined, fields: [] });
+    expect(field.status).toBe(409);
+    expect(await field.json()).toEqual({ error: 'field_in_use' });
+    const removal = await definition(kind, 'shared-type', null);
+    expect(removal.status).toBe(409);
+    expect(await removal.json()).toEqual({ error: 'definition_in_use' });
+    expect(await read()).toEqual(before);
+  },
+);
+
 test('removed object and relationship definitions return only in an explicit reviewed restoration with independent proposals intact', async () => {
   const initial = await read();
   const type = initial.types[0];

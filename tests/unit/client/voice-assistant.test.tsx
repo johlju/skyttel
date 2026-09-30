@@ -320,6 +320,50 @@ test.each(['stop', 'revoked'])(
   },
 );
 
+test('a voice poll answered after access is revoked cannot reopen the conversation', async () => {
+  const { component } = setup();
+  component.unmount();
+  const held = new Map<string, (response: Response) => void>();
+  const voice = { id: 'voice', phase: 'listening', seconds: null, usageFinal: false };
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    const name = url.split('/').at(-1) ?? '';
+    if (['messages', 'poll'].includes(name))
+      return new Promise<Response>((resolve) => held.set(name, resolve));
+    if (url.includes('/voice'))
+      return Response.json({ voice, assistant: assistant(), sdp: 'answer' });
+    return Response.json(
+      init?.method === 'POST' || url.endsWith('/text-session') ? assistant() : { available: true },
+    );
+  });
+  render(
+    <TextAssistant
+      householdId="linden"
+      onMapChange={vi.fn()}
+      onAccessLost={vi.fn()}
+      onSelectItem={async () => false}
+    />,
+  );
+  await userEvent.click(await screen.findByLabelText(/Jag tillåter att OpenAI/));
+  await userEvent.click(screen.getByLabelText(/Jag tillåter förslag och sparande/));
+  await userEvent.click(screen.getByRole('button', { name: 'Starta talsamtal' }));
+  await waitFor(() => expect(held.has('poll')).toBe(true), { timeout: 2000 });
+  await userEvent.type(screen.getByLabelText('Meddelande till textassistenten'), 'Privat text');
+  await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
+  await waitFor(() => expect(held.has('messages')).toBe(true));
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+  await act(async () => {
+    held.get('messages')?.(Response.json({ error: 'forbidden' }, { status: 403 }));
+    await settle();
+    held.get('poll')?.(Response.json({ voice, assistant: assistant() }));
+    await settle();
+  });
+  expect(screen.getByRole('alert').textContent).toBe('Åtkomsten har upphört.');
+  expect(screen.getByLabelText(/Jag tillåter att OpenAI/)).toBeDefined();
+  expect(screen.getByRole('region', { name: 'Skyttels textassistent' }).dataset.sessionActive).toBe(
+    'false',
+  );
+});
+
 test('temporary disconnection mutes capture, recovery re-enables it and an unusable connection stops server work', async () => {
   const { track, calls } = setup();
   await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));

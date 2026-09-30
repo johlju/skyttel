@@ -187,6 +187,12 @@ export function TextAssistant({
     },
     [showTranscript],
   );
+  const updateFromVoice = useCallback(
+    (next: TextAssistantView) => {
+      if (active.current?.id === next.id) update(next);
+    },
+    [update],
+  );
   const fail = useCallback((failure: unknown) => {
     if (!mounted.current) return;
     if (failure instanceof MapRequestError && [401, 403, 404].includes(failure.status)) {
@@ -483,7 +489,7 @@ export function TextAssistant({
           autoStart={startWithVoice}
           householdId={householdId}
           assistant={session}
-          onAssistant={update}
+          onAssistant={updateFromVoice}
           onAccessLost={() => fail(new MapRequestError(403))}
           onTranscript={showTranscript}
           onRecoveryNeeded={() => setUnknown(true)}

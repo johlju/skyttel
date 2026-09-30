@@ -299,6 +299,40 @@ test('used relationship field removal and kind changes are denied without disclo
   expect(JSON.stringify(await read())).not.toContain('Hemlig uppgift');
 });
 
+test('relationship field kind changes are checked against pending definitions, the own draft and saved values', async () => {
+  const noteAs = (kind: string) => ({
+    ...definition,
+    fields: fields.map((field) => (field.id === 'note' ? { ...field, kind } : field)),
+  });
+  const expectKindInUse = async (response: Response) => {
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'field_kind_in_use' });
+  };
+  await define();
+  expect((await save('definition')).status).toBe(200);
+  const member = await otherMember();
+  expect(
+    (
+      await member.json(`${path}/relationship-type`, {
+        version: 0,
+        id: 'storage',
+        baseRevision: 1,
+        value: noteAs('date'),
+      })
+    ).status,
+  ).toBe(200);
+  await expectKindInUse(await define(noteAs('number'), 1));
+  const memberState: MapState = await (await member.request(path)).json();
+  await member.json(`${path}/discard`, { version: memberState.draft.version });
+  expect((await edge({ note: 'Låst skåp' })).status).toBe(200);
+  await expectKindInUse(await define(noteAs('number'), 1));
+  expect((await save('edge')).status).toBe(200);
+  await expectKindInUse(await define(noteAs('number'), 1));
+  const saved = (await read()).relationships.find(({ id }) => id === 'edge');
+  expect((await edge({ amount: 1 }, saved?.revision)).status).toBe(200);
+  expect((await define(noteAs('number'), 1)).status).toBe(200);
+});
+
 test('relationship conflict resolution and undo retain independently changed values and field names', async () => {
   await define();
   await edge(values);

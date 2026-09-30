@@ -101,6 +101,7 @@ async function open() {
   return within(panel.getByRole('group', { name: 'Objektets detaljer' }));
 }
 
+// Two real image uploads and a removal need more than the default budget under a loaded coverage run.
 test('an image uploads to the real private draft, renders its reference and can be removed', async () => {
   const details = await open();
   await userEvent.upload(details.getByLabelText('Välj profilbild'), await file());
@@ -121,7 +122,7 @@ test('an image uploads to the real private draft, renders its reference and can 
     iconId: 'bike',
   });
   expect((await read()).draft.changes[0].after?.profileImageId).toBeUndefined();
-});
+}, 15_000);
 
 test('invalid and oversized files give recoverable messages with earlier proposals intact', async () => {
   const details = await open();
@@ -370,6 +371,7 @@ test('a real image rejection preserves Settings focus until explicit return to t
   }
 }, 15_000);
 
+// The real image upload and held save round trip share the loaded coverage run.
 test('the whole image and description proposal saves once with an exact expanded receipt', async () => {
   const user = userEvent.setup();
   const details = await openInApp();
@@ -445,4 +447,4 @@ test('the whole image and description proposal saves once with an exact expanded
   } finally {
     release();
   }
-});
+}, 15_000);

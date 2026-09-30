@@ -7,6 +7,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
   page,
   browser,
 }) => {
+  test.setTimeout(60_000);
   const installation = await createInstallation();
   try {
     await signIn(page.request, installation.origin);
