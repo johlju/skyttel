@@ -86,10 +86,15 @@ afterEach(() => {
 });
 async function open() {
   render(<HouseholdMap householdId={householdId} />);
-  await userEvent.click(await screen.findByRole('button', { name: 'Lista' }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Uppgifter för Lo Exempel' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Redigera valt objekt' }));
-  return within(screen.getByRole('group', { name: 'Objektets detaljer' }));
+  const tools = within(await screen.findByRole('navigation', { name: 'Kartans verktyg' }));
+  await userEvent.click(tools.getByLabelText('Lista', { selector: 'button' }));
+  const list = within(await screen.findByRole('region', { name: 'Lista och utkast' }));
+  await userEvent.click(
+    await list.findByLabelText('Uppgifter för Lo Exempel', { selector: 'button' }),
+  );
+  const panel = within(await screen.findByRole('region', { name: 'Lo Exempel' }));
+  await userEvent.click(panel.getByRole('button', { name: 'Redigera valt objekt' }));
+  return within(panel.getByRole('group', { name: 'Objektets detaljer' }));
 }
 
 test('an image uploads to the real private draft, renders its reference and can be removed', async () => {
@@ -161,19 +166,21 @@ test('an image error returns to the retained object and expires before an unrela
     new File(['invalid'], 'bad.png', { type: 'image/png' }),
   );
   await screen.findByText(/Bilden kunde inte behandlas/);
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng Lo Exempel' }));
+  const panel = within(screen.getByRole('region', { name: 'Lo Exempel' }));
+  const status = within(screen.getByRole('region', { name: 'Aktuell status' }));
+  await userEvent.click(panel.getByLabelText('Stäng Lo Exempel', { selector: 'button' }));
   expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
   const returnName = 'Återgå till bilden för Lo Exempel';
-  await userEvent.click(screen.getByRole('button', { name: returnName }));
+  await userEvent.click(status.getByRole('button', { name: returnName }));
   expect(screen.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
   expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
   expect(await read()).toEqual(before);
   await user.clear(details.getByLabelText('Beskrivning', { exact: true }));
   await user.paste('Kasta denna text');
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng utan att skicka texten' }));
+  await userEvent.click(panel.getByRole('button', { name: 'Stäng utan att skicka texten' }));
   expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
   expect(await read()).toEqual(before);
-  await userEvent.click(screen.getByRole('button', { name: returnName }));
+  await userEvent.click(status.getByRole('button', { name: returnName }));
   expect(screen.getByRole('heading', { name: 'Lo Exempel' })).toBe(document.activeElement);
   details = within(screen.getByRole('group', { name: 'Objektets detaljer' }));
   expect(details.getByDisplayValue('Befintlig text')).toBeTruthy();
@@ -181,7 +188,7 @@ test('an image error returns to the retained object and expires before an unrela
     `/profile-images/${before.draft.changes[0].after?.profileImageId}`,
   );
   expect(await read()).toEqual(before);
-  await userEvent.click(screen.getByRole('button', { name: 'Hämta aktuellt underlag' }));
+  await userEvent.click(status.getByRole('button', { name: 'Hämta aktuellt underlag' }));
   await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
   expect(screen.queryByRole('button', { name: returnName })).toBeNull();
   const description = details.getByLabelText('Beskrivning', { exact: true });
