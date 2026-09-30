@@ -825,7 +825,6 @@ export function TextAssistant({
         </section>,
         voiceHost,
       )}
-      {renderWorkspace && <div ref={floatingVoice} className="workspace-voice-controls" />}
       {renderWorkspace ? (
         renderWorkspace(
           <>
@@ -852,6 +851,9 @@ export function TextAssistant({
           </div>
         </>
       )}
+      {/* In scroll flow, moving the retained voice host must not shift a panel
+          heading that received focus during the same commit. */}
+      {renderWorkspace && <div ref={floatingVoice} className="workspace-voice-controls" />}
     </section>
   );
 }

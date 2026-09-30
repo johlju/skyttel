@@ -89,6 +89,8 @@ and desktop positions”.
 3. Öppna samtalet, lämna nödvändiga medgivanden och starta textassistenten.
    Skriv ett meddelande utan att skicka det.
 4. Minska fönstret till telefonbredd. Välj varje panel med **Öppna paneler**.
+   Kontrollera att fokuserad rubrik eller kontroll syns utan att döljas av
+   statusen. Vid återgång till listan ska **Uppgifter för Cykeln** ha fokus.
    Öppna Lista och välj Cykeln igen; kontrollera rubrikfokus.
    Stäng samtalspanelen och öppna den igen från verktygsfältet.
 5. Återgå till den ursprungliga datorbredden och välj Cykeln.
@@ -102,6 +104,8 @@ and desktop positions”.
   läsordningen. Väljaren innehåller alla öppna paneler.
 - Nya paneler får rubrikfokus; stängning går till nästa panel eller
   väljaren. När sista panelen stängs går fokus till Lista i verktygsfältet.
+- Återgång till listan återför fokus till den tidigare objektkontrollen.
+  Fokus är synligt och åtkomligt även när samtalets status flyttas.
 - Oskickad objekttext och samtalstext finns kvar. Datorplaceringen återkommer.
 - Kontroller och text kan nås utan horisontell sidrullning.
 

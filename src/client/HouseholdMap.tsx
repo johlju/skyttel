@@ -61,6 +61,10 @@ import './workspace-panels.css';
 import { usePersonalView } from './use-personal-view.js';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
 
+function draftEntryId(kind: DraftConflict['kind'], id: string) {
+  return `draft-entry-${kind}-${id}`;
+}
+
 function checkOperations(operations: SaveOperation[], householdId: string, current: MapState) {
   for (const operation of operations)
     checkOperation(operation, {
@@ -98,7 +102,7 @@ export function HouseholdMap({
   householdName?: string;
   account?: ReactNode;
   profileRequested?: boolean;
-  onSettings?: () => void;
+  onSettings?: (section?: 'types') => void;
   onReturnToMap?: () => void;
   typeSettingsTarget?: HTMLElement | null;
   mapSettingsTarget?: HTMLElement | null;
@@ -714,7 +718,8 @@ export function HouseholdMap({
         setDirty(false);
         setBlocked(false);
         if (document.activeElement === submittedFocus || document.activeElement === document.body) {
-          if (kind === 'undo') openPanel('work', document.getElementById('draft-title'));
+          if (kind === 'undo' || kind === 'resolve')
+            openPanel('work', document.getElementById('draft-title'));
           else newButton.current?.focus();
         }
       }
@@ -786,11 +791,28 @@ export function HouseholdMap({
       conflict.kind === 'object' ? state?.draft.changes : state?.draft.relationships
     )?.find((change) => change.id === conflict.id);
     const deleted = Boolean(proposal?.before && !conflict.current);
+    const editableObject =
+      conflict.kind === 'object' &&
+      !deleted &&
+      state &&
+      !mergeFor(state.draft, 'object', conflict.id)
+        ? displayed.get(conflict.id)
+        : undefined;
+    const editableRelationship =
+      conflict.kind === 'relationship' &&
+      !deleted &&
+      state &&
+      !mergeFor(state.draft, 'relationship', conflict.id)
+        ? displayedEdges.get(conflict.id)
+        : undefined;
     return (
       <div className="conflict-review">
         <h4>Konflikt: sparat i kartan nu</h4>
         {conflict.kind === 'object' ? (
-          details(conflict.current)
+          details(
+            conflict.current,
+            state?.types.find((type) => type.id === conflict.current?.typeId),
+          )
         ) : (
           <p>
             {conflict.current && state
@@ -809,6 +831,24 @@ export function HouseholdMap({
           </>
         )}
         <p>Välj vilket värde du vill behålla. Valet ändrar bara ditt utkast.</p>
+        {editableObject && (
+          <button
+            type="button"
+            disabled={pending || blocked || legacyDirty}
+            onClick={() => edit(editableObject)}
+          >
+            Rätta objektet
+          </button>
+        )}
+        {editableRelationship && (
+          <button
+            type="button"
+            disabled={pending || blocked || legacyDirty}
+            onClick={() => editRelationship(editableRelationship)}
+          >
+            Rätta sambandet
+          </button>
+        )}
         {conflict.type !== undefined && (
           <p>
             Typdefinitionen har ändrats:{' '}
@@ -1068,6 +1108,43 @@ export function HouseholdMap({
     );
   }
   const savedObjects = new Map((state?.objects ?? []).map((object) => [object.id, object]));
+  const conflictEntries = conflicts.map((conflict) => {
+    let label: string;
+    if (conflict.kind === 'relationship') {
+      const change = state?.draft.relationships?.find((item) => item.id === conflict.id);
+      const value = change?.after ?? change?.before;
+      label = `Samband: ${
+        value && change
+          ? relationshipLabel(
+              value,
+              { relationshipTypes: [change.type] },
+              new Map([
+                ...Object.entries(change.objectNames ?? {}).map(
+                  ([id, name]) => [id, { name }] as const,
+                ),
+                ...displayed,
+              ]),
+            )
+          : conflict.id
+      }`;
+    } else {
+      const changes =
+        conflict.kind === 'object'
+          ? state?.draft.changes
+          : conflict.kind === 'objectType'
+            ? state?.draft.objectTypes
+            : state?.draft.relationshipTypes;
+      const change = changes?.find((item) => item.id === conflict.id);
+      const kind =
+        conflict.kind === 'object'
+          ? 'Objekt'
+          : conflict.kind === 'objectType'
+            ? 'Objekttyp'
+            : 'Sambandstyp';
+      label = `${kind}: ${change?.after?.name ?? change?.before?.name ?? conflict.id}`;
+    }
+    return { id: draftEntryId(conflict.kind, conflict.id), label, entityId: conflict.id };
+  });
   const hasChanges = Boolean(
     state &&
       (state.draft.changes.length ||
@@ -1109,6 +1186,32 @@ export function HouseholdMap({
         edge ?? { typeId: '', sourceId: '', targetId: '', knowledge: 'known' },
     });
     setDirty(true);
+  }
+  function editObjectType(type: ObjectType) {
+    if (!state || legacyDirty) return;
+    const proposal = state.draft.objectTypes?.find((item) => item.id === type.id);
+    setEdgeEditor(null);
+    setDirty(false);
+    setEdgeTypeEditor(null);
+    setTypeEditor({
+      type,
+      version: state.draft.version,
+      contentVersion: state.contentVersion,
+      baseRevision: proposal ? (proposal.before?.revision ?? null) : type.revision,
+    });
+  }
+  function editRelationshipType(type: RelationshipType) {
+    if (!state || legacyDirty) return;
+    const proposal = state.draft.relationshipTypes?.find((item) => item.id === type.id);
+    setEdgeEditor(null);
+    setTypeEditor(null);
+    setDirty(false);
+    setEdgeTypeEditor({
+      type,
+      version: state.draft.version,
+      contentVersion: state.contentVersion,
+      baseRevision: proposal ? (proposal.before?.revision ?? null) : type.revision,
+    });
   }
   function selectObject(
     object: MapObject,
@@ -1467,7 +1570,13 @@ export function HouseholdMap({
               unknown={Boolean(blocked && saveAttempt.current && !pending)}
               dirty={dirty}
               unresolved={Boolean(unresolved)}
-              conflicts={conflicts.length > 0}
+              conflicts={conflictEntries.map((entry) => ({
+                id: entry.id,
+                label:
+                  conflictEntries.filter((other) => other.label === entry.label).length > 1
+                    ? `${entry.label} [${entry.entityId}]`
+                    : entry.label,
+              }))}
               expanded={statusOpen}
               error={error}
               working={pending && !saveAttempt.current}
@@ -1497,6 +1606,10 @@ export function HouseholdMap({
                   'work',
                   document.getElementById(hasChanges ? 'draft-title' : 'save-operations-title'),
                 );
+              }}
+              onConflict={(id) => {
+                setStatusOpen(false);
+                openPanel('work', document.getElementById(id));
               }}
               onContinue={() => {
                 setStatusOpen(false);
@@ -2159,23 +2272,7 @@ export function HouseholdMap({
                                   <button
                                     type="button"
                                     disabled={pending || dirty || blocked}
-                                    onClick={() => {
-                                      const proposal = state.draft.objectTypes?.find(
-                                        (item) => item.id === type.id,
-                                      );
-
-                                      setEdgeEditor(null);
-                                      setDirty(false);
-                                      setEdgeTypeEditor(null);
-                                      setTypeEditor({
-                                        type,
-                                        version: state.draft.version,
-                                        contentVersion: state.contentVersion,
-                                        baseRevision: proposal
-                                          ? (proposal.before?.revision ?? null)
-                                          : type.revision,
-                                      });
-                                    }}
+                                    onClick={() => editObjectType(type)}
                                   >
                                     Ändra typ: {type.name}
                                   </button>
@@ -2244,23 +2341,7 @@ export function HouseholdMap({
                                   <button
                                     type="button"
                                     disabled={pending || dirty || blocked}
-                                    onClick={() => {
-                                      const proposal = state.draft.relationshipTypes?.find(
-                                        (item) => item.id === type.id,
-                                      );
-
-                                      setEdgeEditor(null);
-                                      setTypeEditor(null);
-                                      setDirty(false);
-                                      setEdgeTypeEditor({
-                                        type,
-                                        version: state.draft.version,
-                                        contentVersion: state.contentVersion,
-                                        baseRevision: proposal
-                                          ? (proposal.before?.revision ?? null)
-                                          : type.revision,
-                                      });
-                                    }}
+                                    onClick={() => editRelationshipType(type)}
                                   >
                                     Ändra sambandstyp: {type.name}
                                   </button>
@@ -2331,7 +2412,7 @@ export function HouseholdMap({
                       {!hasChanges && <p>Inga förslag i utkastet.</p>}
                       {state.draft.relationshipTypes?.map((change) => (
                         <article key={change.id}>
-                          <h3>
+                          <h3 id={draftEntryId('relationshipType', change.id)} tabIndex={-1}>
                             {!change.after
                               ? 'Borttagen sambandstyp'
                               : change.before
@@ -2385,6 +2466,19 @@ export function HouseholdMap({
                                   behåller ditt förslag. Granska hela utkastet före ett nytt
                                   sparbesked.
                                 </p>
+                                {change.after && (
+                                  <button
+                                    type="button"
+                                    disabled={pending || blocked || legacyDirty}
+                                    onClick={() => {
+                                      if (!change.after) return;
+                                      editRelationshipType(change.after);
+                                      onSettings?.('types');
+                                    }}
+                                  >
+                                    Rätta sambandstypen
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   disabled={pending || blocked || dirty}
@@ -2419,7 +2513,7 @@ export function HouseholdMap({
                       ))}
                       {state.draft.objectTypes?.map((change) => (
                         <article key={change.id}>
-                          <h3>
+                          <h3 id={draftEntryId('objectType', change.id)} tabIndex={-1}>
                             {!change.after
                               ? 'Borttagen objekttyp'
                               : change.before
@@ -2462,6 +2556,19 @@ export function HouseholdMap({
                                   Välj definition för utkastet och granska hela utkastet före ett
                                   nytt sparbesked.
                                 </p>
+                                {change.after && (
+                                  <button
+                                    type="button"
+                                    disabled={pending || blocked || legacyDirty}
+                                    onClick={() => {
+                                      if (!change.after) return;
+                                      editObjectType(change.after);
+                                      onSettings?.('types');
+                                    }}
+                                  >
+                                    Rätta objekttypen
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   disabled={pending || blocked || dirty}
@@ -2496,7 +2603,7 @@ export function HouseholdMap({
                       ))}
                       {state.draft.changes.map((change) => (
                         <article key={change.id}>
-                          <h3>
+                          <h3 id={draftEntryId('object', change.id)} tabIndex={-1}>
                             {!change.after
                               ? 'Borttagning'
                               : !change.before
@@ -2595,7 +2702,9 @@ export function HouseholdMap({
                       ))}
                       {(state.draft.relationships ?? []).map((change) => (
                         <article key={change.id}>
-                          <h3>{change.after ? 'Samband' : 'Borttagning av samband'}</h3>
+                          <h3 id={draftEntryId('relationship', change.id)} tabIndex={-1}>
+                            {change.after ? 'Samband' : 'Borttagning av samband'}
+                          </h3>
                           <h4>Sparat underlag</h4>
                           <p>
                             {change.before

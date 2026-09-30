@@ -228,7 +228,29 @@ test('PANEL-02: mobile panel choice retains conversation, object text and deskto
       for (const name of ['Cykeln', 'Lista och utkast', 'Samtal och text']) {
         await chooser.selectOption({ label: name });
         const chosen = page.getByRole('region', { name, exact: true });
-        await expect(chosen.getByRole('heading', { name, exact: true })).toBeFocused();
+        const focusTarget =
+          name === 'Lista och utkast'
+            ? chosen.getByRole('button', { name: 'Uppgifter för Cykeln', exact: true })
+            : chosen.getByRole('heading', { name, exact: true });
+        await expect(focusTarget).toBeFocused();
+        await expect
+          .poll(() =>
+            focusTarget.evaluate((element) => {
+              const box = element.getBoundingClientRect();
+              const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+              return (
+                element === document.activeElement &&
+                box.width > 0 &&
+                box.height > 0 &&
+                box.left >= 0 &&
+                box.right <= innerWidth &&
+                box.top >= 0 &&
+                box.bottom <= innerHeight &&
+                Boolean(hit && (hit === element || element.contains(hit)))
+              );
+            }),
+          )
+          .toBe(true);
         await expect(page.locator('.workspace-window:visible')).toHaveCount(1);
         expect(
           await chosen.evaluate((element) => {

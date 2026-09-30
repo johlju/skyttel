@@ -993,7 +993,9 @@ function HouseholdPage({
         householdName={result.data.household.name}
         account={account}
         profileRequested={location.state?.profile === true}
-        onSettings={() => navigate(`/households/${encodeURIComponent(id)}/settings`)}
+        onSettings={(section) =>
+          navigate(`/households/${encodeURIComponent(id)}/settings${section ? `/${section}` : ''}`)
+        }
         onReturnToMap={() =>
           navigate(`/households/${encodeURIComponent(id)}`, { state: { conversation: true } })
         }

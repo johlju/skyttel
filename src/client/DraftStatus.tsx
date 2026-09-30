@@ -20,6 +20,7 @@ export function DraftStatus({
   disabled,
   onSave,
   onDraft,
+  onConflict,
   onContinue,
 }: {
   draft: MapDraft;
@@ -28,7 +29,7 @@ export function DraftStatus({
   unknown: boolean;
   dirty: boolean;
   unresolved: boolean;
-  conflicts: boolean;
+  conflicts: { id: string; label: string }[];
   expanded: boolean;
   error: string;
   working: boolean;
@@ -39,6 +40,7 @@ export function DraftStatus({
   disabled: boolean;
   onSave: () => void;
   onDraft: () => void;
+  onConflict: (id: string) => void;
   onContinue: () => void;
 }) {
   const count =
@@ -71,7 +73,25 @@ export function DraftStatus({
       )}
       {dirty && <p>Oskickad formulärtext finns kvar. Den ingår inte i utkastet.</p>}
       {unresolved && <p>Vilka objekt avses? Red ut obesvarade identiteter före sparande.</p>}
-      {conflicts && <p>Utkastet har konflikter. Välj hur de ska lösas före ett nytt sparbesked.</p>}
+      {conflicts.length > 0 && (
+        <>
+          <p>Utkastet har konflikter. Välj hur de ska lösas före ett nytt sparbesked.</p>
+          <details className="draft-conflict-links">
+            <summary>
+              Visa {conflicts.length} {conflicts.length === 1 ? 'konflikt' : 'konflikter'}
+            </summary>
+            <ul>
+              {conflicts.map((conflict) => (
+                <li key={conflict.id}>
+                  <button type="button" onClick={() => onConflict(conflict.id)}>
+                    {conflict.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </>
+      )}
       {unknown && <p>Kontrollera samma sparförsök innan du ändrar eller sparar mer.</p>}
       <div className="draft-status-actions">
         {onRecover && (
@@ -98,9 +118,9 @@ export function DraftStatus({
           <button type="button" onClick={onContinue}>
             Fortsätt redigera
           </button>
-        ) : unresolved || conflicts ? (
+        ) : unresolved || conflicts.length > 0 ? (
           <button type="button" onClick={onDraft}>
-            {conflicts ? 'Lös konflikter i utkastet' : 'Red ut identiteter i utkastet'}
+            {conflicts.length ? 'Lös konflikter i utkastet' : 'Red ut identiteter i utkastet'}
           </button>
         ) : showSave && count ? (
           <button type="button" className="primary" disabled={disabled} onClick={onSave}>

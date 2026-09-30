@@ -75,7 +75,7 @@ afterEach(() => {
   fixture.close();
 });
 
-test('saved history shows definitions, historical direction labels and ended content, then restores the whole removal', async () => {
+async function prepareRemovedHistory() {
   const state = await read();
   const defineObject = {
     name: 'Växt',
@@ -187,6 +187,11 @@ test('saved history shows definitions, historical direction labels and ended con
     ).status,
   ).toBe(200);
   await save('removed');
+  return state;
+}
+
+test('saved history shows definitions, historical direction labels and removed content', async () => {
+  const state = await prepareRemovedHistory();
   const history = await open();
   const changed = await group('changed-direction');
   const disclosure = changed.getByText('Visa ändringarna', { selector: 'summary' });
@@ -207,6 +212,15 @@ test('saved history shows definitions, historical direction labels and ended con
   await userEvent.click(removed.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(removed.getAllByText('Borttagen definition')).toHaveLength(2);
   expect(removed.getAllByText('Borttaget').length).toBeGreaterThan(0);
+  await userEvent.click(within(history).getByRole('button', { name: 'Dölj historik' }));
+  expect(within(history).queryAllByRole('article')).toHaveLength(0);
+});
+
+test('history undo restores the whole removal and its lifecycle values after an explicit save', async () => {
+  await prepareRemovedHistory();
+  await open();
+  const removed = await group('removed');
+  await userEvent.click(removed.getByText('Visa ändringarna', { selector: 'summary' }));
   await userEvent.click(removed.getByRole('button', { name: 'Ångra sparandet' }));
   await waitFor(() =>
     expect(screen.getByRole('region', { name: 'Hela mitt utkast' }).textContent).toContain('Rosen'),
@@ -218,8 +232,6 @@ test('saved history shows definitions, historical direction labels and ended con
     lifecycle: 'ended',
     customValues: { color: 'röd' },
   });
-  await userEvent.click(within(history).getByRole('button', { name: 'Dölj historik' }));
-  expect(within(history).queryAllByRole('article')).toHaveLength(0);
 });
 
 test('empty history and a failed read can be retried without a fabricated result', async () => {

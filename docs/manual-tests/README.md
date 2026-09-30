@@ -66,8 +66,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   teman och typdefinitioner i kartans samlade utkast.
 
 - [Fria paneler](workspace-panels.md): flera objekt och samtal, placering,
-  mobil panelväljare, återöppning av nya objekt, bevarade samband och typer
-  samt fortsatt sökning medan ett förslag skickas.
+  mobil panelväljare med synligt återgångsfokus, återöppning av nya objekt,
+  bevarade samband och typer samt fortsatt sökning medan ett förslag skickas.
 - [Kartans arbetsyta](workspace-shell.md): kompakt och expanderad verktygslåda,
   teman och fokus, stängbar vägledning, hjälp, formulär på telefon samt
   laddning och återhämtning efter nätfel.
@@ -191,6 +191,19 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   ett samlat utkast från formulär, text och tal efter omstart. Besvara
   nödvändiga frågor före ett nytt uttryckligt sparbesked. Använd Navigation
   och aktuell status tillsammans utan att tappa åtkomst till kontrollerna.
+  Öppna en namngiven konflikt från status med tangentbord och återgå till
+  ett annat oskickat objektformulär med texten kvar. Följ alla fyra
+  konfliktslag till rätt ändring och läs tidigare, föreslagna och aktuella
+  avsnitt, dolda värden och hela ekonomiska uppgifter. Rätta ett
+  konfliktobjekt med annan oskickad text kvar och bevara oberoende
+  sparade uppgifter före ett nytt uttryckligt sparande. Rätta ett sambands
+  borttagna mål utan att återuppliva objektet eller spara i förtid.
+  Rätta objekt- och sambandstyper genom inställningarna med oberoende
+  sparade uppgifter kvar och ett nytt uttryckligt sparbesked.
+  Återgå till hela utkastet efter ett konfliktval och bevara senare
+  sökfokus när svaret fördröjs.
+  Återfinn privata konfliktval efter tappade svar och bekräfta samma
+  kvitto efter ett nytt uttryckligt sparande utan dubbletter.
 - [Objekttyper och egna fält](object-types.md): skapa och rätta gemensamma
   definitioner, fyra frivilliga värdeslag, privata förslag, samtidiga
   ändringar i namngivna avsnitt, flytt och döljning utan värdeförlust,

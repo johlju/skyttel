@@ -46,7 +46,17 @@ async function open() {
   return work;
 }
 
-test('relationship field definitions retain removal focus and enter the private draft with all four kinds', async () => {
+test('removing a relationship field returns focus to the add-field button', async () => {
+  const work = await open();
+  await userEvent.click(work.getByRole('button', { name: 'Ny sambandstyp' }));
+  const editor = within(screen.getByRole('group', { name: 'Sambandstypens definition' }));
+  await userEvent.click(editor.getByRole('button', { name: 'Lägg till fält' }));
+  expect(document.activeElement).toBe(editor.getByLabelText('Fältets namn'));
+  await userEvent.click(editor.getByRole('button', { name: 'Ta bort fält: Eget fält 1' }));
+  expect(document.activeElement).toBe(editor.getByRole('button', { name: 'Lägg till fält' }));
+});
+
+test('relationship field definitions enter the private draft with all four kinds', async () => {
   const user = userEvent.setup();
   const before = await read();
   const work = await open();
@@ -61,10 +71,6 @@ test('relationship field definitions retain removal focus and enter the private 
     await user.click(editor.getByLabelText(label));
     await user.paste(text);
   }
-  await userEvent.click(editor.getByRole('button', { name: 'Lägg till fält' }));
-  expect(document.activeElement).toBe(editor.getByLabelText('Fältets namn'));
-  await userEvent.click(editor.getByRole('button', { name: 'Ta bort fält: Eget fält 1' }));
-  expect(document.activeElement).toBe(editor.getByRole('button', { name: 'Lägg till fält' }));
   for (const [name, kind] of [
     ['Anteckning', 'text'],
     ['Belopp', 'number'],

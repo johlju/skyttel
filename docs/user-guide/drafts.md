@@ -71,13 +71,27 @@ Nyare förslag finns kvar. Kopiera eventuell formulärtext du vill behålla,
 stäng formuläret och öppna det aktuella förslaget innan du fortsätter.
 
 Vid konflikt sparas inget från försöket, inte heller de konfliktfria
-delarna. Hämta aktuellt underlag. Utkastet visar ditt tidigare underlag,
-ditt förslag och det som är sparat nu. Välj för varje konflikt:
+delarna. Hämta aktuellt underlag. Öppna statuskortets konfliktlista,
+exempelvis **Visa 1 konflikt**, och välj det berörda objektet, sambandet
+eller typen. Valet öppnar rätt ändring i **Hela mitt utkast**, även
+när arbetspanelerna är stängda eller objektet är borttaget ur kartan.
+Navigeringen ändrar inga uppgifter och andra oskickade formulär finns kvar.
+
+Utkastet visar ditt tidigare underlag, ditt förslag och det som är sparat
+nu. Avsnitt, dolda egna värden, osäkerhet och datum hör till respektive
+underlag. Välj för varje konflikt:
 
 - **Behåll mitt förslag** för att lägga din ändring ovanpå aktuellt
   underlag. För objekt bevaras fält som bara den andra användaren ändrar.
 - **Använd sparat värde** för att ta bort just ditt överlappande förslag.
   Övriga förslag finns kvar.
+
+Du kan också rätta förslaget själv från ändringens **Rätta**-knapp.
+Objekt och samband öppnas i sin redigering; typer öppnas i
+**Inställningar → Typer och egna fält**. Lägg rättelsen i utkastet och
+återgå till konfliktens aktuella underlag. En rättelse kan fortfarande
+behöva ett konfliktval. Slutför eller stäng oskickade formulär innan du
+väljer mellan sparat värde och förslag.
 
 För samband bevaras oberoende ändringar av status och slutdatum. Ett
 slutdatum och dess säkerhet väljs tillsammans. Sambandets betydelse,
@@ -95,6 +109,15 @@ Ett konfliktval ändrar bara utkastet. Granska **Hela mitt utkast** igen
 och välj därefter **Spara hela utkastet**. Tidigare sparbesked återanvänds
 inte. Om underlaget ändras medan du väljer avvisas även ett gammalt
 konfliktval; hämta aktuellt underlag och välj igen.
+
+När valet är klart får rubriken **Hela mitt utkast** fokus. Om du går
+vidare till ett annat fält medan svaret väntar stannar fokus där.
+
+Om svaret på ett konfliktval försvinner är valet ännu inte bekräftat i
+din visning. Välj **Hämta aktuellt underlag** och granska det beständiga
+utkastet. Hämta inte ett sparkvitto för själva konfliktvalet: det sparar
+ingen gemensam ändring. Ett nytt uttryckligt sparande behövs även efter
+att valet återfinns.
 
 ## Följ upp ett oklart sparande
 

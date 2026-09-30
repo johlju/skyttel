@@ -247,6 +247,7 @@ test('legacy custom placement remains visible once while canonical presentation 
 });
 
 test('explicit custom-only order controls object editing and review without inventing built-in metadata', async () => {
+  const user = userEvent.setup();
   expect(
     (
       await client.json(`${path}/object-type`, {
@@ -270,7 +271,8 @@ test('explicit custom-only order controls object editing and review without inve
   await userEvent.click(await screen.findByRole('button', { name: 'Nytt objekt' }));
   const form = within(screen.getByRole('group', { name: 'Objektets detaljer' }));
   await userEvent.selectOptions(form.getByLabelText('Objekttyp', { exact: true }), 'ordered');
-  await userEvent.type(form.getByLabelText('Objektets namn'), 'Sorterade uppgifter');
+  await user.click(form.getByLabelText('Objektets namn'));
+  await user.paste('Sorterade uppgifter');
   const fields = form.getByRole('group', { name: 'Egna fält' });
   expect([...fields.querySelectorAll('label')].map((label) => label.textContent)).toEqual([
     'Andra fältet',
@@ -278,7 +280,8 @@ test('explicit custom-only order controls object editing and review without inve
   ]);
   await userEvent.type(form.getByLabelText('Andra fältet', { exact: true }), 'Två');
   await userEvent.type(form.getByLabelText('Första fältet', { exact: true }), '0');
-  await userEvent.type(form.getByLabelText('Beskrivning', { exact: true }), 'Gemensam text');
+  await user.click(form.getByLabelText('Beskrivning', { exact: true }));
+  await user.paste('Gemensam text');
   await userEvent.click(form.getByRole('button', { name: 'Lägg i mitt utkast' }));
   await screen.findByText('Förslaget finns i ditt privata utkast. Kartan är inte ändrad.');
   const review = within(await screen.findByRole('region', { name: 'Hela mitt utkast' }));
