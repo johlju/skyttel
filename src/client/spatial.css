@@ -173,9 +173,6 @@
   stroke-dasharray: 6 5;
   opacity: 0.6;
 }
-.spatial-map.crowded .connection.existing:not(.selected) {
-  opacity: 0.12;
-}
 .spatial-labels .spatial-edge {
   min-height: 30px;
   max-width: min(15rem, calc(100% - 16px));

@@ -928,10 +928,7 @@ export function SpatialMap({
     </MapNavigation>
   );
   return (
-    <section
-      className={`spatial-map${!allLabels && hiddenLabels > 0 ? ' crowded' : ''}`}
-      aria-label="Rymdkarta"
-    >
+    <section className="spatial-map" aria-label="Rymdkarta">
       <h2>Rymdkarta</h2>
       {settingsMount &&
         createPortal(

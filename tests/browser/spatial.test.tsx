@@ -915,6 +915,46 @@ test('dense labels remain readable and explicit all-label mode retains access to
   await expect.poll(() => document.querySelectorAll('.spatial-name').length).toBe(100);
 });
 
+test('hidden labels do not change the emphasis of unselected relationship lines', async () => {
+  const objects = Array.from({ length: 100 }, (_, index) => ({
+    ...state.objects[0],
+    id: `dense-${index}`,
+    name: `Tätt objekt ${index}`,
+  }));
+  const edges = [1, 2, 3].map((index) => ({
+    ...state.relationships[0],
+    id: `dense-edge-${index}`,
+    sourceId: `dense-${index}`,
+    targetId: `dense-${index + 10}`,
+  }));
+  render(
+    <SpatialMap
+      state={{ ...state, objects, relationships: edges, draft: { version: 0, changes: [] } }}
+      active
+      objects={new Map(objects.map((object) => [object.id, object]))}
+      relationships={new Map(edges.map((edge) => [edge.id, edge]))}
+      selection={{ kind: 'object', id: 'dense-99' }}
+      disabled={false}
+      onSelect={() => {}}
+      onSelectRelationship={() => {}}
+      onFocus={() => {}}
+      onClear={() => {}}
+      onReset={() => {}}
+      onRemove={() => {}}
+    />,
+  );
+  const opacity = () =>
+    [...document.querySelectorAll('line.connection')].map((line) => getComputedStyle(line).opacity);
+  // Hidden labels depend on the camera angle, so they must not restyle lines
+  // while the map turns.
+  await expect.poll(() => document.querySelector('.label-note-count')).not.toBeNull();
+  const withHiddenLabels = opacity();
+  expect(withHiddenLabels).toHaveLength(3);
+  await page.getByLabelText('Alla etiketter', { exact: true }).click();
+  await expect.poll(() => document.querySelectorAll('.spatial-name').length).toBe(100);
+  expect(opacity()).toEqual(withHiddenLabels);
+});
+
 test('a selected relationship keeps its directed label readable in a dense map', async () => {
   const objects = Array.from({ length: 100 }, (_, index) => ({
     ...state.objects[0],
