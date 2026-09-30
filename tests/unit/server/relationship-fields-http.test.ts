@@ -331,6 +331,37 @@ test('relationship field kind changes are checked against pending definitions, t
   const saved = (await read()).relationships.find(({ id }) => id === 'edge');
   expect((await edge({ amount: 1 }, saved?.revision)).status).toBe(200);
   expect((await define(noteAs('number'), 1)).status).toBe(200);
+  const memberDraft: MapState = await (await member.request(path)).json();
+  expect(
+    (
+      await member.json(`${path}/relationship`, {
+        version: memberDraft.draft.version,
+        id: 'member-edge',
+        baseRevision: null,
+        value: {
+          typeId: 'storage',
+          sourceId: 'garage',
+          targetId: 'bike',
+          knowledge: 'known',
+          customValues: { note: 'Hyllan' },
+        },
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await member.json(`${path}/save`, {
+        version: memberDraft.draft.version + 1,
+        operationId: 'member-note',
+      })
+    ).status,
+  ).toBe(200);
+  const before = await read();
+  await expectKindInUse(await save('kind-change'));
+  expect(await read()).toEqual(before);
+  expect(before.relationshipTypes.find(({ id }) => id === 'storage')?.fields?.[0].kind).toBe(
+    'text',
+  );
 });
 
 test('relationship conflict resolution and undo retain independently changed values and field names', async () => {
