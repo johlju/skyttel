@@ -257,3 +257,85 @@ test('YTA-02: theme choice returns focus and System follows the device', async (
     await installation.close();
   }
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`YTA-06: empty mobile maps keep focused display choices readable and operable in ${theme}`, async ({
+    page,
+  }) => {
+    const installation = await createInstallation();
+    try {
+      await page.emulateMedia({ colorScheme: theme });
+      await signIn(page.request, installation.origin);
+      await createHousehold(page.request, installation.origin);
+      await page.setViewportSize({ width: 320, height: 900 });
+      await page.goto(installation.origin);
+      for (const guidance of [true, false]) {
+        if (!guidance)
+          await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
+        for (const height of [900, 568, 451]) {
+          await page.setViewportSize({ width: 320, height });
+          const reset = page.getByRole('button', { name: 'Återställ vy', exact: true });
+          const labels = page.getByRole('checkbox', { name: 'Alla etiketter', exact: true });
+          const heightHelp = page.getByRole('checkbox', { name: 'Visa höjdhjälp', exact: true });
+          for (const target of [reset, labels, heightHelp]) {
+            if (target === reset) await reset.focus();
+            else await page.keyboard.press('Tab');
+            await expect(target).toBeFocused();
+            const visible = await target.evaluate((element) => {
+              const box = element.getBoundingClientRect();
+              const label = element.closest('label') ?? element;
+              const bounds = label.getBoundingClientRect();
+              return {
+                centerHit: element.contains(
+                  document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+                ),
+                labelHit: label.contains(
+                  document.elementFromPoint(bounds.right - 2, bounds.y + bounds.height / 2),
+                ),
+                within:
+                  bounds.left >= 0 &&
+                  bounds.right <= innerWidth &&
+                  bounds.top >= 0 &&
+                  bounds.bottom <= innerHeight,
+              };
+            });
+            expect(visible).toEqual({ centerHit: true, labelHit: true, within: true });
+          }
+          await page.keyboard.press('Space');
+          await expect(heightHelp).toBeChecked();
+          await page.keyboard.press('Space');
+          await expect(heightHelp).not.toBeChecked();
+          const action = page.getByRole('button', {
+            name: guidance ? 'Öppna listan' : 'Öppna Lista',
+            exact: true,
+          });
+          await action.focus();
+          await expect(action).toBeFocused();
+          expect(
+            await action.evaluate((element) => {
+              const box = element.getBoundingClientRect();
+              return (
+                box.top >= 0 &&
+                box.bottom <= innerHeight &&
+                element.contains(
+                  document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+                )
+              );
+            }),
+          ).toBe(true);
+        }
+      }
+      await page.getByRole('button', { name: 'Öppna Lista', exact: true }).click();
+      await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+      await page.getByLabel('Objektets namn').fill('Cykeln');
+      await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
+      await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+      await expect(page.getByText('Din karta börjar här', { exact: true })).toHaveCount(0);
+      await expect(
+        page.getByRole('checkbox', { name: 'Visa höjdhjälp', exact: true }),
+      ).not.toBeChecked();
+    } finally {
+      await installation.close();
+    }
+  });
+}

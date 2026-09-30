@@ -328,23 +328,29 @@ export function HouseholdMap({
         null,
     );
   });
+  const hasMap = state !== null;
   useLayoutEffect(() => {
     const measure = () => {
-      const feedback = workspace.current?.querySelector<HTMLElement>('.workspace-feedback');
-      workspace.current?.style.setProperty('--feedback-height', `${feedback?.offsetHeight ?? 0}px`);
+      for (const [selector, property] of [
+        ['.workspace-feedback', '--feedback-height'],
+        ['.spatial-bottom-bar', '--display-height'],
+      ]) {
+        const element = workspace.current?.querySelector<HTMLElement>(selector);
+        workspace.current?.style.setProperty(property, `${element?.offsetHeight ?? 0}px`);
+      }
     };
     measure();
-    const feedback = workspace.current?.querySelector<HTMLElement>('.workspace-feedback');
     const observer = new ResizeObserver(measure);
-    if (feedback) observer.observe(feedback);
+    const measured = hasMap ? '.workspace-feedback, .spatial-bottom-bar' : '.workspace-feedback';
+    for (const element of workspace.current?.querySelectorAll(measured) ?? [])
+      observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [hasMap]);
   useEffect(() => {
     if (!state && error) workspace.current?.focus();
   }, [state, error]);
   const saveAttempt = useRef<SaveAttempt | null>(null);
   const [operations, setOperations] = useState<SaveOperation[]>([]);
-  const hasMap = state !== null;
   useLayoutEffect(() => {
     if (active && editorOpen && hasMap) {
       editorDialog.current?.querySelector<HTMLSelectElement>('#relationship-source')?.focus();

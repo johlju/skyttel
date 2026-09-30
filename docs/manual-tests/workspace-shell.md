@@ -178,3 +178,47 @@ testfallet “YTA-05: save results remain readable beside tablet work”.
 - Sparbeskedet är läsbart medan arbetsytan är öppen.
 - Att stänga beskedet ändrar inte det sparade innehållet. Cykeln finns
   kvar i kartan när arbetsytan stängs.
+
+### YTA-06: synliga visningsval på en tom mobilkarta
+
+**Syfte:** Kontrollera att tangentbordsfokus, fullständiga etiketter och
+kortets ingångar är nåbara även när en tom karta visar vägledning och status.
+
+**Användare:** Alex.
+
+**Förutsättningar:**
+
+- Börja i ett nytt tomt hushåll enligt den allmänna förberedelsen.
+- Använd ett 320 pixlar brett webbläsarfönster. Upprepa i ljust och mörkt tema
+  med höjderna 900, 568 och 451 pixlar. Detta är fönstermått, inte ett prov
+  på en fysisk telefon.
+
+**Integrationstest:**
+[workspace-shell.spec.ts](../../tests/integration/workspace-shell.spec.ts),
+testfallen “YTA-06: empty mobile maps keep focused display choices readable
+and operable in light” och “YTA-06: empty mobile maps keep focused display
+choices readable and operable in dark”.
+
+**Steg:**
+
+1. Behåll vägledningen på den tomma kartan. Använd tangentbordet för att
+   fokusera **Återställ vy**, sedan Tab till **Alla etiketter** och
+   **Visa höjdhjälp**. Fokus och hela namnet ska synas för varje kontroll.
+2. Tryck mellanslag på **Visa höjdhjälp**, kontrollera att valet aktiveras
+   och tryck igen för att återställa det. Nå vägledningens **Öppna listan**
+   med tangentbordet; sidan får rulla för att visa hela knappen.
+3. Välj **Stäng vägledningen** och upprepa kontrollerna. Det kvarvarande
+   kortet **Din karta börjar här** och statusytan får inte täcka fokus.
+   Kontrollera att kortets **Öppna Lista** går att nå.
+4. Öppna Lista, välj **Nytt objekt**, skriv **Cykeln** och lägg i utkastet.
+   Stäng arbetsytan. Kortet för en tom karta ska försvinna; höjdhjälpen ska
+   fortfarande vara avstängd. Spara inte utkastet.
+
+**Förväntat resultat:**
+
+- Vägledning, visningsval och status delar en rullbar yta när utrymmet är
+  trångt; fullständiga etiketter och fokuserade kontroller förblir synliga.
+- Vägledningens och det tomma kortets listknappar förblir användbara.
+- Ett verkligt objektförslag lämnar tomläget utan att ändra höjdhjälpsvalet.
+- Den separata **Visningsval**-menyn i vyer som är högst 450 pixlar höga
+  behåller sitt befintliga beteende, vilket provas i KAMERA-04.

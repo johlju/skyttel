@@ -70,7 +70,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   bevarade samband och typer samt fortsatt sökning medan ett förslag skickas.
 - [Kartans arbetsyta](workspace-shell.md): kompakt och expanderad verktygslåda,
   teman, läsbara hopplänkar och fokus, stängbar vägledning, hjälp, formulär på
-  telefon samt laddning och återhämtning efter nätfel.
+  telefon samt laddning och återhämtning efter nätfel. På en tom mobilkarta
+  förblir visningsval, vägledning och deras tangentbordsfokus nåbara.
 
 - [Bevarat hushållsarbete](household-work.md): oskickad text, samtal,
   mikrofon, sökning, urval, synligt återställt fokus, personlig vy och samma

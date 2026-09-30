@@ -555,3 +555,32 @@
     overflow: visible;
   }
 }
+
+/* Empty-map guidance and display choices share a scroll flow on narrow,
+   tall views. The retained status cannot cover the card or keyboard focus. */
+@media (max-width: 700px) and (min-height: 451px) {
+  .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty)
+    .spatial-display-tools
+    .spatial-bottom-bar {
+    flex-wrap: wrap;
+    max-height: none;
+  }
+  .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty) {
+    overflow-y: auto;
+    padding-top: calc(142px + var(--display-height, 52px) + 12px);
+    scroll-padding-block: 142px 12px;
+  }
+  .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty) .map-space {
+    position: absolute;
+  }
+  .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty)
+    :is(.workspace-empty, .workspace-feedback, .workspace-voice-controls) {
+    position: relative;
+    inset: auto;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0 12px 12px;
+    transform: none;
+  }
+}
