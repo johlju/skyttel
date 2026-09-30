@@ -561,6 +561,9 @@ test('MEDLEM-08: staged invitation copies its one-time code and revocation retir
     await expect(member).toContainText('Personer och innehåll i kartan finns kvar');
     const warning = member.getByText(/Alla befintliga sessioner förlorar tillgång/);
     const initialTheme = await page.locator('.app-shell').getAttribute('data-theme');
+    if (initialTheme !== 'light' && initialTheme !== 'dark') {
+      throw new Error('The current theme must be light or dark');
+    }
     try {
       for (const theme of ['light', 'dark'] as const) {
         await page.emulateMedia({ colorScheme: theme });
@@ -568,12 +571,17 @@ test('MEDLEM-08: staged invitation copies its one-time code and revocation retir
         await expect(warning).toBeVisible();
         const contrast = await warning.evaluate((paragraph) => {
           const foreground = getComputedStyle(paragraph).color;
-          const background = getComputedStyle(paragraph.parentElement!).backgroundColor;
+          const parent = paragraph.parentElement;
+          if (!parent) throw new Error('The warning must have a containing fieldset');
+          const background = getComputedStyle(parent).backgroundColor;
           const luminance = (color: string) => {
-            const channels = (color.match(/\d+/g) ?? []).slice(0, 3).map(Number).map((value) => {
-              const unit = value / 255;
-              return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
-            });
+            const channels = (color.match(/\d+/g) ?? [])
+              .slice(0, 3)
+              .map(Number)
+              .map((value) => {
+                const unit = value / 255;
+                return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+              });
             return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
           };
           const levels = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
@@ -582,8 +590,8 @@ test('MEDLEM-08: staged invitation copies its one-time code and revocation retir
         expect(contrast, `${theme} revocation warning text contrast`).toBeGreaterThanOrEqual(4.5);
       }
     } finally {
-      await page.emulateMedia({ colorScheme: initialTheme === 'dark' ? 'dark' : 'light' });
-      await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', initialTheme!);
+      await page.emulateMedia({ colorScheme: initialTheme });
+      await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', initialTheme);
     }
     await member.getByRole('button', { name: 'Bekräfta återkallelse', exact: true }).click();
     await expect(

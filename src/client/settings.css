@@ -221,6 +221,10 @@
   background: var(--space-accent);
   color: var(--space-surface);
 }
+.settings-screen .confirmation {
+  background: var(--space-surface);
+  color: var(--space-text);
+}
 .settings-screen .workspace-theme-button {
   width: 44px;
   height: 44px;
