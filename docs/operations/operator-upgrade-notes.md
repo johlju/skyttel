@@ -146,9 +146,16 @@ after a committed replacement, which keeps household content unavailable.
 Allow free persistent disk space for database reconstruction and normal journal
 use. A pending erasure can block content access across the whole installation
 while a database reader or storage error delays cleanup. Keep the recorded
-operation and resume it from household administration. Follow the
+operation and resume it from **Inställningar → Permanent radering**. Follow the
 [pending erasure runbook](permanent-erasure.md) after an interruption.
 Old content generations cannot submit edits or retry saves after an erasure.
+
+Keep the recorded operation identifier after a lost reply. Status checks in
+the original browser tab follow that operation after navigation or reload;
+a newer result does not resolve an earlier attempt. A new browser tab can show
+the latest operation instead. Compare identifiers and keep an unavailable
+attempt unresolved until its own status can be read. Do not start another
+erasure merely because the previous response is missing.
 
 Downloaded exports and provider snapshots remain separate recovery copies.
 Import or restoration of an older copy can restore erased information. Apply

@@ -6,7 +6,7 @@ Use ordinary removal or an ended status when you need history to remain.
 
 ## Review before execution
 
-Open household administration and choose **Permanent radering**. Select
+Open **Inställningar → Permanent radering** for the household. Select
 the intended identities or definitions, then review the full affected
 scope. A merged identity can include its source, survivor, and image
 copies. A selected definition can include objects or relationships still
@@ -17,9 +17,17 @@ changed household requires a new review. Keep the operation identifier
 if the connection fails. Check the status before starting another action.
 Do not assume that a lost reply means that no content was removed.
 
+The page shows the full operation identifier and completed impact counts.
+Within the same browser tab, a known identifier survives ordinary Settings
+navigation and reload. Status reads follow that exact operation, even when
+another administrator completes a newer one. A new tab without a known
+identifier discovers the latest operation; compare identifiers before treating
+that result as recovery of an earlier attempt. An unavailable exact read keeps
+the outcome unknown. It does not start a new erasure or repeat execution.
+
 ## Pending state
 
-The administration page distinguishes preparation, cleanup, and completion.
+The erasure page distinguishes preparation, cleanup, and completion.
 During preparation, target-household content is protected. During cleanup,
 content access across the installation is protected because the database
 journal is shared. Login and administration remain available. Do not
@@ -34,7 +42,7 @@ If status remains pending:
    database size in addition to normal journal and export capacity.
 3. Let active database readers finish. Close external inspection sessions
    and transactions. A reader for another household can delay cleanup.
-4. In household administration, use the pending operation's resume action.
+4. On the erasure page, use the pending operation's resume action.
    The server retries the recorded operation and its cleanup checks.
 5. If needed, restart the single application instance on the same persistent
    disk. Startup removes abandoned server export and import files. Read the durable

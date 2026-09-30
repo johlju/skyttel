@@ -34,7 +34,7 @@ export function settingsEntries(
           {
             to: `${householdPath}/administration`,
             title: 'Administrera tillgång',
-            description: 'Medlemmar och inbjudningar, permanent radering.',
+            description: 'Medlemmar och inbjudningar till hushållet.',
             group: 'Administration',
           },
           {
@@ -53,6 +53,12 @@ export function settingsEntries(
             to: `${householdPath}/settings/content-owners`,
             title: 'Koppla historiskt innehåll',
             description: 'Granska identiteter och bevara varje persons privata arbete.',
+            group: 'Administration',
+          },
+          {
+            to: `${householdPath}/settings/erasure`,
+            title: 'Permanent radering',
+            description: 'Granska hela omfattningen och följ samma raderingsförsök.',
             group: 'Administration',
           },
         ]

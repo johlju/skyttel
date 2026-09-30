@@ -40,6 +40,7 @@ const completed = (operationId: string): ErasureStatus => ({
 });
 afterEach(() => {
   cleanup();
+  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -141,6 +142,10 @@ test.each([true, false])(
           ...catalog,
           status: attempts.length && registered ? completed(String(attempts[0].operationId)) : null,
         });
+      if (url === `${path}/${String(attempts[0]?.operationId)}`)
+        return registered
+          ? Response.json({ status: completed(String(attempts[0].operationId)) })
+          : Response.json({ error: 'maintenance_unavailable' }, { status: 404 });
       if (url.endsWith('/review')) return Response.json(reviewed);
       if (url.endsWith('/execute')) {
         attempts.push(JSON.parse(String(init?.body)));
@@ -272,7 +277,8 @@ test('changing selection removes the old scope and confirmation', async () => {
   await userEvent.click(lamp);
   await userEvent.click(screen.getByRole('button', { name: 'Granska raderingen' }));
   await userEvent.type(await screen.findByLabelText('Skriv RADERA PERMANENT'), 'RADERA PERMANENT');
-  await userEvent.click(lamp);
+  await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Lampan' }));
   expect(screen.queryByRole('region', { name: 'Omfattning att bekräfta' })).toBeNull();
   expect(
     (screen.getByRole('button', { name: 'Granska raderingen' }) as HTMLButtonElement).disabled,

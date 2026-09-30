@@ -35,6 +35,17 @@ export function latestErasure(database: Database.Database, householdId: string) 
     .get(householdId) as ContentMaintenance | undefined;
 }
 
+export function readErasure(
+  database: Database.Database,
+  householdId: string,
+  actorId: string,
+  operationId: string,
+) {
+  const job = contentMaintenance(database, householdId, actorId).read(operationId);
+  if (job.kind !== 'erase') throw new AdministrationError('erasure_unavailable', 404);
+  return erasureStatus(job);
+}
+
 /** A busy reader is a pending cleanup, never evidence that the old pages vanished. */
 function reclaimPages(database: Database.Database) {
   const timeout = database.pragma('busy_timeout', { simple: true }) as number;
@@ -74,8 +85,7 @@ export function resumeErasure(
   operationId: string,
 ) {
   const maintenance = contentMaintenance(database, householdId, actorId);
-  const initial = maintenance.read(operationId);
-  if (initial.kind !== 'erase') throw new AdministrationError('erasure_unavailable', 404);
+  readErasure(database, householdId, actorId, operationId);
   const key = `${householdId}:${operationId}`;
   let jobs = running.get(database);
   if (!jobs) {

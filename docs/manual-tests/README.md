@@ -75,7 +75,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Bevarat hushållsarbete](household-work.md): oskickad text, samtal,
   mikrofon, sökning, urval, synligt återställt fokus, personlig vy och samma
   sparförsök vid tillfälliga vybyten; avveckling vid utloggning, återkallad tillgång
-  och ersatt hushållsinnehåll.
+  och ersatt hushållsinnehåll. Väntande permanent radering stoppar mikrofon,
+  dolt formulär och registrerat sparförsök före omladdning; oberoende privat
+  arbete finns kvar efter uttryckligt slutförande.
 
 - [Månadskostnad](costs.md): separata Render-, Live- och Terra-belopp,
   prisunderlag, månadens antaganden, okända värden, kumulativa mätningar,
@@ -109,10 +111,20 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   Kontrollerade lokala
   leverantörssvar och verklig modellförståelse redovisas separat.
 
-- [Permanent radering](household-erasure.md): uttrycklig granskning och
+- [Permanent radering](household-erasure.md): egen inställningssida,
+  avbruten granskning med bevarat kartarbete, uttrycklig granskning och
   bekräftelse, bevarat oberoende innehåll efter omstart, förlorat svar och
   förnyad granskning efter samtidig ändring samt väntande städning och
-  återhämtning efter omstart. Radering av en tidigare typ tar bort dess
+  återhämtning efter omstart. Kända försök behåller sin identitet genom
+  sidnavigation och omladdning trots senare resultat från en annan
+  administratör. En annan aktuell administratör kan fortsätta samma
+  väntande städning efter rollbyte, omstart och förlorat svar, med bevarat
+  oberoende privat arbete. Ett saknat känt resultat är fortsatt okänt även
+  efter omladdning och ett annat ärendes slutförande.
+  Sena statussvar från en lämnad sida ändrar inte ett nyare försök eller fokus.
+  Hela granskningen och resultatet behåller läsbara identifierare och synligt
+  tangentbordsfokus i båda teman, också på smala och korta fönster.
+  Radering av en tidigare typ tar bort dess
   sista historiska bildversion utan att ta bort objektets nuvarande bild.
 
 - [Fullständig återimport](household-import.md): egna inställningssidor,

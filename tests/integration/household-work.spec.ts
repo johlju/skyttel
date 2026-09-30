@@ -1,4 +1,8 @@
+import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import Database from 'better-sqlite3';
+import type { ErasureStatus } from '../../src/shared/household-erasure.js';
+import type { MapState } from '../../src/shared/map.js';
 import {
   activatePanel,
   createHousehold,
@@ -33,6 +37,255 @@ function conversationInstallation() {
     liveSideband: live.attach,
   });
 }
+
+test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitted save before reloading', async ({
+  page,
+}) => {
+  const installation = await conversationInstallation();
+  const reader = new Database(join(installation.directory, 'skyttel.db'), { readonly: true });
+  const otherPage = await page.context().newPage();
+  let releaseSave = () => {};
+  try {
+    await signIn(page.request, installation.origin);
+    const { household } = await (await createHousehold(page.request, installation.origin)).json();
+    const path = `${installation.origin}/api/households/${household.id}`;
+    const headers = { origin: installation.origin };
+    const read = async (): Promise<MapState> => (await page.request.get(`${path}/map`)).json();
+    const post = (suffix: string, data: unknown) =>
+      page.request.post(`${path}/${suffix}`, { headers, data });
+    for (const [id, name] of [
+      ['lamp', 'Lampan att radera'],
+      ['chair', 'Stolen att bevara'],
+    ]) {
+      const state = await read();
+      expect(
+        (
+          await post('map/draft', {
+            id,
+            version: state.draft.version,
+            contentVersion: state.contentVersion,
+            baseRevision: null,
+            value: { typeId: state.types[0].id, name, description: '' },
+          })
+        ).status(),
+      ).toBe(200);
+    }
+    const proposed = await read();
+    expect(
+      (
+        await post('map/save', {
+          version: proposed.draft.version,
+          contentVersion: proposed.contentVersion,
+          operationId: 'work-before-erasure',
+        })
+      ).status(),
+    ).toBe(200);
+    const saved = await read();
+    const chair = saved.objects.find(({ id }) => id === 'chair');
+    expect(
+      (
+        await post('map/draft', {
+          id: 'chair',
+          version: saved.draft.version,
+          contentVersion: saved.contentVersion,
+          baseRevision: chair?.revision,
+          value: { ...chair, description: 'Oberoende privat förslag' },
+        })
+      ).status(),
+    ).toBe(200);
+    for (const [id, x] of [
+      ['lamp', 5],
+      ['chair', -5],
+    ] as const)
+      expect(
+        (await post('map/view/position', { id, version: 0, position: { x, y: 2, z: 1 } })).status(),
+      ).toBe(200);
+    const before = await read();
+    const viewBefore = await (await page.request.get(`${path}/map/view`)).json();
+    await startConversation(page, installation.origin);
+    await page.getByLabel('Meddelande till textassistenten').fill('Berätta om lampan');
+    await page.getByRole('button', { name: 'Skicka', exact: true }).click();
+    await expect(page.getByRole('log', { name: 'Samtalets dialog' })).toContainText(
+      'Vem använder cykeln?',
+    );
+    await page.getByLabel('Meddelande till textassistenten').fill('Gammalt oskickat svar');
+    await openWorkspace(page);
+    await otherPage.goto(installation.origin);
+    await openWorkspace(otherPage);
+    await otherPage.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+    await otherPage.getByLabel('Objektets namn').fill('Gammal oskickad cykel');
+    await openSettings(otherPage);
+    await expect(otherPage.getByLabel('Objektets namn')).toHaveValue('Gammal oskickad cykel');
+    await expect(otherPage.getByLabel('Objektets namn')).not.toBeVisible();
+    const held = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    let ready = () => {};
+    const saveWaiting = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    let delivered = () => {};
+    const saveDelivered = new Promise<void>((resolve) => {
+      delivered = resolve;
+    });
+    let saveId = '';
+    let saveCount = 0;
+    let executeCount = 0;
+    const resumeIds: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().endsWith('/map/save')) saveCount += 1;
+      if (request.url().endsWith('/erasure/execute')) executeCount += 1;
+      if (request.url().endsWith('/erasure/resume'))
+        resumeIds.push(request.postDataJSON().operationId);
+    });
+    await page.route(
+      `${path}/map/save`,
+      async (route) => {
+        saveId = route.request().postDataJSON().operationId;
+        ready();
+        await held;
+        const response = await route.fetch();
+        expect(response.status()).toBe(409);
+        expect(await response.json()).toEqual({ error: 'content_maintenance' });
+        await route.fulfill({ response });
+        delivered();
+      },
+      { times: 1 },
+    );
+    const pendingRequest = page.waitForRequest(`${path}/map/save`);
+    await page.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
+    const oldSave = await pendingRequest;
+    await saveWaiting;
+    expect(saveId).not.toBe('');
+    expect(await (await page.request.get(`${path}/map/operations/${saveId}`)).json()).toMatchObject(
+      {
+        operation: {
+          operationId: saveId,
+          contentVersion: before.contentVersion,
+          status: 'pending',
+        },
+      },
+    );
+    await openSettings(page);
+    await page
+      .getByRole('navigation', { name: 'Inställningarnas sidor' })
+      .getByRole('link', { name: 'Permanent radering', exact: true })
+      .click();
+    await expect(otherPage.getByLabel('Objektets namn')).toHaveValue('Gammal oskickad cykel');
+    await expect(page.getByLabel('Meddelande till textassistenten')).toHaveValue(
+      'Gammalt oskickat svar',
+    );
+    await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
+      { enabled: true, state: 'live' },
+    ]);
+    const section = page.getByRole('region', { name: 'Permanent radering', exact: true });
+    await section.getByRole('checkbox', { name: 'Lampan att radera', exact: true }).check();
+    await section.getByRole('button', { name: 'Granska raderingen', exact: true }).click();
+    const scope = section.getByRole('region', { name: 'Omfattning att bekräfta' });
+    await expect(scope).not.toContainText('Oberoende privat förslag');
+    await expect(scope).not.toContainText('Stolen att bevara');
+    // This independent reader pins real pre-erasure WAL pages; setup and
+    // domain assertions use the running application's public interfaces.
+    reader.exec('BEGIN');
+    reader.prepare('SELECT id FROM map_object LIMIT 1').get();
+    await section.getByLabel('Skriv RADERA PERMANENT', { exact: true }).fill('RADERA PERMANENT');
+    const executing = page.waitForResponse(`${path}/erasure/execute`);
+    await section.getByRole('button', { name: 'Radera permanent', exact: true }).click();
+    const executed = await executing;
+    expect(executed.status()).toBe(202);
+    const pending: ErasureStatus = (await executed.json()).status;
+    expect(pending.phase).toBe('cleanup');
+    await expect(section.getByText(pending.operationId, { exact: true })).toBeVisible();
+    await expect(
+      section.getByText(/Hushållets innehåll är tillfälligt otillgängligt/),
+    ).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks), {
+        timeout: 10000,
+      })
+      .toEqual([{ enabled: false, state: 'ended' }]);
+    await expect(otherPage.getByLabel('Objektets namn')).toHaveCount(0, { timeout: 10000 });
+    await expect(page.getByLabel('Meddelande till textassistenten')).toHaveCount(0);
+    await expect(page.getByText('Mikrofonen är på', { exact: true })).toHaveCount(0);
+    expect(await (await page.request.get(`${path}/map`)).json()).toEqual({
+      error: 'content_maintenance',
+    });
+    expect(await (await post('exports', {})).json()).toEqual({ error: 'content_maintenance' });
+    releaseSave();
+    await saveDelivered;
+    await (await oldSave.response())?.finished();
+    await expect(otherPage.getByLabel('Objektets namn')).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Hämta samma kvitto igen', exact: true }),
+    ).toHaveCount(0);
+    await expect(section.getByText(pending.operationId, { exact: true })).toBeVisible();
+    expect(saveCount).toBe(1);
+    expect(resumeIds).toEqual([]);
+    reader.exec('ROLLBACK');
+    const completing = page.waitForResponse(`${path}/erasure/resume`);
+    await section.getByRole('button', { name: 'Försök slutföra raderingen', exact: true }).click();
+    const completed = await completing;
+    expect(completed.status()).toBe(200);
+    expect((await completed.json()).status).toMatchObject({
+      operationId: pending.operationId,
+      phase: 'completed',
+      counts: { objects: 1, relationships: 0, objectTypes: 0, relationshipTypes: 0, images: 0 },
+    });
+    await expect(
+      section.getByText('Den permanenta raderingen är slutförd.', { exact: true }),
+    ).toBeVisible();
+    expect(executeCount).toBe(1);
+    expect(resumeIds).toEqual([pending.operationId]);
+    const retained = await read();
+    expect(retained.contentVersion).toBe(before.contentVersion + 1);
+    expect(retained.objects).toEqual(before.objects.filter(({ id }) => id === 'chair'));
+    expect(retained.draft).toEqual(before.draft);
+    expect(retained.types).toEqual(before.types);
+    expect(retained.relationshipTypes).toEqual(before.relationshipTypes);
+    expect(await (await page.request.get(`${path}/map/view`)).json()).toEqual({
+      ...viewBefore,
+      contentVersion: viewBefore.contentVersion + 1,
+      positions: viewBefore.positions.filter(({ id }: { id: string }) => id === 'chair'),
+    });
+    expect(await (await page.request.get(`${path}/map/operations/${saveId}`)).json()).toEqual({
+      operation: null,
+    });
+    await Promise.all([
+      page.waitForEvent('load'),
+      section.getByRole('button', { name: 'Läs in kartan på nytt', exact: true }).click(),
+    ]);
+    await openConversation(page);
+    await expect(
+      page.getByRole('button', { name: 'Starta textassistenten', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole('log', { name: 'Samtalets dialog' })).toHaveCount(0);
+    await expect(page.getByLabel('Objektets namn')).toHaveCount(0);
+    await expect(otherPage.getByLabel('Objektets namn')).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Hämta samma kvitto igen', exact: true }),
+    ).toHaveCount(0);
+    await openWorkspace(page);
+    await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
+      'Oberoende privat förslag',
+    );
+    expect(await read()).toEqual(retained);
+    expect((await (await page.request.get(path)).json()).household.role).toBe('administrator');
+    expect(saveCount).toBe(1);
+    expect(executeCount).toBe(1);
+    expect(resumeIds).toEqual([pending.operationId]);
+    await test.info().attach('retired-save-and-erasure', {
+      body: JSON.stringify({ saveId, pending, saveCount, executeCount, resumeIds }, null, 2),
+      contentType: 'application/json',
+    });
+  } finally {
+    releaseSave();
+    if (reader.inTransaction) reader.exec('ROLLBACK');
+    reader.close();
+    await otherPage.close();
+    await installation.close();
+  }
+});
 
 for (const width of [1280, 390, 320]) {
   test(`ARBETE-01: unsent household work survives ordinary navigation at ${width}px`, async ({

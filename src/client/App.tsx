@@ -886,7 +886,12 @@ function AdministrationPage({ userId, onReload }: { userId: string; onReload: ()
         </Link>
         {' av hushållets information finns på en egen sida i Inställningar.'}
       </p>
-      <HouseholdErasure key={`erasure-${id}`} householdId={id ?? ''} onAccessLost={onReload} />
+      <p>
+        <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/erasure`}>
+          Permanent radering
+        </Link>
+        {' har en egen sida för granskning och uppföljning i Inställningar.'}
+      </p>
       <p>
         <Link to={`/households/${encodeURIComponent(id ?? '')}/settings/import`}>
           Återimportera hushållet
@@ -927,16 +932,23 @@ function HouseholdRecoveryPage({
 }: {
   household: Household | undefined;
   onReload: () => void;
-  page: 'import' | 'owners';
+  page: 'import' | 'owners' | 'erasure';
 }) {
   const { id } = useParams();
   if (household?.id !== id || household?.role !== 'administrator')
     return (
       <section className="panel">
         <Heading>Du kan inte administrera hushållet</Heading>
-        <p>Endast aktuella administratörer kan återimportera och koppla historiskt innehåll.</p>
+        <p>
+          Endast aktuella administratörer kan återimportera, koppla historiskt innehåll och radera
+          permanent.
+        </p>
         <Link to="/">Till startsidan</Link>
       </section>
+    );
+  if (page === 'erasure')
+    return (
+      <HouseholdErasure key={household.id} householdId={household.id} onAccessLost={onReload} />
     );
   return page === 'import' ? (
     <HouseholdImport key={household.id} householdId={household.id} onAccessLost={onReload} />
@@ -1247,6 +1259,12 @@ export function App() {
               path="/households/:id/settings/content-owners"
               element={
                 <HouseholdRecoveryPage household={household} onReload={reload} page="owners" />
+              }
+            />
+            <Route
+              path="/households/:id/settings/erasure"
+              element={
+                <HouseholdRecoveryPage household={household} onReload={reload} page="erasure" />
               }
             />
             <Route

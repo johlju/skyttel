@@ -1,27 +1,27 @@
-.settings-content :is(.household-import, .content-owners) {
+.settings-content :is(.household-import, .content-owners, .household-erasure) {
   max-width: 860px;
 }
-:is(.household-import, .content-owners) button {
+:is(.household-import, .content-owners, .household-erasure) button {
   min-height: 44px;
   max-width: 100%;
   margin: 8px 8px 8px 0;
   white-space: normal;
 }
-:is(.household-import, .content-owners) fieldset {
+:is(.household-import, .content-owners, .household-erasure) fieldset {
   min-width: 0;
   padding: 20px;
   margin-block: 24px;
   border: 1px solid var(--space-line);
   border-radius: 14px;
 }
-:is(.household-import, .content-owners) legend {
+:is(.household-import, .content-owners, .household-erasure) legend {
   max-width: 100%;
   font-weight: 600;
 }
-:is(.household-import, .content-owners) label {
+:is(.household-import, .content-owners, .household-erasure) label {
   margin-block: 16px;
 }
-:is(.household-import, .content-owners) :is(input[type="file"], select) {
+:is(.household-import, .content-owners, .household-erasure) :is(input[type="file"], select) {
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -34,7 +34,7 @@
   padding: 20px;
   background: var(--space-surface);
 }
-.import-steps {
+:is(.import-steps, .erasure-steps) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
@@ -42,18 +42,18 @@
   padding: 0;
   margin-block: 24px;
 }
-.import-steps li {
+:is(.import-steps, .erasure-steps) li {
   padding-block: 8px 12px;
   border-bottom: 3px solid var(--space-line);
   font-size: 14px;
 }
-.import-steps li[data-reached="true"] {
+:is(.import-steps, .erasure-steps) li[data-reached="true"] {
   border-color: var(--space-accent);
 }
-.import-steps li[aria-current] {
+:is(.import-steps, .erasure-steps) li[aria-current] {
   font-weight: 700;
 }
-.import-steps span {
+:is(.import-steps, .erasure-steps) span {
   display: block;
 }
 .import-comparison {
@@ -72,7 +72,7 @@
   font-size: 20px;
   margin: 0 0 12px;
 }
-:is(.household-import, .content-owners) .recovery-confirmation {
+:is(.household-import, .content-owners, .household-erasure) .recovery-confirmation {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -103,10 +103,27 @@
   overflow-wrap: anywhere;
 }
 @media (max-width: 500px) {
-  :is(.household-import, .content-owners) fieldset {
+  :is(.household-import, .content-owners, .household-erasure) fieldset {
     padding: 12px;
   }
   .import-comparison section {
     padding: 16px;
   }
+}
+
+.household-erasure :is(p, li, small) {
+  overflow-wrap: anywhere;
+}
+.household-erasure fieldset label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+}
+.household-erasure input[type="checkbox"] {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  margin: 0;
 }

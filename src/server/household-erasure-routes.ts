@@ -8,6 +8,7 @@ import {
   erasureStatus,
   executeErasure,
   latestErasure,
+  readErasure,
   resumeErasure,
 } from './household-erasure.js';
 import { householdAccess } from './households.js';
@@ -62,6 +63,16 @@ export function householdErasureRoutes(database: Database.Database, auth: Auth, 
         .map(({ id, name }) => ({ id, name })),
     });
   });
+  routes.get('/households/:id/erasure/:operationId', (context) =>
+    context.json({
+      status: readErasure(
+        database,
+        context.req.param('id'),
+        context.get('actorId'),
+        context.req.param('operationId'),
+      ),
+    }),
+  );
   routes.post('/households/:id/erasure/review', async (context) => {
     assertContentAvailable(database, context.req.param('id'));
     const body = await context.req.json().catch(() => null);

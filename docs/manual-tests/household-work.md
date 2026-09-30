@@ -163,6 +163,134 @@ microphone”.
 - Om innehållet tillfälligt är spärrat visas ett besked och kartarbetet
   kan inte fortsätta förrän innehållet är tillgängligt igen.
 
+### ARBETE-07: väntande radering stoppar tidigare arbete före omladdning
+
+**Syfte:** Kontrollera att dolt formulär, samtal, mikrofon och ett registrerat
+sparförsök avvecklas när radering spärrar innehållet, utan att omladdning
+döljer ett fel i avvecklingen.
+
+**Användare:** Alex som aktuell administratör samt provmiljöns operatör.
+
+**Förutsättningar:** Ny kontrollerad kostnadsmiljö enligt allmän förberedelse,
+med `text known`. Anteckna dess utskrivna `directory`. Skapa och spara
+**Lampan att radera** och **Stolen att bevara**, båda av typen **Fordon**.
+Ingen bild behövs i detta fall. Flytta lampan åt höger och stolen åt vänster
+med **Navigera**. Redigera stolen, skriv **Oberoende privat förslag** i
+beskrivningen och lägg i utkastet utan att spara hela utkastet.
+
+**Integrationstest:**
+[household-work.spec.ts](../../tests/integration/household-work.spec.ts),
+testfallet “ARBETE-07: pending erasure retires microphone, unsent forms and
+an admitted save before reloading”.
+
+**Steg:**
+
+1. I flik A, starta textassistent och röst. Skicka en fråga, invänta det
+   kontrollerade svaret och skriv **Gammalt oskickat svar** utan att skicka
+   det. Öppna **Lista**. Öppna samma installation i en andra vanlig flik B
+   med samma inloggning. Där öppnar du **Nytt objekt** och skriver
+   **Gammal oskickad cykel** utan att lägga det i utkastet. Besök
+   **Inställningar** i flik B utan omladdning och behåll fliken öppen.
+   Ett oskickat objekt spärrar sparandet i sin egen flik; därför används
+   separata flikar för formuläret och det väntande sparandet.
+2. I flik A, installera följande utdrag genom **Sources → Snippets** i
+   utvecklarverktygen. Det håller enbart den första sparbegäran efter
+   registreringen; inga svar eller uppgifter ersätts.
+
+   ```js
+   (() => {
+     const originalFetch = window.fetch;
+     let releaseSave = () => {};
+     const held = new Promise((resolve) => { releaseSave = resolve; });
+     function release(event) {
+       if (!event.altKey || !event.shiftKey || event.code !== 'KeyR') return;
+       event.preventDefault();
+       releaseSave();
+       window.removeEventListener('keydown', release);
+     }
+     window.addEventListener('keydown', release);
+     window.fetch = async function (...args) {
+       const input = args[0] instanceof Request ? args[0].url : args[0];
+       const url = new URL(input, location.href);
+       if (url.origin === location.origin &&
+           url.pathname.endsWith('/map/save')) {
+         window.fetch = originalFetch;
+         console.info('ARBETE-07: sparandet väntar');
+         await held;
+       }
+       return originalFetch.apply(this, args);
+     };
+   })();
+   ```
+
+3. Välj **Spara hela utkastet**. Invänta konsolens **ARBETE-07: sparandet
+   väntar**. I **Network** ska registreringen under `map/operations`
+   ha HTTP 200 och status `pending`. Anteckna dess `operationId`.
+   Stäng utvecklarverktygen. Öppna **Inställningar → Permanent radering**.
+   Mikrofonen ska fortfarande vara på. Välj endast lampan och granska.
+   Stolen och dess privata beskrivning ska inte visas i omfattningen.
+4. Håll en separat verklig databasläsare öppen: kör följande i en andra
+   terminal från projektets rot. När kommandot frågar efter sökvägen,
+   skriv `directory` från provmiljön följt av `/skyttel.db` och tryck Enter.
+   Invänta **Läsningen är öppen**.
+
+   ```sh
+   printf 'Databasens fullständiga sökväg: '
+   read -r work_case_database
+   node --input-type=module -e '
+   import Database from "better-sqlite3";
+   const database = new Database(process.argv[1], {
+     readonly: true,
+     fileMustExist: true,
+   });
+   database.exec("BEGIN");
+   database.prepare("SELECT id FROM map_object LIMIT 1").get();
+   function release() {
+     database.exec("ROLLBACK");
+     database.close();
+     console.log("Läsningen är avslutad.");
+     process.exit(0);
+   }
+   process.stdin.resume();
+   process.stdin.once("data", release);
+   process.once("SIGINT", release);
+   console.log("Läsningen är öppen. Tryck Enter först vid steg 7.");
+   ' "$work_case_database"
+   ```
+
+5. Bekräfta med exakt **RADERA PERMANENT**. Invänta HTTP 202 och besked om
+   väntande städning. Anteckna raderingens fullständiga identifierare.
+   **Ladda inte om någon flik.** Inom tio sekunder ska mikrofonen i flik A
+   stoppas och det dolda formuläret i flik B avvecklas. Öppna
+   **Tillbaka till kartan** i en ny flik:
+   innehållet ska vara spärrat. En export i en separat flik ska också avvisas.
+6. I ursprungsfliken, tryck Alt+Skift+R för att släppa den gamla sparbegäran.
+   **Network** ska visa HTTP 409 med `content_maintenance` för denna
+   `map/save`. Den får inte skickas om automatiskt eller återge ett sparat
+   kvitto. Raderingens identifierare och väntande läge ska bestå.
+7. Tryck Enter i läsarens terminal. Välj uttryckligen **Försök slutföra
+   raderingen**. Samma identifierare ska slutföras med ett objekt och noll
+   samband, typer och bildversioner.
+8. Välj **Läs in kartan på nytt**. **Samtal och text** ska kräva en ny start
+   och sakna tidigare dialog och oskickat svar. Det gamla objektformuläret
+   och sparförsökets återförsök ska saknas. Stolen, dess privata förslag och
+   placering är kvar; lampan är borta och Alex är fortfarande administratör.
+
+Om fallet avbryts: släpp sparbegäran med Alt+Skift+R och databasläsaren med
+Enter eller Ctrl+C. Slutför ett eventuellt väntande raderingsärende innan
+provmiljön avslutas enligt kostnadsfallets stoppanvisningar.
+
+**Förväntat resultat:**
+
+- Vanlig navigation bevarar arbetet före raderingen. Innehållsspärren
+  avvecklar däremot mikrofon, formulär och väntande sparande före omladdning.
+- Den automatiserade mediegränsen verifierar att ljudspåret är avslutat
+  och att dolda formulär tas bort. Den kontrollerade transporten provar
+  inte fysisk mikrofon eller verkliga externa modellsvar.
+- En uttrycklig radering och ett uttryckligt slutförande använder samma
+  identifierare. Automationen jämför hela det oberoende privata utkastet,
+  kvarvarande objekt, typer och personliga vyer samt exakt en versionsökning.
+
 ### ARBETE-05: samma sparförsök kan återhämtas efter vybyte
 
 **Syfte:** Ett okänt utfall får inte glömmas vid navigation.

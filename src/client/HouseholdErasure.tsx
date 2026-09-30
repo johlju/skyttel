@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type {
   ErasureItem,
   ErasureKind,
@@ -7,6 +7,7 @@ import type {
   ErasureStatus,
 } from '../shared/household-erasure.js';
 import { MapRequestError, request } from './map-request.js';
+import './household-recovery.css';
 
 type Catalog = {
   objects: ErasureItem[];
@@ -36,6 +37,49 @@ export function HouseholdErasure({
   onAccessLost: () => void;
 }) {
   const path = `/api/households/${encodeURIComponent(householdId)}/erasure`;
+  const storageKey = `skyttel-erasure:${householdId}`;
+  const [operationId, setOperationId] = useState<string | null>(() => {
+    try {
+      const value = sessionStorage.getItem(storageKey);
+      return value && /^[\w-]{1,128}$/.test(value) ? value : null;
+    } catch {
+      return null;
+    }
+  });
+  const knownOperation = useRef(operationId);
+  const remember = useCallback(
+    (id: string | null) => {
+      knownOperation.current = id;
+      setOperationId(id);
+      if (id) sessionStorage.setItem(storageKey, id);
+      else sessionStorage.removeItem(storageKey);
+    },
+    [storageKey],
+  );
+  const readCurrent = useCallback(
+    async (signal?: AbortSignal) => {
+      const id = knownOperation.current;
+      if (!id) {
+        const catalog = await request<Catalog>(path, undefined, signal);
+        return { catalog, status: catalog.status, catalogUnavailable: false };
+      }
+      // A newer catalog result cannot resolve a locally known operation.
+      const { status } = await request<{ status: ErasureStatus }>(
+        `${path}/${encodeURIComponent(id)}`,
+        undefined,
+        signal,
+      );
+      try {
+        const catalog = await request<Catalog>(path, undefined, signal);
+        return { catalog, status, catalogUnavailable: false };
+      } catch (failure) {
+        if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
+          throw failure;
+        return { catalog: null, status, catalogUnavailable: true };
+      }
+    },
+    [path],
+  );
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [selection, setSelection] = useState<ErasureSelection>([]);
   const [review, setReview] = useState<ErasureReview | null>(null);
@@ -45,8 +89,24 @@ export function HouseholdErasure({
   const [error, setError] = useState<string | null>(null);
   const [accessLost, setAccessLost] = useState(false);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
-  const [uncertain, setUncertain] = useState(false);
+  const [uncertain, setUncertain] = useState(Boolean(operationId));
   const alive = useRef(true);
+  const submittedFocus = useRef<Element | null>(null);
+  const selectionHeading = useRef<HTMLLegendElement>(null);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const nextAction = useRef<HTMLButtonElement>(null);
+  const unfinished = status && ['prepared', 'cleanup'].includes(status.phase);
+  const step = review ? 1 : status || uncertain ? 2 : 0;
+  useLayoutEffect(() => {
+    if (busy) return;
+    const previous = submittedFocus.current;
+    submittedFocus.current = null;
+    if (
+      previous &&
+      (document.activeElement === previous || document.activeElement === document.body)
+    )
+      (review ? reviewHeading.current : (nextAction.current ?? selectionHeading.current))?.focus();
+  }, [busy, review]);
   const denied = useCallback(
     (failure: unknown) => {
       if (failure instanceof MapRequestError && [401, 403].includes(failure.status)) {
@@ -62,15 +122,25 @@ export function HouseholdErasure({
     alive.current = true;
     const controller = new AbortController();
     setBusy(true);
-    void request<Catalog>(path, undefined, controller.signal)
+    void readCurrent(controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
-        setCatalog(result);
+        setCatalog(result.catalog);
         setStatus(result.status);
+        remember(result.status?.operationId ?? null);
+        setUncertain(false);
+        if (result.catalogUnavailable)
+          setError(
+            'Raderingsstatusen är återläst, men aktuellt innehåll kunde inte hämtas. Försök läsa in det igen.',
+          );
       })
       .catch((failure: unknown) => {
         if (!controller.signal.aborted && !denied(failure))
-          setError('Innehållet och raderingsstatus kunde inte hämtas. Försök läsa in dem igen.');
+          setError(
+            knownOperation.current
+              ? 'Raderingsstatus kunde inte hämtas. Utfallet är fortfarande oklart. Kontrollera samma raderingsstatus igen.'
+              : 'Innehållet och raderingsstatus kunde inte hämtas. Försök läsa in dem igen.',
+          );
       })
       .finally(() => {
         if (!controller.signal.aborted) setBusy(false);
@@ -79,8 +149,9 @@ export function HouseholdErasure({
       alive.current = false;
       controller.abort();
     };
-  }, [path, denied]);
+  }, [readCurrent, denied, remember]);
   function select(kind: ErasureKind, id: string, checked: boolean) {
+    remember(null);
     setSelection((previous) =>
       checked
         ? [...previous, { kind, id }]
@@ -91,6 +162,7 @@ export function HouseholdErasure({
     setConfirmation('');
   }
   async function inspect() {
+    submittedFocus.current = document.activeElement;
     setBusy(true);
     setError(null);
     try {
@@ -106,36 +178,41 @@ export function HouseholdErasure({
     }
   }
   async function refresh() {
+    submittedFocus.current = document.activeElement;
     setBusy(true);
     setError(null);
     setReview(null);
     setConfirmation('');
     try {
-      const result = await request<Catalog>(path);
+      const result = await readCurrent();
       if (!alive.current) return;
-      setCatalog(result);
-      if (attempt && result.status?.operationId !== attempt.operationId) {
-        setStatus(null);
+      setCatalog(result.catalog);
+      setStatus(result.status);
+      remember(result.status?.operationId ?? null);
+      setSelection([]);
+      setAttempt(null);
+      setUncertain(false);
+      if (result.catalogUnavailable)
         setError(
-          'Inget bekräftat resultat hittades för ditt försök. Utfallet är fortfarande oklart. Återförsök samma radering.',
+          'Raderingsstatusen är återläst, men aktuellt innehåll kunde inte hämtas. Försök läsa in det igen.',
         );
-      } else {
-        setStatus(result.status);
-        setSelection([]);
-        setAttempt(null);
-        setUncertain(false);
-      }
     } catch (failure) {
-      if (alive.current && !denied(failure))
+      if (alive.current && !denied(failure)) {
+        setUncertain(Boolean(knownOperation.current));
         setError(
-          'Raderingsstatus kunde inte hämtas. Utfallet är fortfarande oklart. Försök kontrollera status igen.',
+          failure instanceof MapRequestError && failure.status === 404
+            ? 'Inget bekräftat resultat hittades för ditt försök. Utfallet är fortfarande oklart. Kontrollera samma raderingsstatus igen.'
+            : 'Raderingsstatus kunde inte hämtas. Utfallet är fortfarande oklart. Försök kontrollera status igen.',
         );
+      }
     } finally {
       setBusy(false);
     }
   }
   async function resume() {
     if (!status) return;
+    remember(status.operationId);
+    submittedFocus.current = document.activeElement;
     setBusy(true);
     setError(null);
     try {
@@ -155,15 +232,16 @@ export function HouseholdErasure({
       setBusy(false);
     }
   }
-  const unfinished = status && ['prepared', 'cleanup'].includes(status.phase);
   async function execute() {
     if (!attempt && (!review || confirmation !== 'RADERA PERMANENT')) return;
+    submittedFocus.current = document.activeElement;
     const body = attempt ?? {
       selection: (review as ErasureReview).selection,
       token: (review as ErasureReview).token,
       operationId: crypto.randomUUID(),
       confirmation,
     };
+    remember(body.operationId);
     setAttempt(body);
     setBusy(true);
     setError(null);
@@ -183,6 +261,7 @@ export function HouseholdErasure({
       setReview(null);
       setConfirmation('');
       if (failure instanceof MapRequestError && failure.code === 'erasure_review_changed') {
+        remember(null);
         setAttempt(null);
         setUncertain(false);
         setError(
@@ -198,11 +277,26 @@ export function HouseholdErasure({
   }
   if (accessLost) return null;
   return (
-    <section aria-labelledby="household-erasure-heading" aria-busy={busy}>
-      <h2 id="household-erasure-heading" className="section-heading">
+    <section
+      className="panel household-erasure"
+      aria-labelledby="household-erasure-heading"
+      aria-busy={busy}
+    >
+      <h1 id="household-erasure-heading" tabIndex={-1}>
         Permanent radering
-      </h2>
-      <p>
+      </h1>
+      <ol className="erasure-steps" aria-label="Raderingens steg">
+        {['Välj information', 'Granska hela omfattningen', 'Resultat'].map((label, index) => (
+          <li
+            key={label}
+            aria-current={step === index ? 'step' : undefined}
+            data-reached={index <= step}
+          >
+            <span>{index + 1}</span> {label}
+          </li>
+        ))}
+      </ol>
+      <p className="recovery-note">
         Permanent radering kan inte ångras i Skyttel. Den tar bort berörd information även ur
         historik, privata utkast, personliga vyer och bildversioner. Det skiljer sig från vanlig
         borttagning och att markera något som upphört.
@@ -217,8 +311,34 @@ export function HouseholdErasure({
           {error}
         </p>
       )}
+      {operationId && (
+        <dl className="recovery-facts">
+          <dt>Raderingsförsök</dt>
+          <dd>{operationId}</dd>
+        </dl>
+      )}
       {!uncertain && status?.phase === 'completed' && (
-        <p role="status">Den permanenta raderingen är slutförd.</p>
+        <ul aria-label="Raderingens resultat">
+          <li>Objekt: {status.counts.objects}</li>
+          <li>Samband: {status.counts.relationships}</li>
+          <li>Objekttyper: {status.counts.objectTypes}</li>
+          <li>Sambandstyper: {status.counts.relationshipTypes}</li>
+          <li>Bildversioner: {status.counts.images}</li>
+        </ul>
+      )}
+      {!uncertain && status?.phase === 'completed' && (
+        <>
+          <p role="status">Den permanenta raderingen är slutförd.</p>
+          <p>Läs in aktuellt innehåll innan du fortsätter. Skicka inte gamla ändringar igen.</p>
+          <button
+            ref={nextAction}
+            type="button"
+            className="primary"
+            onClick={() => window.location.assign(`/households/${encodeURIComponent(householdId)}`)}
+          >
+            Läs in kartan på nytt
+          </button>
+        </>
       )}
       {!uncertain && status?.phase === 'failed' && (
         <p role="status">
@@ -232,12 +352,22 @@ export function HouseholdErasure({
             Raderingen är inte slutförd. Hushållets innehåll är tillfälligt otillgängligt tills
             raderingen och städningen har verifierats.
           </p>
-          <button type="button" disabled={busy || uncertain} onClick={() => void resume()}>
+          <button
+            ref={uncertain ? undefined : nextAction}
+            type="button"
+            disabled={busy || uncertain}
+            onClick={() => void resume()}
+          >
             Försök slutföra raderingen
           </button>
         </>
       )}
-      <button type="button" disabled={busy} onClick={() => void refresh()}>
+      <button
+        ref={uncertain || status?.phase === 'failed' ? nextAction : undefined}
+        type="button"
+        disabled={busy}
+        onClick={() => void refresh()}
+      >
         Kontrollera raderingsstatus och läs in aktuellt innehåll
       </button>
       {uncertain && attempt && (
@@ -245,9 +375,11 @@ export function HouseholdErasure({
           Återförsök samma radering
         </button>
       )}
-      {catalog && !unfinished && !uncertain && (
+      {catalog && !unfinished && !review && !uncertain && (
         <fieldset disabled={busy}>
-          <legend>Välj information att radera</legend>
+          <legend ref={selectionHeading} tabIndex={-1}>
+            Välj information att radera
+          </legend>
           {groups.map(([key, kind, label]) => (
             <fieldset key={kind}>
               <legend>{label}</legend>
@@ -277,12 +409,14 @@ export function HouseholdErasure({
       )}
       {review && (
         <section aria-labelledby="erasure-review-heading">
-          <h3 id="erasure-review-heading">Omfattning att bekräfta</h3>
+          <h2 id="erasure-review-heading" ref={reviewHeading} tabIndex={-1}>
+            Omfattning att bekräfta
+          </h2>
           {groups.map(([key, kind, label]) => (
             <div key={kind}>
-              <h4>
+              <h3>
                 {label}: {review[key].length}
-              </h4>
+              </h3>
               <ul aria-label={`Berörda ${label.toLocaleLowerCase('sv')}`}>
                 {review[key].map((item) => (
                   <li key={item.id}>
@@ -303,7 +437,7 @@ export function HouseholdErasure({
             Personliga placeringar: {review.positions}. Privata bildversioner:{' '}
             {review.privateImages}.
           </p>
-          <h4>Berörda bildversioner</h4>
+          <h3>Berörda bildversioner</h3>
           <ul aria-label="Berörda bildversioner">
             {review.imageVersions.map((image) => (
               <li key={image.id}>
@@ -331,6 +465,17 @@ export function HouseholdErasure({
             onClick={() => void execute()}
           >
             Radera permanent
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              submittedFocus.current = document.activeElement;
+              setReview(null);
+              setConfirmation('');
+            }}
+          >
+            Avbryt
           </button>
         </section>
       )}
