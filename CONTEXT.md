@@ -238,3 +238,61 @@ Det är skilt från att användningen är okänd.
 **Osäkert uppgivet**:
 En uppgift som lämnas med osäkerhet, exempelvis att någon tror att Lo
 använder en tjänst.
+
+## Samtal med Skyttel
+
+**Samtal**:
+En pågående dialog mellan en Skyttel-användare och Skyttel om hushållets
+karta, som förs med röst, med text eller med båda.
+Samma samtal och samma privata utkast gäller oavsett hur användaren talar
+eller skriver.
+
+_Undvik_: Talsamtal och textassistent som namn på två separata samtal.
+
+**Röstläge**:
+Det sätt att föra ett samtal där Skyttel-användaren talar till Skyttel.
+
+**Textläge**:
+Det sätt att föra ett samtal där Skyttel-användaren skriver till Skyttel
+och läser samtalets text.
+Röstläge och textläge kan användas samtidigt i samma samtal.
+
+**Samtalstext**:
+Det som Skyttel-användaren och Skyttel har sagt och skrivit i det pågående
+samtalet, visat som text.
+Samtalstexten hör till samtalet och ingår inte i hushållets karta.
+
+_Undvik_: Samtalshistorik och samtalsminne; historik avser sparade
+ändringar i kartan.
+
+**Textvy**:
+Den yta som visar samtalstexten och meddelandefältet där
+Skyttel-användaren skriver till Skyttel.
+Textvyn kan stängas utan att samtalet avslutas.
+
+**Röstruta**:
+Den lilla ruta med vågform och statusord som visar att Skyttel lyssnar,
+arbetar eller talar.
+
+**Samtalsnotis**:
+En kort text med symbol som Skyttel visar när något hindrar samtalet eller
+när Skyttel-användaren behöver göra något.
+Samtalsnotisen hör till samtalet och visas vid röstrutans plats eller i
+textvyn.
+
+_Undvik_: Meddelande, varning och besked för samma sak; meddelande avser
+det Skyttel-användaren skriver till Skyttel.
+
+**Kontext**:
+Det av det pågående samtalet som Skyttel har med sig när den svarar.
+Kontextens utrymme är begränsat och beror på vilken AI-modell Skyttel
+använder.
+
+_Undvik_: Minne och samtalsminne för samma begrepp.
+
+**Samtalsmedgivande**:
+En Skyttel-användares medgivande, för ett visst hushåll, till att OpenAI
+behandlar samtalets uppgifter och att Skyttel föreslår och sparar ändringar
+när användaren uttryckligen ber om det.
+Samma medgivande gäller röst och text. Användaren kan låta det gälla även
+framtida samtal och återkalla det senare.
