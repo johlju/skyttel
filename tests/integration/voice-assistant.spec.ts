@@ -312,6 +312,12 @@ test('TAL-09: gemensam start kräver separata medgivanden och återhämtar mikro
     await panel.getByRole('button', { name: 'Starta röst' }).click();
     await expect(panel.getByText(/Ansluter rösten/)).toBeVisible();
     await expect.poll(() => live.requests.length).toBe(1);
+    // The provider request precedes the browser's answer, and the fixture drops
+    // events until its channel opens; the remote track marks that point.
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().remoteTracks))
+      .toEqual([{ enabled: true, state: 'live' }]);
+    await expect(panel.getByText(/Ansluter rösten/)).toBeVisible();
     expect(
       await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks.at(-1)),
     ).toEqual({ enabled: false, state: 'live' });
