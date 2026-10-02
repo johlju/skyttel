@@ -2,13 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page, test } from '@playwright/test';
 import type { MapState, ObjectType, RelationshipType, SaveReceipt } from '../../src/shared/map.js';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import {
-  activatePanel,
-  openConversation,
-  openSettings,
-  openWorkspace,
-  signIn,
-} from '../support/client.js';
+import { activatePanel, openSettings, openWorkspace, signIn } from '../support/client.js';
+import { conversationStart, openConversationText } from '../support/conversation-page.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -217,14 +212,14 @@ for (const mode of ['voice', 'text'] as const) {
       expect((await read()).draft.changes).toEqual([]);
 
       // 3. Real text task reads the catalog, then proposes the private subscription.
-      await openConversation(page);
+      await openConversationText(page);
       const assistant = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
-      const start = assistant.getByRole('button', { name: 'Starta textassistenten', exact: true });
-      await expect(start).toBeDisabled();
-      await assistant.getByLabel(/Jag tillåter att OpenAI/).check();
-      await expect(start).toBeDisabled();
-      await assistant.getByLabel(/Jag tillåter förslag och sparande/).check();
-      await start.click();
+      const start = conversationStart(assistant);
+      for (const consent of start.consents) {
+        await expect(start.withText).toBeDisabled();
+        await consent.check();
+      }
+      await start.withText.click();
       const message = assistant.getByLabel('Meddelande till textassistenten');
       await message.fill(
         'Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK per månad.',
@@ -372,7 +367,7 @@ for (const mode of ['voice', 'text'] as const) {
       );
 
       // 6. Settings hides work, retains its exact values and resumes the same microphone.
-      await openConversation(page);
+      await openConversationText(page);
       const dialogue = assistant.getByRole('log', { name: 'Samtalets dialog' });
       const dialogueBeforeSettings = await dialogue.innerText();
       await message.fill('Oskickat i samtalet');
@@ -472,7 +467,7 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(person.getByLabel('Beskrivning', { exact: true })).toHaveValue(
         'Oskickat om Kim',
       );
-      await openConversation(page);
+      await openConversationText(page);
       await expect(
         page.getByRole('heading', { name: 'Samtal och text', exact: true }),
       ).toBeFocused();
@@ -502,7 +497,7 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(person.getByLabel('Beskrivning', { exact: true })).toHaveValue(
         'Oskickat om Kim',
       );
-      await openConversation(page);
+      await openConversationText(page);
       const receipts = await history();
       expect(receipts).toHaveLength(1);
       const receipt = receipts[0];

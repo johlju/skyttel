@@ -19,10 +19,6 @@ export async function openWorkspace(page: Page) {
     .click();
 }
 
-export async function openConversation(page: Page) {
-  await (await utilityButton(page, 'Samtal och text')).click();
-}
-
 export async function activatePanel(page: Page, title: string) {
   await page.getByLabel(/^Öppna paneler/).selectOption({ label: title });
   await expect(page.getByRole('region', { name: title, exact: true })).toBeVisible();
@@ -46,7 +42,7 @@ export async function openSettings(page: Page) {
   if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click();
 }
 
-async function utilityButton(page: Page, name: string) {
+export async function utilityButton(page: Page, name: string) {
   const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
   await expect(tools).toBeVisible();
   const button = tools.getByRole('button', { name, exact: true });

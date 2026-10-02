@@ -6,6 +6,10 @@ import '../../src/client/styles.css';
 import type { MapState } from '../../src/shared/map.js';
 import { defaultViewSettings } from '../../src/shared/personal-view.js';
 import type { MapSelection, TextAssistantView } from '../../src/shared/text-assistant.js';
+import {
+  openConversationText,
+  startConversationWithText,
+} from '../support/conversation-browser.js';
 
 const state: MapState = {
   userId: 'alex',
@@ -110,15 +114,10 @@ async function open(width = 1280, height = 900, mapState = state) {
   async function openText() {
     if (width <= 700 && height <= 450)
       await page.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
-    await page
-      .getByRole('navigation', { name: 'Kartans verktyg' })
-      .getByRole('button', { name: 'Samtal och text', exact: true })
-      .click();
+    await openConversationText();
   }
   await openText();
-  await page.getByLabelText(/Jag tillåter att OpenAI/).click();
-  await page.getByLabelText(/Jag tillåter förslag och sparande/).click();
-  await page.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
+  await startConversationWithText();
   await expect.element(page.getByLabelText('Meddelande till textassistenten')).toBeVisible();
   return {
     acknowledgements,
@@ -174,10 +173,7 @@ test('a lost graphics context cannot be acknowledged, and canceling its pending 
   extension?.loseContext();
   await expect.element(page.getByText(/Grafiken är tillfälligt avbruten/)).toBeVisible();
   await app.show({ kind: 'object', id: 'lo' });
-  await page
-    .getByRole('navigation', { name: 'Kartans verktyg' })
-    .getByRole('button', { name: 'Samtal och text', exact: true })
-    .click();
+  await openConversationText();
   await expect
     .element(page.getByRole('button', { name: 'Avbryt uppdrag', exact: true }))
     .toBeVisible();

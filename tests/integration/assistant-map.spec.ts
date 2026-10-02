@@ -1,12 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
-import {
-  createHousehold,
-  openConversation,
-  openMap,
-  openWorkspace,
-  signIn,
-} from '../support/client.js';
+import { createHousehold, openMap, openWorkspace, signIn } from '../support/client.js';
+import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -81,11 +76,9 @@ for (const viewport of [
           ).ok(),
         ).toBe(true);
         await page.goto(installation.origin);
-        await openConversation(page);
+        await openConversationText(page);
         const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
-        await panel.getByLabel(/Jag tillåter att OpenAI/).check();
-        await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
-        await panel.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
+        await startConversationWithText(panel);
         const acknowledgements: {
           displayed: boolean;
           kind: string;
@@ -201,7 +194,7 @@ for (const viewport of [
           await route.continue();
         });
         const send = async (text: string) => {
-          await openConversation(page);
+          await openConversationText(page);
           await panel.getByLabel('Meddelande till textassistenten').fill(text);
           await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
         };
@@ -219,7 +212,7 @@ for (const viewport of [
         await expect(page.getByRole('region', { name: 'Lo Exempel', exact: true })).toContainText(
           'Påhittad uppgift',
         );
-        await openConversation(page);
+        await openConversationText(page);
         await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');
         await openMap(page);
         await page.getByRole('button', { name: 'Navigera', exact: true }).click();
@@ -241,7 +234,7 @@ for (const viewport of [
         await page.getByRole('button', { name: 'Redigera valt samband', exact: true }).click();
         await expect(page.getByLabel('Till objekt', { exact: true })).toHaveValue('music');
         await page.getByLabel('Till objekt', { exact: true }).selectOption('lo');
-        await openConversation(page);
+        await openConversationText(page);
         await expect(panel.getByRole('status')).toHaveText('Markerat i kartan.');
         await send('Visa Lo igen.');
         await expect.poll(() => acknowledgements.length).toBe(3);

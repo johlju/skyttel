@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { activatePanel, createHousehold, signIn } from '../support/client.js';
+import { openConversationText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 
 test('YTA-05: save results remain readable beside tablet work', async ({ page }) => {
@@ -136,7 +137,7 @@ test('YTA-03: narrow screens keep tools, help and text work reachable without gr
       await page.getByRole('button', { name: 'Öppna Lista', exact: true }).click();
       await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
       await expect(tools.getByRole('button', { name: 'Lista', exact: true })).toBeFocused();
-      await tools.getByRole('button', { name: 'Samtal och text', exact: true }).click();
+      await openConversationText(page);
       await expect(page.getByRole('region', { name: 'Talsamtal', exact: true })).toBeVisible();
     }
   } finally {

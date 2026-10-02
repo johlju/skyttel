@@ -2,12 +2,16 @@ import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import {
   createHousehold,
-  openConversation,
   openMap,
   openSettings,
   openWorkspace,
   signIn,
 } from '../support/client.js';
+import {
+  conversationStart,
+  openConversationText,
+  startConversationWithText,
+} from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -16,18 +20,16 @@ import { lastToolResult, modelMessage, modelTool, textModel } from '../support/t
 const assistant = (page: Page) =>
   page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
 async function consent(page: Page) {
-  await openConversation(page);
+  await openConversationText(page);
   const panel = assistant(page);
-  await panel.getByLabel(/Jag tillåter att OpenAI/).check();
-  await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
-  await panel.getByRole('button', { name: 'Starta textassistenten' }).click();
+  await startConversationWithText(panel);
   await expect(panel.getByRole('button', { name: 'Starta röst' })).toBeVisible();
 }
 async function startVoice(
   page: Page,
   expected = 'Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.',
 ) {
-  await openConversation(page);
+  await openConversationText(page);
   await assistant(page).getByRole('button', { name: 'Starta röst' }).click();
   await expect(assistant(page).getByText(expected)).toBeVisible();
   await expect
@@ -105,9 +107,7 @@ test('TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare för
       'Osänd rättelse',
     );
     await assistant(page).getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
-    await expect(
-      assistant(page).getByRole('button', { name: 'Starta textassistenten' }),
-    ).toBeVisible();
+    await expect(conversationStart(assistant(page)).withText).toBeVisible();
     expect((await (await page.request.get(path)).json()).draft).toEqual(before.draft);
   } finally {
     await app.close();
@@ -269,10 +269,11 @@ test('TAL-09: gemensam start kräver separata medgivanden och återhämtar mikro
     await page.goto(app.origin);
     await page.getByRole('button', { name: 'Prata med Skyttel', exact: true }).click();
     const panel = assistant(page);
-    const startText = panel.getByRole('button', { name: 'Starta textassistenten' });
-    const startVoice = panel.getByRole('button', { name: 'Starta talsamtal' });
-    const external = panel.getByLabel(/Jag tillåter att OpenAI/);
-    const work = panel.getByLabel(/Jag tillåter förslag och sparande/);
+    const {
+      consents: [external, work],
+      withText: startText,
+      withVoice: startVoice,
+    } = conversationStart(panel);
     await external.check();
     await expect(startText).toBeDisabled();
     await expect(startVoice).toBeDisabled();
@@ -479,7 +480,7 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
     await expect(assistant(page).getByRole('status', { includeHidden: true })).toHaveText(
       'Markerat i kartan.',
     );
-    await openConversation(page);
+    await openConversationText(page);
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await expect(object).toHaveAttribute('aria-pressed', 'true');
     await expect(
@@ -811,7 +812,7 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
       ).toBeVisible();
     }
     await page.setViewportSize({ width: 390, height: 844 });
-    await openConversation(page);
+    await openConversationText(page);
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await expect
       .poll(

@@ -1,12 +1,7 @@
 import { access } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
-import {
-  createHousehold,
-  openConversation,
-  openProfile,
-  openSettings,
-  signIn,
-} from '../support/client.js';
+import { createHousehold, openProfile, openSettings, signIn } from '../support/client.js';
+import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { launchManualCosts } from '../support/manual-costs.js';
 
 const assistant = (page: Page) =>
@@ -16,22 +11,20 @@ async function startAssistant(page: Page, origin: string) {
   await signIn(page.request, origin);
   const { household } = await (await createHousehold(page.request, origin, 'Kostnadsprov')).json();
   await page.goto(origin);
-  await openConversation(page);
+  await openConversationText(page);
   const panel = assistant(page);
-  await panel.getByLabel(/Jag tillåter att OpenAI/).check();
-  await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
-  await panel.getByRole('button', { name: 'Starta textassistenten' }).click();
+  await startConversationWithText(panel);
   return household.id as string;
 }
 async function sendText(page: Page) {
-  await openConversation(page);
+  await openConversationText(page);
   const panel = assistant(page);
   await panel.getByLabel('Meddelande till textassistenten').fill('Prova kostnadsunderlaget.');
   await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
   await expect(panel).toContainText('Det kontrollerade kostnadsprovet är klart.');
 }
 async function startVoice(page: Page) {
-  await openConversation(page);
+  await openConversationText(page);
   await assistant(page).getByRole('button', { name: 'Starta röst', exact: true }).click();
   await expect(assistant(page)).toContainText(
     'Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.',

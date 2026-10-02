@@ -1,27 +1,27 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import { createHousehold, openConversation, openWorkspace, signIn } from '../support/client.js';
+import { createHousehold, openWorkspace, signIn } from '../support/client.js';
+import { conversationStart, openConversationText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const assistant = (page: Page) =>
   page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
 async function consent(page: Page) {
-  await openConversation(page);
+  await openConversationText(page);
   const panel = assistant(page);
-  const start = panel.getByRole('button', { name: 'Starta textassistenten' });
-  await expect(start).toBeDisabled();
-  await panel.getByLabel(/Jag tillåter att OpenAI/).check();
-  await expect(start).toBeDisabled();
-  const work = panel.getByLabel(/Jag tillåter förslag och sparande/);
-  await work.focus();
+  const start = conversationStart(panel);
+  await expect(start.withText).toBeDisabled();
+  await start.consents[0].check();
+  await expect(start.withText).toBeDisabled();
+  await start.consents[1].focus();
   await page.keyboard.press('Space');
-  await start.focus();
+  await start.withText.focus();
   await page.keyboard.press('Enter');
   await expect(panel.getByLabel('Meddelande till textassistenten')).toBeVisible();
 }
 async function send(page: Page, text: string) {
-  await openConversation(page);
+  await openConversationText(page);
   await assistant(page).getByLabel('Meddelande till textassistenten').fill(text);
   await assistant(page).getByRole('button', { name: 'Skicka', exact: true }).click();
 }
@@ -398,7 +398,7 @@ test('TEXT-05: markering kräver visning och skyddar oskickad text', async ({ pa
     await expect(assistant(page).getByRole('status', { includeHidden: true })).toHaveText(
       'Markerat i kartan.',
     );
-    await openConversation(page);
+    await openConversationText(page);
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await openWorkspace(page);
     await expect(

@@ -4,6 +4,11 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { TextAssistant } from '../../../src/client/TextAssistant.js';
 import { VoiceAssistant } from '../../../src/client/VoiceAssistant.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
+import {
+  getConversationStart,
+  startConversationWithText,
+  startConversationWithVoice,
+} from '../../support/conversation-dom.js';
 
 class Track extends EventTarget {
   enabled = true;
@@ -274,9 +279,7 @@ test.each(['stop', 'revoked'])(
         onSelectItem={async () => false}
       />,
     );
-    await userEvent.click(await screen.findByLabelText(/Jag tillåter att OpenAI/));
-    await userEvent.click(screen.getByLabelText(/Jag tillåter förslag och sparande/));
-    await userEvent.click(screen.getByRole('button', { name: 'Starta talsamtal' }));
+    await startConversationWithVoice();
     await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
     const peer = Peer.all[0];
     const fragment = async (
@@ -313,9 +316,7 @@ test.each(['stop', 'revoked'])(
       await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
     }
     expect(screen.queryByRole('log')).toBeNull();
-    await userEvent.click(screen.getByLabelText(/Jag tillåter att OpenAI/));
-    await userEvent.click(screen.getByLabelText(/Jag tillåter förslag och sparande/));
-    await userEvent.click(screen.getByRole('button', { name: 'Starta textassistenten' }));
+    await startConversationWithText();
     expect(screen.queryByRole('log')).toBeNull();
   },
 );
@@ -343,9 +344,7 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
       onSelectItem={async () => false}
     />,
   );
-  await userEvent.click(await screen.findByLabelText(/Jag tillåter att OpenAI/));
-  await userEvent.click(screen.getByLabelText(/Jag tillåter förslag och sparande/));
-  await userEvent.click(screen.getByRole('button', { name: 'Starta talsamtal' }));
+  await startConversationWithVoice();
   await waitFor(() => expect(held.has('poll')).toBe(true), { timeout: 2000 });
   await userEvent.type(screen.getByLabelText('Meddelande till textassistenten'), 'Privat text');
   await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
@@ -358,7 +357,7 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
     await settle();
   });
   expect(screen.getByRole('alert').textContent).toBe('Åtkomsten har upphört.');
-  expect(screen.getByLabelText(/Jag tillåter att OpenAI/)).toBeDefined();
+  expect(getConversationStart().consents[0]).toBeDefined();
   expect(screen.getByRole('region', { name: 'Skyttels textassistent' }).dataset.sessionActive).toBe(
     'false',
   );

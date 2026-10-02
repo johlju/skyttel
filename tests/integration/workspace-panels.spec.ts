@@ -1,6 +1,7 @@
 import { expect, type Locator, test } from '@playwright/test';
 import type { MapObject, MapState } from '../../src/shared/map.js';
 import { createHousehold, openWorkspace, signIn } from '../support/client.js';
+import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -109,10 +110,7 @@ test('PANEL-01: independent object panels preserve unsent work and reuse each ob
       await panel.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
       await panel.getByLabel('Beskrivning', { exact: true }).fill(`Oskickat om ${name}`);
     }
-    await page
-      .getByRole('navigation', { name: 'Kartans verktyg' })
-      .getByRole('button', { name: 'Samtal och text', exact: true })
-      .click();
+    await openConversationText(page);
     for (const name of ['Cykeln', 'Bilen', 'Garaget']) {
       await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
     }
@@ -207,14 +205,9 @@ test('PANEL-02: mobile panel choice retains conversation, object text and deskto
       .toBeLessThanOrEqual(900);
     await page.setViewportSize({ width: 1440, height: 1000 });
     await expect.poll(async () => (await bounds(panel)).x).toBe(position.x);
-    await page
-      .getByRole('navigation', { name: 'Kartans verktyg' })
-      .getByRole('button', { name: 'Samtal och text', exact: true })
-      .click();
+    await openConversationText(page);
     const conversation = page.getByRole('region', { name: 'Samtal och text', exact: true });
-    await conversation.getByLabel(/Jag tillåter att OpenAI/).check();
-    await conversation.getByLabel(/Jag tillåter förslag och sparande/).check();
-    await conversation.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
+    await startConversationWithText(conversation);
     await conversation.getByLabel('Meddelande till textassistenten').fill('Oskickad samtalstext');
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
@@ -274,10 +267,7 @@ test('PANEL-02: mobile panel choice retains conversation, object text and deskto
       );
       await page.getByRole('button', { name: 'Stäng Samtal och text', exact: true }).click();
       await expect(chooser).toBeFocused();
-      await page
-        .getByRole('navigation', { name: 'Kartans verktyg' })
-        .getByRole('button', { name: 'Samtal och text', exact: true })
-        .click();
+      await openConversationText(page);
       await expect(conversation.getByLabel('Meddelande till textassistenten')).toHaveValue(
         'Oskickad samtalstext',
       );
@@ -348,14 +338,9 @@ test('PANEL-03: an intervening proposal for the same object preserves text and b
       'Min oskickade text',
     );
     await expect(object.getByLabel('Objektets namn', { exact: true })).toHaveValue('Cykeln');
-    await page
-      .getByRole('navigation', { name: 'Kartans verktyg' })
-      .getByRole('button', { name: 'Samtal och text', exact: true })
-      .click();
+    await openConversationText(page);
     const conversation = page.getByRole('region', { name: 'Samtal och text', exact: true });
-    await conversation.getByLabel(/Jag tillåter att OpenAI/).check();
-    await conversation.getByLabel(/Jag tillåter förslag och sparande/).check();
-    await conversation.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
+    await startConversationWithText(conversation);
     await conversation
       .getByLabel('Meddelande till textassistenten')
       .fill('Föreslå en ny beskrivning för cykeln.');

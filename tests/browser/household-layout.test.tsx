@@ -5,6 +5,7 @@ import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import '../../src/client/styles.css';
 import type { MapState } from '../../src/shared/map.js';
 import { defaultViewSettings, type PersonalView } from '../../src/shared/personal-view.js';
+import { openConversationText } from '../support/conversation-browser.js';
 
 const state: MapState = {
   userId: 'alex',
@@ -264,10 +265,7 @@ test('desktop keeps the map and bounded conversation, object and list panels ava
   expect(surface).not.toBeNull();
   const bounds = surface?.getBoundingClientRect();
   expect(bounds?.width).toBeGreaterThan(1300);
-  await page
-    .getByRole('navigation', { name: 'Kartans verktyg' })
-    .getByRole('button', { name: 'Samtal och text', exact: true })
-    .click();
+  await openConversationText();
   const speech = page.getByRole('region', { name: 'Talsamtal' }).element().getBoundingClientRect();
   expect(speech.height).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
@@ -881,10 +879,7 @@ test('phone opens the list from the map and preserves an edited name through map
     .element(page.getByLabelText('Objektets namn', { exact: true }))
     .toHaveValue('Alex ändrat');
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
-  await page
-    .getByRole('navigation', { name: 'Kartans verktyg' })
-    .getByRole('button', { name: 'Samtal och text', exact: true })
-    .click();
+  await openConversationText();
   await expect.element(page.getByRole('region', { name: 'Talsamtal' })).toBeVisible();
   await page
     .getByLabelText(/^Öppna paneler/)

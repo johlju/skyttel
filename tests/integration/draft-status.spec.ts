@@ -3,12 +3,12 @@ import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import type { PersonalView } from '../../src/shared/personal-view.js';
 import {
   createHousehold,
-  openConversation,
   openMap,
   openSettings,
   openWorkspace,
   signIn,
 } from '../support/client.js';
+import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -186,10 +186,8 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Oskickad cykel');
     await page.getByLabel('Beskrivning', { exact: true }).fill('Texten ska finnas kvar');
-    await openConversation(page);
-    await page.getByLabel(/Jag tillåter att OpenAI/).check();
-    await page.getByLabel(/Jag tillåter förslag och sparande/).check();
-    await page.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
+    await openConversationText(page);
+    await startConversationWithText(page);
     await page.getByLabel('Meddelande till textassistenten').fill('Lägg Molnmusik i utkastet.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
@@ -260,7 +258,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     });
     await status.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
     await expect.poll(() => waiting).toBe(true);
-    await openConversation(page);
+    await openConversationText(page);
     await expect(page.getByRole('region', { name: 'Assistentens hela utkast' })).toContainText(
       'Oskickad cykel',
       { timeout: 10000 },
@@ -410,10 +408,8 @@ test('UTKAST-15: a necessary answer gates both save actions until a fresh explic
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
-    await openConversation(page);
-    await page.getByLabel(/Jag tillåter att OpenAI/).check();
-    await page.getByLabel(/Jag tillåter förslag och sparande/).check();
-    await page.getByRole('button', { name: 'Starta textassistenten', exact: true }).click();
+    await openConversationText(page);
+    await startConversationWithText(page);
     await page
       .getByLabel('Meddelande till textassistenten')
       .fill('Förbered uppgiften och fråga vilket kort som avses.');

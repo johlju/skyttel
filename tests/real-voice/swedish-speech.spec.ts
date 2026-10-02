@@ -4,6 +4,7 @@ import { isAbsolute } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import { signIn } from '../support/client.js';
+import { startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 
 declare global {
@@ -63,9 +64,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text från talprovet');
     const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
-    await panel.getByLabel(/Jag tillåter att OpenAI/).check();
-    await panel.getByLabel(/Jag tillåter förslag och sparande/).check();
-    await panel.getByRole('button', { name: 'Starta textassistenten' }).click();
+    await startConversationWithText(panel);
     await panel.getByRole('button', { name: 'Starta röst' }).click();
     await expect(
       panel.getByText('Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.'),

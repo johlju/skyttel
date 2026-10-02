@@ -2,11 +2,11 @@ import { expect, test } from '@playwright/test';
 import {
   activatePanel,
   createHousehold,
-  openConversation,
   openSettings,
   openWorkspace,
   signIn,
 } from '../support/client.js';
+import { openConversationText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 
 test('LISTA-05: short-screen list returns preserve the visible result and keyboard focus', async ({
@@ -101,7 +101,7 @@ test('LISTA-06: an inactive visible list opens details on the first pointer clic
     await openWorkspace(page);
     const work = page.getByRole('region', { name: 'Lista och utkast', exact: true });
     const body = work.locator('.workspace-panel-body');
-    await openConversation(page);
+    await openConversationText(page);
     await expect(work).toBeVisible();
     await expect(work).toHaveAttribute('data-active', 'false');
     const result = work.getByRole('button', {
