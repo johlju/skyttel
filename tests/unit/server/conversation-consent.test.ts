@@ -1,22 +1,13 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
 import { createInstallation, robin } from '../../support/installation.js';
 import { textModel } from '../../support/text-model.js';
 
 type Installation = Awaited<ReturnType<typeof createInstallation>>;
-
-// The consent text has one source. A test raises its version there, as a later release does.
-const consentText = vi.hoisted(() => ({ version: undefined as number | undefined }));
-vi.mock('../../../src/shared/conversation-consent.js', async (original) => {
-  const source = await original<typeof import('../../../src/shared/conversation-consent.js')>();
-  return {
-    ...source,
-    get conversationConsentTextVersion() {
-      return consentText.version ?? source.conversationConsentTextVersion;
-    },
-  };
-});
 
 let app: Installation | undefined;
 const clients: APIRequestContext[] = [];
@@ -24,7 +15,6 @@ afterEach(async () => {
   await Promise.all(clients.splice(0).map((client) => client.dispose()));
   await app?.close();
   app = undefined;
-  consentText.version = undefined;
 });
 
 const model = () => textModel(() => []).provider;
@@ -69,7 +59,7 @@ test('a conversation starts only with a consent for the current consent text, an
     expect(refused.status(), JSON.stringify(data)).toBe(403);
     expect(await refused.json()).toEqual({ error: 'conversation_consent_required' });
   }
-  // Without a conversation there is nothing to speak or write to.
+  // Spoken and written work both need a started conversation, so nothing is left to refuse.
   for (const work of ['messages', 'voice'])
     expect((await send(browser, origin, `${startPath}/missing/${work}`)).status()).toBe(404);
 
@@ -180,25 +170,49 @@ test('saving a consent needs a signed-in member, the own origin and the current 
 });
 
 test('a saved consent for an older consent text no longer applies when the text has a new version', async () => {
-  const { installation, browser, consentPath, startPath } = await setup();
-  const { origin } = installation;
-  await send(browser, origin, consentPath, { textVersion: 1 });
-  expect((await send(browser, origin, startPath)).status()).toBe(201);
+  const directory = await mkdtemp(join(tmpdir(), 'skyttel-consent-'));
+  const databasePath = join(directory, 'skyttel.db');
+  try {
+    const release = await createInstallation(undefined, { modelFetch: model(), databasePath });
+    app = release;
+    const browser = await device(release);
+    const { household } = await (await createHousehold(browser, release.origin)).json();
+    const paths = (origin: string) => ({
+      consentPath: `${origin}/api/households/${household.id}/conversation-consent`,
+      startPath: `${origin}/api/households/${household.id}/text-assistant`,
+    });
+    const before = paths(release.origin);
+    await send(browser, release.origin, before.consentPath, { textVersion: 1 });
+    expect((await send(browser, release.origin, before.startPath)).status()).toBe(201);
+    await release.close();
 
-  // A later release changes the text in substance and raises its version.
-  consentText.version = 2;
-  // The older consent is still on record, so that the user can be told that the text has changed.
-  expect((await (await browser.get(consentPath)).json()).saved.textVersion).toBe(1);
-  for (const data of [{}, { consent: { textVersion: 1 } }]) {
-    const refused = await send(browser, origin, startPath, data);
-    expect(refused.status(), JSON.stringify(data)).toBe(403);
-    expect(await refused.json()).toEqual({ error: 'conversation_consent_required' });
+    // A later release changes the text in substance and raises its version.
+    const laterRelease = await createInstallation(undefined, {
+      modelFetch: model(),
+      databasePath,
+      consentTextVersion: 2,
+    });
+    app = laterRelease;
+    const { origin } = laterRelease;
+    const returning = await device(laterRelease);
+    const { consentPath, startPath } = paths(origin);
+    // The older consent is still on record, so that the user can be told that the text has changed.
+    expect((await (await returning.get(consentPath)).json()).saved.textVersion).toBe(1);
+    for (const data of [{}, { consent: { textVersion: 1 } }]) {
+      const refused = await send(returning, origin, startPath, data);
+      expect(refused.status(), JSON.stringify(data)).toBe(403);
+      expect(await refused.json()).toEqual({ error: 'conversation_consent_required' });
+    }
+    expect((await send(returning, origin, consentPath, { textVersion: 1 })).status()).toBe(400);
+    expect(
+      (await send(returning, origin, startPath, { consent: { textVersion: 2 } })).status(),
+    ).toBe(201);
+    const saved = await send(returning, origin, consentPath, { textVersion: 2 });
+    expect((await saved.json()).saved.textVersion).toBe(2);
+    expect((await send(returning, origin, startPath)).status()).toBe(201);
+  } finally {
+    await app?.close();
+    app = undefined;
+    await rm(directory, { recursive: true, force: true });
   }
-  expect((await send(browser, origin, consentPath, { textVersion: 1 })).status()).toBe(400);
-  expect((await send(browser, origin, startPath, { consent: { textVersion: 2 } })).status()).toBe(
-    201,
-  );
-  const saved = await send(browser, origin, consentPath, { textVersion: 2 });
-  expect((await saved.json()).saved.textVersion).toBe(2);
-  expect((await send(browser, origin, startPath)).status()).toBe(201);
 });

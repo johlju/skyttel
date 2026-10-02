@@ -15,7 +15,7 @@ import { textAssistantInstructions } from './assistant-instructions.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { contentOwner } from './content-identities.js';
-import { conversationConsentValid } from './conversation-consent.js';
+import type { ConversationConsents } from './conversation-consent.js';
 import { householdAccess } from './households.js';
 import { MapError } from './map.js';
 import { connectTextAssistant, type LocalDispatch } from './text-assistant-mcp.js';
@@ -43,6 +43,7 @@ export function textAssistantRoutes({
   database,
   auth,
   config,
+  consents,
   dispatch,
   modelFetch,
   modelUsage,
@@ -51,6 +52,7 @@ export function textAssistantRoutes({
   database: Database.Database;
   auth: Auth;
   config: Config;
+  consents: ConversationConsents;
   dispatch: LocalDispatch;
   modelFetch?: typeof fetch;
   modelUsage?: TextModelUsage;
@@ -833,7 +835,7 @@ export function textAssistantRoutes({
     const householdId = context.req.param('id');
     // A conversation is the only way to conversation work, spoken or written.
     // Without a valid consent none starts, and the client is told why.
-    if (!conversationConsentValid(database, actorId, householdId, body?.consent))
+    if (!consents.valid(actorId, householdId, body?.consent))
       return context.json({ error: conversationConsentRequired }, 403);
     for (const previous of sessions.values())
       if (previous.browserSessionId === browserSessionId && previous.householdId === householdId)

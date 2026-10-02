@@ -8,7 +8,7 @@ import {
   openWorkspace,
   signIn,
 } from '../support/client.js';
-import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
+import { startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 
 test('LISTA-01: multiple type filters combine with search and marks across 500 objects', async ({

@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { createHousehold, openSettings, signIn, utilityButton } from '../support/client.js';
+import { specifiedConsentText } from '../support/conversation.js';
 import {
   chooseConversationVoice,
   consentBox,
@@ -13,13 +14,6 @@ import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { modelMessage, textModel } from '../support/text-model.js';
-
-// The consent text, version 1, as the specification states it.
-const consentText = [
-  'Med ditt medgivande behandlar OpenAI ljudet från din mikrofon medan den är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta som behövs. Skyttel föreslår ändringar i ditt utkast och sparar dem först när du ber om det. Skyttel sparar inte samtalet.',
-  'Skyttel kan höra och förstå fel. Kartan visar vad som har ändrats och sparats.',
-  'Säg eller skriv inga lösenord, koder eller fullständiga konto- och kortnummer.',
-];
 
 async function installation() {
   const live = liveProvider();
@@ -101,12 +95,12 @@ test('MEDGIVANDE-01: samtalsknapparna visar medgivanderutan och Avbryt startar i
       await page.keyboard.press('Enter');
       await expect(box, name).toBeVisible();
       await expect(box).toHaveAccessibleName('Samtal med Skyttel');
-      await expect(box).toHaveAccessibleDescription(consentText.join(' '));
+      await expect(box).toHaveAccessibleDescription(specifiedConsentText.join(' '));
       await expect(
         box.getByRole('heading', { level: 2, name: 'Samtal med Skyttel' }),
       ).toBeFocused();
       await expect(box.getByRole('paragraph')).toHaveText([
-        ...consentText,
+        ...specifiedConsentText,
         'Du kan återkalla det i Inställningar.',
       ]);
       await expect(remember).not.toBeChecked();

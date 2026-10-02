@@ -12,7 +12,8 @@ import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { contentOwnerRoutes } from './content-owner-routes.js';
-import { conversationConsentRoutes } from './conversation-consent.js';
+import { conversationConsents } from './conversation-consent.js';
+import { conversationConsentRoutes } from './conversation-consent-routes.js';
 import { costRoutes } from './cost-routes.js';
 import { installationCosts } from './costs.js';
 import { householdErasureRoutes } from './household-erasure-routes.js';
@@ -35,6 +36,7 @@ export function createApp({
   database,
   auth,
   identity = buildIdentity,
+  consentTextVersion,
   modelFetch,
   modelUsage,
   liveFetch,
@@ -46,6 +48,8 @@ export function createApp({
   database: Database.Database;
   auth: Auth;
   identity?: typeof buildIdentity;
+  /** The version of the conversation consent text, when it is not the release's own. */
+  consentTextVersion?: number;
   modelFetch?: typeof fetch;
   modelUsage?: TextModelUsage;
   liveFetch?: typeof fetch;
@@ -56,6 +60,7 @@ export function createApp({
   const app = new Hono();
   const costs = installationCosts(database);
   const linking = createLoginMethods(database, auth, config.origin);
+  const consents = conversationConsents(database, consentTextVersion);
   app.use(
     '*',
     secureHeaders({
@@ -204,7 +209,7 @@ export function createApp({
   app.route('/api', administrationRoutes(database, auth, config.origin));
   app.route('/api', costRoutes(database, auth, config, costs));
   app.route('/api', contentOwnerRoutes(database, auth, config.origin));
-  app.route('/api', conversationConsentRoutes(database, auth, config.origin));
+  app.route('/api', conversationConsentRoutes(database, auth, config.origin, consents));
   app.route('/api', householdExportRoutes(database, auth, config.origin));
   app.route('/api', householdErasureRoutes(database, auth, config.origin));
   app.route('/api', householdImportRoutes(database, auth, config.origin));
@@ -217,6 +222,7 @@ export function createApp({
     database,
     auth,
     config,
+    consents,
     dispatch: (request) =>
       assistantDispatch
         ? assistantDispatch(request, (next) => app.fetch(next))

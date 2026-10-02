@@ -1,7 +1,7 @@
 /**
  * The conversation consent text and its version. This is the only source of
- * the text: the consent box shows it, and so does the settings page Samtal
- * med Skyttel.
+ * the text. The consent box shows it, and every other place that shows the
+ * text or names its version takes them from here.
  *
  * The first paragraph makes four statements of substance:
  *

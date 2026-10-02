@@ -68,7 +68,7 @@ Avbryt startar inget”.
 - Rutan är en dialog med namnet **Samtal med Skyttel**. Resten av sidan
   går inte att använda medan den visas.
 - **Avbryt** och Escape startar ingenting och sparar inget medgivande.
-  Fokus återgår till den knapp som valdes.
+  Fokus återgår till den knapp som valdes. Vägledningen ligger kvar.
 
 ### MEDGIVANDE-02: vald knapp avgör röst eller text och medgivandet gäller besöket
 
@@ -191,7 +191,7 @@ enhet är provad, och fullständig överensstämmelse intygas inte.
 | 2.4.3, 2.4.7, 2.4.11 Fokus | Fokus går till rubriken, följer läsordningen och återgår till den valda knappen. Rutan täcker inte den kontroll som har fokus. | Fokus på rubriken, tangentordning, synlig fokusram och återgång till vald knapp. | Fokusordning med skärmläsare. |
 | 2.5.8 Pekmål | Kryssrutans etikett och knapparna är minst 44 px höga. | Mått på etikett och knappar. | Träffsäkerhet på fysisk pekskärm. |
 | 3.2.2, 3.3.2 Inmatning och etiketter | Kryssrutan ändrar ingenting förrän användaren godkänner. Alla kontroller har synliga namn. | Avbruten ruta sparar inget. | – |
-| 4.1.3 Statusmeddelanden | Ett misslyckat sparande av medgivandet visas som en varning i rutan. | Varningens text och roll i klientens enhetstester. | Uppläsning av varningen. |
+| 4.1.3 Statusmeddelanden | Ett misslyckat sparande av medgivandet står som en feltext i rutan, som hjälpmedel läser upp. | Feltextens ordalydelse och roll i klientens enhetstester. | Uppläsning av feltexten. |
 <!-- markdownlint-enable MD013 -->
 
 Ett sparat medgivande för en äldre version av medgivandetexten ger

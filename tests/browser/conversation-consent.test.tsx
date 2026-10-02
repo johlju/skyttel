@@ -73,7 +73,7 @@ async function open(width: number, height: number) {
   return starts;
 }
 const box = () => page.getByRole('dialog', { name: consentBoxName, exact: true });
-const place = (control: Locator) => control.element().getBoundingClientRect();
+const rect = (control: Locator) => control.element().getBoundingClientRect();
 const tools = () => page.getByRole('navigation', { name: 'Kartans verktyg' });
 const tool = (name: string) => tools().getByRole('button', { name, exact: true });
 
@@ -87,10 +87,10 @@ test('the consent box opens next to the chosen button, on the side that has room
   for (const name of ['Prata med Skyttel', 'Samtal och text']) {
     await tool(name).click();
     await expect.element(box()).toBeVisible();
-    const chosen = place(tool(name));
-    expect(place(box()).left, name).toBeGreaterThanOrEqual(place(tools()).right);
-    expect(place(box()).left - chosen.right, name).toBeLessThanOrEqual(32);
-    expect(Math.abs(place(box()).top - chosen.top), name).toBeLessThanOrEqual(1);
+    const chosen = rect(tool(name));
+    expect(rect(box()).left, name).toBeGreaterThanOrEqual(rect(tools()).right);
+    expect(rect(box()).left - chosen.right, name).toBeLessThanOrEqual(32);
+    expect(Math.abs(rect(box()).top - chosen.top), name).toBeLessThanOrEqual(1);
     await userEvent.keyboard('{Escape}');
     await expect.element(box()).not.toBeInTheDocument();
     await expect.element(tool(name)).toHaveFocus();
@@ -102,10 +102,10 @@ test('the consent box opens next to the chosen button, on the side that has room
     .getByRole('button', { name: 'Skriv' });
   await guide.click();
   await expect.element(box()).toBeVisible();
-  expect(place(box()).right).toBeLessThanOrEqual(place(guide).left);
-  expect(place(guide).left - place(box()).right).toBeLessThanOrEqual(32);
-  expect(place(box()).bottom).toBeLessThanOrEqual(800);
-  expect(place(box()).top).toBeGreaterThanOrEqual(0);
+  expect(rect(box()).right).toBeLessThanOrEqual(rect(guide).left);
+  expect(rect(guide).left - rect(box()).right).toBeLessThanOrEqual(32);
+  expect(rect(box()).bottom).toBeLessThanOrEqual(800);
+  expect(rect(box()).top).toBeGreaterThanOrEqual(0);
   await box().getByRole('button', { name: 'Avbryt', exact: true }).click();
   await expect.element(guide).toHaveFocus();
 
@@ -113,7 +113,7 @@ test('the consent box opens next to the chosen button, on the side that has room
   const offer = page.getByRole('button', { name: 'Tala eller skriv', exact: true });
   await offer.click();
   await expect.element(box()).toBeVisible();
-  expect(place(box()).right).toBeLessThanOrEqual(place(offer).left);
+  expect(rect(box()).right).toBeLessThanOrEqual(rect(offer).left);
   await box().getByRole('button', { name: 'Avbryt', exact: true }).click();
   await expect.element(offer).toHaveFocus();
   expect(starts).toEqual([]);
@@ -133,11 +133,11 @@ test.each([390, 320])(
     await open(width, 844);
     await tool('Samtal och text').click();
     await expect.element(box()).toBeVisible();
-    expect(place(box()).top).toBeGreaterThanOrEqual(place(tools()).bottom);
-    expect(place(box()).top - place(tools()).bottom).toBeLessThanOrEqual(32);
-    expect(place(box()).left).toBeGreaterThanOrEqual(0);
-    expect(place(box()).right).toBeLessThanOrEqual(width);
-    expect(place(box()).bottom).toBeLessThanOrEqual(844);
+    expect(rect(box()).top).toBeGreaterThanOrEqual(rect(tools()).bottom);
+    expect(rect(box()).top - rect(tools()).bottom).toBeLessThanOrEqual(32);
+    expect(rect(box()).left).toBeGreaterThanOrEqual(0);
+    expect(rect(box()).right).toBeLessThanOrEqual(width);
+    expect(rect(box()).bottom).toBeLessThanOrEqual(844);
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
   },
 );
@@ -146,9 +146,20 @@ test('the consent box follows the toolbar when the window becomes narrow', async
   await open(1280, 800);
   await tool('Samtal och text').click();
   await expect.element(box()).toBeVisible();
-  expect(place(box()).left).toBeGreaterThanOrEqual(place(tools()).right);
+  expect(rect(box()).left).toBeGreaterThanOrEqual(rect(tools()).right);
+  // A narrower window with the toolbar still to the left keeps the box on the screen.
+  await box().getByRole('button', { name: 'Avbryt', exact: true }).click();
+  const guide = page
+    .getByRole('complementary', { name: 'Kom igång med kartan' })
+    .getByRole('button', { name: 'Skriv' });
+  await guide.click();
+  await expect.element(box()).toBeVisible();
+  await page.viewport(800, 600);
+  await expect.poll(() => rect(box()).right).toBeLessThanOrEqual(800);
+  expect(rect(box()).left).toBeGreaterThanOrEqual(0);
+  expect(rect(box()).bottom).toBeLessThanOrEqual(600);
   await page.viewport(390, 844);
-  await expect.poll(() => place(box()).right).toBeLessThanOrEqual(390);
-  expect(place(box()).top).toBeGreaterThanOrEqual(place(tools()).bottom);
-  expect(place(box()).top - place(tools()).bottom).toBeLessThanOrEqual(32);
+  await expect.poll(() => rect(box()).right).toBeLessThanOrEqual(390);
+  expect(rect(box()).top).toBeGreaterThanOrEqual(rect(tools()).bottom);
+  expect(rect(box()).top - rect(tools()).bottom).toBeLessThanOrEqual(32);
 });

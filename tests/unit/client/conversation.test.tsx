@@ -379,6 +379,36 @@ test('closing the consent box after a failed save removes the failure', async ()
   expect(result.current.consent).toMatchObject({ asking: null, error: '' });
 });
 
+test('a consent that is being saved is not withdrawn by closing the consent box', async () => {
+  let answer: (() => void) | undefined;
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  const { commands } = server();
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === consentPath && init?.method === 'POST') await held;
+    return respond(url, init);
+  });
+  const result = await conversationHook();
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('text'));
+  let approved: Promise<void> | undefined;
+  act(() => {
+    approved = result.current.approve(true);
+  });
+  expect(result.current.consent.saving).toBe(true);
+  act(() => result.current.decline());
+  expect(result.current.consent.asking).toBe('text');
+  await act(async () => {
+    answer?.();
+    await approved;
+  });
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  expect(result.current.consent.saved?.textVersion).toBe(1);
+  expect(commands).toEqual(['consent', '/']);
+});
+
 test('a start requested before the server has answered waits and then starts', async () => {
   let answer: (() => void) | undefined;
   const held = new Promise<void>((resolve) => {
@@ -409,10 +439,17 @@ test('a conversation that the server does not offer is not started and not asked
       ? Response.json({ available: false })
       : respond(url, init),
   );
-  const { result } = renderHook(() => useConversation(household));
+  const unavailable = vi.fn();
+  const { result } = renderHook(() =>
+    useConversation({ ...household, onUnavailable: unavailable }),
+  );
+  // A request that is made before the server has answered is told the same.
+  act(() => result.current.begin('voice'));
+  expect(unavailable).not.toHaveBeenCalled();
   await waitFor(() => expect(result.current.available).toBe(false));
-  await waitFor(() => expect(result.current.consent.saved).toBeNull());
+  await waitFor(() => expect(unavailable).toHaveBeenCalledOnce());
   act(() => result.current.begin('text'));
+  expect(unavailable).toHaveBeenCalledTimes(2);
   expect(result.current.consent.asking).toBeNull();
   await act(() => result.current.approve(false));
   expect(result.current.session).toBeNull();

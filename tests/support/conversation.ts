@@ -16,6 +16,14 @@ export const conversationTools = { voice: 'Prata med Skyttel', text: 'Samtal och
 
 export const consentBoxName = 'Samtal med Skyttel';
 
+// The consent text, version 1, as the specification states it: three
+// paragraphs. Tests compare what the product shows with this copy.
+export const specifiedConsentText = [
+  'Med ditt medgivande behandlar OpenAI ljudet från din mikrofon medan den är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta som behövs. Skyttel föreslår ändringar i ditt utkast och sparar dem först när du ber om det. Skyttel sparar inte samtalet.',
+  'Skyttel kan höra och förstå fel. Kartan visar vad som har ändrats och sparats.',
+  'Säg eller skriv inga lösenord, koder eller fullständiga konto- och kortnummer.',
+];
+
 export interface ConsentBoxLookup<Control> {
   /** A checkbox in the consent box. */
   checkbox(name: string): Control;

@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
+import { specifiedConsentText } from '../../support/conversation.js';
 import {
   chooseConversationVoice,
   findConsentBox,
@@ -29,12 +30,6 @@ const session: TextAssistantView = {
     pendingOperations: [],
   },
 };
-// The consent text, version 1, as the specification states it.
-const consentText = [
-  'Med ditt medgivande behandlar OpenAI ljudet från din mikrofon medan den är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta som behövs. Skyttel föreslår ändringar i ditt utkast och sparar dem först när du ber om det. Skyttel sparar inte samtalet.',
-  'Skyttel kan höra och förstå fel. Kartan visar vad som har ändrats och sparats.',
-  'Säg eller skriv inga lösenord, koder eller fullständiga konto- och kortnummer.',
-];
 
 afterEach(() => {
   cleanup();
@@ -84,7 +79,7 @@ test('the consent box states the consent text word for word and offers to rememb
     'P',
   ]);
   expect([...(text?.children ?? [])].map((paragraph) => paragraph.textContent)).toEqual(
-    consentText,
+    specifiedConsentText,
   );
 
   const { remember, approve, decline } = getConsentBoxControls();
@@ -166,7 +161,7 @@ test('a remembered consent is saved before the start, and a save that fails is t
   ]);
 });
 
-test('Godkänn och starta waits while the consent is being saved', async () => {
+test('a consent that is being saved can be neither approved again nor cancelled', async () => {
   let answer: ((response: Response) => void) | undefined;
   show();
   const respond = globalThis.fetch;
@@ -180,7 +175,10 @@ test('Godkänn och starta waits while the consent is being saved', async () => {
   await openConversationText();
   await giveConversationConsent({ remember: true });
   await waitFor(() => expect(getConsentBoxControls().approve.disabled).toBe(true));
-  expect(getConsentBoxControls().decline.disabled).toBe(false);
+  expect(getConsentBoxControls().decline.disabled).toBe(true);
+  // Escape does not withdraw a consent that is already on its way to the server.
+  fireEvent(await findConsentBox(), new Event('cancel', { cancelable: true }));
+  expect(queryConsentBox()).not.toBeNull();
   answer?.(Response.json({ saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' } }));
   await waitFor(() => expect(messageField()).not.toBeNull());
 });

@@ -601,7 +601,7 @@ och utkastets arbetsyta. Ett svar ska inte i sig spara utkastet.
 
 **Användare:** Administratören.
 
-**Förutsättningar:** Ett tomt hushåll och en textassistent som är tillgänglig.
+**Förutsättningar:** Ett tomt hushåll och ett tillgängligt samtal med Skyttel.
 Provet kräver att samtalet visar en nödvändig fråga. Om tjänsten inte ger
 en sådan fråga, anteckna att den delen inte har verifierats.
 

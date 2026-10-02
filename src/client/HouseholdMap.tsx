@@ -58,7 +58,7 @@ import { type PanelAnchor, type PanelFocusRequest, WorkspacePanels } from './Wor
 import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
 import './workspace.css';
 import './workspace-panels.css';
-import { conversationOngoing, useConversation } from './use-conversation.js';
+import { type ConversationMode, conversationOngoing, useConversation } from './use-conversation.js';
 import { usePersonalView } from './use-personal-view.js';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
 
@@ -246,21 +246,20 @@ export function HouseholdMap({
   // The button that the user chose to start a conversation with. The consent
   // box opens next to it and gives the focus back to it.
   const conversationChoice = useRef<HTMLElement | null>(null);
-  function startsConversation(target: WorkspaceTarget) {
-    return (
-      (target === 'conversation' || target === 'voice') &&
-      !conversation.session &&
-      conversation.available !== false
-    );
+  /** How a target starts a conversation that is not yet going on. Null when it starts none. */
+  function conversationStart(target: WorkspaceTarget): ConversationMode | null {
+    if (conversation.session || conversation.available === false) return null;
+    return target === 'voice' ? 'voice' : target === 'conversation' ? 'text' : null;
   }
   function openWork(target: WorkspaceTarget, chosen?: HTMLElement) {
     workTrigger.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (startsConversation(target)) {
+    const start = conversationStart(target);
+    if (start) {
       // The conversation starts first, after the consent box when no consent
       // is valid. Its panel opens when the conversation has started.
       conversationChoice.current = chosen ?? workTrigger.current;
-      conversation.begin(target === 'voice' ? 'voice' : 'text');
+      conversation.begin(start);
       return;
     }
     openPanel(
@@ -273,7 +272,7 @@ export function HouseholdMap({
   function openGuidedWork(target: WorkspaceTarget, chosen: HTMLElement) {
     // The guidance stays while a conversation waits for its start, so that
     // the consent box can give the focus back to the chosen button.
-    if (!startsConversation(target)) setGuidance(false);
+    if (!conversationStart(target)) setGuidance(false);
     openWork(target, chosen);
   }
   function dismissGuidance() {
@@ -1356,6 +1355,10 @@ export function HouseholdMap({
   }
   // The conversation belongs to the map, not to a panel. The toolbar, the
   // status card and the panels all read it and call its commands.
+  function showConversation() {
+    setGuidance(false);
+    openPanel('conversation');
+  }
   const conversation = useConversation({
     householdId,
     enabled: Boolean(state),
@@ -1364,10 +1367,9 @@ export function HouseholdMap({
       // A session poll must not replace its pending state with recovery.
       if (!pending || !saveAttempt.current) setLoad((value) => value + 1);
     },
-    onStarted: () => {
-      setGuidance(false);
-      openPanel('conversation');
-    },
+    onStarted: showConversation,
+    // The panel says that the conversation is not offered.
+    onUnavailable: showConversation,
     onAccessLost: loseAccess,
     onSelectItem: revealAssistantItem,
   });

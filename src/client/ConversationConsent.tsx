@@ -4,7 +4,7 @@ import type { Conversation } from './use-conversation.js';
 import './conversation-consent.css';
 
 const gap = 16;
-const box = (element?: Element | null) => element?.getBoundingClientRect() ?? new DOMRect();
+const rect = (element?: Element | null) => element?.getBoundingClientRect() ?? new DOMRect();
 
 /**
  * Where the box opens: under the toolbar when the toolbar lies at the top,
@@ -16,11 +16,15 @@ function place(dialog: HTMLElement, chosen: DOMRect, toolbar: DOMRect) {
     return { top: toolbar.bottom + gap, left: gap };
   // A chosen button that is no longer shown leaves the toolbar to open next to.
   const beside = chosen.width ? chosen : toolbar;
+  // The box opens to the right when it has room there, and otherwise to the
+  // left. It always stays on the screen.
+  const lowest = window.innerHeight - dialog.offsetHeight - gap;
+  const rightmost = window.innerWidth - dialog.offsetWidth - gap;
   const right = beside.right + gap;
-  const fits = right + dialog.offsetWidth + gap <= window.innerWidth;
+  const left = right <= rightmost ? right : beside.left - gap - dialog.offsetWidth;
   return {
-    top: Math.max(gap, Math.min(beside.top, window.innerHeight - dialog.offsetHeight - gap)),
-    left: Math.max(gap, fits ? right : beside.left - gap - dialog.offsetWidth),
+    top: Math.max(gap, Math.min(beside.top, lowest)),
+    left: Math.max(gap, Math.min(left, rightmost)),
   };
 }
 
@@ -59,9 +63,10 @@ function ConsentBox({
     if (!shown) return;
     const button = chosen.current;
     // The chosen button is measured before the box takes the focus from it.
-    const beside = box(button);
+    const chosenPlace = rect(button);
     const position = () => {
-      const { top, left } = place(shown, beside, box(document.getElementById('workspace-tools')));
+      const toolbar = rect(document.getElementById('workspace-tools'));
+      const { top, left } = place(shown, chosenPlace, toolbar);
       shown.style.top = `${top}px`;
       shown.style.left = `${left}px`;
       shown.style.maxHeight = `calc(100dvh - ${top + gap}px)`;
@@ -117,7 +122,7 @@ function ConsentBox({
         >
           Godkänn och starta
         </button>
-        <button type="button" onClick={conversation.decline}>
+        <button type="button" disabled={saving} onClick={conversation.decline}>
           Avbryt
         </button>
       </div>

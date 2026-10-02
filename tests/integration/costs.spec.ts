@@ -12,7 +12,6 @@ async function startAssistant(page: Page, origin: string) {
   const { household } = await (await createHousehold(page.request, origin, 'Kostnadsprov')).json();
   await page.goto(origin);
   await startConversationWithText(page);
-  const panel = assistant(page);
   return household.id as string;
 }
 async function sendText(page: Page) {

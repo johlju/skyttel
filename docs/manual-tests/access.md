@@ -544,7 +544,10 @@ cancelled before leaving”.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Hushållet finns och kartan är tom.
+**Förutsättningar:** Hushållet finns och kartan är tom. Samtalet är inte
+konfigurerat i installationen. Med ett tillgängligt samtal visar **Tala**
+och **Skriv** först medgivanderutan, som provas i
+[MEDGIVANDE-01](conversation-consent.md#medgivanderutan).
 
 **Integrationstest:**
 [access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
@@ -553,18 +556,16 @@ a mandatory tour”.
 
 **Steg:**
 
-1. Öppna kartan och välj **Tala** i vägledningen. Kontrollera samtalets
-   ingångar. Ingen mikrofon ska börja spela in automatiskt. När samtalet
-   är tillgängligt visas [medgivanderutan](conversation-consent.md) först.
+1. Öppna kartan och välj **Tala** i vägledningen. Kontrollera att
+   samtalspanelen öppnas. Ingen mikrofon ska börja spela in automatiskt.
 2. Ladda om kartan och välj **Skriv** i vägledningen.
 3. Ladda om och välj **Öppna listan**. Kontrollera **Nytt objekt**.
 4. Ladda om och välj **Stäng vägledningen**.
 
 **Förväntat resultat:**
 
-- Tal och text öppnar samtalets riktiga kontroller. Lista öppnar kartarbetet.
-- Vägledningen försvinner när valet har öppnat sin arbetsyta. En avbruten
-  medgivanderuta lämnar vägledningen kvar.
+- Tal och text öppnar samtalspanelen. Lista öppnar kartarbetet.
+- Vägledningen försvinner efter ett val.
 - Stängning ger fokus till kartans verktyg. Alla verktyg kan användas direkt.
 
 ### ACCESS-16: Utgånget inloggningsförsök kan ersättas

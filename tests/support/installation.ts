@@ -42,6 +42,7 @@ export async function createInstallation(
     liveSideband?: LiveSidebandFactory;
     liveUsage?: LiveUsage;
     browserProviderScript?: string;
+    consentTextVersion?: number;
     assistantDispatch?: Parameters<typeof createApp>[0]['assistantDispatch'];
   } = {},
 ) {
@@ -131,6 +132,7 @@ export async function createInstallation(
       liveSideband: databaseOptions.liveSideband,
       liveUsage: databaseOptions.liveUsage,
       assistantDispatch: databaseOptions.assistantDispatch,
+      consentTextVersion: databaseOptions.consentTextVersion,
     });
     closeApp = app.close;
     handle = async (request) => {

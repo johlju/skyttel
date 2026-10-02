@@ -55,7 +55,7 @@ export type Conversation = {
   begin: (mode: ConversationMode) => void;
   /** Approves in the consent box, and saves the consent when it is to be remembered. */
   approve: (remember: boolean) => Promise<void>;
-  /** Closes the consent box. Nothing starts. */
+  /** Closes the consent box. Nothing starts. A consent that is being saved is not withdrawn. */
   decline: () => void;
   send: () => Promise<void>;
   cancel: () => Promise<void>;
@@ -91,6 +91,7 @@ export function useConversation({
   enabled = true,
   onMapChange,
   onStarted,
+  onUnavailable,
   onAccessLost,
   onSelectItem,
 }: {
@@ -100,6 +101,8 @@ export function useConversation({
   onMapChange: () => void;
   /** A conversation has started, so the caller can show it. */
   onStarted?: () => void;
+  /** A requested conversation is not offered by the server, so the caller can say so. */
+  onUnavailable?: () => void;
   onAccessLost: () => void;
   onSelectItem: (target: MapSelection, signal: AbortSignal) => Promise<boolean>;
 }): Conversation {
@@ -130,8 +133,8 @@ export function useConversation({
         : [...rows, row],
     );
   }, []);
-  const callbacks = useRef({ onMapChange, onStarted, onAccessLost, onSelectItem });
-  callbacks.current = { onMapChange, onStarted, onAccessLost, onSelectItem };
+  const callbacks = useRef({ onMapChange, onStarted, onUnavailable, onAccessLost, onSelectItem });
+  callbacks.current = { onMapChange, onStarted, onUnavailable, onAccessLost, onSelectItem };
   const mounted = useRef(true);
   const requestEpoch = useRef(0);
   const update = useCallback(
@@ -312,8 +315,10 @@ export function useConversation({
   const answered = available !== null && savedConsent !== undefined;
   useEffect(() => {
     if (!requested || !answered) return;
-    if (!available) setRequested(null);
-    else if (consentValid) {
+    if (!available) {
+      setRequested(null);
+      callbacks.current.onUnavailable?.();
+    } else if (consentValid) {
       setRequested(null);
       void start(requested);
     }
@@ -471,6 +476,8 @@ export function useConversation({
     },
     approve,
     decline: () => {
+      // The user has approved, and the save is on its way: it cannot be taken back here.
+      if (savingConsent) return;
       setRequested(null);
       setConsentError('');
     },
