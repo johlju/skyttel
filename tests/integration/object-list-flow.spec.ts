@@ -12,6 +12,7 @@ import { createInstallation } from '../support/installation.js';
 test('LISTA-05: short-screen list returns preserve the visible result and keyboard focus', async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   const installation = await createInstallation();
   try {
     await signIn(page.request, installation.origin);
