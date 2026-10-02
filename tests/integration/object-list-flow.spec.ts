@@ -52,7 +52,12 @@ test('LISTA-05: short-screen list returns preserve the visible result and keyboa
     ).toBe(true);
     await openSettings(page);
     await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
-    expect(await flow.evaluate((element) => element.scrollTop)).toBe(remembered);
+    // The return is a router transition, and the list restores its place and
+    // focus in an effect after it. The click does not wait for either, and
+    // the large map can take longer than the default wait on a busy machine.
+    await expect
+      .poll(() => flow.evaluate((element) => element.scrollTop), { timeout: 30_000 })
+      .toBe(remembered);
     expect(
       await page.evaluate(() => {
         const element = document.activeElement;
