@@ -4,7 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { voiceSettleMs } from '../../../src/client/use-voice.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import {
-  openConversationText,
+  chooseConversationText,
   queryConsentBox,
   startConversationWithVoice,
 } from '../../support/conversation-dom.js';
@@ -491,8 +491,8 @@ test('a task that was said is worked through with the microphone off, and the co
   expect(track.stop).toHaveBeenCalled();
 });
 
-test.each(['stop', 'revoked'])(
-  'the conversation keeps both speakers and short pauses, then clears on %s',
+test.each(['a new conversation', 'revoked access'])(
+  'the conversation text keeps both speakers and short pauses, then is emptied by %s',
   async (ending) => {
     const { component } = setup();
     component.unmount();
@@ -535,8 +535,8 @@ test.each(['stop', 'revoked'])(
       );
     };
     await fragment('input', 'Kim betalar', 0, 1000);
-    const log = await screen.findByRole('log', { name: 'Samtalets dialog' });
-    expect(log.textContent).toContain('DuKim betalar');
+    const log = await screen.findByRole('log', { name: 'Samtalstext' });
+    expect(log.textContent).toContain('Du: Kim betalar');
     await fragment('output', 'Jag lyssnar.', 1100, 1300);
     await fragment('input', ' för musiken.', 1500, 1900);
     expect(log.querySelectorAll('li')).toHaveLength(2);
@@ -545,34 +545,30 @@ test.each(['stop', 'revoked'])(
     await fragment('input', 'Rätta till Lo.', 5000, 6000);
     await fragment('output', 'Sparat säger rösten.', 6100, 6500);
     expect(log.querySelectorAll('li')).toHaveLength(4);
-    expect(log.textContent).toContain('SkyttelJag lyssnar. Berätta mer.');
+    expect(log.textContent).toContain('Skyttel: Jag lyssnar. Berätta mer.');
     expect(screen.getByRole('status').textContent).toContain('Nya förslag är osparade');
     expect(voiceBox()?.textContent).toBe('Lyssnar');
-    if (ending === 'stop') {
-      // With the microphone off Skyttel finishes its answer. Nothing comes after the connection.
-      vi.useFakeTimers();
-      fireEvent.click(microphoneButton());
-      await fragment('output', ' Klart.', 6600, 7000);
-      expect(log.textContent).toContain('Sparat säger rösten. Klart.');
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(voiceSettleMs + 1);
-      });
-      vi.useRealTimers();
-      await waitFor(() => expect(peer.connectionState).toBe('closed'));
+    const newConversation = () =>
+      screen.getByRole('button', { name: 'Nytt samtal' }) as HTMLButtonElement;
+    if (ending === 'a new conversation') {
+      expect(log.textContent).toContain('Kim betalar för musiken.');
+      await userEvent.click(newConversation());
       await fragment('output', 'För sent.', 7000, 7500);
       expect(log.textContent).not.toContain('För sent.');
-      expect(log.textContent).toContain('Kim betalar för musiken.');
-      await userEvent.click(screen.getByRole('button', { name: 'Avsluta samtalet' }));
     } else {
-      await userEvent.type(screen.getByLabelText('Meddelande till textassistenten'), 'Privat text');
+      await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), 'Privat text');
       await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
     }
-    expect(screen.queryByRole('log')).toBeNull();
-    // The consent for the visit still applies, so the next conversation starts directly.
-    await openConversationText();
-    expect(await screen.findByLabelText('Meddelande till textassistenten')).toBeDefined();
+    const emptied = 'Här visas det du och Skyttel säger och skriver.';
+    await waitFor(() => expect(log.textContent).toBe(emptied));
+    if (ending === 'revoked access') {
+      expect(newConversation().disabled).toBe(true);
+      // The consent for the visit still applies, so the next conversation starts directly.
+      await chooseConversationText();
+      await waitFor(() => expect(newConversation().disabled).toBe(false));
+    }
     expect(queryConsentBox()).toBeNull();
-    expect(screen.queryByRole('log')).toBeNull();
+    expect(log.textContent).toBe(emptied);
   },
 );
 
@@ -601,7 +597,7 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
   );
   await startConversationWithVoice();
   await waitFor(() => expect(held.has('poll')).toBe(true), { timeout: 2000 });
-  await userEvent.type(screen.getByLabelText('Meddelande till textassistenten'), 'Privat text');
+  await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), 'Privat text');
   await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
   await waitFor(() => expect(held.has('messages')).toBe(true));
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -612,10 +608,10 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
     await settle();
   });
   expect(screen.getByRole('alert').textContent).toBe('Åtkomsten har upphört.');
-  expect(screen.queryByLabelText('Meddelande till textassistenten')).toBeNull();
-  expect(screen.getByRole('region', { name: 'Skyttels textassistent' }).dataset.sessionActive).toBe(
-    'false',
+  expect((screen.getByRole('button', { name: 'Nytt samtal' }) as HTMLButtonElement).disabled).toBe(
+    true,
   );
+  expect(screen.getByRole('region', { name: 'Arbetsyta' }).dataset.sessionActive).toBe('false');
 });
 
 test('temporary disconnection mutes capture, recovery re-enables it and an unusable connection stops server work', async () => {

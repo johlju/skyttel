@@ -53,6 +53,9 @@ export function WorkspaceIcon({ name }: { name: keyof typeof paths }) {
 
 export type WorkspaceTarget = 'list' | 'conversation' | 'voice' | 'search' | 'draft';
 
+/** The toolbar button that opens and closes the text view. */
+export const conversationTool = 'Skriv till Skyttel';
+
 export function WorkspaceTools({
   onOpen,
   account,
@@ -65,6 +68,7 @@ export function WorkspaceTools({
   detailsVisible = false,
   voiceControl,
   voiceBox,
+  textViewOpen = false,
   cameraMount,
   expanded,
   onExpandedChange,
@@ -87,6 +91,7 @@ export function WorkspaceTools({
   voiceControl?: Pick<Voice, 'microphone' | 'starting' | 'disabled' | 'activate'> | null;
   /** The voice box. It follows the conversation buttons in the reading order. */
   voiceBox?: ReactNode;
+  textViewOpen?: boolean;
   cameraMount?: (element: HTMLDivElement | null) => void;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -143,7 +148,7 @@ export function WorkspaceTools({
         {(
           [
             ['mic', 'Prata med Skyttel', 'voice'],
-            ['text', 'Samtal och text', 'conversation'],
+            ['text', conversationTool, 'conversation'],
             ['search', 'Sök i kartan', 'search'],
             ['list', 'Lista', 'list'],
             ['draft', 'Utkast och historik', 'draft'],
@@ -161,6 +166,7 @@ export function WorkspaceTools({
               className={target === 'voice' ? 'workspace-talk' : undefined}
               disabled={target === 'voice' ? voiceControl?.disabled : undefined}
               aria-pressed={target === 'voice' ? voiceControl?.microphone === 'on' : undefined}
+              aria-expanded={target === 'conversation' ? textViewOpen : undefined}
               onClick={(event) => {
                 onExpandedChange(false);
                 setUtility(null);
@@ -273,8 +279,8 @@ export function WorkspaceTools({
             <>
               <h2 tabIndex={-1}>Information och hjälp</h2>
               <p>
-                Välj Lista för att läsa och ändra objekt och samband. Samtal och text fungerar utan
-                mikrofon.
+                Välj Lista för att läsa och ändra objekt och samband. Skriv till Skyttel fungerar
+                utan mikrofon.
               </p>
               <p>
                 Alla förslag samlas i ditt privata utkast. Spara hela utkastet när du vill dela

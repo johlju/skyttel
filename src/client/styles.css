@@ -531,19 +531,12 @@ main:has(.household-panel) {
   line-height: 1.35;
 }
 .assistant-bar-heading,
-.assistant-panel-heading,
 .voice-controls,
 .household-map-heading {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-}
-.assistant-panel-heading {
-  justify-content: space-between;
-}
-.assistant-panel-heading .muted {
-  font-size: 12px;
 }
 .assistant-bar p,
 .voice-assistant p {
@@ -616,24 +609,6 @@ main:has(.household-panel) {
   background: #edf5e9;
   font-size: 12px;
 }
-.assistant-transcript-empty {
-  display: grid;
-  place-content: center;
-  min-height: 220px;
-  padding: 22px;
-  color: #748577;
-  font-size: 13px;
-  text-align: center;
-}
-.assistant-utterance {
-  border-radius: 9px;
-  padding: 10px 12px;
-  background: #f1f5ee;
-  margin-bottom: 12px;
-}
-.assistant-utterance p {
-  white-space: pre-wrap;
-}
 .assistant-work-status {
   display: flex;
   align-items: center;
@@ -658,22 +633,6 @@ main:has(.household-panel) {
   border-radius: 50%;
   background: transparent;
   animation: assistant-work-turn 1s linear infinite;
-}
-.assistant-message-form {
-  margin: 14px 0;
-}
-.assistant-message-form label {
-  font-size: 13px;
-}
-.household-map .assistant-message-form textarea {
-  min-height: 5rem;
-  margin-bottom: 6px;
-  border: 1px solid #b9c9bd;
-  border-radius: 7px;
-}
-.assistant-conversation > button {
-  margin: 0 6px 8px 0;
-  font-size: 12px;
 }
 .household-map-heading h2 {
   margin: 0;

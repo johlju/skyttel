@@ -357,9 +357,6 @@
 .household-map.workspace-shell.workspace-open .assistant-side > :first-child {
   order: -1;
 }
-.household-map.workspace-shell.workspace-open .assistant-conversation {
-  order: 4;
-}
 .household-map.workspace-shell.workspace-open .assistant-changes {
   order: 5;
 }
@@ -638,8 +635,6 @@ footer[hidden] {
     .assistant-empty,
     .assistant-save-note,
     .assistant-work-status,
-    .assistant-utterance,
-    .assistant-transcript-empty,
     .map-loading,
     .map-management .access-list li
   ) {

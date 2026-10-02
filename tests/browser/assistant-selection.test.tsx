@@ -116,18 +116,20 @@ async function open(width = 1280, height = 900, mapState = state) {
       await page.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
   }
   async function openText() {
+    // The expanded names would lie over a text view that is already open.
+    if (page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }).query()) return;
     await showToolNames();
     await openConversationText();
   }
   await showToolNames();
   await startConversationWithText();
-  await expect.element(page.getByLabelText('Meddelande till textassistenten')).toBeVisible();
+  await expect.element(page.getByLabelText('Meddelande till Skyttel')).toBeVisible();
   return {
     acknowledgements,
     async show(item: MapSelection) {
       target = item;
       await openText();
-      await page.getByLabelText('Meddelande till textassistenten').fill('Visa urvalet.');
+      await page.getByLabelText('Meddelande till Skyttel').fill('Visa urvalet.');
       await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     },
   };

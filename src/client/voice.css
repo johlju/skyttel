@@ -1,31 +1,3 @@
-.conversation-transcript {
-  list-style: none;
-  max-height: 24rem;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 0;
-}
-
-.conversation-row {
-  margin-block: 0.75rem;
-  padding: 0.75rem;
-  border-inline-start: 3px solid #577263;
-  overflow-wrap: anywhere;
-}
-
-.conversation-row.user {
-  border-inline-start-color: #93c9ac;
-}
-
-.conversation-row p {
-  margin-block: 0.25rem 0;
-  white-space: pre-wrap;
-}
-
-.conversation-row.partial {
-  border-inline-start-style: dotted;
-}
-
 .assistant-work-indicator.is-working {
   position: fixed;
   z-index: 80;
@@ -56,11 +28,6 @@
 
 .draft-change-summary > li {
   margin-block: 0.6rem;
-}
-
-.assistant-work-time {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .household-map.workspace-shell .workspace-voice-controls:has(.conversation-controls),

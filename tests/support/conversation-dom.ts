@@ -39,11 +39,14 @@ export const {
   startConversationWithText,
   startConversationWithVoice,
   openConversationText,
+  closeConversationText,
+  chooseConversationText,
   chooseConversationVoice,
 } = conversationSteps<HTMLElement>({
   ...lookup,
   tool: (name) => shown(() => screen.getByRole('button', { name })),
   asked: findConsentBox,
+  expanded: (control) => control.getAttribute('aria-expanded') === 'true',
   tick: click,
   press: click,
 });

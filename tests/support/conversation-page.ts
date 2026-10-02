@@ -22,6 +22,7 @@ const steps = (page: Page) =>
   conversationSteps<Locator>({
     ...lookup(page),
     tool: (name) => utilityButton(page, name),
+    expanded: async (control) => (await control.getAttribute('aria-expanded')) === 'true',
     tick: (control) => control.check(),
     press: (control) => control.click(),
   });
@@ -34,6 +35,8 @@ export const startConversationWithText = (page: Page, consent?: { remember?: boo
 export const startConversationWithVoice = (page: Page, consent?: { remember?: boolean }) =>
   steps(page).startConversationWithVoice(consent);
 export const openConversationText = (page: Page) => steps(page).openConversationText();
+export const closeConversationText = (page: Page) => steps(page).closeConversationText();
+export const chooseConversationText = (page: Page) => steps(page).chooseConversationText();
 export const chooseConversationVoice = (page: Page) => steps(page).chooseConversationVoice();
 
 /** The voice box, which follows the voice wherever the map's tools are shown. */

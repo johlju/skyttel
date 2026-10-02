@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { ConversationConsent } from '../../src/client/ConversationConsent.js';
 import {
   type ConversationPresentation,
@@ -12,7 +12,8 @@ import { conversationTools } from './conversation.js';
 /**
  * A conversation that keeps its own state, for tests outside the household's
  * map. It offers what the map offers for a conversation: the two conversation
- * buttons, the consent box and the voice box.
+ * buttons, the consent box and the voice box. The text button opens and closes
+ * the text view while voice-only starts keep it closed.
  */
 export function StandaloneConversation({
   onMapChange,
@@ -26,8 +27,10 @@ export function StandaloneConversation({
 }) {
   const chosen = useRef<HTMLElement | null>(null);
   const microphone = useRef<HTMLButtonElement>(null);
+  const [textViewOpen, setTextViewOpen] = useState(false);
   const conversation = useConversation({
     householdId: presentation.householdId,
+    onStarted: (mode) => { if (mode === 'text') setTextViewOpen(true); },
     onMapChange,
     onAccessLost,
     onSelectItem,
@@ -42,10 +45,12 @@ export function StandaloneConversation({
           type="button"
           aria-pressed={mode === 'voice' ? voice.microphone === 'on' : undefined}
           disabled={mode === 'voice' && Boolean(conversation.session) && voice.disabled}
+          aria-expanded={mode === 'text' ? textViewOpen : undefined}
           onClick={(event) => {
             chosen.current = event.currentTarget;
             // In a conversation that is going on, the voice button is the microphone.
             if (mode === 'voice' && conversation.session) voice.activate();
+            else if (conversation.session) setTextViewOpen(!textViewOpen);
             else conversation.begin(mode);
           }}
         >
@@ -54,7 +59,13 @@ export function StandaloneConversation({
       ))}
       <VoiceBox conversation={conversation} microphoneButton={() => microphone.current} />
       <ConversationConsent conversation={conversation} chosen={chosen} />
-      <ConversationWorkspace conversation={conversation} {...presentation} />
+      <ConversationWorkspace
+        conversation={conversation}
+        textViewOpen={textViewOpen}
+        onOpenTextView={() => setTextViewOpen(true)}
+        onCloseTextView={() => setTextViewOpen(false)}
+        {...presentation}
+      />
     </>
   );
 }

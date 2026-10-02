@@ -1,0 +1,226 @@
+/* The text view: the conversation text and the message field. On a computer
+   and a wide touch screen it is a side field at the right edge that pushes the
+   map aside. It starts under the corner where the voice box stands. */
+.text-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.text-view[hidden] {
+  display: none;
+}
+.household-map.workspace-shell {
+  /* The room that the open text view takes from the map. */
+  --text-view-space: 0px;
+}
+.household-map.workspace-shell .text-view {
+  position: fixed;
+  z-index: 20;
+  top: calc(var(--work-offset, 0px) + 76px);
+  right: 0;
+  width: var(--text-view-space);
+  height: calc(var(--work-height, 100dvh) - 76px);
+  border: solid var(--space-control);
+  border-width: 1px 0 0 1px;
+  border-radius: 16px 0 0;
+  background: var(--space-surface);
+  color: var(--space-text);
+  box-shadow: var(--space-shadow);
+  overflow: hidden;
+}
+.text-view .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.text-view-heading {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  border-bottom: 1px solid var(--space-line);
+}
+.text-view-heading h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 15px;
+}
+.text-view-new {
+  min-height: 36px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+.household-map.workspace-shell .text-view-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-color: transparent;
+}
+.text-view-close svg {
+  width: 22px;
+  height: 22px;
+}
+.household-map.workspace-shell .text-view button:not(.primary):hover:enabled {
+  background: var(--space-surface);
+  border-color: var(--space-accent);
+  color: var(--space-text);
+}
+.household-map.workspace-shell .text-view .primary:hover:enabled {
+  background: var(--space-accent);
+  border-color: var(--space-accent);
+}
+
+/* The part that scrolls. The conversation text stands last in it, next to the
+   message field, and fills the room that is left. */
+.text-view-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.text-view-body > * {
+  flex: none;
+}
+.text-view-body > :empty {
+  display: none;
+}
+.text-view-body > :is(div, .assistant-panel) {
+  margin: 12px 14px 0;
+}
+.household-map.workspace-shell .text-view .assistant-panel {
+  order: 0;
+  padding: 0;
+  border: 0;
+}
+.household-map.workspace-shell.text-view-open .text-view .assistant-bar {
+  display: block;
+}
+.text-view-saves summary {
+  min-height: 44px;
+  align-content: center;
+  font-size: 13px;
+  cursor: pointer;
+}
+.text-view-saves p {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* The conversation text: small text with dense rows and no names. Skyttel's
+   text is plain, and the user's own text stands in a tinted box to the right. */
+.conversation-transcript {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 14px;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.conversation-empty {
+  color: var(--space-muted);
+}
+.conversation-row {
+  max-width: 92%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.conversation-row.user {
+  align-self: flex-end;
+  padding: 4px 10px;
+  border: 1px solid var(--space-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--space-accent), var(--space-surface) 86%);
+}
+.conversation-row.working {
+  max-width: none;
+  color: var(--space-muted);
+}
+
+/* Skicka stands level with the middle of the message field. */
+.text-view-message {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--space-line);
+}
+.text-view-message label {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--space-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.household-map .text-view-message textarea {
+  display: block;
+  min-height: 48px;
+  max-height: 30dvh;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--space-control);
+  border-radius: 10px;
+}
+.text-view-message button {
+  min-width: 88px;
+}
+
+@media (min-width: 701px) {
+  .household-map.workspace-shell.text-view-open {
+    --text-view-space: min(var(--text-view-width, 400px), calc(100vw - 100px));
+  }
+  /* What stands at the right edge moves with the map. */
+  .household-map.workspace-shell.text-view-open .map-space {
+    right: var(--text-view-space);
+  }
+  .household-map.workspace-shell.text-view-open.workspace-revealing .map-space {
+    right: calc(430px + var(--text-view-space));
+  }
+  .household-map.workspace-shell.text-view-open
+    :is(.workspace-feedback, .workspace-windows, .workspace-voice-controls, .map-navigation) {
+    right: calc(24px + var(--text-view-space));
+  }
+  .household-map.workspace-shell.text-view-open:not(.workspace-open) .workspace-feedback {
+    max-width: min(360px, calc(100vw - 136px - var(--text-view-space)));
+  }
+}
+
+/* A narrow screen: the text view fills the screen under the toolbar. It ends
+   above the map's shared feedback, which stands at the bottom edge. */
+@media (max-width: 700px) {
+  .household-map.workspace-shell .text-view {
+    --text-view-top: calc(var(--tools-height, 56px) + 16px);
+    top: calc(var(--work-offset, 0px) + var(--text-view-top));
+    left: 0;
+    width: auto;
+    height: calc(var(--work-height, 100dvh) - var(--text-view-top));
+    border-width: 1px 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+  .household-map.workspace-shell:has(.workspace-feedback > :not(:empty)) .text-view {
+    height: calc(
+      var(--work-height, 100dvh) -
+      var(--text-view-top) -
+      var(--feedback-height, 0px) -
+      24px
+    );
+  }
+  .text-view-message {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}

@@ -11,8 +11,12 @@ import { conversationConsentTextVersion } from '../../src/shared/conversation-co
 export const approvedForVisit = { consent: { textVersion: conversationConsentTextVersion } };
 
 // The toolbar's two conversation buttons. The chosen one decides whether the
-// conversation starts with voice or with text.
-export const conversationTools = { voice: 'Prata med Skyttel', text: 'Samtal och text' } as const;
+// conversation starts with voice or with text. The text button then opens and
+// closes the text view.
+export const conversationTools = {
+  voice: 'Prata med Skyttel',
+  text: 'Skriv till Skyttel',
+} as const;
 
 export const consentBoxName = 'Samtal med Skyttel';
 
@@ -39,6 +43,8 @@ export interface ConversationControls<Control> extends ConsentBoxLookup<Control>
   tool(name: string): Control | Promise<Control>;
   /** Waits for the consent box, where a lookup does not wait by itself. */
   asked?(): Promise<unknown>;
+  /** Whether a toolbar button says that what it opens is open. */
+  expanded(control: Control): boolean | Promise<boolean>;
   tick(control: Control): Promise<unknown>;
   press(control: Control): Promise<unknown>;
 }
@@ -78,7 +84,16 @@ export function conversationSteps<Control>(ui: ConversationControls<Control>) {
     // valid. Otherwise the text button starts the conversation or shows the one
     // that is going on, and the voice button starts the voice, cancels its start
     // or turns the microphone on or off.
-    openConversationText: () => choose('text'),
+    chooseConversationText: () => choose('text'),
     chooseConversationVoice: () => choose('voice'),
+    // The text view, open or closed whatever it was before.
+    async openConversationText() {
+      const tool = await ui.tool(conversationTools.text);
+      if (!(await ui.expanded(tool))) await ui.press(tool);
+    },
+    async closeConversationText() {
+      const tool = await ui.tool(conversationTools.text);
+      if (await ui.expanded(tool)) await ui.press(tool);
+    },
   };
 }

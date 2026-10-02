@@ -61,7 +61,7 @@ function show({ failedSaves = 0 } = {}) {
   );
   return posts;
 }
-const messageField = () => screen.queryByLabelText('Meddelande till textassistenten');
+const messageField = () => screen.queryByLabelText('Meddelande till Skyttel');
 
 test('the consent box states the consent text word for word and offers to remember, approve or cancel', async () => {
   const posts = show();
@@ -106,7 +106,7 @@ test('Avbryt and Escape start nothing and leave the focus on the chosen button',
   // The browser reports Escape in a modal dialog as a cancel event.
   fireEvent(await findConsentBox(), new Event('cancel', { cancelable: true }));
   expect(queryConsentBox()).toBeNull();
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Samtal och text' }));
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Skriv till Skyttel' }));
   expect(messageField()).toBeNull();
   expect(posts).toEqual([]);
 
@@ -122,7 +122,7 @@ test('Avbryt and Escape start nothing and leave the focus on the chosen button',
 
 test.each([
   ['Prata med Skyttel', chooseConversationVoice, true],
-  ['Samtal och text', openConversationText, false],
+  ['Skriv till Skyttel', openConversationText, false],
 ] as const)(
   'Godkänn och starta after %s starts the conversation that button stands for',
   async (_button, choose, withVoice) => {

@@ -57,9 +57,15 @@ import { ConversationWorkspace } from './TextAssistant.js';
 import { VoiceBox } from './VoiceBox.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
 import { type PanelAnchor, type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
-import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
+import {
+  conversationTool,
+  WorkspaceIcon,
+  type WorkspaceTarget,
+  WorkspaceTools,
+} from './WorkspaceTools.js';
 import './workspace.css';
 import './workspace-panels.css';
+import './text-view.css';
 import { type ConversationMode, conversationOngoing, useConversation } from './use-conversation.js';
 import { usePersonalView } from './use-personal-view.js';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
@@ -157,6 +163,8 @@ export function HouseholdMap({
     setPanelFocusRequest({ id, element });
     setPresentation('combined');
     setRevealRequest(undefined);
+    // On a narrow screen the text view would cover the panel.
+    if (narrow) setTextViewOpen(false);
   }
   function focusTools() {
     workspace.current
@@ -234,6 +242,7 @@ export function HouseholdMap({
   const listModeButton = useRef<HTMLButtonElement>(null);
   const workTrigger = useRef<HTMLElement | null>(null);
   const [guidance, setGuidance] = useState(true);
+  const [textViewOpen, setTextViewOpen] = useState(false);
   const workOpen = openPanels.length > 0 && (presentation !== 'map' || detailsOpen || editorOpen);
   const [narrow, setNarrow] = useState(() => window.innerWidth <= 700);
   useEffect(() => {
@@ -241,7 +250,8 @@ export function HouseholdMap({
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
   }, []);
-  const mapCovered = narrow && workOpen && !revealRequest && !navigationOpen;
+  // On a narrow screen the text view fills the screen under the toolbar.
+  const mapCovered = narrow && (workOpen || textViewOpen) && !revealRequest && !navigationOpen;
   useLayoutEffect(() => {
     // Panel focus can scroll the ordinary work flow before navigation closes.
     // Reset only when the requested reveal layout has actually been committed.
@@ -261,7 +271,7 @@ export function HouseholdMap({
     const start = conversationStart(target);
     if (start) {
       // The conversation starts first, after the consent box when no consent
-      // is valid. Its panel opens when the conversation has started.
+      // is valid. The text view opens when the conversation has started.
       conversationChoice.current = chosen ?? workTrigger.current;
       conversation.begin(start);
       return;
@@ -271,12 +281,24 @@ export function HouseholdMap({
       conversation.voice.activate();
       return;
     }
+    if (target === 'conversation') {
+      // The text button opens and closes the text view.
+      if (textViewOpen) closeTextView();
+      else showConversation();
+      return;
+    }
     openPanel(
-      target === 'conversation' || target === 'voice' ? 'conversation' : 'work',
+      'work',
       target === 'search'
         ? workspace.current?.querySelector<HTMLInputElement>('.object-browser input[type="search"]')
         : undefined,
     );
+  }
+  // Closing the text view ends nothing: the conversation, the microphone and
+  // the unsent text stay.
+  function closeTextView() {
+    setTextViewOpen(false);
+    if (!restoreOutsideFocus(conversationTool)) focusTools();
   }
   function openGuidedWork(target: WorkspaceTarget, chosen: HTMLElement) {
     // The guidance stays while a conversation waits for its start, so that
@@ -369,14 +391,27 @@ export function HouseholdMap({
         const element = workspace.current?.querySelector<HTMLElement>(selector);
         workspace.current?.style.setProperty(property, `${element?.offsetHeight ?? 0}px`);
       }
+      // On a narrow screen the text view starts under the toolbar, whose
+      // buttons can stand in two rows. Its expanded names lie over the view.
+      const tools = workspace.current?.querySelector<HTMLElement>(
+        '.workspace-tools:not(.expanded)',
+      );
+      if (tools) workspace.current?.style.setProperty('--tools-height', `${tools.offsetHeight}px`);
     };
     measure();
     const observer = new ResizeObserver(measure);
-    const measured = hasMap ? '.workspace-feedback, .spatial-bottom-bar' : '.workspace-feedback';
+    // The toolbar is shown only while the map is the active view.
+    const measured = [
+      '.workspace-feedback',
+      hasMap && '.spatial-bottom-bar',
+      active && '.workspace-tools',
+    ]
+      .filter(Boolean)
+      .join(', ');
     for (const element of workspace.current?.querySelectorAll(measured) ?? [])
       observer.observe(element);
     return () => observer.disconnect();
-  }, [hasMap]);
+  }, [hasMap, active]);
   useEffect(() => {
     if (!state && error) workspace.current?.focus();
   }, [state, error]);
@@ -388,7 +423,7 @@ export function HouseholdMap({
     }
   }, [active, editorOpen, hasMap]);
   useEffect(() => {
-    if (!active || !workOpen) return;
+    if (!active || !(workOpen || textViewOpen)) return;
     const viewport = window.visualViewport;
     let frame = 0;
     const measure = () => {
@@ -419,7 +454,7 @@ export function HouseholdMap({
       viewport?.removeEventListener('resize', resize);
       viewport?.removeEventListener('scroll', resize);
     };
-  }, [active, workOpen]);
+  }, [active, workOpen, textViewOpen]);
   const newButton = useRef<HTMLButtonElement>(null);
   const mergeButton = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
@@ -1363,10 +1398,10 @@ export function HouseholdMap({
     }
   }
   // The conversation belongs to the map, not to a panel. The toolbar, the
-  // status card and the panels all read it and call its commands.
+  // status card and the text view all read it and call its commands.
   function showConversation() {
     setGuidance(false);
-    openPanel('conversation');
+    setTextViewOpen(true);
   }
   const conversation = useConversation({
     householdId,
@@ -1378,13 +1413,11 @@ export function HouseholdMap({
     },
     // The microphone opens no panel: the voice box follows the voice.
     onStarted: (mode) => (mode === 'voice' ? setGuidance(false) : showConversation()),
-    // The panel says that the conversation is not offered.
+    // The text view says that the conversation is not offered.
     onUnavailable: showConversation,
     onAccessLost: loseAccess,
     onSelectItem: revealAssistantItem,
   });
-  // The conversation panel stands in for the text view until that view exists.
-  const conversationPanelOpen = workOpen && openPanels.includes('conversation');
   const voiceBox = (
     <VoiceBox
       conversation={conversation}
@@ -1441,7 +1474,7 @@ export function HouseholdMap({
     <section
       ref={workspace}
       tabIndex={-1}
-      className={`household-map${active ? ' workspace-shell' : ''}${workOpen ? ' workspace-open' : ''}${revealRequest && !navigationOpen ? ' workspace-revealing' : ''} presentation-${active ? presentation : 'list'}${detailsOpen ? ' map-details-open' : ''}${editorOpen ? ' map-editor-open' : ''}`}
+      className={`household-map${active ? ' workspace-shell' : ''}${workOpen ? ' workspace-open' : ''}${textViewOpen ? ' text-view-open' : ''}${revealRequest && !navigationOpen ? ' workspace-revealing' : ''} presentation-${active ? presentation : 'list'}${detailsOpen ? ' map-details-open' : ''}${editorOpen ? ' map-editor-open' : ''}`}
       onFocusCapture={(event) => {
         if (
           !active ||
@@ -1462,7 +1495,7 @@ export function HouseholdMap({
       }}
       aria-label="Hushållskarta"
       data-navigation-open={navigationOpen}
-      data-conversation-ongoing={conversationOngoing(conversation, conversationPanelOpen)}
+      data-conversation-ongoing={conversationOngoing(conversation, textViewOpen)}
       data-theme={theme.theme}
       onKeyDown={(event) => {
         if (
@@ -1496,13 +1529,14 @@ export function HouseholdMap({
             className="skip-link"
             onClick={(event) => openWork('conversation', event.currentTarget)}
           >
-            Till samtal och text
+            Till samtalet med Skyttel
           </button>
           <WorkspaceTools
             statusOpen={statusOpen}
             onStatus={() => setStatusOpen((value) => !value)}
             voiceControl={conversation.session ? conversation.voice : null}
             voiceBox={voiceBox}
+            textViewOpen={textViewOpen}
             cameraMount={setCameraMount}
             expanded={toolsExpanded}
             onExpandedChange={setToolsExpanded}
@@ -1771,17 +1805,16 @@ export function HouseholdMap({
             />
           )}
           active={active}
-          onOpenConversation={() => {
+          textViewOpen={textViewOpen}
+          onOpenTextView={() => {
             setStatusOpen(false);
-            openWork('conversation');
+            showConversation();
             routeOutsideFocus.current = null;
             if (!active) onReturnToMap?.();
           }}
-          conversationVisible={
-            conversationPanelOpen && (!narrow || activePanel === 'conversation') && !revealRequest
-          }
+          onCloseTextView={closeTextView}
           householdId={householdId}
-          renderWorkspace={(work, conversationPanel, floatingStatus) => (
+          renderWorkspace={(work, floatingStatus) => (
             <WorkspacePanels
               floatingStatus={floatingStatus}
               hidden={!active || !workOpen}
@@ -1803,12 +1836,6 @@ export function HouseholdMap({
                   open: openPanels.includes('work'),
                   content: work,
                   resumeFocus: () => resumeListFocus.current(),
-                },
-                {
-                  id: 'conversation',
-                  title: 'Samtal och text',
-                  open: openPanels.includes('conversation'),
-                  content: conversationPanel,
                 },
                 ...objectPanels.map((panel) => {
                   const selectedObject = displayed.get(panel.id);

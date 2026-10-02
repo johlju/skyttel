@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import type { ObjectType, ObjectValue } from '../shared/map.js';
-import { ConversationTranscript } from './ConversationTranscript.js';
 import { LifecycleDetails } from './Lifecycle.js';
 import { MergeSourceDetails } from './ObjectMerge.js';
 import { ObjectPropertiesDetails } from './ObjectProperties.js';
@@ -18,9 +17,9 @@ import { RelationshipTypeDetails } from './RelationshipTypes.js';
 import { receiptMessage, rejectionMessage } from './SaveOperations.js';
 import { VoicePanel } from './VoiceAssistant.js';
 import './voice.css';
-import { AssistantWorkTime } from './AssistantWorkTime.js';
 import { DraftChangeSummary } from './DraftChangeSummary.js';
 import { relationshipDetails } from './relationship-description.js';
+import { TextView } from './TextView.js';
 import type { Conversation } from './use-conversation.js';
 
 function ObjectDetails({ value, type }: { value: ObjectValue | null; type: ObjectType }) {
@@ -62,21 +61,22 @@ export type ConversationPresentation = {
   onCloseStatus?: () => void;
   onOpenStatus?: () => void;
   active?: boolean;
-  conversationVisible?: boolean;
-  onOpenConversation?: () => void;
+  /** The text view is open. It shows the conversation text and the message field. */
+  textViewOpen?: boolean;
+  onOpenTextView?: () => void;
+  onCloseTextView?: () => void;
   householdId: string;
   children?: ReactNode | ((assistant: AssistantActivity) => ReactNode);
   draftSummary?: ReactNode;
   inspector?: ReactNode;
   renderWorkspace?: (
     work: ReactNode,
-    conversation: ReactNode,
     floatingStatus: RefObject<HTMLDivElement | null>,
   ) => ReactNode;
 };
 
 /**
- * Shows the conversation in the status card and the panels and calls its
+ * Shows the conversation in the status card and the text view and calls its
  * commands. The conversation itself is kept by the caller.
  */
 export function ConversationWorkspace({
@@ -87,17 +87,17 @@ export function ConversationWorkspace({
   draftSummary,
   inspector,
   renderWorkspace,
-  conversationVisible = true,
-  onOpenConversation,
+  textViewOpen = false,
+  onOpenTextView,
+  onCloseTextView,
   statusContent,
   statusOpen = false,
   onCloseStatus,
   onOpenStatus,
 }: ConversationPresentation & { conversation: Conversation }) {
-  const { available, session, transcript, text, pending, error, unknown, needsAnswer } =
-    conversation;
-  // The status card is shown in the conversation panel, or floats over the map
-  // when that panel is not visible. It is rendered where it is shown.
+  const { available, session, pending, error, unknown, needsAnswer } = conversation;
+  // The status card is shown in the text view, or floats over the map when
+  // the text view is not open. It is rendered where it is shown.
   const [statusSlot, setStatusSlot] = useState<HTMLDivElement | null>(null);
   const [floatingSlot, setFloatingSlot] = useState<HTMLDivElement | null>(null);
   const floatingVoice = useRef<HTMLDivElement | null>(null);
@@ -107,9 +107,7 @@ export function ConversationWorkspace({
   }, []);
   const workspace = useRef<HTMLElement>(null);
   const floating = Boolean(
-    renderWorkspace &&
-      (session || statusContent) &&
-      (statusOpen || !workVisible || !conversationVisible),
+    renderWorkspace && (session || statusContent) && (statusOpen || !workVisible || !textViewOpen),
   );
   const statusHost = floating ? floatingSlot : statusSlot;
   const statusHeading = useRef<HTMLHeadingElement>(null);
@@ -153,9 +151,6 @@ export function ConversationWorkspace({
                     ? 'Markerat i kartan.'
                     : 'Nya förslag är osparade tills du uttryckligen ber om ett samlat sparande.'}
         </p>
-        {conversation.workStarted !== null && (
-          <AssistantWorkTime started={conversation.workStarted} />
-        )}
       </div>
       {!compactStatus &&
         session.reply &&
@@ -180,8 +175,8 @@ export function ConversationWorkspace({
           {Boolean(review?.conflicts.length) && (
             <p>Utkastet har konflikter. Red ut dem före ett nytt sparbesked.</p>
           )}
-          {onOpenConversation && (
-            <button type="button" onClick={onOpenConversation}>
+          {onOpenTextView && (
+            <button type="button" onClick={onOpenTextView}>
               Svara i samtalet
             </button>
           )}
@@ -193,33 +188,12 @@ export function ConversationWorkspace({
             Avbryt uppdrag
           </button>
         )}
-        {floating && onOpenConversation && (
-          <button type="button" onClick={onOpenConversation}>
-            Öppna samtalet
-          </button>
-        )}
         {(unknown || session.phase === 'recovery') && (
           <button type="button" disabled={pending} onClick={() => void conversation.recover()}>
             Kontrollera sparresultat
           </button>
         )}
       </div>
-      <details className="conversation-more" open={!floating} hidden={compactStatus}>
-        <summary>Samtalskontroller</summary>
-        <div className="voice-controls">
-          {!unknown && session.phase !== 'recovery' && (
-            <button type="button" disabled={pending} onClick={() => void conversation.recover()}>
-              Kontrollera sparresultat
-            </button>
-          )}
-          <button type="button" disabled={pending} onClick={() => void conversation.end()}>
-            Avsluta samtalet
-          </button>
-        </div>
-        <p className="conversation-retention">
-          Avslut tar bort samtalsminnet. Utkast och sparresultat finns kvar.
-        </p>
-      </details>
     </div>
   );
   const voice = (
@@ -232,9 +206,7 @@ export function ConversationWorkspace({
         <VoicePanel voice={conversation.voice}>{conversationControls}</VoicePanel>
       ) : floating ? (
         <div className="assistant-bar-heading">
-          <button type="button" onClick={onOpenConversation}>
-            Tala eller skriv
-          </button>
+          <span>Samtal med Skyttel</span>
         </div>
       ) : (
         <>
@@ -414,75 +386,40 @@ export function ConversationWorkspace({
       </p>
     </section>
   );
-  const conversationPanel = (
-    <section aria-label="Samtalet" className="assistant-panel assistant-conversation">
-      <div className="assistant-panel-heading">
-        <h3>Samtalet</h3>
-      </div>
-      {!session && (
-        <div className="assistant-transcript-empty">
-          Här visas vad du säger och vad Skyttel svarar.
-        </div>
+  const saves = session && (
+    <div className="text-view-saves">
+      {session.receipt && (
+        <details>
+          <summary>Visa kvittot</summary>
+          <p>{receiptMessage(session.receipt)}</p>
+          <p>Sparat: {session.receipt.savedAt}</p>
+        </details>
       )}
-      {session && (
-        <>
-          {transcript.length > 0 && <ConversationTranscript rows={transcript} />}
-          <form
-            className="assistant-message-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void conversation.send();
-            }}
-          >
-            <label htmlFor="text-assistant-message">Meddelande till textassistenten</label>
-            <textarea
-              placeholder="Berätta vad du vill göra…"
-              id="text-assistant-message"
-              maxLength={4000}
-              value={text}
-              onChange={(event) => conversation.setText(event.target.value)}
-            />
-            <button
-              type="submit"
-              disabled={pending || unknown || session.phase === 'recovery' || !text.trim()}
-            >
-              Skicka
-            </button>
-          </form>
-          {session.receipt && (
-            <details>
-              <summary>Visa kvittot</summary>
-              <p>{receiptMessage(session.receipt)}</p>
-              <p>Sparat: {session.receipt.savedAt}</p>
-            </details>
-          )}
-          <details open={session.phase === 'recovery'}>
-            <summary>Tidigare sparförsök</summary>
-            {!session.operations.length && <p>Inga registrerade sparförsök.</p>}
-            {session.operations.map((operation) => (
-              <article key={operation.operationId}>
-                <p>
-                  {operation.status === 'succeeded'
-                    ? receiptMessage(operation.receipt)
-                    : operation.status === 'rejected'
-                      ? rejectionMessage(operation.error)
-                      : `Väntande sparförsök: ${operation.operationId}`}
-                </p>
-                {operation.status === 'pending' && (
-                  <button
-                    type="button"
-                    disabled={pending || session.phase === 'working'}
-                    onClick={() => void conversation.retry(operation.operationId)}
-                  >
-                    Slutför samma sparförsök
-                  </button>
-                )}
-              </article>
-            ))}
-          </details>
-        </>
-      )}
-    </section>
+      <details open={session.phase === 'recovery'}>
+        <summary>Tidigare sparförsök</summary>
+        {!session.operations.length && <p>Inga registrerade sparförsök.</p>}
+        {session.operations.map((operation) => (
+          <article key={operation.operationId}>
+            <p>
+              {operation.status === 'succeeded'
+                ? receiptMessage(operation.receipt)
+                : operation.status === 'rejected'
+                  ? rejectionMessage(operation.error)
+                  : `Väntande sparförsök: ${operation.operationId}`}
+            </p>
+            {operation.status === 'pending' && (
+              <button
+                type="button"
+                disabled={pending || session.phase === 'working'}
+                onClick={() => void conversation.retry(operation.operationId)}
+              >
+                Slutför samma sparförsök
+              </button>
+            )}
+          </article>
+        ))}
+      </details>
+    </div>
   );
   const status = (
     <section
@@ -515,20 +452,12 @@ export function ConversationWorkspace({
           Visa samtals- och utkastdetaljer
         </button>
       )}
-      {statusOpen && text && (
-        <p>
-          Oskickat samtalsmeddelande finns kvar.{' '}
-          <button type="button" onClick={onOpenConversation}>
-            Fortsätt skriva
-          </button>
-        </p>
-      )}
     </section>
   );
   return (
     <section
       ref={workspace}
-      aria-label="Skyttels textassistent"
+      aria-label="Arbetsyta"
       className="assistant-workspace"
       data-session-active={Boolean(session)}
       id="workspace-work"
@@ -541,25 +470,31 @@ export function ConversationWorkspace({
             {inspector}
             {work}
           </>,
-          <>
-            <div ref={setStatusSlot} />
-            {conversationPanel}
-            {changes}
-          </>,
           floatingVoice,
         )
       ) : (
         <>
-          <div ref={setStatusSlot} />
+          {!textViewOpen && <div ref={setStatusSlot} />}
           <div className="assistant-layout" hidden={!workVisible}>
             {work && <div className="assistant-map-panel">{work}</div>}
-            <div className="assistant-side">
-              {inspector && <div className="assistant-panel">{inspector}</div>}
-              {changes}
-              {conversationPanel}
-            </div>
+            {inspector && (
+              <div className="assistant-side">
+                <div className="assistant-panel">{inspector}</div>
+              </div>
+            )}
           </div>
         </>
+      )}
+      {textViewOpen && (
+        <TextView
+          conversation={conversation}
+          hidden={!workVisible}
+          onClose={() => onCloseTextView?.()}
+        >
+          <div ref={setStatusSlot} />
+          {saves}
+          {changes}
+        </TextView>
       )}
       {/* In scroll flow, the floating status card must not shift a panel
           heading that received focus during the same commit. */}

@@ -47,8 +47,6 @@ export type Conversation = {
   /** The outcome of a save is unknown and must be checked before new work. */
   unknown: boolean;
   working: boolean;
-  /** When the work in progress began, in milliseconds since the epoch. */
-  workStarted: number | null;
   needsAnswer: boolean;
   /** The microphone and the voice connection: `start`, `stop` and `activate`. */
   voice: Voice;
@@ -68,7 +66,11 @@ export type Conversation = {
   revokeConsent: () => Promise<boolean>;
   send: () => Promise<void>;
   cancel: () => Promise<void>;
-  end: () => Promise<void>;
+  /**
+   * Empties the conversation text and the context and stops ongoing work. The
+   * microphone, the unsent text and the draft stay as they are.
+   */
+  newConversation: () => Promise<void>;
   recover: () => Promise<void>;
   retry: (operationId: string) => Promise<void>;
 };
@@ -126,7 +128,6 @@ export function useConversation({
   const [savingConsent, setSavingConsent] = useState(false);
   const [consentError, setConsentError] = useState('');
   const [session, setSession] = useState<TextAssistantView | null>(null);
-  const [workStarted, setWorkStarted] = useState<number | null>(null);
   const [text, setText] = useState('');
   const [startWithVoice, setStartWithVoice] = useState(false);
   const [pending, setPending] = useState(false);
@@ -164,11 +165,6 @@ export function useConversation({
         return;
       active.current = next;
       setSession(next);
-      if (
-        next.phase === 'working' &&
-        (previous?.phase !== 'working' || next.revision !== previous.revision)
-      )
-        setWorkStarted(Date.now());
       if (
         next.modelReply &&
         (next.modelReply !== previous?.modelReply || next.revision !== previous?.revision)
@@ -446,16 +442,23 @@ export function useConversation({
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }
   }
-  async function end() {
+  async function newConversation() {
     const current = active.current;
     if (!current) return;
     const epoch = ++requestEpoch.current;
     setPending(true);
+    setError('');
     try {
-      await request(`${path}/${current.id}/stop`, {});
+      const result = await request<TextAssistantView>(`${path}/${current.id}/new`, {});
       if (epoch !== requestEpoch.current) return;
-      clear();
-      setError('');
+      setUnknown(false);
+      update(result);
+      // The conversation text starts over with what Skyttel says about the draft.
+      setTranscript(
+        result.reply
+          ? [{ id: `new-${result.id}-${result.revision}`, role: 'assistant', text: result.reply }]
+          : [],
+      );
     } catch (failure) {
       if (epoch === requestEpoch.current) fail(failure);
     } finally {
@@ -518,7 +521,6 @@ export function useConversation({
     error,
     unknown,
     working,
-    workStarted: working ? workStarted : null,
     needsAnswer: Boolean(
       session &&
         !working &&
@@ -542,7 +544,7 @@ export function useConversation({
     revokeConsent,
     send,
     cancel: () => command('cancel', { revision: session?.revision }),
-    end,
+    newConversation,
     recover: () => command('recover'),
     retry: (operationId) => command('retry', { operationId }),
   };

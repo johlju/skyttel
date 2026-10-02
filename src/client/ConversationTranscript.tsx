@@ -1,5 +1,3 @@
-import { useLayoutEffect, useRef } from 'react';
-
 export type TranscriptRow = {
   id: string;
   role: 'user' | 'assistant';
@@ -7,42 +5,31 @@ export type TranscriptRow = {
   partial?: boolean;
 };
 
-export function ConversationTranscript({ rows }: { rows: TranscriptRow[] }) {
-  const log = useRef<HTMLOListElement>(null);
-  const follow = useRef(true);
-  useLayoutEffect(() => {
-    if (rows.length && log.current && follow.current)
-      log.current.scrollTop = log.current.scrollHeight;
-  }, [rows]);
+/**
+ * The conversation text: what the user and Skyttel have said and written. No
+ * names are shown, and spoken rows are not marked. The user's rows stand in a
+ * tinted box to the right, and screen readers are told who said what.
+ */
+export function ConversationTranscript({
+  rows,
+  working,
+}: {
+  rows: TranscriptRow[];
+  /** Skyttel is working on a spoken or a written task. */
+  working: boolean;
+}) {
   return (
-    <section aria-label="Assistentens samtalstext" className="assistant-utterance">
-      <h4>Assistentens samtalstext – inte en bekräftelse</h4>
-      <p>
-        Samtalstexten kan innehålla fel. Sparande och markering bekräftas bara av Skyttels status
-        och kvitton.
-      </p>
-      <ol
-        ref={log}
-        role="log"
-        aria-label="Samtalets dialog"
-        aria-relevant="additions text"
-        className="conversation-transcript"
-        onScroll={() => {
-          const element = log.current;
-          if (element)
-            follow.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
-        }}
-      >
-        {rows.map((row) => (
-          <li
-            key={row.id}
-            className={`conversation-row ${row.role}${row.partial ? ' partial' : ''}`}
-          >
-            <strong>{row.role === 'user' ? 'Du' : 'Skyttel'}</strong>
-            <p>{row.text}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
+    <ol role="log" aria-label="Samtalstext" className="conversation-transcript">
+      {!rows.length && !working && (
+        <li className="conversation-empty">Här visas det du och Skyttel säger och skriver.</li>
+      )}
+      {rows.map((row) => (
+        <li key={row.id} className={`conversation-row ${row.role}`}>
+          <span className="visually-hidden">{row.role === 'user' ? 'Du: ' : 'Skyttel: '}</span>
+          {row.text}
+        </li>
+      ))}
+      {working && <li className="conversation-row working">Skyttel arbetar…</li>}
+    </ol>
   );
 }

@@ -84,7 +84,7 @@ afterEach(() => {
 
 test('the consent box opens next to the chosen button, on the side that has room', async () => {
   const starts = await open(1280, 800);
-  for (const name of ['Prata med Skyttel', 'Samtal och text']) {
+  for (const name of ['Prata med Skyttel', 'Skriv till Skyttel']) {
     await tool(name).click();
     await expect.element(box()).toBeVisible();
     const chosen = rect(tool(name));
@@ -109,13 +109,6 @@ test('the consent box opens next to the chosen button, on the side that has room
   await box().getByRole('button', { name: 'Avbryt', exact: true }).click();
   await expect.element(guide).toHaveFocus();
 
-  // The status card offers the conversation too. Its button is the chosen one.
-  const offer = page.getByRole('button', { name: 'Tala eller skriv', exact: true });
-  await offer.click();
-  await expect.element(box()).toBeVisible();
-  expect(rect(box()).right).toBeLessThanOrEqual(rect(offer).left);
-  await box().getByRole('button', { name: 'Avbryt', exact: true }).click();
-  await expect.element(offer).toHaveFocus();
   expect(starts).toEqual([]);
 
   // The voice button from the map starts the conversation with the voice. No panel opens.
@@ -134,7 +127,7 @@ test.each([390, 320])(
   'the consent box opens under the toolbar at the top of a %i px screen',
   async (width) => {
     await open(width, 844);
-    await tool('Samtal och text').click();
+    await tool('Skriv till Skyttel').click();
     await expect.element(box()).toBeVisible();
     expect(rect(box()).top).toBeGreaterThanOrEqual(rect(tools()).bottom);
     expect(rect(box()).top - rect(tools()).bottom).toBeLessThanOrEqual(32);
@@ -147,7 +140,7 @@ test.each([390, 320])(
 
 test('the consent box follows the toolbar when the window becomes narrow', async () => {
   await open(1280, 800);
-  await tool('Samtal och text').click();
+  await tool('Skriv till Skyttel').click();
   await expect.element(box()).toBeVisible();
   expect(rect(box()).left).toBeGreaterThanOrEqual(rect(tools()).right);
   // A narrower window with the toolbar still to the left keeps the box on the screen.

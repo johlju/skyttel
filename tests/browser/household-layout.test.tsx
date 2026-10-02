@@ -51,7 +51,7 @@ async function open(width: number, mapState = state, positions: PersonalView['po
         settings: { ...defaultViewSettings, version: 0 },
       });
     if (url.endsWith('/operations')) return Response.json({ operations: [] });
-    // The conversation panel opens without a conversation when none is offered.
+    // The text view opens without a conversation when none is offered.
     if (url.endsWith('/text-assistant')) return Response.json({ available: false });
     if (url.includes('/map?')) return Response.json(mapState);
     throw new Error(`Unexpected request: ${url}`);
@@ -257,7 +257,7 @@ test('map selection gestures preserve membership and open retained details only 
   expect(positions()).toEqual(before);
 });
 
-test('desktop keeps the map and bounded conversation, object and list panels available', async () => {
+test('desktop keeps the map and the bounded text view, object and list panels available', async () => {
   await open(1440);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   const surface = document.querySelector('.spatial-surface');
@@ -276,7 +276,7 @@ test('desktop keeps the map and bounded conversation, object and list panels ava
   for (const panel of [
     list,
     object,
-    page.getByRole('region', { name: 'Samtal och text', exact: true }),
+    page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }),
   ]) {
     await expect.element(panel).toBeVisible();
     const box = panel.element().getBoundingClientRect();
@@ -861,10 +861,8 @@ test('phone opens the list from the map and preserves an edited name through map
   const objectElement = object.element();
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
   await expect
-    .element(
-      page.getByRole('region', { name: 'Samtal och text', exact: true, includeHidden: true }),
-    )
-    .not.toBeVisible();
+    .element(page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }))
+    .not.toBeInTheDocument();
   await expect
     .element(page.getByRole('region', { name: 'Aktuell status', exact: true }))
     .toBeVisible();
@@ -882,6 +880,11 @@ test('phone opens the list from the map and preserves an edited name through map
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
   await openConversationText();
   await expect.element(page.getByRole('region', { name: 'Talsamtal' })).toBeVisible();
+  // On a narrow screen the text view fills the screen, and the list takes its place.
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
+  await expect
+    .element(page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }))
+    .not.toBeInTheDocument();
   await page
     .getByLabelText(/^Öppna paneler/)
     .selectOptions(page.getByRole('option', { name: 'Alex', exact: true }));

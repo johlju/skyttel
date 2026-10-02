@@ -121,6 +121,13 @@ function server({
       current = { ...current, revision: current.revision + 1, phase: 'working' };
     if (url.endsWith('/cancel'))
       current = { ...current, revision: current.revision + 1, phase: 'ready' };
+    if (url.endsWith('/new'))
+      current = {
+        ...current,
+        revision: current.revision + 1,
+        phase: 'ready',
+        reply: 'Nytt samtal. Utkastet är tomt.',
+      };
     return Response.json(current);
   });
   return { commands, starts };
@@ -193,7 +200,7 @@ test.each<[string, typeof quiet, boolean]>([
   expect(conversationOngoing(conversation, textViewOpen)).toBe(true);
 });
 
-test('the conversation is started, written to, cancelled and ended without any panel', async () => {
+test('the conversation is started, written to, cancelled and started over without any panel', async () => {
   const { commands } = server();
   const result = await conversationHook();
   expect(conversationOngoing(result.current, false)).toBe(false);
@@ -207,17 +214,76 @@ test('the conversation is started, written to, cancelled and ended without any p
   expect(result.current.text).toBe('');
   expect(result.current.transcript.map((row) => row.text)).toEqual(['Lägg till cykeln.']);
   expect(result.current.working).toBe(true);
-  expect(result.current.workStarted).not.toBeNull();
   expect(conversationOngoing(result.current, false)).toBe(true);
 
   await act(() => result.current.cancel());
   expect(result.current.working).toBe(false);
-  expect(result.current.workStarted).toBeNull();
-  await act(() => result.current.end());
+  // A new conversation empties the conversation text. Skyttel says what the
+  // draft keeps, and the conversation and the unsent text stay.
+  act(() => result.current.setText('Oskickat'));
+  await act(() => result.current.newConversation());
+  expect(result.current.session?.id).toBe('session');
+  expect(result.current.transcript.map((row) => [row.role, row.text])).toEqual([
+    ['assistant', 'Nytt samtal. Utkastet är tomt.'],
+  ]);
+  expect(result.current.text).toBe('Oskickat');
+  expect(conversationOngoing(result.current, false)).toBe(true);
+  expect(commands).toEqual(['/', '/session/messages', '/session/cancel', '/session/new']);
+});
+
+test('a new conversation needs a conversation, and one that is not answered keeps the conversation text', async () => {
+  const { commands } = server();
+  const result = await conversationHook();
+  await act(() => result.current.newConversation());
+  expect(commands).toEqual([]);
+
+  act(() => result.current.begin('text'));
+  await act(() => result.current.approve(false));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  act(() => result.current.setText('Lägg till cykeln.'));
+  await act(() => result.current.send());
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/new')) throw new TypeError('Synthetic network failure');
+    return respond(url, init);
+  });
+  await act(() => result.current.newConversation());
+  expect(result.current.transcript.map((row) => row.text)).toEqual(['Lägg till cykeln.']);
+  expect(result.current.unknown).toBe(true);
+  expect(result.current.error).toContain('Svaret saknas');
+  expect(result.current.pending).toBe(false);
+});
+
+test('a new conversation that is answered after the user has left the map changes nothing', async () => {
+  let answer: (() => void) | undefined;
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  server();
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/new')) await held;
+    return respond(url, init);
+  });
+  const { result, rerender } = renderHook(
+    ({ enabled }) => useConversation({ ...household, enabled }),
+    { initialProps: { enabled: true } },
+  );
+  await waitFor(() => expect(result.current.available).toBe(true));
+  act(() => result.current.begin('text'));
+  await act(() => result.current.approve(false));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  let renewed: Promise<void> | undefined;
+  act(() => {
+    renewed = result.current.newConversation();
+  });
+  rerender({ enabled: false });
+  await act(async () => {
+    answer?.();
+    await renewed;
+  });
   expect(result.current.session).toBeNull();
   expect(result.current.transcript).toEqual([]);
-  expect(conversationOngoing(result.current, false)).toBe(false);
-  expect(commands).toEqual(['/', '/session/messages', '/session/cancel', '/session/stop']);
 });
 
 test('the conversation waits for the map and ends when the map is lost', async () => {
@@ -283,13 +349,12 @@ test('without a valid consent the consent box asks first, and the chosen button 
   expect(result.current.consent.asking).toBeNull();
   expect(commands).toEqual(['/']);
 
-  // A new conversation during the same visit does not ask again.
-  await act(() => result.current.end());
-  act(() => result.current.begin('text'));
-  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  // A new conversation does not ask again.
+  await act(() => result.current.newConversation());
   expect(result.current.consent.asking).toBeNull();
-  expect(commands).toEqual(['/', '/session/stop', '/']);
-  expect(starts).toHaveLength(2);
+  expect(result.current.session?.id).toBe('session');
+  expect(commands).toEqual(['/', '/session/new']);
+  expect(starts).toHaveLength(1);
 });
 
 test('a remembered consent is saved before the conversation starts, and a saved consent starts conversations directly', async () => {
@@ -563,19 +628,20 @@ test('the microphone and the voice connection outlive every presentation of the 
   const { commands } = server();
   const track = microphone();
   let conversation!: Conversation;
-  function Workspace({ shown }: { shown: 'panel' | 'map' | 'settings' | 'nothing' }) {
+  function Workspace({ shown }: { shown: 'text view' | 'map' | 'settings' | 'nothing' }) {
     conversation = useConversation(household);
     return shown === 'nothing' ? null : (
       <ConversationWorkspace
         conversation={conversation}
         householdId="linden"
         active={shown !== 'settings'}
-        conversationVisible={shown === 'panel'}
-        renderWorkspace={(_work, panel) => <div data-testid="conversation-panel">{panel}</div>}
+        textViewOpen={shown === 'text view'}
+        renderWorkspace={(work) => work}
       />
     );
   }
-  const map = render(<Workspace shown="panel" />);
+  const textView = () => screen.getByRole('region', { name: 'Skriv till Skyttel' });
+  const map = render(<Workspace shown="text view" />);
   act(() => conversation.begin('voice'));
   await act(() => conversation.approve(false));
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
@@ -588,13 +654,13 @@ test('the microphone and the voice connection outlive every presentation of the 
   );
   await waitFor(() => expect(conversation.voice.microphone).toBe('on'));
   const status = () => screen.getByRole('region', { name: 'Aktuell status' });
-  expect(screen.getByTestId('conversation-panel').contains(status())).toBe(true);
+  expect(textView().contains(status())).toBe(true);
 
-  for (const shown of ['map', 'settings', 'nothing', 'panel'] as const) {
+  for (const shown of ['map', 'settings', 'nothing', 'text view'] as const) {
     map.rerender(<Workspace shown={shown} />);
     if (shown === 'map' || shown === 'settings') {
       expect(status().closest('.workspace-voice-controls')).not.toBeNull();
-      expect(screen.getByTestId('conversation-panel').contains(status())).toBe(false);
+      expect(screen.queryByRole('region', { name: 'Skriv till Skyttel' })).toBeNull();
     }
     if (shown === 'nothing') expect(screen.queryByRole('region')).toBeNull();
     expect(conversation.voice.microphone).toBe('on');
@@ -605,7 +671,7 @@ test('the microphone and the voice connection outlive every presentation of the 
   expect(track.enabled).toBe(true);
   expect(track.stop).not.toHaveBeenCalled();
   expect(commands.filter((command) => command.endsWith('/stop'))).toEqual([]);
-  expect(screen.getByTestId('conversation-panel').contains(status())).toBe(true);
+  expect(textView().contains(status())).toBe(true);
 
   map.rerender(<Workspace shown="nothing" />);
   await act(() => conversation.voice.stop());
