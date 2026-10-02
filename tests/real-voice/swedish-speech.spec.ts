@@ -4,7 +4,11 @@ import { isAbsolute } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import { signIn } from '../support/client.js';
-import { startConversationWithText } from '../support/conversation-page.js';
+import {
+  chooseConversationVoice,
+  microphoneButton,
+  startConversationWithText,
+} from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 
 declare global {
@@ -65,10 +69,10 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text från talprovet');
     const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
     await startConversationWithText(page);
-    await panel.getByRole('button', { name: 'Starta röst' }).click();
-    await expect(
-      panel.getByText('Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.'),
-    ).toBeVisible({ timeout: 30_000 });
+    await chooseConversationVoice(page);
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true', {
+      timeout: 30_000,
+    });
     await expect(panel.getByRole('status')).toHaveText(
       'Sparat. Hela utkastet finns i hushållets karta.',
       { timeout: 180_000 },
@@ -120,23 +124,26 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         { timeout: 30_000 },
       )
       .toBe(true);
-    await panel.getByRole('button', { name: 'Stäng av rösten' }).click();
-    await expect(panel.getByText('Rösten är avstängd.')).toBeVisible();
+    // With the microphone off Skyttel says its answer to the end, and the connection then closes.
+    await chooseConversationVoice(page);
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const peers = window.skyttelRealPeers;
-          return (
-            peers.length > 0 &&
-            peers.every(
-              (peer) =>
-                peer.connectionState === 'closed' &&
-                peer
-                  .getSenders()
-                  .every((sender) => !sender.track || sender.track.readyState === 'ended'),
-            )
-          );
-        }),
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const peers = window.skyttelRealPeers;
+            return (
+              peers.length > 0 &&
+              peers.every(
+                (peer) =>
+                  peer.connectionState === 'closed' &&
+                  peer
+                    .getSenders()
+                    .every((sender) => !sender.track || sender.track.readyState === 'ended'),
+              )
+            );
+          }),
+        { timeout: 60_000 },
       )
       .toBe(true);
     await panel.getByRole('button', { name: 'Avsluta samtalet' }).click();

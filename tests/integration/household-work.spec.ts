@@ -16,6 +16,8 @@ import {
   consentBoxFor,
   openConversationText,
   startConversationWithText,
+  turnMicrophoneOn,
+  voiceBox,
 } from '../support/conversation-page.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
@@ -26,8 +28,8 @@ async function startConversation(page: Page, origin: string) {
   await page.addInitScript({ content: liveBrowserFixtureSource });
   await page.goto(origin);
   await startConversationWithText(page);
-  await page.getByRole('button', { name: 'Starta röst', exact: true }).click();
-  await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
+  await turnMicrophoneOn(page);
+  await expect(voiceBox(page)).toHaveText('Lyssnar');
 }
 
 function conversationInstallation() {
@@ -177,7 +179,7 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
     await expect(page.getByLabel('Meddelande till textassistenten')).toHaveValue(
       'Gammalt oskickat svar',
     );
-    await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
       { enabled: true, state: 'live' },
     ]);
@@ -209,7 +211,7 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
       .toEqual([{ enabled: false, state: 'ended' }]);
     await expect(otherPage.getByLabel('Objektets namn')).toHaveCount(0, { timeout: 10000 });
     await expect(page.getByLabel('Meddelande till textassistenten')).toHaveCount(0);
-    await expect(page.getByText('Mikrofonen är på', { exact: true })).toHaveCount(0);
+    await expect(voiceBox(page)).toHaveCount(0);
     expect(await (await page.request.get(`${path}/map`)).json()).toEqual({
       error: 'content_maintenance',
     });
@@ -362,25 +364,17 @@ test('ARBETE-02: conversation and microphone survive navigation and end on logou
     await page.getByLabel('Meddelande till textassistenten').fill('Oskickat svar');
     await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
-    await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
-    await page
-      .getByRole('region', { name: 'Skyttels röst', exact: true })
-      .getByRole('button', { name: 'Pausa mikrofon', exact: true })
-      .click();
-    await expect(page.getByText('Mikrofonen är pausad', { exact: true })).toBeVisible();
+    // Outside the map the voice box still says that the microphone is on.
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
-      { enabled: false, state: 'live' },
+      { enabled: true, state: 'live' },
     ]);
     await page.getByRole('link', { name: 'Till startsidan', exact: true }).click();
     await expect(page.getByLabel('Meddelande till textassistenten')).toHaveValue('Oskickat svar');
     await expect(page.getByRole('log', { name: 'Samtalets dialog' })).toContainText(
       'Vem använder cykeln?',
     );
-    await expect(page.getByText('Mikrofonen är pausad', { exact: true })).toBeVisible();
-    await page
-      .getByRole('region', { name: 'Skyttels röst', exact: true })
-      .getByRole('button', { name: 'Återuppta mikrofon', exact: true })
-      .click();
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
     await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await page.getByRole('button', { name: 'Logga ut', exact: true }).click();
@@ -435,9 +429,7 @@ test('ARBETE-03: revoked household access retires hidden forms and microphone', 
       .filter({ has: page.getByRole('heading', { name: 'Robin Exempel' }) });
     await membership.getByRole('button', { name: 'Återkalla tillgång', exact: true }).click();
     await membership.getByRole('button', { name: 'Bekräfta återkallelse' }).click();
-    await expect(memberPage.getByText('Mikrofonen är på', { exact: true })).toHaveCount(0, {
-      timeout: 10000,
-    });
+    await expect(voiceBox(memberPage)).toHaveCount(0, { timeout: 10000 });
     await expect
       .poll(() => memberPage.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks))
       .toEqual([{ enabled: false, state: 'ended' }]);

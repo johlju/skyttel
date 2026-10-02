@@ -76,7 +76,7 @@ async function main() {
       origin: app.origin,
       directory: app.directory,
       message:
-        'Disposable controlled voice: no hardware microphone, speech recognition, real provider or API key. Forward this port privately, sign in with Google as Alex, start the text assistant and voice. Type help.',
+        'Disposable controlled voice: no hardware microphone, speech recognition, real provider or API key. Forward this port privately, sign in with Google as Alex and choose Prata med Skyttel. Type help.',
     });
     for await (const raw of input) {
       const line = raw.trim();

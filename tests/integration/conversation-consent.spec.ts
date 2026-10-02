@@ -6,9 +6,11 @@ import {
   consentBox,
   consentBoxFor,
   giveConversationConsent,
+  microphoneButton,
   openConversationText,
   startConversationWithText,
   startConversationWithVoice,
+  voiceBox,
 } from '../support/conversation-page.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
@@ -143,18 +145,22 @@ test('MEDGIVANDE-02: vald knapp avgör röst eller text och medgivandet gäller 
     // The voice button: the conversation starts with the microphone.
     await startConversationWithVoice(page);
     await expect(consentBox(page)).toBeHidden();
-    await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
-    await expect(messageField(page)).toBeVisible();
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
+    // The microphone opens no panel.
+    await expect(messageField(page)).toBeHidden();
     await expect.poll(() => microphones(page)).toEqual([{ enabled: true, state: 'live' }]);
     expect(starts).toEqual(['conversation', 'voice']);
 
     // A new conversation during the same visit does not ask again, here with the text button.
+    await openConversationText(page);
     await endConversation(page);
     await expect(messageField(page)).toHaveCount(0);
     await openConversationText(page);
     await expect(messageField(page)).toBeVisible();
     await expect(consentBox(page)).toBeHidden();
-    await expect(page.getByText('Mikrofonen är av', { exact: true })).toBeVisible();
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    await expect(voiceBox(page)).toHaveCount(0);
     expect(starts).toEqual(['conversation', 'voice', 'conversation']);
 
     // Settings keep the map loaded, so the consent for the visit still applies afterwards.
@@ -175,7 +181,8 @@ test('MEDGIVANDE-02: vald knapp avgör röst eller text och medgivandet gäller 
     expect(starts).toHaveLength(reloadedStarts);
     await giveConversationConsent(page);
     await expect(messageField(page)).toBeVisible();
-    await expect(page.getByText('Mikrofonen är av', { exact: true })).toBeVisible();
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    await expect(voiceBox(page)).toHaveCount(0);
     expect(starts.slice(reloadedStarts)).toEqual(['conversation']);
     expect(await microphones(page)).toEqual([]);
     expect(await (await page.request.get(consentPath)).json()).toEqual({ saved: null });
@@ -207,7 +214,7 @@ test('MEDGIVANDE-03: sparat medgivande följer användaren men inte andra medlem
     // A reloaded page starts directly, with the button that is chosen.
     await page.reload();
     await chooseConversationVoice(page);
-    await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
     await expect(consentBox(page)).toBeHidden();
 
     // Another of the same user's devices starts directly too.

@@ -8,7 +8,12 @@ import {
   openWorkspace,
   signIn,
 } from '../support/client.js';
-import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
+import {
+  openConversationText,
+  startConversationWithText,
+  turnMicrophoneOn,
+  voiceBox,
+} from '../support/conversation-page.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -34,7 +39,6 @@ for (const width of [1440, 390, 320])
       const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
       const legend = page.getByRole('region', { name: 'Förslag i kartan', exact: true });
       await expect(status).toContainText('1 förslag · privat utkast');
-      await expect(status).toContainText('Mikrofonen är av');
       await expect(legend).toContainText('Föreslås läggas till');
       const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
       const statusButton = tools.getByRole('button', { name: 'Aktuell status', exact: true });
@@ -191,8 +195,8 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
     await expect(status).toContainText('2 förslag · privat utkast');
-    await page.getByRole('button', { name: 'Starta röst', exact: true }).click();
-    await expect(status).toContainText('Mikrofonen är på');
+    await turnMicrophoneOn(page);
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
     const voiceId = [...live.channels.keys()].at(-1);
     if (!voiceId) throw new Error('The authorized voice session must exist');
     live.emit(voiceId, {

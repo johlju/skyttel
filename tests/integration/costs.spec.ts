@@ -1,7 +1,13 @@
 import { access } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
 import { createHousehold, openProfile, openSettings, signIn } from '../support/client.js';
-import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
+import {
+  openConversationText,
+  startConversationWithText,
+  turnMicrophoneOff,
+  turnMicrophoneOn,
+  voiceBox,
+} from '../support/conversation-page.js';
 import { launchManualCosts } from '../support/manual-costs.js';
 
 const assistant = (page: Page) =>
@@ -23,10 +29,8 @@ async function sendText(page: Page) {
 }
 async function startVoice(page: Page) {
   await openConversationText(page);
-  await assistant(page).getByRole('button', { name: 'Starta röst', exact: true }).click();
-  await expect(assistant(page)).toContainText(
-    'Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.',
-  );
+  await turnMicrophoneOn(page);
+  await expect(voiceBox(page)).toHaveText('Lyssnar');
 }
 async function openCosts(page: Page) {
   const link = page.getByRole('link', { name: 'Månadskostnad', exact: true });
@@ -47,8 +51,7 @@ test('KOST-01: separata kostnader och månadens antaganden återläses efter oms
     await app.command('delegate');
     await expect(assistant(page)).toContainText('Det kontrollerade kostnadsprovet är klart.');
     await app.command('usage 90');
-    await assistant(page).getByRole('button', { name: 'Stäng av rösten' }).click();
-    await expect(assistant(page)).toContainText('Rösten är avstängd.');
+    await turnMicrophoneOff(page);
     await openCosts(page);
     const overview = category(page, 'Månadens kostnadsöversikt');
     await expect(overview).toContainText('75,54 SEK');
@@ -143,8 +146,7 @@ test('KOST-02: saknade slutvärden och hämtningsfel bevarar känt underlag utan
     await app.command('usage 15');
     await app.command('usage 15');
     await app.command('finalize off');
-    await assistant(page).getByRole('button', { name: 'Stäng av rösten' }).click();
-    await expect(assistant(page)).toContainText('Rösten är avstängd.');
+    await turnMicrophoneOff(page);
     await openCosts(page);
     const live = category(page, 'Live – uppmätt hittills');
     const terra = category(page, 'Terra – uppmätt hittills');

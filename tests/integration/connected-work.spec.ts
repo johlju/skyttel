@@ -3,7 +3,14 @@ import { expect, type Page, test } from '@playwright/test';
 import type { MapState, ObjectType, RelationshipType, SaveReceipt } from '../../src/shared/map.js';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { activatePanel, openSettings, openWorkspace, signIn } from '../support/client.js';
-import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
+import {
+  chooseConversationVoice,
+  microphoneButton,
+  openConversationText,
+  startConversationWithText,
+  turnMicrophoneOn,
+  voiceBox,
+} from '../support/conversation-page.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -235,12 +242,8 @@ for (const mode of ['voice', 'text'] as const) {
 
       // 4. Controlled transcript crosses the real voice delegation and sequential tools.
       if (mode === 'voice') {
-        await assistant.getByRole('button', { name: 'Starta röst', exact: true }).click();
-        await expect(
-          assistant.getByText('Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.', {
-            exact: true,
-          }),
-        ).toBeVisible();
+        await turnMicrophoneOn(page);
+        await expect(voiceBox(page)).toHaveText('Lyssnar');
         expect(await page.evaluate(() => window.skyttelVoiceFixture.stats())).toMatchObject({
           peers: 1,
           openPeers: 1,
@@ -360,17 +363,11 @@ for (const mode of ['voice', 'text'] as const) {
         '',
       );
 
-      // 6. Settings hides work, retains its exact values and resumes the same microphone.
+      // 6. Settings hides work, retains its exact values and keeps the same microphone.
       await openConversationText(page);
       const dialogue = assistant.getByRole('log', { name: 'Samtalets dialog' });
       const dialogueBeforeSettings = await dialogue.innerText();
       await message.fill('Oskickat i samtalet');
-      if (mode === 'voice') {
-        await page
-          .getByRole('navigation', { name: 'Kartans verktyg' })
-          .getByRole('button', { name: 'Pausa mikrofon', exact: true })
-          .click();
-      }
       await openSettings(page);
       await expect(
         page.getByRole('heading', { level: 1, name: 'Inställningar', exact: true }),
@@ -436,14 +433,8 @@ for (const mode of ['voice', 'text'] as const) {
         expect(text.contrast, text.text ?? '').toBeGreaterThanOrEqual(4.5);
       await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
       await expect(statusDetails).toBeFocused();
-      const voice = assistant.getByRole('region', { name: 'Skyttels röst', exact: true });
       if (mode === 'voice') {
-        expect(await page.evaluate(() => window.skyttelVoiceFixture.stats())).toMatchObject({
-          peers: 1,
-          openPeers: 1,
-          microphoneTracks: [{ enabled: false, state: 'live' }],
-        });
-        await voice.getByRole('button', { name: 'Återuppta mikrofon', exact: true }).click();
+        await expect(voiceBox(page)).toHaveText('Lyssnar');
         expect(await page.evaluate(() => window.skyttelVoiceFixture.stats())).toMatchObject({
           peers: 1,
           openPeers: 1,
@@ -536,9 +527,11 @@ for (const mode of ['voice', 'text'] as const) {
 
       // 8. Stop media, restart the same database, inspect full history and two-way privacy.
       if (mode === 'voice') {
-        await voice.getByRole('button', { name: 'Stäng av rösten', exact: true }).click();
+        // The connection closes when Skyttel has been quiet with the microphone off.
+        await chooseConversationVoice(page);
+        await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
         await expect
-          .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats()))
+          .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats()), { timeout: 15_000 })
           .toMatchObject({
             openPeers: 0,
             microphoneTracks: [{ enabled: false, state: 'ended' }],
@@ -546,7 +539,8 @@ for (const mode of ['voice', 'text'] as const) {
           });
       } else {
         expect(live.requests).toEqual([]);
-        await expect(voice.getByRole('button', { name: 'Starta röst', exact: true })).toBeVisible();
+        await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+        await expect(voiceBox(page)).toHaveCount(0);
         expect(await page.evaluate(() => window.familyMediaRequests)).toEqual({
           microphone: 0,
           playback: 0,
