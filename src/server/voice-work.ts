@@ -275,6 +275,21 @@ export function voiceWork({
       )
         rendered = { ...value };
     },
+    /** The conversation has started over. Its own work is already stopped, and nothing said before is passed on. */
+    reset(view: TextAssistantView) {
+      generation++;
+      dispatching?.abort();
+      dispatching = undefined;
+      owned = undefined;
+      fragments = [];
+      pending = [];
+      anchor = undefined;
+      rendered = {
+        revision: view.revision,
+        draftVersion: view.review.version,
+        contentVersion: view.review.contentVersion,
+      };
+    },
     stop() {
       stopped = true;
       cancel();

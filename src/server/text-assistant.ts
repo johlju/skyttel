@@ -10,7 +10,7 @@ import type {
   TextAssistantReview,
   TextAssistantView,
 } from '../shared/text-assistant.js';
-import { assistantFailureMessage } from './assistant-feedback.js';
+import { assistantFailureMessage, newConversationMessage } from './assistant-feedback.js';
 import { textAssistantInstructions } from './assistant-instructions.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
@@ -48,6 +48,7 @@ export function textAssistantRoutes({
   modelFetch,
   modelUsage,
   onStop,
+  onNewConversation,
 }: {
   database: Database.Database;
   auth: Auth;
@@ -57,6 +58,8 @@ export function textAssistantRoutes({
   modelFetch?: typeof fetch;
   modelUsage?: TextModelUsage;
   onStop?: (sessionId: string) => void;
+  /** A conversation has started over, so its voice can do the same and say the statement. */
+  onNewConversation?: (view: TextAssistantView, statement: string) => void;
 }) {
   const routes = new Hono<{ Variables: { actorId: string; browserSessionId: string } }>();
   const sessions = new Map<string, Session>();
@@ -1055,6 +1058,35 @@ export function textAssistantRoutes({
     session.questions = undefined;
     session.phase = session.pendingSave ? 'recovery' : 'ready';
     await refresh(session);
+    return context.json(view(session));
+  });
+  // Nytt samtal: the conversation text and the context are emptied, and
+  // ongoing work stops. The session, its consent and the draft stay. A save
+  // that has begun is still checked before new work.
+  routes.post(`${base}/:sessionId/new`, async (context) => {
+    const session = sessions.get(context.req.param('sessionId'));
+    if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
+    session.task?.abort();
+    session.revision++;
+    session.input = [];
+    session.requestId = undefined;
+    session.requestHash = undefined;
+    session.previousFailure = undefined;
+    session.selection = undefined;
+    session.displayedSelection = undefined;
+    session.displayedItem = undefined;
+    session.modelReply = undefined;
+    session.questions = undefined;
+    session.result = undefined;
+    session.error = undefined;
+    session.receipt = undefined;
+    await refresh(session);
+    session.phase =
+      session.pendingSave || session.operations.some((item) => item.status === 'pending')
+        ? 'recovery'
+        : 'ready';
+    session.reply = newConversationMessage(session.review);
+    onNewConversation?.(view(session), session.reply);
     return context.json(view(session));
   });
   routes.post(`${base}/:sessionId/recover`, async (context) => {

@@ -6,6 +6,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { buildIdentity } from '../shared/build-identity.js';
 import { normalizeHouseholdName } from '../shared/household-name.js';
+import type { TextAssistantView } from '../shared/text-assistant.js';
 import { AdministrationError } from './administration.js';
 import { administrationRoutes } from './administration-routes.js';
 import { assistantRoutes } from './assistant-routes.js';
@@ -217,6 +218,7 @@ export function createApp({
   app.route('/api', profileImageRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
   let stopVoice: ((sessionId: string) => void) | undefined;
+  let renewVoice: ((view: TextAssistantView, statement: string) => void) | undefined;
   const textAssistant = textAssistantRoutes({
     database,
     auth,
@@ -232,6 +234,7 @@ export function createApp({
       modelUsage?.(attempt);
     },
     onStop: (sessionId) => stopVoice?.(sessionId),
+    onNewConversation: (view, statement) => renewVoice?.(view, statement),
   });
   app.route('/api', textAssistant.routes);
   app.route(
@@ -254,6 +257,7 @@ export function createApp({
     interrupt: textAssistant.interrupt,
   });
   stopVoice = voiceAssistant.stopSession;
+  renewVoice = voiceAssistant.newConversation;
   app.route('/api', voiceAssistant.routes);
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));

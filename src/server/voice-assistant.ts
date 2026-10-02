@@ -373,6 +373,31 @@ export function voiceAssistantRoutes({
   });
   return {
     routes,
+    // The voice connection and the microphone keep their state. The provider
+    // offers no way to empty the Live session, so it is told to start over.
+    newConversation: (view: TextAssistantView, statement: string) => {
+      for (const voice of voices.values()) {
+        if (voice.assistant.id !== view.id || voice.closed) continue;
+        voice.assistant = view;
+        voice.view.phase = view.phase === 'recovery' ? 'recovery' : 'listening';
+        voice.work?.reset(view);
+        try {
+          voice.channel.send({
+            type: 'session.instructions.append',
+            delegation_id: null,
+            content:
+              'Användaren har valt ett nytt samtal. Bortse från allt som har sagts tidigare i samtalet.',
+          });
+          voice.channel.send({
+            type: 'session.commentary.append',
+            delegation_id: null,
+            content: statement,
+          });
+        } catch {
+          void close(voice, 'voice_connection_lost');
+        }
+      }
+    },
     stopSession: (sessionId: string) => {
       for (const voice of voices.values())
         if (voice.assistant.id === sessionId) void close(voice, 'voice_access_lost');
