@@ -209,7 +209,6 @@ export function createApp({
   app.route('/api', administrationRoutes(database, auth, config.origin));
   app.route('/api', costRoutes(database, auth, config, costs));
   app.route('/api', contentOwnerRoutes(database, auth, config.origin));
-  app.route('/api', conversationConsentRoutes(database, auth, config.origin, consents));
   app.route('/api', householdExportRoutes(database, auth, config.origin));
   app.route('/api', householdErasureRoutes(database, auth, config.origin));
   app.route('/api', householdImportRoutes(database, auth, config.origin));
@@ -235,6 +234,10 @@ export function createApp({
     onStop: (sessionId) => stopVoice?.(sessionId),
   });
   app.route('/api', textAssistant.routes);
+  app.route(
+    '/api',
+    conversationConsentRoutes(database, auth, config.origin, consents, textAssistant.revokeConsent),
+  );
   const voiceAssistant = voiceAssistantRoutes({
     config,
     dispatch: (request) => app.fetch(request),

@@ -48,6 +48,12 @@ export function conversationConsents(
         .run(textVersion, new Date().toISOString(), householdId, userId);
       return saved(userId, householdId);
     },
+    /** Removes the user's saved consent for the household, whatever text version it approves. */
+    revoke(userId: string, householdId: string) {
+      database
+        .prepare('DELETE FROM conversation_consent WHERE householdId = ? AND userId = ?')
+        .run(householdId, userId);
+    },
     /** `visitConsent` is what a request states that the user approves for the ongoing visit. */
     valid(userId: string, householdId: string, visitConsent: unknown) {
       return approvesCurrentText(visitConsent) || approvesCurrentText(saved(userId, householdId));

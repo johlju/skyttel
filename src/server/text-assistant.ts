@@ -60,6 +60,13 @@ export function textAssistantRoutes({
 }) {
   const routes = new Hono<{ Variables: { actorId: string; browserSessionId: string } }>();
   const sessions = new Map<string, Session>();
+  // The conversations that a revoked consent has ended, until the time they
+  // would have expired by themselves. Work with them is refused with the reason.
+  const revoked = new Map<string, { actorId: string; householdId: string; until: number }>();
+  // How many times each user has revoked the consent for each household.
+  const revocations = new Map<string, number>();
+  const consentOf = (actorId: string, householdId: string) =>
+    JSON.stringify([householdId, actorId]);
   const respond = config.openaiApiKey
     ? textModel(config.openaiApiKey, modelFetch, modelUsage)
     : null;
@@ -837,6 +844,7 @@ export function textAssistantRoutes({
     // Without a valid consent none starts, and the client is told why.
     if (!consents.valid(actorId, householdId, body?.consent))
       return context.json({ error: conversationConsentRequired }, 403);
+    const revocation = revocations.get(consentOf(actorId, householdId));
     for (const previous of sessions.values())
       if (previous.browserSessionId === browserSessionId && previous.householdId === householdId)
         await stop(previous);
@@ -888,6 +896,11 @@ export function textAssistantRoutes({
       }
       if (session.operations.some((operation) => operation.status === 'pending'))
         session.phase = 'recovery';
+      // A consent that was revoked while the conversation connected starts none.
+      if (revocations.get(consentOf(actorId, householdId)) !== revocation) {
+        await stop(session);
+        return context.json({ error: conversationConsentRequired }, 403);
+      }
       sessions.set(session.id, session);
       return context.json(view(session), 201);
     } catch {
@@ -895,15 +908,27 @@ export function textAssistantRoutes({
       return context.json({ error: 'assistant_connection_failed' }, 503);
     }
   });
+  /** Why the user cannot work with a conversation that is not going on. */
+  function ended(sessionId: string, actorId: string, householdId: string) {
+    const revocation = revoked.get(sessionId);
+    return revocation?.actorId === actorId &&
+      revocation.householdId === householdId &&
+      revocation.until > Date.now()
+      ? ({ error: conversationConsentRequired, status: 403 } as const)
+      : ({ error: 'assistant_session_expired', status: 404 } as const);
+  }
   routes.use(`${base}/:sessionId/*`, async (context, next) => {
-    const session = sessions.get(context.req.param('sessionId') ?? '');
+    const sessionId = context.req.param('sessionId') ?? '';
+    const session = sessions.get(sessionId);
     if (
       !session ||
       session.actorId !== context.get('actorId') ||
       session.browserSessionId !== context.get('browserSessionId') ||
       session.householdId !== context.req.param('id')
-    )
-      return context.json({ error: 'assistant_session_expired' }, 404);
+    ) {
+      const { error, status } = ended(sessionId, context.get('actorId'), context.req.param('id'));
+      return context.json({ error }, status);
+    }
     try {
       if (context.req.method === 'GET') await refreshConfirmed(session);
       else await call(session, 'read_my_draft', {});
@@ -914,14 +939,17 @@ export function textAssistantRoutes({
     await next();
   });
   routes.get(`${base}/:sessionId`, async (context) => {
-    const session = sessions.get(context.req.param('sessionId'));
+    const sessionId = context.req.param('sessionId');
+    const session = sessions.get(sessionId);
     if (
       !session ||
       session.actorId !== context.get('actorId') ||
       session.browserSessionId !== context.get('browserSessionId') ||
       session.householdId !== context.req.param('id')
-    )
-      return context.json({ error: 'assistant_session_expired' }, 404);
+    ) {
+      const { error, status } = ended(sessionId, context.get('actorId'), context.req.param('id'));
+      return context.json({ error }, status);
+    }
     try {
       await refreshConfirmed(session);
     } catch {
@@ -1159,6 +1187,23 @@ export function textAssistantRoutes({
     interrupt: (sessionId: string, revision: number) => {
       const session = sessions.get(sessionId);
       if (session?.revision === revision && session.phase === 'working') session.task?.abort();
+    },
+    /**
+     * Ends every conversation that the user has in the household, on all
+     * devices, because the consent is revoked. Further work with them is
+     * refused with that reason. The draft is not touched.
+     */
+    revokeConsent: async (actorId: string, householdId: string) => {
+      const consent = consentOf(actorId, householdId);
+      revocations.set(consent, (revocations.get(consent) ?? 0) + 1);
+      const now = Date.now();
+      for (const [id, { until }] of revoked) if (until <= now) revoked.delete(id);
+      const ending = [...sessions.values()].filter(
+        (session) => session.actorId === actorId && session.householdId === householdId,
+      );
+      for (const session of ending)
+        revoked.set(session.id, { actorId, householdId, until: session.mcp.expiresAt });
+      await Promise.all(ending.map(stop));
     },
     close: async () => {
       await Promise.all([...sessions.values()].map(stop));
