@@ -28,6 +28,33 @@ medgivandetexten ändras i sak frågar Skyttel på nytt, även om du har sparat
 ett tidigare medgivande. Om rutan säger att medgivandet inte kunde sparas
 kan du försöka igen eller godkänna utan att markera kryssrutan.
 
+Du ser och ändrar ditt medgivande på sidan **Samtal med Skyttel**. Öppna
+**Inställningar** och välj sidan under **Hushållets karta**. Alla medlemmar
+i hushållet har sidan. Under **Medgivande** står medgivandetexten och en
+statusrad. Den säger om ett medgivande är sparat och när, om du bara har
+godkänt för det här besöket, eller om medgivandetexten har ändrats sedan
+du sparade.
+
+- **Spara medgivandet** sparar medgivandet direkt. Inget samtal startar,
+  och ett pågående samtal påverkas inte. Nästa gång du väljer en
+  samtalsknapp startar samtalet utan att rutan visas.
+- **Återkalla medgivandet** tar bort ett sparat medgivande och ett som bara
+  gäller besöket. Dina samtal i hushållet avslutas, på alla dina enheter,
+  och ditt utkast ligger kvar. Nästa gång du väljer en samtalsknapp visas
+  medgivanderutan igen.
+
+Knapparna gäller direkt, och sidan har ingen knapp för att spara hela
+sidan. En kort text vid knappen säger hur det gick. Om den säger att
+medgivandet inte kunde sparas eller återkallas är ingenting ändrat, och du
+kan försöka igen. När sidan visar
+**Samtal med Skyttel är inte tillgängligt just nu.** går det inte att
+spara ett medgivande, men du kan återkalla ett som är sparat.
+
+Ett sparat medgivande tas bort när du inte längre är medlem i hushållet.
+Om du bjuds in igen frågar Skyttel på nytt. Medgivandet ingår inte i en
+[fullständig export](household-export.md) och ändras inte av en
+[återimport](household-import.md).
+
 Medgivandet är skilt från cookieval och från andra klienters medgivanden
 under **Assistentanslutningar**.
 

@@ -22,6 +22,8 @@ egen ikon och **Tillbaka till arbetet** återgår till ditt aktiva formulär.
 **Inställningar** öppnar en egen sida med **Typer och egna fält** och,
 för administratören, **Administrera tillgång**. Driftansvariga når även
 **Månadskostnad**. På mobil fäller **Välj inställning** ut sidnavigeringen.
+På sidan **Samtal med Skyttel** ser, sparar och återkallar du ditt
+[medgivande](text-assistant.md#medgivande) till samtal.
 Kartan är dold medan du besöker sidan. **Tillbaka till kartan** återger
 ditt pågående arbete och fokus. Typförslag hör till samma privata utkast
 som objekt och samband; granska och spara hela utkastet i kartan.

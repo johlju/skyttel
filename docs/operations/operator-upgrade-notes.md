@@ -120,6 +120,12 @@ New household archives require an upgraded reader; supported older archives
 remain readable. After rollout, each user must give consent before the first
 text or voice conversation, and can save it for the household.
 
+A user can revoke the consent in Settings. The revocation removes the saved
+consent and ends that user's conversations in the household. A restored
+database backup contains the consents that were saved when the backup was
+made. After a restoration, tell users that a consent which they revoked
+after the backup applies again until they revoke it again.
+
 ### Household export, replacement and recovery
 
 Verify that only current administrators can prepare and download a full

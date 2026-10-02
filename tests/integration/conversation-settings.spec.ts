@@ -100,7 +100,7 @@ const microphones = (page: Page) =>
 const liveMicrophones = async (page: Page) =>
   (await microphones(page)).filter((track) => track.state === 'live').length;
 
-test('MEDGIVANDE-05: sidan Samtal med Skyttel står efter Rymdkartan och visar medgivandet för alla medlemmar', async ({
+test('MEDGIVANDE-05: sidan Samtal med Skyttel visar medgivandet för alla medlemmar', async ({
   page,
   browser,
 }) => {
@@ -209,9 +209,10 @@ test('MEDGIVANDE-06: Spara medgivandet sparar direkt utan att starta ett samtal'
 
     // The next press on a conversation button starts the conversation directly.
     await returnToMap(page);
-    await openConversationText(page);
-    await expect.poll(() => sent).toEqual(['start']);
+    await chooseConversationVoice(page);
+    await expect.poll(() => liveMicrophones(page)).toBe(1);
     await expect(consentBox(page)).toBeHidden();
+    expect(sent[0]).toBe('start');
 
     // The saved consent follows the user to another device.
     const otherDevice = await browser.newContext();
@@ -227,7 +228,7 @@ test('MEDGIVANDE-06: Spara medgivandet sparar direkt utan att starta ett samtal'
   }
 });
 
-test('MEDGIVANDE-07: Återkalla medgivandet gäller genast och samtalsknapparna frågar igen', async ({
+test('MEDGIVANDE-07: Återkalla medgivandet gäller genast och Skyttel frågar igen', async ({
   page,
 }) => {
   const app = await installation();
@@ -273,9 +274,7 @@ test('MEDGIVANDE-07: Återkalla medgivandet gäller genast och samtalsknapparna 
   }
 });
 
-test('MEDGIVANDE-08: medgivande för besöket återkallas eller sparas utan att samtalet störs', async ({
-  page,
-}) => {
+test('MEDGIVANDE-08: medgivande för besöket går att återkalla och att spara', async ({ page }) => {
   const app = await installation();
   try {
     const { consentPath, startPath } = await household(page.request, app.origin);
@@ -329,7 +328,7 @@ test('MEDGIVANDE-08: medgivande för besöket återkallas eller sparas utan att 
   }
 });
 
-test('MEDGIVANDE-09: sidan visas när samtalet inte är tillgängligt och ett sparat medgivande går att återkalla', async ({
+test('MEDGIVANDE-09: sidan visas och återkallar när samtalet inte är tillgängligt', async ({
   page,
 }) => {
   // Without a model key the server does not offer the conversation.
@@ -361,7 +360,7 @@ test('MEDGIVANDE-09: sidan visas när samtalet inte är tillgängligt och ett sp
   }
 });
 
-test('MEDGIVANDE-10: ett misslyckat sparande eller återkallande sägs vid kontrollen som står kvar i sitt läge', async ({
+test('MEDGIVANDE-10: ett misslyckat sparande sägs och knappen behåller sitt läge', async ({
   page,
 }) => {
   const app = await installation();
@@ -409,7 +408,7 @@ test('MEDGIVANDE-10: ett misslyckat sparande eller återkallande sägs vid kontr
   }
 });
 
-test('MEDGIVANDE-11: medgivandet på sidan sköts med tangentbord och pekskärm i båda teman', async ({
+test('MEDGIVANDE-11: sidan sköts med tangentbord och pekskärm i båda teman', async ({
   page,
   browser,
 }) => {
@@ -552,7 +551,13 @@ test('a revocation that reaches a spoken conversation from elsewhere ends it wit
     const { consentPath } = await household(page.request, app.origin);
     await saveConsent(page.request, app.origin, consentPath);
     await openHousehold(page, app.origin);
+    // The voice is connected before the consent is revoked, so that the refusal reaches the voice.
+    const connected = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' && /\/voice$/.test(response.url()) && response.ok(),
+    );
     await chooseConversationVoice(page);
+    await connected;
     await expect.poll(() => liveMicrophones(page)).toBe(1);
 
     // The same user revokes from elsewhere, here without the page.

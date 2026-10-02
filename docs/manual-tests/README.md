@@ -110,7 +110,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   verktygsraden, vägledningen och snabblänken, avbruten start med bevarat
   fokus, start med röst eller text efter vald knapp, medgivande för besöket
   eller sparat per användare och hushåll på flera enheter samt tangentbord,
-  pekskärm och placering vid verktygsraden.
+  pekskärm och placering vid verktygsraden. Sidan **Samtal med Skyttel** i
+  Inställningar: plats i menyn för alla medlemmar, sparat och återkallat
+  medgivande, medgivande för besöket, otillgängligt samtal och misslyckat
+  sparande.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag, kompakt status,
   start efter medgivande, mikrofonpaus, ljudaktivitet, avbrott,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
