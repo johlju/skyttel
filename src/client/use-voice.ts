@@ -1,0 +1,304 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { TextAssistantView } from '../shared/text-assistant.js';
+import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
+import type { TranscriptRow } from './ConversationTranscript.js';
+import { MapRequestError, request } from './map-request.js';
+import { voiceErrorMessage } from './voice-error.js';
+import { createVoiceTransport, type VoiceTransport } from './voice-transport.js';
+
+export type VoiceControl = {
+  label: string;
+  microphone: 'off' | 'on' | 'paused';
+  disabled: boolean;
+  activate: () => void;
+};
+
+/** The microphone and the voice connection of one conversation. */
+export type Voice = VoiceControl & {
+  state: 'idle' | 'permission' | 'connecting' | 'listening' | 'closing';
+  /** The phase the server last reported for the voice connection. */
+  phase: VoiceAssistantView['phase'] | null;
+  starting: boolean;
+  speaking: boolean;
+  error: string;
+  playbackBlocked: boolean;
+  disconnected: boolean;
+  paused: boolean;
+  activity: { microphone: boolean; speaker: boolean };
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  playAudio: () => void;
+};
+
+type Attempt = {
+  path: string;
+  controller: AbortController;
+  transport?: VoiceTransport;
+  voiceId?: string;
+  poll?: ReturnType<typeof setTimeout>;
+};
+async function stopRemote(path: string, id: string) {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      request<VoiceAssistantResponse>(`${path}/${id}/stop`, {}, controller.signal).catch(
+        () => null,
+      ),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), 5000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    controller.abort();
+  }
+}
+
+/**
+ * Owns the microphone and the voice connection for the conversation's session.
+ * The connection lives as long as the caller and the session do, whatever
+ * presentation is shown. Without a session the voice is off and cannot start.
+ */
+export function useVoice(options: {
+  householdId: string;
+  assistant: TextAssistantView | null;
+  onAssistant: (view: TextAssistantView) => void;
+  onAccessLost: () => void;
+  onRecoveryNeeded?: () => void;
+  autoStart?: boolean;
+  onTranscript?: (row: TranscriptRow) => void;
+}): Voice {
+  const path = options.assistant
+    ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
+    : null;
+  const latest = useRef(options);
+  latest.current = options;
+  const current = useRef<Attempt | null>(null);
+  const epoch = useRef(0);
+  const mounted = useRef(true);
+  const [state, setState] = useState<Voice['state']>('idle');
+  const [voice, setVoice] = useState<VoiceAssistantView | null>(null);
+  const [error, setError] = useState('');
+  const [playbackBlocked, setPlaybackBlocked] = useState(false);
+  const [disconnected, setDisconnected] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [activity, setActivity] = useState({ microphone: false, speaker: false });
+  const apply = useCallback((view: TextAssistantView) => {
+    const shown = latest.current.assistant;
+    if (
+      shown &&
+      view.id === shown.id &&
+      view.revision >= shown.revision &&
+      view.review.contentVersion >= shown.review.contentVersion &&
+      (view.review.contentVersion > shown.review.contentVersion ||
+        view.review.version >= shown.review.version)
+    )
+      latest.current.onAssistant(view);
+  }, []);
+  const stop = useCallback(
+    async (message = '') => {
+      const attempt = current.current;
+      if (!attempt) return;
+      attempt.transport?.stopCapture();
+      current.current = null;
+      const generation = ++epoch.current;
+      clearTimeout(attempt.poll);
+      attempt.controller.abort();
+      if (mounted.current) {
+        setState('closing');
+        setPlaybackBlocked(false);
+        setError(message);
+      }
+      const result = attempt.voiceId ? await stopRemote(attempt.path, attempt.voiceId) : null;
+      attempt.transport?.close();
+      if (!mounted.current || generation !== epoch.current) return;
+      if (result) {
+        apply(result.assistant);
+        setVoice(result.voice);
+      }
+      setState('idle');
+      if (attempt.voiceId && !result) {
+        latest.current.onRecoveryNeeded?.();
+        setError(
+          'Mikrofonen är avstängd. Serverns avslut kunde inte bekräftas. Kontrollera sparförsök innan du fortsätter; ett genomfört sparande är inte ångrat.',
+        );
+      }
+    },
+    [apply],
+  );
+  useEffect(() => {
+    mounted.current = true;
+    setState('idle');
+    setVoice(null);
+    setError('');
+    setPlaybackBlocked(false);
+    setDisconnected(false);
+    setPaused(false);
+    setActivity((value) =>
+      value.microphone || value.speaker ? { microphone: false, speaker: false } : value,
+    );
+    return () => {
+      mounted.current = false;
+      if (current.current?.path === path) void stop();
+      epoch.current++;
+    };
+  }, [path, stop]);
+  const start = useCallback(async () => {
+    const initial = latest.current.assistant;
+    if (!path || !initial || current.current) return;
+    const attempt: Attempt = { path, controller: new AbortController() };
+    current.current = attempt;
+    epoch.current++;
+    setState('permission');
+    setPaused(false);
+    setDisconnected(false);
+    setVoice(null);
+    setError('');
+    const active = () => mounted.current && current.current === attempt;
+    const anchor = () => {
+      const assistant = latest.current.assistant ?? initial;
+      return {
+        revision: assistant.revision,
+        draftVersion: assistant.review.version,
+        contentVersion: assistant.review.contentVersion,
+      };
+    };
+    const fail = (failure?: unknown, reason = 'network') => {
+      if (!active()) return;
+      if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
+        latest.current.onAccessLost();
+      void stop(
+        voiceErrorMessage(failure) ??
+          (reason === 'audio'
+            ? 'Ljuduppspelningen avbröts. Starta rösten igen eller fortsätt med text. Ett genomfört sparande är inte ångrat.'
+            : reason === 'microphone'
+              ? 'Mikrofonen slutade fungera. Kontrollera mikrofonen och starta rösten igen, eller fortsätt med text.'
+              : reason === 'provider'
+                ? 'Rösttjänsten avbröt samtalet. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'
+                : 'Röstanslutningen avbröts. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'),
+      );
+    };
+    const poll = async () => {
+      if (!active() || !attempt.voiceId) return;
+      try {
+        const result = await request<VoiceAssistantResponse>(
+          `${path}/${attempt.voiceId}/poll`,
+          anchor(),
+          attempt.controller.signal,
+        );
+        if (!active()) return;
+        apply(result.assistant);
+        setVoice(result.voice);
+        if (result.voice.phase === 'error') {
+          fail(undefined, 'provider');
+          return;
+        }
+        if (result.voice.phase === 'closed' || result.voice.phase === 'closing') {
+          void stop();
+          return;
+        }
+        attempt.poll = setTimeout(() => void poll(), 500);
+      } catch (failure) {
+        fail(failure);
+      }
+    };
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === 'undefined')
+        throw new DOMException('Voice is not supported', 'NotSupportedError');
+      attempt.transport = createVoiceTransport({
+        onMicrophoneReady: () => {
+          if (active()) setState('connecting');
+        },
+        onReady: () => {
+          if (active()) setState('listening');
+        },
+        onClosed: () => {
+          if (active())
+            void stop(
+              'Rösttjänsten avslutade samtalet. Text och formulär finns kvar. Kontrollera sparförsök om utfallet är oklart.',
+            );
+        },
+        onFailure: (reason) => fail(undefined, reason),
+        onPlaybackBlocked: (blocked) => {
+          if (active()) setPlaybackBlocked(blocked);
+        },
+        onDisconnected: (value) => {
+          if (active()) setDisconnected(value);
+        },
+        onTranscript: (row) => {
+          if (active()) latest.current.onTranscript?.(row);
+        },
+        onAudioActivity: (value) => {
+          if (active()) setActivity(value);
+        },
+      });
+      await attempt.transport.connect(async (sdp, options) => {
+        let result: VoiceAssistantResponse;
+        try {
+          result = await request<VoiceAssistantResponse>(
+            path,
+            { sdp, ...anchor() },
+            options.signal,
+          );
+        } catch (failure) {
+          fail(failure);
+          throw failure;
+        }
+        if (!active()) {
+          void stopRemote(path, result.voice.id);
+          throw new DOMException('Voice setup cancelled', 'AbortError');
+        }
+        attempt.voiceId = result.voice.id;
+        apply(result.assistant);
+        setVoice(result.voice);
+        attempt.poll = setTimeout(() => void poll(), 500);
+        if (!result.sdp) throw new Error('Missing voice answer');
+        return result.sdp;
+      }, attempt.controller.signal);
+    } catch (failure) {
+      fail(failure);
+    }
+  }, [path, apply, stop]);
+  useEffect(() => {
+    if (options.autoStart) void start();
+  }, [options.autoStart, start]);
+  const toggleMicrophone = useCallback(() => {
+    current.current?.transport?.setMicrophonePaused(!paused);
+    setPaused(!paused);
+  }, [paused]);
+  const activate = useCallback(() => {
+    if (state === 'idle') void start();
+    else if (state === 'listening') toggleMicrophone();
+    else if (state === 'connecting' || state === 'permission') void stop();
+  }, [state, start, stop, toggleMicrophone]);
+  const close = useCallback(() => stop(), [stop]);
+  const playAudio = useCallback(() => void current.current?.transport?.playAudio(), []);
+  const starting = state === 'connecting' || state === 'permission';
+  return {
+    state,
+    phase: voice?.phase ?? null,
+    starting,
+    speaking: state === 'listening' && activity.speaker,
+    error,
+    playbackBlocked,
+    disconnected,
+    paused,
+    activity,
+    microphone: state !== 'listening' || disconnected ? 'off' : paused ? 'paused' : 'on',
+    label: starting
+      ? 'Avbryt talstart'
+      : state === 'closing'
+        ? 'Stänger rösten'
+        : state === 'listening'
+          ? paused
+            ? 'Återuppta mikrofon'
+            : 'Pausa mikrofon'
+          : 'Prata med Skyttel',
+    disabled: state === 'closing' || (state === 'idle' && options.assistant?.phase === 'working'),
+    activate,
+    start,
+    stop: close,
+    playAudio,
+  };
+}

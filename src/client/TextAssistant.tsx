@@ -2,28 +2,27 @@ import {
   type ReactNode,
   type RefObject,
   useCallback,
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
 import type { ObjectType, ObjectValue } from '../shared/map.js';
-import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
-import { ConversationTranscript, type TranscriptRow } from './ConversationTranscript.js';
+import type { MapSelection } from '../shared/text-assistant.js';
+import { ConversationTranscript } from './ConversationTranscript.js';
 import { LifecycleDetails } from './Lifecycle.js';
-import { MapRequestError, request } from './map-request.js';
 import { MergeSourceDetails } from './ObjectMerge.js';
 import { ObjectPropertiesDetails } from './ObjectProperties.js';
 import { CustomFieldsDetails, ObjectTypeDetails } from './ObjectTypes.js';
 import { ProfileImage } from './ProfileImage.js';
 import { RelationshipTypeDetails } from './RelationshipTypes.js';
 import { receiptMessage, rejectionMessage } from './SaveOperations.js';
-import { VoiceAssistant, type VoiceControl } from './VoiceAssistant.js';
+import { VoicePanel } from './VoiceAssistant.js';
 import './voice.css';
 import { AssistantWorkTime } from './AssistantWorkTime.js';
 import { DraftChangeSummary } from './DraftChangeSummary.js';
 import { relationshipDetails } from './relationship-description.js';
+import { type Conversation, useConversation } from './use-conversation.js';
 
 function ObjectDetails({ value, type }: { value: ObjectValue | null; type: ObjectType }) {
   return value ? (
@@ -58,24 +57,7 @@ function errorMessage(code: string) {
 
 type AssistantActivity = { working: boolean; needsAnswer: boolean };
 
-export function TextAssistant({
-  active: workVisible = true,
-  householdId,
-  onMapChange,
-  onAccessLost,
-  onSelectItem,
-  children,
-  draftSummary,
-  inspector,
-  renderWorkspace,
-  conversationVisible = true,
-  onOpenConversation,
-  onVoiceControl,
-  statusContent,
-  statusOpen = false,
-  onCloseStatus,
-  onOpenStatus,
-}: {
+type ConversationPresentation = {
   statusContent?: (assistant: AssistantActivity & { compact: boolean }) => ReactNode;
   statusOpen?: boolean;
   onCloseStatus?: () => void;
@@ -83,11 +65,7 @@ export function TextAssistant({
   active?: boolean;
   conversationVisible?: boolean;
   onOpenConversation?: () => void;
-  onVoiceControl?: (control: VoiceControl | null) => void;
   householdId: string;
-  onMapChange: () => void;
-  onAccessLost: () => void;
-  onSelectItem: (target: MapSelection, signal: AbortSignal) => Promise<boolean>;
   children?: ReactNode | ((assistant: AssistantActivity) => ReactNode);
   draftSummary?: ReactNode;
   inspector?: ReactNode;
@@ -96,292 +74,86 @@ export function TextAssistant({
     conversation: ReactNode,
     floatingStatus: RefObject<HTMLDivElement | null>,
   ) => ReactNode;
+};
+
+/** A conversation that keeps its own state, for use outside the household's map. */
+export function TextAssistant({
+  onMapChange,
+  onAccessLost,
+  onSelectItem,
+  ...presentation
+}: ConversationPresentation & {
+  onMapChange: () => void;
+  onAccessLost: () => void;
+  onSelectItem: (target: MapSelection, signal: AbortSignal) => Promise<boolean>;
 }) {
-  const path = `/api/households/${encodeURIComponent(householdId)}/text-assistant`;
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [externalAi, setExternalAi] = useState(false);
-  const [mapWork, setMapWork] = useState(false);
-  const [session, setSession] = useState<TextAssistantView | null>(null);
-  const [text, setText] = useState('');
-  const [voiceHost] = useState(() => document.createElement('div'));
-  const voiceSlot = useRef<HTMLDivElement>(null);
-  const floatingVoice = useRef<HTMLDivElement>(null);
+  const conversation = useConversation({
+    householdId: presentation.householdId,
+    onMapChange,
+    onAccessLost,
+    onSelectItem,
+  });
+  return <ConversationWorkspace conversation={conversation} {...presentation} />;
+}
+
+/**
+ * Shows the conversation in the status card and the panels and calls its
+ * commands. The conversation itself is kept by the caller.
+ */
+export function ConversationWorkspace({
+  conversation,
+  active: workVisible = true,
+  householdId,
+  children,
+  draftSummary,
+  inspector,
+  renderWorkspace,
+  conversationVisible = true,
+  onOpenConversation,
+  statusContent,
+  statusOpen = false,
+  onCloseStatus,
+  onOpenStatus,
+}: ConversationPresentation & { conversation: Conversation }) {
+  const { available, session, transcript, text, pending, error, unknown, needsAnswer } =
+    conversation;
+  const { externalAi, mapWork } = conversation.consent;
+  // The status card is shown in the conversation panel, or floats over the map
+  // when that panel is not visible. It is rendered where it is shown.
+  const [statusSlot, setStatusSlot] = useState<HTMLDivElement | null>(null);
+  const [floatingSlot, setFloatingSlot] = useState<HTMLDivElement | null>(null);
+  const floatingVoice = useRef<HTMLDivElement | null>(null);
+  const attachFloatingSlot = useCallback((element: HTMLDivElement | null) => {
+    floatingVoice.current = element;
+    setFloatingSlot(element);
+  }, []);
+  const [voiceInformationSession, setVoiceInformationSession] = useState<string | null>(null);
   const workspace = useRef<HTMLElement>(null);
   const floating = Boolean(
     renderWorkspace &&
       (session || statusContent) &&
       (statusOpen || !workVisible || !conversationVisible),
   );
+  const statusHost = floating ? floatingSlot : statusSlot;
   const statusHeading = useRef<HTMLHeadingElement>(null);
   const statusToggle = useRef<HTMLButtonElement>(null);
   const compactStatus = !workVisible && !statusOpen;
   useLayoutEffect(() => {
-    // Moving one portal host preserves the live microphone transport and its
-    // controls when the conversation panel closes or another page is shown.
-    const target = floating ? floatingVoice.current : voiceSlot.current;
-    if (target && voiceHost.parentElement !== target) target.append(voiceHost);
-    if (!renderWorkspace) return;
-    const element = floatingVoice.current;
-    if (!element) return;
+    if (!renderWorkspace || !floatingSlot) return;
     const measure = () =>
       workspace.current
         ?.closest<HTMLElement>('.household-map')
-        ?.style.setProperty('--voice-height', `${element.offsetHeight}px`);
+        ?.style.setProperty('--voice-height', `${floatingSlot.offsetHeight}px`);
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(element);
+    observer.observe(floatingSlot);
     return () => observer.disconnect();
-  }, [floating, voiceHost, renderWorkspace]);
+  }, [floatingSlot, renderWorkspace]);
   useLayoutEffect(() => {
-    if (statusOpen) statusHeading.current?.focus();
-  }, [statusOpen]);
-  const [startWithVoice, setStartWithVoice] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
-  const [unknown, setUnknown] = useState(false);
-  const [transcript, setTranscript] = useState<TranscriptRow[]>([]);
-  const active = useRef<TextAssistantView | null>(null);
-  const showTranscript = useCallback((row: TranscriptRow) => {
-    if (!active.current) return;
-    setTranscript((rows) =>
-      rows.some((item) => item.id === row.id)
-        ? rows.map((item) => (item.id === row.id ? row : item))
-        : [...rows, row],
-    );
-  }, []);
-  const callbacks = useRef({ onMapChange, onAccessLost, onSelectItem });
-  callbacks.current = { onMapChange, onAccessLost, onSelectItem };
-  const mounted = useRef(true);
-  const requestEpoch = useRef(0);
-  const update = useCallback(
-    (next: TextAssistantView) => {
-      if (!mounted.current) return;
-      const previous = active.current;
-      if (
-        previous &&
-        (next.id !== previous.id ||
-          next.revision < previous.revision ||
-          next.review.contentVersion < previous.review.contentVersion ||
-          (next.review.contentVersion === previous.review.contentVersion &&
-            next.review.version < previous.review.version))
-      )
-        return;
-      active.current = next;
-      setSession(next);
-      if (
-        next.modelReply &&
-        (next.modelReply !== previous?.modelReply || next.revision !== previous?.revision)
-      )
-        showTranscript({
-          id: `text-${next.id}-${next.revision}`,
-          role: 'assistant',
-          text: next.modelReply,
-        });
-      if (
-        !previous ||
-        next.review.version !== previous.review.version ||
-        next.review.contentVersion !== previous.review.contentVersion ||
-        next.receipt?.operationId !== previous.receipt?.operationId
-      )
-        callbacks.current.onMapChange();
-    },
-    [showTranscript],
-  );
-  const updateFromVoice = useCallback(
-    (next: TextAssistantView) => {
-      if (active.current?.id === next.id) update(next);
-    },
-    [update],
-  );
-  const fail = useCallback((failure: unknown) => {
-    if (!mounted.current) return;
-    if (failure instanceof MapRequestError && [401, 403, 404].includes(failure.status)) {
-      active.current = null;
-      setSession(null);
-      setText('');
-      setTranscript([]);
-      setUnknown(false);
-      setExternalAi(false);
-      setMapWork(false);
-      setError(
-        failure.status === 404
-          ? 'Samtalet har avslutats eller innehållet har ersatts. Starta en ny anslutning; ditt beständiga utkast och dina sparförsök finns kvar.'
-          : 'Åtkomsten har upphört.',
-      );
-      if (failure.status !== 404) callbacks.current.onAccessLost();
-    } else {
-      setUnknown(true);
-      setError(
-        'Svaret saknas. Kontrollera sparresultat innan du skickar något nytt. Ett genomfört sparande är inte ångrat.',
-      );
-    }
-  }, []);
-  useEffect(() => {
-    mounted.current = true;
-    const controller = new AbortController();
-    void request<{ available: boolean }>(path, undefined, controller.signal)
-      .then((result) => {
-        if (!controller.signal.aborted) setAvailable(result.available);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setAvailable(false);
-      });
-    return () => {
-      mounted.current = false;
-      requestEpoch.current++;
-      controller.abort();
-      const current = active.current;
-      active.current = null;
-      if (current) void request(`${path}/${current.id}/stop`, {}).catch(() => undefined);
-    };
-  }, [path]);
-  useEffect(() => {
-    if (!session || unknown || pending) return;
-    const controller = new AbortController();
-    const epoch = requestEpoch.current;
-    const relevant = () =>
-      !controller.signal.aborted &&
-      epoch === requestEpoch.current &&
-      active.current?.id === session.id;
-    const timer = setTimeout(
-      () => {
-        void request<TextAssistantView>(`${path}/${session.id}`, undefined, controller.signal)
-          .then((result) => {
-            if (relevant()) update(result);
-          })
-          .catch((failure) => {
-            if (relevant()) fail(failure);
-          });
-      },
-      session.phase === 'working' ? 250 : 5000,
-    );
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [session, unknown, pending, path, update, fail]);
-  async function start(withVoice = false) {
-    setStartWithVoice(withVoice);
-    const epoch = ++requestEpoch.current;
-    setPending(true);
-    setError('');
-    try {
-      const result = await request<TextAssistantView>(path, { externalAi, mapWork });
-      if (!mounted.current || epoch !== requestEpoch.current) {
-        void request(`${path}/${result.id}/stop`, {}).catch(() => undefined);
-        return;
-      }
-      setUnknown(false);
-      update(result);
-    } catch (failure) {
-      if (epoch === requestEpoch.current) fail(failure);
-    } finally {
-      if (mounted.current && epoch === requestEpoch.current) setPending(false);
-    }
-  }
-  const command = useCallback(
-    async (name: string, body: unknown = {}) => {
-      const current = active.current;
-      if (!current) return;
-      const epoch = ++requestEpoch.current;
-      setPending(true);
-      setError('');
-      try {
-        const result = await request<TextAssistantView>(`${path}/${current.id}/${name}`, body);
-        if (epoch !== requestEpoch.current) return;
-        setUnknown(false);
-        update(result);
-      } catch (failure) {
-        if (epoch === requestEpoch.current) fail(failure);
-      } finally {
-        if (mounted.current && epoch === requestEpoch.current) setPending(false);
-      }
-    },
-    [path, update, fail],
-  );
-  async function send() {
-    const current = session;
-    if (!current || !text.trim()) return;
-    const epoch = ++requestEpoch.current;
-    const sent = text;
-    showTranscript({ id: crypto.randomUUID(), role: 'user', text: sent });
-    setPending(true);
-    setError('');
-    try {
-      const result = await request<TextAssistantView>(`${path}/${current.id}/messages`, {
-        revision: current.revision,
-        draftVersion: current.review.version,
-        contentVersion: current.review.contentVersion,
-        requestId: crypto.randomUUID(),
-        text: sent,
-      });
-      if (epoch !== requestEpoch.current) return;
-      update(result);
-      setText((value) => (value === sent ? '' : value));
-      setUnknown(false);
-    } catch (failure) {
-      if (epoch === requestEpoch.current) fail(failure);
-    } finally {
-      if (mounted.current && epoch === requestEpoch.current) setPending(false);
-    }
-  }
-  async function stop() {
-    const current = active.current;
-    if (!current) return;
-    const epoch = ++requestEpoch.current;
-    setPending(true);
-    try {
-      await request(`${path}/${current.id}/stop`, {});
-      if (epoch !== requestEpoch.current) return;
-      active.current = null;
-      setSession(null);
-      setText('');
-      setTranscript([]);
-      setExternalAi(false);
-      setMapWork(false);
-      setUnknown(false);
-      setError('');
-    } catch (failure) {
-      if (epoch === requestEpoch.current) fail(failure);
-    } finally {
-      if (mounted.current && epoch === requestEpoch.current) setPending(false);
-    }
-  }
-  const selectionAcknowledged = useRef<string | null>(null);
-  const selectionKey =
-    session?.phase === 'working' && session.selection?.revision === session.revision
-      ? JSON.stringify([session.id, session.selection])
-      : null;
-  useEffect(() => {
-    const selection = active.current?.selection;
-    if (!selectionKey || !selection || pending || selectionAcknowledged.current === selectionKey)
-      return;
-    const target: MapSelection = selection.kind
-      ? { kind: selection.kind, id: selection.id }
-      : { kind: 'object', id: selection.objectId };
-    const epoch = requestEpoch.current;
-    const abort = new AbortController();
-    void (async () => {
-      let displayed = false;
-      try {
-        displayed = await callbacks.current.onSelectItem(target, abort.signal);
-      } catch {
-        // A failed display is never evidence for a successful map selection.
-      }
-      if (abort.signal.aborted || epoch !== requestEpoch.current) return;
-      selectionAcknowledged.current = selectionKey;
-      void command('selection', { ...selection, ...target, displayed });
-    })();
-    return () => abort.abort();
-  }, [selectionKey, pending, command]);
+    if (statusOpen && statusHost) statusHeading.current?.focus();
+  }, [statusOpen, statusHost]);
   const review = session?.review;
-  const needsAnswer = Boolean(
-    session?.phase !== 'working' &&
-      (session?.questions?.length ||
-        review?.unresolvedIdentities.length ||
-        review?.conflicts.length),
-  );
-  const activity = { working: session?.phase === 'working', needsAnswer };
+  const activity = { working: conversation.working, needsAnswer };
   const work = typeof children === 'function' ? children(activity) : children;
   const conversationControls = session && (
     <div className="conversation-controls">
@@ -404,8 +176,8 @@ export function TextAssistant({
                     ? 'Markerat i kartan.'
                     : 'Nya förslag är osparade tills du uttryckligen ber om ett samlat sparande.'}
         </p>
-        {session.phase === 'working' && (
-          <AssistantWorkTime key={`${session.id}-${session.revision}`} />
+        {conversation.workStarted !== null && (
+          <AssistantWorkTime started={conversation.workStarted} />
         )}
       </div>
       {!compactStatus &&
@@ -440,11 +212,7 @@ export function TextAssistant({
       )}
       <div className="voice-controls">
         {session.phase === 'working' && (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => void command('cancel', { revision: session.revision })}
-          >
+          <button type="button" disabled={pending} onClick={() => void conversation.cancel()}>
             Avbryt uppdrag
           </button>
         )}
@@ -454,7 +222,7 @@ export function TextAssistant({
           </button>
         )}
         {(unknown || session.phase === 'recovery') && (
-          <button type="button" disabled={pending} onClick={() => void command('recover')}>
+          <button type="button" disabled={pending} onClick={() => void conversation.recover()}>
             Kontrollera sparresultat
           </button>
         )}
@@ -463,11 +231,11 @@ export function TextAssistant({
         <summary>Samtalskontroller</summary>
         <div className="voice-controls">
           {!unknown && session.phase !== 'recovery' && (
-            <button type="button" disabled={pending} onClick={() => void command('recover')}>
+            <button type="button" disabled={pending} onClick={() => void conversation.recover()}>
               Kontrollera sparresultat
             </button>
           )}
-          <button type="button" disabled={pending} onClick={() => void stop()}>
+          <button type="button" disabled={pending} onClick={() => void conversation.end()}>
             Avsluta samtalet
           </button>
         </div>
@@ -484,19 +252,17 @@ export function TextAssistant({
       hidden={!workVisible && !session && !statusContent}
     >
       {session ? (
-        <VoiceAssistant
-          onControl={onVoiceControl}
-          autoStart={startWithVoice}
-          householdId={householdId}
-          assistant={session}
-          onAssistant={updateFromVoice}
-          onAccessLost={() => fail(new MapRequestError(403))}
-          onTranscript={showTranscript}
-          onRecoveryNeeded={() => setUnknown(true)}
+        <VoicePanel
+          voice={conversation.voice}
+          working={conversation.working}
           compact={floating}
+          information={{
+            open: voiceInformationSession === session.id,
+            onOpenChange: (open) => setVoiceInformationSession(open ? session.id : null),
+          }}
         >
           {conversationControls}
-        </VoiceAssistant>
+        </VoicePanel>
       ) : floating ? (
         <div className="assistant-bar-heading">
           <span className="microphone-state">Mikrofonen är av</span>
@@ -528,7 +294,9 @@ export function TextAssistant({
                 <input
                   type="checkbox"
                   checked={externalAi}
-                  onChange={(event) => setExternalAi(event.target.checked)}
+                  onChange={(event) =>
+                    conversation.setConsent({ externalAi: event.target.checked })
+                  }
                 />{' '}
                 Jag tillåter att OpenAI behandlar uppgifterna i detta samtal.
               </label>
@@ -536,7 +304,7 @@ export function TextAssistant({
                 <input
                   type="checkbox"
                   checked={mapWork}
-                  onChange={(event) => setMapWork(event.target.checked)}
+                  onChange={(event) => conversation.setConsent({ mapWork: event.target.checked })}
                 />{' '}
                 Jag tillåter förslag och sparande av hela mitt utkast när jag uttryckligen ber om
                 det.
@@ -546,14 +314,14 @@ export function TextAssistant({
                   type="button"
                   className="primary"
                   disabled={pending || !externalAi || !mapWork}
-                  onClick={() => void start(true)}
+                  onClick={() => void conversation.start(true)}
                 >
                   Starta talsamtal
                 </button>
                 <button
                   type="button"
                   disabled={pending || !externalAi || !mapWork}
-                  onClick={() => void start()}
+                  onClick={() => void conversation.start()}
                 >
                   Starta textassistenten
                 </button>
@@ -727,7 +495,7 @@ export function TextAssistant({
       </p>
     </section>
   );
-  const conversation = (
+  const conversationPanel = (
     <section aria-label="Samtalet" className="assistant-panel assistant-conversation">
       <div className="assistant-panel-heading">
         <h3>Samtalet</h3>
@@ -745,7 +513,7 @@ export function TextAssistant({
             className="assistant-message-form"
             onSubmit={(event) => {
               event.preventDefault();
-              void send();
+              void conversation.send();
             }}
           >
             <label htmlFor="text-assistant-message">Meddelande till textassistenten</label>
@@ -754,7 +522,7 @@ export function TextAssistant({
               id="text-assistant-message"
               maxLength={4000}
               value={text}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => conversation.setText(event.target.value)}
             />
             <button
               type="submit"
@@ -786,7 +554,7 @@ export function TextAssistant({
                   <button
                     type="button"
                     disabled={pending || session.phase === 'working'}
-                    onClick={() => void command('retry', { operationId: operation.operationId })}
+                    onClick={() => void conversation.retry(operation.operationId)}
                   >
                     Slutför samma sparförsök
                   </button>
@@ -795,6 +563,47 @@ export function TextAssistant({
             ))}
           </details>
         </>
+      )}
+    </section>
+  );
+  const status = (
+    <section
+      aria-label="Aktuell status"
+      className="workspace-status-card"
+      data-expanded={statusOpen}
+      data-compact={compactStatus}
+    >
+      {statusOpen && (
+        <div className="workspace-status-heading">
+          <h2 tabIndex={-1} ref={statusHeading}>
+            Aktuell status
+          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              onCloseStatus?.();
+              if (!workVisible) requestAnimationFrame(() => statusToggle.current?.focus());
+            }}
+            aria-label="Stäng aktuell status"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      {voice}
+      {statusContent?.({ ...activity, compact: compactStatus })}
+      {!workVisible && !statusOpen && (
+        <button type="button" ref={statusToggle} onClick={onOpenStatus} aria-expanded={false}>
+          Visa samtals- och utkastdetaljer
+        </button>
+      )}
+      {statusOpen && text && (
+        <p>
+          Oskickat samtalsmeddelande finns kvar.{' '}
+          <button type="button" onClick={onOpenConversation}>
+            Fortsätt skriva
+          </button>
+        </p>
       )}
     </section>
   );
@@ -807,48 +616,7 @@ export function TextAssistant({
       id="workspace-work"
       tabIndex={-1}
     >
-      {createPortal(
-        <section
-          aria-label="Aktuell status"
-          className="workspace-status-card"
-          data-expanded={statusOpen}
-          data-compact={compactStatus}
-        >
-          {statusOpen && (
-            <div className="workspace-status-heading">
-              <h2 tabIndex={-1} ref={statusHeading}>
-                Aktuell status
-              </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  onCloseStatus?.();
-                  if (!workVisible) requestAnimationFrame(() => statusToggle.current?.focus());
-                }}
-                aria-label="Stäng aktuell status"
-              >
-                ×
-              </button>
-            </div>
-          )}
-          {voice}
-          {statusContent?.({ ...activity, compact: compactStatus })}
-          {!workVisible && !statusOpen && (
-            <button type="button" ref={statusToggle} onClick={onOpenStatus} aria-expanded={false}>
-              Visa samtals- och utkastdetaljer
-            </button>
-          )}
-          {statusOpen && text && (
-            <p>
-              Oskickat samtalsmeddelande finns kvar.{' '}
-              <button type="button" onClick={onOpenConversation}>
-                Fortsätt skriva
-              </button>
-            </p>
-          )}
-        </section>,
-        voiceHost,
-      )}
+      {statusHost && createPortal(<div>{status}</div>, statusHost)}
       {renderWorkspace ? (
         renderWorkspace(
           <>
@@ -856,28 +624,28 @@ export function TextAssistant({
             {work}
           </>,
           <>
-            <div ref={voiceSlot} />
-            {conversation}
+            <div ref={setStatusSlot} />
+            {conversationPanel}
             {changes}
           </>,
           floatingVoice,
         )
       ) : (
         <>
-          <div ref={voiceSlot} />
+          <div ref={setStatusSlot} />
           <div className="assistant-layout" hidden={!workVisible}>
             {work && <div className="assistant-map-panel">{work}</div>}
             <div className="assistant-side">
               {inspector && <div className="assistant-panel">{inspector}</div>}
               {changes}
-              {conversation}
+              {conversationPanel}
             </div>
           </div>
         </>
       )}
-      {/* In scroll flow, moving the retained voice host must not shift a panel
+      {/* In scroll flow, the floating status card must not shift a panel
           heading that received focus during the same commit. */}
-      {renderWorkspace && <div ref={floatingVoice} className="workspace-voice-controls" />}
+      {renderWorkspace && <div ref={attachFloatingSlot} className="workspace-voice-controls" />}
     </section>
   );
 }

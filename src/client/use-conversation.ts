@@ -1,0 +1,375 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
+import type { TranscriptRow } from './ConversationTranscript.js';
+import { MapRequestError, request } from './map-request.js';
+import { useVoice, type Voice } from './use-voice.js';
+
+/**
+ * The state and the commands of the household's conversation with Skyttel.
+ * Every presentation reads the state and calls the commands. None of them
+ * owns the conversation, so it survives whichever of them is shown.
+ */
+export type Conversation = {
+  /** Whether the server offers the conversation. Null until it has answered. */
+  available: boolean | null;
+  consent: { externalAi: boolean; mapWork: boolean };
+  session: TextAssistantView | null;
+  transcript: TranscriptRow[];
+  /** The text the user has written but not sent. */
+  text: string;
+  /** A command is waiting for the server's answer. */
+  pending: boolean;
+  error: string;
+  /** The outcome of a save is unknown and must be checked before new work. */
+  unknown: boolean;
+  working: boolean;
+  /** When the work in progress began, in milliseconds since the epoch. */
+  workStarted: number | null;
+  needsAnswer: boolean;
+  /** The microphone and the voice connection: `start`, `stop` and `activate`. */
+  voice: Voice;
+  setConsent: (consent: Partial<Conversation['consent']>) => void;
+  setText: (text: string) => void;
+  start: (withVoice?: boolean) => Promise<void>;
+  send: () => Promise<void>;
+  cancel: () => Promise<void>;
+  end: () => Promise<void>;
+  recover: () => Promise<void>;
+  retry: (operationId: string) => Promise<void>;
+};
+
+/**
+ * A conversation is ongoing when the transcript has content, the microphone
+ * is on or starting, Skyttel is working or speaking, or the text view is open.
+ */
+export function conversationOngoing(
+  conversation: Pick<Conversation, 'transcript' | 'working'> & {
+    voice: Pick<Voice, 'microphone' | 'starting' | 'speaking' | 'phase'>;
+  },
+  textViewOpen: boolean,
+) {
+  const { voice } = conversation;
+  return (
+    conversation.transcript.length > 0 ||
+    voice.microphone === 'on' ||
+    voice.starting ||
+    conversation.working ||
+    voice.phase === 'working' ||
+    voice.speaking ||
+    textViewOpen
+  );
+}
+
+export function useConversation({
+  householdId,
+  enabled = true,
+  onMapChange,
+  onAccessLost,
+  onSelectItem,
+}: {
+  householdId: string;
+  /** The conversation exists only while the household's map is loaded. */
+  enabled?: boolean;
+  onMapChange: () => void;
+  onAccessLost: () => void;
+  onSelectItem: (target: MapSelection, signal: AbortSignal) => Promise<boolean>;
+}): Conversation {
+  const path = `/api/households/${encodeURIComponent(householdId)}/text-assistant`;
+  const [available, setAvailable] = useState<boolean | null>(null);
+  const [externalAi, setExternalAi] = useState(false);
+  const [mapWork, setMapWork] = useState(false);
+  const [session, setSession] = useState<TextAssistantView | null>(null);
+  const [workStarted, setWorkStarted] = useState<number | null>(null);
+  const [text, setText] = useState('');
+  const [startWithVoice, setStartWithVoice] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const [unknown, setUnknown] = useState(false);
+  const [transcript, setTranscript] = useState<TranscriptRow[]>([]);
+  const active = useRef<TextAssistantView | null>(null);
+  const showTranscript = useCallback((row: TranscriptRow) => {
+    if (!active.current) return;
+    setTranscript((rows) =>
+      rows.some((item) => item.id === row.id)
+        ? rows.map((item) => (item.id === row.id ? row : item))
+        : [...rows, row],
+    );
+  }, []);
+  const callbacks = useRef({ onMapChange, onAccessLost, onSelectItem });
+  callbacks.current = { onMapChange, onAccessLost, onSelectItem };
+  const mounted = useRef(true);
+  const requestEpoch = useRef(0);
+  const update = useCallback(
+    (next: TextAssistantView) => {
+      if (!mounted.current) return;
+      const previous = active.current;
+      if (
+        previous &&
+        (next.id !== previous.id ||
+          next.revision < previous.revision ||
+          next.review.contentVersion < previous.review.contentVersion ||
+          (next.review.contentVersion === previous.review.contentVersion &&
+            next.review.version < previous.review.version))
+      )
+        return;
+      active.current = next;
+      setSession(next);
+      if (
+        next.phase === 'working' &&
+        (previous?.phase !== 'working' || next.revision !== previous.revision)
+      )
+        setWorkStarted(Date.now());
+      if (
+        next.modelReply &&
+        (next.modelReply !== previous?.modelReply || next.revision !== previous?.revision)
+      )
+        showTranscript({
+          id: `text-${next.id}-${next.revision}`,
+          role: 'assistant',
+          text: next.modelReply,
+        });
+      if (
+        !previous ||
+        next.review.version !== previous.review.version ||
+        next.review.contentVersion !== previous.review.contentVersion ||
+        next.receipt?.operationId !== previous.receipt?.operationId
+      )
+        callbacks.current.onMapChange();
+    },
+    [showTranscript],
+  );
+  const updateFromVoice = useCallback(
+    (next: TextAssistantView) => {
+      if (active.current?.id === next.id) update(next);
+    },
+    [update],
+  );
+  const clear = useCallback(() => {
+    active.current = null;
+    setSession(null);
+    setText('');
+    setTranscript([]);
+    setExternalAi(false);
+    setMapWork(false);
+    setUnknown(false);
+  }, []);
+  const fail = useCallback(
+    (failure: unknown) => {
+      if (!mounted.current) return;
+      if (failure instanceof MapRequestError && [401, 403, 404].includes(failure.status)) {
+        clear();
+        setError(
+          failure.status === 404
+            ? 'Samtalet har avslutats eller innehållet har ersatts. Starta en ny anslutning; ditt beständiga utkast och dina sparförsök finns kvar.'
+            : 'Åtkomsten har upphört.',
+        );
+        if (failure.status !== 404) callbacks.current.onAccessLost();
+      } else {
+        setUnknown(true);
+        setError(
+          'Svaret saknas. Kontrollera sparresultat innan du skickar något nytt. Ett genomfört sparande är inte ångrat.',
+        );
+      }
+    },
+    [clear],
+  );
+  useEffect(() => {
+    if (!enabled) return;
+    mounted.current = true;
+    const controller = new AbortController();
+    void request<{ available: boolean }>(path, undefined, controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) setAvailable(result.available);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setAvailable(false);
+      });
+    return () => {
+      mounted.current = false;
+      requestEpoch.current++;
+      controller.abort();
+      const current = active.current;
+      if (current) void request(`${path}/${current.id}/stop`, {}).catch(() => undefined);
+      // A conversation that is enabled again starts as it does the first time.
+      clear();
+      setAvailable(null);
+      setStartWithVoice(false);
+      setPending(false);
+      setError('');
+    };
+  }, [path, enabled, clear]);
+  useEffect(() => {
+    if (!session || unknown || pending) return;
+    const controller = new AbortController();
+    const epoch = requestEpoch.current;
+    const relevant = () =>
+      !controller.signal.aborted &&
+      epoch === requestEpoch.current &&
+      active.current?.id === session.id;
+    const timer = setTimeout(
+      () => {
+        void request<TextAssistantView>(`${path}/${session.id}`, undefined, controller.signal)
+          .then((result) => {
+            if (relevant()) update(result);
+          })
+          .catch((failure) => {
+            if (relevant()) fail(failure);
+          });
+      },
+      session.phase === 'working' ? 250 : 5000,
+    );
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [session, unknown, pending, path, update, fail]);
+  async function start(withVoice = false) {
+    setStartWithVoice(withVoice);
+    const epoch = ++requestEpoch.current;
+    setPending(true);
+    setError('');
+    try {
+      const result = await request<TextAssistantView>(path, { externalAi, mapWork });
+      if (!mounted.current || epoch !== requestEpoch.current) {
+        void request(`${path}/${result.id}/stop`, {}).catch(() => undefined);
+        return;
+      }
+      setUnknown(false);
+      update(result);
+    } catch (failure) {
+      if (epoch === requestEpoch.current) fail(failure);
+    } finally {
+      if (mounted.current && epoch === requestEpoch.current) setPending(false);
+    }
+  }
+  const command = useCallback(
+    async (name: string, body: unknown = {}) => {
+      const current = active.current;
+      if (!current) return;
+      const epoch = ++requestEpoch.current;
+      setPending(true);
+      setError('');
+      try {
+        const result = await request<TextAssistantView>(`${path}/${current.id}/${name}`, body);
+        if (epoch !== requestEpoch.current) return;
+        setUnknown(false);
+        update(result);
+      } catch (failure) {
+        if (epoch === requestEpoch.current) fail(failure);
+      } finally {
+        if (mounted.current && epoch === requestEpoch.current) setPending(false);
+      }
+    },
+    [path, update, fail],
+  );
+  async function send() {
+    const current = session;
+    if (!current || !text.trim()) return;
+    const epoch = ++requestEpoch.current;
+    const sent = text;
+    showTranscript({ id: crypto.randomUUID(), role: 'user', text: sent });
+    setPending(true);
+    setError('');
+    try {
+      const result = await request<TextAssistantView>(`${path}/${current.id}/messages`, {
+        revision: current.revision,
+        draftVersion: current.review.version,
+        contentVersion: current.review.contentVersion,
+        requestId: crypto.randomUUID(),
+        text: sent,
+      });
+      if (epoch !== requestEpoch.current) return;
+      update(result);
+      setText((value) => (value === sent ? '' : value));
+      setUnknown(false);
+    } catch (failure) {
+      if (epoch === requestEpoch.current) fail(failure);
+    } finally {
+      if (mounted.current && epoch === requestEpoch.current) setPending(false);
+    }
+  }
+  async function end() {
+    const current = active.current;
+    if (!current) return;
+    const epoch = ++requestEpoch.current;
+    setPending(true);
+    try {
+      await request(`${path}/${current.id}/stop`, {});
+      if (epoch !== requestEpoch.current) return;
+      clear();
+      setError('');
+    } catch (failure) {
+      if (epoch === requestEpoch.current) fail(failure);
+    } finally {
+      if (mounted.current && epoch === requestEpoch.current) setPending(false);
+    }
+  }
+  const selectionAcknowledged = useRef<string | null>(null);
+  const selectionKey =
+    session?.phase === 'working' && session.selection?.revision === session.revision
+      ? JSON.stringify([session.id, session.selection])
+      : null;
+  useEffect(() => {
+    const selection = active.current?.selection;
+    if (!selectionKey || !selection || pending || selectionAcknowledged.current === selectionKey)
+      return;
+    const target: MapSelection = selection.kind
+      ? { kind: selection.kind, id: selection.id }
+      : { kind: 'object', id: selection.objectId };
+    const epoch = requestEpoch.current;
+    const abort = new AbortController();
+    void (async () => {
+      let displayed = false;
+      try {
+        displayed = await callbacks.current.onSelectItem(target, abort.signal);
+      } catch {
+        // A failed display is never evidence for a successful map selection.
+      }
+      if (abort.signal.aborted || epoch !== requestEpoch.current) return;
+      selectionAcknowledged.current = selectionKey;
+      void command('selection', { ...selection, ...target, displayed });
+    })();
+    return () => abort.abort();
+  }, [selectionKey, pending, command]);
+  const voice = useVoice({
+    householdId,
+    assistant: session,
+    autoStart: startWithVoice,
+    onAssistant: updateFromVoice,
+    onAccessLost: () => fail(new MapRequestError(403)),
+    onTranscript: showTranscript,
+    onRecoveryNeeded: () => setUnknown(true),
+  });
+  const working = session?.phase === 'working';
+  return {
+    available,
+    consent: { externalAi, mapWork },
+    session,
+    transcript,
+    text,
+    pending,
+    error,
+    unknown,
+    working,
+    workStarted: working ? workStarted : null,
+    needsAnswer: Boolean(
+      session &&
+        !working &&
+        (session.questions?.length ||
+          session.review.unresolvedIdentities.length ||
+          session.review.conflicts.length),
+    ),
+    voice,
+    setConsent: (consent) => {
+      if (consent.externalAi !== undefined) setExternalAi(consent.externalAi);
+      if (consent.mapWork !== undefined) setMapWork(consent.mapWork);
+    },
+    setText,
+    start,
+    send,
+    cancel: () => command('cancel', { revision: session?.revision }),
+    end,
+    recover: () => command('recover'),
+    retry: (operationId) => command('retry', { operationId }),
+  };
+}

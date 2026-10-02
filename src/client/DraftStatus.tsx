@@ -11,6 +11,7 @@ export function DraftStatus({
   dirty,
   unresolved,
   conflicts,
+  conflictLinks,
   expanded,
   error,
   imageError,
@@ -33,6 +34,8 @@ export function DraftStatus({
   dirty: boolean;
   unresolved: boolean;
   conflicts: { id: string; label: string }[];
+  /** Keeps the list of conflicts open when the status is shown in another place. */
+  conflictLinks?: { open: boolean; onOpenChange: (open: boolean) => void };
   expanded: boolean;
   error: string;
   imageError?: { name: string; onReturn: () => void };
@@ -80,7 +83,13 @@ export function DraftStatus({
       {conflicts.length > 0 && (
         <>
           <p>Utkastet har konflikter. Välj hur de ska lösas före ett nytt sparbesked.</p>
-          <details className="draft-conflict-links">
+          <details
+            className="draft-conflict-links"
+            open={conflictLinks?.open}
+            onToggle={
+              conflictLinks && ((event) => conflictLinks.onOpenChange(event.currentTarget.open))
+            }
+          >
             <summary>
               Visa {conflicts.length} {conflicts.length === 1 ? 'konflikt' : 'konflikter'}
             </summary>

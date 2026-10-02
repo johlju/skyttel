@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 
-export function AssistantWorkTime() {
-  const [seconds, setSeconds] = useState(0);
+const elapsed = (started: number) => Math.max(0, Math.floor((Date.now() - started) / 1000));
+
+export function AssistantWorkTime({ started }: { started: number }) {
+  const [seconds, setSeconds] = useState(() => elapsed(started));
   useEffect(() => {
-    const started = Date.now();
-    const timer = setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
+    setSeconds(elapsed(started));
+    const timer = setInterval(() => setSeconds(elapsed(started)), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [started]);
   return (
     <span role="timer" className="assistant-work-time" aria-label="Tid för pågående arbete">
       {seconds < 60 ? `${seconds} s` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`}

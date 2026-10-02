@@ -51,13 +51,13 @@ import {
   SaveOperations,
 } from './SaveOperations.js';
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
-import { TextAssistant } from './TextAssistant.js';
-import type { VoiceControl } from './VoiceAssistant.js';
+import { ConversationWorkspace } from './TextAssistant.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
 import { type PanelAnchor, type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
 import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
 import './workspace.css';
 import './workspace-panels.css';
+import { conversationOngoing, useConversation } from './use-conversation.js';
 import { usePersonalView } from './use-personal-view.js';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
 
@@ -229,7 +229,6 @@ export function HouseholdMap({
   const listModeButton = useRef<HTMLButtonElement>(null);
   const workTrigger = useRef<HTMLElement | null>(null);
   const [guidance, setGuidance] = useState(true);
-  const [voiceControl, setVoiceControl] = useState<VoiceControl | null>(null);
   const workOpen = openPanels.length > 0 && (presentation !== 'map' || detailsOpen || editorOpen);
   const [narrow, setNarrow] = useState(() => window.innerWidth <= 700);
   useEffect(() => {
@@ -301,6 +300,7 @@ export function HouseholdMap({
   }, []);
   const [status, setStatus] = useState('');
   const [statusOpen, setStatusOpen] = useState(false);
+  const [conflictLinksOpen, setConflictLinksOpen] = useState(false);
   function returnFromStatus() {
     setStatusOpen(false);
     routeOutsideFocus.current = null;
@@ -816,6 +816,10 @@ export function HouseholdMap({
     ? { ...state, types: effectiveTypes, relationshipTypes: effectiveEdgeTypes }
     : null;
   const conflicts = state ? draftConflicts(state) : [];
+  const hasConflicts = conflicts.length > 0;
+  useEffect(() => {
+    if (!hasConflicts) setConflictLinksOpen(false);
+  }, [hasConflicts]);
   function conflictReview(conflict: DraftConflict) {
     if (conflict.kind === 'objectType' || conflict.kind === 'relationshipType') return null;
     const proposal = (
@@ -1330,6 +1334,21 @@ export function HouseholdMap({
       signal.removeEventListener('abort', cancel);
     }
   }
+  // The conversation belongs to the map, not to a panel. The toolbar, the
+  // status card and the panels all read it and call its commands.
+  const conversation = useConversation({
+    householdId,
+    enabled: Boolean(state),
+    onMapChange: () => {
+      // The local save owns completion and the following map refresh.
+      // A session poll must not replace its pending state with recovery.
+      if (!pending || !saveAttempt.current) setLoad((value) => value + 1);
+    },
+    onAccessLost: loseAccess,
+    onSelectItem: revealAssistantItem,
+  });
+  // The conversation panel stands in for the text view until that view exists.
+  const conversationPanelOpen = workOpen && openPanels.includes('conversation');
   function remove(kind: 'draft' | 'relationship', item: MapObject | MapRelationship) {
     if (!state) return;
     const changes = kind === 'draft' ? state.draft.changes : state.draft.relationships;
@@ -1399,6 +1418,7 @@ export function HouseholdMap({
       }}
       aria-label="Hushållskarta"
       data-navigation-open={navigationOpen}
+      data-conversation-ongoing={conversationOngoing(conversation, conversationPanelOpen)}
       data-theme={theme.theme}
       onKeyDown={(event) => {
         if (
@@ -1427,7 +1447,7 @@ export function HouseholdMap({
           <WorkspaceTools
             statusOpen={statusOpen}
             onStatus={() => setStatusOpen((value) => !value)}
-            voiceControl={voiceControl}
+            voiceControl={conversation.session ? conversation.voice : null}
             cameraMount={setCameraMount}
             expanded={toolsExpanded}
             onExpandedChange={setToolsExpanded}
@@ -1594,7 +1614,8 @@ export function HouseholdMap({
         </div>
       )}
       {state && (
-        <TextAssistant
+        <ConversationWorkspace
+          conversation={conversation}
           statusOpen={statusOpen}
           onOpenStatus={() => setStatusOpen(true)}
           onCloseStatus={() => {
@@ -1626,6 +1647,7 @@ export function HouseholdMap({
                     ? `${entry.label} [${entry.entityId}]`
                     : entry.label,
               }))}
+              conflictLinks={{ open: conflictLinksOpen, onOpenChange: setConflictLinksOpen }}
               expanded={statusOpen}
               error={error}
               imageError={
@@ -1690,7 +1712,6 @@ export function HouseholdMap({
               }}
             />
           )}
-          onVoiceControl={setVoiceControl}
           active={active}
           onOpenConversation={() => {
             setStatusOpen(false);
@@ -1699,20 +1720,10 @@ export function HouseholdMap({
             if (!active) onReturnToMap?.();
           }}
           conversationVisible={
-            workOpen &&
-            openPanels.includes('conversation') &&
-            (!narrow || activePanel === 'conversation') &&
-            !revealRequest
+            conversationPanelOpen && (!narrow || activePanel === 'conversation') && !revealRequest
           }
           householdId={householdId}
-          onMapChange={() => {
-            // The local save owns completion and the following map refresh.
-            // A session poll must not replace its pending state with recovery.
-            if (!pending || !saveAttempt.current) setLoad((value) => value + 1);
-          }}
-          onAccessLost={loseAccess}
-          onSelectItem={revealAssistantItem}
-          renderWorkspace={(work, conversation, floatingStatus) => (
+          renderWorkspace={(work, conversationPanel, floatingStatus) => (
             <WorkspacePanels
               floatingStatus={floatingStatus}
               hidden={!active || !workOpen}
@@ -1739,7 +1750,7 @@ export function HouseholdMap({
                   id: 'conversation',
                   title: 'Samtal och text',
                   open: openPanels.includes('conversation'),
-                  content: conversation,
+                  content: conversationPanel,
                 },
                 ...objectPanels.map((panel) => {
                   const selectedObject = displayed.get(panel.id);
@@ -2905,7 +2916,7 @@ export function HouseholdMap({
               </div>
             </>
           )}
-        </TextAssistant>
+        </ConversationWorkspace>
       )}
     </section>
   );
