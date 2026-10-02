@@ -105,6 +105,7 @@
         "files.trimFinalNewlines": true,
         "files.exclude": {
           "**/.worktrees": true,
+          "**/.claude/worktrees": true,
           "**/node_modules": true,
           "**/dist": true,
           "**/.git": true,
@@ -112,10 +113,12 @@
           "**/tsconfig.tsbuildinfo": true
         },
         "search.exclude": {
-          "**/.worktrees/**": true
+          "**/.worktrees/**": true,
+          "**/.claude/worktrees/**": true
         },
         "files.watcherExclude": {
-          "**/.worktrees/**": true
+          "**/.worktrees/**": true,
+          "**/.claude/worktrees/**": true
         },
 
         // TypeScript settings

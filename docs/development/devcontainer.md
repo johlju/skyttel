@@ -300,9 +300,10 @@ A normal container stop/start or application restart preserves those contents.
 The same Compose project retains dependencies, editor state, `~/.config`,
 Claude Code's `~/.claude`, and `/home/vscode/worktrees` in named volumes
 across rebuilds.
-Keep additional Git worktrees outside the checkout and install dependencies
-for each. Changing profiles or the Compose project name selects different
-volumes; removing volumes deletes their contents.
+Install dependencies in each additional Git worktree. Worktrees that you
+create manually can go in `/home/vscode/worktrees`. Changing profiles or the
+Compose project name selects different volumes; removing volumes deletes
+their contents.
 
 Codex sessions, plugins, skills, and rules use host directories; `auth.json`
 uses a host file. These mounts survive container recreation. Codex's SQLite
