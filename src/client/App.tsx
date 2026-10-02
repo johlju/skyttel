@@ -1126,11 +1126,13 @@ function HouseholdWork({
   account,
   typeSettingsTarget,
   mapSettingsTarget,
+  conversationSettingsTarget,
 }: {
   onSessionExpired: () => void;
   account: ReactNode;
   typeSettingsTarget: HTMLElement | null;
   mapSettingsTarget: HTMLElement | null;
+  conversationSettingsTarget: HTMLElement | null;
 }) {
   const { pathname } = useLocation();
   const routeId = matchPath('/households/:id', pathname)?.params.id;
@@ -1149,6 +1151,7 @@ function HouseholdWork({
       account={account}
       typeSettingsTarget={typeSettingsTarget}
       mapSettingsTarget={mapSettingsTarget}
+      conversationSettingsTarget={conversationSettingsTarget}
     />
   );
 }
@@ -1160,6 +1163,7 @@ function HouseholdPage({
   account,
   typeSettingsTarget,
   mapSettingsTarget,
+  conversationSettingsTarget,
 }: {
   id: string;
   active: boolean;
@@ -1167,6 +1171,7 @@ function HouseholdPage({
   account: ReactNode;
   typeSettingsTarget: HTMLElement | null;
   mapSettingsTarget: HTMLElement | null;
+  conversationSettingsTarget: HTMLElement | null;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1239,6 +1244,7 @@ function HouseholdPage({
         }
         typeSettingsTarget={typeSettingsTarget}
         mapSettingsTarget={mapSettingsTarget}
+        conversationSettingsTarget={conversationSettingsTarget}
         contentVersion={content.status === 'loaded' ? content.data.contentVersion : undefined}
         onContentReplaced={retireWork}
       />
@@ -1252,6 +1258,8 @@ export function App() {
   const theme = useWorkspaceTheme();
   const [mapSettingsTarget, setMapSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [typeSettingsTarget, setTypeSettingsTarget] = useState<HTMLDivElement | null>(null);
+  const [conversationSettingsTarget, setConversationSettingsTarget] =
+    useState<HTMLDivElement | null>(null);
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
@@ -1397,6 +1405,15 @@ export function App() {
               }
             />
             <Route
+              path="/households/:id/settings/conversation"
+              element={
+                <section className="panel">
+                  <Heading>Samtal med Skyttel</Heading>
+                  <div ref={setConversationSettingsTarget} />
+                </section>
+              }
+            />
+            <Route
               path="/households/:id/settings/types"
               element={
                 <section className="panel">
@@ -1497,6 +1514,7 @@ export function App() {
             onSessionExpired={reload}
             typeSettingsTarget={typeSettingsTarget}
             mapSettingsTarget={mapSettingsTarget}
+            conversationSettingsTarget={conversationSettingsTarget}
           />
         )}
         {data?.status === 'forbidden' && !settingsPage && (

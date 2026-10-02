@@ -29,6 +29,7 @@ import { buildHeader, notifyOutdatedClient } from './build-guard.js';
 import { DraftStatus } from './DraftStatus.js';
 import './draft-status.css';
 import { ConversationConsent } from './ConversationConsent.js';
+import { ConversationSettings } from './ConversationSettings.js';
 import { LifecycleDetails, LifecycleStatus } from './Lifecycle.js';
 import { MapHistory } from './MapHistory.js';
 import { type MapRevealRequest, waitForMapDisplay } from './map-display.js';
@@ -95,6 +96,7 @@ export function HouseholdMap({
   onReturnToMap,
   typeSettingsTarget,
   mapSettingsTarget,
+  conversationSettingsTarget,
 }: {
   householdId: string;
   active?: boolean;
@@ -107,6 +109,7 @@ export function HouseholdMap({
   onReturnToMap?: () => void;
   typeSettingsTarget?: HTMLElement | null;
   mapSettingsTarget?: HTMLElement | null;
+  conversationSettingsTarget?: HTMLElement | null;
 }) {
   const theme = useWorkspaceTheme();
   const [typeHost] = useState(() => document.createElement('div'));
@@ -1459,6 +1462,12 @@ export function HouseholdMap({
           showAll();
       }}
     >
+      {conversationSettingsTarget &&
+        // The page in Settings shows and changes the consent of the map's own conversation.
+        createPortal(
+          <ConversationSettings conversation={conversation} householdName={householdName} />,
+          conversationSettingsTarget,
+        )}
       {active && (
         <>
           <a className="skip-link" href="#workspace-tools">

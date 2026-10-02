@@ -29,6 +29,8 @@ export type Conversation = {
     visit: boolean;
     /** Saved for the current consent text, or approved for the visit. */
     valid: boolean;
+    /** The server has answered whether a consent is saved. */
+    known: boolean;
     /** How the conversation starts once the user approves. Null while the box is not shown. */
     asking: ConversationMode | null;
     /** The server is saving the consent. */
@@ -57,6 +59,15 @@ export type Conversation = {
   approve: (remember: boolean) => Promise<void>;
   /** Closes the consent box. Nothing starts. A consent that is being saved is not withdrawn. */
   decline: () => void;
+  /** Saves the consent from Settings. It never starts a conversation. Tells whether it was saved. */
+  saveConsent: () => Promise<boolean>;
+  /**
+   * Revokes the consent, saved or for the visit, and ends the conversation
+   * that goes on. The draft is not touched. Tells whether it was revoked.
+   */
+  revokeConsent: () => Promise<boolean>;
+  /** Reads the saved consent again, as another of the user's devices can have changed it. */
+  refreshConsent: () => void;
   send: () => Promise<void>;
   cancel: () => Promise<void>;
   end: () => Promise<void>;
@@ -137,6 +148,9 @@ export function useConversation({
   callbacks.current = { onMapChange, onStarted, onUnavailable, onAccessLost, onSelectItem };
   const mounted = useRef(true);
   const requestEpoch = useRef(0);
+  // Counts the visits and what Settings does with the consent, so that an
+  // answer is not applied after the user has left the map or done something newer.
+  const consentEpoch = useRef(0);
   const update = useCallback(
     (next: TextAssistantView) => {
       if (!mounted.current) return;
@@ -237,6 +251,7 @@ export function useConversation({
     return () => {
       mounted.current = false;
       requestEpoch.current++;
+      consentEpoch.current++;
       controller.abort();
       const current = active.current;
       if (current) void request(`${path}/${current.id}/stop`, {}).catch(() => undefined);
@@ -345,6 +360,57 @@ export function useConversation({
       fail(outcome.failure);
     else setConsentError('Medgivandet kunde inte sparas. Försök igen.');
   }
+  /** Sends what Settings does with the consent. Null when the answer is missing or no longer applies. */
+  async function changeConsent(change: 'save' | 'revoke') {
+    const epoch = ++consentEpoch.current;
+    const outcome = await (change === 'save'
+      ? request<ConversationConsentView>(consentPath, {
+          textVersion: conversationConsentTextVersion,
+        })
+      : request<ConversationConsentView>(`${consentPath}/revoke`, {})
+    ).catch((failure: unknown) => ({ failure }));
+    if (epoch !== consentEpoch.current) return null;
+    if (!('failure' in outcome)) return outcome;
+    if (outcome.failure instanceof MapRequestError && [401, 403].includes(outcome.failure.status))
+      fail(outcome.failure);
+    return null;
+  }
+  async function saveConsent() {
+    // Saving in Settings starts nothing, so a start that waits for a consent is dropped.
+    setRequested(null);
+    const outcome = await changeConsent('save');
+    if (outcome) setSavedConsent(outcome.saved);
+    return Boolean(outcome);
+  }
+  async function revokeConsent() {
+    const outcome = await changeConsent('revoke');
+    if (!outcome) return false;
+    // The server has ended the user's conversations in the household. This one
+    // ends here too, and an answer to an earlier command is not for a new one.
+    // The text that the user has written but not sent stays.
+    requestEpoch.current++;
+    active.current = null;
+    setSession(null);
+    setTranscript([]);
+    setUnknown(false);
+    setPending(false);
+    setError('');
+    setRequested(null);
+    setSavedConsent(outcome.saved);
+    setVisitConsent(false);
+    return true;
+  }
+  const refreshConsent = useCallback(() => {
+    const epoch = ++consentEpoch.current;
+    void request<ConversationConsentView>(consentPath)
+      .then((result) => {
+        // The first answer about the saved consent is left to arrive by itself.
+        if (epoch === consentEpoch.current)
+          setSavedConsent((known) => (known === undefined ? known : (result.saved ?? null)));
+      })
+      // Without an answer the page shows what this visit last knew.
+      .catch(() => undefined);
+  }, [consentPath]);
   const command = useCallback(
     async (name: string, body: unknown = {}) => {
       const current = active.current;
@@ -439,7 +505,8 @@ export function useConversation({
     assistant: session,
     autoStart: startWithVoice,
     onAssistant: updateFromVoice,
-    onAccessLost: () => fail(new MapRequestError(403)),
+    // A refusal for a revoked consent ends the conversation, not the access.
+    onAccessLost: fail,
     onTranscript: showTranscript,
     onRecoveryNeeded: () => setUnknown(true),
   });
@@ -450,6 +517,7 @@ export function useConversation({
       saved: savedConsent ?? null,
       visit: visitConsent,
       valid: consentValid,
+      known: savedConsent !== undefined,
       asking: answered && available && !consentValid ? requested : null,
       saving: savingConsent,
       error: consentError,
@@ -481,6 +549,9 @@ export function useConversation({
       setRequested(null);
       setConsentError('');
     },
+    saveConsent,
+    revokeConsent,
+    refreshConsent,
     send,
     cancel: () => command('cancel', { revision: session?.revision }),
     end,

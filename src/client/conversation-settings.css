@@ -1,0 +1,41 @@
+.conversation-settings {
+  display: grid;
+  gap: 28px;
+  max-width: 70ch;
+}
+.conversation-settings > p {
+  margin: 0;
+}
+.conversation-setting h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.conversation-setting p {
+  margin: 12px 0 0;
+}
+.conversation-setting .conversation-setting-scope {
+  margin-top: 4px;
+  color: var(--space-muted);
+  font-size: 14px;
+}
+.conversation-setting .conversation-setting-status {
+  font-weight: 600;
+}
+.conversation-setting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.conversation-setting-actions button {
+  min-height: 44px;
+}
+.conversation-setting-actions button[aria-disabled="true"] {
+  cursor: progress;
+  opacity: 0.7;
+}
+/* The text has its place from the start, so that a result moves nothing. */
+.conversation-setting .conversation-setting-feedback {
+  min-height: 1.5em;
+  margin-top: 8px;
+}

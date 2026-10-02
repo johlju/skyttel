@@ -64,7 +64,8 @@ export function useVoice(options: {
   householdId: string;
   assistant: TextAssistantView | null;
   onAssistant: (view: TextAssistantView) => void;
-  onAccessLost: () => void;
+  /** The server refuses the voice work. The failure says why. */
+  onAccessLost: (failure: MapRequestError) => void;
   onRecoveryNeeded?: () => void;
   autoStart?: boolean;
   onTranscript?: (row: TranscriptRow) => void;
@@ -167,7 +168,7 @@ export function useVoice(options: {
     const fail = (failure?: unknown, reason = 'network') => {
       if (!active()) return;
       if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
-        latest.current.onAccessLost();
+        latest.current.onAccessLost(failure);
       void stop(
         voiceErrorMessage(failure) ??
           (reason === 'audio'

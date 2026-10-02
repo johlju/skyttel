@@ -21,6 +21,12 @@ export function settingsEntries(
             group: 'Hushållets karta',
           },
           {
+            to: `${householdPath}/settings/conversation`,
+            title: 'Samtal med Skyttel',
+            description: 'Ditt medgivande, utkastet och textvyns bredd.',
+            group: 'Hushållets karta',
+          },
+          {
             to: `${householdPath}/settings/types`,
             title: 'Typer och egna fält',
             description:
