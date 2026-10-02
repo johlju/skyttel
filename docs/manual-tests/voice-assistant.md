@@ -32,8 +32,8 @@ formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 2. För TAL-02 och TAL-03: skapa Talprov och lägg **Lo Exempel**, typ
    **Person**, med beskrivningen **Påhittad uppgift** i ditt utkast.
    Spara inte. TAL-01 har egna förberedelser nedan.
-3. För TAL-02 och TAL-03: godkänn båda valen i textassistenten, välj
-   **Starta textassistenten** och sedan **Starta röst**.
+3. För TAL-02 och TAL-03: välj **Samtal och text**, välj
+   **Godkänn och starta** i medgivanderutan och sedan **Starta röst**.
    Kontrollerade kommandon nedan skrivs i startguidens
    terminal. Ersätt `REQUEST`, `VERSION`, `CONTENT` och objekt-ID med värden
    från första `held`-meddelandets `draft`. Efter ett verktyg som ändrar
@@ -121,8 +121,9 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    befintliga betalningsroller. Utkastet ska vara tomt, osänd formulärtext
    bevarad och tidigare okända/osäkra uppgifter oförändrade.
 8. Stäng rösten och kontrollera avslutade spår enligt startguiden.
-   Avsluta samtalet, starta en ny textanslutning med båda medgivandena och
-   öppna **Tidigare sparförsök**. Familjens kvitto och sparade karta ska
+   Avsluta samtalet och välj **Samtal och text**. Det nya samtalet startar
+   utan medgivanderuta under samma besök. Öppna
+   **Tidigare sparförsök**. Familjens kvitto och sparade karta ska
    finnas kvar utan ett nytt modelluppdrag.
    Avsluta med `quit` och kontrollera att den tillfälliga katalogen försvinner.
 
@@ -276,7 +277,7 @@ när den gemensamma assistenten används genom rösten.
 
 **Förutsättningar:** Starta en ny installation enligt
 [röstförberedelsen](#controlled-voice-fixture). Skapa Talprov
-med Lo Exempel som osparat Person-förslag. Starta textassistenten och rösten.
+med Lo Exempel som osparat Person-förslag. Starta samtalet och rösten.
 Vänta på **Lyssnar**. Anteckna kartans aktuella urval. Tysta mediespår
 och terminalens kommentarspaket är inte bevis för hört tal.
 
@@ -535,10 +536,11 @@ som ett hinder eller låta gamla frågor följa ett nytt uppdrag.
 - Nytt uppdrag och avslut rensar tidigare samtalsfrågor. Fel och nästa
   handling nås även med stängd dialog. Utkastet bevaras vid avslut.
 
-### TAL-09: gemensam start kräver separata medgivanden och återhämtar mikrofonavbrott
+### TAL-09: starten kräver medgivande och återhämtar mikrofonavbrott
 
-**Syfte:** Erbjuda text från samma start och skilja väntan på mikrofonåtkomst
-från anslutning, med återhämtning efter avslag eller avbruten start.
+**Syfte:** Starta samtalet först efter medgivande och skilja väntan på
+mikrofonåtkomst från anslutning, med återhämtning efter avslag eller
+avbruten start.
 
 **Användare:** Alex i en ny kontrollerad installation.
 
@@ -546,12 +548,12 @@ från anslutning, med återhämtning efter avslag eller avbruten start.
 
 **Integrationstest:**
 [voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
-“TAL-09: gemensam start kräver separata medgivanden och återhämtar mikrofonavbrott”.
+“TAL-09: starten kräver medgivande och återhämtar mikrofonavbrott”.
 
 **Steg:**
 
-1. Välj **Prata med Skyttel**. Mikrofonen är av. Prova varje medgivande
-   ensamt: båda startsätten förblir spärrade. Godkänn båda och starta text.
+1. Välj **Prata med Skyttel**. Medgivanderutan visas, och mikrofonen är
+   av. Välj **Avbryt**. Välj **Samtal och text** och **Godkänn och starta**.
 2. Skicka ett textmeddelande och svara från startguiden. Mikrofonen ska
    fortfarande vara oanvänd och inga röstanslutningar skapade.
 3. Kör `window.skyttelVoiceFixture.setMicrophone('hold')` i konsolen.
@@ -565,8 +567,8 @@ från anslutning, med återhämtning efter avslag eller avbruten start.
 
 **Förväntat resultat:**
 
-- Båda startsätten kräver samma två medgivanden. Att öppna starten eller
-  använda text begär inte mikrofonåtkomst.
+- Röst och text kräver samma medgivande. Att öppna eller avbryta
+  medgivanderutan eller använda text begär inte mikrofonåtkomst.
 - Sen mikrofonåtkomst återupplivar inte avbruten start. Avslag lämnar
   samtalet användbart. Klar anslutning och mikrofonåtkomst skiljs åt.
 
@@ -616,10 +618,9 @@ window. Sign in with Google as the controlled **Alex Exempel**. The prepared
 family case opens its existing household. Otherwise, create **Talprov** through
 the normal form. Use only invented information.
 
-Open **Skyttels textassistent**, approve its separate AI and map-work choices,
-and select **Starta textassistenten**. Then choose **Starta röst** under
-**Tala med Skyttel**. Open **Samtal och text** from the map tools
-to reach these controls. The fixture needs no hardware microphone permission.
+Choose **Samtal och text** from the map tools and select
+**Godkänn och starta** in the consent box. Then choose **Starta röst** in
+the conversation panel. The fixture needs no hardware microphone permission.
 Keep the tab open and active: its normal status requests maintain the server's
 voice connection. Closing the tab is a connection-loss check, not a pause.
 

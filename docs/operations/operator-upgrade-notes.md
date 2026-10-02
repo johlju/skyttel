@@ -103,6 +103,23 @@ save. Use the [assistant recovery guidance](installation.md#recover-assistant-ac
 before retrying uncertain work. Final voice usage can be unavailable after a
 connection loss; retain that uncertainty in cost records.
 
+### Conversation consent
+
+This release stores a saved conversation consent for each Skyttel user and
+household, with its date and the version of the consent text. Use the database
+backup and matching image procedure above for rollback; changing the image
+alone does not remove this storage. Backups and recovery copies retain these
+consent records. Apply household access and retention restrictions to them.
+
+A saved consent is not household content. A full household archive does not
+contain it, and import does not transfer or change it. After a move to
+another installation, each user gives consent again. When a user loses access
+to a household, that user's saved consent is removed.
+
+New household archives require an upgraded reader; supported older archives
+remain readable. After rollout, each user must give consent before the first
+text or voice conversation, and can save it for the household.
+
 ### Household export, replacement and recovery
 
 Verify that only current administrators can prepare and download a full

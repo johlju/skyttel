@@ -44,8 +44,8 @@ med ett [familjeabonnemang](family-subscription.md).
 
 ### Använd assistenter
 
-- [Skyttels text och röst](text-assistant.md): starta ett samtal, ge
-  uppdrag, granska förslag, spara och hantera avbrott.
+- [Skyttels text och röst](text-assistant.md): lämna medgivande, starta
+  ett samtal, ge uppdrag, granska förslag, spara och hantera avbrott.
 - [Externa assistenter](assistants.md): ansluta en textklient, välja
   åtkomst, arbeta med kartan och återkalla anslutningen.
 

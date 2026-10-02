@@ -86,7 +86,7 @@ and desktop positions”.
    Escape. Dra därefter rubriken. Anteckna placeringen. Minska datorfönstret
    och kontrollera att panelen ryms; återställ fönstret och kontrollera
    att panelen återfår placeringen.
-3. Öppna samtalet, lämna nödvändiga medgivanden och starta textassistenten.
+3. Välj **Samtal och text** och **Godkänn och starta** i medgivanderutan.
    Skriv ett meddelande utan att skicka det.
 4. Minska fönstret till telefonbredd. Välj varje panel med **Öppna paneler**.
    Kontrollera att fokuserad rubrik eller kontroll syns utan att döljas av
@@ -128,8 +128,9 @@ text and blocks stale staging”.
    **Min oskickade text** som beskrivning utan att skicka formuläret.
    Flytta direkt till beskrivningen när formuläret öppnas; kontrollera
    att namnet fortfarande är Cykeln och att texten hamnar i valt fält.
-2. Starta textassistenten och be om ett förslag till en annan beskrivning
-   för samma cykel. Vänta på det bekräftade förslaget i ditt utkast.
+2. Välj **Samtal och text** och **Godkänn och starta**. Be om ett förslag
+   till en annan beskrivning för samma cykel. Vänta på det bekräftade
+   förslaget i ditt utkast.
 3. Välj Cykeln i panelväljaren. Läs varningen och kontrollera din text.
 4. Kopiera eventuell text som ska behållas. Välj
    **Stäng utan att skicka texten**, öppna Cykeln igen och börja redigera.

@@ -26,9 +26,9 @@ fallen anger formulär, samtal, profil eller administration.
    kör `identity robin`, logga in med Microsoft i en separat profil och
    bjud in Robins ID från Alex profil. Acceptera som Robin; behåll rollen
    medlem. Befintliga sessioner påverkas inte av identitetsvalet.
-   Välj medgivandena och **Starta textassistenten**, sedan **Starta röst**
-   när ett fall kräver samtal. Miljön ersätter taltransporten och provar
-   inte fysiskt ljud.
+   Välj **Samtal och text** och **Godkänn och starta** i medgivanderutan,
+   sedan **Starta röst** när ett fall kräver samtal. Miljön ersätter
+   taltransporten och provar inte fysiskt ljud.
 3. Börja varje fall med en ny provinstallation eller ett tomt utkast utan
    pågående sparande. Behåll fliken och databasen under varje fall.
 4. Prova ARBETE-01 på dator och mobil. Använd även tangentbord och
@@ -395,9 +395,9 @@ till gemensamt kvitto och privat fortsatt arbete”.
    för att bjuda in och acceptera som Robin. Som Robin, välj **Lista →
    Nytt objekt**, skriv **Robins notering** och **Lägg i mitt utkast**.
    Spara inte. Den gemensamma kartan ska fortfarande vara tom.
-2. Som Alex, öppna **Samtal och text**. Kontrollera att start kräver både
-   AI-valet och valet för förslag och sparande. Starta textassistenten och
-   skicka **Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK
+2. Som Alex, välj **Samtal och text**. Kontrollera att medgivanderutan
+   visas och välj **Godkänn och starta**. Skicka
+   **Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK
    per månad.** Släpp `read_type_catalog` med `{}`. Nästa resultat ska ge
    typerna **Abonnemang**, **Person** och **Betalar**. Släpp därefter
    `propose_object` med katalogens Abonnemang-ID, dess `typeRevision`,

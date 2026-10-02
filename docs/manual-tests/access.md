@@ -554,7 +554,8 @@ a mandatory tour”.
 **Steg:**
 
 1. Öppna kartan och välj **Tala** i vägledningen. Kontrollera samtalets
-   ingångar och medgivanden. Ingen mikrofon ska börja spela in automatiskt.
+   ingångar. Ingen mikrofon ska börja spela in automatiskt. När samtalet
+   är tillgängligt visas [medgivanderutan](conversation-consent.md) först.
 2. Ladda om kartan och välj **Skriv** i vägledningen.
 3. Ladda om och välj **Öppna listan**. Kontrollera **Nytt objekt**.
 4. Ladda om och välj **Stäng vägledningen**.
@@ -562,7 +563,8 @@ a mandatory tour”.
 **Förväntat resultat:**
 
 - Tal och text öppnar samtalets riktiga kontroller. Lista öppnar kartarbetet.
-- Vägledningen försvinner efter ett val. Befintliga medgivanden gäller.
+- Vägledningen försvinner när valet har öppnat sin arbetsyta. En avbruten
+  medgivanderuta lämnar vägledningen kvar.
 - Stängning ger fokus till kartans verktyg. Alla verktyg kan användas direkt.
 
 ### ACCESS-16: Utgånget inloggningsförsök kan ersättas

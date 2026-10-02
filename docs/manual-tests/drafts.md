@@ -553,7 +553,7 @@ kartan som en annan medlem efter omstart.
 **Användare:** Administratören och den inbjudna medlemmen.
 
 **Förutsättningar:** Tomt hushåll, separat medlemsprofil och samtalsstart
-med båda medgivandena enligt förberedelsen.
+med medgivande enligt förberedelsen.
 
 **Integrationstest:**
 [draft-status.spec.ts](../../tests/integration/draft-status.spec.ts),
@@ -565,8 +565,8 @@ private draft and an atomic household save”.
 1. Lägg **Lo Exempel** i utkastet genom formuläret. Påbörja ett nytt objekt
    **Oskickad cykel**, skriv **Texten ska finnas kvar** i beskrivningen och
    lämna texten i formuläret.
-2. Starta textassistenten. Skriv **Lägg Molnmusik i utkastet**. Kontrollera
-   två privata förslag i statusen.
+2. Välj **Samtal och text** och **Godkänn och starta**. Skriv
+   **Lägg Molnmusik i utkastet**. Kontrollera två privata förslag i statusen.
 3. Starta rösten och säg **Lo använder Molnmusik**. Kontrollera att sambandet
    ingår och att statusen visar tre privata förslag.
 4. Skriv ett oskickat samtalsmeddelande. Besök Inställningar och återgå
@@ -601,7 +601,7 @@ och utkastets arbetsyta. Ett svar ska inte i sig spara utkastet.
 
 **Användare:** Administratören.
 
-**Förutsättningar:** Ett tomt hushåll och textassistent med båda medgivandena.
+**Förutsättningar:** Ett tomt hushåll och en textassistent som är tillgänglig.
 Provet kräver att samtalet visar en nödvändig fråga. Om tjänsten inte ger
 en sådan fråga, anteckna att den delen inte har verifierats.
 
@@ -612,8 +612,9 @@ fresh explicit save”.
 
 **Steg:**
 
-1. Lägg **Lo Exempel** i utkastet via formuläret. Starta textassistenten
-   och be den förbereda uppgiften och fråga vilket kort som avses.
+1. Lägg **Lo Exempel** i utkastet via formuläret. Välj **Samtal och text**
+   och **Godkänn och starta**. Be assistenten förbereda uppgiften och fråga
+   vilket kort som avses.
 2. Stäng arbetsytan när statusen visar **Nödvändigt svar**. Kontrollera
    att frågan finns kvar och att kortet inte erbjuder sparande.
 3. Öppna Lista och **Hela mitt utkast**. Kontrollera att **Spara hela

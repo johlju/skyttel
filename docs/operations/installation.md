@@ -71,8 +71,9 @@ authentication secret. Text and voice use the same key. Never put it in a
 
 Voice needs the production HTTPS origin for microphone access. Permit
 outbound HTTPS and WebSocket connections to OpenAI from the server, and
-WebRTC media connectivity from the user's browser. Each user must approve
-the separate AI and map-work choices and explicitly start text or voice.
+WebRTC media connectivity from the user's browser. Each user must give the
+conversation consent for the household before text or voice starts, and
+can save it so that later conversations start directly.
 Starting voice requests microphone access; browser autoplay restrictions
 may require **Spela upp ljud**.
 
@@ -99,8 +100,9 @@ failures without collecting microphone audio or household content.
 A denied microphone, blocked audio or broken voice connection leaves text
 and forms usable. Check browser permissions, secure origin and network
 access, then start a fresh voice connection. Voice does not reconnect
-automatically. After an application restart, start a new assistant session
-and complete fresh consent.
+automatically. After an application restart, start a new assistant session.
+A saved conversation consent remains. A consent given only for the visit
+lasts until the page is reloaded.
 
 Stopping a session or losing a connection does not undo a completed save.
 Check the durable save result before trying again. For an unresolved save,

@@ -111,8 +111,8 @@ Textassistenten är tillgänglig med testmiljöns ersättare för modelltjänste
 
 **Steg:**
 
-1. Öppna Samtal och text, godkänn testmiljöns medgivanden och starta
-   textassistenten. Skriv **Oskickat medan jag söker** utan att skicka.
+1. Välj **Samtal och text** och **Godkänn och starta** i medgivanderutan.
+   Skriv **Oskickat medan jag söker** utan att skicka.
 2. Öppna Lista och markera både Lo och Kim. Sök efter **Lo Exempel**.
    Kontrollera att kameran behåller sitt läge medan du skriver.
 3. Välj träffens namn för att visa Lo i kartan. Kontrollera att Lo och

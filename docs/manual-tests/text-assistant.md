@@ -34,8 +34,8 @@ formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 2. Skapa hushållet Textprov. Skapa objektet **Lo Exempel** av typen
    **Person**, med beskrivningen **Påhittad uppgift**, genom formuläret.
    Välj **Lägg i mitt utkast** och lämna förslaget osparat.
-3. Starta textassistenten med båda uttryckliga valen. Kontrollera först
-   att enbart AI-valet inte räcker för att aktivera startknappen.
+3. Välj **Samtal och text** och **Godkänn och starta** i medgivanderutan.
+   [Samtalsmedgivandet](conversation-consent.md) har egna testfall.
 4. Starta en ny tom kontrollerad installation mellan TEXT-02 till TEXT-09.
    Behåll samma databas under ett omstartsprov. Avsluta med `quit` och
    stäng provfönstret enligt startguidens städningssteg.
@@ -318,7 +318,7 @@ Inga modellsvar behövs; assistenten läser det befintliga utkastet.
    Skapa också den oanvända objekttypen **Förvaring** och sambandstypen
    **Förvaras**, med riktningarna **förvaras i** och **innehåller**.
    Lämna alla fyra förslagen osparade.
-4. Godkänn assistentens två val och starta textassistenten. Läs
+4. Välj **Samtal och text** och **Godkänn och starta**. Läs
    **Ändringar under samtalet** utan att öppna detaljerna.
 5. Kräv **Sista fyra: 1111 → 2222**, sambandet från Kim som betalar
    Kortet samt de båda nya typerna i den synliga listan.
@@ -493,9 +493,9 @@ authentication and same-origin checks use the printed address.
 
 Choose Google sign-in. The substitute provider signs in **Alex Exempel**
 without an external account or password. Complete the normal first-household
-form with the name **Textprov**. Create only made-up content. Start
-**Skyttels textassistent** with both explicit choices for external AI and
-map work. The substitute uses that same application consent flow.
+form with the name **Textprov**. Create only made-up content. Choose
+**Samtal och text** and select **Godkänn och starta** in the consent box.
+The substitute uses that same application consent flow.
 
 Enter the scenario's message and press **Skicka**. Each provider request
 stops at the external boundary and prints a `held` event in the terminal.
@@ -562,7 +562,7 @@ new held request that can be answered normally. No real network outage or
 API charge is involved.
 
 For restart recovery, enter `restart` and wait for `restarted`. Reload the
-browser and start a new assistant session using its normal consent choices.
+browser and start a new assistant session through its normal consent box.
 The database and browser login remain, while old conversation memory and
 assistant grants are closed. The application reads durable proposals and
 operation results through a new ordinary MCP connection. `restart` does

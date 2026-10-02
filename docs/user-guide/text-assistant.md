@@ -3,11 +3,35 @@
 [Till användarguidens innehåll](README.md)
 
 Välj **Prata med Skyttel** eller **Samtal och text** i hushållets karta.
-Den gemensamma starten erbjuder både **Starta talsamtal** och
-**Starta textassistenten**. Godkänn separat att
-OpenAI behandlar uppgifter och att assistenten får föreslå ändringar och
-spara när du ber om det. Detta är skilt från cookieval och andra klienters
-medgivanden. Om assistenten inte är tillgänglig fungerar kartans formulär.
+**Prata med Skyttel** startar samtalet med mikrofonen, och
+**Samtal och text** startar det med text. Utan giltigt medgivande visas
+först [medgivanderutan](#medgivande). Om assistenten inte är tillgänglig
+fungerar kartans formulär.
+
+## Medgivande
+
+Skyttel behöver ditt medgivande innan ett samtal startar. Samma medgivande
+gäller röst och text. Medgivanderutan **Samtal med Skyttel** visas när du
+väljer en samtalsknapp i verktygsraden, **Tala** eller **Skriv** i kartans
+vägledning eller snabblänken **Till samtal och text**.
+
+1. Läs texten i rutan. Den säger vad OpenAI behandlar, att Skyttel sparar
+   ändringar först när du ber om det och att samtalet inte sparas.
+2. Markera **Fråga inte igen för det här hushållet** om du vill spara
+   medgivandet. Det gäller då dig i det här hushållet, på alla dina enheter.
+3. Välj **Godkänn och starta**. Samtalet startar med röst eller text, efter
+   den knapp du valde. **Avbryt** startar ingenting.
+
+Utan kryssrutan gäller medgivandet tills du lämnar hushållets karta eller
+laddar om sidan. Ett nytt samtal under samma besök frågar inte igen. Om
+medgivandetexten ändras i sak frågar Skyttel på nytt, även om du har sparat
+ett tidigare medgivande. Om rutan säger att medgivandet inte kunde sparas
+kan du försöka igen eller godkänna utan att markera kryssrutan.
+
+Medgivandet är skilt från cookieval och från andra klienters medgivanden
+under **Assistentanslutningar**.
+
+## Följ samtalet
 
 Samtalspanelen kan stängas utan att samtalet avslutas. Det kompakta kortet
 visar fortfarande status, nödvändiga frågor och fel. **Öppna samtalet**
@@ -30,7 +54,8 @@ och ingår först när du lägger den i utkastet.
 
 ## Tala med Skyttel
 
-Välj **Starta röst** i ditt pågående samtal och tillåt mikrofonen i
+**Prata med Skyttel** startar rösten tillsammans med samtalet. I ett
+pågående samtal väljer du **Starta röst**. Tillåt mikrofonen i
 webbläsaren. Rösten använder samma utkast och regler som textassistenten.
 OpenAI behandlar ljudet när rösten är igång. Mikrofonen startar först när
 du väljer det och anslutningen är klar. Om webbläsaren blockerar ljudet,

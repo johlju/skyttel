@@ -28,7 +28,8 @@ Namnet ska ha 1–100 tecken. Vid ett oklart resultat väljer du
 
 Kartans vägledning erbjuder **Tala**, **Skriv** och **Öppna listan**.
 Du kan välja **Stäng vägledningen** och använda kartans verktyg direkt.
-Tal börjar först när du själv startar rösten och ger nödvändiga medgivanden.
+Tal börjar först när du själv startar rösten och har lämnat ditt
+[medgivande](text-assistant.md#medgivande).
 
 I **Din profil** finns **Logga ut** och **Inloggningssätt**. Vill du använda
 både Google och Microsoft för samma Skyttel-användare behöver du

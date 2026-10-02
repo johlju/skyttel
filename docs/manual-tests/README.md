@@ -38,8 +38,9 @@ familjeflöden, verklig webbläsarzoom, granskade bilder och miljöbegränsninga
 
 Hushållet öppnar rymdkartan. Välj **Lista** i **Kartans verktyg** före
 fallens formulär, listor, typer, historik och utkast. Välj **Samtal och text**
-före samtalsfallen. På telefon öppnar **Visa verktygens namn** även de
-kompletterande verktygen.
+före samtalsfallen. Utan giltigt medgivande visas medgivanderutan först;
+välj **Godkänn och starta**. På telefon öppnar **Visa verktygens namn**
+även de kompletterande verktygen.
 
 Välj **Uppgifter** vid objektet i Lista för att öppna dess panel. Namnet
 visar i stället objektet i kartan. När ett fall återvänder
@@ -105,13 +106,18 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   egna typer och fält, daterade avtal, riktning och typbyte, skyddade
   definitioner, granskad sammanslagning med bilder samt ångring efter import.
 
+- [Samtalsmedgivandet](conversation-consent.md): medgivanderutan från
+  verktygsraden, vägledningen och snabblänken, avbruten start med bevarat
+  fokus, start med röst eller text efter vald knapp, medgivande för besöket
+  eller sparat per användare och hushåll på flera enheter samt tangentbord,
+  pekskärm och placering vid verktygsraden.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag, kompakt status,
-  gemensam start, mikrofonpaus, ljudaktivitet, avbrott,
+  start efter medgivande, mikrofonpaus, ljudaktivitet, avbrott,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
   samtalstext och verifierade resultat, löpande dialog och
   synlig arbetstid. Kontrollerat familjeunderlag och
   verkligt tal redovisas separat.
-- [Skyttels textassistent](text-assistant.md): separat AI-val, hela utkast,
+- [Skyttels textassistent](text-assistant.md): hela utkast,
   rättelse och samlat sparande, sena svar, avbrott, återfunna kvitton och
   samtidigt synliga objekt och samband i karta och detaljpanel även på
   telefon, med skyddad formulärtext samt obekräftad samtalstext
