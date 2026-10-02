@@ -125,10 +125,10 @@ export const liveBrowserFixtureSource = `
     releaseMicrophone: () => releaseMicrophone?.(),
     setPlayback: (value) => { playback = value; },
     setAutoStart: (value) => { autoStart = value; },
-    setSound: (source, active) => {
+    setSound: (source, active, level = 0.2) => {
       const signal = signals.get(source === 'microphone' ? microphoneTracks : remoteTracks);
       if (!signal) throw new Error('Missing media signal');
-      signal.gain.gain.value = active ? 0.2 : 0;
+      signal.gain.gain.value = active ? level : 0;
       void signal.context.resume();
     },
     stats: () => ({
@@ -136,7 +136,8 @@ export const liveBrowserFixtureSource = `
       openPeers: peers.filter(peer => peer.connectionState !== 'closed').length,
       microphoneTracks: microphoneTracks.map(track => ({ enabled: track.enabled, state: track.readyState })),
       remoteTracks: remoteTracks.map(track => ({ enabled: track.enabled, state: track.readyState })),
-      audioElements: audioElements.size
+      audioElements: audioElements.size,
+      silencedAudioElements: [...audioElements].filter(element => element.muted).length
     })
   };
 })();
@@ -157,13 +158,15 @@ declare global {
       releaseMicrophone(): void;
       setPlayback(value: 'allow' | 'blocked' | 'error'): void;
       setAutoStart(value: boolean): void;
-      setSound(source: 'microphone' | 'remote', active: boolean): void;
+      /** The level is the sound's strength, from 0 to 1. A quiet voice when it is left out. */
+      setSound(source: 'microphone' | 'remote', active: boolean, level?: number): void;
       stats(): {
         peers: number;
         openPeers: number;
         microphoneTracks: { enabled: boolean; state: string }[];
         remoteTracks: { enabled: boolean; state: string }[];
         audioElements: number;
+        silencedAudioElements: number;
       };
     };
   }

@@ -10,6 +10,8 @@ export function createVoiceTransport(callbacks: {
   onDisconnected: (disconnected: boolean) => void;
   onTranscript?: (row: TranscriptRow) => void;
   onAudioActivity?: (activity: { microphone: boolean; speaker: boolean }) => void;
+  /** Skyttel has taken on a task from what the user said. */
+  onDelegation?: () => void;
 }) {
   const live = new OpenAILiveWebRTC();
   const audio = new Audio();
@@ -26,6 +28,9 @@ export function createVoiceTransport(callbacks: {
     [];
   const samples = new Uint8Array(256);
   let playing = false;
+  // Skyttel's voice is silenced until what Skyttel is saying has ended.
+  let silenced = false;
+  let silentTicks = 0;
   let activity = { microphone: false, speaker: false };
   function meter(stream: MediaStream, input: boolean) {
     const source = audioContext.createMediaStreamSource(stream);
@@ -34,25 +39,40 @@ export function createVoiceTransport(callbacks: {
     source.connect(analyser);
     meters.push({ source, analyser, input });
   }
+  const measuring = () =>
+    !closed &&
+    !stopped &&
+    connected &&
+    started &&
+    live.peerConnection.connectionState === 'connected' &&
+    audioContext.state === 'running';
+  // The largest deviation from silence in a stream, from 0 to 1.
+  function peak(analyser: AnalyserNode) {
+    analyser.getByteTimeDomainData(samples);
+    let largest = 0;
+    for (const value of samples) largest = Math.max(largest, Math.abs(value - 128));
+    return Math.min(1, largest / 128);
+  }
+  const audible = (analyser: AnalyserNode) => peak(analyser) > 3 / 128;
   // Observe only the already-authorized streams. Incoming audio remains
-  // independent of microphone pause, and transcripts never imply playback.
+  // independent of the microphone being off, and transcripts never imply playback.
   const activityTimer = setInterval(() => {
     const next = { microphone: false, speaker: false };
-    if (
-      !closed &&
-      !stopped &&
-      connected &&
-      started &&
-      live.peerConnection.connectionState === 'connected' &&
-      audioContext.state === 'running'
-    ) {
+    if (measuring()) {
       for (const { analyser, input } of meters) {
         if (input ? paused : !playing) continue;
-        analyser.getByteTimeDomainData(samples);
-        const audible = samples.some((value) => Math.abs(value - 128) > 3);
-        if (input) next.microphone ||= audible;
-        else next.speaker ||= audible;
+        if (input) next.microphone ||= audible(analyser);
+        else next.speaker ||= audible(analyser);
       }
+    }
+    if (silenced) {
+      // A second without sound ends what Skyttel was saying when it was silenced.
+      silentTicks = next.speaker ? 0 : silentTicks + 1;
+      if (silentTicks >= 10) {
+        silenced = false;
+        audio.muted = false;
+      }
+      next.speaker = false;
     }
     if (next.microphone !== activity.microphone || next.speaker !== activity.speaker) {
       activity = next;
@@ -184,6 +204,7 @@ export function createVoiceTransport(callbacks: {
     live.on('session.delegation.created', () => {
       assistantBoundary = true;
       finish(assistantRow);
+      if (!closed && !stopped) callbacks.onDelegation?.();
     }),
     live.on('session.started', (event) => {
       if (typeof event.session?.id !== 'string' || !event.session.id) return;
@@ -274,6 +295,24 @@ export function createVoiceTransport(callbacks: {
       for (const track of microphone?.getTracks() ?? [])
         track.enabled =
           !paused && connected && started && live.peerConnection.connectionState === 'connected';
+    },
+    /** The microphone's sound level right now, from 0 to 1. It is 0 while the microphone is off. */
+    microphoneLevel() {
+      if (paused || !measuring()) return 0;
+      let level = 0;
+      for (const { analyser, input } of meters) if (input) level = Math.max(level, peak(analyser));
+      return level;
+    },
+    /** Silences what Skyttel is saying. What Skyttel says next is heard again. */
+    silence() {
+      if (closed || stopped) return;
+      silenced = true;
+      silentTicks = 0;
+      audio.muted = true;
+      if (activity.speaker) {
+        activity = { ...activity, speaker: false };
+        callbacks.onAudioActivity?.(activity);
+      }
     },
     close,
     playAudio,

@@ -48,7 +48,7 @@
   background: var(--space-surface);
   border-color: var(--space-control);
 }
-.household-map.workspace-shell :is(a, .muted, .microphone-state) {
+.household-map.workspace-shell :is(a, .muted) {
   color: var(--space-muted);
 }
 .household-map.workspace-shell :focus-visible {
@@ -121,11 +121,14 @@
   background: var(--space-accent);
   color: var(--space-bg);
 }
-.household-map.workspace-shell .workspace-tools .workspace-talk {
+/* The microphone is a plain tool while it is off and has the accent colour while it is on. */
+.household-map.workspace-shell .workspace-tools .workspace-talk[aria-pressed="true"] {
   background: var(--space-accent);
   color: white;
 }
-.household-map.workspace-shell[data-theme="dark"] .workspace-tools .workspace-talk {
+.household-map.workspace-shell[data-theme="dark"]
+  .workspace-tools
+  .workspace-talk[aria-pressed="true"] {
   color: #092b2b;
 }
 .workspace-tools svg,
@@ -438,7 +441,7 @@
   background: color-mix(in srgb, var(--space-accent), var(--space-surface) 88%);
   color: var(--space-text);
 }
-.household-map.workspace-shell :is(.assistant-bar p, .assistant-bar .microphone-state) {
+.household-map.workspace-shell .assistant-bar p {
   color: var(--space-muted);
 }
 .household-map.workspace-shell.workspace-open .map-space {

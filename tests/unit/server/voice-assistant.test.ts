@@ -577,6 +577,47 @@ test('a held voice proposal is synchronously invalidated by new speech and by st
   expect(model.requests).toHaveLength(1);
 });
 
+test('the voice reports work only for a task that was said, and not after that task is stopped from the conversation', async () => {
+  const model = textModel(() => new Promise<unknown[]>(() => {}));
+  const voice = await setupVoice(model.provider);
+  const session = `${voice.path}/${voice.assistant.id}`;
+  voice.transcript('Rätta namnet.');
+  voice.delegate();
+  await expect.poll(() => model.requests.length).toBe(1);
+  await expect.poll(async () => (await voice.poll()).voice.phase).toBe('working');
+  // The stop icon stops the work through the conversation, whether it was said or written.
+  const working = await (await browser.get(session)).json();
+  const cancelled = await browser.post(`${session}/cancel`, {
+    headers: { origin: app.origin },
+    data: { revision: working.revision },
+  });
+  expect(cancelled.status(), await cancelled.text()).toBe(200);
+  await expect.poll(async () => (await voice.poll()).voice.phase).toBe('listening');
+  expect((await voice.poll()).assistant.phase).not.toBe('working');
+  // Skyttel is given nothing to say about the stopped task.
+  expect(voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual(
+    [],
+  );
+  // A written message is the conversation's work, not the voice's.
+  const ready = await (await browser.get(session)).json();
+  const written = await browser.post(`${session}/messages`, {
+    headers: { origin: app.origin },
+    data: {
+      revision: ready.revision,
+      draftVersion: ready.review.version,
+      contentVersion: ready.review.contentVersion,
+      requestId: crypto.randomUUID(),
+      text: 'Beskriv utkastet.',
+    },
+  });
+  expect(written.status(), await written.text()).toBe(202);
+  await expect.poll(() => model.requests.length).toBe(2);
+  expect(await voice.poll()).toMatchObject({
+    assistant: { phase: 'working' },
+    voice: { phase: 'listening' },
+  });
+});
+
 test('the first fragment retains its displayed draft anchor when a web edit arrives before delegation', async () => {
   const model = textModel(() => [modelMessage('Detta ska inte skickas.')]);
   const voice = await setupVoice(model.provider);

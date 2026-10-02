@@ -6,27 +6,40 @@ import { MapRequestError, request } from './map-request.js';
 import { voiceErrorMessage } from './voice-error.js';
 import { createVoiceTransport, type VoiceTransport } from './voice-transport.js';
 
-export type VoiceControl = {
-  label: string;
-  microphone: 'off' | 'on' | 'paused';
-  disabled: boolean;
-  activate: () => void;
-};
+/**
+ * How long Skyttel must be quiet after the microphone is turned off before the
+ * voice connection closes. Skyttel first finishes what was said and its answer.
+ */
+export const voiceSettleMs = 3000;
 
 /** The microphone and the voice connection of one conversation. */
-export type Voice = VoiceControl & {
+export type Voice = {
   state: 'idle' | 'permission' | 'connecting' | 'listening' | 'closing';
   /** The phase the server last reported for the voice connection. */
   phase: VoiceAssistantView['phase'] | null;
+  /** What the user is told about the microphone. It is off while the voice starts. */
+  microphone: 'off' | 'on';
   starting: boolean;
+  /** Skyttel is heard. */
   speaking: boolean;
+  /** The user is heard, with the microphone on. */
+  userSpeaking: boolean;
+  /** Skyttel works with a task that the user gave with the voice. */
+  working: boolean;
   error: string;
   playbackBlocked: boolean;
   disconnected: boolean;
-  paused: boolean;
-  activity: { microphone: boolean; speaker: boolean };
+  /** The microphone cannot be turned on: Skyttel works with a written message. */
+  disabled: boolean;
+  /** The microphone's sound level right now, from 0 to 1. */
+  level: () => number;
+  /** A short press: starts the voice, cancels the start, or turns the microphone on or off. */
+  activate: () => void;
   start: () => Promise<void>;
+  /** Closes the voice connection at once, and with it the work that came by voice. */
   stop: () => Promise<void>;
+  /** Silences what Skyttel is saying. */
+  silence: () => void;
   playAudio: () => void;
 };
 
@@ -83,7 +96,10 @@ export function useVoice(options: {
   const [error, setError] = useState('');
   const [playbackBlocked, setPlaybackBlocked] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
-  const [paused, setPaused] = useState(false);
+  // The microphone is off while the voice connection stays, until Skyttel has finished.
+  const [off, setOff] = useState(false);
+  // Counts what is heard of the conversation, so that the connection outlasts it.
+  const [heard, setHeard] = useState(0);
   const [activity, setActivity] = useState({ microphone: false, speaker: false });
   const apply = useCallback((view: TextAssistantView) => {
     const shown = latest.current.assistant;
@@ -135,7 +151,7 @@ export function useVoice(options: {
     setError('');
     setPlaybackBlocked(false);
     setDisconnected(false);
-    setPaused(false);
+    setOff(false);
     setActivity((value) =>
       value.microphone || value.speaker ? { microphone: false, speaker: false } : value,
     );
@@ -152,7 +168,7 @@ export function useVoice(options: {
     current.current = attempt;
     epoch.current++;
     setState('permission');
-    setPaused(false);
+    setOff(false);
     setDisconnected(false);
     setVoice(null);
     setError('');
@@ -228,7 +244,12 @@ export function useVoice(options: {
           if (active()) setDisconnected(value);
         },
         onTranscript: (row) => {
-          if (active()) latest.current.onTranscript?.(row);
+          if (!active()) return;
+          setHeard((count) => count + 1);
+          latest.current.onTranscript?.(row);
+        },
+        onDelegation: () => {
+          if (active()) setHeard((count) => count + 1);
         },
         onAudioActivity: (value) => {
           if (active()) setActivity(value);
@@ -264,42 +285,48 @@ export function useVoice(options: {
   useEffect(() => {
     if (options.autoStart) void start();
   }, [options.autoStart, start]);
-  const toggleMicrophone = useCallback(() => {
-    current.current?.transport?.setMicrophonePaused(!paused);
-    setPaused(!paused);
-  }, [paused]);
+  const starting = state === 'connecting' || state === 'permission';
+  const working = state === 'listening' && voice?.phase === 'working';
+  const speaking = state === 'listening' && activity.speaker;
   const activate = useCallback(() => {
     if (state === 'idle') void start();
-    else if (state === 'listening') toggleMicrophone();
-    else if (state === 'connecting' || state === 'permission') void stop();
-  }, [state, start, stop, toggleMicrophone]);
+    else if (state === 'listening') {
+      current.current?.transport?.setMicrophonePaused(!off);
+      setOff(!off);
+    } else if (starting) void stop();
+  }, [state, starting, off, start, stop]);
+  // With the microphone off, Skyttel finishes what was said and its answer.
+  // The connection then closes, so that nothing stays open towards OpenAI.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: what is heard restarts the wait
+  useEffect(() => {
+    if (state !== 'listening' || !off || working || speaking) return;
+    const timer = setTimeout(() => void stop(), voiceSettleMs);
+    return () => clearTimeout(timer);
+  }, [state, off, working, speaking, heard, stop]);
   const close = useCallback(() => stop(), [stop]);
   const playAudio = useCallback(() => void current.current?.transport?.playAudio(), []);
-  const starting = state === 'connecting' || state === 'permission';
+  const silence = useCallback(() => current.current?.transport?.silence(), []);
+  const level = useCallback(() => current.current?.transport?.microphoneLevel() ?? 0, []);
+  const microphone = state === 'listening' && !off && !disconnected ? 'on' : 'off';
   return {
     state,
     phase: voice?.phase ?? null,
+    microphone,
     starting,
-    speaking: state === 'listening' && activity.speaker,
+    speaking,
+    userSpeaking: microphone === 'on' && activity.microphone,
+    working,
     error,
     playbackBlocked,
     disconnected,
-    paused,
-    activity,
-    microphone: state !== 'listening' || disconnected ? 'off' : paused ? 'paused' : 'on',
-    label: starting
-      ? 'Avbryt talstart'
-      : state === 'closing'
-        ? 'Stänger rösten'
-        : state === 'listening'
-          ? paused
-            ? 'Återuppta mikrofon'
-            : 'Pausa mikrofon'
-          : 'Prata med Skyttel',
-    disabled: state === 'closing' || (state === 'idle' && options.assistant?.phase === 'working'),
+    disabled:
+      state === 'closing' ||
+      (microphone === 'off' && !starting && !working && options.assistant?.phase === 'working'),
+    level,
     activate,
     start,
     stop: close,
+    silence,
     playAudio,
   };
 }

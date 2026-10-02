@@ -577,30 +577,6 @@ main:has(.household-panel) {
   background: #315b44;
   border-color: #315b44;
 }
-.microphone-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #61766c;
-  font-size: 13px;
-}
-.microphone-state::before {
-  content: "";
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #95a69a;
-}
-.microphone-state.connected::before {
-  background: #428d62;
-  box-shadow: 0 0 0 4px #e4f2e6;
-}
-.voice-assistant .voice-status {
-  border-top: 1px solid #e8ede2;
-  padding-top: 12px;
-  color: #263c33;
-  font-size: 14px;
-}
 .assistant-layout:has(> .assistant-map-panel) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;

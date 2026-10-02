@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
-import { VoiceAssistant } from '../../../src/client/VoiceAssistant.js';
+import { voiceSettleMs } from '../../../src/client/use-voice.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import {
   openConversationText,
@@ -9,6 +9,7 @@ import {
   startConversationWithVoice,
 } from '../../support/conversation-dom.js';
 import { StandaloneConversation } from '../../support/conversation-harness.js';
+import { closeVoiceConnection, StandaloneVoice } from '../../support/voice-harness.js';
 
 class Track extends EventTarget {
   enabled = true;
@@ -114,12 +115,10 @@ function setup() {
     }),
   );
   const changed = vi.fn();
-  const control = vi.fn();
   const accessLost = vi.fn();
   const recoveryNeeded = vi.fn();
   const component = render(
-    <VoiceAssistant
-      onControl={control}
+    <StandaloneVoice
       householdId="linden"
       assistant={view}
       onAssistant={changed}
@@ -132,7 +131,6 @@ function setup() {
     getUserMedia,
     calls,
     changed,
-    control,
     accessLost,
     recoveryNeeded,
     component,
@@ -140,6 +138,13 @@ function setup() {
     audios,
   };
 }
+// The button that turns the microphone on and off, and the voice box that follows the voice.
+const microphoneButton = () =>
+  screen.getByRole<HTMLButtonElement>('button', { name: 'Prata med Skyttel' });
+const voiceBox = () => screen.queryByRole('group', { name: 'Röstruta' });
+// What a screen reader is told, and the element that is replaced for each new telling.
+const announced = () => document.querySelector('.voice-announcement')?.firstElementChild;
+const announcement = () => announced()?.textContent;
 afterEach(async () => {
   await act(async () => cleanup());
   vi.useRealTimers();
@@ -148,16 +153,18 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-test('measured incoming audio continues during microphone pause and releases its observers on stop', async () => {
-  const signals = new Map<Track, boolean>();
+// An audio context whose analysers measure what the test sets for each track,
+// as a deviation from silence between 0 and 127.
+function meteredAudio() {
+  const signals = new Map<Track, number>();
   const disconnects: ReturnType<typeof vi.fn>[] = [];
   const close = vi.fn().mockResolvedValue(undefined);
-  let state = 'running';
+  const context = { state: 'running' };
   vi.stubGlobal(
     'AudioContext',
     class {
       get state() {
-        return state;
+        return context.state;
       }
       close = close;
       resume = vi.fn().mockResolvedValue(undefined);
@@ -178,66 +185,206 @@ test('measured incoming audio continues during microphone pause and releases its
           stream: undefined as Stream | undefined,
           disconnect,
           getByteTimeDomainData(data: Uint8Array) {
-            data.fill(this.stream?.getTracks().some((track) => signals.get(track)) ? 150 : 128);
+            const heard = this.stream?.getTracks().map((track) => signals.get(track) ?? 0) ?? [];
+            data.fill(128 + Math.max(0, ...heard));
           },
         };
       }
     },
   );
-  const { track, control, component } = setup();
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  return { signals, disconnects, close, context };
+}
+// Starts the voice and lets Skyttel's audio in, so that both speakers can be heard.
+async function startWithAudio() {
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   const peer = Peer.all[0];
   const remote = new Track();
   await act(async () => {
     peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
-    const event = new Event('track');
-    Object.assign(event, { track: remote });
-    peer.dispatchEvent(event);
+    peer.dispatchEvent(Object.assign(new Event('track'), { track: remote }));
   });
-  expect(control.mock.lastCall?.[0]).toMatchObject({ label: 'Pausa mikrofon', microphone: 'on' });
-  signals.set(track, true);
+  return { peer, remote };
+}
+
+test('the voice box follows who is heard, and Skyttel is heard on with the microphone off', async () => {
+  const { signals, disconnects, close, context } = meteredAudio();
+  const { track } = setup();
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
+  expect(voiceBox()).toBeNull();
+  const { peer, remote } = await startWithAudio();
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('true');
+  expect(voiceBox()?.textContent).toBe('Lyssnar');
+  signals.set(track, 22);
   await screen.findByText('Du talar');
-  signals.set(remote, true);
+  signals.set(remote, 22);
   await screen.findByText('Skyttel talar');
-  await userEvent.click(screen.getByRole('button', { name: 'Pausa mikrofon' }));
-  expect(control.mock.lastCall?.[0]).toMatchObject({
-    label: 'Återuppta mikrofon',
-    microphone: 'paused',
-  });
+  await userEvent.click(microphoneButton());
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
   expect(track.enabled).toBe(false);
   expect(remote.stop).not.toHaveBeenCalled();
-  expect(screen.getByText('Skyttel talar')).toBeDefined();
-  signals.set(remote, false);
-  await waitFor(() => expect(screen.queryByText('Skyttel talar')).toBeNull());
-  expect(screen.queryByText('Du talar')).toBeNull();
-  await userEvent.click(screen.getByRole('button', { name: 'Återuppta mikrofon' }));
+  expect(voiceBox()?.textContent).toBe('Skyttel talar');
+  signals.set(remote, 0);
+  await waitFor(() => expect(voiceBox()).toBeNull());
+  expect(peer.connectionState).toBe('connected');
+  await userEvent.click(microphoneButton());
   await screen.findByText('Du talar');
-  state = 'suspended';
+  context.state = 'suspended';
   await waitFor(() => expect(screen.queryByText('Du talar')).toBeNull());
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
-  await screen.findByText('Rösten är avstängd.');
+  await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
+  await waitFor(() => expect(peer.connectionState).toBe('closed'));
+  expect(voiceBox()).toBeNull();
   expect(close).toHaveBeenCalled();
   expect(disconnects).toHaveLength(4);
   for (const disconnect of disconnects) expect(disconnect).toHaveBeenCalled();
   expect(track.stop).toHaveBeenCalled();
   expect(remote.stop).toHaveBeenCalled();
-  component.unmount();
-  expect(control.mock.lastCall).toEqual([null]);
 });
 
-test('pausing the microphone preserves the session and remains paused after reconnection', async () => {
+test("the bars follow the microphone's sound level while the user talks", async () => {
+  const { signals } = meteredAudio();
+  const { track } = setup();
+  await startWithAudio();
+  const tallest = () =>
+    Math.max(
+      ...[...(voiceBox()?.querySelectorAll('i') ?? [])].map(
+        (bar) => Number.parseFloat(bar.style.height) || 0,
+      ),
+    );
+  expect(voiceBox()?.querySelectorAll('[aria-hidden="true"] i')).toHaveLength(7);
+  expect(tallest()).toBe(0);
+  signals.set(track, 26);
+  await screen.findByText('Du talar');
+  // A quiet voice: at most 4 + 0.2 × 20 = 8 px. A loud one: more than 4 + 0.9 × 20 × 0.65 px.
+  await waitFor(() => expect(tallest()).toBeGreaterThan(4));
+  expect(tallest()).toBeLessThanOrEqual(8.1);
+  signals.set(track, 120);
+  await waitFor(() => expect(tallest()).toBeGreaterThan(15));
+  signals.set(track, 0);
+  await screen.findByText('Lyssnar');
+  expect(tallest()).toBe(0);
+});
+
+test('the stop icon silences Skyttel, stops work in progress and gives the focus to the microphone', async () => {
+  const { signals } = meteredAudio();
+  const cancel = vi.fn(async () => {});
+  const { component, view, audios, changed } = setup();
+  const show = (phase: TextAssistantView['phase']) =>
+    component.rerender(
+      <StandaloneVoice
+        householdId="linden"
+        assistant={{ ...view, phase }}
+        onAssistant={changed}
+        onAccessLost={() => {}}
+        onCancel={cancel}
+      />,
+    );
+  show('ready');
+  const { remote } = await startWithAudio();
+  expect(screen.queryByRole('button', { name: 'Avbryt' })).toBeNull();
+  signals.set(remote, 22);
+  await screen.findByText('Skyttel talar');
+  await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
+  expect(audios[0].muted).toBe(true);
+  expect(cancel).not.toHaveBeenCalled();
+  expect(voiceBox()?.textContent).toBe('Lyssnar');
+  expect(document.activeElement).toBe(microphoneButton());
+  // What Skyttel says next is heard again, once the silenced words have ended.
+  signals.set(remote, 0);
+  await waitFor(() => expect(audios[0].muted).toBe(false), { timeout: 3000 });
+  signals.set(remote, 22);
+  await screen.findByText('Skyttel talar');
+  signals.set(remote, 0);
+  await screen.findByText('Lyssnar');
+  // A written message counts while the microphone is on.
+  show('working');
+  expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
+  await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
+  expect(cancel).toHaveBeenCalledOnce();
+});
+
+test('a screen reader is told Lyssnar once, Skyttel arbetar, and Mikrofonen är av when the box goes', async () => {
+  const { signals } = meteredAudio();
+  const { track, view } = setup();
+  let phase = 'listening';
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) =>
+      Response.json({
+        sdp: 'answer',
+        assistant: view,
+        voice: {
+          id: 'voice-session',
+          phase: url.endsWith('/stop') ? 'closed' : phase,
+          seconds: null,
+          usageFinal: false,
+        },
+      }),
+    ),
+  );
+  await userEvent.click(microphoneButton());
+  // The focus is elsewhere, so the button's own state is not what the user hears.
+  microphoneButton().blur();
+  expect(voiceBox()?.textContent).toBe('Rösten startar');
+  expect(announcement()).toBe('');
+  await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+  const peer = Peer.all[0];
+  const remote = new Track();
+  await act(async () => {
+    peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
+    peer.dispatchEvent(Object.assign(new Event('track'), { track: remote }));
+  });
+  await waitFor(() => expect(announcement()).toBe('Lyssnar'));
+  const first = announced();
+  signals.set(track, 22);
+  await screen.findByText('Du talar');
+  signals.set(track, 0);
+  await waitFor(() => expect(voiceBox()?.textContent).toBe('Lyssnar'));
+  // The word came back after talk. It is not read again.
+  expect(announced()).toBe(first);
+  phase = 'working';
+  await waitFor(() => expect(announcement()).toBe('Skyttel arbetar'), { timeout: 2000 });
+  expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
+  phase = 'listening';
+  signals.set(remote, 22);
+  await screen.findByText('Skyttel talar');
+  expect(announcement()).toBe('Skyttel arbetar');
+  await userEvent.click(microphoneButton());
+  microphoneButton().blur();
+  expect(voiceBox()?.textContent).toBe('Skyttel talar');
+  expect(announcement()).toBe('Skyttel arbetar');
+  signals.set(remote, 0);
+  await waitFor(() => expect(announcement()).toBe('Mikrofonen är av'));
+  expect(voiceBox()).toBeNull();
+});
+
+test('the button says its own state while it has the focus, so nothing more is read', async () => {
+  setup();
+  await userEvent.click(microphoneButton());
+  await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+  await act(async () =>
+    Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
+  );
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('true');
+  expect(document.activeElement).toBe(microphoneButton());
+  expect(announcement()).toBe('');
+  await userEvent.click(microphoneButton());
+  expect(voiceBox()).toBeNull();
+  expect(announcement()).toBe('');
+});
+
+test('with the microphone off the connection stays while Skyttel finishes, and the microphone stays off after a reconnection', async () => {
   const { track, calls, getUserMedia } = setup();
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   const peer = Peer.all[0];
   await act(async () =>
     peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Pausa mikrofon' }));
+  await userEvent.click(microphoneButton());
   expect(track.enabled).toBe(false);
   expect(track.stop).not.toHaveBeenCalled();
-  expect(screen.getByText('Mikrofonen är pausad')).toBeDefined();
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
   await act(async () => {
     peer.connectionState = 'disconnected';
     peer.dispatchEvent(new Event('connectionstatechange'));
@@ -245,11 +392,103 @@ test('pausing the microphone preserves the session and remains paused after reco
     peer.dispatchEvent(new Event('connectionstatechange'));
   });
   expect(track.enabled).toBe(false);
-  await userEvent.click(screen.getByRole('button', { name: 'Återuppta mikrofon' }));
+  await userEvent.click(microphoneButton());
   expect(track.enabled).toBe(true);
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('true');
   expect(getUserMedia).toHaveBeenCalledOnce();
   expect(calls.filter((call) => call.url === base)).toHaveLength(1);
   expect(calls.some((call) => call.url.endsWith('/stop'))).toBe(false);
+});
+
+test('the connection closes when Skyttel has been quiet with the microphone off, and what is heard keeps it open', async () => {
+  const { track, calls } = setup();
+  await userEvent.click(microphoneButton());
+  await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+  const peer = Peer.all[0];
+  await act(async () =>
+    peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
+  );
+  const stopped = () => calls.some((call) => call.url.endsWith('/stop'));
+  vi.useFakeTimers();
+  fireEvent.click(microphoneButton());
+  expect(track.enabled).toBe(false);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(voiceSettleMs - 500);
+  });
+  expect(stopped()).toBe(false);
+  // Skyttel takes on what was said just before the microphone was turned off.
+  await act(async () =>
+    peer.channel.emit({
+      type: 'session.delegation.created',
+      offset_ms: 100,
+      delegation: { id: 'task', type: 'delegation', target: 'client' },
+    }),
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(voiceSettleMs - 500);
+  });
+  expect(stopped()).toBe(false);
+  expect(track.stop).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(501);
+  });
+  expect(stopped()).toBe(true);
+  expect(track.stop).toHaveBeenCalled();
+  expect(peer.connectionState).toBe('closed');
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+test('a task that was said is worked through with the microphone off, and the connection closes afterwards', async () => {
+  const { view, track } = setup();
+  let phase = 'working';
+  const urls: string[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) => {
+      urls.push(url);
+      return Response.json({
+        sdp: 'answer',
+        assistant: view,
+        voice: {
+          id: 'voice-session',
+          phase: url.endsWith('/poll') ? phase : url.endsWith('/stop') ? 'closed' : 'listening',
+          seconds: null,
+          usageFinal: false,
+        },
+      });
+    }),
+  );
+  // The polls that follow the task run on the test's clock from the start.
+  vi.useFakeTimers();
+  await act(async () => {
+    fireEvent.click(microphoneButton());
+  });
+  await act(async () => {
+    Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
+    await vi.advanceTimersByTimeAsync(600);
+  });
+  expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
+  fireEvent.click(microphoneButton());
+  expect(track.enabled).toBe(false);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(voiceSettleMs * 3);
+  });
+  // The box stays for the task that was said, with the stop icon, and the microphone can be turned on.
+  expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
+  expect(screen.getByRole('button', { name: 'Avbryt' })).toBeDefined();
+  expect(microphoneButton().disabled).toBe(false);
+  expect(urls.some((url) => url.endsWith('/stop'))).toBe(false);
+  phase = 'listening';
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(voiceSettleMs / 2);
+  });
+  expect(voiceBox()).toBeNull();
+  expect(urls.some((url) => url.endsWith('/stop'))).toBe(false);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(voiceSettleMs);
+  });
+  expect(urls.some((url) => url.endsWith('/stop'))).toBe(true);
+  expect(track.stop).toHaveBeenCalled();
 });
 
 test.each(['stop', 'revoked'])(
@@ -282,6 +521,9 @@ test.each(['stop', 'revoked'])(
     await startConversationWithVoice();
     await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
     const peer = Peer.all[0];
+    await act(async () =>
+      peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
+    );
     const fragment = async (
       role: 'input' | 'output',
       delta: string,
@@ -305,8 +547,18 @@ test.each(['stop', 'revoked'])(
     expect(log.querySelectorAll('li')).toHaveLength(4);
     expect(log.textContent).toContain('SkyttelJag lyssnar. Berätta mer.');
     expect(screen.getByRole('status').textContent).toContain('Nya förslag är osparade');
+    expect(voiceBox()?.textContent).toBe('Lyssnar');
     if (ending === 'stop') {
-      await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+      // With the microphone off Skyttel finishes its answer. Nothing comes after the connection.
+      vi.useFakeTimers();
+      fireEvent.click(microphoneButton());
+      await fragment('output', ' Klart.', 6600, 7000);
+      expect(log.textContent).toContain('Sparat säger rösten. Klart.');
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(voiceSettleMs + 1);
+      });
+      vi.useRealTimers();
+      await waitFor(() => expect(peer.connectionState).toBe('closed'));
       await fragment('output', 'För sent.', 7000, 7500);
       expect(log.textContent).not.toContain('För sent.');
       expect(log.textContent).toContain('Kim betalar för musiken.');
@@ -368,7 +620,7 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
 
 test('temporary disconnection mutes capture, recovery re-enables it and an unusable connection stops server work', async () => {
   const { track, calls } = setup();
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   const peer = Peer.all[0];
   await act(async () =>
@@ -381,12 +633,13 @@ test('temporary disconnection mutes capture, recovery re-enables it and an unusa
     await vi.advanceTimersByTimeAsync(2000);
   });
   expect(track.enabled).toBe(false);
-  expect(screen.getByText(/^Anslutningen är tillfälligt bruten/)).toBeDefined();
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
   await act(async () => {
     peer.connectionState = 'connected';
     peer.dispatchEvent(new Event('connectionstatechange'));
   });
   expect(track.enabled).toBe(true);
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('true');
   await act(async () => {
     peer.connectionState = 'disconnected';
     peer.dispatchEvent(new Event('connectionstatechange'));
@@ -401,7 +654,7 @@ test('temporary disconnection mutes capture, recovery re-enables it and an unusa
 test('voice starts only on request, gates microphone on protocol readiness and stops without claiming a save', async () => {
   const { track, getUserMedia, calls } = setup();
   expect(getUserMedia).not.toHaveBeenCalled();
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(calls[0]?.url).toBe(base));
   expect(calls[0].body).toEqual({
     sdp: 'synthetic-offer',
@@ -410,12 +663,18 @@ test('voice starts only on request, gates microphone on protocol readiness and s
     contentVersion: 1,
   });
   expect(track.enabled).toBe(false);
+  // The voice starts: the name stays, and the description says what a press does.
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
+  expect(microphoneButton().title).toBe('Avbryt starten av rösten');
+  expect(voiceBox()?.textContent).toBe('Rösten startar');
+  expect(screen.queryByRole('button', { name: 'Avbryt' })).toBeNull();
   await act(async () =>
     Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
   );
   await waitFor(() => expect(track.enabled).toBe(true));
-  expect(screen.getByText(/^Lyssnar\./)).toBeDefined();
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+  expect(microphoneButton().title).toBe('');
+  expect(voiceBox()?.textContent).toBe('Lyssnar');
+  await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
   expect(track.stop).toHaveBeenCalled();
   await waitFor(() => expect(Peer.all[0].connectionState).toBe('closed'));
   expect(calls.some((call) => call.url === `${base}/voice-session/stop`)).toBe(true);
@@ -428,7 +687,7 @@ test('blocked remote audio can be resumed explicitly and all remote tracks stop 
   vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValueOnce(
     new DOMException('blocked', 'NotAllowedError'),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   const remote = new Track();
   await act(async () => {
@@ -441,7 +700,7 @@ test('blocked remote audio can be resumed explicitly and all remote tracks stop 
   expect(track.enabled).toBe(true);
   await userEvent.click(resume);
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Spela upp ljud' })).toBeNull());
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+  await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
   expect(remote.stop).toHaveBeenCalled();
   expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
 });
@@ -449,11 +708,11 @@ test('blocked remote audio can be resumed explicitly and all remote tracks stop 
 test('a microphone refusal offers recovery without creating a remote session', async () => {
   const { getUserMedia, calls } = setup();
   getUserMedia.mockRejectedValueOnce(new DOMException('denied', 'NotAllowedError'));
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   expect((await screen.findByRole('alert')).textContent).toContain('Mikrofonen tilläts inte');
   expect(calls).toHaveLength(0);
   expect(Peer.all[0].connectionState).toBe('closed');
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(calls[0]?.url).toBe(base));
 });
 
@@ -465,7 +724,7 @@ test.each([
   async (name, message) => {
     const { getUserMedia, calls } = setup();
     getUserMedia.mockRejectedValueOnce(new DOMException('private device details', name));
-    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    await userEvent.click(microphoneButton());
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain(message);
     expect(alert.textContent).not.toContain('private device details');
@@ -476,7 +735,7 @@ test.each([
 test('unsupported browsers explain missing voice support before capturing audio', async () => {
   const { calls, getUserMedia } = setup();
   vi.stubGlobal('RTCPeerConnection', undefined);
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   expect((await screen.findByRole('alert')).textContent).toContain('saknar stöd för röstsamtal');
   expect(getUserMedia).not.toHaveBeenCalled();
   expect(calls).toHaveLength(0);
@@ -501,13 +760,13 @@ test.each([
     vi.mocked(fetch).mockResolvedValueOnce(
       Response.json({ error: code, diagnosticId }, { status: 503 }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    await userEvent.click(microphoneButton());
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain(message);
     expect(alert.textContent).toContain(`Felreferens: ${diagnosticId}`);
     expect(track.stop).toHaveBeenCalled();
     expect(accessLost).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    await userEvent.click(microphoneButton());
     await waitFor(() => expect(Peer.all[1]?.channel.readyState).toBe('open'));
     expect(screen.queryByRole('alert')).toBeNull();
   },
@@ -521,7 +780,7 @@ test('untrusted diagnostic references and error messages are not rendered', asyn
       { status: 503 },
     ),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   const alert = await screen.findByRole('alert');
   expect(alert.textContent).toContain('Servern kunde inte ansluta');
   expect(alert.textContent).not.toContain('private provider details');
@@ -536,13 +795,15 @@ test('cancelling permission stops a late microphone stream without opening a ses
       grant = resolve;
     }),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+  await userEvent.click(microphoneButton());
+  expect(voiceBox()?.textContent).toBe('Rösten startar');
+  await userEvent.click(microphoneButton());
   await act(async () => grant(new Stream([track])));
   expect(track.stop).toHaveBeenCalled();
   expect(calls).toHaveLength(0);
   expect(changed).not.toHaveBeenCalled();
-  expect(screen.getByText('Rösten är avstängd.')).toBeDefined();
+  expect(voiceBox()).toBeNull();
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
 });
 
 test('a late creation response after cancellation closes that session without replacing the current assistant', async () => {
@@ -563,9 +824,9 @@ test('a late creation response after cancellation closes that session without re
       });
     }),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(posted).toContain(base));
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+  await userEvent.click(microphoneButton());
   await act(async () =>
     reply(
       Response.json({
@@ -584,7 +845,7 @@ test.each(['microphone', 'audio', 'provider', 'channel', 'peer'] as const)(
   '%s failure stops capture and cancels the associated server work',
   async (kind) => {
     const { track, calls, audios } = setup();
-    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    await userEvent.click(microphoneButton());
     await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
     await act(async () => {
       const peer = Peer.all[0];
@@ -602,7 +863,7 @@ test.each(['microphone', 'audio', 'provider', 'channel', 'peer'] as const)(
     expect(track.stop).toHaveBeenCalled();
     expect(calls.some((call) => call.url.endsWith('/stop'))).toBe(true);
     expect(screen.getByRole('alert').textContent).not.toContain('private provider detail');
-    expect(screen.getByRole('button', { name: 'Starta röst' })).toBeDefined();
+    expect(microphoneButton()).toBeDefined();
   },
 );
 
@@ -623,7 +884,7 @@ test('a server-reported voice failure explains the interruption while preserving
       }),
     ),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   expect((await screen.findByRole('alert')).textContent).toContain('Rösttjänsten avbröt');
 });
@@ -650,10 +911,10 @@ test('a delayed poll after stopping cannot replace newer assistant work', async 
       });
     }),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(reply).toBeDefined());
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
-  await screen.findByRole('button', { name: 'Starta röst' });
+  await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
+  await waitFor(() => expect(microphoneButton().disabled).toBe(false));
   changed.mockClear();
   await act(async () =>
     reply(
@@ -664,7 +925,7 @@ test('a delayed poll after stopping cannot replace newer assistant work', async 
     ),
   );
   expect(changed).not.toHaveBeenCalled();
-  expect(screen.getByText('Rösten är avstängd.')).toBeDefined();
+  expect(voiceBox()).toBeNull();
 });
 
 test('losing the polling connection stops capture and preserves an explicit recovery message', async () => {
@@ -687,7 +948,7 @@ test('losing the polling connection stops capture and preserves an explicit reco
       });
     }),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   expect((await screen.findByRole('alert')).textContent).toContain('kontrollera sparförsök');
   expect(track.stop).toHaveBeenCalled();
   expect(calls).toContain(`${base}/voice-session/stop`);
@@ -706,10 +967,10 @@ test('an unconfirmed remote stop has a bounded drain and never claims known fina
       });
     }),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   vi.useFakeTimers();
-  fireEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+  fireEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
   expect(track.stop).toHaveBeenCalled();
   expect(Peer.all[0].connectionState).toBe('connected');
   await act(async () => {
@@ -724,7 +985,7 @@ test('missing protocol startup times out without ever enabling microphone captur
   const { track, calls } = setup();
   vi.useFakeTimers();
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    fireEvent.click(microphoneButton());
   });
   expect(Peer.all[0].channel.readyState).toBe('open');
   // The SDK negotiated, but no session.started event arrived.
@@ -743,48 +1004,46 @@ test('revoked access during setup reports access loss and releases microphone re
     'fetch',
     vi.fn(async () => Response.json({ error: 'forbidden' }, { status: 403 })),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(accessLost).toHaveBeenCalledOnce());
   expect(track.stop).toHaveBeenCalled();
   expect(Peer.all[0].connectionState).toBe('closed');
 });
 
-test('working text tasks prevent a new voice connection and recovery keeps voice available', async () => {
+test('the microphone cannot be turned on while Skyttel works with a written message, and recovery keeps it available', async () => {
   const { component, view, getUserMedia } = setup();
   const changed = vi.fn();
   component.rerender(
-    <VoiceAssistant
+    <StandaloneVoice
       householdId="linden"
       assistant={{ ...view, phase: 'working' }}
       onAssistant={changed}
       onAccessLost={() => {}}
     />,
   );
-  expect((screen.getByRole('button', { name: 'Starta röst' }) as HTMLButtonElement).disabled).toBe(
-    true,
-  );
+  expect(microphoneButton().disabled).toBe(true);
+  // A conversation with text alone never shows the voice box.
+  expect(voiceBox()).toBeNull();
   expect(getUserMedia).not.toHaveBeenCalled();
   component.rerender(
-    <VoiceAssistant
+    <StandaloneVoice
       householdId="linden"
       assistant={{ ...view, phase: 'recovery' }}
       onAssistant={changed}
       onAccessLost={() => {}}
     />,
   );
-  expect((screen.getByRole('button', { name: 'Starta röst' }) as HTMLButtonElement).disabled).toBe(
-    false,
-  );
+  expect(microphoneButton().disabled).toBe(false);
 });
 
 test.each([
-  ['working', 'Assistenten arbetar…'],
-  ['recovery', 'Kontrollera det tidigare sparförsöket innan nya ändringar.'],
-  ['closed', 'Rösten är avstängd.'],
-  ['closing', 'Rösten är avstängd.'],
+  ['working', 'Skyttel arbetar'],
+  ['recovery', 'Lyssnar'],
+  ['closed', null],
+  ['closing', null],
 ])(
-  'the public %s state updates voice status with the current displayed anchor',
-  async (phase, message) => {
+  'the public %s state updates the voice box with the current displayed anchor',
+  async (phase, word) => {
     const { view } = setup();
     const polls: unknown[] = [];
     vi.stubGlobal(
@@ -803,12 +1062,14 @@ test.each([
         });
       }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    await userEvent.click(microphoneButton());
     await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
     await act(async () =>
       Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
     );
-    expect(await screen.findByText(message)).toBeDefined();
+    await waitFor(() => expect(polls).not.toEqual([]), { timeout: 2000 });
+    await waitFor(() => expect(voiceBox()?.textContent ?? null).toBe(word));
+    expect(microphoneButton().getAttribute('aria-pressed')).toBe(String(word !== null));
     expect(polls[0]).toEqual({ revision: 2, draftVersion: 3, contentVersion: 1 });
   },
 );
@@ -841,7 +1102,7 @@ test.each(['resolved', 'rejected'])(
         });
       }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+    await userEvent.click(microphoneButton());
     await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
     const peer = Peer.all[0];
     const remote = new Track();
@@ -849,7 +1110,7 @@ test.each(['resolved', 'rejected'])(
       peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
       peer.dispatchEvent(Object.assign(new Event('track'), { track: remote, streams: [] }));
     });
-    await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+    await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
     const late = new Track();
     await act(async () => {
       peer.dispatchEvent(Object.assign(new Event('track'), { track: late, streams: [] }));
@@ -876,7 +1137,7 @@ test.each(['resolved', 'rejected'])(
 
 test('a remote protocol close stops microphone input and fetches the server finalization result', async () => {
   const { calls, track } = setup();
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   await act(async () =>
     Peer.all[0].channel.emit({ type: 'session.closed', session: { id: 'provider-session' } }),
@@ -899,9 +1160,9 @@ test('a rejected stop request closes local resources and requires receipt recove
       });
     }),
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
-  await userEvent.click(screen.getByRole('button', { name: 'Stäng av rösten' }));
+  await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
   expect(track.stop).toHaveBeenCalled();
   expect(Peer.all[0].connectionState).toBe('closed');
   expect(recoveryNeeded).toHaveBeenCalledOnce();
@@ -910,11 +1171,11 @@ test('a rejected stop request closes local resources and requires receipt recove
 
 test('an older voice reply cannot overwrite a newer displayed text revision', async () => {
   const { component, view, changed, calls } = setup();
-  await userEvent.click(screen.getByRole('button', { name: 'Starta röst' }));
+  await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   changed.mockClear();
   component.rerender(
-    <VoiceAssistant
+    <StandaloneVoice
       householdId="linden"
       assistant={{ ...view, revision: 3 }}
       onAssistant={changed}

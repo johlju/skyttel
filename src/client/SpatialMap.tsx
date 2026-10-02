@@ -172,7 +172,7 @@ export function SpatialMap({
     if (!bounds || !root) return;
     const boxes = [
       ...root.querySelectorAll(
-        '.workspace-tools, .workspace-context, .workspace-feedback, .workspace-voice-controls, .workspace-status-card, .map-navigation, .spatial-bottom-bar, .label-note, .spatial-display-tools > summary, .spatial-view-actions',
+        '.workspace-tools, .workspace-context, .workspace-feedback, .voice-box, .workspace-voice-controls, .workspace-status-card, .map-navigation, .spatial-bottom-bar, .label-note, .spatial-display-tools > summary, .spatial-view-actions',
       ),
     ].flatMap((element) => {
       if (element.closest('details:not([open])') && !element.matches('summary')) return [];
@@ -428,7 +428,7 @@ export function SpatialMap({
     const overlays = element
       .closest('.household-map')
       ?.querySelectorAll(
-        '.workspace-tools, .workspace-context, .workspace-feedback, .workspace-voice-controls, .spatial-tools, .map-navigation, .spatial-bottom-bar, .spatial-display-tools, .spatial-view-actions',
+        '.workspace-tools, .workspace-context, .workspace-feedback, .voice-box, .workspace-voice-controls, .spatial-tools, .map-navigation, .spatial-bottom-bar, .spatial-display-tools, .spatial-view-actions',
       );
     for (const overlay of overlays ?? []) {
       const closedTools = overlay.closest('details:not([open])');

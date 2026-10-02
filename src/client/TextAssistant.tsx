@@ -105,7 +105,6 @@ export function ConversationWorkspace({
     floatingVoice.current = element;
     setFloatingSlot(element);
   }, []);
-  const [voiceInformationSession, setVoiceInformationSession] = useState<string | null>(null);
   const workspace = useRef<HTMLElement>(null);
   const floating = Boolean(
     renderWorkspace &&
@@ -230,20 +229,9 @@ export function ConversationWorkspace({
       hidden={!workVisible && !session && !statusContent}
     >
       {session ? (
-        <VoicePanel
-          voice={conversation.voice}
-          working={conversation.working}
-          compact={floating}
-          information={{
-            open: voiceInformationSession === session.id,
-            onOpenChange: (open) => setVoiceInformationSession(open ? session.id : null),
-          }}
-        >
-          {conversationControls}
-        </VoicePanel>
+        <VoicePanel voice={conversation.voice}>{conversationControls}</VoicePanel>
       ) : floating ? (
         <div className="assistant-bar-heading">
-          <span className="microphone-state">Mikrofonen är av</span>
           <button type="button" onClick={onOpenConversation}>
             Tala eller skriv
           </button>
@@ -252,7 +240,6 @@ export function ConversationWorkspace({
         <>
           <div className="assistant-bar-heading">
             <h3>Tala med Skyttel</h3>
-            <span className="microphone-state">Mikrofonen är av</span>
           </div>
           {available === null && (
             <p className="assistant-loading">Hämtar samtalets tillgänglighet…</p>
@@ -431,7 +418,6 @@ export function ConversationWorkspace({
     <section aria-label="Samtalet" className="assistant-panel assistant-conversation">
       <div className="assistant-panel-heading">
         <h3>Samtalet</h3>
-        <span className="muted">Svenska · tal och text</span>
       </div>
       {!session && (
         <div className="assistant-transcript-empty">

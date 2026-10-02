@@ -285,7 +285,7 @@
   background: var(--space-surface);
   border-color: var(--space-control);
 }
-.has-settings .household-work-background :is(.muted, .microphone-state) {
+.has-settings .household-work-background .muted {
   color: var(--space-muted);
 }
 .has-settings .household-work-background :focus-visible {
@@ -326,9 +326,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 16px;
-}
-.has-settings .workspace-status-card[data-compact="true"] .voice-waveform {
-  display: none;
 }
 .has-settings .workspace-status-card[data-compact="true"] :is(p, .voice-controls) {
   margin: 0;

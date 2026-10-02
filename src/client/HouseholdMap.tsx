@@ -54,6 +54,7 @@ import {
 } from './SaveOperations.js';
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
 import { ConversationWorkspace } from './TextAssistant.js';
+import { VoiceBox } from './VoiceBox.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
 import { type PanelAnchor, type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
 import { WorkspaceIcon, type WorkspaceTarget, WorkspaceTools } from './WorkspaceTools.js';
@@ -263,6 +264,11 @@ export function HouseholdMap({
       // is valid. Its panel opens when the conversation has started.
       conversationChoice.current = chosen ?? workTrigger.current;
       conversation.begin(start);
+      return;
+    }
+    if (target === 'voice' && conversation.session) {
+      // The microphone opens no panel. The voice box shows what it does.
+      conversation.voice.activate();
       return;
     }
     openPanel(
@@ -1370,7 +1376,8 @@ export function HouseholdMap({
       // A session poll must not replace its pending state with recovery.
       if (!pending || !saveAttempt.current) setLoad((value) => value + 1);
     },
-    onStarted: showConversation,
+    // The microphone opens no panel: the voice box follows the voice.
+    onStarted: (mode) => (mode === 'voice' ? setGuidance(false) : showConversation()),
     // The panel says that the conversation is not offered.
     onUnavailable: showConversation,
     onAccessLost: loseAccess,
@@ -1378,6 +1385,14 @@ export function HouseholdMap({
   });
   // The conversation panel stands in for the text view until that view exists.
   const conversationPanelOpen = workOpen && openPanels.includes('conversation');
+  const voiceBox = (
+    <VoiceBox
+      conversation={conversation}
+      microphoneButton={() =>
+        workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null
+      }
+    />
+  );
   function remove(kind: 'draft' | 'relationship', item: MapObject | MapRelationship) {
     if (!state) return;
     const changes = kind === 'draft' ? state.draft.changes : state.draft.relationships;
@@ -1487,6 +1502,7 @@ export function HouseholdMap({
             statusOpen={statusOpen}
             onStatus={() => setStatusOpen((value) => !value)}
             voiceControl={conversation.session ? conversation.voice : null}
+            voiceBox={voiceBox}
             cameraMount={setCameraMount}
             expanded={toolsExpanded}
             onExpandedChange={setToolsExpanded}
@@ -1550,6 +1566,8 @@ export function HouseholdMap({
           )}
         </>
       )}
+      {/* Outside the map, where its tools are not shown, the voice box still says what the voice does. */}
+      {!active && voiceBox}
       <div className="workspace-feedback">
         {status && !pending && !error && (
           <button

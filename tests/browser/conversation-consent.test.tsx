@@ -118,13 +118,16 @@ test('the consent box opens next to the chosen button, on the side that has room
   await expect.element(offer).toHaveFocus();
   expect(starts).toEqual([]);
 
-  // The voice button from the map starts the conversation, and its panel opens.
+  // The voice button from the map starts the conversation with the voice. No panel opens.
   await tool('Prata med Skyttel').click();
   await box().getByRole('button', { name: 'Godkänn och starta', exact: true }).click();
   await expect
-    .element(page.getByRole('region', { name: 'Samtal och text', exact: true }))
-    .toBeVisible();
+    .element(page.getByRole('complementary', { name: 'Kom igång med kartan' }))
+    .not.toBeInTheDocument();
   expect(starts).toEqual([{ consent: { textVersion: 1 } }]);
+  await expect
+    .element(page.getByRole('region', { name: 'Samtal och text', exact: true }))
+    .not.toBeInTheDocument();
 });
 
 test.each([390, 320])(

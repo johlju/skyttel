@@ -169,9 +169,6 @@ const quiet: Parameters<typeof conversationOngoing>[0] = {
 test('no conversation is ongoing while nothing is said, heard, in progress or shown', () => {
   expect(conversationOngoing(quiet, false)).toBe(false);
   expect(
-    conversationOngoing({ ...quiet, voice: { ...quiet.voice, microphone: 'paused' } }, false),
-  ).toBe(false);
-  expect(
     conversationOngoing({ ...quiet, voice: { ...quiet.voice, phase: 'listening' } }, false),
   ).toBe(false);
 });
@@ -609,7 +606,6 @@ test('the microphone and the voice connection outlive every presentation of the 
   expect(track.stop).not.toHaveBeenCalled();
   expect(commands.filter((command) => command.endsWith('/stop'))).toEqual([]);
   expect(screen.getByTestId('conversation-panel').contains(status())).toBe(true);
-  expect(screen.getByText('Mikrofonen är på')).toBeDefined();
 
   map.rerender(<Workspace shown="nothing" />);
   await act(() => conversation.voice.stop());

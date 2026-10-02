@@ -20,7 +20,8 @@ export function voiceWork({
   initial: TextAssistantView;
   request: (action?: string, body?: unknown, signal?: AbortSignal) => Promise<TextAssistantView>;
   interrupt: (revision: number) => void;
-  update: (view: TextAssistantView) => void;
+  /** The conversation as the voice last saw it, and whether the voice has a task in progress. */
+  update: (view: TextAssistantView, working: boolean) => void;
   failed: () => void;
 }) {
   let rendered: Anchor = {
@@ -50,7 +51,7 @@ export function voiceWork({
     interrupt(revision);
     canceling = request('cancel', { revision })
       .then((view) => {
-        update(view);
+        update(view, false);
         return { revision, view };
       })
       .catch(() => undefined);
@@ -150,18 +151,27 @@ export function voiceWork({
         const revision = owned;
         const deadline = Date.now() + 120_000;
         while (current() && view.phase === 'working' && view.revision === revision) {
-          update(view);
+          update(view, true);
           if (Date.now() > deadline) throw new Error('voice_task_timeout');
           await new Promise((resolve) => setTimeout(resolve, 50));
           view = await request();
         }
-        if (view.revision !== revision) return;
+        if (view.revision !== revision) {
+          // The task was stopped or replaced in the conversation, outside the
+          // voice. The voice no longer works with it and says nothing about it.
+          if (current()) {
+            owned = undefined;
+            dispatching = undefined;
+            update(view, false);
+          }
+          return;
+        }
       }
       if (!current()) return;
       owned = undefined;
       dispatching = undefined;
       rendered = { ...rendered, revision: Math.max(rendered.revision, view.revision) };
-      update(view);
+      update(view, false);
       append(id, completion(view));
     } catch {
       if (!current()) return;
@@ -170,7 +180,7 @@ export function voiceWork({
       try {
         const view = await request();
         if (stopped || generation !== recoveryGeneration) return;
-        update(view);
+        update(view, false);
         append(
           id,
           view.phase === 'recovery'

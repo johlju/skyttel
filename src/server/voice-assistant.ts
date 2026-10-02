@@ -275,15 +275,16 @@ export function voiceAssistantRoutes({
           if (!response.ok) throw new Error('voice_request_failed');
           return response.json();
         },
-        update: (view) => {
+        update: (view, working) => {
           voice.assistant = view;
+          // The voice works only with a task that was said. A written message
+          // is the conversation's work.
           if (!voice.closed)
-            voice.view.phase =
-              view.phase === 'working'
-                ? 'working'
-                : view.phase === 'recovery'
-                  ? 'recovery'
-                  : 'listening';
+            voice.view.phase = working
+              ? 'working'
+              : view.phase === 'recovery'
+                ? 'recovery'
+                : 'listening';
         },
         failed: () => {
           void close(voice, 'voice_connection_lost');

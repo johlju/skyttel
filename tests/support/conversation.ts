@@ -16,6 +16,9 @@ export const conversationTools = { voice: 'Prata med Skyttel', text: 'Samtal och
 
 export const consentBoxName = 'Samtal med Skyttel';
 
+// The voice box, which shows what the voice does while no panel is open.
+export const voiceBoxName = 'Röstruta';
+
 // The consent text, version 1, as the specification states it: three
 // paragraphs. Tests compare what the product shows with this copy.
 export const specifiedConsentText = [
@@ -72,7 +75,9 @@ export function conversationSteps<Control>(ui: ConversationControls<Control>) {
       await giveConversationConsent(consent);
     },
     // The toolbar's buttons alone. They show the consent box when no consent is
-    // valid. Otherwise they start the conversation or show the one that is going on.
+    // valid. Otherwise the text button starts the conversation or shows the one
+    // that is going on, and the voice button starts the voice, cancels its start
+    // or turns the microphone on or off.
     openConversationText: () => choose('text'),
     chooseConversationVoice: () => choose('voice'),
   };

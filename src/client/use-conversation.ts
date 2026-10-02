@@ -108,8 +108,8 @@ export function useConversation({
   /** The conversation exists only while the household's map is loaded. */
   enabled?: boolean;
   onMapChange: () => void;
-  /** A conversation has started, so the caller can show it. */
-  onStarted?: () => void;
+  /** A conversation has started, so the caller can show it as the chosen button asks. */
+  onStarted?: (mode: ConversationMode) => void;
   /** A requested conversation is not offered by the server, so the caller can say so. */
   onUnavailable?: () => void;
   onAccessLost: () => void;
@@ -311,7 +311,7 @@ export function useConversation({
         }
         setUnknown(false);
         update(result);
-        callbacks.current.onStarted?.();
+        callbacks.current.onStarted?.(mode);
       } catch (failure) {
         if (epoch !== requestEpoch.current) return;
         fail(failure);

@@ -1,6 +1,6 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import logo from '../../docs/images/shuttle-logo-transparent-small.png';
-import type { VoiceControl } from './use-voice.js';
+import type { Voice } from './use-voice.js';
 
 const paths = {
   navigate: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0M16 8l-2 6-6 2 2-6 6-2',
@@ -19,7 +19,6 @@ const paths = {
   depthForward: 'M5 17h10v4H5zM10 16V3m-4 4 4-4 4 4M18 9l3 3-3 3',
   depthBackward: 'M5 3h10v4H5zM10 8v13m-4-4 4 4 4-4M18 9l3 3-3 3',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8',
-  stop: '',
   activity: 'M3 12h4l3-8 4 16 3-8h4',
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
   text: 'M4 5h16M12 5v15M8 20h8',
@@ -47,14 +46,7 @@ export function WorkspaceIcon({ name }: { name: keyof typeof paths }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {name === 'stop' ? (
-        <>
-          <circle cx="12" cy="12" r="10" />
-          <rect x="8" y="8" width="8" height="8" rx="1" fill="currentColor" stroke="none" />
-        </>
-      ) : (
-        <path d={paths[name]} />
-      )}
+      <path d={paths[name]} />
     </svg>
   );
 }
@@ -72,6 +64,7 @@ export function WorkspaceTools({
   detailsAvailable = false,
   detailsVisible = false,
   voiceControl,
+  voiceBox,
   cameraMount,
   expanded,
   onExpandedChange,
@@ -90,7 +83,10 @@ export function WorkspaceTools({
   onDetails?: () => void;
   detailsAvailable?: boolean;
   detailsVisible?: boolean;
-  voiceControl?: VoiceControl | null;
+  /** The microphone of the conversation that is going on. Null when none is. */
+  voiceControl?: Pick<Voice, 'microphone' | 'starting' | 'disabled' | 'activate'> | null;
+  /** The voice box. It follows the conversation buttons in the reading order. */
+  voiceBox?: ReactNode;
   cameraMount?: (element: HTMLDivElement | null) => void;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -146,38 +142,37 @@ export function WorkspaceTools({
         </a>
         {(
           [
-            [
-              voiceControl?.microphone === 'on' ? 'stop' : 'mic',
-              voiceControl?.label ?? 'Prata med Skyttel',
-              'voice',
-            ],
+            ['mic', 'Prata med Skyttel', 'voice'],
             ['text', 'Samtal och text', 'conversation'],
             ['search', 'Sök i kartan', 'search'],
             ['list', 'Lista', 'list'],
             ['draft', 'Utkast och historik', 'draft'],
           ] as const
         ).map(([icon, label, target]) => (
-          <button
-            key={target}
-            type="button"
-            title={label}
-            aria-label={label}
-            data-secondary={target === 'draft' || target === 'search' || undefined}
-            className={target === 'voice' ? 'workspace-talk' : undefined}
-            disabled={target === 'voice' ? voiceControl?.disabled : undefined}
-            aria-pressed={
-              target === 'voice' && voiceControl ? voiceControl.microphone === 'on' : undefined
-            }
-            onClick={(event) => {
-              onExpandedChange(false);
-              setUtility(null);
-              if (target === 'voice' && voiceControl) voiceControl.activate();
-              else onOpen(target, event.currentTarget);
-            }}
-          >
-            <WorkspaceIcon name={icon} />
-            <span>{label}</span>
-          </button>
+          <Fragment key={target}>
+            <button
+              type="button"
+              // The name stays. The description says what a press does while the voice starts.
+              title={
+                target === 'voice' && voiceControl?.starting ? 'Avbryt starten av rösten' : label
+              }
+              aria-label={label}
+              data-secondary={target === 'draft' || target === 'search' || undefined}
+              className={target === 'voice' ? 'workspace-talk' : undefined}
+              disabled={target === 'voice' ? voiceControl?.disabled : undefined}
+              aria-pressed={target === 'voice' ? voiceControl?.microphone === 'on' : undefined}
+              onClick={(event) => {
+                onExpandedChange(false);
+                setUtility(null);
+                if (target === 'voice' && voiceControl) voiceControl.activate();
+                else onOpen(target, event.currentTarget);
+              }}
+            >
+              <WorkspaceIcon name={icon} />
+              <span>{label}</span>
+            </button>
+            {target === 'conversation' && voiceBox}
+          </Fragment>
         ))}
         {onDetails && (
           <button
