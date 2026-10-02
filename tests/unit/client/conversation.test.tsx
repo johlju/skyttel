@@ -1,5 +1,4 @@
 import { act, cleanup, render, renderHook, screen, waitFor } from '@testing-library/react';
-import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
 import { ConversationWorkspace } from '../../../src/client/TextAssistant.js';
 import {
@@ -8,6 +7,7 @@ import {
   useConversation,
 } from '../../../src/client/use-conversation.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
+import { startConversationWithVoice } from '../../support/conversation-dom.js';
 
 class Track extends EventTarget {
   enabled = true;
@@ -233,9 +233,7 @@ test('the microphone and the voice connection outlive every presentation of the 
     );
   }
   const map = render(<Workspace shown="panel" />);
-  await userEvent.click(await screen.findByLabelText(/Jag tillåter att OpenAI/));
-  await userEvent.click(screen.getByLabelText(/Jag tillåter förslag och sparande/));
-  await userEvent.click(screen.getByRole('button', { name: 'Starta talsamtal' }));
+  await startConversationWithVoice();
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   await act(async () =>
     Peer.all[0].channel.dispatchEvent(
