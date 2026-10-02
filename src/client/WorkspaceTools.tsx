@@ -80,7 +80,8 @@ export function WorkspaceTools({
 }: {
   statusOpen?: boolean;
   onStatus?: () => void;
-  onOpen: (target: WorkspaceTarget) => void;
+  /** Opens a tool. The chosen button is where a conversation's consent box opens. */
+  onOpen: (target: WorkspaceTarget, chosen: HTMLElement) => void;
   account?: ReactNode;
   onSettings?: () => void;
   profileRequested?: boolean;
@@ -167,11 +168,11 @@ export function WorkspaceTools({
             aria-pressed={
               target === 'voice' && voiceControl ? voiceControl.microphone === 'on' : undefined
             }
-            onClick={() => {
+            onClick={(event) => {
               onExpandedChange(false);
               setUtility(null);
               if (target === 'voice' && voiceControl) voiceControl.activate();
-              else onOpen(target);
+              else onOpen(target, event.currentTarget);
             }}
           >
             <WorkspaceIcon name={icon} />

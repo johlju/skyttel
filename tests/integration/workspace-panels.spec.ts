@@ -205,9 +205,8 @@ test('PANEL-02: mobile panel choice retains conversation, object text and deskto
       .toBeLessThanOrEqual(900);
     await page.setViewportSize({ width: 1440, height: 1000 });
     await expect.poll(async () => (await bounds(panel)).x).toBe(position.x);
-    await openConversationText(page);
+    await startConversationWithText(page);
     const conversation = page.getByRole('region', { name: 'Samtal och text', exact: true });
-    await startConversationWithText(conversation);
     await conversation.getByLabel('Meddelande till textassistenten').fill('Oskickad samtalstext');
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
@@ -338,9 +337,8 @@ test('PANEL-03: an intervening proposal for the same object preserves text and b
       'Min oskickade text',
     );
     await expect(object.getByLabel('Objektets namn', { exact: true })).toHaveValue('Cykeln');
-    await openConversationText(page);
+    await startConversationWithText(page);
     const conversation = page.getByRole('region', { name: 'Samtal och text', exact: true });
-    await startConversationWithText(conversation);
     await conversation
       .getByLabel('Meddelande till textassistenten')
       .fill('Föreslå en ny beskrivning för cykeln.');

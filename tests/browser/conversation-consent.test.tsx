@@ -1,0 +1,154 @@
+import { cleanup, render } from '@testing-library/react';
+import { afterEach, expect, test, vi } from 'vitest';
+import { type Locator, page, userEvent } from 'vitest/browser';
+import { HouseholdMap } from '../../src/client/HouseholdMap.js';
+import '../../src/client/styles.css';
+import type { MapState } from '../../src/shared/map.js';
+import { defaultViewSettings } from '../../src/shared/personal-view.js';
+import type { TextAssistantView } from '../../src/shared/text-assistant.js';
+import { consentBoxName } from '../support/conversation.js';
+
+const state: MapState = {
+  userId: 'alex',
+  contentVersion: 1,
+  types: [{ id: 'person', householdId: 'home', revision: 1, name: 'Person', description: '' }],
+  relationshipTypes: [],
+  relationships: [],
+  objects: [
+    {
+      id: 'alex',
+      householdId: 'home',
+      typeId: 'person',
+      revision: 1,
+      name: 'Alex',
+      description: '',
+    },
+  ],
+  draft: { version: 0, changes: [] },
+};
+const session: TextAssistantView = {
+  id: 'session',
+  revision: 0,
+  phase: 'ready',
+  operations: [],
+  review: {
+    version: 0,
+    contentVersion: 1,
+    changes: [],
+    readyToSave: false,
+    conflicts: [],
+    unresolvedIdentities: [],
+    pendingOperations: [],
+  },
+};
+
+/** The household's map, with a conversation that is offered and no saved consent. */
+async function open(width: number, height: number) {
+  await page.viewport(width, height);
+  await expect.poll(() => window.innerWidth).toBe(width);
+  const starts: unknown[] = [];
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/view'))
+      return Response.json({
+        contentVersion: 1,
+        positions: [],
+        settings: { ...defaultViewSettings, version: 0 },
+      });
+    if (url.endsWith('/operations')) return Response.json({ operations: [] });
+    if (url.endsWith('/conversation-consent')) return Response.json({ saved: null });
+    if (url.includes('/map?')) return Response.json(state);
+    if (!url.endsWith('/text-assistant')) return Response.json(session);
+    if (init?.method !== 'POST') return Response.json({ available: true });
+    starts.push(JSON.parse(String(init.body)));
+    return Response.json(session);
+  });
+  render(
+    <main>
+      <section className="panel household-panel">
+        <HouseholdMap householdId="home" />
+      </section>
+    </main>,
+  );
+  await expect.element(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
+  return starts;
+}
+const box = () => page.getByRole('dialog', { name: consentBoxName, exact: true });
+const place = (control: Locator) => control.element().getBoundingClientRect();
+const tools = () => page.getByRole('navigation', { name: 'Kartans verktyg' });
+const tool = (name: string) => tools().getByRole('button', { name, exact: true });
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+test('the consent box opens next to the chosen button, on the side that has room', async () => {
+  const starts = await open(1280, 800);
+  for (const name of ['Prata med Skyttel', 'Samtal och text']) {
+    await tool(name).click();
+    await expect.element(box()).toBeVisible();
+    const chosen = place(tool(name));
+    expect(place(box()).left, name).toBeGreaterThanOrEqual(place(tools()).right);
+    expect(place(box()).left - chosen.right, name).toBeLessThanOrEqual(32);
+    expect(Math.abs(place(box()).top - chosen.top), name).toBeLessThanOrEqual(1);
+    await userEvent.keyboard('{Escape}');
+    await expect.element(box()).not.toBeInTheDocument();
+    await expect.element(tool(name)).toHaveFocus();
+  }
+
+  // The welcome guide stands at the right edge: its buttons get the box on their left side.
+  const guide = page
+    .getByRole('complementary', { name: 'Kom igång med kartan' })
+    .getByRole('button', { name: 'Skriv' });
+  await guide.click();
+  await expect.element(box()).toBeVisible();
+  expect(place(box()).right).toBeLessThanOrEqual(place(guide).left);
+  expect(place(guide).left - place(box()).right).toBeLessThanOrEqual(32);
+  expect(place(box()).bottom).toBeLessThanOrEqual(800);
+  expect(place(box()).top).toBeGreaterThanOrEqual(0);
+  await box().getByRole('button', { name: 'Avbryt', exact: true }).click();
+  await expect.element(guide).toHaveFocus();
+
+  // The status card offers the conversation too. Its button is the chosen one.
+  const offer = page.getByRole('button', { name: 'Tala eller skriv', exact: true });
+  await offer.click();
+  await expect.element(box()).toBeVisible();
+  expect(place(box()).right).toBeLessThanOrEqual(place(offer).left);
+  await box().getByRole('button', { name: 'Avbryt', exact: true }).click();
+  await expect.element(offer).toHaveFocus();
+  expect(starts).toEqual([]);
+
+  // The voice button from the map starts the conversation, and its panel opens.
+  await tool('Prata med Skyttel').click();
+  await box().getByRole('button', { name: 'Godkänn och starta', exact: true }).click();
+  await expect
+    .element(page.getByRole('region', { name: 'Samtal och text', exact: true }))
+    .toBeVisible();
+  expect(starts).toEqual([{ consent: { textVersion: 1 } }]);
+});
+
+test.each([390, 320])(
+  'the consent box opens under the toolbar at the top of a %i px screen',
+  async (width) => {
+    await open(width, 844);
+    await tool('Samtal och text').click();
+    await expect.element(box()).toBeVisible();
+    expect(place(box()).top).toBeGreaterThanOrEqual(place(tools()).bottom);
+    expect(place(box()).top - place(tools()).bottom).toBeLessThanOrEqual(32);
+    expect(place(box()).left).toBeGreaterThanOrEqual(0);
+    expect(place(box()).right).toBeLessThanOrEqual(width);
+    expect(place(box()).bottom).toBeLessThanOrEqual(844);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+  },
+);
+
+test('the consent box follows the toolbar when the window becomes narrow', async () => {
+  await open(1280, 800);
+  await tool('Samtal och text').click();
+  await expect.element(box()).toBeVisible();
+  expect(place(box()).left).toBeGreaterThanOrEqual(place(tools()).right);
+  await page.viewport(390, 844);
+  await expect.poll(() => place(box()).right).toBeLessThanOrEqual(390);
+  expect(place(box()).top).toBeGreaterThanOrEqual(place(tools()).bottom);
+  expect(place(box()).top - place(tools()).bottom).toBeLessThanOrEqual(32);
+});

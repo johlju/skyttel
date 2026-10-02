@@ -27,7 +27,9 @@ export async function checkContainerVoiceAssistant({
   }
   const map = await call('/map');
   assert.equal((await call('/text-assistant')).available, true);
-  const consent = { externalAi: true, mapWork: true };
+  // The consent for the current consent text, version 1 in
+  // src/shared/conversation-consent.ts.
+  const consent = { consent: { textVersion: 1 } };
   const assistant = await call('/text-assistant', consent, 201);
   const receipt = assistant.operations.find((operation) => operation.status === 'succeeded');
   assert.ok(receipt, 'The preceding text-assistant check supplies a durable saved receipt');

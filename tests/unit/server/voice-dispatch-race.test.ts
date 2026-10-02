@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
@@ -58,7 +59,7 @@ test.each(['new speech', 'connection loss'])(
     typeId = map.types[0].id;
     const response = await browser.post(`${householdPath}/text-assistant`, {
       headers: { origin: app.origin },
-      data: { externalAi: true, mapWork: true },
+      data: approvedForVisit,
     });
     expect(response.status()).toBe(201);
     const assistant = await response.json();

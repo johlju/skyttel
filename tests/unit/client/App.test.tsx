@@ -18,6 +18,7 @@ const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
   routes['/api/households/linden/text-assistant'] ??= [{ data: { available: false } }];
+  routes['/api/households/linden/conversation-consent'] ??= [{ data: { saved: null } }];
   routes['/api/households/linden/map?reload=0'] ??= [
     {
       data: {

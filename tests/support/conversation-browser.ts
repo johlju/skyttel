@@ -1,19 +1,17 @@
 import { type Locator, page } from 'vitest/browser';
-import { conversationStartSteps, conversationTextSteps } from './conversation.js';
+import { consentBoxName, conversationSteps } from './conversation.js';
 
 // The conversation steps for Vitest browser mode.
-export const { startConversationWithText } = conversationStartSteps<Locator>({
-  labelled: (label) => page.getByLabelText(label),
-  button: (name) => page.getByRole('button', { name, exact: true }),
-  tick: (control) => control.click(),
-  press: (control) => control.click(),
-});
+const consentBox = () => page.getByRole('dialog', { name: consentBoxName, exact: true });
 
-export const { openConversationText } = conversationTextSteps<Locator>({
+export const { startConversationWithText, openConversationText } = conversationSteps<Locator>({
+  checkbox: (name) => consentBox().getByRole('checkbox', { name, exact: true }),
+  button: (name) => consentBox().getByRole('button', { name, exact: true }),
   tool: (name) =>
     page.getByRole('navigation', { name: 'Kartans verktyg' }).getByRole('button', {
       name,
       exact: true,
     }),
+  tick: (control) => control.click(),
   press: (control) => control.click(),
 });

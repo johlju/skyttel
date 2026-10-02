@@ -8,7 +8,9 @@ import {
   signIn,
 } from '../support/client.js';
 import {
-  conversationStart,
+  chooseConversationVoice,
+  consentBox,
+  consentBoxFor,
   openConversationText,
   startConversationWithText,
 } from '../support/conversation-page.js';
@@ -20,9 +22,8 @@ import { lastToolResult, modelMessage, modelTool, textModel } from '../support/t
 const assistant = (page: Page) =>
   page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
 async function consent(page: Page) {
-  await openConversationText(page);
+  await startConversationWithText(page);
   const panel = assistant(page);
-  await startConversationWithText(panel);
   await expect(panel.getByRole('button', { name: 'Starta röst' })).toBeVisible();
 }
 async function startVoice(
@@ -107,7 +108,7 @@ test('TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare för
       'Osänd rättelse',
     );
     await assistant(page).getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
-    await expect(conversationStart(assistant(page)).withText).toBeVisible();
+    await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toHaveCount(0);
     expect((await (await page.request.get(path)).json()).draft).toEqual(before.draft);
   } finally {
     await app.close();
@@ -253,9 +254,7 @@ test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async 
   }
 });
 
-test('TAL-09: gemensam start kräver separata medgivanden och återhämtar mikrofonavbrott', async ({
-  page,
-}) => {
+test('TAL-09: starten kräver medgivande och återhämtar mikrofonavbrott', async ({ page }) => {
   const live = liveProvider();
   const app = await createInstallation(undefined, {
     modelFetch: textModel(() => [modelMessage('Texten fungerar.')]).provider,
@@ -267,25 +266,16 @@ test('TAL-09: gemensam start kräver separata medgivanden och återhämtar mikro
     await createHousehold(page.request, app.origin);
     await page.addInitScript({ content: liveBrowserFixtureSource });
     await page.goto(app.origin);
-    await page.getByRole('button', { name: 'Prata med Skyttel', exact: true }).click();
+    await chooseConversationVoice(page);
+    await expect(consentBox(page)).toBeVisible();
+    await consentBoxFor(page).decline.click();
     const panel = assistant(page);
-    const {
-      consents: [external, work],
-      withText: startText,
-      withVoice: startVoice,
-    } = conversationStart(panel);
-    await external.check();
-    await expect(startText).toBeDisabled();
-    await expect(startVoice).toBeDisabled();
-    await external.uncheck();
-    await work.check();
-    await expect(startText).toBeDisabled();
-    await expect(startVoice).toBeDisabled();
-    await external.check();
+    await expect(panel.getByLabel('Meddelande till textassistenten')).toHaveCount(0);
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual(
       [],
     );
-    await startText.click();
+    expect(live.requests).toHaveLength(0);
+    await startConversationWithText(page);
     await panel.getByLabel('Meddelande till textassistenten').fill('Text utan mikrofon');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect(panel.getByRole('log')).toContainText('Texten fungerar.');
@@ -622,7 +612,8 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       ),
     ).toBe(true);
     await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
-    await consent(page);
+    // The consent for the visit still applies: the new conversation starts directly.
+    await openConversationText(page);
     await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
     await expect(
       assistant(page).locator('details').filter({ hasText: 'Tidigare sparförsök' }),

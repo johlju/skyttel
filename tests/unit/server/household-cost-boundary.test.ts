@@ -2,6 +2,7 @@ import { request } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import { expect, test } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { costProvider } from '../../support/cost-provider.js';
 import { createInstallation } from '../../support/installation.js';
 
@@ -19,7 +20,7 @@ test('current household archives reimport without replacing or transferring inst
     const assistant = await (
       await owner.post(`${path}/text-assistant`, {
         headers,
-        data: { externalAi: true, mapWork: true },
+        data: approvedForVisit,
       })
     ).json();
     expect(
@@ -50,7 +51,7 @@ test('current household archives reimport without replacing or transferring inst
     const parts = unzipSync(archive);
     expect(Object.keys(parts).sort()).toEqual(['content.json', 'images.bin', 'manifest.json']);
     const manifest = JSON.parse(new TextDecoder().decode(parts['manifest.json']));
-    expect(manifest.schemaVersion).toBe(21);
+    expect(manifest.schemaVersion).toBe(22);
     const serialized = new TextDecoder().decode(parts['content.json']);
     expect(serialized).not.toMatch(
       /cost_attempt|cost_assumptions|cost_coverage|ratesJSON|gpt-5\.6-terra/,

@@ -6,8 +6,8 @@ import {
   conversationOngoing,
   useConversation,
 } from '../../../src/client/use-conversation.js';
+import type { SavedConversationConsent } from '../../../src/shared/conversation-consent.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
-import { startConversationWithVoice } from '../../support/conversation-dom.js';
 
 class Track extends EventTarget {
   enabled = true;
@@ -58,6 +58,7 @@ class Peer extends EventTarget {
 }
 
 const path = '/api/households/linden/text-assistant';
+const consentPath = '/api/households/linden/conversation-consent';
 function session(): TextAssistantView {
   return {
     id: 'session',
@@ -75,13 +76,36 @@ function session(): TextAssistantView {
     },
   };
 }
-/** Answers as the server does and records every command it receives. */
-function server() {
+/**
+ * Answers as the server does and records every command it receives. A start
+ * needs a consent for text version 1: saved, or stated for the visit.
+ */
+function server({
+  saved = null,
+  saves = true,
+}: {
+  saved?: SavedConversationConsent | null;
+  saves?: boolean;
+} = {}) {
   const commands: string[] = [];
+  const starts: unknown[] = [];
   let current = session();
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
-    if (init?.method !== 'POST') return Response.json(url === path ? { available: true } : current);
+    const body = init?.method === 'POST' ? JSON.parse(String(init.body)) : undefined;
+    if (url === consentPath) {
+      if (!body) return Response.json({ saved });
+      commands.push('consent');
+      if (!saves) return Response.json({ error: 'internal_error' }, { status: 500 });
+      saved = { textVersion: body.textVersion, savedAt: '2026-10-01T08:00:00.000Z' };
+      return Response.json({ saved });
+    }
+    if (!body) return Response.json(url === path ? { available: true } : current);
     commands.push(url.slice(path.length) || '/');
+    if (url === path) {
+      starts.push(body);
+      if (saved?.textVersion !== 1 && body.consent?.textVersion !== 1)
+        return Response.json({ error: 'conversation_consent_required' }, { status: 403 });
+    }
     if (url.includes('/voice'))
       return Response.json({
         voice: {
@@ -99,7 +123,13 @@ function server() {
       current = { ...current, revision: current.revision + 1, phase: 'ready' };
     return Response.json(current);
   });
-  return commands;
+  return { commands, starts };
+}
+/** The hook once the server has said that the conversation is offered. */
+async function conversationHook(onAccessLost = vi.fn()) {
+  const hook = renderHook(() => useConversation({ ...household, onAccessLost }));
+  await waitFor(() => expect(hook.result.current.available).toBe(true));
+  return hook.result;
 }
 function microphone() {
   Peer.all = [];
@@ -167,14 +197,12 @@ test.each<[string, typeof quiet, boolean]>([
 });
 
 test('the conversation is started, written to, cancelled and ended without any panel', async () => {
-  const commands = server();
-  const { result } = renderHook(() => useConversation(household));
-  await waitFor(() => expect(result.current.available).toBe(true));
+  const { commands } = server();
+  const result = await conversationHook();
   expect(conversationOngoing(result.current, false)).toBe(false);
-  act(() => result.current.setConsent({ externalAi: true, mapWork: true }));
-  expect(result.current.consent).toEqual({ externalAi: true, mapWork: true });
-  await act(() => result.current.start());
-  expect(result.current.session?.id).toBe('session');
+  act(() => result.current.begin('text'));
+  await act(() => result.current.approve(false));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
 
   act(() => result.current.setText('Lägg till cykeln.'));
   expect(result.current.text).toBe('Lägg till cykeln.');
@@ -191,13 +219,12 @@ test('the conversation is started, written to, cancelled and ended without any p
   await act(() => result.current.end());
   expect(result.current.session).toBeNull();
   expect(result.current.transcript).toEqual([]);
-  expect(result.current.consent).toEqual({ externalAi: false, mapWork: false });
   expect(conversationOngoing(result.current, false)).toBe(false);
   expect(commands).toEqual(['/', '/session/messages', '/session/cancel', '/session/stop']);
 });
 
 test('the conversation waits for the map and ends when the map is lost', async () => {
-  const commands = server();
+  const { commands } = server();
   const fetched = vi.spyOn(globalThis, 'fetch');
   const { result, rerender } = renderHook(
     ({ enabled }) => useConversation({ ...household, enabled }),
@@ -207,17 +234,299 @@ test('the conversation waits for the map and ends when the map is lost', async (
   expect(result.current.available).toBeNull();
   rerender({ enabled: true });
   await waitFor(() => expect(result.current.available).toBe(true));
-  await act(() => result.current.start());
+  act(() => result.current.begin('text'));
+  await act(() => result.current.approve(false));
+  await waitFor(() => expect(result.current.session).not.toBeNull());
   act(() => result.current.setText('Oskickat'));
   rerender({ enabled: false });
   expect(result.current.session).toBeNull();
   expect(result.current.text).toBe('');
   expect(result.current.available).toBeNull();
   expect(commands).toEqual(['/', '/session/stop']);
+
+  // A consent that is not saved ends when the user leaves the household's map.
+  rerender({ enabled: true });
+  await waitFor(() => expect(result.current.available).toBe(true));
+  expect(result.current.consent).toMatchObject({ visit: false, valid: false });
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('text'));
+  expect(commands).toEqual(['/', '/session/stop']);
+});
+
+test('without a valid consent the consent box asks first, and the chosen button decides how the conversation starts', async () => {
+  const { commands, starts } = server();
+  const result = await conversationHook();
+  await waitFor(() => expect(result.current.consent.saved).toBeNull());
+  expect(result.current.consent).toMatchObject({ visit: false, valid: false, asking: null });
+
+  act(() => result.current.begin('voice'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('voice'));
+  act(() => result.current.decline());
+  expect(result.current.consent.asking).toBeNull();
+  expect(result.current.session).toBeNull();
+  expect(commands).toEqual([]);
+
+  act(() => result.current.begin('text'));
+  expect(result.current.consent.asking).toBe('text');
+  await act(() => result.current.approve(false));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  expect(result.current.consent).toMatchObject({
+    saved: null,
+    visit: true,
+    valid: true,
+    asking: null,
+  });
+  // The conversation has started with text: the microphone is not started.
+  expect(result.current.voice.starting).toBe(false);
+  expect(commands).toEqual(['/']);
+  expect(starts).toEqual([{ consent: { textVersion: 1 } }]);
+
+  // A started conversation is not started again.
+  act(() => result.current.begin('voice'));
+  expect(result.current.consent.asking).toBeNull();
+  expect(commands).toEqual(['/']);
+
+  // A new conversation during the same visit does not ask again.
+  await act(() => result.current.end());
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  expect(result.current.consent.asking).toBeNull();
+  expect(commands).toEqual(['/', '/session/stop', '/']);
+  expect(starts).toHaveLength(2);
+});
+
+test('a remembered consent is saved before the conversation starts, and a saved consent starts conversations directly', async () => {
+  const { commands, starts } = server();
+  const started = vi.fn();
+  const { result, unmount } = renderHook(() =>
+    useConversation({ ...household, onStarted: started }),
+  );
+  await waitFor(() => expect(result.current.available).toBe(true));
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('text'));
+  await act(() => result.current.approve(true));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  expect(started).toHaveBeenCalledOnce();
+  expect(result.current.consent).toMatchObject({
+    saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' },
+    visit: false,
+    valid: true,
+    asking: null,
+    saving: false,
+    error: '',
+  });
+  expect(commands).toEqual(['consent', '/']);
+  // The saved consent is on the server. The start does not state one for the visit.
+  expect(starts).toEqual([{}]);
+  unmount();
+
+  // Another visit, or another of the user's devices: nothing is asked.
+  commands.length = 0;
+  const returning = await conversationHook();
+  act(() => returning.current.begin('voice'));
+  await waitFor(() => expect(returning.current.session?.id).toBe('session'));
+  expect(returning.current.consent.asking).toBeNull();
+  expect(commands[0]).toBe('/');
+  expect(commands).not.toContain('consent');
+});
+
+test('a saved consent for an older consent text asks again', async () => {
+  const { commands } = server({
+    saved: { textVersion: 0, savedAt: '2026-09-01T08:00:00.000Z' },
+  });
+  const result = await conversationHook();
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('text'));
+  expect(result.current.consent).toMatchObject({
+    saved: { textVersion: 0, savedAt: '2026-09-01T08:00:00.000Z' },
+    valid: false,
+  });
+  expect(commands).toEqual([]);
+  await act(() => result.current.approve(true));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  expect(result.current.consent.saved?.textVersion).toBe(1);
+});
+
+test('a consent that cannot be saved keeps the consent box open and starts nothing', async () => {
+  const { commands } = server({ saves: false });
+  const result = await conversationHook();
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('text'));
+  await act(() => result.current.approve(true));
+  expect(result.current.consent).toMatchObject({
+    asking: 'text',
+    saving: false,
+    valid: false,
+    error: 'Medgivandet kunde inte sparas. Försök igen.',
+  });
+  expect(result.current.session).toBeNull();
+  expect(commands).toEqual(['consent']);
+
+  // The user can still approve for the visit alone.
+  await act(() => result.current.approve(false));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  expect(result.current.consent.error).toBe('');
+});
+
+test('closing the consent box after a failed save removes the failure', async () => {
+  server({ saves: false });
+  const result = await conversationHook();
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('text'));
+  await act(() => result.current.approve(true));
+  expect(result.current.consent.error).not.toBe('');
+  act(() => result.current.decline());
+  expect(result.current.consent).toMatchObject({ asking: null, error: '' });
+});
+
+test('a start requested before the server has answered waits and then starts', async () => {
+  let answer: (() => void) | undefined;
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  const { commands } = server({
+    saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' },
+  });
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (init?.method !== 'POST') await held;
+    return respond(url, init);
+  });
+  const { result } = renderHook(() => useConversation(household));
+  act(() => result.current.begin('voice'));
+  expect(result.current.consent.asking).toBeNull();
+  expect(commands).toEqual([]);
+  await act(async () => answer?.());
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  expect(result.current.consent.asking).toBeNull();
+});
+
+test('a conversation that the server does not offer is not started and not asked about', async () => {
+  const { commands } = server();
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) =>
+    url === path && init?.method !== 'POST'
+      ? Response.json({ available: false })
+      : respond(url, init),
+  );
+  const { result } = renderHook(() => useConversation(household));
+  await waitFor(() => expect(result.current.available).toBe(false));
+  await waitFor(() => expect(result.current.consent.saved).toBeNull());
+  act(() => result.current.begin('text'));
+  expect(result.current.consent.asking).toBeNull();
+  await act(() => result.current.approve(false));
+  expect(result.current.session).toBeNull();
+  expect(commands).toEqual([]);
+});
+
+test('an unanswered question about the saved consent lets the consent box ask', async () => {
+  server();
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === consentPath && init?.method !== 'POST') throw new Error('Synthetic lost response');
+    return respond(url, init);
+  });
+  const result = await conversationHook();
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('text'));
+});
+
+test('a start that the server refuses for want of consent asks again without losing access', async () => {
+  const lost = vi.fn();
+  // This client believes that a consent is saved. The server no longer has it.
+  const { starts } = server({
+    saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' },
+  });
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) =>
+    url === path && init?.method === 'POST' && !JSON.parse(String(init.body)).consent
+      ? Response.json({ error: 'conversation_consent_required' }, { status: 403 })
+      : respond(url, init),
+  );
+  const result = await conversationHook(lost);
+  await waitFor(() => expect(result.current.consent.valid).toBe(true));
+  act(() => result.current.begin('voice'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('voice'));
+  expect(result.current.consent).toMatchObject({ saved: null, visit: false, valid: false });
+  expect(result.current.session).toBeNull();
+  expect(result.current.error).toBe('');
+  expect(lost).not.toHaveBeenCalled();
+  await act(() => result.current.approve(false));
+  await waitFor(() => expect(result.current.session?.id).toBe('session'));
+  expect(starts).toEqual([{ consent: { textVersion: 1 } }]);
+});
+
+test('access that is lost while the consent is saved ends the work in the household', async () => {
+  const lost = vi.fn();
+  server();
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) =>
+    url === consentPath && init?.method === 'POST'
+      ? Response.json({ error: 'forbidden' }, { status: 403 })
+      : respond(url, init),
+  );
+  const result = await conversationHook(lost);
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('text'));
+  await act(() => result.current.approve(true));
+  expect(lost).toHaveBeenCalledOnce();
+  expect(result.current.error).toBe('Åtkomsten har upphört.');
+  expect(result.current.consent.error).toBe('');
+});
+
+test('a start that fails for another reason does not ask for the consent again', async () => {
+  server({ saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' } });
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === path && init?.method === 'POST') throw new TypeError('Synthetic lost response');
+    return respond(url, init);
+  });
+  const result = await conversationHook();
+  await waitFor(() => expect(result.current.consent.valid).toBe(true));
+  act(() => result.current.begin('text'));
+  await waitFor(() => expect(result.current.error).toContain('Svaret saknas.'));
+  expect(result.current.consent).toMatchObject({ valid: true, asking: null });
+  expect(result.current.session).toBeNull();
+});
+
+test('a saved consent that is answered after the user has left the map is not for the new visit', async () => {
+  let answer: ((response: Response) => void) | undefined;
+  const { commands } = server();
+  const respond = globalThis.fetch;
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) =>
+    url === consentPath && init?.method === 'POST'
+      ? new Promise<Response>((resolve) => {
+          answer = resolve;
+        })
+      : respond(url, init),
+  );
+  const { result, rerender } = renderHook(
+    ({ enabled }) => useConversation({ ...household, enabled }),
+    { initialProps: { enabled: true } },
+  );
+  await waitFor(() => expect(result.current.available).toBe(true));
+  act(() => result.current.begin('voice'));
+  await waitFor(() => expect(result.current.consent.asking).toBe('voice'));
+  let approved: Promise<void> | undefined;
+  act(() => {
+    approved = result.current.approve(true);
+  });
+  expect(result.current.consent.saving).toBe(true);
+  rerender({ enabled: false });
+  rerender({ enabled: true });
+  await waitFor(() => expect(result.current.available).toBe(true));
+  await act(async () => {
+    answer?.(Response.json({ saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' } }));
+    await approved;
+  });
+  // The new visit reads the consent from the server itself, and nothing has started.
+  expect(result.current.consent).toMatchObject({ saved: null, asking: null, saving: false });
+  expect(result.current.session).toBeNull();
+  expect(commands).toEqual([]);
 });
 
 test('the microphone and the voice connection outlive every presentation of the conversation', async () => {
-  const commands = server();
+  const { commands } = server();
   const track = microphone();
   let conversation!: Conversation;
   function Workspace({ shown }: { shown: 'panel' | 'map' | 'settings' | 'nothing' }) {
@@ -233,7 +542,8 @@ test('the microphone and the voice connection outlive every presentation of the 
     );
   }
   const map = render(<Workspace shown="panel" />);
-  await startConversationWithVoice();
+  act(() => conversation.begin('voice'));
+  await act(() => conversation.approve(false));
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   await act(async () =>
     Peer.all[0].channel.dispatchEvent(

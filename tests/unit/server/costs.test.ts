@@ -3,6 +3,7 @@ import { type APIRequestContext, request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { afterEach, expect, test, vi } from 'vitest';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { costProvider } from '../../support/cost-provider.js';
 import { createInstallation, robin } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
@@ -42,7 +43,7 @@ async function setup(
   const path = `${householdPath}/text-assistant`;
   const started = await browser.post(path, {
     headers: headers(),
-    data: { externalAi: true, mapWork: true },
+    data: approvedForVisit,
   });
   expect(started.status()).toBe(201);
   const assistant = await started.json();
@@ -231,7 +232,7 @@ test('the operator reads separate measured Terra cost and Render assumptions aft
   const path = `${app.origin}/api/households/${household.id}/text-assistant`;
   const started = await browser.post(path, {
     headers: { origin: app.origin },
-    data: { externalAi: true, mapWork: true },
+    data: approvedForVisit,
   });
   const assistant = await started.json();
   expect(

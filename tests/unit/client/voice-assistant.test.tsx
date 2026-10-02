@@ -1,14 +1,14 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
-import { TextAssistant } from '../../../src/client/TextAssistant.js';
 import { VoiceAssistant } from '../../../src/client/VoiceAssistant.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import {
-  getConversationStart,
-  startConversationWithText,
+  openConversationText,
+  queryConsentBox,
   startConversationWithVoice,
 } from '../../support/conversation-dom.js';
+import { StandaloneConversation } from '../../support/conversation-harness.js';
 
 class Track extends EventTarget {
   enabled = true;
@@ -272,7 +272,7 @@ test.each(['stop', 'revoked'])(
       );
     });
     render(
-      <TextAssistant
+      <StandaloneConversation
         householdId="linden"
         onMapChange={vi.fn()}
         onAccessLost={vi.fn()}
@@ -316,7 +316,10 @@ test.each(['stop', 'revoked'])(
       await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
     }
     expect(screen.queryByRole('log')).toBeNull();
-    await startConversationWithText();
+    // The consent for the visit still applies, so the next conversation starts directly.
+    await openConversationText();
+    expect(await screen.findByLabelText('Meddelande till textassistenten')).toBeDefined();
+    expect(queryConsentBox()).toBeNull();
     expect(screen.queryByRole('log')).toBeNull();
   },
 );
@@ -337,7 +340,7 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
     );
   });
   render(
-    <TextAssistant
+    <StandaloneConversation
       householdId="linden"
       onMapChange={vi.fn()}
       onAccessLost={vi.fn()}
@@ -357,7 +360,7 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
     await settle();
   });
   expect(screen.getByRole('alert').textContent).toBe('Åtkomsten har upphört.');
-  expect(getConversationStart().consents[0]).toBeDefined();
+  expect(screen.queryByLabelText('Meddelande till textassistenten')).toBeNull();
   expect(screen.getByRole('region', { name: 'Skyttels textassistent' }).dataset.sessionActive).toBe(
     'false',
   );

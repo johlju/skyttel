@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { toResponseInputItems } from 'openai/lib/responses/ResponseInputItems';
 import type { ResponseInputItem } from 'openai/resources/responses/responses';
 import { z } from 'zod';
+import { conversationConsentRequired } from '../shared/conversation-consent.js';
 import type {
   MapSelection,
   TextAssistantReview,
@@ -14,6 +15,7 @@ import { textAssistantInstructions } from './assistant-instructions.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { contentOwner } from './content-identities.js';
+import { conversationConsentValid } from './conversation-consent.js';
 import { householdAccess } from './households.js';
 import { MapError } from './map.js';
 import { connectTextAssistant, type LocalDispatch } from './text-assistant-mcp.js';
@@ -826,11 +828,13 @@ export function textAssistantRoutes({
   routes.post(base, async (context) => {
     if (!config.openaiApiKey) return context.json({ error: 'assistant_unavailable' }, 503);
     const body = await context.req.json().catch(() => null);
-    if (body?.externalAi !== true || body?.mapWork !== true)
-      return context.json({ error: 'forbidden' }, 403);
     const actorId = context.get('actorId');
     const browserSessionId = context.get('browserSessionId');
     const householdId = context.req.param('id');
+    // A conversation is the only way to conversation work, spoken or written.
+    // Without a valid consent none starts, and the client is told why.
+    if (!conversationConsentValid(database, actorId, householdId, body?.consent))
+      return context.json({ error: conversationConsentRequired }, 403);
     for (const previous of sessions.values())
       if (previous.browserSessionId === browserSessionId && previous.householdId === householdId)
         await stop(previous);

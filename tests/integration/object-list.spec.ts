@@ -147,9 +147,8 @@ test('LISTA-03: a map result focuses only its direct neighbors and closes only t
     const map = page.getByRole('region', { name: 'Rymdkarta', exact: true });
     const lo = map.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
     await lo.click({ trial: true });
-    await openConversationText(page);
+    await startConversationWithText(page);
     const conversation = page.getByRole('region', { name: 'Samtal och text', exact: true });
-    await startConversationWithText(conversation);
     await conversation
       .getByLabel('Meddelande till textassistenten', { exact: true })
       .fill('Oskickat medan jag söker');

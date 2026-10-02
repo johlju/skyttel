@@ -3,6 +3,7 @@ import { afterEach, expect, test } from 'vitest';
 import type { MapState } from '../../../src/shared/map.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
 import { modelTool, textModel } from '../../support/text-model.js';
@@ -103,7 +104,7 @@ test.each(['text', 'voice'] as const)(
       liveSideband: live.attach,
     });
     const { browser, post, path, ownerId, actorId, state } = fixture;
-    const started = await post('text-assistant', { externalAi: true, mapWork: true });
+    const started = await post('text-assistant', approvedForVisit);
     expect(started.status(), await started.text()).toBe(201);
     const session: TextAssistantView = await started.json();
     let route = `text-assistant/${session.id}`;
@@ -201,7 +202,7 @@ test.each(['text', 'voice'] as const)(
     // Start a fresh authorized executor so pending work is checked first.
     await post(`${route}/stop`, {});
     const resumed: TextAssistantView = await (
-      await post('text-assistant', { externalAi: true, mapWork: true })
+      await post('text-assistant', approvedForVisit)
     ).json();
     expect(resumed.phase).toBe('recovery');
     route = `text-assistant/${resumed.id}`;
@@ -285,7 +286,7 @@ test.each(['login actor', 'other owner', 'other household', 'other content gener
     actorId = fixture.actorId;
     const { browser, path, post } = fixture;
     const session: TextAssistantView = await (
-      await post('text-assistant', { externalAi: true, mapWork: true })
+      await post('text-assistant', approvedForVisit)
     ).json();
     const route = `text-assistant/${session.id}`;
     expect(

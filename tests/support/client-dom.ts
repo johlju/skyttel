@@ -42,6 +42,18 @@ if (typeof globalThis.ResizeObserver !== 'function') {
   });
 }
 
+// jsdom omits the native dialog methods. Real modal behavior is covered in Chromium.
+if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
+  for (const name of ['showModal', 'close'] as const)
+    Object.defineProperty(HTMLDialogElement.prototype, name, {
+      configurable: true,
+      writable: true,
+      value(this: HTMLDialogElement) {
+        this.open = name === 'showModal';
+      },
+    });
+}
+
 // Real stream activity is covered in Chromium using generated audio tracks.
 // jsdom has no Web Audio processing; provide the browser boundary there.
 if (typeof globalThis.AudioContext !== 'function') {

@@ -51,7 +51,8 @@ async function open(width: number, mapState = state, positions: PersonalView['po
         settings: { ...defaultViewSettings, version: 0 },
       });
     if (url.endsWith('/operations')) return Response.json({ operations: [] });
-    if (url.endsWith('/text-assistant')) return Response.json({ available: true });
+    // The conversation panel opens without a conversation when none is offered.
+    if (url.endsWith('/text-assistant')) return Response.json({ available: false });
     if (url.includes('/map?')) return Response.json(mapState);
     throw new Error(`Unexpected request: ${url}`);
   });

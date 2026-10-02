@@ -40,6 +40,7 @@ const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
   routes['/api/households/linden/text-assistant'] ??= [{ data: { available: false } }];
+  routes['/api/households/linden/conversation-consent'] ??= [{ data: { saved: null } }];
   routes['/api/households/linden/erasure'] ??= Array.from({ length: 3 }, () => ({
     data: { objects: [], relationships: [], objectTypes: [], relationshipTypes: [], status: null },
   }));

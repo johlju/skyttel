@@ -36,8 +36,12 @@ export async function checkContainerTextAssistant({
   const baselineConnections = await connections();
   assert.equal((await request(name, `${path}/text-assistant`)).status, 401);
   assert.equal((await call('/text-assistant')).available, true);
-  for (const body of [{}, { externalAi: true }, { mapWork: true }]) {
-    await call('/text-assistant', body, 403);
+  // A conversation starts only with a consent for the current consent text,
+  // version 1 in src/shared/conversation-consent.ts.
+  const consent = { consent: { textVersion: 1 } };
+  for (const body of [{}, { consent: { textVersion: 0 } }, { externalAi: true, mapWork: true }]) {
+    const refused = await call('/text-assistant', body, 403);
+    assert.equal(refused.error, 'conversation_consent_required');
   }
   assert.deepEqual(await connections(), baselineConnections);
   assert.equal(
@@ -45,7 +49,7 @@ export async function checkContainerTextAssistant({
       await request(name, `${path}/text-assistant`, {
         method: 'POST',
         headers: { ...headers, origin: 'https://unrelated.example' },
-        body: JSON.stringify({ externalAi: true, mapWork: true }),
+        body: JSON.stringify(consent),
       })
     ).status,
     403,
@@ -64,7 +68,6 @@ export async function checkContainerTextAssistant({
     },
   });
   const draft = await call('/map');
-  const consent = { externalAi: true, mapWork: true };
   const session = await call('/text-assistant', consent, 201);
   assert.equal(session.phase, 'ready');
   assert.equal(session.review.version, draft.draft.version);

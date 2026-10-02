@@ -1,51 +1,49 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { vi } from 'vitest';
-import { conversationStartControls, conversationStartSteps } from './conversation.js';
+import { consentBoxControls, consentBoxName, conversationSteps } from './conversation.js';
 
 // The conversation steps for Testing Library in jsdom.
 
-interface Start {
-  consents: HTMLInputElement[];
-  withText: HTMLButtonElement;
-  withVoice: HTMLButtonElement;
+interface ConsentBox {
+  remember: HTMLInputElement;
+  approve: HTMLButtonElement;
+  decline: HTMLButtonElement;
 }
 
 // Fake timers stall userEvent and waitFor, so a test that uses them acts on the
-// controls directly, once the start is already shown.
+// controls directly, once they are already shown.
 const click = (control: HTMLElement) =>
   vi.isFakeTimers()
     ? act(async () => {
         fireEvent.click(control);
       })
     : userEvent.click(control);
+const shown = <Control>(get: () => Control) =>
+  vi.isFakeTimers() ? Promise.resolve(get()) : waitFor(get);
 
-const shown = {
-  labelled: (label: RegExp) => screen.getByLabelText(label),
-  button: (name: string) => screen.getByRole('button', { name }),
+// The consent box, named as Testing Library names its queries: get throws when
+// the box is not shown, query gives null, and find waits for the box.
+export const getConsentBox = () => screen.getByRole('dialog', { name: consentBoxName });
+export const queryConsentBox = () => screen.queryByRole('dialog', { name: consentBoxName });
+export const findConsentBox = () => shown(getConsentBox);
+
+const lookup = {
+  checkbox: (name: string) => within(getConsentBox()).getByRole('checkbox', { name }),
+  button: (name: string) => within(getConsentBox()).getByRole('button', { name }),
 };
-const steps = conversationStartSteps<HTMLElement>({ ...shown, tick: click, press: click });
+export const getConsentBoxControls = () => consentBoxControls(lookup) as ConsentBox;
 
-// The start's controls, named as Testing Library names its queries: get throws
-// when the start is not shown, query gives null for each missing control, and
-// find waits for the start.
-export const getConversationStart = () => conversationStartControls(shown) as Start;
-
-export const queryConversationStart = () =>
-  conversationStartControls({
-    labelled: (label) => screen.queryByLabelText(label),
-    button: (name) => screen.queryByRole('button', { name }),
-  });
-
-export const findConversationStart = () =>
-  vi.isFakeTimers() ? Promise.resolve(getConversationStart()) : waitFor(getConversationStart);
-
-export async function startConversationWithText() {
-  await findConversationStart();
-  await steps.startConversationWithText();
-}
-
-export async function startConversationWithVoice() {
-  await findConversationStart();
-  await steps.startConversationWithVoice();
-}
+export const {
+  giveConversationConsent,
+  startConversationWithText,
+  startConversationWithVoice,
+  openConversationText,
+  chooseConversationVoice,
+} = conversationSteps<HTMLElement>({
+  ...lookup,
+  tool: (name) => shown(() => screen.getByRole('button', { name })),
+  asked: findConsentBox,
+  tick: click,
+  press: click,
+});

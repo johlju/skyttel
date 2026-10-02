@@ -4,54 +4,68 @@
 // conversation-page.ts (Playwright), conversation-browser.ts (Vitest browser
 // mode) and conversation-dom.ts (Testing Library).
 
-export interface StartLookup<Control> {
-  labelled(label: RegExp): Control;
+import { conversationConsentTextVersion } from '../../src/shared/conversation-consent.js';
+
+// What a client sends to start a conversation that its user has approved for
+// the visit, for tests that start one without the visible interface.
+export const approvedForVisit = { consent: { textVersion: conversationConsentTextVersion } };
+
+// The toolbar's two conversation buttons. The chosen one decides whether the
+// conversation starts with voice or with text.
+export const conversationTools = { voice: 'Prata med Skyttel', text: 'Samtal och text' } as const;
+
+export const consentBoxName = 'Samtal med Skyttel';
+
+export interface ConsentBoxLookup<Control> {
+  /** A checkbox in the consent box. */
+  checkbox(name: string): Control;
+  /** A button in the consent box. */
   button(name: string): Control;
 }
 
-export interface StartControls<Control> extends StartLookup<Control> {
+export interface ConversationControls<Control> extends ConsentBoxLookup<Control> {
+  /** A button in the toolbar. */
+  tool(name: string): Control | Promise<Control>;
+  /** Waits for the consent box, where a lookup does not wait by itself. */
+  asked?(): Promise<unknown>;
   tick(control: Control): Promise<unknown>;
   press(control: Control): Promise<unknown>;
 }
 
-export interface ToolbarControls<Control> {
-  tool(name: string): Control | Promise<Control>;
-  press(control: Control): Promise<unknown>;
-}
-
-// For tests about the start itself, such as what it requires before consent.
-export function conversationStartControls<Control>(ui: StartLookup<Control>) {
+// For tests about the consent box itself, such as what it offers and where focus goes.
+export function consentBoxControls<Control>(ui: ConsentBoxLookup<Control>) {
   return {
-    consents: [
-      ui.labelled(/Jag tillåter att OpenAI/),
-      ui.labelled(/Jag tillåter förslag och sparande/),
-    ],
-    withText: ui.button('Starta textassistenten'),
-    withVoice: ui.button('Starta talsamtal'),
+    remember: ui.checkbox('Fråga inte igen för det här hushållet'),
+    approve: ui.button('Godkänn och starta'),
+    decline: ui.button('Avbryt'),
   };
 }
 
-export function conversationStartSteps<Control>(ui: StartControls<Control>) {
-  async function giveConversationConsent() {
-    for (const consent of conversationStartControls(ui).consents) await ui.tick(consent);
+export function conversationSteps<Control>(ui: ConversationControls<Control>) {
+  const choose = async (mode: keyof typeof conversationTools) =>
+    ui.press(await ui.tool(conversationTools[mode]));
+  // Approves in the consent box. A remembered consent is saved for the household.
+  async function giveConversationConsent({ remember = false } = {}) {
+    await ui.asked?.();
+    const box = consentBoxControls(ui);
+    if (remember) await ui.tick(box.remember);
+    await ui.press(box.approve);
   }
   return {
     giveConversationConsent,
-    async startConversationWithText() {
-      await giveConversationConsent();
-      await ui.press(conversationStartControls(ui).withText);
+    // The first start of a visit without a saved consent: the chosen button,
+    // then the consent box.
+    async startConversationWithText(consent?: { remember?: boolean }) {
+      await choose('text');
+      await giveConversationConsent(consent);
     },
-    async startConversationWithVoice() {
-      await giveConversationConsent();
-      await ui.press(conversationStartControls(ui).withVoice);
+    async startConversationWithVoice(consent?: { remember?: boolean }) {
+      await choose('voice');
+      await giveConversationConsent(consent);
     },
-  };
-}
-
-export function conversationTextSteps<Control>(ui: ToolbarControls<Control>) {
-  return {
-    async openConversationText() {
-      await ui.press(await ui.tool('Samtal och text'));
-    },
+    // The toolbar's buttons alone. They show the consent box when no consent is
+    // valid. Otherwise they start the conversation or show the one that is going on.
+    openConversationText: () => choose('text'),
+    chooseConversationVoice: () => choose('voice'),
   };
 }

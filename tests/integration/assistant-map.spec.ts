@@ -76,9 +76,8 @@ for (const viewport of [
           ).ok(),
         ).toBe(true);
         await page.goto(installation.origin);
-        await openConversationText(page);
+        await startConversationWithText(page);
         const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
-        await startConversationWithText(panel);
         const acknowledgements: {
           displayed: boolean;
           kind: string;

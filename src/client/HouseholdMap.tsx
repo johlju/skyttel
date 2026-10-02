@@ -28,6 +28,7 @@ import type { MapSelection } from '../shared/text-assistant.js';
 import { buildHeader, notifyOutdatedClient } from './build-guard.js';
 import { DraftStatus } from './DraftStatus.js';
 import './draft-status.css';
+import { ConversationConsent } from './ConversationConsent.js';
 import { LifecycleDetails, LifecycleStatus } from './Lifecycle.js';
 import { MapHistory } from './MapHistory.js';
 import { type MapRevealRequest, waitForMapDisplay } from './map-display.js';
@@ -242,9 +243,26 @@ export function HouseholdMap({
     // Reset only when the requested reveal layout has actually been committed.
     if (revealRequest && !navigationOpen && workspace.current) workspace.current.scrollTop = 0;
   }, [revealRequest, navigationOpen]);
-  function openWork(target: WorkspaceTarget) {
+  // The button that the user chose to start a conversation with. The consent
+  // box opens next to it and gives the focus back to it.
+  const conversationChoice = useRef<HTMLElement | null>(null);
+  function startsConversation(target: WorkspaceTarget) {
+    return (
+      (target === 'conversation' || target === 'voice') &&
+      !conversation.session &&
+      conversation.available !== false
+    );
+  }
+  function openWork(target: WorkspaceTarget, chosen?: HTMLElement) {
     workTrigger.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (startsConversation(target)) {
+      // The conversation starts first, after the consent box when no consent
+      // is valid. Its panel opens when the conversation has started.
+      conversationChoice.current = chosen ?? workTrigger.current;
+      conversation.begin(target === 'voice' ? 'voice' : 'text');
+      return;
+    }
     openPanel(
       target === 'conversation' || target === 'voice' ? 'conversation' : 'work',
       target === 'search'
@@ -252,9 +270,11 @@ export function HouseholdMap({
         : undefined,
     );
   }
-  function openGuidedWork(target: WorkspaceTarget) {
-    setGuidance(false);
-    openWork(target);
+  function openGuidedWork(target: WorkspaceTarget, chosen: HTMLElement) {
+    // The guidance stays while a conversation waits for its start, so that
+    // the consent box can give the focus back to the chosen button.
+    if (!startsConversation(target)) setGuidance(false);
+    openWork(target, chosen);
   }
   function dismissGuidance() {
     setGuidance(false);
@@ -1344,6 +1364,10 @@ export function HouseholdMap({
       // A session poll must not replace its pending state with recovery.
       if (!pending || !saveAttempt.current) setLoad((value) => value + 1);
     },
+    onStarted: () => {
+      setGuidance(false);
+      openPanel('conversation');
+    },
     onAccessLost: loseAccess,
     onSelectItem: revealAssistantItem,
   });
@@ -1441,7 +1465,11 @@ export function HouseholdMap({
           <button type="button" className="skip-link" onClick={() => openWork('list')}>
             Till lista och formulär
           </button>
-          <button type="button" className="skip-link" onClick={() => openWork('conversation')}>
+          <button
+            type="button"
+            className="skip-link"
+            onClick={(event) => openWork('conversation', event.currentTarget)}
+          >
             Till samtal och text
           </button>
           <WorkspaceTools
@@ -1480,6 +1508,7 @@ export function HouseholdMap({
                 (!(narrow || revealRequest) || activePanel === selectedObject.id),
             )}
           />
+          <ConversationConsent conversation={conversation} chosen={conversationChoice} />
           <div className="workspace-context">
             {householdName}
             <span>Gemensam karta</span>

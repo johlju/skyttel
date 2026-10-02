@@ -3,7 +3,7 @@ import { expect, type Page, test } from '@playwright/test';
 import type { MapState, ObjectType, RelationshipType, SaveReceipt } from '../../src/shared/map.js';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { activatePanel, openSettings, openWorkspace, signIn } from '../support/client.js';
-import { conversationStart, openConversationText } from '../support/conversation-page.js';
+import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
@@ -212,14 +212,8 @@ for (const mode of ['voice', 'text'] as const) {
       expect((await read()).draft.changes).toEqual([]);
 
       // 3. Real text task reads the catalog, then proposes the private subscription.
-      await openConversationText(page);
+      await startConversationWithText(page);
       const assistant = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
-      const start = conversationStart(assistant);
-      for (const consent of start.consents) {
-        await expect(start.withText).toBeDisabled();
-        await consent.check();
-      }
-      await start.withText.click();
       const message = assistant.getByLabel('Meddelande till textassistenten');
       await message.fill(
         'Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK per månad.',

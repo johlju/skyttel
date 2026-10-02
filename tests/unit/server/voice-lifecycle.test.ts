@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import type { LiveUsage, LiveUsageAttempt } from '../../../src/server/live-provider.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation, robin } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
@@ -40,7 +41,7 @@ async function setup(
   async function start() {
     const consent = await browser.post(path, {
       headers: { origin: app.origin },
-      data: { externalAi: true, mapWork: true },
+      data: approvedForVisit,
     });
     expect(consent.status(), await consent.text()).toBe(201);
     const assistant: TextAssistantView = await consent.json();

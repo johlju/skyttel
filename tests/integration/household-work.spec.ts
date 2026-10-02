@@ -12,7 +12,8 @@ import {
   signIn,
 } from '../support/client.js';
 import {
-  conversationStart,
+  consentBox,
+  consentBoxFor,
   openConversationText,
   startConversationWithText,
 } from '../support/conversation-page.js';
@@ -24,7 +25,6 @@ import { modelMessage, textModel } from '../support/text-model.js';
 async function startConversation(page: Page, origin: string) {
   await page.addInitScript({ content: liveBrowserFixtureSource });
   await page.goto(origin);
-  await openConversationText(page);
   await startConversationWithText(page);
   await page.getByRole('button', { name: 'Starta röst', exact: true }).click();
   await expect(page.getByText('Mikrofonen är på', { exact: true })).toBeVisible();
@@ -257,8 +257,10 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
       page.waitForEvent('load'),
       section.getByRole('button', { name: 'Läs in kartan på nytt', exact: true }).click(),
     ]);
+    // The page is loaded anew: the conversation is gone, and so is the consent for the visit.
     await openConversationText(page);
-    await expect(conversationStart(page).withText).toBeVisible();
+    await expect(consentBox(page)).toBeVisible();
+    await consentBoxFor(page).decline.click();
     await expect(page.getByRole('log', { name: 'Samtalets dialog' })).toHaveCount(0);
     await expect(page.getByLabel('Objektets namn')).toHaveCount(0);
     await expect(otherPage.getByLabel('Objektets namn')).toHaveCount(0);
@@ -497,8 +499,10 @@ test('ARBETE-04: replaced household content retires hidden work and microphone',
       page.getByRole('button', { name: 'Läs in det återställda hushållet' }).click(),
     ]);
     await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+    // The page is loaded anew: the conversation is gone, and so is the consent for the visit.
     await openConversationText(page);
-    await expect(conversationStart(page).withText).toBeVisible();
+    await expect(consentBox(page)).toBeVisible();
+    await consentBoxFor(page).decline.click();
     await openWorkspace(page);
     await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
       'Inga förslag',

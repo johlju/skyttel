@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type ConversationConsentView,
+  conversationConsentRequired,
+  conversationConsentTextVersion,
+  type SavedConversationConsent,
+} from '../shared/conversation-consent.js';
 import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
 import { useVoice, type Voice } from './use-voice.js';
+
+/** How a conversation starts: with the microphone, or with the conversation text. */
+export type ConversationMode = 'voice' | 'text';
 
 /**
  * The state and the commands of the household's conversation with Skyttel.
@@ -12,7 +21,20 @@ import { useVoice, type Voice } from './use-voice.js';
 export type Conversation = {
   /** Whether the server offers the conversation. Null until it has answered. */
   available: boolean | null;
-  consent: { externalAi: boolean; mapWork: boolean };
+  /** The conversation consent for this household, and the consent box that asks for it. */
+  consent: {
+    /** The saved consent, whatever text version it approves. Null when none is saved. */
+    saved: SavedConversationConsent | null;
+    /** Approved without being saved. It lasts until the user leaves the household's map. */
+    visit: boolean;
+    /** Saved for the current consent text, or approved for the visit. */
+    valid: boolean;
+    /** How the conversation starts once the user approves. Null while the box is not shown. */
+    asking: ConversationMode | null;
+    /** The server is saving the consent. */
+    saving: boolean;
+    error: string;
+  };
   session: TextAssistantView | null;
   transcript: TranscriptRow[];
   /** The text the user has written but not sent. */
@@ -28,9 +50,13 @@ export type Conversation = {
   needsAnswer: boolean;
   /** The microphone and the voice connection: `start`, `stop` and `activate`. */
   voice: Voice;
-  setConsent: (consent: Partial<Conversation['consent']>) => void;
   setText: (text: string) => void;
-  start: (withVoice?: boolean) => Promise<void>;
+  /** Starts a conversation, after the consent box when no consent is valid. */
+  begin: (mode: ConversationMode) => void;
+  /** Approves in the consent box, and saves the consent when it is to be remembered. */
+  approve: (remember: boolean) => Promise<void>;
+  /** Closes the consent box. Nothing starts. */
+  decline: () => void;
   send: () => Promise<void>;
   cancel: () => Promise<void>;
   end: () => Promise<void>;
@@ -64,6 +90,7 @@ export function useConversation({
   householdId,
   enabled = true,
   onMapChange,
+  onStarted,
   onAccessLost,
   onSelectItem,
 }: {
@@ -71,13 +98,21 @@ export function useConversation({
   /** The conversation exists only while the household's map is loaded. */
   enabled?: boolean;
   onMapChange: () => void;
+  /** A conversation has started, so the caller can show it. */
+  onStarted?: () => void;
   onAccessLost: () => void;
   onSelectItem: (target: MapSelection, signal: AbortSignal) => Promise<boolean>;
 }): Conversation {
-  const path = `/api/households/${encodeURIComponent(householdId)}/text-assistant`;
+  const household = `/api/households/${encodeURIComponent(householdId)}`;
+  const path = `${household}/text-assistant`;
+  const consentPath = `${household}/conversation-consent`;
   const [available, setAvailable] = useState<boolean | null>(null);
-  const [externalAi, setExternalAi] = useState(false);
-  const [mapWork, setMapWork] = useState(false);
+  // Undefined until the server has answered.
+  const [savedConsent, setSavedConsent] = useState<SavedConversationConsent | null>();
+  const [visitConsent, setVisitConsent] = useState(false);
+  const [requested, setRequested] = useState<ConversationMode | null>(null);
+  const [savingConsent, setSavingConsent] = useState(false);
+  const [consentError, setConsentError] = useState('');
   const [session, setSession] = useState<TextAssistantView | null>(null);
   const [workStarted, setWorkStarted] = useState<number | null>(null);
   const [text, setText] = useState('');
@@ -95,8 +130,8 @@ export function useConversation({
         : [...rows, row],
     );
   }, []);
-  const callbacks = useRef({ onMapChange, onAccessLost, onSelectItem });
-  callbacks.current = { onMapChange, onAccessLost, onSelectItem };
+  const callbacks = useRef({ onMapChange, onStarted, onAccessLost, onSelectItem });
+  callbacks.current = { onMapChange, onStarted, onAccessLost, onSelectItem };
   const mounted = useRef(true);
   const requestEpoch = useRef(0);
   const update = useCallback(
@@ -149,14 +184,18 @@ export function useConversation({
     setSession(null);
     setText('');
     setTranscript([]);
-    setExternalAi(false);
-    setMapWork(false);
     setUnknown(false);
   }, []);
   const fail = useCallback(
     (failure: unknown) => {
       if (!mounted.current) return;
-      if (failure instanceof MapRequestError && [401, 403, 404].includes(failure.status)) {
+      if (failure instanceof MapRequestError && failure.code === conversationConsentRequired) {
+        // The server has no valid consent, whatever this client last knew.
+        // The access is not lost, and the next start asks for the consent.
+        clear();
+        setSavedConsent(null);
+        setVisitConsent(false);
+      } else if (failure instanceof MapRequestError && [401, 403, 404].includes(failure.status)) {
         clear();
         setError(
           failure.status === 404
@@ -184,6 +223,14 @@ export function useConversation({
       .catch(() => {
         if (!controller.signal.aborted) setAvailable(false);
       });
+    void request<ConversationConsentView>(consentPath, undefined, controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) setSavedConsent(result.saved ?? null);
+      })
+      .catch(() => {
+        // Without an answer the consent box asks. The server decides what is valid.
+        if (!controller.signal.aborted) setSavedConsent(null);
+      });
     return () => {
       mounted.current = false;
       requestEpoch.current++;
@@ -193,11 +240,17 @@ export function useConversation({
       // A conversation that is enabled again starts as it does the first time.
       clear();
       setAvailable(null);
+      // A consent that is not saved lasts until the user leaves the household's map.
+      setSavedConsent(undefined);
+      setVisitConsent(false);
+      setRequested(null);
+      setSavingConsent(false);
+      setConsentError('');
       setStartWithVoice(false);
       setPending(false);
       setError('');
     };
-  }, [path, enabled, clear]);
+  }, [path, consentPath, enabled, clear]);
   useEffect(() => {
     if (!session || unknown || pending) return;
     const controller = new AbortController();
@@ -223,24 +276,69 @@ export function useConversation({
       controller.abort();
     };
   }, [session, unknown, pending, path, update, fail]);
-  async function start(withVoice = false) {
-    setStartWithVoice(withVoice);
-    const epoch = ++requestEpoch.current;
-    setPending(true);
-    setError('');
-    try {
-      const result = await request<TextAssistantView>(path, { externalAi, mapWork });
-      if (!mounted.current || epoch !== requestEpoch.current) {
-        void request(`${path}/${result.id}/stop`, {}).catch(() => undefined);
-        return;
+  const consentValid = visitConsent || savedConsent?.textVersion === conversationConsentTextVersion;
+  const start = useCallback(
+    async (mode: ConversationMode) => {
+      setStartWithVoice(mode === 'voice');
+      const epoch = ++requestEpoch.current;
+      setPending(true);
+      setError('');
+      try {
+        // A saved consent is on the server. One for the visit is stated with each start.
+        const result = await request<TextAssistantView>(
+          path,
+          visitConsent ? { consent: { textVersion: conversationConsentTextVersion } } : {},
+        );
+        if (!mounted.current || epoch !== requestEpoch.current) {
+          void request(`${path}/${result.id}/stop`, {}).catch(() => undefined);
+          return;
+        }
+        setUnknown(false);
+        update(result);
+        callbacks.current.onStarted?.();
+      } catch (failure) {
+        if (epoch !== requestEpoch.current) return;
+        fail(failure);
+        if (failure instanceof MapRequestError && failure.code === conversationConsentRequired)
+          setRequested(mode);
+      } finally {
+        if (mounted.current && epoch === requestEpoch.current) setPending(false);
       }
-      setUnknown(false);
-      update(result);
-    } catch (failure) {
-      if (epoch === requestEpoch.current) fail(failure);
-    } finally {
-      if (mounted.current && epoch === requestEpoch.current) setPending(false);
+    },
+    [path, visitConsent, update, fail],
+  );
+  // A requested start waits for the server's answers about the conversation
+  // and the saved consent. It then starts, or the consent box asks first.
+  const answered = available !== null && savedConsent !== undefined;
+  useEffect(() => {
+    if (!requested || !answered) return;
+    if (!available) setRequested(null);
+    else if (consentValid) {
+      setRequested(null);
+      void start(requested);
     }
+  }, [requested, answered, available, consentValid, start]);
+  async function approve(remember: boolean) {
+    setConsentError('');
+    if (!remember) {
+      setVisitConsent(true);
+      return;
+    }
+    const epoch = requestEpoch.current;
+    setSavingConsent(true);
+    const outcome = await request<ConversationConsentView>(consentPath, {
+      textVersion: conversationConsentTextVersion,
+    }).catch((failure: unknown) => ({ failure }));
+    // An answer that comes after the user has left the household's map is not for this visit.
+    if (epoch !== requestEpoch.current) return;
+    setSavingConsent(false);
+    if (!('failure' in outcome)) setSavedConsent(outcome.saved);
+    else if (
+      outcome.failure instanceof MapRequestError &&
+      [401, 403].includes(outcome.failure.status)
+    )
+      fail(outcome.failure);
+    else setConsentError('Medgivandet kunde inte sparas. Försök igen.');
   }
   const command = useCallback(
     async (name: string, body: unknown = {}) => {
@@ -343,7 +441,14 @@ export function useConversation({
   const working = session?.phase === 'working';
   return {
     available,
-    consent: { externalAi, mapWork },
+    consent: {
+      saved: savedConsent ?? null,
+      visit: visitConsent,
+      valid: consentValid,
+      asking: answered && available && !consentValid ? requested : null,
+      saving: savingConsent,
+      error: consentError,
+    },
     session,
     transcript,
     text,
@@ -360,12 +465,15 @@ export function useConversation({
           session.review.conflicts.length),
     ),
     voice,
-    setConsent: (consent) => {
-      if (consent.externalAi !== undefined) setExternalAi(consent.externalAi);
-      if (consent.mapWork !== undefined) setMapWork(consent.mapWork);
-    },
     setText,
-    start,
+    begin: (mode) => {
+      if (!session && !pending) setRequested(mode);
+    },
+    approve,
+    decline: () => {
+      setRequested(null);
+      setConsentError('');
+    },
     send,
     cancel: () => command('cancel', { revision: session?.revision }),
     end,

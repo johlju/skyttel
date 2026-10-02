@@ -12,6 +12,7 @@ import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { contentOwnerRoutes } from './content-owner-routes.js';
+import { conversationConsentRoutes } from './conversation-consent.js';
 import { costRoutes } from './cost-routes.js';
 import { installationCosts } from './costs.js';
 import { householdErasureRoutes } from './household-erasure-routes.js';
@@ -203,6 +204,7 @@ export function createApp({
   app.route('/api', administrationRoutes(database, auth, config.origin));
   app.route('/api', costRoutes(database, auth, config, costs));
   app.route('/api', contentOwnerRoutes(database, auth, config.origin));
+  app.route('/api', conversationConsentRoutes(database, auth, config.origin));
   app.route('/api', householdExportRoutes(database, auth, config.origin));
   app.route('/api', householdErasureRoutes(database, auth, config.origin));
   app.route('/api', householdImportRoutes(database, auth, config.origin));

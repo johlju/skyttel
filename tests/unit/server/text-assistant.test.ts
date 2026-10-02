@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import type { TextModelAttempt, TextModelUsage } from '../../../src/server/text-assistant-model.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
@@ -25,19 +26,17 @@ afterEach(async () => {
   await app?.close();
 });
 
-test('the own assistant needs a separate AI and map-work choice, keeps its normal MCP grant private, and revokes it on stop', async () => {
+test('the own assistant needs the conversation consent, keeps its normal MCP grant private, and revokes it on stop', async () => {
   await setup(async () => {
     throw new Error('No provider call should be needed for consent');
   });
   expect((await (await browser.get(path)).json()).available).toBe(true);
-  for (const data of [{}, { externalAi: true }, { mapWork: true }]) {
-    expect((await browser.post(path, { headers: { origin: app.origin }, data })).status()).toBe(
-      403,
-    );
-  }
+  expect((await browser.post(path, { headers: { origin: app.origin }, data: {} })).status()).toBe(
+    403,
+  );
   const started = await browser.post(path, {
     headers: { origin: app.origin },
-    data: { externalAi: true, mapWork: true },
+    data: approvedForVisit,
   });
   expect(started.status(), await started.text()).toBe(201);
   const session = await started.json();
@@ -68,7 +67,7 @@ test('missing model configuration leaves ordinary map work available', async () 
     (
       await browser.post(path, {
         headers: { origin: app.origin },
-        data: { externalAi: true, mapWork: true },
+        data: approvedForVisit,
       })
     ).status(),
   ).toBe(503);
@@ -88,7 +87,7 @@ test('browser fetch metadata does not change the internal OAuth authorization re
       'content-type': 'application/json',
       'sec-fetch-mode': 'cors',
     },
-    body: JSON.stringify({ externalAi: true, mapWork: true }),
+    body: JSON.stringify(approvedForVisit),
   });
   expect(response.status, await response.clone().text()).toBe(201);
   expect(await response.json()).toMatchObject({ phase: 'ready', review: { version: 0 } });
@@ -97,7 +96,7 @@ test('browser fetch metadata does not change the internal OAuth authorization re
 async function start() {
   const response = await browser.post(path, {
     headers: { origin: app.origin },
-    data: { externalAi: true, mapWork: true },
+    data: approvedForVisit,
   });
   expect(response.status(), await response.text()).toBe(201);
   return response.json();

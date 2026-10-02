@@ -1,32 +1,31 @@
 import type { Locator, Page } from '@playwright/test';
 import { utilityButton } from './client.js';
-import {
-  conversationStartControls,
-  conversationStartSteps,
-  conversationTextSteps,
-  type StartControls,
-} from './conversation.js';
+import { consentBoxControls, consentBoxName, conversationSteps } from './conversation.js';
 
-// The conversation steps for Playwright. A scope is the page, or the region a
-// test expects the start to be offered in.
-type Scope = Page | Locator;
+// The conversation steps for Playwright.
 
-const controls = (scope: Scope): StartControls<Locator> => ({
-  labelled: (label) => scope.getByLabel(label),
-  button: (name) => scope.getByRole('button', { name, exact: true }),
-  tick: (control) => control.check(),
-  press: (control) => control.click(),
+/** The consent box, a dialog over the household's map. */
+export const consentBox = (page: Page) =>
+  page.getByRole('dialog', { name: consentBoxName, exact: true });
+
+const lookup = (page: Page) => ({
+  checkbox: (name: string) => consentBox(page).getByRole('checkbox', { name, exact: true }),
+  button: (name: string) => consentBox(page).getByRole('button', { name, exact: true }),
 });
-const steps = (scope: Scope) => conversationStartSteps(controls(scope));
-
-export const conversationStart = (scope: Scope) => conversationStartControls(controls(scope));
-export const giveConversationConsent = (scope: Scope) => steps(scope).giveConversationConsent();
-export const startConversationWithText = (scope: Scope) => steps(scope).startConversationWithText();
-export const startConversationWithVoice = (scope: Scope) =>
-  steps(scope).startConversationWithVoice();
-
-export const openConversationText = (page: Page) =>
-  conversationTextSteps<Locator>({
+const steps = (page: Page) =>
+  conversationSteps<Locator>({
+    ...lookup(page),
     tool: (name) => utilityButton(page, name),
+    tick: (control) => control.check(),
     press: (control) => control.click(),
-  }).openConversationText();
+  });
+
+export const consentBoxFor = (page: Page) => consentBoxControls(lookup(page));
+export const giveConversationConsent = (page: Page, consent?: { remember?: boolean }) =>
+  steps(page).giveConversationConsent(consent);
+export const startConversationWithText = (page: Page, consent?: { remember?: boolean }) =>
+  steps(page).startConversationWithText(consent);
+export const startConversationWithVoice = (page: Page, consent?: { remember?: boolean }) =>
+  steps(page).startConversationWithVoice(consent);
+export const openConversationText = (page: Page) => steps(page).openConversationText();
+export const chooseConversationVoice = (page: Page) => steps(page).chooseConversationVoice();

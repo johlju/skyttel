@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline';
 import { request } from '@playwright/test';
 import { expect, test } from 'vitest';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 
 function launch() {
   const child = spawn(process.execPath, ['--import', 'tsx', 'scripts/manual-voice.ts']);
@@ -61,7 +62,7 @@ test('manual voice controls drive real delegation and MCP, preserve provisional 
     const base = `${origin}/api/households/${household.id}`;
     const created = await browser.post(`${base}/text-assistant`, {
       headers: { origin },
-      data: { externalAi: true, mapWork: true },
+      data: approvedForVisit,
     });
     expect(created.status()).toBe(201);
     const assistant = await created.json();
@@ -150,7 +151,7 @@ test('manual voice family setup refuses reuse and resolves the seeded conflict a
     const assistant = await (
       await browser.post(`${base}/text-assistant`, {
         headers: { origin },
-        data: { externalAi: true, mapWork: true },
+        data: approvedForVisit,
       })
     ).json();
     const path = `${base}/text-assistant/${assistant.id}`;

@@ -2,7 +2,6 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { userEvent } from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { TextAssistant } from '../../../src/client/TextAssistant.js';
 import type {
   MapObject,
   ObjectType,
@@ -11,12 +10,13 @@ import type {
 } from '../../../src/shared/map.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import {
-  findConversationStart,
-  getConversationStart,
-  queryConversationStart,
+  findConsentBox,
+  openConversationText,
+  queryConsentBox,
   startConversationWithText,
   startConversationWithVoice,
 } from '../../support/conversation-dom.js';
+import { StandaloneConversation } from '../../support/conversation-harness.js';
 
 const path = '/api/households/linden/text-assistant';
 function session(): TextAssistantView {
@@ -74,7 +74,7 @@ test('working time advances visibly without repeating live announcements and res
 
 function showAssistant(onMapChange = vi.fn(), onAccessLost = vi.fn()) {
   return render(
-    <TextAssistant
+    <StandaloneConversation
       householdId="linden"
       onMapChange={onMapChange}
       onAccessLost={onAccessLost}
@@ -90,7 +90,7 @@ test('the shared workspace keeps the map, draft and conversation available befor
     return Response.json({ available: true });
   });
   render(
-    <TextAssistant
+    <StandaloneConversation
       householdId="linden"
       onMapChange={vi.fn()}
       onAccessLost={vi.fn()}
@@ -98,7 +98,7 @@ test('the shared workspace keeps the map, draft and conversation available befor
       draftSummary={<p>Cykeln: föreslaget namn</p>}
     >
       <section aria-label="Hushållets karta">Kartan är tillgänglig</section>
-    </TextAssistant>,
+    </StandaloneConversation>,
   );
   expect(await screen.findByRole('region', { name: 'Talsamtal' })).toBeTruthy();
   expect(screen.getByRole('region', { name: 'Hushållets karta' }).textContent).toContain(
@@ -110,7 +110,9 @@ test('the shared workspace keeps the map, draft and conversation available befor
   expect(screen.getByRole('region', { name: 'Samtalet' }).textContent).toContain(
     'Här visas vad du säger och vad Skyttel svarar.',
   );
-  expect((await findConversationStart()).withText.disabled).toBe(true);
+  // Nothing starts before the consent: a conversation button only asks for it.
+  await openConversationText();
+  expect(await findConsentBox()).toBeDefined();
   expect(requests.every((request) => request.startsWith('GET '))).toBe(true);
 });
 
@@ -121,7 +123,6 @@ test('voice can start directly after consent and text remains available if the m
     return Response.json(init?.method === 'POST' ? session() : { available: true });
   });
   showAssistant();
-  expect((await findConversationStart()).withVoice.disabled).toBe(true);
   await startConversationWithVoice();
   expect(
     await screen.findByRole('textbox', { name: 'Meddelande till textassistenten' }),
@@ -222,7 +223,10 @@ test('a pending save is recovered with the same operation and a durable receipt 
   );
   await userEvent.click(screen.getByRole('button', { name: 'Avsluta samtalet' }));
   expect(screen.queryByLabelText('Meddelande till textassistenten')).toBeNull();
-  expect(getConversationStart().withText.disabled).toBe(true);
+  // A new conversation during the same visit starts without the consent box.
+  await openConversationText();
+  expect(await screen.findByLabelText('Meddelande till textassistenten')).toBeDefined();
+  expect(queryConsentBox()).toBeNull();
 });
 
 test.each([
@@ -309,7 +313,8 @@ test.each([false, 'unreachable'])(
         'Textassistenten är inte tillgänglig. Du kan använda kartan och formulären.',
       ),
     ).toBeDefined();
-    expect(queryConversationStart().withText).toBeNull();
+    await openConversationText();
+    expect(queryConsentBox()).toBeNull();
   },
 );
 
@@ -356,7 +361,7 @@ test.each(['Avbryt uppdrag', 'Avsluta samtalet'])(
       throw new Error(`Unexpected request ${url}`);
     });
     render(
-      <TextAssistant
+      <StandaloneConversation
         householdId="linden"
         onMapChange={vi.fn()}
         onAccessLost={vi.fn()}
@@ -378,7 +383,8 @@ test.each(['Avbryt uppdrag', 'Avsluta samtalet'])(
     expect(selected).not.toHaveBeenCalled();
     expect(screen.queryByText('Ett gammalt svar')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Avbryt uppdrag' })).toBeNull();
-    if (action === 'Avsluta samtalet') expect(getConversationStart().withText).toBeDefined();
+    if (action === 'Avsluta samtalet')
+      expect(screen.queryByLabelText('Meddelande till textassistenten')).toBeNull();
     else expect(screen.getByRole('status').textContent).toContain('Nya förslag är osparade');
   },
 );
@@ -412,7 +418,7 @@ test.each([true, false])(
       return (
         <>
           {selected && <p>Kartans markerade objekt: {selected}</p>}
-          <TextAssistant
+          <StandaloneConversation
             householdId="linden"
             onMapChange={vi.fn()}
             onAccessLost={vi.fn()}
@@ -467,7 +473,7 @@ test('canceling while the map display is pending aborts it and prevents a late a
     return Response.json(current);
   });
   render(
-    <TextAssistant
+    <StandaloneConversation
       householdId="linden"
       onMapChange={vi.fn()}
       onAccessLost={vi.fn()}
@@ -702,7 +708,7 @@ test('whole draft review exposes object facts, type edits, uncertain relationshi
   expect(review.getByText('Identitet: edge. Från alex till bike.')).toBeDefined();
 });
 
-test('separate choices start the conversation and a lost reply retains the message with recovery controls', async () => {
+test('a lost reply retains the message with recovery controls', async () => {
   const current = session();
   let posts = 0;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
@@ -716,19 +722,14 @@ test('separate choices start the conversation and a lost reply retains the messa
     throw new Error(`Unexpected request ${url}`);
   });
   render(
-    <TextAssistant
+    <StandaloneConversation
       householdId="linden"
       onMapChange={vi.fn()}
       onAccessLost={vi.fn()}
       onSelectItem={async () => false}
     />,
   );
-  const start = await findConversationStart();
-  for (const consent of start.consents) {
-    expect(start.withText.disabled).toBe(true);
-    await userEvent.click(consent);
-  }
-  await userEvent.click(start.withText);
+  await startConversationWithText();
   const input = await screen.findByLabelText('Meddelande till textassistenten');
   await userEvent.type(input, 'Rätta priset och spara.');
   await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
@@ -748,7 +749,7 @@ test('provider errors preserve manual work and revoked access clears the convers
     return Response.json(current);
   });
   render(
-    <TextAssistant
+    <StandaloneConversation
       householdId="linden"
       onMapChange={vi.fn()}
       onAccessLost={lost}

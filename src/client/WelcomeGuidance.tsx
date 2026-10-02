@@ -5,7 +5,7 @@ export function WelcomeGuidance({
   onDismiss,
   empty = false,
 }: {
-  onOpen: (target: WorkspaceTarget) => void;
+  onOpen: (target: WorkspaceTarget, chosen: HTMLElement) => void;
   onDismiss: () => void;
   empty?: boolean;
 }) {
@@ -25,13 +25,17 @@ export function WelcomeGuidance({
         utkastet.
       </p>
       <div className="access-actions">
-        <button type="button" className="primary" onClick={() => onOpen('voice')}>
+        <button
+          type="button"
+          className="primary"
+          onClick={(event) => onOpen('voice', event.currentTarget)}
+        >
           Tala
         </button>
-        <button type="button" onClick={() => onOpen('conversation')}>
+        <button type="button" onClick={(event) => onOpen('conversation', event.currentTarget)}>
           Skriv
         </button>
-        <button type="button" onClick={() => onOpen('list')}>
+        <button type="button" onClick={(event) => onOpen('list', event.currentTarget)}>
           Öppna listan
         </button>
       </div>

@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline';
 import { request } from '@playwright/test';
 import { expect, test } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 
 test('manual text controls hold actual provider work, reject a stale release and remove their disposable installation', async () => {
   const child = spawn(process.execPath, ['--import', 'tsx', 'scripts/manual-text-assistant.ts']);
@@ -47,7 +48,7 @@ test('manual text controls hold actual provider work, reject a stale release and
     const base = `${origin}/api/households/${household.id}`;
     const created = await browser.post(`${base}/text-assistant`, {
       headers: { origin },
-      data: { externalAi: true, mapWork: true },
+      data: approvedForVisit,
     });
     expect(created.status()).toBe(201);
     const session = await created.json();

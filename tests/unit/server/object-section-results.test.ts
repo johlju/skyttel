@@ -1,6 +1,7 @@
 import { request } from '@playwright/test';
 import { expect, test } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { modelTool, textModel } from '../../support/text-model.js';
 
@@ -64,7 +65,7 @@ test.each(['draft', 'latest_save'])(
       });
       if (source === 'latest_save')
         await post('map/save', { version: 3, operationId: 'presentation' });
-      const session = await post('text-assistant', { externalAi: true, mapWork: true });
+      const session = await post('text-assistant', approvedForVisit);
       let view = await post(`text-assistant/${session.id}/messages`, {
         revision: session.revision,
         requestId: crypto.randomUUID(),

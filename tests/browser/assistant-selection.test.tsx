@@ -111,12 +111,15 @@ async function open(width = 1280, height = 900, mapState = state) {
   await expect
     .element(page.getByRole('button', { name: 'Nytt objekt', exact: true }))
     .toBeEnabled();
-  async function openText() {
+  async function showToolNames() {
     if (width <= 700 && height <= 450)
       await page.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
+  }
+  async function openText() {
+    await showToolNames();
     await openConversationText();
   }
-  await openText();
+  await showToolNames();
   await startConversationWithText();
   await expect.element(page.getByLabelText('Meddelande till textassistenten')).toBeVisible();
   return {

@@ -1,6 +1,7 @@
 import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test, vi } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
+import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
@@ -26,7 +27,7 @@ test('voice requires the existing current assistant consent and creates only the
   const base = `${app.origin}/api/households/${household.id}/text-assistant`;
   const started = await browser.post(base, {
     headers: { origin: app.origin },
-    data: { externalAi: true, mapWork: true },
+    data: approvedForVisit,
   });
   const assistant = await started.json();
   const voice = await browser.post(`${base}/${assistant.id}/voice`, {
@@ -95,7 +96,7 @@ async function setupVoice(
   const assistant = await (
     await browser.post(path, {
       headers: { origin: app.origin },
-      data: { externalAi: true, mapWork: true },
+      data: approvedForVisit,
     })
   ).json();
   const started = await browser.post(`${path}/${assistant.id}/voice`, {
@@ -777,7 +778,7 @@ test('provider startup failure records unknown usage and leaves the same text se
   const session = await (
     await browser.post(path, {
       headers: { origin: app.origin },
-      data: { externalAi: true, mapWork: true },
+      data: approvedForVisit,
     })
   ).json();
   const response = await browser.post(`${path}/${session.id}/voice`, {
@@ -829,7 +830,7 @@ test.each([
     const session = await (
       await browser.post(path, {
         headers: { origin: app.origin },
-        data: { externalAi: true, mapWork: true },
+        data: approvedForVisit,
       })
     ).json();
     const response = await browser.post(`${path}/${session.id}/voice`, {

@@ -1,24 +1,15 @@
 import { expect, type Page, test } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { createHousehold, openWorkspace, signIn } from '../support/client.js';
-import { conversationStart, openConversationText } from '../support/conversation-page.js';
+import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const assistant = (page: Page) =>
   page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
 async function consent(page: Page) {
-  await openConversationText(page);
-  const panel = assistant(page);
-  const start = conversationStart(panel);
-  await expect(start.withText).toBeDisabled();
-  await start.consents[0].check();
-  await expect(start.withText).toBeDisabled();
-  await start.consents[1].focus();
-  await page.keyboard.press('Space');
-  await start.withText.focus();
-  await page.keyboard.press('Enter');
-  await expect(panel.getByLabel('Meddelande till textassistenten')).toBeVisible();
+  await startConversationWithText(page);
+  await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toBeVisible();
 }
 async function send(page: Page, text: string) {
   await openConversationText(page);

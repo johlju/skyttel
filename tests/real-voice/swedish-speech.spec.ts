@@ -64,7 +64,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text från talprovet');
     const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
-    await startConversationWithText(panel);
+    await startConversationWithText(page);
     await panel.getByRole('button', { name: 'Starta röst' }).click();
     await expect(
       panel.getByText('Lyssnar. Du kan tala, rätta eller be att spara hela utkastet.'),

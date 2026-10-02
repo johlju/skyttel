@@ -186,7 +186,6 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Oskickad cykel');
     await page.getByLabel('Beskrivning', { exact: true }).fill('Texten ska finnas kvar');
-    await openConversationText(page);
     await startConversationWithText(page);
     await page.getByLabel('Meddelande till textassistenten').fill('Lägg Molnmusik i utkastet.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
@@ -408,7 +407,6 @@ test('UTKAST-15: a necessary answer gates both save actions until a fresh explic
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Lo Exempel');
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
-    await openConversationText(page);
     await startConversationWithText(page);
     await page
       .getByLabel('Meddelande till textassistenten')

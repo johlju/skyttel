@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import type { ObjectType, ObjectValue } from '../shared/map.js';
-import type { MapSelection } from '../shared/text-assistant.js';
 import { ConversationTranscript } from './ConversationTranscript.js';
 import { LifecycleDetails } from './Lifecycle.js';
 import { MergeSourceDetails } from './ObjectMerge.js';
@@ -22,7 +21,7 @@ import './voice.css';
 import { AssistantWorkTime } from './AssistantWorkTime.js';
 import { DraftChangeSummary } from './DraftChangeSummary.js';
 import { relationshipDetails } from './relationship-description.js';
-import { type Conversation, useConversation } from './use-conversation.js';
+import type { Conversation } from './use-conversation.js';
 
 function ObjectDetails({ value, type }: { value: ObjectValue | null; type: ObjectType }) {
   return value ? (
@@ -57,7 +56,7 @@ function errorMessage(code: string) {
 
 type AssistantActivity = { working: boolean; needsAnswer: boolean };
 
-type ConversationPresentation = {
+export type ConversationPresentation = {
   statusContent?: (assistant: AssistantActivity & { compact: boolean }) => ReactNode;
   statusOpen?: boolean;
   onCloseStatus?: () => void;
@@ -75,26 +74,6 @@ type ConversationPresentation = {
     floatingStatus: RefObject<HTMLDivElement | null>,
   ) => ReactNode;
 };
-
-/** A conversation that keeps its own state, for use outside the household's map. */
-export function TextAssistant({
-  onMapChange,
-  onAccessLost,
-  onSelectItem,
-  ...presentation
-}: ConversationPresentation & {
-  onMapChange: () => void;
-  onAccessLost: () => void;
-  onSelectItem: (target: MapSelection, signal: AbortSignal) => Promise<boolean>;
-}) {
-  const conversation = useConversation({
-    householdId: presentation.householdId,
-    onMapChange,
-    onAccessLost,
-    onSelectItem,
-  });
-  return <ConversationWorkspace conversation={conversation} {...presentation} />;
-}
 
 /**
  * Shows the conversation in the status card and the panels and calls its
@@ -117,7 +96,6 @@ export function ConversationWorkspace({
 }: ConversationPresentation & { conversation: Conversation }) {
   const { available, session, transcript, text, pending, error, unknown, needsAnswer } =
     conversation;
-  const { externalAi, mapWork } = conversation.consent;
   // The status card is shown in the conversation panel, or floats over the map
   // when that panel is not visible. It is rendered where it is shown.
   const [statusSlot, setStatusSlot] = useState<HTMLDivElement | null>(null);
@@ -281,52 +259,6 @@ export function ConversationWorkspace({
           )}
           {available === false && (
             <p>Textassistenten är inte tillgänglig. Du kan använda kartan och formulären.</p>
-          )}
-          {!session && available && (
-            <>
-              <p>
-                OpenAI behandlar ditt meddelande, hela ditt eget utkast och relevanta kartuppgifter.
-                Om du startar röst behandlas även ditt ljud. Mikrofonen startar först när du väljer
-                det. Samtalet sparas inte i Skyttels hushållsinnehåll. Skriv inga lösenord eller
-                fullständiga konto- och kortnummer.
-              </p>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={externalAi}
-                  onChange={(event) =>
-                    conversation.setConsent({ externalAi: event.target.checked })
-                  }
-                />{' '}
-                Jag tillåter att OpenAI behandlar uppgifterna i detta samtal.
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={mapWork}
-                  onChange={(event) => conversation.setConsent({ mapWork: event.target.checked })}
-                />{' '}
-                Jag tillåter förslag och sparande av hela mitt utkast när jag uttryckligen ber om
-                det.
-              </label>
-              <div className="voice-controls">
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={pending || !externalAi || !mapWork}
-                  onClick={() => void conversation.start(true)}
-                >
-                  Starta talsamtal
-                </button>
-                <button
-                  type="button"
-                  disabled={pending || !externalAi || !mapWork}
-                  onClick={() => void conversation.start()}
-                >
-                  Starta textassistenten
-                </button>
-              </div>
-            </>
           )}
         </>
       )}
