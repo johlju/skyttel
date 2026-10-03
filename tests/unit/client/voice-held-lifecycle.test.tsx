@@ -362,3 +362,46 @@ test.each(['inputBlocked', 'contextFailed', 'saveChecking'] as const)(
     expect(media.peers).toHaveLength(1);
   },
 );
+
+test('a delayed playback permission granted after context failure cannot resume a still-held local microphone', async () => {
+  const media = voiceMedia();
+  const captureAssignments: boolean[] = [];
+  let enabled = media.microphone.enabled;
+  Object.defineProperty(media.microphone, 'enabled', {
+    get: () => enabled,
+    set: (value: boolean) => {
+      enabled = value;
+      captureAssignments.push(value);
+    },
+  });
+  vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValueOnce(
+    new DOMException('Audio gesture required', 'NotAllowedError'),
+  );
+  let allow!: () => void;
+  const allowed = new Promise<void>((resolve) => {
+    allow = resolve;
+  });
+  const options = {
+    householdId: 'linden',
+    assistant: null,
+    onAssistant: () => {},
+    onAccessLost: () => {},
+  };
+  const page = render(<HeldVoice {...options} />);
+  press();
+  const audio = await screen.findByRole('button', { name: 'Starta ljudet' });
+  expect(media.microphone.enabled).toBe(false);
+  vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(() => allowed);
+  fireEvent.click(audio);
+  captureAssignments.length = 0;
+  media.processors[0].port.postMessage.mockClear();
+  page.rerender(<HeldVoice {...options} contextFailed />);
+  expect(media.microphone.enabled).toBe(false);
+  await act(async () => allow());
+  expect(captureAssignments).not.toContain(true);
+  expect(media.processors[0].port.postMessage.mock.calls).not.toContainEqual([{ capture: true }]);
+  expect(media.microphone.enabled).toBe(false);
+  expect(media.processors[0].port.postMessage).toHaveBeenLastCalledWith({ capture: false });
+  expect(button().getAttribute('aria-pressed')).toBe('false');
+  release();
+});

@@ -749,15 +749,17 @@ export function useVoice(options: {
     void Promise.all([playback.audio.play(), playback.audioContext.resume()])
       .then(() => {
         if (prepared.current !== playback || held.current !== request) return;
-        request?.buffer?.playbackReady();
         const capture = Boolean(
           request &&
             !request.released &&
             !latest.current.inputBlocked &&
             !latest.current.saveChecking &&
+            !latest.current.contextFailed &&
             navigator.onLine !== false,
         );
+        // Playback readiness can enable the track; apply the current input gate first.
         request?.buffer?.capture(capture);
+        request?.buffer?.playbackReady();
         setHeldListening(capture && Boolean(request?.buffer?.ready));
         setPlaybackBlocked(false);
       })
