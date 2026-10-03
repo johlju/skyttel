@@ -435,7 +435,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
    tool NUMMER report_result {"source":"draft"}
    ```
 
-4. Under **Besked från Skyttel**, kräv **Utkast:**, **Gäller: aktuellt →
+4. I **Samtalstext**, kräv **Utkast:**, **Gäller: aktuellt →
    upphört** för Tonrum och **Lo Exempel Använder Tonrum → Lo Exempel
    Betalar Tonrum**. Kontrollera att båda rättelserna fortfarande ligger
    i utkastet och att **Lista och utkast** fortfarande finns i panelväljaren.
@@ -447,8 +447,8 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
    {"version":VERSION,"contentVersion":CONTENT,"operationId":"text-details-save"}
    ```
 
-6. Kräv det korta beskedet **Sparat. Hela utkastet finns i hushållets
-   karta.** och ett tomt utkast. Öppna **Utkast och historik**, **Tidigare
+6. Kräv det korta beskedet **Sparat.** i samtalstexten och ett tomt utkast.
+   Öppna **Utkast och historik**, **Tidigare
    sparförsök** och
    **Visa kvittot** och kontrollera
    att **Tonrum** och sambandstypen **Betalar** finns med.
@@ -459,7 +459,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
    ```
 
 8. Kräv **Sparandet:** och samma tidigare och nya status respektive
-   sambandstyp under **Besked från Skyttel**. Kontrollera att utkastet
+   sambandstyp i **Samtalstext**. Kontrollera att utkastet
    förblir tomt och att inget nytt sparförsök tillkommer under **Tidigare
    sparförsök**. Listpanelen ska fortfarande finnas i panelväljaren.
 
@@ -468,7 +468,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
 - Både det osparade utkastet och det senaste kvittot beskriver den
   verkliga ändringen från aktuellt till upphört och från Använder till
   Betalar. Förevärdet får inte beskrivas med den nya sambandstypen.
-- Begärda detaljer visas som besked från Skyttel. Granskningen kräver
+- Begärda detaljer visas som Skyttels svar i samtalstexten. Granskningen kräver
   ingen kartmarkering och ändrar eller sparar inga uppgifter.
 - Själva sparandet bekräftas kort. Detaljer ges när de efterfrågas och
   bygger då på det beständiga kvittot.

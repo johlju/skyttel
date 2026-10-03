@@ -318,6 +318,9 @@ export function voiceAssistantRoutes({
       voice.work = voiceWork({
         channel,
         initial: current,
+        response: (value) => {
+          voice.view.response = value;
+        },
         transcript: (role, text) => transcript?.(context.req.param('sessionId'), role, text),
         interrupt: (revision) => interrupt(context.req.param('sessionId'), revision),
         request: async (action, body, signal) => {
@@ -430,6 +433,7 @@ export function voiceAssistantRoutes({
       )
         return context.json({ error: 'invalid_request' }, 400);
       voice.work?.rendered(body);
+      if (body.microphoneOn === true) voice.work?.answer(voice.assistant);
       voice.heartbeat = Date.now();
     } else return context.json({ error: 'not_found' }, 404);
     return context.json({ voice: voice.view, assistant: voice.assistant });

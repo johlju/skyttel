@@ -205,17 +205,26 @@ när du använder rösten:
 - **Du talar**: staplarna följer hur starkt du talar.
 - **Skyttel arbetar**: Skyttel arbetar med ditt uppdrag.
 - **Skyttel talar**: Skyttel svarar med rösten.
+- **Väntar på ditt svar**: Skyttel har ställt en nödvändig fråga. Rutan
+  finns kvar när mikrofonen är av; punkterna blir då nedtonade.
+- **Sparat**: ett beständigt kvitto bekräftar sparandet. En grön bock
+  visas med ordet i fyra sekunder efter det talade sparbeskedet, eller
+  från avbrottet om du trycker **Avbryt** under beskedet.
 
 Medan Skyttel arbetar eller talar finns stoppikonen **Avbryt** i
 röstrutan. Den stoppar arbetet och tystar Skyttel. Förslag som redan
 ligger i utkastet finns kvar. Med minskad rörelse i systemet rör sig
 vågformen inte: den visar sju punkter när ingen hörs och sju stilla
 staplar när någon hörs. En skärmläsare får höra **Lyssnar** när mikrofonen slås
-på, **Skyttel arbetar** och **Mikrofonen är av** när röstrutan försvinner.
+på, **Skyttel arbetar**, **Sparat** och **Mikrofonen är av** när röstrutan
+försvinner. **Väntar på ditt svar** läses inte upp: Skyttel har just sagt frågan.
 
 Om ett sparresultat är oklart visas att det tidigare sparförsöket måste
-kontrolleras innan nya ändringar. En nödvändig fråga visas med
-**Svara i samtalet** så att du kan öppna dialogen och svara.
+kontrolleras innan nya ändringar. Skyttel ställer nödvändiga frågor
+i samtalet, även om vilken person eller sak som avses och vilket värde
+du vill behålla vid en konflikt. Slå på mikrofonen för att svara med rösten
+eller välj **Skriv till Skyttel** för att läsa frågan och skriva ett svar.
+Textvyn öppnas inte automatiskt och frågan visas inte i en separat ruta.
 
 Skyttel ger korta resultatbesked, exempelvis **Utkastet är uppdaterat**
 eller **Sparat**, utan att läsa upp ändringarna efter varje steg.
@@ -226,8 +235,9 @@ I samtalstexten visas både dina ord och Skyttels svar löpande. Tidigare
 rader finns kvar under samtalet. Korta pauser kan fortsätta samma rad.
 När du stänger av mikrofonen arbetar Skyttel färdigt med det du sade och
 talar klart sitt svar. Inget mer ljud från mikrofonen skickas. Rösten
-stängs några sekunder efter att Skyttel har tystnat, och samtalet finns
-kvar. Medan Skyttel arbetar med ett skrivet meddelande går mikrofonen
+behåller anslutningen medan du är kvar i samtalet, så att en paus inte
+avbryter det sista yttrandet eller svaret. Medan Skyttel arbetar med ett
+skrivet meddelande går mikrofonen
 inte att slå på, förrän Skyttel är klar eller uppdraget är avbrutet.
 
 Beskriv ärendet på svenska, svara på följdfrågor och rätta uppgifter med

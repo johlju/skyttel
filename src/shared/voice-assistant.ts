@@ -6,6 +6,14 @@ export interface VoiceAssistantView {
   error?: string;
   seconds: number | null;
   usageFinal: boolean;
+  /** The checked result handed to the voice, not evidence that its audio was heard. */
+  response?: {
+    id: string;
+    revision: number;
+    text: string;
+    questionPending: boolean;
+    receiptOperationId?: string;
+  };
 }
 
 export interface VoiceAssistantResponse {

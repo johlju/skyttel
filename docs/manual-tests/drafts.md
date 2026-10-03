@@ -615,11 +615,12 @@ fresh explicit save”.
 1. Lägg **Lo Exempel** i utkastet via formuläret. Välj **Skriv till Skyttel**
    och **Godkänn och starta**. Be assistenten förbereda uppgiften och fråga
    vilket kort som avses.
-2. Stäng arbetsytan när statusen visar **Nödvändigt svar**. Kontrollera
-   att frågan finns kvar och att kartåterkopplingen inte erbjuder sparande.
+2. Läs frågan i samtalstexten och stäng arbetsytan. Kontrollera
+   att kartåterkopplingen inte erbjuder sparande. Ingen separat
+   **Nödvändigt svar**-ruta eller **Svara i samtalet**-knapp ska finnas.
 3. Öppna Lista och **Hela mitt utkast**. Kontrollera att **Spara hela
    utkastet** är inaktiverad även där. Kartan har ännu inga sparade objekt.
-4. Välj **Svara i samtalet**, svara **Kortet Lo Exempel avses** och skicka.
+4. Välj **Skriv till Skyttel**, svara **Kortet Lo Exempel avses** och skicka.
    Vänta tills frågan är besvarad. Stäng arbetsytan igen.
 5. Kontrollera att sparande nu erbjuds men inte har genomförts. Välj
    **Spara hela utkastet** uttryckligen och läs det verifierade resultatet.

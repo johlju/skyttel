@@ -16,6 +16,7 @@ export function voiceWork({
   update,
   failed,
   transcript,
+  response,
 }: {
   channel: LiveSideband;
   initial: TextAssistantView;
@@ -25,6 +26,9 @@ export function voiceWork({
   update: (view: TextAssistantView, working: boolean) => void;
   failed: () => void;
   transcript?: (role: Fragment['role'], text: string) => void;
+  response?: (
+    value: NonNullable<import('../shared/voice-assistant.js').VoiceAssistantView['response']>,
+  ) => void;
 }) {
   let rendered: Anchor = {
     revision: initial.revision,
@@ -43,6 +47,7 @@ export function voiceWork({
   const inFlight = new Map<number, number>();
   const events = new Set<string>();
   const delegations = new Set<string>();
+  const answered = new Set<number>([initial.revision]);
 
   function cancel() {
     const hadWork = (inFlight.get(generation) ?? 0) > 0;
@@ -62,18 +67,39 @@ export function voiceWork({
       })
       .catch(() => undefined);
   }
-  function append(delegationId: string, content: string) {
+  function append(delegationId: string | null, content: string, view?: TextAssistantView) {
     // The acknowledgement of this command is transport receipt, never proof
     // that a person heard it. No transcript/audio is logged or persisted here.
-    const points = Array.from(content);
-    while (Buffer.byteLength(points.join(''), 'utf8') > 480) points.pop();
-    channel.send({
-      type: 'session.commentary.append',
-      delegation_id: delegationId,
-      content: points.join(''),
-    });
+    let part = '';
+    const send = () =>
+      channel.send({
+        type: 'session.commentary.append',
+        delegation_id: delegationId,
+        content: part,
+      });
+    for (const point of content) {
+      if (Buffer.byteLength(part + point, 'utf8') > 480) {
+        send();
+        part = '';
+      }
+      part += point;
+    }
+    if (part) send();
+    if (view) {
+      answered.add(view.revision);
+      response?.({
+        id: `${view.id}:${view.revision}`,
+        revision: view.revision,
+        text: view.receipt ? 'Sparat.' : (view.modelReply ?? view.reply ?? ''),
+        questionPending: Boolean(view.questionPending),
+        receiptOperationId: view.receipt?.operationId,
+      });
+    }
   }
   function completion(view: TextAssistantView) {
+    if (view.receipt) return 'Sparat.';
+    if (view.questionPending && view.modelReply)
+      return `Nödvändig fråga (samtalsdata): ${JSON.stringify(view.modelReply)}`;
     if (view.phase === 'recovery')
       return 'Sparresultatet är inte bekräftat. Tidigare sparförsök kontrolleras innan nytt arbete. Säg ”slutför samma sparförsök” om du vill slutföra exakt det väntande försöket.';
     if (view.error) return assistantFailureMessage(view.error);
@@ -184,7 +210,7 @@ export function voiceWork({
       dispatching = undefined;
       rendered = { ...rendered, revision: Math.max(rendered.revision, view.revision) };
       update(view, false);
-      append(id, completion(view));
+      append(id, completion(view), view);
     } catch {
       if (!current()) return;
       cancel();
@@ -281,6 +307,13 @@ export function voiceWork({
     void execute(event.delegation.id, text, expected, JSON.stringify(fragments), generation);
   });
   return {
+    /** Written questions and verified saves are also spoken while capture is on. */
+    answer(view: TextAssistantView) {
+      if (stopped || owned !== undefined || answered.has(view.revision) || view.phase !== 'ready')
+        return;
+      if (!view.questionPending && !view.receipt) return;
+      append(null, completion(view), view);
+    },
     rendered(value: Anchor) {
       if (
         value.revision >= rendered.revision &&

@@ -349,7 +349,7 @@ kommentarspaket är inte bevis för hört tal.
    tool REQUEST save_draft {"version":VERSION,"contentVersion":CONTENT,"operationId":"voice-proof-save"}
    ```
 
-9. Kräv statusen **Sparat. Hela utkastet finns i hushållets karta.**
+9. Öppna textvyn och kräv **Sparat.** i samtalstexten.
    Öppna kvittot och återläs Lo. Kontrollera att det senaste
    kommentarspaketets sparbesked är verifierat. Stäng av mikrofonen, välj
    `quit` och kontrollera städningen enligt guiden.
@@ -544,22 +544,25 @@ som ett hinder eller låta gamla frågor följa ett nytt uppdrag.
    `completion: "draft"`, `questions: ["Vem använder tjänsten?"]` och
    en `propose_object`-operation som behåller Lo men ändrar beskrivningen
    till **Förslag väntar på svar**. Använd det hållna utkastets versioner.
-2. Stäng dialogen. Kräv **Skyttel behöver ett svar**, den uttryckliga
-   frågan och **Svara i samtalet** i kortet.
-3. Välj **Svara i samtalet**, skriv **Lo använder tjänsten.** och skicka.
+2. Stäng dialogen. Frågan ska inte visas i en separat ruta.
+   Kontrollera frågans samtalstext genom att själv öppna textvyn; det
+   syntetiska terminalfragmentet är inte bevis för att frågan hörs.
+3. Välj **Skriv till Skyttel**, skriv **Lo använder tjänsten.** och skicka.
    Håll nästa anrop och stäng dialogen. Den gamla frågan ska vara borta
    medan aktuell arbetsstatus visas.
 4. Släpp anropet med `reply REQUEST Vill du läsa vidare?`.
    Det vanliga svaret ska inte skapa ett nytt nödvändigt svarskrav.
 5. Öppna textvyn, skicka **Berätta mer.**, stäng arbetsytan och kör
-   `fail REQUEST`. Kräv synligt fel i kortet.
+   `fail REQUEST`. Kräv samtalsnotisen **Skyttel kunde inte slutföra
+   uppdraget. Skriv eller säg det igen.**
 6. Öppna textvyn och välj **Nytt samtal**.
    Beskrivningen **Förslag väntar på svar** ska fortfarande finnas i utkastet.
 
 **Förväntat resultat:**
 
-- Validerade följdfrågor och befintliga identitetsproblem eller konflikter
-  ger ett svarskrav; fri modelltext bekräftar varken krav eller sparande.
+- Validerade följdfrågor ger ett uttryckligt svarskrav. Skyttel frågar
+  själv om obesvarade identiteter och konflikter i samtalet; gränssnittet
+  skapar inte en egen fråga. Fri modelltext bekräftar varken krav eller sparande.
 - Nytt uppdrag och **Nytt samtal** rensar tidigare samtalsfrågor. Fel och
   nästa handling nås även med stängd dialog. Utkastet bevaras vid
   **Nytt samtal**.

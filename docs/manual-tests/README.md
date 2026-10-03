@@ -121,6 +121,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   automatisk återkomst, bevarad text med stoppad sändning och mikrofon,
   hjälpmedel utan dubbel uppläsning, fokus och placering vid röstrutan
   eller meddelandefältet på bred och smal skärm.
+- [Frågor och talade sparbesked](conversation-questions.md): identiteter,
+  konflikter, väntan med mikrofonen av, beständigt kvitto och fyra
+  sekunders sparbesked efter ljud eller stopp.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
   röstrutans statusord, vågform, stoppikon, plats och uppläsning,

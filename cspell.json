@@ -414,7 +414,12 @@
     "trackpad",
     "fokusram",
     "fokusramen",
-    "fokusordning"
+    "fokusordning",
+    "talproven",
+    "vyöppning",
+    "providertext",
+    "vyöppningar",
+    "transkriptfragment"
   ],
   "overrides": [
     {

@@ -50,6 +50,8 @@ export function createVoiceTransport(
     onDisconnected: (disconnected: boolean) => void;
     onTranscript?: (row: TranscriptRow) => void;
     onAudioActivity?: (activity: { microphone: boolean; speaker: boolean }) => void;
+    /** Text aligned with provider output audio; it does not define a complete turn. */
+    onOutputTranscript?: (text: string) => void;
     /** Skyttel has taken on a task from what the user said. */
     onDelegation?: () => void;
     inputAllowed?: () => boolean;
@@ -255,7 +257,10 @@ export function createVoiceTransport(
   live.peerConnection.addEventListener('connectionstatechange', connectionChanged);
   const subscriptions = [
     live.on('session.input_transcript.delta', (event) => transcript('user', event)),
-    live.on('session.output_transcript.delta', (event) => transcript('assistant', event)),
+    live.on('session.output_transcript.delta', (event) => {
+      transcript('assistant', event);
+      if (!closed && !stopped && event.delta) callbacks.onOutputTranscript?.(event.delta);
+    }),
     live.on('session.delegation.created', () => {
       assistantBoundary = true;
       finish(assistantRow);

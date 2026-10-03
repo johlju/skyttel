@@ -92,6 +92,11 @@
 .voice-box:has(.voice-stop) {
   padding-right: 5px;
 }
+.voice-saved {
+  width: 16px;
+  height: 16px;
+  color: var(--proposal-added, #187747);
+}
 
 .conversation-corner button.voice-stop,
 .household-map.workspace-shell .conversation-corner button.voice-stop {

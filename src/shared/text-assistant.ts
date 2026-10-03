@@ -36,6 +36,8 @@ export interface TextAssistantView {
   modelReply?: string;
   /** Explicit follow-up questions from a validated assistant action, never a save receipt. */
   questions?: string[];
+  /** The server has asked a necessary question in this conversation and awaits an answer. */
+  questionPending?: boolean;
   result?: TextAssistantResult;
   error?: string;
   receipt?: SaveReceipt;

@@ -26,6 +26,11 @@ export type Voice = {
   userSpeaking: boolean;
   /** Skyttel works with a task that the user gave with the voice. */
   working: boolean;
+  /** A necessary question that this voice has spoken still awaits an answer. */
+  waitingForAnswer?: boolean;
+  /** A verified save, shown for four seconds after the bounded spoken acknowledgement drains. */
+  saved?: boolean;
+  savedId?: string;
   error: string;
   playbackBlocked: boolean;
   disconnected: boolean;
@@ -70,6 +75,7 @@ type Attempt = {
   retained?: MediaStream;
   poll?: ReturnType<typeof setTimeout>;
   held?: HeldRequest;
+  output?: { text: string; heard: boolean; speaking: boolean; matched?: string };
 };
 async function stopRemote(path: string, id: string) {
   const controller = new AbortController();
@@ -127,8 +133,55 @@ export function useVoice(options: {
   const [disconnected, setDisconnected] = useState(false);
   // Microphone-off keeps the connection alive: Live has no reliable answer-complete event.
   const [off, setOff] = useState(false);
+  const offRef = useRef(off);
+  offRef.current = off;
   const [activity, setActivity] = useState({ microphone: false, speaker: false });
   const [heldListening, setHeldListening] = useState(false);
+  const [spokenQuestion, setSpokenQuestion] = useState<number | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [savedId, setSavedId] = useState('');
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const completedOutput = useRef(new Set<string>());
+  const announceSave = useCallback((id: string) => {
+    clearTimeout(savedTimer.current);
+    setSavedId(id);
+    setSaved(true);
+    savedTimer.current = setTimeout(() => setSaved(false), 4000);
+  }, []);
+  const checkOutput = useRef<() => void>(() => {});
+  checkOutput.current = () => {
+    const attempt = current.current;
+    const response = voice?.response;
+    const output = attempt?.output;
+    if (!attempt || !response || !output || completedOutput.current.has(response.id)) return;
+    const words = (text: string) =>
+      text
+        .toLocaleLowerCase('sv')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim();
+    if (!response.text || !words(output.text).includes(words(response.text))) return;
+    if (output.matched !== response.id) {
+      output.matched = response.id;
+      // Earlier audio and a pause before the final word do not prove that the
+      // audio associated with a newly delivered transcript has even started.
+      output.heard = output.speaking;
+    }
+    if (!output.heard || output.speaking) return;
+    // A matching transcript alone never starts the timer: audio must first be
+    // observed, and then drain. Live offers no complete-turn event; future
+    // unsolicited output cannot be ruled out by this bounded-word check.
+    completedOutput.current.add(response.id);
+    attempt.output = { text: '', heard: false, speaking: false };
+    if (response.questionPending) setSpokenQuestion(response.revision);
+    if (
+      response.receiptOperationId &&
+      response.receiptOperationId === latest.current.assistant?.receipt?.operationId
+    )
+      announceSave(response.receiptOperationId);
+  };
+  useEffect(() => {
+    if (voice?.response) checkOutput.current();
+  }, [voice?.response]);
   const apply = useCallback((view: TextAssistantView) => {
     const shown = latest.current.assistant;
     if (
@@ -200,11 +253,15 @@ export function useVoice(options: {
     setPlaybackBlocked(false);
     setDisconnected(false);
     setOff(false);
+    setSpokenQuestion(null);
+    setSaved(false);
+    completedOutput.current.clear();
     setActivity((value) =>
       value.microphone || value.speaker ? { microphone: false, speaker: false } : value,
     );
     return () => {
       mounted.current = false;
+      clearTimeout(savedTimer.current);
       if (current.current?.path === path) void stop();
       epoch.current++;
     };
@@ -261,6 +318,7 @@ export function useVoice(options: {
         path,
         controller: new AbortController(),
         held: held.current ?? undefined,
+        output: { text: '', heard: false, speaking: false },
       };
       current.current = attempt;
       epoch.current++;
@@ -305,7 +363,7 @@ export function useVoice(options: {
         try {
           const result = await request<VoiceAssistantResponse>(
             `${path}/${attempt.voiceId}/poll`,
-            anchor(),
+            { ...anchor(), microphoneOn: !offRef.current },
             attempt.controller.signal,
           );
           if (!active()) return;
@@ -373,8 +431,22 @@ export function useVoice(options: {
             onTranscript: (row) => {
               if (active()) latest.current.onTranscript?.(row);
             },
+            onOutputTranscript: (text) => {
+              if (!active() || !attempt.output) return;
+              attempt.output.text += text;
+              checkOutput.current();
+            },
             onAudioActivity: (value) => {
-              if (active()) setActivity(value);
+              if (!active()) return;
+              setActivity(value);
+              if (attempt.output) {
+                attempt.output.speaking = value.speaker;
+                attempt.output.heard ||= value.speaker;
+                checkOutput.current();
+              }
+            },
+            onDelegation: () => {
+              attempt.output = { text: '', heard: false, speaking: false };
             },
           },
           playback,
@@ -511,6 +583,14 @@ export function useVoice(options: {
   const silence = useCallback(
     (cancelWork?: () => Promise<void>) => {
       const attempt = current.current;
+      const response = voice?.response;
+      if (
+        response?.receiptOperationId === latest.current.assistant?.receipt?.operationId &&
+        response?.receiptOperationId
+      ) {
+        completedOutput.current.add(response.id);
+        announceSave(response.receiptOperationId);
+      }
       // Live has no output-cancel event. Retire the entire output stream, retaining
       // the authorized input and conversation as historical text in a fresh session.
       const interrupted = renew(async () => {
@@ -538,7 +618,7 @@ export function useVoice(options: {
           );
         });
     },
-    [renew, apply],
+    [renew, apply, voice?.response, announceSave],
   );
   const level = useCallback(() => current.current?.transport?.microphoneLevel() ?? 0, []);
   const startHeld = useCallback(() => {
@@ -639,6 +719,11 @@ export function useVoice(options: {
     speaking,
     userSpeaking: microphone === 'on' && activity.microphone,
     working,
+    waitingForAnswer: Boolean(
+      options.assistant?.questionPending && spokenQuestion === options.assistant.revision,
+    ),
+    saved,
+    savedId,
     error,
     playbackBlocked,
     disconnected,

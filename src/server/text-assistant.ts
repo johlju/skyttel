@@ -176,6 +176,7 @@ export function textAssistantRoutes({
       reply,
       modelReply,
       questions,
+      questionPending: Boolean(questions?.length),
       result,
       error,
       receipt,
@@ -608,6 +609,26 @@ export function textAssistantRoutes({
         });
         tools.push({
           type: 'function',
+          name: 'ask_questions',
+          description:
+            'Ställ nödvändiga riktade frågor i samtalet och invänta svar. Använd även utan ändringsoperationer, till exempel för obesvarade identiteter eller konflikter. Beskriv de berörda namnen och konkreta valen från aktuellt underlag; gissa inga svar. Detta ändrar eller sparar ingenting.',
+          parameters: {
+            type: 'object',
+            properties: {
+              questions: {
+                type: 'array',
+                minItems: 1,
+                maxItems: 3,
+                items: { type: 'string', maxLength: 240 },
+              },
+            },
+            required: ['questions'],
+            additionalProperties: false,
+          },
+          strict: false,
+        });
+        tools.push({
+          type: 'function',
           name: 'report_result',
           description:
             'Ge detaljer från aktuellt utkast eller ett verkligt sparande utan ytterligare modellomgång. latest_save hämtar senaste kvittot; save kräver operationId och userId från historiken. last_failure återger det senaste registrerade felet i samtalet utan att upprepa uppdraget. Texten skapas av servern från faktiska poster och fel, inte av modellen.',
@@ -711,6 +732,26 @@ export function textAssistantRoutes({
           guard();
           const args = JSON.parse(action.arguments) as Record<string, unknown>;
           if (combined) Object.assign(args, { version, contentVersion });
+          if (action.name === 'ask_questions') {
+            if (calls.length !== 1) throw new MapError('invalid_request', 400);
+            const value = z
+              .object({
+                questions: z.array(z.string().trim().min(1).max(240)).min(1).max(3),
+              })
+              .strict()
+              .parse(args);
+            session.questions = value.questions;
+            session.modelReply = value.questions.join(' ');
+            session.reply = session.result?.message;
+            session.phase = 'ready';
+            session.input.push({
+              type: 'function_call_output',
+              call_id: action.call_id,
+              output: JSON.stringify({ questionPending: true }),
+            });
+            session.conversation.push({ role: 'assistant', text: session.modelReply });
+            return;
+          }
           if (action.name === 'report_result') {
             const parsed = z
               .discriminatedUnion('source', [

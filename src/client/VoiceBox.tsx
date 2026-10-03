@@ -7,16 +7,20 @@ import './voice-box.css';
 const statuses = [
   { id: 'working', word: 'Skyttel arbetar', wave: 'still', stop: true },
   { id: 'speaking', word: 'Skyttel talar', wave: 'skyttel', stop: true },
+  { id: 'saved', word: 'Sparat', wave: 'still', stop: false },
   { id: 'starting', word: 'Rösten startar', wave: 'dimmed', stop: false },
   { id: 'user', word: 'Du talar', wave: 'user', stop: false },
+  { id: 'waiting', word: 'Väntar på ditt svar', wave: 'still', stop: false },
   { id: 'listening', word: 'Lyssnar', wave: 'still', stop: false },
 ] as const;
 
-export type VoiceBoxStatus = (typeof statuses)[number];
+export type VoiceBoxStatus = Omit<(typeof statuses)[number], 'wave'> & {
+  wave: 'still' | 'dimmed' | 'user' | 'skyttel';
+};
 
 type VoiceBoxState = Pick<
   Voice,
-  'microphone' | 'starting' | 'speaking' | 'userSpeaking' | 'working'
+  'microphone' | 'starting' | 'speaking' | 'userSpeaking' | 'working' | 'waitingForAnswer' | 'saved'
 >;
 
 /**
@@ -29,11 +33,14 @@ export function voiceBoxStatus(voice: VoiceBoxState, working: boolean): VoiceBox
     // A written message counts while the microphone is on.
     working: voice.working || (on && working),
     speaking: voice.speaking,
+    saved: voice.saved,
     starting: voice.starting,
     user: voice.userSpeaking,
+    waiting: voice.waitingForAnswer,
     listening: on,
   };
-  return statuses.find((status) => applies[status.id]) ?? null;
+  const status = statuses.find((status) => applies[status.id]) ?? null;
+  return status?.id === 'waiting' && !on ? { ...status, wave: 'dimmed' } : status;
 }
 
 // How much each of the seven bars takes of the sound level, highest in the middle.
@@ -112,6 +119,7 @@ export function VoiceBox({
   const before = useRef({ on, shown });
   // Whether the user has yet to be told that the microphone, once on, is off.
   const owesOff = useRef(on);
+  const announcedSave = useRef('');
   const microphoneButtonNow = useRef(microphoneButton);
   microphoneButtonNow.current = microphoneButton;
   const focusAfterStopNow = useRef(focusAfterStop);
@@ -126,12 +134,15 @@ export function VoiceBox({
     let text = '';
     if (on && !previous.on) text = saysState ? '' : 'Lyssnar';
     else if (shown === 'working' && previous.shown !== 'working') text = 'Skyttel arbetar';
-    else if (!on && !shown && owesOff.current) {
+    else if (shown === 'saved' && announcedSave.current !== voice.savedId) {
+      announcedSave.current = voice.savedId ?? '';
+      text = 'Sparat';
+    } else if (!on && !shown && owesOff.current) {
       owesOff.current = false;
       text = saysState ? '' : 'Mikrofonen är av';
     }
     if (text) setAnnouncement(({ count }) => ({ count: count + 1, text }));
-  }, [on, shown]);
+  }, [on, shown, voice.savedId]);
   // The stop icon goes away while it may have the focus, which must not be lost.
   const stopFocused = useRef(false);
   const stopShown = Boolean(status?.stop && !hideStop);
@@ -163,6 +174,18 @@ export function VoiceBox({
         // biome-ignore lint/a11y/useSemanticElements: a named group that is not a form
         <div className="voice-box" role="group" aria-label="Röstruta">
           <Waveform form={status.wave} level={voice.level} />
+          {status.id === 'saved' && (
+            <svg className="voice-saved" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="m5 12 4 4L19 6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
           <span>{status.word}</span>
           {status.stop && !hideStop && (
             <button

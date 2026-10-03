@@ -202,6 +202,23 @@ export function useConversation({
           role: 'assistant',
           text: reply.text,
         });
+      if (next.receipt && next.receipt.operationId !== previous?.receipt?.operationId)
+        showTranscript({
+          id: `saved-${next.id}-${next.receipt.operationId}`,
+          role: 'assistant',
+          text: 'Sparat.',
+        });
+      if (
+        next.result &&
+        next.reply &&
+        !next.receipt &&
+        (next.reply !== previous?.reply || next.revision !== previous?.revision)
+      )
+        showTranscript({
+          id: `result-${next.id}-${next.revision}`,
+          role: 'assistant',
+          text: next.reply,
+        });
       if (
         next.modelReply &&
         !(next.completedReplies ?? []).some((reply) => reply.text === next.modelReply) &&
@@ -631,13 +648,7 @@ export function useConversation({
     error,
     unknown,
     working,
-    needsAnswer: Boolean(
-      session &&
-        !working &&
-        (session.questions?.length ||
-          session.review.unresolvedIdentities.length ||
-          session.review.conflicts.length),
-    ),
+    needsAnswer: Boolean(!working && session?.questionPending),
     voice,
     setText,
     begin: (mode) => {

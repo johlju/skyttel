@@ -263,7 +263,7 @@ test("the bars follow the microphone's sound level while the user talks", async 
   await waitFor(() => expect(tallest()).toBeGreaterThan(15));
   signals.set(track, 0);
   await screen.findByText('Lyssnar');
-  expect(tallest()).toBe(0);
+  await waitFor(() => expect(tallest()).toBe(0));
 });
 
 test('Avbryt discards the interrupted output across long pauses and permits a fresh answer', async () => {
@@ -1231,7 +1231,12 @@ test.each([
     await waitFor(() => expect(polls).not.toEqual([]), { timeout: 2000 });
     await waitFor(() => expect(voiceBox()?.textContent ?? null).toBe(word));
     expect(microphoneButton().getAttribute('aria-pressed')).toBe(String(word !== null));
-    expect(polls[0]).toEqual({ revision: 2, draftVersion: 3, contentVersion: 1 });
+    expect(polls[0]).toEqual({
+      revision: 2,
+      draftVersion: 3,
+      contentVersion: 1,
+      microphoneOn: true,
+    });
   },
 );
 
@@ -1348,6 +1353,7 @@ test('an older voice reply cannot overwrite a newer displayed text revision', as
     revision: 3,
     draftVersion: 3,
     contentVersion: 1,
+    microphoneOn: true,
   });
   expect(changed).not.toHaveBeenCalled();
 });
