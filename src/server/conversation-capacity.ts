@@ -59,31 +59,32 @@ export class ConversationCapacity {
       this.measuredVoice = Math.min(1, ratio);
   }
 
-  needsSummary(textBytes: number, dialogueBytes: number) {
+  private textTokens(textBytes: number) {
     const measured = this.measuredText;
-    const textTokens = measured
-      ? measured.tokens + Math.max(0, textBytes - measured.bytes) / 3
-      : textBytes / 3;
+    return measured ? measured.tokens + Math.max(0, textBytes - measured.bytes) / 3 : textBytes / 3;
+  }
+
+  private voiceRatio(dialogueBytes: number) {
+    return (
+      this.measuredVoice ??
+      (this.voiceSource ? dialogueBytes / 3 / voiceConversationModel.tokens : 0)
+    );
+  }
+
+  needsSummary(textBytes: number, dialogueBytes: number) {
     // Live automatically replaces history above 90%; reserve one percentage
     // point for usage-event and polling latency. This is an effective limit.
-    const voiceRatio =
-      this.measuredVoice ??
-      (this.voiceSource ? dialogueBytes / 3 / voiceConversationModel.tokens : 0);
-    return textTokens >= textConversationModel.tokens * 0.95 || voiceRatio >= 0.89;
+    return (
+      this.textTokens(textBytes) >= textConversationModel.tokens * 0.95 ||
+      this.voiceRatio(dialogueBytes) >= 0.89
+    );
   }
 
   percent(textBytes: number, dialogueBytes: number) {
-    const measured = this.measuredText;
-    const text = measured
-      ? measured.tokens + Math.max(0, textBytes - measured.bytes) / 3
-      : textBytes / 3;
-    const voice =
-      this.measuredVoice === undefined
-        ? this.voiceSource
-          ? dialogueBytes / 3 / voiceConversationModel.tokens
-          : 0
-        : this.measuredVoice;
-    return Math.max(percentage(text, textConversationModel.tokens), percentage(voice, 1));
+    return Math.max(
+      percentage(this.textTokens(textBytes), textConversationModel.tokens),
+      percentage(this.voiceRatio(dialogueBytes), 1),
+    );
   }
 
   reset() {
