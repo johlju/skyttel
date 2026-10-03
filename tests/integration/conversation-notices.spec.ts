@@ -17,6 +17,8 @@ const disconnectedIdle = 'Ingen kontakt med Skyttel. Försök igen när kontakte
 const unavailable =
   'Samtal med Skyttel är inte tillgängligt just nu. Kontakta administratören om det fortsätter.';
 const failed = 'Skyttel kunde inte slutföra uppdraget. Försök igen.';
+// Availability and recovery can wait for the five-second HTTP check plus its response.
+const networkRecheckTimeout = 10_000;
 const notice = (page: Page) => page.getByRole('region', { name: 'Samtalsnotis', exact: true });
 const textView = (page: Page) =>
   page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
@@ -138,7 +140,7 @@ test('NOT-02: bruten kontakt stoppar mikrofon och sändning medan texten går at
     expect(sent).toHaveLength(0);
     expect(model.requests).toHaveLength(0);
     await page.context().setOffline(false);
-    await expect(notice(page)).toHaveCount(0);
+    await expect(notice(page)).toHaveCount(0, { timeout: networkRecheckTimeout });
     await expect(polite(page)).toHaveText('Kontakten med Skyttel är tillbaka.');
     await expect(microphoneButton(page)).toBeEnabled();
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
@@ -196,7 +198,7 @@ test('NOT-03: en notis flyttas till textvyn utan ny uppläsning och försvinner 
       'first',
     );
     await page.context().setOffline(false);
-    await expect(notice(page)).toHaveCount(0);
+    await expect(notice(page)).toHaveCount(0, { timeout: networkRecheckTimeout });
     await expect(polite(page)).toHaveText('Kontakten med Skyttel är tillbaka.');
   } finally {
     await page.context().setOffline(false);
@@ -216,16 +218,16 @@ test('NOT-04: bruten kontakt går före otillgängligt samtal och uppdragsfel', 
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect(notice(page)).toContainText(failed);
     app.setConversationAvailable(false);
-    await expect(notice(page)).toContainText(unavailable, { timeout: 7000 });
+    await expect(notice(page)).toContainText(unavailable, { timeout: networkRecheckTimeout });
     await expect(page.getByRole('button', { name: 'Skicka', exact: true })).toBeDisabled();
     await field(page).fill('Oskickad text finns kvar.');
     await page.context().setOffline(true);
     await expect(notice(page)).toContainText(disconnectedActive);
     await expect(notice(page)).toHaveCount(1);
     await page.context().setOffline(false);
-    await expect(notice(page)).toContainText(unavailable);
+    await expect(notice(page)).toContainText(unavailable, { timeout: networkRecheckTimeout });
     app.setConversationAvailable(true);
-    await expect(notice(page)).toContainText(failed, { timeout: 7000 });
+    await expect(notice(page)).toContainText(failed, { timeout: networkRecheckTimeout });
     await expect(polite(page)).toContainText('Samtal med Skyttel är tillgängligt igen.');
     await expect(field(page)).toHaveValue('Oskickad text finns kvar.');
     await expect(page.getByRole('button', { name: 'Skicka', exact: true })).toBeEnabled();
@@ -288,7 +290,7 @@ test('NOT-06: en stängbar kontakt-notis försvinner automatiskt och nästa avbr
     await expect(textView(page)).toHaveCount(0);
     await notice(page).getByRole('button', { name: 'Stäng notisen' }).focus();
     await page.context().setOffline(false);
-    await expect(notice(page)).toHaveCount(0);
+    await expect(notice(page)).toHaveCount(0, { timeout: networkRecheckTimeout });
     await expect(microphoneButton(page)).toBeFocused();
     await expect(polite(page)).toHaveText('Kontakten med Skyttel är tillbaka.');
     await page.context().setOffline(true);
@@ -298,6 +300,10 @@ test('NOT-06: en stängbar kontakt-notis försvinner automatiskt och nästa avbr
     await notice(page).getByRole('button', { name: 'Stäng notisen' }).click();
     await expect(notice(page)).toHaveCount(0);
     await page.context().setOffline(false);
+    await expect(microphoneButton(page)).not.toHaveAccessibleDescription(
+      /Inte tillgängligt just nu\./,
+      { timeout: networkRecheckTimeout },
+    );
     // Dismissal does not produce a recovery announcement.
     await expect(polite(page)).toHaveText('');
   } finally {
