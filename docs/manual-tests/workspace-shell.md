@@ -1,6 +1,7 @@
 # Manuella testfall för kartans arbetsyta
 
-Fallen omfattar kartans verktyg, teman, vägledning och återhämtning.
+Fallen omfattar kartans verktyg, teman, vägledning, samtalshjälp och
+återhämtning.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
 ## Konfigurerade användare
@@ -18,6 +19,13 @@ testidentitet och påhittade hushållsuppgifter.
 3. Kör med tangentbord på dator och pekskärm på telefon. Kontrollera
    skärmläsarens namn, läsordning och statusmeddelanden separat. Anteckna
    fysiska enheter och hjälpmedel; Chromium-emulering verifierar inte dem.
+4. För YTA-03, YTA-07 och YTA-08: använd i stället
+   [den kontrollerade röstinstallationen](voice-assistant.md#controlled-voice-fixture).
+   Starta med `node --import tsx scripts/manual-voice.ts` efter bygget,
+   följ den privata portvidarebefordran och logga in med Google som Alex.
+   Skapa ett tomt hushåll Hjälpprov; kör inte `seed-family`.
+   Börja med stängda arbetsytor och utan sparat medgivande. Installationens
+   ljudspår är tysta och bevisar inte hört tal. Avsluta med `quit`.
 
 ## Verktyg och teman
 
@@ -102,8 +110,9 @@ without graphics”.
    **Information och hjälp**. Läs instruktionerna och tryck Escape.
 2. Välj **Lista**, **Nytt objekt** och skriv **Min cykel**. Kontrollera att
    fält och knappen för att lägga i utkastet går att nå.
-3. Stäng arbetsytan och välj **Skriv till Skyttel**. Kontrollera att
-   samtalsytan går att nå utan mikrofon.
+3. Stäng arbetsytan och välj **Skriv till Skyttel**. Ge medgivande med
+   **Godkänn och starta** om rutan visas. Kontrollera att samtalsytan går
+   att nå utan mikrofon.
 4. Upprepa med förstoring och tangentbord; använd hopplänkarna till
    formulär och samtal före kartgrafiken.
 5. Öppna **Sök i kartan** och **Utkast och historik** från de expanderade
@@ -121,6 +130,117 @@ without graphics”.
 - Fokus återgår till en synlig verktygsknapp. Täckta kartkontroller går
   inte att tabba till medan arbetsytan ligger över kartan; stäng
   arbetsytan för att använda kartans kontroller igen.
+
+### YTA-07: hjälpen förklarar samtalet och leder till rätt kontroller
+
+**Syfte:** Läsa hjälpen innan medgivande och följa dess samtalskontroller.
+
+**Användare:** Alex, administratör i Hjälpprov.
+
+**Förutsättningar:** Den kontrollerade installationen enligt steg 4.
+Börja med tomt utkast på dator. Använd Windows eller Linux och upprepa
+på macOS; anteckna faktiskt provad enhet och eventuella genvägskrockar.
+
+**Integrationstest:**
+[conversation-help.spec.ts](../../tests/integration/conversation-help.spec.ts),
+testfallet “YTA-07: hjälpen förklarar samtalet och leder till rätt kontroller”,
+i grupperna Windows och Linux samt macOS.
+Automationen emulerar plattformsnamnet och provar tangentkommandot i
+Chromium; fysisk mikrofon, faktisk uppläsning och OS-genvägar återstår.
+Tal som väntar under starten provas i
+[MIKROFONTRYCK-05](microphone-press.md#mikrofontryck-05-tal-under-starten-förs-över-efter-släpp-utan-ny-inspelning).
+
+**Steg:**
+
+1. Nå **Information och hjälp** med Tab och öppna med Enter. Läs rubriken
+   och delarna om samma samtal, långt tryck, medgivande, OpenAI och formulär.
+   Kontrollera att läsning inte startar mikrofonen eller frågar om medgivande.
+2. Läs att släpp stoppar ny inspelning direkt och att redan inspelat tal
+   från starten kan skickas efter släpp. Läs tangentkombinationen för din
+   enhet: Ctrl+Mellanslag eller Ctrl+Skift+Mellanslag. Läs förbehållet om
+   fel i samtalstexten och att kartan och kvittot bekräftar resultatet.
+3. Läs vilka uppgifter OpenAI behandlar. Läs att begäran om att inte lagra
+   inte garanterar behandling enbart i EU eller omedelbar radering av alla
+   kopior.
+   Nå **Läs OpenAI:s datavillkor** med Tab och kontrollera länkens namn.
+4. Stäng med Escape. Välj **Lista**, **Nytt objekt**, ange **Lo Exempel**
+   och välj **Lägg i mitt utkast** utan att starta något samtal.
+   Välj **Stäng arbetsytan**.
+5. Tryck tangentkombinationen kort. I medgivanderutan, markera
+   **Fråga inte igen för det här hushållet** och välj **Godkänn och starta**.
+   Tryck kombinationen kort igen för att stänga av mikrofonen.
+   Håll sedan kombinationen tills mikrofonen är på och släpp.
+6. Välj **Skriv till Skyttel**, skicka **Vad finns i utkastet?** och släpp
+   modellsvaret i terminalen med `reply ANROP Lo-förslaget ligger kvar.`,
+   där `ANROP` är ID från `held`. Skriv **Oskickat medan hjälpen läses**
+   utan att skicka. Öppna och stäng hjälpen igen.
+7. Följ hjälpens väg: **Inställningar**, **Samtal med Skyttel**,
+   **Återkalla medgivandet** och **Återkalla och avsluta samtalet**.
+   Återgå till kartan och välj **Skriv till Skyttel** igen.
+
+**Förväntat resultat:**
+
+- Hjälpens rubrik får fokus. Texten använder **Prata med Skyttel** och
+  **Skriv till Skyttel**, förklarar att röst och text är samma samtal och
+  att formulären kan användas utan mikrofon eller samtalsmedgivande.
+- Texten förklarar långt och kort tryck, medgivande före inspelning,
+  fortsatt svar efter släpp och att väntande tal kasseras vid avbruten start.
+  Tangentkombinationen följer plattformen. Kort tryck räcker alltid.
+- Mikrofonen växlar med kort tryck och är av efter släpp av långt tryck.
+  Samma samtal fortsätter i text utan ny medgivanderuta. Lo-förslaget
+  finns kvar; oskickad text bevaras medan hjälpen läses.
+- Återkallandet avslutar samtalet, bevarar Lo-förslaget och frågar om
+  medgivande vid nästa start. Hjälpens kontrollnamn leder till dessa steg.
+- OpenAI:s behandling, möjliga kvarvarande uppgifter och begränsningar
+  beskrivs utan löfte om omedelbar radering eller behandling enbart i EU.
+  Automationen granskar också att verkliga text- och röstanrop begär
+  att inte lagra svar eller session; den provar inte leverantörens drift.
+
+### YTA-08: hjälpens långa text går att läsa och stänga på smal skärm
+
+**Syfte:** Läsa hela hjälpen och nå verktygen utan rullning i sidled.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Samma installation på smal skärm, gärna 320×568 px.
+Inget samtal pågår. Använd tangentbord och upprepa på fysisk pekskärm.
+
+**Integrationstest:**
+[conversation-help.spec.ts](../../tests/integration/conversation-help.spec.ts),
+testfallet “YTA-08: hjälpens långa text går att läsa och stänga på smal skärm”.
+Att fälla ihop verktygen medan hjälpen är öppen täcks även av YTA-03.
+
+**Steg:**
+
+1. Expandera verktygen och öppna **Information och hjälp** med tangentbord.
+   Kontrollera fokus på rubriken. Rulla till slutet, med End på dator
+   eller genom hjälpens text på pekskärm. Läs formuläralternativet.
+2. Nå länken till datavillkoren och stängknappen med Tab. Kontrollera
+   att det fokuserade innehållet syns och att hjälpen ryms i sidled.
+3. Välj **Dölj verktygens namn** medan hjälpen är öppen. Kräv att knappen
+   går att aktivera och att hjälpen fortfarande går att läsa.
+4. Stäng med Escape. Öppna igen, rulla och använd **Stäng verktyget**.
+
+**Förväntat resultat:**
+
+- Hjälpen och verktygen har egna nåbara ytor. Lång text rullar inom
+  hjälpen och täcker inte knappen som fäller ihop verktygen.
+- Rubriker, stycken, datavillkorslänk och stängknapp går att nå med
+  tangentbord. Ingen rullning i sidled behövs. Mikrofonen startar inte.
+- Stängning återför fokus till hjälpknappen eller den synliga knappen
+  för att expandera verktygen när hjälpknappen har dolts.
+
+**Tillgänglighetsbedömning för samtalshjälpen:**
+
+Designmålen är WCAG 2.2 AA: semantisk region och rubrikordning (1.3.1),
+beskrivande rubriker och länk (2.4.6), tangentbord och logiskt återställt
+fokus (2.1.1, 2.4.3), samt omflöde och oskymt fokus (1.4.10, 2.4.11).
+Länken använder arbetsytans minst 44 px höga träffyta (2.5.8).
+Automationen kontrollerar region, rubrikfokus, genvägarnas kontrollerade
+beteende, smal läsyta, rullning, nåbara verktyg och återställt fokus.
+Verklig NVDA/VoiceOver-uppläsning, genvägar på fysisk Windows/macOS,
+pekning på iPhone/iPad, kontrast i båda teman och 200/400 procents zoom
+återstår. Inget intyg om fullständig WCAG-överensstämmelse ges.
 
 ## Återhämtning
 

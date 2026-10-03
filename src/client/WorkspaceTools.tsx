@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import logo from '../../docs/images/shuttle-logo-transparent-small.png';
+import { ConversationHelp } from './ConversationHelp.js';
 import { microphoneShortcut, useMicrophonePress } from './use-microphone-press.js';
 import { type TextButtonStatus, textButtonStatusWords } from './use-text-button-status.js';
 import type { Voice } from './use-voice.js';
@@ -346,7 +347,7 @@ export function WorkspaceTools({
       {utility && (
         <section
           ref={utilityPanel}
-          className="workspace-utility"
+          className={`workspace-utility${utility === 'help' ? ' workspace-help' : ''}`}
           aria-label={utility === 'help' ? 'Information och hjälp' : 'Din profil'}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
@@ -366,18 +367,7 @@ export function WorkspaceTools({
           {utility === 'help' ? (
             <>
               <h2 tabIndex={-1}>Information och hjälp</h2>
-              <p>
-                Välj Lista för att läsa och ändra objekt och samband. Skriv till Skyttel fungerar
-                utan mikrofon.
-              </p>
-              <p>
-                Alla förslag samlas i ditt privata utkast. Spara hela utkastet när du vill dela
-                ändringarna med hushållet.
-              </p>
-              <p>
-                Kartan kan också styras med tangentbord genom Navigera. Stäng arbetsytan för att
-                återgå till kartan; din oskickade text finns kvar.
-              </p>
+              <ConversationHelp />
             </>
           ) : (
             <>

@@ -239,6 +239,10 @@
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
 }
+.workspace-help {
+  left: calc(var(--tools-right, 88px) + 20px);
+  max-width: calc(100vw - var(--tools-right, 88px) - 32px);
+}
 .workspace-utility :is(a, button:not(.workspace-close)) {
   display: flex;
   min-height: 44px;
@@ -598,6 +602,14 @@
     max-width: calc(100vw - 24px);
     max-height: calc(100dvh - 120px);
     padding: 14px;
+  }
+  /* Long help and the expanded tools must both remain reachable. */
+  .workspace-tools.expanded:has(+ .workspace-help) {
+    max-height: calc(var(--work-height, 100dvh) * 0.4);
+  }
+  .workspace-help {
+    top: calc(var(--work-offset, 0px) + var(--tools-bottom, 96px) + 12px);
+    max-height: calc(var(--work-height, 100dvh) - var(--tools-bottom, 96px) - 24px);
   }
   .household-map.workspace-shell .workspace-feedback {
     top: auto;

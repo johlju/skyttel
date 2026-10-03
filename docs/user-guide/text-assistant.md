@@ -17,6 +17,8 @@ godkännas på nytt. Samma medgivande
 gäller röst och text. Medgivanderutan **Samtal med Skyttel** visas när du
 väljer en samtalsknapp i verktygsraden, **Tala** eller **Skriv** i kartans
 vägledning eller snabblänken **Till samtalet med Skyttel**.
+**Information och hjälp** i verktygsraden förklarar röst, text, långt tryck,
+tangentkombinationen och hur uppgifterna behandlas.
 
 1. Läs texten i rutan. Den säger vad OpenAI behandlar, att Skyttel sparar
    ändringar först när du ber om det och att samtalet inte sparas.
@@ -60,9 +62,10 @@ samtalsmedgivandet igen.
 Utan pågående samtal gäller knapparna direkt. Sidan har ingen knapp för
 att spara hela
 sidan. En kort text vid knappen säger hur det gick. Om den säger att
-medgivandet inte kunde sparas eller återkallas har medgivandet inte
-ändrats, och du kan försöka igen. Mikrofonen kan behöva slås på igen
-efter ett misslyckat återkallande. När sidan visar
+medgivandet inte kunde sparas eller återkallas kan du försöka igen.
+Ett saknat svar betyder inte att medgivandet är oförändrat. Mikrofonen
+stängs av direkt när du återkallar, och nästa start kan kräva medgivande
+på nytt. När sidan visar
 **Samtal med Skyttel är inte tillgängligt just nu.** går det inte att
 spara ett medgivande, men du kan återkalla ett som är sparat.
 
@@ -340,7 +343,8 @@ ges även när vanliga bekräftelser är korta.
 I samtalstexten visas både dina ord och Skyttels svar löpande. Tidigare
 rader finns kvar under samtalet. Korta pauser kan fortsätta samma rad.
 När du stänger av mikrofonen arbetar Skyttel färdigt med det du sade och
-talar klart sitt svar. Inget mer ljud från mikrofonen skickas. Rösten
+talar klart sitt svar. Ingen ny inspelning görs. Tal som redan spelats in
+under ett långt tryck kan fortfarande överföras. Rösten
 behåller anslutningen medan du är kvar i samtalet, så att en paus inte
 avbryter det sista yttrandet eller svaret. Medan Skyttel arbetar med ett
 skrivet meddelande går mikrofonen
@@ -372,11 +376,11 @@ samtalet. Svaret beskriver ändrade värden före och efter, inklusive
 objektens identitet, om de gäller eller har upphört, profilbildsändringar
 och egna typdefinitioner. Profilbilder beskrivs som tillagda, bytta eller
 borttagna.
-Fråga om något är oklart. Assistenten
+Fråga om något är oklart. Skyttel
 ska fråga vid tvetydig identitet och skilja okänt, uttryckligen inget,
 osäkert uppgivet och ospecificerat objekt åt.
 
-Du kan ge flera önskemål samtidigt. Assistenten kan lägga tydliga delar
+Du kan ge flera önskemål samtidigt. Skyttel kan lägga tydliga delar
 i utkastet och fråga om den del som är oklar. **Spara inte** låter dig
 göra beställda utkaständringar utan att spara dem i hushållets karta.
 
@@ -453,14 +457,20 @@ eller byte av innehållsägare kräver en ny anslutning.
 
 ## Vilka uppgifter behandlas?
 
-Vid röst används även ljud och tillfälliga textfragment av samtalet.
-Skyttel skickar meddelandet, hela det egna utkast som behöver granskas och
-relevanta kartdelar till OpenAI. Bilder skickas inte i textanropen.
-Fullständiga samtal sparas inte som hushållsinnehåll. Skriv inte lösenord,
-fullständiga konto- eller kortnummer, pinkoder eller återställningskoder.
+Med ditt medgivande behandlar OpenAI ljud som spelas in medan mikrofonen
+är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta
+som behövs. Samtalets tillfälliga text ingår också, så att Skyttel kan svara
+i samma sammanhang. Tal från starten kan vänta i webbläsaren och skickas
+efter släpp, medan ny inspelning stängs av direkt. Bilder skickas inte till
+OpenAI. Skyttel sparar inte samtalet. Säg eller skriv inga lösenord,
+koder eller fullständiga konto- och kortnummer.
 
-Anrop använder `store: false`. Det är ingen garanti om enbart behandling
-i EU eller omedelbar radering av alla leverantörskopior. Läs
+Skyttel begär att OpenAI inte lagrar samtalet. OpenAI kan ändå behålla
+uppgifter tillfälligt för att driva tjänsten och uppgifter ur samtalet i
+loggar för att förebygga missbruk och uppfylla rättsliga krav. Det garanterar
+inte behandling enbart i EU eller omedelbar radering av alla kopior hos
+leverantören. Återkallat medgivande
+tar inte tillbaka uppgifter som redan har skickats. Läs
 [OpenAI:s datavillkor](https://developers.openai.com/api/docs/guides/your-data).
 Hushållets administratör hanterar användare, export, återimport och
 permanent radering i Skyttels egna administrationsvyer.

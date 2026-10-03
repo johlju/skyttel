@@ -411,6 +411,15 @@ export function HouseholdMap({
       }
       // On a narrow screen the text view starts under the toolbar, whose
       // buttons can stand in two rows. Its expanded names lie over the view.
+      const toolbar = workspace.current?.querySelector<HTMLElement>('.workspace-tools');
+      if (toolbar) {
+        const bounds = toolbar.getBoundingClientRect();
+        workspace.current?.style.setProperty('--tools-right', `${bounds.right}px`);
+        workspace.current?.style.setProperty(
+          '--tools-bottom',
+          `${bounds.bottom - viewport.offset}px`,
+        );
+      }
       const tools = workspace.current?.querySelector<HTMLElement>(
         '.workspace-tools:not(.expanded)',
       );

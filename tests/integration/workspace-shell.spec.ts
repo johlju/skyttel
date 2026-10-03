@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { activatePanel, createHousehold, signIn } from '../support/client.js';
-import { openConversationText } from '../support/conversation-page.js';
+import { startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
+import { modelMessage, textModel } from '../support/text-model.js';
 
 test('YTA-05: save results remain readable beside tablet work', async ({ page }) => {
   const installation = await createInstallation();
@@ -72,7 +73,8 @@ test('YTA-01: map tools open real household work and preserve it when closed', a
 test('YTA-03: narrow screens keep tools, help and text work reachable without graphics', async ({
   page,
 }) => {
-  const installation = await createInstallation();
+  const model = textModel(() => [modelMessage('Du kan skriva här.')]);
+  const installation = await createInstallation(undefined, { modelFetch: model.provider });
   try {
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
@@ -137,9 +139,9 @@ test('YTA-03: narrow screens keep tools, help and text work reachable without gr
       await page.getByRole('button', { name: 'Öppna Lista', exact: true }).click();
       await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
       await expect(tools.getByRole('button', { name: 'Lista', exact: true })).toBeFocused();
-      await openConversationText(page);
+      await startConversationWithText(page);
       await expect(
-        page.getByRole('region', { name: 'Samtal med Skyttel', exact: true }),
+        page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }),
       ).toBeVisible();
     }
   } finally {
