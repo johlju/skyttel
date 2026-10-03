@@ -105,6 +105,7 @@ försöka igen.
 **Visa kvittot** och **Tidigare sparförsök** finns i **Utkast och historik**
 i kartans verktygsrad. Där kan du granska det beständiga sparresultatet,
 oberoende av om textvyn är öppen.
+
 ## Samtalets kontext
 
 Skyttel har med sig hela det pågående samtalet, också efter att ett förslag
