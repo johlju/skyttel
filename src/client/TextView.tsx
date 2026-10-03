@@ -1,20 +1,10 @@
-import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useId, useLayoutEffect, useRef } from 'react';
 import { ContextMeter } from './ConversationContext.js';
 import { ConversationTranscript } from './ConversationTranscript.js';
 import type { Conversation } from './use-conversation.js';
+import { useConversationViewport } from './use-conversation-viewport.js';
 import { voiceBoxStatus } from './VoiceBox.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
-
-/**
- * A computer: the main pointer is not a finger, and the window is wider than
- * 700 px. Everything else is a mobile device or a narrow screen.
- */
-function onComputer() {
-  return (
-    !window.matchMedia('(pointer: coarse)').matches &&
-    !window.matchMedia('(max-width: 700px)').matches
-  );
-}
 
 /**
  * The text view: the conversation text and the message field. It reads the
@@ -45,18 +35,8 @@ export function TextView({
   draftContent?: ReactNode;
 }) {
   const { session, transcript, text, pending, unknown, working } = conversation;
-  const [computer, setComputer] = useState(onComputer);
-  useEffect(() => {
-    const width = window.matchMedia('(max-width: 700px)');
-    const pointer = window.matchMedia('(pointer: coarse)');
-    const changed = () => setComputer(onComputer());
-    width.addEventListener('change', changed);
-    pointer.addEventListener('change', changed);
-    return () => {
-      width.removeEventListener('change', changed);
-      pointer.removeEventListener('change', changed);
-    };
-  }, []);
+  const { computer, mobile, short } = useConversationViewport();
+  const initialComputer = useRef(computer);
   const stop = working && !computer;
   const stopFocused = useRef(false);
   const id = useId();
@@ -68,8 +48,10 @@ export function TextView({
     // On a computer the message field gets the focus when the text view opens.
     // On a mobile device and a narrow screen it does not, so that the on-screen
     // keyboard stays down. The focus then stays in the toolbar or goes to the heading.
-    if (onComputer()) field.current?.focus();
+    if (initialComputer.current) field.current?.focus();
     else if (!document.activeElement?.closest('.workspace-tools')) heading.current?.focus();
+    // Opening is the only focus trigger; resizing or revealing a keyboard must
+    // preserve the user's current focus.
   }, []);
   // The newest row stays in view, unless the user has scrolled up to read.
   // biome-ignore lint/correctness/useExhaustiveDependencies: follow new rows
@@ -98,53 +80,59 @@ export function TextView({
   return (
     <section
       className={`text-view${draftOpen ? ' draft-open' : ''}`}
+      data-short={short}
+      data-mobile={mobile}
       aria-labelledby={`${id}-title`}
       hidden={hidden}
       onKeyDown={(event) => {
-        if (event.key === 'Escape' && working && !window.matchMedia('(pointer: coarse)').matches) {
+        if (event.key === 'Escape' && working && !mobile) {
           event.preventDefault();
           event.stopPropagation();
           void conversation.cancel();
         }
       }}
     >
-      <header className="text-view-heading">
-        <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>
-          Skriv till Skyttel
-        </h2>
-        <button
-          type="button"
-          className="text-view-new"
-          disabled={!session}
-          onClick={() => void conversation.newConversation()}
-        >
-          Nytt samtal
-        </button>
-        <button
-          type="button"
-          className="text-view-close"
-          aria-label="Stäng textvyn"
-          title="Stäng textvyn"
-          onClick={onClose}
-        >
-          <WorkspaceIcon name="close" />
-        </button>
-      </header>
-      <ContextMeter percentage={session?.contextPercentage} />
-      {onToggleDraft && (
-        <button
-          type="button"
-          className="text-view-draft-toggle"
-          aria-expanded={draftOpen}
-          aria-controls={`${id}-draft`}
-          onClick={onToggleDraft}
-        >
-          <span aria-hidden="true" className="draft-direction">
-            {draftOpen ? '›' : '‹'}
-          </span>
-          {draftOpen ? 'Dölj utkastet' : 'Visa utkastet'} <span>({draftCount})</span>
-        </button>
-      )}
+      <div className="text-view-header">
+        <header className="text-view-heading">
+          <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>
+            Skriv till Skyttel
+          </h2>
+          <button
+            type="button"
+            className="text-view-new"
+            disabled={!session}
+            onClick={() => void conversation.newConversation()}
+          >
+            Nytt samtal
+          </button>
+          <button
+            type="button"
+            className="text-view-close"
+            aria-label="Stäng textvyn"
+            title="Stäng textvyn"
+            onClick={onClose}
+          >
+            <WorkspaceIcon name="close" />
+          </button>
+        </header>
+        <ContextMeter percentage={session?.contextPercentage} />
+        {onToggleDraft && (
+          <button
+            type="button"
+            className="text-view-draft-toggle"
+            aria-expanded={draftOpen}
+            aria-label={`${draftOpen ? 'Dölj utkastet' : 'Visa utkastet'} (${draftCount})`}
+            aria-controls={`${id}-draft`}
+            onClick={onToggleDraft}
+          >
+            <span aria-hidden="true" className="draft-direction">
+              {draftOpen ? '›' : '‹'}
+            </span>
+            {short ? 'Utkast' : draftOpen ? 'Dölj utkastet' : 'Visa utkastet'}{' '}
+            <span>({draftCount})</span>
+          </button>
+        )}
+      </div>
       <div className="text-view-columns">
         <section
           id={`${id}-draft`}
@@ -188,7 +176,7 @@ export function TextView({
             <textarea
               ref={field}
               id={`${id}-message`}
-              rows={2}
+              rows={short ? 1 : 2}
               maxLength={4000}
               placeholder="Berätta vad du vill göra…"
               value={text}

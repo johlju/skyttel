@@ -9,6 +9,9 @@
 .text-view[hidden] {
   display: none;
 }
+.text-view-header {
+  flex: none;
+}
 .household-map.workspace-shell {
   /* The room that the open text view takes from the map. */
   --text-view-space: 0px;
@@ -241,51 +244,62 @@
 .conversation-draft-table th:first-child {
   width: 40px;
 }
-@media (min-width: 701px) and (pointer: fine) {
-  .household-map.workspace-shell.text-view-open:has(.text-view.draft-open) {
-    --text-view-space: min(
-      calc(var(--text-view-width, 400px) + var(--draft-view-width, 340px)),
-      calc(100vw - 100px)
-    );
-  }
-  .draft-open .text-view-columns {
-    flex-direction: row;
-  }
-  .draft-open .text-view-draft {
-    flex: 0 1 var(--draft-view-width, 340px);
-    box-sizing: border-box;
-    border-right: 1px solid var(--space-line);
-    border-bottom: 0;
-  }
+:is([data-narrow="true"], [data-mobile="true"]) .draft-direction {
+  display: inline-block;
+  transform: rotate(-90deg);
 }
-@media (max-width: 700px), (pointer: coarse) {
-  .draft-direction {
-    display: inline-block;
-    transform: rotate(-90deg);
-  }
-  .text-view-draft {
-    max-height: 45%;
-  }
+:is([data-narrow="true"], [data-mobile="true"]) .text-view-draft {
+  max-height: 45%;
 }
 
-@media (min-width: 701px) {
-  .household-map.workspace-shell.text-view-open {
-    --text-view-space: min(var(--text-view-width, 400px), calc(100vw - 100px));
-  }
-  /* What stands at the right edge moves with the map. */
-  .household-map.workspace-shell.text-view-open .map-space {
-    right: var(--text-view-space);
-  }
-  .household-map.workspace-shell.text-view-open.workspace-revealing .map-space {
-    right: calc(430px + var(--text-view-space));
-  }
-  .household-map.workspace-shell.text-view-open
-    :is(.workspace-feedback, .workspace-windows, .workspace-voice-controls, .map-navigation) {
-    right: calc(24px + var(--text-view-space));
-  }
-  .household-map.workspace-shell.text-view-open:not(.workspace-open) .workspace-feedback {
-    max-width: min(360px, calc(100vw - 136px - var(--text-view-space)));
-  }
+.household-map.workspace-shell[data-narrow="false"][data-mobile="false"].text-view-open:has(
+  .text-view.draft-open
+) {
+  --text-view-space: min(
+    calc(var(--text-view-width, 400px) + var(--draft-view-width, 340px)),
+    calc(100vw - 100px)
+  );
+}
+[data-narrow="false"][data-mobile="false"] .draft-open .text-view-columns {
+  flex-direction: row;
+}
+[data-narrow="false"][data-mobile="false"] .draft-open .text-view-draft {
+  flex: 0 1 var(--draft-view-width, 340px);
+  box-sizing: border-box;
+  border-right: 1px solid var(--space-line);
+  border-bottom: 0;
+}
+
+.household-map.workspace-shell[data-narrow="false"].text-view-open {
+  --text-view-space: min(var(--text-view-width, 400px), calc(100vw - 100px));
+}
+/* What stands at the right edge moves with the map. */
+.household-map.workspace-shell[data-narrow="false"].text-view-open .map-space {
+  right: var(--text-view-space);
+}
+.household-map.workspace-shell[data-narrow="false"].text-view-open.workspace-revealing .map-space {
+  right: calc(430px + var(--text-view-space));
+}
+.household-map.workspace-shell[data-narrow="false"].text-view-open
+  :is(.workspace-feedback, .workspace-windows, .workspace-voice-controls, .map-navigation) {
+  right: calc(24px + var(--text-view-space));
+}
+.household-map.workspace-shell[data-narrow="false"].text-view-open:not(.workspace-open)
+  .workspace-feedback {
+  max-width: min(360px, calc(100vw - 136px - var(--text-view-space)));
+}
+
+.household-map.workspace-shell[data-wide-touch="true"].text-view-open {
+  --text-view-space: 400px;
+}
+.household-map.workspace-shell[data-mobile="true"] .workspace-tools {
+  max-height: calc(var(--work-height, 100dvh) - 24px);
+}
+.household-map.workspace-shell[data-narrow="true"] .workspace-tools {
+  top: calc(var(--work-offset, 0px) + 12px);
+}
+.household-map.workspace-shell[data-short="true"][data-wide-touch="true"] .workspace-tools {
+  top: calc(var(--work-offset, 0px) + 12px);
 }
 
 /* The panels wait behind a text view that fills a narrow screen. */
@@ -294,28 +308,101 @@
   display: none;
 }
 
-/* A narrow screen: the text view fills the screen under the toolbar. It ends
-   above the map's shared feedback, which stands at the bottom edge. */
-@media (max-width: 700px) {
-  .household-map.workspace-shell .text-view {
-    --text-view-top: calc(var(--tools-height, 56px) + 16px);
-    top: calc(var(--work-offset, 0px) + var(--text-view-top));
-    left: 0;
-    width: auto;
-    height: calc(
-      var(--work-height, 100dvh) -
-      var(--text-view-top) -
-      var(--feedback-height, 0px) -
-      var(--voice-height, 0px) -
-      var(--conversation-corner-height, 0px) -
-      48px
-    );
-    border-width: 1px 0 0;
-    border-radius: 16px 16px 0 0;
-  }
-  .text-view-message {
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-  }
+/* Narrow text fills the visible viewport, without reserving a voice row above
+   it. The voice sits above the composer; the map remains behind this surface. */
+.household-map.workspace-shell[data-narrow="true"] .text-view {
+  --text-view-top: calc(var(--tools-height, 56px) + 16px);
+  top: calc(var(--work-offset, 0px) + var(--text-view-top));
+  left: 0;
+  width: auto;
+  height: calc(var(--work-height, 100dvh) - var(--text-view-top));
+  border-width: 1px 0 0;
+  border-radius: 16px 16px 0 0;
+}
+[data-narrow="true"] .text-view-message {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.household-map.workspace-shell[data-short="true"][data-wide-touch="true"] .text-view {
+  top: calc(var(--work-offset, 0px) + 56px);
+  height: calc(var(--work-height, 100dvh) - 56px);
+}
+/* The same mounted controls form one row: no duplicated accessible controls or
+   replacement message field when a real keyboard changes the visible height. */
+.text-view[data-short="true"] .text-view-header {
+  display: grid;
+  grid-template-columns: minmax(46px, 1fr) auto auto 44px;
+  align-items: center;
+  gap: 4px;
+  height: 44px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--space-line);
+}
+.text-view[data-short="true"] .text-view-heading {
+  display: contents;
+}
+.text-view[data-short="true"] :is(h2, .conversation-context-meter label, .text-view-message label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.text-view[data-short="true"] .conversation-context-meter {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  padding: 0 4px;
+  gap: 4px;
+  border: 0;
+  font-size: 11px;
+}
+.text-view[data-short="true"] .text-view-draft-toggle {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  margin: 0;
+  min-height: 36px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+.text-view[data-short="true"] .draft-direction {
+  display: none;
+}
+.text-view[data-short="true"] .text-view-new {
+  grid-column: 3;
+  grid-row: 1;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+.text-view[data-short="true"] .text-view-close {
+  grid-column: 4;
+  grid-row: 1;
+}
+.text-view[data-short="true"] .text-view-message {
+  padding: 0 4px;
+  gap: 4px;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.household-map .text-view[data-short="true"] .text-view-message textarea {
+  min-height: 36px;
+  height: 36px;
+  max-height: 36px;
+  padding: 7px 8px;
+  resize: none;
+}
+.text-view[data-short="true"] .text-view-message button {
+  min-height: 44px;
+  min-width: 72px;
+  padding: 4px 8px;
+}
+.text-view[data-short="true"] .conversation-notice {
+  min-height: 46px;
+  max-height: max(46px, min(96px, calc(var(--work-height, 100dvh) - 144px)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .text-view-canceled {

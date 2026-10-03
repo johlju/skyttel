@@ -151,7 +151,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   och raden Skyttel arbetar sist, **Nytt samtal** behåller utkast, mikrofon
   och oskickad text även vid dubbelklick under fördröjd omstart, och textvyn
   går att använda på pekskärm och smal skärm. Kontrollerade kommentarspaket
-  och faktiskt hört tal provas separat.
+  och faktiskt hört tal provas separat. Mobilfallen provar iPhone och
+  iPad, fast sidofält på bred pekskärm, kompakt rad vid kort synlig höjd,
+  bibehållet fokus, 190 px synlig höjd med rösten på, fria kartkontroller
+  och långa rullbara notiser.
 - [Samtalets kö och avbrott](conversation-queue.md): serverns kö på dator,
   fokusstyrd Escape, stopp på mobil och smal skärm, talade och skrivna
   uppdrag samt kvarvarande utkast, oskickad text och återkoppling.

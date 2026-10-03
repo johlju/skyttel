@@ -94,6 +94,14 @@ samtalstexten och meddelandefältet **Meddelande till Skyttel**.
   Tryck i fältet när du vill skriva. På en smal skärm fyller textvyn
   skärmen under verktygsraden, och **Lista** och kartans paneler tar dess
   plats när du väljer dem.
+- På en bred pekskärm är textvyn 400 px bred, också på en liggande
+  telefon. Kartan syns bredvid. En dator med pekskärm och mus följer
+  datorläget; den främsta pekaren avgör.
+- När den synliga höjden är under 520 px på mobil enhet eller smal skärm
+  blir överkanten en kompakt rad med kontextmätaren, **Utkast** och
+  antalet ändringar, **Nytt samtal** och stängknappen. Fältet är en rad
+  högt. Rubriken, **Kontext** och fältets etikett finns kvar för
+  skärmläsaren. Textvyn följer den del av skärmen som tangentbordet lämnar.
 - Skriv ditt meddelande och välj **Skicka** eller tryck Retur. Skift+Retur
   ger en ny rad. Fältet behåller fokus efter att meddelandet har skickats.
 - I samtalstexten står det du skriver i en tonad ruta till höger och det
@@ -105,6 +113,14 @@ samtalstexten och meddelandefältet **Meddelande till Skyttel**.
   arbete. Mikrofonen behåller sitt läge, och ditt
   utkast och din oskickade text finns kvar. Skyttel säger hur många
   osparade ändringar som ligger kvar i utkastet.
+
+På smal skärm står röstrutan ovanför meddelandefältet när textvyn är
+öppen. Ingen rad är reserverad för rösten ovanför textvyn.
+Kartans återkoppling för utkastet går då att nå genom att rulla i
+textvyn, och den täcker inte fältet. När textvyn är stängd står röstrutan
+och samtalsnotisen ovanför kartans nedersta rad och dess återkoppling.
+Långa samtalsnotiser i ett kort fönster går att rulla utan att fältet
+flyttas bort.
 
 ## Utkastet i textvyn
 

@@ -73,6 +73,7 @@ import './workspace-panels.css';
 import './text-view.css';
 import { type ConversationMode, conversationOngoing, useConversation } from './use-conversation.js';
 import { useConversationPreferences } from './use-conversation-preferences.js';
+import { useConversationViewport } from './use-conversation-viewport.js';
 import { usePersonalView } from './use-personal-view.js';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
 
@@ -250,12 +251,8 @@ export function HouseholdMap({
   const [guidance, setGuidance] = useState(true);
   const [textViewOpen, setTextViewOpen] = useState(false);
   const workOpen = openPanels.length > 0 && (presentation !== 'map' || detailsOpen || editorOpen);
-  const [narrow, setNarrow] = useState(() => window.innerWidth <= 700);
-  useEffect(() => {
-    const resize = () => setNarrow(window.innerWidth <= 700);
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
+  const viewport = useConversationViewport();
+  const { narrow } = viewport;
   // On a narrow screen the text view fills the screen under the toolbar. The
   // panels wait behind it, unchanged.
   const panelsCovered = narrow && textViewOpen;
@@ -398,6 +395,8 @@ export function HouseholdMap({
   const hasMap = state !== null;
   useLayoutEffect(() => {
     const measure = () => {
+      workspace.current?.style.setProperty('--work-height', `${viewport.height}px`);
+      workspace.current?.style.setProperty('--work-offset', `${viewport.offset}px`);
       for (const [selector, property] of [
         ['.workspace-feedback', '--feedback-height'],
         ['.spatial-bottom-bar', '--display-height'],
@@ -411,6 +410,23 @@ export function HouseholdMap({
         '.workspace-tools:not(.expanded)',
       );
       if (tools) workspace.current?.style.setProperty('--tools-height', `${tools.offsetHeight}px`);
+      const composer = workspace.current?.querySelector('.text-view-message');
+      const inlineNotice = workspace.current?.querySelector(
+        '.text-view-conversation > .conversation-notice',
+      );
+      if (composer)
+        workspace.current?.style.setProperty(
+          '--composer-top',
+          `${(inlineNotice ?? composer).getBoundingClientRect().top - 4}px`,
+        );
+      const floor = Math.min(
+        viewport.height + viewport.offset - 12,
+        ...['.spatial-bottom-bar', '.workspace-feedback', '.workspace-voice-controls']
+          .map((selector) => workspace.current?.querySelector<HTMLElement>(selector))
+          .filter((element): element is HTMLElement => Boolean(element?.offsetHeight))
+          .map((element) => element.getBoundingClientRect().top),
+      );
+      workspace.current?.style.setProperty('--conversation-floor', `${floor - 8}px`);
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -419,13 +435,31 @@ export function HouseholdMap({
       '.workspace-feedback',
       hasMap && '.spatial-bottom-bar',
       active && '.workspace-tools',
+      hasMap && '.workspace-voice-controls',
+      textViewOpen && '.text-view-message',
+      textViewOpen && '.text-view',
+      textViewOpen && '.text-view-body',
+      textViewOpen && '.text-view-conversation > .conversation-notice',
     ]
       .filter(Boolean)
       .join(', ');
     for (const element of workspace.current?.querySelectorAll(measured) ?? [])
       observer.observe(element);
-    return () => observer.disconnect();
-  }, [hasMap, active]);
+    // Insertion/removal or a flow-class change can move a footer without
+    // changing its size (for example after the first object is saved).
+    const layout = new MutationObserver(measure);
+    if (workspace.current)
+      layout.observe(workspace.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'hidden'],
+      });
+    return () => {
+      observer.disconnect();
+      layout.disconnect();
+    };
+  }, [hasMap, active, textViewOpen, viewport.height, viewport.offset]);
   useEffect(() => {
     if (!state && error) workspace.current?.focus();
   }, [state, error]);
@@ -438,37 +472,17 @@ export function HouseholdMap({
   }, [active, editorOpen, hasMap]);
   useEffect(() => {
     if (!active || !(workOpen || textViewOpen)) return;
-    const viewport = window.visualViewport;
-    let frame = 0;
-    const measure = () => {
-      workspace.current?.style.setProperty(
-        '--work-height',
-        `${viewport?.height ?? window.innerHeight}px`,
-      );
-      workspace.current?.style.setProperty('--work-offset', `${viewport?.offsetTop ?? 0}px`);
-    };
-    const resize = () => {
-      measure();
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const field = document.activeElement;
-        const workSurface = workspace.current?.querySelector('.assistant-workspace');
-        if (field instanceof HTMLElement && workSurface?.contains(field)) {
-          field.scrollIntoView({ block: 'center', behavior: 'instant' });
-        }
-      });
-    };
-    measure();
-    window.addEventListener('resize', resize);
-    viewport?.addEventListener('resize', resize);
-    viewport?.addEventListener('scroll', resize);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', resize);
-      viewport?.removeEventListener('resize', resize);
-      viewport?.removeEventListener('scroll', resize);
-    };
-  }, [active, workOpen, textViewOpen]);
+    workspace.current?.style.setProperty('--work-height', `${viewport.height}px`);
+    workspace.current?.style.setProperty('--work-offset', `${viewport.offset}px`);
+    const frame = requestAnimationFrame(() => {
+      const field = document.activeElement;
+      const workSurface = workspace.current?.querySelector('.assistant-workspace');
+      if (field instanceof HTMLElement && workSurface?.contains(field)) {
+        field.scrollIntoView({ block: 'center', behavior: 'instant' });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [active, workOpen, textViewOpen, viewport.height, viewport.offset]);
   const newButton = useRef<HTMLButtonElement>(null);
   const mergeButton = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
@@ -1478,11 +1492,7 @@ export function HouseholdMap({
     <VoiceBox
       conversation={conversation}
       notice={textViewOpen && active ? null : notice}
-      hideStop={
-        textViewOpen &&
-        (narrow || window.matchMedia('(pointer: coarse)').matches) &&
-        conversation.working
-      }
+      hideStop={textViewOpen && !viewport.computer && conversation.working}
       microphoneButton={() =>
         workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null
       }
@@ -1563,6 +1573,10 @@ export function HouseholdMap({
       aria-label="Hushållskarta"
       data-navigation-open={navigationOpen}
       data-conversation-ongoing={conversationOngoing(conversation, textViewOpen)}
+      data-mobile={viewport.mobile}
+      data-narrow={narrow}
+      data-short={viewport.short}
+      data-wide-touch={viewport.wideTouch}
       data-theme={theme.theme}
       onKeyDown={(event) => {
         if (

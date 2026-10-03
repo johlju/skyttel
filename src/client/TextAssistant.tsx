@@ -13,6 +13,7 @@ import { ConversationDraft, draftCount } from './ConversationDraft.js';
 import './voice.css';
 import { TextView } from './TextView.js';
 import type { Conversation } from './use-conversation.js';
+import { useConversationViewport } from './use-conversation-viewport.js';
 
 type AssistantActivity = { working: boolean; needsAnswer: boolean };
 
@@ -54,6 +55,8 @@ export function ConversationWorkspace({
   notice,
 }: ConversationPresentation & { conversation: Conversation }) {
   const { session, needsAnswer } = conversation;
+  const { narrow } = useConversationViewport();
+  const feedbackInText = narrow && textViewOpen;
   const [floatingSlot, setFloatingSlot] = useState<HTMLDivElement | null>(null);
   const floatingVoice = useRef<HTMLDivElement | null>(null);
   const attachFloatingSlot = useCallback((element: HTMLDivElement | null) => {
@@ -117,7 +120,7 @@ export function ConversationWorkspace({
       id="workspace-work"
       tabIndex={-1}
     >
-      {floatingSlot && createPortal(feedback, floatingSlot)}
+      {floatingSlot && !feedbackInText && createPortal(feedback, floatingSlot)}
       {renderWorkspace ? (
         renderWorkspace(
           <>
@@ -153,6 +156,7 @@ export function ConversationWorkspace({
           draftContent={<ConversationDraft draft={visibleDraft} />}
           notice={notice}
         >
+          {feedbackInText && feedback}
           {!notice && conversation.error && <p role="alert">{conversation.error}</p>}
           <div className="text-view-task-controls">
             {(conversation.unknown || session?.phase === 'recovery') && (

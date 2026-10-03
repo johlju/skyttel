@@ -18,7 +18,7 @@ vid körning.
 
 1. För TEXTVY-01, TEXTVY-02 och TEXTVY-04: starta den
    [kontrollerade installationen för text](text-assistant.md#controlled-text-fixture).
-   För TEXTVY-03: starta i stället
+   För TEXTVY-03 och TEXTMOBIL-01–04: starta i stället
    [den kontrollerade röstinstallationen](voice-assistant.md#controlled-voice-fixture)
    med `node --import tsx scripts/manual-voice.ts` efter bygget. Följ guidens
    privata portvidarebefordran och inloggning. Kör inte `seed-family`;
@@ -214,6 +214,7 @@ skärm”.
 **Förväntat resultat:**
 
 - På iPad är textvyn ett sidofält vid högerkanten och kartan syns bredvid.
+  Sidofältet är 400 px brett även på en liggande telefon.
   Fältet får inte fokus av sig självt, och tangentbordet kommer upp först
   när du trycker i fältet. Fältet behåller fokus efter **Skicka**.
 - På smal skärm fyller textvyn skärmen under verktygsraden. Rubriken,
@@ -221,6 +222,164 @@ skärm”.
   Fältet får inte fokus av sig självt.
 - När textvyn stängs syns kartan igen. **Lista** ersätter textvyn på smal
   skärm, och samtalet och den oskickade texten finns kvar.
+
+## Textvyn på mobil enhet
+
+### TEXTMOBIL-01: samma lägesregel ger rätt bredd och kompakt rad
+
+**Syfte:** Läsa, skriva och öppna utkastet på telefon, surfplatta och dator.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Den kontrollerade röstinstallationen med Textprov
+och det osparade Lo-förslaget. Börja utan öppet samtal. Prova Chrome på
+Windows, macOS, iPhone och iPad; anteckna varje verklig enhet separat.
+
+**Integrationstest:**
+[mobile-conversation.spec.ts](../../tests/integration/mobile-conversation.spec.ts),
+testfallet “TEXTMOBIL-01: samma lägesregel ger rätt bredd och kompakt rad”,
+i grupperna för 390×844, 375×667, 844×390, 820×1180, 1180×820,
+320×250, 700×500 och 1280×900.
+
+**Steg:**
+
+1. På stående iPhone: välj **Skriv till Skyttel** och godkänn. Kräv att
+   textvyn börjar under verktygsraden och fyller resten av den synliga
+   skärmen. Tangentbordet ska inte öppnas av sig självt.
+2. Tryck i **Meddelande till Skyttel**, skriv **Ett vanligt uppdrag.** och
+   välj **Skicka**. Släpp det hållna modellsvaret i terminalen med
+   `reply ANROP Ett synligt provsvar.`, där `ANROP` är ID från `held`.
+   Fältet ska behålla fokus. Rulla för att läsa kartans utkaståterkoppling.
+3. Välj **Visa utkastet**. Kräv Lo Exempel och knappens nya namn
+   **Dölj utkastet (1)**. Stäng utkastet igen.
+4. Upprepa på iPad stående och liggande samt iPhone liggande. Kräv ett
+   sidofält till höger med kartan synlig bredvid. Sidofältets fasta bredd
+   på 400 px mäts i automationen.
+5. På dator: minska fönstret till högst 700 px. Kräv samma fyllda textvy
+   som på stående telefon. Minska höjden under 520 px. Kräv en enda rad
+   med mätaren, **Utkast (1)**, **Nytt samtal** och stängknappen.
+6. Läs med VoiceOver eller NVDA. Rubriken **Skriv till Skyttel**,
+   mätarens namn **Kontext** och fältets etikett ska finnas även när de
+   inte syns. Utkastknappen ska heta **Visa utkastet (1)** eller
+   **Dölj utkastet (1)**. På bred dator med mus ska rubriken synas även
+   om höjden är kort. En bärbar dator med både mus och pekskärm följer
+   sin främsta pekare, inte bara förekomsten av pekstöd.
+
+**Förväntat resultat:**
+
+- Bredd och främsta pekare ger samma läge genom hela samtalsflödet.
+  Ett smalt datorfönster fungerar som smal skärm.
+- Under 520 px synlig höjd på mobil enhet eller smal skärm används
+  den kompakta raden och ett meddelandefält på en rad. Alla kontroller
+  är nåbara utan rullning i sidled. Fältets och mätarens namn bevaras.
+- Automationen kontrollerar mått, knappnamn, utkastets innehåll och att
+  **Skicka** verkligen kan tryckas utan att kartans återkoppling täcker det.
+
+### TEXTMOBIL-02: synlig höjd följs utan att fält eller fokus byts
+
+**Syfte:** Fortsätta skriva när ett verkligt skärmtangentbord tar plats.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Samma installation. På fysisk iPhone eller iPad
+får tangentbordet själv bestämma höjden; de automatiserade höjderna är
+kontrollerade exempel, inte uppmätta tangentbord.
+
+**Integrationstest:**
+[mobile-conversation.spec.ts](../../tests/integration/mobile-conversation.spec.ts),
+testfallet “TEXTMOBIL-02: synlig höjd följs utan att fält eller fokus byts”,
+i grupperna för 508, 407, 420 och 190 px synlig höjd.
+
+**Steg:**
+
+1. Öppna textvyn och godkänn. Kräv att tangentbordet är dolt. Slå på
+   **Prata med Skyttel**; den kontrollerade rösten använder tysta spår.
+2. Tryck i fältet och skriv **Ett vanligt uppdrag.**. Kräv att textvyn
+   följer den yta som tangentbordet lämnar, med fältet synligt.
+3. Vrid telefonen till liggande medan tangentbordet är öppet. Kräv den
+   kompakta raden, minst en läsbar samtalsrad och fältet. Röstrutan står
+   ovanför sidofältet på bred pekskärm, med samma höjd som tidigare.
+   På smal skärm står den direkt ovanför fältet i textvyn.
+4. Välj **Skicka** och släpp svaret med `reply ANROP Ett synligt provsvar.`.
+   Kräv fokus kvar i fältet, kvarvarande tangentbord och läsbart svar.
+5. Dölj tangentbordet och öppna det igen. Kräv samma pågående samtal,
+   oskickad text och mikrofon på. Upprepa på iPad i båda riktningarna.
+
+**Förväntat resultat:**
+
+- Ingen ombyggnad av fältet tappar text eller fokus. Tangentbordet
+  öppnas bara när användaren väljer fältet och står kvar efter **Skicka**.
+- Automationen använder webbläsarens verkliga ändring av synlig höjd.
+  Vid 844×190 px mäts sidofältet till 134 px med kompakt rad, samtalsyta
+  och fält synliga och mikrofonen på. Röstrutan är fortfarande 36 px hög.
+- Verkligt tangentbord, rotation, synlig fokusmarkering och VoiceOver
+  återstår att kontrollera manuellt på iPhone och iPad.
+
+### TEXTMOBIL-03: röstrutan och notisen lämnar kartans nederkant fri
+
+**Syfte:** Nå kartans kontroller och samtalets kontroller utan överlapp.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Samma installation på stående telefon. Lo-förslaget
+är osparat. Textvyn är öppen och mikrofonen på.
+
+**Integrationstest:**
+[mobile-conversation.spec.ts](../../tests/integration/mobile-conversation.spec.ts),
+testfallet “TEXTMOBIL-03: röstrutan och notisen lämnar kartans nederkant fri”.
+
+**Steg:**
+
+1. Stäng textvyn. Läs röstrutan, kartans återkoppling och raden med
+   **Återställ vy**. Kräv att ingen av dem täcker den andra.
+2. Kör `window.skyttelVoiceFixture.setSound('remote', true)` i
+   webbläsarkonsolen för att låta den externa provkällan visa **Skyttel
+   talar**. Tryck på **Avbryt**, även nära den synliga ikonens kant.
+   Kräv att rösten tystnar och utkastet ligger kvar.
+3. Öppna textvyn igen. Skicka **Ett kontrollerat fel.** och kör
+   `fail ANROP` i terminalen, med anrops-ID från `held`.
+4. Läs **Skyttel kunde inte slutföra uppdraget. Försök igen.** ovanför
+   fältet. Välj **Stäng notisen**. Kräv att notisen försvinner och
+   att samtalet och utkastet finns kvar.
+
+**Förväntat resultat:**
+
+- Röstrutan står ovanför kartans nedersta synliga kontroller och
+  återkoppling när textvyn är stängd. Med textvyn öppen står röstrutan
+  ovanför fältet, utan att täcka notisens stängknapp.
+- Stoppikonens tryckyta och notisens stängknapp är 44×44 px på mobil
+  enhet. Stoppikonens synliga cirkel behåller sitt utseende.
+  Automation mäter tryckytorna och trycker utanför cirkelns synliga kant.
+
+### TEXTMOBIL-04: en lång notis rullar och kan stängas i kort fönster
+
+**Syfte:** Nå notisens innehåll och stängknapp utan att tappa fältet.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Samma installation på liggande telefon med
+skärmtangentbordet öppet och textvyn i kort läge.
+
+**Integrationstest:**
+[mobile-conversation.spec.ts](../../tests/integration/mobile-conversation.spec.ts),
+testfallet “TEXTMOBIL-04: en lång notis rullar och kan stängas i kort fönster”.
+
+**Steg:**
+
+1. Skicka **Ett kontrollerat fel.** och kör `fail ANROP` i terminalen.
+2. Läs notisen ovanför fältet. Om den inte ryms, rulla inne i notisen
+   för att läsa resten. Kontrollera att fältet ligger kvar.
+3. Flytta fokus till **Stäng notisen** med externt tangentbord eller
+   VoiceOver och aktivera knappen. Kräv att den går att nå även efter
+   att notisens text har rullats.
+4. Skriv ett nytt uppdrag och välj **Skicka**. Kräv fokus kvar i fältet.
+
+**Förväntat resultat:**
+
+- Notisen rullar inom sin begränsade yta och flyttar inte bort fältet.
+  Stängknappen går att nå och har kvar sin tryckyta på 44×44 px.
+- Automation provar detta vid 844×190 px. Faktisk förstoring, fokus
+  och VoiceOver med verkligt tangentbord provas separat.
 
 ## Bedömning och återstående manuella prov
 
@@ -238,5 +397,14 @@ enhet är provad, och fullständig överensstämmelse intygas inte.
 | 1.4.4, 1.4.10 Förstoring och omflöde | På smal skärm fyller textvyn skärmen under verktygsraden, och bara samtalstexten rullar. | Textvyn ryms på 390 px utan rullning i sidled, med rubrik, fält och **Skicka** synliga. | Verklig webbläsarzoom och textförstoring. |
 | 2.1.1 Tangentbord | Alla kontroller nås med Tab. Retur skickar, och Skift+Retur ger en ny rad. | Skicka med Retur och ny rad med Skift+Retur. | Hjälpmedlens egna tangentkommandon. |
 | 2.5.8 Pekmål | **Stäng textvyn** är 44 px. **Nytt samtal** och **Skicka** är minst 36 px höga. | Tryck på fältet och **Skicka** på pekskärm. | Träffsäkerhet på fysisk pekskärm. |
-| 3.3.2 Etiketter | Fältet har den synliga etiketten **Meddelande till Skyttel**. | Fältets namn och platshållare. | – |
+| 3.3.2 Etiketter | Fältet har etiketten **Meddelande till Skyttel**, dold visuellt i kort läge. | Fältets namn och platshållare även efter ändrad synlig höjd. | Uppläsning i kort läge. |
 <!-- markdownlint-enable MD013 -->
+
+Mobilfallen verifierar även omflöde utan horisontell rullning (1.4.10),
+namn på dolda etiketter och den kompakta utkastknappen (1.3.1, 4.1.2),
+bevarat fokus och nåbar stängknapp efter rullning (2.4.3, 2.4.11) samt
+44 px tryckyta utan förändrad symbol (2.5.8). Läsordningen och det
+synliga fokuset på verklig iPhone och iPad, kontrast i båda teman och
+200/400 procents zoom återstår att kontrollera. Emulerade skärmstorlekar
+och en ändring av webbläsarens synliga höjd bevisar inte ett fysiskt
+skärmtangentbord eller fullständig överensstämmelse.

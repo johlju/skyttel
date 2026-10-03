@@ -6,7 +6,7 @@
 .conversation-corner {
   position: fixed;
   z-index: 27;
-  top: 24px;
+  top: calc(var(--work-offset, 0px) + 24px);
   right: 24px;
   display: flex;
   flex-direction: column;
@@ -24,40 +24,14 @@
 .has-settings .household-work-background .conversation-corner:has(.voice-box) {
   padding: 12px 24px 0;
 }
-@media (min-width: 701px) {
-  /* A panel is open: its close button has the corner, and the box stands beside it. */
-  .household-map.workspace-shell.workspace-open .conversation-corner {
-    top: 16px;
-    right: 160px;
-  }
-  .household-map.workspace-shell:not(.workspace-open):has(.voice-box) .workspace-feedback {
-    top: 72px;
-  }
+/* The shared viewport mode, rather than status word length, chooses placement. */
+.household-map.workspace-shell[data-narrow="false"]:not(.workspace-open):has(.voice-box)
+.workspace-feedback {
+  top: 72px;
 }
-@media (max-width: 700px) {
-  .household-map.workspace-shell .conversation-corner {
-    top: auto;
-    right: 12px;
-    bottom: calc(var(--feedback-height, 0px) + var(--voice-height, 0px) + 36px);
-  }
-  /* The open panels, the feedback and the status card scroll as one flow. */
-  .household-map.workspace-shell.workspace-open:not(.workspace-revealing) .conversation-corner {
-    bottom: 12px;
-  }
-  .household-map.workspace-shell.workspace-open:not(.workspace-revealing):has(.voice-box) {
-    padding-bottom: 60px;
-  }
-}
-/* A short narrow window has the map's row at the bottom edge. */
-@media (max-width: 700px) and (max-height: 450px) {
-  .household-map.workspace-shell:not(.workspace-open) .conversation-corner {
-    bottom: calc(
-      var(--feedback-height, 0px) +
-      var(--voice-height, 0px) +
-      var(--display-height, 0px) +
-      24px
-    );
-  }
+.household-map.workspace-shell[data-narrow="true"] .conversation-corner {
+  top: auto;
+  right: 12px;
 }
 
 .voice-announcement {
@@ -130,12 +104,34 @@
   height: 14px;
 }
 /* On a touch device the icon looks the same and has a larger area to press. */
-@media (pointer: coarse) {
-  .conversation-corner .voice-stop::after {
-    content: "";
-    position: absolute;
-    inset: -9px;
-  }
+[data-mobile="true"] .conversation-corner .voice-stop::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+}
+
+/* The primary-pointer/width/visible-height rule comes from the shared viewport
+   hook. Keeping this corner mounted preserves its once-per-context notices. */
+.household-map.workspace-shell[data-narrow="true"] .conversation-corner {
+  top: var(--conversation-floor);
+  bottom: auto;
+  transform: translateY(-100%);
+}
+.household-map.workspace-shell[data-narrow="false"].workspace-open .conversation-corner {
+  top: calc(var(--work-offset, 0px) + 16px);
+  right: 160px;
+}
+.household-map.workspace-shell[data-short="true"][data-wide-touch="true"] .conversation-corner {
+  top: calc(var(--work-offset, 0px) + 12px);
+  right: 12px;
+}
+.household-map.workspace-shell[data-narrow="true"].text-view-open .conversation-corner {
+  top: var(--composer-top);
+  bottom: auto;
+  transform: translateY(-100%);
+}
+.household-map.workspace-shell[data-narrow="true"].text-view-open:has(.voice-box) .text-view-body {
+  padding-bottom: 44px;
 }
 
 /*
