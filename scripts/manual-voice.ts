@@ -101,6 +101,7 @@ async function main() {
               'tool REQUEST TOOL JSON',
               'reply REQUEST TEXT',
               'fail REQUEST',
+              'available on|off',
               'restart',
               'quit',
             ],
@@ -177,6 +178,9 @@ async function main() {
               reason: 'close_requested',
             });
           }
+        } else if (command === 'available') {
+          if (id !== 'on' && id !== 'off') throw new Error('Use available on or available off.');
+          app.setConversationAvailable(id === 'on');
         } else if (command === 'finalize') {
           if (id !== 'on' && id !== 'off') throw new Error('Use finalize on or finalize off.');
           live.configure({ finalize: id === 'on' });

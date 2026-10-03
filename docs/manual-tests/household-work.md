@@ -442,11 +442,10 @@ till gemensamt kvitto och privat fortsatt arbete”.
    panel för Kim. Använd inte åtgärden som kastar oskickad text.
 5. Skriv **Oskickat i samtalet** utan att skicka. Låt mikrofonen vara på
    och öppna **Inställningar**. Rubriken ska få fokus och kartarbetet döljas.
-   Inställningarnas innehåll ska komma före den kompakta statusytan.
-   Läs de tre privata förslagens status och välj
-   **Visa samtals- och utkastdetaljer**. Kontrollera rubrikfokus och beskedet
-   om oskickat samtalsmeddelande. Välj **Stäng aktuell status** och kontrollera
-   att fokus återgår till detaljknappen. Röstrutan visar **Lyssnar**.
+   Inställningarnas innehåll ska komma före kartans återkoppling om
+   utkast och sparande. Läs de tre privata förslagens återkoppling och
+   kontrollera att röstrutan visar **Lyssnar**. Ingen knapp **Aktuell
+   status** eller **Visa samtals- och utkastdetaljer** finns.
    Välj **Tillbaka till kartan** och välj
    abonnemanget, Kim och samtalet genom **Öppna paneler**. Kontrollera
    rubrikfokus, samma beskrivningar, samma dialog och båda oskickade texter.

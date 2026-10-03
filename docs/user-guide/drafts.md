@@ -7,13 +7,14 @@ Skyttel-användare och hushåll samlas i ett privat utkast. Andra medlemmar
 ser den gemensamma kartan tills du sparar. Utkastet ingår däremot i
 administratörens [fullständiga export](household-export.md).
 
-## Följ aktuell status i kartan
+## Följ utkastet i kartan
 
-Statuskortet finns kvar när du stänger arbetspanelerna. Det visar
-mikrofonen, arbetet, frågor och fel samt antalet privata förslag.
-**Aktuell status** i verktygen öppnar även det senaste sparresultatets
-detaljer. **Visa verktygens namn** gör knappen synlig i en hopfälld
-verktygslåda. Statusuppdateringar flyttar inte ditt fokus.
+Kartans återkoppling visar antalet privata förslag, nödvändiga frågor och
+sparresultat även när arbetspanelerna är stängda. **Utkast och historik**
+i verktygen visar hela utkastet och tidigare sparförsök. **Visa verktygens
+namn** gör knappen synlig i en hopfälld verktygslåda. Uppdateringar flyttar
+inte ditt fokus. Mikrofonläge och samtalsproblem visas i röstrutan och
+[samtalsnotiserna](text-assistant.md#följ-samtalet).
 
 Grönt plus betyder **Föreslås läggas till**, amberfärgad penna betyder
 **Föreslås ändras** och rött kryss betyder **Föreslås tas bort**.
@@ -27,8 +28,8 @@ utkastet hämtas försvinner förslagsmarkeringarna och legenden.
 utan att skicka innan du sparar med kartans knapp. Oskickade
 samtalsmeddelanden finns kvar i samtalet och ingår inte i sparandet.
 
-Besvara nödvändiga frågor i samtalet innan du sparar. Varken statuskortet
-eller utkastets sparknapp kringgår frågan. Ett svar sparar inte i sig
+Besvara nödvändiga frågor i samtalet innan du sparar. Varken kartans
+återkoppling eller utkastets sparknapp kringgår frågan. Ett svar sparar inte i sig
 förslagen; ge ett nytt uttryckligt sparbesked när uppgifterna stämmer.
 
 ## Granska, spara eller kasta förslag
@@ -40,8 +41,8 @@ förslagen; ge ett nytt uttryckligt sparbesked när uppgifterna stämmer.
    värden, inklusive samband, typer, bilder och borttagningar.
 3. Rätta vid behov ett förslag genom att välja innehållet, öppna dess
    redigering och lägga rättelsen i utkastet.
-4. Välj **Spara hela utkastet** i statuskortet eller utkastet när förslagen
-   stämmer. Ingen extra granskning krävs för att använda knappen.
+4. Välj **Spara hela utkastet** i kartans återkoppling eller utkastet när
+   förslagen stämmer. Ingen extra granskning krävs för att använda knappen.
    Sparandet gäller
    allt i utkastet tillsammans. Ett fel eller en konflikt stoppar hela
    sparandet; inget sparas delvis.
@@ -71,8 +72,8 @@ Nyare förslag finns kvar. Kopiera eventuell formulärtext du vill behålla,
 stäng formuläret och öppna det aktuella förslaget innan du fortsätter.
 
 Vid konflikt sparas inget från försöket, inte heller de konfliktfria
-delarna. Hämta aktuellt underlag. Öppna statuskortets konfliktlista,
-exempelvis **Visa 1 konflikt**, och välj det berörda objektet, sambandet
+delarna. Hämta aktuellt underlag. Öppna konfliktlistan i kartans
+återkoppling, exempelvis **Visa 1 konflikt**, och välj det berörda objektet, sambandet
 eller typen. Valet öppnar rätt ändring i **Hela mitt utkast**, även
 när arbetspanelerna är stängda eller objektet är borttaget ur kartan.
 Navigeringen ändrar inga uppgifter och andra oskickade formulär finns kvar.

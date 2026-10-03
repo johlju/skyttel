@@ -224,8 +224,11 @@ export function WorkspaceTools({
               }
               disabled={
                 target === 'voice' && conversationOngoing
-                  ? voiceControl?.disabled || conversationUnavailable
+                  ? !conversationUnavailable && voiceControl?.disabled
                   : undefined
+              }
+              aria-disabled={
+                (target === 'voice' && conversationOngoing && conversationUnavailable) || undefined
               }
               aria-pressed={target === 'voice' ? voiceControl?.microphone === 'on' : undefined}
               aria-expanded={target === 'conversation' ? textViewOpen : undefined}

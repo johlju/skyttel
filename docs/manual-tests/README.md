@@ -85,7 +85,7 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   dolt formulär och registrerat sparförsök före omladdning; oberoende privat
   arbete finns kvar efter uttryckligt slutförande. Ett sammanhängande
   familjeärende går från synlig inloggning, text och tal till rättelse,
-  Inställningar med kompakt status och valda detaljer, samlat kvitto, omstart
+  Inställningar med röstruta och utkastets återkoppling, samlat kvitto, omstart
   och två medlemmars skilda utkast;
   samma fullständiga arbete provas med text och listor utan grafik eller ljud.
 
@@ -116,7 +116,12 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   otillgängligt samtal, misslyckat sparande och ny fråga efter en ny
   inbjudan. Ändrad medgivandetext kräver ett nytt sparat medgivande;
   en separat tillfällig installation förbereder det syntetiska tillståndet.
-- [Skyttels röst](voice-assistant.md): svenska röstuppdrag, kompakt status,
+- [Samtalsnotiser](conversation-notices.md): bruten kontakt, otillgängligt
+  samtal och uppdragsfel; en gemensam ordning, bara ett besked, stängning och
+  automatisk återkomst, bevarad text med stoppad sändning och mikrofon,
+  hjälpmedel utan dubbel uppläsning, fokus och placering vid röstrutan
+  eller meddelandefältet på bred och smal skärm.
+- [Skyttels röst](voice-assistant.md): svenska röstuppdrag,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
   röstrutans statusord, vågform, stoppikon, plats och uppläsning,
   ljudaktivitet, fördröjda svar med mikrofonen av och fokus efter avbrott

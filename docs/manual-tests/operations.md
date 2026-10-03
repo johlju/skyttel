@@ -163,7 +163,7 @@ consuming newer proposals”.
 2. Öppna appen i andra profilen som samma användare. Öppna **Lo Exempel**,
    ändra namnet till **Lo Lind** och välj **Lägg i mitt utkast**.
 3. Välj **Spara hela utkastet** i första profilen utan omladdning.
-   Kontrollera avvisningen. Stäng arbetsytan och läs statuskortets
+   Kontrollera avvisningen. Stäng arbetsytan och läs kartans återkoppling om
    avvisade sparande och kvarvarande legend. Stäng den första profilen.
 4. Stoppa och starta appen med samma databas. Ladda om i andra profilen.
    Granska **Mina sparförsök**, **Hela mitt utkast** och objektlistan.

@@ -279,17 +279,16 @@
     top: calc(var(--work-offset, 0px) + var(--text-view-top));
     left: 0;
     width: auto;
-    height: calc(var(--work-height, 100dvh) - var(--text-view-top));
-    border-width: 1px 0 0;
-    border-radius: 16px 16px 0 0;
-  }
-  .household-map.workspace-shell:has(.workspace-feedback > :not(:empty)) .text-view {
     height: calc(
       var(--work-height, 100dvh) -
       var(--text-view-top) -
       var(--feedback-height, 0px) -
-      24px
+      var(--voice-height, 0px) -
+      var(--conversation-corner-height, 0px) -
+      48px
     );
+    border-width: 1px 0 0;
+    border-radius: 16px 16px 0 0;
   }
   .text-view-message {
     padding-bottom: max(12px, env(safe-area-inset-bottom));

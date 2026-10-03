@@ -98,7 +98,7 @@ En **Obesvarad identitetsfråga** kan finnas i utkastet men måste lösas
 innan det kan sparas. Den betyder inte samma sak som ett avsiktligt
 ospecificerat objekt eller en osäker uppgift.
 
-Välj **Red ut identiteter i utkastet** i **Aktuell status** även om
+Välj **Red ut identiteter i utkastet** i kartans återkoppling även om
 objektets panel är stängd. Vid objektets förslag väljer du **Red ut
 identiteten för** följt av objektets namn. Formuläret behåller eventuell
 oskickad text. Besvara identitetsfrågan och lägg rättelsen i utkastet.

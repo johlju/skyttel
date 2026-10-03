@@ -485,22 +485,21 @@ unknown save at 1440px/390px/320px and verify the same receipt”.
 **Steg:**
 
 1. Lägg objektet **Familjeabonnemanget** i utkastet. Stäng arbetsytan.
-2. Kontrollera statuskortets **1 förslag · privat utkast**, mikrofonens
-   avstängda läge och legenden för grönt plus, amberfärgad penna och rött kryss.
-3. Öppna verktygens namn vid behov. Fokusera **Aktuell status** och tryck
-   Retur. Kontrollera rubrikens fokus och att verktygen fälls ihop.
-4. Blockera sparadressen och välj **Spara hela utkastet** i kortet.
+2. Kontrollera kartåterkopplingens **1 förslag · privat utkast** och
+   legenden för grönt plus, amberfärgad penna och rött kryss.
+3. Kontrollera att **Aktuell status** inte längre finns i verktygen.
+   Utkastets återkoppling är redan synlig när arbetsytan är stängd.
+4. Blockera sparadressen och välj **Spara hela utkastet** i återkopplingen.
    Läs **Sparutfall okänt**, det bevarade förslaget och legenden.
 5. Ta bort blockeringen och välj **Hämta samma kvitto igen**. Läs resultatet.
-   Stäng aktuell status och kontrollera fokus. Öppna **Sparförsök och kvitton**.
+   Öppna **Utkast och historik** och läs **Tidigare sparförsök**.
 
 **Förväntat resultat:**
 
 - Sparandet kräver ingen extra granskningsdialog. Ett obekräftat försök
   visas aldrig som säkert lyckat eller säkert misslyckat.
-- Kortets knappar kan användas utan att verktygen täcker dem. Stängning
-  återför fokus till **Aktuell status** på dator eller **Visa verktygens
-  namn** när statusknappen är dold i mobilens hopfällda verktyg.
+- Återkopplingens knappar kan användas utan att verktygen täcker dem.
+  Ingen separat statuspanel behöver öppnas eller stängas.
 - Samma försök kontrolleras och får ett verifierat kvitto. Objektet finns
   en gång i kartan. Legenden försvinner när det bekräftat tomma utkastet
   hämtas. Sparförsöken innehåller ett enda försök.
@@ -512,8 +511,8 @@ unknown save at 1440px/390px/320px and verify the same receipt”.
 
 ### UTKAST-13: sparresultat behåller ett nyare valt textfält
 
-**Syfte:** Statusändringar ska inte avbryta skrivande. Aktuell status ska
-kunna öppnas och stängas med avsiktlig fokusflytt.
+**Syfte:** Sparresultat ska inte avbryta skrivande. Kartåterkopplingen
+ska uppdateras utan att flytta fokus.
 
 **Användare:** Administratören.
 
@@ -522,8 +521,8 @@ nätverksläge så att det går att välja ett annat fält under sparandet.
 
 **Integrationstest:**
 [draft-status.spec.ts](../../tests/integration/draft-status.spec.ts),
-testfallet “UTKAST-13: a verified save keeps a newer field focused and
-current status opens explicitly”.
+testfallet “UTKAST-13: a verified save keeps a newer field focused without the removed
+status controls”.
 
 **Steg:**
 
@@ -531,15 +530,15 @@ current status opens explicitly”.
 2. Medan svaret väntar, välj **Sök objekt** och skriv **Lo**.
 3. Invänta sparkvittot och fortsätt skriva ett blanksteg och **Exempel**
    utan att klicka igen.
-4. Öppna verktygens namn vid behov. Fokusera **Aktuell status** och tryck
-   Retur. Läs mikrofonläge och bekräftat kvitto.
-5. Välj **Stäng aktuell status**.
+4. Läs det bekräftade kvittot i kartans återkoppling. Kontrollera att
+   **Aktuell status** inte längre finns i verktygen.
+5. Fortsätt skriva i sökfältet utan att klicka på det igen.
 
 **Förväntat resultat:**
 
 - Sökfältet behåller fokus och innehåller **Lo Exempel** efter sparandet.
-- Den uttryckliga statusöppningen fokuserar rubriken **Aktuell status**.
-  Stängning lämnar fokus på dess verktygsknapp.
+- Det bekräftade kvittot är synligt utan någon statusöppning.
+  Sökfältet behåller fokus även när återkopplingen uppdateras.
 - Det automatiserade provet håller ett verkligt lyckat serversvar för
   att säkerställa ordningen och kontrollerar att utkastet är tomt innan
   fortsatt skrivande. Ett manuellt prov där svaret hinner fram före
@@ -597,7 +596,7 @@ private draft and an atomic household save”.
 
 ### UTKAST-15: besvara nödvändig fråga före ett nytt sparbesked
 
-**Syfte:** Samma nödvändiga fråga ska hindra sparande från både statuskortet
+**Syfte:** Samma nödvändiga fråga ska hindra sparande från både kartåterkopplingen
 och utkastets arbetsyta. Ett svar ska inte i sig spara utkastet.
 
 **Användare:** Administratören.
@@ -617,7 +616,7 @@ fresh explicit save”.
    och **Godkänn och starta**. Be assistenten förbereda uppgiften och fråga
    vilket kort som avses.
 2. Stäng arbetsytan när statusen visar **Nödvändigt svar**. Kontrollera
-   att frågan finns kvar och att kortet inte erbjuder sparande.
+   att frågan finns kvar och att kartåterkopplingen inte erbjuder sparande.
 3. Öppna Lista och **Hela mitt utkast**. Kontrollera att **Spara hela
    utkastet** är inaktiverad även där. Kartan har ännu inga sparade objekt.
 4. Välj **Svara i samtalet**, svara **Kortet Lo Exempel avses** och skicka.
@@ -627,7 +626,7 @@ fresh explicit save”.
 
 **Förväntat resultat:**
 
-- Varken statuskortet eller arbetsytan kringgår den nödvändiga frågan.
+- Varken kartåterkopplingen eller arbetsytan kringgår den nödvändiga frågan.
   Det privata förslaget finns kvar medan frågan besvaras.
 - Att svara skapar inget sparförsök. Först det nya uttryckliga sparbeskedet
   ger ett kvitto och gör uppgifterna till sparat kartinnehåll.
@@ -660,10 +659,10 @@ conflict without losing unsent work”.
    försöket avvisas och välj **Hämta aktuellt underlag**.
 3. Hos Alex: öppna **Nytt objekt**, skriv Oskickad cykel och stäng
    arbetsytan utan att lägga texten i utkastet.
-4. I **Aktuell status**, öppna **Visa 1 konflikt**. Använd tangentbordet
+4. I kartans återkoppling, öppna **Visa 1 konflikt**. Använd tangentbordet
    för att välja **Objekt: Lo Lind**.
 5. Läs det tidigare namnet, förslaget och det aktuella sparade namnet.
-   Välj **Fortsätt redigera** i statuskortet.
+   Välj **Fortsätt redigera** i kartåterkopplingen.
 
 **Förväntat resultat:**
 
@@ -757,11 +756,11 @@ independent saved facts until a fresh save”.
 
 1. Alex öppnar Nytt objekt, skriver Oskickad cykel och beskrivningen
    Behåll den här texten. Stäng arbetsytan utan att skicka texten.
-2. Öppna statuskortets konfliktlista och välj Objekt: Lo Lind.
+2. Öppna kartåterkopplingens konfliktlista och välj Objekt: Lo Lind.
    Använd tangentbordet till **Rätta objektet** och tryck Enter.
 3. Kontrollera rätt objektpanel och rubrikfokus. Ändra namnet till
    Lo Alm och välj Lägg i mitt utkast.
-4. Välj Fortsätt redigera i statuskortet. Kontrollera den oskickade
+4. Välj Fortsätt redigera i kartåterkopplingen. Kontrollera den oskickade
    cykelns namn och beskrivning, och stäng sedan utan att skicka texten.
 5. Välj Behåll mitt förslag för Lo Alm. Kontrollera kartan hos Robin
    innan Alex väljer Spara hela utkastet.
@@ -798,7 +797,7 @@ and still requires a fresh save at 1440px”, samma titel med “390px”.
 
 1. Alex försöker spara hela utkastet. Kontrollera att inget sparas och
    hämta aktuellt underlag, eller ladda om sidan.
-2. Stäng arbetsytan, öppna statuskortets konfliktlista och välj sambandet.
+2. Stäng arbetsytan, öppna kartåterkopplingens konfliktlista och välj sambandet.
    Läs informationen om borttaget objekt. Behåll mitt förslag ska saknas.
 3. Använd tangentbordet till **Rätta sambandet** och tryck Enter.
    Kontrollera fokus på Från objekt och förslagets riktning och säkerhet.
@@ -841,7 +840,7 @@ samma titel med “390px”.
 
 1. Alex försöker spara hela utkastet. Kontrollera att inget sparas och
    hämta aktuellt underlag, eller ladda om sidan.
-2. Öppna statuskortets konfliktlista och välj Min typ för rätt slags typ.
+2. Öppna kartåterkopplingens konfliktlista och välj Min typ för rätt slags typ.
    Läs det egna förslaget och Robins aktuella namn och beskrivning.
 3. Använd tangentbordet till **Rätta objekttypen** eller
    **Rätta sambandstypen** och tryck Enter. Kontrollera sidan
@@ -879,7 +878,7 @@ to the draft without saving”.
 
 **Steg:**
 
-1. Alex öppnar statuskortets konfliktlista och väljer Objekt: Lo Lind.
+1. Alex öppnar kartåterkopplingens konfliktlista och väljer Objekt: Lo Lind.
 2. Använd tangentbordet till Använd sparat värde eller Behåll mitt förslag,
    och tryck Enter. Ge inget sparbesked.
 3. Kontrollera fokus, privat utkast, Robins sparade karta och historiken.
@@ -944,7 +943,7 @@ choice and one fresh receipt at 1440px”, samma titel med “390px”.
    som Alex. Granska Lo Lind, Spelar piano och Privat stol i utkastet.
 3. Ladda om Alex sida, öppna Lista och kontrollera att samma privata
    resultat finns kvar. Ge fortfarande inget sparbesked.
-4. Stäng panelerna. Välj Spara hela utkastet i statuskortet och avbryt
+4. Stäng panelerna. Välj Spara hela utkastet i kartåterkopplingen och avbryt
    svaret efter att servern genomför sparandet.
 5. Läs Sparutfall okänt. Välj Hämta samma kvitto igen. Kontrollera Robins
    karta, det tomma privata utkastet och den nya historikgruppen.
@@ -960,10 +959,10 @@ choice and one fresh receipt at 1440px”, samma titel med “390px”.
 - Återhämtningen ger exakt samma kvitto. Endast ett nytt sparförsök och
   en historikgrupp tillkommer; kartan sparas inte en andra gång.
 
-### UTKAST-16: använd Navigation och aktuell status tillsammans
+### UTKAST-16: använd Navigation och utkastets återkoppling tillsammans
 
 **Syfte:** Behålla åtkomst till personlig placering och sparande när båda
-ytorna är öppna, även när förstoring kräver rullning.
+ytorna är synliga, även när förstoring kräver rullning.
 
 **Användare:** Administratören.
 
@@ -972,28 +971,29 @@ nytt privat förslag. Börja med stängd arbetsyta och stängd vägledning.
 
 **Integrationstest:**
 [draft-status.spec.ts](../../tests/integration/draft-status.spec.ts),
-testfallen “UTKAST-16: navigation and current status keep lower controls
+testfallen “UTKAST-16: navigation and draft feedback keep lower controls
 usable in both opening orders at 1440px”, samma titel med “640px” och “320px”.
 
 **Steg:**
 
-1. Markera Lo Exempel i kartan. Öppna **Navigera** och sedan **Aktuell
-   status** från verktygen. Expandera verktygens namn om det behövs.
-2. Kontrollera att statusrubriken får synligt fokus. Använd tangentbord
-   och pekare för att flytta Lo i alla sex riktningar i Navigation.
+1. Markera Lo Exempel i kartan. Öppna **Navigera** från verktygen.
+   Expandera verktygens namn om det behövs. Utkastets återkoppling
+   är redan synlig och **Aktuell status** finns inte i verktygen.
+2. Använd tangentbord och pekare för att flytta Lo i alla sex riktningar
+   i Navigation.
    Rulla vid behov till de nedre kontrollerna.
-3. Flytta fokus till **Spara hela utkastet** i statuskortet och kontrollera
+3. Flytta fokus till **Spara hela utkastet** i kartåterkopplingen och kontrollera
    att knappen går att nå utan att spara. Det privata förslaget ska bestå.
-4. Stäng aktuell status och sedan Navigation. Kontrollera fokus på
-   **Navigera**. Upprepa med aktuell status öppnad före Navigation.
+4. Välj **Stäng navigering**. Kontrollera fokus på **Navigera**.
+   Upprepa efter att först ha fokuserat återkopplingens sparknapp.
 5. Upprepa på smal skärm och vid hög förstoring.
 
 **Förväntat resultat:**
 
-- Alla personliga flyttriktningar och statusens sparknapp är åtkomliga
-  i båda öppningsordningarna, även när ytorna behöver rullas.
+- Alla personliga flyttriktningar och återkopplingens sparknapp är
+  åtkomliga i båda ordningarna, även när ytorna behöver rullas.
 - Flyttningarna ändrar bara den personliga vyn. Kartans gemensamma
   innehåll och Blå cykelns privata förslag består utan sparförsök.
 - Fokus följer den uttryckliga handlingen och går tillbaka till verktygen
-  vid stängning. Navigation, status och verktygen täcker inte den kontroll
+  vid stängning. Navigation, återkoppling och verktygen täcker inte den kontroll
   som används.

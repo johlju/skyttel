@@ -225,7 +225,7 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
 **Förutsättningar:** Lo-förslaget finns och rösten är igång.
 Använd en telefonbred vy, 390 × 844 CSS-pixlar i det automatiska provet.
 Markeringen och detaljpanelens sammanfattning ska vara synliga samtidigt
-som statuskortet är öppet; kortet får inte täcka detaljpanelens kontroller.
+med kartans återkoppling; den får inte täcka detaljpanelens kontroller.
 Prova även navigationen vid 640 × 500 och 320 × 250 CSS-pixlar.
 
 **Integrationstest:**
@@ -451,8 +451,8 @@ finns kvar. Anteckna utkastets innehåll och version.
 
 1. Skriv **Osänd rättelse** i samtalets textfält utan att skicka.
    Kör `user Rätta Lo.` och `delegate` i startguiden. Håll modellanropet.
-2. Stäng arbetsytan med **Till kartan**. Kräv **Assistenten arbetar** i
-   statuskortet. Välj **Avbryt uppdrag** där.
+2. Stäng textvyn och kräv **Skyttel arbetar** i röstrutan.
+   Välj röstrutans **Avbryt**.
 3. Släpp det gamla anropet med ett `propose_object` som försöker byta
    Lo-förslagets namn till **För sent**. Använd det hållna anropets version,
    innehållsversion och hela tidigare objektvärde enligt TAL-01:s verktygssteg.
@@ -918,9 +918,9 @@ intygas inte.
 | 4.1.3 Statusmeddelanden | **Lyssnar**, **Skyttel arbetar** och **Mikrofonen är av** läses upp i tur, utan att flytta fokus och utan ljudsignaler. | Uppläsningarnas text, tur och att de inte upprepas. | Att varje uppläsning kommer en gång med riktig skärmläsare. |
 <!-- markdownlint-enable MD013 -->
 
-Statuskortet och samtalspanelen säger också att Skyttel arbetar, så
-skärmläsaren kan höra det två gånger. Röstrutans plats, bredd, höjd och
-pekmål kontrolleras automatiskt i
+Samtalsnotisernas uppläsning och fokus provas i
+[samtalsnotiserna](conversation-notices.md). Röstrutans plats, bredd,
+höjd och pekmål kontrolleras automatiskt i
 [voice-box.spec.ts](../../tests/integration/voice-box.spec.ts), med de
 testfall vars titel börjar med “röstrutan står på sin plats”. På riktig
 enhet prövas platsen i TAL-17.
@@ -977,6 +977,14 @@ in the map tools to turn the microphone on. The fixture needs no hardware
 microphone permission.
 Keep the tab open and active: its normal status requests maintain the server's
 voice connection. Closing the tab is a connection-loss check, not a pause.
+
+### Conversation availability and task failure
+
+`available off` makes the conversation unavailable without replacing the
+household or the held task. `available on` restores it. The normal availability
+check updates the notice within five seconds. `fail REQUEST` rejects a held
+Terra request and shows the task-failure notice. These commands change only
+the disposable fixture; they do not configure a production installation.
 
 ### Transcript fragments and delegation
 

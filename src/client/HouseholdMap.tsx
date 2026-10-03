@@ -1781,7 +1781,7 @@ export function HouseholdMap({
           draftFeedback={({ working, needsAnswer, compact }) => (
             <>
               <DraftStatus
-                compact={compact}
+                compact={compact || (narrow && textViewOpen)}
                 draft={state.draft}
                 operation={pendingOperation ?? operations[0]}
                 saving={Boolean(pending && saveAttempt.current)}

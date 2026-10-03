@@ -167,6 +167,7 @@ test('NOT-03: en notis flyttas till textvyn utan ny uppläsning och försvinner 
     await microphoneButton(page).focus();
     await page.context().setOffline(true);
     await expect(notice(page)).toContainText(disconnectedActive);
+    await expect(microphoneButton(page)).toBeFocused();
     await expect(assertive(page)).toHaveText(disconnectedActive);
     await assertive(page)
       .locator('span')
@@ -340,6 +341,47 @@ for (const viewport of [
       await page.evaluate(() => window.skyttelVoiceFixture.reconnect());
       await expect(notice(page)).toHaveCount(0);
       await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    } finally {
+      await app.close();
+    }
+  });
+}
+
+for (const viewport of [
+  { width: 1280, height: 900 },
+  { width: 820, height: 1180 },
+  { width: 390, height: 844 },
+]) {
+  test(`NOT-08: en uppdragsnotis står bredvid röstrutan utan att täcka återkoppling vid ${viewport.width} × ${viewport.height}`, async ({
+    page,
+  }) => {
+    const { app } = await configured(
+      textModel(() => Promise.reject(new Error('Synthetic provider failure'))),
+    );
+    try {
+      await page.setViewportSize(viewport);
+      await openMap(page, app.origin);
+      await startConversationWithVoice(page);
+      await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
+      await textButton(page).click();
+      await field(page).fill('Ge ett förslag.');
+      await page.getByRole('button', { name: 'Skicka', exact: true }).click();
+      await expect(notice(page)).toContainText(failed);
+      await page.getByRole('button', { name: 'Stäng textvyn' }).click();
+      const box = await bounds(voiceBox(page));
+      const card = await bounds(notice(page));
+      const feedback = await bounds(page.locator('.workspace-voice-controls'));
+      expect(overlaps(card, feedback)).toBe(false);
+      expect(overlaps(card, box)).toBe(false);
+      if (viewport.width <= 700) expect(card.bottom).toBeLessThan(box.y);
+      else expect(card.y).toBeGreaterThan(box.bottom);
+      await textButton(page).focus();
+      await page.keyboard.press('Tab');
+      await expect(notice(page).getByRole('button', { name: 'Stäng notisen' })).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(notice(page)).toHaveCount(0);
+      await expect(microphoneButton(page)).toBeFocused();
+      await expect(voiceBox(page)).toHaveText('Lyssnar');
     } finally {
       await app.close();
     }

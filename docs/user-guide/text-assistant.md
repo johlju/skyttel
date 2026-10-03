@@ -138,17 +138,29 @@ Redan sparade uppgifter påverkas inte av att utkastet kastas.
 
 ## Följ samtalet
 
-Med textvyn stängd visar det kompakta kortet fortfarande status,
-nödvändiga frågor och fel. Samtalet och oskickad text finns kvar när du
-växlar mellan kartan, panelerna och Inställningar. Vid en begärd
-kartmarkering visas kartan och uppgifterna bredvid varandra så att kortet
-inte täcker dem. Verktygsradens mikrofonkontroll finns kvar.
+Röstrutans korta statusord visar vad rösten gör. **Skriv till Skyttel**
+öppnar samtalstexten, där du kan läsa frågor och svar. Samtalet, mikrofonen
+och oskickad text finns kvar när du växlar mellan kartan, panelerna och
+Inställningar. På Inställningar har röstrutan och kartans återkoppling
+om utkast och sparande var sitt utrymme under sidans innehåll.
 
-På Inställningar har sidans innehåll och samtalets kompakta status var sitt
-utrymme. Mikrofonkontroller, nödvändiga frågor, fel och sparstatus finns
-kvar. Välj **Visa samtals- och utkastdetaljer** för ytterligare uppgifter
-om samtalet och ditt privata arbete. **Stäng aktuell status** återgår
-till den kompakta vyn. I korta fönster kan båda områdena rullas var för sig.
+En samtalsnotis förklarar ett hinder eller ett misslyckat uppdrag. På bred
+skärm står den under röstrutan; på smal skärm står den ovanför rutan,
+över hela bredden. När textvyn är öppen finns samma besked bara som en rad
+ovanför meddelandefältet. Du kan läsa och skriva text även när kontakten
+är bruten, men **Skicka** är avstängd tills kontakten är tillbaka.
+Mikrofonen stängs av vid kontaktavbrott. Slå själv på den igen när du vill
+fortsätta tala. **Samtal med Skyttel är inte tillgängligt just nu.** betyder
+att du behöver vänta eller kontakta administratören; Skicka är avstängd
+även då.
+
+Utan pågående samtal ser båda samtalsknapparna avstängda ut vid ett sådant
+hinder, men ett tryck visar förklaringen. Textvyn öppnas inte. Notisen går
+att stänga och försvinner också när hindret upphör. I ett pågående samtal
+står hinder kvar tills de är borta. **Skyttel kunde inte slutföra
+uppdraget. Försök igen.** kan stängas med **Stäng notisen** och försvinner
+också vid nästa försök. Att stänga notisen avslutar inte samtalet och
+ändrar inte utkastet.
 
 Beskriv vad du vill hitta, lägga till eller rätta. Skyttel använder
 hushållets egna typer och ditt befintliga privata utkast. Förslag från
