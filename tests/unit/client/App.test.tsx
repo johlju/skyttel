@@ -343,4 +343,56 @@ describe('Skyttel application interface', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Logga ut' }));
     expect(await screen.findByRole('heading', { name: 'Välkommen till Skyttel' })).toBeDefined();
   });
+
+  test.each([401, 403, 409])(
+    'retires map controls when the personal-view request reports %s',
+    async (status) => {
+      serve({
+        '/api/bootstrap': [{ data: ready }, ...(status === 401 ? [{ data: anonymous }] : [])],
+        '/api/households/linden': [{ data: { household } }],
+        '/api/households/linden/map/view': [{ status }],
+      });
+      mount('/households/linden');
+      if (status === 401) await screen.findByRole('heading', { name: 'Välkommen till Skyttel' });
+      else if (status === 403)
+        await screen.findByRole('heading', { name: 'Du har inte tillgång till hushållet' });
+      else
+        expect((await screen.findByRole('alert')).textContent).toContain(
+          'Kartarbetet och mikrofonen är stoppade',
+        );
+      expect(screen.queryByRole('region', { name: 'Arbetsyta' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Prata med Skyttel' })).toBeNull();
+    },
+  );
+
+  test('an interrupted access refresh preserves the mounted map when the browser regains focus', async () => {
+    const view = {
+      contentVersion: 1,
+      positions: [],
+      settings: { ...defaultViewSettings, version: 0 },
+    };
+    const fetch = serve({
+      '/api/bootstrap': [{ data: ready }, { data: ready }],
+      '/api/households/linden': [{ data: { household } }, { status: 503 }],
+      '/api/households/linden/map/conversation-preferences': [
+        { data: defaultConversationPreferences },
+        { data: defaultConversationPreferences },
+      ],
+      '/api/households/linden/map/view': [
+        { data: view },
+        { data: view },
+        { error: new Error('Synthetic interrupted access refresh') },
+      ],
+    });
+    mount('/households/linden');
+    const workspace = await screen.findByRole('region', { name: 'Arbetsyta' });
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(fetch.mock.calls.filter(([path]) => path === '/api/households/linden')).toHaveLength(2);
+    expect(
+      fetch.mock.calls.filter(([path]) => path === '/api/households/linden/map/view'),
+    ).toHaveLength(3);
+    expect(screen.getByRole('region', { name: 'Arbetsyta' })).toBe(workspace);
+    expect(screen.queryByRole('button', { name: 'Försök igen' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Hushållet Linden' })).toBeDefined();
+  });
 });
