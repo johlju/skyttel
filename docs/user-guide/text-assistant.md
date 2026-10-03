@@ -160,6 +160,16 @@ Redan sparade uppgifter påverkas inte av att utkastet kastas.
 
 ## Följ samtalet
 
+Röst och text hör till samma samtal och kan användas samtidigt. Skriver du
+med mikrofonen på svarar Skyttel också med rösten. Med mikrofonen av kommer
+ett skrivet svar bara som text. Alla dina ord och Skyttels svar finns i
+samtalstexten, även om du öppnar textvyn senare. Talade rader har ingen
+extra märkning och textvyn öppnas aldrig av ett svar.
+
+En skärmläsare läser bara Skyttels nya svar som inte sägs med rösten, och
+väntar på sin tur. Dina egna rader och gamla svar läses inte upp när du
+öppnar textvyn. Du kan ändå läsa alla rader själv med skärmläsaren.
+
 Röstrutans korta statusord visar vad rösten gör. **Skriv till Skyttel**
 öppnar samtalstexten, där du kan läsa frågor och svar. Samtalet, mikrofonen
 och oskickad text finns kvar när du växlar mellan kartan, panelerna och
@@ -264,7 +274,8 @@ sparbesked ger inte tillåtelse för ett nytt sparande. Vid oklarheter
 behövs ett nytt tydligt besked. Kvittot och kartans verkliga markering
 är bekräftelsen även när du använder röst.
 
-Nytt tal kan avbryta ett äldre uppdrag. Vid bruten anslutning stängs
+Nya talade och skrivna uppdrag köas medan Skyttel arbetar. Vid bruten
+anslutning stängs
 mikrofonen av medan anslutningen kontrolleras. Efter en längre störning
 slår du själv på den igen. Ett ljudsvar som inte hördes betyder inte att ett
 sparande misslyckades. Kontrollera sparresultat först. Du kan säga

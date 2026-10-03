@@ -158,6 +158,16 @@ export function useVoice(options: {
     savedTimer.current = setTimeout(() => setSaved(false), 4000);
   }, []);
   const checkOutput = useRef<() => void>(() => {});
+  const outputTask = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const taskId = options.assistant?.taskId;
+    if (!taskId || taskId === outputTask.current) return;
+    outputTask.current = taskId;
+    // A typed task has no Live delegation event. Output from a preceding task
+    // must not prove completion of this task's question or save response.
+    const attempt = current.current;
+    if (attempt) attempt.output = { text: '', heard: false, speaking: false };
+  }, [options.assistant?.taskId]);
   checkOutput.current = () => {
     const attempt = current.current;
     const response = voice?.response;
@@ -191,18 +201,31 @@ export function useVoice(options: {
   useEffect(() => {
     if (voice?.response) checkOutput.current();
   }, [voice?.response]);
-  const apply = useCallback((view: TextAssistantView) => {
-    const shown = latest.current.assistant;
-    if (
-      shown &&
-      view.id === shown.id &&
-      view.revision >= shown.revision &&
-      view.review.contentVersion >= shown.review.contentVersion &&
-      (view.review.contentVersion > shown.review.contentVersion ||
-        view.review.version >= shown.review.version)
-    )
-      latest.current.onAssistant(view);
-  }, []);
+  const apply = useCallback(
+    (view: TextAssistantView, delivery?: VoiceAssistantView['replyDelivery']) => {
+      const shown = latest.current.assistant;
+      if (
+        shown &&
+        view.id === shown.id &&
+        view.revision >= shown.revision &&
+        view.review.contentVersion >= shown.review.contentVersion &&
+        (view.review.contentVersion > shown.review.contentVersion ||
+          view.review.version >= shown.review.version)
+      )
+        latest.current.onAssistant(
+          delivery?.length
+            ? {
+                ...view,
+                completedReplies: view.completedReplies?.map((reply) => {
+                  const disposition = delivery.find((item) => item.id === reply.id);
+                  return disposition ? { ...reply, voiced: disposition.voiced } : reply;
+                }),
+              }
+            : view,
+        );
+    },
+    [],
+  );
   const stop = useCallback(
     async (message: VoiceFailure | null = null) => {
       prepared.current?.close();
@@ -240,7 +263,7 @@ export function useVoice(options: {
       attempt.transport?.close();
       if (!mounted.current || generation !== epoch.current) return;
       if (result) {
-        apply(result.assistant);
+        apply(result.assistant, result.voice.replyDelivery);
         setVoice(result.voice);
       }
       setState('idle');
@@ -365,7 +388,7 @@ export function useVoice(options: {
             attempt.controller.signal,
           );
           if (!active()) return;
-          apply(result.assistant);
+          apply(result.assistant, result.voice.replyDelivery);
           if ((result.assistant.contextRevision ?? 0) > (initial.contextRevision ?? 0)) {
             resetVoice.current(result.assistant);
             return;
@@ -465,6 +488,7 @@ export function useVoice(options: {
                 {
                   sdp,
                   ...anchor(),
+                  microphoneOn: !(reuse?.paused ?? attempt.held?.released ?? false),
                   ...(history
                     ? {
                         history: history.map(({ role, text, partial }) => ({
@@ -488,7 +512,7 @@ export function useVoice(options: {
               throw new DOMException('Voice setup cancelled', 'AbortError');
             }
             attempt.voiceId = result.voice.id;
-            apply(result.assistant);
+            apply(result.assistant, result.voice.replyDelivery);
             setVoice(result.voice);
             attempt.poll = setTimeout(() => void poll(), 500);
             if (!result.sdp) throw new Error('Missing voice answer');

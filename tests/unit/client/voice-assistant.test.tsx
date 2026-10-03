@@ -680,6 +680,7 @@ test('voice starts only on request, gates microphone on protocol readiness and s
     revision: 2,
     draftVersion: 3,
     contentVersion: 1,
+    microphoneOn: true,
   });
   expect(track.enabled).toBe(false);
   // The voice starts: the name stays, and the description says what a press does.

@@ -9,6 +9,8 @@ export interface VoiceAssistantView {
   diagnosticId?: string;
   seconds: number | null;
   usageFinal: boolean;
+  /** Ephemeral typed reply handoffs; OFF completions are consumed without speech. */
+  replyDelivery?: { id: string; voiced: boolean }[];
   /** The checked result handed to the voice, not evidence that its audio was heard. */
   response?: {
     id: string;

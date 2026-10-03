@@ -155,6 +155,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Samtalets kö och avbrott](conversation-queue.md): serverns kö på dator,
   fokusstyrd Escape, stopp på mobil och smal skärm, talade och skrivna
   uppdrag samt kvarvarande utkast, oskickad text och återkoppling.
+- [Röst och text i samma samtal](conversation-voice-text.md): skrivna svar
+  med röst när mikrofonen är på, text när den är av, ordnad överlämning av
+  långa svar, kvarvarande samtalstext och artig uppläsning bara av nya
+  textlevererade Skyttel-rader. Obekräftad text ger inget sparkvitto.
 - [Samtalets kontext](conversation-context.md): samma tillfälliga samtal
   genom utkast, sparande, avbrott, fel, mikrofon av och på samt byte mellan
   röst och text. Äldre sparbesked ger inget nytt sparande. Skrivna och

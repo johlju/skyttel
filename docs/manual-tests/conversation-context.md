@@ -141,13 +141,16 @@ och kastar utkastet”.
    **Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.**,
    kvarvarande Lo-förslag, mikrofon på och **Oskickat** kvar.
 3. Slå av mikrofonen och skicka **Nytt samtal** i textvyn. Kontrollera
-   samma resultat med mikrofonen av. Ingen medgivanderuta visas.
+   samma resultat med mikrofonen av. Ingen medgivanderuta visas. Kör
+   `sessions`; ingen ny röstkommentar skickas för detta skrivna kommando.
 4. Slå på mikrofonen. Kör `user Nytt samtal`, slå av mikrofonen innan
    du kör `delegate`, och skriv **Oskickat under avstängning** utan att
    skicka. Släpp delegeringen. Kräv nytt samtal, kvarvarande Lo-förslag,
    oskickad text kvar och mikrofonen fortsatt av. `stats()` enligt
    röstguiden ska visa ett levande avstängt mikrofonspår och
    `microphoneRequests:1`.
+   Kör `sessions`; det redan talade kommandot får sitt röstbesked även
+   efter avstängningen.
 5. Slå på mikrofonen, kör `user Kasta utkastet` och `delegate`.
    Kräv tomt utkast och **Utkastet är kastat.** Stäng av mikrofonen och
    skicka sedan **Kasta utkastet** i textvyn. Utkastet är fortsatt tomt.
@@ -171,6 +174,10 @@ och kastar utkastet”.
   Faktiskt hört tal, mikrofon och skärmläsare återstår att prova manuellt
   i en isolerad verklig röstinstallation enligt
   [röstguiden](voice-assistant.md#tal-01-familjeärendet-sparas-med-röst-och-bevarad-oskickad-formulärtext).
+- Ett skrivet nytt samtal med mikrofonen av ger enbart text. Ett talat
+  nytt samtal får sitt röstbesked efter släpp eller avstängning, medan
+  mikrofonen förblir av. Kontrollera överlämningen i `sessions`; faktiskt
+  hört tal kräver den separata verkliga röstinstallationen.
 
 ## Kontextmätaren
 

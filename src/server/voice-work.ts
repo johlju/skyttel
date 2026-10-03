@@ -17,6 +17,7 @@ export function voiceWork({
   failed,
   transcript,
   response,
+  delivered,
 }: {
   channel: LiveSideband;
   initial: TextAssistantView;
@@ -29,6 +30,7 @@ export function voiceWork({
   response?: (
     value: NonNullable<import('../shared/voice-assistant.js').VoiceAssistantView['response']>,
   ) => void;
+  delivered?: (value: { id: string; voiced: boolean }) => void;
 }) {
   let rendered: Anchor = {
     revision: initial.revision,
@@ -48,6 +50,7 @@ export function voiceWork({
   const events = new Set<string>();
   const delegations = new Set<string>();
   const answered = new Set<number>([initial.revision]);
+  const answeredReplies = new Set((initial.completedReplies ?? []).map((reply) => reply.id));
 
   function cancel() {
     const hadWork = (inFlight.get(generation) ?? 0) > 0;
@@ -307,10 +310,51 @@ export function voiceWork({
     void execute(event.delegation.id, text, expected, JSON.stringify(fragments), generation);
   });
   return {
-    /** Written questions and verified saves are also spoken while capture is on. */
-    answer(view: TextAssistantView) {
-      if (stopped || owned !== undefined || answered.has(view.revision) || view.phase !== 'ready')
+    /** Consume each typed FIFO completion once, including while the next task works. */
+    answer(view: TextAssistantView, microphoneOn = true) {
+      if (stopped) return;
+      for (const reply of view.completedReplies ?? []) {
+        if (answeredReplies.has(reply.id)) continue;
+        // Spoken executors hand their own results to Live. OFF completions are
+        // consumed too: enabling capture later must not replay old text.
+        if (reply.source === 'voice' || !microphoneOn) {
+          answeredReplies.add(reply.id);
+          delivered?.({ id: reply.id, voiced: reply.source === 'voice' });
+          if (reply.revision !== undefined) answered.add(reply.revision);
+          continue;
+        }
+        if (owned !== undefined) continue;
+        answeredReplies.add(reply.id);
+        const completed: TextAssistantView = {
+          ...view,
+          phase: 'ready',
+          revision: reply.revision ?? view.revision,
+          modelReply: reply.text || undefined,
+          reply: reply.reply,
+          receipt: reply.receipt,
+          result: reply.result,
+          questionPending: reply.questionPending,
+          error: undefined,
+        };
+        // Keep all of the actual reply, and its source boundary. append splits
+        // UTF-8 safely at Live's byte limit rather than dropping long answers.
+        const content =
+          reply.receipt || reply.questionPending
+            ? completion(completed)
+            : [
+                reply.reply ? `Skyttels resultat (verifierat): ${reply.reply}` : '',
+                reply.text ? `Samtal (obekräftat): ${JSON.stringify(reply.text)}` : '',
+              ]
+                .filter(Boolean)
+                .join('\n');
+        if (content) append(null, content, completed);
+        delivered?.({ id: reply.id, voiced: Boolean(content) });
+      }
+      if (!microphoneOn) {
+        if (view.phase !== 'working') answered.add(view.revision);
         return;
+      }
+      if (owned !== undefined || answered.has(view.revision) || view.phase !== 'ready') return;
       if (!view.questionPending && !view.receipt) return;
       append(null, completion(view), view);
     },
@@ -332,6 +376,8 @@ export function voiceWork({
       fragments = [];
       pending = [];
       anchor = undefined;
+      answeredReplies.clear();
+      answered.add(view.revision);
       rendered = {
         revision: view.revision,
         draftVersion: view.review.version,

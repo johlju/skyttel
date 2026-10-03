@@ -43,3 +43,50 @@ test('working is announced once only when the voice box does not already announc
     'Skyttel arbetar',
   );
 });
+
+test('typed text waits for its voice handoff choice rather than announcing during a microphone race', () => {
+  const view = render(<ConversationTranscript rows={[]} working={false} />);
+  const pending: TranscriptRow = {
+    id: 'pending',
+    role: 'assistant',
+    text: 'Ett svar.',
+    voicePending: true,
+  };
+  view.rerender(<ConversationTranscript rows={[pending]} working={false} />);
+  expect(view.container.querySelector('.conversation-announcement')?.textContent).toBe('');
+  view.rerender(
+    <ConversationTranscript
+      rows={[{ ...pending, voicePending: false, voiced: true }]}
+      working={false}
+    />,
+  );
+  expect(view.container.querySelector('.conversation-announcement')?.textContent).toBe('');
+  view.rerender(
+    <ConversationTranscript
+      rows={[
+        { ...pending, voicePending: false, voiced: true },
+        { id: 'off', role: 'assistant', text: 'Svaret blev text.', voicePending: true },
+      ]}
+      working={false}
+    />,
+  );
+  expect(view.container.querySelector('.conversation-announcement')?.textContent).toBe('');
+  view.rerender(
+    <ConversationTranscript
+      rows={[
+        { ...pending, voicePending: false, voiced: true },
+        {
+          id: 'off',
+          role: 'assistant',
+          text: 'Svaret blev text.',
+          voicePending: false,
+          voiced: false,
+        },
+      ]}
+      working={false}
+    />,
+  );
+  expect(view.container.querySelector('.conversation-announcement')?.textContent).toBe(
+    'Skyttel: Svaret blev text.',
+  );
+});

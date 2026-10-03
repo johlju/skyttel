@@ -7,6 +7,8 @@ export type TranscriptRow = {
   partial?: boolean;
   /** Delivery metadata for announcements only; spoken rows have no visible label. */
   voiced?: boolean;
+  /** Wait for the connection's actual handoff choice before announcing typed text. */
+  voicePending?: boolean;
 };
 
 /**
@@ -38,7 +40,7 @@ export function ConversationTranscript({
   useEffect(() => {
     const text: string[] = [];
     for (const row of rows) {
-      if (seen.current.has(row.id) || row.partial) continue;
+      if (seen.current.has(row.id) || row.partial || row.voicePending) continue;
       seen.current.add(row.id);
       if (row.role === 'assistant' && !row.voiced) text.push(`Skyttel: ${row.text}`);
     }

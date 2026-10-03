@@ -147,6 +147,7 @@ export function textAssistantRoutes({
       id,
       revision,
       contextRevision,
+      resetSource,
       discarded,
       canceled,
       completedReplies,
@@ -172,6 +173,7 @@ export function textAssistantRoutes({
         contextBytes(session),
         Buffer.byteLength(JSON.stringify(session.conversation)),
       ),
+      resetSource,
       discarded,
       canceled,
       completedReplies,
@@ -473,6 +475,7 @@ export function textAssistantRoutes({
     session.contextOffset = 0;
     session.contextRevision = (session.contextRevision ?? 0) + 1;
     session.capacity.reset();
+    session.resetSource = deferVoiceClose ? 'voice' : 'text';
     session.previousFailure = undefined;
     session.selection = undefined;
     session.displayedSelection = undefined;
@@ -1030,6 +1033,7 @@ export function textAssistantRoutes({
     session.taskId = message.id;
     session.revision++;
     session.phase = 'working';
+    session.resetSource = undefined;
     session.canceled = undefined;
     session.error = undefined;
     session.reply = undefined;
@@ -1075,8 +1079,17 @@ export function textAssistantRoutes({
       .finally(() => {
         if (task.signal.aborted || session.task !== task || !sessions.has(session.id)) return;
         accepted.status = 'completed';
-        if (session.modelReply)
-          session.completedReplies?.push({ id: message.id, text: session.modelReply });
+        if (session.modelReply || session.reply)
+          session.completedReplies?.push({
+            id: message.id,
+            text: session.modelReply ?? '',
+            revision,
+            source: message.voice ? 'voice' : 'text',
+            reply: session.reply,
+            questionPending: view(session).questionPending,
+            receipt: session.receipt,
+            result: session.result,
+          });
         session.task = undefined;
         session.taskId = undefined;
         accepted.result = {

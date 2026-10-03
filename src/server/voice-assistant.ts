@@ -353,6 +353,10 @@ export function voiceAssistantRoutes({
         response: (value) => {
           voice.view.response = value;
         },
+        delivered: (value) => {
+          voice.view.replyDelivery ??= [];
+          voice.view.replyDelivery.push(value);
+        },
         transcript: (role, text) => transcript?.(context.req.param('sessionId'), role, text),
         interrupt: (revision) => interrupt(context.req.param('sessionId'), revision),
         request: async (action, body, signal) => {
@@ -404,12 +408,19 @@ export function voiceAssistantRoutes({
         voice.assistant = await assistant(path, requestHeaders);
         if (voice.closed) throw new Error('live_start_interrupted');
         voice.view.phase = voice.assistant.phase === 'recovery' ? 'recovery' : 'listening';
-        if (body.newConversation === true && voice.assistant.reply)
-          channel.send({
-            type: 'session.commentary.append',
-            delegation_id: null,
-            content: voice.assistant.reply,
-          });
+        if (body.newConversation === true && voice.assistant.reply) {
+          // A spoken reset retains its reply after release. Typed/toolbar
+          // resets follow the retained capture mode instead.
+          const voiced = voice.assistant.resetSource === 'voice' || body.microphoneOn !== false;
+          const reply = voice.assistant.reply;
+          voice.assistant = { ...voice.assistant, replyVoiced: voiced };
+          if (voiced)
+            channel.send({
+              type: 'session.commentary.append',
+              delegation_id: null,
+              content: reply,
+            });
+        }
         usage.outcome = 'active';
         record(voice);
         return context.json(
@@ -469,7 +480,7 @@ export function voiceAssistantRoutes({
       )
         return context.json({ error: 'invalid_request' }, 400);
       voice.work?.rendered(body);
-      if (body.microphoneOn === true) voice.work?.answer(voice.assistant);
+      voice.work?.answer(voice.assistant, body.microphoneOn === true);
       voice.heartbeat = Date.now();
     } else return context.json({ error: 'not_found' }, 404);
     return context.json({ voice: voice.view, assistant: voice.assistant });

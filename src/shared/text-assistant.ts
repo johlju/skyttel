@@ -15,6 +15,19 @@ export type TextAssistantResult = {
   /** Server-produced text grounded in checked MCP results or recorded failures. */
   message: string;
 };
+/** Ephemeral FIFO completion, including its delivery origin and checked outcome. */
+export type ConversationReply = {
+  id: string;
+  text: string;
+  revision?: number;
+  source?: 'voice' | 'text';
+  /** Voice poll handoff disposition; absent until that connection consumes the reply. */
+  voiced?: boolean;
+  reply?: string;
+  questionPending?: boolean;
+  receipt?: SaveReceipt;
+  result?: TextAssistantResult;
+};
 export interface TextAssistantView {
   id: string;
   revision: number;
@@ -22,6 +35,10 @@ export interface TextAssistantView {
   contextRevision?: number;
   /** Server-calculated occupancy of the conversation, from 0 to 100. */
   contextPercentage?: number;
+  /** Origin of the explicit reset; pre-release spoken work still gets its voice reply. */
+  resetSource?: 'voice' | 'text';
+  /** Startup handoff disposition for the reset statement. */
+  replyVoiced?: boolean;
   /** Verified whole-draft discard, shown as conversation text. */
   discarded?: boolean;
   /** Accepted messages waiting on the server, excluding the current task. */
@@ -29,7 +46,7 @@ export interface TextAssistantView {
   taskId?: string;
   taskStatus?: 'queued' | 'working' | 'completed' | 'canceled';
   /** Completed replies remain available when the next queued task starts. */
-  completedReplies?: { id: string; text: string }[];
+  completedReplies?: ConversationReply[];
   canceled?: boolean;
   phase: 'ready' | 'working' | 'error' | 'recovery';
   review: TextAssistantReview;

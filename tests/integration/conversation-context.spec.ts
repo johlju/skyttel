@@ -271,10 +271,16 @@ test('KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar ut
     expect((await read()).draft.changes).toHaveLength(1);
     expect(live.requests[1].session.input).toBeUndefined();
     await turnMicrophoneOff(page);
+    const commentsBeforeTypedReset = live.sent.filter(
+      ({ event }) => event.type === 'session.commentary.append',
+    ).length;
     await send(page, 'Nytt samtal');
     await expect.poll(() => live.requests.length).toBe(3);
     await expect(field(page)).toHaveValue('');
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    expect(
+      live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
+    ).toHaveLength(commentsBeforeTypedReset);
     expect((await read()).draft.changes).toHaveLength(1);
     await turnMicrophoneOn(page);
     const finish = utterance(live, 'Nytt samtal');
@@ -282,6 +288,11 @@ test('KONTEXT-03: skrivna och talade kommandon börjar om samtalet och kastar ut
     await field(page).fill('Oskickat under avstängning');
     finish();
     await expect.poll(() => live.requests.length).toBe(4);
+    await expect
+      .poll(
+        () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
+      )
+      .toBe(commentsBeforeTypedReset + 1);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await expect(field(page)).toHaveValue('Oskickat under avstängning');
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([

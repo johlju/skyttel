@@ -147,12 +147,21 @@ export function useConversation({
   const [error, setError] = useState('');
   const [unknown, setUnknown] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptRow[]>([]);
+  const voiceConnected = useRef(false);
   const active = useRef<TextAssistantView | null>(null);
   const showTranscript = useCallback((row: TranscriptRow) => {
     if (!active.current) return;
     setTranscript((rows) =>
       rows.some((item) => item.id === row.id)
-        ? rows.map((item) => (item.id === row.id ? row : item))
+        ? rows.map((item) =>
+            item.id === row.id
+              ? {
+                  ...row,
+                  voiced: row.voiced ?? item.voiced,
+                  voicePending: (row.voiced ?? item.voiced) === undefined && row.voicePending,
+                }
+              : item,
+          )
         : [...rows, row],
     );
   }, []);
@@ -184,40 +193,108 @@ export function useConversation({
         setError('');
         setTranscript(
           next.reply
-            ? [{ id: `new-${next.id}-${next.revision}`, role: 'assistant', text: next.reply }]
+            ? [
+                {
+                  id: `new-${next.id}-${next.revision}`,
+                  role: 'assistant',
+                  text: next.reply,
+                  voiced: next.resetSource === 'voice' ? true : next.replyVoiced,
+                  voicePending:
+                    next.resetSource !== 'voice' &&
+                    next.replyVoiced === undefined &&
+                    voiceConnected.current,
+                },
+              ]
             : [],
         );
-      } else if (next.discarded && next.revision !== previous?.revision && next.reply) {
+      } else if (
+        next.discarded &&
+        next.revision !== previous?.revision &&
+        next.reply &&
+        !(next.completedReplies ?? []).some((reply) => reply.reply === next.reply)
+      ) {
         showTranscript({
           id: `discard-${next.id}-${next.revision}`,
           role: 'assistant',
           text: next.reply,
+          voicePending: voiceConnected.current,
         });
       }
+      if (next.replyVoiced !== undefined)
+        setTranscript((rows) =>
+          rows.map((row) =>
+            row.id === `new-${next.id}-${next.revision}`
+              ? { ...row, voiced: next.replyVoiced, voicePending: false }
+              : row,
+          ),
+        );
       if (next.revision !== previous?.revision || next.error !== previous?.error)
         setTaskFailed(next.phase === 'error' && Boolean(next.error));
-      for (const reply of next.completedReplies ?? [])
-        showTranscript({
-          id: `queued-${next.id}-${reply.id}`,
-          role: 'assistant',
-          text: reply.text,
-        });
-      if (next.receipt && next.receipt.operationId !== previous?.receipt?.operationId)
+      for (const reply of next.completedReplies ?? []) {
+        const voiced = reply.source === 'voice' ? true : reply.voiced;
+        const voicePending = voiced === undefined && voiceConnected.current;
+        if (reply.text)
+          showTranscript({
+            id:
+              reply.revision === undefined
+                ? `queued-${next.id}-${reply.id}`
+                : `text-${next.id}-${reply.revision}`,
+            role: 'assistant',
+            text: reply.text,
+            voiced,
+            voicePending,
+          });
+        if (reply.receipt)
+          showTranscript({
+            id: `saved-${next.id}-${reply.receipt.operationId}`,
+            role: 'assistant',
+            text: 'Sparat.',
+            voiced,
+            voicePending,
+          });
+        else if (reply.result && reply.reply)
+          showTranscript({
+            id: `result-${next.id}-${reply.revision}`,
+            role: 'assistant',
+            text: reply.reply,
+            voiced,
+            voicePending,
+          });
+      }
+      const voiced = (next.completedReplies ?? []).some(
+        (reply) => reply.revision === next.revision && reply.source === 'voice',
+      )
+        ? true
+        : undefined;
+      if (
+        next.receipt &&
+        next.receipt.operationId !== previous?.receipt?.operationId &&
+        !(next.completedReplies ?? []).some(
+          (reply) => reply.receipt?.operationId === next.receipt?.operationId,
+        )
+      )
         showTranscript({
           id: `saved-${next.id}-${next.receipt.operationId}`,
           role: 'assistant',
           text: 'Sparat.',
+          voiced,
+          voicePending: voiced === undefined && voiceConnected.current,
         });
       if (
         next.result &&
         next.reply &&
         !next.receipt &&
+        !(next.completedReplies ?? []).some(
+          (reply) => reply.revision === next.revision && reply.reply === next.reply,
+        ) &&
         (next.reply !== previous?.reply || next.revision !== previous?.revision)
       )
         showTranscript({
           id: `result-${next.id}-${next.revision}`,
           role: 'assistant',
           text: next.reply,
+          voiced,
+          voicePending: voiced === undefined && voiceConnected.current,
         });
       if (
         next.modelReply &&
@@ -228,6 +305,8 @@ export function useConversation({
           id: `text-${next.id}-${next.revision}`,
           role: 'assistant',
           text: next.modelReply,
+          voiced,
+          voicePending: voiced === undefined && voiceConnected.current,
         });
       if (
         !previous ||
@@ -391,6 +470,18 @@ export function useConversation({
     inputBlocked: !connected || available === false,
     onRecoveryNeeded: () => setUnknown(true),
   });
+  voiceConnected.current = voice.state === 'listening' || voice.starting;
+  useEffect(() => {
+    if (voice.state !== 'idle' && voice.state !== 'closing') return;
+    // If the connection ends before a handoff, the retained reply is text.
+    setTranscript((rows) =>
+      rows.some((row) => row.voicePending)
+        ? rows.map((row) =>
+            row.voicePending ? { ...row, voicePending: false, voiced: false } : row,
+          )
+        : rows,
+    );
+  }, [voice.state]);
   pauseCapture.current = () => voice.pauseMicrophone?.();
   const disconnected = !navigator.onLine || !connected || voice.disconnected;
   const inputBlocked = disconnected || available === false;
@@ -585,9 +676,20 @@ export function useConversation({
       setUnknown(false);
       update(result);
       // The conversation text starts over with what Skyttel says about the draft.
-      setTranscript(
+      setTranscript((rows) =>
         result.reply
-          ? [{ id: `new-${result.id}-${result.revision}`, role: 'assistant', text: result.reply }]
+          ? [
+              {
+                id: `new-${result.id}-${result.revision}`,
+                role: 'assistant',
+                text: result.reply,
+                voiced: rows.find((row) => row.id === `new-${result.id}-${result.revision}`)
+                  ?.voiced,
+                voicePending:
+                  rows.find((row) => row.id === `new-${result.id}-${result.revision}`)
+                    ?.voicePending ?? voiceConnected.current,
+              },
+            ]
           : [],
       );
     } catch (failure) {
