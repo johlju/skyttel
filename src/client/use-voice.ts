@@ -711,6 +711,13 @@ export function useVoice(options: {
         } else for (const track of stream?.getTracks() ?? []) track.stop();
         return assistant;
       } catch (failure) {
+        if (preserveInput) {
+          held.current?.buffer?.close();
+          held.current?.controller.abort();
+          held.current = null;
+          setHeldListening(false);
+          setContextPaused(false);
+        }
         for (const track of stream?.getTracks() ?? []) track.stop();
         if (current.current === continuation) {
           prepared.current?.close();

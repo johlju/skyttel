@@ -330,6 +330,35 @@ test('voice startup context failure retains local input and reports the explicit
   await waitFor(() => expect(track.stop).toHaveBeenCalled());
 });
 
+test('failed summary handoff request releases its microphone and permits an explicit retry', async () => {
+  meteredAudio();
+  const { track, view } = setup();
+  let needed = false;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) =>
+      url.endsWith('/summarize')
+        ? Response.json({ error: 'controlled_handoff_failure' }, { status: 503 })
+        : Response.json({
+            voice: {
+              id: 'voice-session',
+              phase: 'listening',
+              seconds: null,
+              usageFinal: false,
+              summaryReady: true,
+            },
+            assistant: { ...view, ...(needed ? { contextSummaryState: 'needed' } : {}) },
+            sdp: 'synthetic-answer',
+          }),
+    ),
+  );
+  await startWithAudio();
+  needed = true;
+  await waitFor(() => expect(track.stop).toHaveBeenCalled(), { timeout: 2000 });
+  await waitFor(() => expect(microphoneButton().disabled).toBe(false));
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
+});
+
 test('the voice box follows who is heard, and Skyttel is heard on with the microphone off', async () => {
   const { signals, disconnects, close, context } = meteredAudio();
   const { track } = setup();
