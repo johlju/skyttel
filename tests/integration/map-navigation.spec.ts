@@ -171,7 +171,11 @@ test('NAVIGATION-02: navigation and unsent details retain separate usable areas 
       await page.setViewportSize({ width, height });
       for (const navigationFirst of [true, false]) {
         await page.reload();
-        await lo.click();
+        // Initial graph placement may sit behind the protected display row.
+        // Select with the native keyboard control before testing panel pointer access.
+        await lo.focus();
+        await lo.press('Enter');
+        await expect(lo).toHaveAttribute('aria-pressed', 'true');
         const trigger = page.getByRole('button', { name: 'Navigera', exact: true });
         const details = page.getByRole('button', { name: 'Visa detaljer', exact: true });
         if (navigationFirst) {
