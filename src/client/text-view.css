@@ -200,6 +200,12 @@
   }
 }
 
+/* The panels wait behind a text view that fills a narrow screen. */
+.household-map.workspace-shell.workspace-open.text-view-open:not(.workspace-revealing)
+.workspace-windows[hidden] {
+  display: none;
+}
+
 /* A narrow screen: the text view fills the screen under the toolbar. It ends
    above the map's shared feedback, which stands at the bottom edge. */
 @media (max-width: 700px) {

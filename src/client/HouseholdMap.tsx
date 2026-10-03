@@ -250,7 +250,9 @@ export function HouseholdMap({
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
   }, []);
-  // On a narrow screen the text view fills the screen under the toolbar.
+  // On a narrow screen the text view fills the screen under the toolbar. The
+  // panels wait behind it, unchanged.
+  const panelsCovered = narrow && textViewOpen;
   const mapCovered = narrow && (workOpen || textViewOpen) && !revealRequest && !navigationOpen;
   useLayoutEffect(() => {
     // Panel focus can scroll the ordinary work flow before navigation closes.
@@ -1653,7 +1655,7 @@ export function HouseholdMap({
           </div>
         )}
       </div>
-      {active && workOpen && (
+      {active && workOpen && !panelsCovered && (
         <button
           type="button"
           className="workspace-work-close"
@@ -1817,7 +1819,7 @@ export function HouseholdMap({
           renderWorkspace={(work, floatingStatus) => (
             <WorkspacePanels
               floatingStatus={floatingStatus}
-              hidden={!active || !workOpen}
+              hidden={!active || !workOpen || panelsCovered}
               restoreFocusOnReveal={!profileRequested}
               activeId={activePanel}
               focusRequest={panelFocusRequest}
