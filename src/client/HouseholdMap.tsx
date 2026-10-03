@@ -510,7 +510,11 @@ export function HouseholdMap({
       const field = document.activeElement;
       const workSurface = workspace.current?.querySelector('.assistant-workspace');
       if (field instanceof HTMLElement && workSurface?.contains(field)) {
-        field.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const bounds = field.getBoundingClientRect();
+        // Route return can already have restored a visible list result and
+        // its exact scroll. Only reveal a target clipped by the viewport.
+        if (bounds.top < viewport.offset || bounds.bottom > viewport.offset + viewport.height)
+          field.scrollIntoView({ block: 'center', behavior: 'instant' });
       }
     });
     return () => cancelAnimationFrame(frame);
