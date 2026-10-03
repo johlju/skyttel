@@ -284,14 +284,34 @@ test('TEXTVY-03: Nytt samtal tömmer samtalet och behåller utkast och mikrofon'
     await expect
       .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks))
       .toEqual([{ enabled: false, state: 'live' }]);
-    await textView(page).getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await messageField(page).fill('Oskickat vid omstart');
+    let releaseReset!: () => void;
+    const resetHeld = new Promise<void>((resolve) => {
+      releaseReset = resolve;
+    });
+    let resetRequests = 0;
+    await page.route('**/text-assistant/*/new', async (route) => {
+      resetRequests++;
+      await resetHeld;
+      await route.continue();
+    });
+    await textView(page).getByRole('button', { name: 'Nytt samtal', exact: true }).dblclick();
+    await expect.poll(() => resetRequests).toBe(1);
+    releaseReset();
+    await expect.poll(() => live.requests.length).toBe(3);
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks))
+      .toEqual([{ enabled: false, state: 'live' }]);
     await expect(conversationText(page)).toHaveText(
       'Skyttel: Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.',
     );
-    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
-      { enabled: false, state: 'live' },
-    ]);
-    expect(live.requests).toHaveLength(3);
+    await expect(messageField(page)).toHaveValue('Oskickat vid omstart');
+    expect((await (await page.request.get(path)).json()).draft).toEqual(before);
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneRequests)).toBe(
+      1,
+    );
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().openPeers)).toBe(1);
+    expect(resetRequests).toBe(1);
   } finally {
     await app.close();
   }

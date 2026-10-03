@@ -147,6 +147,7 @@ export function useConversation({
   callbacks.current = { onMapChange, onStarted, onUnavailable, onAccessLost, onSelectItem };
   const mounted = useRef(true);
   const requestEpoch = useRef(0);
+  const resetInProgress = useRef(false);
   // Counts the visits and what Settings does with the consent, so that an
   // answer is not applied after the user has left the map or done something newer.
   const consentEpoch = useRef(0);
@@ -444,7 +445,10 @@ export function useConversation({
   }
   async function newConversation() {
     const current = active.current;
-    if (!current) return;
+    if (!current || resetInProgress.current) return;
+    // A reset may interrupt a pending message, but a second reset must not
+    // replace the first one's retained microphone while the server answers.
+    resetInProgress.current = true;
     const epoch = ++requestEpoch.current;
     setPending(true);
     setError('');
@@ -464,6 +468,7 @@ export function useConversation({
     } catch (failure) {
       if (epoch === requestEpoch.current) fail(failure);
     } finally {
+      resetInProgress.current = false;
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }
   }

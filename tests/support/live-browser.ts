@@ -8,6 +8,7 @@ export const liveBrowserFixtureSource = `
   const remoteTracks = [];
   const audioElements = new Set();
   let microphone = 'allow';
+  let microphoneRequests = 0;
   let playback = 'allow';
   let autoStart = true;
   let releaseMicrophone;
@@ -98,6 +99,7 @@ export const liveBrowserFixtureSource = `
   Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
     configurable: true,
     value: async () => {
+      microphoneRequests++;
       if (microphone === 'deny') throw new DOMException('Synthetic denied microphone', 'NotAllowedError');
       if (microphone === 'error') throw new DOMException('Synthetic missing microphone', 'NotFoundError');
       if (microphone === 'hold') await new Promise(resolve => { releaseMicrophone = resolve; });
@@ -132,6 +134,7 @@ export const liveBrowserFixtureSource = `
       void signal.context.resume();
     },
     stats: () => ({
+      microphoneRequests,
       peers: peers.length,
       openPeers: peers.filter(peer => peer.connectionState !== 'closed').length,
       microphoneTracks: microphoneTracks.map(track => ({ enabled: track.enabled, state: track.readyState })),
@@ -161,6 +164,7 @@ declare global {
       /** The level is the sound's strength, from 0 to 1. A quiet voice when it is left out. */
       setSound(source: 'microphone' | 'remote', active: boolean, level?: number): void;
       stats(): {
+        microphoneRequests: number;
         peers: number;
         openPeers: number;
         microphoneTracks: { enabled: boolean; state: string }[];

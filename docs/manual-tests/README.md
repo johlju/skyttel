@@ -128,7 +128,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Textvyn](text-view.md): **Skriv till Skyttel** öppnar och stänger
   textvyn utan att samtalet avslutas, samtalstexten visar vem som skriver
   och raden Skyttel arbetar sist, **Nytt samtal** behåller utkast, mikrofon
-  och oskickad text, och textvyn går att använda på pekskärm och smal skärm.
+  och oskickad text även vid dubbelklick under fördröjd omstart, och textvyn
+  går att använda på pekskärm och smal skärm. Kontrollerade kommentarspaket
+  och faktiskt hört tal provas separat.
 - [Skyttels textassistent](text-assistant.md): hela utkast,
   rättelse och samlat sparande, sena svar, avbrott, återfunna kvitton och
   samtidigt synliga objekt och samband i karta och detaljpanel även på

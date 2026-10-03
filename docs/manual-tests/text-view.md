@@ -16,14 +16,23 @@ vid körning.
 
 ## Allmän förberedelse
 
-1. Starta den
+1. För TEXTVY-01, TEXTVY-02 och TEXTVY-04: starta den
    [kontrollerade installationen för text](text-assistant.md#controlled-text-fixture).
-   Den håller varje modellsvar tills du släpper det i terminalen.
+   För TEXTVY-03: starta i stället
+   [den kontrollerade röstinstallationen](voice-assistant.md#controlled-voice-fixture)
+   med `node --import tsx scripts/manual-voice.ts` efter bygget. Följ guidens
+   privata portvidarebefordran och inloggning. Kör inte `seed-family`;
+   hushållet och det enda förslaget skapas i nästa steg. Båda installationerna
+   håller varje modellsvar tills du släpper det i terminalen.
 2. Skapa hushållet Textprov. Skapa **Lo Exempel** av typen **Person** med
    beskrivningen **Påhittad uppgift** genom Lista och välj
    **Lägg i mitt utkast**. Lämna förslaget osparat.
 3. Ladda om sidan före varje fall, så att inget medgivande gäller för
    besöket. Behåll hushållet och förslaget mellan fallen.
+4. Avsluta respektive installation med `quit` och kontrollera att dess
+   tillfälliga katalog försvinner enligt startguiden. Röstinstallationen
+   använder tysta mediespår. Den provar kommentarspaket och mikrofonläge;
+   faktiskt hört tal redovisas separat i TEXTVY-03.
 
 ## Textvyn
 
@@ -110,9 +119,8 @@ oskickad text och utan att frågas om medgivande igen.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Lo-förslaget ligger osparat i utkastet. En mikrofon
-är ansluten, eller den kontrollerade mikrofonen i den kontrollerade
-röstinstallationen används. Inget medgivande gäller.
+**Förutsättningar:** Den kontrollerade röstinstallationen är igång med
+Textprov och Lo-förslaget osparat i utkastet. Inget medgivande gäller.
 
 **Integrationstest:**
 [text-view.spec.ts](../../tests/integration/text-view.spec.ts),
@@ -124,23 +132,59 @@ mikrofon”.
 1. Välj **Prata med Skyttel** och **Godkänn och starta**. Öppna textvyn
    med **Skriv till Skyttel**.
 2. Skicka **Rätta namnet.**. Medan terminalen håller svaret, skriv
-   **Oskickat** i fältet utan att skicka.
+   **Oskickat** i fältet utan att skicka. Anteckna anropets `id`, utkastets
+   `version` och `contentVersion` samt Lo-förslagets `id` och hela `after`
+   från `held.draft`.
 3. Välj **Nytt samtal**.
-4. Släpp det hållna svaret med ett förslag som byter Lo:s namn.
-5. Skicka **Vad finns i utkastet?** och läs nästa `held` i terminalen.
-   Släpp svaret.
-6. Stäng av mikrofonen och välj **Nytt samtal** igen.
+   Kör `sessions` i terminalen. Det senaste paketet av typen
+   `session.commentary.append` ska ha `content` lika med
+   **Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.**
+4. Släpp det gamla hållna anropet med `tool REQUEST propose_object`
+   följt av ett JSON-objekt på samma terminalrad. Ersätt `REQUEST` med
+   antecknat anrops-ID. Argumentet ska ha antecknad `version`,
+   `contentVersion`, Lo-förslagets `id`, `baseRevision:null` och `value`
+   lika med kopierat `after`, men ändrat `name` till **För sent**.
+   Ta bort eventuella servermetadata som `id`, `householdId` och `revision`
+   ur `value`. Kontrollera oförändrat Lo-förslag i utkastet.
+5. Skicka **Vad finns i utkastet?**. Nästa `held.input` ska innehålla
+   bara det nya uppdraget utan **Rätta namnet.** Släpp svaret med
+   `reply REQUEST Lo Exempel.`, där `REQUEST` är det nya anropets ID.
+6. Stäng av mikrofonen. Skriv **Oskickat vid omstart** utan att skicka.
+   Aktivera långsam nätverksanslutning i webbläsarens utvecklarverktyg
+   och dubbelklicka **Nytt samtal** medan omstarten väntar på svar.
+   Vänta på beskedet och återställ normal anslutning.
+   Kontrollera i nätverkspanelen att bara ett anrop till `/new` skickas.
+   Kör `window.skyttelVoiceFixture.stats()` i webbläsarkonsolen.
 
 **Förväntat resultat:**
 
 - Samtalstexten töms och visar bara
   **Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.**
-  Med mikrofonen på säger Skyttel samma sak.
+  Samma verifierbara besked skickas i kommentarspaketet.
+  Paketet och de tysta spåren bevisar inte att tal hörs.
 - Ingen medgivanderuta visas. Mikrofonen är fortfarande på.
 - **Oskickat** står kvar i fältet. Lo-förslaget är oförändrat, också
   efter att det stoppade svaret har släppts.
 - Nästa uppdrag bär inget av det som sades före **Nytt samtal**.
 - När mikrofonen är av förblir den av efter **Nytt samtal**.
+  Även ett dubbelklick med fördröjt svar bevarar läget, Lo-förslaget och
+  **Oskickat vid omstart**. `stats()` visar `microphoneRequests: 1`,
+  `openPeers: 1` och ett mikrofonspår med `enabled:false`, `state:'live'`.
+
+**Separat prov med faktiskt hört tal:**
+
+1. Följ [förberedelsen med verklig röst](../development/devcontainer.md#optional-assistant-access)
+   i en isolerad installation med konfigurerad privat leverantörsnyckel
+   och påhittade data. Skapa Textprov och samma osparade Lo-förslag.
+2. Anslut fysisk mikrofon och ljudutgång. Välj **Prata med Skyttel**,
+   godkänn samtalet och tillåt mikrofonen. Öppna textvyn och välj
+   **Nytt samtal**. Använd **Spela upp ljud** om uppspelning blockeras.
+3. Kontrollera att Skyttel hörbart säger att ett nytt samtal börjar och
+   att en osparad ändring ligger kvar i utkastet. Kontrollera samtidigt
+   samma besked i samtalstexten och kvarvarande Lo-förslag.
+4. Anteckna faktiskt hört resultat, mikrofon, ljudutgång och webbläsare
+   separat från det kontrollerade provet. Detta lyssningsprov återstår
+   tills en människa har utfört det; integrationstestet provar inte ljudet.
 
 ### TEXTVY-04: textvyn går att använda på mobil enhet och smal skärm
 

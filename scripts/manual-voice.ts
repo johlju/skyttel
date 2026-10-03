@@ -34,6 +34,7 @@ async function main() {
     return {
       id,
       message: current.message,
+      input: item.request.input,
       draft: current.draft,
       lastToolResult: lastToolResult(item.request),
       tools: item.request.tools.map((tool) => tool.name),

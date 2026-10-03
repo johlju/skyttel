@@ -4,6 +4,7 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "portvidarebefordran",
     "realpath",
     "textvy",
     "textvyn",
