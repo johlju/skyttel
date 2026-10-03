@@ -82,7 +82,9 @@ test('PANEL-05: a delayed object proposal preserves a newer search focus and the
 test('PANEL-01: independent object panels preserve unsent work and reuse each object', async ({
   page,
 }) => {
-  const installation = await createInstallation();
+  const installation = await createInstallation(undefined, {
+    modelFetch: textModel(() => [modelMessage('Hej.')]).provider,
+  });
   try {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await signIn(page.request, installation.origin);
@@ -114,7 +116,7 @@ test('PANEL-01: independent object panels preserve unsent work and reuse each ob
       await panel.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
       await panel.getByLabel('Beskrivning', { exact: true }).fill(`Oskickat om ${name}`);
     }
-    await openConversationText(page);
+    await startConversationWithText(page);
     for (const name of ['Cykeln', 'Bilen', 'Garaget']) {
       await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
     }
