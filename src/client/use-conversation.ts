@@ -393,6 +393,9 @@ export function useConversation({
     setPending(false);
     setError('');
     setRequested(null);
+    // A consent that the consent box is still saving gets no answer for this visit.
+    setSavingConsent(false);
+    setConsentError('');
     setSavedConsent(outcome.saved);
     setVisitConsent(false);
     return true;

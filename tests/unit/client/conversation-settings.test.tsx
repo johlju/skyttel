@@ -206,7 +206,7 @@ test('saving a consent for the visit leaves the conversation that goes on as it 
   await giveConversationConsent();
   await screen.findByText('Samtalet pågår');
   await userEvent.type(screen.getByLabelText('Oskickad text'), 'Lägg till en cykel');
-  const sent = posts.length;
+  const before = posts.length;
 
   const pressed = button('Spara medgivandet');
   await userEvent.click(pressed);
@@ -219,7 +219,7 @@ test('saving a consent for the visit leaves the conversation that goes on as it 
     'Lägg till en cykel',
   );
   // The only request is the save: nothing is started, stopped or sent.
-  expect(posts.slice(sent)).toEqual([{ url: consentPath, body: { textVersion: 1 } }]);
+  expect(posts.slice(before)).toEqual([{ url: consentPath, body: { textVersion: 1 } }]);
 });
 
 test('revoking while a conversation goes on ends it and keeps the unsent text', async () => {

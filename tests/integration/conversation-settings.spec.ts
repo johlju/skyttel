@@ -634,6 +634,7 @@ test('MEDGIVANDE-13: ett återkallande på en annan enhet avslutar samtalet', as
     await expect(page.getByText('Åtkomsten har upphört.', { exact: true })).toHaveCount(0);
     await chooseConversationVoice(page);
     await expect(consentBox(page)).toBeVisible();
+    await expect(consentBoxFor(page).remember).not.toBeChecked();
     await consentBoxFor(page).decline.click();
     await openConversationSettings(page);
     await expect(consentPart(page).status('Inget medgivande är sparat.')).toBeVisible();
