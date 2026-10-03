@@ -379,7 +379,9 @@ export function voiceAssistantRoutes({
       for (const voice of voices.values()) {
         if (voice.assistant.id !== view.id || voice.closed) continue;
         voice.assistant = view;
-        voice.view.phase = view.phase === 'recovery' ? 'recovery' : 'listening';
+        // The stopped work ends its phase. A voice that is still starting keeps its own.
+        if (voice.view.phase === 'working' || voice.view.phase === 'recovery')
+          voice.view.phase = view.phase === 'recovery' ? 'recovery' : 'listening';
         voice.work?.reset(view);
         try {
           voice.channel.send({

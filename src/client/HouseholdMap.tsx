@@ -58,7 +58,7 @@ import { VoiceBox } from './VoiceBox.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
 import { type PanelAnchor, type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
 import {
-  conversationTool,
+  textViewButtonName,
   WorkspaceIcon,
   type WorkspaceTarget,
   WorkspaceTools,
@@ -300,7 +300,7 @@ export function HouseholdMap({
   // the unsent text stay.
   function closeTextView() {
     setTextViewOpen(false);
-    if (!restoreOutsideFocus(conversationTool)) focusTools();
+    if (!restoreOutsideFocus(textViewButtonName)) focusTools();
   }
   function openGuidedWork(target: WorkspaceTarget, chosen: HTMLElement) {
     // The guidance stays while a conversation waits for its start, so that

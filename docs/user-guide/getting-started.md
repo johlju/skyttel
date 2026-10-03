@@ -87,7 +87,7 @@ Placeringar och oskickad text bevaras vid skärmbyte under samma session.
 Läs om [navigering och personlig vy](spatial-map.md) för att söka,
 fokusera på ett objekt och ordna placeringarna så att de passar dig.
 
-Formulär, textassistent och röst använder samma privata utkast. Ett
+Formulär, text och röst till Skyttel använder samma privata utkast. Ett
 sparande omfattar hela utkastet, även förslag från en annan enhet eller
 assistent. Text som bara finns i ett öppet formulär ingår först när du
 lägger den i utkastet och kan försvinna om du stänger sidan.

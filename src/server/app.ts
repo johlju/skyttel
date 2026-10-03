@@ -218,7 +218,7 @@ export function createApp({
   app.route('/api', profileImageRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
   let stopVoice: ((sessionId: string) => void) | undefined;
-  let renewVoice: ((view: TextAssistantView, statement: string) => void) | undefined;
+  let newVoiceConversation: ((view: TextAssistantView, statement: string) => void) | undefined;
   const textAssistant = textAssistantRoutes({
     database,
     auth,
@@ -234,7 +234,7 @@ export function createApp({
       modelUsage?.(attempt);
     },
     onStop: (sessionId) => stopVoice?.(sessionId),
-    onNewConversation: (view, statement) => renewVoice?.(view, statement),
+    onNewConversation: (view, statement) => newVoiceConversation?.(view, statement),
   });
   app.route('/api', textAssistant.routes);
   app.route(
@@ -257,7 +257,7 @@ export function createApp({
     interrupt: textAssistant.interrupt,
   });
   stopVoice = voiceAssistant.stopSession;
-  renewVoice = voiceAssistant.newConversation;
+  newVoiceConversation = voiceAssistant.newConversation;
   app.route('/api', voiceAssistant.routes);
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));

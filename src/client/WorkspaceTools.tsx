@@ -53,8 +53,8 @@ export function WorkspaceIcon({ name }: { name: keyof typeof paths }) {
 
 export type WorkspaceTarget = 'list' | 'conversation' | 'voice' | 'search' | 'draft';
 
-/** The toolbar button that opens and closes the text view. */
-export const conversationTool = 'Skriv till Skyttel';
+/** The name of the toolbar button that opens and closes the text view. */
+export const textViewButtonName = 'Skriv till Skyttel';
 
 export function WorkspaceTools({
   onOpen,
@@ -148,7 +148,7 @@ export function WorkspaceTools({
         {(
           [
             ['mic', 'Prata med Skyttel', 'voice'],
-            ['text', conversationTool, 'conversation'],
+            ['text', textViewButtonName, 'conversation'],
             ['search', 'Sök i kartan', 'search'],
             ['list', 'Lista', 'list'],
             ['draft', 'Utkast och historik', 'draft'],

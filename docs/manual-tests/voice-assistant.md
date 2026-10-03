@@ -393,7 +393,7 @@ tysta mediespår; verkligt tal redovisas separat i TAL-01.
    står i en tonad ruta, Skyttels rad **Jag lyssnar. Berätta mer.** står
    utan ruta och den senare rättelsen **Rätta till Lo.** ligger på en ny
    rad. Talade rader är inte märkta.
-3. Välj **Prata med Skyttel**. Kräv **Mikrofonen är pausad** och kör:
+3. Välj **Prata med Skyttel**. Kontrollera att knappen inte är intryckt och kör:
 
    ```javascript
    window.skyttelVoiceFixture.disconnect();

@@ -3,9 +3,9 @@
 Fallen provar **Skriv till Skyttel**: textvyn öppnas och stängs utan att
 samtalet avslutas, samtalstexten visar vem som skriver, raden
 **Skyttel arbetar…** står sist och **Nytt samtal** tömmer samtalet men
-behåller utkast, mikrofon och oskickad text. De provar också textvyn på
-mobil enhet och smal skärm. Den slutliga utformningen på mobil enhet har
-egna testfall senare.
+behåller utkast, mikrofon och oskickad text. De provar också att textvyn
+går att använda på mobil enhet och smal skärm. Placering, bredd och mått
+kontrolleras av integrationstesterna.
 Anteckna commit, webbläsare, enhet och godkänt eller underkänt resultat
 vid körning.
 
@@ -55,8 +55,7 @@ avsluta samtalet”.
 
 **Förväntat resultat:**
 
-- Textvyn är ett sidofält vid högerkanten, 400 px brett. Kartan knuffas
-  undan och syns bredvid. Uppe till höger är en rad fri ovanför textvyn.
+- Textvyn står vid högerkanten, och kartan syns bredvid.
 - Meddelandefältet **Meddelande till Skyttel** har fokus när textvyn
   öppnas och platshållaren **Berätta vad du vill göra…**.
 - Textvyn har inga **Samtalskontroller**, **Öppna samtalet**,
@@ -96,13 +95,11 @@ Skyttel arbetar sist”.
 
 - Den tomma samtalstexten visar
   **Här visas det du och Skyttel säger och skriver.**
-- **Skicka** står i höjd med fältets mitt. Fältet behåller fokus efter
-  klicket på **Skicka** och efter Retur.
+- Fältet behåller fokus efter klicket på **Skicka** och efter Retur.
 - Raden **Skyttel arbetar…** står sist medan Skyttel arbetar. Ingen
   tidräknare visas.
-- Samtalstexten har liten text med täta rader och inga synliga namn. Din
-  text står i en tonad ruta till höger, och Skyttels text står utan ruta.
-  Skift+Retur ger en ny rad i samma meddelande.
+- Samtalstexten visar inga namn. Din text och Skyttels text går att
+  skilja åt utan namn. Skift+Retur ger en ny rad i samma meddelande.
 - Skärmläsaren läser **Du:** före dina rader och **Skyttel:** före
   Skyttels rader.
 
@@ -176,3 +173,22 @@ skärm”.
   Fältet får inte fokus av sig självt.
 - När textvyn stängs syns kartan igen. **Lista** ersätter textvyn på smal
   skärm, och samtalet och den oskickade texten finns kvar.
+
+## Bedömning och återstående manuella prov
+
+Flödet är utformat mot WCAG 2.2 nivå AA. Kraven nedan är designmål, och
+automationen visar bara det som anges. Ingen skärmläsare och ingen fysisk
+enhet är provad, och fullständig överensstämmelse intygas inte.
+
+<!-- markdownlint-disable MD013 -->
+| Kriterium | Utformning | Automatisk kontroll | Återstår att prova manuellt |
+| --- | --- | --- | --- |
+| 1.3.1, 4.1.2 Namn, roll och relationer | Textvyn är en region med rubriken **Skriv till Skyttel** som namn. Samtalstexten är en logg med namnet **Samtalstext**. Varje rad börjar med en dold talare, **Du:** eller **Skyttel:**. **Skriv till Skyttel** säger med sitt utfällda läge om textvyn är öppen. | Namn på region, logg, fält och knappar, dolda talare och knappens läge. | Uppläsning med NVDA och VoiceOver, och hur loggens nya rader läses upp. |
+| 1.3.2, 2.4.3 Ordning och fokus | Rubriken, **Nytt samtal** och **Stäng textvyn** står först, samtalstexten därefter och fältet sist. På dator får fältet fokus när textvyn öppnas, och **Stäng textvyn** ger fokus till **Skriv till Skyttel**. På mobil enhet och smal skärm stannar fokus i verktygsraden eller går till rubriken. | Fokus vid öppning på dator och pekskärm, efter **Skicka** och efter stängning. | Fokusordning med skärmläsare och på fysisk pekskärm. |
+| 1.4.1 Färg | Din text står i en tonad ruta med kant. Talaren finns också i text för hjälpmedel. | Rutan och den dolda talaren. | – |
+| 1.4.3, 1.4.11 Kontrast | Textvyn använder kartans färger för text, ytor, kanter och fokus i ljust och mörkt tema. | Ingen. | Kontrast för samtalstexten, platshållaren och den tonade rutan i båda teman. |
+| 1.4.4, 1.4.10 Förstoring och omflöde | På smal skärm fyller textvyn skärmen under verktygsraden, och bara samtalstexten rullar. | Textvyn ryms på 390 px utan rullning i sidled, med rubrik, fält och **Skicka** synliga. | Verklig webbläsarzoom och textförstoring. |
+| 2.1.1 Tangentbord | Alla kontroller nås med Tab. Retur skickar, och Skift+Retur ger en ny rad. | Skicka med Retur och ny rad med Skift+Retur. | Hjälpmedlens egna tangentkommandon. |
+| 2.5.8 Pekmål | **Stäng textvyn** är 44 px. **Nytt samtal** och **Skicka** är minst 36 px höga. | Tryck på fältet och **Skicka** på pekskärm. | Träffsäkerhet på fysisk pekskärm. |
+| 3.3.2 Etiketter | Fältet har den synliga etiketten **Meddelande till Skyttel**. | Fältets namn och platshållare. | – |
+<!-- markdownlint-enable MD013 -->

@@ -77,8 +77,8 @@ samtalstexten och meddelandefältet **Meddelande till Skyttel**.
   också. Raden **Skyttel arbetar…** står sist medan Skyttel arbetar.
 - **Stäng textvyn** eller **Skriv till Skyttel** stänger textvyn. Samtalet,
   mikrofonen och din oskickade text finns kvar tills du öppnar den igen.
-- **Nytt samtal** tömmer samtalstexten och det Skyttel minns av samtalet
-  och stoppar pågående arbete. Mikrofonen behåller sitt läge, och ditt
+- **Nytt samtal** tömmer samtalstexten och kontexten och stoppar pågående
+  arbete. Mikrofonen behåller sitt läge, och ditt
   utkast och din oskickade text finns kvar. Skyttel säger hur många
   osparade ändringar som ligger kvar i utkastet.
 
@@ -222,7 +222,7 @@ behöver kontrolleras innan ett nytt
 uppdrag kan börja.
 
 En avstängd mikrofon behåller samtalstexten i det pågående samtalet.
-**Nytt samtal** tömmer samtalstexten och det Skyttel minns av samtalet.
+**Nytt samtal** tömmer samtalstexten och kontexten.
 Samtalet avslutas när du lämnar hushållets karta, laddar om sidan eller
 när åtkomsten upphör.
 Anslutningen upphör senast efter 30 minuter eller när dess medgivande
