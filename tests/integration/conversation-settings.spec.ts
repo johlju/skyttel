@@ -560,9 +560,7 @@ test('MEDGIVANDE-12: en medlem som bjuds in igen har inget sparat medgivande', a
   }
 });
 
-test('a consent that is saved for another version of the consent text is told as changed and saved anew', async ({
-  page,
-}) => {
+test('MEDGIVANDE-14: ändrad medgivandetext kräver ett nytt sparat medgivande', async ({ page }) => {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-consent-page-'));
   const databasePath = join(directory, 'skyttel.db');
   let app = await installation({ databasePath, consentTextVersion: 2 });

@@ -5,7 +5,7 @@ Fallen omfattar medgivanderutan vid samtalets start: när den visas, vad
 och hur ett sparat medgivande följer användaren mellan enheter.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
-Fallen MEDGIVANDE-05 till MEDGIVANDE-13 omfattar sidan **Samtal med
+Fallen MEDGIVANDE-05 till MEDGIVANDE-14 omfattar sidan **Samtal med
 Skyttel** i Inställningar: var sidan står, vad delen **Medgivande** visar,
 hur medgivandet sparas och återkallas där, att återkallandet gäller på
 användarens alla enheter och att medgivandet följer medlemskapet.
@@ -491,6 +491,84 @@ samtalet”.
   Kartan finns kvar, och ingen text säger att åtkomsten har upphört.
 - **Prata med Skyttel** visar medgivanderutan, med omarkerad kryssruta.
 
+### MEDGIVANDE-14: ändrad medgivandetext kräver ett nytt sparat medgivande
+
+**Syfte:** Visa att ett medgivande för en annan version av texten inte
+gäller och att användaren kan ersätta det från Inställningar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Starta en ny kontrollerad installation enligt den
+allmänna förberedelsen, med bara Alex och hushållet Medgivandeprov. Spara
+medgivandet enligt steg 1 i MEDGIVANDE-06. Lämna sidan öppen utan samtal.
+Förbered sedan en annan sparad textversion enligt nedan. Värdet 2 är
+syntetiskt; den aktuella textversionen är 1. Det motsvarar det sparade
+tillståndet efter ett byte av medgivandetextens version.
+
+I en andra terminal, från repositoryts rot, sätt katalogen till exakt
+`directory` från startterminalens `ready`-händelse. Kör hela blocket:
+
+```sh
+SKYTTEL_MANUAL_CONSENT_DIR='/tmp/skyttel-test-ersätt-med-utskriven-katalog'
+node --input-type=module - "$SKYTTEL_MANUAL_CONSENT_DIR" <<'JS'
+import { realpathSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join } from 'node:path';
+import Database from 'better-sqlite3';
+
+const directory = realpathSync(process.argv[2]);
+if (dirname(directory) !== realpathSync(tmpdir()) ||
+    !basename(directory).startsWith('skyttel-test-')) {
+  throw new Error('Use the disposable fixture directory from ready.');
+}
+const database = new Database(join(directory, 'skyttel.db'), {
+  fileMustExist: true,
+});
+try {
+  database.transaction(() => {
+    const rows = database.prepare(
+      'SELECT textVersion FROM conversation_consent',
+    ).all();
+    if (rows.length !== 1 || rows[0].textVersion !== 1) {
+      throw new Error('Prepare one saved consent in a new fixture.');
+    }
+    database.prepare(
+      'UPDATE conversation_consent SET textVersion = 2',
+    ).run();
+  })();
+  console.log('Prepared saved consent for text version 2.');
+} finally {
+  database.close();
+}
+JS
+```
+
+Kräv utskriften `Prepared saved consent for text version 2.`. Kör därefter
+`restart` i startterminalen och vänta på `restarted`. Behåll samma
+webbläsarprofil och adress. Avsluta med `quit` efter fallet enligt den
+allmänna förberedelsen; starta en ny installation inför nästa körning.
+
+**Integrationstest:**
+[conversation-settings.spec.ts](../../tests/integration/conversation-settings.spec.ts),
+testfallet “MEDGIVANDE-14: ändrad medgivandetext kräver ett nytt sparat
+medgivande”.
+
+**Steg:**
+
+1. Ladda om sidan och öppna **Inställningar**, **Samtal med Skyttel**.
+   Läs statusraden och knappen under **Medgivande**.
+2. Välj **Spara medgivandet**. Läs texten vid knappen, statusraden och
+   knappens nya namn.
+
+**Förväntat resultat:**
+
+- Före sparandet står **Medgivandetexten har ändrats. Inget medgivande
+  är sparat.** och endast **Spara medgivandet** erbjuds.
+- Efter sparandet visas **Medgivandet är sparat**, statusraden börjar
+  med **Sparat den** och visar dagens datum. Knappen heter
+  **Återkalla medgivandet**. Det nya medgivandet ersätter den andra
+  textversionens medgivande.
+
 ## Bedömning och återstående manuella prov
 
 Flödet är utformat mot WCAG 2.2 nivå AA. Kraven nedan är designmål, och
@@ -532,8 +610,6 @@ och ingen fysisk enhet är provad.
 | 4.1.3 Statusmeddelanden | Texten vid knappen är ett statusområde som finns från början och läses upp utan att fokus flyttas. Den töms före varje åtgärd, så att samma besked läses upp igen. | Områdets roll, att det finns före första åtgärden och textens ordalydelse. | Uppläsning av texten, även när samma besked upprepas. |
 <!-- markdownlint-enable MD013 -->
 
-Statusraden **Medgivandetexten har ändrats. Inget medgivande är sparat.**
-går inte att nå för hand, eftersom texten bara har en version.
-Integrationstestet “a consent that is saved for another version of the
-consent text is told as changed and saved anew” provar den med två
-installationer på samma databas.
+MEDGIVANDE-14 provar statusraden för ändrad medgivandetext och ett nytt
+sparande med syntetiskt förberedd textversion. Integrationstestet använder
+två installationer på samma databas för motsvarande tillstånd.

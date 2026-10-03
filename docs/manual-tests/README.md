@@ -114,7 +114,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   Inställningar: plats i menyn för alla medlemmar, sparat och återkallat
   medgivande, medgivande för besöket, återkallande från en annan enhet,
   otillgängligt samtal, misslyckat sparande och ny fråga efter en ny
-  inbjudan.
+  inbjudan. Ändrad medgivandetext kräver ett nytt sparat medgivande;
+  en separat tillfällig installation förbereder det syntetiska tillståndet.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag, kompakt status,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
   röstrutans statusord, vågform, stoppikon, plats och uppläsning,
