@@ -876,6 +876,7 @@ export function useVoice(options: {
           !request.released &&
           !latest.current.inputBlocked &&
           !latest.current.saveChecking &&
+          !latest.current.contextFailed &&
           navigator.onLine !== false;
         buffer.capture(capture);
         if (held.current === request && mounted.current) {

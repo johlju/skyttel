@@ -405,3 +405,42 @@ test('a delayed playback permission granted after context failure cannot resume 
   expect(button().getAttribute('aria-pressed')).toBe('false');
   release();
 });
+
+test('microphone permission completing after context failure never starts held capture and retains cleanup ownership', async () => {
+  const media = voiceMedia();
+  const captureAssignments: boolean[] = [];
+  let enabled = media.microphone.enabled;
+  Object.defineProperty(media.microphone, 'enabled', {
+    get: () => enabled,
+    set: (value: boolean) => {
+      enabled = value;
+      captureAssignments.push(value);
+    },
+  });
+  let finish!: (stream: typeof media.stream) => void;
+  const permission = new Promise<typeof media.stream>((resolve) => {
+    finish = resolve;
+  });
+  media.getUserMedia.mockImplementation(() => permission);
+  const options = {
+    householdId: 'linden',
+    assistant: null,
+    onAssistant: () => {},
+    onAccessLost: () => {},
+  };
+  const page = render(<HeldVoice {...options} />);
+  press();
+  await waitFor(() => expect(media.getUserMedia).toHaveBeenCalledOnce());
+  captureAssignments.length = 0;
+  page.rerender(<HeldVoice {...options} contextFailed />);
+  await act(async () => finish(media.stream));
+  await waitFor(() => expect(media.processors).toHaveLength(1));
+  expect(captureAssignments).not.toContain(true);
+  expect(media.processors[0].port.postMessage.mock.calls).not.toContainEqual([{ capture: true }]);
+  expect(media.microphone.enabled).toBe(false);
+  expect(button().getAttribute('aria-pressed')).toBe('false');
+  release();
+  expect(media.microphone.stopped).toBe(false);
+  page.unmount();
+  expect(media.microphone.stopped).toBe(true);
+});
