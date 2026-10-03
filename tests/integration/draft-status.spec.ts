@@ -9,6 +9,7 @@ import {
   signIn,
 } from '../support/client.js';
 import {
+  openConversationDraft,
   openConversationText,
   startConversationWithText,
   turnMicrophoneOn,
@@ -262,10 +263,9 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     await status.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
     await expect.poll(() => waiting).toBe(true);
     await openConversationText(page);
-    await expect(page.getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
-      'Oskickad cykel',
-      { timeout: 10000 },
-    );
+    await expect(await openConversationDraft(page)).toContainText('Oskickad cykel', {
+      timeout: 10000,
+    });
     await openMap(page);
     await expect(status).toContainText('Väntar på sparkvitto');
     const before = await read();

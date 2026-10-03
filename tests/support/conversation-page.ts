@@ -39,6 +39,28 @@ export const closeConversationText = (page: Page) => steps(page).closeConversati
 export const chooseConversationText = (page: Page) => steps(page).chooseConversationText();
 export const chooseConversationVoice = (page: Page) => steps(page).chooseConversationVoice();
 
+/** Opens the current whole draft beside the conversation text. */
+export async function openConversationDraft(page: Page) {
+  await openConversationText(page);
+  const view = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+  const show = view.getByRole('button', { name: /^Visa utkastet/ });
+  if (await show.isVisible()) await show.click();
+  const draft = view.getByRole('region', { name: 'Utkastet', exact: true });
+  await expect(draft).toBeVisible();
+  return draft;
+}
+
+/** Receipts belong to the existing draft and history work panel. */
+export async function openConversationReceipts(page: Page) {
+  const receipts = page.getByRole('region', { name: 'Mina sparförsök', exact: true });
+  if (!(await receipts.isVisible()))
+    await (await utilityButton(page, 'Utkast och historik')).click();
+  const summary = receipts.getByText('Tidigare sparförsök', { exact: true });
+  if ((await summary.locator('..').getAttribute('open')) === null) await summary.click();
+  await expect(receipts).toBeVisible();
+  return receipts;
+}
+
 /** The voice box, which follows the voice wherever the map's tools are shown. */
 export const voiceBox = (page: Page) =>
   page.getByRole('group', { name: voiceBoxName, exact: true });

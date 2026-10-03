@@ -13,6 +13,8 @@ import {
   consentBox,
   consentBoxFor,
   microphoneButton,
+  openConversationDraft,
+  openConversationReceipts,
   openConversationText,
   startConversationWithText,
   turnMicrophoneOff,
@@ -429,9 +431,7 @@ test('TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtal
     await expect(log).toContainText('Kim betalar för musiken.');
     await assistant(page).getByRole('button', { name: 'Nytt samtal' }).click();
     await expect(log).toHaveText(/^Skyttel: Nytt samtal\./);
-    await expect(assistant(page).getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
-      'Lo Exempel',
-    );
+    await expect(await openConversationDraft(page)).toContainText('Lo Exempel');
   } finally {
     await app.close();
   }
@@ -512,8 +512,9 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
       )
       .toBe(6);
     expect(JSON.stringify(live.sent.at(-1))).toContain('Skyttels resultat (verifierat): Sparat.');
-    await assistant(page).getByText('Visa kvittot', { exact: true }).click();
-    await expect(assistant(page)).toContainText('Sparat: Lo Exempel. Kvitto:');
+    const receipts = await openConversationReceipts(page);
+    await receipts.getByText('Visa kvittot', { exact: true }).first().click();
+    await expect(receipts).toContainText('Sparat: Lo Exempel. Kvitto:');
     expect((await (await page.request.get(path)).json()).objects).toMatchObject([{ id: 'lo' }]);
   } finally {
     await app.close();
@@ -588,9 +589,7 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
     await consent(page);
-    await expect(assistant(page).getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
-      'Lo Lind',
-    );
+    await expect(await openConversationDraft(page)).toContainText('Lo Lind');
     await startVoice(page);
     speak(live, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
     await expect(assistant(page).getByRole('status')).toHaveText(
@@ -599,11 +598,10 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Osänd text som ska finnas kvar',
     );
-    await expect(assistant(page).getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
-      'Inga förslag.',
-    );
-    await assistant(page).getByText('Visa kvittot', { exact: true }).click();
-    await expect(assistant(page)).toContainText('Familjens Molnmusik');
+    await expect(await openConversationDraft(page)).toContainText('Utkastet är tomt.');
+    const receipts = await openConversationReceipts(page);
+    await receipts.getByText('Visa kvittot', { exact: true }).first().click();
+    await expect(receipts).toContainText('Familjens Molnmusik');
     const map = await (
       await page.request.get(`${app.origin}/api/households/${household.id}/map`)
     ).json();
@@ -622,13 +620,14 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       .toBe(true);
     await turnMicrophoneOff(page);
     // Nytt samtal does not ask for the consent again.
+    await openConversationText(page);
     await assistant(page).getByRole('button', { name: 'Nytt samtal' }).click();
     await expect(page.getByRole('dialog', { name: 'Samtal med Skyttel' })).toHaveCount(0);
     await expect.poll(() => openVoiceConnections(page)).toBe(1);
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
       { enabled: false, state: 'live' },
     ]);
-    await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
+    await openConversationReceipts(page);
     await expect(
       assistant(page).locator('details').filter({ hasText: 'Tidigare sparförsök' }),
     ).toContainText('Familjens Molnmusik');
@@ -880,8 +879,7 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     await page.reload();
     await openWorkspace(page);
     await consent(page);
-    await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
-    await expect(assistant(page)).toContainText(operation.operationId);
+    await expect(await openConversationReceipts(page)).toContainText(operation.operationId);
     const voiceStarted = page.waitForResponse(
       (response) => response.url().endsWith('/voice') && response.request().method() === 'POST',
     );

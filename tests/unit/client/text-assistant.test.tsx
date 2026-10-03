@@ -103,7 +103,7 @@ test('the shared workspace keeps the map available before consent', async () => 
   expect(requests.every((request) => request.startsWith('GET '))).toBe(true);
 });
 
-test('the text view shows an empty conversation text, the message field and the changes of the conversation', async () => {
+test('the text view shows empty conversation text, the message field and a collapsed draft', async () => {
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) =>
     Response.json(url === path && init?.method !== 'POST' ? { available: true } : session()),
   );
@@ -118,7 +118,10 @@ test('the text view shows an empty conversation text, the message field and the 
   expect(field.getAttribute('placeholder')).toBe('Berätta vad du vill göra…');
   // On a computer the message field has the focus when the text view opens.
   expect(document.activeElement).toBe(field);
-  expect(textView.getByRole('region', { name: 'Ändringar under samtalet' })).toBeDefined();
+  const draftButton = textView.getByRole('button', { name: /^Visa utkastet/ });
+  expect(draftButton.getAttribute('aria-expanded')).toBe('false');
+  await userEvent.click(draftButton);
+  expect(textView.getByRole('region', { name: 'Utkastet' }).textContent).toBe('Utkastet är tomt.');
   for (const removed of [
     'Samtalskontroller',
     'Öppna samtalet',
@@ -215,7 +218,7 @@ test('unverified model conversation stays separate from receipt and selection st
   expect(conversation.textContent).toContain('Vem betalar?');
 });
 
-test('a pending save is recovered with the same operation and a durable receipt replaces model claims', async () => {
+test('recovery retains the pending operation until its durable receipt replaces model claims', async () => {
   let current: TextAssistantView = { ...session(), phase: 'recovery' };
   const identity = {
     operationId: 'same-save',
@@ -227,11 +230,12 @@ test('a pending save is recovered with the same operation and a durable receipt 
   };
   const receipt: SaveReceipt = { ...identity, savedAt: identity.createdAt, changes: [] };
   const requests: { url: string; body: unknown }[] = [];
+  let recoveries = 0;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     if (url === path) return Response.json(init?.method === 'POST' ? current : { available: true });
     if (url.endsWith('/stop')) return Response.json({ stopped: true });
     if (init?.method === 'POST') requests.push({ url, body: JSON.parse(String(init.body)) });
-    if (url.endsWith('/recover'))
+    if (url.endsWith('/recover') && recoveries++ === 0)
       current = {
         ...current,
         phase: 'recovery',
@@ -241,7 +245,7 @@ test('a pending save is recovered with the same operation and a durable receipt 
           { ...identity, status: 'pending' },
         ],
       };
-    if (url.endsWith('/retry'))
+    else if (url.endsWith('/recover'))
       current = {
         ...current,
         phase: 'ready',
@@ -264,20 +268,15 @@ test('a pending save is recovered with the same operation and a durable receipt 
   await startConversationWithText();
   await userEvent.type(await screen.findByLabelText('Meddelande till Skyttel'), 'Nästa ändring');
   await userEvent.click(screen.getByRole('button', { name: 'Kontrollera sparresultat' }));
-  expect(await screen.findByText('Väntande sparförsök: same-save')).toBeDefined();
-  expect(screen.getByText(/Avvisat: hushållets innehåll har ersatts/)).toBeDefined();
   expect((screen.getByRole('button', { name: 'Skicka' }) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.getByRole('status').textContent).toContain('Kontrollera det tidigare sparförsöket');
-  await userEvent.click(screen.getByRole('button', { name: 'Slutför samma sparförsök' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Kontrollera sparresultat' }));
   expect(requests).toEqual([
     { url: `${path}/session/recover`, body: {} },
-    { url: `${path}/session/retry`, body: { operationId: 'same-save' } },
+    { url: `${path}/session/recover`, body: {} },
   ]);
   expect(screen.queryByRole('button', { name: 'Kontrollera sparresultat' })).toBeNull();
   expect(await screen.findByText('Sparat. Hela utkastet finns i hushållets karta.')).toBeDefined();
-  await userEvent.click(screen.getByText('Visa kvittot'));
-  expect(screen.getAllByText('Sparat: . Kvitto: same-save.')).toHaveLength(2);
-  expect(screen.getByText('Sparat: 2026-09-24T12:00:00Z')).toBeDefined();
   expect(screen.queryByText(/Ett obekräftat modellpåstående/)).toBeNull();
   expect(changed).toHaveBeenCalledTimes(2);
   expect((screen.getByRole('button', { name: 'Skicka' }) as HTMLButtonElement).disabled).toBe(
@@ -581,7 +580,7 @@ test('canceling while the map display is pending aborts it and prevents a late a
   expect(screen.queryByRole('alert')).toBeNull();
 });
 
-test('whole draft review exposes object facts, type edits, uncertain relationships, merge sources and current conflicts', async () => {
+test('the draft table exposes every change, object facts, type edits and uncertain relationships', async () => {
   const type: ObjectType = {
     id: 'vehicle',
     householdId: 'linden',
@@ -752,42 +751,25 @@ test('whole draft review exposes object facts, type edits, uncertain relationshi
   });
   showAssistant();
   await startConversationWithText();
-  const review = within(await screen.findByRole('region', { name: 'Hela ditt utkast' }));
-  const compact = review.getByRole('list', { name: 'Alla föreslagna ändringar' });
+  await userEvent.click(screen.getByRole('button', { name: /^Visa utkastet/ }));
+  const review = within(await screen.findByRole('region', { name: 'Utkastet' }));
+  const compact = review.getByRole('table', { name: 'Osparade ändringar' });
   expect(compact.textContent).toContain('Namn: Gammal cykel → Rättad cykel');
   expect(compact.textContent).toContain('Färg: Blå → Röd');
   expect(compact.textContent).toContain('Pris: 100 → 150');
   expect(compact.textContent).toContain('Alex → använder → Rättad cykel (osäkert uppgivet)');
-  expect(compact.textContent).toContain('Objekttyp: Fordon → Cykeltyp');
-  expect(compact.textContent).toContain('Sambandstyp: Använder → Delad användning');
-  expect(compact.textContent).toContain('Ta bort samband: robin');
-  expect(review.getByText('Ta bort: Dubblett')).toBeDefined();
-  expect(review.getByText('Lägg till: Oklar cykel')).toBeDefined();
-  expect(review.queryByText('Inga förslag.')).toBeNull();
-  await userEvent.click(review.getByText('Visa hela utkastets detaljer'));
-  expect(review.getByText('Gammal cykel · Tidigare fordonstyp')).toBeDefined();
-  expect(review.getByText('Rättad cykel · Fordon')).toBeDefined();
-  expect(review.getByText('Färg: Röd')).toBeDefined();
-  expect(review.getByText('Identiteten behöver redas ut.')).toBeDefined();
-  expect(review.getByText('Uttryckligen ospecificerat objekt.')).toBeDefined();
-  expect(
-    review.getByText('Förslag: Alex → använder → Rättad cykel (osäkert uppgivet)'),
-  ).toBeDefined();
-  expect(review.getByText('Förslag: alex → använder → Uttryckligen inget')).toBeDefined();
-  expect(review.getByText('Förslag: alex → använder → Okänt')).toBeDefined();
-  expect(review.getByText('Förslag: alex → använder → Olöst identitet')).toBeDefined();
-  expect(review.getByText('Robins rättning · Fordon')).toBeDefined();
-  expect(review.getByText(/Typen har ändrats: Ny gemensam fordonstyp/)).toBeDefined();
-  expect(review.getByText('Typen finns inte längre.')).toBeDefined();
-  expect(review.getByText('Sambandet hänvisar till borttagna objekt.')).toBeDefined();
-  expect(review.getByText('Motsvarande samband finns redan i kartan.')).toBeDefined();
-  expect(review.getByText('Borttagningen berör även sparade samband.')).toBeDefined();
-  expect(review.getAllByText('Finns inte i kartan').length).toBeGreaterThan(0);
-  expect(review.getByText('alex → Samband → Okänt')).toBeDefined();
-  expect(review.getByText('Alex → använder → Rättad cykel (osäkert uppgivet)')).toBeDefined();
-  await userEvent.click(review.getByText('Granskade objekt före sammanslagningen'));
-  expect(review.getByText('Dubblett · Identitet: duplicate')).toBeDefined();
-  expect(review.getByText('Identitet: edge. Från alex till bike.')).toBeDefined();
+  expect(compact.textContent).toContain('Objekttyp: Tidigare fordonstyp → Fordon');
+  expect(compact.textContent).toContain('Namn: Fordon → Cykeltyp');
+  expect(compact.textContent).toContain('Namn: Använder → Delad användning');
+  expect(review.getAllByRole('row')).toHaveLength(14);
+  const removed = within(review.getByRole('row', { name: /Dubblett/ }));
+  expect(removed.getByText('Ta bort')).toBeDefined();
+  const added = within(review.getByRole('row', { name: /Oklar cykel/ }));
+  expect(added.getByText('Lägg till')).toBeDefined();
+  expect(compact.textContent).toContain('alex → använder → Uttryckligen inget');
+  expect(compact.textContent).toContain('alex → använder → Okänt');
+  expect(compact.textContent).toContain('alex → använder → Olöst identitet');
+  expect(review.queryByRole('link')).toBeNull();
 });
 
 test('a lost reply retains the message with recovery controls', async () => {

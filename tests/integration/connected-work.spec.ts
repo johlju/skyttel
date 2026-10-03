@@ -6,6 +6,8 @@ import { activatePanel, openSettings, openWorkspace, signIn } from '../support/c
 import {
   chooseConversationVoice,
   microphoneButton,
+  openConversationDraft,
+  openConversationReceipts,
   openConversationText,
   startConversationWithText,
   turnMicrophoneOn,
@@ -226,7 +228,9 @@ for (const mode of ['voice', 'text'] as const) {
         'Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK per månad.',
       );
       await assistant.getByRole('button', { name: 'Skicka', exact: true }).click();
-      const proposals = assistant.getByRole('list', { name: 'Alla föreslagna ändringar' });
+      const proposals = (await openConversationDraft(page)).getByRole('table', {
+        name: 'Osparade ändringar',
+      });
       await expect(proposals).toContainText('Familjens Molnmusik');
       await expect(assistant.getByRole('log', { name: 'Samtalstext' })).toContainText(
         'Familjeabonnemanget är föreslaget',
@@ -267,7 +271,7 @@ for (const mode of ['voice', 'text'] as const) {
         await message.fill('Kim Exempel betalar familjens Molnmusik.');
         await assistant.getByRole('button', { name: 'Skicka', exact: true }).click();
       }
-      await expect(proposals.getByRole('listitem')).toHaveCount(3);
+      await expect(proposals.getByRole('row')).toHaveCount(4);
       await expect(proposals).toContainText('Kim Exempel → Betalar → Familjens Molnmusik');
       await expect(assistant.getByRole('log', { name: 'Samtalstext' })).toContainText(
         'Förslagen är fortfarande privata.',
@@ -460,21 +464,17 @@ for (const mode of ['voice', 'text'] as const) {
       expect(await history()).toEqual([]);
 
       // 7. Explicit whole save; compare all real receipt values, excluding local text.
-      await expect(proposals.getByRole('listitem')).toHaveCount(3);
-      await assistant.getByText('Visa hela utkastets detaljer', { exact: true }).click();
-      const wholeDraft = assistant.getByRole('region', {
-        name: 'Hela ditt utkast',
-        exact: true,
-      });
-      for (const value of ['Rättad för hand', '189', 'SEK', 'månad'])
-        await expect(wholeDraft.getByText(value, { exact: false }).first()).toBeVisible();
+      await expect(proposals.getByRole('row')).toHaveCount(4);
+      await expect(proposals).toContainText('Familjens Molnmusik');
+      await expect(proposals).toContainText('Kim Exempel');
       await message.fill('Spara hela utkastet nu.');
       await assistant.getByRole('button', { name: 'Skicka', exact: true }).click();
       await expect(assistant.getByRole('status')).toHaveText(
         'Sparat. Hela utkastet finns i hushållets karta.',
       );
-      await assistant.getByText('Visa kvittot', { exact: true }).click();
-      await expect(assistant).toContainText('Familjens Molnmusik');
+      const savedReceipts = await openConversationReceipts(page);
+      await savedReceipts.getByText('Visa kvittot', { exact: true }).first().click();
+      await expect(savedReceipts).toContainText('Familjens Molnmusik');
       await activatePanel(page, 'Kim Exempel');
       await expect(person.getByLabel('Beskrivning', { exact: true })).toHaveValue(
         'Oskickat om Kim',
@@ -485,7 +485,7 @@ for (const mode of ['voice', 'text'] as const) {
       const receipt = receipts[0];
       // The server owns the durable operation identity; model-supplied IDs are not authority.
       const operationId = receipt.operationId;
-      await expect(assistant).toContainText(operationId);
+      await expect(savedReceipts).toContainText(operationId);
       expect(receipt).toMatchObject({
         operationId,
         userId: identity.user.id,
