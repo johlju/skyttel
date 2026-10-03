@@ -17,6 +17,9 @@ async function startAssistant(page: Page, origin: string) {
   const { household } = await (await createHousehold(page.request, origin, 'Kostnadsprov')).json();
   await page.goto(origin);
   await startConversationWithText(page);
+  // Finish the initial session creation before asking to open text or voice
+  // again; a second start would supersede the request still in flight.
+  await expect(page.getByRole('region', { name: 'Skriv till Skyttel', exact: true })).toBeVisible();
   return household.id as string;
 }
 async function sendText(page: Page) {

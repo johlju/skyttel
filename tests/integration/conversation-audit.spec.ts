@@ -159,7 +159,9 @@ test('NOT-10: ett verkligt väntande sparförsök visar frågesymbol och kontrol
       'Skyttel kunde inte kontrollera om utkastet sparades.',
     );
     const guide = page.getByRole('button', { name: 'Stäng vägledningen', exact: true });
-    if (await guide.isVisible()) await guide.click();
+    // The pending-save notice can cover the guidance close button at this
+    // viewport. Dismiss guidance through its keyboard action before measuring.
+    if (await guide.isVisible()) await guide.press('Enter');
     await expect(guide).toHaveCount(0);
     const action = notice(page).getByRole('button', {
       name: 'Kontrollera om utkastet sparades',

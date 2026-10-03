@@ -347,7 +347,8 @@ kontrollknapp under texten”.
 **Steg:**
 
 1. Ladda om och vänta på **Skyttel kunde inte kontrollera om utkastet
-   sparades.** Läs symbolen, texten och kontrollknappen.
+   sparades.** Om vägledningen visas, stäng den med tangentbordet.
+   Läs symbolen, texten och kontrollknappen.
 2. Kontrollera mikrofonens läge, det privata förslaget och sparförsöket.
 3. Ta bort nätverksblockeringen. Välj **Kontrollera om utkastet sparades**.
    Följ resultatet enligt SPAR-02.
