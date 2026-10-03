@@ -249,17 +249,23 @@ test('TEXTVY-03: Nytt samtal tömmer samtalet och behåller utkast och mikrofon'
       'Skyttel: Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.',
     );
     expect((await (await page.request.get(path)).json()).draft).toEqual(before);
-    // The microphone keeps its state, and Skyttel is told to start over and what to say.
+    // The same authorized microphone stays live. The provider context and
+    // old playback are replaced, and Skyttel says what remains.
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
       { enabled: true, state: 'live' },
     ]);
-    expect(live.requests).toHaveLength(1);
+    expect(live.requests).toHaveLength(2);
+    expect(live.requests[1].session.input).toBeUndefined();
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().openPeers)).toBe(1);
+    expect(
+      await page.evaluate(() => window.skyttelVoiceFixture.stats().remoteTracks[0].state),
+    ).toBe('ended');
     expect(live.sent.map(({ event }) => event)).toContainEqual({
       type: 'session.commentary.append',
       delegation_id: null,
       content: 'Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.',
     });
-    expect(live.sent.map(({ event }) => event.type)).not.toContain('session.close');
+    expect(live.sent.map(({ event }) => event.type)).toContain('session.close');
     expect(stops.filter((stop) => stop.endsWith('/stop'))).toEqual([]);
 
     // The next message starts without what was said before.
@@ -269,6 +275,23 @@ test('TEXTVY-03: Nytt samtal tömmer samtalet och behåller utkast och mikrofon'
     expect(model.requests[1].input).toHaveLength(1);
     expect(JSON.stringify(model.requests[1].input)).not.toContain('Rätta namnet.');
     release([modelMessage('Lo Exempel.')]);
+    await expect(conversationText(page)).toContainText('Skyttel: Lo Exempel.');
+    // Starting over also keeps an off microphone off, with the same live track.
+    await page
+      .getByRole('navigation', { name: 'Kartans verktyg' })
+      .locator('.workspace-talk')
+      .click();
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks))
+      .toEqual([{ enabled: false, state: 'live' }]);
+    await textView(page).getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await expect(conversationText(page)).toHaveText(
+      'Skyttel: Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.',
+    );
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
+      { enabled: false, state: 'live' },
+    ]);
+    expect(live.requests).toHaveLength(3);
   } finally {
     await app.close();
   }

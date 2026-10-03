@@ -135,7 +135,7 @@ test('a new conversation stops held work, leaves the draft and counts its unsave
   );
 });
 
-test('a new conversation keeps the voice connection, empties what was said and lets Skyttel say what remains', async () => {
+test('a new conversation replaces the voice context and lets Skyttel say what remains', async () => {
   const live = liveProvider();
   const model = textModel(() => [modelMessage('Ett provsvar.')]);
   await setup({ modelFetch: model.provider, liveFetch: live.provider, liveSideband: live.attach });
@@ -148,8 +148,7 @@ test('a new conversation keeps the voice connection, empties what was said and l
     contentVersion: session.review.contentVersion,
   });
   expect(started.status(), await started.text()).toBe(201);
-  const { voice } = await started.json();
-  const providerId = [...live.channels.keys()][0];
+  let providerId = [...live.channels.keys()][0];
   let offset = 0;
   const say = (delta: string) =>
     live.emit(providerId, {
@@ -173,31 +172,27 @@ test('a new conversation keeps the voice connection, empties what was said and l
 
   const renewed = await newConversation(session);
   expect(renewed.reply).toBe('Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.');
-  // The microphone keeps its state: the voice connection is neither closed nor restarted.
-  expect(live.channels.has(providerId)).toBe(true);
-  expect(live.requests).toHaveLength(1);
-  expect(live.sent.map(({ event }) => event.type)).not.toContain('session.close');
-  expect(live.sent.map(({ event }) => event)).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        type: 'session.instructions.append',
-        delegation_id: null,
-        content: expect.stringContaining('nytt samtal'),
-      }),
-      {
-        type: 'session.commentary.append',
-        delegation_id: null,
-        content: 'Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.',
-      },
-    ]),
-  );
-  const polled = await post(`${path}/${session.id}/voice/${voice.id}/poll`, {
+  // A prompt to ignore old context does not clear the provider's history.
+  // The old session closes; the browser establishes a fresh one.
+  await expect.poll(() => live.channels.has(providerId)).toBe(false);
+  expect(live.sent.map(({ event }) => event.type)).toContain('session.close');
+  expect(live.sent.map(({ event }) => event.type)).not.toContain('session.instructions.append');
+  const replacement = await post(`${path}/${session.id}/voice`, {
+    sdp: 'synthetic-replacement-offer',
     revision: renewed.revision,
     draftVersion: renewed.review.version,
     contentVersion: renewed.review.contentVersion,
+    newConversation: true,
   });
-  expect(await polled.json()).toMatchObject({ voice: { phase: 'listening' } });
-
+  expect(replacement.status(), await replacement.text()).toBe(201);
+  expect(live.requests).toHaveLength(2);
+  expect(live.requests[1].session.input).toBeUndefined();
+  expect(live.sent.map(({ event }) => event)).toContainEqual({
+    type: 'session.commentary.append',
+    delegation_id: null,
+    content: 'Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.',
+  });
+  providerId = [...live.channels.keys()][0];
   // What was said before the new conversation is not passed on with the next task.
   say('Vad kostar den?');
   delegate();
@@ -246,7 +241,7 @@ test('a new conversation still checks a save that has begun before new work', as
         contentVersion: renewed.review.contentVersion,
       })
     ).json();
-  expect(await poll(first.id)).toMatchObject({ voice: { phase: 'recovery' } });
+  expect(await poll(first.id)).toMatchObject({ voice: { phase: 'closed' } });
   const refused = await post(`${path}/${session.id}/messages`, {
     revision: renewed.revision,
     draftVersion: renewed.review.version,
@@ -257,12 +252,9 @@ test('a new conversation still checks a save that has begun before new work', as
   expect(refused.status()).toBe(409);
   expect(model.requests).toEqual([]);
 
-  // A voice connection that cannot be told about the new conversation is closed.
+  // A fresh voice connection also preserves the recovery barrier.
   const second = await startVoice(renewed.revision);
-  const channel = [...live.channels.values()].at(-1) as unknown as { send: () => void };
-  channel.send = () => {
-    throw new Error('Synthetic sideband failure');
-  };
+  expect(await poll(second.id)).toMatchObject({ voice: { phase: 'recovery' } });
   await newConversation(renewed);
-  await expect.poll(async () => (await poll(second.id)).voice?.phase).toMatch(/closing|error/);
+  await expect.poll(async () => (await poll(second.id)).voice?.phase).toMatch(/closing|closed/);
 });

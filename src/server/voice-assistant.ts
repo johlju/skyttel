@@ -312,6 +312,12 @@ export function voiceAssistantRoutes({
         voice.assistant = await assistant(path, requestHeaders);
         if (voice.closed) throw new Error('live_start_interrupted');
         voice.view.phase = voice.assistant.phase === 'recovery' ? 'recovery' : 'listening';
+        if (body.newConversation === true && voice.assistant.reply)
+          channel.send({
+            type: 'session.commentary.append',
+            delegation_id: null,
+            content: voice.assistant.reply,
+          });
         usage.outcome = 'active';
         record(voice);
         return context.json(
@@ -373,31 +379,14 @@ export function voiceAssistantRoutes({
   });
   return {
     routes,
-    // The voice connection and the microphone keep their state. The provider
-    // offers no way to empty the Live session, so it is told to start over.
-    newConversation: (view: TextAssistantView, statement: string) => {
+    // Live has no context-clearing event. Close the old provider session; the
+    // browser reconnects with its existing microphone stream and pause state.
+    newConversation: (view: TextAssistantView) => {
       for (const voice of voices.values()) {
         if (voice.assistant.id !== view.id || voice.closed) continue;
         voice.assistant = view;
-        // The stopped work ends its phase. A voice that is still starting keeps its own.
-        if (voice.view.phase === 'working' || voice.view.phase === 'recovery')
-          voice.view.phase = view.phase === 'recovery' ? 'recovery' : 'listening';
         voice.work?.reset(view);
-        try {
-          voice.channel.send({
-            type: 'session.instructions.append',
-            delegation_id: null,
-            content:
-              'Användaren har valt ett nytt samtal. Bortse från allt som har sagts tidigare i samtalet.',
-          });
-          voice.channel.send({
-            type: 'session.commentary.append',
-            delegation_id: null,
-            content: statement,
-          });
-        } catch {
-          void close(voice, 'voice_connection_lost');
-        }
+        void close(voice);
       }
     },
     stopSession: (sessionId: string) => {

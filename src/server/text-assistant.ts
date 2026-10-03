@@ -59,7 +59,7 @@ export function textAssistantRoutes({
   modelUsage?: TextModelUsage;
   onStop?: (sessionId: string) => void;
   /** A conversation has started over, so its voice can do the same and say the statement. */
-  onNewConversation?: (view: TextAssistantView, statement: string) => void;
+  onNewConversation?: (view: TextAssistantView) => void;
 }) {
   const routes = new Hono<{ Variables: { actorId: string; browserSessionId: string } }>();
   const sessions = new Map<string, Session>();
@@ -1086,7 +1086,7 @@ export function textAssistantRoutes({
         ? 'recovery'
         : 'ready';
     session.reply = newConversationMessage(session.review);
-    onNewConversation?.(view(session), session.reply);
+    onNewConversation?.(view(session));
     return context.json(view(session));
   });
   routes.post(`${base}/:sessionId/recover`, async (context) => {

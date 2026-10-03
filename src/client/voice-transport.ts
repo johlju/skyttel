@@ -262,9 +262,15 @@ export function createVoiceTransport(callbacks: {
     live.close();
   }
   return {
-    async connect(exchangeSdp: ExchangeSdp, signal: AbortSignal) {
+    async connect(
+      exchangeSdp: ExchangeSdp,
+      signal: AbortSignal,
+      retained?: { stream: MediaStream; paused: boolean },
+    ) {
       try {
-        microphone = await navigator.mediaDevices.getUserMedia({ audio: true });
+        paused = retained?.paused ?? false;
+        microphone =
+          retained?.stream ?? (await navigator.mediaDevices.getUserMedia({ audio: true }));
         if (closed || stopped || signal.aborted) {
           stopCapture();
           throw new DOMException('Voice setup cancelled', 'AbortError');
@@ -287,6 +293,17 @@ export function createVoiceTransport(callbacks: {
         close();
         throw error;
       }
+    },
+    // Transfer ownership before closing the old peer. The same authorized
+    // stream is attached to a fresh provider session without another permission request.
+    releaseMicrophone() {
+      const stream = microphone;
+      microphone = undefined;
+      for (const track of stream?.getTracks() ?? []) {
+        track.removeEventListener('ended', microphoneEnded);
+        track.enabled = false;
+      }
+      return stream;
     },
     stopCapture,
     setMicrophonePaused(value: boolean) {

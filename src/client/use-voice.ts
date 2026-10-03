@@ -40,14 +40,20 @@ export type Voice = {
   stop: () => Promise<void>;
   /** Silences what Skyttel is saying. */
   silence: () => void;
+  /** Replace provider context and queued audio while keeping the authorized microphone. */
+  newConversation: (reset: () => Promise<TextAssistantView>) => Promise<TextAssistantView>;
   playAudio: () => void;
 };
+
+type RetainedInput = { stream: MediaStream; paused: boolean };
 
 type Attempt = {
   path: string;
   controller: AbortController;
   transport?: VoiceTransport;
   voiceId?: string;
+  /** Microphone owned while a conversation reset waits for the server. */
+  retained?: MediaStream;
   poll?: ReturnType<typeof setTimeout>;
 };
 async function stopRemote(path: string, id: string) {
@@ -118,6 +124,7 @@ export function useVoice(options: {
       const attempt = current.current;
       if (!attempt) return;
       attempt.transport?.stopCapture();
+      for (const track of attempt.retained?.getTracks() ?? []) track.stop();
       current.current = null;
       const generation = ++epoch.current;
       clearTimeout(attempt.poll);
@@ -161,127 +168,130 @@ export function useVoice(options: {
       epoch.current++;
     };
   }, [path, stop]);
-  const start = useCallback(async () => {
-    const initial = latest.current.assistant;
-    if (!path || !initial || current.current) return;
-    const attempt: Attempt = { path, controller: new AbortController() };
-    current.current = attempt;
-    epoch.current++;
-    setState('permission');
-    setOff(false);
-    setDisconnected(false);
-    setVoice(null);
-    setError('');
-    const active = () => mounted.current && current.current === attempt;
-    const anchor = () => {
-      const assistant = latest.current.assistant ?? initial;
-      return {
-        revision: assistant.revision,
-        draftVersion: assistant.review.version,
-        contentVersion: assistant.review.contentVersion,
+  const start = useCallback(
+    async (reuse?: RetainedInput, next?: TextAssistantView) => {
+      const initial = next ?? latest.current.assistant;
+      if (!path || !initial || current.current) return;
+      const attempt: Attempt = { path, controller: new AbortController() };
+      current.current = attempt;
+      epoch.current++;
+      setState('permission');
+      setOff(reuse?.paused ?? false);
+      setDisconnected(false);
+      setVoice(null);
+      setError('');
+      const active = () => mounted.current && current.current === attempt;
+      const anchor = () => {
+        const shown = latest.current.assistant;
+        const assistant = shown && shown.revision >= initial.revision ? shown : initial;
+        return {
+          revision: assistant.revision,
+          draftVersion: assistant.review.version,
+          contentVersion: assistant.review.contentVersion,
+        };
       };
-    };
-    const fail = (failure?: unknown, reason = 'network') => {
-      if (!active()) return;
-      if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
-        latest.current.onAccessLost(failure);
-      void stop(
-        voiceErrorMessage(failure) ??
-          (reason === 'audio'
-            ? 'Ljuduppspelningen avbröts. Starta rösten igen eller fortsätt med text. Ett genomfört sparande är inte ångrat.'
-            : reason === 'microphone'
-              ? 'Mikrofonen slutade fungera. Kontrollera mikrofonen och starta rösten igen, eller fortsätt med text.'
-              : reason === 'provider'
-                ? 'Rösttjänsten avbröt samtalet. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'
-                : 'Röstanslutningen avbröts. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'),
-      );
-    };
-    const poll = async () => {
-      if (!active() || !attempt.voiceId) return;
-      try {
-        const result = await request<VoiceAssistantResponse>(
-          `${path}/${attempt.voiceId}/poll`,
-          anchor(),
-          attempt.controller.signal,
-        );
+      const fail = (failure?: unknown, reason = 'network') => {
         if (!active()) return;
-        apply(result.assistant);
-        setVoice(result.voice);
-        if (result.voice.phase === 'error') {
-          fail(undefined, 'provider');
-          return;
+        if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
+          latest.current.onAccessLost(failure);
+        void stop(
+          voiceErrorMessage(failure) ??
+            (reason === 'audio'
+              ? 'Ljuduppspelningen avbröts. Starta rösten igen eller fortsätt med text. Ett genomfört sparande är inte ångrat.'
+              : reason === 'microphone'
+                ? 'Mikrofonen slutade fungera. Kontrollera mikrofonen och starta rösten igen, eller fortsätt med text.'
+                : reason === 'provider'
+                  ? 'Rösttjänsten avbröt samtalet. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'
+                  : 'Röstanslutningen avbröts. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'),
+        );
+      };
+      const poll = async () => {
+        if (!active() || !attempt.voiceId) return;
+        try {
+          const result = await request<VoiceAssistantResponse>(
+            `${path}/${attempt.voiceId}/poll`,
+            anchor(),
+            attempt.controller.signal,
+          );
+          if (!active()) return;
+          apply(result.assistant);
+          setVoice(result.voice);
+          if (result.voice.phase === 'error') {
+            fail(undefined, 'provider');
+            return;
+          }
+          if (result.voice.phase === 'closed' || result.voice.phase === 'closing') {
+            void stop();
+            return;
+          }
+          attempt.poll = setTimeout(() => void poll(), 500);
+        } catch (failure) {
+          fail(failure);
         }
-        if (result.voice.phase === 'closed' || result.voice.phase === 'closing') {
-          void stop();
-          return;
-        }
-        attempt.poll = setTimeout(() => void poll(), 500);
+      };
+      try {
+        if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === 'undefined')
+          throw new DOMException('Voice is not supported', 'NotSupportedError');
+        attempt.transport = createVoiceTransport({
+          onMicrophoneReady: () => {
+            if (active()) setState('connecting');
+          },
+          onReady: () => {
+            if (active()) setState('listening');
+          },
+          onClosed: () => {
+            if (active())
+              void stop(
+                'Rösttjänsten avslutade samtalet. Text och formulär finns kvar. Kontrollera sparförsök om utfallet är oklart.',
+              );
+          },
+          onFailure: (reason) => fail(undefined, reason),
+          onPlaybackBlocked: (blocked) => {
+            if (active()) setPlaybackBlocked(blocked);
+          },
+          onDisconnected: (value) => {
+            if (active()) setDisconnected(value);
+          },
+          onTranscript: (row) => {
+            if (active()) latest.current.onTranscript?.(row);
+          },
+          onAudioActivity: (value) => {
+            if (active()) setActivity(value);
+          },
+        });
+        await attempt.transport.connect(
+          async (sdp, options) => {
+            let result: VoiceAssistantResponse;
+            try {
+              result = await request<VoiceAssistantResponse>(
+                path,
+                { sdp, ...anchor(), ...(next ? { newConversation: true } : {}) },
+                options.signal,
+              );
+            } catch (failure) {
+              fail(failure);
+              throw failure;
+            }
+            if (!active()) {
+              void stopRemote(path, result.voice.id);
+              throw new DOMException('Voice setup cancelled', 'AbortError');
+            }
+            attempt.voiceId = result.voice.id;
+            apply(result.assistant);
+            setVoice(result.voice);
+            attempt.poll = setTimeout(() => void poll(), 500);
+            if (!result.sdp) throw new Error('Missing voice answer');
+            return result.sdp;
+          },
+          attempt.controller.signal,
+          reuse,
+        );
       } catch (failure) {
         fail(failure);
       }
-    };
-    try {
-      if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === 'undefined')
-        throw new DOMException('Voice is not supported', 'NotSupportedError');
-      attempt.transport = createVoiceTransport({
-        onMicrophoneReady: () => {
-          if (active()) setState('connecting');
-        },
-        onReady: () => {
-          if (active()) setState('listening');
-        },
-        onClosed: () => {
-          if (active())
-            void stop(
-              'Rösttjänsten avslutade samtalet. Text och formulär finns kvar. Kontrollera sparförsök om utfallet är oklart.',
-            );
-        },
-        onFailure: (reason) => fail(undefined, reason),
-        onPlaybackBlocked: (blocked) => {
-          if (active()) setPlaybackBlocked(blocked);
-        },
-        onDisconnected: (value) => {
-          if (active()) setDisconnected(value);
-        },
-        onTranscript: (row) => {
-          if (!active()) return;
-          setHeard((count) => count + 1);
-          latest.current.onTranscript?.(row);
-        },
-        onDelegation: () => {
-          if (active()) setHeard((count) => count + 1);
-        },
-        onAudioActivity: (value) => {
-          if (active()) setActivity(value);
-        },
-      });
-      await attempt.transport.connect(async (sdp, options) => {
-        let result: VoiceAssistantResponse;
-        try {
-          result = await request<VoiceAssistantResponse>(
-            path,
-            { sdp, ...anchor() },
-            options.signal,
-          );
-        } catch (failure) {
-          fail(failure);
-          throw failure;
-        }
-        if (!active()) {
-          void stopRemote(path, result.voice.id);
-          throw new DOMException('Voice setup cancelled', 'AbortError');
-        }
-        attempt.voiceId = result.voice.id;
-        apply(result.assistant);
-        setVoice(result.voice);
-        attempt.poll = setTimeout(() => void poll(), 500);
-        if (!result.sdp) throw new Error('Missing voice answer');
-        return result.sdp;
-      }, attempt.controller.signal);
-    } catch (failure) {
-      fail(failure);
-    }
-  }, [path, apply, stop]);
+    },
+    [path, apply, stop],
+  );
   useEffect(() => {
     if (options.autoStart) void start();
   }, [options.autoStart, start]);
@@ -303,6 +313,43 @@ export function useVoice(options: {
     const timer = setTimeout(() => void stop(), voiceSettleMs);
     return () => clearTimeout(timer);
   }, [state, off, working, speaking, heard, stop]);
+  const newConversation = useCallback(
+    async (reset: () => Promise<TextAssistantView>) => {
+      const attempt = current.current;
+      if (!attempt) return reset();
+      current.current = null;
+      epoch.current++;
+      clearTimeout(attempt.poll);
+      attempt.controller.abort();
+      const stream = attempt.transport?.releaseMicrophone();
+      // Silence the old peer before requesting the reset. Its events cannot add
+      // old transcript rows while the server clears the conversation.
+      attempt.transport?.close();
+      const continuation: Attempt = {
+        path: attempt.path,
+        controller: new AbortController(),
+        retained: stream,
+      };
+      current.current = continuation;
+      setState('connecting');
+      try {
+        const assistant = await reset();
+        if (mounted.current && current.current === continuation) {
+          current.current = null;
+          await start(stream ? { stream, paused: off } : undefined, assistant);
+        } else for (const track of stream?.getTracks() ?? []) track.stop();
+        return assistant;
+      } catch (failure) {
+        for (const track of stream?.getTracks() ?? []) track.stop();
+        if (current.current === continuation) {
+          current.current = null;
+          if (mounted.current) setState('idle');
+        }
+        throw failure;
+      }
+    },
+    [off, start],
+  );
   const close = useCallback(() => stop(), [stop]);
   const playAudio = useCallback(() => void current.current?.transport?.playAudio(), []);
   const silence = useCallback(() => current.current?.transport?.silence(), []);
@@ -324,7 +371,8 @@ export function useVoice(options: {
       (microphone === 'off' && !starting && !working && options.assistant?.phase === 'working'),
     level,
     activate,
-    start,
+    start: () => start(),
+    newConversation,
     stop: close,
     silence,
     playAudio,

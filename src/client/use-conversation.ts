@@ -449,7 +449,9 @@ export function useConversation({
     setPending(true);
     setError('');
     try {
-      const result = await request<TextAssistantView>(`${path}/${current.id}/new`, {});
+      const result = await voice.newConversation(() =>
+        request<TextAssistantView>(`${path}/${current.id}/new`, {}),
+      );
       if (epoch !== requestEpoch.current) return;
       setUnknown(false);
       update(result);

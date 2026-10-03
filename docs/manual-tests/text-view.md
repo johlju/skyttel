@@ -128,6 +128,8 @@ mikrofon”.
 3. Välj **Nytt samtal**.
 4. Släpp det hållna svaret med ett förslag som byter Lo:s namn.
 5. Skicka **Vad finns i utkastet?** och läs nästa `held` i terminalen.
+   Släpp svaret.
+6. Stäng av mikrofonen och välj **Nytt samtal** igen.
 
 **Förväntat resultat:**
 
@@ -138,6 +140,7 @@ mikrofon”.
 - **Oskickat** står kvar i fältet. Lo-förslaget är oförändrat, också
   efter att det stoppade svaret har släppts.
 - Nästa uppdrag bär inget av det som sades före **Nytt samtal**.
+- När mikrofonen är av förblir den av efter **Nytt samtal**.
 
 ### TEXTVY-04: textvyn går att använda på mobil enhet och smal skärm
 
