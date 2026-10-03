@@ -69,7 +69,8 @@ export const microphoneButton = (page: Page) =>
     .getByRole('navigation', { name: 'Kartans verktyg' })
     .getByRole('button', { name: conversationTools.voice, exact: true });
 /** What a screen reader is told about the voice. */
-export const voiceAnnouncement = (page: Page) => page.locator('.voice-announcement');
+export const voiceAnnouncement = (page: Page) =>
+  page.locator('.voice-announcement:not(.voice-context-announcement)');
 
 /** Turns the microphone on in a conversation with a valid consent, until Skyttel listens. */
 export async function turnMicrophoneOn(page: Page) {
