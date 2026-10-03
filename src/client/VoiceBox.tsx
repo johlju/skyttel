@@ -122,7 +122,6 @@ export function VoiceBox({
     if (text) setAnnouncement(({ count }) => ({ count: count + 1, text }));
   }, [on, shown]);
   // The stop icon goes away while it may have the focus, which must not be lost.
-  const stop = useRef<HTMLButtonElement>(null);
   const stopFocused = useRef(false);
   const stopShown = Boolean(status?.stop);
   useLayoutEffect(() => {
@@ -143,7 +142,6 @@ export function VoiceBox({
           <span>{status.word}</span>
           {status.stop && (
             <button
-              ref={stop}
               type="button"
               className="voice-stop"
               aria-label="Avbryt"

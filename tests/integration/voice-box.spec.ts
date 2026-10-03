@@ -446,7 +446,7 @@ for (const [name, width, height, place] of [
   ['bred pekskärm', 820, 1180, 'top'],
   ['smal skärm', 390, 844, 'bottom'],
 ] as const)
-  test(`TAL-15: röstrutan står på sin plats på ${name} och täcker aldrig kartans rad eller återkoppling`, async ({
+  test(`röstrutan står på sin plats på ${name} och täcker aldrig kartans rad eller återkoppling`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height });

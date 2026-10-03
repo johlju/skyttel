@@ -107,8 +107,9 @@ när du använder rösten:
 
 Medan Skyttel arbetar eller talar finns stoppikonen **Avbryt** i
 röstrutan. Den stoppar arbetet och tystar Skyttel. Förslag som redan
-ligger i utkastet finns kvar. Med minskad rörelse i systemet står
-vågformen stilla. En skärmläsare får höra **Lyssnar** när mikrofonen slås
+ligger i utkastet finns kvar. Med minskad rörelse i systemet rör sig
+vågformen inte: den visar sju punkter när ingen hörs och sju stilla
+staplar när någon hörs. En skärmläsare får höra **Lyssnar** när mikrofonen slås
 på, **Skyttel arbetar** och **Mikrofonen är av** när röstrutan försvinner.
 
 Om ett sparresultat är oklart visas att det tidigare sparförsöket måste

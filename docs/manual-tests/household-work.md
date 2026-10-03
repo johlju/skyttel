@@ -73,7 +73,7 @@ at 320px”.
 
 ### ARBETE-02: samtal och mikrofon består och avslutas vid utloggning
 
-**Syfte:** Bevara samtalet och styra mikrofonen från en annan vy.
+**Syfte:** Bevara samtalet och mikrofonens läge i en annan vy.
 
 **Användare:** Alex.
 

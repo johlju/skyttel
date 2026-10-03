@@ -34,8 +34,9 @@ samtalstext, sökning, urval eller personlig kartvy. Samma sak gäller
 **Månadskostnad** om du har tillgång till den. Ett pågående sparförsök
 fortsätter; följ dess status och kontrollera samma kvitto vid okänt utfall.
 
-Ett pågående samtal behåller mikrofonens läge. Mikrofonkontrollen finns
-kvar i den andra vyn så att du kan pausa eller stänga av rösten.
+Ett pågående samtal behåller mikrofonens läge. Röstrutan visar i den andra
+vyn vad rösten gör, och stoppikonen **Avbryt** fungerar där. Mikrofonen slår
+du på och av med **Prata med Skyttel** i kartans verktyg.
 Oskickad formulärtext hör fortfarande inte till utkastet; välj
 **Lägg i mitt utkast** för att ta med den i det samlade sparandet.
 

@@ -597,7 +597,7 @@ avbruten start.
 
 ## Mikrofonen och röstrutan
 
-Fallen TAL-10 till TAL-16 använder den
+Fallen TAL-10 till TAL-14 och TAL-16 använder den
 [kontrollerade startguiden](#controlled-voice-fixture) med Talprov och
 Lo Exempel som osparat förslag, enligt förberedelsens steg 2. Starta en ny
 installation för varje fall. Kommandon som `setSound` och `stats()` körs i
@@ -622,7 +622,7 @@ någon panel öppnas”.
 **Steg:**
 
 1. Kontrollera att **Prata med Skyttel** i **Kartans verktyg** visar en
-   mikrofon, inte är intryckt och har samma färg som de andra verktygen.
+   mikrofon och inte är intryckt.
 2. Kör `window.skyttelVoiceFixture.setMicrophone('hold')`. Välj **Tala** i
    vägledningen och **Godkänn och starta** i medgivanderutan.
 3. Läs röstrutan och för muspekaren över **Prata med Skyttel**.
@@ -640,8 +640,8 @@ någon panel öppnas”.
   intryckt och beskrivs **Avbryt starten av rösten**.
 - Steg 4: röstrutan försvinner. Det sena mikrofonspåret avslutas, och
   ingen röstanslutning skapas.
-- Steg 5: knappen är intryckt och har accentfärg. Röstrutan visar sju
-  punkter och **Lyssnar**. Ingen panel öppnas, och samtalets textfält syns
+- Steg 5: knappen är intryckt och visar samma mikrofon. Röstrutan visar
+  sju punkter och **Lyssnar**. Ingen panel öppnas, och samtalets textfält syns
   inte.
 - Steg 6: knappen är inte intryckt, och röstrutan försvinner direkt.
   Mikrofonspåret är avstängt från första stund och avslutat när
@@ -787,45 +787,12 @@ som följer rösten”.
   staplar i accentfärg som är låga vid svagt ljud och höga vid starkt ljud.
 - Steg 2: **Skyttel talar** går före **Du talar**. Staplarna rör sig
   jämnt i textfärg, och stoppikonen visas.
-- Steg 3: **Skyttel arbetar** går före båda, med stilla punkter. Rutan blir
-  bredare men aldrig högre. Efter svaret visar den **Skyttel talar**.
+- Steg 3: **Skyttel arbetar** går före båda, med stilla punkter. Efter
+  svaret visar den **Skyttel talar**.
 - Steg 4: vågformen rör sig inte. **Skyttel talar** och **Du talar** har
   samma sju stilla staplar, som inte ändras med ljudnivån. **Lyssnar** har
   sju punkter. Formerna byts utan övergång. Statusordet
   **Mikrofonen är av** visas aldrig.
-
-### TAL-15: röstrutan står på sin plats och täcker aldrig kartans rad eller återkoppling
-
-**Syfte:** Placera röstrutan uppe till höger på dator och bred pekskärm och
-vid nederkanten till höger på smal skärm.
-
-**Användare:** Alex i den kontrollerade installationen.
-
-**Förutsättningar:** Mikrofonen är på. Prova ett fönster på 1280 × 800,
-820 × 1180 och 390 × 844 CSS-pixlar.
-
-**Integrationstest:**
-[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
-testfallen “TAL-15: röstrutan står på sin plats på dator och täcker aldrig
-kartans rad eller återkoppling”, samma titel med “bred pekskärm” och med
-“smal skärm”.
-
-**Steg:**
-
-1. Välj **Återställ vy** så att kartans återkoppling visas.
-2. Kör `user Beskriv utkastet.` och `delegate`.
-3. Öppna **Lista** och se var röstrutan står.
-
-**Förväntat resultat:**
-
-- På dator och bred pekskärm står röstrutan uppe till höger, och kartans
-  återkoppling står under den. På smal skärm står den till höger vid
-  nederkanten, ovanför statuskortet och återkopplingen.
-- Röstrutan täcker aldrig raden med **Återställ vy** eller kartans
-  återkoppling. Med **Skyttel arbetar** blir den bredare men står kvar på
-  samma plats och har samma höjd.
-- Med Lista öppen står röstrutan bredvid **Till kartan** på dator och vid
-  nederkanten på smal skärm. Sidan rullar inte i sidled.
 
 ### TAL-16: hjälpmedel får röstrutans namn, knappens läge och uppläsningarna i tur
 
@@ -927,7 +894,7 @@ intygas inte.
 | --- | --- | --- | --- |
 | 1.1.1 Icke-textuellt innehåll | Vågformen är dold för hjälpmedel. Statusordet bär beskedet, och stoppikonen heter **Avbryt**. | Dold vågform, namn på stoppikonen. | Uppläsning med NVDA och VoiceOver. |
 | 1.3.1, 4.1.2 Namn, roll och värde | **Prata med Skyttel** är en växlingsknapp med samma namn i båda lägena. Röstrutan är gruppen **Röstruta**. Beskrivningen är **Avbryt starten av rösten** medan rösten startar. | Namn, roll, intryckt läge och beskrivning. | Hur skärmläsare säger läget. |
-| 1.4.1 Färg | Accentfärgen på knappen följs av intryckt läge, och vågformens färg av statusordet. | Intryckt läge och statusord i alla lägen. | – |
+| 1.4.1 Färg | Påslagen knapp har fylld bakgrund, inte bara en annan nyans, och intryckt läge för hjälpmedel. Röstrutan med **Lyssnar** visar också att mikrofonen är på. Vågformens färg följs av statusordet. | Intryckt läge, ändrad bakgrund och statusord i alla lägen. | Om fylld och ofylld knapp går att skilja åt utan färgseende. |
 | 1.4.3, 1.4.11 Kontrast | Rutan och knappen använder kartans färger i ljust och mörkt tema. De grå punkterna bär ingen egen information. | – | Kontrast för text, stoppikon och fokusram i båda teman. |
 | 1.4.4, 1.4.10 Förstoring och omflöde | Rutan har fast höjd och följer innehållets bredd, utan rullning i sidled. | Placering på 1280, 820 och 390 px utan rullning i sidled. | Verklig webbläsarzoom 200 och 400 procent. |
 | 2.1.1 Tangentbord | Knappen och stoppikonen nås med Tab. | Tangentordning och Enter på **Avbryt**. | Hjälpmedlens egna kommandon. |
@@ -938,9 +905,12 @@ intygas inte.
 | 4.1.3 Statusmeddelanden | **Lyssnar**, **Skyttel arbetar** och **Mikrofonen är av** läses upp i tur, utan att flytta fokus och utan ljudsignaler. | Uppläsningarnas text, tur och att de inte upprepas. | Att varje uppläsning kommer en gång med riktig skärmläsare. |
 <!-- markdownlint-enable MD013 -->
 
-Statuskortet och samtalspanelen säger i dag också att Skyttel arbetar.
-De ersätts av senare ärenden, och tills dess kan skärmläsaren höra det
-två gånger.
+Statuskortet och samtalspanelen säger också att Skyttel arbetar, så
+skärmläsaren kan höra det två gånger. Röstrutans plats, bredd, höjd och
+pekmål kontrolleras automatiskt i
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts), med de
+testfall vars titel börjar med “röstrutan står på sin plats”. På riktig
+enhet prövas platsen i TAL-17.
 
 ## Controlled voice fixture
 
