@@ -120,6 +120,12 @@ New household archives require an upgraded reader; supported older archives
 remain readable. After rollout, each user must give consent before the first
 text or voice conversation, and can save it for the household.
 
+This release changes the consent text. A saved consent for the previous text
+does not apply. Verify that users must approve the new text before text or
+voice work can start. Speech recorded during a long press can wait in the
+browser and go to the voice service after the user releases the button.
+Release stops new recording immediately.
+
 A user can revoke the consent in Settings. The revocation removes the saved
 consent and ends that user's conversations in the household. A restored
 database backup contains the consents that were saved when the backup was

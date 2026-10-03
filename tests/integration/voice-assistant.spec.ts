@@ -425,9 +425,11 @@ test('TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtal
     expect(live.requests).toHaveLength(1);
     speak(live, 'Kontrollera utkastet.');
     await expect.poll(() => held).toBe(true);
-    await expect(assistant(page).getByRole('status')).toContainText('Skyttel arbetar');
+    await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
     // A spoken task shows the working row last in the conversation text, without a timer.
-    await expect(log.getByRole('listitem').last()).toHaveText('Skyttel arbetar…');
+    await expect(log.getByRole('listitem').last()).toHaveText(
+      'Skyttel arbetar… 0 meddelanden väntar. Tryck på Escape för att avbryta.',
+    );
     await expect(assistant(page).getByRole('timer')).toHaveCount(0);
     release([modelMessage('Vem använder musiken?')]);
     await expect(log).toContainText('Vem använder musiken?');

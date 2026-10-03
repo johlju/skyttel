@@ -121,7 +121,10 @@ test('TAL-10: Prata med Skyttel slår på och av mikrofonen utan att någon pane
     await openMapWithDraft(page, app.origin);
     const microphone = microphoneButton(page);
     await expect(microphone).toHaveAttribute('aria-pressed', 'false');
-    await expect(microphone).toHaveAttribute('title', 'Prata med Skyttel');
+    await expect(microphone).toHaveAttribute(
+      'title',
+      'Prata med Skyttel (Ctrl+Mellanslag). Håll in för att tala tills du släpper.',
+    );
     await expect(voiceBox(page)).toHaveCount(0);
     const off = await microphone.evaluate((button) => getComputedStyle(button).backgroundColor);
 
@@ -158,7 +161,10 @@ test('TAL-10: Prata med Skyttel slår på och av mikrofonen utan att någon pane
     await microphone.click();
     await listening(page);
     await expect(microphone).toHaveAccessibleName('Prata med Skyttel');
-    await expect(microphone).toHaveAttribute('title', 'Prata med Skyttel');
+    await expect(microphone).toHaveAttribute(
+      'title',
+      'Prata med Skyttel (Ctrl+Mellanslag). Håll in för att tala tills du släpper.',
+    );
     await expect(panel(page)).toHaveCount(0);
     await expect(messageField(page)).toBeHidden();
     expect(
