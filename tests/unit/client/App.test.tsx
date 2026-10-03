@@ -37,7 +37,11 @@ function serve(routes: Record<string, Reply[]>) {
       },
     },
   ];
-  routes['/api/households/linden/map/operations'] ??= [{ data: { operations: [] } }];
+  // The draft view and automatic conversation recovery each read pending saves.
+  routes['/api/households/linden/map/operations'] ??= [
+    { data: { operations: [] } },
+    { data: { operations: [] } },
+  ];
   const fetch = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
     const path =
       typeof input === 'string'
