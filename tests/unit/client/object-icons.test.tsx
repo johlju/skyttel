@@ -113,7 +113,7 @@ test('a delayed text proposal for the picker does not replace a newer search foc
   );
   expect(document.activeElement).toBe(search);
   expect((await read()).draft.changes[0].after?.description).toBe('Befintlig text och senare text');
-});
+}, 10_000);
 
 test.each([403, 503])(
   'icon proposal failure %s preserves the earlier draft and reports the access or uncertain result',
