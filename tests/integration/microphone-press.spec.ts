@@ -205,13 +205,13 @@ test('MIKROFONTRYCK-07: spärrat ljud ger ingen inspelning och ljudstart efter s
     await startConversationWithText(page);
     await page.evaluate(() => window.skyttelVoiceFixture.setPlayback('blocked'));
     await down(page);
-    await expect(page.getByRole('button', { name: 'Spela upp ljud', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Starta ljudet', exact: true })).toBeVisible();
     expect((await tracks(page)).every((track) => !track.enabled)).toBe(true);
     await page.evaluate(() => window.skyttelVoiceFixture.setMicrophoneTone(440));
     await page.waitForTimeout(250);
     await page.mouse.up();
     await page.evaluate(() => window.skyttelVoiceFixture.setPlayback('allow'));
-    await page.getByRole('button', { name: 'Spela upp ljud', exact: true }).click();
+    await page.getByRole('button', { name: 'Starta ljudet', exact: true }).click();
     await page.waitForTimeout(250);
     await expect(microphone(page)).toHaveAttribute('aria-pressed', 'false');
     expect((await tracks(page)).every((track) => !track.enabled)).toBe(true);

@@ -23,15 +23,21 @@ export function useConversationNotice({
   ongoing,
   requested,
   eventKey,
+  diagnostic,
 }: {
   conditions: ConversationNoticeConditions;
   ongoing: boolean;
   requested: number;
   eventKey: string;
+  diagnostic?: { noticeId: ConversationNotice['id']; reference?: string };
 }) {
   const [dismissed, setDismissed] = useState('');
   const [usedRequest, setUsedRequest] = useState(0);
-  const candidate: ConversationNotice | undefined = firstConversationNotice(conditions);
+  const definition = firstConversationNotice(conditions);
+  const candidate: ConversationNotice | undefined =
+    definition && diagnostic?.noticeId === definition.id && diagnostic.reference
+      ? { ...definition, text: `${definition.text} Felreferens: ${diagnostic.reference}.` }
+      : definition;
   const identity = candidate
     ? `${candidate.id}:${candidate.kind === 'event' ? eventKey : ongoing ? 'active' : requested}`
     : '';

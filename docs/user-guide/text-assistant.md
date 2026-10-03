@@ -199,14 +199,18 @@ Medan rösten startar avbryter ett tryck starten. Rösten använder samma
 utkast och regler som texten. OpenAI behandlar ljud som spelats in medan
 mikrofonen är på. Tidigare inspelat tal från långt
 tryck kan överföras efter släpp. Om webbläsaren blockerar ljudet, välj
-**Spela upp ljud**. Mikrofonen börjar lyssna först när ljudet fungerar.
+**Starta ljudet**. Mikrofonen börjar lyssna först när ljudet fungerar.
 Om kontakten bryts är mikrofonen av tills du själv slår på den igen.
 Du kan fortsätta med text eller formulär när
 mikrofonen eller ljuduppspelningen inte fungerar.
 
-Om rösten inte startar visar felmeddelandet vad du kan prova. Om det visar
-**Felreferens**, skicka referensen till den som driver installationen för
-felsökning. Du kan fortsätta med text och formulär under tiden.
+När rösten inte startar eller avbryts visar en samtalsnotis vad du kan prova.
+Webbläsarens notis skiljer på nekad, saknad eller upptagen mikrofon och saknat
+röststöd. Serverns notis skiljer på ett tillfälligt startfel, avbruten röst och
+ett fel som kräver administratören. Om notisen visar **Felreferens**, skicka
+referensen till den som driver installationen för felsökning. Stäng notisen
+med **Stäng notisen**, eller försök igen med mikrofonknappen. Ett stoppat
+ljud visas med **Webbläsaren stoppade ljudet.** och **Starta ljudet**.
 
 Röstrutan visar vad rösten gör, med en vågform och ett ord. Den står
 uppe till höger, och nere till höger på en smal skärm. Röstrutan syns bara

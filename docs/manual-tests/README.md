@@ -58,6 +58,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 
 ## Områden
 
+- [Röstfel och ljudåterhämtning](voice-errors.md): fyra mikrofonhinder, tre
+  servergrupper, felreferenser, stängning, återförsök och **Starta ljudet**
+  med avstängd mikrofon fram till fungerande uppspelning.
+
 - [Objektlistor](object-lists.md): typgrupper, flera typfilter, markeringar,
   separat sortering, sidval, bevarat rulläge, första klicket i en inaktiv
   lista och uttryckligt kartfokus.

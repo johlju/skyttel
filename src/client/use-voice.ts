@@ -3,7 +3,7 @@ import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
-import { voiceErrorMessage } from './voice-error.js';
+import { type VoiceFailure, voiceErrorNotice, voiceFailureMessage } from './voice-error.js';
 import { createHeldInput, type HeldInput, prepareHeldInput } from './voice-held-input.js';
 import {
   createVoiceTransport,
@@ -32,6 +32,7 @@ export type Voice = {
   saved?: boolean;
   savedId?: string;
   error: string;
+  failure?: VoiceFailure & { occurrence: number };
   playbackBlocked: boolean;
   disconnected: boolean;
   /** The microphone cannot be turned on: Skyttel works with a written message. */
@@ -75,6 +76,7 @@ type Attempt = {
   retained?: MediaStream;
   poll?: ReturnType<typeof setTimeout>;
   held?: HeldRequest;
+  ready?: boolean;
   output?: { text: string; heard: boolean; speaking: boolean; matched?: string };
 };
 async function stopRemote(path: string, id: string) {
@@ -128,7 +130,14 @@ export function useVoice(options: {
   const resetVoice = useRef<(view: TextAssistantView) => void>(() => {});
   const [state, setState] = useState<Voice['state']>('idle');
   const [voice, setVoice] = useState<VoiceAssistantView | null>(null);
-  const [error, setError] = useState('');
+  const [failure, setFailure] = useState<(VoiceFailure & { occurrence: number }) | null>(null);
+  const error = voiceFailureMessage(failure);
+  const failedCount = useRef(0);
+  const setError = useCallback(
+    (value: VoiceFailure | null) =>
+      setFailure(value ? { ...value, occurrence: ++failedCount.current } : null),
+    [],
+  );
   const [playbackBlocked, setPlaybackBlocked] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   // Microphone-off keeps the connection alive: Live has no reliable answer-complete event.
@@ -195,7 +204,7 @@ export function useVoice(options: {
       latest.current.onAssistant(view);
   }, []);
   const stop = useCallback(
-    async (message = '') => {
+    async (message: VoiceFailure | null = null) => {
       prepared.current?.close();
       prepared.current = null;
       const attempt = current.current;
@@ -238,18 +247,16 @@ export function useVoice(options: {
       setDisconnected(false);
       if (attempt.voiceId && !result) {
         latest.current.onRecoveryNeeded?.();
-        setError(
-          'Mikrofonen är avstängd. Serverns avslut kunde inte bekräftas. Kontrollera sparförsök innan du fortsätter; ett genomfört sparande är inte ångrat.',
-        );
+        if (!message) setError(voiceErrorNotice(undefined, 'interrupted'));
       }
     },
-    [apply],
+    [apply, setError],
   );
   useEffect(() => {
     mounted.current = true;
     setState('idle');
     setVoice(null);
-    setError('');
+    setError(null);
     setPlaybackBlocked(false);
     setDisconnected(false);
     setOff(false);
@@ -265,7 +272,7 @@ export function useVoice(options: {
       if (current.current?.path === path) void stop();
       epoch.current++;
     };
-  }, [path, stop]);
+  }, [path, stop, setError]);
   useEffect(() => {
     const householdId = options.householdId;
     return () => {
@@ -328,7 +335,7 @@ export function useVoice(options: {
       setPlaybackBlocked(false);
       setActivity({ microphone: false, speaker: false });
       setVoice(null);
-      setError('');
+      setError(null);
       const active = () => mounted.current && current.current === attempt;
       const anchor = () => {
         const shown = latest.current.assistant;
@@ -339,20 +346,11 @@ export function useVoice(options: {
           contentVersion: assistant.review.contentVersion,
         };
       };
-      const fail = (failure?: unknown, reason = 'network') => {
+      const fail = (failure?: unknown) => {
         if (!active()) return;
         if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
           latest.current.onAccessLost(failure);
-        void stop(
-          voiceErrorMessage(failure) ??
-            (reason === 'audio'
-              ? 'Ljuduppspelningen avbröts. Starta rösten igen eller fortsätt med text. Ett genomfört sparande är inte ångrat.'
-              : reason === 'microphone'
-                ? 'Mikrofonen slutade fungera. Kontrollera mikrofonen och starta rösten igen, eller fortsätt med text.'
-                : reason === 'provider'
-                  ? 'Rösttjänsten avbröt samtalet. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'
-                  : 'Röstanslutningen avbröts. Fortsätt med text eller formulär och kontrollera sparförsök. Ett genomfört sparande är inte ångrat.'),
-        );
+        void stop(voiceErrorNotice(failure, attempt.ready ? 'interrupted' : 'startup'));
       };
       const poll = async () => {
         if (!active() || !attempt.voiceId) return;
@@ -374,7 +372,14 @@ export function useVoice(options: {
           }
           setVoice(result.voice);
           if (result.voice.phase === 'error') {
-            fail(undefined, 'provider');
+            fail(
+              new MapRequestError(
+                503,
+                result.voice.error,
+                result.voice.diagnosticId,
+                result.voice.errorGroup,
+              ),
+            );
             return;
           }
           if (result.voice.phase === 'closed' || result.voice.phase === 'closing') {
@@ -407,6 +412,7 @@ export function useVoice(options: {
             },
             onReady: () => {
               if (!active()) return;
+              attempt.ready = true;
               if (latest.current.inputBlocked) {
                 attempt.transport?.setMicrophonePaused(true);
                 setOff(true);
@@ -414,12 +420,9 @@ export function useVoice(options: {
               setState('listening');
             },
             onClosed: () => {
-              if (active())
-                void stop(
-                  'Rösttjänsten avslutade samtalet. Text och formulär finns kvar. Kontrollera sparförsök om utfallet är oklart.',
-                );
+              if (active()) void stop(voiceErrorNotice(undefined, 'interrupted'));
             },
-            onFailure: (reason) => fail(undefined, reason),
+            onFailure: () => fail(),
             onPlaybackBlocked: (blocked) => {
               if (active()) setPlaybackBlocked(blocked);
             },
@@ -498,7 +501,7 @@ export function useVoice(options: {
         fail(failure);
       }
     },
-    [path, apply, stop],
+    [path, apply, stop, setError],
   );
   useEffect(() => {
     if (options.autoStart) void start();
@@ -509,6 +512,7 @@ export function useVoice(options: {
   const activate = useCallback(() => {
     if (latest.current.inputBlocked || !navigator.onLine) return;
     if (state === 'idle') {
+      setError(null);
       if (held.current) {
         void stop();
         return;
@@ -521,7 +525,7 @@ export function useVoice(options: {
       current.current?.transport?.setMicrophonePaused(!off);
       setOff(!off);
     } else if (starting) void stop();
-  }, [state, starting, off, start, stop, prepareAudio]);
+  }, [state, starting, off, start, stop, prepareAudio, setError]);
   // Quiet gaps cannot prove that the final utterance or answer has finished.
   // The muted connection closes with the conversation, access loss or leaving the household.
   const renew = useCallback(
@@ -572,7 +576,31 @@ export function useVoice(options: {
     [off, start],
   );
   const close = useCallback(() => stop(), [stop]);
-  const playAudio = useCallback(() => void current.current?.transport?.playAudio(), []);
+  const playAudio = useCallback(() => {
+    const transport = current.current?.transport;
+    if (transport) {
+      void transport.playAudio();
+      return;
+    }
+    const playback = prepared.current;
+    const request = held.current;
+    if (!playback) return;
+    void Promise.all([playback.audio.play(), playback.audioContext.resume()])
+      .then(() => {
+        if (prepared.current !== playback || held.current !== request) return;
+        request?.buffer?.playbackReady();
+        const capture = Boolean(
+          request &&
+            !request.released &&
+            !latest.current.inputBlocked &&
+            navigator.onLine !== false,
+        );
+        request?.buffer?.capture(capture);
+        setHeldListening(capture && Boolean(request?.buffer?.ready));
+        setPlaybackBlocked(false);
+      })
+      .catch(() => setPlaybackBlocked(true));
+  }, []);
   const newConversation = useCallback(
     (reset: () => Promise<TextAssistantView>) => renew(reset),
     [renew],
@@ -613,12 +641,10 @@ export function useVoice(options: {
         .catch(() => {
           if (!mounted.current || epoch.current !== generation) return;
           latest.current.onRecoveryNeeded?.();
-          setError(
-            'Rösten kunde inte fortsätta efter avbrottet. Starta rösten igen eller fortsätt med text.',
-          );
+          setError(voiceErrorNotice(undefined, 'interrupted'));
         });
     },
-    [renew, apply, voice?.response, announceSave],
+    [renew, apply, voice?.response, announceSave, setError],
   );
   const level = useCallback(() => current.current?.transport?.microphoneLevel() ?? 0, []);
   const startHeld = useCallback(() => {
@@ -636,6 +662,7 @@ export function useVoice(options: {
       return;
     }
     if (current.current || (held.current && !held.current.released)) return;
+    setError(null);
     prepareAudio();
     const request: HeldRequest = { released: false, controller: new AbortController() };
     cancelledHeldStart.current = false;
@@ -647,10 +674,10 @@ export function useVoice(options: {
       request.input = createHeldInput(playback, request.controller.signal).then((buffer) => {
         request.buffer = buffer;
         buffer.onFailure(() => {
-          const message = 'Mikrofonen kunde inte fortsätta. Försök igen.';
+          const message = voiceErrorNotice(undefined, 'interrupted');
           if (current.current) void stop(message);
           else {
-            request.failed = new Error(message);
+            request.failed = new Error('Held microphone ended');
             request.released = true;
             buffer.discard();
             buffer.close();
@@ -673,7 +700,7 @@ export function useVoice(options: {
       // before transport startup has a chance to await this same promise.
       void request.input.catch((failure) => {
         if (held.current !== request || request.controller.signal.aborted) return;
-        const message = voiceErrorMessage(failure) ?? 'Mikrofonen kunde inte startas. Försök igen.';
+        const message = voiceErrorNotice(failure);
         if (current.current) void stop(message);
         else {
           // Keep the rejected request for the pending conversation's start.
@@ -686,7 +713,7 @@ export function useVoice(options: {
       });
     }
     if (latest.current.assistant) void start();
-  }, [state, start, prepareAudio, stop]);
+  }, [state, start, prepareAudio, stop, setError]);
   const releaseHeld = useCallback(() => {
     if (!held.current) return;
     held.current.released = true;
@@ -725,6 +752,7 @@ export function useVoice(options: {
     saved,
     savedId,
     error,
+    failure: failure ?? undefined,
     playbackBlocked,
     disconnected,
     disabled:

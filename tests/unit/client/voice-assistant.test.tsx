@@ -451,7 +451,7 @@ test('the muted connection outlasts delayed delegation and quiet gaps in the ans
   expect(stopped()).toBe(false);
   expect(track.stop).not.toHaveBeenCalled();
   expect(peer.connectionState).toBe('connected');
-  expect(screen.queryByRole('alert')).toBeNull();
+  expect(screen.queryByRole('region', { name: 'Samtalsnotis' })).toBeNull();
 });
 
 test('a task that was said is worked through with the microphone off, including a delayed answer', async () => {
@@ -665,7 +665,9 @@ test('temporary disconnection leaves capture off until another press, and an unu
   expect(track.stop).toHaveBeenCalled();
   expect(calls.some((call) => call.url.endsWith('/stop'))).toBe(true);
   expect(peer.connectionState).toBe('closed');
-  expect(screen.getByRole('alert').textContent).toContain('inte ångrat');
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+    'Rösten avbröts',
+  );
 });
 
 test('voice starts only on request, gates microphone on protocol readiness and stops without claiming a save', async () => {
@@ -719,7 +721,7 @@ test('the start gesture unlocks playback before asynchronous microphone and serv
     await startWithAudio();
     expect(unlocked).toBe(true);
     expect(track.enabled).toBe(true);
-    expect(screen.queryByRole('button', { name: 'Spela upp ljud' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Starta ljudet' })).toBeNull();
   } finally {
     microphoneButton().removeEventListener('click', entering, true);
     document.removeEventListener('click', leaving);
@@ -776,7 +778,7 @@ test('consent approval unlocks output in its gesture before the shared conversat
       Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
     );
     expect(track.enabled).toBe(true);
-    expect(screen.queryByRole('button', { name: 'Spela upp ljud' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Starta ljudet' })).toBeNull();
   } finally {
     document.removeEventListener('click', entering, true);
     document.removeEventListener('click', leaving);
@@ -817,13 +819,13 @@ test('blocked remote audio can be resumed explicitly and all remote tracks stop 
       Object.assign(new Event('track'), { track: remote, streams: [new Stream([remote])] }),
     );
   });
-  const resume = await screen.findByRole('button', { name: 'Spela upp ljud' });
+  const resume = await screen.findByRole('button', { name: 'Starta ljudet' });
   expect(track.enabled).toBe(false);
   expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
   vi.mocked(HTMLMediaElement.prototype.play).mockResolvedValue();
   await userEvent.click(resume);
   await waitFor(() => expect(track.enabled).toBe(true));
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Spela upp ljud' })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Starta ljudet' })).toBeNull());
   await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
   expect(remote.stop).toHaveBeenCalled();
   expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
@@ -833,7 +835,9 @@ test('a microphone refusal offers recovery without creating a remote session', a
   const { getUserMedia, calls } = setup();
   getUserMedia.mockRejectedValueOnce(new DOMException('denied', 'NotAllowedError'));
   await userEvent.click(microphoneButton());
-  expect((await screen.findByRole('alert')).textContent).toContain('Mikrofonen tilläts inte');
+  expect((await screen.findByRole('region', { name: 'Samtalsnotis' })).textContent).toContain(
+    'Webbläsaren tillåter inte mikrofonen',
+  );
   expect(calls).toHaveLength(0);
   expect(Peer.all[0].connectionState).toBe('closed');
   await userEvent.click(microphoneButton());
@@ -849,7 +853,7 @@ test.each([
     const { getUserMedia, calls } = setup();
     getUserMedia.mockRejectedValueOnce(new DOMException('private device details', name));
     await userEvent.click(microphoneButton());
-    const alert = await screen.findByRole('alert');
+    const alert = await screen.findByRole('region', { name: 'Samtalsnotis' });
     expect(alert.textContent).toContain(message);
     expect(alert.textContent).not.toContain('private device details');
     expect(calls).toHaveLength(0);
@@ -867,7 +871,9 @@ test.each(['microphone', 'WebRTC', 'audio context'])(
       throw new Error('Playback is unavailable');
     });
     await userEvent.click(microphoneButton());
-    expect((await screen.findByRole('alert')).textContent).toContain('saknar stöd för röstsamtal');
+    expect((await screen.findByRole('region', { name: 'Samtalsnotis' })).textContent).toContain(
+      'har inte stöd för röst',
+    );
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
     expect(getUserMedia).not.toHaveBeenCalled();
     expect(calls).toHaveLength(0);
@@ -896,23 +902,25 @@ test('an audio context construction failure is reported by startup without escap
     },
   );
   await userEvent.click(microphoneButton());
-  expect((await screen.findByRole('alert')).textContent).toContain('saknar stöd för röstsamtal');
+  expect((await screen.findByRole('region', { name: 'Samtalsnotis' })).textContent).toContain(
+    'har inte stöd för röst',
+  );
   expect(Peer.all).toHaveLength(0);
   expect(getUserMedia).not.toHaveBeenCalled();
   expect(calls).toHaveLength(0);
 });
 
 test.each([
-  ['voice_unavailable', 'inte konfigurerad'],
-  ['voice_provider_authentication_failed', 'nekade serverns API-nyckel'],
-  ['voice_provider_access_denied', 'nekade åtkomst'],
-  ['voice_provider_limit', 'användningsgräns'],
-  ['voice_provider_rejected', 'avvisade begäran'],
-  ['voice_provider_unavailable', 'kunde inte starta rösttjänsten just nu'],
-  ['voice_provider_timeout', 'svarade inte i tid'],
-  ['voice_connection_failed', 'Servern kunde inte ansluta'],
-  ['assistant_draft_changed', 'Utkastet eller samtalet har ändrats'],
-  ['voice_session_expired', 'Röstsamtalet har avslutats'],
+  ['voice_unavailable', 'Rösten fungerar inte'],
+  ['voice_provider_authentication_failed', 'Rösten fungerar inte'],
+  ['voice_provider_access_denied', 'Rösten fungerar inte'],
+  ['voice_provider_limit', 'Rösten kunde inte starta just nu'],
+  ['voice_provider_rejected', 'Rösten fungerar inte'],
+  ['voice_provider_unavailable', 'Rösten kunde inte starta just nu'],
+  ['voice_provider_timeout', 'Rösten kunde inte starta just nu'],
+  ['voice_connection_failed', 'Rösten kunde inte starta just nu'],
+  ['assistant_draft_changed', 'Rösten kunde inte starta just nu'],
+  ['voice_session_expired', 'Rösten avbröts'],
 ])(
   'server failure %s remains visible with its diagnostic reference and allows retry',
   async (code, message) => {
@@ -922,14 +930,14 @@ test.each([
       Response.json({ error: code, diagnosticId }, { status: 503 }),
     );
     await userEvent.click(microphoneButton());
-    const alert = await screen.findByRole('alert');
+    const alert = await screen.findByRole('region', { name: 'Samtalsnotis' });
     expect(alert.textContent).toContain(message);
     expect(alert.textContent).toContain(`Felreferens: ${diagnosticId}`);
     expect(track.stop).toHaveBeenCalled();
     expect(accessLost).not.toHaveBeenCalled();
     await userEvent.click(microphoneButton());
     await waitFor(() => expect(Peer.all[1]?.channel.readyState).toBe('open'));
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Samtalsnotis' })).toBeNull();
   },
 );
 
@@ -942,8 +950,8 @@ test('untrusted diagnostic references and error messages are not rendered', asyn
     ),
   );
   await userEvent.click(microphoneButton());
-  const alert = await screen.findByRole('alert');
-  expect(alert.textContent).toContain('Servern kunde inte ansluta');
+  const alert = await screen.findByRole('region', { name: 'Samtalsnotis' });
+  expect(alert.textContent).toContain('Rösten kunde inte starta just nu');
   expect(alert.textContent).not.toContain('private provider details');
   expect(alert.textContent).not.toContain('Felreferens');
 });
@@ -1023,7 +1031,9 @@ test.each(['microphone', 'audio', 'provider', 'channel', 'peer'] as const)(
     });
     expect(track.stop).toHaveBeenCalled();
     expect(calls.some((call) => call.url.endsWith('/stop'))).toBe(true);
-    expect(screen.getByRole('alert').textContent).not.toContain('private provider detail');
+    expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).not.toContain(
+      'private provider detail',
+    );
     expect(microphoneButton()).toBeDefined();
   },
 );
@@ -1039,6 +1049,7 @@ test('a server-reported voice failure explains the interruption while preserving
         voice: {
           id: 'voice-session',
           phase: url.endsWith('/poll') ? 'error' : url.endsWith('/stop') ? 'closed' : 'listening',
+          errorGroup: url.endsWith('/poll') ? 'interrupted' : undefined,
           seconds: null,
           usageFinal: false,
         },
@@ -1047,7 +1058,9 @@ test('a server-reported voice failure explains the interruption while preserving
   );
   await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
-  expect((await screen.findByRole('alert')).textContent).toContain('Rösttjänsten avbröt');
+  expect((await screen.findByRole('region', { name: 'Samtalsnotis' })).textContent).toContain(
+    'Rösten avbröts',
+  );
 });
 
 test('a delayed poll after stopping cannot replace newer assistant work', async () => {
@@ -1110,7 +1123,9 @@ test('losing the polling connection stops capture and preserves an explicit reco
     }),
   );
   await userEvent.click(microphoneButton());
-  expect((await screen.findByRole('alert')).textContent).toContain('kontrollera sparförsök');
+  expect((await screen.findByRole('region', { name: 'Samtalsnotis' })).textContent).toContain(
+    'Rösten kunde inte starta just nu',
+  );
   expect(track.stop).toHaveBeenCalled();
   expect(calls).toContain(`${base}/voice-session/stop`);
 });
@@ -1138,7 +1153,9 @@ test('an unconfirmed remote stop has a bounded drain and never claims known fina
     await vi.advanceTimersByTimeAsync(5001);
   });
   expect(Peer.all[0].connectionState).toBe('closed');
-  expect(screen.getByRole('alert').textContent).toContain('Serverns avslut kunde inte bekräftas');
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+    'Rösten avbröts',
+  );
   expect(recoveryNeeded).toHaveBeenCalledOnce();
 });
 
@@ -1288,7 +1305,7 @@ test.each(['resolved', 'rejected'])(
     expect(track.enabled).toBe(false);
     expect(remote.stop).toHaveBeenCalled();
     expect(late.stop).toHaveBeenCalled();
-    expect(screen.queryByRole('button', { name: 'Spela upp ljud' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Starta ljudet' })).toBeNull();
     await act(async () =>
       finishStop(
         Response.json({
@@ -1310,7 +1327,9 @@ test('a remote protocol close stops microphone input and fetches the server fina
   );
   expect(track.stop).toHaveBeenCalled();
   expect(calls.some((call) => call.url.endsWith('/stop'))).toBe(true);
-  expect(screen.getByRole('alert').textContent).toContain('Rösttjänsten avslutade samtalet');
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+    'Rösten avbröts',
+  );
 });
 
 test('a rejected stop request closes local resources and requires receipt recovery before text work', async () => {
@@ -1332,7 +1351,9 @@ test('a rejected stop request closes local resources and requires receipt recove
   expect(track.stop).toHaveBeenCalled();
   expect(Peer.all[0].connectionState).toBe('closed');
   expect(recoveryNeeded).toHaveBeenCalledOnce();
-  expect(screen.getByRole('alert').textContent).toContain('Serverns avslut kunde inte bekräftas');
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+    'Rösten avbröts',
+  );
 });
 
 test('an older voice reply cannot overwrite a newer displayed text revision', async () => {

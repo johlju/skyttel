@@ -32,6 +32,7 @@ async function main() {
   let retiredContextSource:
     | (typeof live.channels extends Map<string, infer Channel> ? Channel : never)
     | undefined;
+  let voiceFailureStatus: 401 | 503 | undefined;
   function describe(id: string, item: Pending) {
     const user = item.request.input.findLast((part) => part.role === 'user');
     const current = user && typeof user.content === 'string' ? JSON.parse(user.content) : {};
@@ -67,7 +68,15 @@ async function main() {
       body.usage.output_tokens_details.reasoning_tokens = Math.min(10, body.usage.output_tokens);
       return Response.json(body, { headers: response.headers });
     },
-    liveFetch: live.provider,
+    liveFetch: (url, init) =>
+      voiceFailureStatus
+        ? Promise.resolve(
+            Response.json(
+              { error: { message: 'controlled_voice_failure' } },
+              { status: voiceFailureStatus },
+            ),
+          )
+        : live.provider(url, init),
     liveSideband: live.attach,
     browserProviderScript: liveBrowserFixtureSource,
   });
@@ -104,6 +113,7 @@ async function main() {
               'seed-family',
               'identity alex|robin',
               'sessions',
+              'voice-failure startup|administration|off',
               'user TEXT',
               'assistant TEXT',
               'delegate',
@@ -125,6 +135,13 @@ async function main() {
               'quit',
             ],
           });
+          continue;
+        }
+        if (command === 'voice-failure') {
+          if (!['startup', 'administration', 'off'].includes(id))
+            throw new Error('Use voice-failure startup, administration or off.');
+          voiceFailureStatus = id === 'startup' ? 503 : id === 'administration' ? 401 : undefined;
+          emit('voice-failure', { group: id });
           continue;
         }
         if (command === 'sessions') {

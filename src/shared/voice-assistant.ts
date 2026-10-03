@@ -1,9 +1,12 @@
 import type { TextAssistantView } from './text-assistant.js';
+import type { VoiceErrorGroup } from './voice-error.js';
 
 export interface VoiceAssistantView {
   id: string;
   phase: 'connecting' | 'listening' | 'working' | 'recovery' | 'closing' | 'closed' | 'error';
   error?: string;
+  errorGroup?: VoiceErrorGroup;
+  diagnosticId?: string;
   seconds: number | null;
   usageFinal: boolean;
   /** The checked result handed to the voice, not evidence that its audio was heard. */

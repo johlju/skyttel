@@ -242,7 +242,7 @@ ljudstart efter släpp lämnar mikrofonen av”.
 
 1. Håll mikrofonknappen längre än tröskeln. Läs beskedet om spärrat ljud.
 2. Släpp. Sätt uppspelningen till `allow` enligt ljudkontrollerna och
-   välj **Spela upp ljud**.
+   välj **Starta ljudet**.
 3. Kontrollera mikrofonen. Avsluta provmiljön enligt startguiden.
 
 **Förväntat resultat:**

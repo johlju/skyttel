@@ -1445,10 +1445,18 @@ export function HouseholdMap({
       disconnectedIdle: Boolean(conversation.disconnected && !ongoing),
       unavailable: conversation.available === false,
       taskFailed: Boolean(conversation.taskFailed),
+      ...(conversation.voice.failure ? { [conversation.voice.failure.noticeId]: true } : {}),
+      playbackStopped: conversation.voice.playbackBlocked,
     },
     ongoing,
     requested: conversation.noticeRequested ?? 0,
-    eventKey: `${conversation.session?.id}:${conversation.session?.revision}`,
+    eventKey: `${conversation.session?.id}:${conversation.session?.revision}:${conversation.voice.failure?.occurrence ?? 0}`,
+    diagnostic: conversation.voice.failure
+      ? {
+          noticeId: conversation.voice.failure.noticeId,
+          reference: conversation.voice.failure.diagnosticId,
+        }
+      : undefined,
   });
   const notice = noticeState.notice && (
     <ConversationNoticeCard
@@ -1456,6 +1464,9 @@ export function HouseholdMap({
       notice={noticeState.notice}
       closable={noticeState.closable}
       onDismiss={noticeState.dismiss}
+      onAction={
+        noticeState.notice.id === 'playbackStopped' ? conversation.voice.playAudio : undefined
+      }
       focusAfterRemoval={() =>
         active
           ? (workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null)
@@ -1467,7 +1478,6 @@ export function HouseholdMap({
     <VoiceBox
       conversation={conversation}
       notice={textViewOpen && active ? null : notice}
-      showErrors={!textViewOpen}
       hideStop={
         textViewOpen &&
         (narrow || window.matchMedia('(pointer: coarse)').matches) &&

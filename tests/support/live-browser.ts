@@ -142,6 +142,7 @@ export const liveBrowserFixtureSource = `
     value: async () => {
       microphoneRequests++;
       if (microphone === 'deny') throw new DOMException('Synthetic denied microphone', 'NotAllowedError');
+      if (microphone === 'busy') throw new DOMException('Synthetic busy microphone', 'NotReadableError');
       if (microphone === 'error') throw new DOMException('Synthetic missing microphone', 'NotFoundError');
       if (microphone === 'hold') await new Promise(resolve => { releaseMicrophone = resolve; });
       return silentStream(microphoneTracks);
@@ -206,7 +207,7 @@ declare global {
       close(): void;
       remoteTrack(): void;
       audioError(): void;
-      setMicrophone(value: 'allow' | 'deny' | 'error' | 'hold'): void;
+      setMicrophone(value: 'allow' | 'deny' | 'error' | 'hold' | 'busy'): void;
       releaseMicrophone(): void;
       setPlayback(value: 'allow' | 'blocked' | 'error'): void;
       setAutoStart(value: boolean): void;

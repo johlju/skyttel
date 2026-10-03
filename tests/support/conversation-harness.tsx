@@ -57,16 +57,25 @@ export function StandaloneConversation({
       ),
       unavailable: conversation.available === false,
       taskFailed: Boolean(conversation.taskFailed),
+      ...(conversation.voice.failure ? { [conversation.voice.failure.noticeId]: true } : {}),
+      playbackStopped: conversation.voice.playbackBlocked,
     },
     ongoing: conversationOngoing(conversation, textViewOpen),
     requested: conversation.noticeRequested ?? 0,
-    eventKey: `${conversation.session?.id}:${conversation.session?.revision}`,
+    eventKey: `${conversation.session?.id}:${conversation.session?.revision}:${conversation.voice.failure?.occurrence ?? 0}`,
+    diagnostic: conversation.voice.failure
+      ? {
+          noticeId: conversation.voice.failure.noticeId,
+          reference: conversation.voice.failure.diagnosticId,
+        }
+      : undefined,
   });
   const notice = noticeState.notice && (
     <ConversationNoticeCard
       notice={noticeState.notice}
       closable={noticeState.closable}
       onDismiss={noticeState.dismiss}
+      onAction={conversation.voice.playAudio}
       focusAfterRemoval={() => microphone.current}
     />
   );
@@ -100,7 +109,6 @@ export function StandaloneConversation({
         conversation={conversation}
         microphoneButton={() => microphone.current}
         notice={textViewOpen ? null : notice}
-        showErrors={!textViewOpen}
       />
       <ConversationNoticeAnnouncements announcement={noticeState.announcement} />
       <ConversationConsent conversation={conversation} chosen={chosen} />

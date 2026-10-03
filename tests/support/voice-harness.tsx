@@ -1,6 +1,10 @@
 import { useRef } from 'react';
+import {
+  ConversationNoticeAnnouncements,
+  ConversationNoticeCard,
+  useConversationNotice,
+} from '../../src/client/ConversationNotice.js';
 import { useVoice } from '../../src/client/use-voice.js';
-import { VoicePanel } from '../../src/client/VoiceAssistant.js';
 import { VoiceBox } from '../../src/client/VoiceBox.js';
 import { conversationTools } from './conversation.js';
 
@@ -21,6 +25,18 @@ export function StandaloneVoice({
 }) {
   const voice = useVoice(options);
   const button = useRef<HTMLButtonElement>(null);
+  const notices = useConversationNotice({
+    conditions: {
+      ...(voice.failure ? { [voice.failure.noticeId]: true } : {}),
+      playbackStopped: voice.playbackBlocked,
+    },
+    ongoing: voice.starting || voice.state === 'listening',
+    requested: 0,
+    eventKey: String(voice.failure?.occurrence ?? 0),
+    diagnostic: voice.failure
+      ? { noticeId: voice.failure.noticeId, reference: voice.failure.diagnosticId }
+      : undefined,
+  });
   return (
     <>
       <button
@@ -43,8 +59,20 @@ export function StandaloneVoice({
           cancel: () => voice.silence(onCancel),
         }}
         microphoneButton={() => button.current}
+        notice={
+          notices.notice && (
+            <ConversationNoticeCard
+              key={notices.notice.id}
+              notice={notices.notice}
+              closable={notices.closable}
+              onDismiss={notices.dismiss}
+              onAction={voice.playAudio}
+              focusAfterRemoval={() => button.current}
+            />
+          )
+        }
       />
-      <VoicePanel voice={voice} />
+      <ConversationNoticeAnnouncements announcement={notices.announcement} />
     </>
   );
 }

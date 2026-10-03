@@ -1,3 +1,4 @@
+import type { VoiceErrorGroup } from '../shared/voice-error.js';
 import { buildHeader, notifyOutdatedClient } from './build-guard.js';
 
 export class MapRequestError extends Error {
@@ -5,6 +6,7 @@ export class MapRequestError extends Error {
     readonly status: number,
     readonly code: string = 'request_failed',
     readonly diagnosticId?: string,
+    readonly voiceErrorGroup?: VoiceErrorGroup,
   ) {
     super(code);
   }
@@ -34,6 +36,9 @@ export async function request<T>(path: string, body?: unknown, signal?: AbortSig
       typeof result.diagnosticId === 'string' &&
         /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(result.diagnosticId)
         ? result.diagnosticId
+        : undefined,
+      ['startup', 'interrupted', 'administration'].includes(result.voiceErrorGroup)
+        ? result.voiceErrorGroup
         : undefined,
     );
   }

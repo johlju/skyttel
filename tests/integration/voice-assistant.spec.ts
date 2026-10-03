@@ -721,7 +721,9 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
           () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
         )
         .toBe(++completions);
-      await expect(assistant(page).getByRole('alert')).toContainText('Inget sparades');
+      await expect(page.getByRole('region', { name: 'Samtalsnotis', exact: true })).toContainText(
+        'Skyttel kunde inte slutföra uppdraget. Försök igen.',
+      );
       // The next utterance uses the review that the actual browser has received.
       await expect(voiceBox(page)).toHaveText('Lyssnar');
     }
@@ -736,7 +738,9 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
       ),
     ).toBe(true);
     await expect.poll(() => openVoiceConnections(page), { timeout: 15_000 }).toBe(0);
-    await expect(assistant(page).getByRole('alert')).toContainText('Röstanslutningen avbröts');
+    await expect(page.getByRole('region', { name: 'Samtalsnotis', exact: true })).toContainText(
+      'Rösten avbröts. Tryck på mikrofonknappen för att fortsätta.',
+    );
     release([
       modelTool('propose_object', {
         version: 1,
@@ -746,7 +750,7 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
         value: { ...value, name: 'För sent' },
       }),
     ]);
-    await expect(assistant(page).getByRole('status')).not.toContainText('arbetar');
+    await expect(voiceBox(page)).toHaveCount(0);
     const map = await (await page.request.get(path)).json();
     expect(map.objects).toEqual([]);
     expect(map.draft.changes).toMatchObject([{ id: 'lo', after: { name: 'Lo Exempel' } }]);
@@ -758,10 +762,10 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
       ),
     ).toBe(true);
     await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeEditable();
-    const voicePanel = page.getByRole('region', { name: 'Skyttels röst', exact: true });
+    const voiceNotice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
     await page.evaluate(() => window.skyttelVoiceFixture.setMicrophone('deny'));
     await chooseConversationVoice(page);
-    await expect(voicePanel.getByRole('alert')).toContainText('Mikrofonen tilläts inte');
+    await expect(voiceNotice).toContainText('Webbläsaren tillåter inte mikrofonen');
     await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeEditable();
     await page.evaluate(() => {
       window.skyttelVoiceFixture.setMicrophone('allow');
@@ -769,7 +773,7 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
     });
     await openConversationText(page);
     await chooseConversationVoice(page);
-    await expect(voicePanel.getByRole('alert')).toContainText('stoppade ljuduppspelningen');
+    await expect(voiceNotice).toContainText('Webbläsaren stoppade ljudet.');
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     expect(
       await page.evaluate(() =>
@@ -777,8 +781,8 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
       ),
     ).toBe(true);
     await page.evaluate(() => window.skyttelVoiceFixture.setPlayback('allow'));
-    await voicePanel.getByRole('button', { name: 'Spela upp ljud' }).click();
-    await expect(voicePanel.getByRole('button', { name: 'Spela upp ljud' })).toHaveCount(0);
+    await voiceNotice.getByRole('button', { name: 'Starta ljudet' }).click();
+    await expect(voiceNotice.getByRole('button', { name: 'Starta ljudet' })).toHaveCount(0);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     await turnMicrophoneOff(page);
     await signOut(page);

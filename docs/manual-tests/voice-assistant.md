@@ -137,7 +137,7 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    utan att lägga texten i utkastet. Godkänn assistentens båda val.
    Kontrollera att mikrofonen inte används före **Prata med Skyttel**.
    Välj knappen och tillåt mikrofonen. Om ljud blockeras, välj
-   **Spela upp ljud**.
+   **Starta ljudet**.
 2. Beskriv familjens Molnmusik med rösten: separat tjänstekonto, kontaktadress
    och inloggningsadress, Alex som avtalspart, Kim som betalare och ett kort
    som betalningsmedel. Lo använder tjänsten. Ange 149 kr per månad.
@@ -198,7 +198,7 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
 4. Kör `window.skyttelVoiceFixture.disconnect()` i webbläsarkonsolen.
    Kräv att **Prata med Skyttel** inte längre är intryckt och att
    mikrofonspåret är avstängt direkt. Efter tre sekunder är rösten avslutad
-   och felet **Röstanslutningen avbröts** visas.
+   och felet **Rösten avbröts** visas.
 5. Släpp det gamla anropet med `tool REQUEST propose_object` följt av JSON
    med ursprunglig `version`, `contentVersion`, Lo-förslagets `id`,
    `baseRevision:null` och `value` lika med kopierat `after`, men ändrat
@@ -1049,6 +1049,9 @@ from the held request. The launcher does not repair stale arguments.
 | `finalize on` | Restore final closure events for subsequent stops. |
 | `drop` | Drop the controlled server-side provider connection. |
 | `sessions` | Inspect current provider IDs and submitted commentary/close events. |
+| `voice-failure startup` | Reject new Live sessions with a temporary provider failure; exercises the short startup notice and diagnostic log. |
+| `voice-failure administration` | Reject new Live sessions with an authentication failure; exercises the administrator notice and diagnostic log. |
+| `voice-failure off` | Restore successful provider startup for retries. |
 | `restart` | Reject held responses and restart with the same temporary database and origin. |
 | `quit` | Stop the application and remove the temporary database. |
 <!-- markdownlint-enable MD013 -->
@@ -1093,8 +1096,8 @@ To simulate blocked audio playback, set this before starting voice:
 window.skyttelVoiceFixture.setPlayback('blocked');
 ```
 
-Require the visible playback message and **Spela upp ljud** button. Set playback
-to `allow`, then press that button; the simulated playback warning should clear.
+Require the visible playback message and **Starta ljudet** button. Set playback
+to `allow`, then press that button; the playback conversation notice should clear.
 No sound is produced. `setSound('microphone', true, 0.8)` and
 `setSound('remote', true)` simulate a loud user and Skyttel talking, and
 `false` ends either sound. During an active session, the following console
@@ -1108,7 +1111,7 @@ Use `reconnect()` within three seconds for a transient interruption. Leave it
 disconnected for the application's timeout, or use `fail()` for immediate
 failure. `audioError()` emits a media-output error. A transient recovery
 keeps the microphone off until another explicit press. Blocked playback
-keeps capture off until **Spela upp ljud** succeeds. Microphone-off keeps
+keeps capture off until **Starta ljudet** succeeds. Microphone-off keeps
 the connection alive for delayed answers. Open **Din profil → Inloggningssätt**,
 expand **Välj inställning** if needed and choose **Logga ut** to close and
 release all resources. Then inspect:

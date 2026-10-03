@@ -940,7 +940,11 @@ test.each([
     });
     expect(response.status()).toBe(503);
     const body = await response.json();
-    expect(body).toEqual({ error: code, diagnosticId: expect.any(String) });
+    expect(body).toEqual({
+      error: code,
+      voiceErrorGroup: [400, 401, 403, 404, 422].includes(status) ? 'administration' : 'startup',
+      diagnosticId: expect.any(String),
+    });
     const entries = log.mock.calls.map(([entry]) => JSON.parse(String(entry)));
     expect(entries).toContainEqual({
       event: 'voice_start_failed',

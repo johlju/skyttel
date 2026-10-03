@@ -5,6 +5,7 @@ import type { InitialItem } from 'openai/resources/live/live';
 import { SidebandWS } from 'openai/resources/live/sideband/ws';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantView } from '../shared/voice-assistant.js';
+import { voiceErrorGroup } from '../shared/voice-error.js';
 import { voiceAssistantInstructions } from './assistant-instructions.js';
 import type { Config } from './config.js';
 import { voiceConversationModel } from './conversation-capacity.js';
@@ -120,6 +121,19 @@ export function voiceAssistantRoutes({
     const canceling = voice.work?.stop();
     voice.view.phase = 'closing';
     voice.view.error = error;
+    if (error) {
+      voice.view.errorGroup = voiceErrorGroup(error, 'interrupted');
+      voice.view.diagnosticId = voice.usage.attemptId;
+      console.error(
+        JSON.stringify({
+          event: 'voice_interrupted',
+          diagnosticId: voice.usage.attemptId,
+          stage: 'session',
+          code: error,
+          group: voice.view.errorGroup,
+        }),
+      );
+    }
     clearInterval(voice.timer);
     let resolve!: () => void;
     voice.closed = new Promise<void>((done) => {
@@ -159,7 +173,8 @@ export function voiceAssistantRoutes({
     const requestHeaders = headers(context.req.raw.headers);
     const path = `/api/households/${encodeURIComponent(context.req.param('id'))}/text-assistant/${encodeURIComponent(context.req.param('sessionId'))}`;
     const current = await assistant(path, requestHeaders);
-    if (!client) return context.json({ error: 'voice_unavailable' }, 503);
+    if (!client)
+      return context.json({ error: 'voice_unavailable', voiceErrorGroup: 'administration' }, 503);
     const body = await context.req.json().catch(() => null);
     if (typeof body?.sdp !== 'string' || !body.sdp || body.sdp.length > 12000)
       return context.json({ error: 'invalid_request' }, 400);
@@ -427,13 +442,17 @@ export function voiceAssistantRoutes({
               : undefined,
         }),
       );
-      return context.json({ error: code, diagnosticId: usage.attemptId }, 503);
+      return context.json(
+        { error: code, voiceErrorGroup: voiceErrorGroup(code), diagnosticId: usage.attemptId },
+        503,
+      );
     }
   });
   routes.post(`${base}/:voiceId/:action`, async (context) => {
     const voice = voices.get(context.req.param('voiceId'));
     const path = `/api/households/${encodeURIComponent(context.req.param('id'))}/text-assistant/${encodeURIComponent(context.req.param('sessionId'))}`;
-    if (!voice || voice.path !== path) return context.json({ error: 'voice_session_expired' }, 404);
+    if (!voice || voice.path !== path)
+      return context.json({ error: 'voice_session_expired', voiceErrorGroup: 'interrupted' }, 404);
     if (context.req.header('Origin') !== config.origin)
       return context.json({ error: 'forbidden' }, 403);
     voice.assistant = await assistant(path, headers(context.req.raw.headers));

@@ -154,7 +154,6 @@ export function ConversationWorkspace({
           notice={notice}
         >
           {!notice && conversation.error && <p role="alert">{conversation.error}</p>}
-          {!notice && conversation.voice.error && <p role="alert">{conversation.voice.error}</p>}
           <div className="text-view-task-controls">
             {(conversation.unknown || session?.phase === 'recovery') && (
               <button

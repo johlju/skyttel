@@ -99,7 +99,6 @@ export function VoiceBox({
   microphoneButton,
   focusAfterStop,
   notice,
-  showErrors = false,
   hideStop = false,
 }: {
   /** The voice, whether Skyttel works with a said or a written task, and how to stop the work. */
@@ -110,7 +109,6 @@ export function VoiceBox({
   /** The visible control to focus when the stop icon disappears. */
   focusAfterStop?: () => HTMLElement | null;
   notice?: ReactNode;
-  showErrors?: boolean;
   hideStop?: boolean;
 }) {
   const { voice } = conversation;
@@ -220,11 +218,6 @@ export function VoiceBox({
         </div>
       )}
       {notice}
-      {showErrors && !notice && voice.error && (
-        <p role="alert" className="conversation-notice">
-          {voice.error}
-        </p>
-      )}
     </div>
   );
 }

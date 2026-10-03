@@ -97,6 +97,16 @@ session creation (`create`) from the server control connection (`sideband`).
 Use these fields to investigate credentials, model access, quota or network
 failures without collecting microphone audio or household content.
 
+The public error group is `startup`, `interrupted` or `administration`; the
+browser maps it to a short conversation notice. Existing detailed error
+codes remain in startup responses and logs. A runtime failure records
+`voice_interrupted` with `diagnosticId`, `stage: session`, `code` and `group`.
+Its diagnostic ID is the voice attempt ID also used by usage records and
+is returned with the failed session in polling responses. Match the shown
+reference to that log entry to distinguish connection loss, provider
+failure and expiration. These records contain no provider error body,
+audio or household content.
+
 A denied microphone, blocked audio or broken voice connection leaves text
 and forms usable. Check browser permissions, secure origin and network
 access, then start a fresh voice connection. Voice does not reconnect
