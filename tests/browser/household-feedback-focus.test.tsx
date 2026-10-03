@@ -14,7 +14,7 @@ afterEach(() => {
 
 /** The browser renders the real map and panels against the public HTTP boundary.
  * Persistence and authorization of these same forms have real-SQLite unit cases. */
-async function open() {
+async function open(withDraft = true) {
   await page.viewport(1440, 900);
   const lo = {
     id: 'lo',
@@ -39,19 +39,22 @@ async function open() {
     relationships: [],
     objects: [lo],
     draft: {
-      version: 1,
-      changes: [
-        {
-          id: 'lo',
-          before: lo,
-          after: { ...lo, description: 'Privat förslag' },
-          type: person,
-          beforeType: person,
-        },
-      ],
+      version: withDraft ? 1 : 0,
+      changes: withDraft
+        ? [
+            {
+              id: 'lo',
+              before: lo,
+              after: { ...lo, description: 'Privat förslag' },
+              type: person,
+              beforeType: person,
+            },
+          ]
+        : [],
     },
   };
   const writes: { path: string; body: unknown }[] = [];
+  let failProposal = false;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     if (url.endsWith('/conversation-preferences'))
       return Response.json(defaultConversationPreferences);
@@ -67,6 +70,7 @@ async function open() {
     if (url.includes('/map?')) return Response.json(state);
     if (url.endsWith('/draft') && init?.method === 'POST') {
       writes.push({ path: url, body: JSON.parse(String(init.body)) });
+      if (failProposal) throw new Error('Synthetic proposal transport failure');
     }
     throw new Error(`Unexpected request: ${url}`);
   });
@@ -77,7 +81,12 @@ async function open() {
   );
   await expect.element(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
-  return { writes };
+  return {
+    writes,
+    failProposal: () => {
+      failProposal = true;
+    },
+  };
 }
 
 const feedback = () => page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
@@ -109,5 +118,46 @@ test('closed draft feedback opens its review and resumes the retained object fie
     .toBeVisible();
   await expect
     .element(review.getByText('Beskrivning: Sparad beskrivning', { exact: true }))
+    .toBeVisible();
+});
+
+test('closed unsent new-object form resumes from feedback and an uncertain icon prerequisite refresh restores its focus without retrying', async () => {
+  const home = await open(false);
+  await feedback().getByRole('button', { name: 'Sparförsök och kvitton', exact: true }).click();
+  await expect
+    .element(page.getByRole('heading', { name: 'Mina sparförsök', exact: true }))
+    .toBeVisible();
+  await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+  const name = page.getByLabelText('Objektets namn', { exact: true });
+  await name.fill('Privat oskickat objekt');
+  await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
+  await expect.element(name).not.toBeVisible();
+  await feedback().getByRole('button', { name: 'Fortsätt redigera', exact: true }).click();
+  await expect.element(name).toHaveValue('Privat oskickat objekt');
+  await expect.element(name).toHaveFocus();
+  expect(home.writes).toEqual([]);
+  home.failProposal();
+  const submit = page.getByRole('button', {
+    name: 'Lägg uppgifterna i utkastet först',
+    exact: true,
+  });
+  await submit.click();
+  const refresh = page.getByRole('button', { name: 'Hämta aktuellt underlag', exact: true });
+  await expect.element(refresh).toBeVisible();
+  await refresh.click();
+  await expect.element(refresh).not.toBeInTheDocument();
+  await expect.element(submit).toHaveFocus();
+  await expect.element(name).toHaveValue('Privat oskickat objekt');
+  expect(home.writes).toHaveLength(1);
+  expect(home.writes[0].body).toMatchObject({
+    version: 0,
+    contentVersion: 1,
+    value: { name: 'Privat oskickat objekt' },
+  });
+  await expect
+    .element(feedback().getByText('Inga osparade förslag', { exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true }))
     .toBeVisible();
 });
