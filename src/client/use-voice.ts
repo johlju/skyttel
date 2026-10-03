@@ -20,6 +20,8 @@ export type Voice = {
   phase: VoiceAssistantView['phase'] | null;
   /** What the user is told about the microphone. It is off while the voice starts. */
   microphone: 'off' | 'on';
+  /** Retained user choice during an internal pause; never announce it as a toggle. */
+  microphoneAnnouncement?: 'off' | 'on';
   starting: boolean;
   /** Skyttel is heard. */
   speaking: boolean;

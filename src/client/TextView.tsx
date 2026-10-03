@@ -9,7 +9,6 @@ import { ConversationWidthHandle } from './ConversationWidthHandle.js';
 import type { Conversation } from './use-conversation.js';
 import type { useConversationPreferences } from './use-conversation-preferences.js';
 import { useConversationViewport } from './use-conversation-viewport.js';
-import { voiceBoxStatus } from './VoiceBox.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
 
 /**
@@ -212,7 +211,7 @@ export function TextView({
               queued={session?.queuedMessages ?? 0}
               computer={computer}
               announce={!hidden}
-              announceWorking={voiceBoxStatus(conversation.voice, working)?.id !== 'working'}
+              announceWorking={false}
             />
           </div>
           <p className="text-view-canceled" aria-live="polite" aria-atomic="true">

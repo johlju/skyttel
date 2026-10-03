@@ -33,6 +33,11 @@
 .conversation-notice-content > button {
   margin-top: 8px;
 }
+.household-map.workspace-shell .conversation-notice-content > button {
+  width: auto;
+  max-width: 100%;
+  min-height: 44px;
+}
 .household-map.workspace-shell .conversation-notice-close {
   display: grid;
   place-items: center;
@@ -57,14 +62,34 @@
 .conversation-corner {
   gap: 8px;
 }
-.text-view > .conversation-notice,
-.text-view-conversation > .conversation-notice {
+.conversation-notice[data-inline="true"] {
+  position: fixed;
+  left: var(--notice-left);
+  top: var(--notice-top);
+  width: var(--notice-width);
+  max-height: calc(var(--work-height, 100dvh) - var(--tools-height, 100px) - 100px);
+  overflow-y: auto;
   flex: none;
-  width: auto;
   max-width: none;
   border-width: 1px 0 0;
   border-radius: 0;
   box-shadow: none;
+}
+.text-view-notice-slot {
+  flex: none;
+  height: var(--notice-height, 0px);
+}
+/* Keep the card fixed to its visual slot, outside the toolbar's scroll area.
+   Translate only the voice box; a transformed ancestor would instead make
+   fixed notice coordinates relative to the corner on a narrow screen. */
+.household-map.workspace-shell[data-narrow="true"]
+.conversation-corner:has(.conversation-notice[data-inline="true"]) {
+  transform: none;
+}
+.household-map.workspace-shell[data-narrow="true"]
+  .conversation-corner:has(.conversation-notice[data-inline="true"])
+  .voice-box {
+  transform: translateY(-100%);
 }
 .household-map.workspace-shell .workspace-tools button[data-unavailable="true"] {
   opacity: 0.6;
@@ -79,7 +104,7 @@
   .household-map.workspace-shell .conversation-corner:has(.conversation-notice) {
     left: 12px;
   }
-  .conversation-corner .conversation-notice {
+  .conversation-corner .conversation-notice:not([data-inline="true"]) {
     order: -1;
     width: 100%;
     max-width: none;
@@ -88,5 +113,14 @@
     .conversation-notice
   ) {
     padding-bottom: calc(var(--conversation-corner-height, 0px) + 24px);
+  }
+}
+/* The upper display row must leave room for the conversation controls above
+   it. Keep the protected row as the corner's floor, rather than putting the
+   corner over either the toolbar or that row. Short viewports use their
+   existing scrolling layout instead. */
+@media (max-width: 700px) and (min-height: 451px) {
+  .household-map.workspace-shell .spatial-display-tools .spatial-bottom-bar {
+    top: max(142px, var(--conversation-controls-bottom, 142px));
   }
 }

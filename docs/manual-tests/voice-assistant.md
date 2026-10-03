@@ -935,6 +935,15 @@ höjd och pekmål kontrolleras automatiskt i
 testfall vars titel börjar med “röstrutan står på sin plats”. På riktig
 enhet prövas platsen i TAL-17.
 
+Placeringsproven kräver att hela röstrutan är synlig och står ovanför
+den faktiska raden med **Återställ vy**, kartans återkoppling och
+utkastets återkoppling, utan överlappning. På smal skärm kan dessa
+skyddade ytor följa den synliga skärmens rullningsflöde; de bestämmer
+gränsen som rutan måste lämna fri. Rutan ska inte hamna under kartans
+rad eller täcka verktygsraden när textvyn stängs. Samtalsdelarnas
+samlade läsordning, statusförekomster och kvarstående hjälpmedelsprov
+finns i [den samlade bedömningen](conversation-accessibility.md).
+
 ## Controlled voice fixture
 
 Use this disposable fixture to check Skyttel's voice controls, delegation,

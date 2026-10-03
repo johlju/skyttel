@@ -107,12 +107,15 @@ export function ConversationNoticeCard({
   onDismiss,
   onAction,
   focusAfterRemoval,
+  inline = false,
 }: {
   notice: ConversationNotice;
   closable: boolean;
   onDismiss: () => void;
   onAction?: () => void;
   focusAfterRemoval: () => HTMLElement | null;
+  /** Visual placement changes; the reading order and card identity stay put. */
+  inline?: boolean;
 }) {
   const element = useRef<HTMLElement>(null);
   const restore = useRef(focusAfterRemoval);
@@ -129,6 +132,7 @@ export function ConversationNoticeCard({
       className="conversation-notice"
       aria-label="Samtalsnotis"
       data-kind={notice.kind}
+      data-inline={inline || undefined}
     >
       <svg
         viewBox="0 0 24 24"

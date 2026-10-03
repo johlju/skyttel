@@ -227,7 +227,9 @@ test.describe('smal mobil med återkoppling', () => {
         .click();
       await field(page).fill('Ett kontrollerat fel.');
       await view(page).getByRole('button', { name: 'Skicka', exact: true }).click();
-      const close = view(page).getByRole('button', { name: 'Stäng notisen', exact: true });
+      const close = page
+        .getByRole('region', { name: 'Samtalsnotis', exact: true })
+        .getByRole('button', { name: 'Stäng notisen', exact: true });
       await expect(close).toBeVisible();
       const closeBox = await bounds(close);
       expect(closeBox.width).toBe(44);
@@ -250,7 +252,7 @@ test.describe('kort mobil med lång notis', () => {
       await startConversationWithText(page);
       await field(page).fill('Ett kontrollerat fel.');
       await view(page).getByRole('button', { name: 'Skicka', exact: true }).click();
-      const notice = view(page).locator('.conversation-notice');
+      const notice = page.getByRole('region', { name: 'Samtalsnotis', exact: true });
       await expect(notice).toContainText('Skyttel kunde inte slutföra uppdraget. Försök igen.');
       const close = notice.getByRole('button', { name: 'Stäng notisen', exact: true });
       const closeBox = await bounds(close);

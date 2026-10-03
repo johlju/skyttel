@@ -141,7 +141,7 @@ export function WorkspaceTools({
   const microphoneDescription = voiceControl?.starting
     ? 'Avbryt starten av rösten'
     : `Prata med Skyttel (${microphoneShortcut()}). Håll in för att tala tills du släpper.`;
-  const voiceDescription = `${microphoneDescription}${conversationUnavailable && !conversationOngoing ? ' Inte tillgängligt just nu.' : ''}`;
+  const voiceDescription = `${microphoneDescription}${conversationUnavailable ? ' Inte tillgängligt just nu.' : ''}`;
   const utilityPanel = useRef<HTMLElement>(null);
   useEffect(() => {
     if (utility) utilityPanel.current?.querySelector<HTMLElement>('h2')?.focus();
@@ -216,9 +216,8 @@ export function WorkspaceTools({
               aria-description={
                 target === 'voice' && !touch
                   ? voiceDescription
-                  : (target === 'voice' || target === 'conversation') &&
-                      conversationUnavailable &&
-                      !conversationOngoing
+                  : conversationUnavailable &&
+                      (target === 'voice' || (target === 'conversation' && !conversationOngoing))
                     ? `${label}. Inte tillgängligt just nu.`
                     : undefined
               }
@@ -240,9 +239,6 @@ export function WorkspaceTools({
                 target === 'voice' && conversationOngoing
                   ? !conversationUnavailable && voiceControl?.disabled
                   : undefined
-              }
-              aria-disabled={
-                (target === 'voice' && conversationOngoing && conversationUnavailable) || undefined
               }
               aria-pressed={target === 'voice' ? voiceControl?.microphone === 'on' : undefined}
               aria-expanded={target === 'conversation' ? textViewOpen : undefined}

@@ -59,7 +59,7 @@ import {
 } from './SaveOperations.js';
 import { ProposalSymbol, SpatialMap } from './SpatialMap.js';
 import { ConversationWorkspace } from './TextAssistant.js';
-import { VoiceBox } from './VoiceBox.js';
+import { VoiceBox, VoiceStatusAnnouncements } from './VoiceBox.js';
 import { WelcomeGuidance } from './WelcomeGuidance.js';
 import { type PanelAnchor, type PanelFocusRequest, WorkspacePanels } from './WorkspacePanels.js';
 import {
@@ -425,14 +425,28 @@ export function HouseholdMap({
       );
       if (tools) workspace.current?.style.setProperty('--tools-height', `${tools.offsetHeight}px`);
       const composer = workspace.current?.querySelector('.text-view-message');
-      const inlineNotice = workspace.current?.querySelector(
-        '.text-view-conversation > .conversation-notice',
-      );
+      const inlineNotice = workspace.current?.querySelector<HTMLElement>('.text-view-notice-slot');
+      const card = workspace.current?.querySelector<HTMLElement>('.conversation-notice');
+      if (inlineNotice && card) {
+        const slot = inlineNotice.getBoundingClientRect();
+        card.style.setProperty('--notice-left', `${slot.left}px`);
+        card.style.setProperty('--notice-top', `${slot.top}px`);
+        card.style.setProperty('--notice-width', `${slot.width}px`);
+        workspace.current?.style.setProperty('--notice-height', `${card.offsetHeight}px`);
+      }
       if (composer)
         workspace.current?.style.setProperty(
           '--composer-top',
           `${(inlineNotice ?? composer).getBoundingClientRect().top - 4}px`,
         );
+      const corner = workspace.current?.querySelector<HTMLElement>('.conversation-corner');
+      const visibleTools = workspace.current?.querySelector<HTMLElement>('.workspace-tools');
+      const cornerHeight = corner?.offsetHeight ?? 0;
+      const minimumFloor = (visibleTools?.getBoundingClientRect().bottom ?? 0) + cornerHeight + 12;
+      workspace.current?.style.setProperty(
+        '--conversation-controls-bottom',
+        `${minimumFloor + 8}px`,
+      );
       const floor = Math.min(
         viewport.height + viewport.offset - 12,
         ...['.spatial-bottom-bar', '.workspace-feedback', '.workspace-voice-controls']
@@ -440,6 +454,8 @@ export function HouseholdMap({
           .filter((element): element is HTMLElement => Boolean(element?.offsetHeight))
           .map((element) => element.getBoundingClientRect().top),
       );
+      // An empty map can place its display row just below the toolbar. A tall
+      // corner must not cover those conversation buttons when text closes.
       workspace.current?.style.setProperty('--conversation-floor', `${floor - 8}px`);
     };
     measure();
@@ -453,7 +469,9 @@ export function HouseholdMap({
       textViewOpen && '.text-view-message',
       textViewOpen && '.text-view',
       textViewOpen && '.text-view-body',
-      textViewOpen && '.text-view-conversation > .conversation-notice',
+      textViewOpen && '.text-view-notice-slot',
+      '.conversation-notice',
+      '.conversation-corner',
     ]
       .filter(Boolean)
       .join(', ');
@@ -1524,12 +1542,14 @@ export function HouseholdMap({
           ? (workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null)
           : document.querySelector<HTMLElement>('.settings-return')
       }
+      inline={textViewOpen && active}
     />
   );
   const voiceBox = (
     <VoiceBox
       conversation={conversation}
-      notice={textViewOpen && active ? null : notice}
+      announce={false}
+      notice={notice}
       hideStop={textViewOpen && !viewport.computer && conversation.working}
       microphoneButton={() =>
         workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null
@@ -1748,6 +1768,14 @@ export function HouseholdMap({
       )}
       {/* Outside the map, where its tools are not shown, the voice box still says what the voice does. */}
       {!active && voiceBox}
+      <VoiceStatusAnnouncements
+        conversation={conversation}
+        textViewOpen={textViewOpen && active}
+        microphoneOffExplained={noticeState.notice?.id === 'disconnectedActive'}
+        microphoneButton={() =>
+          workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null
+        }
+      />
       <ConversationNoticeAnnouncements announcement={noticeState.announcement} />
       <p className="visually-hidden text-button-announcement" aria-live="polite" aria-atomic="true">
         <span key={textButton.announcement.count}>{textButton.announcement.text}</span>
@@ -1946,7 +1974,9 @@ export function HouseholdMap({
           showDraftOnStart={conversationPreferences.preferences.showDraftOnStart}
           preferencesKnown={conversationPreferences.known}
           widthPreferences={conversationPreferences}
-          notice={active ? notice : null}
+          notice={
+            active && notice ? <div className="text-view-notice-slot" aria-hidden="true" /> : null
+          }
           onCloseTextView={closeTextView}
           householdId={householdId}
           renderWorkspace={(work, floatingStatus) => (

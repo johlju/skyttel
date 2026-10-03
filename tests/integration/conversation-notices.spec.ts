@@ -119,7 +119,9 @@ test('NOT-02: bruten kontakt stoppar mikrofon och sändning medan texten går at
     await page.context().setOffline(true);
     await expect(notice(page)).toContainText(disconnectedActive);
     await expect(notice(page).getByRole('button', { name: 'Stäng notisen' })).toHaveCount(0);
-    await expect(microphoneButton(page)).toBeDisabled();
+    await expect(microphoneButton(page)).toBeEnabled();
+    await expect(microphoneButton(page)).not.toHaveAttribute('aria-disabled');
+    await expect(microphoneButton(page)).toHaveAccessibleDescription(/Inte tillgängligt just nu\./);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await expect
       .poll(() =>
@@ -175,7 +177,8 @@ test('NOT-03: en notis flyttas till textvyn utan ny uppläsning och försvinner 
         element.dataset.announcementIdentity = 'first';
       });
     await textButton(page).click();
-    await expect(textView(page).getByRole('region', { name: 'Samtalsnotis' })).toBeVisible();
+    await expect(notice(page)).toBeVisible();
+    await expect(notice(page)).toHaveAttribute('data-inline', 'true');
     await expect(notice(page)).toHaveCount(1);
     await expect(assertive(page).locator('span')).toHaveAttribute(
       'data-announcement-identity',

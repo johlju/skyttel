@@ -12,6 +12,45 @@ import {
 
 afterEach(cleanup);
 
+test.each([
+  ['saveChecking', 'polite'],
+  ['saveCheckFailed', 'assertive'],
+  ['disconnectedActive', 'assertive'],
+  ['disconnectedIdle', 'assertive'],
+  ['unavailable', 'assertive'],
+  ['contextFull', 'assertive'],
+  ['microphoneDenied', 'assertive'],
+  ['microphoneMissing', 'assertive'],
+  ['microphoneBusy', 'assertive'],
+  ['voiceUnsupported', 'assertive'],
+  ['voiceStartFailed', 'assertive'],
+  ['voiceInterrupted', 'assertive'],
+  ['voiceAdministration', 'assertive'],
+  ['consentRevoked', 'assertive'],
+  ['taskFailed', 'polite'],
+  ['playbackStopped', 'polite'],
+] as const)('%s announces its text and action in the specified %s region', (id, live) => {
+  function Screen() {
+    const state = useConversationNotice({
+      conditions: { [id]: true },
+      ongoing: true,
+      requested: 0,
+      eventKey: 'occurrence',
+    });
+    return <ConversationNoticeAnnouncements announcement={state.announcement} />;
+  }
+  render(<Screen />);
+  const definition = firstConversationNotice({ [id]: true });
+  const action = definition && 'action' in definition ? definition.action : '';
+  expect(document.querySelector(`[aria-live="${live}"]`)?.textContent).toBe(
+    `${definition?.text}${action ? ` ${action}.` : ''}`,
+  );
+  expect(
+    document.querySelector(`[aria-live="${live === 'polite' ? 'assertive' : 'polite'}"]`)
+      ?.textContent,
+  ).toBe('');
+});
+
 test('all conversation situations follow the single priority order, including future notices', () => {
   const order = [
     'saveChecking',

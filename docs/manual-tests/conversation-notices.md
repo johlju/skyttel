@@ -91,7 +91,9 @@ texten går att skriva och läsa”.
 
 **Förväntat resultat:**
 
-- Mikrofonen stängs av vid avbrottet och dess knapp är inaktiverad.
+- Mikrofonen stängs av vid avbrottet. Knappen ser avstängd ut men är
+  tillgänglig för hjälpmedel; beskrivningen slutar med **Inte tillgängligt
+  just nu.** Ett tryck visar hindret utan att börja lyssna.
   Notisen säger **Ingen kontakt med Skyttel. Mikrofonen är av. Slå på den
   igen när kontakten är tillbaka.** Den har ingen stängknapp.
 - Textknappen fungerar. Samtalstexten går att läsa och meddelandefältet

@@ -492,18 +492,20 @@ for (const [name, width, height, place] of [
       const feedback = page.locator('.workspace-feedback');
       await expect(feedback).toContainText('Översikt återställd');
       const row = page.locator('.spatial-bottom-bar');
-      const feedbackHeight = (await bounds(feedback)).height;
       const check = async () => {
         const box = await bounds(voiceBox(page));
         const margin = place === 'top' ? 24 : 12;
         expect(Math.round(width - box.right)).toBe(margin);
         if (place === 'top') expect(Math.round(box.y)).toBe(24);
         else {
-          // At the bottom edge the box stands on the status card, below the map's row.
+          // The box stays above the actual protected map row and feedback.
+          // Their visible placement can follow the viewport's scrolling flow.
           const card = await bounds(page.locator('.workspace-voice-controls'));
-          expect(Math.round(card.y - box.bottom)).toBe(12);
-          expect(Math.round(height - card.bottom)).toBeLessThanOrEqual(24 + feedbackHeight);
-          expect(box.y).toBeGreaterThan((await bounds(row)).bottom);
+          const floor = Math.min(card.y, (await bounds(row)).y, (await bounds(feedback)).y);
+          expect(box.bottom).toBeLessThanOrEqual(floor);
+          expect(overlaps(box, card)).toBe(false);
+          expect(box.y).toBeGreaterThanOrEqual(0);
+          expect(box.bottom).toBeLessThanOrEqual(height);
         }
         expect(overlaps(box, await bounds(feedback))).toBe(false);
         expect(overlaps(box, await bounds(row))).toBe(false);
@@ -518,7 +520,7 @@ for (const [name, width, height, place] of [
       await expect.poll(() => model.waiting()).toBe(1);
       await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
       const working = await check();
-      // At the bottom edge the box stands on the status card, which grows while Skyttel works.
+      // At the bottom edge the protected surfaces can grow while Skyttel works.
       if (place === 'top') expect(working.y).toBe(first.y);
       expect(working.height).toBe(first.height);
       expect(working.width).toBeGreaterThan(first.width);

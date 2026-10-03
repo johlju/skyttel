@@ -58,6 +58,11 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 
 ## Områden
 
+- [Samtalets samlade hjälpmedelsflöde](conversation-accessibility.md):
+  naturlig läs- och tabbordning över verktyg, röstruta och flyttad notis,
+  en enda statusförekomst, återkomst och fokus, minskad rörelse samt
+  samlad WCAG-bedömning med kvarstående mänskliga prov.
+
 - [Automatisk kontroll av sparande](save-check.md): återkomst efter nätfel,
   ursprungligt försöks-ID efter omstart utan nytt medgivande, ett enda
   utfallsbesked med röstval och kvitto, återkallat medgivande med tappat

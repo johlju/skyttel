@@ -327,6 +327,28 @@ staplar när någon hörs. En skärmläsare får höra **Lyssnar** när mikrofon
 på, **Skyttel arbetar**, **Sparat** och **Mikrofonen är av** när röstrutan
 försvinner. **Väntar på ditt svar** läses inte upp: Skyttel har just sagt frågan.
 
+Tangentbordets och hjälpmedlets läsordning är **Prata med Skyttel**,
+**Skriv till Skyttel**, röstrutans **Avbryt**, notisens åtgärd,
+**Stäng notisen** och därefter återstående verktyg. Bara kontroller som
+finns och visas ingår. På smal skärm går fokus därför till nederkanten
+och tillbaka till verktygsraden. Notisen behåller ordningen när den
+visas ovanför textvyns meddelandefält.
+
+Samma arbete annonseras en gång även när både röstrutan och textvyn
+visar det. När mikrofonknappen redan har fokus förmedlar dess eget
+läge påslag och avslag, utan extra **Lyssnar** eller **Mikrofonen är av**.
+En kontakt-notis som själv säger att mikrofonen är av får heller ingen
+extra avstängningsuppläsning. Notiser tar inte fokus när de uppstår.
+Försvinner en notis medan dess knapp har fokus återgår fokus till
+**Prata med Skyttel**. Ett kontakt- eller tillgänglighetshinder som
+upphör får ett återkomstbesked; att själv stänga notisen ger inget sådant
+besked. En visuellt avstängd samtalsknapp går fortfarande att aktivera
+för att få hindret förklarat och har beskrivningen **Inte tillgängligt
+just nu.**
+
+Systemets minskade rörelse gäller också arbetsmarkeringen och alla
+samtalsytors övergångar. Skyttel har ingen egen rörelseinställning.
+
 Om ett sparresultat är oklart kontrollerar Skyttel det automatiskt när
 kontakten är tillbaka. Under kontrollen är Skicka och mikrofonen avstängda.
 Skyttel ställer nödvändiga frågor

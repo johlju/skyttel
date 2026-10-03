@@ -90,59 +90,92 @@ function Waveform({ form, level }: { form: VoiceBoxStatus['wave']; level: () => 
 }
 
 /**
- * The voice box: a waveform, one status word and the stop icon. Only the stop
- * icon can be pressed. What a screen reader is told stands apart from the box,
- * because the last announcement comes when the box has gone.
+ * One status occurrence across the voice box, text view and Settings. The
+ * household keeps this mounted when the visible surfaces move or disappear.
  */
-export function VoiceBox({
+export function VoiceStatusAnnouncements({
   conversation,
   microphoneButton,
-  focusAfterStop,
-  notice,
-  hideStop = false,
+  textViewOpen = false,
+  microphoneOffExplained = false,
 }: {
-  /** The voice, whether Skyttel works with a said or a written task, and how to stop the work. */
-  conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'> &
-    Partial<Pick<Conversation, 'session'>>;
-  /** The button that turns the microphone on and off, where there is one. */
+  conversation: Pick<Conversation, 'voice' | 'working'> & Partial<Pick<Conversation, 'session'>>;
   microphoneButton?: () => HTMLElement | null;
-  /** The visible control to focus when the stop icon disappears. */
-  focusAfterStop?: () => HTMLElement | null;
-  notice?: ReactNode;
-  hideStop?: boolean;
+  textViewOpen?: boolean;
+  microphoneOffExplained?: boolean;
 }) {
   const { voice } = conversation;
   const status = voiceBoxStatus(voice, conversation.working);
-  const on = voice.microphone === 'on';
+  const on = (voice.microphoneAnnouncement ?? voice.microphone) === 'on';
   const [announcement, setAnnouncement] = useState({ count: 0, text: '' });
   const shown = status?.id ?? null;
   const before = useRef({ on, shown });
   // Whether the user has yet to be told that the microphone, once on, is off.
   const owesOff = useRef(on);
   const announcedSave = useRef('');
+  const toldWork = useRef(false);
+  const working = voice.working || conversation.working;
   const microphoneButtonNow = useRef(microphoneButton);
   microphoneButtonNow.current = microphoneButton;
-  const focusAfterStopNow = useRef(focusAfterStop);
-  focusAfterStopNow.current = focusAfterStop;
   useEffect(() => {
     const previous = before.current;
     before.current = { on, shown };
     if (on) owesOff.current = true;
+    if (!working) toldWork.current = false;
     // A screen reader says the state of the button by itself while the focus is on it.
     const button = microphoneButtonNow.current?.();
     const saysState = Boolean(button) && document.activeElement === button;
     let text = '';
     if (on && !previous.on) text = saysState ? '' : 'Lyssnar';
-    else if (shown === 'working' && previous.shown !== 'working') text = 'Skyttel arbetar';
-    else if (shown === 'saved' && announcedSave.current !== voice.savedId) {
+    else if (working && !toldWork.current && (shown === 'working' || textViewOpen)) {
+      toldWork.current = true;
+      text = 'Skyttel arbetar';
+    } else if (shown === 'saved' && announcedSave.current !== voice.savedId) {
       announcedSave.current = voice.savedId ?? '';
       text = 'Sparat';
     } else if (!on && !shown && owesOff.current) {
       owesOff.current = false;
-      text = saysState ? '' : 'Mikrofonen är av';
+      text = saysState || microphoneOffExplained ? '' : 'Mikrofonen är av';
     }
     if (text) setAnnouncement(({ count }) => ({ count: count + 1, text }));
-  }, [on, shown, voice.savedId]);
+  }, [on, shown, voice.savedId, working, textViewOpen, microphoneOffExplained]);
+  return (
+    <>
+      <p className="voice-announcement" aria-live="polite" aria-atomic="true">
+        <span key={announcement.count}>{announcement.text}</span>
+      </p>
+      <ContextAnnouncement
+        percentage={conversation.session?.contextPercentage ?? 0}
+        visible={Boolean(status)}
+        conversationKey={`${conversation.session?.id ?? ''}:${conversation.session?.contextRevision ?? 0}`}
+      />
+    </>
+  );
+}
+
+export function VoiceBox({
+  conversation,
+  microphoneButton,
+  focusAfterStop,
+  notice,
+  hideStop = false,
+  announce = true,
+}: {
+  conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'> &
+    Partial<Pick<Conversation, 'session'>>;
+  microphoneButton?: () => HTMLElement | null;
+  focusAfterStop?: () => HTMLElement | null;
+  notice?: ReactNode;
+  hideStop?: boolean;
+  /** The household mounts announcements once, outside changing visual surfaces. */
+  announce?: boolean;
+}) {
+  const { voice } = conversation;
+  const status = voiceBoxStatus(voice, conversation.working);
+  const microphoneButtonNow = useRef(microphoneButton);
+  microphoneButtonNow.current = microphoneButton;
+  const focusAfterStopNow = useRef(focusAfterStop);
+  focusAfterStopNow.current = focusAfterStop;
   // The stop icon goes away while it may have the focus, which must not be lost.
   const stopFocused = useRef(false);
   const stopShown = Boolean(status?.stop && !hideStop);
@@ -166,15 +199,9 @@ export function VoiceBox({
   }, []);
   return (
     <div className="conversation-corner" ref={corner}>
-      {/* A new element each time, so that the same words are read again. */}
-      <p className="voice-announcement" aria-live="polite" aria-atomic="true">
-        <span key={announcement.count}>{announcement.text}</span>
-      </p>
-      <ContextAnnouncement
-        percentage={conversation.session?.contextPercentage ?? 0}
-        visible={Boolean(status)}
-        conversationKey={`${conversation.session?.id ?? ''}:${conversation.session?.contextRevision ?? 0}`}
-      />
+      {announce && (
+        <VoiceStatusAnnouncements conversation={conversation} microphoneButton={microphoneButton} />
+      )}
       {status && (
         // biome-ignore lint/a11y/useSemanticElements: a named group that is not a form
         <div className="voice-box" role="group" aria-label="Röstruta">

@@ -399,7 +399,7 @@
   min-width: 72px;
   padding: 4px 8px;
 }
-.text-view[data-short="true"] .conversation-notice {
+.household-map[data-short="true"] .conversation-notice[data-inline="true"] {
   min-height: 46px;
   max-height: max(46px, min(96px, calc(var(--work-height, 100dvh) - 144px)));
   overflow-y: auto;
