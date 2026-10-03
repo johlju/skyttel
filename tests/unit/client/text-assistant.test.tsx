@@ -196,7 +196,9 @@ test('voice can start directly after consent and text remains available if the m
   expect(screen.queryByRole('textbox', { name: 'Meddelande till Skyttel' })).toBeNull();
   await openConversationText();
   expect(await screen.findByRole('textbox', { name: 'Meddelande till Skyttel' })).toBeTruthy();
-  expect(await screen.findByRole('alert')).toBeTruthy();
+  expect((await screen.findByRole('region', { name: 'Samtalsnotis' })).textContent).toContain(
+    'Webbläsaren har inte stöd för röst. Du kan skriva till Skyttel.',
+  );
   expect(posts).toEqual([path]);
 });
 
