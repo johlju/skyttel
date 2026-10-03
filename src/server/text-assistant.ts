@@ -1140,6 +1140,7 @@ export function textAssistantRoutes({
       (session) =>
         session.householdId === context.req.param('id') &&
         session.phase === 'working' &&
+        householdAccess(database, session.actorId, session.householdId) &&
         contentOwner(database, session.householdId, session.actorId) === owner &&
         (!body.operationIds ||
           (session.pendingSave && body.operationIds.includes(session.pendingSave.operationId))),

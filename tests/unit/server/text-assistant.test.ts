@@ -4,7 +4,7 @@ import type { TextModelAttempt, TextModelUsage } from '../../../src/server/text-
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
-import { createInstallation } from '../../support/installation.js';
+import { createInstallation, robin } from '../../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -1994,4 +1994,68 @@ test('a delayed poll cannot authorize saving a draft newer than the browser revi
   const map = await (await browser.get(path.replace('/text-assistant', '/map'))).json();
   expect(map.objects).toEqual([]);
   expect(map.draft.changes).toHaveLength(2);
+});
+
+test('household recovery ignores a working session whose other actor lost membership', async () => {
+  let release!: (reply: ReturnType<typeof modelMessage>[]) => void;
+  let held = false;
+  const model = textModel(() => {
+    held = true;
+    return new Promise<ReturnType<typeof modelMessage>[]>((resolve) => {
+      release = resolve;
+    });
+  });
+  await setup(model.provider);
+  const other = await request.newContext();
+  try {
+    app.setIdentity(robin);
+    await signIn(other, app.origin, 'microsoft');
+    const { user } = await (await other.get(`${app.origin}/api/bootstrap`)).json();
+    const householdPath = path.replace('/text-assistant', '');
+    const invitation = await browser.post(`${householdPath}/invitations`, {
+      headers: { origin: app.origin },
+      data: { userId: user.id },
+    });
+    expect(invitation.status()).toBe(201);
+    const accepted = await other.post(`${app.origin}/api/invitations/accept`, {
+      headers: { origin: app.origin },
+      data: { code: (await invitation.json()).code },
+    });
+    expect(accepted.status()).toBe(200);
+    const started = await other.post(path, {
+      headers: { origin: app.origin },
+      data: approvedForVisit,
+    });
+    expect(started.status()).toBe(201);
+    const session = await started.json();
+    const sent = await other.post(`${path}/${session.id}/messages`, {
+      headers: { origin: app.origin },
+      data: {
+        revision: session.revision,
+        ...displayedVersion(session),
+        requestId: 'stale-task',
+        text: 'Beskriv mitt utkast.',
+      },
+    });
+    expect(sent.status()).toBe(202);
+    await expect.poll(() => held).toBe(true);
+    const removed = await browser.post(`${householdPath}/members/${user.id}/revoke`, {
+      headers: { origin: app.origin },
+      data: {},
+    });
+    expect(removed.status()).toBe(200);
+    const checked = await browser.post(`${path}/recover`, {
+      headers: { origin: app.origin },
+      data: {},
+    });
+    expect(checked.status(), await checked.text()).toBe(200);
+    expect(await checked.json()).toMatchObject({
+      reply: 'Kontrollen visar att utkastet inte sparades. Dina osparade ändringar ligger kvar.',
+      operations: [],
+    });
+    expect((await browser.get(path.replace('/text-assistant', '/map'))).status()).toBe(200);
+  } finally {
+    release?.([modelMessage('Det sena svaret ska inte visas.')]);
+    await other.dispose();
+  }
 });

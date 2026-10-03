@@ -244,6 +244,62 @@ behåller samma privata utkast”.
 - Förklaringen är det enda utfallsbeskedet i samtalet. En lyckad kontroll
   av ett osparat resultat visar ingen återförsöksknapp för själva kontrollen.
 
+## Återkallat medgivande
+
+### SPARKONTROLL-06: oklart sparförsök efter återkallat medgivande
+
+**Syfte:** Kontrollera ursprungligt kvitto när återkallandet avslutar samtalet,
+även om dess svar tappas. Ett medgivande får inte behövas för kontrollen.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo ligger i utkastet, textsamtalet och mikrofonen är på.
+Använd nätblockering för `/text-assistant/*/recover` så att den första
+kontrollen misslyckas. Behåll terminalen för modellens `held`-anrop.
+
+**Integrationstest:**
+[save-check.spec.ts](../../tests/integration/save-check.spec.ts), testfallen
+“SPARKONTROLL-06: ett oklart sparförsök kontrolleras efter återkallat
+medgivande utan nytt sparande” och samma titel med tillägget
+“även när återkallandets svar tappas”.
+
+**Steg:**
+
+1. Skriv **Spara hela utkastet.**. Släpp modellens `held` med
+   `tool REQUEST prepare_save {"version":VERSION,"contentVersion":CONTENT}`.
+   Släpp nästa anrop med `reply REQUEST Försöket är förberett.`.
+   Kräv kontrollfelnotisen. Anteckna det väntande ursprungliga ID:t
+   i **Utkast och historik → Tidigare sparförsök**.
+2. Skriv en ny text utan att skicka. Öppna **Inställningar → Samtal med
+   Skyttel** och välj **Återkalla medgivandet**. Bekräfta med
+   **Återkalla och avsluta samtalet**.
+3. Med ett normalt svar: kräv avstängd röst, återkallat medgivande och
+   ett verkligt kvitto. Gå tillbaka till kartan. Ingen gammal kontrollnotis
+   eller felnotis ska ligga kvar.
+4. Upprepa från ett nytt väntande försök. Bryt nu kontakten efter att
+   bekräftelsens `/conversation-consent/revoke` skickats men innan dess
+   svar når sidan. Ta bort nätblockeringen och återställ kontakten.
+   Automatiken tappar uttryckligen serverns lyckade svar; i ett manuellt
+   prov måste serverns återkallande bekräftas i nästa status.
+5. Kräv avstängd fångst direkt. Gå tillbaka till kartan. Kontrollnotisen
+   går före andra notiser och blockerar nytt arbete utan att fråga efter
+   medgivande. Släpp kontrollen genom att ta bort eventuell nätblockering.
+6. Kräv ett genomfört försök med samma ID, ägare och versioner samt ett
+   enda historikkvitto. Lo finns i kartan; inget nytt försök har skapats.
+7. Öppna textsamtalet och ge medgivandet för det nya samtalet. Den
+   oskickade texten finns kvar. Efter ett tappat återkallandesvar står
+   kontrollens förklaring en gång i samtalstexten. Efter ett normalt svar
+   är det gamla samtalet tomt och kvittot finns i utkastets återkoppling.
+
+**Förväntat resultat:**
+
+- Bekräftelsen avslutar fångst direkt, utan att avbryta ett registrerat
+  sparande med ett nytt modelluppdrag. Kontroll använder bara det gamla ID:t.
+- Ett tappat återkallandesvar förlorar varken kvitto eller oskickad text.
+  Kontrollen är oberoende av medgivande men kräver hushållstillgång.
+- Ett normalt återkallandesvar tar bort gamla kontrolltillstånd. Ingen
+  tidigare felnotis följer med till nästa samtal.
+
 ## Tillgänglighetsbedömning och körgränser
 
 Bedömningen är ett designmål för WCAG 2.2 AA, inte ett intyg om verifierad

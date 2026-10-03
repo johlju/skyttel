@@ -103,6 +103,15 @@ save. Use the [assistant recovery guidance](installation.md#recover-assistant-ac
 before retrying uncertain work. Final voice usage can be unavailable after a
 connection loss; retain that uncertainty in cost records.
 
+### Interrupted save recovery
+
+After contact returns, the application checks an uncertain save before it
+accepts new conversation work. An already registered save can finish with its
+original operation and content, even after conversation consent is revoked.
+Do not create a new save attempt to replace a missing reply. If the automatic
+check fails, restore household access and storage availability, then use the
+check action. Retain the original operation and its durable result.
+
 ### Conversation consent
 
 This release stores a saved conversation consent for each Skyttel user and

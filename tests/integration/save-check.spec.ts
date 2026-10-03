@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, openSettings, signIn } from '../support/client.js';
 import {
   microphoneButton,
   startConversationWithText,
@@ -418,3 +418,142 @@ test('SPARKONTROLL-05: ett avvisat väntande försök förklaras som osparat och
     await app.close();
   }
 });
+
+for (const lostRevocationReply of [false, true])
+  test(`SPARKONTROLL-06: ett oklart sparförsök kontrolleras efter återkallat medgivande utan nytt sparande${lostRevocationReply ? ' även när återkallandets svar tappas' : ''}`, async ({
+    page,
+  }) => {
+    const live = liveProvider();
+    let step = 0;
+    const model = textModel(() =>
+      step++ === 0
+        ? [modelTool('prepare_save', { version: 1, contentVersion: 1, operationId: 'provider-id' })]
+        : [modelMessage('Försöket är förberett.')],
+    );
+    const app = await createInstallation(undefined, {
+      modelFetch: model.provider,
+      liveFetch: live.provider,
+      liveSideband: live.attach,
+    });
+    let release: (() => void) | undefined;
+    try {
+      await signIn(page.request, app.origin);
+      const { household } = await (await createHousehold(page.request, app.origin)).json();
+      const base = `${app.origin}/api/households/${household.id}`;
+      const path = `${base}/map`;
+      const state = await (await page.request.get(path)).json();
+      await page.request.post(`${path}/draft`, {
+        headers: { origin: app.origin },
+        data: {
+          version: 0,
+          contentVersion: 1,
+          id: 'lo',
+          baseRevision: null,
+          value: { typeId: state.types[0].id, name: 'Lo Exempel', description: '' },
+        },
+      });
+      await page.addInitScript({ content: liveBrowserFixtureSource });
+      await page.goto(app.origin);
+      await startConversationWithText(page);
+      await turnMicrophoneOn(page);
+      await page.route('**/text-assistant/*/recover', (route) => route.abort());
+      await page.getByLabel('Meddelande till Skyttel').fill('Spara hela utkastet.');
+      await page.getByRole('button', { name: 'Skicka', exact: true }).click();
+      await expect(notice(page)).toContainText(
+        'Skyttel kunde inte kontrollera om utkastet sparades.',
+      );
+      const original = (await (await page.request.get(`${path}/operations`)).json()).operations[0];
+      expect(original.status).toBe('pending');
+      await page.getByLabel('Meddelande till Skyttel').fill('Text som inte har skickats.');
+      await openSettings(page);
+      await page
+        .locator('.settings-cards')
+        .getByRole('link', { name: /^Samtal med Skyttel/ })
+        .click();
+      await page.getByRole('button', { name: 'Återkalla medgivandet', exact: true }).click();
+      if (lostRevocationReply) {
+        await page.route('**/conversation-consent/revoke', async (route) => {
+          const response = await route.fetch();
+          expect(response.status()).toBe(200);
+          await route.abort();
+        });
+        await page.route('**/text-assistant/recover', async (route) => {
+          const response = await route.fetch();
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          await route.fulfill({ response });
+        });
+      }
+      await page
+        .getByRole('button', { name: 'Återkalla och avsluta samtalet', exact: true })
+        .click();
+      await expect
+        .poll(
+          async () =>
+            await page.evaluate(() =>
+              window.skyttelVoiceFixture
+                .stats()
+                .microphoneTracks.every((track) => track.state === 'ended'),
+            ),
+        )
+        .toBe(true);
+      if (lostRevocationReply) await expect.poll(() => typeof release).toBe('function');
+      else
+        await expect(
+          page.getByRole('status').filter({ hasText: 'Medgivandet är återkallat' }),
+        ).toBeVisible();
+      expect(
+        (await (await page.request.get(`${base}/conversation-consent`)).json()).saved,
+      ).toBeNull();
+      await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+      if (lostRevocationReply) {
+        await expect(notice(page)).toContainText(checking);
+        await expect(microphoneButton(page)).toBeDisabled();
+        await expect(page.getByRole('dialog', { name: 'Samtalsmedgivande' })).toHaveCount(0);
+        release?.();
+        await expect(
+          page.getByText(checking, { exact: true }).filter({ visible: true }),
+        ).toHaveCount(0);
+      } else {
+        await expect(notice(page)).toHaveCount(0);
+        await expect(
+          page.getByRole('status').filter({ hasText: `Kvitto: ${original.operationId}` }),
+        ).toBeVisible();
+      }
+      const operations = (await (await page.request.get(`${path}/operations`)).json()).operations;
+      expect(operations).toHaveLength(1);
+      expect(operations[0]).toMatchObject({
+        operationId: original.operationId,
+        householdId: original.householdId,
+        userId: original.userId,
+        contentVersion: original.contentVersion,
+        draftVersion: original.draftVersion,
+        status: 'succeeded',
+      });
+      expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([
+        operations[0].receipt,
+      ]);
+      expect((await (await page.request.get(path)).json()).draft.changes).toHaveLength(0);
+      expect(model.requests).toHaveLength(2);
+      await startConversationWithText(page);
+      await expect(page.getByLabel('Meddelande till Skyttel')).toHaveValue(
+        'Text som inte har skickats.',
+      );
+      if (lostRevocationReply) {
+        await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(saved);
+        await expect(
+          page.getByRole('log').getByRole('listitem').filter({ hasText: saved }),
+        ).toHaveCount(1);
+      } else
+        await expect(page.getByRole('log', { name: 'Samtalstext' })).toHaveText(
+          'Här visas det du och Skyttel säger och skriver.',
+        );
+      expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual(
+        operations,
+      );
+    } finally {
+      release?.();
+      await app.close();
+    }
+  });

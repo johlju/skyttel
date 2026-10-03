@@ -60,7 +60,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 
 - [Automatisk kontroll av sparande](save-check.md): återkomst efter nätfel,
   ursprungligt försöks-ID efter omstart utan nytt medgivande, ett enda
-  utfallsbesked med röstval och kvitto samt återförsök bara vid kontrollfel.
+  utfallsbesked med röstval och kvitto, återkallat medgivande med tappat
+  svar samt återförsök bara vid kontrollfel.
 
 - [Röstfel och ljudåterhämtning](voice-errors.md): fyra mikrofonhinder, tre
   servergrupper, felreferenser, stängning, återförsök och **Starta ljudet**

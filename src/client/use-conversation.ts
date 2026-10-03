@@ -645,9 +645,23 @@ export function useConversation({
       checkOccurrence.current = null;
     } catch (failure) {
       if (!mounted.current || epoch !== requestEpoch.current) return;
-      if (failure instanceof MapRequestError && failure.status === 404 && current) {
+      if (
+        failure instanceof MapRequestError &&
+        current &&
+        (failure.status === 404 ||
+          failure.code === conversationConsentRequired ||
+          failure.code === conversationConsentRevoked)
+      ) {
         active.current = null;
         setSession(null);
+        if (
+          failure.code === conversationConsentRequired ||
+          failure.code === conversationConsentRevoked
+        ) {
+          setSavedConsent(null);
+          setVisitConsent(false);
+          endVoice.current();
+        }
         setDiscovered(
           current.operations
             .filter(
@@ -801,6 +815,25 @@ export function useConversation({
     const outcome = await changeConsent(`${consentPath}/revoke`, {});
     revoking.current = false;
     if (!outcome) {
+      // The confirming gesture already ended local audio. A lost revocation
+      // reply cannot discard an uncertain save or trust the retired session.
+      const current = active.current;
+      const ids = current?.operations
+        .filter(
+          (item) => item.status === 'pending' || item.operationId === current.receipt?.operationId,
+        )
+        .map((item) => item.operationId);
+      if (unknown || current?.phase === 'recovery' || ids?.length) {
+        active.current = null;
+        setSession(null);
+        setDiscovered(ids?.length ? ids : discovered);
+        setUnknown(true);
+        setSaveCheckFailed(false);
+        setSavedConsent(null);
+        setVisitConsent(false);
+        setRequested(null);
+        callbacks.current.onEnded?.();
+      }
       setPending(false);
       return false;
     }
@@ -812,6 +845,12 @@ export function useConversation({
     setSession(null);
     setTranscript([]);
     setUnknown(false);
+    setDiscovered(null);
+    setSaveCheckFailed(false);
+    setChecking(false);
+    setNextCheckAt(0);
+    checkOccurrence.current = null;
+    checkedReplies.current.clear();
     setPending(false);
     setError('');
     setRequested(null);
