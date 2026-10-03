@@ -138,6 +138,6 @@ de lokala klienter som OpenAI beskriver; webbklienten har egen installation.
 
 Tillgången till anslutningar beror på klienten, ditt konto och arbetsytans
 inställningar. Om anslutningen inte är tillgänglig kan du fortsätta med
-Skyttels formulär eller den [inbyggda textassistenten](text-assistant.md).
+Skyttels formulär eller [Skriv till Skyttel](text-assistant.md#skriv-till-skyttel).
 Den externa anslutningen gäller text. För röst använder du
 [Tala med Skyttel](text-assistant.md#tala-med-skyttel) i appen.

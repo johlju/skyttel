@@ -61,11 +61,11 @@ Avbryt startar inget”.
    och **Avbryt**.
 2. Markera kryssrutan och välj **Avbryt**. Kontrollera att fokus står på
    **Prata med Skyttel** och att varken samtal eller mikrofon har startat.
-3. Välj **Samtal och text**. Kontrollera att kryssrutan är omarkerad igen.
+3. Välj **Skriv till Skyttel**. Kontrollera att kryssrutan är omarkerad igen.
    Stäng rutan med Escape.
 4. Upprepa med **Tala** och **Skriv** i kartans vägledning. Vägledningen
    ska ligga kvar när rutan stängs.
-5. Gå med Tab från sidans början till snabblänken **Till samtal och text**
+5. Gå med Tab från sidans början till snabblänken **Till samtalet med Skyttel**
    och välj den med Enter. Stäng rutan.
 
 **Förväntat resultat:**
@@ -97,19 +97,20 @@ medgivandet gäller besöket”.
 1. Välj **Prata med Skyttel** och **Godkänn och starta** utan att markera
    kryssrutan. Kontrollera att knappen är intryckt, att röstrutan visar
    **Lyssnar** och att ingen panel öppnas.
-2. Välj **Samtal och text** och **Avsluta samtalet**. Välj
-   **Samtal och text**. Samtalet ska starta direkt, med mikrofonen av.
-3. Avsluta samtalet. Öppna **Inställningar** och välj
-   **Tillbaka till kartan**. Välj **Samtal och text**; samtalet ska starta
-   direkt.
-4. Ladda om sidan. Välj **Samtal och text**. Medgivanderutan ska visas
+2. Välj **Skriv till Skyttel** och **Nytt samtal** i textvyn. Samtalstexten töms och Skyttel säger
+   att utkastet är tomt. Ingen medgivanderuta visas, och mikrofonen är
+   fortfarande på.
+3. Öppna **Inställningar** och välj **Tillbaka till kartan**. Välj
+   **Skriv till Skyttel** om textvyn är stängd; samtalet ska visas utan
+   medgivanderutan.
+4. Ladda om sidan. Välj **Skriv till Skyttel**. Medgivanderutan ska visas
    igen, med omarkerad kryssruta. Välj **Godkänn och starta**.
 
 **Förväntat resultat:**
 
 - Röstknappen startar samtalet med mikrofonen. Textknappen startar
   samtalet utan att begära mikrofonåtkomst.
-- Ett nytt samtal under samma besök frågar inte igen, inte heller efter
+- **Nytt samtal** frågar inte igen, och samtalet frågar inte igen efter
   ett besök i Inställningar.
 - Efter omladdningen frågar Skyttel igen. Inget medgivande har sparats.
 
@@ -131,13 +132,13 @@ andra medlemmar”.
 
 **Steg:**
 
-1. Som Alex, välj **Samtal och text**, markera
+1. Som Alex, välj **Skriv till Skyttel**, markera
    **Fråga inte igen för det här hushållet** och välj **Godkänn och starta**.
 2. Ladda om sidan och välj **Prata med Skyttel**. Samtalet ska starta
    direkt med mikrofonen.
 3. Kör `identity alex`. Logga in som Alex i ytterligare en webbläsarprofil,
-   som en andra enhet. Välj **Samtal och text**; samtalet ska starta direkt.
-4. Som Robin, välj **Samtal och text**. Medgivanderutan ska visas, med
+   som en andra enhet. Välj **Skriv till Skyttel**; samtalet ska starta direkt.
+4. Som Robin, välj **Skriv till Skyttel**. Medgivanderutan ska visas, med
    omarkerad kryssruta. Välj **Avbryt**.
 
 **Förväntat resultat:**
@@ -165,13 +166,13 @@ pekskärm”.
 1. På dator, välj en samtalsknapp i verktygsraden. Rutan ska öppnas intill
    den valda knappen. Stäng den.
 2. Minska fönstret till telefonbredd, där verktygsraden ligger överst.
-   Välj **Samtal och text**. Rutan ska öppnas under verktygsraden och
+   Välj **Skriv till Skyttel**. Rutan ska öppnas under verktygsraden och
    rymmas på skärmen utan rullning i sidled. Stäng den.
-3. Återställ fönstret. Flytta fokus till **Samtal och text** med Tab och
+3. Återställ fönstret. Flytta fokus till **Skriv till Skyttel** med Tab och
    tryck Enter. Gå med Tab till kryssrutan och markera den med
    mellanslag. Gå vidare till **Godkänn och starta** och tryck Enter.
 4. På en pekskärm med en annan användare, eller i en ny installation, tryck
-   på **Samtal och text** och sedan på **Godkänn och starta**.
+   på **Skriv till Skyttel** och sedan på **Godkänn och starta**.
 5. Upprepa steg 3 med skärmläsare. Lyssna efter dialogens namn,
    medgivandetexten, kryssrutans namn och raden om återkallande.
 

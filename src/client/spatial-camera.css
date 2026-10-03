@@ -66,7 +66,7 @@
     flex-wrap: nowrap;
   }
   .workspace-tools:not(.expanded)
-    button:is([aria-label="Samtal och text"], [aria-label="Visa detaljer"]) {
+    button:is([aria-label="Skriv till Skyttel"], [aria-label="Visa detaljer"]) {
     display: none;
   }
   .workspace-shell:has(.workspace-camera-tools) .workspace-context {

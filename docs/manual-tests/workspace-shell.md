@@ -70,7 +70,7 @@ device”.
 2. Ladda om och kontrollera att valet består. Välj sedan **Ljust**.
 3. Välj **System** och ändra enhetens tema till mörkt och sedan ljust.
 4. I varje temaläge, flytta tangentbordsfokus till **Hoppa till innehållet**,
-   **Till verktygen**, **Till lista och formulär** och **Till samtal och text**.
+   **Till verktygen**, **Till lista och formulär** och **Till samtalet med Skyttel**.
    Kontrollera att länkarna och knapparna går att läsa och har synligt fokus.
 5. Öppna temavalet med tangentbordet och tryck Escape.
 
@@ -102,7 +102,7 @@ without graphics”.
    **Information och hjälp**. Läs instruktionerna och tryck Escape.
 2. Välj **Lista**, **Nytt objekt** och skriv **Min cykel**. Kontrollera att
    fält och knappen för att lägga i utkastet går att nå.
-3. Stäng arbetsytan och välj **Samtal och text**. Kontrollera att
+3. Stäng arbetsytan och välj **Skriv till Skyttel**. Kontrollera att
    samtalsytan går att nå utan mikrofon.
 4. Upprepa med förstoring och tangentbord; använd hopplänkarna till
    formulär och samtal före kartgrafiken.

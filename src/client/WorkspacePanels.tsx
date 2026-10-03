@@ -421,7 +421,7 @@ export function WorkspacePanels({
                     </span>
                     <span>
                       <span className="workspace-window-title">{entry.title}</span>
-                      {['work', 'conversation'].includes(entry.id) && (
+                      {entry.id === 'work' && (
                         <span className="workspace-window-move-label">Flytta</span>
                       )}
                     </span>

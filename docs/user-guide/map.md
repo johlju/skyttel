@@ -5,8 +5,8 @@
 Objekt och samband bildar hushållets gemensamma karta. Du föreslår
 ändringar i ditt privata utkast och sparar dem tillsammans när du är klar.
 Öppna **Lista** i kartans verktyg för att göra hela arbetet med formulär.
-**Samtal och text** öppnar assistenten. På telefon visar
-**Visa verktygens namn** även de kompletterande verktygen.
+**Skriv till Skyttel** öppnar textvyn, där du skriver till Skyttel.
+På telefon visar **Visa verktygens namn** även de kompletterande verktygen.
 
 **Tema** ger valen **Ljust**, **Mörkt** och **System**. System följer
 inställningen på din enhet. **Information och hjälp** förklarar verktygen.
@@ -41,8 +41,9 @@ Oskickad formulärtext hör fortfarande inte till utkastet; välj
 **Lägg i mitt utkast** för att ta med den i det samlade sparandet.
 
 **Stäng arbetsytan** återgår till kartan och behåller oskickad text.
-Öppna **Lista** eller **Samtal och text** och välj din panel i
-**Öppna paneler** för att fortsätta. Ett kryss stänger bara den panelen;
+Öppna **Lista** och välj din panel i **Öppna paneler** för att
+fortsätta. **Skriv till Skyttel** öppnar textvyn med samtalet. Ett kryss
+stänger bara den panelen;
 objektets oskickade text finns kvar när du öppnar samma objekt igen.
 Ett nytt objekt som ännu inte finns i utkastet öppnar du med **Fortsätt**
 under **Påbörjade objekt** i Lista. Du kan ha flera sådana formulär samtidigt.

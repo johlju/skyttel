@@ -68,7 +68,7 @@ innehåller även privata utkast och personliga vyer; läs
 
 Fortsätt med [objekt och samband](map.md) eller följ hela exemplet för
 ett [familjeabonnemang](family-subscription.md). Du kan också öppna
-[Skyttels textassistent](text-assistant.md) och beskriva vad du vill göra.
+[Samtal med Skyttel](text-assistant.md) och beskriva vad du vill göra.
 
 ## Välj arbetssätt
 

@@ -146,7 +146,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         { timeout: 60_000 },
       )
       .toBe(true);
-    await panel.getByRole('button', { name: 'Avsluta samtalet' }).click();
+    await panel.getByRole('button', { name: 'Nytt samtal' }).click();
     await app.restart();
     const recovered = (await (await page.request.get(`${mapUrl}/history`)).json())
       .history as SaveReceipt[];

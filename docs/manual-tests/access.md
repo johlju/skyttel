@@ -557,14 +557,14 @@ a mandatory tour”.
 **Steg:**
 
 1. Öppna kartan och välj **Tala** i vägledningen. Kontrollera att
-   samtalspanelen öppnas. Ingen mikrofon ska börja spela in automatiskt.
+   textvyn öppnas. Ingen mikrofon ska börja spela in automatiskt.
 2. Ladda om kartan och välj **Skriv** i vägledningen.
 3. Ladda om och välj **Öppna listan**. Kontrollera **Nytt objekt**.
 4. Ladda om och välj **Stäng vägledningen**.
 
 **Förväntat resultat:**
 
-- Tal och text öppnar samtalspanelen. Lista öppnar kartarbetet.
+- Tal och text öppnar textvyn. Lista öppnar kartarbetet.
 - Vägledningen försvinner efter ett val.
 - Stängning ger fokus till kartans verktyg. Alla verktyg kan användas direkt.
 

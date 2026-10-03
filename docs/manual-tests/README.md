@@ -37,7 +37,7 @@ familjeflöden, verklig webbläsarzoom, granskade bilder och miljöbegränsninga
 ## Öppna arbetsytor
 
 Hushållet öppnar rymdkartan. Välj **Lista** i **Kartans verktyg** före
-fallens formulär, listor, typer, historik och utkast. Välj **Samtal och text**
+fallens formulär, listor, typer, historik och utkast. Välj **Skriv till Skyttel**
 före samtalsfallen. Utan giltigt medgivande visas medgivanderutan först;
 välj **Godkänn och starta**. På telefon öppnar **Visa verktygens namn**
 även de kompletterande verktygen.
@@ -122,8 +122,12 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   ljudaktivitet, avbrott,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
   samtalstext och verifierade resultat, löpande dialog och
-  synlig arbetstid. Kontrollerat familjeunderlag och
+  raden Skyttel arbetar. Kontrollerat familjeunderlag och
   verkligt tal redovisas separat.
+- [Textvyn](text-view.md): **Skriv till Skyttel** öppnar och stänger
+  textvyn utan att samtalet avslutas, samtalstexten visar vem som skriver
+  och raden Skyttel arbetar sist, **Nytt samtal** behåller utkast, mikrofon
+  och oskickad text, och textvyn går att använda på pekskärm och smal skärm.
 - [Skyttels textassistent](text-assistant.md): hela utkast,
   rättelse och samlat sparande, sena svar, avbrott, återfunna kvitton och
   samtidigt synliga objekt och samband i karta och detaljpanel även på

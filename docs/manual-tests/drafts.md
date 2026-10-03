@@ -565,7 +565,7 @@ private draft and an atomic household save”.
 1. Lägg **Lo Exempel** i utkastet genom formuläret. Påbörja ett nytt objekt
    **Oskickad cykel**, skriv **Texten ska finnas kvar** i beskrivningen och
    lämna texten i formuläret.
-2. Välj **Samtal och text** och **Godkänn och starta**. Skriv
+2. Välj **Skriv till Skyttel** och **Godkänn och starta**. Skriv
    **Lägg Molnmusik i utkastet**. Kontrollera två privata förslag i statusen.
 3. Välj **Prata med Skyttel** och säg **Lo använder Molnmusik**.
    Kontrollera att sambandet ingår och att statusen visar tre privata
@@ -613,7 +613,7 @@ fresh explicit save”.
 
 **Steg:**
 
-1. Lägg **Lo Exempel** i utkastet via formuläret. Välj **Samtal och text**
+1. Lägg **Lo Exempel** i utkastet via formuläret. Välj **Skriv till Skyttel**
    och **Godkänn och starta**. Be assistenten förbereda uppgiften och fråga
    vilket kort som avses.
 2. Stäng arbetsytan när statusen visar **Nödvändigt svar**. Kontrollera

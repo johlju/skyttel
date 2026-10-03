@@ -46,7 +46,7 @@ reuse each object”.
 3. Öppna Lista och välj Cykeln. Kontrollera rubrikfokus, välj
    **Redigera valt objekt** och skriv en beskrivning utan att skicka den.
 4. Öppna Lista igen och upprepa för Bilen och Garaget. Öppna även
-   **Samtal och text**.
+   **Skriv till Skyttel**.
 5. Välj Cykeln i **Öppna paneler** och stäng den med **Stäng Cykeln**.
    Öppna Cykeln från listan två gånger och kontrollera rubrikfokus även
    när panelen redan är öppen.
@@ -56,7 +56,7 @@ reuse each object”.
 
 **Förväntat resultat:**
 
-- Alla tre objekt och samtalet kan vara öppna samtidigt på dator.
+- Alla tre objekt och textvyn kan vara öppna samtidigt på dator.
 - Varje objekt återanvänder sin panel och sin egen oskickade text.
 - Även nya objekt som aldrig har skickats till utkastet finns kvar efter
   panelstängning och kan återöppnas från **Påbörjade objekt**.
@@ -71,7 +71,7 @@ reuse each object”.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Cykeln finns i kartan och textassistenten är tillgänglig.
+**Förutsättningar:** Cykeln finns i kartan och samtalet är tillgängligt.
 
 **Integrationstest:**
 [workspace-panels.spec.ts](../../tests/integration/workspace-panels.spec.ts),
@@ -86,13 +86,16 @@ and desktop positions”.
    Escape. Dra därefter rubriken. Anteckna placeringen. Minska datorfönstret
    och kontrollera att panelen ryms; återställ fönstret och kontrollera
    att panelen återfår placeringen.
-3. Välj **Samtal och text** och **Godkänn och starta** i medgivanderutan.
+3. Välj **Skriv till Skyttel** och **Godkänn och starta** i medgivanderutan.
    Skriv ett meddelande utan att skicka det.
-4. Minska fönstret till telefonbredd. Välj varje panel med **Öppna paneler**.
-   Kontrollera att fokuserad rubrik eller kontroll syns utan att döljas av
-   statusen. Vid återgång till listan ska **Uppgifter för Cykeln** ha fokus.
-   Öppna Lista och välj Cykeln igen; kontrollera rubrikfokus.
-   Stäng samtalspanelen och öppna den igen från verktygsfältet.
+4. Minska fönstret till telefonbredd. Textvyn fyller skärmen, och
+   panelerna väntar bakom den. Stäng textvyn med **Skriv till Skyttel**.
+   Välj varje panel med **Öppna paneler**. Kontrollera att fokuserad rubrik
+   eller kontroll syns utan att döljas av statusen. Vid återgång till listan
+   ska **Uppgifter för Cykeln** ha fokus. Öppna Lista och välj Cykeln igen;
+   kontrollera rubrikfokus. Öppna textvyn, kontrollera meddelandet och
+   stäng den med **Stäng textvyn**. Cykeln ska få fokus igen. Öppna textvyn
+   på nytt från verktygsraden.
 5. Återgå till den ursprungliga datorbredden och välj Cykeln.
 
 **Förväntat resultat:**
@@ -101,7 +104,8 @@ and desktop positions”.
   från flyttknapparna till flyttkontrollen.
 - Aktiv panel kommer framför övriga vid pekning eller fokus.
 - Mobil visar en panel i taget och väljaren kommer före panelen i
-  läsordningen. Väljaren innehåller alla öppna paneler.
+  läsordningen. Väljaren innehåller alla öppna paneler. Textvyn är ingen
+  panel i väljaren.
 - Nya paneler får rubrikfokus; stängning går till nästa panel eller
   väljaren. När sista panelen stängs går fokus till Lista i verktygsfältet.
 - Återgång till listan återför fokus till den tidigare objektkontrollen.
@@ -115,7 +119,7 @@ and desktop positions”.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Cykeln finns i kartan och textassistenten är tillgänglig.
+**Förutsättningar:** Cykeln finns i kartan och samtalet är tillgängligt.
 
 **Integrationstest:**
 [workspace-panels.spec.ts](../../tests/integration/workspace-panels.spec.ts),
@@ -128,7 +132,7 @@ text and blocks stale staging”.
    **Min oskickade text** som beskrivning utan att skicka formuläret.
    Flytta direkt till beskrivningen när formuläret öppnas; kontrollera
    att namnet fortfarande är Cykeln och att texten hamnar i valt fält.
-2. Välj **Samtal och text** och **Godkänn och starta**. Be om ett förslag
+2. Välj **Skriv till Skyttel** och **Godkänn och starta**. Be om ett förslag
    till en annan beskrivning för samma cykel. Vänta på det bekräftade
    förslaget i ditt utkast.
 3. Välj Cykeln i panelväljaren. Läs varningen och kontrollera din text.

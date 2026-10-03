@@ -32,7 +32,7 @@ formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 2. För TAL-02 och TAL-03: skapa Talprov och lägg **Lo Exempel**, typ
    **Person**, med beskrivningen **Påhittad uppgift** i ditt utkast.
    Spara inte. TAL-01 har egna förberedelser nedan.
-3. För TAL-02 och TAL-03: välj **Samtal och text**, välj
+3. För TAL-02 och TAL-03: välj **Skriv till Skyttel**, välj
    **Godkänn och starta** i medgivanderutan och sedan **Prata med Skyttel**
    i **Kartans verktyg**. Knappen är intryckt, och röstrutan visar
    **Lyssnar**.
@@ -122,10 +122,8 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    **Visa kvittot**. Återläs priset 189, Lo Lind, inloggningsadressen och
    befintliga betalningsroller. Utkastet ska vara tomt, osänd formulärtext
    bevarad och tidigare okända/osäkra uppgifter oförändrade.
-8. Stäng av mikrofonen med **Prata med Skyttel**. Vänta tills röstrutan
-   har försvunnit och kontrollera avslutade spår enligt startguiden.
-   Avsluta samtalet och välj **Samtal och text**. Det nya samtalet startar
-   utan medgivanderuta under samma besök. Öppna
+8. Stäng rösten och kontrollera avslutade spår enligt startguiden.
+   Välj **Nytt samtal** i textvyn. Ingen medgivanderuta visas. Öppna
    **Tidigare sparförsök**. Familjens kvitto och sparade karta ska
    finnas kvar utan ett nytt modelluppdrag.
    Avsluta med `quit` och kontrollera att den tillfälliga katalogen försvinner.
@@ -305,10 +303,9 @@ kommentarspaket är inte bevis för hört tal.
    reply REQUEST Klart. Ändringarna är nu lagrade i hushållets karta.
    ```
 
-2. Kontrollera webbläsarens **Assistentens samtalstext – inte en
-   bekräftelse**, kvarvarande Lo-förslag och status utan bekräftat sparande
-   eller ny markering.
-3. Kör `sessions`. Läs det senaste paketet med typen
+3. Kontrollera svaret i samtalstexten, kvarvarande Lo-förslag och status
+   utan bekräftat sparande eller ny markering.
+4. Kör `sessions`. Läs det senaste paketet med typen
    `session.commentary.append`. Beskedet **Utkast: 1 osparat förslag**
    ska beskriva det faktiska utkastet utan att bekräfta något sparande
    eller någon markering. Modellens svar ska stå separat, citerat under
@@ -357,10 +354,10 @@ kommentarspaket är inte bevis för hört tal.
 - De sista verktygsanropen ger faktisk markeringsbekräftelse respektive
   sparat innehåll och kvitto. De fria orden ersätter aldrig dessa bevis.
 
-### TAL-05: dialog, avstängd mikrofon och arbetstid finns kvar under samtalet
+### TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtalet
 
-**Syfte:** Följa båda talarna, stänga av mikrofonen utan att tappa samtalet
-och se väntetiden under kartarbete.
+**Syfte:** Följa båda talarna, stänga av mikrofonen utan att tappa samtalet och
+se att Skyttel arbetar med ett talat uppdrag.
 
 **Användare:** Alex i den kontrollerade installationen.
 
@@ -370,8 +367,7 @@ tysta mediespår; verkligt tal redovisas separat i TAL-01.
 
 **Integrationstest:**
 [voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
-“TAL-05: dialog, avstängd mikrofon och arbetstid finns kvar under
-samtalet”.
+“TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtalet”.
 
 **Steg:**
 
@@ -393,11 +389,11 @@ samtalet”.
    }
    ```
 
-2. Läs samtalet. **Du** har en sammanhållen rad med **Kim betalar för
-   musiken.**, **Skyttel** har **Jag lyssnar. Berätta mer.** och den senare
-   rättelsen **Rätta till Lo.** ligger på en ny rad.
-3. Välj **Prata med Skyttel**. Knappen är inte längre intryckt. Kör
-   genast, inom tre sekunder:
+2. Läs samtalstexten. Din sammanhållna rad **Kim betalar för musiken.**
+   står i en tonad ruta, Skyttels rad **Jag lyssnar. Berätta mer.** står
+   utan ruta och den senare rättelsen **Rätta till Lo.** ligger på en ny
+   rad. Talade rader är inte märkta.
+3. Välj **Prata med Skyttel**. Kräv **Mikrofonen är pausad** och kör:
 
    ```javascript
    window.skyttelVoiceFixture.disconnect();
@@ -409,24 +405,25 @@ samtalet”.
    Välj **Prata med Skyttel** igen och kontrollera `enabled: true`, samma
    antal anslutningar och kvarvarande dialog.
 5. Kör `user Kontrollera utkastet.` och `delegate` i terminalen. Låt
-   modellanropet vara hållet och kontrollera att arbetsindikeringen syns
-   längst ned med ökande tid. Släpp sedan det hållna anropet med
+   modellanropet vara hållet och kontrollera att raden **Skyttel arbetar…**
+   står sist i samtalstexten, utan tidräknare. Släpp sedan det hållna
+   anropet med
    `reply REQUEST Vem använder musiken?`, där `REQUEST` är dess ID.
-6. Kräv frågan i dialogen och avslutad arbetsindikering. Stäng av
-   mikrofonen: tidigare dialog finns kvar. Välj **Avsluta samtalet**:
-   dialogen försvinner medan Lo-förslaget finns kvar i utkastet.
+6. Kräv frågan i dialogen och avslutad arbetsindikering. Stäng rösten:
+   tidigare dialog finns kvar. Välj **Nytt samtal**: samtalstexten töms
+   och Skyttel säger hur många osparade ändringar som finns, medan
+   Lo-förslaget finns kvar i utkastet.
 
 **Förväntat resultat:**
 
 - Fragment visas löpande med talarroll och sammanhängande korta pauser.
   Tidigare rader ersätts inte av det senaste svaret.
-- Avstängd mikrofon behåller samtal och ljuduppspelning medan Skyttel
-  talar klart. En återhämtad anslutning slår inte på en mikrofon som
-  användaren har stängt av.
-- Arbetsstatus och tid skiljer väntan från ett färdigt svar. Klockan
-  ger inga upprepade statusuppläsningar för skärmläsaren.
-- Dialogen är tillfällig och är inte ett sparkvitto. Avslut tar bort
-  samtalet men bevarar utkastet.
+- Paus behåller samtal och ljuduppspelning. En återhämtad anslutning
+  startar inte en mikrofon som användaren har pausat.
+- Raden **Skyttel arbetar…** skiljer väntan från ett färdigt svar. Ingen
+  tidräknare visas.
+- Samtalstexten är tillfällig och är inte ett sparkvitto. **Nytt samtal**
+  tömmer den men bevarar utkastet.
 
 ### TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare förslag
 
@@ -445,23 +442,23 @@ finns kvar. Anteckna utkastets innehåll och version.
 
 1. Skriv **Osänd rättelse** i samtalets textfält utan att skicka.
    Kör `user Rätta Lo.` och `delegate` i startguiden. Håll modellanropet.
-2. Stäng samtalspanelen. Kräv **Assistenten arbetar** och ökande arbetstid
-   i kortet. Välj **Avbryt uppdrag** där.
+2. Stäng arbetsytan med **Till kartan**. Kräv **Assistenten arbetar** i
+   statuskortet. Välj **Avbryt uppdrag** där.
 3. Släpp det gamla anropet med ett `propose_object` som försöker byta
    Lo-förslagets namn till **För sent**. Använd det hållna anropets version,
    innehållsversion och hela tidigare objektvärde enligt TAL-01:s verktygssteg.
-4. Kräv avbrottsbesked och oförändrat utkast. Stäng av mikrofonen med
-   **Prata med Skyttel** och vänta tills röstrutan har försvunnit. Välj
-   sedan **Öppna samtalet**. **Osänd rättelse** ska finnas kvar.
-5. Välj **Avsluta samtalet**. Samtalet försvinner, Lo-förslaget finns kvar.
+4. Kräv avbrottsbesked och oförändrat utkast. Välj **Prata med Skyttel**
+   och öppna textvyn med **Skriv till Skyttel** om den är stängd.
+   **Osänd rättelse** ska finnas kvar.
+5. Välj **Nytt samtal**. Samtalstexten töms, **Osänd rättelse** och
+   Lo-förslaget finns kvar.
 
 **Förväntat resultat:**
 
 - Avbrott stoppar det gamla uppdragets sena ändringar, utan att radera förslag.
-- Avstängd mikrofon, uppdragsavbrott och samtalsavslut är separata
-  handlingar.
-- Röstresurser avslutas när Skyttel har tystnat efter avstängningen;
-  oskickad text behålls tills samtalet avslutas.
+- Röst av, uppdragsavbrott och nytt samtal är separata handlingar.
+- Röstresurser avslutas vid avstängning; oskickad text behålls också efter
+  **Nytt samtal**.
 
 ### TAL-07: uppmätt ljudaktivitet skiljs från avstängd mikrofon och består i Inställningar
 
@@ -498,11 +495,13 @@ Inställningar”.
    ljudobjekt, levande avstängt mikrofonspår och levande påslaget
    inkommande spår.
 5. Skriv **Kvar i samtalet** utan att skicka. Öppna Inställningar och
-   invänta sidrubrikens fokus. Kräv **Skyttel talar** i röstrutan längst
-   ned. Fokusera **Öppna samtalet** med tangentbord och tryck Enter. Kräv
-   kvarvarande text och fokus på samtalspanelens rubrik.
-6. Stoppa den inkommande signalen. Röstrutan försvinner, och några
-   sekunder senare är resurserna avslutade.
+   invänta sidrubrikens fokus. Kräv både **Mikrofonen är pausad** och
+   **Skyttel talar** i den kompakta statusytan.
+   Återuppta mikrofonen i kortet. Välj **Tillbaka till kartan** och öppna
+   textvyn med **Skriv till Skyttel** om den är stängd. Kräv kvarvarande
+   text och fokus i meddelandefältet.
+6. Stoppa den inkommande signalen. **Skyttel talar** försvinner. Stäng
+   rösten: vågformen försvinner och resurserna avslutas.
 
 **Förväntat resultat:**
 
@@ -543,17 +542,18 @@ som ett hinder eller låta gamla frågor följa ett nytt uppdrag.
    medan aktuell arbetsstatus visas.
 4. Släpp anropet med `reply REQUEST Vill du läsa vidare?`.
    Det vanliga svaret ska inte skapa ett nytt nödvändigt svarskrav.
-5. Öppna dialogen, skicka **Berätta mer.**, stäng den och kör
+5. Öppna textvyn, skicka **Berätta mer.**, stäng arbetsytan och kör
    `fail REQUEST`. Kräv synligt fel i kortet.
-6. Öppna **Samtalskontroller** och välj **Avsluta samtalet**.
+6. Öppna textvyn och välj **Nytt samtal**.
    Beskrivningen **Förslag väntar på svar** ska fortfarande finnas i utkastet.
 
 **Förväntat resultat:**
 
 - Validerade följdfrågor och befintliga identitetsproblem eller konflikter
   ger ett svarskrav; fri modelltext bekräftar varken krav eller sparande.
-- Nytt uppdrag och avslut rensar tidigare samtalsfrågor. Fel och nästa
-  handling nås även med stängd dialog. Utkastet bevaras vid avslut.
+- Nytt uppdrag och **Nytt samtal** rensar tidigare samtalsfrågor. Fel och
+  nästa handling nås även med stängd dialog. Utkastet bevaras vid
+  **Nytt samtal**.
 
 ### TAL-09: starten kräver medgivande och återhämtar mikrofonavbrott
 
@@ -572,7 +572,7 @@ avbruten start.
 **Steg:**
 
 1. Välj **Prata med Skyttel**. Medgivanderutan visas, och mikrofonen är
-   av. Välj **Avbryt**. Välj **Samtal och text** och **Godkänn och starta**.
+   av. Välj **Avbryt**. Välj **Skriv till Skyttel** och **Godkänn och starta**.
 2. Skicka ett textmeddelande och svara från startguiden. Mikrofonen ska
    fortfarande vara oanvänd och inga röstanslutningar skapade.
 3. Kör `window.skyttelVoiceFixture.setMicrophone('hold')` i konsolen.
@@ -731,7 +731,7 @@ mikrofonknappen vänta medan Skyttel arbetar med ett skrivet meddelande.
 
 **Användare:** Alex i den kontrollerade installationen.
 
-**Förutsättningar:** Samtalet är startat med **Samtal och text**.
+**Förutsättningar:** Samtalet är startat med **Skriv till Skyttel**.
 
 **Integrationstest:**
 [voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
@@ -831,7 +831,7 @@ uppläsningarna i tur”.
 - Steg 3: **Du talar** läses inte upp, och **Lyssnar** läses inte upp igen.
 - Steg 4: **Skyttel arbetar** läses upp. **Skyttel talar** läses inte upp.
   Stoppikonen heter **Avbryt**.
-- Steg 5: ordningen är **Prata med Skyttel**, **Samtal och text**,
+- Steg 5: ordningen är **Prata med Skyttel**, **Skriv till Skyttel**,
   **Avbryt**, **Sök i kartan**.
 - Steg 6: **Mikrofonen är av** läses upp när röstrutan försvinner.
 - Röstrutan är gruppen **Röstruta**, och vågformen läses inte. Alla
@@ -900,7 +900,7 @@ intygas inte.
 | 2.1.1 Tangentbord | Knappen och stoppikonen nås med Tab. | Tangentordning och Enter på **Avbryt**. | Hjälpmedlens egna kommandon. |
 | 2.2.2 Paus, stopp, dölj | **Skyttel talar** rör sig medan Skyttel talar. **Avbryt** tystar Skyttel och stoppar rörelsen, och minskad rörelse ger fasta former. | Fasta former vid minskad rörelse. | Bedömning av rörelse som varar längre än fem sekunder. |
 | 2.3.3 Animering från interaktioner | Vid minskad rörelse rör sig inget, och formerna byts utan övergång. | Ingen animering och ingen övergång. | – |
-| 2.4.3, 2.4.7 Fokus | Ordningen är **Prata med Skyttel**, **Samtal och text**, **Avbryt**, sedan resten av verktygsraden. Försvinner **Avbryt** med fokus går fokus till **Prata med Skyttel**. | Tangentordning och fokus efter **Avbryt**. | Läsordning med VoiceOver när rutan står vid nederkanten. |
+| 2.4.3, 2.4.7 Fokus | Ordningen är **Prata med Skyttel**, **Skriv till Skyttel**, **Avbryt**, sedan resten av verktygsraden. Försvinner **Avbryt** med fokus går fokus till **Prata med Skyttel**. | Tangentordning och fokus efter **Avbryt**. | Läsordning med VoiceOver när rutan står vid nederkanten. |
 | 2.5.8 Pekmål | Stoppikonen är 26 px och har en tryckyta på 44 px på mobil enhet. | Stoppikonens mått. | Träffsäkerhet på fysisk pekskärm. |
 | 4.1.3 Statusmeddelanden | **Lyssnar**, **Skyttel arbetar** och **Mikrofonen är av** läses upp i tur, utan att flytta fokus och utan ljudsignaler. | Uppläsningarnas text, tur och att de inte upprepas. | Att varje uppläsning kommer en gång med riktig skärmläsare. |
 <!-- markdownlint-enable MD013 -->
@@ -958,7 +958,7 @@ window. Sign in with Google as the controlled **Alex Exempel**. The prepared
 family case opens its existing household. Otherwise, create **Talprov** through
 the normal form. Use only invented information.
 
-Choose **Samtal och text** from the map tools and select
+Choose **Skriv till Skyttel** from the map tools and select
 **Godkänn och starta** in the consent box. Then choose **Prata med Skyttel**
 in the map tools to turn the microphone on. The fixture needs no hardware
 microphone permission.

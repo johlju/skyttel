@@ -203,7 +203,7 @@ test('TEXTVY-02: samtalstexten visar vem som skriver och raden Skyttel arbetar s
   }
 });
 
-test('TEXTVY-03: Nytt samtal tömmer samtalstexten, stoppar arbetet och behåller utkast och mikrofon', async ({
+test('TEXTVY-03: Nytt samtal tömmer samtalet och behåller utkast och mikrofon', async ({
   page,
 }) => {
   let held = false;

@@ -135,7 +135,7 @@ CSS-mått; riktig webbläsarzoom provas separat.
    och återgå till den föregående vyn.
 3. Öppna **Visningsval**, slå på och av **Alla etiketter** och stäng valet.
 4. Öppna **Navigera**, rotera och stäng navigeringen.
-5. Välj **Visa verktygens namn** och kontrollera att **Samtal och text**
+5. Välj **Visa verktygens namn** och kontrollera att **Skriv till Skyttel**
    samt **Visa detaljer** går att nå.
 6. Aktivera kamerafokus med tangentbord från det utökade verktygsfältet.
    Upprepa med översikt och återgång efter att verktygsnamnen öppnats igen.

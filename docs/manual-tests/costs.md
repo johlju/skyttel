@@ -23,7 +23,7 @@ fallen anger formulär, samtal, profil eller administration.
 2. Starta en ny installation för varje fall. Behåll samma databas och
    webbläsarfönster inom ett falls omstartsprov.
 3. KOST-01 och KOST-02 börjar med Google-inloggning som Alex. Skapa
-   **Kostnadsprov**, välj **Samtal och text** och **Godkänn och starta**
+   **Kostnadsprov**, välj **Skriv till Skyttel** och **Godkänn och starta**
    i medgivanderutan. KOST-03 och KOST-04 börjar utan hushåll.
 4. Terminalkommandon nedan skrivs i startguidens terminal. Avsluta varje
    fall med `quit` och kontrollera borttagen tillfällig katalog enligt guiden.
@@ -261,7 +261,7 @@ launcher for each case. Never reuse a real installation for these controls.
 | `quit` | Stop the application and remove its temporary directory. |
 <!-- markdownlint-enable MD013 -->
 
-To generate Terra usage, choose **Samtal och text**, select
+To generate Terra usage, choose **Skriv till Skyttel**, select
 **Godkänn och starta** in the consent box, and send
 **Prova kostnadsunderlaget.** The fixed response is
 **Det kontrollerade kostnadsprovet är klart.** No map change is proposed.

@@ -34,7 +34,7 @@ formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
 2. Skapa hushållet Textprov. Skapa objektet **Lo Exempel** av typen
    **Person**, med beskrivningen **Påhittad uppgift**, genom formuläret.
    Välj **Lägg i mitt utkast** och lämna förslaget osparat.
-3. Välj **Samtal och text** och **Godkänn och starta** i medgivanderutan.
+3. Välj **Skriv till Skyttel** och **Godkänn och starta** i medgivanderutan.
    [Samtalsmedgivandet](conversation-consent.md) har egna testfall.
 4. Starta en ny tom kontrollerad installation mellan TEXT-02 till TEXT-09.
    Behåll samma databas under ett omstartsprov. Avsluta med `quit` och
@@ -250,17 +250,17 @@ i kartan innan du börjar. Inget sparande är genomfört.
 
 **Steg:**
 
-1. Skicka **Kontrollera utkastet.** till textassistenten. Vänta på `held`
+1. Skicka **Kontrollera utkastet.** till Skyttel. Vänta på `held`
    i terminalen och ersätt `NUMMER` med anropets ID:
 
    ```text
    reply NUMMER Klart. Ändringarna är nu lagrade i hushållets karta.
    ```
 
-2. Kräv rubriken **Assistentens samtalstext – inte en bekräftelse** vid
-   texten och förklaringen att bara Skyttels status och kvitton bekräftar
-   sparande och markering. Kontrollera det osparade Lo-förslaget och att
-   inget nytt spar- eller markeringsbesked visas i statusen.
+2. Kontrollera att svaret står i samtalstexten och att textvyn inte har
+   något förbehåll om att samtalstexten kan innehålla fel. Kontrollera det
+   osparade Lo-förslaget och att inget nytt spar- eller markeringsbesked
+   visas i statusen.
 3. Skicka samma fråga på nytt för varje svar nedan. Använd det nya
    `held`-numret och släpp ett svar i taget:
 
@@ -318,7 +318,7 @@ Inga modellsvar behövs; assistenten läser det befintliga utkastet.
    Skapa också den oanvända objekttypen **Förvaring** och sambandstypen
    **Förvaras**, med riktningarna **förvaras i** och **innehåller**.
    Lämna alla fyra förslagen osparade.
-4. Välj **Samtal och text** och **Godkänn och starta**. Läs
+4. Välj **Skriv till Skyttel** och **Godkänn och starta**. Läs
    **Ändringar under samtalet** utan att öppna detaljerna.
 5. Kräv **Sista fyra: 1111 → 2222**, sambandet från Kim som betalar
    Kortet samt de båda nya typerna i den synliga listan.
@@ -354,7 +354,7 @@ före bekräftelsen”, dator-, telefon- och korta vyer, inklusive
 
 **Steg:**
 
-1. Öppna **Samtal och text**. Skriv **Visa Lo i kartan** i assistenten.
+1. Öppna **Skriv till Skyttel**. Skriv **Visa Lo i kartan** i textvyn.
    Kopiera Lo-förslagets ID från terminalens `held`. Svara med
    `tool NUMMER show_map_item {"kind":"object","id":"LO-ID"}`;
    byt `NUMMER` och `LO-ID` mot provets verkliga värden.
@@ -362,10 +362,10 @@ före bekräftelsen”, dator-, telefon- och korta vyer, inklusive
    Detaljpanelen ska samtidigt synas med Lo och beskrivningen
    **Påhittad uppgift**, utan att du behöver rulla sidan för att hitta den.
    Nästa `held` ska innehålla `displayed: true`. Släpp det svaret med
-   `reply NUMMER Här är urvalet.`, välj **Samtal och text** i panelväljaren
-   och kontrollera **Markerat i kartan**.
+   `reply NUMMER Här är urvalet.`, öppna textvyn med **Skriv till Skyttel**
+   om den är stängd och kontrollera **Markerat i kartan**.
 3. Öppna **Navigera** och panorera tills objekten inte syns.
-   Öppna samtalspanelen och skriv **Visa sambandet mellan Lo och Molnmusik**.
+   Öppna textvyn och skriv **Visa sambandet mellan Lo och Molnmusik**.
    Kopiera sambandets
    ID från `held` och svara med
    `tool NUMMER show_map_item {"kind":"relationship","id":"SAMBANDS-ID"}`.
@@ -374,12 +374,13 @@ före bekräftelsen”, dator-, telefon- och korta vyer, inklusive
    Kontrollera `displayed: true` och släpp sluttexten.
 5. Välj **Redigera valt samband**. Ändra **Till objekt** i formuläret
    utan att lägga ändringen i utkastet.
-   Välj samtalspanelen, skriv **Visa Lo igen** och upprepa
+   Öppna textvyn, skriv **Visa Lo igen** och upprepa
    visningsanropet från steg 1.
    Kontrollera `displayed: false`, släpp sluttexten och kontrollera att
    formulärets oskickade ändring finns kvar.
 6. Stäng formuläret och upprepa steg 1–5 med ett smalt telefonfönster.
-   Detaljpanelen ska synas direkt under kartan. Om uppgifterna är längre
+   Textvyn stängs när Skyttel visar något i kartan, och detaljpanelen ska
+   synas direkt under kartan. Om uppgifterna är längre
    kan du rulla inuti panelen. Markeringen öppnar inget redigeringsformulär.
 7. Prova också faktisk webbläsarzoom 200 och 400 procent. I ett kort
    fönster visas kartan och detaljpanelen bredvid varandra. Rulla ned
@@ -419,9 +420,9 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
 2. Redigera sambandet och byt typen till **Betalar**. Lägg rättelsen i
    utkastet. Redigera sedan Tonrum, välj statusen **Upphört** och lägg
    även den rättelsen i utkastet. Lämna båda osparade.
-3. Öppna **Lista** och välj sedan samtalspanelen. Skicka
+3. Öppna **Lista** och sedan textvyn med **Skriv till Skyttel**. Skicka
    **Läs upp hela utkastet.** i
-   assistenten. Ersätt `NUMMER` med det aktuella `held`-numret i terminalen:
+   textvyn. Ersätt `NUMMER` med det aktuella `held`-numret i terminalen:
 
    ```text
    tool NUMMER report_result {"source":"draft"}
@@ -494,7 +495,7 @@ authentication and same-origin checks use the printed address.
 Choose Google sign-in. The substitute provider signs in **Alex Exempel**
 without an external account or password. Complete the normal first-household
 form with the name **Textprov**. Create only made-up content. Choose
-**Samtal och text** and select **Godkänn och starta** in the consent box.
+**Skriv till Skyttel** and select **Godkänn och starta** in the consent box.
 The substitute uses that same application consent flow.
 
 Enter the scenario's message and press **Skicka**. Each provider request

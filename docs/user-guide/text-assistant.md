@@ -1,11 +1,11 @@
-# Skyttels textassistent
+# Samtal med Skyttel
 
 [Till användarguidens innehåll](README.md)
 
-Välj **Prata med Skyttel** eller **Samtal och text** i hushållets karta.
+Välj **Prata med Skyttel** eller **Skriv till Skyttel** i hushållets karta.
 **Prata med Skyttel** startar samtalet med mikrofonen, och
-**Samtal och text** startar det med text. Utan giltigt medgivande visas
-först [medgivanderutan](#medgivande). Om assistenten inte är tillgänglig
+**Skriv till Skyttel** startar det med text. Utan giltigt medgivande visas
+först [medgivanderutan](#medgivande). Om samtalet inte är tillgängligt
 fungerar kartans formulär.
 
 ## Medgivande
@@ -13,7 +13,7 @@ fungerar kartans formulär.
 Skyttel behöver ditt medgivande innan ett samtal startar. Samma medgivande
 gäller röst och text. Medgivanderutan **Samtal med Skyttel** visas när du
 väljer en samtalsknapp i verktygsraden, **Tala** eller **Skriv** i kartans
-vägledning eller snabblänken **Till samtal och text**.
+vägledning eller snabblänken **Till samtalet med Skyttel**.
 
 1. Läs texten i rutan. Den säger vad OpenAI behandlar, att Skyttel sparar
    ändringar först när du ber om det och att samtalet inte sparas.
@@ -23,7 +23,7 @@ vägledning eller snabblänken **Till samtal och text**.
    den knapp du valde. **Avbryt** startar ingenting.
 
 Utan kryssrutan gäller medgivandet tills du lämnar hushållets karta eller
-laddar om sidan. Ett nytt samtal under samma besök frågar inte igen. Om
+laddar om sidan. **Nytt samtal** frågar inte igen. Om
 medgivandetexten ändras i sak frågar Skyttel på nytt, även om du har sparat
 ett tidigare medgivande. Om rutan säger att medgivandet inte kunde sparas
 kan du försöka igen eller godkänna utan att markera kryssrutan.
@@ -58,15 +58,37 @@ Om du bjuds in igen frågar Skyttel på nytt. Medgivandet ingår inte i en
 Medgivandet är skilt från cookieval och från andra klienters medgivanden
 under **Assistentanslutningar**.
 
+## Skriv till Skyttel
+
+**Skriv till Skyttel** öppnar och stänger textvyn. Textvyn visar
+samtalstexten och meddelandefältet **Meddelande till Skyttel**.
+
+- På en dator ligger textvyn vid högerkanten och knuffar undan kartan, så
+  att du ser ändringarna i kartan medan du skriver. Meddelandefältet får
+  fokus när textvyn öppnas.
+- På en mobil enhet och en smal skärm får fältet inte fokus av sig självt.
+  Tryck i fältet när du vill skriva. På en smal skärm fyller textvyn
+  skärmen under verktygsraden, och **Lista** och kartans paneler tar dess
+  plats när du väljer dem.
+- Skriv ditt meddelande och välj **Skicka** eller tryck Retur. Skift+Retur
+  ger en ny rad. Fältet behåller fokus efter att meddelandet har skickats.
+- I samtalstexten står det du skriver i en tonad ruta till höger och det
+  Skyttel svarar utan ruta. Det du och Skyttel säger med rösten står där
+  också. Raden **Skyttel arbetar…** står sist medan Skyttel arbetar.
+- **Stäng textvyn** eller **Skriv till Skyttel** stänger textvyn. Samtalet,
+  mikrofonen och din oskickade text finns kvar tills du öppnar den igen.
+- **Nytt samtal** tömmer samtalstexten och det Skyttel minns av samtalet
+  och stoppar pågående arbete. Mikrofonen behåller sitt läge, och ditt
+  utkast och din oskickade text finns kvar. Skyttel säger hur många
+  osparade ändringar som ligger kvar i utkastet.
+
 ## Följ samtalet
 
-Samtalspanelen kan stängas utan att samtalet avslutas. Det kompakta kortet
-visar fortfarande status, nödvändiga frågor och fel. **Öppna samtalet**
-tar dig tillbaka till dialogen, även från Inställningar. Samtalet och
-oskickad text finns kvar när du växlar tillbaka till kartan.
-I korta fönster kan du rulla ned till samtalskortet och panelväljaren.
-Vid en begärd kartmarkering visas kartan och uppgifterna bredvid varandra
-så att kortet inte täcker dem. Verktygsradens mikrofonkontroll finns kvar.
+Med textvyn stängd visar det kompakta kortet fortfarande status,
+nödvändiga frågor och fel. Samtalet och oskickad text finns kvar när du
+växlar mellan kartan, panelerna och Inställningar. Vid en begärd
+kartmarkering visas kartan och uppgifterna bredvid varandra så att kortet
+inte täcker dem. Verktygsradens mikrofonkontroll finns kvar.
 
 På Inställningar har sidans innehåll och samtalets kompakta status var sitt
 utrymme. Mikrofonkontroller, nödvändiga frågor, fel och sparstatus finns
@@ -74,7 +96,7 @@ kvar. Välj **Visa samtals- och utkastdetaljer** för ytterligare uppgifter
 om samtalet och ditt privata arbete. **Stäng aktuell status** återgår
 till den kompakta vyn. I korta fönster kan båda områdena rullas var för sig.
 
-Beskriv vad du vill hitta, lägga till eller rätta. Assistenten använder
+Beskriv vad du vill hitta, lägga till eller rätta. Skyttel använder
 hushållets egna typer och ditt befintliga privata utkast. Förslag från
 andra klienter ingår också. Oskickad formulärtext ligger kvar i formuläret
 och ingår först när du lägger den i utkastet.
@@ -86,7 +108,7 @@ tryck slår på den, och nästa tryck stänger av den. Knappen har
 accentfärg medan mikrofonen är på. Ingen panel öppnas. Första gången under
 ett besök visas medgivanderutan först. Tillåt mikrofonen i webbläsaren.
 Medan rösten startar avbryter ett tryck starten. Rösten använder samma
-utkast och regler som textassistenten. OpenAI behandlar ljudet från
+utkast och regler som texten. OpenAI behandlar ljudet från
 mikrofonen medan den är på. Om webbläsaren blockerar ljudet, välj
 **Spela upp ljud**. Du kan fortsätta med text eller formulär när
 mikrofonen eller ljuduppspelningen inte fungerar.
@@ -121,7 +143,7 @@ eller **Sparat**, utan att läsa upp ändringarna efter varje steg.
 Be om detaljer när du vill höra dem. Nödvändiga följdfrågor och felbesked
 ges även när vanliga bekräftelser är korta.
 
-I **Samtalet** visas både dina ord och Skyttels svar löpande. Tidigare
+I samtalstexten visas både dina ord och Skyttels svar löpande. Tidigare
 rader finns kvar under samtalet. Korta pauser kan fortsätta samma rad.
 När du stänger av mikrofonen arbetar Skyttel färdigt med det du sade och
 talar klart sitt svar. Inget mer ljud från mikrofonen skickas. Rösten
@@ -171,8 +193,8 @@ Om formuleringen är oklar kan du behöva skriva **Spara hela utkastet nu**.
 
 Statusen **Sparat** kommer från ett beständigt kvitto. **Visa kvittot**
 visar vad sparandet omfattar. Fråga **Vad sparades senast?** för att få
-detaljer från det sparandet i samtalet. **Assistentens samtalstext – inte en
-bekräftelse** visar modellens frågor och svar separat. Texten kan innehålla
+detaljer från det sparandet i samtalet. Samtalstexten visar Skyttels frågor
+och svar. Skyttel kan höra och förstå fel, så samtalstexten kan innehålla
 fel, även ett påstående om att något har sparats eller markerats. Lita på
 Skyttels status och kvitto för sådana resultat. Detsamma gäller AI-röstens
 formuleringar; ett ljudsvar är inte i sig ett sparbevis.
@@ -194,14 +216,15 @@ startar du en ny anslutning och öppnar **Tidigare sparförsök**. Där finns
 underlag och ett nytt sparbesked.
 
 Fråga **Vad var felet?** för att höra det senaste registrerade felet i
-det pågående samtalet. Felminnet följer samtalet och försvinner när det
-avslutas. Ett oklart sparresultat behöver kontrolleras innan ett nytt
+det pågående samtalet. Felminnet följer samtalet och försvinner vid
+**Nytt samtal** eller när samtalet avslutas. Ett oklart sparresultat
+behöver kontrolleras innan ett nytt
 uppdrag kan börja.
 
-En avstängd mikrofon behåller den synliga dialogen i det pågående samtalet.
-**Avsluta samtalet**, under **Samtalskontroller** i det kompakta kortet,
-tar bort anslutningen och samtalsminnet.
-Dialogen försvinner också vid omladdning eller när åtkomsten upphör.
+En avstängd mikrofon behåller samtalstexten i det pågående samtalet.
+**Nytt samtal** tömmer samtalstexten och det Skyttel minns av samtalet.
+Samtalet avslutas när du lämnar hushållets karta, laddar om sidan eller
+när åtkomsten upphör.
 Anslutningen upphör senast efter 30 minuter eller när dess medgivande
 återkallas. Utkast, sparade uppgifter och kvitton finns kvar. Återimport
 eller byte av innehållsägare kräver en ny anslutning.

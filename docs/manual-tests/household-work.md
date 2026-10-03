@@ -26,8 +26,8 @@ fallen anger formulär, samtal, profil eller administration.
    kör `identity robin`, logga in med Microsoft i en separat profil och
    bjud in Robins ID från Alex profil. Acceptera som Robin; behåll rollen
    medlem. Befintliga sessioner påverkas inte av identitetsvalet.
-   Välj **Samtal och text** och **Godkänn och starta** i medgivanderutan,
-   sedan **Prata med Skyttel** när ett fall kräver röst. Miljön ersätter
+   Välj **Skriv till Skyttel** och **Godkänn och starta** i medgivanderutan,
+   sedan **Prata med Skyttel** när ett fall kräver samtal. Miljön ersätter
    taltransporten och provar inte fysiskt ljud.
 3. Börja varje fall med en ny provinstallation eller ett tomt utkast utan
    pågående sparande. Behåll fliken och databasen under varje fall.
@@ -272,7 +272,7 @@ an admitted save before reloading”.
 7. Tryck Enter i läsarens terminal. Välj uttryckligen **Försök slutföra
    raderingen**. Samma identifierare ska slutföras med ett objekt och noll
    samband, typer och bildversioner.
-8. Välj **Läs in kartan på nytt**. **Samtal och text** ska kräva en ny start
+8. Välj **Läs in kartan på nytt**. **Skriv till Skyttel** ska kräva en ny start
    och sakna tidigare dialog och oskickat svar. Det gamla objektformuläret
    och sparförsökets återförsök ska saknas. Stolen, dess privata förslag och
    placering är kvar; lampan är borta och Alex är fortfarande administratör.
@@ -396,7 +396,7 @@ till gemensamt kvitto och privat fortsatt arbete”.
    för att bjuda in och acceptera som Robin. Som Robin, välj **Lista →
    Nytt objekt**, skriv **Robins notering** och **Lägg i mitt utkast**.
    Spara inte. Den gemensamma kartan ska fortfarande vara tom.
-2. Som Alex, välj **Samtal och text**. Kontrollera att medgivanderutan
+2. Som Alex, välj **Skriv till Skyttel**. Kontrollera att medgivanderutan
    visas och välj **Godkänn och starta**. Skicka
    **Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK
    per månad.** Släpp `read_type_catalog` med `{}`. Nästa resultat ska ge
@@ -461,7 +461,7 @@ till gemensamt kvitto och privat fortsatt arbete”.
    Kontrollera ett kvitto för båda objekten och sambandet, tomt Alex-utkast
    och öppna **Öppna paneler → Kim Exempel**. Kontrollera att
    **Oskickat om Kim** fortfarande finns i formuläret men inte i sparad
-   beskrivning. Återvänd till **Samtal och text** för kvittot och röstens
+   beskrivning. Återvänd till **Skriv till Skyttel** för kvittot och röstens
    kontroller. Robins privata notering ingår inte i kvittot.
 7. Stäng av mikrofonen med **Prata med Skyttel** och vänta tills
    röstrutan har försvunnit. Kör `restart` i terminalen och ladda sedan om
