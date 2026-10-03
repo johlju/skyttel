@@ -1181,7 +1181,12 @@ test('RYMD-10: label notices remain stable while a compact map opens its saved a
     ]);
     await openMap(page);
     const space = page.getByRole('region', { name: 'Rymdkarta', exact: true });
-    await space.getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true }).click();
+    // Keep default graph positions: select through the native keyboard control
+    // when the protected display row covers the object's pointer target.
+    const kim = space.getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true });
+    await kim.focus();
+    await kim.press('Enter');
+    await expect(kim).toHaveAttribute('aria-pressed', 'true');
     await expect(
       space.getByRole('button', { name: 'Markera objekt: Kim Exempel', exact: true }),
     ).toBeVisible();
