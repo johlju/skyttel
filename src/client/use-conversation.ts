@@ -706,7 +706,8 @@ export function useConversation({
       !saveChecking ||
       saveCheckFailed ||
       checking ||
-      pending
+      pending ||
+      manualSaveOperationId
     )
       return;
     const timer = setTimeout(
@@ -714,7 +715,17 @@ export function useConversation({
       nextCheckAt ? Math.max(0, nextCheckAt - Date.now()) : 250,
     );
     return () => clearTimeout(timer);
-  }, [enabled, connected, saveChecking, saveCheckFailed, checking, pending, nextCheckAt, recover]);
+  }, [
+    enabled,
+    connected,
+    saveChecking,
+    saveCheckFailed,
+    checking,
+    pending,
+    manualSaveOperationId,
+    nextCheckAt,
+    recover,
+  ]);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
