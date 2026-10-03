@@ -452,17 +452,20 @@ till gemensamt kvitto och privat fortsatt arbete”.
    rubrikfokus, samma beskrivningar, samma dialog och båda oskickade texter.
    Robins notering ska fortfarande vara privat. Automationen kontrollerar
    att samma levande mediespår och anslutning används efter Inställningar.
-6. Öppna **Visa hela utkastets detaljer** i samtalet. Granska två objekt,
-   ett samband och **189 / SEK / månad**, med **Rättad för hand**.
+6. Välj **Visa utkastet** i textvyn. Tabellen ska ha två objekt och ett
+   samband. Granska **189 / SEK / månad**, med **Rättad för hand**, i
+   abonnemangets uppgifter och återvänd sedan till **Skriv till Skyttel**.
    Ersätt samtalets oskickade text med **Spara hela utkastet nu.** och skicka.
    Släpp exakt ett `save_draft` med den aktuella granskningens version,
    innehållsversion och `operationId: "family-save"`. Servern tilldelar
-   sparandets beständiga identifierare; anteckna den från **Visa kvittot**.
+   sparandets beständiga identifierare; anteckna den från
+   **Utkast och historik → Tidigare sparförsök → Visa kvittot**.
    Kontrollera ett kvitto för båda objekten och sambandet, tomt Alex-utkast
    och öppna **Öppna paneler → Kim Exempel**. Kontrollera att
    **Oskickat om Kim** fortfarande finns i formuläret men inte i sparad
-   beskrivning. Återvänd till **Skriv till Skyttel** för kvittot och röstens
-   kontroller. Robins privata notering ingår inte i kvittot.
+   beskrivning. Kvittot finns kvar i **Utkast och historik**, och
+   mikrofonknappen finns kvar i verktygsraden. Robins privata notering
+   ingår inte i kvittot.
 7. Stäng av mikrofonen med **Prata med Skyttel** och vänta tills
    röstrutan har försvunnit. Kör `restart` i terminalen och ladda sedan om
    Alex flik. Öppna **Lista → Visa historik → Visa ändringarna** för samma

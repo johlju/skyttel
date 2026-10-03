@@ -249,23 +249,32 @@ databasens sparande; redovisa inte det som ett prov av förlorat sådant svar.
    `tool REQUEST prepare_save {"version":VERSION,"contentVersion":CONTENT,"operationId":"tal-prov"}`.
    Avsluta nästa anrop med `reply REQUEST Försöket är förberett.`.
 3. Kräv väntande sparförsök och ingen sparbekräftelse. Anteckna det riktiga
-   operation-ID:t från **Tidigare sparförsök**; modellens `tal-prov` är inte
+   operation-ID:t från **Utkast och historik → Tidigare sparförsök**;
+   modellens `tal-prov` är inte
    kvittots ID. Stäng av mikrofonen med **Prata med Skyttel** och vänta
    tills röstrutan har försvunnit. Kör `restart` i terminalen.
-4. Ladda om webbläsaren, godkänn en ny assistentanslutning och välj
-   **Prata med Skyttel**.
+4. Ladda om webbläsaren och välj **Prata med Skyttel**. Godkänn
+   medgivanderutan om den visas.
    Skriv `user Slutför samma sparförsök.` och `delegate`. Inget Terra-svar
    behöver släppas: det exakta väntande försöket återhämtas via MCP.
 5. Kontrollera ett genomfört kvitto med samma operation-ID och Lo i kartan.
    Kör `drop` efter sparandet; kontrollera att det genomförda kvittot finns
    kvar även om ett ljudsvar inte hördes. Vänta på avstängd röst, ladda om
-   och godkänn en ny textassistentanslutning. Öppna **Tidigare sparförsök**
+   och välj **Skriv till Skyttel**. Godkänn medgivanderutan om den visas.
+   Öppna **Utkast och historik → Tidigare sparförsök**
    och kontrollera samma genomförda kvitto igen.
 6. Slå på mikrofonen igen. Kör `usage 12`, `usage 15` och `finalize off`.
-   Välj **Avsluta samtalet**. Röstanslutningen stängs. Kontrollera
-   stoppsvarets `voice.seconds:15` och
-   `voice.usageFinal:false` i nätverkspanelen. Återställ `finalize on`
-   innan nästa prov.
+   Anteckna adressen och svarets `voice.id` för det senaste POST-anropet
+   till `/voice` i nätverkspanelen. Öppna textvyn och välj **Nytt samtal**.
+   Den gamla röstanslutningen stängs, och en ny behåller mikrofonens läge.
+   Kopiera det gamla startanropet som `fetch` från nätverkspanelen. Ändra
+   adressen till `GAMLA-ADRESSEN/GAMLA-ID/stop` och kroppen till `"{}"`;
+   behåll anropets rubriker. Kör det i konsolen och läs JSON-svaret.
+   Det bekräftar den redan stängda anslutningen och ska visa
+   `voice.phase:"closed"`, `voice.seconds:15` och `voice.usageFinal:false`.
+   Återställ `finalize on`. Öppna **Din profil → Inloggningssätt**,
+   öppna **Välj inställning** om menyn är hopfälld och välj **Logga ut**.
+   Alla mikrofonspår och röstanslutningar ska vara stängda.
 
 **Förväntat resultat:**
 
@@ -1086,8 +1095,9 @@ disconnected for the application's timeout, or use `fail()` for immediate
 failure. `audioError()` emits a media-output error. A transient recovery
 keeps the microphone off until another explicit press. Blocked playback
 keeps capture off until **Spela upp ljud** succeeds. Microphone-off keeps
-the connection alive for delayed answers; choose **Avsluta samtalet**
-to close and release all resources. Then inspect:
+the connection alive for delayed answers. Open **Din profil → Inloggningssätt**,
+expand **Välj inställning** if needed and choose **Logga ut** to close and
+release all resources. Then inspect:
 
 ```js
 window.skyttelVoiceFixture.stats();
