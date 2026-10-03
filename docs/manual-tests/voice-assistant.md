@@ -262,7 +262,8 @@ databasens sparande; redovisa inte det som ett prov av förlorat sådant svar.
    och godkänn en ny textassistentanslutning. Öppna **Tidigare sparförsök**
    och kontrollera samma genomförda kvitto igen.
 6. Slå på mikrofonen igen. Kör `usage 12`, `usage 15` och `finalize off`.
-   Välj **Avsluta samtalet**. Röstanslutningen stängs. Kontrollera stoppsvarets `voice.seconds:15` och
+   Välj **Avsluta samtalet**. Röstanslutningen stängs. Kontrollera
+   stoppsvarets `voice.seconds:15` och
    `voice.usageFinal:false` i nätverkspanelen. Återställ `finalize on`
    innan nästa prov.
 
