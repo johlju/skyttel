@@ -161,6 +161,20 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
     const oldSave = await pendingRequest;
     await saveWaiting;
     expect(saveId).not.toBe('');
+    // The conversation must observe this registered operation while the
+    // same browser still owns its original, unfinished manual save request.
+    await page.waitForResponse(async (response) => {
+      if (
+        !/\/text-assistant\/[^/]+(?:\/voice\/[^/]+\/poll)?$/.test(response.url()) ||
+        response.status() !== 200
+      )
+        return false;
+      const body = await response.json();
+      return (body.assistant ?? body).operations?.some(
+        (operation: { operationId: string; status: string }) =>
+          operation.operationId === saveId && operation.status === 'pending',
+      );
+    });
     expect(await (await page.request.get(`${path}/map/operations/${saveId}`)).json()).toMatchObject(
       {
         operation: {

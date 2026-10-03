@@ -117,6 +117,7 @@ export function conversationOngoing(
 export function useConversation({
   householdId,
   enabled = true,
+  manualSaveOperationId,
   onMapChange,
   onStarted,
   onEnded,
@@ -127,6 +128,8 @@ export function useConversation({
   householdId: string;
   /** The conversation exists only while the household's map is loaded. */
   enabled?: boolean;
+  /** A local save request still owns this operation's completion. */
+  manualSaveOperationId?: string;
   onMapChange: () => void;
   /** A conversation has started, so the caller can show it as the chosen button asks. */
   onStarted?: (mode: ConversationMode) => void;
@@ -168,6 +171,8 @@ export function useConversation({
   const [discovered, setDiscovered] = useState<string[] | null>(null);
   const checkedReplies = useRef(new Set<string>());
   const recovering = useRef(false);
+  const manualSave = useRef(manualSaveOperationId);
+  manualSave.current = manualSaveOperationId;
   const checkOccurrence = useRef<string | null>(null);
   const [transcript, setTranscript] = useState<TranscriptRow[]>([]);
   const voiceConnected = useRef(false);
@@ -555,6 +560,16 @@ export function useConversation({
       controller.abort();
     };
   }, [session, unknown, pending, connected, path, update, fail]);
+  const saveChecking =
+    unknown ||
+    checking ||
+    Boolean(discovered?.some((id) => id !== manualSaveOperationId)) ||
+    session?.phase === 'recovery' ||
+    Boolean(
+      session?.operations.some(
+        (item) => item.status === 'pending' && item.operationId !== manualSaveOperationId,
+      ),
+    );
   const voice = useVoice({
     householdId,
     assistant: session,
@@ -565,12 +580,7 @@ export function useConversation({
     onTranscript: showTranscript,
     transcript,
     inputBlocked: !connected || available === false,
-    saveChecking:
-      unknown ||
-      checking ||
-      Boolean(discovered) ||
-      session?.phase === 'recovery' ||
-      Boolean(session?.operations.some((item) => item.status === 'pending')),
+    saveChecking,
     contextFailed: session?.contextSummaryState === 'failed',
     onRecoveryNeeded: () => setUnknown(true),
   });
@@ -591,12 +601,6 @@ export function useConversation({
   }, [voice.state]);
   pauseCapture.current = () => voice.pauseMicrophone?.();
   const disconnected = !navigator.onLine || !connected || voice.disconnected;
-  const saveChecking =
-    unknown ||
-    checking ||
-    Boolean(discovered) ||
-    session?.phase === 'recovery' ||
-    Boolean(session?.operations.some((item) => item.status === 'pending'));
   const inputBlocked =
     disconnected ||
     available === false ||
@@ -611,7 +615,10 @@ export function useConversation({
     previouslyConnected.current = connected;
   }, [connected]);
   const recover = useCallback(async () => {
-    if (recovering.current || !connection.current || !navigator.onLine) return;
+    // Recovery can finish registered operations. Wait for the local request's
+    // outcome before treating its operation as uncertain, including stale timers.
+    if (manualSave.current || recovering.current || !connection.current || !navigator.onLine)
+      return;
     recovering.current = true;
     checkOccurrence.current ??= crypto.randomUUID();
     const checkId = checkOccurrence.current;
@@ -718,7 +725,7 @@ export function useConversation({
     )
       .then((result) => {
         const pending = result.operations
-          ?.filter((item) => item.status === 'pending')
+          ?.filter((item) => item.status === 'pending' && item.operationId !== manualSave.current)
           .map((item) => item.operationId);
         if (!controller.signal.aborted && pending?.length) setDiscovered(pending);
       })

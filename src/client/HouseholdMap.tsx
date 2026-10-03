@@ -1467,6 +1467,7 @@ export function HouseholdMap({
   const conversation = useConversation({
     householdId,
     enabled: Boolean(state),
+    manualSaveOperationId: pending ? saveAttempt.current?.operationId : undefined,
     onMapChange: () => {
       // The local save owns completion and the following map refresh.
       // A session poll must not replace its pending state with recovery.
