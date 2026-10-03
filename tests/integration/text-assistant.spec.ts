@@ -1,14 +1,21 @@
 import { expect, type Page, test } from '@playwright/test';
-import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
+import type { TextAssistantReview, TextAssistantView } from '../../src/shared/text-assistant.js';
 import { createHousehold, openWorkspace, signIn, utilityButton } from '../support/client.js';
 import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const assistant = (page: Page) => page.getByRole('region', { name: 'Arbetsyta', exact: true });
+const transcript = (page: Page) => page.getByRole('log', { name: 'Samtalstext', exact: true });
+const notice = (page: Page) => page.getByRole('region', { name: 'Samtalsnotis', exact: true });
 async function consent(page: Page) {
+  const started = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' && response.url().endsWith('/text-assistant'),
+  );
   await startConversationWithText(page);
   await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeVisible();
+  return (await (await started).json()) as TextAssistantView;
 }
 async function send(page: Page, text: string) {
   await openConversationText(page);
@@ -206,9 +213,11 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
     await consent(page);
     await expect(await showDraft(page)).toContainText('Lo Lind');
     await send(page, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
-    await expect(assistant(page).getByRole('status')).toHaveText(
-      'Sparat. Hela utkastet finns i hushållets karta.',
-    );
+    await expect(
+      transcript(page)
+        .getByRole('listitem')
+        .filter({ hasText: /^Skyttel: Sparat\.$/ }),
+    ).toHaveCount(1);
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Osänd text som ska finnas kvar',
     );
@@ -249,10 +258,10 @@ test('TEXT-02: sena svar efter kastat utkast och avbrott ändrar inte nytt arbet
   const app = await createInstallation(undefined, { modelFetch: model.provider });
   try {
     const { path, value } = await arrange(page, app);
-    await consent(page);
+    const started = await consent(page);
     await send(page, 'Rätta namnet.');
     await expect.poll(() => held).toBe(true);
-    await expect(assistant(page).getByRole('status')).toContainText('Skyttel arbetar');
+    await expect(transcript(page)).toContainText('Skyttel arbetar');
     await page.request.post(`${path}/discard`, {
       headers: { origin: app.origin },
       data: { version: 1, contentVersion: 1 },
@@ -266,9 +275,14 @@ test('TEXT-02: sena svar efter kastat utkast och avbrott ändrar inte nytt arbet
         value: { ...value, name: 'För sent' },
       }),
     ]);
-    await expect(assistant(page).getByRole('alert')).toContainText(
-      'Utkastet eller kartan har ändrats',
-    );
+    await expect(notice(page)).toHaveText('Skyttel kunde inte slutföra uppdraget. Försök igen.×');
+    expect(
+      (
+        await (
+          await page.request.get(`${path.replace(/\/map$/, '/text-assistant')}/${started.id}`)
+        ).json()
+      ).error,
+    ).toBe('assistant_draft_changed');
     expect((await (await page.request.get(path)).json()).draft.changes).toEqual([]);
     held = false;
     await send(page, 'Skapa ett nytt förslag.');
@@ -303,7 +317,10 @@ test('TEXT-03: nekade sparbesked och modellfel lämnar formulärarbetet tillgän
   const app = await createInstallation(undefined, { modelFetch: model.provider });
   try {
     const { path } = await arrange(page, app);
-    await consent(page);
+    const started = await consent(page);
+    const currentTask = async (): Promise<TextAssistantView> =>
+      (await page.request.get(`${path.replace(/\/map$/, '/text-assistant')}/${started.id}`)).json();
+    let revision = started.revision;
     for (const text of [
       'Spara inte.',
       'Vad händer om vi sparar?',
@@ -312,12 +329,22 @@ test('TEXT-03: nekade sparbesked och modellfel lämnar formulärarbetet tillgän
       'Skriv ”spara” i beskrivningen.',
     ]) {
       await send(page, text);
-      await expect(assistant(page).getByRole('alert')).toContainText('Inget sparades');
+      await expect
+        .poll(async () => {
+          const current = await currentTask();
+          return current.revision > revision && current.error === 'assistant_save_not_requested';
+        })
+        .toBe(true);
+      revision = (await currentTask()).revision;
+      await expect(notice(page)).toContainText(
+        'Skyttel kunde inte slutföra uppdraget. Försök igen.',
+      );
       expect((await (await page.request.get(path)).json()).objects).toEqual([]);
     }
     fail = true;
     await send(page, 'Beskriv mitt utkast.');
-    await expect(assistant(page).getByRole('alert')).toContainText('Skyttel kunde inte slutföra');
+    await expect.poll(async () => (await currentTask()).error).toBe('assistant_provider_failed');
+    await expect(notice(page)).toContainText('Skyttel kunde inte slutföra');
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
       .getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true })
@@ -368,7 +395,9 @@ test('TEXT-04: ett tappat sparbesked återfinns efter omstart utan dubbelt spara
     });
     await send(page, 'Spara hela utkastet nu.');
     await expect.poll(() => dropped).toBe(true);
-    await expect(assistant(page).getByRole('alert')).toContainText('Svaret saknas');
+    await expect(notice(page)).toContainText(
+      'Det är oklart om utkastet sparades. Skyttel kontrollerar det.',
+    );
     await app.restart();
     await page.unroute('**/text-assistant/*/messages');
     await page.reload();
@@ -464,9 +493,11 @@ test('TEXT-06: obekräftad samtalstext skiljs från sparande och markering', asy
       expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
     }
     await send(page, 'Spara hela utkastet nu.');
-    await expect(assistant(page).getByRole('status')).toHaveText(
-      'Sparat. Hela utkastet finns i hushållets karta.',
-    );
+    await expect(
+      transcript(page)
+        .getByRole('listitem')
+        .filter({ hasText: /^Skyttel: Sparat\.$/ }),
+    ).toHaveCount(1);
     await showAttempts(page);
     await assistant(page).getByText('Visa kvittot', { exact: true }).last().click();
     await expect(assistant(page)).toContainText('Sparat: Lo Exempel. Kvitto:');
@@ -544,10 +575,7 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     await consent(page);
     await openWorkspace(page);
     const listPanel = page.getByRole('region', { name: 'Lista och utkast', exact: true });
-    const panel = assistant(page);
-    const report = panel
-      .getByRole('heading', { name: 'Besked från Skyttel', exact: true })
-      .locator('..');
+    const report = transcript(page);
     const beforeReview = await read();
 
     await send(page, 'Läs upp hela utkastet.');
@@ -558,9 +586,11 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     expect(await read()).toEqual(beforeReview);
 
     await send(page, 'Spara hela utkastet nu.');
-    await expect(panel.getByRole('status')).toHaveText(
-      'Sparat. Hela utkastet finns i hushållets karta.',
-    );
+    await expect(
+      transcript(page)
+        .getByRole('listitem')
+        .filter({ hasText: /^Skyttel: Sparat\.$/ }),
+    ).toHaveCount(1);
     const saved = await read();
     expect(saved.draft.changes).toEqual([]);
     expect(saved.draft.relationships ?? []).toEqual([]);
