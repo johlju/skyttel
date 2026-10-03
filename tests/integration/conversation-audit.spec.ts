@@ -101,6 +101,7 @@ for (const theme of ['light', 'dark'] as const)
       app.setConversationAvailable(false);
       await expect(microphoneButton(page)).toHaveAccessibleDescription(
         /Inte tillgängligt just nu\./,
+        { timeout: 10_000 },
       );
       await microphoneButton(page).click();
       await expect(notice(page)).toContainText('Samtal med Skyttel är inte tillgängligt just nu.');
@@ -113,7 +114,9 @@ for (const theme of ['light', 'dark'] as const)
       await capture(page, `notice-unavailable-${theme}`);
 
       app.setConversationAvailable(true);
-      await expect(notice(page)).toHaveCount(0);
+      // Availability is checked every five seconds; allow the next probe to
+      // finish even when the service changes just after the previous one.
+      await expect(notice(page)).toHaveCount(0, { timeout: 10_000 });
       await page.evaluate(() => window.skyttelVoiceFixture.setMicrophone('deny'));
       await microphoneButton(page).click();
       await expect(notice(page)).toContainText('Webbläsaren tillåter inte mikrofonen.');
