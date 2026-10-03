@@ -6,6 +6,7 @@ import {
 import { draftCount } from './ConversationDraft.js';
 import type { Conversation } from './use-conversation.js';
 import type { useConversationPreferences } from './use-conversation-preferences.js';
+import { useConversationViewport } from './use-conversation-viewport.js';
 import './conversation-settings.css';
 
 const savedDate = new Intl.DateTimeFormat('sv-SE', { dateStyle: 'long' });
@@ -26,11 +27,13 @@ export function ConversationSettings({
   ongoing?: boolean;
   personal?: ReturnType<typeof useConversationPreferences>;
 }) {
+  const { mobile } = useConversationViewport();
   return (
     <div className="conversation-settings">
       {conversation.available === false && <p>Samtal med Skyttel är inte tillgängligt just nu.</p>}
       <ConsentSetting conversation={conversation} householdName={householdName} ongoing={ongoing} />
       {personal && <DraftSetting personal={personal} />}
+      {personal && !mobile && <WidthSetting personal={personal} />}
     </div>
   );
 }
@@ -55,6 +58,52 @@ function DraftSetting({ personal }: { personal: ReturnType<typeof useConversatio
       <p id={`${id}-help`}>Ett tomt utkast visas när Skyttel föreslår den första ändringen.</p>
       <p className="conversation-setting-feedback" role="status">
         {personal.feedback}
+      </p>
+    </section>
+  );
+}
+
+function WidthSetting({ personal }: { personal: ReturnType<typeof useConversationPreferences> }) {
+  const id = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const restore = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const changed = personal.preferences.textWidth !== 400 || personal.preferences.draftWidth !== 340;
+  useLayoutEffect(() => {
+    if (restore.current && !busy && !changed) {
+      restore.current = false;
+      heading.current?.focus();
+    }
+  }, [busy, changed]);
+  return (
+    <section className="conversation-setting" aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>
+        Textvyns bredd
+      </h2>
+      <p className="conversation-setting-scope">Gäller dig i alla dina hushåll.</p>
+      {personal.known &&
+        (changed || busy ? (
+          <div className="conversation-setting-actions">
+            <button
+              type="button"
+              aria-disabled={busy || personal.pending}
+              onClick={async () => {
+                if (busy || personal.pending) return;
+                restore.current = true;
+                setBusy(true);
+                const saved = await personal.resetWidths();
+                if (!saved) restore.current = false;
+                setBusy(false);
+              }}
+            >
+              Återställ bredderna
+            </button>
+          </div>
+        ) : (
+          <p>Du har inte ändrat bredderna.</p>
+        ))}
+      <p className="conversation-setting-feedback" role="status">
+        {personal.widthFeedback}
       </p>
     </section>
   );

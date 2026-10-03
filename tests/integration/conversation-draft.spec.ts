@@ -149,7 +149,11 @@ test('SAMTALSUTKAST-02: valet följer användaren mellan hushåll och enheter', 
   try {
     await settings(page);
     await expect(preference(page)).not.toBeChecked();
-    await expect(page.getByText('Gäller dig i alla dina hushåll.', { exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole('region', { name: 'Utkastet', exact: true })
+        .getByText('Gäller dig i alla dina hushåll.', { exact: true }),
+    ).toBeVisible();
     await preference(page).check();
     await expect(
       page.getByRole('region', { name: 'Utkastet', exact: true }).getByRole('status'),

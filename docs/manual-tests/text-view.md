@@ -4,7 +4,8 @@ Fallen provar **Skriv till Skyttel**: textvyn öppnas och stängs utan att
 samtalet avslutas, samtalstexten visar vem som skriver, raden
 **Skyttel arbetar…** står sist och **Nytt samtal** tömmer samtalet men
 behåller utkast, mikrofon och oskickad text. De provar också att textvyn
-går att använda på mobil enhet och smal skärm. Placering, bredd och mått
+går att använda på mobil enhet och smal skärm samt personliga bredder på
+dator. Placering, bredd och mått
 kontrolleras av integrationstesterna.
 Anteckna commit, webbläsare, enhet och godkänt eller underkänt resultat
 vid körning.
@@ -18,7 +19,7 @@ vid körning.
 
 1. För TEXTVY-01, TEXTVY-02 och TEXTVY-04: starta den
    [kontrollerade installationen för text](text-assistant.md#controlled-text-fixture).
-   För TEXTVY-03 och TEXTMOBIL-01–04: starta i stället
+   För TEXTVY-03, TEXTMOBIL-01–04 och TEXTBREDD-01–05: starta i stället
    [den kontrollerade röstinstallationen](voice-assistant.md#controlled-voice-fixture)
    med `node --import tsx scripts/manual-voice.ts` efter bygget. Följ guidens
    privata portvidarebefordran och inloggning. Kör inte `seed-family`;
@@ -381,6 +382,218 @@ testfallet “TEXTMOBIL-04: en lång notis rullar och kan stängas i kort fönst
 - Automation provar detta vid 844×190 px. Faktisk förstoring, fokus
   och VoiceOver med verkligt tangentbord provas separat.
 
+## Personliga bredder på dator
+
+### TEXTBREDD-01: handtagen ändrar bredderna var för sig utan att avbryta samtalet
+
+**Syfte:** Ändra en bredd med mus eller tangentbord och behålla samtalet.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Röstinstallationen från förberedelsen med det
+osparade Lo-förslaget. Ett brett datorfönster med mus, gärna 1600 px.
+Börja med grundbredderna genom TEXTBREDD-03 om de tidigare har ändrats.
+
+**Integrationstest:**
+[conversation-widths.spec.ts](../../tests/integration/conversation-widths.spec.ts),
+testfallet “TEXTBREDD-01: handtagen ändrar bredderna var för sig utan att
+avbryta samtalet”.
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel**, godkänn och välj **Visa utkastet**.
+   Slå på **Prata med Skyttel**. Skriv **Oskickat medan bredden ändras**
+   utan att skicka.
+2. Dra gränsen vid samtalstextens vänsterkant åt vänster och sedan
+   gränsen vid utkastets vänsterkant åt vänster. Kontrollera fältet,
+   mikrofonläget och Lo-förslaget efter varje dragning.
+3. Nå **Ändra samtalstextens bredd** med Tab. Tryck vänsterpil och
+   högerpil. Nå **Ändra utkastlistans bredd** och tryck högerpil.
+4. Dra vardera gränsen så långt åt höger som möjligt. Dra sedan
+   samtalstextens gräns långt åt vänster. Kontrollera att kartan syns.
+5. Läs handtagens namn, roll och aktuella värde med NVDA eller VoiceOver.
+
+**Förväntat resultat:**
+
+- Samtalstext och utkast ändras var för sig. Dragning behåller fokus i
+  fältet; piltangenter behåller fokus på handtaget. Oskickad text,
+  mikrofonläge, samtal och Lo-förslag finns kvar. Ingen ny mikrofon begärs.
+- Handtagen heter **Ändra samtalstextens bredd** och
+  **Ändra utkastlistans bredd** och har rollen avskiljare med aktuellt,
+  minsta och största värde. Piltangenter ger ett alternativ till dragning.
+- Automationen mäter grundbredderna 400/340 px, steget 24 px och
+  minimibredderna 300/260 px. Största bredd lämnar kartan synlig.
+  Den kontrollerar samma fält och oförändrade mikrofonspår under ändring.
+- Verklig uppläsning, synligt fokus och kontrast provas separat manuellt.
+
+### TEXTBREDD-02: bredderna följer användaren och skärmens begränsning sparas inte
+
+**Syfte:** Behålla Alex bredder mellan hushåll och enheter utan att ändra
+Robins bredder eller skriva över valet på liten skärm.
+
+**Användare:** Alex och Robin.
+
+**Förutsättningar:** Samma röstinstallation, två webbläsarprofiler för
+Alex och en för Robin. Skapa extra hushållet med den begränsade
+provdatabasförberedelsen i
+[SAMTALSUTKAST-02](conversation-draft.md#samtalsutkast-02-valet-följer-användaren-mellan-hushåll-och-enheter).
+Använd katalogen från röstinstallationen. Den andra profilen öppnar
+`/households/draft-other-household` på installationens utskrivna adress.
+
+**Integrationstest:**
+[conversation-widths.spec.ts](../../tests/integration/conversation-widths.spec.ts),
+testfallet “TEXTBREDD-02: bredderna följer användaren och skärmens
+begränsning sparas inte”.
+
+**Steg:**
+
+1. I Alex första profil, öppna samtal och utkast och gör båda bredderna
+   tydligt större med handtagen.
+2. Logga in med Google som Alex i den andra profilen. Öppna andra
+   hushållet, starta med text, godkänn och öppna det tomma utkastet.
+3. Minska andra fönstrets bredd till cirka 850 px. Kontrollera kartan och
+   utkastet. Gör fönstret brett igen utan att använda något handtag.
+4. Öka utkastbredden med vänsterpil i andra profilen. Återgå till Alex
+   första fönster och kontrollera samma ändring.
+5. Kör `identity robin`. Logga in med Microsoft i Robins profil. Bjud in
+   Robin till Textprov enligt SAMTALSUTKAST-02. Öppna samtal och utkast
+   där. Kör `identity alex`, sedan `restart`, och ladda om Alex sida.
+
+**Förväntat resultat:**
+
+- Alex bredder gäller i båda hushållen och profilerna samt efter omstart.
+  När ett redan öppet fönster får fokus läser det in det sparade valet.
+- På mindre datorfönster begränsas visningen så att kartan syns och
+  utkastet ryms. De större sparade bredderna kommer tillbaka på bred skärm
+  utan att användaren behöver ändra dem igen.
+- Robin börjar med grundbredderna, oberoende av Alex val.
+
+### TEXTBREDD-03: bredderna återställs i Inställningar även utan tillgängligt samtal
+
+**Syfte:** Återställa båda bredderna utan att ändra valet för utkastet.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Samma installation. Kör `available off` i terminalen
+och ladda om sidan. Förbered ändrade bredder med TEXTBREDD-01 innan
+samtalet stängs av. Markera gärna utkastets startval i Inställningar.
+
+**Integrationstest:**
+[conversation-widths.spec.ts](../../tests/integration/conversation-widths.spec.ts),
+testfallet “TEXTBREDD-03: bredderna återställs i Inställningar även utan
+tillgängligt samtal”.
+
+**Steg:**
+
+1. Öppna **Inställningar**, **Samtal med Skyttel**. Läs **Textvyns bredd**.
+2. Aktivera offline i webbläsarens utvecklarverktyg. Välj
+   **Återställ bredderna** och läs återkopplingen. Återställ anslutningen.
+3. Använd Tab och Enter för att välja **Återställ bredderna** igen.
+   Kontrollera återkoppling, fokus och utkastets startval.
+4. Kör `available on`, återgå till kartan och öppna samtal och utkast.
+
+**Förväntat resultat:**
+
+- Delen säger **Gäller dig i alla dina hushåll.** och visar inga värden.
+  Samtalets otillgänglighet hindrar inte återställningen.
+- Vid misslyckande står **Bredderna kunde inte sparas. Försök igen.**
+  Knappen och tidigare bredder finns kvar och fokus stannar på knappen.
+- Vid lyckad återställning står **Bredderna är återställda**. Knappen
+  försvinner, **Du har inte ändrat bredderna.** visas och fokus går till
+  delens rubrik. Valet **Visa utkastet när ett samtal börjar** ändras inte.
+- Samtalstext och utkast har grundbredderna igen. Knappen visas bara när
+  minst en sparad bredd skiljer sig från grundvärdet.
+
+### TEXTBREDD-04: mobil enhet och smal skärm har inga breddhandtag
+
+**Syfte:** Behålla mobilens och den smala skärmens layout.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Samma installation, tidigare ändrade bredder och
+ett datorfönster högst 700 px brett, stående telefon och bred surfplatta.
+
+**Integrationstest:**
+[conversation-widths.spec.ts](../../tests/integration/conversation-widths.spec.ts),
+testfallet “TEXTBREDD-04: mobil enhet och smal skärm har inga breddhandtag”,
+i grupperna smal dator, telefon och bred pekskärm.
+
+**Steg:**
+
+1. Öppna textvyn och utkastet på varje skärm. Kontrollera att inga
+   breddhandtag finns eller kan nås med Tab.
+2. Öppna **Inställningar**, **Samtal med Skyttel** på varje enhet.
+3. Återgå till ett brett datorfönster och kontrollera de sparade bredderna.
+
+**Förväntat resultat:**
+
+- Ingen bredd ändras på mobil enhet eller smal skärm. Bred pekskärm har
+  fortsatt ett fast sidofält på 400 px; smal skärm fylls som tidigare.
+- **Textvyns bredd** saknas på mobil enhet. Delen finns på smal dator
+  och kan återställa sparade bredder där.
+- Visning på dessa skärmar skriver inte över de sparade datorbredderna.
+  Automationen provar emulerade pekare; fysisk enhet provas separat.
+
+### TEXTBREDD-05: äldre hushållsarkiv lämnar personliga samtalsval kvar
+
+**Syfte:** Läsa ett kompatibelt äldre arkiv utan att återställa personliga
+bredder, utkastets startval eller medgivande från hushållsfilen.
+
+**Användare:** Alex, administratör i Textprov.
+
+**Förutsättningar:** Samma isolerade röstinstallation och Lo-förslag.
+Inga verkliga privata uppgifter används. Det nya personliga lagret ändrar
+inte hushållsfilens innehåll; en kopia med schemaversion 23 är därför ett
+giltigt kompatibilitetsprov. Ändra aldrig en produktionsfil för detta prov.
+
+**Integrationstest:**
+[conversation-widths.spec.ts](../../tests/integration/conversation-widths.spec.ts),
+testfallet “TEXTBREDD-05: äldre hushållsarkiv lämnar personliga samtalsval kvar”.
+Aktuell export och återimport täcks även av
+[household-export-ui.spec.ts](../../tests/integration/household-export-ui.spec.ts),
+testfallet “EXPORT-10: the downloaded current-format archive restores
+shared, private and historical content after restart”.
+
+**Steg:**
+
+1. Starta samtalet med text, markera **Fråga inte igen för det här
+   hushållet** och godkänn. Öppna utkastet och ändra båda bredderna.
+2. Öppna **Inställningar**, **Fullständig export**. Förbered exporten och
+   hämta ZIP-filen. Kör kommandot nedan i arbetsytan; ersätt endast
+   sökvägen med den hämtade provfilen. Kommandot kontrollerar versionen och
+   gör en ny tillfällig kopia utan att ändra hushållsinnehållet.
+3. På **Samtal med Skyttel**, återställ bredderna och markera
+   **Visa utkastet när ett samtal börjar**.
+4. På **Återimportera hushållet**, välj `/tmp/skyttel-schema-23.zip`.
+   Välj **Kontrollera importfil**, granska och markera **Jag vill ersätta
+   allt hushållsinnehåll**. Välj **Ersätt hushållets innehåll**.
+5. Läs **Samtal med Skyttel** igen och kontrollera grundbredderna,
+   utkastets markerade startval och det sparade medgivandet. Läs Lo-förslaget.
+   Ta bort den tillfälliga provkopian när provet är färdigt.
+
+```sh
+TEXTBREDD_ARCHIVE=/absolute/path/skyttel-hushall.zip node --input-type=module <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import { unzipSync, zipSync } from 'fflate';
+const parts = unzipSync(readFileSync(process.env.TEXTBREDD_ARCHIVE));
+const manifest = JSON.parse(Buffer.from(parts['manifest.json']).toString());
+if (manifest.format !== 'skyttel-household' || manifest.schemaVersion !== 24)
+  throw Error('En provexport med schemaversion 24 krävs');
+manifest.schemaVersion = 23;
+parts['manifest.json'] = Buffer.from(JSON.stringify(manifest));
+writeFileSync('/tmp/skyttel-schema-23.zip', zipSync(parts), { mode: 0o600 });
+JS
+```
+
+**Förväntat resultat:**
+
+- Exporten använder schemaversion 24. Personliga samtalsval och medgivande
+  ingår inte i hushållsfilen; automationen granskar detta.
+- En giltig schemaversion 23 går att kontrollera och återimportera genom
+  gränssnittet. Lo-förslaget bevaras. Aktuell version provas också.
+- Grundbredderna, det markerade startvalet och det sparade medgivandet
+  finns kvar efter import. Hushållsimport skriver inte över personliga val.
+
 ## Bedömning och återstående manuella prov
 
 Flödet är utformat mot WCAG 2.2 nivå AA. Kraven nedan är designmål, och
@@ -408,3 +621,14 @@ synliga fokuset på verklig iPhone och iPad, kontrast i båda teman och
 200/400 procents zoom återstår att kontrollera. Emulerade skärmstorlekar
 och en ändring av webbläsarens synliga höjd bevisar inte ett fysiskt
 skärmtangentbord eller fullständig överensstämmelse.
+
+Breddhandtagen har namn, avskiljarroll, orientering, styrd region och
+aktuellt/minsta/största värde (1.3.1, 4.1.2). Tab och piltangenter ger
+tangentbordsåtkomst och ett alternativ till dragning (2.1.1, 2.5.7).
+Handtagens träffyta är 24 px bred (2.5.8), och fokus markeras i kartans
+accentfärg (2.4.7, 1.4.11). Återställning ger artig återkoppling och
+rubrikfokus när knappen försvinner (2.4.3, 4.1.3). Automationen kontrollerar
+namn, roller, värden, dragning, piltangenter, bevarat fokus och text samt
+återställningens fokus. Verklig skärmläsaruppläsning, kontrast i båda teman
+och omflöde vid 200/400 procents zoom återstår. Detta är designmål och
+avgränsade kontroller, inte ett intyg om fullständig WCAG-överensstämmelse.

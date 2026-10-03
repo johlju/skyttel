@@ -790,7 +790,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
     await section.getByRole('button', { name: 'Hämta ZIP-fil' }).click();
     const result = await archive(await downloaded);
     const manifest = JSON.parse(Buffer.from(result.parts['manifest.json']).toString());
-    expect(manifest.schemaVersion).toBe(22);
+    expect(manifest.schemaVersion).toBe(24);
     const encoded = Buffer.from(result.parts['content.json']).toString();
     for (const excluded of [
       'synthetic-provider-token',

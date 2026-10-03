@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { ConversationSettings } from '../../../src/client/ConversationSettings.js';
 import { useConversation } from '../../../src/client/use-conversation.js';
 import { useConversationPreferences } from '../../../src/client/use-conversation-preferences.js';
+import { defaultConversationPreferences } from '../../../src/shared/conversation-preferences.js';
 
 const path = '/api/households/linden/map';
 const checkbox = () =>
@@ -39,7 +40,7 @@ test('the unavailable conversation still permits a personal choice, which is opt
   let release!: (response: Response) => void;
   const writes: unknown[] = [];
   provider(
-    async () => Response.json({ showDraftOnStart: false }),
+    async () => Response.json({ ...defaultConversationPreferences, showDraftOnStart: false }),
     async (init) => {
       writes.push(JSON.parse(String(init.body)));
       return new Promise((resolve) => {
@@ -52,7 +53,7 @@ test('the unavailable conversation still permits a personal choice, which is opt
   await userEvent.click(checkbox());
   expect((checkbox() as HTMLInputElement).checked).toBe(true);
   expect(checkbox().getAttribute('aria-disabled')).toBe('true');
-  release(Response.json({ showDraftOnStart: true }));
+  release(Response.json({ ...defaultConversationPreferences, showDraftOnStart: true }));
   await waitFor(() => expect(status().textContent).toBe('Valet är sparat'));
   expect(writes).toEqual([{ showDraftOnStart: true }]);
   expect(checkbox()).toBe(document.activeElement);
@@ -61,10 +62,10 @@ test('the unavailable conversation still permits a personal choice, which is opt
 test('a failed save restores the persisted choice and lets the focused checkbox retry', async () => {
   let failures = 1;
   provider(
-    async () => Response.json({ showDraftOnStart: true }),
+    async () => Response.json({ ...defaultConversationPreferences, showDraftOnStart: true }),
     async () => {
       if (failures--) throw Error('offline');
-      return Response.json({ showDraftOnStart: false });
+      return Response.json({ ...defaultConversationPreferences, showDraftOnStart: false });
     },
   );
   render(<Page />);
@@ -83,7 +84,7 @@ test('a failed initial read does not invent a saved choice or enable changes', a
     async () => {
       throw Error('offline');
     },
-    async () => Response.json({ showDraftOnStart: false }),
+    async () => Response.json({ ...defaultConversationPreferences, showDraftOnStart: false }),
   );
   render(<Page />);
   await waitFor(() =>

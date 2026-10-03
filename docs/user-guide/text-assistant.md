@@ -135,6 +135,27 @@ och samtalsnotisen ovanför kartans nedersta rad och dess återkoppling.
 Långa samtalsnotiser i ett kort fönster går att rulla utan att fältet
 flyttas bort.
 
+## Textvyns bredd
+
+På dator kan du ändra samtalstextens och utkastets bredd var för sig.
+Dra gränsen vid respektive vänsterkant, eller nå **Ändra samtalstextens
+bredd** och **Ändra utkastlistans bredd** med Tab och använd vänster- och
+högerpil. Varje piltryck flyttar gränsen 24 px. Samtalstexten börjar med
+400 px och utkastet med 340 px; de blir som minst 300 respektive 260 px.
+Kartan lämnas alltid synlig.
+
+Bredderna sparas direkt för dig i alla dina hushåll och på alla dina
+enheter. På mindre skärm begränsas bara visningen; de sparade bredderna
+kommer tillbaka när de ryms igen. På mobil enhet och smal skärm finns inga
+breddhandtag. Bred pekskärm behåller sidofältet på 400 px.
+
+I **Inställningar**, **Samtal med Skyttel**, finns **Textvyns bredd** på
+dator, även i ett smalt fönster. **Återställ bredderna** återställer båda
+bredderna och säger **Bredderna är återställda**. Knappen visas bara när
+du har ändrat någon bredd; annars står **Du har inte ändrat bredderna.**
+Det går att återställa även när samtalet inte är tillgängligt. Delen visas
+inte på mobil enhet. Återställning ändrar inte utkastets startval.
+
 ## Utkastet i textvyn
 
 **Visa utkastet** ovanför samtalstexten visar antalet osparade ändringar.

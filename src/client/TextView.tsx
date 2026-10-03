@@ -1,7 +1,13 @@
 import { type ReactNode, useId, useLayoutEffect, useRef } from 'react';
+import {
+  conversationWidths,
+  defaultConversationPreferences,
+} from '../shared/conversation-preferences.js';
 import { ContextMeter } from './ConversationContext.js';
 import { ConversationTranscript } from './ConversationTranscript.js';
+import { ConversationWidthHandle } from './ConversationWidthHandle.js';
 import type { Conversation } from './use-conversation.js';
+import type { useConversationPreferences } from './use-conversation-preferences.js';
 import { useConversationViewport } from './use-conversation-viewport.js';
 import { voiceBoxStatus } from './VoiceBox.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
@@ -21,6 +27,7 @@ export function TextView({
   draftCount = 0,
   onToggleDraft,
   draftContent,
+  widthPreferences,
 }: {
   conversation: Conversation;
   hidden?: boolean;
@@ -33,9 +40,22 @@ export function TextView({
   draftCount?: number;
   onToggleDraft?: () => void;
   draftContent?: ReactNode;
+  widthPreferences?: ReturnType<typeof useConversationPreferences>;
 }) {
   const { session, transcript, text, pending, unknown, working } = conversation;
-  const { computer, mobile, short } = useConversationViewport();
+  const viewport = useConversationViewport();
+  const { computer, mobile, short } = viewport;
+  const root = useRef<HTMLElement>(null);
+  const widths = conversationWidths(
+    widthPreferences?.preferences ?? defaultConversationPreferences,
+    viewport.width,
+    draftOpen,
+  );
+  useLayoutEffect(() => {
+    const map = root.current?.closest<HTMLElement>('.household-map');
+    map?.style.setProperty('--text-view-width', `${computer ? widths.textWidth : 400}px`);
+    map?.style.setProperty('--draft-view-width', `${computer ? widths.draftWidth : 340}px`);
+  }, [computer, widths.textWidth, widths.draftWidth]);
   const initialComputer = useRef(computer);
   const stop = working && !computer;
   const stopFocused = useRef(false);
@@ -79,6 +99,7 @@ export function TextView({
   }
   return (
     <section
+      ref={root}
       className={`text-view${draftOpen ? ' draft-open' : ''}`}
       data-short={short}
       data-mobile={mobile}
@@ -116,6 +137,10 @@ export function TextView({
           </button>
         </header>
         <ContextMeter percentage={session?.contextPercentage} />
+        {widthPreferences?.widthFeedback &&
+          !widthPreferences.widthFeedback.includes('återställda') && (
+            <p role="status">{widthPreferences.widthFeedback}</p>
+          )}
         {onToggleDraft && (
           <button
             type="button"
@@ -134,6 +159,20 @@ export function TextView({
         )}
       </div>
       <div className="text-view-columns">
+        {computer && widthPreferences?.known && draftOpen && (
+          <ConversationWidthHandle
+            name="Ändra utkastlistans bredd"
+            value={widths.draftWidth}
+            minimum={260}
+            maximum={widths.available - widths.textWidth}
+            controls={`${id}-draft`}
+            onPreview={(draftWidth) => widthPreferences.previewWidths({ draftWidth })}
+            onCommit={(draftWidth) => {
+              void widthPreferences.resize({ draftWidth });
+            }}
+            onCancel={widthPreferences.cancelPreview}
+          />
+        )}
         <section
           id={`${id}-draft`}
           className="text-view-draft"
@@ -142,7 +181,21 @@ export function TextView({
         >
           {draftContent}
         </section>
-        <div className="text-view-conversation">
+        <div id={`${id}-conversation`} className="text-view-conversation">
+          {computer && widthPreferences?.known && (
+            <ConversationWidthHandle
+              name="Ändra samtalstextens bredd"
+              value={widths.textWidth}
+              minimum={300}
+              maximum={widths.available - (draftOpen ? widths.draftWidth : 0)}
+              controls={`${id}-conversation`}
+              onPreview={(textWidth) => widthPreferences.previewWidths({ textWidth })}
+              onCommit={(textWidth) => {
+                void widthPreferences.resize({ textWidth });
+              }}
+              onCancel={widthPreferences.cancelPreview}
+            />
+          )}
           <div
             ref={body}
             className="text-view-body"

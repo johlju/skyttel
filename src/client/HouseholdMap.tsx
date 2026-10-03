@@ -1921,6 +1921,7 @@ export function HouseholdMap({
           draft={state.draft}
           showDraftOnStart={conversationPreferences.preferences.showDraftOnStart}
           preferencesKnown={conversationPreferences.known}
+          widthPreferences={conversationPreferences}
           notice={active ? notice : null}
           onCloseTextView={closeTextView}
           householdId={householdId}

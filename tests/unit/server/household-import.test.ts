@@ -32,6 +32,32 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
+test('household archives exclude personal conversation choices and import preserves them', async () => {
+  const preferences = { showDraftOnStart: true, textWidth: 624, draftWidth: 460 };
+  expect((await client.json(`${path}/map/conversation-preferences`, preferences)).status).toBe(200);
+  const prepared = await (await client.json(`${path}/exports`, {})).json();
+  const bytes = new Uint8Array(
+    await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
+  );
+  const parts = unzipSync(bytes);
+  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(24);
+  const encoded = new TextDecoder().decode(parts['content.json']);
+  for (const field of ['showDraftOnStart', 'textWidth', 'draftWidth', 'conversationPreferences'])
+    expect(encoded).not.toContain(field);
+  const ready = await (await upload(bytes)).json();
+  expect(
+    (
+      await client.json(`${path}/imports/${ready.id}/confirm`, {
+        contentVersion: 1,
+        confirmed: true,
+      })
+    ).status,
+  ).toBe(200);
+  expect(await (await client.request(`${path}/map/conversation-preferences`)).json()).toEqual(
+    preferences,
+  );
+});
+
 async function upload(bytes = archive, actor = client, scope = path) {
   return actor.request(`${scope}/imports`, {
     method: 'POST',
@@ -60,7 +86,7 @@ function changedContent(change: (content: Record<string, unknown>) => void) {
   });
 }
 
-test.each([14, 15, 16, 17])(
+test.each([14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24])(
   'schema %i household archives remain importable with their saved content and history',
   async (schemaVersion) => {
     const bytes = altered((parts) => {

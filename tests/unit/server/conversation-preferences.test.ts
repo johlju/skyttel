@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
+import { defaultConversationPreferences } from '../../../src/shared/conversation-preferences.js';
 import { applicationFixture } from './fixture.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
@@ -14,12 +15,20 @@ beforeEach(async () => {
 afterEach(() => fixture.close());
 
 test('a personal draft choice defaults to closed and survives rereading without consent', async () => {
-  expect(await (await client.request(path)).json()).toEqual({ showDraftOnStart: false });
+  expect(await (await client.request(path)).json()).toEqual({
+    ...defaultConversationPreferences,
+    showDraftOnStart: false,
+  });
   expect(await (await client.json(path, { showDraftOnStart: true })).json()).toEqual({
+    ...defaultConversationPreferences,
     showDraftOnStart: true,
   });
-  expect(await (await client.request(path)).json()).toEqual({ showDraftOnStart: true });
+  expect(await (await client.request(path)).json()).toEqual({
+    ...defaultConversationPreferences,
+    showDraftOnStart: true,
+  });
   expect(await (await client.json(path, { showDraftOnStart: false })).json()).toEqual({
+    ...defaultConversationPreferences,
     showDraftOnStart: false,
   });
 });
@@ -29,6 +38,11 @@ test('invalid personal choices, unknown households and unauthenticated requests 
     {},
     { showDraftOnStart: 'true' },
     { showDraftOnStart: false, userId: 'another' },
+    { textWidth: 299 },
+    { draftWidth: 259 },
+    { textWidth: 400.5 },
+    { draftWidth: '340' },
+    { textWidth: Number.MAX_SAFE_INTEGER + 1 },
   ])
     expect((await client.json(path, body)).status).toBe(400);
   expect(
@@ -42,5 +56,26 @@ test('invalid personal choices, unknown households and unauthenticated requests 
       })
     ).status,
   ).toBe(403);
-  expect(await (await client.request(path)).json()).toEqual({ showDraftOnStart: false });
+  expect(await (await client.request(path)).json()).toEqual({
+    ...defaultConversationPreferences,
+    showDraftOnStart: false,
+  });
+});
+
+test('independent partial width changes retain the other personal choices', async () => {
+  await client.json(path, { showDraftOnStart: true, textWidth: 624, draftWidth: 460 });
+  expect(await (await client.json(path, { textWidth: 648 })).json()).toEqual({
+    showDraftOnStart: true,
+    textWidth: 648,
+    draftWidth: 460,
+  });
+  expect(await (await client.json(path, { draftWidth: 484 })).json()).toEqual({
+    showDraftOnStart: true,
+    textWidth: 648,
+    draftWidth: 484,
+  });
+  expect(await (await client.json(path, { textWidth: 400, draftWidth: 340 })).json()).toEqual({
+    ...defaultConversationPreferences,
+    showDraftOnStart: true,
+  });
 });

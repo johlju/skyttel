@@ -12,6 +12,7 @@ function viewport() {
     computer: !mobile && !narrow,
     wideTouch: mobile && !narrow,
     short: (mobile || narrow) && height < 520,
+    width: window.innerWidth,
     height,
     offset: window.visualViewport?.offsetTop ?? 0,
   };

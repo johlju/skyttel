@@ -13,6 +13,7 @@ import { ConversationDraft, draftCount } from './ConversationDraft.js';
 import './voice.css';
 import { TextView } from './TextView.js';
 import type { Conversation } from './use-conversation.js';
+import type { useConversationPreferences } from './use-conversation-preferences.js';
 import { useConversationViewport } from './use-conversation-viewport.js';
 
 type AssistantActivity = { working: boolean; needsAnswer: boolean };
@@ -29,6 +30,7 @@ export type ConversationPresentation = {
   draft?: MapDraft;
   showDraftOnStart?: boolean;
   preferencesKnown?: boolean;
+  widthPreferences?: ReturnType<typeof useConversationPreferences>;
   inspector?: ReactNode;
   renderWorkspace?: (
     work: ReactNode,
@@ -47,6 +49,7 @@ export function ConversationWorkspace({
   draft,
   showDraftOnStart = false,
   preferencesKnown = true,
+  widthPreferences,
   inspector,
   renderWorkspace,
   textViewOpen = false,
@@ -145,6 +148,7 @@ export function ConversationWorkspace({
       {textViewOpen && (
         <TextView
           conversation={conversation}
+          widthPreferences={widthPreferences}
           hidden={!workVisible}
           onClose={() => onCloseTextView?.()}
           draftOpen={draftOpen}

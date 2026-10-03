@@ -161,7 +161,12 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   och faktiskt hört tal provas separat. Mobilfallen provar iPhone och
   iPad, fast sidofält på bred pekskärm, kompakt rad vid kort synlig höjd,
   bibehållet fokus, 190 px synlig höjd med rösten på, fria kartkontroller
-  och långa rullbara notiser.
+  och långa rullbara notiser. Datorfallen provar oberoende breddhandtag
+  med mus och piltangenter, personliga bredder mellan hushåll och enheter,
+  visningsbegränsning utan ändrat sparat val samt återställning även utan
+  tillgängligt samtal. Mobil enhet och smal skärm behåller sina bredder.
+  Aktuella och kompatibla äldre hushållsarkiv bevarar personliga samtalsval
+  och håller dem och medgivandet utanför hushållsfilen.
 - [Samtalets kö och avbrott](conversation-queue.md): serverns kö på dator,
   fokusstyrd Escape, stopp på mobil och smal skärm, talade och skrivna
   uppdrag samt kvarvarande utkast, oskickad text och återkoppling.
