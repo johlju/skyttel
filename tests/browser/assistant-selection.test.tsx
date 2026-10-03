@@ -1,6 +1,6 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import '../../src/client/styles.css';
 import type { MapState } from '../../src/shared/map.js';
@@ -99,6 +99,7 @@ async function open(width = 1280, height = 900, mapState = state) {
         revision: current.revision + 1,
         phase: 'ready',
         selection: undefined,
+        canceled: true,
       };
     return Response.json(current);
   });
@@ -179,11 +180,13 @@ test('a lost graphics context cannot be acknowledged, and canceling its pending 
   await expect.element(page.getByText(/Grafiken är tillfälligt avbruten/)).toBeVisible();
   await app.show({ kind: 'object', id: 'lo' });
   await openConversationText();
-  await expect
-    .element(page.getByRole('button', { name: 'Avbryt uppdrag', exact: true }))
-    .toBeVisible();
+  await expect.element(page.getByRole('log').getByText(/Skyttel arbetar…/)).toBeVisible();
   expect(app.acknowledgements).toEqual([]);
-  await page.getByRole('button', { name: 'Avbryt uppdrag', exact: true }).click();
+  await page.getByLabelText('Meddelande till Skyttel').click();
+  await userEvent.keyboard('{Escape}');
+  await expect
+    .element(page.getByText('Avbrutet. Föreslagna ändringar ligger kvar i utkastet.'))
+    .toBeVisible();
   extension?.restoreContext();
   await expect.element(page.getByText(/Grafiken är tillfälligt avbruten/)).not.toBeInTheDocument();
   expect(app.acknowledgements).toEqual([]);
