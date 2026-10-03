@@ -1,11 +1,11 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
+import type { TranscriptRow } from '../../../src/client/ConversationTranscript.js';
 import { useTextButtonStatus } from '../../../src/client/use-text-button-status.js';
 import { useVoice } from '../../../src/client/use-voice.js';
 import { WorkspaceTools } from '../../../src/client/WorkspaceTools.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
-import type { TranscriptRow } from '../../../src/client/ConversationTranscript.js';
 
 const initial: TextAssistantView = {
   id: 'conversation',
