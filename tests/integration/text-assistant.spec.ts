@@ -273,7 +273,7 @@ test('TEXT-02: sena svar efter kastat utkast och avbrott ändrar inte nytt arbet
     held = false;
     await send(page, 'Skapa ett nytt förslag.');
     await expect.poll(() => held).toBe(true);
-    await assistant(page).getByRole('button', { name: 'Avbryt uppdrag' }).click();
+    await assistant(page).getByRole('textbox', { name: 'Meddelande till Skyttel' }).press('Escape');
     release([
       modelTool('propose_object', {
         version: 2,
@@ -283,7 +283,9 @@ test('TEXT-02: sena svar efter kastat utkast och avbrott ändrar inte nytt arbet
         value,
       }),
     ]);
-    await expect(assistant(page)).toContainText('Uppdraget är avbrutet');
+    await expect(assistant(page)).toContainText(
+      'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.',
+    );
     expect((await (await page.request.get(path)).json()).draft.changes).toEqual([]);
   } finally {
     await app.close();

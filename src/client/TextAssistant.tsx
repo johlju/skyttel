@@ -156,15 +156,6 @@ export function ConversationWorkspace({
           {!notice && conversation.error && <p role="alert">{conversation.error}</p>}
           {!notice && conversation.voice.error && <p role="alert">{conversation.voice.error}</p>}
           <div className="text-view-task-controls">
-            {session?.phase === 'working' && (
-              <button
-                type="button"
-                disabled={conversation.pending}
-                onClick={() => void conversation.cancel()}
-              >
-                Avbryt uppdrag
-              </button>
-            )}
             {(conversation.unknown || session?.phase === 'recovery') && (
               <button
                 type="button"

@@ -145,6 +145,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   och oskickad text även vid dubbelklick under fördröjd omstart, och textvyn
   går att använda på pekskärm och smal skärm. Kontrollerade kommentarspaket
   och faktiskt hört tal provas separat.
+- [Samtalets kö och avbrott](conversation-queue.md): serverns kö på dator,
+  fokusstyrd Escape, stopp på mobil och smal skärm, talade och skrivna
+  uppdrag samt kvarvarande utkast, oskickad text och återkoppling.
 - [Samtalets kontext](conversation-context.md): samma tillfälliga samtal
   genom utkast, sparande, avbrott, fel, mikrofon av och på samt byte mellan
   röst och text. Äldre sparbesked ger inget nytt sparande. Skrivna och

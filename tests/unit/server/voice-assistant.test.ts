@@ -588,7 +588,7 @@ test.each([
   expect(map.draft.changes).toHaveLength(1);
 });
 
-test('a held voice proposal is synchronously invalidated by new speech and by stop before its late tool result', async () => {
+test('new speech retains held voice work until an explicit stop invalidates its late tool result', async () => {
   let release: ((value: unknown[]) => void) | undefined;
   const model = textModel(
     () =>
@@ -602,6 +602,15 @@ test('a held voice proposal is synchronously invalidated by new speech and by st
   voice.delegate();
   await expect.poll(() => model.requests.length).toBe(1);
   voice.transcript('Nej, vänta.');
+  expect((await voice.poll()).assistant.phase).toBe('working');
+  const stopped = await browser.post(
+    `${voice.path}/${voice.assistant.id}/voice/${voice.voice.id}/stop`,
+    {
+      headers: { origin: app.origin },
+      data: {},
+    },
+  );
+  expect((await stopped.json()).voice.phase).toBe('closed');
   release?.([
     modelTool('propose_object', {
       version: 0,
@@ -616,14 +625,6 @@ test('a held voice proposal is synchronously invalidated by new speech and by st
   expect(voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append')).toEqual(
     [],
   );
-  const stopped = await browser.post(
-    `${voice.path}/${voice.assistant.id}/voice/${voice.voice.id}/stop`,
-    {
-      headers: { origin: app.origin },
-      data: {},
-    },
-  );
-  expect((await stopped.json()).voice.phase).toBe('closed');
   voice.delegate();
   expect(model.requests).toHaveLength(1);
 });
@@ -687,7 +688,7 @@ test('the first fragment retains its displayed draft anchor when a web edit arri
   expect((await voice.poll()).assistant.review.changes).toHaveLength(1);
 });
 
-test('a correction spoken during held work becomes the new task without reusing the canceled task or its approval', async () => {
+test('a spoken correction waits for held work and retains context without inheriting save authority', async () => {
   let release: ((value: unknown[]) => void) | undefined;
   const model = textModel(() =>
     model.requests.length === 1
@@ -702,15 +703,22 @@ test('a correction spoken during held work becomes the new task without reusing 
   await expect.poll(() => model.requests.length).toBe(1);
   voice.transcript('Nej, ändra namnet till Nytt.');
   voice.delegate();
-  await expect.poll(() => model.requests.length).toBe(2);
+  await expect.poll(async () => (await voice.poll()).assistant.queuedMessages).toBe(1);
+  expect(model.requests).toHaveLength(1);
   release?.([modelMessage('Gammalt svar.')]);
+  await expect.poll(() => model.requests.length).toBe(2);
   await expect
     .poll(
       () =>
         voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
     )
-    .toBe(1);
+    .toBe(2);
   expect((await voice.poll()).assistant.modelReply).toBe('Det nya uppdraget är förstått.');
+  const turn = JSON.parse(
+    String(model.requests[1].input.findLast((item) => item.role === 'user')?.content),
+  );
+  expect(turn.message).toBe('Nej, ändra namnet till Nytt.');
+  expect(JSON.stringify(model.requests[1].input)).toContain('Spara.');
 });
 
 test('delegation timing cannot complete a transcript fragment or include a later save fragment', async () => {

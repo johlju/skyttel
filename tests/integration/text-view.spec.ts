@@ -162,7 +162,10 @@ test('TEXTVY-02: samtalstexten visar vem som skriver och raden Skyttel arbetar s
     await expect(messageField(page)).toBeFocused();
     await expect(messageField(page)).toHaveValue('');
     const rows = conversationText(page).getByRole('listitem');
-    await expect(rows).toHaveText(['Du: Vem betalar musiken?', 'Skyttel arbetar…']);
+    await expect(rows).toHaveText([
+      'Du: Vem betalar musiken?',
+      'Skyttel arbetar… 0 meddelanden väntar. Tryck på Escape för att avbryta.',
+    ]);
     await expect(textView(page).getByRole('timer')).toHaveCount(0);
     await release([modelMessage('Kim betalar musiken.')]);
     await expect(rows).toHaveText(['Du: Vem betalar musiken?', 'Skyttel: Kim betalar musiken.']);
@@ -194,7 +197,9 @@ test('TEXTVY-02: samtalstexten visar vem som skriver och raden Skyttel arbetar s
     await messageField(page).pressSequentially('rad två');
     await page.keyboard.press('Enter');
     await expect(rows.nth(2)).toHaveText('Du: Rad ett\nrad två');
-    await expect(rows.last()).toHaveText('Skyttel arbetar…');
+    await expect(rows.last()).toHaveText(
+      'Skyttel arbetar… 0 meddelanden väntar. Tryck på Escape för att avbryta.',
+    );
     await expect(messageField(page)).toBeFocused();
     await release([modelMessage('Klart.')]);
     await expect(rows.last()).toHaveText('Skyttel: Klart.');
@@ -225,7 +230,7 @@ test('TEXTVY-03: Nytt samtal tömmer samtalet och behåller utkast och mikrofon'
     await textView(page).getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect.poll(() => held).toBe(true);
     await expect(conversationText(page).getByRole('listitem').last()).toHaveText(
-      'Skyttel arbetar…',
+      'Skyttel arbetar… 0 meddelanden väntar. Tryck på Escape för att avbryta.',
     );
     await messageField(page).fill('Oskickat');
 

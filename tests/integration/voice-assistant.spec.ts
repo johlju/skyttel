@@ -10,6 +10,7 @@ import {
 } from '../support/client.js';
 import {
   chooseConversationVoice,
+  closeConversationText,
   consentBox,
   consentBoxFor,
   microphoneButton,
@@ -97,9 +98,10 @@ test('TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare för
     await assistant(page).getByLabel('Meddelande till Skyttel').fill('Osänd rättelse');
     speak(live, 'Rätta Lo.');
     await expect.poll(() => held).toBe(true);
+    await closeConversationText(page);
     await openMap(page);
-    await expect(assistant(page).getByRole('status')).toContainText('Skyttel arbetar');
-    await assistant(page).getByRole('button', { name: 'Avbryt uppdrag', exact: true }).click();
+    await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+    await voiceBox(page).getByRole('button', { name: 'Avbryt', exact: true }).click();
     release([
       modelTool('propose_object', {
         version: before.draft.version,
@@ -109,7 +111,10 @@ test('TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare för
         value: { ...value, name: 'För sent' },
       }),
     ]);
-    await expect(assistant(page)).toContainText('Uppdraget är avbrutet');
+    await openConversationText(page);
+    await expect(assistant(page)).toContainText(
+      'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.',
+    );
     await expect
       .poll(async () => (await (await page.request.get(path)).json()).draft)
       .toEqual(before.draft);

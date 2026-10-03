@@ -106,7 +106,8 @@ Skyttel arbetar sist”.
   **Här visas det du och Skyttel säger och skriver.**
 - Fältet behåller fokus efter klicket på **Skicka** och efter Retur.
 - Raden **Skyttel arbetar…** står sist medan Skyttel arbetar. Ingen
-  tidräknare visas.
+  tidräknare visas. Raden visar **0 meddelanden väntar. Tryck på Escape
+  för att avbryta.** på dator.
 - Samtalstexten visar inga namn. Din text och Skyttels text går att
   skilja åt utan namn. Skift+Retur ger en ny rad i samma meddelande.
 - Skärmläsaren läser **Du:** före dina rader och **Skyttel:** före

@@ -20,7 +20,7 @@ export function voiceWork({
   channel: LiveSideband;
   initial: TextAssistantView;
   request: (action?: string, body?: unknown, signal?: AbortSignal) => Promise<TextAssistantView>;
-  interrupt: (revision: number) => void;
+  interrupt: (revision?: number) => void;
   /** The conversation as the voice last saw it, and whether the voice has a task in progress. */
   update: (view: TextAssistantView, working: boolean) => void;
   failed: () => void;
@@ -40,18 +40,22 @@ export function voiceWork({
   let dispatching: AbortController | undefined;
   let canceling: Promise<{ revision: number; view: TextAssistantView } | undefined> =
     Promise.resolve(undefined);
+  const inFlight = new Map<number, number>();
   const events = new Set<string>();
   const delegations = new Set<string>();
 
   function cancel() {
+    const hadWork = (inFlight.get(generation) ?? 0) > 0;
     generation++;
     dispatching?.abort();
     dispatching = undefined;
-    const revision = owned;
+    const revision = owned ?? (hadWork ? rendered.revision : undefined);
     owned = undefined;
     if (revision === undefined) return;
-    interrupt(revision);
-    canceling = request('cancel', { revision })
+    // A spoken task may already have advanced from the queue, beyond its
+    // last observed revision. A stop covers the conversation's current work.
+    interrupt();
+    canceling = request('cancel', { revision, all: true })
       .then((view) => {
         update(view, false);
         return { revision, view };
@@ -106,6 +110,7 @@ export function voiceWork({
     task: number,
   ) {
     const current = () => !stopped && generation === task;
+    inFlight.set(task, (inFlight.get(task) ?? 0) + 1);
     try {
       const canceled = await canceling;
       if (!current()) return;
@@ -134,11 +139,14 @@ export function voiceWork({
       } else {
         const controller = new AbortController();
         dispatching = controller;
+        const requestId = randomUUID();
+        owned = view.phase === 'working' ? view.revision : view.revision + 1;
         view = await request(
           'messages',
           {
             ...expected,
-            requestId: randomUUID(),
+            revision: view.phase === 'working' ? view.revision : expected.revision,
+            requestId,
             text,
             voiceContext: context,
           },
@@ -153,15 +161,14 @@ export function voiceWork({
           return;
         }
         owned = view.revision;
-        const revision = owned;
         const deadline = Date.now() + 120_000;
-        while (current() && view.phase === 'working' && view.revision === revision) {
+        while (current() && (view.taskStatus === 'queued' || view.taskStatus === 'working')) {
           update(view, true);
           if (Date.now() > deadline) throw new Error('voice_task_timeout');
           await new Promise((resolve) => setTimeout(resolve, 50));
-          view = await request();
+          view = await request(`messages/${requestId}`);
         }
-        if (view.revision !== revision) {
+        if (view.taskStatus === 'canceled') {
           // The task was stopped or replaced in the conversation, outside the
           // voice. The voice no longer works with it and says nothing about it.
           if (current()) {
@@ -195,6 +202,10 @@ export function voiceWork({
       } catch {
         if (!stopped && generation === recoveryGeneration) failed();
       }
+    } finally {
+      const remaining = (inFlight.get(task) ?? 1) - 1;
+      if (remaining) inFlight.set(task, remaining);
+      else inFlight.delete(task);
     }
   }
   function fragment(
@@ -221,7 +232,6 @@ export function voiceWork({
     events.add(event.event_id);
     transcript?.(role, event.delta);
     if (role === 'user') {
-      cancel();
       anchor ??= { ...rendered };
       pending.push({ role, text: event.delta, startMs: event.start_ms, endMs: event.end_ms });
       if (pending.map((item) => item.text).join('').length > 4000) {
@@ -268,7 +278,6 @@ export function voiceWork({
       );
       return;
     }
-    cancel();
     void execute(event.delegation.id, text, expected, JSON.stringify(fragments), generation);
   });
   return {

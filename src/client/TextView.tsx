@@ -1,4 +1,4 @@
-import { type ReactNode, useId, useLayoutEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ConversationTranscript } from './ConversationTranscript.js';
 import type { Conversation } from './use-conversation.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
@@ -43,6 +43,20 @@ export function TextView({
   draftContent?: ReactNode;
 }) {
   const { session, transcript, text, pending, unknown, working } = conversation;
+  const [computer, setComputer] = useState(onComputer);
+  useEffect(() => {
+    const width = window.matchMedia('(max-width: 700px)');
+    const pointer = window.matchMedia('(pointer: coarse)');
+    const changed = () => setComputer(onComputer());
+    width.addEventListener('change', changed);
+    pointer.addEventListener('change', changed);
+    return () => {
+      width.removeEventListener('change', changed);
+      pointer.removeEventListener('change', changed);
+    };
+  }, []);
+  const stop = working && !computer;
+  const stopFocused = useRef(false);
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -60,6 +74,12 @@ export function TextView({
   useLayoutEffect(() => {
     if (body.current && follow.current) body.current.scrollTop = body.current.scrollHeight;
   }, [transcript, working]);
+  useLayoutEffect(() => {
+    if (!stop && stopFocused.current) {
+      stopFocused.current = false;
+      field.current?.focus();
+    }
+  }, [stop]);
   const blocked =
     conversation.inputBlocked ||
     !session ||
@@ -68,8 +88,8 @@ export function TextView({
     session.phase === 'recovery' ||
     !text.trim();
   function send() {
-    if (blocked) return;
-    void conversation.send();
+    if (blocked || stop) return;
+    void conversation.send(computer);
     // The message field keeps the focus, also after a click on Skicka.
     field.current?.focus();
   }
@@ -78,6 +98,13 @@ export function TextView({
       className={`text-view${draftOpen ? ' draft-open' : ''}`}
       aria-labelledby={`${id}-title`}
       hidden={hidden}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && working && !window.matchMedia('(pointer: coarse)').matches) {
+          event.preventDefault();
+          event.stopPropagation();
+          void conversation.cancel();
+        }
+      }}
     >
       <header className="text-view-heading">
         <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>
@@ -134,8 +161,16 @@ export function TextView({
             }}
           >
             {children}
-            <ConversationTranscript rows={transcript} working={working} />
+            <ConversationTranscript
+              rows={transcript}
+              working={working}
+              queued={session?.queuedMessages ?? 0}
+              computer={computer}
+            />
           </div>
+          <p className="text-view-canceled" aria-live="polite" aria-atomic="true">
+            {session?.canceled ? 'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.' : ''}
+          </p>
           {notice}
           <form
             className="text-view-message"
@@ -161,9 +196,29 @@ export function TextView({
                 send();
               }}
             />
-            <button type="submit" className="primary" disabled={blocked}>
-              Skicka
-            </button>
+            {stop ? (
+              <button
+                type="button"
+                className="primary text-view-stop"
+                aria-label="Avbryt"
+                title="Avbryt"
+                onFocus={() => {
+                  stopFocused.current = true;
+                }}
+                onBlur={(event) => {
+                  if (event.currentTarget.isConnected) stopFocused.current = false;
+                }}
+                onClick={() => void conversation.cancel()}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
+                </svg>
+              </button>
+            ) : (
+              <button type="submit" className="primary" disabled={blocked}>
+                Skicka
+              </button>
+            )}
           </form>
         </div>
       </div>

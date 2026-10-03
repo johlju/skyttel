@@ -283,9 +283,24 @@ genom att en sådan visningsbegäran kan nekas.
 
 ## Avbrott och återupptagning
 
-**Avbryt uppdrag** stoppar fortsatta anrop från det uppdraget. Ett nytt
-meddelande ersätter också pågående arbete. Genomförda förslag finns kvar
-i utkastet. Ett genomfört sparande blir inte ångrat av ett avbrott.
+Ett nytt meddelande avbryter inte pågående arbete. På dator kan du fortsätta
+med **Skicka**: meddelandena väntar på servern och besvaras i ordning.
+Raden **Skyttel arbetar…** visar hur många som väntar. Tryck Escape när
+fokus är i textvyn för att avbryta arbete och allt som väntar. Escape gör
+ingenting när Skyttel bara talar eller fokus är utanför textvyn.
+
+På mobil och smal skärm ersätter en stoppikon **Skicka** medan Skyttel
+arbetar. Ett tryck avbryter utan att skicka den text som ligger kvar i
+fältet. Här skickas ett meddelande åt gången. Escape fungerar också i
+ett smalt datorfönster. När stoppikonen finns i textvyn visar röstrutan
+bara statusordet.
+
+Stoppikonen i röstrutan avbryter också. Alla avbrott stoppar pågående
+arbete, tystar rösten och tömmer kön, oavsett om uppdragen kom med tal
+eller text. Genomförda förslag finns kvar i utkastet. Ett genomfört
+sparande blir inte ångrat. Textvyn visar **Avbrutet. Föreslagna ändringar
+ligger kvar i utkastet.** tills nästa uppdrag börjar eller du väljer
+**Nytt samtal**. Nytt samtal tömmer också kön.
 
 Om svaret saknas, välj **Kontrollera sparresultat** innan nytt arbete.
 Ett väntande försök kan slutföras med **Slutför samma sparförsök**. Det

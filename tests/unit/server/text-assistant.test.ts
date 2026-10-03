@@ -963,7 +963,7 @@ test.each([
   expect((await (await browser.get(`${mapPath}/history`)).json()).history).toEqual([]);
 });
 
-test.each(['discard', 'cancel', 'supersede', 'logout'] as const)(
+test.each(['discard', 'cancel', 'new conversation', 'logout'] as const)(
   'late provider work cannot undo %s',
   async (action) => {
     let release!: (output: unknown[]) => void;
@@ -1007,7 +1007,15 @@ test.each(['discard', 'cancel', 'supersede', 'logout'] as const)(
           })
         ).status(),
       ).toBe(200);
-    if (action === 'supersede') await message({ ...session, revision: 1 }, 'Läs mitt nya uppdrag.');
+    if (action === 'new conversation')
+      expect(
+        (
+          await browser.post(`${path}/${session.id}/new`, {
+            headers: { origin: app.origin },
+            data: {},
+          })
+        ).status(),
+      ).toBe(200);
     if (action === 'logout')
       expect(
         (
@@ -1062,6 +1070,72 @@ async function replaceHousehold() {
   });
   expect((await confirmed.json()).status).toBe('completed');
 }
+
+test('queued save cannot acquire authority over an external draft edit observed by polling', async () => {
+  let release!: (output: unknown[]) => void;
+  const model = textModel(
+    () =>
+      new Promise<unknown[]>((resolve) => {
+        release = resolve;
+      }),
+  );
+  await setup(model.provider);
+  const value = await webProposal();
+  const session = await start();
+  const post = (body: unknown) =>
+    browser.post(`${path}/${session.id}/messages`, {
+      headers: { origin: app.origin },
+      data: body,
+    });
+  expect(
+    (
+      await post({
+        revision: 0,
+        ...displayedVersion(session),
+        requestId: 'first',
+        text: 'Förklara.',
+      })
+    ).status(),
+  ).toBe(202);
+  await expect.poll(() => model.requests.length).toBe(1);
+  const body = {
+    revision: 1,
+    ...displayedVersion(session),
+    requestId: 'queued-save',
+    text: 'Spara hela utkastet nu.',
+  };
+  expect((await post(body)).status()).toBe(202);
+  expect((await post(body)).status()).toBe(202);
+  expect((await post({ ...body, text: 'Annat.' })).status()).toBe(409);
+  expect((await post({ ...body, requestId: 'mobile', queue: false })).status()).toBe(409);
+  expect((await (await browser.get(`${path}/${session.id}`)).json()).queuedMessages).toBe(1);
+  const changed = await browser.post(`${path.replace('/text-assistant', '/map')}/draft`, {
+    headers: { origin: app.origin },
+    data: {
+      version: 1,
+      contentVersion: 1,
+      id: 'web-object',
+      baseRevision: null,
+      value: { ...value, name: 'Extern rättelse' },
+    },
+  });
+  expect(changed.status(), await changed.text()).toBe(200);
+  // A public view read observes the external draft; it must not authorize the queued save.
+  expect((await (await browser.get(`${path}/${session.id}`)).json()).review.version).toBe(2);
+  release([modelMessage('Förklarat.')]);
+  await expect
+    .poll(
+      async () =>
+        (await (await browser.get(`${path}/${session.id}/messages/queued-save`)).json()).taskStatus,
+    )
+    .toBe('completed');
+  const finished = await (await browser.get(`${path}/${session.id}/messages/queued-save`)).json();
+  expect(finished.error).toBe('assistant_draft_changed');
+  expect(model.requests).toHaveLength(1);
+  const map = await (await browser.get(path.replace('/text-assistant', '/map'))).json();
+  expect(map.objects).toEqual([]);
+  expect(map.draft.changes[0].after.name).toBe('Extern rättelse');
+});
 
 test('content replacement invalidates cached conversation and held provider work before new-owner context can be returned', async () => {
   let release!: (output: unknown[]) => void;

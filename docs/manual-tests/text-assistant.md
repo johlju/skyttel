@@ -94,6 +94,7 @@ formulärtext”.
 **Användare:** Alex i den kontrollerade installationen.
 
 **Förutsättningar:** Lo-förslaget finns. Terminalen håller modellsvar.
+Datorfönstret är bredare än 700 px.
 
 **Integrationstest:**
 [text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
@@ -110,8 +111,9 @@ nytt arbete”.
    `JSON` ska innehålla de ursprungliga `version`, `contentVersion`,
    `id`, `baseRevision: null` och det kopierade objektet under `value`.
    Använd inte den nya versionen efter kastandet.
-4. Skicka **Skapa ett nytt förslag**. När nästa svar hålls, välj
-   **Avbryt uppdrag**. Släpp även det svaret som ett `propose_object`
+4. Skicka **Skapa ett nytt förslag**. När nästa svar hålls, tryck Escape
+   med fokus i meddelandefältet. Släpp även det svaret som ett
+   `propose_object`
    med den version som hörde till just det uppdraget och ett nytt ID.
 5. Kontrollera utkast och sparad karta. Fortsätt med ett vanligt formulär.
 
@@ -410,6 +412,7 @@ detaljer från kvittot efter ett kort sparbesked.
 **Användare:** Alex i den kontrollerade installationen.
 
 **Förutsättningar:** Lo-förslaget finns. Terminalen håller modellsvar.
+Datorfönstret är bredare än 700 px.
 Alla uppgifter är påhittade.
 
 **Integrationstest:**

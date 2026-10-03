@@ -451,13 +451,14 @@ finns kvar. Anteckna utkastets innehåll och version.
 
 1. Skriv **Osänd rättelse** i samtalets textfält utan att skicka.
    Kör `user Rätta Lo.` och `delegate` i startguiden. Håll modellanropet.
-2. Stäng textvyn och kräv **Skyttel arbetar** i röstrutan.
-   Välj röstrutans **Avbryt**.
+2. Stäng textvyn och arbetsytan med **Till kartan**. Kräv **Skyttel
+   arbetar** i röstrutan och välj dess **Avbryt**.
 3. Släpp det gamla anropet med ett `propose_object` som försöker byta
    Lo-förslagets namn till **För sent**. Använd det hållna anropets version,
    innehållsversion och hela tidigare objektvärde enligt TAL-01:s verktygssteg.
-4. Kräv avbrottsbesked och oförändrat utkast. Välj **Prata med Skyttel**
-   och öppna textvyn med **Skriv till Skyttel** om den är stängd.
+4. Öppna textvyn med **Skriv till Skyttel**. Kräv **Avbrutet. Föreslagna
+   ändringar ligger kvar i utkastet.** och oförändrat utkast.
+   Stäng av mikrofonen med **Prata med Skyttel**.
    **Osänd rättelse** ska finnas kvar.
 5. Välj **Nytt samtal**. Samtalstexten töms, **Osänd rättelse** och
    Lo-förslaget finns kvar.
@@ -754,8 +755,8 @@ stänger av mikrofonknappen”.
 1. Skriv **Beskriv utkastet.** och välj **Skicka**. Låt anropet vara
    hållet.
 2. Släpp anropet med `reply REQUEST Utkastet har ett förslag.`.
-3. Skicka ett nytt meddelande och välj **Avbryt uppdrag** medan anropet
-   är hållet.
+3. På dator: skicka ett nytt meddelande och tryck Escape med fokus i
+   meddelandefältet medan anropet är hållet.
 4. Välj **Prata med Skyttel**. Skicka **Beskriv det nu.** i textfältet och
    välj **Avbryt** i röstrutan medan anropet är hållet.
 

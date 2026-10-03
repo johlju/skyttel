@@ -62,7 +62,7 @@ export function voiceAssistantRoutes({
   liveSideband?: LiveSidebandFactory;
   liveUsage?: LiveUsage;
   recordUsage?: LiveUsage;
-  interrupt: (sessionId: string, revision: number) => void;
+  interrupt: (sessionId: string, revision?: number) => void;
   conversation?: (
     sessionId: string,
   ) => { role: 'user' | 'assistant'; text: string; partial?: boolean }[];
@@ -323,7 +323,7 @@ export function voiceAssistantRoutes({
         request: async (action, body, signal) => {
           const response = await dispatch(
             new Request(`${config.origin}${path}${action ? `/${action}` : ''}`, {
-              method: action ? 'POST' : 'GET',
+              method: action && !action.startsWith('messages/') ? 'POST' : 'GET',
               headers: requestHeaders,
               body: action ? JSON.stringify(body) : undefined,
               signal,

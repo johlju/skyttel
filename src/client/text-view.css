@@ -294,3 +294,14 @@
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
+
+.text-view-canceled {
+  margin: 0 12px;
+}
+.text-view-canceled:empty {
+  display: none;
+}
+.text-view-stop svg {
+  width: 24px;
+  height: 24px;
+}

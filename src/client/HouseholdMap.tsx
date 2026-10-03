@@ -1468,6 +1468,11 @@ export function HouseholdMap({
       conversation={conversation}
       notice={textViewOpen && active ? null : notice}
       showErrors={!textViewOpen}
+      hideStop={
+        textViewOpen &&
+        (narrow || window.matchMedia('(pointer: coarse)').matches) &&
+        conversation.working
+      }
       microphoneButton={() =>
         workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null
       }

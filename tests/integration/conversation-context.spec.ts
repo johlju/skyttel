@@ -162,7 +162,7 @@ test('KONTEXT-01: kontexten består efter utkast, sparande, avbrott och fel', as
     const saved = await read();
     await send(page, 'Kontrollera samtalets tillfälliga provord.');
     await expect.poll(() => held).toBe(true);
-    await page.getByRole('button', { name: 'Avbryt uppdrag', exact: true }).click();
+    await field(page).press('Escape');
     release([modelMessage('För sent.')]);
     await expect(log(page)).not.toContainText('För sent.');
     await send(page, 'Vad gjorde vi?');

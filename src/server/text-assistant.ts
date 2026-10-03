@@ -24,6 +24,12 @@ import { type TextModelUsage, textModel } from './text-assistant-model.js';
 import { draftResult, historyResult } from './text-assistant-results.js';
 
 type Mcp = Awaited<ReturnType<typeof connectTextAssistant>>;
+type Message = { id: string; text: string; voice: boolean; contentVersion: number };
+type AcceptedMessage = {
+  hash: string;
+  status: NonNullable<TextAssistantView['taskStatus']>;
+  result?: TextAssistantView;
+};
 type Session = TextAssistantView & {
   id: string;
   actorId: string;
@@ -36,8 +42,12 @@ type Session = TextAssistantView & {
   conversation: { role: 'user' | 'assistant'; text: string; partial?: boolean }[];
   /** Dialogue already included in Responses input; add new fragments once. */
   contextOffset: number;
-  requestId?: string;
-  requestHash?: string;
+  queue: Message[];
+  /** Revisions before an explicit stop/reset cannot introduce new queued work. */
+  boundaryRevision: number;
+  /** Version reached by this FIFO, unaffected by view reads of external edits. */
+  workVersion?: number;
+  accepted: Map<string, AcceptedMessage>;
   previousFailure?: string;
   pendingSave?: { operationId: string; version: number; contentVersion: number };
   displayed?: (value: boolean) => void;
@@ -92,6 +102,8 @@ export function textAssistantRoutes({
   async function stop(session: Session) {
     sessions.delete(session.id);
     session.task?.abort();
+    session.queue = [];
+    session.accepted.clear();
     onStop?.(session.id);
     session.displayed?.(false);
     session.input = [];
@@ -134,6 +146,9 @@ export function textAssistantRoutes({
       revision,
       contextRevision,
       discarded,
+      canceled,
+      completedReplies,
+      taskId,
       phase,
       review,
       reply,
@@ -152,6 +167,10 @@ export function textAssistantRoutes({
       revision,
       contextRevision,
       discarded,
+      canceled,
+      completedReplies,
+      taskId,
+      queuedMessages: session.queue.length,
       phase,
       review,
       reply,
@@ -330,6 +349,7 @@ export function textAssistantRoutes({
   }
   function saved(session: Session, receipt: TextAssistantView['receipt']) {
     session.receipt = receipt;
+    session.workVersion = receipt ? receipt.draftVersion + 1 : session.workVersion;
     session.pendingSave = undefined;
     session.reply = 'Sparat. Hela utkastet finns i hushållets karta.';
     session.conversation.push({ role: 'assistant', text: session.reply });
@@ -414,7 +434,13 @@ export function textAssistantRoutes({
   }
   async function startOver(session: Session, discard = false, deferVoiceClose = false) {
     session.task?.abort();
+    session.queue = [];
+    session.accepted.clear();
+    session.taskId = undefined;
+    session.canceled = undefined;
+    session.completedReplies = [];
     session.revision++;
+    session.boundaryRevision = session.revision;
     await refresh(session);
     session.phase = session.pendingSave ? 'recovery' : 'ready';
     if (discard) {
@@ -423,12 +449,11 @@ export function textAssistantRoutes({
         contentVersion: session.review.contentVersion,
       });
     }
+    session.workVersion = session.review.version;
     session.input = [];
     session.conversation = [];
     session.contextOffset = 0;
     session.contextRevision = (session.contextRevision ?? 0) + 1;
-    session.requestId = undefined;
-    session.requestHash = undefined;
     session.previousFailure = undefined;
     session.selection = undefined;
     session.displayedSelection = undefined;
@@ -849,6 +874,7 @@ export function textAssistantRoutes({
               output: JSON.stringify(value),
             });
           if (tool.annotations?.readOnlyHint !== true) {
+            if (Number.isSafeInteger(value.version)) session.workVersion = value.version;
             const before = previousReview ?? session.review;
             session.review = await call(session, 'read_my_draft', {}, guard);
             version = session.review.version;
@@ -930,6 +956,76 @@ export function textAssistantRoutes({
       }
     }
   }
+  function nextMessage(session: Session) {
+    if (session.phase === 'working' || session.phase === 'recovery') return;
+    const next = session.queue.shift();
+    if (next) beginMessage(session, next);
+  }
+  function beginMessage(session: Session, message: Message) {
+    const accepted = session.accepted.get(message.id);
+    if (!accepted) return;
+    accepted.status = 'working';
+    const task = new AbortController();
+    session.task = task;
+    session.taskId = message.id;
+    session.revision++;
+    session.phase = 'working';
+    session.canceled = undefined;
+    session.error = undefined;
+    session.reply = undefined;
+    session.modelReply = undefined;
+    session.questions = undefined;
+    session.receipt = undefined;
+    session.discarded = undefined;
+    session.result = undefined;
+    session.selection = undefined;
+    session.displayedSelection = undefined;
+    session.displayedItem = undefined;
+    if (!message.voice) session.conversation.push({ role: 'user', text: message.text });
+    const revision = session.revision;
+    const expected = {
+      version: session.workVersion ?? session.review.version,
+      contentVersion: message.contentVersion,
+    };
+    const execute = async () => {
+      if (conversationCommand(message.text)?.discard) {
+        session.review = await call(session, 'discard_draft', expected, () => {
+          if (task.signal.aborted || session.revision !== revision)
+            throw new MapError('assistant_canceled', 409);
+        });
+        session.workVersion = session.review.version;
+        session.phase = 'ready';
+        session.result = { kind: 'draft', message: 'Utkastet är kastat.' };
+        session.reply = session.result.message;
+        session.discarded = true;
+        session.conversation.push({ role: 'assistant', text: session.reply });
+        finishInterruptedInput(session);
+        session.input.push(
+          { role: 'user', content: JSON.stringify({ message: message.text }) },
+          { role: 'assistant', content: session.reply },
+        );
+      } else await run(session, message.text, revision, task, expected);
+    };
+    void execute()
+      .catch(() => {
+        if (task.signal.aborted || session.revision !== revision) return;
+        session.phase = 'error';
+        session.error = 'assistant_draft_changed';
+      })
+      .finally(() => {
+        if (task.signal.aborted || session.task !== task || !sessions.has(session.id)) return;
+        accepted.status = 'completed';
+        if (session.modelReply)
+          session.completedReplies?.push({ id: message.id, text: session.modelReply });
+        session.task = undefined;
+        session.taskId = undefined;
+        accepted.result = {
+          ...view(session),
+          completedReplies: [...(session.completedReplies ?? [])],
+        };
+        nextMessage(session);
+      });
+  }
   const base = '/households/:id/text-assistant';
   routes.get(base, (context) => context.json({ available: Boolean(config.openaiApiKey) }));
   routes.post(base, async (context) => {
@@ -982,6 +1078,10 @@ export function textAssistantRoutes({
         conversation: [],
         contextOffset: 0,
         contextRevision: 0,
+        queue: [],
+        boundaryRevision: 0,
+        accepted: new Map(),
+        completedReplies: [],
         timer: setTimeout(
           () => {
             void stop(session);
@@ -1071,6 +1171,7 @@ export function textAssistantRoutes({
       typeof body.text !== 'string' ||
       !body.text.trim() ||
       body.text.length > 4000 ||
+      (body.queue !== undefined && typeof body.queue !== 'boolean') ||
       (body.voiceContext !== undefined &&
         (typeof body.voiceContext !== 'string' || body.voiceContext.length > 8000)) ||
       !Number.isSafeInteger(body.draftVersion) ||
@@ -1092,18 +1193,26 @@ export function textAssistantRoutes({
         }),
       )
       .digest('hex');
-    if (session.requestId === body.requestId)
-      return session.requestHash === requestHash
+    const accepted = session.accepted.get(body.requestId);
+    if (accepted)
+      return accepted.hash === requestHash
         ? context.json(view(session), 202)
         : context.json({ error: 'assistant_turn_changed' }, 409);
-    if (body.revision !== session.revision)
-      return context.json({ error: 'assistant_turn_changed' }, 409);
-    if (session.pendingSave || session.phase === 'recovery')
+    const currentTurn = () =>
+      body.revision === session.revision ||
+      (session.phase === 'working' &&
+        Number.isSafeInteger(body.revision) &&
+        body.revision >= session.boundaryRevision &&
+        body.revision < session.revision);
+    if (!currentTurn()) return context.json({ error: 'assistant_turn_changed' }, 409);
+    if ((session.pendingSave || session.phase === 'recovery') && session.phase !== 'working')
       return context.json({ error: 'operation_pending' }, 409);
     const current = await call(session, 'read_my_draft', {});
-    if (body.revision !== session.revision)
-      return context.json({ error: 'assistant_turn_changed' }, 409);
-    if (body.draftVersion !== current.version || body.contentVersion !== current.contentVersion)
+    if (!currentTurn()) return context.json({ error: 'assistant_turn_changed' }, 409);
+    if (
+      body.contentVersion !== current.contentVersion ||
+      (session.phase !== 'working' && body.draftVersion !== current.version)
+    )
       return context.json({ error: 'assistant_draft_changed' }, 409);
     if (context.req.raw.signal.aborted) return context.json({ error: 'assistant_canceled' }, 409);
     const control = conversationCommand(body.text);
@@ -1111,72 +1220,64 @@ export function textAssistantRoutes({
       await startOver(session, control.discard, body.voiceContext !== undefined);
       return context.json(view(session));
     }
-    if (body.voiceContext === undefined)
-      session.conversation.push({ role: 'user', text: body.text });
-    if (control?.discard) {
-      session.task?.abort();
-      session.revision++;
-      session.review = await call(session, 'discard_draft', {
-        version: current.version,
-        contentVersion: current.contentVersion,
-      });
-      session.phase = 'ready';
-      session.error = undefined;
-      session.modelReply = undefined;
-      session.questions = undefined;
-      session.receipt = undefined;
-      session.result = { kind: 'draft', message: 'Utkastet är kastat.' };
-      session.reply = session.result.message;
-      session.discarded = true;
-      session.conversation.push({ role: 'assistant', text: session.reply });
-      finishInterruptedInput(session);
-      session.input.push(
-        { role: 'user', content: JSON.stringify({ message: body.text }) },
-        { role: 'assistant', content: session.reply },
-      );
-      return context.json(view(session));
+    if (session.task && !session.task.signal.aborted && body.queue === false)
+      return context.json({ error: 'assistant_busy' }, 409);
+    if (session.accepted.size >= 200)
+      return context.json({ error: 'assistant_context_limit' }, 409);
+    const message: Message = {
+      id: body.requestId,
+      text: body.text,
+      voice: body.voiceContext !== undefined,
+      contentVersion: current.contentVersion,
+    };
+    session.accepted.set(message.id, { hash: requestHash, status: 'queued' });
+    if (session.task && !session.task.signal.aborted) session.queue.push(message);
+    else {
+      session.review = current;
+      session.workVersion = current.version;
+      beginMessage(session, message);
     }
-    session.task?.abort();
-    session.task = new AbortController();
-    const task = session.task;
-    const aborted = () => task.abort();
-    if (body.voiceContext !== undefined)
-      context.req.raw.signal.addEventListener('abort', aborted, { once: true });
-    session.revision++;
-    session.requestId = body.requestId;
-    session.requestHash = requestHash;
-    session.phase = 'working';
-    session.error = undefined;
-    session.reply = undefined;
-    session.modelReply = undefined;
-    session.questions = undefined;
-    session.receipt = undefined;
-    session.discarded = undefined;
-    session.result = undefined;
-    session.selection = undefined;
-    session.displayedSelection = undefined;
-    session.displayedItem = undefined;
-    void run(session, body.text, session.revision, session.task, {
-      version: body.draftVersion,
-      contentVersion: body.contentVersion,
-    }).finally(() => context.req.raw.signal.removeEventListener('abort', aborted));
-    return context.json(view(session), 202);
+    return context.json(
+      { ...view(session), taskStatus: session.accepted.get(message.id)?.status },
+      202,
+    );
+  });
+  // Poll a particular accepted message: a subsequent FIFO task may already be
+  // running when a voice executor observes its own verified completion.
+  routes.get(`${base}/:sessionId/messages/:requestId`, (context) => {
+    const session = sessions.get(context.req.param('sessionId'));
+    if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
+    const accepted = session.accepted.get(context.req.param('requestId'));
+    if (!accepted) return context.json({ error: 'assistant_turn_changed' }, 409);
+    return context.json({ ...(accepted.result ?? view(session)), taskStatus: accepted.status });
   });
   routes.post(`${base}/:sessionId/cancel`, async (context) => {
     const session = sessions.get(context.req.param('sessionId'));
     if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
     const body = await context.req.json().catch(() => null);
-    if (body?.revision !== session.revision)
+    if (session.canceled && session.phase !== 'working') return context.json(view(session));
+    if (body?.all !== true && body?.revision !== session.revision)
       return context.json({ error: 'assistant_turn_changed' }, 409);
     session.task?.abort();
+    session.queue = [];
+    session.taskId = undefined;
     session.revision++;
+    session.boundaryRevision = session.revision;
+    session.canceled = true;
     session.selection = undefined;
-    session.reply = 'Uppdraget är avbrutet. Ett redan genomfört sparande är inte ångrat.';
+    session.error = undefined;
+    session.reply = 'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.';
     session.conversation.push({ role: 'assistant', text: session.reply });
     session.modelReply = undefined;
     session.questions = undefined;
     session.phase = session.pendingSave ? 'recovery' : 'ready';
     await refresh(session);
+    for (const accepted of session.accepted.values()) {
+      if (accepted.status === 'queued' || accepted.status === 'working') {
+        accepted.status = 'canceled';
+        accepted.result = view(session);
+      }
+    }
     return context.json(view(session));
   });
   // Nytt samtal: the conversation text and the context are emptied, and
@@ -1220,6 +1321,7 @@ export function textAssistantRoutes({
           ? 'Sparförsöket avvisades. Granska hela utkastet och ge ett nytt sparbesked.'
           : 'Tidigare sparförsök är kontrollerade. Inget okänt försök återstår.';
     }
+    nextMessage(session);
     return context.json(view(session));
   });
   routes.post(`${base}/:sessionId/retry`, async (context) => {
@@ -1281,9 +1383,12 @@ export function textAssistantRoutes({
       if (!sessions.has(session.id))
         return context.json({ error: 'assistant_session_expired' }, 404);
       authorize(session.actorId, session.browserSessionId, session.householdId);
+      if (session.task === task) session.task = undefined;
+      if (session.revision === revision && !task.signal.aborted) nextMessage(session);
       return context.json(view(session));
     } finally {
       context.req.raw.signal.removeEventListener('abort', abort);
+      if (session.task === task) session.task = undefined;
     }
   });
   routes.post(`${base}/:sessionId/selection`, async (context) => {
@@ -1323,11 +1428,16 @@ export function textAssistantRoutes({
       const session = sessions.get(sessionId);
       if (session) session.conversation.push({ role, text, partial: true });
     },
-    // Only interrupt the voice-owned in-memory task. Its normal HTTP cancel
+    // Interrupt current in-memory work synchronously. The normal HTTP cancel
     // route refreshes status; durable operations remain available for recovery.
-    interrupt: (sessionId: string, revision: number) => {
+    interrupt: (sessionId: string, revision?: number) => {
       const session = sessions.get(sessionId);
-      if (session?.revision === revision && session.phase === 'working') session.task?.abort();
+      if (
+        session &&
+        (revision === undefined || session.revision === revision) &&
+        session.phase === 'working'
+      )
+        session.task?.abort();
     },
     /**
      * Ends every conversation that the user has in the household, on all

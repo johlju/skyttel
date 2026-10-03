@@ -72,7 +72,7 @@ export type Conversation = {
    * that goes on. The draft is not touched. Tells whether it was revoked.
    */
   revokeConsent: () => Promise<boolean>;
-  send: () => Promise<void>;
+  send: (queue?: boolean) => Promise<void>;
   cancel: () => Promise<void>;
   /**
    * Empties the conversation text and the context and stops ongoing work. The
@@ -196,8 +196,15 @@ export function useConversation({
       }
       if (next.revision !== previous?.revision || next.error !== previous?.error)
         setTaskFailed(next.phase === 'error' && Boolean(next.error));
+      for (const reply of next.completedReplies ?? [])
+        showTranscript({
+          id: `queued-${next.id}-${reply.id}`,
+          role: 'assistant',
+          text: reply.text,
+        });
       if (
         next.modelReply &&
+        !(next.completedReplies ?? []).some((reply) => reply.text === next.modelReply) &&
         (next.modelReply !== previous?.modelReply || next.revision !== previous?.revision)
       )
         showTranscript({
@@ -504,7 +511,7 @@ export function useConversation({
     },
     [path, update, fail],
   );
-  async function send() {
+  async function send(queue = true) {
     const current = session;
     if (!current || !text.trim() || inputBlocked || !connection.current || !navigator.onLine)
       return;
@@ -532,6 +539,7 @@ export function useConversation({
         contentVersion: current.review.contentVersion,
         requestId: crypto.randomUUID(),
         text: sent,
+        queue,
       });
       if (epoch !== requestEpoch.current) return;
       update(result);
@@ -655,7 +663,11 @@ export function useConversation({
     saveConsent,
     revokeConsent,
     send,
-    cancel: () => command('cancel', { revision: session?.revision }),
+    cancel: async () => {
+      const cancelWork = () => command('cancel', { revision: active.current?.revision, all: true });
+      if (voice.state === 'listening' || voice.starting) await voice.silence(cancelWork);
+      else await cancelWork();
+    },
     newConversation,
     recover: () => command('recover'),
     retry: (operationId) => command('retry', { operationId }),

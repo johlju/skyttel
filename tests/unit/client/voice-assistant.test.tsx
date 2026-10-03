@@ -290,7 +290,7 @@ test('Avbryt discards the interrupted output across long pauses and permits a fr
   expect((audios[0].srcObject as unknown as Stream)?.getTracks() ?? []).not.toContain(remote);
   expect(audios).toHaveLength(1);
   expect(track.stop).not.toHaveBeenCalled();
-  expect(cancel).not.toHaveBeenCalled();
+  expect(cancel).toHaveBeenCalledOnce();
   expect(document.activeElement).toBe(microphoneButton());
   await waitFor(() => expect(Peer.all[1]?.channel.readyState).toBe('open'));
   vi.useFakeTimers();
@@ -316,7 +316,7 @@ test('Avbryt discards the interrupted output across long pauses and permits a fr
   await screen.findByText('Lyssnar');
   show('working');
   await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
-  expect(cancel).toHaveBeenCalledOnce();
+  expect(cancel).toHaveBeenCalledTimes(2);
 });
 
 test('a screen reader is told Lyssnar once, Skyttel arbetar, and Mikrofonen är av when the box goes', async () => {

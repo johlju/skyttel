@@ -58,9 +58,12 @@ test('the working row stands last in the conversation text, and no working time 
     within(screen.getByRole('log', { name: 'Samtalstext' }))
       .getAllByRole('listitem')
       .map((row) => row.textContent);
-  expect(rows()).toEqual(['Skyttel: Ett svar.', 'Skyttel arbetar…']);
+  expect(rows()).toEqual([
+    'Skyttel: Ett svar.',
+    'Skyttel arbetar… 0 meddelanden väntar. Tryck på Escape för att avbryta.',
+  ]);
   expect(screen.queryByRole('timer')).toBeNull();
-  await userEvent.click(screen.getByRole('button', { name: 'Avbryt uppdrag' }));
+  await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), '{Escape}');
   expect(rows()).toEqual(['Skyttel: Ett svar.']);
 });
 
@@ -358,9 +361,11 @@ test('a working task can be cancelled and an expired session clears private text
   expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toContain(
     'Skyttel arbetar…',
   );
-  await userEvent.click(screen.getByRole('button', { name: 'Avbryt uppdrag' }));
-  expect(cancelled).toHaveBeenCalledExactlyOnceWith({ revision: 3 });
-  expect(screen.queryByRole('button', { name: 'Avbryt uppdrag' })).toBeNull();
+  await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), '{Escape}');
+  expect(cancelled).toHaveBeenCalledExactlyOnceWith({ revision: 3, all: true });
+  expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).not.toContain(
+    'Skyttel arbetar…',
+  );
   await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), 'Privat nästa meddelande');
   await userEvent.click(screen.getByRole('button', { name: 'Nytt samtal' }));
   expect(
@@ -417,7 +422,7 @@ test('closing the panel during connection creation stops the late session', asyn
   expect(stopped).toHaveBeenCalledExactlyOnceWith(`${path}/session/stop`);
 });
 
-test.each(['Avbryt uppdrag', 'Nytt samtal'])(
+test.each(['Escape', 'Nytt samtal'])(
   'a delayed working poll cannot restore a task or select an object after %s',
   async (action) => {
     let release!: (response: Response) => void;
@@ -455,7 +460,9 @@ test.each(['Avbryt uppdrag', 'Nytt samtal'])(
     );
     await startConversationWithText();
     await waitFor(() => expect(polled).toHaveBeenCalledOnce());
-    await userEvent.click(screen.getByRole('button', { name: action }));
+    if (action === 'Escape')
+      await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), '{Escape}');
+    else await userEvent.click(screen.getByRole('button', { name: action }));
     await act(async () =>
       release(
         Response.json({
@@ -467,7 +474,9 @@ test.each(['Avbryt uppdrag', 'Nytt samtal'])(
     );
     expect(selected).not.toHaveBeenCalled();
     expect(screen.queryByText('Ett gammalt svar')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Avbryt uppdrag' })).toBeNull();
+    expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).not.toContain(
+      'Skyttel arbetar…',
+    );
     expect(screen.getByRole('status').textContent).toContain('Nya förslag är osparade');
     expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toBe(
       action === 'Nytt samtal'
@@ -576,14 +585,16 @@ test('canceling while the map display is pending aborts it and prevents a late a
   await startConversationWithText();
   await waitFor(() => expect(displaySignal).toBeDefined());
   expect(acknowledged).not.toHaveBeenCalled();
-  await userEvent.click(screen.getByRole('button', { name: 'Avbryt uppdrag' }));
+  await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), '{Escape}');
   expect(displaySignal.aborted).toBe(true);
   await act(async () => finishDisplay(true));
   expect(acknowledged).not.toHaveBeenCalled();
   await act(async () =>
     finishCancel(Response.json({ ...current, revision: 2, phase: 'ready', selection: undefined })),
   );
-  expect(screen.queryByRole('button', { name: 'Avbryt uppdrag' })).toBeNull();
+  expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).not.toContain(
+    'Skyttel arbetar…',
+  );
   expect(screen.queryByRole('alert')).toBeNull();
 });
 

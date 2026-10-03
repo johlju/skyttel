@@ -35,7 +35,8 @@ ett gammalt sparbesked kan spara igen.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Lo-förslaget ligger osparat i utkastet. Textvyn är öppen.
+**Förutsättningar:** Lo-förslaget ligger osparat i utkastet. Textvyn är
+öppen i ett datorfönster bredare än 700 px.
 
 **Integrationstest:**
 [conversation-context.spec.ts](../../tests/integration/conversation-context.spec.ts),
@@ -57,7 +58,8 @@ avbrott och fel”.
    `version`, `contentVersion` och `operationId:"context-manual-save"`.
    Kontrollera Lo Senaste i kartan och det verkliga kvittot.
 4. Skicka **Kontrollera samtalets tillfälliga provord.**. Låt svaret vara
-   hållet. Välj **Avbryt uppdrag** och släpp sedan det gamla svaret med
+   hållet. Tryck Escape med fokus i meddelandefältet och släpp sedan
+   det gamla svaret med
    `reply` och texten **För sent.**.
 5. Skicka **Vad gjorde vi?**. Läs `held.input`: tidigare uppdrag och
    sparbesked ska finnas kvar. Försök släppa ett `save_draft` med de nu
@@ -83,7 +85,8 @@ röstanslutning.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Lo-förslaget ligger osparat i utkastet. Textvyn är öppen.
+**Förutsättningar:** Lo-förslaget ligger osparat i utkastet. Textvyn är
+öppen i ett datorfönster bredare än 700 px.
 
 **Integrationstest:**
 [conversation-context.spec.ts](../../tests/integration/conversation-context.spec.ts),
@@ -120,7 +123,8 @@ eller tal, med bevarat mikrofonläge.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Lo-förslaget ligger osparat i utkastet. Textvyn är öppen.
+**Förutsättningar:** Lo-förslaget ligger osparat i utkastet. Textvyn är
+öppen i ett datorfönster bredare än 700 px.
 
 **Integrationstest:**
 [conversation-context.spec.ts](../../tests/integration/conversation-context.spec.ts),

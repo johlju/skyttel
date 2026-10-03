@@ -14,9 +14,9 @@ afterEach(async () => {
   await app?.close();
 });
 
-test.each(['new speech', 'connection loss'])(
+test.each(['connection loss'])(
   '%s at the provider response boundary cancels the original delegation before its returned tool can persist',
-  async (interruption) => {
+  async () => {
     const live = liveProvider();
     let providerId = '';
     let typeId = '';
@@ -27,15 +27,7 @@ test.each(['new speech', 'connection loss'])(
       // This event is delivered inside the external provider callback, before
       // its response is available to the SDK/application. No internal route,
       // work function or database method is replaced or paused.
-      if (interruption === 'new speech') {
-        live.emit(providerId, {
-          type: 'session.input_transcript.delta',
-          event_id: randomUUID(),
-          delta: 'Nej, vänta. Förklara bara.',
-          start_ms: 101,
-          end_ms: 200,
-        });
-      } else live.channels.get(providerId)?.emit('close', 1006, '', []);
+      live.channels.get(providerId)?.emit('close', 1006, '', []);
       return [
         modelTool('propose_object', {
           version: 0,
@@ -95,18 +87,6 @@ test.each(['new speech', 'connection loss'])(
       ),
     ).toEqual([]);
 
-    if (interruption === 'new speech') {
-      live.emit(providerId, {
-        type: 'session.delegation.created',
-        event_id: randomUUID(),
-        offset_ms: 200,
-        delegation: { id: randomUUID(), type: 'delegation', target: 'client' },
-      });
-      await expect
-        .poll(async () => (await (await browser.get(path)).json()).modelReply)
-        .toBe('Det nya uppdraget är förstått.');
-      expect(model.requests).toHaveLength(2);
-      expect(await (await browser.get(`${householdPath}/map`)).json()).toEqual(map);
-    } else await expect.poll(() => live.channels.size).toBe(0);
+    await expect.poll(() => live.channels.size).toBe(0);
   },
 );

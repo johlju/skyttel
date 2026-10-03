@@ -360,7 +360,7 @@ test('TAL-13: ett skrivet meddelande visar aldrig röstrutan och stänger av mik
     await sendMessage(page, 'Beskriv det en gång till.');
     await expect.poll(() => model.waiting()).toBe(1);
     await expect(microphone).toBeDisabled();
-    await page.getByRole('button', { name: 'Avbryt uppdrag', exact: true }).click();
+    await panel(page).getByRole('textbox', { name: 'Meddelande till Skyttel' }).press('Escape');
     await expect(microphone).toBeEnabled();
     await expect(voiceBox(page)).toHaveCount(0);
     expect(live.requests).toHaveLength(0);

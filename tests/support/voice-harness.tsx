@@ -40,7 +40,7 @@ export function StandaloneVoice({
         conversation={{
           voice,
           working: options.assistant?.phase === 'working',
-          cancel: onCancel,
+          cancel: () => voice.silence(onCancel),
         }}
         microphoneButton={() => button.current}
       />

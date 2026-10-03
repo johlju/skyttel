@@ -92,6 +92,7 @@ export function VoiceBox({
   focusAfterStop,
   notice,
   showErrors = false,
+  hideStop = false,
 }: {
   /** The voice, whether Skyttel works with a said or a written task, and how to stop the work. */
   conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'>;
@@ -101,6 +102,7 @@ export function VoiceBox({
   focusAfterStop?: () => HTMLElement | null;
   notice?: ReactNode;
   showErrors?: boolean;
+  hideStop?: boolean;
 }) {
   const { voice } = conversation;
   const status = voiceBoxStatus(voice, conversation.working);
@@ -132,7 +134,7 @@ export function VoiceBox({
   }, [on, shown]);
   // The stop icon goes away while it may have the focus, which must not be lost.
   const stopFocused = useRef(false);
-  const stopShown = Boolean(status?.stop);
+  const stopShown = Boolean(status?.stop && !hideStop);
   useLayoutEffect(() => {
     if (stopShown || !stopFocused.current) return;
     stopFocused.current = false;
@@ -162,7 +164,7 @@ export function VoiceBox({
         <div className="voice-box" role="group" aria-label="Röstruta">
           <Waveform form={status.wave} level={voice.level} />
           <span>{status.word}</span>
-          {status.stop && (
+          {status.stop && !hideStop && (
             <button
               type="button"
               className="voice-stop"
@@ -176,7 +178,7 @@ export function VoiceBox({
               }}
               onClick={() => {
                 // Suggested changes stay in the draft. Only the work and the voice stop.
-                voice.silence(conversation.working ? conversation.cancel : undefined);
+                void conversation.cancel();
               }}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">

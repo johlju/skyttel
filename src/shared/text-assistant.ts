@@ -22,6 +22,13 @@ export interface TextAssistantView {
   contextRevision?: number;
   /** Verified whole-draft discard, shown as conversation text. */
   discarded?: boolean;
+  /** Accepted messages waiting on the server, excluding the current task. */
+  queuedMessages?: number;
+  taskId?: string;
+  taskStatus?: 'queued' | 'working' | 'completed' | 'canceled';
+  /** Completed replies remain available when the next queued task starts. */
+  completedReplies?: { id: string; text: string }[];
+  canceled?: boolean;
   phase: 'ready' | 'working' | 'error' | 'recovery';
   review: TextAssistantReview;
   reply?: string;

@@ -46,7 +46,7 @@ export type Voice = {
   /** Closes the voice connection at once, and with it the work that came by voice. */
   stop: () => Promise<void>;
   /** Silences what Skyttel is saying. */
-  silence: (cancelWork?: () => Promise<void>) => void;
+  silence: (cancelWork?: () => Promise<void>) => Promise<void>;
   /** Replace provider context and queued audio while keeping the authorized microphone. */
   newConversation: (reset: () => Promise<TextAssistantView>) => Promise<TextAssistantView>;
   playAudio: () => void;
@@ -528,13 +528,15 @@ export function useVoice(options: {
         return assistant;
       }, latest.current.transcript ?? []);
       const generation = epoch.current;
-      void interrupted.catch(() => {
-        if (!mounted.current || epoch.current !== generation) return;
-        latest.current.onRecoveryNeeded?.();
-        setError(
-          'Rösten kunde inte fortsätta efter avbrottet. Starta rösten igen eller fortsätt med text.',
-        );
-      });
+      return interrupted
+        .then(() => undefined)
+        .catch(() => {
+          if (!mounted.current || epoch.current !== generation) return;
+          latest.current.onRecoveryNeeded?.();
+          setError(
+            'Rösten kunde inte fortsätta efter avbrottet. Starta rösten igen eller fortsätt med text.',
+          );
+        });
     },
     [renew, apply],
   );
