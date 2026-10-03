@@ -1,8 +1,17 @@
 import { type APIRequestContext, request } from '@playwright/test';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  configure,
+  getConfig,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest';
 import { HouseholdMap } from '../../../src/client/HouseholdMap.js';
 import type { MapState } from '../../../src/shared/map.js';
 import { createHousehold, signIn } from '../../support/client.js';
@@ -19,6 +28,13 @@ import { lastToolResult, modelMessage, modelTool, textModel } from '../../suppor
 import { voiceMedia } from '../../support/voice-media.js';
 
 vi.setConfig({ testTimeout: 30_000 });
+const asyncUtilTimeout = getConfig().asyncUtilTimeout;
+beforeAll(() => {
+  // These workflows use real HTTP and SQLite. Allow CI time to finish the
+  // requests while still resolving each wait as soon as its assertion passes.
+  configure({ asyncUtilTimeout: 10_000 });
+});
+afterAll(() => configure({ asyncUtilTimeout }));
 let installation: Awaited<ReturnType<typeof createInstallation>>;
 let http: APIRequestContext;
 const cleanups: (() => void)[] = [];

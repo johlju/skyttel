@@ -178,6 +178,62 @@ test('contact loss during a working task triggers one authoritative check after 
   );
 });
 
+test.each([false, true])(
+  'browser offline status blocks an availability recheck even when its response is pending=%s',
+  async (responsePending) => {
+    vi.useFakeTimers();
+    const online = vi.spyOn(navigator, 'onLine', 'get');
+    let release!: (response: Response) => void;
+    let hold = false;
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return Response.json(initial);
+      if (url === path)
+        return hold
+          ? new Promise<Response>((resolve) => {
+              release = resolve;
+            })
+          : Response.json({ available: true });
+      if (url.endsWith('/conversation-consent')) return Response.json({ saved: null });
+      return Response.json({ operations: [] });
+    });
+    vi.stubGlobal('fetch', fetch);
+    const { result } = renderHook(() => useConversation(options));
+    await tick(0);
+    await start(result);
+    act(() => result.current.setText('Behåll min oskickade fråga.'));
+    if (responsePending) {
+      hold = true;
+      act(() => window.dispatchEvent(new Event('online')));
+      await tick(0);
+      online.mockReturnValue(false);
+      await act(async () => release(Response.json({ available: true })));
+    } else {
+      online.mockReturnValue(false);
+      const calls = fetch.mock.calls.length;
+      act(() => window.dispatchEvent(new Event('online')));
+      await tick(0);
+      expect(fetch).toHaveBeenCalledTimes(calls);
+    }
+    expect(result.current.inputBlocked).toBe(true);
+    expect(result.current.text).toBe('Behåll min oskickade fråga.');
+    expect(result.current.voice.state).toBe('idle');
+    const calls = fetch.mock.calls.length;
+    await act(async () => result.current.send());
+    expect(fetch).toHaveBeenCalledTimes(calls);
+    hold = false;
+    online.mockReturnValue(true);
+    act(() => window.dispatchEvent(new Event('online')));
+    await tick(0);
+    expect(result.current.inputBlocked).toBe(false);
+    await act(async () => result.current.send());
+    expect(fetch).toHaveBeenLastCalledWith(
+      `${path}/network/messages`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(result.current.text).toBe('');
+  },
+);
+
 test('a periodic availability failure blocks an existing conversation, while unavailable service recovery requires a fresh explicit request', async () => {
   vi.useFakeTimers();
   let availability: boolean | 'error' = true;
