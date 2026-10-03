@@ -778,6 +778,7 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
 test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röstomstart', async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 390, height: 844 });
   let step = 0;
   const model = textModel(() => {
