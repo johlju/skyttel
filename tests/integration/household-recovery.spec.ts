@@ -189,7 +189,14 @@ test('FLYTT-01: a fresh installation restores an archive, explicitly assigns pri
         })
       ).status(),
     ).toBe(200);
+    // Keep the registered save unfinished while testing ownership transfer.
+    // Otherwise the mounted map can recover and complete it before assignment.
+    await destinationPage.route('**/text-assistant/recover', (route) => route.abort());
+    const recoveryAttempt = destinationPage.waitForEvent('requestfailed', {
+      predicate: (request) => request.url().endsWith('/text-assistant/recover'),
+    });
     await destinationPage.reload();
+    await recoveryAttempt;
     await destinationPage
       .getByRole('button', { name: 'Hämta aktuella innehållskopplingar' })
       .click();

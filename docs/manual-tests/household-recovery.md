@@ -37,6 +37,10 @@ tom installation. Den tredje installationen använder en ny egen hemlighet.
 
 **Förutsättningar:** Båda installationerna fungerar enligt förberedelsen.
 Ingen annan skriver till dem. Chromium med utvecklarverktyg finns tillgängligt.
+Blockera `*/text-assistant/recover` i nätverkspanelen i profil A och B
+innan de väntande försöken förbereds. Det hindrar kartans automatiska
+kontroll från att slutföra dem under flyttprovet. Ta bort blockeringen
+efter arkivjämförelsen och före det nya sparandet i steg 13.
 Den lokala MCP-kontrollklienten `scripts/manual-mcp-client.ts` från samma
 färdigställda batch används enbart med påhittade uppgifter.
 
