@@ -1,3 +1,5 @@
+import type { SaveReceipt } from './map.js';
+
 /**
  * The conversation consent text and its version. This is the only source of
  * the text. The consent box shows it, and every other place that shows the
@@ -39,7 +41,12 @@ export interface SavedConversationConsent {
 
 export interface ConversationConsentView {
   saved: SavedConversationConsent | null;
+  /** Receipts for already registered saves completed while ending the conversation. */
+  receipts?: SaveReceipt[];
 }
 
 /** The server's reason for refusing conversation work without a valid consent. */
 export const conversationConsentRequired = 'conversation_consent_required';
+
+/** A previously authorized conversation was explicitly ended by revocation. */
+export const conversationConsentRevoked = 'conversation_consent_revoked';

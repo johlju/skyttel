@@ -1443,14 +1443,22 @@ export function HouseholdMap({
     // The microphone opens no panel: the voice box follows the voice.
     onStarted: (mode) => (mode === 'voice' ? setGuidance(false) : showConversation()),
     onAccessLost: loseAccess,
+    onEnded: () => {
+      if (document.activeElement?.closest('.text-view')) closeTextView();
+      else setTextViewOpen(false);
+    },
     onSelectItem: revealAssistantItem,
   });
+  useEffect(() => {
+    if (conversation.revocationReceipt) setStatus(receiptMessage(conversation.revocationReceipt));
+  }, [conversation.revocationReceipt]);
   const liveOngoing = conversationOngoing(conversation, textViewOpen);
   const beforeConnection = useRef({ blocked: false, ongoing: false });
   const interruptedConversation = useRef(false);
   if (conversation.inputBlocked && !beforeConnection.current.blocked)
     interruptedConversation.current = liveOngoing || beforeConnection.current.ongoing;
   if (!conversation.inputBlocked) interruptedConversation.current = false;
+  if (conversation.revokedHere) interruptedConversation.current = false;
   const ongoing =
     liveOngoing ||
     interruptedConversation.current ||
@@ -1460,10 +1468,13 @@ export function HouseholdMap({
     conditions: {
       saveChecking: Boolean(conversation.saveChecking),
       saveCheckFailed: Boolean(conversation.saveCheckFailed),
-      disconnectedActive: Boolean(conversation.disconnected && ongoing),
-      disconnectedIdle: Boolean(conversation.disconnected && !ongoing),
-      unavailable: conversation.available === false,
+      disconnectedActive: Boolean(
+        !conversation.revokedHere && conversation.disconnected && ongoing,
+      ),
+      disconnectedIdle: Boolean(!conversation.revokedHere && conversation.disconnected && !ongoing),
+      unavailable: !conversation.revokedHere && conversation.available === false,
       taskFailed: Boolean(conversation.taskFailed),
+      consentRevoked: Boolean(conversation.consentRevoked),
       ...(conversation.voice.failure ? { [conversation.voice.failure.noticeId]: true } : {}),
       playbackStopped: conversation.voice.playbackBlocked,
     },
@@ -1607,6 +1618,7 @@ export function HouseholdMap({
             conversation={conversation}
             householdName={householdName}
             personal={conversationPreferences}
+            ongoing={ongoing}
           />,
           conversationSettingsTarget,
         )}

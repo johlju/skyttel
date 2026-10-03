@@ -8,24 +8,29 @@ import {
   type Page,
   test,
 } from '@playwright/test';
+import { conversationConsentTextVersion } from '../../src/shared/conversation-consent.js';
 import { bounds, contrast } from '../support/accessibility.js';
 import { createHousehold, openSettings, signIn } from '../support/client.js';
 import { specifiedConsentText } from '../support/conversation.js';
 import {
+  chooseConversationText,
   chooseConversationVoice,
   consentBox,
   consentBoxFor,
   giveConversationConsent,
   openConversationText,
+  startConversationWithText,
   startConversationWithVoice,
+  turnMicrophoneOn,
+  voiceBox,
 } from '../support/conversation-page.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
-import { modelMessage, textModel } from '../support/text-model.js';
+import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const householdName = 'Familjen Berg';
-const refusal = { error: 'conversation_consent_required' };
+const refusal = { error: 'conversation_consent_revoked' };
 
 type InstallationOptions = Parameters<typeof createInstallation>[1];
 /** An installation that offers the conversation, with controlled answers and a silent voice. */
@@ -124,10 +129,10 @@ async function joinAsRobin(
   return { userId: user.id as string, joinAgain: join };
 }
 /** Expects the server to refuse a request for conversation work, and to say why. */
-async function expectRefused(request: Promise<APIResponse>) {
+async function expectRefused(request: Promise<APIResponse>, reason = refusal) {
   const refused = await request;
   expect(refused.status()).toBe(403);
-  expect(await refused.json()).toEqual(refusal);
+  expect(await refused.json()).toEqual(reason);
 }
 /** Lets every request that the page sends to save or revoke the consent fail. */
 const loseConnection = (page: Page) =>
@@ -135,7 +140,10 @@ const loseConnection = (page: Page) =>
     route.request().method() === 'POST' ? route.abort('connectionfailed') : route.continue(),
   );
 const saveConsent = (client: APIRequestContext, origin: string, consentPath: string) =>
-  client.post(consentPath, { headers: { origin }, data: { textVersion: 2 } });
+  client.post(consentPath, {
+    headers: { origin },
+    data: { textVersion: conversationConsentTextVersion },
+  });
 const microphones = (page: Page) =>
   page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks);
 const liveMicrophones = async (page: Page) =>
@@ -284,6 +292,7 @@ test('MEDGIVANDE-07: Återkalla medgivandet gäller genast och Skyttel frågar i
     // The server refuses a conversation for the user in the household, and says why.
     await expectRefused(
       page.request.post(startPath, { headers: { origin: app.origin }, data: {} }),
+      { error: 'conversation_consent_required' },
     );
 
     // The revocation stays after a reload, and both conversation buttons ask again.
@@ -326,6 +335,7 @@ test('MEDGIVANDE-08: medgivande för besöket går att återkalla och att spara'
 
     // Revoking ends the consent for the visit. The pressed button is gone, and the focus goes to the other.
     await consent.revoke.click();
+    await page.getByRole('button', { name: 'Återkalla och avsluta samtalet' }).click();
     await expect(consent.feedback).toHaveText('Medgivandet är återkallat');
     await expect(consent.status('Inget medgivande är sparat.')).toBeVisible();
     await expect(consent.buttons).toHaveText(['Spara medgivandet']);
@@ -630,6 +640,9 @@ test('MEDGIVANDE-13: ett återkallande på en annan enhet avslutar samtalet', as
     await expect.poll(() => liveMicrophones(page)).toBe(0);
     await expect(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
     await expect(page.getByText('Åtkomsten har upphört.', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toHaveText(
+      /Medgivandet är återkallat. Samtalet är avslutat. Utkastet ligger kvar./,
+    );
     await chooseConversationVoice(page);
     await expect(consentBox(page)).toBeVisible();
     await expect(consentBoxFor(page).remember).not.toBeChecked();
@@ -638,6 +651,263 @@ test('MEDGIVANDE-13: ett återkallande på en annan enhet avslutar samtalet', as
     await expect(consentPart(page).status('Inget medgivande är sparat.')).toBeVisible();
     await otherDevice.close();
   } finally {
+    await app.close();
+  }
+});
+
+const textView = (page: Page) =>
+  page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+const message = (page: Page) =>
+  textView(page).getByRole('textbox', { name: 'Meddelande till Skyttel' });
+const revocation = (page: Page) =>
+  page.getByRole('dialog', { name: 'Återkalla medgivandet', exact: true });
+const confirmRevocation = (page: Page) =>
+  revocation(page).getByRole('button', { name: 'Återkalla och avsluta samtalet' });
+async function arrangeDraft(page: Page, path: string, origin: string) {
+  const state = await (await page.request.get(`${path}/map`)).json();
+  const proposed = await page.request.post(`${path}/map/draft`, {
+    headers: { origin },
+    data: {
+      version: state.draft.version,
+      contentVersion: state.contentVersion,
+      id: 'lo',
+      baseRevision: null,
+      value: { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Påhittad uppgift' },
+    },
+  });
+  expect(proposed.ok(), await proposed.text()).toBe(true);
+  return (await (await page.request.get(`${path}/map`)).json()).draft;
+}
+
+test('MEDGIVANDE-15: återkallandet behåller utkast och oskickad text', async ({ page }) => {
+  let release!: (reply: unknown[]) => void;
+  const model = textModel((request) => {
+    const current = JSON.parse(
+      String(request.input.findLast((part) => part.role === 'user')?.content),
+    );
+    if (current.message === 'Tillfälligt provord för återkallandet.')
+      return new Promise<unknown[]>((resolve) => {
+        release = resolve;
+      });
+    expect(JSON.stringify(request.input)).not.toContain('Tillfälligt provord för återkallandet.');
+    return [modelMessage('Ett nytt samtal.')];
+  });
+  const app = await installation({ modelFetch: model.provider });
+  try {
+    const { path, startPath } = await signInWithHousehold(page.request, app.origin);
+    const draft = await arrangeDraft(page, path, app.origin);
+    await openHousehold(page, app.origin);
+    const started = page.waitForResponse(
+      (response) =>
+        response.url() === startPath && response.request().method() === 'POST' && response.ok(),
+    );
+    await startConversationWithText(page);
+    await expect(message(page)).toBeVisible();
+    const old = `${startPath}/${(await (await started).json()).id}`;
+    await turnMicrophoneOn(page);
+    await message(page).fill('Tillfälligt provord för återkallandet.');
+    await textView(page).getByRole('button', { name: 'Skicka', exact: true }).click();
+    await expect.poll(() => Boolean(release)).toBe(true);
+    await message(page).fill('Min oskickade text.');
+    await openConversationSettings(page);
+    await consentPart(page).revoke.click();
+    await expect(revocation(page)).toContainText(
+      'Samtalet avslutas och samtalstexten töms. Utkastet med 1 osparade ändringar ligger kvar.',
+    );
+    await expect(revocation(page).getByRole('heading')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(revocation(page)).toHaveCount(0);
+    await expect(consentPart(page).revoke).toBeFocused();
+    expect(await liveMicrophones(page)).toBe(1);
+    await consentPart(page).revoke.click();
+    await revocation(page).getByRole('button', { name: 'Avbryt', exact: true }).click();
+    await expect(consentPart(page).revoke).toBeFocused();
+    await consentPart(page).revoke.click();
+    await confirmRevocation(page).click();
+    await expect(consentPart(page).feedback).toHaveText('Medgivandet är återkallat');
+    await expect(consentPart(page).save).toBeFocused();
+    await expect.poll(() => liveMicrophones(page)).toBe(0);
+    release([modelMessage('För sent efter återkallandet.')]);
+    await expectRefused(page.request.get(old));
+    expect((await (await page.request.get(`${path}/map`)).json()).draft).toEqual(draft);
+    expect((await (await page.request.get(`${path}/map/operations`)).json()).operations).toEqual(
+      [],
+    );
+    await returnToMap(page);
+    await expect(textView(page)).toHaveCount(0);
+    await expect(voiceBox(page)).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toHaveCount(0);
+    await startConversationWithText(page);
+    await expect(message(page)).toHaveValue('Min oskickade text.');
+    await expect(textView(page).getByRole('log')).not.toContainText('Tillfälligt provord');
+    await message(page).fill('Börja om.');
+    await textView(page).getByRole('button', { name: 'Skicka', exact: true }).click();
+    await expect(textView(page).getByRole('log')).toContainText('Ett nytt samtal.');
+  } finally {
+    release?.([]);
+    await app.close();
+  }
+});
+
+test('MEDGIVANDE-16: registrerat sparande slutförs vid återkallandet', async ({ page }) => {
+  let release!: () => void;
+  let registered = false;
+  const model = textModel((request) => {
+    const current = JSON.parse(
+      String(request.input.findLast((part) => part.role === 'user')?.content),
+    );
+    return [
+      modelTool('save_draft', {
+        version: current.draft.version,
+        contentVersion: current.draft.contentVersion,
+        operationId: 'provider-id',
+      }),
+    ];
+  });
+  const app = await installation({
+    modelFetch: model.provider,
+    assistantDispatch: async (request, dispatch) => {
+      const body =
+        request.method === 'POST'
+          ? await request
+              .clone()
+              .json()
+              .catch(() => null)
+          : null;
+      const response = await dispatch(request);
+      if (body?.method === 'tools/call' && body.params?.name === 'prepare_save') {
+        registered = true;
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      }
+      return response;
+    },
+  });
+  try {
+    const { path } = await signInWithHousehold(page.request, app.origin);
+    await arrangeDraft(page, path, app.origin);
+    await openHousehold(page, app.origin);
+    await startConversationWithText(page);
+    await expect(message(page)).toBeVisible();
+    await turnMicrophoneOn(page);
+    await message(page).fill('Spara hela utkastet nu.');
+    await textView(page).getByRole('button', { name: 'Skicka', exact: true }).click();
+    await expect.poll(() => registered).toBe(true);
+    await openConversationSettings(page);
+    await consentPart(page).revoke.click();
+    await expect(revocation(page)).toContainText('Skyttel sparar ditt utkast. Sparandet slutförs.');
+    await expect(revocation(page)).not.toContainText('osparade ändringar');
+    const before = (await (await page.request.get(`${path}/map/operations`)).json()).operations[0];
+    expect(before.status).toBe('pending');
+    await confirmRevocation(page).click();
+    await expect.poll(() => liveMicrophones(page)).toBe(0);
+    await expect(consentPart(page).feedback).toHaveText('Medgivandet är återkallat');
+    const operations = (await (await page.request.get(`${path}/map/operations`)).json()).operations;
+    expect(operations).toHaveLength(1);
+    expect(operations[0]).toMatchObject({ status: 'succeeded', operationId: before.operationId });
+    const state = await (await page.request.get(`${path}/map`)).json();
+    expect(state.draft.changes).toHaveLength(0);
+    expect(state.objects).toEqual([expect.objectContaining({ name: 'Lo Exempel' })]);
+    release();
+    await returnToMap(page);
+    await expect(
+      page.getByRole('status').filter({ hasText: `Kvitto: ${before.operationId}` }),
+    ).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toHaveCount(0);
+    await expect(textView(page)).toHaveCount(0);
+  } finally {
+    release?.();
+    await app.close();
+  }
+});
+
+test('MEDGIVANDE-17: återkallanderutan med tangentbord och pekskärm', async ({ browser }) => {
+  const app = await installation();
+  const device = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  try {
+    const page = await device.newPage();
+    await signInWithHousehold(page.request, app.origin);
+    await openHousehold(page, app.origin);
+    await startConversationWithText(page);
+    await expect(message(page)).toBeVisible();
+    await openConversationSettings(page);
+    for (const theme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: theme as 'light' | 'dark' });
+      await consentPart(page).revoke.tap();
+      const dialog = revocation(page);
+      await expect(dialog.getByRole('heading')).toBeFocused();
+      await expect(dialog).toHaveAttribute('aria-describedby', /.+/);
+      await page.keyboard.press('Tab');
+      await expect(confirmRevocation(page)).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(dialog.getByRole('button', { name: 'Avbryt', exact: true })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(confirmRevocation(page)).toBeFocused();
+      expect(await contrast(dialog.getByRole('paragraph'))).toBeGreaterThanOrEqual(4.5);
+      const area = await bounds(dialog);
+      expect(area.x).toBeGreaterThanOrEqual(0);
+      expect(area.right).toBeLessThanOrEqual(390);
+      for (const control of await dialog.getByRole('button').all()) {
+        const box = await bounds(control);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.width).toBeGreaterThanOrEqual(44);
+      }
+      await dialog.getByRole('button', { name: 'Avbryt', exact: true }).tap();
+      await expect(consentPart(page).revoke).toBeFocused();
+    }
+    await consentPart(page).revoke.tap();
+    await confirmRevocation(page).tap();
+    await expect(consentPart(page).save).toBeFocused();
+  } finally {
+    await device.close();
+    await app.close();
+  }
+});
+
+test('MEDGIVANDE-18: nästa textförsök visar återkallandet på en annan enhet', async ({
+  page,
+  browser,
+}) => {
+  const app = await installation();
+  const other = await browser.newContext();
+  try {
+    const { path, consentPath } = await signInWithHousehold(page.request, app.origin);
+    await arrangeDraft(page, path, app.origin);
+    await saveConsent(page.request, app.origin, consentPath);
+    await openHousehold(page, app.origin);
+    await signIn(other.request, app.origin);
+    const second = await other.newPage();
+    await openHousehold(second, app.origin);
+    await chooseConversationText(page);
+    await expect(message(page)).toBeVisible();
+    await message(page).fill('Text som inte hunnit skickas.');
+    await openConversationSettings(second);
+    await consentPart(second).revoke.click();
+    await expect(consentPart(second).feedback).toHaveText('Medgivandet är återkallat');
+    const refusal = page.waitForResponse(
+      (response) =>
+        /\/text-assistant\/[^/]+\/messages$/.test(response.url()) && response.status() === 403,
+    );
+    await textView(page).getByRole('button', { name: 'Skicka', exact: true }).click();
+    expect(await (await refusal).json()).toEqual({ error: 'conversation_consent_revoked' });
+    await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toContainText(
+      'Medgivandet är återkallat. Samtalet är avslutat. Utkastet ligger kvar.',
+    );
+    await expect(textView(page)).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
+    expect((await (await page.request.get(`${path}/map`)).json()).draft.changes).toHaveLength(1);
+    await startConversationWithText(page);
+    await expect(message(page)).toHaveValue('Text som inte hunnit skickas.');
+    await expect(textView(page).getByRole('log')).not.toContainText(
+      'Text som inte hunnit skickas.',
+    );
+  } finally {
+    await other.close();
     await app.close();
   }
 });

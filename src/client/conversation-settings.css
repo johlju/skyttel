@@ -39,3 +39,21 @@
   min-height: 1.5em;
   margin-top: 8px;
 }
+
+.conversation-revocation {
+  max-width: min(46ch, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 20px;
+  color: var(--space-text);
+  background: var(--space-surface);
+  border: 1px solid var(--space-control);
+  border-radius: 12px;
+}
+.conversation-revocation h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.conversation-revocation::backdrop {
+  background: rgb(0 0 0 / 40%);
+}

@@ -5,7 +5,10 @@ import { toResponseInputItems } from 'openai/lib/responses/ResponseInputItems';
 import type { ResponseInputItem } from 'openai/resources/responses/responses';
 import { z } from 'zod';
 import { conversationCommand } from '../shared/conversation-command.js';
-import { conversationConsentRequired } from '../shared/conversation-consent.js';
+import {
+  conversationConsentRequired,
+  conversationConsentRevoked,
+} from '../shared/conversation-consent.js';
 import type {
   MapSelection,
   TextAssistantReview,
@@ -19,7 +22,7 @@ import { contentOwner } from './content-identities.js';
 import { ConversationCapacity } from './conversation-capacity.js';
 import type { ConversationConsents } from './conversation-consent.js';
 import { householdAccess } from './households.js';
-import { MapError } from './map.js';
+import { householdMap, MapError } from './map.js';
 import { checkSaves } from './save-check.js';
 import { connectTextAssistant, type LocalDispatch } from './text-assistant-mcp.js';
 import { type TextModelUsage, textModel } from './text-assistant-model.js';
@@ -119,6 +122,8 @@ export function textAssistantRoutes({
     session.receipt = undefined;
     session.saveCheck = undefined;
     session.operations = [];
+    session.completedReplies = [];
+    session.result = undefined;
     clearTimeout(session.timer);
     await session.mcp.close();
   }
@@ -182,6 +187,12 @@ export function textAssistantRoutes({
       completedReplies,
       taskId,
       queuedMessages: session.queue.length,
+      saving: Boolean(
+        session.pendingSave &&
+          householdMap(database, session.actorId, session.householdId).operation(
+            session.pendingSave.operationId,
+          ).operation?.status === 'pending',
+      ),
       phase,
       review,
       reply,
@@ -1230,7 +1241,7 @@ export function textAssistantRoutes({
   function ended(sessionId: string, actorId: string, householdId: string) {
     const ending = revoked.get(sessionId);
     return ending?.actorId === actorId && ending.householdId === householdId
-      ? ({ error: conversationConsentRequired, status: 403 } as const)
+      ? ({ error: conversationConsentRevoked, status: 403 } as const)
       : ({ error: 'assistant_session_expired', status: 404 } as const);
   }
   routes.use(`${base}/:sessionId/*`, async (context, next) => {
@@ -1586,9 +1597,9 @@ export function textAssistantRoutes({
     /**
      * Ends every conversation that the user has in the household, on all
      * devices, because the consent is revoked. Further work with them is
-     * refused with that reason. The draft is not touched. A save is one
-     * transaction, so it is either carried out or not begun, and a prepared
-     * save that is not carried out stays as an attempt to check.
+     * refused with that reason. The draft is not touched. Only already
+     * registered saves may finish under their original authority; a failed
+     * check remains a durable attempt for recovery without conversation consent.
      */
     endConversations: async (actorId: string, householdId: string) => {
       const key = consentKey(actorId, householdId);
@@ -1603,7 +1614,29 @@ export function textAssistantRoutes({
           Math.max(1, session.mcp.expiresAt - Date.now()),
         ).unref();
       }
+      // Revocation never authorizes a fresh save. Complete only an immutable
+      // operation that was registered under the earlier explicit save command.
+      // SQLite serializes this with an already executing save using the same ID.
+      const receipts: NonNullable<TextAssistantView['receipt']>[] = [];
+      for (const session of ending) {
+        if (session.pendingSave) {
+          try {
+            const checked = checkSaves(database, actorId, householdId, [
+              session.pendingSave.operationId,
+            ]);
+            if (
+              checked.receipt &&
+              !receipts.some((item) => item.operationId === checked.receipt?.operationId)
+            )
+              receipts.push(checked.receipt);
+          } catch {
+            // A failed check remains a durable attempt for consent-independent
+            // recovery; it cannot prevent revocation or retain the conversation.
+          }
+        }
+      }
       await Promise.all(ending.map(stop));
+      return receipts;
     },
     close: async () => {
       await Promise.all([...sessions.values()].map(stop));

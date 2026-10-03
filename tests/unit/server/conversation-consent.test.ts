@@ -345,7 +345,7 @@ test('revoking removes the saved consent and ends the user’s conversations in 
   const { installation, browser, consentPath, startPath } = await setup();
   const { origin } = installation;
   const revokePath = `${consentPath}/revoke`;
-  const refusal = { error: 'conversation_consent_required' };
+  const refusal = { error: 'conversation_consent_revoked' };
   await send(browser, origin, consentPath, { textVersion: 2 });
   const otherDevice = await device(installation);
   const conversations = await Promise.all(
@@ -373,7 +373,7 @@ test('revoking removes the saved consent and ends the user’s conversations in 
     expect(await read.json()).toEqual(refusal);
     const restarted = await send(client, origin, startPath);
     expect(restarted.status()).toBe(403);
-    expect(await restarted.json()).toEqual(refusal);
+    expect(await restarted.json()).toEqual({ error: 'conversation_consent_required' });
   }
   // A conversation that never existed is still only missing.
   expect((await send(browser, origin, `${startPath}/missing/messages`)).status()).toBe(404);
@@ -396,7 +396,7 @@ test('revoking ends a conversation that was approved for the visit only', async 
   expect((await send(browser, origin, `${consentPath}/revoke`)).status()).toBe(200);
   const refused = await send(browser, origin, `${conversation}/messages`);
   expect(refused.status()).toBe(403);
-  expect(await refused.json()).toEqual({ error: 'conversation_consent_required' });
+  expect(await refused.json()).toEqual({ error: 'conversation_consent_revoked' });
 });
 
 test('a consent that is revoked while a conversation is being started starts none', async () => {

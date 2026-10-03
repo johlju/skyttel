@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import type { ConversationConsentView } from '../shared/conversation-consent.js';
+import type { SaveReceipt } from '../shared/map.js';
 import type { Auth } from './auth.js';
 import type { ConversationConsents } from './conversation-consent.js';
 import { householdAccess } from './households.js';
@@ -12,7 +13,7 @@ export function conversationConsentRoutes(
   origin: string,
   consents: ConversationConsents,
   /** Ends the user's conversations in the household, on all devices, when the consent is revoked. */
-  endConversations: (userId: string, householdId: string) => Promise<void>,
+  endConversations: (userId: string, householdId: string) => Promise<SaveReceipt[]>,
 ) {
   const routes = new Hono<{ Variables: { userId: string } }>();
   const path = '/households/:id/conversation-consent';
@@ -44,8 +45,11 @@ export function conversationConsentRoutes(
     const userId = context.get('userId');
     const householdId = context.req.param('id');
     consents.revoke(userId, householdId);
-    await endConversations(userId, householdId);
-    return context.json<ConversationConsentView>({ saved: consents.saved(userId, householdId) });
+    const receipts = await endConversations(userId, householdId);
+    return context.json<ConversationConsentView>({
+      saved: consents.saved(userId, householdId),
+      ...(receipts.length ? { receipts } : {}),
+    });
   });
   return routes;
 }

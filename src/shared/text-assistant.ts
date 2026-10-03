@@ -50,6 +50,8 @@ export interface TextAssistantView {
   /** Completed replies remain available when the next queued task starts. */
   completedReplies?: ConversationReply[];
   canceled?: boolean;
+  /** An explicitly authorized immutable save is durably registered and unfinished. */
+  saving?: boolean;
   phase: 'ready' | 'working' | 'error' | 'recovery';
   review: TextAssistantReview;
   reply?: string;

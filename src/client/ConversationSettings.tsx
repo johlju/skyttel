@@ -3,6 +3,7 @@ import {
   conversationConsentText,
   conversationConsentTextVersion,
 } from '../shared/conversation-consent.js';
+import { draftCount } from './ConversationDraft.js';
 import type { Conversation } from './use-conversation.js';
 import type { useConversationPreferences } from './use-conversation-preferences.js';
 import './conversation-settings.css';
@@ -18,15 +19,17 @@ export function ConversationSettings({
   conversation,
   householdName,
   personal,
+  ongoing = false,
 }: {
   conversation: Conversation;
   householdName: string;
+  ongoing?: boolean;
   personal?: ReturnType<typeof useConversationPreferences>;
 }) {
   return (
     <div className="conversation-settings">
       {conversation.available === false && <p>Samtal med Skyttel är inte tillgängligt just nu.</p>}
-      <ConsentSetting conversation={conversation} householdName={householdName} />
+      <ConsentSetting conversation={conversation} householdName={householdName} ongoing={ongoing} />
       {personal && <DraftSetting personal={personal} />}
     </div>
   );
@@ -64,15 +67,18 @@ type ConsentAction = { name: string; run: () => Promise<boolean>; done: string; 
 function ConsentSetting({
   conversation,
   householdName,
+  ongoing,
 }: {
   conversation: Conversation;
   householdName: string;
+  ongoing: boolean;
 }) {
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const actions = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [confirm, setConfirm] = useState(false);
   const { saved, visit, known } = conversation.consent;
   // A consent that is saved for an older consent text no longer applies.
   const current = saved?.textVersion === conversationConsentTextVersion ? saved : null;
@@ -110,9 +116,9 @@ function ConsentSetting({
     if (!actions.current?.contains(document.activeElement))
       (actions.current?.querySelector('button') ?? heading.current)?.focus();
   });
-  async function change(action: ConsentAction) {
+  async function change(action: ConsentAction, confirmed = false) {
     if (busy) return;
-    keepFocus.current = actions.current?.contains(document.activeElement) ?? false;
+    keepFocus.current = confirmed || (actions.current?.contains(document.activeElement) ?? false);
     setBusy(true);
     // An emptied text lets a screen reader read the same result once more.
     setFeedback('');
@@ -122,7 +128,15 @@ function ConsentSetting({
   }
   const button = (action?: ConsentAction) =>
     action && (
-      <button type="button" aria-disabled={busy} onClick={() => void change(action)}>
+      <button
+        type="button"
+        aria-disabled={busy}
+        onClick={() => {
+          if (busy) return;
+          if (action === revoke && ongoing) setConfirm(true);
+          else void change(action);
+        }}
+      >
         {action.name}
       </button>
     );
@@ -147,6 +161,84 @@ function ConsentSetting({
       <p className="conversation-setting-feedback" role="status">
         {feedback}
       </p>
+      {confirm && (
+        <RevocationConfirmation
+          conversation={conversation}
+          onCancel={() => setConfirm(false)}
+          onConfirm={() => {
+            setConfirm(false);
+            void change(revoke, true);
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+/** Native modal focus containment, Escape and focus restoration belong to this dialog. */
+function RevocationConfirmation({
+  conversation,
+  onCancel,
+  onConfirm,
+}: {
+  conversation: Conversation;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const id = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  useLayoutEffect(() => {
+    const shown = dialog.current;
+    const chosen = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    shown?.showModal();
+    heading.current?.focus();
+    return () => {
+      shown?.close();
+      chosen?.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="conversation-revocation"
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab') return;
+        const buttons = dialog.current?.querySelectorAll('button');
+        const first = buttons?.[0];
+        const last = buttons?.[buttons.length - 1];
+        if (!event.shiftKey && event.target === last) {
+          event.preventDefault();
+          first?.focus();
+        } else if (event.shiftKey && (event.target === first || event.target === heading.current)) {
+          event.preventDefault();
+          last?.focus();
+        }
+      }}
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-text`}
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+    >
+      <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>
+        Återkalla medgivandet
+      </h2>
+      <p id={`${id}-text`}>
+        Samtalet avslutas och samtalstexten töms.{' '}
+        {conversation.session?.saving
+          ? 'Skyttel sparar ditt utkast. Sparandet slutförs.'
+          : `Utkastet med ${draftCount(conversation.session?.review)} osparade ändringar ligger kvar.`}
+      </p>
+      <div className="conversation-setting-actions">
+        <button type="button" onClick={onConfirm}>
+          Återkalla och avsluta samtalet
+        </button>
+        <button type="button" onClick={onCancel}>
+          Avbryt
+        </button>
+      </div>
+    </dialog>
   );
 }

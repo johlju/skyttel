@@ -121,6 +121,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   pekskärm och placering vid verktygsraden. Sidan **Samtal med Skyttel** i
   Inställningar: plats i menyn för alla medlemmar, sparat och återkallat
   medgivande, medgivande för besöket, återkallande från en annan enhet,
+  bekräftelse under samtal, kvarvarande utkast och oskickad text,
+  slutfört registrerat sparande med kvitto, tangentbord och pekskärm,
   otillgängligt samtal, misslyckat sparande och ny fråga efter en ny
   inbjudan. Ändrad medgivandetext kräver ett nytt sparat medgivande;
   en separat tillfällig installation förbereder det syntetiska tillståndet.

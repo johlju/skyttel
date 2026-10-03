@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import OpenAI from 'openai';
 import type { InitialItem } from 'openai/resources/live/live';
 import { SidebandWS } from 'openai/resources/live/sideband/ws';
+import { conversationConsentRevoked } from '../shared/conversation-consent.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantView } from '../shared/voice-assistant.js';
 import { voiceErrorGroup } from '../shared/voice-error.js';
@@ -102,7 +103,10 @@ export function voiceAssistantRoutes({
     const response = await dispatch(
       new Request(`${config.origin}${path}`, { headers: requestHeaders }),
     );
-    if (!response.ok) throw new MapError('voice_access_lost', response.status as 401 | 403 | 404);
+    if (!response.ok) {
+      const refusal = await response.json().catch(() => null);
+      throw new MapError(refusal?.error ?? 'voice_access_lost', response.status as 401 | 403 | 404);
+    }
     return response.json();
   }
   function report(usage: LiveUsageAttempt) {
@@ -437,6 +441,8 @@ export function voiceAssistantRoutes({
       usage.outcome = 'failed';
       usage.endedAt = new Date().toISOString();
       report(usage);
+      if (error instanceof MapError && error.code === conversationConsentRevoked)
+        return context.json({ error: error.code }, 403);
       const code = startupErrorCode(error);
       console.error(
         JSON.stringify({

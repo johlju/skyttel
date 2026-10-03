@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { conversationConsentRevoked } from '../shared/conversation-consent.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
@@ -51,6 +52,8 @@ export type Voice = {
   pauseMicrophone?: () => void;
   /** Closes the voice connection at once, and with it the work that came by voice. */
   stop: () => Promise<void>;
+  /** Drop local audio immediately; consent revocation owns server work cleanup. */
+  endConversation?: () => Promise<void>;
   /** Silences what Skyttel is saying. */
   silence: (cancelWork?: () => Promise<void>) => Promise<void>;
   /** Replace provider context and queued audio while keeping the authorized microphone. */
@@ -228,7 +231,13 @@ export function useVoice(options: {
     [],
   );
   const stop = useCallback(
-    async (message: VoiceFailure | null = null) => {
+    async (message: VoiceFailure | null = null, revoked = false) => {
+      if (revoked) {
+        clearTimeout(savedTimer.current);
+        setSaved(false);
+        setSavedId('');
+        setSpokenQuestion(null);
+      }
       prepared.current?.close();
       prepared.current = null;
       const attempt = current.current;
@@ -245,6 +254,12 @@ export function useVoice(options: {
         if (request) cancelledHeldStart.current = true;
         if (mounted.current) {
           setError(message);
+          if (revoked) {
+            setVoice(null);
+            setPlaybackBlocked(false);
+            setActivity({ microphone: false, speaker: false });
+            setDisconnected(false);
+          }
           setState('idle');
         }
         return;
@@ -259,6 +274,15 @@ export function useVoice(options: {
         setState('closing');
         setPlaybackBlocked(false);
         setError(message);
+      }
+      if (revoked) {
+        attempt.transport?.close();
+        setVoice(null);
+        setActivity({ microphone: false, speaker: false });
+        setPlaybackBlocked(false);
+        setState('idle');
+        setDisconnected(false);
+        return;
       }
       const result = attempt.voiceId ? await stopRemote(attempt.path, attempt.voiceId) : null;
       attempt.transport?.close();
@@ -372,8 +396,10 @@ export function useVoice(options: {
       };
       const fail = (failure?: unknown) => {
         if (!active()) return;
-        if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
+        if (failure instanceof MapRequestError && [401, 403].includes(failure.status)) {
           latest.current.onAccessLost(failure);
+          if (failure.code === conversationConsentRevoked) return;
+        }
         void stop(voiceErrorNotice(failure, attempt.ready ? 'interrupted' : 'startup'));
       };
       const poll = async () => {
@@ -821,6 +847,7 @@ export function useVoice(options: {
     },
     newConversation,
     stop: close,
+    endConversation: () => stop(null, true),
     silence,
     playAudio,
   };

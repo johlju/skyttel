@@ -5,7 +5,7 @@ Fallen omfattar medgivanderutan vid samtalets start: när den visas, vad
 och hur ett sparat medgivande följer användaren mellan enheter.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
-Fallen MEDGIVANDE-05 till MEDGIVANDE-14 omfattar sidan **Samtal med
+Fallen MEDGIVANDE-05 till MEDGIVANDE-18 omfattar sidan **Samtal med
 Skyttel** i Inställningar: var sidan står, vad delen **Medgivande** visar,
 hur medgivandet sparas och återkallas där, att återkallandet gäller på
 användarens alla enheter och att medgivandet följer medlemskapet.
@@ -18,7 +18,7 @@ användarens alla enheter och att medgivandet följer medlemskapet.
   med Microsoft i en separat webbläsarprofil.
 - Robin är medlem på samma sätt i MEDGIVANDE-05 och MEDGIVANDE-12.
 - Alex använder en andra webbläsarprofil som en andra enhet i
-  MEDGIVANDE-06 och MEDGIVANDE-13.
+  MEDGIVANDE-06, MEDGIVANDE-13 och MEDGIVANDE-18.
 - Den kontrollerade miljön använder inga verkliga externa konton.
 
 ## Allmän förberedelse
@@ -34,6 +34,29 @@ användarens alla enheter och att medgivandet följer medlemskapet.
 4. Kör även med tangentbord, skärmläsare och pekskärm på fysisk telefon
    och dator. Anteckna hjälpmedel och plattformar separat från
    Chromium-emulering.
+
+## Förberedelse för återkallande under samtal
+
+För MEDGIVANDE-15 till MEDGIVANDE-18 används en separat kontrollerad
+installation med riktiga servervägar och en tillfällig SQLite-databas.
+Kostnadsmiljön ovan kan inte hålla ett registrerat sparande. Kör från
+repositoryts rot:
+
+```sh
+npm run build
+npx tsx scripts/manual-voice.ts
+```
+
+Öppna den utskrivna adressen privat och logga in som Alex med Google.
+Skapa hushållet Medgivandeprov. Lägg till den påhittade personen
+**Lo Exempel** i utkastet genom kartans lista och formulär. Spara inte;
+utkastet ska innehålla exakt en ändring. Den kontrollerade mikrofonen
+använder tyst ljud och spelar inte in din riktiga mikrofon.
+
+Textsvar väntar i terminalen. När den skriver `held`, använd dess aktuella
+`id` i kommandot `reply ID Ett provsvar.`. `pending` visar aktuella
+förfrågningar. `quit` avslutar installationen och tar bort provdatabasen.
+Starta en ny installation och upprepa förberedelsen för varje fall.
 
 ## Medgivanderutan
 
@@ -313,8 +336,9 @@ spara”.
 1. Välj **Prata med Skyttel** och **Godkänn och starta** utan att markera
    kryssrutan. Vänta tills mikrofonen är på.
 2. Öppna sidan **Samtal med Skyttel**. Läs statusraden och knapparna.
-3. Välj **Återkalla medgivandet**. Läs statusraden och kontrollera
-   mikrofonen.
+3. Välj **Återkalla medgivandet** och därefter
+   **Återkalla och avsluta samtalet** i bekräftelserutan. Läs statusraden
+   och kontrollera mikrofonen.
 4. Välj **Tillbaka till kartan** och **Prata med Skyttel**. Välj
    **Godkänn och starta** i medgivanderutan, utan att markera kryssrutan.
 5. Öppna sidan igen och välj **Spara medgivandet**.
@@ -493,6 +517,8 @@ samtalet”.
 
 - På den första enheten stängs mikrofonen av, och samtalet avslutas.
   Kartan finns kvar, och ingen text säger att åtkomsten har upphört.
+  En notis säger **Medgivandet är återkallat. Samtalet är avslutat.
+  Utkastet ligger kvar.**
 - **Prata med Skyttel** visar medgivanderutan, med omarkerad kryssruta.
 
 ### MEDGIVANDE-14: ändrad medgivandetext kräver ett nytt sparat medgivande
@@ -573,6 +599,164 @@ medgivande”.
   **Återkalla medgivandet**. Det nya medgivandet ersätter den andra
   textversionens medgivande.
 
+## Återkallande under samtal
+
+### MEDGIVANDE-15: återkallandet behåller utkast och oskickad text
+
+**Syfte:** Bekräfta återkallandet och tömma samtalstext och kontext utan
+att förlora utkast eller oskickad text.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Följ förberedelsen för återkallande under samtal ovan.
+Utkastet har en osparad ändring. Inget medgivande är sparat.
+
+**Integrationstest:**
+[conversation-settings.spec.ts](../../tests/integration/conversation-settings.spec.ts),
+testfallet “MEDGIVANDE-15: återkallandet behåller utkast och oskickad text”.
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel** och **Godkänn och starta**. Vänta på
+   textvyn. Slå på mikrofonen med **Prata med Skyttel**.
+2. Skicka **Tillfälligt provord för återkallandet.**. Låt terminalens
+   förfrågan vänta. Skriv **Min oskickade text.** utan att skicka.
+3. Öppna **Inställningar**, sidan **Samtal med Skyttel**, och välj
+   **Återkalla medgivandet**. Läs rutan. Stäng med Escape. Öppna igen
+   och välj **Avbryt**. Kontrollera fokus efter båda handlingarna.
+4. Öppna rutan igen och välj **Återkalla och avsluta samtalet**.
+5. Släpp det gamla svaret med `reply ID För sent efter återkallandet.`.
+   Välj **Tillbaka till kartan**. Kontrollera utkastet.
+6. Välj **Skriv till Skyttel** och godkänn igen. Läs skrivfältet och
+   samtalstexten. Skicka **Börja om.** och släpp det nya svaret med
+   `reply ID Ett nytt samtal.`.
+
+**Förväntat resultat:**
+
+- Rutan säger **Samtalet avslutas och samtalstexten töms. Utkastet med 1
+  osparade ändringar ligger kvar.** och har två knappar.
+- Escape och **Avbryt** återför fokus till **Återkalla medgivandet**.
+  Mikrofonen och arbetet fortsätter.
+- Bekräftelsen stänger mikrofonen och avslutar arbetet. Fokus går till
+  **Spara medgivandet**; resultatet säger **Medgivandet är återkallat**.
+- Textvyn och röstrutan är borta i kartan. Ingen samtalsnotis visas där.
+  Lo Exempel ligger kvar i utkastet. Det sena svaret visas inte.
+- Nästa start frågar om medgivande igen. **Min oskickade text.** ligger
+  kvar i skrivfältet. Den gamla samtalstexten och kontexten är tömda.
+  Det nya svaret visas i det nya samtalet.
+
+### MEDGIVANDE-16: registrerat sparande slutförs vid återkallandet
+
+**Syfte:** Slutföra ett redan godkänt och registrerat sparande och visa
+samma kvitto när användaren återkallar medgivandet.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Följ förberedelsen ovan. Utkastet har en ändring.
+Skriv `hold-save on` i terminalen innan samtalet börjar.
+
+**Integrationstest:**
+[conversation-settings.spec.ts](../../tests/integration/conversation-settings.spec.ts),
+testfallet “MEDGIVANDE-16: registrerat sparande slutförs vid återkallandet”.
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel**, godkänn för besöket och vänta på textvyn.
+   Slå på mikrofonen med **Prata med Skyttel** och skicka
+   **Spara hela utkastet nu.**.
+2. Läs `id`, `draft.version` och `draft.contentVersion` i terminalens
+   `held`. Ersätt ID, V och C med dessa värden i följande kommando:
+
+   ```text
+   tool ID save_draft {"version":V,"contentVersion":C,"operationId":"prov"}
+   ```
+
+3. Vänta på terminalens `save-registered`. Notera dess `operationId`.
+   Öppna **Samtal med Skyttel** i Inställningar och välj
+   **Återkalla medgivandet**. Läs rutan och bekräfta.
+4. Skriv `release-save`. Gå tillbaka till kartan och läs sparresultatet.
+   Öppna **Utkast och historik** och kontrollera kvittot.
+
+**Förväntat resultat:**
+
+- Rutan säger **Skyttel sparar ditt utkast. Sparandet slutförs.** i
+  stället för att ange antal osparade ändringar.
+- Medgivandet återkallas medan det registrerade sparandet slutförs.
+  Kartan innehåller Lo Exempel och utkastet är tomt.
+- Sparresultatet visar kvittot med det noterade ID:t. Historiken har ett
+  sparande för samma ID, även efter att det fördröjda svaret släpps.
+- Textvyn och röstrutan är stängda och ingen samtalsnotis visas.
+  Sparresultatet går att kontrollera utan ett nytt samtalsmedgivande.
+
+### MEDGIVANDE-17: återkallanderutan med tangentbord och pekskärm
+
+**Syfte:** Använda bekräftelsen utan visuell kartnavigering och utan mus.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Följ förberedelsen ovan. Börja ett textsamtal och
+öppna **Samtal med Skyttel** i Inställningar. Prova ljust och mörkt tema
+på dator och telefon; anteckna faktisk enhet och hjälpmedel separat.
+
+**Integrationstest:**
+[conversation-settings.spec.ts](../../tests/integration/conversation-settings.spec.ts),
+testfallet “MEDGIVANDE-17: återkallanderutan med tangentbord och pekskärm”.
+
+**Steg:**
+
+1. Använd Tab och Enter för att välja **Återkalla medgivandet**.
+   Läs rutans rubrik, beskrivning och knappar med skärmläsare.
+2. Gå framåt och bakåt med Tab. Välj **Avbryt** och kontrollera fokus.
+   Öppna igen och stäng med Escape.
+3. Upprepa på pekskärm i båda teman. Förstora texten och kontrollera
+   läsordning, synligt fokus och att alla handlingar går att nå.
+4. Öppna igen och välj **Återkalla och avsluta samtalet**. Lyssna på
+   resultatet utan att flytta fokus.
+
+**Förväntat resultat:**
+
+- Fokus börjar på rubriken. Namn och beskrivning berättar vad som
+  avslutas och vad som ligger kvar. Tab stannar inom rutan.
+- Escape och **Avbryt** återför fokus till den valda knappen utan att
+  ändra medgivandet. Bekräftelse återför fokus till **Spara medgivandet**.
+- Text och knappar kan läsas och nås även efter förstoring. Knapparna
+  fungerar med beröring. Resultatet läses upp en gång vid knappen.
+
+### MEDGIVANDE-18: nästa textförsök visar återkallandet på en annan enhet
+
+**Syfte:** Avsluta samma användares textsamtal på en annan enhet utan
+att förlora hushållets karta, utkast eller oskickad text.
+
+**Användare:** Alex i två samtidigt inloggade webbläsarprofiler.
+
+**Förutsättningar:** Följ förberedelsen ovan och spara medgivandet i
+Inställningar. Logga in som Alex i en andra profil på samma adress.
+
+**Integrationstest:**
+[conversation-settings.spec.ts](../../tests/integration/conversation-settings.spec.ts),
+testfallet “MEDGIVANDE-18: nästa textförsök visar återkallandet på en annan
+enhet”.
+
+**Steg:**
+
+1. Börja ett textsamtal i första profilen. Skriv **Text som inte hunnit
+   skickas.** i skrivfältet utan att skicka.
+2. Öppna **Samtal med Skyttel** i andra profilen och välj
+   **Återkalla medgivandet**. Inget samtal pågår där; ingen
+   bekräftelseruta ska visas.
+3. Gå tillbaka direkt till första profilen och välj **Skicka**. Om
+   servern redan har avslutat vyn genom sin kontroll, läs notisen där.
+4. Välj **Skriv till Skyttel** igen och godkänn. Läs skrivfältet.
+
+**Förväntat resultat:**
+
+- Första profilen visar **Medgivandet är återkallat. Samtalet är avslutat.
+  Utkastet ligger kvar.** senast vid nästa försök att skicka. Notisen
+  läses upp en gång och säger inte att hushållets åtkomst har upphört.
+- Textvyn och samtalet avslutas; kartan och utkastet finns kvar.
+- Nästa start visar medgivanderutan. Skrivfältet har kvar **Text som inte
+  hunnit skickas.**. Texten ingår inte i det nya samtalets historik.
+
 ## Bedömning och återstående manuella prov
 
 Flödet är utformat mot WCAG 2.2 nivå AA. Kraven nedan är designmål, och
@@ -617,3 +801,21 @@ och ingen fysisk enhet är provad.
 MEDGIVANDE-14 provar statusraden för ändrad medgivandetext och ett nytt
 sparande med syntetiskt förberedd textversion. Integrationstestet använder
 två installationer på samma databas för motsvarande tillstånd.
+
+### Bekräftat återkallande under samtal
+
+Designmålet är WCAG 2.2 AA. MEDGIVANDE-15 till MEDGIVANDE-18 provar
+funktionerna genom offentliga gränssnitt; detta är ingen fullständig
+verifiering av överensstämmelse.
+
+- 1.3.1, 2.4.6 och 4.1.2: den modala rutan har rubrik, namn och
+  beskrivning. Kontrollerna har synliga, semantiska namn.
+- 2.1.1, 2.4.3 och 2.4.7: fokus börjar på rubriken, Tab går inom rutan,
+  Escape avbryter och fokus återställs efter avbrott och bekräftelse.
+- 1.4.3, 1.4.10 och 2.5.8: automatiska kontroller provar minst 4,5:1
+  textkontrast, omflöde på 390 px och minst 44 px höga och breda knappar
+  i båda teman. Verklig zoom och fysisk pekskärm återstår.
+- 4.1.3: inställningsresultat och kvitto använder befintliga statusområden.
+  Ett återkallande från en annan enhet annonseras som en enda notis.
+  Faktisk uppläsning med NVDA och VoiceOver återstår, liksom lyssning på
+  riktigt ljud; den kontrollerade transporten är tyst.

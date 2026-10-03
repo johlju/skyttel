@@ -25,6 +25,8 @@ async function main() {
     throw new Error('Run without arguments in the development environment.');
   process.umask(0o077);
   const pending = new Map<string, Pending>();
+  let holdSave = false;
+  let releaseSave: (() => void) | undefined;
   let sequence = 0;
   let offset = 0;
   let textContextPercent: number | undefined;
@@ -79,12 +81,31 @@ async function main() {
         : live.provider(url, init),
     liveSideband: live.attach,
     browserProviderScript: liveBrowserFixtureSource,
+    assistantDispatch: async (request, dispatch) => {
+      const body =
+        request.method === 'POST'
+          ? await request
+              .clone()
+              .json()
+              .catch(() => null)
+          : null;
+      const response = await dispatch(request);
+      if (holdSave && body?.method === 'tools/call' && body.params?.name === 'prepare_save') {
+        emit('save-registered', { operationId: body.params.arguments.operationId });
+        await new Promise<void>((resolve) => {
+          releaseSave = resolve;
+        });
+        releaseSave = undefined;
+      }
+      return response;
+    },
   });
   const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
   const stop = () => input.close();
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
   const releaseAll = () => {
+    releaseSave?.();
     for (const item of pending.values()) item.reject(new Error('controlled_provider_shutdown'));
     pending.clear();
   };
@@ -126,6 +147,8 @@ async function main() {
               'final SECONDS',
               'finalize on|off',
               'drop',
+              'hold-save on|off',
+              'release-save',
               'pending',
               'tool REQUEST TOOL JSON',
               'reply REQUEST TEXT',
@@ -135,6 +158,18 @@ async function main() {
               'quit',
             ],
           });
+          continue;
+        }
+        if (command === 'hold-save') {
+          if (id !== 'on' && id !== 'off') throw new Error('Use hold-save on or off.');
+          holdSave = id === 'on';
+          emit('hold-save', { enabled: holdSave });
+          continue;
+        }
+        if (command === 'release-save') {
+          if (!releaseSave) throw new Error('Wait for save-registered before releasing.');
+          releaseSave();
+          emit('save-released');
           continue;
         }
         if (command === 'voice-failure') {

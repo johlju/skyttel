@@ -43,13 +43,26 @@ du sparade.
   samtalsknapp startar samtalet utan att rutan visas.
 - **Återkalla medgivandet** tar bort ett sparat medgivande och ett som bara
   gäller besöket. Dina samtal i hushållet avslutas, på alla dina enheter,
-  och ditt utkast ligger kvar. Nästa gång du väljer en samtalsknapp visas
-  medgivanderutan igen.
+  och ditt utkast ligger kvar. Under ett pågående samtal visar en ruta
+  hur många osparade ändringar som ligger kvar. Välj **Avbryt** för att
+  fortsätta eller **Återkalla och avsluta samtalet** för att bekräfta.
+  Ett redan påbörjat sparande slutförs och visar sitt kvitto. Då säger
+  rutan **Skyttel sparar ditt utkast. Sparandet slutförs.**.
+  Textvyn stängs och samtalstexten töms; oskickad text ligger kvar.
+  Nästa gång du väljer en samtalsknapp visas medgivanderutan igen.
 
-Knapparna gäller direkt, och sidan har ingen knapp för att spara hela
+Om medgivandet återkallas på en annan enhet avslutas samtalet senast vid
+nästa försök att tala eller skicka. En notis säger **Medgivandet är
+återkallat. Samtalet är avslutat. Utkastet ligger kvar.**. Hushållets karta
+finns kvar. Ett okänt sparresultat går att kontrollera utan att godkänna
+samtalsmedgivandet igen.
+
+Utan pågående samtal gäller knapparna direkt. Sidan har ingen knapp för
+att spara hela
 sidan. En kort text vid knappen säger hur det gick. Om den säger att
-medgivandet inte kunde sparas eller återkallas är ingenting ändrat, och du
-kan försöka igen. När sidan visar
+medgivandet inte kunde sparas eller återkallas har medgivandet inte
+ändrats, och du kan försöka igen. Mikrofonen kan behöva slås på igen
+efter ett misslyckat återkallande. När sidan visar
 **Samtal med Skyttel är inte tillgängligt just nu.** går det inte att
 spara ett medgivande, men du kan återkalla ett som är sparat.
 

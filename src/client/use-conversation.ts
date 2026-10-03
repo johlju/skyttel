@@ -3,10 +3,11 @@ import { conversationCommand } from '../shared/conversation-command.js';
 import {
   type ConversationConsentView,
   conversationConsentRequired,
+  conversationConsentRevoked,
   conversationConsentTextVersion,
   type SavedConversationConsent,
 } from '../shared/conversation-consent.js';
-import type { SaveOperation } from '../shared/map.js';
+import type { SaveOperation, SaveReceipt } from '../shared/map.js';
 import type { SaveCheck } from '../shared/save-check.js';
 import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
@@ -28,6 +29,10 @@ export type Conversation = {
   /** A press while idle asks to see the blocking notice, without opening a view. */
   noticeRequested?: number;
   taskFailed?: boolean;
+  consentRevoked?: boolean;
+  /** This tab confirmed revocation; hide conversation notices until the next request. */
+  revokedHere?: boolean;
+  revocationReceipt?: SaveReceipt;
   showNotice?: () => void;
   /** Whether the server offers the conversation. Null until it has answered. */
   available: boolean | null;
@@ -114,6 +119,7 @@ export function useConversation({
   enabled = true,
   onMapChange,
   onStarted,
+  onEnded,
   onUnavailable,
   onAccessLost,
   onSelectItem,
@@ -124,6 +130,8 @@ export function useConversation({
   onMapChange: () => void;
   /** A conversation has started, so the caller can show it as the chosen button asks. */
   onStarted?: (mode: ConversationMode) => void;
+  /** Explicit revocation ends its presentations without disturbing Settings focus. */
+  onEnded?: () => void;
   /** A requested conversation is not offered by the server, so the caller can say so. */
   onUnavailable?: () => void;
   onAccessLost: () => void;
@@ -138,6 +146,10 @@ export function useConversation({
   const pauseCapture = useRef<() => void>(() => {});
   const [noticeRequested, setNoticeRequested] = useState(0);
   const [taskFailed, setTaskFailed] = useState(false);
+  const [consentRevoked, setConsentRevoked] = useState(false);
+  const [revokedHere, setRevokedHere] = useState(false);
+  const [revocationReceipt, setRevocationReceipt] = useState<SaveReceipt>();
+  const endVoice = useRef<() => void>(() => {});
   // Undefined until the server has answered.
   const [savedConsent, setSavedConsent] = useState<SavedConversationConsent | null>();
   const [visitConsent, setVisitConsent] = useState(false);
@@ -176,11 +188,26 @@ export function useConversation({
         : [...rows, row],
     );
   }, []);
-  const callbacks = useRef({ onMapChange, onStarted, onUnavailable, onAccessLost, onSelectItem });
-  callbacks.current = { onMapChange, onStarted, onUnavailable, onAccessLost, onSelectItem };
+  const callbacks = useRef({
+    onMapChange,
+    onStarted,
+    onEnded,
+    onUnavailable,
+    onAccessLost,
+    onSelectItem,
+  });
+  callbacks.current = {
+    onMapChange,
+    onStarted,
+    onEnded,
+    onUnavailable,
+    onAccessLost,
+    onSelectItem,
+  };
   const mounted = useRef(true);
   const requestEpoch = useRef(0);
   const resetInProgress = useRef(false);
+  const revoking = useRef(false);
   // Counts the visits and what Settings does with the consent, so that an
   // answer is not applied after the user has left the map or done something newer.
   const consentEpoch = useRef(0);
@@ -370,7 +397,28 @@ export function useConversation({
   const fail = useCallback(
     (failure: unknown) => {
       if (!mounted.current) return;
-      if (failure instanceof MapRequestError && failure.code === conversationConsentRequired) {
+      if (failure instanceof MapRequestError && failure.code === conversationConsentRevoked) {
+        requestEpoch.current++;
+        active.current = null;
+        setSession(null);
+        setTranscript([]);
+        setUnknown(false);
+        setPending(false);
+        setError('');
+        setTaskFailed(false);
+        setStartWithVoice(false);
+        setSavedConsent(null);
+        setVisitConsent(false);
+        setRequested(null);
+        setConsentRevoked(true);
+        setRevokedHere(false);
+        endVoice.current();
+        callbacks.current.onEnded?.();
+        callbacks.current.onMapChange();
+      } else if (
+        failure instanceof MapRequestError &&
+        failure.code === conversationConsentRequired
+      ) {
         // The server has no valid consent, whatever this client last knew.
         // The access is not lost, and the next start asks for the consent.
         clear();
@@ -433,6 +481,10 @@ export function useConversation({
       setConsentError('');
       setStartWithVoice(false);
       setPending(false);
+      setConsentRevoked(false);
+      setRevokedHere(false);
+      setRevocationReceipt(undefined);
+      revoking.current = false;
       setError('');
     };
   }, [path, consentPath, enabled, clear]);
@@ -514,6 +566,9 @@ export function useConversation({
       Boolean(session?.operations.some((item) => item.status === 'pending')),
     onRecoveryNeeded: () => setUnknown(true),
   });
+  endVoice.current = () => {
+    void voice.endConversation?.();
+  };
   voiceConnected.current = voice.state === 'listening' || voice.starting;
   useEffect(() => {
     if (voice.state !== 'idle' && voice.state !== 'closing') return;
@@ -735,8 +790,20 @@ export function useConversation({
     return Boolean(outcome);
   }
   async function revokeConsent() {
+    if (revoking.current) return false;
+    revoking.current = true;
+    requestEpoch.current++;
+    setPending(true);
+    // Capture and buffered input stop in the confirming gesture. Closing local
+    // audio sends no cancel that could abort a registered save on the server.
+    setStartWithVoice(false);
+    endVoice.current();
     const outcome = await changeConsent(`${consentPath}/revoke`, {});
-    if (!outcome) return false;
+    revoking.current = false;
+    if (!outcome) {
+      setPending(false);
+      return false;
+    }
     // The server has ended the user's conversations in the household. This one
     // ends here too, and an answer to an earlier command is not for a new one.
     // The text that the user has written but not sent stays.
@@ -753,12 +820,19 @@ export function useConversation({
     setConsentError('');
     setSavedConsent(outcome.saved);
     setVisitConsent(false);
+    setStartWithVoice(false);
+    setTaskFailed(false);
+    setConsentRevoked(false);
+    setRevokedHere(true);
+    setRevocationReceipt(outcome.receipts?.[0]);
+    callbacks.current.onEnded?.();
+    callbacks.current.onMapChange();
     return true;
   }
   const command = useCallback(
     async (name: string, body: unknown = {}) => {
       const current = active.current;
-      if (!current) return;
+      if (!current || revoking.current) return;
       const epoch = ++requestEpoch.current;
       setPending(true);
       setError('');
@@ -777,7 +851,14 @@ export function useConversation({
   );
   async function send(queue = true) {
     const current = session;
-    if (!current || !text.trim() || inputBlocked || !connection.current || !navigator.onLine)
+    if (
+      !current ||
+      revoking.current ||
+      !text.trim() ||
+      inputBlocked ||
+      !connection.current ||
+      !navigator.onLine
+    )
       return;
     const control = conversationCommand(text);
     if (control?.reset) {
@@ -817,7 +898,7 @@ export function useConversation({
   }
   async function newConversation(discard = false) {
     const current = active.current;
-    if (!current || resetInProgress.current || saveChecking) return;
+    if (!current || resetInProgress.current || saveChecking || revoking.current) return;
     // A reset may interrupt a pending message, but a second reset must not
     // replace the first one's retained microphone while the server answers.
     resetInProgress.current = true;
@@ -889,6 +970,9 @@ export function useConversation({
     inputBlocked,
     noticeRequested,
     taskFailed,
+    consentRevoked,
+    revokedHere,
+    revocationReceipt,
     showNotice: () => setNoticeRequested((value) => value + 1),
     consent: {
       saved: savedConsent ?? null,
@@ -912,6 +996,8 @@ export function useConversation({
     voice,
     setText,
     begin: (mode) => {
+      setConsentRevoked(false);
+      setRevokedHere(false);
       setTaskFailed(false);
       if (inputBlocked || !connection.current || !navigator.onLine) {
         setNoticeRequested((value) => value + 1);

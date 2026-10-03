@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { ConversationConsent } from '../../../src/client/ConversationConsent.js';
 import { ConversationSettings } from '../../../src/client/ConversationSettings.js';
-import { useConversation } from '../../../src/client/use-conversation.js';
+import { conversationOngoing, useConversation } from '../../../src/client/use-conversation.js';
 import type { SavedConversationConsent } from '../../../src/shared/conversation-consent.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { specifiedConsentText } from '../../support/conversation.js';
@@ -45,6 +45,7 @@ function Page({ onAccessLost }: { onAccessLost: () => void }) {
   const conversation = useConversation({
     householdId: 'linden',
     onStarted: () => setTextViewOpen(true),
+    onEnded: () => setTextViewOpen(false),
     onMapChange: () => undefined,
     onAccessLost,
     onSelectItem: async () => false,
@@ -72,7 +73,11 @@ function Page({ onAccessLost }: { onAccessLost: () => void }) {
           onChange={(event) => conversation.setText(event.target.value)}
         />
       </label>
-      <ConversationSettings conversation={conversation} householdName="Familjen Berg" />
+      <ConversationSettings
+        conversation={conversation}
+        householdName="Familjen Berg"
+        ongoing={conversationOngoing(conversation, textViewOpen)}
+      />
     </>
   );
 }
@@ -92,7 +97,7 @@ function show({
       if (url === consentPath) return Response.json({ saved: server.saved });
       return server.sessionStatus === 200
         ? Response.json(session)
-        : Response.json({ error: 'conversation_consent_required' }, { status: 403 });
+        : Response.json({ error: 'conversation_consent_revoked' }, { status: 403 });
     }
     posts.push({ url, body: JSON.parse(String(init.body)) });
     if (url === consentPath || url === revokePath) {
@@ -232,6 +237,11 @@ test('revoking while a conversation goes on ends it and keeps the unsent text', 
   await userEvent.type(screen.getByLabelText('Oskickad text'), 'Lägg till en cykel');
 
   await userEvent.click(button('Återkalla medgivandet'));
+  const confirmation = screen.getByRole('dialog', { name: 'Återkalla medgivandet' });
+  expect(confirmation.textContent).toContain('Utkastet med 0 osparade ändringar ligger kvar.');
+  await userEvent.click(
+    within(confirmation).getByRole('button', { name: 'Återkalla och avsluta samtalet' }),
+  );
   await status('Inget medgivande är sparat.');
   expect(screen.getByText('Inget samtal pågår')).toBeDefined();
   expect((screen.getByLabelText('Oskickad text') as HTMLInputElement).value).toBe(
