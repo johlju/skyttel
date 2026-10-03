@@ -16,6 +16,7 @@ declare global {
   interface Window {
     skyttelRealPeers: RTCPeerConnection[];
     skyttelRealMicrophones: MediaStreamTrack[];
+    skyttelRealSavedReplyDrained: boolean;
   }
 }
 
@@ -77,6 +78,22 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text från talprovet');
     const panel = page.getByRole('region', { name: 'Arbetsyta', exact: true });
+    // Observe the four-second status before speech can trigger the save. Later
+    // receipt and media checks may take longer than its visible lifetime.
+    await page.evaluate(() => {
+      window.skyttelRealSavedReplyDrained = false;
+      const observer = new MutationObserver(() => {
+        const box = document.querySelector('[role="group"][aria-label="Röstruta"]');
+        if (
+          box &&
+          [...box.querySelectorAll('span')].some((span) => span.textContent?.trim() === 'Sparat')
+        ) {
+          window.skyttelRealSavedReplyDrained = true;
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
     await startConversationWithText(page);
     await chooseConversationVoice(page);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true', {
@@ -156,7 +173,9 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
       .toBe(true);
     // Sparat requires the canonical reply's words, observed output audio and its drain.
     // It does not establish acoustic intelligibility or rule out later unsolicited output.
-    await expect(voiceBox(page)).toHaveText('Sparat', { timeout: 60_000 });
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelRealSavedReplyDrained), { timeout: 60_000 })
+      .toBe(true);
     await expect(voiceBox(page)).toHaveCount(0, { timeout: 30_000 });
     const peersBeforeReset = await page.evaluate(() => window.skyttelRealPeers.length);
     await panel.getByRole('button', { name: 'Nytt samtal' }).click();
