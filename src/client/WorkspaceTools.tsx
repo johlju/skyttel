@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import logo from '../../docs/images/shuttle-logo-transparent-small.png';
+import { microphoneShortcut, useMicrophonePress } from './use-microphone-press.js';
 import type { Voice } from './use-voice.js';
 
 const paths = {
@@ -68,6 +69,7 @@ export function WorkspaceTools({
   detailsVisible = false,
   voiceControl,
   voiceBox,
+  holdVoice,
   textViewOpen = false,
   cameraMount,
   expanded,
@@ -89,6 +91,7 @@ export function WorkspaceTools({
   detailsVisible?: boolean;
   /** The microphone of the conversation that is going on. Null when none is. */
   voiceControl?: Pick<Voice, 'microphone' | 'starting' | 'disabled' | 'activate'> | null;
+  holdVoice?: { canHold: boolean; prepare: () => void; start: () => void; release: () => void };
   /** The voice box. It follows the conversation buttons in the reading order. */
   voiceBox?: ReactNode;
   textViewOpen?: boolean;
@@ -102,6 +105,37 @@ export function WorkspaceTools({
   const returnFocus = useRef<HTMLButtonElement | null>(null);
   const expansionControl = useRef<HTMLButtonElement>(null);
   const tools = useRef<HTMLElement>(null);
+  const microphoneButton = useRef<HTMLButtonElement>(null);
+  const microphonePress = useMicrophonePress({
+    button: microphoneButton,
+    canHold: () =>
+      Boolean(
+        holdVoice?.canHold &&
+          !voiceControl?.disabled &&
+          !voiceControl?.starting &&
+          voiceControl?.microphone !== 'on' &&
+          navigator.onLine !== false,
+      ),
+    prepare: () => holdVoice?.prepare(),
+    startHeld: () => holdVoice?.start(),
+    releaseHeld: () => holdVoice?.release(),
+    short: () => {
+      onExpandedChange(false);
+      setUtility(null);
+      if (voiceControl) voiceControl.activate();
+      else if (microphoneButton.current) onOpen('voice', microphoneButton.current);
+    },
+  });
+  const [touch, setTouch] = useState(() => window.matchMedia('(pointer: coarse)').matches);
+  useEffect(() => {
+    const query = window.matchMedia('(pointer: coarse)');
+    const change = () => setTouch(query.matches);
+    query.addEventListener('change', change);
+    return () => query.removeEventListener('change', change);
+  }, []);
+  const voiceDescription = voiceControl?.starting
+    ? 'Avbryt starten av rösten'
+    : `Prata med Skyttel (${microphoneShortcut()}). Håll in för att tala tills du släpper.`;
   const utilityPanel = useRef<HTMLElement>(null);
   useEffect(() => {
     if (utility) utilityPanel.current?.querySelector<HTMLElement>('h2')?.focus();
@@ -156,23 +190,34 @@ export function WorkspaceTools({
         ).map(([icon, label, target]) => (
           <Fragment key={target}>
             <button
+              ref={target === 'voice' ? microphoneButton : undefined}
               type="button"
               // The name stays. The description says what a press does while the voice starts.
-              title={
-                target === 'voice' && voiceControl?.starting ? 'Avbryt starten av rösten' : label
-              }
+              title={target === 'voice' ? (touch ? undefined : voiceDescription) : label}
               aria-label={label}
+              aria-description={target === 'voice' && !touch ? voiceDescription : undefined}
+              data-held={(target === 'voice' && microphonePress.held) || undefined}
               data-secondary={target === 'draft' || target === 'search' || undefined}
               className={target === 'voice' ? 'workspace-talk' : undefined}
               disabled={target === 'voice' ? voiceControl?.disabled : undefined}
               aria-pressed={target === 'voice' ? voiceControl?.microphone === 'on' : undefined}
               aria-expanded={target === 'conversation' ? textViewOpen : undefined}
               onClick={(event) => {
+                if (target === 'voice') {
+                  microphonePress.onClick(event);
+                  return;
+                }
                 onExpandedChange(false);
                 setUtility(null);
-                if (target === 'voice' && voiceControl) voiceControl.activate();
-                else onOpen(target, event.currentTarget);
+                onOpen(target, event.currentTarget);
               }}
+              onPointerDown={target === 'voice' ? microphonePress.onPointerDown : undefined}
+              onPointerUp={target === 'voice' ? microphonePress.onPointerUp : undefined}
+              onPointerCancel={target === 'voice' ? microphonePress.onPointerCancel : undefined}
+              onLostPointerCapture={
+                target === 'voice' ? microphonePress.onLostPointerCapture : undefined
+              }
+              onContextMenu={target === 'voice' ? microphonePress.onContextMenu : undefined}
             >
               <WorkspaceIcon name={icon} />
               <span>{label}</span>

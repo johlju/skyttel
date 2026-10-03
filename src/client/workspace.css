@@ -122,6 +122,16 @@
   color: var(--space-bg);
 }
 /* The microphone is a plain tool while it is off and has the accent colour while it is on. */
+.workspace-talk {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.workspace-talk[data-held="true"] {
+  outline: 3px solid var(--space-accent);
+  outline-offset: 3px;
+}
 .household-map.workspace-shell .workspace-tools .workspace-talk[aria-pressed="true"] {
   background: var(--space-accent);
   color: white;

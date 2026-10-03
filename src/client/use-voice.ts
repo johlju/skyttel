@@ -37,6 +37,9 @@ export type Voice = {
   start: () => Promise<void>;
   /** Prepare playback synchronously while a click can authorize browser audio. */
   prepareAudio?: () => void;
+  /** A held press starts input and releases it without stopping Skyttel's answer. */
+  startHeld?: () => void;
+  releaseHeld?: () => void;
   /** Closes the voice connection at once, and with it the work that came by voice. */
   stop: () => Promise<void>;
   /** Silences what Skyttel is saying. */
@@ -56,6 +59,7 @@ type Attempt = {
   /** Microphone owned while a conversation reset waits for the server. */
   retained?: MediaStream;
   poll?: ReturnType<typeof setTimeout>;
+  held?: { released: boolean };
 };
 async function stopRemote(path: string, id: string) {
   const controller = new AbortController();
@@ -91,6 +95,7 @@ export function useVoice(options: {
   onTranscript?: (row: TranscriptRow) => void;
   /** Current ephemeral text to retain when interrupted output requires a fresh connection. */
   transcript?: TranscriptRow[];
+  inputBlocked?: boolean;
 }): Voice {
   const path = options.assistant
     ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
@@ -99,6 +104,7 @@ export function useVoice(options: {
   latest.current = options;
   const current = useRef<Attempt | null>(null);
   const prepared = useRef<VoicePlayback | null>(null);
+  const held = useRef<{ released: boolean } | null>(null);
   const epoch = useRef(0);
   const mounted = useRef(true);
   const resetVoice = useRef<(view: TextAssistantView) => void>(() => {});
@@ -127,6 +133,7 @@ export function useVoice(options: {
       prepared.current?.close();
       prepared.current = null;
       const attempt = current.current;
+      held.current = null;
       if (!attempt) return;
       attempt.transport?.stopCapture();
       for (const track of attempt.retained?.getTracks() ?? []) track.stop();
@@ -199,11 +206,15 @@ export function useVoice(options: {
     async (reuse?: RetainedInput, next?: TextAssistantView, history?: TranscriptRow[]) => {
       const initial = next ?? latest.current.assistant;
       if (!path || !initial || current.current) return;
-      const attempt: Attempt = { path, controller: new AbortController() };
+      const attempt: Attempt = {
+        path,
+        controller: new AbortController(),
+        held: held.current ?? undefined,
+      };
       current.current = attempt;
       epoch.current++;
       setState('permission');
-      setOff(reuse?.paused ?? false);
+      setOff(attempt.held?.released ?? reuse?.paused ?? false);
       setDisconnected(false);
       setPlaybackBlocked(false);
       setActivity({ microphone: false, speaker: false });
@@ -342,7 +353,7 @@ export function useVoice(options: {
             return result.sdp;
           },
           attempt.controller.signal,
-          reuse,
+          reuse ?? (attempt.held ? { paused: attempt.held.released } : undefined),
         );
       } catch (failure) {
         fail(failure);
@@ -358,6 +369,7 @@ export function useVoice(options: {
   const speaking = state === 'listening' && activity.speaker;
   const activate = useCallback(() => {
     if (state === 'idle') {
+      held.current = null;
       prepareAudio();
       void start();
     } else if (state === 'listening') {
@@ -449,6 +461,31 @@ export function useVoice(options: {
     [renew, apply],
   );
   const level = useCallback(() => current.current?.transport?.microphoneLevel() ?? 0, []);
+  const startHeld = useCallback(() => {
+    if (
+      latest.current.inputBlocked ||
+      navigator.onLine === false ||
+      latest.current.assistant?.phase === 'working'
+    )
+      return;
+    if (current.current?.transport && state === 'listening') {
+      held.current = { released: false };
+      current.current.held = held.current;
+      current.current.transport.setMicrophonePaused(false);
+      setOff(false);
+      return;
+    }
+    if (current.current || (held.current && !held.current.released)) return;
+    held.current = { released: false };
+    prepareAudio();
+    if (latest.current.assistant) void start();
+  }, [state, start, prepareAudio]);
+  const releaseHeld = useCallback(() => {
+    if (!held.current) return;
+    held.current.released = true;
+    current.current?.transport?.setMicrophonePaused(true);
+    setOff(true);
+  }, []);
   const microphone =
     state === 'listening' && !off && !disconnected && !playbackBlocked ? 'on' : 'off';
   return {
@@ -472,6 +509,8 @@ export function useVoice(options: {
       return start();
     },
     prepareAudio,
+    startHeld,
+    releaseHeld,
     newConversation,
     stop: close,
     silence,

@@ -8,19 +8,28 @@ export function prepareVoicePlayback(audio = new Audio(), audioContext = new Aud
   // It follows the existing same-origin content policy and requests no microphone.
   audio.src = silentPlaybackUrl;
   audio.loop = true;
-  try {
-    void Promise.resolve(audioContext.resume()).catch(() => {});
-  } catch {
-    // A denied preparation is handled when the remote output is played.
-  }
-  try {
-    void Promise.resolve(audio.play()).catch(() => {});
-  } catch {
-    // Keep the element for ordinary playback and its explicit recovery button.
-  }
+  const ready = Promise.all([
+    (() => {
+      try {
+        return Promise.resolve(audioContext.resume()).then(() => audioContext.state === 'running');
+      } catch {
+        return Promise.resolve(false);
+      }
+    })(),
+    (() => {
+      try {
+        return Promise.resolve(audio.play()).then(() => true);
+      } catch {
+        return Promise.resolve(false);
+      }
+    })(),
+  ])
+    .then((values) => values[0] && values[1])
+    .catch(() => false);
   return {
     audio,
     audioContext,
+    ready,
     close() {
       audio.pause();
       audio.removeAttribute('src');
@@ -295,7 +304,7 @@ export function createVoiceTransport(
     async connect(
       exchangeSdp: ExchangeSdp,
       signal: AbortSignal,
-      retained?: { stream: MediaStream; paused: boolean },
+      retained?: { stream?: MediaStream; paused: boolean },
     ) {
       try {
         paused = retained?.paused ?? false;

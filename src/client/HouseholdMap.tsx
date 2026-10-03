@@ -1548,6 +1548,19 @@ export function HouseholdMap({
             statusOpen={statusOpen}
             onStatus={() => setStatusOpen((value) => !value)}
             voiceControl={conversation.session ? conversation.voice : null}
+            holdVoice={{
+              canHold:
+                conversation.consent.valid &&
+                conversation.available === true &&
+                !conversation.pending &&
+                !conversation.unknown,
+              prepare: () => conversation.voice.prepareAudio?.(),
+              start: () => {
+                conversation.voice.startHeld?.();
+                if (!conversation.session) conversation.begin('voice');
+              },
+              release: () => conversation.voice.releaseHeld?.(),
+            }}
             voiceBox={voiceBox}
             textViewOpen={textViewOpen}
             cameraMount={setCameraMount}

@@ -129,6 +129,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   personligt val mellan hushåll och enheter, första förslaget, tomt utkast,
   sparåterkoppling och kvittots plats i Utkast och historik.
 
+- [Mikrofontryck](microphone-press.md): kort och långt tryck, släpp och
+  systemavbrott, medgivande, pekfångst och tangentkombinationer på riktiga
+  Windows- och macOS-enheter.
+
 - [Textvyn](text-view.md): **Skriv till Skyttel** öppnar och stänger
   textvyn utan att samtalet avslutas, samtalstexten visar vem som skriver
   och raden Skyttel arbetar sist, **Nytt samtal** behåller utkast, mikrofon

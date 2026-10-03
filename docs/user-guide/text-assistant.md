@@ -58,6 +58,21 @@ Om du bjuds in igen frågar Skyttel på nytt. Medgivandet ingår inte i en
 Medgivandet är skilt från cookieval och från andra klienters medgivanden
 under **Assistentanslutningar**.
 
+## Håll in för att tala
+
+Ett kort tryck på **Prata med Skyttel** slår på eller av mikrofonen.
+När mikrofonen är av kan du också hålla knappen längre än 0,45 sekunder
+för att tala tills du släpper. Knappen får en ring medan du håller.
+Lyssnandet fortsätter när pekaren eller fingret glider från knappen.
+När du släpper är mikrofonen av, och Skyttel talar klart sitt svar.
+Ett systemavbrott räknas som att du släpper.
+
+Ctrl+Mellanslag på Windows och Linux, och Ctrl+Skift+Mellanslag på macOS,
+gör samma sak: tryck kort för att växla på och av eller håll för att tala
+tills du släpper. Utan giltigt medgivande visar långt tryck samma
+medgivanderuta som kort tryck. Kort tryck räcker alltid, även med
+skärmläsare på pekskärm.
+
 ## Skriv till Skyttel
 
 **Skriv till Skyttel** öppnar och stänger textvyn. Textvyn visar
