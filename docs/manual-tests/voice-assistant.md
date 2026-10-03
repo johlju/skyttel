@@ -134,7 +134,8 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
 
 **Steg, verkligt svenskt tal:**
 
-1. Följ [röstguidens verkliga setup](../development/devcontainer.md#optional-assistant-access)
+1. Följ
+   [förberedelsen i TAL-17](#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
    i en ny isolerad installation med påhittade data. Skapa Talprov och lägg
    Lo Exempel, typ Person, med beskrivningen Påhittad uppgift i utkastet.
    Välj Lo och skriv **Osänd text som ska finnas kvar** i beskrivningen
@@ -881,13 +882,39 @@ uppläsningarna i tur”.
 **Syfte:** Pröva det som de kontrollerade fallen inte kan visa: riktig
 mikrofon, riktig enhet och riktiga hjälpmedel.
 
-**Användare:** Alex i en isolerad installation med påhittade data och
-verklig röst, enligt
-[röstguidens verkliga setup](../development/devcontainer.md#optional-assistant-access).
+**Användare:** Alex med konfigurerad inloggning i ett separat provhushåll
+med påhittade data och verklig röst.
 
 **Förutsättningar:** Chrome på Windows med NVDA, Chrome på macOS med
 VoiceOver, och Chrome på iPhone och iPad med VoiceOver. Verkliga
 leverantörsanrop kan kosta pengar.
+
+**Förberedelse med verklig röst:**
+
+1. Följ [guiden för separat provdatabas](../development/devcontainer.md#disposable-local-database),
+   inklusive lokal inloggning, startkommandot och städningen. Behåll
+   provdatabasen vid omstart inom ett fall. Kör inte den kontrollerade
+   röststartguiden för dessa lyssningsprov.
+2. Konfigurera serverns `OPENAI_API_KEY` i den privata miljöfilen enligt
+   [leverantörsförberedelsen](../development/devcontainer.md#optional-assistant-access)
+   och starta om provmiljön. Nyckeln är endast för servern och ska inte
+   anges i en `VITE_`-variabel. Den verkliga leverantören ska vara tillgänglig.
+3. På dator kan den lokala guidens adress användas. För iPhone och iPad
+   behövs en isolerad provinstallation med en HTTPS-adress som enheten
+   når och med fungerande konfigurerad inloggning. Använd dess faktiska
+   adress; datorns `localhost` är inte en adress till datorn från telefonen.
+   Installationens ursprung och inloggning följer
+   [installationsguiden](../operations/installation.md).
+4. Logga in med den konfigurerade testidentiteten och skapa Talprov med
+   enbart påhittade uppgifter. Anslut fysisk mikrofon och ljudutgång.
+   Använd enhetens riktiga skärmtangentbord och den angivna skärmläsaren.
+   Godkänn den aktuella medgivandetexten vid samtalsstart; äldre sparat
+   medgivande kräver nytt godkännande.
+
+Det separata automatiska [WAV-provet](real-voice-tests.md) kräver egen
+uttrycklig aktivering och använder inspelat tal med ersatt mikrofon och
+inloggning. Det är leverantörsunderlag, inte dessa fysiska lyssningsprov.
+Anteckna faktiskt hört resultat separat från automatiska körningar.
 
 **Integrationstest:** Enbart manuellt. Inget automatiskt prov använder
 riktig mikrofon, enhet eller skärmläsare.

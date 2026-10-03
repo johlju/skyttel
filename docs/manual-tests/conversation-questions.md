@@ -54,9 +54,11 @@ in med Google. Samtalet kräver inte administrativa rättigheter.
    `window.skyttelVoiceFixture.setSound('remote', false);`.
 5. Detta provar ljudaktivitet och gränssnitt mot riktig server och SQLite.
    Det verifierar inte fysisk mikrofon, svensk talförståelse, en verklig
-   röst eller att modellens uppläsning matchar frågan. Använd en separat
-   installation med verkliga leverantörer för dessa observationer och
-   redovisa dem separat i [talproven](real-voice-tests.md).
+   röst eller att modellens uppläsning matchar frågan. Följ
+   [förberedelsen i TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
+   för dessa observationer med verkliga leverantörer och fysisk mikrofon.
+   Redovisa faktiskt hört tal separat från den kontrollerade körningen
+   och det automatiska [WAV-provet](real-voice-tests.md).
 
 ## Nödvändiga frågor
 

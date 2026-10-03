@@ -174,8 +174,8 @@ och kastar utkastet”.
   nytt samtal utan kastkommando. Redan sparade uppgifter påverkas inte.
 - Logga ut avslutar samtalet. Samtalsord och ljud lagras inte.
   Faktiskt hört tal, mikrofon och skärmläsare återstår att prova manuellt
-  i en isolerad verklig röstinstallation enligt
-  [röstguiden](voice-assistant.md#tal-01-familjeärendet-sparas-med-röst-och-bevarad-oskickad-formulärtext).
+  enligt
+  [förberedelsen i TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare).
 - Ett skrivet nytt samtal med mikrofonen av ger enbart text. Ett talat
   nytt samtal får sitt röstbesked efter släpp eller avstängning, medan
   mikrofonen förblir av. Kontrollera överlämningen i `sessions`; faktiskt

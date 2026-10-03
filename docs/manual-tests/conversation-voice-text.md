@@ -27,9 +27,11 @@ Alex loggar in med Google i den kontrollerade installationen.
    Skicka den text som anges i fallet. Signalen är fortfarande tyst och
    bevisar inte att en verklig röst hörs eller uttalar hela svaret rätt.
 5. Börja med en ny installation inför varje fall. För lyssning och
-   skärmläsare används en separat installation med verklig röstleverantör
-   och enhet enligt [talproven](real-voice-tests.md). Anteckna faktiskt
-   hört ljud och uppläsning separat från den kontrollerade körningen.
+   skärmläsare, följ
+   [förberedelsen i TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
+   med verklig leverantör, fysisk mikrofon och enhet. Anteckna faktiskt
+   hört ljud och uppläsning separat från den kontrollerade körningen
+   och det automatiska [WAV-provet](real-voice-tests.md).
 
 ## Gemensamma svar
 

@@ -177,9 +177,10 @@ mikrofon”.
 
 **Separat prov med faktiskt hört tal:**
 
-1. Följ [förberedelsen med verklig röst](../development/devcontainer.md#optional-assistant-access)
-   i en isolerad installation med konfigurerad privat leverantörsnyckel
-   och påhittade data. Skapa Textprov och samma osparade Lo-förslag.
+1. Följ
+   [förberedelsen i TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
+   med separat provdatabas, privat leverantörsnyckel och fysisk mikrofon.
+   Skapa Textprov och samma osparade Lo-förslag.
 2. Anslut fysisk mikrofon och ljudutgång. Välj **Prata med Skyttel**,
    godkänn samtalet och tillåt mikrofonen. Öppna textvyn och välj
    **Nytt samtal**. Använd **Starta ljudet** om uppspelning blockeras.

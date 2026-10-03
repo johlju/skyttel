@@ -17,10 +17,14 @@ underkänt resultat. Redovisa riktiga enheter separat från Chromium-emulering.
 1. Starta [den kontrollerade kostnadsmiljön](costs.md#controlled-cost-fixture),
    logga in som Alex och skapa Tryckprov. Den kontrollerade miljön använder
    tysta mediespår och prövar inte verkligt ljud eller mikrofonens starttid.
-2. För verkligt tal, använd i stället den isolerade miljön i
-   [talprovsguiden](real-voice-tests.md) med serverns privata konfiguration.
+2. För verkligt tal, följ i stället
+   [förberedelsen i TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
+   med separat provdatabas, privat leverantörsnyckel och fysisk mikrofon.
    Använd Chrome på Windows, macOS, iPhone och iPad. Anteckna varje
    plattform separat. Riktiga leverantörsanrop kan kosta pengar.
+   Det separata automatiska [WAV-provet](real-voice-tests.md) använder
+   inspelat tal och ersätter mikrofon och inloggning; det förbereder inte
+   ett prov med fysisk mikrofon eller skärmläsare.
 3. Börja varje fall med omladdning. I fall 1, 3 och 4: starta med röst,
    godkänn medgivandet, vänta på **Lyssnar** och tryck kort på
    **Prata med Skyttel**, så att mikrofonen är av. Fall 2 börjar utan medgivande.
