@@ -160,7 +160,7 @@ test('MEDGIVANDE-02: vald knapp avgör röst eller text och medgivandet gäller 
     );
     await expect(consentBox(page)).toBeHidden();
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
-    expect(starts).toEqual(['conversation', 'voice']);
+    expect(starts).toEqual(['conversation', 'voice', 'voice']);
 
     // Settings keep the map loaded, so the consent for the visit still applies afterwards.
     await openSettings(page);

@@ -3,6 +3,7 @@ import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import {
   createHousehold,
   openMap,
+  openProfile,
   openSettings,
   openWorkspace,
   signIn,
@@ -26,6 +27,12 @@ import { lastToolResult, modelMessage, modelTool, textModel } from '../support/t
 const openVoiceConnections = (page: Page) =>
   page.evaluate(() => window.skyttelVoiceFixture.stats().openPeers);
 const assistant = (page: Page) => page.getByRole('region', { name: 'Arbetsyta', exact: true });
+async function signOut(page: Page) {
+  await openProfile(page);
+  await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
+  await page.getByRole('button', { name: 'Logga ut', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();
+}
 async function consent(page: Page) {
   await startConversationWithText(page);
   await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeVisible();
@@ -415,7 +422,7 @@ test('TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtal
     release([modelMessage('Vem använder musiken?')]);
     await expect(log).toContainText('Vem använder musiken?');
     await expect(log.getByText('Skyttel arbetar…')).toHaveCount(0);
-    await assistant(page).getByRole('button', { name: 'Stäng av rösten' }).click();
+    await turnMicrophoneOff(page);
     await expect(log).toContainText('Kim betalar för musiken.');
     await assistant(page).getByRole('button', { name: 'Nytt samtal' }).click();
     await expect(log).toHaveText(/^Skyttel: Nytt samtal\./);
@@ -611,18 +618,13 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       .poll(() => live.sent.some(({ event }) => event.type === 'session.commentary.append'))
       .toBe(true);
     await turnMicrophoneOff(page);
-    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
-    await expect.poll(() => openVoiceConnections(page)).toBe(0);
-    expect(
-      await page.evaluate(() =>
-        window.skyttelVoiceFixture
-          .stats()
-          .microphoneTracks.every((track) => track.state === 'ended'),
-      ),
-    ).toBe(true);
     // Nytt samtal does not ask for the consent again.
     await assistant(page).getByRole('button', { name: 'Nytt samtal' }).click();
     await expect(page.getByRole('dialog', { name: 'Samtal med Skyttel' })).toHaveCount(0);
+    await expect.poll(() => openVoiceConnections(page)).toBe(1);
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
+      { enabled: false, state: 'live' },
+    ]);
     await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
     await expect(
       assistant(page).locator('details').filter({ hasText: 'Tidigare sparförsök' }),
@@ -631,6 +633,15 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       await (await page.request.get(`${app.origin}/api/households/${household.id}/map`)).json(),
     ).toEqual(map);
     expect(model.requests).toHaveLength(4);
+    await signOut(page);
+    await expect.poll(() => openVoiceConnections(page)).toBe(0);
+    expect(
+      await page.evaluate(() =>
+        window.skyttelVoiceFixture
+          .stats()
+          .microphoneTracks.every((track) => track.state === 'ended'),
+      ),
+    ).toBe(true);
   } finally {
     await app.close();
   }
@@ -751,7 +762,7 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
     await expect(voicePanel.getByRole('button', { name: 'Spela upp ljud' })).toHaveCount(0);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     await turnMicrophoneOff(page);
-    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
+    await signOut(page);
     await expect.poll(() => openVoiceConnections(page)).toBe(0);
     const media = await page.evaluate(() => window.skyttelVoiceFixture.stats());
     expect(media.openPeers).toBe(0);
@@ -867,7 +878,12 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     await consent(page);
     await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
     await expect(assistant(page)).toContainText(operation.operationId);
+    const voiceStarted = page.waitForResponse(
+      (response) => response.url().endsWith('/voice') && response.request().method() === 'POST',
+    );
     await startVoice(page);
+    const started = await voiceStarted;
+    const { voice } = await started.json();
     const usageSession = [...live.channels.keys()].at(-1);
     if (!usageSession) throw new Error('Missing new voice for provisional usage');
     for (const seconds of [12, 15])
@@ -877,20 +893,23 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
         usage: { seconds },
       });
     live.configure({ finalize: false });
-    // Ending the conversation closes the voice connection and finalizes usage.
-    const stopResponse = page.waitForResponse(
-      (response) => response.url().includes('/voice/') && response.url().endsWith('/stop'),
-      { timeout: 15_000 },
-    );
-    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
-    expect(await (await stopResponse).json()).toMatchObject({
+    // Nytt samtal retires the old provider session while retaining the microphone.
+    const previousStarts = live.requests.length;
+    await assistant(page).getByRole('button', { name: 'Nytt samtal' }).click();
+    await expect.poll(() => live.requests.length).toBe(previousStarts + 1);
+    const closed = await page.request.post(`${started.url()}/${voice.id}/stop`, {
+      headers: { origin: app.origin },
+    });
+    expect(await closed.json()).toMatchObject({
       voice: { phase: 'closed', seconds: 15, usageFinal: false },
     });
-    await expect.poll(() => openVoiceConnections(page), { timeout: 15_000 }).toBe(0);
+    await expect.poll(() => openVoiceConnections(page), { timeout: 15_000 }).toBe(1);
     expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual(
       operations,
     );
     live.configure({ finalize: true });
+    await signOut(page);
+    await expect.poll(() => openVoiceConnections(page)).toBe(0);
   } finally {
     await app.close();
   }
