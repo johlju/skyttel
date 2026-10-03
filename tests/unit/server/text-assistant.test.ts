@@ -1675,7 +1675,7 @@ test('HTTP authorization and exact turn retries prevent duplicate provider work 
 });
 
 test.each(['retry', 'completed elsewhere'] as const)(
-  'a prepared save recovers via %s with one durable receipt',
+  'an automatically completed prepared save returns one durable receipt via %s',
   async (mode) => {
     let step = 0;
     const model = textModel(() =>
@@ -1701,9 +1701,10 @@ test.each(['retry', 'completed elsewhere'] as const)(
         data,
       });
     const recovered = await (await post('recover', {})).json();
-    expect(recovered.phase).toBe('recovery');
+    expect(recovered.phase).toBe('ready');
+    expect(recovered.saveCheck.reply).toContain('hela utkastet sparades');
     const operation = recovered.operations[0];
-    expect(operation.status).toBe('pending');
+    expect(operation.status).toBe('succeeded');
     expect(operation.operationId).not.toBe('provider-chosen');
     if (mode === 'completed elsewhere') {
       const save = await browser.post(`${path.replace('/text-assistant', '/map')}/save`, {
@@ -1770,7 +1771,12 @@ test('an unresolved identity rejects the whole save and recovery requires a fres
     headers: { origin: app.origin },
     data: {},
   });
-  expect(await recovery.json()).toMatchObject({ phase: 'ready', error: 'unresolved_identity' });
+  expect(await recovery.json()).toMatchObject({
+    phase: 'ready',
+    saveCheck: {
+      reply: 'Kontrollen visar att utkastet inte sparades. Dina osparade ändringar ligger kvar.',
+    },
+  });
   expect(
     (
       await browser.post(`${path}/${session.id}/retry`, {

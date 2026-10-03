@@ -262,8 +262,9 @@ staplar när någon hörs. En skärmläsare får höra **Lyssnar** när mikrofon
 på, **Skyttel arbetar**, **Sparat** och **Mikrofonen är av** när röstrutan
 försvinner. **Väntar på ditt svar** läses inte upp: Skyttel har just sagt frågan.
 
-Om ett sparresultat är oklart visas att det tidigare sparförsöket måste
-kontrolleras innan nya ändringar. Skyttel ställer nödvändiga frågor
+Om ett sparresultat är oklart kontrollerar Skyttel det automatiskt när
+kontakten är tillbaka. Under kontrollen är Skicka och mikrofonen avstängda.
+Skyttel ställer nödvändiga frågor
 i samtalet, även om vilken person eller sak som avses och vilket värde
 du vill behålla vid en konflikt. Slå på mikrofonen för att svara med rösten
 eller välj **Skriv till Skyttel** för att läsa frågan och skriva ett svar.
@@ -294,8 +295,8 @@ Nya talade och skrivna uppdrag köas medan Skyttel arbetar. Vid bruten
 anslutning stängs
 mikrofonen av medan anslutningen kontrolleras. Efter en längre störning
 slår du själv på den igen. Ett ljudsvar som inte hördes betyder inte att ett
-sparande misslyckades. Kontrollera sparresultat först. Du kan säga
-**Slutför samma sparförsök** när exakt ett väntande försök finns.
+sparande misslyckades. Skyttel kontrollerar själv ett oklart resultat innan
+nytt arbete och förklarar utfallet i samtalet.
 Genomförda sparanden och deras kvitton finns kvar efter avstängning,
 omladdning och omstart.
 
@@ -356,13 +357,23 @@ sparande blir inte ångrat. Textvyn visar **Avbrutet. Föreslagna ändringar
 ligger kvar i utkastet.** tills nästa uppdrag börjar eller du väljer
 **Nytt samtal**. Nytt samtal tömmer också kön.
 
-Om svaret saknas, välj **Kontrollera sparresultat** innan nytt arbete.
-Ett väntande försök kan slutföras med **Slutför samma sparförsök**. Det
-återanvänder exakt det beständiga försöket. Efter omladdning eller omstart
-startar du en ny anslutning och öppnar **Utkast och historik**, sedan
-**Tidigare sparförsök**. Där finns
-även kvitton från andra enheter. Ett avvisat försök behöver ett nytt
-underlag och ett nytt sparbesked.
+Om ett sparresultat är oklart visar samtalsnotisen **Det är oklart om
+utkastet sparades. Skyttel kontrollerar det.** Kontrollen kräver inget
+samtalsmedgivande. Den väntar tills kontakten är tillbaka och slutför bara
+ett redan registrerat sparförsök med samma identitet och innehåll. Den
+skapar aldrig ett nytt sparande av ett nyare utkast.
+
+Efter kontrollen förklarar Skyttel alltid utfallet i samtalstexten, även
+när utkastet inte sparades. Med mikrofonen på sägs förklaringen också med
+rösten. Ett kvitto ger **Sparat**; ett osparat utkast ger ingen sådan
+bekräftelse. Oskickad text finns kvar och nytt arbete blir möjligt när
+kontrollen är klar. Textvyn öppnas inte av förklaringen.
+
+Bara om kontrollen misslyckas visas **Skyttel kunde inte kontrollera om
+utkastet sparades.** med **Kontrollera om utkastet sparades**. Försök igen
+med den knappen. **Utkast och historik → Tidigare sparförsök** innehåller
+även kvitton från andra enheter. Ett avvisat försök behåller utkastet och
+behöver ett nytt underlag och ett nytt sparbesked.
 
 Fråga **Vad var felet?** för att höra det senaste registrerade felet i
 det pågående samtalet. Felminnet följer samtalet och försvinner vid

@@ -1451,7 +1451,10 @@ export function HouseholdMap({
   if (conversation.inputBlocked && !beforeConnection.current.blocked)
     interruptedConversation.current = liveOngoing || beforeConnection.current.ongoing;
   if (!conversation.inputBlocked) interruptedConversation.current = false;
-  const ongoing = liveOngoing || interruptedConversation.current;
+  const ongoing =
+    liveOngoing ||
+    interruptedConversation.current ||
+    Boolean(conversation.saveChecking || conversation.saveCheckFailed);
   beforeConnection.current = { blocked: Boolean(conversation.inputBlocked), ongoing };
   const noticeState = useConversationNotice({
     conditions: {

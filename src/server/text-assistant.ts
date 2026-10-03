@@ -1119,8 +1119,29 @@ export function textAssistantRoutes({
           )))
     )
       return context.json({ error: 'invalid_request' }, 400);
+    if (
+      body.checkId !== undefined &&
+      (typeof body.checkId !== 'string' || !/^[a-f0-9-]{36}$/.test(body.checkId))
+    )
+      return context.json({ error: 'invalid_request' }, 400);
+    const owner = contentOwner(database, context.req.param('id'), context.get('actorId'));
+    const activeAttempt = [...sessions.values()].some(
+      (session) =>
+        session.householdId === context.req.param('id') &&
+        session.phase === 'working' &&
+        contentOwner(database, session.householdId, session.actorId) === owner &&
+        (!body.operationIds ||
+          (session.pendingSave && body.operationIds.includes(session.pendingSave.operationId))),
+    );
+    if (activeAttempt) return context.json({ checking: true });
     return context.json(
-      checkSaves(database, context.get('actorId'), context.req.param('id'), body.operationIds),
+      checkSaves(
+        database,
+        context.get('actorId'),
+        context.req.param('id'),
+        body.operationIds,
+        body.checkId,
+      ),
     );
   });
   routes.post(base, async (context) => {
@@ -1392,12 +1413,19 @@ export function textAssistantRoutes({
     const session = sessions.get(context.req.param('sessionId'));
     if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
     if (session.phase === 'working') return context.json(view(session));
+    const body = await context.req.json().catch(() => ({}));
+    if (
+      body.checkId !== undefined &&
+      (typeof body.checkId !== 'string' || !/^[a-f0-9-]{36}$/.test(body.checkId))
+    )
+      return context.json({ error: 'invalid_request' }, 400);
+    if (body.checkId && session.saveCheck?.id === body.checkId) return context.json(view(session));
     const ids = session.pendingSave
       ? [session.pendingSave.operationId]
       : session.receipt
         ? [session.receipt.operationId]
         : undefined;
-    const checked = checkSaves(database, session.actorId, session.householdId, ids);
+    const checked = checkSaves(database, session.actorId, session.householdId, ids, body.checkId);
     await refresh(session);
     if (checked.receipt) {
       const operation = checked.operations.find((item) => item.status === 'succeeded');
@@ -1412,12 +1440,22 @@ export function textAssistantRoutes({
     if (session.saveCheck?.id !== checked.id) {
       session.revision++;
       session.conversation.push({ role: 'assistant', text: checked.reply });
+      session.completedReplies?.push({
+        id: `check-${checked.id}`,
+        source: 'text',
+        revision: session.revision,
+        text: '',
+        reply: checked.reply,
+        receipt: checked.receipt,
+        saveCheck: checked,
+      });
     }
     session.saveCheck = checked;
     session.reply = checked.reply;
     session.modelReply = undefined;
     session.questions = undefined;
     session.error = undefined;
+    session.result = undefined;
     session.pendingSave = undefined;
     session.phase = 'ready';
     nextMessage(session);

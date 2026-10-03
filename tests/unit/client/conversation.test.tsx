@@ -254,7 +254,8 @@ test('a new conversation needs a conversation, and one that is not answered keep
   await act(() => result.current.newConversation());
   expect(result.current.transcript.map((row) => row.text)).toEqual(['Lägg till cykeln.']);
   expect(result.current.unknown).toBe(true);
-  expect(result.current.error).toContain('Svaret saknas');
+  expect(result.current.error).toBe('');
+  expect(result.current.saveChecking).toBe(true);
   expect(result.current.pending).toBe(false);
   act(() => result.current.setText('Nytt samtal'));
   await act(() => result.current.send());
@@ -591,7 +592,8 @@ test('a start that fails for another reason does not ask for the consent again',
   const result = await conversationHook();
   await waitFor(() => expect(result.current.consent.valid).toBe(true));
   act(() => result.current.begin('text'));
-  await waitFor(() => expect(result.current.error).toContain('Svaret saknas.'));
+  await waitFor(() => expect(result.current.saveChecking).toBe(true));
+  expect(result.current.error).toBe('');
   expect(result.current.consent).toMatchObject({ valid: true, asking: null });
   expect(result.current.session).toBeNull();
 });

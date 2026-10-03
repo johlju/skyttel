@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { SaveCheck } from '../shared/save-check.js';
 import { householdMap, MapError } from './map.js';
@@ -11,6 +11,7 @@ export function checkSaves(
   actorId: string,
   householdId: string,
   ids?: string[],
+  occurrence = randomUUID(),
 ): SaveCheck {
   const map = householdMap(database, actorId, householdId);
   const selected =
@@ -19,6 +20,7 @@ export function checkSaves(
       .operations()
       .operations.filter((item) => item.status === 'pending')
       .map((item) => item.operationId);
+  if (selected.length > 1) throw new MapError('operation_conflict');
   for (const id of selected) {
     const operation = map.operation(id).operation;
     if (operation?.status !== 'pending') continue;
@@ -43,19 +45,20 @@ export function checkSaves(
     .map((id) => map.operation(id).operation)
     .filter((item) => item !== null);
   const successful = operations.find((item) => item.status === 'succeeded');
+  const newerDraft = successful && map.read().draft;
+  const newerChanges = Boolean(
+    newerDraft &&
+      (newerDraft.changes.length ||
+        newerDraft.relationships?.length ||
+        newerDraft.objectTypes?.length ||
+        newerDraft.relationshipTypes?.length),
+  );
   return {
-    id: createHash('sha256')
-      .update(
-        JSON.stringify(
-          selected.map((id) => [
-            id,
-            operations.find((item) => item.operationId === id)?.status ?? 'missing',
-          ]),
-        ),
-      )
-      .digest('hex'),
+    id: occurrence,
     reply: successful
-      ? 'Kontrollen visar att hela utkastet sparades. Ändringarna finns i hushållets karta.'
+      ? newerChanges
+        ? 'Kontrollen visar att det tidigare utkastet sparades. Nyare osparade ändringar ligger kvar.'
+        : 'Kontrollen visar att hela utkastet sparades. Ändringarna finns i hushållets karta.'
       : 'Kontrollen visar att utkastet inte sparades. Dina osparade ändringar ligger kvar.',
     receipt: successful?.status === 'succeeded' ? successful.receipt : undefined,
     operations,

@@ -93,18 +93,23 @@ export function voiceWork({
       response?.({
         id: `${view.id}:${view.revision}`,
         revision: view.revision,
-        text: view.receipt ? 'Sparat.' : (view.modelReply ?? view.reply ?? ''),
+        text: view.saveCheck
+          ? view.saveCheck.reply + (view.receipt ? ' Sparat.' : '')
+          : view.receipt
+            ? 'Sparat.'
+            : (view.modelReply ?? view.reply ?? ''),
         questionPending: Boolean(view.questionPending),
         receiptOperationId: view.receipt?.operationId,
       });
     }
   }
   function completion(view: TextAssistantView) {
+    if (view.saveCheck) return view.saveCheck.reply + (view.receipt ? ' Sparat.' : '');
     if (view.receipt) return 'Sparat.';
     if (view.questionPending && view.modelReply)
       return `Nödvändig fråga (samtalsdata): ${JSON.stringify(view.modelReply)}`;
     if (view.phase === 'recovery')
-      return 'Sparresultatet är inte bekräftat. Tidigare sparförsök kontrolleras innan nytt arbete. Säg ”slutför samma sparförsök” om du vill slutföra exakt det väntande försöket.';
+      return 'Det är oklart om utkastet sparades. Skyttel kontrollerar det.';
     if (view.error) return assistantFailureMessage(view.error);
     const count =
       view.review.changes.length +
@@ -315,6 +320,11 @@ export function voiceWork({
       if (stopped) return;
       for (const reply of view.completedReplies ?? []) {
         if (answeredReplies.has(reply.id)) continue;
+        if (reply.saveCheck && reply.revision !== undefined && answered.has(reply.revision)) {
+          answeredReplies.add(reply.id);
+          delivered?.({ id: reply.id, voiced: true });
+          continue;
+        }
         // Spoken executors hand their own results to Live. OFF completions are
         // consumed too: enabling capture later must not replay old text.
         if (reply.source === 'voice' || !microphoneOn) {
@@ -333,13 +343,14 @@ export function voiceWork({
           reply: reply.reply,
           receipt: reply.receipt,
           result: reply.result,
+          saveCheck: reply.saveCheck,
           questionPending: reply.questionPending,
           error: undefined,
         };
         // Keep all of the actual reply, and its source boundary. append splits
         // UTF-8 safely at Live's byte limit rather than dropping long answers.
         const content =
-          reply.receipt || reply.questionPending
+          reply.receipt || reply.questionPending || reply.saveCheck
             ? completion(completed)
             : [
                 reply.reply ? `Skyttels resultat (verifierat): ${reply.reply}` : '',

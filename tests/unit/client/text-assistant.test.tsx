@@ -257,6 +257,13 @@ test('recovery retains the pending operation until its durable receipt replaces 
         error: undefined,
         receipt,
         reply: 'Ett obekräftat modellpåstående som inte ska ersätta kvittot.',
+        saveCheck: {
+          id: 'checked-save',
+          reply:
+            'Kontrollen visar att hela utkastet sparades. Ändringarna finns i hushållets karta.',
+          receipt,
+          operations: [{ ...identity, status: 'succeeded', receipt }],
+        },
         operations: [{ ...identity, status: 'succeeded', receipt }],
       };
     if (url.endsWith('/new'))
@@ -264,6 +271,7 @@ test('recovery retains the pending operation until its durable receipt replaces 
         ...current,
         revision: current.revision + 1,
         receipt: undefined,
+        saveCheck: undefined,
         reply: 'Nytt samtal. Utkastet är tomt.',
       };
     return Response.json(current);
@@ -272,17 +280,19 @@ test('recovery retains the pending operation until its durable receipt replaces 
   showAssistant(changed);
   await startConversationWithText();
   await userEvent.type(await screen.findByLabelText('Meddelande till Skyttel'), 'Nästa ändring');
-  await userEvent.click(screen.getByRole('button', { name: 'Kontrollera sparresultat' }));
   expect((screen.getByRole('button', { name: 'Skicka' }) as HTMLButtonElement).disabled).toBe(true);
-  expect(
-    screen.queryByText('Kontrollera det tidigare sparförsöket innan du fortsätter.'),
-  ).toBeNull();
-  expect(screen.getByRole('button', { name: 'Kontrollera sparresultat' })).toBeDefined();
-  await userEvent.click(screen.getByRole('button', { name: 'Kontrollera sparresultat' }));
-  expect(requests).toEqual([
-    { url: `${path}/session/recover`, body: {} },
-    { url: `${path}/session/recover`, body: {} },
-  ]);
+  await waitFor(() => expect(recoveries).toBe(2));
+  await waitFor(() =>
+    expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toContain(
+      'Kontrollen visar att hela utkastet sparades.',
+    ),
+  );
+  expect(requests).toHaveLength(2);
+  expect(requests[0]).toEqual({
+    url: `${path}/session/recover`,
+    body: { checkId: expect.any(String) },
+  });
+  expect(requests[1]).toEqual(requests[0]);
   expect(screen.queryByRole('button', { name: 'Kontrollera sparresultat' })).toBeNull();
   expect(screen.queryByRole('region', { name: 'Aktuell status' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Kontrollera sparresultat' })).toBeNull();
@@ -817,9 +827,12 @@ test('a lost reply retains the message with recovery controls', async () => {
   const input = await screen.findByLabelText('Meddelande till Skyttel');
   await userEvent.type(input, 'Rätta priset och spara.');
   await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
-  expect(await screen.findByText(/Svaret saknas/)).toBeDefined();
+  expect(
+    await screen.findByText('Skyttel kunde inte kontrollera om utkastet sparades.'),
+  ).toBeDefined();
   expect((input as HTMLTextAreaElement).value).toBe('Rätta priset och spara.');
-  expect(screen.getByRole('button', { name: 'Kontrollera sparresultat' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Kontrollera om utkastet sparades' })).toBeDefined();
+  expect((screen.getByRole('button', { name: 'Skicka' }) as HTMLButtonElement).disabled).toBe(true);
   expect(posts).toBe(1);
 });
 

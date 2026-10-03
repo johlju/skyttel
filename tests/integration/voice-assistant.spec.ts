@@ -865,24 +865,31 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
         () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
       )
       .toBe(1);
+    // Lose the automatic check before it reaches the server, preserving the
+    // registered original attempt across restart.
+    await page.route('**/text-assistant/*/recover', (route) => route.abort());
     speak(live, 'Spara.');
-    await expect(assistant(page).getByRole('status')).toHaveText(
-      'Kontrollera det tidigare sparförsöket innan du fortsätter.',
+    await expect(page.getByRole('region', { name: 'Samtalsnotis', exact: true })).toContainText(
+      'Skyttel kunde inte kontrollera om utkastet sparades.',
     );
     const operation = (await (await page.request.get(`${path}/operations`)).json()).operations[0];
     expect(operation.status).toBe('pending');
-    await turnMicrophoneOff(page);
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await app.restart();
+    await page.unroute('**/text-assistant/*/recover');
     await page.reload();
     await openWorkspace(page);
+    await expect
+      .poll(
+        async () =>
+          (await (await page.request.get(`${path}/operations`)).json()).operations[0]?.status,
+      )
+      .toBe('succeeded');
+    await expect(microphoneButton(page)).toBeEnabled();
     await consent(page);
     await startVoice(page);
-    await expect(assistant(page).getByRole('status')).toHaveText(
-      'Kontrollera det tidigare sparförsöket innan du fortsätter.',
-    );
-    speak(live, 'Slutför samma sparförsök.');
-    await expect(assistant(page).getByRole('status')).toHaveText(
-      'Sparat. Hela utkastet finns i hushållets karta.',
+    await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(
+      'Kontrollen visar att hela utkastet sparades. Ändringarna finns i hushållets karta.',
     );
     const operations = (await (await page.request.get(`${path}/operations`)).json()).operations;
     expect(operations).toHaveLength(1);

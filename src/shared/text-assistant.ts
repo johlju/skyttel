@@ -28,6 +28,7 @@ export type ConversationReply = {
   questionPending?: boolean;
   receipt?: SaveReceipt;
   result?: TextAssistantResult;
+  saveCheck?: SaveCheck;
 };
 export interface TextAssistantView {
   id: string;

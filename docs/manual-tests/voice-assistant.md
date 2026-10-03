@@ -245,18 +245,22 @@ databasens sparande; redovisa inte det som ett prov av förlorat sådant svar.
    Öppna **Navigera**, panorera och välj **Stäng navigering** även i de
    korta vyerna. Stängknappen ska gå att klicka på och lämna fokus på
    **Navigera**. Lo ska fortfarande vara vald, synlig och åtkomlig i kartan.
-2. Skriv `user Spara.` och `delegate`. Släpp det hållna anropet med
+2. Öppna webbläsarens utvecklarverktyg, **Network request blocking**.
+   Lägg till mönstret `*text-assistant/*/recover` och aktivera blockeringen.
+   Skriv `user Spara.` och `delegate`. Släpp det hållna anropet med
    `tool REQUEST prepare_save {"version":VERSION,"contentVersion":CONTENT,"operationId":"tal-prov"}`.
    Avsluta nästa anrop med `reply REQUEST Försöket är förberett.`.
-3. Kräv väntande sparförsök och ingen sparbekräftelse. Anteckna det riktiga
-   operation-ID:t från **Utkast och historik → Tidigare sparförsök**;
-   modellens `tal-prov` är inte
-   kvittots ID. Stäng av mikrofonen med **Prata med Skyttel** och vänta
-   tills röstrutan har försvunnit. Kör `restart` i terminalen.
-4. Ladda om webbläsaren och välj **Prata med Skyttel**. Godkänn
-   medgivanderutan om den visas.
-   Skriv `user Slutför samma sparförsök.` och `delegate`. Inget Terra-svar
-   behöver släppas: det exakta väntande försöket återhämtas via MCP.
+3. Kräv väntande sparförsök och samtalsnotisen **Skyttel kunde inte
+   kontrollera om utkastet sparades.**. Anteckna det riktiga operation-ID:t
+   från **Utkast och historik → Tidigare sparförsök**. Modellens `tal-prov`
+   är inte kvittots ID. Mikrofonen är av under den blockerade kontrollen.
+   Kör `restart` i terminalen.
+4. Ta bort nätblockeringen och ladda om webbläsaren. Skyttel kontrollerar
+   och slutför själv det registrerade försöket, innan något nytt samtal
+   startas eller något medgivande ges. Välj sedan **Skriv till Skyttel**
+   och godkänn medgivandet om det behövs. Kräv förklaringen **Kontrollen
+   visar att hela utkastet sparades. Ändringarna finns i hushållets karta.**
+   i samtalstexten. Slå på mikrofonen för resten av fallet.
 5. Kontrollera ett genomfört kvitto med samma operation-ID och Lo i kartan.
    Kör `drop` efter sparandet; kontrollera att det genomförda kvittot finns
    kvar även om ett ljudsvar inte hördes. Vänta på avstängd röst, ladda om

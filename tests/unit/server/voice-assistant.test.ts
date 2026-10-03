@@ -747,7 +747,7 @@ test('delegation timing cannot complete a transcript fragment or include a later
   expect(model.requests).toHaveLength(0);
 });
 
-test('voice checks a pending save before new work and retries only the exact durable attempt on a new explicit spoken instruction', async () => {
+test('voice checks and completes only the original registered save before new work', async () => {
   let step = 0;
   const model = textModel(() =>
     step++ === 0
@@ -777,15 +777,6 @@ test('voice checks a pending save before new work and retries only the exact dur
         voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
     )
     .toBe(2);
-  expect((await voice.poll()).assistant.receipt).toBeUndefined();
-  voice.transcript('Slutför samma sparförsök.');
-  voice.delegate();
-  await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
-    .toBe(3);
   const saved = (await voice.poll()).assistant;
   expect(saved.receipt.operationId).toBe(pending.operationId);
   expect(saved.operations).toHaveLength(1);

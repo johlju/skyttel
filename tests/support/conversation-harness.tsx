@@ -62,7 +62,9 @@ export function StandaloneConversation({
       ...(conversation.voice.failure ? { [conversation.voice.failure.noticeId]: true } : {}),
       playbackStopped: conversation.voice.playbackBlocked,
     },
-    ongoing: conversationOngoing(conversation, textViewOpen),
+    ongoing:
+      conversationOngoing(conversation, textViewOpen) ||
+      Boolean(conversation.saveChecking || conversation.saveCheckFailed),
     requested: conversation.noticeRequested ?? 0,
     eventKey: `${conversation.session?.id}:${conversation.session?.revision}:${conversation.voice.failure?.occurrence ?? 0}`,
     diagnostic: conversation.voice.failure
@@ -77,7 +79,11 @@ export function StandaloneConversation({
       notice={noticeState.notice}
       closable={noticeState.closable}
       onDismiss={noticeState.dismiss}
-      onAction={conversation.voice.playAudio}
+      onAction={
+        noticeState.notice?.id === 'saveCheckFailed'
+          ? conversation.recover
+          : conversation.voice.playAudio
+      }
       focusAfterRemoval={() => microphone.current}
     />
   );

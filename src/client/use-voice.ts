@@ -621,6 +621,7 @@ export function useVoice(options: {
           request &&
             !request.released &&
             !latest.current.inputBlocked &&
+            !latest.current.saveChecking &&
             navigator.onLine !== false,
         );
         request?.buffer?.capture(capture);
@@ -717,7 +718,10 @@ export function useVoice(options: {
           }
         });
         const capture =
-          !request.released && !latest.current.inputBlocked && navigator.onLine !== false;
+          !request.released &&
+          !latest.current.inputBlocked &&
+          !latest.current.saveChecking &&
+          navigator.onLine !== false;
         buffer.capture(capture);
         if (held.current === request && mounted.current) {
           setHeldListening(capture && buffer.ready);

@@ -115,9 +115,19 @@ A saved conversation consent remains. A consent given only for the visit
 lasts until the page is reloaded.
 
 Stopping a session or losing a connection does not undo a completed save.
-Check the durable save result before trying again. For an unresolved save,
-use **Slutför samma sparförsök** to retry the pending operation. Keep the
-existing database; do not reset it to clear an uncertain result.
+Skyttel automatically checks uncertain saves when contact returns. It
+reads the terminal receipt or completes only the original durably
+registered operation, keeping its owner, household, content version, draft
+version and operation ID. Recovery requires household authorization but
+no conversation consent or provider connection. An active conversation
+save settles before recovery completes it.
+
+Only a failed check exposes **Kontrollera om utkastet sparades**. If that
+check continues failing, investigate normal household access and database
+availability. Conflicting or rejected attempts remain unsaved, with their
+draft preserved; recovery never creates a replacement save. Keep the
+existing database and receipts; do not reset them to clear an uncertain
+result. No schema migration or new runtime configuration is required.
 
 ## Register identity providers
 

@@ -151,10 +151,12 @@ export function useConversation({
   const [error, setError] = useState('');
   const [unknown, setUnknown] = useState(false);
   const [saveCheckFailed, setSaveCheckFailed] = useState(false);
+  const [nextCheckAt, setNextCheckAt] = useState(0);
   const [checking, setChecking] = useState(false);
   const [discovered, setDiscovered] = useState<string[] | null>(null);
   const checkedReplies = useRef(new Set<string>());
   const recovering = useRef(false);
+  const checkOccurrence = useRef<string | null>(null);
   const [transcript, setTranscript] = useState<TranscriptRow[]>([]);
   const voiceConnected = useRef(false);
   const active = useRef<TextAssistantView | null>(null);
@@ -242,6 +244,14 @@ export function useConversation({
       for (const reply of next.completedReplies ?? []) {
         const voiced = reply.source === 'voice' ? true : reply.voiced;
         const voicePending = voiced === undefined && voiceConnected.current;
+        if (reply.saveCheck)
+          showTranscript({
+            id: `check-${reply.saveCheck.id}`,
+            role: 'assistant',
+            text: reply.saveCheck.reply,
+            voiced,
+            voicePending,
+          });
         if (reply.text)
           showTranscript({
             id:
@@ -253,7 +263,7 @@ export function useConversation({
             voiced,
             voicePending,
           });
-        if (reply.receipt)
+        if (reply.receipt && !reply.saveCheck)
           showTranscript({
             id: `saved-${next.id}-${reply.receipt.operationId}`,
             role: 'assistant',
@@ -270,7 +280,10 @@ export function useConversation({
             voicePending,
           });
       }
-      if (next.saveCheck && !checkedReplies.current.has(next.saveCheck.id)) {
+      if (
+        next.saveCheck &&
+        !(next.completedReplies ?? []).some((reply) => reply.saveCheck?.id === next.saveCheck?.id)
+      ) {
         checkedReplies.current.add(next.saveCheck.id);
         showTranscript({
           id: `check-${next.saveCheck.id}`,
@@ -349,6 +362,10 @@ export function useConversation({
     setText('');
     setTranscript([]);
     setUnknown(false);
+    setDiscovered(null);
+    setSaveCheckFailed(false);
+    checkedReplies.current.clear();
+    checkOccurrence.current = null;
   }, []);
   const fail = useCallback(
     (failure: unknown) => {
@@ -426,6 +443,9 @@ export function useConversation({
       connection.current = false;
       pauseCapture.current();
       setConnected(false);
+      // Canceling a poll on contact loss is not evidence that its work did not
+      // save. Check the original task before accepting another instruction.
+      if (active.current?.phase === 'working') setUnknown(true);
     };
     const check = async () => {
       if (!navigator.onLine) return offline();
@@ -486,7 +506,12 @@ export function useConversation({
     onTranscript: showTranscript,
     transcript,
     inputBlocked: !connected || available === false,
-    saveChecking: unknown || checking || Boolean(discovered) || session?.phase === 'recovery',
+    saveChecking:
+      unknown ||
+      checking ||
+      Boolean(discovered) ||
+      session?.phase === 'recovery' ||
+      Boolean(session?.operations.some((item) => item.status === 'pending')),
     onRecoveryNeeded: () => setUnknown(true),
   });
   voiceConnected.current = voice.state === 'listening' || voice.starting;
@@ -503,14 +528,26 @@ export function useConversation({
   }, [voice.state]);
   pauseCapture.current = () => voice.pauseMicrophone?.();
   const disconnected = !navigator.onLine || !connected || voice.disconnected;
-  const saveChecking = unknown || checking || Boolean(discovered) || session?.phase === 'recovery';
+  const saveChecking =
+    unknown ||
+    checking ||
+    Boolean(discovered) ||
+    session?.phase === 'recovery' ||
+    Boolean(session?.operations.some((item) => item.status === 'pending'));
   const inputBlocked = disconnected || available === false || saveChecking;
   useEffect(() => {
     if (disconnected || available === false) pauseCapture.current();
   }, [disconnected, available]);
+  const previouslyConnected = useRef(connected);
+  useEffect(() => {
+    if (connected && !previouslyConnected.current) setSaveCheckFailed(false);
+    previouslyConnected.current = connected;
+  }, [connected]);
   const recover = useCallback(async () => {
     if (recovering.current || !connection.current || !navigator.onLine) return;
     recovering.current = true;
+    checkOccurrence.current ??= crypto.randomUUID();
+    const checkId = checkOccurrence.current;
     setChecking(true);
     setSaveCheckFailed(false);
     setError('');
@@ -518,19 +555,27 @@ export function useConversation({
     const current = active.current;
     try {
       if (current) {
-        const result = await request<TextAssistantView>(`${path}/${current.id}/recover`, {});
+        const result = await request<TextAssistantView>(`${path}/${current.id}/recover`, {
+          checkId,
+        });
         if (!mounted.current || epoch !== requestEpoch.current) return;
         update(result);
         if (result.phase === 'working' || result.phase === 'recovery') {
+          setNextCheckAt(Date.now() + 250);
           setUnknown(true);
           return;
         }
       } else {
-        const result = await request<SaveCheck>(
-          `${path}/recover`,
-          discovered ? { operationIds: discovered } : {},
-        );
+        const result = await request<SaveCheck>(`${path}/recover`, {
+          checkId,
+          ...(discovered ? { operationIds: discovered } : {}),
+        });
         if (!mounted.current || epoch !== requestEpoch.current) return;
+        if ('checking' in result) {
+          setNextCheckAt(Date.now() + 250);
+          setUnknown(true);
+          return;
+        }
         if (!checkedReplies.current.has(result.id)) {
           checkedReplies.current.add(result.id);
           setTranscript((rows) => [
@@ -542,11 +587,20 @@ export function useConversation({
       }
       setUnknown(false);
       setDiscovered(null);
+      checkOccurrence.current = null;
     } catch (failure) {
       if (!mounted.current || epoch !== requestEpoch.current) return;
       if (failure instanceof MapRequestError && failure.status === 404 && current) {
         active.current = null;
         setSession(null);
+        setDiscovered(
+          current.operations
+            .filter(
+              (item) =>
+                item.status === 'pending' || item.operationId === current.receipt?.operationId,
+            )
+            .map((item) => item.operationId),
+        );
         setUnknown(true);
       } else if (failure instanceof MapRequestError && [401, 403].includes(failure.status))
         fail(failure);
@@ -567,18 +621,12 @@ export function useConversation({
       pending
     )
       return;
-    const timer = setTimeout(() => void recover(), session?.phase === 'working' ? 250 : 0);
+    const timer = setTimeout(
+      () => void recover(),
+      nextCheckAt ? Math.max(0, nextCheckAt - Date.now()) : 250,
+    );
     return () => clearTimeout(timer);
-  }, [
-    enabled,
-    connected,
-    saveChecking,
-    saveCheckFailed,
-    checking,
-    pending,
-    recover,
-    session?.phase,
-  ]);
+  }, [enabled, connected, saveChecking, saveCheckFailed, checking, pending, nextCheckAt, recover]);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
@@ -769,7 +817,7 @@ export function useConversation({
   }
   async function newConversation(discard = false) {
     const current = active.current;
-    if (!current || resetInProgress.current) return;
+    if (!current || resetInProgress.current || saveChecking) return;
     // A reset may interrupt a pending message, but a second reset must not
     // replace the first one's retained microphone while the server answers.
     resetInProgress.current = true;
