@@ -1,5 +1,6 @@
 import type { DraftConflict } from './draft-conflicts.js';
 import type { MapDraft, ObjectType, RelationshipType, SaveOperation, SaveReceipt } from './map.js';
+import type { SaveCheck } from './save-check.js';
 
 export type TextAssistantReview = MapDraft & {
   contentVersion: number;
@@ -60,6 +61,7 @@ export interface TextAssistantView {
   result?: TextAssistantResult;
   error?: string;
   receipt?: SaveReceipt;
+  saveCheck?: SaveCheck;
   operations: SaveOperation[];
   selection?: (
     | { objectId: string; kind?: undefined; id?: undefined }

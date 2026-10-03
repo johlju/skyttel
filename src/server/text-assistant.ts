@@ -20,6 +20,7 @@ import { ConversationCapacity } from './conversation-capacity.js';
 import type { ConversationConsents } from './conversation-consent.js';
 import { householdAccess } from './households.js';
 import { MapError } from './map.js';
+import { checkSaves } from './save-check.js';
 import { connectTextAssistant, type LocalDispatch } from './text-assistant-mcp.js';
 import { type TextModelUsage, textModel } from './text-assistant-model.js';
 import { draftResult, historyResult } from './text-assistant-results.js';
@@ -116,6 +117,7 @@ export function textAssistantRoutes({
     session.questions = undefined;
     session.previousFailure = undefined;
     session.receipt = undefined;
+    session.saveCheck = undefined;
     session.operations = [];
     clearTimeout(session.timer);
     await session.mcp.close();
@@ -160,6 +162,7 @@ export function textAssistantRoutes({
       result,
       error,
       receipt,
+      saveCheck,
       operations,
       selection,
       displayedSelection,
@@ -188,6 +191,7 @@ export function textAssistantRoutes({
       result,
       error,
       receipt,
+      saveCheck,
       operations,
       selection,
       displayedSelection,
@@ -486,6 +490,7 @@ export function textAssistantRoutes({
     session.result = undefined;
     session.error = undefined;
     session.receipt = undefined;
+    session.saveCheck = undefined;
     session.discarded = undefined;
     session.phase =
       session.pendingSave || session.operations.some((item) => item.status === 'pending')
@@ -1040,6 +1045,7 @@ export function textAssistantRoutes({
     session.modelReply = undefined;
     session.questions = undefined;
     session.receipt = undefined;
+    session.saveCheck = undefined;
     session.discarded = undefined;
     session.result = undefined;
     session.selection = undefined;
@@ -1101,6 +1107,22 @@ export function textAssistantRoutes({
   }
   const base = '/households/:id/text-assistant';
   routes.get(base, (context) => context.json({ available: Boolean(config.openaiApiKey) }));
+  routes.post(`${base}/recover`, async (context) => {
+    const body = await context.req.json().catch(() => null);
+    if (
+      !body ||
+      (body.operationIds !== undefined &&
+        (!Array.isArray(body.operationIds) ||
+          body.operationIds.length > 20 ||
+          body.operationIds.some(
+            (id: unknown) => typeof id !== 'string' || !/^[\w-]{1,128}$/.test(id),
+          )))
+    )
+      return context.json({ error: 'invalid_request' }, 400);
+    return context.json(
+      checkSaves(database, context.get('actorId'), context.req.param('id'), body.operationIds),
+    );
+  });
   routes.post(base, async (context) => {
     if (!config.openaiApiKey) return context.json({ error: 'assistant_unavailable' }, 503);
     const body = await context.req.json().catch(() => null);
@@ -1370,31 +1392,34 @@ export function textAssistantRoutes({
     const session = sessions.get(context.req.param('sessionId'));
     if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
     if (session.phase === 'working') return context.json(view(session));
-    session.modelReply = undefined;
-    session.questions = undefined;
+    const ids = session.pendingSave
+      ? [session.pendingSave.operationId]
+      : session.receipt
+        ? [session.receipt.operationId]
+        : undefined;
+    const checked = checkSaves(database, session.actorId, session.householdId, ids);
     await refresh(session);
-    const operation = session.pendingSave
-      ? session.operations.find((item) => item.operationId === session.pendingSave?.operationId)
-      : undefined;
-    if (operation?.status === 'succeeded') {
-      verifyReceipt(session, operation.receipt, {
+    if (checked.receipt) {
+      const operation = checked.operations.find((item) => item.status === 'succeeded');
+      if (!operation) throw new Error('invalid_receipt');
+      verifyReceipt(session, checked.receipt, {
         operationId: operation.operationId,
         version: operation.draftVersion,
         contentVersion: operation.contentVersion,
       });
-      saved(session, operation.receipt);
-    } else if (session.operations.some((item) => item.status === 'pending'))
-      session.phase = 'recovery';
-    else {
-      session.pendingSave = undefined;
-      session.phase = 'ready';
-      session.error = operation?.status === 'rejected' ? operation.error : undefined;
-      if (session.error) session.previousFailure = assistantFailureMessage(session.error);
-      session.reply =
-        operation?.status === 'rejected'
-          ? 'Sparförsöket avvisades. Granska hela utkastet och ge ett nytt sparbesked.'
-          : 'Tidigare sparförsök är kontrollerade. Inget okänt försök återstår.';
+      saved(session, checked.receipt);
     }
+    if (session.saveCheck?.id !== checked.id) {
+      session.revision++;
+      session.conversation.push({ role: 'assistant', text: checked.reply });
+    }
+    session.saveCheck = checked;
+    session.reply = checked.reply;
+    session.modelReply = undefined;
+    session.questions = undefined;
+    session.error = undefined;
+    session.pendingSave = undefined;
+    session.phase = 'ready';
     nextMessage(session);
     return context.json(view(session));
   });

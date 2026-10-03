@@ -115,6 +115,7 @@ export function useVoice(options: {
   transcript?: TranscriptRow[];
   /** Network or service conditions forbid sending microphone input. */
   inputBlocked?: boolean;
+  saveChecking?: boolean;
 }): Voice {
   const path = options.assistant
     ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
@@ -429,7 +430,10 @@ export function useVoice(options: {
         const playback = prepared.current ?? undefined;
         attempt.transport = createVoiceTransport(
           {
-            inputAllowed: () => !latest.current.inputBlocked && navigator.onLine !== false,
+            inputAllowed: () =>
+              !latest.current.inputBlocked &&
+              !latest.current.saveChecking &&
+              navigator.onLine !== false,
             onMicrophoneReady: () => {
               if (active()) setState('connecting');
             },
@@ -534,7 +538,7 @@ export function useVoice(options: {
   const working = state === 'listening' && voice?.phase === 'working';
   const speaking = state === 'listening' && activity.speaker;
   const activate = useCallback(() => {
-    if (latest.current.inputBlocked || !navigator.onLine) return;
+    if (latest.current.inputBlocked || latest.current.saveChecking || !navigator.onLine) return;
     if (state === 'idle') {
       setError(null);
       if (held.current) {
@@ -674,6 +678,7 @@ export function useVoice(options: {
   const startHeld = useCallback(() => {
     if (
       latest.current.inputBlocked ||
+      latest.current.saveChecking ||
       navigator.onLine === false ||
       latest.current.assistant?.phase === 'working'
     )
@@ -758,8 +763,20 @@ export function useVoice(options: {
     window.addEventListener('offline', blocked);
     return () => window.removeEventListener('offline', blocked);
   }, [options.inputBlocked, releaseHeld]);
+  useEffect(() => {
+    const transport = current.current?.transport;
+    if (options.saveChecking) {
+      held.current?.buffer?.capture(false);
+      transport?.setMicrophonePaused(true);
+    } else if (!off && !options.inputBlocked && navigator.onLine !== false)
+      transport?.setMicrophonePaused(false);
+  }, [options.saveChecking, options.inputBlocked, off]);
   const microphone =
-    (state === 'listening' || heldListening) && !off && !disconnected && !playbackBlocked
+    (state === 'listening' || heldListening) &&
+    !off &&
+    !disconnected &&
+    !playbackBlocked &&
+    !options.saveChecking
       ? 'on'
       : 'off';
   return {

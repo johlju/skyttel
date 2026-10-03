@@ -158,17 +158,6 @@ export function ConversationWorkspace({
         >
           {feedbackInText && feedback}
           {!notice && conversation.error && <p role="alert">{conversation.error}</p>}
-          <div className="text-view-task-controls">
-            {(conversation.unknown || session?.phase === 'recovery') && (
-              <button
-                type="button"
-                disabled={conversation.pending}
-                onClick={() => void conversation.recover()}
-              >
-                Kontrollera sparresultat
-              </button>
-            )}
-          </div>
         </TextView>
       )}
       {/* Shared draft feedback stays outside the text view and the conversation notice. */}

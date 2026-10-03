@@ -1455,6 +1455,8 @@ export function HouseholdMap({
   beforeConnection.current = { blocked: Boolean(conversation.inputBlocked), ongoing };
   const noticeState = useConversationNotice({
     conditions: {
+      saveChecking: Boolean(conversation.saveChecking),
+      saveCheckFailed: Boolean(conversation.saveCheckFailed),
       disconnectedActive: Boolean(conversation.disconnected && ongoing),
       disconnectedIdle: Boolean(conversation.disconnected && !ongoing),
       unavailable: conversation.available === false,
@@ -1479,7 +1481,11 @@ export function HouseholdMap({
       closable={noticeState.closable}
       onDismiss={noticeState.dismiss}
       onAction={
-        noticeState.notice.id === 'playbackStopped' ? conversation.voice.playAudio : undefined
+        noticeState.notice.id === 'playbackStopped'
+          ? conversation.voice.playAudio
+          : noticeState.notice.id === 'saveCheckFailed'
+            ? () => void conversation.recover()
+            : undefined
       }
       focusAfterRemoval={() =>
         active

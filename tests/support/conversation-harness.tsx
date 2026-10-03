@@ -49,6 +49,8 @@ export function StandaloneConversation({
   const { voice } = conversation;
   const noticeState = useConversationNotice({
     conditions: {
+      saveChecking: Boolean(conversation.saveChecking),
+      saveCheckFailed: Boolean(conversation.saveCheckFailed),
       disconnectedActive: Boolean(
         conversation.disconnected && conversationOngoing(conversation, textViewOpen),
       ),
