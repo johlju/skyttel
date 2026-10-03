@@ -62,10 +62,12 @@ export function textAssistantRoutes({
   const sessions = new Map<string, Session>();
   // The conversations that a revoked consent has ended, until the time they
   // would have expired by themselves. Work with them is refused with the reason.
-  const revoked = new Map<string, { actorId: string; householdId: string; until: number }>();
-  // How many times each user has revoked the consent for each household.
+  const revoked = new Map<string, { actorId: string; householdId: string }>();
+  // How many times each user has revoked the consent for each household, so
+  // that a start can tell whether a revocation came while it connected. It
+  // holds one number for each user and household that has revoked.
   const revocations = new Map<string, number>();
-  const consentOf = (actorId: string, householdId: string) =>
+  const consentKey = (actorId: string, householdId: string) =>
     JSON.stringify([householdId, actorId]);
   const respond = config.openaiApiKey
     ? textModel(config.openaiApiKey, modelFetch, modelUsage)
@@ -844,7 +846,7 @@ export function textAssistantRoutes({
     // Without a valid consent none starts, and the client is told why.
     if (!consents.valid(actorId, householdId, body?.consent))
       return context.json({ error: conversationConsentRequired }, 403);
-    const revocation = revocations.get(consentOf(actorId, householdId));
+    const revocationsAtStart = revocations.get(consentKey(actorId, householdId));
     for (const previous of sessions.values())
       if (previous.browserSessionId === browserSessionId && previous.householdId === householdId)
         await stop(previous);
@@ -897,7 +899,7 @@ export function textAssistantRoutes({
       if (session.operations.some((operation) => operation.status === 'pending'))
         session.phase = 'recovery';
       // A consent that was revoked while the conversation connected starts none.
-      if (revocations.get(consentOf(actorId, householdId)) !== revocation) {
+      if (revocations.get(consentKey(actorId, householdId)) !== revocationsAtStart) {
         await stop(session);
         return context.json({ error: conversationConsentRequired }, 403);
       }
@@ -910,10 +912,8 @@ export function textAssistantRoutes({
   });
   /** Why the user cannot work with a conversation that is not going on. */
   function ended(sessionId: string, actorId: string, householdId: string) {
-    const revocation = revoked.get(sessionId);
-    return revocation?.actorId === actorId &&
-      revocation.householdId === householdId &&
-      revocation.until > Date.now()
+    const ending = revoked.get(sessionId);
+    return ending?.actorId === actorId && ending.householdId === householdId
       ? ({ error: conversationConsentRequired, status: 403 } as const)
       : ({ error: 'assistant_session_expired', status: 404 } as const);
   }
@@ -1191,18 +1191,23 @@ export function textAssistantRoutes({
     /**
      * Ends every conversation that the user has in the household, on all
      * devices, because the consent is revoked. Further work with them is
-     * refused with that reason. The draft is not touched.
+     * refused with that reason. The draft is not touched. A save is one
+     * transaction, so it is either carried out or not begun, and a prepared
+     * save that is not carried out stays as an attempt to check.
      */
-    revokeConsent: async (actorId: string, householdId: string) => {
-      const consent = consentOf(actorId, householdId);
-      revocations.set(consent, (revocations.get(consent) ?? 0) + 1);
-      const now = Date.now();
-      for (const [id, { until }] of revoked) if (until <= now) revoked.delete(id);
+    endConversations: async (actorId: string, householdId: string) => {
+      const key = consentKey(actorId, householdId);
+      revocations.set(key, (revocations.get(key) ?? 0) + 1);
       const ending = [...sessions.values()].filter(
         (session) => session.actorId === actorId && session.householdId === householdId,
       );
-      for (const session of ending)
-        revoked.set(session.id, { actorId, householdId, until: session.mcp.expiresAt });
+      for (const session of ending) {
+        revoked.set(session.id, { actorId, householdId });
+        setTimeout(
+          () => revoked.delete(session.id),
+          Math.max(1, session.mcp.expiresAt - Date.now()),
+        ).unref();
+      }
       await Promise.all(ending.map(stop));
     },
     close: async () => {

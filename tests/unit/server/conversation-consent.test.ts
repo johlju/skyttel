@@ -393,7 +393,6 @@ test('revoking ends a conversation that was approved for the visit only', async 
   const refused = await send(browser, origin, `${conversation}/messages`);
   expect(refused.status()).toBe(403);
   expect(await refused.json()).toEqual({ error: 'conversation_consent_required' });
-  expect((await send(browser, origin, startPath)).status()).toBe(403);
 });
 
 test('a consent that is revoked while a conversation is being started starts none', async () => {

@@ -236,7 +236,13 @@ export function createApp({
   app.route('/api', textAssistant.routes);
   app.route(
     '/api',
-    conversationConsentRoutes(database, auth, config.origin, consents, textAssistant.revokeConsent),
+    conversationConsentRoutes(
+      database,
+      auth,
+      config.origin,
+      consents,
+      textAssistant.endConversations,
+    ),
   );
   const voiceAssistant = voiceAssistantRoutes({
     config,
