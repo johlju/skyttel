@@ -484,7 +484,12 @@ for (const viewport of [
       });
       await page.goto(installation.origin);
       await openMap(page);
-      await page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }).click();
+      // Select through the public keyboard control: default graph placement is
+      // independent of the protected lower controls whose pointer access is tested below.
+      const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
+      await lo.focus();
+      await lo.press('Enter');
+      await expect(lo).toHaveAttribute('aria-pressed', 'true');
       const shared = await read();
       const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
       const navigation = page.getByRole('region', { name: 'Navigation', exact: true });
