@@ -129,6 +129,10 @@ test.each([
     const posts = show();
     await choose();
     await giveConversationConsent();
+    if (withVoice) {
+      expect(messageField()).toBeNull();
+      await openConversationText();
+    }
     await waitFor(() => expect(messageField()).not.toBeNull());
     expect(queryConsentBox()).toBeNull();
     // Approved for the visit: nothing is saved, and the start states the consent.

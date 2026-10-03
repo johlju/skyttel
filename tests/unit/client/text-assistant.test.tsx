@@ -187,6 +187,8 @@ test('voice can start directly after consent and text remains available if the m
   });
   showAssistant();
   await startConversationWithVoice();
+  expect(screen.queryByRole('textbox', { name: 'Meddelande till Skyttel' })).toBeNull();
+  await openConversationText();
   expect(await screen.findByRole('textbox', { name: 'Meddelande till Skyttel' })).toBeTruthy();
   expect(await screen.findByRole('alert')).toBeTruthy();
   expect(posts).toEqual([path]);

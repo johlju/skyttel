@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import {
   chooseConversationText,
+  openConversationText,
   queryConsentBox,
   startConversationWithVoice,
 } from '../../support/conversation-dom.js';
@@ -519,6 +520,7 @@ test.each(['a new conversation', 'revoked access'])(
       />,
     );
     await startConversationWithVoice();
+    await openConversationText();
     await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
     const peer = Peer.all[0];
     await act(async () =>
@@ -596,6 +598,7 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
     />,
   );
   await startConversationWithVoice();
+  await openConversationText();
   await waitFor(() => expect(held.has('poll')).toBe(true), { timeout: 2000 });
   await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), 'Privat text');
   await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));

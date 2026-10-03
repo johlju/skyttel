@@ -47,6 +47,10 @@ class Peer extends EventTarget {
     this.localDescription = value;
   }
   async setRemoteDescription() {
+    const track = new Track();
+    this.dispatchEvent(
+      Object.assign(new Event('track'), { track, streams: [new Stream([track])] }),
+    );
     this.connectionState = 'connected';
     this.dispatchEvent(new Event('connectionstatechange'));
     this.channel.readyState = 'open';
