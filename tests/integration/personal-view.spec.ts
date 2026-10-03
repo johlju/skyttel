@@ -394,14 +394,18 @@ test('PLACERING-04: personal display settings, new proposals and viewport change
     if (!bounds) throw new Error('The map background must be visible');
     // Floating controls now share the canvas area. Compare its unobscured
     // center so focus rings and disabled controls do not masquerade as stars.
+    // The status card at the lower right edge is left out of it.
+    const card = await page.locator('.workspace-voice-controls').boundingBox();
+    const top = bounds.y + bounds.height / 4;
+    const bottom = Math.min(top + bounds.height / 2, card ? card.y - 12 : Number.POSITIVE_INFINITY);
     const background = async () =>
       sharp(
         await page.screenshot({
           clip: {
             x: bounds.x + bounds.width / 4,
-            y: bounds.y + bounds.height / 4,
+            y: top,
             width: bounds.width / 2,
-            height: bounds.height / 2,
+            height: bottom - top,
           },
         }),
       )

@@ -106,7 +106,10 @@ for (const viewport of [
             const summaryBounds = summary?.getBoundingClientRect();
             const working = document.querySelector('.assistant-work-indicator.is-working');
             const notice = working?.checkVisibility() ? working.getBoundingClientRect() : undefined;
-            const visibleBottom = Math.min(innerHeight, notice?.top ?? innerHeight);
+            // The work notice limits the visible map only where it stands over the map.
+            const overMap =
+              notice && bounds && notice.left < bounds.right && notice.right > bounds.left;
+            const visibleBottom = Math.min(innerHeight, overMap ? notice.top : innerHeight);
             const unobscured = (element: Element | null | undefined, rect: DOMRect | undefined) =>
               Boolean(
                 element &&
