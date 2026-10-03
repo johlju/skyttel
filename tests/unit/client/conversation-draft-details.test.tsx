@@ -237,3 +237,106 @@ test('the whole draft names additions, removals and changed relationship and typ
   expect(summary.textContent).toContain('Ta bort Objekttyp: Borttagen typ');
   expect(summary.textContent).toContain('Slutdatum: Ej uppgivet → 2026-10-03');
 });
+
+test('review retains image removal, lifecycle correction and newly defined optional fields even when older definitions omitted field metadata', () => {
+  const plainType: ObjectType = {
+    id: 'person',
+    householdId: 'linden',
+    revision: 1,
+    name: 'Person',
+    description: '',
+  };
+  const relationshipType = {
+    id: 'knows',
+    householdId: 'linden',
+    revision: 1,
+    name: 'känner',
+    description: '',
+  };
+  const before = {
+    id: 'alex',
+    householdId: 'linden',
+    revision: 1,
+    typeId: plainType.id,
+    name: 'Alex',
+    description: '',
+    profileImageId: 'image',
+  };
+  const imageRemoved: DraftChange = {
+    id: 'alex',
+    type: plainType,
+    before,
+    after: { typeId: plainType.id, name: 'Alex', description: '', lifecycle: 'ended' },
+  };
+  const imageAdded: DraftChange = {
+    id: 'robin',
+    type: plainType,
+    before: { ...before, id: 'robin', name: 'Robin', profileImageId: undefined },
+    after: { typeId: plainType.id, name: 'Robin', description: '', profileImageId: 'new-image' },
+  };
+  const draft: MapDraft = {
+    version: 2,
+    changes: [imageRemoved, imageAdded],
+    relationships: [
+      {
+        id: 'knows-alex',
+        type: relationshipType,
+        objectNames: { alex: 'Alex', robin: 'Robin' },
+        before: {
+          id: 'knows-alex',
+          householdId: 'linden',
+          revision: 1,
+          typeId: relationshipType.id,
+          sourceId: 'alex',
+          targetId: 'robin',
+          knowledge: 'known',
+          lifecycle: 'ended',
+        },
+        after: {
+          typeId: relationshipType.id,
+          sourceId: 'alex',
+          targetId: 'robin',
+          knowledge: 'known',
+          lifecycle: 'active',
+        },
+      },
+    ],
+    objectTypes: [
+      {
+        id: plainType.id,
+        before: plainType,
+        after: {
+          ...plainType,
+          revision: 2,
+          name: 'Person',
+          description: '',
+          fields: [
+            { id: 'birthday', name: 'Födelsedag', kind: 'date', description: 'Uppgivet datum' },
+          ],
+        },
+      },
+    ],
+    relationshipTypes: [
+      {
+        id: relationshipType.id,
+        before: {
+          ...relationshipType,
+          fields: [{ id: 'old', name: 'Gammal uppgift', kind: 'text', description: 'Tas bort' }],
+        },
+        after: { ...relationshipType, revision: 2, name: 'känner', description: '' },
+      },
+    ],
+  };
+  const page = render(<DraftChangeSummary review={draft} />);
+  const summary = screen.getByRole('list', { name: 'Alla föreslagna ändringar' });
+  expect(summary.textContent).toContain('Profilbild: Bild finns → Ingen bild');
+  expect(summary.textContent).toContain('Profilbild: Ingen bild → Ny bild');
+  expect(summary.textContent).toContain('Gäller: Aktuellt → Upphört');
+  expect(summary.textContent).toContain('Gäller: Upphört → Aktuellt');
+  expect(summary.textContent).toContain('Eget fält: Inget → Födelsedag (datum): Uppgivet datum');
+  expect(summary.textContent).toContain('Eget fält: Gammal uppgift (text): Tas bort → Borttaget');
+  page.rerender(<ConversationDraft draft={draft} />);
+  const table = screen.getByRole('table', { name: 'Osparade ändringar' });
+  expect(table.textContent).toContain('Gäller: Upphört → Aktuellt');
+  expect(table.textContent).toContain('Profilbild: Bild finns → Ingen bild');
+});

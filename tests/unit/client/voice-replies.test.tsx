@@ -27,18 +27,25 @@ const box = () => screen.queryByRole('group', { name: 'Röstruta' });
 function Voice() {
   const [assistant, onAssistant] = useState(initial);
   return (
-    <StandaloneVoice
-      householdId="linden"
-      assistant={assistant}
-      onAssistant={onAssistant}
-      onAccessLost={() => {}}
-    />
+    <>
+      <StandaloneVoice
+        householdId="linden"
+        assistant={assistant}
+        onAssistant={onAssistant}
+        onAccessLost={() => {}}
+      />
+      <output aria-label="Levererade svar">{JSON.stringify(assistant)}</output>
+    </>
   );
 }
 async function arrange() {
   const media = voiceMedia();
   vi.useFakeTimers();
-  const server: { assistant: TextAssistantView; response?: VoiceAssistantView['response'] } = {
+  const server: {
+    assistant: TextAssistantView;
+    response?: VoiceAssistantView['response'];
+    replyDelivery?: VoiceAssistantView['replyDelivery'];
+  } = {
     assistant: initial,
   };
   vi.stubGlobal('fetch', async (url: string) =>
@@ -50,6 +57,7 @@ async function arrange() {
         seconds: null,
         usageFinal: false,
         response: server.response,
+        replyDelivery: server.replyDelivery,
       },
       sdp: 'synthetic-answer',
     }),
@@ -251,3 +259,75 @@ test('audio from the preceding typed task cannot acknowledge a newly delivered s
   await tick(100);
   expect(box()?.textContent).toBe('Sparat');
 });
+
+test('voice handoffs assign only matching FIFO replies their spoken disposition and preserve other undelivered transcript rows', async () => {
+  const { server, tick } = await arrange();
+  server.assistant = {
+    ...initial,
+    revision: 1,
+    completedReplies: [
+      { id: 'spoken', revision: 1, source: 'text', text: 'Svaret som rösten levererar.' },
+      { id: 'text-only', revision: 2, source: 'text', text: 'Svaret som endast visas i text.' },
+      { id: 'waiting', revision: 3, source: 'text', text: 'Ännu inte levererat.' },
+    ],
+  };
+  server.replyDelivery = [
+    { id: 'spoken', voiced: true },
+    { id: 'text-only', voiced: false },
+  ];
+  await tick(500);
+  const shown: TextAssistantView = JSON.parse(
+    screen.getByLabelText('Levererade svar').textContent ?? '{}',
+  );
+  expect(shown.completedReplies).toEqual([
+    {
+      id: 'spoken',
+      revision: 1,
+      source: 'text',
+      text: 'Svaret som rösten levererar.',
+      voiced: true,
+    },
+    {
+      id: 'text-only',
+      revision: 2,
+      source: 'text',
+      text: 'Svaret som endast visas i text.',
+      voiced: false,
+    },
+    { id: 'waiting', revision: 3, source: 'text', text: 'Ännu inte levererat.' },
+  ]);
+});
+
+test.each(['other-session', 'old-turn', 'old-draft', 'old-content'] as const)(
+  'a delayed %s voice status cannot overwrite the newer authoritative conversation shown by text',
+  async (kind) => {
+    const { server, tick } = await arrange();
+    const latest: TextAssistantView = {
+      ...initial,
+      revision: 2,
+      review: { ...initial.review, version: 2, contentVersion: 2 },
+      modelReply: 'Det aktuella svaret.',
+    };
+    server.assistant = latest;
+    await tick(500);
+    const stale: TextAssistantView = {
+      ...latest,
+      modelReply: 'Ett gammalt privat svar.',
+      ...(kind === 'other-session'
+        ? { id: 'old-session' }
+        : kind === 'old-turn'
+          ? { revision: 1 }
+          : {
+              review: {
+                ...latest.review,
+                ...(kind === 'old-draft' ? { version: 1 } : { contentVersion: 1 }),
+              },
+            }),
+    };
+    server.assistant = stale;
+    await tick(500);
+    expect(JSON.parse(screen.getByLabelText('Levererade svar').textContent ?? '{}')).toEqual(
+      latest,
+    );
+  },
+);

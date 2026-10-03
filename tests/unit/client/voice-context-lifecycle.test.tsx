@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { useVoice } from '../../../src/client/use-voice.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
+import type { VoiceAssistantView } from '../../../src/shared/voice-assistant.js';
 import { voiceMedia } from '../../support/voice-media.js';
 
 const initial: TextAssistantView = {
@@ -81,7 +82,11 @@ async function setup(held = false) {
   const recovered = vi.fn();
   const summary = delayed<Response>();
   const reset = delayed<Response>();
-  const server = { assistant: initial, rejectStartup: false };
+  const server: {
+    assistant: TextAssistantView;
+    rejectStartup: boolean;
+    response?: VoiceAssistantView['response'];
+  } = { assistant: initial, rejectStartup: false };
   const calls: string[] = [];
   vi.stubGlobal('fetch', async (url: string) => {
     calls.push(url);
@@ -98,6 +103,7 @@ async function setup(held = false) {
         seconds: null,
         usageFinal: false,
         summaryReady: true,
+        response: server.response,
       },
       sdp: 'synthetic-answer',
     });
@@ -215,4 +221,63 @@ test('summary failure during provider startup retains input OFF and closes it wh
   fireEvent.click(screen.getByRole('button', { name: 'Lämna' }));
   await tick(0);
   expect(media.microphone.stopped).toBe(true);
+});
+
+test('a summary handoff waits for the current necessary question audio to drain before replacing its peer', async () => {
+  const { media, server, summary, calls } = await setup();
+  const question = 'Vilken cykel menar du?';
+  server.assistant = {
+    ...initial,
+    revision: 1,
+    taskId: 'question',
+    questionPending: true,
+    contextSummaryState: 'needed',
+  };
+  server.response = { id: 'spoken-question', revision: 1, text: question, questionPending: true };
+  await tick(500);
+  media.signals.set(media.peers[0].remote, 40);
+  await tick(100);
+  await act(async () =>
+    media.peers[0].channel.emit({
+      type: 'session.output_transcript.delta',
+      delta: question,
+      start_ms: 0,
+      end_ms: 100,
+    }),
+  );
+  await tick(1000);
+  expect(calls.filter((url) => url.endsWith('/summarize'))).toEqual([]);
+  expect(media.peers[0].remote.stopped).toBe(false);
+  expect(media.microphone.enabled).toBe(false);
+  media.signals.set(media.peers[0].remote, 0);
+  await tick(500);
+  expect(calls.filter((url) => url.endsWith('/summarize'))).toHaveLength(1);
+  expect(media.peers[0].remote.stopped).toBe(true);
+  server.assistant = { ...server.assistant, contextSummaryState: undefined, contextGeneration: 1 };
+  await act(async () => summary.resolve(Response.json(server.assistant)));
+  expect(media.peers).toHaveLength(2);
+  expect(media.getUserMedia).toHaveBeenCalledOnce();
+});
+
+test('a summary already completed by the text conversation renews voice context without submitting another summary or reopening an OFF microphone', async () => {
+  const { media, server, calls } = await setup();
+  fireEvent.click(microphone());
+  expect(media.microphone.enabled).toBe(false);
+  server.assistant = {
+    ...initial,
+    revision: 1,
+    contextGeneration: 1,
+    contextSummaries: [{ id: 'from-text', text: 'Sammanfattningen från samma samtal.' }],
+  };
+  await tick(1000);
+  expect(calls.filter((url) => url.endsWith('/summarize'))).toEqual([]);
+  expect(media.peers).toHaveLength(2);
+  await act(async () =>
+    media.peers[1].channel.emit({ type: 'session.started', session: { id: 'replacement' } }),
+  );
+  expect(state().assistant.contextSummaries).toEqual(server.assistant.contextSummaries);
+  expect(media.getUserMedia).toHaveBeenCalledOnce();
+  expect(media.microphone.enabled).toBe(false);
+  expect(media.peers[0].remote.stopped).toBe(true);
+  expect(microphone().getAttribute('aria-pressed')).toBe('false');
 });
