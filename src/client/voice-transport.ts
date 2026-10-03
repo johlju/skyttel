@@ -1,29 +1,54 @@
 import { type ExchangeSdp, OpenAILiveWebRTC } from 'openai/live/webrtc';
 import type { TranscriptRow } from './ConversationTranscript.js';
+import silentPlaybackUrl from './voice-silence.wav?no-inline';
 
-export function createVoiceTransport(callbacks: {
-  onReady: () => void;
-  onMicrophoneReady?: () => void;
-  onClosed: () => void;
-  onFailure: (reason: 'network' | 'audio' | 'microphone' | 'provider') => void;
-  onPlaybackBlocked: (blocked: boolean) => void;
-  onDisconnected: (disconnected: boolean) => void;
-  onTranscript?: (row: TranscriptRow) => void;
-  onAudioActivity?: (activity: { microphone: boolean; speaker: boolean }) => void;
-  /** Skyttel has taken on a task from what the user said. */
-  onDelegation?: () => void;
-}) {
+/** Unlock the eventual output element and audio meter during the user's start gesture. */
+export function prepareVoicePlayback(audio = new Audio(), audioContext = new AudioContext()) {
+  // A bundled silent PCM source keeps playback alive until the remote stream arrives.
+  // It follows the existing same-origin content policy and requests no microphone.
+  audio.src = silentPlaybackUrl;
+  audio.loop = true;
+  void audioContext.resume().catch(() => {});
+  void audio.play().catch(() => {});
+  return {
+    audio,
+    audioContext,
+    close() {
+      audio.pause();
+      audio.removeAttribute('src');
+      if (audioContext.state !== 'closed') void audioContext.close().catch(() => {});
+    },
+  };
+}
+export type VoicePlayback = ReturnType<typeof prepareVoicePlayback>;
+
+export function createVoiceTransport(
+  callbacks: {
+    onReady: () => void;
+    onMicrophoneReady?: () => void;
+    onClosed: () => void;
+    onFailure: (reason: 'network' | 'audio' | 'microphone' | 'provider') => void;
+    onPlaybackBlocked: (blocked: boolean) => void;
+    onDisconnected: (disconnected: boolean) => void;
+    onTranscript?: (row: TranscriptRow) => void;
+    onAudioActivity?: (activity: { microphone: boolean; speaker: boolean }) => void;
+    /** Skyttel has taken on a task from what the user said. */
+    onDelegation?: () => void;
+  },
+  playback?: VoicePlayback,
+) {
   const live = new OpenAILiveWebRTC();
-  const audio = new Audio();
+  const audio = playback?.audio ?? new Audio();
   audio.autoplay = true;
   const remoteTracks = new Set<MediaStreamTrack>();
   let microphone: MediaStream | undefined;
   let connected = false;
   let started = false;
   let stopped = false;
+  let playbackTransferred = false;
   let closed = false;
   let paused = false;
-  const audioContext = new AudioContext();
+  const audioContext = playback?.audioContext ?? new AudioContext();
   const meters: { source: MediaStreamAudioSourceNode; analyser: AnalyserNode; input: boolean }[] =
     [];
   const samples = new Uint8Array(256);
@@ -148,6 +173,7 @@ export function createVoiceTransport(callbacks: {
     }
     remoteTracks.add(event.track);
     meter(new MediaStream([event.track]), false);
+    audio.loop = false;
     audio.srcObject = new MediaStream([...remoteTracks]);
     void playAudio();
   };
@@ -230,7 +256,8 @@ export function createVoiceTransport(callbacks: {
       analyser.disconnect();
     }
     meters.length = 0;
-    if (audioContext.state !== 'closed') void audioContext.close().catch(() => {});
+    if (!playbackTransferred && audioContext.state !== 'closed')
+      void audioContext.close().catch(() => {});
     clearTimeout(startupTimer);
     clearTimeout(disconnectTimer);
     for (const track of microphone?.getTracks() ?? []) {
@@ -239,7 +266,7 @@ export function createVoiceTransport(callbacks: {
       track.stop();
     }
     for (const track of remoteTracks) track.stop();
-    audio.pause();
+    if (!playbackTransferred) audio.pause();
   }
   function close() {
     if (closed) return;
@@ -249,7 +276,10 @@ export function createVoiceTransport(callbacks: {
     live.peerConnection.removeEventListener('track', receiveTrack);
     live.peerConnection.removeEventListener('connectionstatechange', connectionChanged);
     audio.removeEventListener('error', audioFailed);
-    audio.srcObject = null;
+    if (!playbackTransferred) {
+      audio.srcObject = null;
+      audio.removeAttribute('src');
+    }
     remoteTracks.clear();
     live.close();
   }
@@ -285,6 +315,12 @@ export function createVoiceTransport(callbacks: {
         close();
         throw error;
       }
+    },
+    /** Carry the already-unlocked output and running context into a replacement connection. */
+    releasePlayback() {
+      playbackTransferred = true;
+      audio.srcObject = null;
+      return prepareVoicePlayback(audio, audioContext);
     },
     // Transfer ownership before closing the old peer. The same authorized
     // stream is attached to a fresh provider session without another permission request.

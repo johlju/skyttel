@@ -289,6 +289,17 @@ export function useConversation({
       controller.abort();
     };
   }, [session, unknown, pending, path, update, fail]);
+  const voice = useVoice({
+    householdId,
+    assistant: session,
+    autoStart: startWithVoice,
+    onAssistant: updateFromVoice,
+    // A refusal for a revoked consent ends the conversation, not the access.
+    onAccessLost: fail,
+    onTranscript: showTranscript,
+    transcript,
+    onRecoveryNeeded: () => setUnknown(true),
+  });
   const consentValid = visitConsent || savedConsent?.textVersion === conversationConsentTextVersion;
   const start = useCallback(
     async (mode: ConversationMode) => {
@@ -311,6 +322,7 @@ export function useConversation({
         callbacks.current.onStarted?.(mode);
       } catch (failure) {
         if (epoch !== requestEpoch.current) return;
+        void voice.stop();
         fail(failure);
         if (failure instanceof MapRequestError && failure.code === conversationConsentRequired)
           setRequested(mode);
@@ -318,7 +330,7 @@ export function useConversation({
         if (mounted.current && epoch === requestEpoch.current) setPending(false);
       }
     },
-    [path, visitConsent, update, fail],
+    [path, visitConsent, update, fail, voice.stop],
   );
   // A requested start waits for the server's answers about the conversation
   // and the saved consent. It then starts, or the consent box asks first.
@@ -334,6 +346,7 @@ export function useConversation({
     }
   }, [requested, answered, available, consentValid, start]);
   async function approve(remember: boolean) {
+    if (requested === 'voice') voice.prepareAudio?.();
     setConsentError('');
     if (!remember) {
       setVisitConsent(true);
@@ -348,12 +361,12 @@ export function useConversation({
     if (epoch !== requestEpoch.current) return;
     setSavingConsent(false);
     if (!('failure' in outcome)) setSavedConsent(outcome.saved);
-    else if (
-      outcome.failure instanceof MapRequestError &&
-      [401, 403].includes(outcome.failure.status)
-    )
-      fail(outcome.failure);
-    else setConsentError('Medgivandet kunde inte sparas. Försök igen.');
+    else {
+      void voice.stop();
+      if (outcome.failure instanceof MapRequestError && [401, 403].includes(outcome.failure.status))
+        fail(outcome.failure);
+      else setConsentError('Medgivandet kunde inte sparas. Försök igen.');
+    }
   }
   /** Sends what Settings does with the consent. Null when the answer is missing or no longer applies. */
   async function changeConsent(changePath: string, body: unknown) {
@@ -499,17 +512,6 @@ export function useConversation({
     })();
     return () => abort.abort();
   }, [selectionKey, pending, command]);
-  const voice = useVoice({
-    householdId,
-    assistant: session,
-    autoStart: startWithVoice,
-    onAssistant: updateFromVoice,
-    // A refusal for a revoked consent ends the conversation, not the access.
-    onAccessLost: fail,
-    onTranscript: showTranscript,
-    transcript,
-    onRecoveryNeeded: () => setUnknown(true),
-  });
   const working = session?.phase === 'working';
   return {
     available,
@@ -539,12 +541,16 @@ export function useConversation({
     voice,
     setText,
     begin: (mode) => {
-      if (!session && !pending) setRequested(mode);
+      if (!session && !pending) {
+        if (mode === 'voice' && consentValid && available === true) voice.prepareAudio?.();
+        setRequested(mode);
+      }
     },
     approve,
     decline: () => {
       // The user has approved, and the save is on its way: it cannot be taken back here.
       if (savingConsent) return;
+      void voice.stop();
       setRequested(null);
       setConsentError('');
     },

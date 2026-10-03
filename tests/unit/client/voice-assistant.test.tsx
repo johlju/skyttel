@@ -287,7 +287,8 @@ test('Avbryt discards the interrupted output across long pauses and permits a fr
   await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
   expect(peer.connectionState).toBe('closed');
   expect(remote.stop).toHaveBeenCalled();
-  expect(audios[0].srcObject).toBeNull();
+  expect((audios[0].srcObject as unknown as Stream)?.getTracks() ?? []).not.toContain(remote);
+  expect(audios).toHaveLength(1);
   expect(track.stop).not.toHaveBeenCalled();
   expect(cancel).not.toHaveBeenCalled();
   expect(document.activeElement).toBe(microphoneButton());
@@ -698,10 +699,94 @@ test('voice starts only on request, gates microphone on protocol readiness and s
   expect(Peer.all[0].channel.send).not.toHaveBeenCalled();
 });
 
+test('the start gesture unlocks playback before asynchronous microphone and server work', async () => {
+  const { track } = setup();
+  let gesture = false;
+  let unlocked = false;
+  const entering = () => {
+    gesture = true;
+  };
+  const leaving = () => {
+    gesture = false;
+  };
+  microphoneButton().addEventListener('click', entering, true);
+  document.addEventListener('click', leaving);
+  vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(async () => {
+    if (gesture) unlocked = true;
+    if (!unlocked) throw new DOMException('Gesture needed', 'NotAllowedError');
+  });
+  try {
+    await startWithAudio();
+    expect(unlocked).toBe(true);
+    expect(track.enabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Spela upp ljud' })).toBeNull();
+  } finally {
+    microphoneButton().removeEventListener('click', entering, true);
+    document.removeEventListener('click', leaving);
+  }
+});
+
+test('consent approval unlocks output in its gesture before the shared conversation starts', async () => {
+  const { component, track, getUserMedia } = setup();
+  component.unmount();
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url.includes('/voice'))
+      return Response.json({
+        voice: {
+          id: 'voice',
+          phase: url.endsWith('/stop') ? 'closed' : 'listening',
+          seconds: null,
+          usageFinal: false,
+        },
+        assistant: assistant(),
+        sdp: 'answer',
+      });
+    return Response.json(
+      init?.method === 'POST' || url.endsWith('/text-session') ? assistant() : { available: true },
+    );
+  });
+  render(
+    <StandaloneConversation
+      householdId="linden"
+      onMapChange={vi.fn()}
+      onAccessLost={vi.fn()}
+      onSelectItem={async () => false}
+    />,
+  );
+  let gesture: string | null = null;
+  const preparedIn: string[] = [];
+  const entering = (event: Event) => {
+    gesture = (event.target as HTMLElement).closest('button')?.textContent ?? '';
+  };
+  const leaving = () => {
+    gesture = null;
+  };
+  document.addEventListener('click', entering, true);
+  document.addEventListener('click', leaving);
+  vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(async () => {
+    if (gesture) preparedIn.push(gesture);
+    if (!preparedIn.length) throw new DOMException('Gesture needed', 'NotAllowedError');
+  });
+  try {
+    expect(getUserMedia).not.toHaveBeenCalled();
+    await startConversationWithVoice();
+    expect(preparedIn).toContain('Godkänn och starta');
+    await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+    await act(async () =>
+      Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
+    );
+    expect(track.enabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Spela upp ljud' })).toBeNull();
+  } finally {
+    document.removeEventListener('click', entering, true);
+    document.removeEventListener('click', leaving);
+  }
+});
+
 test('protocol readiness keeps capture off until remote playback succeeds', async () => {
   const { track } = setup();
   let playing!: () => void;
-  vi.mocked(HTMLMediaElement.prototype.play).mockReturnValueOnce(
+  vi.mocked(HTMLMediaElement.prototype.play).mockReturnValue(
     new Promise<void>((resolve) => {
       playing = resolve;
     }),
@@ -1118,7 +1203,7 @@ test.each(['resolved', 'rejected'])(
   async (outcome) => {
     const { view, track } = setup();
     let finishAudio!: () => void;
-    vi.mocked(HTMLMediaElement.prototype.play).mockReturnValueOnce(
+    vi.mocked(HTMLMediaElement.prototype.play).mockReturnValue(
       new Promise<void>((resolve, reject) => {
         finishAudio = () =>
           outcome === 'resolved'
