@@ -48,7 +48,7 @@ function show({ failedSaves = 0 } = {}) {
     if (url === consentPath)
       return failedSaves-- > 0
         ? Response.json({ error: 'internal_error' }, { status: 500 })
-        : Response.json({ saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' } });
+        : Response.json({ saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' } });
     return Response.json(session);
   });
   render(
@@ -136,7 +136,7 @@ test.each([
     await waitFor(() => expect(messageField()).not.toBeNull());
     expect(queryConsentBox()).toBeNull();
     // Approved for the visit: nothing is saved, and the start states the consent.
-    expect(posts).toEqual([{ url: path, body: { consent: { textVersion: 1 } } }]);
+    expect(posts).toEqual([{ url: path, body: { consent: { textVersion: 2 } } }]);
     // jsdom has no microphone, so a start with voice says that the voice is not supported.
     if (withVoice) expect((await screen.findByRole('alert')).textContent).toContain('röst');
     else expect(screen.queryByRole('alert')).toBeNull();
@@ -153,14 +153,14 @@ test('a remembered consent is saved before the start, and a save that fails is t
   );
   expect(getConsentBoxControls().remember.checked).toBe(true);
   expect(messageField()).toBeNull();
-  expect(posts).toEqual([{ url: consentPath, body: { textVersion: 1 } }]);
+  expect(posts).toEqual([{ url: consentPath, body: { textVersion: 2 } }]);
 
   await userEvent.click(getConsentBoxControls().approve);
   await waitFor(() => expect(messageField()).not.toBeNull());
   expect(queryConsentBox()).toBeNull();
   expect(posts).toEqual([
-    { url: consentPath, body: { textVersion: 1 } },
-    { url: consentPath, body: { textVersion: 1 } },
+    { url: consentPath, body: { textVersion: 2 } },
+    { url: consentPath, body: { textVersion: 2 } },
     { url: path, body: {} },
   ]);
 });
@@ -183,6 +183,6 @@ test('a consent that is being saved can be neither approved again nor cancelled'
   // Escape does not withdraw a consent that is already on its way to the server.
   fireEvent(await findConsentBox(), new Event('cancel', { cancelable: true }));
   expect(queryConsentBox()).not.toBeNull();
-  answer?.(Response.json({ saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' } }));
+  answer?.(Response.json({ saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' } }));
   await waitFor(() => expect(messageField()).not.toBeNull());
 });

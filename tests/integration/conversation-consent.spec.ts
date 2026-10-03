@@ -206,7 +206,7 @@ test('MEDGIVANDE-03: sparat medgivande följer användaren men inte andra medlem
     const { saved } = await (
       await page.request.get(`${householdPath}/conversation-consent`)
     ).json();
-    expect(saved).toEqual({ textVersion: 1, savedAt: expect.any(String) });
+    expect(saved).toEqual({ textVersion: 2, savedAt: expect.any(String) });
     expect(Date.parse(saved.savedAt)).toBeGreaterThanOrEqual(before);
 
     // A reloaded page starts directly, with the button that is chosen.

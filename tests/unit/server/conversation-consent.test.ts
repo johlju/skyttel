@@ -56,7 +56,7 @@ test('a conversation starts only with a consent for the current consent text, an
     { consent: null },
     { consent: {} },
     { consent: { textVersion: 0 } },
-    { consent: { textVersion: 2 } },
+    { consent: { textVersion: 1 } },
     { consent: { textVersion: '1' } },
     { externalAi: true, mapWork: true },
   ]) {
@@ -68,7 +68,7 @@ test('a conversation starts only with a consent for the current consent text, an
   for (const work of ['messages', 'voice'])
     expect((await send(browser, origin, `${startPath}/missing/${work}`)).status()).toBe(404);
 
-  const started = await send(browser, origin, startPath, { consent: { textVersion: 1 } });
+  const started = await send(browser, origin, startPath, { consent: { textVersion: 2 } });
   expect(started.status(), await started.text()).toBe(201);
   // A consent for the visit is not saved: the next visit is asked again.
   expect(await (await browser.get(consentPath)).json()).toEqual({ saved: null });
@@ -80,10 +80,10 @@ test('a saved consent has its date and text version, follows the user between de
   const { installation, browser, householdPath, consentPath, startPath } = await setup();
   const { origin } = installation;
   const before = Date.now();
-  const saved = await send(browser, origin, consentPath, { textVersion: 1 });
+  const saved = await send(browser, origin, consentPath, { textVersion: 2 });
   expect(saved.status(), await saved.text()).toBe(200);
   const consent = (await saved.json()).saved;
-  expect(consent).toEqual({ textVersion: 1, savedAt: expect.any(String) });
+  expect(consent).toEqual({ textVersion: 2, savedAt: expect.any(String) });
   expect(new Date(consent.savedAt).toISOString()).toBe(consent.savedAt);
   expect(Date.parse(consent.savedAt)).toBeGreaterThanOrEqual(before);
   expect(Date.parse(consent.savedAt)).toBeLessThanOrEqual(Date.now());
@@ -118,8 +118,8 @@ test('a saved consent has its date and text version, follows the user between de
   expect(await refused.json()).toEqual({ error: 'conversation_consent_required' });
   // The first user's consent is untouched by the other member and by saving again.
   expect(await (await browser.get(consentPath)).json()).toEqual({ saved: consent });
-  const again = await send(browser, origin, consentPath, { textVersion: 1 });
-  expect((await again.json()).saved.textVersion).toBe(1);
+  const again = await send(browser, origin, consentPath, { textVersion: 2 });
+  expect((await again.json()).saved.textVersion).toBe(2);
 });
 
 test('a saved consent follows the membership: a member who is invited again is asked again', async () => {
@@ -137,7 +137,7 @@ test('a saved consent follows the membership: a member who is invited again is a
     expect(accepted.status()).toBe(200);
   }
   await join();
-  expect((await send(member, origin, consentPath, { textVersion: 1 })).status()).toBe(200);
+  expect((await send(member, origin, consentPath, { textVersion: 2 })).status()).toBe(200);
   expect((await send(member, origin, startPath)).status()).toBe(201);
 
   const revoked = await send(browser, origin, `${householdPath}/members/${user.id}/revoke`);
@@ -165,7 +165,7 @@ test('an administrator who leaves the household and is invited again is asked ag
     role: 'administrator',
   });
   expect(promoted.status(), await promoted.text()).toBe(200);
-  expect((await send(browser, origin, consentPath, { textVersion: 1 })).status()).toBe(200);
+  expect((await send(browser, origin, consentPath, { textVersion: 2 })).status()).toBe(200);
 
   const left = await send(browser, origin, `${householdPath}/members/${user.id}/revoke`);
   expect(left.status(), await left.text()).toBe(200);
@@ -186,9 +186,9 @@ test('the consent is not household content: a full export leaves it out, and a r
   const { household } = await (await client.json('/api/households', { name: 'Linden' })).json();
   const path = `/api/households/${household.id}`;
   const { saved } = await (
-    await client.json(`${path}/conversation-consent`, { textVersion: 1 })
+    await client.json(`${path}/conversation-consent`, { textVersion: 2 })
   ).json();
-  expect(saved).toEqual({ textVersion: 1, savedAt: expect.any(String) });
+  expect(saved).toEqual({ textVersion: 2, savedAt: expect.any(String) });
 
   const prepared = await client.json(`${path}/exports`, {});
   expect(prepared.status, await prepared.clone().text()).toBe(201);
@@ -240,7 +240,7 @@ test('a consent does not outlive its household: a household that is erased leave
   };
   addHousehold();
   const consentPath = '/api/households/erased/conversation-consent';
-  expect((await client.json(consentPath, { textVersion: 1 })).status).toBe(200);
+  expect((await client.json(consentPath, { textVersion: 2 })).status).toBe(200);
   expect((await (await client.request(consentPath)).json()).saved).not.toBeNull();
 
   const tables = database
@@ -269,19 +269,19 @@ test('saving a consent needs a signed-in member, the own origin and the current 
   const anonymous = await request.newContext();
   clients.push(anonymous);
   expect((await anonymous.get(consentPath)).status()).toBe(401);
-  expect((await send(anonymous, origin, consentPath, { textVersion: 1 })).status()).toBe(401);
+  expect((await send(anonymous, origin, consentPath, { textVersion: 2 })).status()).toBe(401);
   expect(
     (
       await browser.post(consentPath, {
         headers: { origin: 'https://unrelated.example' },
-        data: { textVersion: 1 },
+        data: { textVersion: 2 },
       })
     ).status(),
   ).toBe(403);
   const unknownHousehold = `${origin}/api/households/missing/conversation-consent`;
   expect((await browser.get(unknownHousehold)).status()).toBe(403);
-  expect((await send(browser, origin, unknownHousehold, { textVersion: 1 })).status()).toBe(403);
-  for (const data of [{}, { textVersion: 0 }, { textVersion: 2 }, { textVersion: '1' }, null]) {
+  expect((await send(browser, origin, unknownHousehold, { textVersion: 2 })).status()).toBe(403);
+  for (const data of [{}, { textVersion: 0 }, { textVersion: 1 }, { textVersion: '1' }, null]) {
     const invalid = await send(browser, origin, consentPath, data);
     expect(invalid.status(), JSON.stringify(data)).toBe(400);
     expect(await invalid.json()).toEqual({ error: 'invalid_request' });
@@ -293,7 +293,11 @@ test('a saved consent for an older consent text no longer applies when the text 
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-consent-'));
   const databasePath = join(directory, 'skyttel.db');
   try {
-    const release = await createInstallation(undefined, { modelFetch: model(), databasePath });
+    const release = await createInstallation(undefined, {
+      modelFetch: model(),
+      databasePath,
+      consentTextVersion: 1,
+    });
     app = release;
     const browser = await device(release);
     const { household } = await (await createHousehold(browser, release.origin)).json();
@@ -342,7 +346,7 @@ test('revoking removes the saved consent and ends the user’s conversations in 
   const { origin } = installation;
   const revokePath = `${consentPath}/revoke`;
   const refusal = { error: 'conversation_consent_required' };
-  await send(browser, origin, consentPath, { textVersion: 1 });
+  await send(browser, origin, consentPath, { textVersion: 2 });
   const otherDevice = await device(installation);
   const conversations = await Promise.all(
     [browser, otherDevice].map(async (client) => {
@@ -375,7 +379,7 @@ test('revoking removes the saved consent and ends the user’s conversations in 
   expect((await send(browser, origin, `${startPath}/missing/messages`)).status()).toBe(404);
   // Revoking again changes nothing, and a new consent applies as the first one did.
   expect(await (await send(browser, origin, revokePath)).json()).toEqual({ saved: null });
-  expect((await send(browser, origin, consentPath, { textVersion: 1 })).status()).toBe(200);
+  expect((await send(browser, origin, consentPath, { textVersion: 2 })).status()).toBe(200);
   expect((await send(browser, origin, startPath)).status()).toBe(201);
   // The conversations that the revoked consent started stay ended.
   expect((await conversations[0].client.get(conversations[0].path)).status()).toBe(403);
@@ -384,7 +388,7 @@ test('revoking removes the saved consent and ends the user’s conversations in 
 test('revoking ends a conversation that was approved for the visit only', async () => {
   const { installation, browser, consentPath, startPath } = await setup();
   const { origin } = installation;
-  const started = await send(browser, origin, startPath, { consent: { textVersion: 1 } });
+  const started = await send(browser, origin, startPath, { consent: { textVersion: 2 } });
   expect(started.status(), await started.text()).toBe(201);
   const conversation = `${startPath}/${(await started.json()).id}`;
   expect((await browser.get(conversation)).status()).toBe(200);
@@ -416,12 +420,12 @@ test('a consent that is revoked while a conversation is being started starts non
   const startPath = `${origin}/api/households/${household.id}/text-assistant`;
 
   whileStarting = () => send(otherDevice, origin, `${consentPath}/revoke`);
-  const refused = await send(browser, origin, startPath, { consent: { textVersion: 1 } });
+  const refused = await send(browser, origin, startPath, { consent: { textVersion: 2 } });
   expect(whileStarting).toBeUndefined();
   expect(refused.status(), await refused.text()).toBe(403);
   expect(await refused.json()).toEqual({ error: 'conversation_consent_required' });
   // A consent that the user gives after the revocation starts a conversation as usual.
-  const started = await send(browser, origin, startPath, { consent: { textVersion: 1 } });
+  const started = await send(browser, origin, startPath, { consent: { textVersion: 2 } });
   expect(started.status(), await started.text()).toBe(201);
 });
 
@@ -432,8 +436,8 @@ test('revoking applies to one user in one household, and needs a signed-in membe
   const { user } = await (await browser.get(`${origin}/api/bootstrap`)).json();
   installation.seedMembership(user.id, 'other-household', 'Hushållet Eken');
   const otherConsentPath = `${origin}/api/households/other-household/conversation-consent`;
-  await send(browser, origin, consentPath, { textVersion: 1 });
-  await send(browser, origin, otherConsentPath, { textVersion: 1 });
+  await send(browser, origin, consentPath, { textVersion: 2 });
+  await send(browser, origin, otherConsentPath, { textVersion: 2 });
 
   installation.setIdentity(robin);
   const member = await device(installation, 'microsoft');
@@ -446,7 +450,7 @@ test('revoking applies to one user in one household, and needs a signed-in membe
   await send(member, origin, `${origin}/api/invitations/accept`, {
     code: (await invitation.json()).code,
   });
-  await send(member, origin, consentPath, { textVersion: 1 });
+  await send(member, origin, consentPath, { textVersion: 2 });
   const memberStarted = await send(member, origin, startPath);
   expect(memberStarted.status(), await memberStarted.text()).toBe(201);
   const memberConversation = `${startPath}/${(await memberStarted.json()).id}`;

@@ -55,7 +55,9 @@ Avbryt startar inget”.
 **Steg:**
 
 1. Välj **Prata med Skyttel** i **Kartans verktyg**. Läs medgivanderutan:
-   rubriken **Samtal med Skyttel**, medgivandetexten i tre stycken,
+   rubriken **Samtal med Skyttel**, medgivandetexten i tre stycken som
+   förklarar att tidigare inspelat tal från långt tryck kan skickas efter
+   släpp och att släpp stänger av ny inspelning direkt,
    kryssrutan **Fråga inte igen för det här hushållet**, raden
    **Du kan återkalla det i Inställningar.** samt **Godkänn och starta**
    och **Avbryt**.
@@ -503,8 +505,8 @@ gäller och att användaren kan ersätta det från Inställningar.
 **Förutsättningar:** Starta en ny kontrollerad installation enligt den
 allmänna förberedelsen, med bara Alex och hushållet Medgivandeprov. Spara
 medgivandet enligt steg 1 i MEDGIVANDE-06. Lämna sidan öppen utan samtal.
-Förbered sedan en annan sparad textversion enligt nedan. Värdet 2 är
-syntetiskt; den aktuella textversionen är 1. Det motsvarar det sparade
+Förbered sedan en annan sparad textversion enligt nedan. Värdet 1 är den
+tidigare textversionen; den aktuella textversionen är 2. Det motsvarar det sparade
 tillståndet efter ett byte av medgivandetextens version.
 
 I en andra terminal, från repositoryts rot, sätt katalogen till exakt
@@ -531,21 +533,21 @@ try {
     const rows = database.prepare(
       'SELECT textVersion FROM conversation_consent',
     ).all();
-    if (rows.length !== 1 || rows[0].textVersion !== 1) {
+    if (rows.length !== 1 || rows[0].textVersion !== 2) {
       throw new Error('Prepare one saved consent in a new fixture.');
     }
     database.prepare(
-      'UPDATE conversation_consent SET textVersion = 2',
+      'UPDATE conversation_consent SET textVersion = 1',
     ).run();
   })();
-  console.log('Prepared saved consent for text version 2.');
+  console.log('Prepared saved consent for text version 1.');
 } finally {
   database.close();
 }
 JS
 ```
 
-Kräv utskriften `Prepared saved consent for text version 2.`. Kör därefter
+Kräv utskriften `Prepared saved consent for text version 1.`. Kör därefter
 `restart` i startterminalen och vänta på `restarted`. Behåll samma
 webbläsarprofil och adress. Avsluta med `quit` efter fallet enligt den
 allmänna förberedelsen; starta en ny installation inför nästa körning.

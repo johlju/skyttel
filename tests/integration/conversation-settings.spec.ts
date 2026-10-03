@@ -135,7 +135,7 @@ const loseConnection = (page: Page) =>
     route.request().method() === 'POST' ? route.abort('connectionfailed') : route.continue(),
   );
 const saveConsent = (client: APIRequestContext, origin: string, consentPath: string) =>
-  client.post(consentPath, { headers: { origin }, data: { textVersion: 1 } });
+  client.post(consentPath, { headers: { origin }, data: { textVersion: 2 } });
 const microphones = (page: Page) =>
   page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks);
 const liveMicrophones = async (page: Page) =>
@@ -233,7 +233,7 @@ test('MEDGIVANDE-06: Spara medgivandet sparar direkt utan att starta ett samtal'
     await expect(consent.buttons).toHaveText(['Återkalla medgivandet']);
     await expect(consent.revoke).toBeFocused();
     const { saved } = await (await page.request.get(consentPath)).json();
-    expect(saved).toEqual({ textVersion: 1, savedAt: expect.any(String) });
+    expect(saved).toEqual({ textVersion: 2, savedAt: expect.any(String) });
     expect(Date.parse(saved.savedAt)).toBeGreaterThanOrEqual(before);
     // Saving started neither a conversation nor the microphone.
     expect(sent).toEqual([]);
@@ -563,23 +563,23 @@ test('MEDGIVANDE-12: en medlem som bjuds in igen har inget sparat medgivande', a
 test('MEDGIVANDE-14: ändrad medgivandetext kräver ett nytt sparat medgivande', async ({ page }) => {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-consent-page-'));
   const databasePath = join(directory, 'skyttel.db');
-  let app = await installation({ databasePath, consentTextVersion: 2 });
+  let app = await installation({ databasePath, consentTextVersion: 1 });
   try {
     // A release with another version of the consent text saves the user's consent to it.
     const first = await signInWithHousehold(page.request, app.origin);
     const other = await page.request.post(first.consentPath, {
       headers: { origin: app.origin },
-      data: { textVersion: 2 },
+      data: { textVersion: 1 },
     });
-    expect((await other.json()).saved.textVersion).toBe(2);
+    expect((await other.json()).saved.textVersion).toBe(1);
     const householdId = first.path.split('/').at(-1);
     await app.close();
 
-    // The release that the page belongs to has version 1. The saved consent does not apply to it.
+    // The release that the page belongs to has version 2. The saved consent does not apply to it.
     app = await installation({ databasePath });
     await signIn(page.request, app.origin);
     const consentPath = `${app.origin}/api/households/${householdId}/conversation-consent`;
-    expect((await (await page.request.get(consentPath)).json()).saved.textVersion).toBe(2);
+    expect((await (await page.request.get(consentPath)).json()).saved.textVersion).toBe(1);
     await openHousehold(page, app.origin);
     await openConversationSettings(page);
     const consent = consentPart(page);
@@ -592,7 +592,7 @@ test('MEDGIVANDE-14: ändrad medgivandetext kräver ett nytt sparat medgivande',
     await expect(consent.feedback).toHaveText('Medgivandet är sparat');
     await expect(consent.status(await savedStatus(page.request, consentPath))).toBeVisible();
     await expect(consent.buttons).toHaveText(['Återkalla medgivandet']);
-    expect((await (await page.request.get(consentPath)).json()).saved.textVersion).toBe(1);
+    expect((await (await page.request.get(consentPath)).json()).saved.textVersion).toBe(2);
   } finally {
     await app.close();
     await rm(directory, { recursive: true, force: true });

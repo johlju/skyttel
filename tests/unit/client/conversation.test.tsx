@@ -82,7 +82,7 @@ function session(): TextAssistantView {
 }
 /**
  * Answers as the server does and records every command it receives. A start
- * needs a consent for text version 1: saved, or stated for the visit.
+ * needs a consent for text version 2: saved, or stated for the visit.
  */
 function server({
   saved = null,
@@ -107,7 +107,7 @@ function server({
     commands.push(url.slice(path.length) || '/');
     if (url === path) {
       starts.push(body);
-      if (saved?.textVersion !== 1 && body.consent?.textVersion !== 1)
+      if (saved?.textVersion !== 2 && body.consent?.textVersion !== 2)
         return Response.json({ error: 'conversation_consent_required' }, { status: 403 });
     }
     if (url.includes('/voice'))
@@ -350,7 +350,7 @@ test('without a valid consent the consent box asks first, and the chosen button 
   // The conversation has started with text: the microphone is not started.
   expect(result.current.voice.starting).toBe(false);
   expect(commands).toEqual(['/']);
-  expect(starts).toEqual([{ consent: { textVersion: 1 } }]);
+  expect(starts).toEqual([{ consent: { textVersion: 2 } }]);
 
   // A started conversation is not started again.
   act(() => result.current.begin('voice'));
@@ -378,7 +378,7 @@ test('a remembered consent is saved before the conversation starts, and a saved 
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
   expect(started).toHaveBeenCalledOnce();
   expect(result.current.consent).toMatchObject({
-    saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' },
+    saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' },
     visit: false,
     valid: true,
     asking: null,
@@ -414,7 +414,7 @@ test('a saved consent for an older consent text asks again', async () => {
   expect(commands).toEqual([]);
   await act(() => result.current.approve(true));
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
-  expect(result.current.consent.saved?.textVersion).toBe(1);
+  expect(result.current.consent.saved?.textVersion).toBe(2);
 });
 
 test('a consent that cannot be saved keeps the consent box open and starts nothing', async () => {
@@ -475,7 +475,7 @@ test('a consent that is being saved is not withdrawn by closing the consent box'
     await approved;
   });
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
-  expect(result.current.consent.saved?.textVersion).toBe(1);
+  expect(result.current.consent.saved?.textVersion).toBe(2);
   expect(commands).toEqual(['consent', '/']);
 });
 
@@ -485,7 +485,7 @@ test('a start requested before the server has answered waits and then starts', a
     answer = resolve;
   });
   const { commands } = server({
-    saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' },
+    saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' },
   });
   const respond = globalThis.fetch;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
@@ -542,7 +542,7 @@ test('a start that the server refuses for want of consent asks again without los
   const lost = vi.fn();
   // This client believes that a consent is saved. The server no longer has it.
   const { starts } = server({
-    saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' },
+    saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' },
   });
   const respond = globalThis.fetch;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) =>
@@ -560,7 +560,7 @@ test('a start that the server refuses for want of consent asks again without los
   expect(lost).not.toHaveBeenCalled();
   await act(() => result.current.approve(false));
   await waitFor(() => expect(result.current.session?.id).toBe('session'));
-  expect(starts).toEqual([{ consent: { textVersion: 1 } }]);
+  expect(starts).toEqual([{ consent: { textVersion: 2 } }]);
 });
 
 test('access that is lost while the consent is saved ends the work in the household', async () => {
@@ -582,7 +582,7 @@ test('access that is lost while the consent is saved ends the work in the househ
 });
 
 test('a start that fails for another reason does not ask for the consent again', async () => {
-  server({ saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' } });
+  server({ saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' } });
   const respond = globalThis.fetch;
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     if (url === path && init?.method === 'POST') throw new TypeError('Synthetic lost response');
@@ -623,7 +623,7 @@ test('a saved consent that is answered after the user has left the map is not fo
   rerender({ enabled: true });
   await waitFor(() => expect(result.current.available).toBe(true));
   await act(async () => {
-    answer?.(Response.json({ saved: { textVersion: 1, savedAt: '2026-10-01T08:00:00.000Z' } }));
+    answer?.(Response.json({ saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' } }));
     await approved;
   });
   // The new visit reads the consent from the server itself, and nothing has started.

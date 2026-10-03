@@ -10,7 +10,10 @@ fungerar kartans formulär.
 
 ## Medgivande
 
-Skyttel behöver ditt medgivande innan ett samtal startar. Samma medgivande
+Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 2
+förklarar att tal från långt tryck kan skickas efter släpp, medan ny
+inspelning stängs av direkt. Ett sparat medgivande för version 1 behöver
+godkännas på nytt. Samma medgivande
 gäller röst och text. Medgivanderutan **Samtal med Skyttel** visas när du
 väljer en samtalsknapp i verktygsraden, **Tala** eller **Skriv** i kartans
 vägledning eller snabblänken **Till samtalet med Skyttel**.
@@ -180,8 +183,9 @@ tryck slår på den, och nästa tryck stänger av den. Knappen har
 accentfärg medan mikrofonen är på. Ingen panel öppnas. Första gången under
 ett besök visas medgivanderutan först. Tillåt mikrofonen i webbläsaren.
 Medan rösten startar avbryter ett tryck starten. Rösten använder samma
-utkast och regler som texten. OpenAI behandlar ljudet från
-mikrofonen medan den är på. Om webbläsaren blockerar ljudet, välj
+utkast och regler som texten. OpenAI behandlar ljud som spelats in medan
+mikrofonen är på. Tidigare inspelat tal från långt
+tryck kan överföras efter släpp. Om webbläsaren blockerar ljudet, välj
 **Spela upp ljud**. Mikrofonen börjar lyssna först när ljudet fungerar.
 Om kontakten bryts är mikrofonen av tills du själv slår på den igen.
 Du kan fortsätta med text eller formulär när

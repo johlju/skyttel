@@ -6,9 +6,10 @@
  * The first paragraph makes four statements of substance:
  *
  * 1. OpenAI, and no other or further provider, processes the data.
- * 2. The kinds of data processed are the sound from the microphone while it
- *    is on, what the user writes, the whole draft and the data in the
- *    household's map that is needed.
+ * 2. The kinds of data processed are sound recorded while the microphone is
+ *    on, what the user writes, the whole draft and the map data needed.
+ *    Startup speech captured during a held press may be sent after release;
+ *    release immediately stops new recording. This rule is substantive.
  * 3. Skyttel saves changes only when the user asks for it.
  * 4. Skyttel does not save the conversation.
  *
@@ -20,11 +21,11 @@
  * corrections and rewordings, a changed warning about secrets, a changed
  * reservation about errors, and a changed heading, checkbox or button text.
  */
-export const conversationConsentTextVersion = 1;
+export const conversationConsentTextVersion = 2;
 
 /** The consent text, one entry per paragraph. */
 export const conversationConsentText = [
-  'Med ditt medgivande behandlar OpenAI ljudet från din mikrofon medan den är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta som behövs. Skyttel föreslår ändringar i ditt utkast och sparar dem först när du ber om det. Skyttel sparar inte samtalet.',
+  'Med ditt medgivande behandlar OpenAI ljud som spelas in medan din mikrofon är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta som behövs. Vid långt tryck kan tal från starten vänta i webbläsaren och skickas efter att du släppt knappen. Släpp stänger av ny inspelning direkt. Skyttel föreslår ändringar i ditt utkast och sparar dem först när du ber om det. Skyttel sparar inte samtalet.',
   'Skyttel kan höra och förstå fel. Kartan visar vad som har ändrats och sparats.',
   'Säg eller skriv inga lösenord, koder eller fullständiga konto- och kortnummer.',
 ] as const;
