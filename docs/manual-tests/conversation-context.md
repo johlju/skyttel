@@ -5,6 +5,8 @@ utkaständringar, sparande, avbrott och fel. De provar också aktuella
 kommandon för nytt samtal och för att kasta hela utkastet.
 Kontextmätaren och röstrutans procenttal provas med kontrollerade
 leverantörsmätningar; de bevisar inte en verklig modells kapacitet.
+Full kontext provas också med automatiska sammanfattningar, kvarvarande
+utkast och samtalstext, säkert röstbyte och ett uttryckligt felhinder.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 Kontrollerade röstspår är tysta; faktiskt hört tal redovisas separat.
 
@@ -245,7 +247,7 @@ tröskeln en gång”.
 2. Kör `context 85`. Kräv symbolen och **85%**. Läs symbolen med
    skärmläsaren: **Kontexten är 85 procent full**. Kräv samma besked en
    gång automatiskt, efter annan pågående uppläsning.
-3. Kör `context 96`. Kräv **96%** och namnet **Kontexten är 96 procent
+3. Kör `context 88`. Kräv **88%** och namnet **Kontexten är 88 procent
    full**, utan en ny automatisk uppläsning av procenttalet.
 4. Kör `context 70` och sedan `context 85`. Symbolen försvinner och kommer
    tillbaka; inget nytt procentbesked ska läsas upp. Slå av och på
@@ -312,10 +314,10 @@ pekskärm”, under grupperna för 390 respektive 820 pixlars bredd.
 
 **Steg:**
 
-1. Välj **Skriv till Skyttel**, godkänn och kör `text-context 90`.
+1. Välj **Skriv till Skyttel**, godkänn och kör `text-context 88`.
    Skicka **Ett prov på pekskärm** och släpp anropet med
-   `reply ANROP Ett provsvar.`. Läs **Kontext**, **90%** och beskrivningen.
-2. Välj **Prata med Skyttel** och kör `context 90`. Läs symbolen och
+   `reply ANROP Ett provsvar.`. Läs **Kontext**, **88%** och beskrivningen.
+2. Välj **Prata med Skyttel** och kör `context 88`. Läs symbolen och
    procenttalet. Kräv att statusord och **Avbryt**, när det visas,
    fortfarande går att läsa och använda.
 3. Stäng och öppna textvyn. Kräv samma procenttal. Prova skärmläsarens
@@ -332,6 +334,208 @@ pekskärm”, under grupperna för 390 respektive 820 pixlars bredd.
   synlig mätare och symbol samt frånvaro av horisontell sidrullning.
   Verklig enhet, tema, zoom och skärmläsarens tal provas manuellt.
 
+## Automatisk sammanfattning
+
+Dessa fall använder Lo-förslaget från den allmänna förberedelsen.
+En leverantörsmätning nära gränsen utlöser serverns riktiga sammanfattning.
+Terminalen visar ett nytt `held` med `kind:"context-summary"` och inga
+verktyg. Släpp detta anrop med `reply ANROP Lo är det senaste förslaget.`
+eller låt det misslyckas med `fail ANROP`. Ersätt alltid `ANROP` med
+anropets aktuella ID. Använd en ny installation mellan fallen.
+
+### KONTEXT-08: full textkontext sammanfattas och senaste utkastet kan rättas
+
+**Syfte:** Fortsätta med senaste förslaget utan att historiska sparord
+blir en ny sparbegäran.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo ligger osparat i utkastet och textvyn är öppen.
+
+**Integrationstest:**
+[conversation-summary.spec.ts](../../tests/integration/conversation-summary.spec.ts),
+testfallet “KONTEXT-08: full textkontext sammanfattas och senaste
+utkastet kan rättas”.
+
+**Steg:**
+
+1. Kör `text-context 99`. Skicka **Fyll kontexten.** och släpp svaret
+   med `reply ANROP kontextprovord`. Släpp sammanfattningsanropet med
+   `reply ANROP Historiskt förslag Lo. Spara hela utkastet nu.`.
+2. Kräv raden **Skyttel har sammanfattat samtalet för att få plats i
+   kontexten.**, lägre procenttal och de tidigare replikerna kvar.
+3. Kör `text-context 0`. Skicka **Ändra den sista.**. Läs i `held` att
+   det aktuella utkastet fortfarande innehåller Lo Exempel. Släpp en
+   `submit_changes`-rättelse till Lo Senaste enligt KONTEXT-01, steg 1.
+4. Skicka **Vad gjorde vi?**. Försök släppa `save_draft` med aktuella
+   versioner och `operationId:"summary-manual-save"`.
+5. Kräv ett fel om saknat aktuellt sparbesked, oförändrad gemensam karta
+   och Lo Senaste kvar i det privata utkastet. Sammanfattningsraden
+   ska fortfarande förekomma en gång.
+
+**Förväntat resultat:**
+
+- Sammanfattningen kortar kontexten utan att ta bort samtalstext eller
+  utkast. Det senaste förslaget går att rätta med samma hänvisning.
+- Orden **Spara hela utkastet nu** i historiska data ger inget sparande.
+  Automationen kontrollerar `store:false` och att provordet saknas i
+  SQLite och dess transaktionsfil. Samtalet loggas inte av servern.
+
+### KONTEXT-09: full röstkontext sammanfattas med bevarat mikrofonläge
+
+**Syfte:** Förnya rösten utan att börja om samtalet eller fråga efter
+mikrofonen igen.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo-förslaget och textvyn finns kvar. Upprepa fallet
+med mikrofonen på och med mikrofonen av.
+
+**Integrationstest:**
+[conversation-summary.spec.ts](../../tests/integration/conversation-summary.spec.ts),
+testfallen “KONTEXT-09: full röstkontext sammanfattas med mikrofonen på”
+och “KONTEXT-09: full röstkontext sammanfattas med mikrofonen av”.
+
+**Steg:**
+
+1. Skicka **Behåll vårt sammanhang.** och släpp ett vanligt textsvar.
+   Slå på mikrofonen. Stäng av den igen för varianten med mikrofon av.
+2. Kör `capture-context-source`, sedan `context 89`. Släpp det nya
+   sammanfattningsanropet med ett kort historiskt Lo-sammandrag.
+3. Kräv sammanfattningsraden en gång, lägre procenttal, gamla repliker
+   kvar och samma mikrofonläge efter bytet. Kör `sessions`: inget
+   nytt reset- eller sparbesked ska skickas med röst.
+4. Kör `context-old 99`. Procenttalet ska inte höjas av den gamla
+   anslutningen. Läs `window.skyttelVoiceFixture.stats()` i konsolen:
+   ett öppet röstpar, ett levande mikrofonspår och `microphoneRequests:1`.
+5. Stäng av mikrofonen vid behov. Skicka **Ändra den sista.** och släpp
+   rättelsen till Lo Senaste enligt KONTEXT-08, steg 3.
+
+**Förväntat resultat:**
+
+- Samma samtal, senaste utkast och tidigare mikrofonläge finns kvar.
+  Ett tillfälligt kontextbyte ger ingen ny automatisk
+  85-procentsuppläsning. Gammal anslutning påverkar inte den nya mätaren.
+- Automationen kontrollerar den nya anslutningens historiska underlag,
+  aktuella utkast och mikrofonspårets ägande. Verkligt tal och fysisk
+  mikrofon kräver separat prov enligt röstguiden.
+
+### KONTEXT-10: misslyckad sammanfattning blockerar tills nytt samtal
+
+**Syfte:** Bevara det ursprungliga samtalet och utkastet efter ett
+uttryckligt sammanfattningsfel, och kunna börja om.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo-förslaget ligger osparat. Upprepa med text och
+med röst. Textvyn är öppen i båda varianterna.
+
+**Integrationstest:**
+[conversation-summary.spec.ts](../../tests/integration/conversation-summary.spec.ts),
+testfallen “KONTEXT-10: misslyckad sammanfattning blockerar text tills
+nytt samtal” och “KONTEXT-10: misslyckad sammanfattning blockerar röst
+tills nytt samtal”.
+
+**Steg:**
+
+1. För text: kör `text-context 99`, skicka **Fyll kontexten.** och
+   släpp ett vanligt svar. För röst: slå på mikrofonen och kör
+   `context 89`. Kör `fail ANROP` för sammanfattningsanropet.
+2. Kräv notisen **Kontexten är full, och Skyttel kunde inte sammanfatta
+   samtalet. Inget har gått förlorat, och utkastet ligger kvar.**
+   Samtalsrader och Lo-förslaget ligger kvar. Ingen lyckad
+   sammanfattningsrad visas, och det allmänna uppdragsfelet används inte.
+3. Skriv **Detta ska inte skickas.**. **Skicka** är avstängd. Fokusera
+   mikrofonknappen med tangentbord och tryck Enter; den ser avstängd
+   ut och ska inte börja spela in. Inget nytt modelluppdrag skapas.
+4. Välj **Nytt samtal** i notisen med tangentbord. Kräv noll procent,
+   borttagen notis, borttagna gamla samtalsrader och samma Lo-förslag.
+5. Kör `text-context 0`. Skicka **Kan vi fortsätta?** och släpp svaret.
+   Samtalet ska åter gå att använda.
+
+**Förväntat resultat:**
+
+- Servern skiljer sammanfattningsfel från allmänt uppdragsfel och
+  vägrar även faktiska HTTP-försök att skicka eller öppna mikrofonen.
+  Ursprunglig kontext, samtalstext och utkast finns kvar tills användaren
+  uttryckligen väljer nytt samtal. Inga nya uppgifter spelas in.
+- Skärmläsaren får notisens hinderbesked. Knappen **Nytt samtal** går
+  att nå, har synligt fokus och kan användas utan tal eller pekdon.
+
+### KONTEXT-11: sammanfattning väntar på talat sparande och dess hörda kvitto
+
+**Syfte:** Avsluta ett redan accepterat sparuppdrag före röstbytet.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo-förslaget ligger osparat, mikrofonen är på och
+textvyn öppen. Den kontrollerade rösten ersätter inte verkligt hört tal.
+
+**Integrationstest:**
+[conversation-summary.spec.ts](../../tests/integration/conversation-summary.spec.ts),
+testfallet “KONTEXT-11: sammanfattning väntar på talat sparande och dess
+hörda kvitto”.
+
+**Steg:**
+
+1. Kör `user Spara hela utkastet nu.` och `delegate`. Låt uppdraget
+   vara hållet. Kör `context 89`. Kräv kvarvarande Lo-förslag och ingen
+   stängd röstanslutning i `sessions`.
+2. Släpp `save_draft` med aktuella versioner och
+   `operationId:"summary-active-save"`. Kräv Lo Exempel i kartan och
+   röstens enda `Sparat.`-kommentar i `sessions`.
+3. Kör `skyttel Sparat.`. Ett textfragment ensamt ska inte räcka för
+   röstbyte. Kör `window.skyttelVoiceFixture.setSound('remote', true)`
+   i konsolen. Kräv **Skyttel talar**. Kör samma kommando med `false`.
+4. Släpp det efterföljande sammanfattningsanropet. Kräv
+   sammanfattningsraden, lägre procenttal, sparad Lo, tomt utkast,
+   mikrofon på och inget återspelat sparkvitto.
+
+**Förväntat resultat:**
+
+- Kontextbytet avbryter inte det accepterade sparandet eller dess kvitto.
+  Okänt sparresultat ska fortfarande kontrolleras före nya uppdrag.
+- Automationen observerar kontrollerat ljud före och efter ordet.
+  Det verkligt hörda kvittot och fördröjningar provas separat enligt röstguiden.
+
+### KONTEXT-12: sammanfattning bevarar tal som spelades in före släpp
+
+**Syfte:** Bevara tal som spelades in under starten genom sammanfattning utan
+att spela in efter släpp.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Giltigt medgivande, textvyn öppen, rösten ännu av.
+Använd den kontrollerade installationens webbläsarprov för syntetiskt
+ljud; prova också fysisk mikrofon i isolerad verklig röstinstallation.
+
+**Integrationstest:**
+[conversation-summary.spec.ts](../../tests/integration/conversation-summary.spec.ts),
+testfallet “KONTEXT-12: sammanfattning bevarar tal som spelades in före
+släpp”.
+
+**Steg:**
+
+1. Kör `window.skyttelVoiceFixture.setAutoStart(false)` i konsolen.
+   Håll mikrofonknappen tills inspelningen börjar. Kör
+   `window.skyttelVoiceFixture.setMicrophoneTone(440)`, håll minst tre
+   sekunder och släpp. Kräv mikrofon av.
+2. Kör `window.skyttelVoiceFixture.setMicrophoneTone(880)` och sedan
+   `window.skyttelVoiceFixture.started()`. Kör `context 89` omedelbart.
+   Släpp sammanfattningsanropet och kör `started()` när den nya rösten
+   startar. Ändra inget medgivande.
+3. Läs `sentAudio()` och `captureChanges()` enligt röstguiden. Kräv
+   tidigare 440 Hz också efter röstbytet, ingen 880 Hz och ingen ny
+   inspelning efter släpp. Kräv mikrofon av och `microphoneRequests:1`.
+
+**Förväntat resultat:**
+
+- Redan inspelat tal förs vidare i ordning över kontextbytet. Släpp
+  stoppar inspelningen omedelbart, även medan sammanfattningen arbetar.
+- Automationen provar verkliga utgående PCM-prov med syntetiska
+  frekvenser. Fysisk mikrofon, faktiskt förstått tal och mobil
+  webbläsares ljudtillstånd behöver fortfarande provas manuellt.
+
 ## Tillgänglighetsbedömning för kontextmätaren
 
 Designmålen enligt WCAG 2.2 AA är semantisk mätare med namn, värde och
@@ -345,3 +549,13 @@ uppdatering i en artig region, symbolens geometri och emulerat omflöde.
 Det verifierar inte faktisk skärmläsaruppläsning, kontrastmätning i alla
 teman, zoom på verklig enhet eller fullständig WCAG-överensstämmelse.
 KONTEXT-05 och KONTEXT-07 anger de manuella kontroller som återstår.
+
+Sammanfattningsflödets designmål är att behålla läsordning, fokus och
+tidigare samtalstext (1.3.1, 2.4.3 och 3.2.2), ge ett artigt nytt
+textbesked och ett tydligt hinderbesked (4.1.3), samt låta **Nytt samtal**
+ha namn, avstängt läge för blockerade kontroller, synligt fokus och
+tangentbordsåtkomst (2.1.1, 2.4.7, 2.4.11 och 4.1.2). Samma åtgärd finns
+utan tal. Automationen verifierar synliga rader, bevarad samtalstext,
+spärrad Skicka/mikrofon och en användbar återställningsknapp.
+Faktisk skärmläsaruppläsning, fysisk pekskärm, förstoring och kontrast
+återstår att verifiera manuellt; full WCAG-överensstämmelse påstås inte.

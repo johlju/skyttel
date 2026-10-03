@@ -218,6 +218,7 @@ export function createApp({
   app.route('/api', profileImageRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
   let stopVoice: ((sessionId: string) => void) | undefined;
+  let summarizeVoice: ((sessionId: string, signal: AbortSignal) => Promise<void>) | undefined;
   let newVoiceConversation:
     | ((view: TextAssistantView, deferVoiceClose?: boolean) => void)
     | undefined;
@@ -236,6 +237,7 @@ export function createApp({
       modelUsage?.(attempt);
     },
     onStop: (sessionId) => stopVoice?.(sessionId),
+    onSummary: (sessionId, signal) => summarizeVoice?.(sessionId, signal),
     onNewConversation: (view, deferVoiceClose) => newVoiceConversation?.(view, deferVoiceClose),
   });
   app.route('/api', textAssistant.routes);
@@ -260,8 +262,10 @@ export function createApp({
     conversation: textAssistant.conversation,
     transcript: textAssistant.transcript,
     contextUsage: textAssistant.contextUsage,
+    prepareVoiceContext: textAssistant.prepareVoiceContext,
   });
   stopVoice = voiceAssistant.stopSession;
+  summarizeVoice = voiceAssistant.summarizeSession;
   newVoiceConversation = voiceAssistant.newConversation;
   app.route('/api', voiceAssistant.routes);
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));

@@ -367,6 +367,13 @@ export function useConversation({
           voiced,
           voicePending: voiced === undefined && voiceConnected.current,
         });
+      for (const summary of next.contextSummaries ?? [])
+        showTranscript({
+          id: `summary-${next.id}-${summary.id}`,
+          role: 'assistant',
+          text: summary.text,
+          voiced: false,
+        });
       if (
         !previous ||
         next.review.version !== previous.review.version ||
@@ -541,7 +548,7 @@ export function useConversation({
             if (relevant()) fail(failure);
           });
       },
-      session.phase === 'working' ? 250 : 5000,
+      session.phase === 'working' || session.contextSummaryState === 'summarizing' ? 250 : 5000,
     );
     return () => {
       clearTimeout(timer);
@@ -564,6 +571,7 @@ export function useConversation({
       Boolean(discovered) ||
       session?.phase === 'recovery' ||
       Boolean(session?.operations.some((item) => item.status === 'pending')),
+    contextFailed: session?.contextSummaryState === 'failed',
     onRecoveryNeeded: () => setUnknown(true),
   });
   endVoice.current = () => {
@@ -589,7 +597,11 @@ export function useConversation({
     Boolean(discovered) ||
     session?.phase === 'recovery' ||
     Boolean(session?.operations.some((item) => item.status === 'pending'));
-  const inputBlocked = disconnected || available === false || saveChecking;
+  const inputBlocked =
+    disconnected ||
+    available === false ||
+    saveChecking ||
+    session?.contextSummaryState === 'failed';
   useEffect(() => {
     if (disconnected || available === false) pauseCapture.current();
   }, [disconnected, available]);
@@ -895,6 +907,7 @@ export function useConversation({
       revoking.current ||
       !text.trim() ||
       inputBlocked ||
+      current.contextSummaryState === 'summarizing' ||
       !connection.current ||
       !navigator.onLine
     )

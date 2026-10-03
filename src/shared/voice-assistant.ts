@@ -8,6 +8,8 @@ export interface VoiceAssistantView {
   errorGroup?: VoiceErrorGroup;
   diagnosticId?: string;
   seconds: number | null;
+  /** No delegated work or incomplete utterance will be canceled by a context handoff. */
+  summaryReady?: boolean;
   usageFinal: boolean;
   /** Ephemeral typed reply handoffs; OFF completions are consumed without speech. */
   replyDelivery?: { id: string; voiced: boolean }[];

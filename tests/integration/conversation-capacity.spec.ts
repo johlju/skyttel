@@ -130,9 +130,9 @@ test('KONTEXT-05: rösten visar procent från 85 och läser tröskeln en gång',
     const after = await voiceBox(page).boundingBox();
     expect(after?.height).toBe(before.height);
     expect(after?.width).toBeGreaterThan(before.width);
-    usage(live, 0.96);
-    await expect(symbol(page, 96)).toBeVisible();
-    await expect(meter(page)).toHaveAttribute('value', '96');
+    usage(live, 0.88);
+    await expect(symbol(page, 88)).toBeVisible();
+    await expect(meter(page)).toHaveAttribute('value', '88');
     usage(live, 0.7);
     await expect(voiceBox(page).locator('.voice-context')).toHaveCount(0);
     usage(live, 0.85);
@@ -213,14 +213,14 @@ for (const width of [390, 820])
       const { app, live, setTextPercent } = await installation(page);
       try {
         await startConversationWithText(page);
-        setTextPercent(90);
+        setTextPercent(88);
         await send(page, 'Ett prov på pekskärm.');
-        await expect(meter(page)).toHaveAttribute('value', '90');
+        await expect(meter(page)).toHaveAttribute('value', '88');
         await turnMicrophoneOn(page);
-        usage(live, 0.9);
-        await expect(meter(page)).toHaveAttribute('value', '90');
+        usage(live, 0.88);
+        await expect(meter(page)).toHaveAttribute('value', '88');
         await expect(meter(page)).toHaveAccessibleDescription(description);
-        await expect(symbol(page, 90)).toBeVisible();
+        await expect(symbol(page, 88)).toBeVisible();
         await openConversationText(page);
         await expect(meter(page)).toBeVisible();
         expect(

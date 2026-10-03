@@ -195,6 +195,22 @@ full** en gång, utan att avbryta annan uppläsning. Högre värden läses
 inte upp automatiskt; du kan läsa det aktuella talet i röstrutan.
 **Nytt samtal** tömmer kontexten och återställer mätaren till noll.
 
+När kontexten behöver mer plats sammanfattar Skyttel samtalet automatiskt,
+för både text och röst. Raden **Skyttel har sammanfattat samtalet för att
+få plats i kontexten.** visas och procenttalet sjunker. Samtalstexten och
+ditt utkast ligger kvar. Skyttel behåller en sammanfattning och de senaste
+replikerna för fortsatt arbete, och läser ditt aktuella utkast på nytt.
+Äldre detaljer kan saknas i sammanfattningen; skriv dem igen om de behövs.
+Rösten pausar inspelningen under bytet och behåller mikrofonens läge.
+Tal som redan spelades in före släpp kan fortfarande skickas efteråt.
+
+Om sammanfattningen misslyckas visas **Kontexten är full, och Skyttel
+kunde inte sammanfatta samtalet. Inget har gått förlorat, och utkastet
+ligger kvar.** Det ursprungliga samtalet ligger kvar i textvyn, och
+**Skicka** och mikrofonen är avstängda. Välj **Nytt samtal** i notisen
+för att tömma samtalstexten och kontexten. Utkastet ligger kvar, och
+du kan fortsätta med det i det nya samtalet.
+
 Skyttel har med sig hela det pågående samtalet, också efter att ett förslag
 har lagts i utkastet, efter sparande, avbrott eller fel. Du kan exempelvis
 säga eller skriva **Ändra den sista** för att rätta det senaste förslaget.

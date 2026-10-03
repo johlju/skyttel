@@ -19,8 +19,13 @@ import { textAssistantInstructions } from './assistant-instructions.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { contentOwner } from './content-identities.js';
-import { ConversationCapacity } from './conversation-capacity.js';
+import { ConversationCapacity, voiceConversationModel } from './conversation-capacity.js';
 import type { ConversationConsents } from './conversation-consent.js';
+import {
+  contextSummaryMessage,
+  historicalSummary,
+  summarizeConversation,
+} from './conversation-summary.js';
 import { householdAccess } from './households.js';
 import { householdMap, MapError } from './map.js';
 import { checkSaves } from './save-check.js';
@@ -54,6 +59,9 @@ type Session = TextAssistantView & {
   workVersion?: number;
   accepted: Map<string, AcceptedMessage>;
   capacity: ConversationCapacity;
+  summary?: string;
+  summaryOffset?: number;
+  summaryTask?: AbortController;
   previousFailure?: string;
   pendingSave?: { operationId: string; version: number; contentVersion: number };
   displayed?: (value: boolean) => void;
@@ -69,6 +77,7 @@ export function textAssistantRoutes({
   modelUsage,
   onStop,
   onNewConversation,
+  onSummary,
 }: {
   database: Database.Database;
   auth: Auth;
@@ -78,6 +87,7 @@ export function textAssistantRoutes({
   modelFetch?: typeof fetch;
   modelUsage?: TextModelUsage;
   onStop?: (sessionId: string) => void;
+  onSummary?: (sessionId: string, signal: AbortSignal) => Promise<void> | undefined;
   /** A conversation has started over, so its voice can do the same and say the statement. */
   onNewConversation?: (view: TextAssistantView, deferVoiceClose?: boolean) => void;
 }) {
@@ -108,6 +118,7 @@ export function textAssistantRoutes({
   async function stop(session: Session) {
     sessions.delete(session.id);
     session.task?.abort();
+    session.summaryTask?.abort();
     session.queue = [];
     session.accepted.clear();
     onStop?.(session.id);
@@ -178,9 +189,12 @@ export function textAssistantRoutes({
       id,
       revision,
       contextRevision,
+      contextGeneration: session.contextGeneration,
+      contextSummaryState: session.contextSummaryState,
+      contextSummaries: session.contextSummaries,
       contextPercentage: session.capacity.percent(
         contextBytes(session),
-        Buffer.byteLength(JSON.stringify(session.conversation)),
+        Buffer.byteLength(JSON.stringify(providerConversation(session))),
       ),
       resetSource,
       discarded,
@@ -221,6 +235,110 @@ export function textAssistantRoutes({
         dialogue: session.conversation.slice(session.contextOffset),
       }),
     );
+  }
+  function providerConversation(session: Session) {
+    if (!session.summary) return session.conversation;
+    return [
+      {
+        role: 'assistant' as const,
+        text: JSON.stringify({ historical: true, untrusted: true, summary: session.summary }),
+      },
+      ...session.conversation.slice(session.summaryOffset),
+      // Current draft is independently read by the server; a summary is never
+      // the authority for its state or for any new action.
+      {
+        role: 'assistant' as const,
+        text: JSON.stringify({ currentDraft: session.review, historical: true }),
+      },
+    ];
+  }
+  function needsSummary(session: Session) {
+    return session.capacity.needsSummary(
+      contextBytes(session),
+      Buffer.byteLength(JSON.stringify(providerConversation(session))),
+    );
+  }
+  async function summarize(
+    session: Session,
+    parentGuard?: () => void,
+    continuation: ResponseInputItem[] = [],
+    handoff = false,
+  ) {
+    if (session.summaryTask || session.contextSummaryState === 'failed') return;
+    const task = new AbortController();
+    session.summaryTask = task;
+    const revision = session.revision;
+    const guard = () => {
+      if (
+        task.signal.aborted ||
+        sessions.get(session.id) !== session ||
+        session.revision !== revision
+      )
+        throw new MapError('assistant_canceled', 409);
+      if (revoked.has(session.id)) throw new MapError('forbidden', 403);
+      authorize(session.actorId, session.browserSessionId, session.householdId);
+      parentGuard?.();
+    };
+    session.contextSummaryState = 'summarizing';
+    try {
+      guard();
+      if (!respond) throw new Error('assistant_unavailable');
+      if (handoff) await onSummary?.(session.id, task.signal);
+      guard();
+      const snapshot = session.conversation.length;
+      const summary = await summarizeConversation(
+        respond,
+        JSON.stringify({
+          previousSummary: session.summary,
+          conversation: session.conversation.slice(session.summaryOffset ?? 0),
+          providerResults: session.input,
+        }),
+        task.signal,
+        guard,
+      );
+      const review = (await call(session, 'read_my_draft', {}, guard)) as TextAssistantReview;
+      guard();
+      // Atomic installation: failure keeps the whole old ledger and provider
+      // input. The visible transcript is never truncated by this operation.
+      session.review = review;
+      session.summary = summary;
+      session.summaryOffset = Math.max(0, snapshot - 8);
+      while (
+        session.summaryOffset < snapshot &&
+        JSON.stringify(session.conversation.slice(session.summaryOffset, snapshot)).length > 16_000
+      )
+        session.summaryOffset++;
+      session.contextOffset = snapshot;
+      session.input = [
+        historicalSummary(summary),
+        {
+          role: 'assistant',
+          content: JSON.stringify({
+            historical: true,
+            recentConversation: session.conversation.slice(session.summaryOffset, snapshot),
+          }),
+        },
+        ...continuation,
+      ];
+      session.contextGeneration = (session.contextGeneration ?? 0) + 1;
+      session.contextSummaries ??= [];
+      session.contextSummaries.push({ id: randomUUID(), text: contextSummaryMessage });
+      session.contextSummaryState = undefined;
+      session.capacity.reset();
+    } catch (error) {
+      if (task.signal.aborted || session.revision !== revision || !sessions.has(session.id)) return;
+      if (authorityLost(error)) {
+        await stop(session);
+        return;
+      }
+      session.contextSummaryState = 'failed';
+      // A distinct DTO state, not a generic task/provider failure.
+    } finally {
+      if (session.summaryTask === task) {
+        session.summaryTask = undefined;
+        if (session.contextSummaryState === 'summarizing') session.contextSummaryState = 'needed';
+      }
+    }
   }
   async function call(
     session: Session,
@@ -471,6 +589,13 @@ export function textAssistantRoutes({
   }
   async function startOver(session: Session, discard = false, deferVoiceClose = false) {
     session.task?.abort();
+    session.summaryTask?.abort();
+    session.summaryTask = undefined;
+    session.summary = undefined;
+    session.summaryOffset = undefined;
+    session.contextSummaryState = undefined;
+    session.contextSummaries = [];
+    session.contextGeneration = 0;
     session.queue = [];
     session.accepted.clear();
     session.taskId = undefined;
@@ -540,12 +665,19 @@ export function textAssistantRoutes({
       session.operations = (await call(session, 'read_my_save_operations', {}, guard)).operations;
       if (session.operations.some((operation) => operation.status === 'pending'))
         throw new MapError('operation_pending', 409);
+      if (needsSummary(session)) await summarize(session, guard);
+      guard();
+      if (session.contextSummaryState === 'failed') {
+        session.phase = 'ready';
+        return;
+      }
       let version = review.version;
       const mutations = new Set<string>();
       const contentVersion = review.contentVersion;
       finishInterruptedInput(session);
       const dialogue = session.conversation.slice(session.contextOffset);
       session.contextOffset = session.conversation.length;
+      let turnStart = session.input.length;
       session.input.push({
         role: 'user',
         content: JSON.stringify({
@@ -560,8 +692,17 @@ export function textAssistantRoutes({
       for (let step = 0; step < 48; step++) {
         guard();
         if (!respond) throw new Error('assistant_unavailable');
-        if (JSON.stringify(session.input).length > 500_000)
-          throw new MapError('assistant_context_limit', 409);
+        if (needsSummary(session)) {
+          const continuation = session.input.slice(turnStart);
+          await summarize(session, guard, continuation);
+          guard();
+          turnStart = session.input.length - continuation.length;
+          if (view(session).contextSummaryState === 'failed' || needsSummary(session)) {
+            session.contextSummaryState = 'failed';
+            session.phase = 'ready';
+            return;
+          }
+        }
         const tools = session.mcp.tools.map((tool) => ({
           type: 'function' as const,
           name: tool.name,
@@ -1039,7 +1180,13 @@ export function textAssistantRoutes({
     }
   }
   function nextMessage(session: Session) {
-    if (session.phase === 'working' || session.phase === 'recovery') return;
+    if (
+      session.phase === 'working' ||
+      session.phase === 'recovery' ||
+      session.contextSummaryState === 'failed' ||
+      session.contextSummaryState === 'summarizing'
+    )
+      return;
     const next = session.queue.shift();
     if (next) beginMessage(session, next);
   }
@@ -1089,7 +1236,21 @@ export function textAssistantRoutes({
           { role: 'user', content: JSON.stringify({ message: message.text }) },
           { role: 'assistant', content: session.reply },
         );
-      } else await run(session, message.text, revision, task, expected);
+      } else {
+        await run(session, message.text, revision, task, expected);
+        if (
+          !task.signal.aborted &&
+          session.revision === revision &&
+          session.phase === 'ready' &&
+          needsSummary(session)
+        )
+          if (message.voice) session.contextSummaryState = 'needed';
+          else
+            await summarize(session, () => {
+              if (task.signal.aborted || session.revision !== revision)
+                throw new MapError('assistant_canceled', 409);
+            });
+      }
     };
     void execute()
       .catch(() => {
@@ -1299,6 +1460,10 @@ export function textAssistantRoutes({
   routes.post(`${base}/:sessionId/messages`, async (context) => {
     const session = sessions.get(context.req.param('sessionId'));
     if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
+    if (session.contextSummaryState === 'failed')
+      return context.json({ error: 'assistant_context_summary_failed' }, 409);
+    if (session.contextSummaryState === 'summarizing')
+      return context.json({ error: 'assistant_busy' }, 409);
     const body = await context.req.json().catch(() => null);
     if (
       !body ||
@@ -1376,6 +1541,18 @@ export function textAssistantRoutes({
       202,
     );
   });
+  routes.post(`${base}/:sessionId/summarize`, async (context) => {
+    const session = sessions.get(context.req.param('sessionId'));
+    if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
+    if (session.phase === 'working' || session.phase === 'recovery' || session.pendingSave)
+      return context.json(view(session));
+    if (session.contextSummaryState === 'needed' || needsSummary(session)) {
+      // The browser has paused local capture and retired the peer before this
+      // handoff. Close its server sideband before taking the ledger snapshot.
+      await summarize(session, undefined, [], true);
+    }
+    return context.json(view(session));
+  });
   // Poll a particular accepted message: a subsequent FIFO task may already be
   // running when a voice executor observes its own verified completion.
   routes.get(`${base}/:sessionId/messages/:requestId`, (context) => {
@@ -1393,6 +1570,7 @@ export function textAssistantRoutes({
     if (body?.all !== true && body?.revision !== session.revision)
       return context.json({ error: 'assistant_turn_changed' }, 409);
     session.task?.abort();
+    session.summaryTask?.abort();
     session.queue = [];
     session.taskId = undefined;
     session.taskSource = undefined;
@@ -1578,12 +1756,31 @@ export function textAssistantRoutes({
     routes,
     /** Private ephemeral context shared by text and every voice connection.
      * Never expose it in status responses or write it to the household. */
-    conversation: (sessionId: string) => sessions.get(sessionId)?.conversation ?? [],
+    conversation: (sessionId: string) => {
+      const session = sessions.get(sessionId);
+      return session ? providerConversation(session) : [];
+    },
+    prepareVoiceContext: async (sessionId: string) => {
+      const session = sessions.get(sessionId);
+      if (!session) return;
+      const bytes = Buffer.byteLength(JSON.stringify(providerConversation(session)));
+      if (!session.contextSummaryState && bytes / 3 >= voiceConversationModel.tokens * 0.89)
+        await summarize(session);
+      if (sessions.get(sessionId) !== session) return;
+      if (
+        Buffer.byteLength(JSON.stringify(providerConversation(session))) / 3 >=
+        voiceConversationModel.tokens * 0.89
+      )
+        session.contextSummaryState = 'failed';
+      return view(session);
+    },
     contextUsage: (sessionId: string, revision: number, source: string, ratio?: unknown) => {
       const session = sessions.get(sessionId);
       if (session && (session.contextRevision ?? 0) === revision) {
         if (ratio === undefined) session.capacity.beginVoice(source);
         else session.capacity.voice(source, ratio);
+        if (!session.contextSummaryState && needsSummary(session))
+          session.contextSummaryState = 'needed';
       }
     },
     transcript: (sessionId: string, role: 'user' | 'assistant', text: string) => {
@@ -1616,6 +1813,7 @@ export function textAssistantRoutes({
       );
       for (const session of ending) {
         revoked.set(session.id, { actorId, householdId });
+        session.summaryTask?.abort();
         setTimeout(
           () => revoked.delete(session.id),
           Math.max(1, session.mcp.expiresAt - Date.now()),

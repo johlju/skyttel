@@ -40,6 +40,7 @@ async function main() {
     const current = user && typeof user.content === 'string' ? JSON.parse(user.content) : {};
     return {
       id,
+      kind: item.request.tools.length ? 'work' : 'context-summary',
       message: current.message,
       input: item.request.input,
       draft: current.draft,

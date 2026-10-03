@@ -59,6 +59,19 @@ export class ConversationCapacity {
       this.measuredVoice = Math.min(1, ratio);
   }
 
+  needsSummary(textBytes: number, dialogueBytes: number) {
+    const measured = this.measuredText;
+    const textTokens = measured
+      ? measured.tokens + Math.max(0, textBytes - measured.bytes) / 3
+      : textBytes / 3;
+    // Live automatically replaces history above 90%; reserve one percentage
+    // point for usage-event and polling latency. This is an effective limit.
+    const voiceRatio =
+      this.measuredVoice ??
+      (this.voiceSource ? dialogueBytes / 3 / voiceConversationModel.tokens : 0);
+    return textTokens >= textConversationModel.tokens * 0.95 || voiceRatio >= 0.89;
+  }
+
   percent(textBytes: number, dialogueBytes: number) {
     const measured = this.measuredText;
     const text = measured

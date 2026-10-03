@@ -42,6 +42,7 @@ export function textModel(apiKey: string, modelFetch?: typeof fetch, record?: Te
     input: ResponseInputItem[],
     tools: Tool[],
     signal: AbortSignal,
+    maxOutputTokens?: number,
   ) => {
     const attempt: TextModelAttempt = {
       attemptId: randomUUID(),
@@ -65,6 +66,7 @@ export function textModel(apiKey: string, modelFetch?: typeof fetch, record?: Te
           instructions,
           input,
           tools,
+          ...(maxOutputTokens === undefined ? {} : { max_output_tokens: maxOutputTokens }),
         },
         { signal },
       );

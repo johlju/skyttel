@@ -80,6 +80,8 @@ type Attempt = {
   poll?: ReturnType<typeof setTimeout>;
   held?: HeldRequest;
   ready?: boolean;
+  summaryPausedAt?: number;
+  providerGeneration?: number;
   output?: { text: string; heard: boolean; speaking: boolean; matched?: string };
 };
 async function stopRemote(path: string, id: string) {
@@ -119,6 +121,7 @@ export function useVoice(options: {
   /** Network or service conditions forbid sending microphone input. */
   inputBlocked?: boolean;
   saveChecking?: boolean;
+  contextFailed?: boolean;
 }): Voice {
   const path = options.assistant
     ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
@@ -132,6 +135,9 @@ export function useVoice(options: {
   const epoch = useRef(0);
   const mounted = useRef(true);
   const resetVoice = useRef<(view: TextAssistantView) => void>(() => {});
+  const summarizeVoice = useRef<(view: TextAssistantView) => void>(() => {});
+  const summaryRenewal = useRef(false);
+  const [contextPaused, setContextPaused] = useState(false);
   const [state, setState] = useState<Voice['state']>('idle');
   const [voice, setVoice] = useState<VoiceAssistantView | null>(null);
   const [failure, setFailure] = useState<(VoiceFailure & { occurrence: number }) | null>(null);
@@ -149,6 +155,8 @@ export function useVoice(options: {
   const offRef = useRef(off);
   offRef.current = off;
   const [activity, setActivity] = useState({ microphone: false, speaker: false });
+  const activityRef = useRef(activity);
+  activityRef.current = activity;
   const [heldListening, setHeldListening] = useState(false);
   const [spokenQuestion, setSpokenQuestion] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
@@ -361,7 +369,12 @@ export function useVoice(options: {
     async (reuse?: RetainedInput, next?: TextAssistantView, history?: TranscriptRow[]) => {
       const initial = next ?? latest.current.assistant;
       if (!path || !initial || current.current || cancelledHeldStart.current) return;
-      if (latest.current.inputBlocked || !navigator.onLine) {
+      if (
+        latest.current.inputBlocked ||
+        latest.current.saveChecking ||
+        latest.current.contextFailed ||
+        !navigator.onLine
+      ) {
         for (const track of reuse?.stream.getTracks() ?? []) track.stop();
         prepared.current?.close();
         prepared.current = null;
@@ -378,6 +391,7 @@ export function useVoice(options: {
       current.current = attempt;
       epoch.current++;
       setState('permission');
+      setContextPaused(false);
       setOff(attempt.held?.released ?? reuse?.paused ?? false);
       setDisconnected(false);
       setPlaybackBlocked(false);
@@ -420,6 +434,35 @@ export function useVoice(options: {
             resetVoice.current(result.assistant);
             return;
           }
+          if (result.assistant.contextSummaryState === 'failed') {
+            attempt.transport?.suspendInput();
+            setOff(true);
+            attempt.poll = setTimeout(() => void poll(), 500);
+            return;
+          }
+          if (
+            result.assistant.contextSummaryState === 'needed' ||
+            (result.assistant.contextGeneration ?? 0) >
+              (attempt.providerGeneration ?? initial.contextGeneration ?? 0)
+          ) {
+            attempt.transport?.suspendInput();
+            setContextPaused(true);
+            attempt.summaryPausedAt ??= Date.now();
+          }
+          if (
+            result.assistant.phase !== 'working' &&
+            result.assistant.phase !== 'recovery' &&
+            result.voice.summaryReady !== false &&
+            Date.now() - (attempt.summaryPausedAt ?? Date.now()) >= 500 &&
+            !activityRef.current.speaker &&
+            (!result.voice.response || completedOutput.current.has(result.voice.response.id)) &&
+            (result.assistant.contextSummaryState === 'needed' ||
+              (result.assistant.contextGeneration ?? 0) >
+                (attempt.providerGeneration ?? initial.contextGeneration ?? 0))
+          ) {
+            summarizeVoice.current(result.assistant);
+            return;
+          }
           setVoice(result.voice);
           if (result.voice.phase === 'error') {
             fail(
@@ -459,6 +502,7 @@ export function useVoice(options: {
             inputAllowed: () =>
               !latest.current.inputBlocked &&
               !latest.current.saveChecking &&
+              !latest.current.contextFailed &&
               navigator.onLine !== false,
             onMicrophoneReady: () => {
               if (active()) setState('connecting');
@@ -493,6 +537,7 @@ export function useVoice(options: {
               checkOutput.current();
             },
             onAudioActivity: (value) => {
+              activityRef.current = value;
               if (!active()) return;
               setActivity(value);
               if (attempt.output) {
@@ -527,13 +572,37 @@ export function useVoice(options: {
                           partial,
                         })),
                       }
-                    : next
+                    : next && !summaryRenewal.current
                       ? { newConversation: true }
                       : {}),
                 },
                 options.signal,
               );
             } catch (failure) {
+              if (
+                failure instanceof MapRequestError &&
+                failure.code === 'assistant_context_summary_failed'
+              ) {
+                const failedView = await request<TextAssistantView>(
+                  path.replace(/\/voice$/, ''),
+                  undefined,
+                  attempt.controller.signal,
+                );
+                if (active()) {
+                  apply(failedView);
+                  attempt.transport?.suspendInput();
+                  prepared.current = attempt.transport?.releasePlayback() ?? prepared.current;
+                  const stream = attempt.transport?.releaseMicrophone();
+                  attempt.transport?.releaseBufferedInput();
+                  current.current = { path, controller: new AbortController(), retained: stream };
+                  attempt.controller.abort();
+                  attempt.transport?.close();
+                  setContextPaused(true);
+                  setOff(true);
+                  setState('idle');
+                }
+                throw new DOMException('Voice context is full', 'AbortError');
+              }
               fail(failure);
               throw failure;
             }
@@ -542,6 +611,7 @@ export function useVoice(options: {
               throw new DOMException('Voice setup cancelled', 'AbortError');
             }
             attempt.voiceId = result.voice.id;
+            attempt.providerGeneration = result.assistant.contextGeneration ?? 0;
             apply(result.assistant, result.voice.replyDelivery);
             setVoice(result.voice);
             attempt.poll = setTimeout(() => void poll(), 500);
@@ -564,7 +634,13 @@ export function useVoice(options: {
   const working = state === 'listening' && voice?.phase === 'working';
   const speaking = state === 'listening' && activity.speaker;
   const activate = useCallback(() => {
-    if (latest.current.inputBlocked || latest.current.saveChecking || !navigator.onLine) return;
+    if (
+      latest.current.inputBlocked ||
+      latest.current.saveChecking ||
+      latest.current.contextFailed ||
+      !navigator.onLine
+    )
+      return;
     if (state === 'idle') {
       setError(null);
       if (held.current) {
@@ -583,7 +659,11 @@ export function useVoice(options: {
   // Quiet gaps cannot prove that the final utterance or answer has finished.
   // The muted connection closes with the conversation, access loss or leaving the household.
   const renew = useCallback(
-    async (reset: () => Promise<TextAssistantView>, history?: TranscriptRow[]) => {
+    async (
+      reset: () => Promise<TextAssistantView>,
+      history?: TranscriptRow[],
+      preserveInput = false,
+    ) => {
       const attempt = current.current;
       if (!attempt) return reset();
       // Preserve the unlocked output too: spoken reset has no new browser gesture.
@@ -593,11 +673,15 @@ export function useVoice(options: {
       epoch.current++;
       clearTimeout(attempt.poll);
       attempt.controller.abort();
-      const stream = attempt.transport?.releaseMicrophone();
-      // Renewal starts a new input context; retired startup speech cannot be replayed.
-      held.current?.buffer?.close();
-      held.current?.controller.abort();
-      held.current = null;
+      const stream = attempt.transport?.releaseMicrophone() ?? attempt.retained;
+      const pendingInput = preserveInput ? attempt.transport?.releaseBufferedInput() : undefined;
+      // Explicit reset retires startup speech; summary transfers its existing queue.
+      if (pendingInput && held.current) held.current.buffer = pendingInput;
+      else {
+        held.current?.buffer?.close();
+        held.current?.controller.abort();
+        held.current = null;
+      }
       setHeldListening(false);
       // Retire the old peer first. Its queued output and transcript events
       // cannot reappear while the server prepares the new connection.
@@ -611,9 +695,19 @@ export function useVoice(options: {
       setState('connecting');
       try {
         const assistant = await reset();
+        if (preserveInput) apply(assistant);
+        if (assistant.contextSummaryState === 'failed') {
+          // Keep pre-release queued speech locally, paused, until the user's
+          // explicit reset/stop. Failure does not erase the original context.
+          held.current?.buffer?.capture(false);
+          held.current?.buffer?.transmit(false);
+          setOff(true);
+          setState('idle');
+          return assistant;
+        }
         if (mounted.current && current.current === continuation) {
           current.current = null;
-          await start(stream ? { stream, paused: off } : undefined, assistant, history);
+          await start(stream ? { stream, paused: offRef.current } : undefined, assistant, history);
         } else for (const track of stream?.getTracks() ?? []) track.stop();
         return assistant;
       } catch (failure) {
@@ -627,7 +721,7 @@ export function useVoice(options: {
         throw failure;
       }
     },
-    [off, start],
+    [apply, start],
   );
   const close = useCallback(() => stop(), [stop]);
   const playAudio = useCallback(() => {
@@ -662,6 +756,25 @@ export function useVoice(options: {
   );
   resetVoice.current = (view) => {
     void newConversation(async () => view).catch(() => latest.current.onRecoveryNeeded?.());
+  };
+  summarizeVoice.current = (view) => {
+    if (summaryRenewal.current) return;
+    summaryRenewal.current = true;
+    void renew(
+      async () =>
+        view.contextSummaryState === 'needed'
+          ? request<TextAssistantView>(`${path?.replace(/\/voice$/, '')}/summarize`, {})
+          : view,
+      undefined,
+      true,
+    )
+      .catch((failure) => {
+        if (failure instanceof MapRequestError) latest.current.onAccessLost(failure);
+        else setError(voiceErrorNotice(failure, 'interrupted'));
+      })
+      .finally(() => {
+        summaryRenewal.current = false;
+      });
   };
   const silence = useCallback(
     (cancelWork?: () => Promise<void>) => {
@@ -706,6 +819,7 @@ export function useVoice(options: {
     if (
       latest.current.inputBlocked ||
       latest.current.saveChecking ||
+      latest.current.contextFailed ||
       navigator.onLine === false ||
       latest.current.assistant?.phase === 'working'
     )
@@ -780,7 +894,16 @@ export function useVoice(options: {
     current.current?.transport?.setMicrophonePaused(true);
     setHeldListening(false);
     setOff(true);
+    offRef.current = true;
   }, []);
+  useEffect(() => {
+    if (!options.contextFailed) return;
+    held.current?.buffer?.capture(false);
+    held.current?.buffer?.transmit(false);
+    current.current?.transport?.suspendInput();
+    offRef.current = true;
+    setOff(true);
+  }, [options.contextFailed]);
   useEffect(() => {
     const blocked = () => {
       if (!latest.current.inputBlocked && navigator.onLine !== false) return;
@@ -798,12 +921,19 @@ export function useVoice(options: {
     if (options.saveChecking) {
       held.current?.buffer?.capture(false);
       transport?.setMicrophonePaused(true);
-    } else if (!off && !options.inputBlocked && navigator.onLine !== false)
+    } else if (
+      !off &&
+      !options.inputBlocked &&
+      !options.contextFailed &&
+      !contextPaused &&
+      navigator.onLine !== false
+    )
       transport?.setMicrophonePaused(false);
-  }, [options.saveChecking, options.inputBlocked, off]);
+  }, [options.saveChecking, options.inputBlocked, options.contextFailed, contextPaused, off]);
   const microphone =
     (state === 'listening' || heldListening) &&
     !off &&
+    !contextPaused &&
     !disconnected &&
     !playbackBlocked &&
     !options.saveChecking
@@ -827,6 +957,7 @@ export function useVoice(options: {
     playbackBlocked,
     disconnected,
     disabled:
+      contextPaused ||
       state === 'closing' ||
       (microphone === 'off' && !starting && !working && options.assistant?.phase === 'working'),
     level,

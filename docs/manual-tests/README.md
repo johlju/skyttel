@@ -183,6 +183,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   Kontextmätaren följer serverns procenttal, röstrutan visar procent från
   85 och ger en enda artig uppläsning, även på smal pekskärm. Nytt samtal
   återställer mätaren och gamla mätningar ignoreras.
+  Full kontext sammanfattas automatiskt med kvarvarande samtalstext,
+  aktuellt utkast, mikrofonläge och tidigare inspelat tal. Misslyckad
+  sammanfattning blockerar nya uppdrag tills Nytt samtal. Pågående
+  sparande och dess hörda kvitto avslutas före röstbytet.
 - [Skyttels textassistent](text-assistant.md): hela utkast,
   rättelse och samlat sparande, sena svar, avbrott, återfunna kvitton och
   samtidigt synliga objekt och samband i karta och detaljpanel även på

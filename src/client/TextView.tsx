@@ -90,6 +90,7 @@ export function TextView({
     pending ||
     unknown ||
     session.phase === 'recovery' ||
+    session.contextSummaryState === 'summarizing' ||
     !text.trim();
   function send() {
     if (blocked || stop) return;

@@ -59,6 +59,7 @@ export function voiceAssistantRoutes({
   conversation,
   transcript,
   contextUsage,
+  prepareVoiceContext,
 }: {
   config: Config;
   dispatch: LocalDispatch;
@@ -77,6 +78,7 @@ export function voiceAssistantRoutes({
     source: string,
     ratio?: unknown,
   ) => void;
+  prepareVoiceContext?: (sessionId: string) => Promise<TextAssistantView | undefined>;
 }) {
   const routes = new Hono();
   const voices = new Map<string, Voice>();
@@ -176,7 +178,7 @@ export function voiceAssistantRoutes({
       return context.json({ error: 'forbidden' }, 403);
     const requestHeaders = headers(context.req.raw.headers);
     const path = `/api/households/${encodeURIComponent(context.req.param('id'))}/text-assistant/${encodeURIComponent(context.req.param('sessionId'))}`;
-    const current = await assistant(path, requestHeaders);
+    let current = await assistant(path, requestHeaders);
     if (!client)
       return context.json({ error: 'voice_unavailable', voiceErrorGroup: 'administration' }, 503);
     const body = await context.req.json().catch(() => null);
@@ -189,6 +191,12 @@ export function voiceAssistantRoutes({
       body.contentVersion !== current.review.contentVersion
     )
       return context.json({ error: 'assistant_draft_changed' }, 409);
+    current = (await prepareVoiceContext?.(context.req.param('sessionId'))) ?? current;
+    current = await assistant(path, requestHeaders);
+    if (current.contextSummaryState === 'failed')
+      return context.json({ error: 'assistant_context_summary_failed' }, 409);
+    if (current.contextSummaryState === 'summarizing')
+      return context.json({ error: 'assistant_busy' }, 409);
     let history: InitialItem[] | undefined;
     if (body.history !== undefined) {
       if (
@@ -487,12 +495,28 @@ export function voiceAssistantRoutes({
         return context.json({ error: 'invalid_request' }, 400);
       voice.work?.rendered(body);
       voice.work?.answer(voice.assistant, body.microphoneOn === true);
+      voice.view.summaryReady = voice.work?.readyForSummary() ?? true;
       voice.heartbeat = Date.now();
     } else return context.json({ error: 'not_found' }, 404);
     return context.json({ voice: voice.view, assistant: voice.assistant });
   });
   return {
     routes,
+    summarizeSession: async (sessionId: string, signal: AbortSignal) => {
+      const active = [...voices.values()].filter((voice) => voice.assistant.id === sessionId);
+      for (const voice of active) {
+        // An accepted delegate can race the last browser poll. Finish its
+        // checked result before retiring context, rather than canceling it.
+        const deadline = Date.now() + 120_000;
+        while (!voice.closed && voice.work && !voice.work.readyForSummary()) {
+          if (signal.aborted || Date.now() > deadline)
+            throw new Error('context_handoff_interrupted');
+          voice.heartbeat = Date.now();
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        await close(voice);
+      }
+    },
     // Live has no context-clearing event. Close the old provider session; the
     // browser reconnects with its existing microphone stream and pause state.
     newConversation: (view: TextAssistantView, deferVoiceClose = false) => {

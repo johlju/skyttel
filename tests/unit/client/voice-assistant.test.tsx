@@ -208,6 +208,128 @@ async function startWithAudio() {
   return { peer, remote };
 }
 
+test.each([true, false])(
+  'automatic summary transfers the same microphone, preserves ON=%s and cannot replay a reset reply',
+  async (on) => {
+    meteredAudio();
+    const { track, getUserMedia, calls, changed, view } = setup();
+    let needed = false;
+    let summarized = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        calls.push({ url, body: JSON.parse(String(init.body)) });
+        if (url.endsWith('/summarize')) {
+          summarized = true;
+          return Response.json({
+            ...view,
+            contextGeneration: 1,
+            contextSummaries: [{ id: 'summary-1', text: 'Sammanfattat.' }],
+          });
+        }
+        return Response.json({
+          voice: {
+            id: summarized ? 'new-voice' : 'voice-session',
+            phase: url.endsWith('/stop') ? 'closed' : 'listening',
+            seconds: null,
+            usageFinal: false,
+            summaryReady: true,
+          },
+          assistant: {
+            ...view,
+            ...(needed && !summarized ? { contextSummaryState: 'needed' } : {}),
+            ...(summarized ? { contextGeneration: 1 } : {}),
+          },
+          sdp: 'synthetic-answer',
+        });
+      }),
+    );
+    await startWithAudio();
+    if (!on) await userEvent.click(microphoneButton());
+    needed = true;
+    await waitFor(() => expect(Peer.all).toHaveLength(2), { timeout: 2000 });
+    await waitFor(() => expect(Peer.all[1].channel.readyState).toBe('open'));
+    await act(async () =>
+      Peer.all[1].channel.emit({ type: 'session.started', session: { id: 'new-provider' } }),
+    );
+    await waitFor(() => expect(microphoneButton().getAttribute('aria-pressed')).toBe(String(on)));
+    expect(track.enabled).toBe(on);
+    expect(track.stop).not.toHaveBeenCalled();
+    expect(getUserMedia).toHaveBeenCalledOnce();
+    expect(Peer.all[0].connectionState).toBe('closed');
+    const starts = calls.filter((call) => call.url === base);
+    expect(starts).toHaveLength(2);
+    expect(starts[1].body).not.toHaveProperty('newConversation');
+    expect(starts[1].body).not.toHaveProperty('history');
+    expect(changed).toHaveBeenCalledWith(expect.objectContaining({ contextGeneration: 1 }));
+  },
+);
+
+test('failed automatic summary retains the authorized microphone paused until explicit stop', async () => {
+  meteredAudio();
+  const { track, changed, view } = setup();
+  let needed = false;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) =>
+      url.endsWith('/summarize')
+        ? Response.json({ ...view, contextSummaryState: 'failed' })
+        : Response.json({
+            voice: {
+              id: 'voice-session',
+              phase: url.endsWith('/stop') ? 'closed' : 'listening',
+              seconds: null,
+              usageFinal: false,
+              summaryReady: true,
+            },
+            assistant: { ...view, ...(needed ? { contextSummaryState: 'needed' } : {}) },
+            sdp: 'synthetic-answer',
+          }),
+    ),
+  );
+  await startWithAudio();
+  needed = true;
+  await waitFor(
+    () =>
+      expect(changed).toHaveBeenCalledWith(
+        expect.objectContaining({ contextSummaryState: 'failed' }),
+      ),
+    { timeout: 2000 },
+  );
+  expect(track.enabled).toBe(false);
+  expect(track.stop).not.toHaveBeenCalled();
+  expect(Peer.all).toHaveLength(1);
+  await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
+  await waitFor(() => expect(track.stop).toHaveBeenCalled());
+});
+
+test('voice startup context failure retains local input and reports the explicit server state without a generic voice error', async () => {
+  meteredAudio();
+  const { track, changed, view, getUserMedia } = setup();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) =>
+      url === base
+        ? Response.json({ error: 'assistant_context_summary_failed' }, { status: 409 })
+        : Response.json({ ...view, contextSummaryState: 'failed' }),
+    ),
+  );
+  await userEvent.click(microphoneButton());
+  await waitFor(() =>
+    expect(changed).toHaveBeenCalledWith(
+      expect.objectContaining({ contextSummaryState: 'failed' }),
+    ),
+  );
+  expect(track.enabled).toBe(false);
+  expect(track.stop).not.toHaveBeenCalled();
+  expect(getUserMedia).toHaveBeenCalledOnce();
+  expect(
+    screen.queryByText('Rösten kunde inte starta just nu. Försök igen om en stund.'),
+  ).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
+  await waitFor(() => expect(track.stop).toHaveBeenCalled());
+});
+
 test('the voice box follows who is heard, and Skyttel is heard on with the microphone off', async () => {
   const { signals, disconnects, close, context } = meteredAudio();
   const { track } = setup();

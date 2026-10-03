@@ -315,6 +315,7 @@ export function voiceWork({
     void execute(event.delegation.id, text, expected, JSON.stringify(fragments), generation);
   });
   return {
+    readyForSummary: () => owned === undefined && inFlight.size === 0 && pending.length === 0,
     /** Consume each typed FIFO completion once, including while the next task works. */
     answer(view: TextAssistantView, microphoneOn = true) {
       if (stopped) return;

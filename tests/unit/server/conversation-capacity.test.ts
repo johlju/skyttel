@@ -36,3 +36,23 @@ test('invalid and retired usage cannot overwrite measurements and reset retires 
   expect(capacity.percent(0, 0)).toBe(0);
   expect(capacity.percent(3_150_000, 0)).toBe(100);
 });
+
+test('effective headroom triggers before model exhaustion and retires old voice measurements after summary', () => {
+  const capacity = new ConversationCapacity();
+  capacity.text({ input_tokens: 987_000, output_tokens: 0 }, 0);
+  expect(capacity.needsSummary(0, 0)).toBe(false);
+  capacity.text({ input_tokens: 997_500, output_tokens: 0 }, 0);
+  expect(capacity.needsSummary(0, 0)).toBe(true);
+  capacity.reset();
+  expect(capacity.needsSummary(2_992_500, 0)).toBe(true);
+  capacity.beginVoice('before-summary');
+  capacity.voice('before-summary', 0.88);
+  expect(capacity.needsSummary(0, 0)).toBe(false);
+  capacity.voice('before-summary', 0.89);
+  expect(capacity.needsSummary(0, 0)).toBe(true);
+  capacity.reset();
+  capacity.beginVoice('after-summary');
+  capacity.voice('before-summary', 1);
+  expect(capacity.needsSummary(0, 0)).toBe(false);
+  expect(capacity.needsSummary(0, 341_760)).toBe(true);
+});

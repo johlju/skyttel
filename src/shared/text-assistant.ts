@@ -37,6 +37,10 @@ export interface TextAssistantView {
   contextRevision?: number;
   /** Server-calculated occupancy of the conversation, from 0 to 100. */
   contextPercentage?: number;
+  /** A provider handoff is separate from clearing the visible conversation. */
+  contextSummaryState?: 'needed' | 'summarizing' | 'failed';
+  contextGeneration?: number;
+  contextSummaries?: { id: string; text: string }[];
   /** Origin of the explicit reset; pre-release spoken work still gets its voice reply. */
   resetSource?: 'voice' | 'text';
   /** Startup handoff disposition for the reset statement. */

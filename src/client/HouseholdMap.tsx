@@ -1481,6 +1481,7 @@ export function HouseholdMap({
       unavailable: !conversation.revokedHere && conversation.available === false,
       taskFailed: Boolean(conversation.taskFailed),
       consentRevoked: Boolean(conversation.consentRevoked),
+      contextFull: conversation.session?.contextSummaryState === 'failed',
       ...(conversation.voice.failure ? { [conversation.voice.failure.noticeId]: true } : {}),
       playbackStopped: conversation.voice.playbackBlocked,
     },
@@ -1505,7 +1506,9 @@ export function HouseholdMap({
           ? conversation.voice.playAudio
           : noticeState.notice.id === 'saveCheckFailed'
             ? () => void conversation.recover()
-            : undefined
+            : noticeState.notice.id === 'contextFull'
+              ? () => void conversation.newConversation()
+              : undefined
       }
       focusAfterRemoval={() =>
         active

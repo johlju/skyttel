@@ -222,7 +222,9 @@ export function createVoiceTransport(
     if (!playing) return;
     if (callbacks.inputAllowed?.() === false) {
       paused = true;
-      buffered?.discard();
+      buffered?.capture(false);
+      buffered?.transmit(false);
+      for (const track of buffered?.outgoing.getTracks() ?? []) track.enabled = false;
       for (const track of microphone?.getTracks() ?? []) track.enabled = false;
       callbacks.onReady();
       return;
@@ -327,6 +329,25 @@ export function createVoiceTransport(
     live.close();
   }
   return {
+    suspendInput() {
+      paused = true;
+      buffered?.capture(false);
+      buffered?.transmit(false);
+      for (const track of [
+        ...(microphone?.getTracks() ?? []),
+        ...(buffered?.outgoing.getTracks() ?? []),
+      ])
+        track.enabled = false;
+    },
+    /** Preserve already-captured held speech across a context summary handoff. */
+    releaseBufferedInput() {
+      const input = buffered;
+      input?.capture(false);
+      input?.transmit(false);
+      for (const track of input?.outgoing.getTracks() ?? []) track.enabled = false;
+      buffered = undefined;
+      return input;
+    },
     async connect(
       exchangeSdp: ExchangeSdp,
       signal: AbortSignal,
@@ -354,7 +375,8 @@ export function createVoiceTransport(
             live.peerConnection.addTrack(track, buffered.outgoing);
           }
           buffered.onDrained(() => {
-            if (paused) for (const track of buffered.outgoing.getTracks()) track.enabled = false;
+            if (paused)
+              for (const track of buffered?.outgoing.getTracks() ?? []) track.enabled = false;
           });
         }
         meter(microphone, true);
