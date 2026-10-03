@@ -19,7 +19,7 @@ testidentitet och påhittade hushållsuppgifter.
 3. Kör med tangentbord på dator och pekskärm på telefon. Kontrollera
    skärmläsarens namn, läsordning och statusmeddelanden separat. Anteckna
    fysiska enheter och hjälpmedel; Chromium-emulering verifierar inte dem.
-4. För YTA-03, YTA-07 och YTA-08: använd i stället
+4. För YTA-03, YTA-07, YTA-08 och YTA-09: använd i stället
    [den kontrollerade röstinstallationen](voice-assistant.md#controlled-voice-fixture).
    Starta med `node --import tsx scripts/manual-voice.ts` efter bygget,
    följ den privata portvidarebefordran och logga in med Google som Alex.
@@ -342,3 +342,41 @@ choices readable and operable in dark”.
 - Ett verkligt objektförslag lämnar tomläget utan att ändra höjdhjälpsvalet.
 - Den separata **Visningsval**-menyn i vyer som är högst 450 pixlar höga
   behåller sitt befintliga beteende, vilket provas i KAMERA-04.
+
+### YTA-09: den tomma kartan förblir användbar med röst och samtalsnotis
+
+**Syfte:** Nå den tomma kartans listknapp när röstrutan eller en samtalsnotis
+visas ovanför kartans visningsval och utkastets återkoppling.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Den kontrollerade röstinstallationen enligt den allmänna
+förberedelsen, med ett tomt hushåll och stängda arbetsytor. Använd ett
+320 pixlar brett fönster med höjderna 900 och 568 pixlar.
+
+**Integrationstest:**
+[workspace-shell.spec.ts](../../tests/integration/workspace-shell.spec.ts),
+testfallet “YTA-09: voice and notices leave the empty map entry and lower
+controls reachable”.
+
+**Steg:**
+
+1. Välj **Prata med Skyttel** och godkänn samtalsmedgivandet. Läs **Lyssnar**
+   i röstrutan. Kortet **Din karta börjar här** ska finnas kvar. Välj
+   **Återställ vy** och läs **Översikt återställd.** i kartans statusyta.
+2. Nå kortets **Öppna Lista** med tangentbordet. Fokus och knappen ska synas
+   och vara fria från röstrutan. Kontrollera båda fönsterhöjderna.
+3. Slå på **Offline** i webbläsarens nätverkspanel. Läs samtalsnotisen
+   **Ingen kontakt med Skyttel. Mikrofonen är av.** och kontrollera samma
+   listknapp vid båda höjderna.
+4. Slå av **Offline**, välj **Öppna Lista** och sedan **Nytt objekt**.
+   Formuläret med **Objektets namn** ska gå att använda. Skapa inget objekt.
+
+**Förväntat resultat:**
+
+- Röstrutan och samtalsnotisen täcker inte den tomma kartans listknapp.
+- Röstrutan eller notisen ligger ovanför visningsvalen, som ligger ovanför
+  kartans statusyta och utkastets återkoppling. Vid platsbrist är
+  återkopplingen nåbar med rullning.
+- Samtalet öppnar ingen arbetsyta automatiskt; listknappen öppnar formuläret
+  när Alex väljer den. Installationen provar placering, inte hört tal.

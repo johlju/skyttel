@@ -556,22 +556,41 @@
   }
 }
 
-/* Empty-map guidance and display choices share a scroll flow on narrow,
-   tall views. The retained status cannot cover the card or keyboard focus. */
+/* On an empty narrow map, guidance, the lower display row and retained
+   status share one scroll flow. Spare height stays above the display row;
+   smaller windows scroll the same order without overlapping focused controls. */
 @media (max-width: 700px) and (min-height: 451px) {
   .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty)
     .spatial-display-tools
     .spatial-bottom-bar {
+    position: relative;
+    inset: auto;
     flex-wrap: wrap;
     max-height: none;
   }
   .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty) {
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
-    padding-top: calc(142px + var(--display-height, 52px) + 12px);
+    padding-top: 142px;
     scroll-padding-block: 142px 12px;
   }
   .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty) .map-space {
-    position: absolute;
+    position: static;
+    flex-shrink: 0;
+    margin: auto 12px 12px;
+    padding-top: var(--conversation-corner-height, 0px);
+  }
+  .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty) .spatial-map {
+    position: static;
+    height: auto;
+  }
+  .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty) .workspace-feedback {
+    order: 1;
+  }
+  .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty)
+    .workspace-voice-controls {
+    order: 2;
   }
   .household-map.workspace-shell:not(.workspace-open):has(.workspace-empty)
     :is(.workspace-empty, .workspace-feedback, .workspace-voice-controls) {
@@ -580,6 +599,7 @@
     width: auto;
     max-width: none;
     max-height: none;
+    flex-shrink: 0;
     margin: 0 12px 12px;
     transform: none;
   }

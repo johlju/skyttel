@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { activatePanel, createHousehold, signIn } from '../support/client.js';
-import { startConversationWithText } from '../support/conversation-page.js';
+import {
+  startConversationWithText,
+  startConversationWithVoice,
+  voiceBox,
+} from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
+import { liveBrowserFixtureSource } from '../support/live-browser.js';
+import { liveProvider } from '../support/live-provider.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 test('YTA-05: save results remain readable beside tablet work', async ({ page }) => {
@@ -344,3 +350,84 @@ for (const theme of ['light', 'dark'] as const) {
     }
   });
 }
+
+test('YTA-09: voice and notices leave the empty map entry and lower controls reachable', async ({
+  page,
+  context,
+}) => {
+  const live = liveProvider();
+  const installation = await createInstallation(undefined, {
+    modelFetch: textModel(() => []).provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  try {
+    await signIn(page.request, installation.origin);
+    await createHousehold(page.request, installation.origin);
+    await page.addInitScript({ content: liveBrowserFixtureSource });
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto(installation.origin);
+    await startConversationWithVoice(page);
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
+    await page.getByRole('button', { name: 'Återställ vy', exact: true }).click();
+    await expect(page.locator('.workspace-feedback')).toContainText('Översikt återställd.');
+    for (const disconnected of [false, true]) {
+      if (disconnected) {
+        await context.setOffline(true);
+        await expect(page.getByRole('region', { name: 'Samtalsnotis', exact: true })).toContainText(
+          'Ingen kontakt med Skyttel. Mikrofonen är av.',
+        );
+      }
+      for (const height of [900, 568]) {
+        await page.setViewportSize({ width: 320, height });
+        await expect
+          .poll(() =>
+            page.evaluate(() => {
+              const bounds = (selector: string) => {
+                const element = document.querySelector(selector);
+                if (!element) throw new Error(`Missing visible surface: ${selector}`);
+                return element.getBoundingClientRect();
+              };
+              const entry = bounds('.workspace-empty');
+              const corner = bounds('.conversation-corner');
+              const row = bounds('.spatial-bottom-bar');
+              const status = bounds('.workspace-feedback');
+              const feedback = bounds('.workspace-voice-controls');
+              return {
+                entryClear: entry.bottom <= corner.top,
+                cornerClear: corner.bottom <= row.top,
+                statusClear: row.bottom <= status.top && status.bottom <= feedback.top,
+                feedbackClear: row.bottom <= feedback.top,
+                cornerVisible: corner.top >= 0 && corner.bottom <= innerHeight,
+              };
+            }),
+          )
+          .toEqual({
+            entryClear: true,
+            cornerClear: true,
+            statusClear: true,
+            feedbackClear: true,
+            cornerVisible: true,
+          });
+        const entry = page.getByRole('button', { name: 'Öppna Lista', exact: true });
+        await entry.focus();
+        await expect(entry).toBeFocused();
+        expect(
+          await entry.evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            return element.contains(
+              document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+            );
+          }),
+        ).toBe(true);
+      }
+    }
+    await context.setOffline(false);
+    await page.getByRole('button', { name: 'Öppna Lista', exact: true }).click();
+    await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
+    await expect(page.getByLabel('Objektets namn')).toBeVisible();
+  } finally {
+    await context.setOffline(false);
+    await installation.close();
+  }
+});

@@ -98,7 +98,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   tangentkombination, medgivande och leverantörens datavillkor, formulär på
   telefon samt laddning och återhämtning efter nätfel. Hjälpens långa text
   går att rulla på telefon. På en tom mobilkarta förblir visningsval,
-  vägledning och deras tangentbordsfokus nåbara.
+  vägledning och deras tangentbordsfokus nåbara, även med röstruta eller
+  samtalsnotis.
 
 - [Bevarat hushållsarbete](household-work.md): oskickad text, samtal,
   mikrofon, sökning, urval, synligt återställt fokus, personlig vy och samma
