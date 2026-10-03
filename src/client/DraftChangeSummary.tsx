@@ -1,5 +1,11 @@
 import { type FinancialFact, financialFields } from '../shared/financial-facts.js';
-import type { DraftChange, MapDraft, ObjectType, RelationshipType } from '../shared/map.js';
+import type {
+  DraftChange,
+  DraftRelationshipChange,
+  MapDraft,
+  ObjectType,
+  RelationshipType,
+} from '../shared/map.js';
 import { objectIconLabel } from '../shared/object-icons.js';
 import { builtinPresentationChanges } from '../shared/object-properties.js';
 import { relationshipDetails } from './relationship-description.js';
@@ -26,7 +32,7 @@ function factText(fact: FinancialFact | undefined) {
 function difference(label: string, before: string, after: string) {
   return before === after ? [] : [`${label}: ${before} → ${after}`];
 }
-function objectDifferences({ before, after, type, beforeType }: DraftChange) {
+export function objectDifferences({ before, after, type, beforeType }: DraftChange) {
   if (!before || !after) return [];
   const fields = new Map(
     [...((beforeType ?? type).fields ?? []), ...(type.fields ?? [])].map((field) => [
@@ -77,7 +83,7 @@ function identity(value: 'unspecified' | 'unresolved' | undefined) {
       ? 'Olöst identitet'
       : 'Identifierat';
 }
-function typeDifferences(
+export function typeDifferences(
   before: ObjectType & RelationshipType,
   after: ObjectType & RelationshipType,
 ) {
@@ -117,6 +123,35 @@ function typeDifferences(
 }
 function action(before: unknown, after: unknown) {
   return after ? (before ? 'Rätta' : 'Lägg till') : 'Ta bort';
+}
+
+export function relationshipDifferences(change: DraftRelationshipChange) {
+  if (!change.before || !change.after) return [];
+  const describe = (value: NonNullable<typeof change.after>) =>
+    relationshipDetails(value, change.type.forwardLabel ?? change.type.name, change.objectNames);
+  return [
+    ...difference('Samband', describe(change.before), describe(change.after)),
+    ...[
+      ...new Map(
+        [...(change.beforeType?.fields ?? []), ...(change.type.fields ?? [])].map((field) => [
+          field.id,
+          field,
+        ]),
+      ).values(),
+    ].flatMap((field) =>
+      difference(
+        field.name,
+        valueText(change.before?.customValues?.[field.id]),
+        valueText(change.after?.customValues?.[field.id]),
+      ),
+    ),
+    ...difference(
+      'Gäller',
+      change.before.lifecycle === 'ended' ? 'Upphört' : 'Aktuellt',
+      change.after.lifecycle === 'ended' ? 'Upphört' : 'Aktuellt',
+    ),
+    ...difference('Slutdatum', factText(change.before.endDate), factText(change.after.endDate)),
+  ];
 }
 function lines(values: string[]) {
   return values.map((line) => <div key={line}>{line}</div>);

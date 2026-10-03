@@ -125,6 +125,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   samtalstext och verifierade resultat, löpande dialog och
   raden Skyttel arbetar. Kontrollerat familjeunderlag och
   verkligt tal redovisas separat.
+- [Utkastet i samtalet](conversation-draft.md): tabellen och dess symboler,
+  personligt val mellan hushåll och enheter, första förslaget, tomt utkast,
+  sparåterkoppling och kvittots plats i Utkast och historik.
+
 - [Textvyn](text-view.md): **Skriv till Skyttel** öppnar och stänger
   textvyn utan att samtalet avslutas, samtalstexten visar vem som skriver
   och raden Skyttel arbetar sist, **Nytt samtal** behåller utkast, mikrofon

@@ -82,6 +82,30 @@ samtalstexten och meddelandefältet **Meddelande till Skyttel**.
   utkast och din oskickade text finns kvar. Skyttel säger hur många
   osparade ändringar som ligger kvar i utkastet.
 
+## Utkastet i textvyn
+
+**Visa utkastet** ovanför samtalstexten visar antalet osparade ändringar.
+Välj knappen för en tabell med symbol, namn, typ och vad som ändras.
+Plus betyder nytt förslag, penna betyder rättelse och kryss betyder
+borttagning. Objekt, samband och egna typer ingår. Tabellen står till
+vänster om samtalstexten på dator och mellan knappen och samtalstexten på
+mobil enhet och smal skärm. **Dölj utkastet** fäller ihop den.
+Ett utfällt utkast utan ändringar säger **Utkastet är tomt.**
+
+På sidan **Samtal med Skyttel** i Inställningar kan du markera
+**Visa utkastet när ett samtal börjar** under **Utkastet**. Valet sparas
+direkt och gäller dig i alla dina hushåll, på alla dina enheter. Grundvalet
+är hopfällt. Med valet på öppnas ett befintligt utkast när samtalet börjar
+och efter **Nytt samtal**. Ett tomt utkast väntar tills Skyttel föreslår den
+första ändringen. Att visa eller dölja utkastet ändrar bara det pågående
+samtalet. Valet går att spara även när samtalet inte är tillgängligt.
+En kort text vid kryssrutan säger om valet sparades eller om du behöver
+försöka igen.
+
+**Visa kvittot** och **Tidigare sparförsök** finns i **Utkast och historik**
+i kartans verktygsrad. Där kan du granska det beständiga sparresultatet,
+oberoende av om textvyn är öppen.
+
 ## Följ samtalet
 
 Med textvyn stängd visar det kompakta kortet fortfarande status,
@@ -170,9 +194,9 @@ omladdning och omstart.
 
 ## Granska, rätta och spara
 
-**Hela ditt utkast** visar de samlade förslagen för objekt, samband och
-typer. Rättelser visar tidigare och föreslagna värden, exempelvis
-**Sista fyra: 1111 → 2222**. Öppna detaljerna för mer information.
+**Visa utkastet** i textvyn visar de samlade förslagen för objekt,
+samband och typer. Rättelser visar tidigare och föreslagna värden, exempelvis
+**Sista fyra: 1111 → 2222**. Välj **Utkast och historik** för mer information.
 Skriv eller säg **Läs upp hela utkastet** för att granska förslagen i
 samtalet. Svaret beskriver ändrade värden före och efter, inklusive
 objektens identitet, om de gäller eller har upphört, profilbildsändringar
@@ -213,7 +237,8 @@ i utkastet. Ett genomfört sparande blir inte ångrat av ett avbrott.
 Om svaret saknas, välj **Kontrollera sparresultat** innan nytt arbete.
 Ett väntande försök kan slutföras med **Slutför samma sparförsök**. Det
 återanvänder exakt det beständiga försöket. Efter omladdning eller omstart
-startar du en ny anslutning och öppnar **Tidigare sparförsök**. Där finns
+startar du en ny anslutning och öppnar **Utkast och historik**, sedan
+**Tidigare sparförsök**. Där finns
 även kvitton från andra enheter. Ett avvisat försök behöver ett nytt
 underlag och ett nytt sparbesked.
 

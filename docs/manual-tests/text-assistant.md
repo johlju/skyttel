@@ -272,17 +272,19 @@ i kartan innan du börjar. Inget sparande är genomfört.
 
 4. Kontrollera att varje svar visas i samma tydligt märkta samtalsdel.
    Frågan ska gå att läsa som en vanlig följdfråga. Kontrollera utkastet,
-   kartans urval och **Tidigare sparförsök** igen.
+   kartans urval och **Tidigare sparförsök** i **Utkast och historik** igen.
 5. Skicka **Spara hela utkastet nu**. Läs `version` och `contentVersion`
    från det nya `held.draft`. Släpp anropet med följande kommando, efter
    att du ersatt `NUMMER`, `VERSION` och `CONTENT` med aktuella värden:
 
    ```text
-   tool NUMMER save_draft {"version":VERSION,"contentVersion":CONTENT,"operationId":"text-proof-save"}
+   tool NUMMER save_draft
+   {"version":VERSION,"contentVersion":CONTENT,"operationId":"text-proof-save"}
    ```
 
 6. Kräv den verkliga statusen **Sparat. Hela utkastet finns i hushållets
-   karta.** Öppna **Visa kvittot** och kontrollera Lo i den sparade kartan
+   karta.** Öppna **Utkast och historik**, **Tidigare sparförsök** och
+   **Visa kvittot** och kontrollera Lo i den sparade kartan
    samt ett tomt utkast.
 
 **Förväntat resultat:**
@@ -306,7 +308,8 @@ Inga modellsvar behövs; assistenten läser det befintliga utkastet.
 
 **Integrationstest:**
 [text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
-“TEXT-07: hela ändringslistan visar samband, typer och verkliga före- och eftervärden”.
+“TEXT-07: hela ändringslistan visar samband, typer och verkliga före- och
+eftervärden”.
 
 **Steg:**
 
@@ -319,10 +322,11 @@ Inga modellsvar behövs; assistenten läser det befintliga utkastet.
    **Förvaras**, med riktningarna **förvaras i** och **innehåller**.
    Lämna alla fyra förslagen osparade.
 4. Välj **Skriv till Skyttel** och **Godkänn och starta**. Läs
-   **Ändringar under samtalet** utan att öppna detaljerna.
+   **Visa utkastet** och läs tabellen utan att öppna andra detaljer.
 5. Kräv **Sista fyra: 1111 → 2222**, sambandet från Kim som betalar
    Kortet samt de båda nya typerna i den synliga listan.
-6. Öppna detaljer vid behov. Kontrollera att den sparade kartan fortfarande
+6. Välj **Utkast och historik** för detaljer vid behov. Kontrollera att den
+   sparade kartan fortfarande
    har värdet 1111 och att de fyra förslagen ligger kvar i utkastet.
 
 **Förväntat resultat:**
@@ -436,11 +440,14 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
    från det nya `held.draft`. Ersätt `NUMMER`, `VERSION` och `CONTENT`:
 
    ```text
-   tool NUMMER save_draft {"version":VERSION,"contentVersion":CONTENT,"operationId":"text-details-save"}
+   tool NUMMER save_draft
+   {"version":VERSION,"contentVersion":CONTENT,"operationId":"text-details-save"}
    ```
 
 6. Kräv det korta beskedet **Sparat. Hela utkastet finns i hushållets
-   karta.** och ett tomt utkast. Öppna **Visa kvittot** och kontrollera
+   karta.** och ett tomt utkast. Öppna **Utkast och historik**, **Tidigare
+   sparförsök** och
+   **Visa kvittot** och kontrollera
    att **Tonrum** och sambandstypen **Betalar** finns med.
 7. Skicka **Vad sparades senast?** Använd det nya `held`-numret:
 

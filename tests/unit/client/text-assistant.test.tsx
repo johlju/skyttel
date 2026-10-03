@@ -87,7 +87,6 @@ test('the shared workspace keeps the map available before consent', async () => 
       onMapChange={vi.fn()}
       onAccessLost={vi.fn()}
       onSelectItem={async () => false}
-      draftSummary={<p>Cykeln: föreslaget namn</p>}
     >
       <section aria-label="Hushållets karta">Kartan är tillgänglig</section>
     </StandaloneConversation>,

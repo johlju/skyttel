@@ -67,6 +67,7 @@ import './workspace.css';
 import './workspace-panels.css';
 import './text-view.css';
 import { type ConversationMode, conversationOngoing, useConversation } from './use-conversation.js';
+import { useConversationPreferences } from './use-conversation-preferences.js';
 import { usePersonalView } from './use-personal-view.js';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
 
@@ -491,6 +492,7 @@ export function HouseholdMap({
     setError('Du har inte längre tillgång. Logga in och kontrollera din tillgång till hushållet.');
   }, [setError]);
   const personal = usePersonalView(path, loseAccess);
+  const conversationPreferences = useConversationPreferences(path);
 
   useEffect(() => {
     let active = true;
@@ -1520,7 +1522,11 @@ export function HouseholdMap({
       {conversationSettingsTarget &&
         // The page in Settings shows and changes the consent of the map's own conversation.
         createPortal(
-          <ConversationSettings conversation={conversation} householdName={householdName} />,
+          <ConversationSettings
+            conversation={conversation}
+            householdName={householdName}
+            personal={conversationPreferences}
+          />,
           conversationSettingsTarget,
         )}
       {active && (
@@ -1813,6 +1819,9 @@ export function HouseholdMap({
           )}
           active={active}
           textViewOpen={textViewOpen}
+          draft={state.draft}
+          showDraftOnStart={conversationPreferences.preferences.showDraftOnStart}
+          preferencesKnown={conversationPreferences.known}
           onOpenTextView={() => {
             setStatusOpen(false);
             showConversation();
@@ -2027,44 +2036,6 @@ export function HouseholdMap({
                 )}
               </section>
             </dialog>
-          }
-          draftSummary={
-            <>
-              {!hasChanges ? (
-                <p className="assistant-empty">Inga förslag i utkastet.</p>
-              ) : (
-                <ul className="assistant-change-list">
-                  {[
-                    ...state.draft.changes,
-                    ...(state.draft.relationships ?? []),
-                    ...(state.draft.objectTypes ?? []),
-                    ...(state.draft.relationshipTypes ?? []),
-                  ].map((change) => (
-                    <li key={change.id}>
-                      {change.after ? (change.before ? 'Ändra' : 'Lägg till') : 'Ta bort'}:{' '}
-                      {change.after && 'name' in change.after
-                        ? change.after.name
-                        : change.before && 'name' in change.before
-                          ? change.before.name
-                          : 'Samband'}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {Boolean(conflicts.length || unresolved) && (
-                <p className="error">
-                  Utkastet har konflikter eller olösta identiteter. Red ut dem före sparande.
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  openPanel('work', document.getElementById('draft-title'));
-                }}
-              >
-                Granska utkastet
-              </button>
-            </>
           }
         >
           {(assistant) => (

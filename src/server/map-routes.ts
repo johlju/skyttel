@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3';
 import { Hono, type MiddlewareHandler } from 'hono';
 import type { Auth } from './auth.js';
+import { conversationPreferences } from './conversation-preferences.js';
+import { householdAccess } from './households.js';
 import { householdMap, MapError } from './map.js';
 import { personalView } from './personal-view.js';
 
@@ -32,6 +34,18 @@ export function mapRoutes(database: Database.Database, auth: Auth, origin: strin
   };
   routes.use('/households/:id/map/*', authenticate);
   routes.use('/households/:id/map', authenticate);
+  routes.get('/households/:id/map/conversation-preferences', (context) => {
+    if (!householdAccess(database, context.get('userId'), context.req.param('id')))
+      throw new MapError('forbidden', 403);
+    return context.json(conversationPreferences(database, context.get('userId')).read());
+  });
+  routes.post('/households/:id/map/conversation-preferences', (context) => {
+    if (!householdAccess(database, context.get('userId'), context.req.param('id')))
+      throw new MapError('forbidden', 403);
+    return context.json(
+      conversationPreferences(database, context.get('userId')).configure(context.get('body')),
+    );
+  });
   routes.get('/households/:id/map/view', (context) =>
     context.json(personalView(database, context.get('userId'), context.req.param('id')).read()),
   );

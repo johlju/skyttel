@@ -181,6 +181,70 @@
   min-width: 88px;
 }
 
+.text-view-columns,
+.text-view-conversation {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.text-view-draft-toggle {
+  flex: none;
+  align-self: flex-start;
+  min-height: 44px;
+  margin: 8px 12px;
+}
+.text-view-draft {
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+  border-bottom: 1px solid var(--space-line);
+}
+.conversation-draft-table table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.conversation-draft-table :is(th, td) {
+  padding: 8px 4px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--space-line);
+}
+.conversation-draft-table th:first-child {
+  width: 40px;
+}
+@media (min-width: 701px) and (pointer: fine) {
+  .household-map.workspace-shell.text-view-open:has(.text-view.draft-open) {
+    --text-view-space: min(
+      calc(var(--text-view-width, 400px) + var(--draft-view-width, 340px)),
+      calc(100vw - 100px)
+    );
+  }
+  .draft-open .text-view-columns {
+    flex-direction: row;
+  }
+  .draft-open .text-view-draft {
+    flex: 0 1 var(--draft-view-width, 340px);
+    box-sizing: border-box;
+    border-right: 1px solid var(--space-line);
+    border-bottom: 0;
+  }
+}
+@media (max-width: 700px), (pointer: coarse) {
+  .draft-direction {
+    display: inline-block;
+    transform: rotate(-90deg);
+  }
+  .text-view-draft {
+    max-height: 45%;
+  }
+}
+
 @media (min-width: 701px) {
   .household-map.workspace-shell.text-view-open {
     --text-view-space: min(var(--text-view-width, 400px), calc(100vw - 100px));

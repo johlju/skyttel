@@ -4,6 +4,7 @@ import {
   conversationConsentTextVersion,
 } from '../shared/conversation-consent.js';
 import type { Conversation } from './use-conversation.js';
+import type { useConversationPreferences } from './use-conversation-preferences.js';
 import './conversation-settings.css';
 
 const savedDate = new Intl.DateTimeFormat('sv-SE', { dateStyle: 'long' });
@@ -16,15 +17,43 @@ const savedDate = new Intl.DateTimeFormat('sv-SE', { dateStyle: 'long' });
 export function ConversationSettings({
   conversation,
   householdName,
+  personal,
 }: {
   conversation: Conversation;
   householdName: string;
+  personal?: ReturnType<typeof useConversationPreferences>;
 }) {
   return (
     <div className="conversation-settings">
       {conversation.available === false && <p>Samtal med Skyttel är inte tillgängligt just nu.</p>}
       <ConsentSetting conversation={conversation} householdName={householdName} />
+      {personal && <DraftSetting personal={personal} />}
     </div>
+  );
+}
+
+function DraftSetting({ personal }: { personal: ReturnType<typeof useConversationPreferences> }) {
+  const id = useId();
+  return (
+    <section className="conversation-setting" aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`}>Utkastet</h2>
+      <p className="conversation-setting-scope">Gäller dig i alla dina hushåll.</p>
+      <label>
+        <input
+          type="checkbox"
+          checked={personal.preferences.showDraftOnStart}
+          disabled={!personal.known}
+          aria-disabled={personal.pending}
+          aria-describedby={`${id}-help`}
+          onChange={(event) => void personal.configure(event.target.checked)}
+        />{' '}
+        Visa utkastet när ett samtal börjar
+      </label>
+      <p id={`${id}-help`}>Ett tomt utkast visas när Skyttel föreslår den första ändringen.</p>
+      <p className="conversation-setting-feedback" role="status">
+        {personal.feedback}
+      </p>
+    </section>
   );
 }
 

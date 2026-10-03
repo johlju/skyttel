@@ -101,36 +101,45 @@ export function SaveOperations({
     <section aria-labelledby="save-operations-title" className="draft-review">
       <h2 id="save-operations-title">Mina sparförsök</h2>
       <p>Dina väntande och senaste sparförsök i hushållet, även från andra enheter.</p>
-      {!operations.length && <p>Inga registrerade sparförsök.</p>}
-      {operations.map((operation) => (
-        <article key={operation.operationId}>
-          <h3>
-            {operation.status === 'succeeded'
-              ? 'Genomfört'
-              : operation.status === 'rejected'
-                ? 'Avvisat'
-                : 'Väntande'}
-            {' — utkastversion '}
-            {operation.draftVersion}
-          </h3>
-          <p>
-            Sparförsök: {operation.operationId}. Registrerat: {operation.createdAt}.
-          </p>
-          {operation.status === 'succeeded' && <p>{receiptMessage(operation.receipt)}</p>}
-          {operation.status === 'rejected' && <p>{rejectionMessage(operation.error)}</p>}
-          {operation.status === 'pending' && (
-            <>
-              <p>
-                Inget slutligt kvitto finns ännu. Kontrollera och återförsök samma sparande innan du
-                ändrar utkastet.
-              </p>
-              <button type="button" disabled={disabled} onClick={() => onRetry(operation)}>
-                Återförsök sparandet
-              </button>
-            </>
-          )}
-        </article>
-      ))}
+      <details>
+        <summary>Tidigare sparförsök</summary>
+        {!operations.length && <p>Inga registrerade sparförsök.</p>}
+        {operations.map((operation) => (
+          <article key={operation.operationId}>
+            <h3>
+              {operation.status === 'succeeded'
+                ? 'Genomfört'
+                : operation.status === 'rejected'
+                  ? 'Avvisat'
+                  : 'Väntande'}
+              {' — utkastversion '}
+              {operation.draftVersion}
+            </h3>
+            <p>
+              Sparförsök: {operation.operationId}. Registrerat: {operation.createdAt}.
+            </p>
+            {operation.status === 'succeeded' && (
+              <details>
+                <summary>Visa kvittot</summary>
+                <p>{receiptMessage(operation.receipt)}</p>
+                <p>Sparat: {operation.receipt.savedAt}</p>
+              </details>
+            )}
+            {operation.status === 'rejected' && <p>{rejectionMessage(operation.error)}</p>}
+            {operation.status === 'pending' && (
+              <>
+                <p>
+                  Inget slutligt kvitto finns ännu. Kontrollera och återförsök samma sparande innan
+                  du ändrar utkastet.
+                </p>
+                <button type="button" disabled={disabled} onClick={() => onRetry(operation)}>
+                  Återförsök sparandet
+                </button>
+              </>
+            )}
+          </article>
+        ))}
+      </details>
     </section>
   );
 }
