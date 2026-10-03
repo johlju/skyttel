@@ -262,7 +262,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     await status.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
     await expect.poll(() => waiting).toBe(true);
     await openConversationText(page);
-    await expect(page.getByRole('region', { name: 'Assistentens hela utkast' })).toContainText(
+    await expect(page.getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
       'Oskickad cykel',
       { timeout: 10000 },
     );

@@ -138,7 +138,9 @@ test('YTA-03: narrow screens keep tools, help and text work reachable without gr
       await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
       await expect(tools.getByRole('button', { name: 'Lista', exact: true })).toBeFocused();
       await openConversationText(page);
-      await expect(page.getByRole('region', { name: 'Talsamtal', exact: true })).toBeVisible();
+      await expect(
+        page.getByRole('region', { name: 'Samtal med Skyttel', exact: true }),
+      ).toBeVisible();
     }
   } finally {
     await installation.close();

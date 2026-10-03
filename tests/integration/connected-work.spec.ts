@@ -463,7 +463,7 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(proposals.getByRole('listitem')).toHaveCount(3);
       await assistant.getByText('Visa hela utkastets detaljer', { exact: true }).click();
       const wholeDraft = assistant.getByRole('region', {
-        name: 'Assistentens hela utkast',
+        name: 'Hela ditt utkast',
         exact: true,
       });
       for (const value of ['Rättad för hand', '189', 'SEK', 'månad'])

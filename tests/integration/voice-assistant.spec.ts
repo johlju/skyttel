@@ -86,7 +86,7 @@ test('TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare för
     speak(live, 'Rätta Lo.');
     await expect.poll(() => held).toBe(true);
     await openMap(page);
-    await expect(assistant(page).getByRole('status')).toContainText('Assistenten arbetar');
+    await expect(assistant(page).getByRole('status')).toContainText('Skyttel arbetar');
     await assistant(page).getByRole('button', { name: 'Avbryt uppdrag', exact: true }).click();
     release([
       modelTool('propose_object', {
@@ -237,7 +237,7 @@ test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async 
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect.poll(() => stage).toBe(2);
     await openMap(page);
-    await expect(panel.getByRole('status')).toContainText('Assistenten arbetar');
+    await expect(panel.getByRole('status')).toContainText('Skyttel arbetar');
     await expect(panel.getByRole('button', { name: 'Svara i samtalet' })).toHaveCount(0);
     release([modelMessage('Vill du läsa vidare?')]);
     await expect(panel.getByRole('status')).toContainText('Nya förslag är osparade');
@@ -245,9 +245,7 @@ test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async 
     await panel.getByLabel('Meddelande till Skyttel').fill('Berätta mer.');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await openMap(page);
-    await expect(panel.getByRole('alert')).toContainText(
-      'Assistenten kunde inte slutföra uppdraget',
-    );
+    await expect(panel.getByRole('alert')).toContainText('Skyttel kunde inte slutföra uppdraget');
     await openConversationText(page);
     await panel.getByRole('button', { name: 'Nytt samtal' }).click();
     await expect(panel.getByRole('log', { name: 'Samtalstext' })).toHaveText(
@@ -407,7 +405,7 @@ test('TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtal
     expect(live.requests).toHaveLength(1);
     speak(live, 'Kontrollera utkastet.');
     await expect.poll(() => held).toBe(true);
-    await expect(assistant(page).getByRole('status')).toContainText('Assistenten arbetar');
+    await expect(assistant(page).getByRole('status')).toContainText('Skyttel arbetar');
     // A spoken task shows the working row last in the conversation text, without a timer.
     await expect(log.getByRole('listitem').last()).toHaveText('Skyttel arbetar…');
     await expect(assistant(page).getByRole('timer')).toHaveCount(0);
@@ -418,9 +416,9 @@ test('TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtal
     await expect(log).toContainText('Kim betalar för musiken.');
     await assistant(page).getByRole('button', { name: 'Nytt samtal' }).click();
     await expect(log).toHaveText(/^Skyttel: Nytt samtal\./);
-    await expect(
-      assistant(page).getByRole('region', { name: 'Assistentens hela utkast' }),
-    ).toContainText('Lo Exempel');
+    await expect(assistant(page).getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
+      'Lo Exempel',
+    );
   } finally {
     await app.close();
   }
@@ -577,9 +575,9 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
     await consent(page);
-    await expect(
-      assistant(page).getByRole('region', { name: 'Assistentens hela utkast' }),
-    ).toContainText('Lo Lind');
+    await expect(assistant(page).getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
+      'Lo Lind',
+    );
     await startVoice(page);
     speak(live, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
     await expect(assistant(page).getByRole('status')).toHaveText(
@@ -588,9 +586,9 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Osänd text som ska finnas kvar',
     );
-    await expect(
-      assistant(page).getByRole('region', { name: 'Assistentens hela utkast' }),
-    ).toContainText('Inga förslag.');
+    await expect(assistant(page).getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
+      'Inga förslag.',
+    );
     await assistant(page).getByText('Visa kvittot', { exact: true }).click();
     await expect(assistant(page)).toContainText('Familjens Molnmusik');
     const map = await (

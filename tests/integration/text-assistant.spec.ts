@@ -189,9 +189,9 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
     await consent(page);
-    await expect(
-      assistant(page).getByRole('region', { name: 'Assistentens hela utkast' }),
-    ).toContainText('Lo Lind');
+    await expect(assistant(page).getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
+      'Lo Lind',
+    );
     await send(page, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
     await expect(assistant(page).getByRole('status')).toHaveText(
       'Sparat. Hela utkastet finns i hushållets karta.',
@@ -199,9 +199,9 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Osänd text som ska finnas kvar',
     );
-    await expect(
-      assistant(page).getByRole('region', { name: 'Assistentens hela utkast' }),
-    ).toContainText('Inga förslag.');
+    await expect(assistant(page).getByRole('region', { name: 'Hela ditt utkast' })).toContainText(
+      'Inga förslag.',
+    );
     await assistant(page).getByText('Visa kvittot', { exact: true }).click();
     await expect(assistant(page)).toContainText('Familjens Molnmusik');
     const map = await (
@@ -240,7 +240,7 @@ test('TEXT-02: sena svar efter kastat utkast och avbrott ändrar inte nytt arbet
     await consent(page);
     await send(page, 'Rätta namnet.');
     await expect.poll(() => held).toBe(true);
-    await expect(assistant(page).getByRole('status')).toContainText('Assistenten arbetar');
+    await expect(assistant(page).getByRole('status')).toContainText('Skyttel arbetar');
     await page.request.post(`${path}/discard`, {
       headers: { origin: app.origin },
       data: { version: 1, contentVersion: 1 },
@@ -303,9 +303,7 @@ test('TEXT-03: nekade sparbesked och modellfel lämnar formulärarbetet tillgän
     }
     fail = true;
     await send(page, 'Beskriv mitt utkast.');
-    await expect(assistant(page).getByRole('alert')).toContainText(
-      'Assistenten kunde inte slutföra',
-    );
+    await expect(assistant(page).getByRole('alert')).toContainText('Skyttel kunde inte slutföra');
     await page
       .getByRole('list', { name: 'Objekt', exact: true })
       .getByRole('button', { name: 'Uppgifter för Lo Exempel', exact: true })

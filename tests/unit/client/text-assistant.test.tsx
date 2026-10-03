@@ -92,7 +92,7 @@ test('the shared workspace keeps the map available before consent', async () => 
       <section aria-label="Hushållets karta">Kartan är tillgänglig</section>
     </StandaloneConversation>,
   );
-  expect(await screen.findByRole('region', { name: 'Talsamtal' })).toBeTruthy();
+  expect(await screen.findByRole('region', { name: 'Samtal med Skyttel' })).toBeTruthy();
   expect(screen.getByRole('region', { name: 'Hushållets karta' }).textContent).toContain(
     'Kartan är tillgänglig',
   );
@@ -352,7 +352,7 @@ test('a working task can be cancelled and an expired session clears private text
   });
   showAssistant(vi.fn(), lost);
   await startConversationWithText();
-  expect(screen.getByRole('status').textContent).toContain('Assistenten arbetar');
+  expect(screen.getByRole('status').textContent).toContain('Skyttel arbetar');
   await userEvent.click(screen.getByRole('button', { name: 'Avbryt uppdrag' }));
   expect(cancelled).toHaveBeenCalledExactlyOnceWith({ revision: 3 });
   expect(screen.queryByRole('button', { name: 'Avbryt uppdrag' })).toBeNull();
@@ -380,7 +380,7 @@ test.each([false, 'unreachable'])(
     showAssistant();
     expect(
       await screen.findByText(
-        'Textassistenten är inte tillgänglig. Du kan använda kartan och formulären.',
+        'Samtal med Skyttel är inte tillgängligt. Du kan använda kartan och formulären.',
       ),
     ).toBeDefined();
     await openConversationText();
@@ -750,7 +750,7 @@ test('whole draft review exposes object facts, type edits, uncertain relationshi
   });
   showAssistant();
   await startConversationWithText();
-  const review = within(await screen.findByRole('region', { name: 'Assistentens hela utkast' }));
+  const review = within(await screen.findByRole('region', { name: 'Hela ditt utkast' }));
   const compact = review.getByRole('list', { name: 'Alla föreslagna ändringar' });
   expect(compact.textContent).toContain('Namn: Gammal cykel → Rättad cykel');
   expect(compact.textContent).toContain('Färg: Blå → Röd');

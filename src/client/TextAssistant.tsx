@@ -50,7 +50,7 @@ function errorMessage(code: string) {
     return 'Utkastet eller kartan har ändrats. Hämta aktuellt underlag, red ut eventuella konflikter och ge ett nytt besked.';
   if (code === 'operation_pending' || code === 'assistant_save_unknown')
     return 'Sparresultatet behöver kontrolleras innan nytt arbete kan börja.';
-  return 'Assistenten kunde inte slutföra uppdraget. Kontrollera utkastet och tidigare sparförsök. Du kan fortsätta i kartans formulär.';
+  return 'Skyttel kunde inte slutföra uppdraget. Kontrollera utkastet och tidigare sparförsök. Du kan fortsätta i kartans formulär.';
 }
 
 type AssistantActivity = { working: boolean; needsAnswer: boolean };
@@ -140,7 +140,7 @@ export function ConversationWorkspace({
           className={`assistant-work-status${session.phase === 'working' ? ' is-working' : ''}`}
         >
           {session.phase === 'working'
-            ? 'Assistenten arbetar… Du kan avbryta eller ge ett nytt uppdrag.'
+            ? 'Skyttel arbetar… Du kan avbryta eller ge ett nytt uppdrag.'
             : session.phase === 'recovery'
               ? 'Kontrollera det tidigare sparförsöket innan du fortsätter.'
               : needsAnswer
@@ -198,7 +198,7 @@ export function ConversationWorkspace({
   );
   const voice = (
     <section
-      aria-label="Talsamtal"
+      aria-label="Samtal med Skyttel"
       className="assistant-bar"
       hidden={!workVisible && !session && !statusContent}
     >
@@ -217,7 +217,7 @@ export function ConversationWorkspace({
             <p className="assistant-loading">Hämtar samtalets tillgänglighet…</p>
           )}
           {available === false && (
-            <p>Textassistenten är inte tillgänglig. Du kan använda kartan och formulären.</p>
+            <p>Samtal med Skyttel är inte tillgängligt. Du kan använda kartan och formulären.</p>
           )}
         </>
       )}
@@ -228,7 +228,7 @@ export function ConversationWorkspace({
     <section aria-label="Ändringar under samtalet" className="assistant-panel assistant-changes">
       <h3>Ändringar under samtalet</h3>
       {review ? (
-        <section aria-label="Assistentens hela utkast">
+        <section aria-label="Hela ditt utkast">
           <h4>Hela ditt utkast</h4>
           <p>
             Även tidigare förslag från formulär och andra klienter ingår. Ett sparbesked gäller allt

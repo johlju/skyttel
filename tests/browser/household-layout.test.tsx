@@ -267,7 +267,10 @@ test('desktop keeps the map and the bounded text view, object and list panels av
   const bounds = surface?.getBoundingClientRect();
   expect(bounds?.width).toBeGreaterThan(1300);
   await openConversationText();
-  const speech = page.getByRole('region', { name: 'Talsamtal' }).element().getBoundingClientRect();
+  const speech = page
+    .getByRole('region', { name: 'Samtal med Skyttel' })
+    .element()
+    .getBoundingClientRect();
   expect(speech.height).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await list.getByRole('button', { name: 'Uppgifter för Alex', exact: true }).click();
@@ -879,7 +882,7 @@ test('phone opens the list from the map and preserves an edited name through map
     .toHaveValue('Alex ändrat');
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
   await openConversationText();
-  await expect.element(page.getByRole('region', { name: 'Talsamtal' })).toBeVisible();
+  await expect.element(page.getByRole('region', { name: 'Samtal med Skyttel' })).toBeVisible();
   // On a narrow screen the text view fills the screen, and the list takes its place.
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await expect
