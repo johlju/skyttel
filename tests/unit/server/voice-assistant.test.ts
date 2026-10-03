@@ -255,7 +255,7 @@ test('only one actual delegation executes raw voice fragments through Terra and 
   expect(voice.live.sent.at(-1)?.event).toMatchObject({
     type: 'session.commentary.append',
     delegation_id: saveId,
-    content: 'Skyttels resultat (verifierat): Sparat.',
+    content: 'Sparat.',
   });
   const map = await (await browser.get(voice.path.replace('/text-assistant', '/map'))).json();
   expect(map.objects).toMatchObject([{ id: 'family-music' }]);
@@ -456,7 +456,7 @@ test('long quoted model conversation cannot break the source boundary or Live co
   expect((await voice.poll()).assistant.modelReply).toBe(modelReply);
 });
 
-test('combined type proposals speak the verified draft result and retain the useful directed question', async () => {
+test('combined type proposals speak the directed question and retain the verified draft result', async () => {
   const question =
     'Vilken person använder Familjens musik: Lo eller Alex? Om båda använder tjänsten kan jag lägga till båda sambanden, men jag behöver veta om det gäller deras egna tjänstekonton eller samma gemensamma tjänstekonto.';
   const model = textModel(() => [
@@ -495,8 +495,9 @@ test('combined type proposals speak the verified draft result and retain the use
   expect(status.assistant.result).toEqual({ kind: 'draft', message: 'Utkastet är uppdaterat.' });
   const sent = voice.live.sent.at(-1)?.event as { content: string };
   const content = sent.content;
-  expect(content).toContain('Skyttels resultat (verifierat): Utkastet är uppdaterat.');
-  expect(content).toContain(JSON.stringify(question));
+  expect(content).toBe(`Nödvändig fråga (samtalsdata): ${JSON.stringify(question)}`);
+  expect(status.assistant.questionPending).toBe(true);
+  expect(status.assistant.receipt).toBeUndefined();
   expect(Buffer.byteLength(content, 'utf8')).toBeLessThanOrEqual(480);
   expect(model.requests).toHaveLength(1);
 });
