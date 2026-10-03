@@ -328,7 +328,9 @@ test('TAL-09: starten kräver medgivande och återhämtar mikrofonavbrott', asyn
     expect(live.requests).toHaveLength(0);
     await page.evaluate(() => window.skyttelVoiceFixture.setMicrophone('deny'));
     await chooseConversationVoice(page);
-    await expect(panel.getByRole('alert')).toContainText('mikrofon');
+    await expect(page.getByRole('region', { name: 'Samtalsnotis', exact: true })).toContainText(
+      'Webbläsaren tillåter inte mikrofonen.',
+    );
     await expect(voiceBox(page)).toHaveCount(0);
     await expect(panel.getByLabel('Meddelande till Skyttel')).toBeEditable();
     await expect(panel.getByRole('log')).toContainText('Texten fungerar.');

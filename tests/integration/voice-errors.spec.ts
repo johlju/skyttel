@@ -34,6 +34,7 @@ async function setup(page: import('@playwright/test').Page, liveFetch?: typeof f
   await page.addInitScript({ content: liveBrowserFixtureSource });
   await page.goto(app.origin);
   await startConversationWithText(page);
+  await expect(page.getByRole('region', { name: 'Skriv till Skyttel', exact: true })).toBeVisible();
   return { app, live };
 }
 
