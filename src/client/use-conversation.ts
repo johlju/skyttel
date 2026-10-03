@@ -66,8 +66,6 @@ export type Conversation = {
    * that goes on. The draft is not touched. Tells whether it was revoked.
    */
   revokeConsent: () => Promise<boolean>;
-  /** Reads the saved consent again, as another of the user's devices can have changed it. */
-  refreshConsent: () => void;
   send: () => Promise<void>;
   cancel: () => Promise<void>;
   end: () => Promise<void>;
@@ -361,14 +359,11 @@ export function useConversation({
     else setConsentError('Medgivandet kunde inte sparas. Försök igen.');
   }
   /** Sends what Settings does with the consent. Null when the answer is missing or no longer applies. */
-  async function changeConsent(change: 'save' | 'revoke') {
+  async function changeConsent(changePath: string, body: unknown) {
     const epoch = ++consentEpoch.current;
-    const outcome = await (change === 'save'
-      ? request<ConversationConsentView>(consentPath, {
-          textVersion: conversationConsentTextVersion,
-        })
-      : request<ConversationConsentView>(`${consentPath}/revoke`, {})
-    ).catch((failure: unknown) => ({ failure }));
+    const outcome = await request<ConversationConsentView>(changePath, body).catch(
+      (failure: unknown) => ({ failure }),
+    );
     if (epoch !== consentEpoch.current) return null;
     if (!('failure' in outcome)) return outcome;
     if (outcome.failure instanceof MapRequestError && [401, 403].includes(outcome.failure.status))
@@ -378,12 +373,14 @@ export function useConversation({
   async function saveConsent() {
     // Saving in Settings starts nothing, so a start that waits for a consent is dropped.
     setRequested(null);
-    const outcome = await changeConsent('save');
+    const outcome = await changeConsent(consentPath, {
+      textVersion: conversationConsentTextVersion,
+    });
     if (outcome) setSavedConsent(outcome.saved);
     return Boolean(outcome);
   }
   async function revokeConsent() {
-    const outcome = await changeConsent('revoke');
+    const outcome = await changeConsent(`${consentPath}/revoke`, {});
     if (!outcome) return false;
     // The server has ended the user's conversations in the household. This one
     // ends here too, and an answer to an earlier command is not for a new one.
@@ -400,17 +397,6 @@ export function useConversation({
     setVisitConsent(false);
     return true;
   }
-  const refreshConsent = useCallback(() => {
-    const epoch = ++consentEpoch.current;
-    void request<ConversationConsentView>(consentPath)
-      .then((result) => {
-        // The first answer about the saved consent is left to arrive by itself.
-        if (epoch === consentEpoch.current)
-          setSavedConsent((known) => (known === undefined ? known : (result.saved ?? null)));
-      })
-      // Without an answer the page shows what this visit last knew.
-      .catch(() => undefined);
-  }, [consentPath]);
   const command = useCallback(
     async (name: string, body: unknown = {}) => {
       const current = active.current;
@@ -551,7 +537,6 @@ export function useConversation({
     },
     saveConsent,
     revokeConsent,
-    refreshConsent,
     send,
     cancel: () => command('cancel', { revision: session?.revision }),
     end,

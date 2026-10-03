@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   conversationConsentText,
   conversationConsentTextVersion,
@@ -28,6 +28,9 @@ export function ConversationSettings({
   );
 }
 
+/** What a button of the part Medgivande does, and the text that says how it went. */
+type ConsentAction = { name: string; run: () => Promise<boolean>; done: string; failed: string };
+
 /** The part Medgivande: the consent text, whether a consent is saved, and saving and revoking it. */
 function ConsentSetting({
   conversation,
@@ -37,12 +40,11 @@ function ConsentSetting({
   householdName: string;
 }) {
   const id = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
   const actions = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
   const { saved, visit, known } = conversation.consent;
-  const { refreshConsent } = conversation;
-  useEffect(refreshConsent, [refreshConsent]);
   // A consent that is saved for an older consent text no longer applies.
   const current = saved?.textVersion === conversationConsentTextVersion ? saved : null;
   const status = current
@@ -52,45 +54,54 @@ function ConsentSetting({
       : saved
         ? 'Medgivandetexten har ändrats. Inget medgivande är sparat.'
         : 'Inget medgivande är sparat.';
+  const save: ConsentAction = {
+    name: 'Spara medgivandet',
+    run: conversation.saveConsent,
+    done: 'Medgivandet är sparat',
+    failed: 'Medgivandet kunde inte sparas. Försök igen.',
+  };
+  const revoke: ConsentAction = {
+    name: 'Återkalla medgivandet',
+    run: conversation.revokeConsent,
+    done: 'Medgivandet är återkallat',
+    failed: 'Medgivandet kunde inte återkallas. Försök igen.',
+  };
   // A consent cannot be saved while the conversation is not offered. It can still be revoked.
   const canSave = known && !current && conversation.available === true;
   const canRevoke = known && Boolean(current || visit);
+  // The first button stays in place and changes its name when the consent is saved or revoked.
+  const [first, second] = [...(canSave ? [save] : []), ...(canRevoke ? [revoke] : [])];
   // The focus stays on the button that the user pressed. When that button is
-  // no longer shown, the focus goes to the one that is.
+  // no longer shown, the focus goes to the one that is, or to the part's
+  // heading when no button is left.
   const keepFocus = useRef(false);
   useLayoutEffect(() => {
     if (!keepFocus.current || busy) return;
     keepFocus.current = false;
     if (!actions.current?.contains(document.activeElement))
-      actions.current?.querySelector('button')?.focus();
+      (actions.current?.querySelector('button') ?? heading.current)?.focus();
   });
-  async function change(action: 'save' | 'revoke') {
+  async function change(action: ConsentAction) {
     if (busy) return;
     keepFocus.current = actions.current?.contains(document.activeElement) ?? false;
     setBusy(true);
     // An emptied text lets a screen reader read the same result once more.
     setFeedback('');
-    const done = await (action === 'save'
-      ? conversation.saveConsent()
-      : conversation.revokeConsent());
+    const done = await action.run();
     setBusy(false);
-    setFeedback(
-      action === 'save'
-        ? done
-          ? 'Medgivandet är sparat'
-          : 'Medgivandet kunde inte sparas. Försök igen.'
-        : done
-          ? 'Medgivandet är återkallat'
-          : 'Medgivandet kunde inte återkallas. Försök igen.',
-    );
+    setFeedback(done ? action.done : action.failed);
   }
-  const save = { name: 'Spara medgivandet', action: 'save' } as const;
-  const revoke = { name: 'Återkalla medgivandet', action: 'revoke' } as const;
-  // The first button stays in place and changes its name when the consent is saved or revoked.
-  const [first, second] = [...(canSave ? [save] : []), ...(canRevoke ? [revoke] : [])];
+  const button = (action?: ConsentAction) =>
+    action && (
+      <button type="button" aria-disabled={busy} onClick={() => void change(action)}>
+        {action.name}
+      </button>
+    );
   return (
     <section className="conversation-setting" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`}>Medgivande</h2>
+      <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>
+        Medgivande
+      </h2>
       <p className="conversation-setting-scope">Gäller dig i hushållet {householdName}.</p>
       {conversationConsentText.map((paragraph) => (
         <p key={paragraph}>{paragraph}</p>
@@ -101,16 +112,8 @@ function ConsentSetting({
       </p>
       {known && <p className="conversation-setting-status">{status}</p>}
       <div ref={actions} className="conversation-setting-actions">
-        {first && (
-          <button type="button" aria-disabled={busy} onClick={() => void change(first.action)}>
-            {first.name}
-          </button>
-        )}
-        {second && (
-          <button type="button" aria-disabled={busy} onClick={() => void change(second.action)}>
-            {second.name}
-          </button>
-        )}
+        {button(first)}
+        {button(second)}
       </div>
       <p className="conversation-setting-feedback" role="status">
         {feedback}

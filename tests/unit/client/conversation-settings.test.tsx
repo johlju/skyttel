@@ -249,7 +249,7 @@ test('a consent that is saved for another version of the consent text is told as
   expect(buttons()).toEqual(['Återkalla medgivandet']);
 });
 
-test('a save or a revocation that fails is told, and the control is as it was', async () => {
+test('a save that fails is told, and the control is as it was', async () => {
   const { posts, accessLost } = show({ failures: [500, 500] });
   await status('Inget medgivande är sparat.');
   const save = button('Spara medgivandet');
@@ -266,27 +266,29 @@ test('a save or a revocation that fails is told, and the control is as it was', 
   await userEvent.click(save);
   await status('Sparat den 1 oktober 2026.');
   expect(feedback()).toBe('Medgivandet är sparat');
+  expect(accessLost).not.toHaveBeenCalled();
+});
 
-  cleanup();
-  const again = show({ saved: savedConsent, failures: [503] });
+test('a revocation that fails is told, and the control is as it was', async () => {
+  const { posts, accessLost } = show({ saved: savedConsent, failures: [503] });
   await status('Sparat den 1 oktober 2026.');
   await userEvent.click(button('Återkalla medgivandet'));
   await waitFor(() => expect(feedback()).toBe('Medgivandet kunde inte återkallas. Försök igen.'));
   expect(texts()).toContain('Sparat den 1 oktober 2026.');
   expect(buttons()).toEqual(['Återkalla medgivandet']);
   expect(document.activeElement).toBe(button('Återkalla medgivandet'));
-  expect(again.posts).toEqual([{ url: revokePath, body: {} }]);
+  expect(posts).toEqual([{ url: revokePath, body: {} }]);
   expect(accessLost).not.toHaveBeenCalled();
-  expect(again.accessLost).not.toHaveBeenCalled();
 });
 
-test('when the conversation is not available the page says so, offers no saving and still revokes', async () => {
+test('when the conversation is not available the page says so and offers no saving', async () => {
   show({ available: false });
   await status('Inget medgivande är sparat.');
   expect(screen.getByText('Samtal med Skyttel är inte tillgängligt just nu.')).toBeDefined();
   expect(buttons()).toEqual([]);
+});
 
-  cleanup();
+test('when the conversation is not available a saved consent is still revoked, and the focus goes to the part', async () => {
   const { posts } = show({ available: false, saved: savedConsent });
   await status('Sparat den 1 oktober 2026.');
   expect(screen.getByText('Samtal med Skyttel är inte tillgängligt just nu.')).toBeDefined();
@@ -295,6 +297,8 @@ test('when the conversation is not available the page says so, offers no saving 
   await status('Inget medgivande är sparat.');
   expect(feedback()).toBe('Medgivandet är återkallat');
   expect(buttons()).toEqual([]);
+  // No button is left, so the focus goes to the heading of the part.
+  expect(document.activeElement).toBe(within(part()).getByRole('heading', { level: 2 }));
   expect(posts).toEqual([{ url: revokePath, body: {} }]);
 });
 
@@ -302,16 +306,6 @@ test('an available conversation is not told as unavailable', async () => {
   show();
   await status('Inget medgivande är sparat.');
   expect(screen.queryByText('Samtal med Skyttel är inte tillgängligt just nu.')).toBeNull();
-});
-
-test('the page reads the saved consent anew when it opens, as another device can have changed it', async () => {
-  const { server } = show();
-  await status('Inget medgivande är sparat.');
-  cleanup();
-  // The same visit to the map would keep what it first read. A page that opens asks again.
-  server.saved = savedConsent;
-  render(<Page onAccessLost={() => undefined} />);
-  await status('Sparat den 1 oktober 2026.');
 });
 
 test('a conversation that the server has ended for a revoked consent ends here without loss of access, and the next start asks', async () => {
