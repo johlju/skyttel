@@ -117,7 +117,7 @@ function scanResult(target, evidence, exceptions, scannedAt, retainedImageIds) {
   requireState(
     /^[0-9]+\.[0-9]+\.[0-9]+$/u.test(scanner) &&
       /^Tool: syft-[0-9]+\.[0-9]+\.[0-9]+$/u.test(inventory) &&
-      /^[0-9]+(?:\.[0-9]+)*$/u.test(String(database?.schemaVersion)) &&
+      /^v?[0-9]+\.[0-9]+\.[0-9]+$/u.test(String(database?.schemaVersion)) &&
       Number.isFinite(Date.parse(database.built)),
   );
   requireState(exceptions.version === 1 && Array.isArray(exceptions.exceptions));

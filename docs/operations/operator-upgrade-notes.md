@@ -255,6 +255,11 @@ service.
 
 ### Image security monitoring and release verification
 
+After the monitoring update reaches the main branch, run the image security
+workflow again. Check fresh scan evidence for the running and retained recovery
+images. Earlier unknown results do not establish image safety. Continue private
+investigation if the new result is blocked or unknown.
+
 Configure the operator who receives security alerts and verify delivery through
 GitHub. Review the latest successful scan of the running and retained recovery
 images before each production update and at least monthly. Missing or stale
