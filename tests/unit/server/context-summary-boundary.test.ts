@@ -1,6 +1,6 @@
 import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test } from 'vitest';
-import * as conversationConsent from '../../../src/shared/conversation-consent.js';
+import { conversationConsentRevoked } from '../../../src/shared/conversation-consent.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
@@ -181,13 +181,7 @@ test('revoking during a held summary aborts the provider, preserves the draft an
   release([modelMessage('För sent efter återkallat medgivande.')]);
   const ended = await browser.get(`${path}/${started.id}`);
   expect(ended.status()).toBe(403);
-  // This isolated base precedes #209's distinct revoked cause. Integration
-  // takes its exported constant while preserving that issue's full behavior.
-  const cause =
-    'conversationConsentRevoked' in conversationConsent
-      ? conversationConsent.conversationConsentRevoked
-      : conversationConsent.conversationConsentRequired;
-  expect(await ended.json()).toEqual({ error: cause });
+  expect(await ended.json()).toEqual({ error: conversationConsentRevoked });
   const map = await (await browser.get(path.replace('/text-assistant', '/map'))).json();
   expect(map.draft.changes).toEqual(started.review.changes);
   expect(map.objects).toEqual([]);
