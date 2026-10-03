@@ -37,19 +37,14 @@ for (const width of [1440, 390, 320])
       await page.getByLabel('Objektets namn').fill('Familjeabonnemanget');
       await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
       await openMap(page);
-      const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+      const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
       const legend = page.getByRole('region', { name: 'Förslag i kartan', exact: true });
       await expect(status).toContainText('1 förslag · privat utkast');
       await expect(legend).toContainText('Föreslås läggas till');
       const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
-      const statusButton = tools.getByRole('button', { name: 'Aktuell status', exact: true });
-      if (!(await statusButton.isVisible()))
-        await tools.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
-      await statusButton.focus();
-      await page.keyboard.press('Enter');
-      await expect(
-        status.getByRole('heading', { name: 'Aktuell status', exact: true }),
-      ).toBeFocused();
+      await expect(tools.getByRole('button', { name: 'Aktuell status', exact: true })).toHaveCount(
+        0,
+      );
       const held = new Promise<void>((resolve) => {
         release = resolve;
       });
@@ -85,12 +80,7 @@ for (const width of [1440, 390, 320])
       expect(operations).toHaveLength(1);
       expect(operations[0].operationId).toBe(receipt?.operationId);
       expect(operations[0].receipt).toEqual(receipt);
-      await status.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
-      await expect(
-        width > 700
-          ? statusButton
-          : tools.getByRole('button', { name: 'Visa verktygens namn', exact: true }),
-      ).toBeFocused();
+      await expect(status).toContainText('Sparat · kvitto bekräftat');
     } finally {
       release?.();
       await installation.close();
@@ -194,7 +184,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     await startConversationWithText(page);
     await page.getByLabel('Meddelande till Skyttel').fill('Lägg Molnmusik i utkastet.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
-    const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+    const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
     await expect(status).toContainText('2 förslag · privat utkast');
     await turnMicrophoneOn(page);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
@@ -354,17 +344,11 @@ test('UTKAST-13: a verified save keeps a newer field focused and current status 
     await page.keyboard.type(' Exempel');
     await expect(search).toHaveValue('Lo Exempel');
     const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
-    const trigger = tools.getByRole('button', { name: 'Aktuell status', exact: true });
-    if (!(await trigger.isVisible()))
-      await tools.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
-    await trigger.focus();
-    await page.keyboard.press('Enter');
-    await expect(page.getByRole('heading', { name: 'Aktuell status', exact: true })).toBeFocused();
-    await expect(page.getByRole('region', { name: 'Aktuell status', exact: true })).toContainText(
-      'Sparat · kvitto bekräftat',
-    );
-    await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
-    await expect(trigger).toBeFocused();
+    await expect(tools.getByRole('button', { name: 'Aktuell status', exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('region', { name: 'Utkastets återkoppling', exact: true }),
+    ).toContainText('Sparat · kvitto bekräftat');
+    await expect(search).toBeFocused();
   } finally {
     release?.();
     await installation.close();
@@ -417,10 +401,12 @@ test('UTKAST-15: a necessary answer gates both save actions until a fresh explic
       .fill('Förbered uppgiften och fråga vilket kort som avses.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     await openMap(page);
-    const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
-    await expect(status.getByRole('region', { name: 'Nödvändigt svar' })).toContainText(
+    const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
+    await openConversationText(page);
+    await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(
       'Vilket kort avses?',
     );
+    await openMap(page);
     await expect(
       status.getByRole('button', { name: 'Spara hela utkastet', exact: true }),
     ).toHaveCount(0);
@@ -432,10 +418,10 @@ test('UTKAST-15: a necessary answer gates both save actions until a fresh explic
     ).toBeDisabled();
     expect((await read()).objects).toEqual([]);
     expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
-    await status.getByRole('button', { name: 'Svara i samtalet', exact: true }).click();
+    await openConversationText(page);
     await page.getByLabel('Meddelande till Skyttel').fill('Kortet Lo Exempel avses.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
-    await expect(status.getByRole('region', { name: 'Nödvändigt svar' })).toHaveCount(0);
+    await expect.poll(() => calls).toBe(2);
     await openMap(page);
     const save = status.getByRole('button', { name: 'Spara hela utkastet', exact: true });
     await expect(save).toBeEnabled();
@@ -502,20 +488,14 @@ for (const viewport of [
       const shared = await read();
       const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
       const navigation = page.getByRole('region', { name: 'Navigation', exact: true });
-      const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+      const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
       const view = async (): Promise<PersonalView> =>
         (await page.request.get(`${path}/view`)).json();
       let version = 0;
       for (const first of ['navigation', 'status']) {
         if (first === 'navigation')
           await tools.getByRole('button', { name: 'Navigera', exact: true }).click();
-        const trigger = tools.getByRole('button', { name: 'Aktuell status', exact: true });
-        if (!(await trigger.isVisible()))
-          await tools.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
-        await trigger.click();
-        await expect(
-          status.getByRole('heading', { name: 'Aktuell status', exact: true }),
-        ).toBeFocused();
+        await expect(status).toBeVisible();
         if (first === 'status')
           await tools.getByRole('button', { name: 'Navigera', exact: true }).click();
         const navigationBox = await navigation.boundingBox();
@@ -541,7 +521,6 @@ for (const viewport of [
         await save.focus();
         await save.click({ trial: true });
         await expect(save).toBeFocused();
-        await status.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
         await navigation.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
         await expect(tools.getByRole('button', { name: 'Navigera', exact: true })).toBeFocused();
         expect(await read()).toEqual(shared);

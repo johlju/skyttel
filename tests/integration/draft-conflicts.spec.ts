@@ -35,7 +35,7 @@ test('UTKAST-17: closed-panel status leads to a concurrent object conflict witho
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     await page.getByLabel('Objektets namn').fill('Oskickad cykel');
     await openMap(page);
-    const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+    const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
     await status.getByText('Visa 1 konflikt', { exact: true }).click();
     const destination = status.getByRole('button', { name: 'Objekt: Lo Lind', exact: true });
     await destination.focus();
@@ -194,7 +194,7 @@ for (const { width, height } of [
       const unchanged = await app.read();
       await page.goto(app.installation.origin);
       await openMap(page);
-      const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+      const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
       const review = page.getByRole('region', { name: 'Hela mitt utkast', exact: true });
       for (const [label, title] of [
         ['Objekttyp: Min objekttyp', 'Ändrad objekttyp: Min objekttyp'],
@@ -295,7 +295,7 @@ test('UTKAST-19: an own object correction preserves unsent work and independent 
     await unsent.getByLabel('Objektets namn').fill('Oskickad cykel');
     await unsent.getByLabel('Beskrivning', { exact: true }).fill('Behåll den här texten');
     await openMap(page);
-    const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+    const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
     await status.getByText('Visa 1 konflikt', { exact: true }).click();
     await status.getByRole('button', { name: 'Objekt: Lo Lind', exact: true }).click();
     const review = page.getByRole('region', { name: 'Hela mitt utkast', exact: true });
@@ -375,7 +375,7 @@ for (const width of [1440, 390]) {
       const saved = await app.read();
       await page.goto(app.installation.origin);
       await openMap(page);
-      const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+      const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
       await status.getByText('Visa 1 konflikt', { exact: true }).click();
       await status
         .getByRole('button', {
@@ -484,7 +484,7 @@ for (const kind of ['object-type', 'relationship-type'] as const) {
         await page.goto(app.installation.origin);
         await openWorkspace(page);
         await openMap(page);
-        const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+        const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
         await status.getByText('Visa 1 konflikt', { exact: true }).click();
         await status
           .getByRole('button', {
@@ -597,7 +597,7 @@ for (const choice of ['saved', 'proposed'] as const) {
       await page.goto(app.installation.origin);
       await openWorkspace(page);
       await openMap(page);
-      const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+      const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
       await status.getByText('Visa 1 konflikt', { exact: true }).click();
       await status.getByRole('button', { name: 'Objekt: Lo Lind', exact: true }).click();
       const review = page.getByRole('region', { name: 'Hela mitt utkast', exact: true });
@@ -752,7 +752,7 @@ for (const width of [1440, 390]) {
       expect((await app.read()).draft).toEqual(privateResult);
       expect((await app.read(other.request)).objects).toEqual(saved.objects);
       await openMap(page);
-      const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+      const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
       await expect(status).toContainText('2 förslag · privat utkast');
       let receipt: SaveReceipt | undefined;
       let saveRequests = 0;

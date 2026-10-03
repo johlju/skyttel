@@ -61,7 +61,7 @@ for (const width of [1280, 390, 320]) {
         expect(typedDraft.types).toEqual(initial.types);
         await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
         await expect(
-          page.getByRole('region', { name: 'Aktuell status', exact: true }),
+          page.getByRole('region', { name: 'Utkastets återkoppling', exact: true }),
         ).toContainText('Oskickad formulärtext finns kvar');
         await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
           'Oskickat före den nya typen',

@@ -378,29 +378,20 @@ for (const mode of ['voice', 'text'] as const) {
       ).toBeFocused();
       const settingsPosition = await page.locator('.settings-screen').boundingBox();
       const retainedStatusPosition = await page
-        .getByRole('region', { name: 'Aktuell status', exact: true })
+        .getByRole('region', { name: 'Utkastets återkoppling', exact: true })
         .boundingBox();
       expect(required(settingsPosition?.y)).toBeLessThan(required(retainedStatusPosition?.y));
       await expect(person).not.toBeVisible();
       await expect(subscription).not.toBeVisible();
       await expect(message).not.toBeVisible();
-      const statusDetails = page.getByRole('button', {
-        name: 'Visa samtals- och utkastdetaljer',
-        exact: true,
-      });
       await expect(page.locator('.household-work-background')).toBeInViewport({ ratio: 1 });
-      await expect(statusDetails).toBeVisible();
-      await expect(page.getByRole('region', { name: 'Aktuell status', exact: true })).toContainText(
-        '3 förslag · privat utkast',
-      );
-      await statusDetails.click();
       await expect(
-        page.getByRole('heading', { name: 'Aktuell status', exact: true }),
-      ).toBeFocused();
+        page.getByRole('region', { name: 'Utkastets återkoppling', exact: true }),
+      ).toContainText('3 förslag · privat utkast');
       // The unsent message stays in the closed text view, without a button of its own here.
       await expect(page.getByRole('button', { name: 'Fortsätt skriva' })).toHaveCount(0);
       const retainedText = await page
-        .getByRole('region', { name: 'Aktuell status', exact: true })
+        .getByRole('region', { name: 'Utkastets återkoppling', exact: true })
         .evaluate((status) => {
           const luminance = (color: string) => {
             if (!/^rgb\(\d+, \d+, \d+\)$/.test(color))
@@ -434,8 +425,6 @@ for (const mode of ['voice', 'text'] as const) {
       expect(retainedText.length).toBeGreaterThan(0);
       for (const text of retainedText)
         expect(text.contrast, text.text ?? '').toBeGreaterThanOrEqual(4.5);
-      await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
-      await expect(statusDetails).toBeFocused();
       if (mode === 'voice') {
         await expect(voiceBox(page)).toHaveText('Lyssnar');
         expect(await page.evaluate(() => window.skyttelVoiceFixture.stats())).toMatchObject({
@@ -469,8 +458,9 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(proposals).toContainText('Kim Exempel');
       await message.fill('Spara hela utkastet nu.');
       await assistant.getByRole('button', { name: 'Skicka', exact: true }).click();
-      await expect(assistant.getByRole('status')).toHaveText(
-        'Sparat. Hela utkastet finns i hushållets karta.',
+      await expect.poll(async () => (await history()).length).toBe(1);
+      await expect(page.getByRole('region', { name: 'Utkastets återkoppling' })).toContainText(
+        'Sparat · kvitto bekräftat',
       );
       const savedReceipts = await openConversationReceipts(page);
       await savedReceipts.getByText('Visa kvittot', { exact: true }).first().click();

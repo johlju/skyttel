@@ -13,6 +13,13 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+.household-map.workspace-shell
+  :is(.workspace-draft-feedback, .conversation-notice)
+  button:hover:enabled {
+  background: var(--space-surface);
+  border-color: var(--space-accent);
+  color: var(--space-text);
+}
 .draft-status-summary {
   display: grid;
   gap: 4px;

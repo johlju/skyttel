@@ -285,12 +285,7 @@ for (const width of [1440, 390, 320]) {
       await expect(
         page.getByRole('heading', { name: 'Inställningar', level: 1, exact: true }),
       ).toBeFocused();
-      await page
-        .getByRole('button', { name: 'Visa samtals- och utkastdetaljer', exact: true })
-        .click();
-      await expect(
-        page.getByRole('button', { name: 'Spara hela utkastet', exact: true }),
-      ).toBeDisabled();
+      await expect(page.getByRole('region', { name: 'Utkastets återkoppling' })).toBeVisible();
       const settingsReturn = page.getByRole('link', { name: 'Tillbaka till kartan', exact: true });
       await settingsReturn.focus();
       releaseResponse();
