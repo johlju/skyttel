@@ -1,7 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
-import { voiceSettleMs } from '../../../src/client/use-voice.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import {
   chooseConversationText,
@@ -39,6 +38,7 @@ class Peer extends EventTarget {
   connectionState = 'new';
   localDescription: object | null = null;
   channel = new Channel();
+  remote = new Track();
   addTrack = vi.fn();
   constructor() {
     super();
@@ -56,6 +56,7 @@ class Peer extends EventTarget {
   async setRemoteDescription() {
     this.connectionState = 'connected';
     this.dispatchEvent(new Event('connectionstatechange'));
+    this.dispatchEvent(Object.assign(new Event('track'), { track: this.remote }));
     this.channel.readyState = 'open';
     this.channel.dispatchEvent(new Event('open'));
   }
@@ -199,10 +200,9 @@ async function startWithAudio() {
   await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
   const peer = Peer.all[0];
-  const remote = new Track();
+  const remote = peer.remote;
   await act(async () => {
     peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
-    peer.dispatchEvent(Object.assign(new Event('track'), { track: remote }));
   });
   return { peer, remote };
 }
@@ -400,7 +400,7 @@ test('with the microphone off the connection stays while Skyttel finishes, and t
   expect(calls.some((call) => call.url.endsWith('/stop'))).toBe(false);
 });
 
-test('the connection closes when Skyttel has been quiet with the microphone off, and what is heard keeps it open', async () => {
+test('the muted connection outlasts delayed delegation and quiet gaps in the answer', async () => {
   const { track, calls } = setup();
   await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
@@ -413,7 +413,7 @@ test('the connection closes when Skyttel has been quiet with the microphone off,
   fireEvent.click(microphoneButton());
   expect(track.enabled).toBe(false);
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(voiceSettleMs - 500);
+    await vi.advanceTimersByTimeAsync(6000);
   });
   expect(stopped()).toBe(false);
   // Skyttel takes on what was said just before the microphone was turned off.
@@ -425,20 +425,20 @@ test('the connection closes when Skyttel has been quiet with the microphone off,
     }),
   );
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(voiceSettleMs - 500);
+    await vi.advanceTimersByTimeAsync(6000);
   });
   expect(stopped()).toBe(false);
   expect(track.stop).not.toHaveBeenCalled();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(501);
   });
-  expect(stopped()).toBe(true);
-  expect(track.stop).toHaveBeenCalled();
-  expect(peer.connectionState).toBe('closed');
+  expect(stopped()).toBe(false);
+  expect(track.stop).not.toHaveBeenCalled();
+  expect(peer.connectionState).toBe('connected');
   expect(screen.queryByRole('alert')).toBeNull();
 });
 
-test('a task that was said is worked through with the microphone off, and the connection closes afterwards', async () => {
+test('a task that was said is worked through with the microphone off, including a delayed answer', async () => {
   const { view, track } = setup();
   let phase = 'working';
   const urls: string[] = [];
@@ -471,7 +471,7 @@ test('a task that was said is worked through with the microphone off, and the co
   fireEvent.click(microphoneButton());
   expect(track.enabled).toBe(false);
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(voiceSettleMs * 3);
+    await vi.advanceTimersByTimeAsync(3000 * 3);
   });
   // The box stays for the task that was said, with the stop icon, and the microphone can be turned on.
   expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
@@ -480,15 +480,15 @@ test('a task that was said is worked through with the microphone off, and the co
   expect(urls.some((url) => url.endsWith('/stop'))).toBe(false);
   phase = 'listening';
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(voiceSettleMs / 2);
+    await vi.advanceTimersByTimeAsync(3000 / 2);
   });
   expect(voiceBox()).toBeNull();
   expect(urls.some((url) => url.endsWith('/stop'))).toBe(false);
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(voiceSettleMs);
+    await vi.advanceTimersByTimeAsync(3000);
   });
-  expect(urls.some((url) => url.endsWith('/stop'))).toBe(true);
-  expect(track.stop).toHaveBeenCalled();
+  expect(urls.some((url) => url.endsWith('/stop'))).toBe(false);
+  expect(track.stop).not.toHaveBeenCalled();
 });
 
 test.each(['a new conversation', 'revoked access'])(
@@ -614,7 +614,7 @@ test('a voice poll answered after access is revoked cannot reopen the conversati
   expect(screen.getByRole('region', { name: 'Arbetsyta' }).dataset.sessionActive).toBe('false');
 });
 
-test('temporary disconnection mutes capture, recovery re-enables it and an unusable connection stops server work', async () => {
+test('temporary disconnection leaves capture off until another press, and an unusable connection stops server work', async () => {
   const { track, calls } = setup();
   await userEvent.click(microphoneButton());
   await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
@@ -634,6 +634,9 @@ test('temporary disconnection mutes capture, recovery re-enables it and an unusa
     peer.connectionState = 'connected';
     peer.dispatchEvent(new Event('connectionstatechange'));
   });
+  expect(track.enabled).toBe(false);
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
+  fireEvent.click(microphoneButton());
   expect(track.enabled).toBe(true);
   expect(microphoneButton().getAttribute('aria-pressed')).toBe('true');
   await act(async () => {
@@ -678,9 +681,29 @@ test('voice starts only on request, gates microphone on protocol readiness and s
   expect(Peer.all[0].channel.send).not.toHaveBeenCalled();
 });
 
+test('protocol readiness keeps capture off until remote playback succeeds', async () => {
+  const { track } = setup();
+  let playing!: () => void;
+  vi.mocked(HTMLMediaElement.prototype.play).mockReturnValueOnce(
+    new Promise<void>((resolve) => {
+      playing = resolve;
+    }),
+  );
+  await userEvent.click(microphoneButton());
+  await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+  await act(async () =>
+    Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
+  );
+  expect(track.enabled).toBe(false);
+  expect(voiceBox()?.textContent).toBe('Rösten startar');
+  await act(async () => playing());
+  expect(track.enabled).toBe(true);
+  expect(voiceBox()?.textContent).toBe('Lyssnar');
+});
+
 test('blocked remote audio can be resumed explicitly and all remote tracks stop with the voice session', async () => {
   const { track } = setup();
-  vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValueOnce(
+  vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValue(
     new DOMException('blocked', 'NotAllowedError'),
   );
   await userEvent.click(microphoneButton());
@@ -693,8 +716,11 @@ test('blocked remote audio can be resumed explicitly and all remote tracks stop 
     );
   });
   const resume = await screen.findByRole('button', { name: 'Spela upp ljud' });
-  expect(track.enabled).toBe(true);
+  expect(track.enabled).toBe(false);
+  expect(microphoneButton().getAttribute('aria-pressed')).toBe('false');
+  vi.mocked(HTMLMediaElement.prototype.play).mockResolvedValue();
   await userEvent.click(resume);
+  await waitFor(() => expect(track.enabled).toBe(true));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Spela upp ljud' })).toBeNull());
   await userEvent.click(screen.getByRole('button', { name: closeVoiceConnection }));
   expect(remote.stop).toHaveBeenCalled();

@@ -143,10 +143,12 @@ export function createVoiceTransport(callbacks: {
         playing = true;
         void audioContext.resume().catch(() => {});
         callbacks.onPlaybackBlocked(false);
+        ready();
       }
     } catch {
       if (!closed && !stopped) {
         playing = false;
+        for (const track of microphone?.getTracks() ?? []) track.enabled = false;
         callbacks.onPlaybackBlocked(true);
       }
     }
@@ -179,12 +181,14 @@ export function createVoiceTransport(callbacks: {
     )
       return;
     clearTimeout(startupTimer);
+    if (!playing) return;
     for (const track of microphone?.getTracks() ?? []) track.enabled = !paused;
     callbacks.onReady();
   }
   const connectionChanged = () => {
     if (closed || stopped) return;
     if (live.peerConnection.connectionState === 'disconnected') {
+      paused = true;
       for (const track of microphone?.getTracks() ?? []) track.enabled = false;
       callbacks.onDisconnected(true);
       disconnectTimer ??= setTimeout(() => {
@@ -311,7 +315,11 @@ export function createVoiceTransport(callbacks: {
       if (closed || stopped) return;
       for (const track of microphone?.getTracks() ?? [])
         track.enabled =
-          !paused && connected && started && live.peerConnection.connectionState === 'connected';
+          !paused &&
+          playing &&
+          connected &&
+          started &&
+          live.peerConnection.connectionState === 'connected';
     },
     /** The microphone's sound level right now, from 0 to 1. It is 0 while the microphone is off. */
     microphoneLevel() {

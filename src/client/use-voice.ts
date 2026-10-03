@@ -6,12 +6,6 @@ import { MapRequestError, request } from './map-request.js';
 import { voiceErrorMessage } from './voice-error.js';
 import { createVoiceTransport, type VoiceTransport } from './voice-transport.js';
 
-/**
- * How long Skyttel must be quiet after the microphone is turned off before the
- * voice connection closes. Skyttel first finishes what was said and its answer.
- */
-export const voiceSettleMs = 3000;
-
 /** The microphone and the voice connection of one conversation. */
 export type Voice = {
   state: 'idle' | 'permission' | 'connecting' | 'listening' | 'closing';
@@ -102,10 +96,8 @@ export function useVoice(options: {
   const [error, setError] = useState('');
   const [playbackBlocked, setPlaybackBlocked] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
-  // The microphone is off while the voice connection stays, until Skyttel has finished.
+  // Microphone-off keeps the connection alive: Live has no reliable answer-complete event.
   const [off, setOff] = useState(false);
-  // Counts what is heard of the conversation, so that the connection outlasts it.
-  const [heard, setHeard] = useState(0);
   const [activity, setActivity] = useState({ microphone: false, speaker: false });
   const apply = useCallback((view: TextAssistantView) => {
     const shown = latest.current.assistant;
@@ -250,7 +242,9 @@ export function useVoice(options: {
             if (active()) setPlaybackBlocked(blocked);
           },
           onDisconnected: (value) => {
-            if (active()) setDisconnected(value);
+            if (!active()) return;
+          setDisconnected(value);
+          if (value) setOff(true);
           },
           onTranscript: (row) => {
             if (active()) latest.current.onTranscript?.(row);
@@ -305,14 +299,8 @@ export function useVoice(options: {
       setOff(!off);
     } else if (starting) void stop();
   }, [state, starting, off, start, stop]);
-  // With the microphone off, Skyttel finishes what was said and its answer.
-  // The connection then closes, so that nothing stays open towards OpenAI.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: what is heard restarts the wait
-  useEffect(() => {
-    if (state !== 'listening' || !off || working || speaking) return;
-    const timer = setTimeout(() => void stop(), voiceSettleMs);
-    return () => clearTimeout(timer);
-  }, [state, off, working, speaking, heard, stop]);
+  // Quiet gaps cannot prove that the final utterance or answer has finished.
+  // The muted connection closes with the conversation, access loss or leaving the household.
   const newConversation = useCallback(
     async (reset: () => Promise<TextAssistantView>) => {
       const attempt = current.current;
@@ -354,7 +342,8 @@ export function useVoice(options: {
   const playAudio = useCallback(() => void current.current?.transport?.playAudio(), []);
   const silence = useCallback(() => current.current?.transport?.silence(), []);
   const level = useCallback(() => current.current?.transport?.microphoneLevel() ?? 0, []);
-  const microphone = state === 'listening' && !off && !disconnected ? 'on' : 'off';
+  const microphone =
+    state === 'listening' && !off && !disconnected && !playbackBlocked ? 'on' : 'off';
   return {
     state,
     phase: voice?.phase ?? null,

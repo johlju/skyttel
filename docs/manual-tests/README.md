@@ -119,7 +119,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag, kompakt status,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
   röstrutans statusord, vågform, stoppikon, plats och uppläsning,
-  ljudaktivitet, avbrott,
+  ljudaktivitet, fördröjda svar med mikrofonen av och fokus efter avbrott
+  även i Inställningar,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
   samtalstext och verifierade resultat, löpande dialog och
   raden Skyttel arbetar. Kontrollerat familjeunderlag och

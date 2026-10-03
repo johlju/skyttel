@@ -166,23 +166,21 @@ test('TAL-10: Prata med Skyttel slår på och av mikrofonen utan att någon pane
     ).not.toBe(off);
     expect(live.requests).toHaveLength(1);
 
-    // A short press turns the microphone off: its sound stops at once, and the connection closes.
+    // A short press turns the microphone off. Quiet gaps cannot prove the answer is complete.
     await microphone.click();
     await expect(microphone).toHaveAttribute('aria-pressed', 'false');
     await expect(voiceBox(page)).toHaveCount(0);
     expect((await media(page)).microphoneTracks.at(-1)).toEqual({ enabled: false, state: 'live' });
     await expect(panel(page)).toHaveCount(0);
-    await expect.poll(async () => (await media(page)).openPeers, { timeout: 15_000 }).toBe(0);
-    expect((await media(page)).microphoneTracks.every((track) => track.state === 'ended')).toBe(
-      true,
-    );
+    await page.waitForTimeout(3500);
+    expect((await media(page)).openPeers).toBe(1);
 
     // The same conversation goes on: the next press listens again without asking.
     await expect(microphone).toBeEnabled();
     await microphone.click();
     await listening(page);
     await expect(consentBox(page)).toHaveCount(0);
-    expect(live.requests).toHaveLength(2);
+    expect(live.requests).toHaveLength(1);
   } finally {
     await app.close();
   }
@@ -242,9 +240,12 @@ test('TAL-11: Skyttel arbetar färdigt och talar klart när mikrofonen stängs a
     await expect(voiceBox(page)).toHaveCount(0);
     await expect(voiceAnnouncement(page)).toHaveText('Mikrofonen är av');
 
-    // Then the voice connection closes, and the microphone is released.
-    await expect.poll(async () => (await media(page)).openPeers, { timeout: 15_000 }).toBe(0);
-    expect((await media(page)).microphoneTracks).toEqual([{ enabled: false, state: 'ended' }]);
+    // A long pause in the answer does not close the connection or lose later output.
+    await page.waitForTimeout(3500);
+    expect((await media(page)).openPeers).toBe(1);
+    await sound(page, 'remote', 0.2);
+    await expect(voiceBox(page)).toHaveText('Skyttel talar');
+    expect((await media(page)).microphoneTracks).toEqual([{ enabled: false, state: 'live' }]);
     await expect(page.getByRole('alert')).toHaveCount(0);
     expect(live.requests).toHaveLength(1);
   } finally {
@@ -523,17 +524,11 @@ test('TAL-16: hjälpmedel får röstrutans namn, knappens läge och uppläsninga
     await expect(announcement).toHaveText('');
 
     // The focus is elsewhere: Lyssnar is read once when the microphone is turned on.
-    await page.evaluate(() => window.skyttelVoiceFixture.setMicrophone('hold'));
-    await expect.poll(async () => (await media(page)).openPeers, { timeout: 15_000 }).toBe(0);
+    expect((await media(page)).openPeers).toBe(1);
     await expect(microphoneButton(page)).toBeEnabled();
-    await microphoneButton(page).click();
-    await expect(voiceBox(page)).toHaveText('Rösten startar');
+    // Activate without moving the focus from the map.
     await page.getByRole('button', { name: 'Återställ vy', exact: true }).focus();
-    await expect(announcement).toHaveText('');
-    await page.evaluate(() => {
-      window.skyttelVoiceFixture.releaseMicrophone();
-      window.skyttelVoiceFixture.setMicrophone('allow');
-    });
+    await microphoneButton(page).evaluate((button: HTMLButtonElement) => button.click());
     await listening(page);
     await expect(announcement).toHaveText('Lyssnar');
     const told = await announcement.locator('span').evaluateHandle((element) => element);
@@ -591,7 +586,7 @@ test('TAL-16: hjälpmedel får röstrutans namn, knappens läge och uppläsninga
     await expect(announcement).toHaveText('Mikrofonen är av');
 
     // Settings keep the map loaded: the voice box follows the voice there too.
-    await expect.poll(async () => (await media(page)).openPeers, { timeout: 15_000 }).toBe(0);
+    expect((await media(page)).openPeers).toBe(1);
     await expect(microphoneButton(page)).toBeEnabled();
     await microphoneButton(page).click();
     await listening(page);
@@ -604,6 +599,12 @@ test('TAL-16: hjälpmedel får röstrutans namn, knappens läge och uppläsninga
     await expect(voiceBox(page)).toHaveText('Skyttel talar');
     await expect(stopIcon(page)).toBeVisible();
     expect((await media(page)).openPeers).toBe(1);
+    await stopIcon(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(stopIcon(page)).toHaveCount(0);
+    await expect(
+      page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }),
+    ).toBeFocused();
   } finally {
     await app.close();
   }

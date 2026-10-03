@@ -56,17 +56,9 @@ export async function turnMicrophoneOn(page: Page) {
   await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
   await expect(voiceBox(page)).toBeVisible();
 }
-/**
- * Turns the microphone off and waits until the voice connection has closed,
- * which it does when Skyttel has finished and been quiet for a few seconds.
- */
+/** Turns capture off while retaining the connection for Skyttel’s delayed answer. */
 export async function turnMicrophoneOff(page: Page) {
   await chooseConversationVoice(page);
   await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
-  await expect
-    .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().openPeers), {
-      timeout: 15_000,
-    })
-    .toBe(0);
   await expect(microphoneButton(page)).toBeEnabled();
 }

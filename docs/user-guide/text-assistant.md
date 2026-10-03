@@ -110,7 +110,9 @@ ett besök visas medgivanderutan först. Tillåt mikrofonen i webbläsaren.
 Medan rösten startar avbryter ett tryck starten. Rösten använder samma
 utkast och regler som texten. OpenAI behandlar ljudet från
 mikrofonen medan den är på. Om webbläsaren blockerar ljudet, välj
-**Spela upp ljud**. Du kan fortsätta med text eller formulär när
+**Spela upp ljud**. Mikrofonen börjar lyssna först när ljudet fungerar.
+Om kontakten bryts är mikrofonen av tills du själv slår på den igen.
+Du kan fortsätta med text eller formulär när
 mikrofonen eller ljuduppspelningen inte fungerar.
 
 Om rösten inte startar visar felmeddelandet vad du kan prova. Om det visar

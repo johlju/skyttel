@@ -262,8 +262,7 @@ databasens sparande; redovisa inte det som ett prov av förlorat sådant svar.
    och godkänn en ny textassistentanslutning. Öppna **Tidigare sparförsök**
    och kontrollera samma genomförda kvitto igen.
 6. Slå på mikrofonen igen. Kör `usage 12`, `usage 15` och `finalize off`.
-   Stäng av mikrofonen. Röstanslutningen stängs några sekunder efter att
-   Skyttel har tystnat. Kontrollera stoppsvarets `voice.seconds:15` och
+   Välj **Avsluta samtalet**. Röstanslutningen stängs. Kontrollera stoppsvarets `voice.seconds:15` och
    `voice.usageFinal:false` i nätverkspanelen. Återställ `finalize on`
    innan nästa prov.
 
@@ -495,13 +494,12 @@ Inställningar”.
    ljudobjekt, levande avstängt mikrofonspår och levande påslaget
    inkommande spår.
 5. Skriv **Kvar i samtalet** utan att skicka. Öppna Inställningar och
-   invänta sidrubrikens fokus. Kräv både **Mikrofonen är pausad** och
-   **Skyttel talar** i den kompakta statusytan.
-   Återuppta mikrofonen i kortet. Välj **Tillbaka till kartan** och öppna
-   textvyn med **Skriv till Skyttel** om den är stängd. Kräv kvarvarande
-   text och fokus i meddelandefältet.
-6. Stoppa den inkommande signalen. **Skyttel talar** försvinner. Stäng
-   rösten: vågformen försvinner och resurserna avslutas.
+   invänta sidrubrikens fokus. Kräv **Skyttel talar** i röstrutan längst
+   ned. Välj **Tillbaka till kartan** och öppna textvyn med
+   **Skriv till Skyttel** om den är stängd. Kräv kvarvarande text och fokus
+   i meddelandefältet.
+6. Stoppa den inkommande signalen. Röstrutan försvinner. Vänta mer än
+   tre sekunder: anslutningen och det avstängda mikrofonspåret finns kvar.
 
 **Förväntat resultat:**
 
@@ -644,8 +642,8 @@ någon panel öppnas”.
   sju punkter och **Lyssnar**. Ingen panel öppnas, och samtalets textfält syns
   inte.
 - Steg 6: knappen är inte intryckt, och röstrutan försvinner direkt.
-  Mikrofonspåret är avstängt från första stund och avslutat när
-  röstanslutningen har stängts: `openPeers: 0`.
+  Mikrofonspåret är avstängt från första stund och fortsätter vara levande.
+  Anslutningen är kvar så att ett fördröjt svar kan höras: `openPeers: 1`.
 - Steg 7: samma samtal fortsätter utan medgivanderuta, och röstrutan visar
   **Lyssnar**.
 
@@ -686,8 +684,9 @@ stängs av”.
 - Steg 3: utkastet visar **Lo Lind**. Röstrutan visar **Skyttel talar**.
 - Steg 4: `sessions` visar ett kommentarspaket för uppdraget. Röstrutan
   försvinner när ljudet tystnar, och skärmläsaren får **Mikrofonen är av**.
-  Därefter är anslutningen stängd och mikrofonspåret avslutat. Inget fel
-  visas.
+  Anslutningen och det avstängda mikrofonspåret finns kvar även efter en
+  längre paus. Kör `setSound('remote', true)` igen: **Skyttel talar** visas
+  utan att mikrofonen slås på. Inget fel visas.
 
 ### TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåller förslagen
 
@@ -813,8 +812,8 @@ uppläsningarna i tur”.
 
 1. Starta samtalet med **Prata med Skyttel** och **Godkänn och starta**.
    Välj knappen igen med fokus kvar på den.
-2. Kör `setMicrophone('hold')`, välj knappen och flytta fokus till
-   **Återställ vy**. Kör `releaseMicrophone()` och `setMicrophone('allow')`.
+2. Slå på mikrofonen och flytta fokus till **Återställ vy** innan
+   uppläsningen börjar.
 3. Kör `setSound('microphone', true)` och sedan
    `setSound('microphone', false)`.
 4. Kör `user Beskriv utkastet.`, `delegate`, släpp anropet med ett svar och
@@ -822,7 +821,8 @@ uppläsningarna i tur”.
 5. Gå med Tab från **Prata med Skyttel**.
 6. Välj **Prata med Skyttel**, flytta fokus till **Återställ vy** och kör
    `setSound('remote', false)`.
-7. Slå på mikrofonen igen och öppna **Inställningar**.
+7. Slå på mikrofonen igen och öppna **Inställningar**. Kör
+   `setSound('remote', true)`, gå med Tab till **Avbryt** och tryck Enter.
 
 **Förväntat resultat:**
 
@@ -837,7 +837,8 @@ uppläsningarna i tur”.
 - Röstrutan är gruppen **Röstruta**, och vågformen läses inte. Alla
   uppläsningar väntar på sin tur, och inga ljudsignaler hörs.
 - Steg 7: röstrutan står kvar i Inställningarnas statusrad och följer
-  rösten där.
+  rösten där. När **Avbryt** försvinner står fokus på **Tillbaka till
+  kartan**.
 
 ### TAL-17: röstrutan med riktig mikrofon, pekskärm och skärmläsare
 
@@ -1079,9 +1080,11 @@ window.skyttelVoiceFixture.disconnect();
 
 Use `reconnect()` within three seconds for a transient interruption. Leave it
 disconnected for the application's timeout, or use `fail()` for immediate
-failure. `audioError()` emits a media-output error. After turning the
-microphone off, wait until the voice box is gone and the connection has
-closed, a few seconds after Skyttel is quiet. Then inspect:
+failure. `audioError()` emits a media-output error. A transient recovery
+keeps the microphone off until another explicit press. Blocked playback
+keeps capture off until **Spela upp ljud** succeeds. Microphone-off keeps
+the connection alive for delayed answers; choose **Avsluta samtalet**
+to close and release all resources. Then inspect:
 
 ```js
 window.skyttelVoiceFixture.stats();

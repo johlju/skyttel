@@ -175,7 +175,8 @@ test('TAL-07: uppmätt ljudaktivitet skiljs från avstängd mikrofon och består
     await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeFocused();
     await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', false));
     await expect(box).toHaveCount(0);
-    await expect.poll(() => openVoiceConnections(page), { timeout: 15_000 }).toBe(0);
+    await page.waitForTimeout(3500);
+    expect(await openVoiceConnections(page)).toBe(1);
     expect(live.requests).toHaveLength(1);
   } finally {
     await app.close();
@@ -608,6 +609,8 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       .poll(() => live.sent.some(({ event }) => event.type === 'session.commentary.append'))
       .toBe(true);
     await turnMicrophoneOff(page);
+    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
+    await expect.poll(() => openVoiceConnections(page)).toBe(0);
     expect(
       await page.evaluate(() =>
         window.skyttelVoiceFixture
@@ -732,12 +735,22 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
       window.skyttelVoiceFixture.setMicrophone('allow');
       window.skyttelVoiceFixture.setPlayback('blocked');
     });
-    await startVoice(page);
+    await openConversationText(page);
+    await chooseConversationVoice(page);
     await expect(voicePanel.getByRole('alert')).toContainText('stoppade ljuduppspelningen');
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    expect(
+      await page.evaluate(() =>
+        window.skyttelVoiceFixture.stats().microphoneTracks.every((track) => !track.enabled),
+      ),
+    ).toBe(true);
     await page.evaluate(() => window.skyttelVoiceFixture.setPlayback('allow'));
     await voicePanel.getByRole('button', { name: 'Spela upp ljud' }).click();
     await expect(voicePanel.getByRole('button', { name: 'Spela upp ljud' })).toHaveCount(0);
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
     await turnMicrophoneOff(page);
+    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
+    await expect.poll(() => openVoiceConnections(page)).toBe(0);
     const media = await page.evaluate(() => window.skyttelVoiceFixture.stats());
     expect(media.openPeers).toBe(0);
     expect(media.audioElements).toBe(0);
@@ -862,12 +875,12 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
         usage: { seconds },
       });
     live.configure({ finalize: false });
-    // The connection closes once Skyttel has been quiet with the microphone off.
+    // Ending the conversation closes the voice connection and finalizes usage.
     const stopResponse = page.waitForResponse(
       (response) => response.url().includes('/voice/') && response.url().endsWith('/stop'),
       { timeout: 15_000 },
     );
-    await chooseConversationVoice(page);
+    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
     expect(await (await stopResponse).json()).toMatchObject({
       voice: { phase: 'closed', seconds: 15, usageFinal: false },
     });

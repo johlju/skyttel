@@ -89,11 +89,14 @@ function Waveform({ form, level }: { form: VoiceBoxStatus['wave']; level: () => 
 export function VoiceBox({
   conversation,
   microphoneButton,
+  focusAfterStop,
 }: {
   /** The voice, whether Skyttel works with a said or a written task, and how to stop the work. */
   conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'>;
   /** The button that turns the microphone on and off, where there is one. */
   microphoneButton?: () => HTMLElement | null;
+  /** The visible control to focus when the stop icon disappears. */
+  focusAfterStop?: () => HTMLElement | null;
 }) {
   const { voice } = conversation;
   const status = voiceBoxStatus(voice, conversation.working);
@@ -105,6 +108,8 @@ export function VoiceBox({
   const owesOff = useRef(on);
   const microphoneButtonNow = useRef(microphoneButton);
   microphoneButtonNow.current = microphoneButton;
+  const focusAfterStopNow = useRef(focusAfterStop);
+  focusAfterStopNow.current = focusAfterStop;
   useEffect(() => {
     const previous = before.current;
     before.current = { on, shown };
@@ -127,7 +132,7 @@ export function VoiceBox({
   useLayoutEffect(() => {
     if (stopShown || !stopFocused.current) return;
     stopFocused.current = false;
-    microphoneButtonNow.current?.()?.focus();
+    (focusAfterStopNow.current?.() ?? microphoneButtonNow.current?.())?.focus();
   }, [stopShown]);
   return (
     <div className="conversation-corner">

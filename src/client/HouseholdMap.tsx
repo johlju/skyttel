@@ -1426,6 +1426,11 @@ export function HouseholdMap({
       microphoneButton={() =>
         workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null
       }
+      focusAfterStop={() =>
+        active
+          ? (workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null)
+          : document.querySelector<HTMLElement>('.settings-return')
+      }
     />
   );
   function remove(kind: 'draft' | 'relationship', item: MapObject | MapRelationship) {
