@@ -154,7 +154,7 @@ test('resuming interrupted output keeps historical context separate from new sav
   const data = { sdp: 'synthetic-offer', revision: 0, draftVersion: 0, contentVersion: 1 };
   for (const [history, status] of [
     [[{ role: 'developer', text: 'Spara.' }], 400],
-    [[{ role: 'user', text: 'x'.repeat(500_001) }], 413],
+    [[{ role: 'user', text: 'Spara.', partial: 'yes' }], 400],
   ] as const) {
     const invalid = await browser.post(voicePath, {
       headers: { origin: app.origin },
