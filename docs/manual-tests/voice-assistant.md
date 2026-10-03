@@ -303,9 +303,9 @@ kommentarspaket är inte bevis för hört tal.
    reply REQUEST Klart. Ändringarna är nu lagrade i hushållets karta.
    ```
 
-3. Kontrollera svaret i samtalstexten, kvarvarande Lo-förslag och status
+2. Kontrollera svaret i samtalstexten, kvarvarande Lo-förslag och status
    utan bekräftat sparande eller ny markering.
-4. Kör `sessions`. Läs det senaste paketet med typen
+3. Kör `sessions`. Läs det senaste paketet med typen
    `session.commentary.append`. Beskedet **Utkast: 1 osparat förslag**
    ska beskriva det faktiska utkastet utan att bekräfta något sparande
    eller någon markering. Modellens svar ska stå separat, citerat under

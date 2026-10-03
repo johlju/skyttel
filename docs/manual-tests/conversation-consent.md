@@ -97,7 +97,8 @@ medgivandet gäller besöket”.
 1. Välj **Prata med Skyttel** och **Godkänn och starta** utan att markera
    kryssrutan. Kontrollera att knappen är intryckt, att röstrutan visar
    **Lyssnar** och att ingen panel öppnas.
-2. Välj **Skriv till Skyttel** och **Nytt samtal** i textvyn. Samtalstexten töms och Skyttel säger
+2. Välj **Skriv till Skyttel** och **Nytt samtal** i textvyn.
+   Samtalstexten töms och Skyttel säger
    att utkastet är tomt. Ingen medgivanderuta visas, och mikrofonen är
    fortfarande på.
 3. Öppna **Inställningar** och välj **Tillbaka till kartan**. Välj

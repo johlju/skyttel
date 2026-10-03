@@ -1,6 +1,6 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { ConversationConsent } from '../../../src/client/ConversationConsent.js';
 import { ConversationSettings } from '../../../src/client/ConversationSettings.js';
@@ -41,8 +41,10 @@ afterEach(() => {
  */
 function Page({ onAccessLost }: { onAccessLost: () => void }) {
   const chosen = useRef<HTMLElement | null>(null);
+  const [textViewOpen, setTextViewOpen] = useState(false);
   const conversation = useConversation({
     householdId: 'linden',
+    onStarted: () => setTextViewOpen(true),
     onMapChange: () => undefined,
     onAccessLost,
     onSelectItem: async () => false,
@@ -58,11 +60,11 @@ function Page({ onAccessLost }: { onAccessLost: () => void }) {
       >
         Starta samtalet
       </button>
-      <button type="button" onClick={() => void conversation.end()}>
-        Avsluta samtalet
+      <button type="button" onClick={() => setTextViewOpen(false)}>
+        Stäng textvyn
       </button>
       <ConversationConsent conversation={conversation} chosen={chosen} />
-      <p>{conversation.session ? 'Samtalet pågår' : 'Inget samtal pågår'}</p>
+      <p>{conversation.session && textViewOpen ? 'Samtalet pågår' : 'Inget samtal pågår'}</p>
       <label>
         Oskickad text
         <input
@@ -180,7 +182,7 @@ test('a consent for the visit is revoked at once without a conversation, and the
   await userEvent.click(screen.getByRole('button', { name: 'Starta samtalet' }));
   await giveConversationConsent();
   await screen.findByText('Samtalet pågår');
-  await userEvent.click(screen.getByRole('button', { name: 'Avsluta samtalet' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng textvyn' }));
   await screen.findByText('Inget samtal pågår');
   await status('Du har godkänt för det här besöket. Inget medgivande är sparat.');
   expect(buttons()).toEqual(['Spara medgivandet', 'Återkalla medgivandet']);

@@ -330,7 +330,9 @@ test('TAL-09: starten kräver medgivande och återhämtar mikrofonavbrott', asyn
   }
 });
 
-test('TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtalet', async ({ page }) => {
+test('TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtalet', async ({
+  page,
+}) => {
   let release!: (output: unknown[]) => void;
   let held = false;
   const model = textModel(

@@ -243,8 +243,8 @@ export function useVoice(options: {
           },
           onDisconnected: (value) => {
             if (!active()) return;
-          setDisconnected(value);
-          if (value) setOff(true);
+            setDisconnected(value);
+            if (value) setOff(true);
           },
           onTranscript: (row) => {
             if (active()) latest.current.onTranscript?.(row);

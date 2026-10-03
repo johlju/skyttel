@@ -30,7 +30,9 @@ export function StandaloneConversation({
   const [textViewOpen, setTextViewOpen] = useState(false);
   const conversation = useConversation({
     householdId: presentation.householdId,
-    onStarted: (mode) => { if (mode === 'text') setTextViewOpen(true); },
+    onStarted: (mode) => {
+      if (mode === 'text') setTextViewOpen(true);
+    },
     onMapChange,
     onAccessLost,
     onSelectItem,
