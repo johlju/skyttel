@@ -52,9 +52,8 @@ export async function openConversationDraft(page: Page) {
 
 /** Receipts belong to the existing draft and history work panel. */
 export async function openConversationReceipts(page: Page) {
+  await (await utilityButton(page, 'Utkast och historik')).click();
   const receipts = page.getByRole('region', { name: 'Mina sparförsök', exact: true });
-  if (!(await receipts.isVisible()))
-    await (await utilityButton(page, 'Utkast och historik')).click();
   const summary = receipts.getByText('Tidigare sparförsök', { exact: true });
   if ((await summary.locator('..').getAttribute('open')) === null) await summary.click();
   await expect(receipts).toBeVisible();

@@ -524,15 +524,15 @@ for (const mode of ['voice', 'text'] as const) {
 
       // 8. Stop media, restart the same database, inspect full history and two-way privacy.
       if (mode === 'voice') {
-        // The connection closes when Skyttel has been quiet with the microphone off.
+        // Capture stops immediately; quiet gaps do not prove that an answer is finished.
         await chooseConversationVoice(page);
         await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
         await expect
           .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats()), { timeout: 15_000 })
           .toMatchObject({
-            openPeers: 0,
-            microphoneTracks: [{ enabled: false, state: 'ended' }],
-            remoteTracks: [{ enabled: true, state: 'ended' }],
+            openPeers: 1,
+            microphoneTracks: [{ enabled: false, state: 'live' }],
+            remoteTracks: [{ enabled: true, state: 'live' }],
           });
       } else {
         expect(live.requests).toEqual([]);
@@ -544,6 +544,14 @@ for (const mode of ['voice', 'text'] as const) {
         });
       }
       await app.restart();
+      if (mode === 'voice')
+        await expect
+          .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats()), { timeout: 15_000 })
+          .toMatchObject({
+            openPeers: 0,
+            microphoneTracks: [{ enabled: false, state: 'ended' }],
+            remoteTracks: [{ enabled: true, state: 'ended' }],
+          });
       await page.reload();
       if (mode === 'text') await loseGraphics(page);
       expect((await (await page.request.get(`${app.origin}/api/bootstrap`)).json()).user.id).toBe(
