@@ -216,7 +216,7 @@ for (const width of [1280, 390, 320]) {
         }
         await closeWorkspace(page);
         const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
-        await expect(status).toContainText('Red ut obesvarade identiteter före sparande');
+        await expect(status).toContainText('Red ut identiteter i utkastet');
         await expect(status).toContainText('Oskickad formulärtext finns kvar');
         const resolve = status.getByRole('button', {
           name: 'Red ut identiteter i utkastet',

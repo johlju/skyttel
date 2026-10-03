@@ -2,7 +2,16 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { createHousehold, openProfile, openWorkspace, signIn } from '../support/client.js';
+import {
+  consentBox,
+  giveConversationConsent,
+  microphoneButton,
+  voiceBox,
+} from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
+import { liveBrowserFixtureSource } from '../support/live-browser.js';
+import { liveProvider } from '../support/live-provider.js';
+import { modelMessage, textModel } from '../support/text-model.js';
 
 test('ACCESS-14: external sign-in explains the return and can be cancelled before leaving', async ({
   page,
@@ -98,17 +107,40 @@ test('ACCESS-17: revoked access retires protected work while the operator can op
 test('ACCESS-15: first-use guidance opens voice, text and list without a mandatory tour', async ({
   page,
 }) => {
-  const installation = await createInstallation();
+  const live = liveProvider();
+  const installation = await createInstallation(undefined, {
+    modelFetch: textModel(() => [modelMessage('Hej.')]).provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
   try {
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
+    await page.addInitScript({ content: liveBrowserFixtureSource });
     for (const action of ['Tala', 'Skriv', 'Öppna listan']) {
       await page.goto(installation.origin);
       const guidance = page.getByRole('complementary', { name: 'Kom igång med kartan' });
       await guidance.getByRole('button', { name: action, exact: true }).click();
       if (action === 'Öppna listan')
         await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toBeVisible();
-      else await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toBeVisible();
+      else {
+        await expect(consentBox(page)).toBeVisible();
+        await expect(guidance).toBeVisible();
+        await giveConversationConsent(page);
+        if (action === 'Tala') {
+          await expect(voiceBox(page)).toHaveText('Lyssnar');
+          await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
+          await expect(
+            page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }),
+          ).toHaveCount(0);
+        } else {
+          await expect(
+            page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }),
+          ).toBeVisible();
+          await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+          await expect(voiceBox(page)).toHaveCount(0);
+        }
+      }
       await expect(guidance).toHaveCount(0);
     }
     await page.goto(installation.origin);

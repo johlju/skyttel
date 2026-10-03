@@ -197,6 +197,11 @@ for (const viewport of [
         });
         const send = async (text: string) => {
           await openConversationText(page);
+          const collapseTools = page.getByRole('button', {
+            name: 'Dölj verktygens namn',
+            exact: true,
+          });
+          if (await collapseTools.isVisible()) await collapseTools.click();
           await panel.getByLabel('Meddelande till Skyttel').fill(text);
           await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
         };
