@@ -267,3 +267,38 @@ test('a periodic availability failure blocks an existing conversation, while una
   expect(result.current.inputBlocked).toBe(false);
   expect(result.current.voice.state).toBe('idle');
 });
+
+test('late availability, consent and online responses from a departed household cannot authorize its replacement', async () => {
+  vi.useFakeTimers();
+  const held: ((response: Response) => void)[] = [];
+  vi.stubGlobal('fetch', async (url: string) => {
+    if (url.startsWith('/api/households/linden/') && !url.endsWith('/map/operations'))
+      return new Promise<Response>((resolve) => held.push(resolve));
+    if (url.endsWith('/text-assistant')) return Response.json({ available: false });
+    if (url.endsWith('/conversation-consent')) return Response.json({ saved: null });
+    return Response.json({ operations: [] });
+  });
+  const { result, rerender } = renderHook(
+    ({ householdId }) => useConversation({ ...options, householdId }),
+    { initialProps: { householdId: 'linden' } },
+  );
+  act(() => window.dispatchEvent(new Event('online')));
+  await tick(0);
+  expect(held).toHaveLength(3);
+  rerender({ householdId: 'eken' });
+  await tick(0);
+  await act(async () => {
+    for (const resolve of held)
+      resolve(
+        Response.json({
+          available: true,
+          saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' },
+        }),
+      );
+  });
+  expect(result.current.available).toBe(false);
+  expect(result.current.consent.saved).toBeNull();
+  expect(result.current.consent.valid).toBe(false);
+  expect(result.current.inputBlocked).toBe(true);
+  expect(result.current.session).toBeNull();
+});

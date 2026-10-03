@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { useRef, useState } from 'react';
 import { afterEach, expect, test, vi } from 'vitest';
@@ -87,6 +87,7 @@ function show({
   saved = null as SavedConversationConsent | null,
   available = true,
   failures = [] as number[],
+  saving = false,
 } = {}) {
   const server = { saved, failures, sessionStatus: 200 };
   const posts: { url: string; body: unknown }[] = [];
@@ -96,7 +97,7 @@ function show({
       if (url === path) return Response.json({ available });
       if (url === consentPath) return Response.json({ saved: server.saved });
       return server.sessionStatus === 200
-        ? Response.json(session)
+        ? Response.json({ ...session, saving })
         : Response.json({ error: 'conversation_consent_revoked' }, { status: 403 });
     }
     posts.push({ url, body: JSON.parse(String(init.body)) });
@@ -106,7 +107,7 @@ function show({
       server.saved = url === consentPath ? savedConsent : null;
       return Response.json({ saved: server.saved });
     }
-    return Response.json(session);
+    return Response.json({ ...session, saving });
   });
   render(<Page onAccessLost={accessLost} />);
   return { posts, server, accessLost };
@@ -250,6 +251,53 @@ test('revoking while a conversation goes on ends it and keeps the unsent text', 
   expect(posts.at(-1)).toEqual({ url: revokePath, body: {} });
   await userEvent.click(screen.getByRole('button', { name: 'Starta samtalet' }));
   await waitFor(() => expect(queryConsentBox()).not.toBeNull());
+});
+
+test('revocation confirmation contains keyboard focus and cancelling preserves the conversation and unsent text', async () => {
+  const { posts } = show({ saved: savedConsent });
+  await status('Sparat den 1 oktober 2026.');
+  await userEvent.click(screen.getByRole('button', { name: 'Starta samtalet' }));
+  await screen.findByText('Samtalet pågår');
+  await userEvent.type(screen.getByLabelText('Oskickad text'), 'Behåll min fråga.');
+  const revoke = button('Återkalla medgivandet');
+  await userEvent.click(revoke);
+  const dialog = screen.getByRole('dialog', { name: 'Återkalla medgivandet' });
+  const confirm = within(dialog).getByRole('button', { name: 'Återkalla och avsluta samtalet' });
+  const cancel = within(dialog).getByRole('button', { name: 'Avbryt' });
+  expect(document.activeElement).toBe(within(dialog).getByRole('heading'));
+  await userEvent.tab({ shift: true });
+  expect(document.activeElement).toBe(cancel);
+  await userEvent.tab();
+  expect(document.activeElement).toBe(confirm);
+  await userEvent.tab({ shift: true });
+  expect(document.activeElement).toBe(cancel);
+  await userEvent.click(cancel);
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(document.activeElement).toBe(revoke);
+  expect(screen.getByText('Samtalet pågår')).toBeDefined();
+  expect((screen.getByLabelText('Oskickad text') as HTMLInputElement).value).toBe(
+    'Behåll min fråga.',
+  );
+  expect(posts).toEqual([{ url: path, body: {} }]);
+});
+
+test('native dialog cancellation does not revoke consent or stop a registered save', async () => {
+  const { posts } = show({ saved: savedConsent, saving: true });
+  await status('Sparat den 1 oktober 2026.');
+  await userEvent.click(screen.getByRole('button', { name: 'Starta samtalet' }));
+  await screen.findByText('Samtalet pågår');
+  const revoke = button('Återkalla medgivandet');
+  await userEvent.click(revoke);
+  const dialog = screen.getByRole('dialog', { name: 'Återkalla medgivandet' });
+  expect(dialog.textContent).toContain('Skyttel sparar ditt utkast. Sparandet slutförs.');
+  expect(dialog.textContent).not.toContain('osparade ändringar');
+  await userEvent.keyboard('{Escape}');
+  fireEvent(dialog, new Event('cancel', { bubbles: false, cancelable: true }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(document.activeElement).toBe(revoke);
+  expect(posts).toEqual([{ url: path, body: {} }]);
+  expect(screen.getByText('Samtalet pågår')).toBeDefined();
+  expect(feedback()).toBe('');
 });
 
 test('a consent that is saved for another version of the consent text is told as changed and can be saved anew', async () => {

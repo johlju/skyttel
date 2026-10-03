@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
 import { ConversationSettings } from '../../../src/client/ConversationSettings.js';
@@ -91,4 +91,95 @@ test('a failed initial read does not invent a saved choice or enable changes', a
     expect(status().textContent).toBe('Valet kunde inte läsas in. Ladda om sidan och försök igen.'),
   );
   expect(checkbox().hasAttribute('disabled')).toBe(true);
+});
+
+test('resetting personal widths sends one write, retains the busy control and restores focus to the heading after success', async () => {
+  let release!: (response: Response) => void;
+  const writes: unknown[] = [];
+  provider(
+    async () =>
+      Response.json({ ...defaultConversationPreferences, textWidth: 460, draftWidth: 380 }),
+    async (init) => {
+      writes.push(JSON.parse(String(init.body)));
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    },
+  );
+  render(<Page />);
+  const reset = await screen.findByRole('button', { name: 'Återställ bredderna' });
+  await userEvent.click(reset);
+  expect(reset.getAttribute('aria-disabled')).toBe('true');
+  await userEvent.click(reset);
+  expect(writes).toEqual([{ textWidth: 400, draftWidth: 340 }]);
+  expect(screen.getByRole('button', { name: 'Återställ bredderna' })).toBe(reset);
+  await act(async () => release(Response.json(defaultConversationPreferences)));
+  const region = screen.getByRole('region', { name: 'Textvyns bredd' });
+  expect(within(region).getByRole('status').textContent).toBe('Bredderna är återställda');
+  expect(screen.queryByRole('button', { name: 'Återställ bredderna' })).toBeNull();
+  expect(within(region).getByText('Du har inte ändrat bredderna.')).toBeDefined();
+  expect(document.activeElement).toBe(within(region).getByRole('heading'));
+});
+
+test('a rejected width reset retains the changed widths and focused retry control until a successful retry', async () => {
+  let failures = 1;
+  const writes: unknown[] = [];
+  provider(
+    async () => Response.json({ ...defaultConversationPreferences, draftWidth: 380 }),
+    async (init) => {
+      writes.push(JSON.parse(String(init.body)));
+      return failures--
+        ? Response.json({ error: 'unavailable' }, { status: 503 })
+        : Response.json(defaultConversationPreferences);
+    },
+  );
+  render(<Page />);
+  const reset = await screen.findByRole('button', { name: 'Återställ bredderna' });
+  await userEvent.click(reset);
+  const region = screen.getByRole('region', { name: 'Textvyns bredd' });
+  await waitFor(() =>
+    expect(within(region).getByRole('status').textContent).toBe(
+      'Bredderna kunde inte sparas. Försök igen.',
+    ),
+  );
+  expect(screen.getByRole('button', { name: 'Återställ bredderna' })).toBe(reset);
+  expect(document.activeElement).toBe(reset);
+  expect(reset.getAttribute('aria-disabled')).toBe('false');
+  await userEvent.click(reset);
+  await waitFor(() =>
+    expect(within(region).getByRole('status').textContent).toBe('Bredderna är återställda'),
+  );
+  expect(writes).toEqual([
+    { textWidth: 400, draftWidth: 340 },
+    { textWidth: 400, draftWidth: 340 },
+  ]);
+  expect(document.activeElement).toBe(within(region).getByRole('heading'));
+});
+
+test('a pending draft preference prevents a width reset from overtaking that write', async () => {
+  let release!: (response: Response) => void;
+  const writes: unknown[] = [];
+  provider(
+    async () => Response.json({ ...defaultConversationPreferences, textWidth: 460 }),
+    async (init) => {
+      writes.push(JSON.parse(String(init.body)));
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    },
+  );
+  render(<Page />);
+  const reset = await screen.findByRole('button', { name: 'Återställ bredderna' });
+  await userEvent.click(checkbox());
+  expect(reset.getAttribute('aria-disabled')).toBe('true');
+  await userEvent.click(reset);
+  expect(writes).toEqual([{ showDraftOnStart: true }]);
+  await act(async () =>
+    release(
+      Response.json({ ...defaultConversationPreferences, showDraftOnStart: true, textWidth: 460 }),
+    ),
+  );
+  expect(reset.getAttribute('aria-disabled')).toBe('false');
+  expect((checkbox() as HTMLInputElement).checked).toBe(true);
+  expect(writes).toHaveLength(1);
 });
