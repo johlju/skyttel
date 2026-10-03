@@ -286,10 +286,10 @@ faktiskt hörda uppläsningar och fysisk användbarhet är inte verifierade.
 | --- | --- | --- |
 | 1.1.1, 1.3.1, 1.3.2, 4.1.2 | Namngiven Röstruta, semantisk samtalstext, dekorativa symboler och samma DOM-/tabbordning i HJALP-02; mikrofonens läge, namn och operabla hinder i HJALP-01/05 och TAL-16. | Läsordning, namn och tillstånd med verklig skärmläsare på dator och pekskärm. |
 | 1.3.4, 1.4.10, 1.4.12, 2.4.11 | HJALP-02/05/06 täcker dator och smal skärm; [viewportfallen](text-view.md) täcker orientering, kort synlig höjd och samma fält vid tangentbord. Notisen har begränsad höjd och kan rullas. | Verklig zoom, textavstånd, skärmtangentbord och synligt fokus under långa feltexter i stödda webbläsare. |
-| 1.4.1, 1.4.3, 1.4.11 | Statusord kompletterar vågform/färg; fasta former i HJALP-06. [Grafikfallen](spatial-map.md) och [textbrickorna](text-view.md) provar teman, kontrast och oförändrad geometri. | Visuell läsbarhet, egna färglägen och fokuskontrast på verkliga skärmar. |
+| 1.4.1, 1.4.3, 1.4.11 | Statusord kompletterar vågform/färg; fasta former i HJALP-06. [Grafikfallen](spatial-map.md) och [textbrickorna](text-view.md) provar teman, kontrast och oförändrad geometri. NOT-09 mäter notistext och symbolkontrast i båda teman. | Visuell läsbarhet, symbolernas former enligt NOT-11, egna färglägen och fokuskontrast på verkliga skärmar. |
 | 2.1.1, 2.1.2, 2.4.3, 2.4.6, 2.4.7, 2.5.3 | HJALP-01/02/05 provar Retur, Tab, synligt namnprefix och logisk borttagningsfokus. [Köfallen](conversation-queue.md) provar Escape/Avbryt; [medgivandet](conversation-consent.md) provar modal fokus och oskickad text. | Skärmläsarens tangentlägen, fokusindikatorer, fullständiga flöden utan pekdon och eventuell tangentkonflikt. |
-| 2.2.2, 2.3.1 | HJALP-06 provar OS-styrda fasta former, stilla arbetsmarkering och inga övergångar. Ingen blinkande samtalsåterkoppling finns i designen. | Verklig OS-inställning och upplevd rörelse med enheten. |
-| 2.5.7, 2.5.8 | [Breddfallen](conversation-consent.md) har tangentalternativ till dragning; [viewportfallen](text-view.md) provar 44-pixels mål på mobil. Åtgärd/stängning i HJALP-05 nås med tangentbord. | Träffytor, pekprecision och handhavande på fysisk telefon och surfplatta. |
+| 2.2.2, 2.3.1 | HJALP-06 provar OS-styrda fasta former, stilla arbetsmarkering och inga övergångar. Ingen blinkande samtalsåterkoppling finns i designen. | **Skyttel talar** med normal rörelse längre än fem sekunder är uttryckligen inte färdigbedömt. Bedöm det i #220, utöver verklig OS-inställning och upplevd rörelse. |
+| 2.5.7, 2.5.8 | [Breddfallen](text-view.md#personliga-bredder-på-dator) har tangentalternativ till dragning; [viewportfallen](text-view.md) provar 44-pixels mål på mobil. Åtgärd/stängning i HJALP-05 nås med tangentbord. | Träffytor, pekprecision och handhavande på fysisk telefon och surfplatta. |
 | 3.2.1, 3.2.2, 3.3.1, 3.3.2, 3.3.3 | Notiser tar inte fokus när de uppstår; HJALP-04 provar bibehållet fält. [Röstfel](voice-errors.md), [notiser](conversation-notices.md) och [frågor](conversation-questions.md) har kort orsak och möjlig nästa handling. | Begriplighet, ordningsföljd och felåterhämtning vid lyssning och långsam användning. |
 | 3.3.4 | [Sparandets kontroll](save-check.md), [frågor och Sparat](conversation-questions.md) samt medgivandefallen skiljer privat utkast, uttryckligt sparande och beständigt kvitto. | Hela användarens beslut om ändringar, granskning och återhämtning med hjälpmedel. |
 | 4.1.3 | HJALP-03/04/05 provar en förekomst över ytorna och riktiga kontakt-/ljudflöden. Status är polite, notiser följer prioritetstabellen; enhetstest provar samtliga sexton uppläsningsnivåer och åtgärdsnamn. Transkriptet annonserar bara nya, ej röstlevererade svar. | Verklig avbrytande respektive köad uppläsning, dubblering, tal/SR-samspel och återkomstordning. |
@@ -302,3 +302,29 @@ svar, faktisk ljudaktivitet och definitivt avbrott enligt
 att ett godtyckligt framtida ljudsegment är omöjligt. Lyssningsprov,
 mikrofonbehörighet och full hjälpmedelsbedömning hör till #220. Ingen
 sådan mänsklig körning redovisas här.
+
+### Mänsklig slutkontroll
+
+Utför [TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
+med NVDA och Chrome på Windows samt VoiceOver och Chrome på macOS,
+iPhone och iPad. Prova först riktigt iPhone-tangentbord, ett fingertryck
+som hålls och de två plattformarnas tangentkombinationer. Kör även
+MIKROFONTRYCK-03/04, TEXTMOBIL-02/03, NOT-07/08 och HJALP-01–06.
+Anteckna enhet, system, webbläsare, hjälpmedel, byggversion och resultat
+för varje kombination i [#220](https://github.com/viscalyx/skyttel/issues/220).
+Alla dessa mänskliga resultat återstår.
+
+Låt **Skyttel talar** pågå längre än fem sekunder med normal rörelse och
+bedöm vågformen enligt
+[W3C:s vägledning för 2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html).
+Kontrollera hur användaren stoppar rörelsen medan kartan och samtalet
+fortfarande går att använda. Anta inget undantag för nödvändig rörelse.
+Ett godkänt prov med minskad rörelse visar inte att normal rörelse uppfyller
+2.2.2. Notera också om skärmläsarens röst tas upp av mikrofonen eller
+avbryter Skyttel; de kontrollerade medieproven besvarar inte det.
+
+Prova 200 och 400 procents förstoring, ökat textavstånd, båda teman och
+hela flödet från medgivande till sparande och återkallande. Bedöm synligt
+fokus, pekmål, rätt läsordning vid nederkanten och fri plats för kartans
+rad och gemensamma återkoppling med verkligt tangentbord. Redovisa brister
+som egna ärenden. Påstå bara överensstämmelse för det som är utvärderat.

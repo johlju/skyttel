@@ -70,7 +70,7 @@ export async function connectTextAssistant({
     const scope = 'skyttel:read skyttel:write';
     const registration = await json('/api/auth/oauth2/register', {
       application_type: origin.startsWith('http:') ? 'native' : 'web',
-      client_name: 'Skyttels textassistent',
+      client_name: 'Samtal med Skyttel',
       redirect_uris: [redirectUri],
       token_endpoint_auth_method: 'none',
       grant_types: ['authorization_code'],
@@ -134,7 +134,7 @@ export async function connectTextAssistant({
     const tokens = await tokenResponse.json();
     if (typeof tokens.access_token !== 'string' || !Number.isFinite(tokens.expires_in))
       throw new Error('invalid_token_response');
-    client = new Client({ name: 'Skyttels textassistent', version: '1' });
+    client = new Client({ name: 'Samtal med Skyttel', version: '1' });
     const transport = new StreamableHTTPClientTransport(new URL(`${origin}/mcp`), {
       requestInit: { headers: { authorization: `Bearer ${tokens.access_token}` } },
       fetch: async (input, init) => dispatch(new Request(input, init)),

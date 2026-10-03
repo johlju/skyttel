@@ -103,7 +103,7 @@ map-result navigation”.
 **Förutsättningar:** Ett testhushåll har Lo Exempel, Kim Exempel och
 Långt borta. Lo har ett samband till Kim och Kim har ett till Långt borta.
 Placera det sista objektet tydligt längre bort i den personliga vyn.
-Textassistenten är tillgänglig med testmiljöns ersättare för modelltjänsten.
+Samtal med Skyttel är tillgängligt med testmiljöns ersättare för modelltjänsten.
 
 **Integrationstest:**
 [object-list.spec.ts](../../tests/integration/object-list.spec.ts), testfallet

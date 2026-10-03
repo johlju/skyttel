@@ -1,6 +1,7 @@
 # Manuella testfall för Skyttels röst
 
-Fallen provar samma privata utkast, MCP-regler och kvitton som textassistenten.
+Fallen provar samtal med röst, samma privata utkast, MCP-regler och kvitton
+som samtal med text.
 Anteckna commit, webbläsare, operativsystem, mikrofon, modell eller kontrollerad
 ersättare samt resultat. De kontrollerade flödena verifieras automatiskt.
 I [#97](https://github.com/viscalyx/skyttel/issues/97) återstår mänsklig
@@ -75,9 +76,10 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    före första inloggningen och vänta på `seeded`. Logga in som Alex.
    Hushållet TestHousehold finns redan; skapa inget nytt.
 2. Välj **Kim Exempel** i listan. Skriv **Osänd text som ska finnas kvar**
-   i beskrivningen utan att lägga texten i utkastet. Starta assistenten och
-   rösten. Kontrollera Lo-förslaget, adressändringen och namnkonflikten
-   i assistentens hela utkast.
+   i beskrivningen utan att lägga texten i utkastet. Välj **Prata med
+   Skyttel** och **Godkänn och starta**. Kontrollera Lo-förslaget,
+   adressändringen och namnkonflikten
+   i hela utkastet.
 3. Skriv `user Behåll Lo-förslaget, rätta priset till 189 kr och spara.`
    och sedan `delegate`. Från `held.draft` kopieras `version`,
    `contentVersion` och hela första objektet i `conflicts`. Ersätt markörerna
@@ -118,13 +120,15 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    tool REQUEST save_draft {"version":VERSION,"contentVersion":CONTENT,"operationId":"family-manual-save"}
    ```
 
-7. Kräv **Sparat. Hela utkastet finns i hushållets karta.** och öppna
+7. Välj **Skriv med Skyttel** och kräv **Sparat.** i samtalstexten.
+   Öppna **Utkast och historik** och
    **Visa kvittot**. Återläs priset 189, Lo Lind, inloggningsadressen och
    befintliga betalningsroller. Utkastet ska vara tomt, osänd formulärtext
    bevarad och tidigare okända/osäkra uppgifter oförändrade.
-8. Stäng rösten och kontrollera avslutade spår enligt startguiden.
-   Välj **Nytt samtal** i textvyn. Ingen medgivanderuta visas. Öppna
-   **Tidigare sparförsök**. Familjens kvitto och sparade karta ska
+8. Slå av mikrofonen med **Prata med Skyttel**. Kontrollera att spåret är
+   avstängt; en tyst röstanslutning kan ligga kvar. Välj **Nytt samtal**
+   i textvyn. Ingen medgivanderuta visas. Öppna **Utkast och historik**
+   och **Tidigare sparförsök**. Familjens kvitto och sparade karta ska
    finnas kvar utan ett nytt modelluppdrag.
    Avsluta med `quit` och kontrollera att den tillfälliga katalogen försvinner.
 
@@ -134,9 +138,9 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    i en ny isolerad installation med påhittade data. Skapa Talprov och lägg
    Lo Exempel, typ Person, med beskrivningen Påhittad uppgift i utkastet.
    Välj Lo och skriv **Osänd text som ska finnas kvar** i beskrivningen
-   utan att lägga texten i utkastet. Godkänn assistentens båda val.
-   Kontrollera att mikrofonen inte används före **Prata med Skyttel**.
-   Välj knappen och tillåt mikrofonen. Om ljud blockeras, välj
+   utan att lägga texten i utkastet. Kontrollera att mikrofonen inte
+   används före **Prata med Skyttel**. Välj knappen, **Godkänn och starta**
+   och tillåt mikrofonen. Om ljud blockeras, välj
    **Starta ljudet**.
 2. Beskriv familjens Molnmusik med rösten: separat tjänstekonto, kontaktadress
    och inloggningsadress, Alex som avtalspart, Kim som betalare och ett kort
@@ -148,12 +152,13 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    ska förbli olika objekt. Säg en rättelse av inloggningsadressen.
 5. Säg **Rätta priset till 189 kr och spara**. Inget tangentbord behövs
    för kartarbetet efter röststart.
-6. Öppna kvittot och återläs roller, pris, kunskapsstatus och osänd text.
+6. Öppna **Utkast och historik**, visa kvittot och återläs roller, pris,
+   kunskapsstatus och osänd text.
    Stäng av mikrofonen. Fortsätt med ett normalt formulär.
 7. Anteckna den faktiskt provade enheten, mikrofonen och ljudutgången.
-   Ytterligare Windows-, iPhone- och iPad-prov hör till den uppskjutna
-   enhetsmatrisen i #97. De är inga nya villkor för detta falls eller
-   specifikationens avslut. När sådana prov väljs, redovisa varje
+   Chrome på Windows, macOS, iPhone och iPad med riktiga mikrofoner och
+   hjälpmedel ingår i den kvarstående mänskliga kontrollen i
+   [#220](https://github.com/viscalyx/skyttel/issues/220). Redovisa varje
    kombination separat, inklusive mikrofonavslag och ljuduppspelning.
 
 **Förväntat resultat:**
@@ -164,7 +169,9 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
   utan ett extra obligatoriskt ja. Konflikter behöver däremot redas ut.
 - Sparstatus bygger på ett riktigt kvitto. Osänd text blir inte sparad.
   Konto, adresser och roller behåller sin betydelse och kunskapsstatus.
-- Mikrofon och ljudresurser avslutas. Inget verkligt plattformsresultat
+- Mikrofonavslag stoppar ny inspelning direkt. En tyst anslutning kan
+  behålla mikrofonspåret för att låta Skyttel tala klart. När provmiljön
+  avslutas frigörs resurserna. Inget verkligt plattformsresultat
   tillskrivs CI eller de tysta kontrollerade ersättarna.
 
 ## Avbrott och återhämtning
@@ -292,7 +299,7 @@ databasens sparande; redovisa inte det som ett prov av förlorat sådant svar.
 ### TAL-04: samtalstext hålls isär från verifierade röstresultat
 
 **Syfte:** Hålla modellens samtalstext skild från bekräftade resultat även
-när den gemensamma assistenten används genom rösten.
+när samma samtal förs med rösten.
 
 **Användare:** Alex i den kontrollerade installationen.
 
@@ -648,7 +655,8 @@ någon panel öppnas”.
    `setMicrophone('allow')` på samma testobjekt.
 5. Välj **Prata med Skyttel** igen.
 6. Välj **Prata med Skyttel** en gång till. Vänta några sekunder och kör
-   `window.skyttelVoiceFixture.stats()`.
+   `window.skyttelVoiceFixture.stats()`. Kontrollera Lo-förslaget i
+   **Utkast och historik** utan att föreslå någon ändring.
 7. Välj **Prata med Skyttel** igen.
 
 **Förväntat resultat:**
@@ -660,10 +668,12 @@ någon panel öppnas”.
   ingen röstanslutning skapas.
 - Steg 5: knappen är intryckt och visar samma mikrofon. Röstrutan visar
   sju punkter och **Lyssnar**. Ingen panel öppnas, och samtalets textfält syns
-  inte.
+  inte. Knappen har accentfärgad bakgrund; i avläget är den en vanlig
+  knapp utan stoppsymbol.
 - Steg 6: knappen är inte intryckt, och röstrutan försvinner direkt.
   Mikrofonspåret är avstängt från första stund och fortsätter vara levande.
   Anslutningen är kvar så att ett fördröjt svar kan höras: `openPeers: 1`.
+  Lo-förslagets identitet, typ och värden är oförändrade av mikrofonavslag.
 - Steg 7: samma samtal fortsätter utan medgivanderuta, och röstrutan visar
   **Lyssnar**.
 
@@ -814,6 +824,10 @@ som följer rösten”.
   samma sju stilla staplar, som inte ändras med ljudnivån. **Lyssnar** har
   sju punkter. Formerna byts utan övergång. Statusordet
   **Mikrofonen är av** visas aldrig.
+- Röstrutan är en namngiven grupp, ingen knapp. Bara **Avbryt** går att
+  trycka på. Den har inget annat än vågform, ett statusord, eventuell
+  kontextsymbol och stoppikon. Den blir bredare med fler delar men behåller
+  samma höjd, 36 px.
 
 ### TAL-16: hjälpmedel får röstrutans namn, knappens läge och uppläsningarna i tur
 
@@ -896,8 +910,10 @@ riktig mikrofon, enhet eller skärmläsare.
 **Förväntat resultat:**
 
 - Skyttel bearbetar det sagda färdigt och talar klart efter att
-  mikrofonen är av. Webbläsaren slutar använda mikrofonen några sekunder
-  efter att Skyttel har tystnat.
+  mikrofonen är av. Ny inspelning slutar direkt vid avslag. En tyst
+  anslutning kan behålla mikrofonspåret; systemets användningsindikator
+  bevisar därför inte att nytt tal tas emot. Säg ett nytt provord efter
+  avslag och kontrollera att det inte når samtalet.
 - Staplarna följer rösten. **Avbryt** tystar Skyttel direkt.
 - Uppläsningarna kommer en gång, i tur och med rätt text. Anteckna om
   skärmläsarens röst tas upp av mikrofonen.

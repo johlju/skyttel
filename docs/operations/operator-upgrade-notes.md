@@ -91,15 +91,14 @@ copies when that history is required; this upgrade adds no automatic backup.
 
 ### Built-in text and voice assistants
 
-Personal conversation choices now include saved desktop widths. They remain
-in the installation database and apply to the user's households. Household
-export and import do not transfer or restore these choices. Keep an installation
-database backup if these choices must survive disk replacement. The upgrade
-preserves existing draft choices and supplies default widths.
+Personal conversation choices remain in the installation database and apply
+to the user's households. Household export and import do not transfer or
+restore these choices. Include them in installation backups if they must
+survive disk replacement. Follow the matching database backup and image
+procedure above for rollback.
 
-New household archives use schema version 24 and need an upgraded reader.
-The upgraded reader still accepts supported archives from versions 14 through
-23. Use the matching database backup and image procedure above for rollback.
+New household archives need an upgraded reader. The upgraded application
+continues to read supported older archives.
 
 To enable the optional assistants, configure the AI provider key in the server's
 private environment and restart. Keep the key out of browser settings, public

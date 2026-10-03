@@ -1,4 +1,4 @@
-# Manuella testfall för Skyttels textassistent
+# Manuella testfall för samtal med Skyttel
 
 Fallen provar samlat utkast, rättelse och sparande, sena svar, avbrott,
 kvittoåterhämtning, begärda samtalsdetaljer och faktisk markering.
@@ -70,7 +70,7 @@ formulärtext”.
    blivit en e-postadress. Be om en rättelse av inloggningsadressen.
 4. Öppna ett objekt i formuläret och skriv **Osänd text som ska finnas
    kvar** i beskrivningen utan att lägga texten i utkastet.
-5. Skriv **Rätta priset till 189 kr och spara** i assistenten. Öppna kvittot.
+5. Skriv **Rätta priset till 189 kr och spara** i textvyn. Öppna kvittot.
 6. Återläs abonnemang, betalare, betalningsmedel, konto och adresser.
    Kontrollera också okända och osäkra uppgifter samt den osända texten.
 
@@ -192,14 +192,17 @@ dubbelt sparande”.
 5. Vänta tills försöket visar `succeeded`. Om det ännu inte är klart,
    upprepa bara den skrivskyddade kontrollen; gör inget nytt sparförsök.
    Skriv sedan `restart` i launcher-terminalen.
-6. Ladda om sidan, godkänn en ny textanslutning och öppna **Tidigare
-   sparförsök**. Kontrollera kvittot, Lo och det nu tomma utkastet.
+6. Ladda om sidan och invänta den automatiska kontrollen av sparandet.
+   Den kräver inget nytt medgivande. Öppna **Utkast och historik**,
+   **Tidigare sparförsök**. Kontrollera kvittot, Lo och det tomma utkastet.
 
 **Förväntat resultat:**
 
-- Frånkopplingen visas som saknat svar. Det betyder inte att sparandet
+- Frånkopplingen visas som bruten kontakt eller oklart sparande.
+  Det betyder inte att sparandet
   misslyckades. Omstart bevarar det genomförda försöket och dess enda kvitto.
-- En ny normal MCP-anslutning återfinner kvittot. Ingen extra kopia eller
+- Den automatiska kontrollen återfinner kvittot med ursprungligt ID.
+  Ingen extra kopia eller
   nytt sparande behövs. Webbläsarens offlineprov bryter statushämtningen;
   CI avbryter dessutom det accepterade meddelandesvaret efter verklig commit.
 
@@ -284,8 +287,8 @@ i kartan innan du börjar. Inget sparande är genomfört.
    {"version":VERSION,"contentVersion":CONTENT,"operationId":"text-proof-save"}
    ```
 
-6. Kräv den verkliga statusen **Sparat. Hela utkastet finns i hushållets
-   karta.** Öppna **Utkast och historik**, **Tidigare sparförsök** och
+6. Kräv det verifierade beskedet **Sparat.** i samtalstexten.
+   Öppna **Utkast och historik**, **Tidigare sparförsök** och
    **Visa kvittot** och kontrollera Lo i den sparade kartan
    samt ett tomt utkast.
 
@@ -306,7 +309,7 @@ i kartan innan du börjar. Inget sparande är genomfört.
 
 **Förutsättningar:** Ny isolerad installation enligt startguiden. Detta
 fall använder egna förberedelser i stället för det vanliga Lo-förslaget.
-Inga modellsvar behövs; assistenten läser det befintliga utkastet.
+Inga modellsvar behövs; Skyttel läser det befintliga utkastet.
 
 **Integrationstest:**
 [text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
@@ -342,7 +345,7 @@ eftervärden”.
 
 ### TEXT-08: markering öppnar och centrerar objekt och samband före bekräftelsen
 
-**Syfte:** Assistentens markeringsbesked ska följa synlig karta och rätt
+**Syfte:** Skyttels markeringsbesked ska följa synlig karta och rätt
 uppgifter i detaljpanelen, även när kartan är stängd eller bortpanorerad
 och när skärmen är smal.
 

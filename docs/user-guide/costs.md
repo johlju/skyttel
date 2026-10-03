@@ -20,7 +20,7 @@ Välj **Månad (UTC)**. Ett modellförsök räknas till månaden när det starta
   för talet. Prisuppskattningens sekunder visas separat eftersom en antagen
   minimitid kan vara längre än den rapporterade tiden.
 - **Terra – uppmätt hittills:** registrerade token och uppskattad kostnad
-  för textassistenten, även när den arbetar bakom ett talärende.
+  för samtalet, även när Skyttel arbetar med ett talat uppdrag.
   Resonemang ingår i utdata och läggs inte till en gång till.
 
 Månadens summa visas först, följd av separata rader för Render, Live och

@@ -544,10 +544,12 @@ cancelled before leaving”.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Hushållet finns och kartan är tom. Samtalet är inte
-konfigurerat i installationen. Med ett tillgängligt samtal visar **Tala**
-och **Skriv** först medgivanderutan, som provas i
-[MEDGIVANDE-01](conversation-consent.md#medgivanderutan).
+**Förutsättningar:** Hushållet finns och kartan är tom. Använd
+[den kontrollerade röstinstallationen](voice-assistant.md#controlled-voice-fixture)
+med tillgängligt samtal, eller en isolerad installation med verklig röst.
+Inget sparat medgivande finns. Kryssa inte i att medgivandet ska sparas.
+Det kontrollerade provet ersätter bara externa leverantörer och media;
+verklig mikrofon och enhetsbeteende hör till #220.
 
 **Integrationstest:**
 [access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
@@ -556,16 +558,20 @@ a mandatory tour”.
 
 **Steg:**
 
-1. Öppna kartan och välj **Tala** i vägledningen. Kontrollera att
-   textvyn öppnas. Ingen mikrofon ska börja spela in automatiskt.
-2. Ladda om kartan och välj **Skriv** i vägledningen.
+1. Öppna kartan och välj **Tala** i vägledningen. Kontrollera medgivanderutan
+   och att ingen mikrofon lyssnar före **Godkänn och starta**. Godkänn och
+   kontrollera röstrutans **Lyssnar**, utan att textvyn öppnas.
+2. Ladda om kartan och välj **Skriv** i vägledningen. Godkänn och kontrollera
+   textvyn, utan röstruta eller påslagen mikrofon.
 3. Ladda om och välj **Öppna listan**. Kontrollera **Nytt objekt**.
 4. Ladda om och välj **Stäng vägledningen**.
 
 **Förväntat resultat:**
 
-- Tal och text öppnar textvyn. Lista öppnar kartarbetet.
-- Vägledningen försvinner efter ett val.
+- Tala startar rösten och Skriv öppnar textvyn. Samma medgivande täcker
+  båda. Lista öppnar kartarbetet utan att kräva medgivande till samtal.
+- Vägledningen står kvar medan medgivandet väntar och försvinner när
+  användaren har godkänt eller valt listan.
 - Stängning ger fokus till kartans verktyg. Alla verktyg kan användas direkt.
 
 ### ACCESS-16: Utgånget inloggningsförsök kan ersättas

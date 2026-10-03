@@ -118,7 +118,8 @@ test('TAL-10: Prata med Skyttel slår på och av mikrofonen utan att någon pane
 }) => {
   const { app, live } = await installation(textModel(() => [modelMessage('Hej.')]).provider);
   try {
-    await openMapWithDraft(page, app.origin);
+    const { path } = await openMapWithDraft(page, app.origin);
+    const draftBefore = (await (await page.request.get(path)).json()).draft;
     const microphone = microphoneButton(page);
     await expect(microphone).toHaveAttribute('aria-pressed', 'false');
     await expect(microphone).toHaveAttribute(
@@ -178,6 +179,7 @@ test('TAL-10: Prata med Skyttel slår på och av mikrofonen utan att någon pane
     await expect(voiceBox(page)).toHaveCount(0);
     expect((await media(page)).microphoneTracks.at(-1)).toEqual({ enabled: false, state: 'live' });
     await expect(panel(page)).toHaveCount(0);
+    expect((await (await page.request.get(path)).json()).draft).toEqual(draftBefore);
     await page.waitForTimeout(3500);
     expect((await media(page)).openPeers).toBe(1);
 

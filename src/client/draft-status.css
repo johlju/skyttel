@@ -93,10 +93,13 @@
   }
 }
 
+/* The selected mobile layout stacks conversation controls above the lower
+   map row and feedback. The feedback card sits 24px from the edge; leave
+   another 8px between it and the display row. Short windows use flow layout. */
 @media (max-width: 700px) and (min-height: 451px) {
   .household-map.workspace-shell .spatial-display-tools .spatial-bottom-bar {
-    top: 142px;
-    bottom: auto;
+    top: auto;
+    bottom: calc(32px + var(--feedback-height, 0px) + var(--voice-height, 0px));
   }
 }
 

@@ -115,12 +115,3 @@
     padding-bottom: calc(var(--conversation-corner-height, 0px) + 24px);
   }
 }
-/* The upper display row must leave room for the conversation controls above
-   it. Keep the protected row as the corner's floor, rather than putting the
-   corner over either the toolbar or that row. Short viewports use their
-   existing scrolling layout instead. */
-@media (max-width: 700px) and (min-height: 451px) {
-  .household-map.workspace-shell .spatial-display-tools .spatial-bottom-bar {
-    top: max(142px, var(--conversation-controls-bottom, 142px));
-  }
-}

@@ -37,7 +37,7 @@ export function assistantFailureMessage(code: string): string {
     case 'merge_choices_required':
       return 'Sammanslagningen kräver ett val för de uppgifter och samband som skiljer sig åt.';
     case 'invalid_request':
-      return 'Assistentens begäran innehöll ogiltiga uppgifter och kunde inte genomföras.';
+      return 'Begäran innehöll ogiltiga uppgifter och kunde inte genomföras.';
     case 'forbidden':
     case 'unauthenticated':
       return 'Åtkomsten till hushållets karta är inte längre tillgänglig. Anslut på nytt för att fortsätta.';

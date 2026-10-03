@@ -46,7 +46,7 @@ reuse each object”.
 3. Öppna Lista och välj Cykeln. Kontrollera rubrikfokus, välj
    **Redigera valt objekt** och skriv en beskrivning utan att skicka den.
 4. Öppna Lista igen och upprepa för Bilen och Garaget. Öppna även
-   **Skriv till Skyttel**.
+   **Skriv till Skyttel** och **Godkänn och starta** om medgivande behövs.
 5. Välj Cykeln i **Öppna paneler** och stäng den med **Stäng Cykeln**.
    Öppna Cykeln från listan två gånger och kontrollera rubrikfokus även
    när panelen redan är öppen.

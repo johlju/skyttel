@@ -291,6 +291,126 @@ uppdragsnotis står bredvid röstrutan utan att täcka återkoppling vid 390 × 
 - Stängning återför fokus till mikrofonknappen. Mikrofonen och
   **Lyssnar** finns kvar; att stänga ett felbesked avslutar inget samtal.
 
+## Symboler och läsbarhet
+
+### NOT-09: symbolfärg och läsbarhet skiljer hinder från händelse
+
+**Syfte:** Skilja hinder från händelser med både form, färg och text.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Den kontrollerade röstinstallationen, normalt nätverk
+och ljust tema. Textvyn har öppnats med medgivande och stängts igen.
+
+**Integrationstest:**
+[conversation-audit.spec.ts](../../tests/integration/conversation-audit.spec.ts),
+testfallen “NOT-09: symbolfärg och läsbarhet skiljer hinder från händelse i
+light tema” och samma titel med “dark tema”.
+
+**Steg:**
+
+1. Kör `available off`. Vänta på knappbeskrivningen **Inte tillgängligt
+   just nu.** Tryck på mikrofonknappen och läs notisen.
+2. Kör `available on` och vänta på att notisen försvinner.
+3. I webbläsarens konsol, kör
+   `window.skyttelVoiceFixture.setMicrophone('deny')`. Tryck på
+   mikrofonknappen och läs notisen.
+4. Upprepa i mörkt tema. Mät symbolens kontrast mot kortets bakgrund
+   och textens kontrast med ett kontrastverktyg.
+
+**Förväntat resultat:**
+
+- Hindret har en överstruken cirkel; mikrofonhändelsen har en överstruken
+  mikrofon. Symbolerna står till vänster om texten och har olika färg.
+- Symbolerna har minst 3:1 kontrast, och texten minst 4,5:1, i båda teman.
+  Automationen mäter de faktiskt beräknade färgerna på de ogenomskinliga
+  korten. Den bedömer inte färgseende eller fysisk bildskärm.
+- Symbolen är dold för hjälpmedel; text och namngivna kontroller bär
+  beskedet. Båda fallen är stängbara när inget samtal pågår.
+
+### NOT-10: ett väntande sparförsök visar frågesymbol och kontrollknapp
+
+**Syfte:** Visa ett kontrollfel utan att ge en ny befogenhet att spara.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Ett registrerat men inte genomfört sparförsök enligt
+[SPAR-02](operations.md#spar-02-automatiskt-kontrollera-ett-väntande-sparande-från-en-annan-klient).
+Prova 390 × 844 px och blockera `*/text-assistant/recover` i webbläsarens
+nätverkspanel innan sidan laddas om.
+
+**Integrationstest:**
+[conversation-audit.spec.ts](../../tests/integration/conversation-audit.spec.ts),
+testfallet “NOT-10: ett verkligt väntande sparförsök visar frågesymbol och
+kontrollknapp under texten”.
+
+**Steg:**
+
+1. Ladda om och vänta på **Skyttel kunde inte kontrollera om utkastet
+   sparades.** Läs symbolen, texten och kontrollknappen.
+2. Kontrollera mikrofonens läge, det privata förslaget och sparförsöket.
+3. Ta bort nätverksblockeringen. Välj **Kontrollera om utkastet sparades**.
+   Följ resultatet enligt SPAR-02.
+
+**Förväntat resultat:**
+
+- Ett frågetecken i cirkel står till vänster. **Kontrollera om utkastet
+  sparades** står under texten, med minst 44 px hög tryckyta. Ingen
+  stängknapp finns, och kortet kräver ingen rullning i sidled.
+- Mikrofonen är av. Förslaget är identiskt med det som registrerades;
+  felet har varken sparat det eller kastat det.
+- Kontrollen använder samma försöks-ID. Automationen använder en riktig
+  registrering och avbryter bara kontrollsvaret till webbläsaren.
+
+### NOT-11: varje situation har sin avtalade symbol och typfärg
+
+**Syfte:** Granska alla former utan att bara jämföra interna SVG-sökvägar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Kör de länkade fallen i den kontrollerade miljön.
+Prova både ljust och mörkt tema. Detta fall är enbart manuellt; ingen
+mänsklig formbedömning redovisas som utförd.
+
+**Integrationstest:** Inget. De länkade fallen automatiserar situationens
+text, kontroller och beteende, inte människans igenkänning av symbolen.
+
+**Steg:**
+
+1. Utlös varje rad genom det angivna fallet. Läs först texten, jämför
+   sedan den synliga symbolen med tabellen och anteckna resultat per rad.
+2. Kontrollera att alla hinder har samma symbolfärg som hindret i NOT-09,
+   och alla händelser samma färg som mikrofonhändelsen. Se också att
+   formerna går att skilja åt utan färg.
+
+**Förväntat resultat:**
+
+<!-- markdownlint-disable MD013 -->
+| Situation och körbart fall | Synlig symbol | Typfärg |
+| --- | --- | --- |
+| Kontroll pågår, SPARKONTROLL-01 | Frågetecken i cirkel | Hinder |
+| Kontrollfel, NOT-10 | Frågetecken i cirkel | Hinder |
+| Bruten kontakt, pågående samtal, NOT-02 | Överstruken kontaktsymbol | Hinder |
+| Bruten kontakt, inget samtal, NOT-06 | Överstruken kontaktsymbol | Hinder |
+| Samtal otillgängligt, NOT-01 | Överstruken cirkel | Hinder |
+| Full kontext efter misslyckad sammanfattning, KONTEXT-10 | Mätare | Hinder |
+| Nekad mikrofon, ROSTFEL-01 deny | Överstruken mikrofon | Händelse |
+| Ingen mikrofon, ROSTFEL-01 error | Överstruken mikrofon | Händelse |
+| Upptagen mikrofon, ROSTFEL-01 busy | Överstruken mikrofon | Händelse |
+| Röststödet saknas, ROSTFEL-01 unsupported | Överstruken mikrofon | Händelse |
+| Tillfälligt röstfel, ROSTFEL-02 startup | Varningstriangel | Händelse |
+| Avbruten röst, ROSTFEL-03 | Överstruken mikrofon | Händelse |
+| Administrationsfel, ROSTFEL-02 administration | Varningstriangel | Händelse |
+| Återkallat medgivande, MEDGIVANDE-13 | Varningstriangel | Händelse |
+| Misslyckat uppdrag, NOT-05 | Varningstriangel | Händelse |
+| Stoppat ljud, ROSTFEL-04 | Överstruken högtalare | Hinder |
+<!-- markdownlint-enable MD013 -->
+
+Läs [kontrollfallen](save-check.md), [kontextfallen](conversation-context.md),
+[röstfelen](voice-errors.md) och [medgivandefallen](conversation-consent.md)
+för respektive förberedelse och utlösning. NOT-11 kompletterar deras
+beteendekontroller med en uttrycklig granskning av form och typfärg.
+
 ## WCAG 2.2 AA: utformning och verifiering
 
 Utformningen syftar till WCAG 2.2 AA. Automationen provar det ändrade
@@ -303,7 +423,7 @@ Fullständig överensstämmelse för hela sidor och flöden är inte verifierad.
 | --- | --- | --- |
 | 1.1.1, 1.3.1 Icke-textuellt innehåll och struktur | Symbolen är dold; text, namngiven notis och knappar bär beskedet. Automationen kontrollerar text och dold symbol. | Läsordning med NVDA och VoiceOver. |
 | 1.4.1 Färg | Hinder och händelser har olika symbolfärg. De tre grundfallen har också skilda symbolformer och texter; en händelse har stängknapp. | Igenkänning utan färgseende. |
-| 1.4.3, 1.4.11 Kontrast | Text, symbol och fokus använder kartans temafärger. | Mät text, symboler, avstängda knappar och fokus i båda teman. |
+| 1.4.3, 1.4.11 Kontrast | NOT-09 mäter text minst 4,5:1 och symbol minst 3:1 på hinder- och händelsekort i båda teman. | Fysisk bildskärm, avstängda knappar, kanter och fokus i båda teman. |
 | 1.4.4, 1.4.10 Förstoring och omflöde | Automatisk geometri vid fyra kontaktmått och tre samtidiga mått; inget dolt fält eller dold återkoppling. | Verklig zoom 200 och 400 procent samt långa texter i korta fönster. |
 | 2.1.1, 2.4.3 Tangentbord och fokusordning | Tab och Retur stänger notisen. Visning flyttar inte fokus; borttagning återför det till mikrofonknappen. Automationen provar detta. | Hjälpmedlens kommandon och flytt av en fokuserad notis mellan vyer. |
 | 2.4.7, 2.4.11 Synligt fokus | Fokusramen är kartans vanliga ram; kortet överlappar inte återkoppling eller kartans rad. | Synlig ram och fullständiga tangentbordsflöden på fysisk telefon. |

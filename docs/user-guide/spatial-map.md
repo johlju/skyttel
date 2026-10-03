@@ -8,7 +8,7 @@ Välj **Lista** i verktygen för listor, formulär och utkast. Välj
 **Stäng arbetsytan** för att återgå till hela kartan. På telefon visar
 **Visa verktygens namn** även de kompletterande verktygen, däribland Tema.
 
-När assistenten visar ett objekt eller samband öppnas dess detaljpanel.
+När Skyttel visar ett objekt eller samband öppnas dess detaljpanel.
 Kartan och det valda innehållets detaljpanel visas samtidigt innan
 markeringsbeskedet. På en smal skärm ligger detaljpanelen direkt under
 kartan; rulla i panelen för att läsa längre uppgifter. Välj

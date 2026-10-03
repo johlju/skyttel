@@ -48,7 +48,7 @@ test('the own assistant needs the conversation consent, keeps its normal MCP gra
   expect(JSON.stringify(session)).not.toMatch(/access_token|Bearer|synthetic-model-key/);
   const connections = await (await browser.get(`${app.origin}/api/assistants/context`)).json();
   expect(connections.connections).toHaveLength(1);
-  expect(connections.connections[0].clientName).toBe('Skyttels textassistent');
+  expect(connections.connections[0].clientName).toBe('Samtal med Skyttel');
   const stopped = await browser.post(`${path}/${session.id}/stop`, {
     headers: { origin: app.origin },
     data: {},

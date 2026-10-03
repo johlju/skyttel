@@ -186,7 +186,7 @@ an admitted save before reloading”.
 
 **Steg:**
 
-1. I flik A, starta textassistent och röst. Skicka en fråga, invänta det
+1. I flik A, öppna textvyn och slå på mikrofonen. Skicka en fråga, invänta det
    kontrollerade svaret och skriv **Gammalt oskickat svar** utan att skicka
    det. Öppna **Lista**. Öppna samma installation i en andra vanlig flik B
    med samma inloggning. Där öppnar du **Nytt objekt** och skriver

@@ -88,10 +88,11 @@ ett återförsök ger samma kvitto, objekt och enda historikhändelse.
 De manuella stegen ovan verifierar återfinnandet efter ett bekräftat
 sparande; de verifierar inte själva avbrottet efter transaktionen.
 
-### SPAR-02: återförsöka ett väntande sparande från en annan klient
+### SPAR-02: automatiskt kontrollera ett väntande sparande från en annan klient
 
 **Syfte:** Kontrollera att ett avbrott före kartändringen lämnar ett
-väntande försök och ett bevarat utkast som kan sparas från en annan klient.
+väntande försök som slutförs med samma ID vid nästa besök, utan en ny
+begäran om sparande.
 
 **Användare:** Den konfigurerade administratören i båda profilerna.
 
@@ -100,7 +101,8 @@ Chrome med utvecklarverktyg i första profilen.
 
 **Integrationstest:**
 [operations.spec.ts](../../tests/integration/operations.spec.ts),
-testfallet “SPAR-02: retry a pending save on another client after
+testfallet “SPAR-02: automatically recover the same pending save on another
+client after
 interruption before commit”.
 
 **Steg:**
@@ -115,13 +117,16 @@ interruption before commit”.
    **Nytt objekt**, **Spara hela utkastet** och **Kasta hela utkastet**.
    Under **Network** ska `/map/save` vara blockerad medan
    registreringen till `/map/operations` lyckas.
-4. Stäng den första profilen. Stoppa och starta applikationen igen med
+4. Anteckna försöks-ID i **Utkast och historik**, **Mina sparförsök**.
+   Kontrollera att objektet fortfarande är ett privat förslag, utan
+   gemensamt objekt eller historikhändelse för sparandet.
+5. Stäng den första profilen. Stoppa och starta applikationen igen med
    samma databas. Öppna appen i den andra profilen utan nätverksblockering
    och logga in som samma användare.
-5. Granska **Mina sparförsök**, utkastet och objektlistan. Kontrollera
-   åter att ändringsknapparna är inaktiverade.
-6. Välj **Återförsök sparandet** för det väntande försöket. Kontrollera
-   kvittot, utkastet och objektlistan. Ladda om och kontrollera igen.
+6. Vänta på den automatiska kontrollen. Välj inte ett nytt sparande.
+   Granska **Mina sparförsök**, kvittot, utkastet och objektlistan.
+   Kontrollera att det ursprungliga försöks-ID:t används. Ladda om och
+   kontrollera igen.
 7. Skapa objektet **Nästa privata förslag** och lägg det i utkastet.
    Kontrollera att kvittot bara beskriver det tidigare sparandet.
 8. Stäng av nätverksblockeringen i den första profilen före nästa fall.
@@ -129,11 +134,12 @@ interruption before commit”.
 **Förväntat resultat:**
 
 - Avbrottet visar **Utfallet är okänt**. Ändringar och kastande blockeras.
-- Efter omstart visas **Väntande**. Utkastet innehåller
-  **Väntande sparande**. Objektlistan visar **förslag i ditt utkast**
-  vid objektet; det ingår ännu inte i den gemensamma kartan.
-- Återförsöket ger **Genomfört** med kvitto och tömmer utkastet.
-  Objektet finns en gång i kartan, även efter omladdning.
+- Före omstart visas **Väntande**, med förslaget kvar i det privata
+  utkastet. Registreringen har inte ändrat den gemensamma kartan.
+- Efter omstart kontrollerar Skyttel det registrerade försöket utan nytt
+  medgivande. Ändringar blockeras under kontrollen. Resultatet blir
+  **Genomfört** med samma ID, ett verifierat kvitto och tomt utkast.
+  Objektet och sparhändelsen finns en gång, även efter omladdning.
 - **Nästa privata förslag** ligger kvar i utkastet och omfattas inte
   av det tidigare kvittot.
 
@@ -141,6 +147,14 @@ Det automatiserade testet upprepar dessutom den genomförda begäran
 genom API:et medan nästa förslag ligger i utkastet. Samma kvitto ska
 returneras, nästa förslag ska bevaras och historiken får ingen dubblett.
 Den sista kontrollen utförs inte av de manuella stegen.
+
+Automationen håller också den andra klientens kontrollbegäran medan den
+granskar vänteläget. För ett separat manuellt kontrollfel kan du blockera
+`*/text-assistant/recover` före det andra besöket: utkastet ska då förbli
+privat och ändringar blockerade. Ta bort blockeringen och välj
+**Kontrollera om utkastet sparades** först när ett kontrollfel visas.
+Det återförsöket kontrollerar samma registrerade ID; det är ingen ny
+begäran om sparande. Se även [SPARKONTROLL-02](save-check.md).
 
 ### SPAR-03: återfinna ett avvisat försök utan att förbruka nyare förslag
 

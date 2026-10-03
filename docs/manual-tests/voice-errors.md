@@ -20,8 +20,8 @@ serverloggar; inga administrativa rättigheter behövs för samtalsflödet.
 3. Öppna webbläsarens utvecklarkonsol. Provets
    `window.skyttelVoiceFixture` ersätter endast webbläsarens media och den
    externa leverantören. Den spelar inte in den verkliga mikrofonen.
-4. Stäng tidigare röstanslutning genom att avsluta samtalet och starta ett
-   nytt textsamtal mellan fallen. Återställ med
+4. Slå av mikrofonen med **Prata med Skyttel** och välj **Nytt samtal**
+   i textvyn mellan fallen. Återställ med
    `window.skyttelVoiceFixture.setMicrophone('allow')` och
    `window.skyttelVoiceFixture.setPlayback('allow')`. Skriv
    `voice-failure off` i terminalen. Avsluta med `quit`; provdatabasen tas bort.

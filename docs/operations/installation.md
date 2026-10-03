@@ -75,7 +75,7 @@ WebRTC media connectivity from the user's browser. Each user must give the
 conversation consent for the household before text or voice starts, and
 can save it so that later conversations start directly.
 Starting voice requests microphone access; browser autoplay restrictions
-may require **Spela upp ljud**.
+may require **Starta ljudet**.
 
 Before opening access, check the real providers with invented household
 information using the [text](../manual-tests/text-assistant.md) and

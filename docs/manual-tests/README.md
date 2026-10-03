@@ -18,6 +18,12 @@ Separata automatiska [modellprov](real-model-tests.md) och
 [talprov](real-voice-tests.md) använder verkliga leverantörer.
 De körs uttryckligen med privat konfiguration och redovisas separat från CI.
 
+För det förenklade samtalet finns en separat kvarstående
+[mänsklig verifiering #220](https://github.com/viscalyx/skyttel/issues/220).
+Den omfattar verklig mikrofon, skärmtangentbord och skärmläsare på
+Chrome för Windows, macOS, iPhone och iPad. Automatiska DOM-, medie- och
+fönsterprov ska redovisas separat från de resultaten.
+
 ## Köra och förbereda prov
 
 [Testguiden](../development/testing.md) beskriver kommandon för automatiska
@@ -138,7 +144,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   samtal och uppdragsfel; en gemensam ordning, bara ett besked, stängning och
   automatisk återkomst, bevarad text med stoppad sändning och mikrofon,
   hjälpmedel utan dubbel uppläsning, fokus och placering vid röstrutan
-  eller meddelandefältet på bred och smal skärm.
+  eller meddelandefältet på bred och smal skärm, verkligt registrerat
+  kontrollfel samt mätt text- och symbolkontrast i båda teman. NOT-11 har
+  en separat körbar mänsklig granskning av alla symbolformer och typfärger.
 - [Frågor och talade sparbesked](conversation-questions.md): identiteter,
   konflikter, väntan med mikrofonen av, beständigt kvitto och fyra
   sekunders sparbesked efter ljud eller stopp.
@@ -194,7 +202,7 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   aktuellt utkast, mikrofonläge och tidigare inspelat tal. Misslyckad
   sammanfattning blockerar nya uppdrag tills Nytt samtal. Pågående
   sparande och dess hörda kvitto avslutas före röstbytet.
-- [Skyttels textassistent](text-assistant.md): hela utkast,
+- [Samtal med Skyttel](text-assistant.md): hela utkast,
   rättelse och samlat sparande, sena svar, avbrott, återfunna kvitton och
   samtidigt synliga objekt och samband i karta och detaljpanel även på
   telefon, med skyddad formulärtext samt obekräftad samtalstext
@@ -296,7 +304,7 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   Misslyckad urklippsknapp följs av manuell kopiering och faktisk acceptans.
 - [Objekt och samband](map.md): skapa, söka, rätta och ta bort uppgifter,
   skilja lika namn åt, bevara ofullständiga uppgifter och rätta obesvarad
-  identitet från aktuell status med bevarad oskickad text. Påbörjade objekt
+  identitet från utkastets återkoppling med bevarad oskickad text. Påbörjade objekt
   kan få en ny typ från Inställningar och sparas med nya samband i ett kvitto.
 - [Markering och detaljer](map-selection.md): flerval, tomrumsgester,
   textkontroller, aktiv detaljikon och placering nära objektet.
@@ -333,7 +341,7 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   paneler, samma kvitto vid okänt utfall, bevarat tangentbordsfokus och
   ett samlat utkast från formulär, text och tal efter omstart. Besvara
   nödvändiga frågor före ett nytt uttryckligt sparbesked. Använd Navigation
-  och aktuell status tillsammans utan att tappa åtkomst till kontrollerna.
+  och utkastets återkoppling tillsammans utan att tappa åtkomst till kontrollerna.
   Öppna en namngiven konflikt från status med tangentbord och återgå till
   ett annat oskickat objektformulär med texten kvar. Följ alla fyra
   konfliktslag till rätt ändring och läs tidigare, föreslagna och aktuella

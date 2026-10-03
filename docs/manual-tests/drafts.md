@@ -613,7 +613,7 @@ fresh explicit save”.
 **Steg:**
 
 1. Lägg **Lo Exempel** i utkastet via formuläret. Välj **Skriv till Skyttel**
-   och **Godkänn och starta**. Be assistenten förbereda uppgiften och fråga
+   och **Godkänn och starta**. Be Skyttel förbereda uppgiften och fråga
    vilket kort som avses.
 2. Läs frågan i samtalstexten och stäng arbetsytan. Kontrollera
    att kartåterkopplingen inte erbjuder sparande. Ingen separat
@@ -709,7 +709,7 @@ och “640px”. Det sista fallet använder ett 456 pixlar högt fönster.
    men behåll Sparad ekonomi och Sparad skuld. Dölj anteckningsfältet
    med värdet kvar och föreslå att sambandets mål är okänt. Spara allt.
 5. Alex laddar om kartan utan att kasta sitt utkast. Stäng arbetspaneler
-   och vägledning. Öppna **Visa 4 konflikter** i aktuell status med
+   och vägledning. Öppna **Visa 4 konflikter** i kartans utkaståterkoppling med
    tangentbord och pekare.
 6. Använd tangentbordet för att besöka objekttyp, sambandstyp, samband
    och objekt från listan. Återgå till kartan mellan destinationerna.

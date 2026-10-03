@@ -19,7 +19,7 @@ vid körning.
 
 1. För TEXTVY-01, TEXTVY-02 och TEXTVY-04: starta den
    [kontrollerade installationen för text](text-assistant.md#controlled-text-fixture).
-   För TEXTVY-03, TEXTMOBIL-01–04 och TEXTBREDD-01–05: starta i stället
+   För TEXTVY-03, TEXTMOBIL-01–05 och TEXTBREDD-01–05: starta i stället
    [den kontrollerade röstinstallationen](voice-assistant.md#controlled-voice-fixture)
    med `node --import tsx scripts/manual-voice.ts` efter bygget. Följ guidens
    privata portvidarebefordran och inloggning. Kör inte `seed-family`;
@@ -66,6 +66,8 @@ avsluta samtalet”.
 **Förväntat resultat:**
 
 - Textvyn står vid högerkanten, och kartan syns bredvid.
+- **Skicka** står i höjd med fältets mitt. Efter skickandet, också med
+  ett klick på **Skicka**, har meddelandefältet kvar fokus.
 - Meddelandefältet **Meddelande till Skyttel** har fokus när textvyn
   öppnas och platshållaren **Berätta vad du vill göra…**.
 - Textvyn har inga **Samtalskontroller**, **Öppna samtalet**,
@@ -180,7 +182,7 @@ mikrofon”.
    och påhittade data. Skapa Textprov och samma osparade Lo-förslag.
 2. Anslut fysisk mikrofon och ljudutgång. Välj **Prata med Skyttel**,
    godkänn samtalet och tillåt mikrofonen. Öppna textvyn och välj
-   **Nytt samtal**. Använd **Spela upp ljud** om uppspelning blockeras.
+   **Nytt samtal**. Använd **Starta ljudet** om uppspelning blockeras.
 3. Kontrollera att Skyttel hörbart säger att ett nytt samtal börjar och
    att en osparad ändring ligger kvar i utkastet. Kontrollera samtidigt
    samma besked i samtalstexten och kvarvarande Lo-förslag.
@@ -381,6 +383,54 @@ testfallet “TEXTMOBIL-04: en lång notis rullar och kan stängas i kort fönst
   Stängknappen går att nå och har kvar sin tryckyta på 44×44 px.
 - Automation provar detta vid 844×190 px. Faktisk förstoring, fokus
   och VoiceOver med verkligt tangentbord provas separat.
+
+### TEXTMOBIL-05: vald röstruta och kompakt textvy använder det riktiga samtalet
+
+**Syfte:** Jämföra det levererade mobila flödet med den valda utformningen,
+med samma samtal från röst till text och kort fönster.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Den kontrollerade röstinstallationen och Lo-förslaget.
+Börja vid 390 × 844 px med pekskärmsläge och minskad rörelse. För verkligt
+skärmtangentbord används en fysisk telefon; fönsterändring är ett separat
+layoutprov.
+
+**Integrationstest:**
+[conversation-audit.spec.ts](../../tests/integration/conversation-audit.spec.ts),
+testfallet “TEXTMOBIL-05: vald röstruta och kompakt textvy använder det
+riktiga samtalet”, i gruppen “valt mobilt samtalsflöde”.
+
+**Steg:**
+
+1. Välj **Prata med Skyttel**, godkänn och invänta **Lyssnar**. Kör
+   `user Beskriv utkastet.` och `delegate`. Håll modellsvar och kontrollera
+   **Skyttel arbetar**, vågform och **Avbryt** med textvyn stängd.
+2. Släpp `reply REQUEST Lo-förslaget ligger kvar i utkastet.` och invänta
+   **Lyssnar**. Öppna **Skriv till Skyttel**. Fältet ska inte få fokus
+   av sig självt på pekskärm.
+3. Tryck i fältet, skriv **Beskriv den senaste ändringen.** och skicka.
+   Håll nästa modellsvar. Prova en synlig höjd på 508 px, motsvarande
+   prototypens stående telefon med tangentbord. Läs den kompakta raden,
+   den tidigare samtalstexten, röstrutan och fältet.
+4. Prova 844 × 190 px och därefter 820 × 1180 px. Behåll fältets fokus
+   genom ändringarna. Släpp nästa svar och avsluta provmiljön.
+
+**Förväntat resultat:**
+
+- Med textvyn stängd står röstrutan vid nedre högra kanten, ovanför
+  kartans rad med **Återställ vy** och utkastets återkoppling. Alla tre
+  ytorna är skilda. Statusordet och stoppikonen ryms på en rad.
+- Vid 508 och 190 px synlig höjd syns kontextmätare, **Utkast (1)**,
+  **Nytt samtal** och stängknapp i en kompakt rad. Fältet har en rad,
+  behåller fokus och står under samtalstexten. Röstrutan står ovanför
+  fältet. Endast fältets **Avbryt** visas under skrivet arbete.
+- Vid 820 × 1180 px är textvyn ett 400 px sidofält och kartan syns
+  bredvid. Kompakt läge upphör utan att fältet eller samtalet byts ut.
+- Automationen fångar appens riktiga ytor efter produktionsbygge, med riktig
+  server och tillfällig SQLite. Den ersätter externa modeller och medier.
+  Den ritar inget tangentbord och verifierar inte fysisk mikrofon eller
+  iOS-tangentbord; dessa prov återstår enligt #220.
 
 ## Personliga bredder på dator
 
