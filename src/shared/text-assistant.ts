@@ -20,6 +20,8 @@ export interface TextAssistantView {
   revision: number;
   /** Advances only when the conversation text and context are explicitly cleared. */
   contextRevision?: number;
+  /** Server-calculated occupancy of the conversation, from 0 to 100. */
+  contextPercentage?: number;
   /** Verified whole-draft discard, shown as conversation text. */
   discarded?: boolean;
   /** Accepted messages waiting on the server, excluding the current task. */

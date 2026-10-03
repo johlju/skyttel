@@ -7,6 +7,7 @@ import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantView } from '../shared/voice-assistant.js';
 import { voiceAssistantInstructions } from './assistant-instructions.js';
 import type { Config } from './config.js';
+import { voiceConversationModel } from './conversation-capacity.js';
 import type {
   LiveSideband,
   LiveSidebandFactory,
@@ -55,6 +56,7 @@ export function voiceAssistantRoutes({
   interrupt,
   conversation,
   transcript,
+  contextUsage,
 }: {
   config: Config;
   dispatch: LocalDispatch;
@@ -67,6 +69,12 @@ export function voiceAssistantRoutes({
     sessionId: string,
   ) => { role: 'user' | 'assistant'; text: string; partial?: boolean }[];
   transcript?: (sessionId: string, role: 'user' | 'assistant', text: string) => void;
+  contextUsage?: (
+    sessionId: string,
+    contextRevision: number,
+    source: string,
+    ratio?: unknown,
+  ) => void;
 }) {
   const routes = new Hono();
   const voices = new Map<string, Voice>();
@@ -231,7 +239,7 @@ export function voiceAssistantRoutes({
       const result = await client.live.create(
         {
           session: {
-            model: 'gpt-live-1',
+            model: voiceConversationModel.model,
             audio: { output: { voice: 'marin' } },
             delegation: { type: 'client' },
             store: false,
@@ -281,6 +289,8 @@ export function voiceAssistantRoutes({
           if (Date.now() - voice.heartbeat > 10_000) void close(voice, 'voice_connection_lost');
         }, 1000).unref(),
       };
+      const contextRevision = current.contextRevision ?? 0;
+      contextUsage?.(context.req.param('sessionId'), contextRevision, voice.view.id);
       channel.on('error', () => {
         void close(voice, 'voice_provider_failed');
       });
@@ -289,6 +299,13 @@ export function voiceAssistantRoutes({
       });
       channel.on('session.usage.updated', (event) => {
         if (voice.finalized) return;
+        if (!voice.closed && typeof event.context_window?.usage_ratio === 'number')
+          contextUsage?.(
+            context.req.param('sessionId'),
+            contextRevision,
+            voice.view.id,
+            event.context_window.usage_ratio,
+          );
         if (
           !Number.isFinite(event.usage?.seconds) ||
           event.usage.seconds < 0 ||

@@ -155,6 +155,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   genom utkast, sparande, avbrott, fel, mikrofon av och på samt byte mellan
   röst och text. Äldre sparbesked ger inget nytt sparande. Skrivna och
   talade kommandon börjar om samtalet och kastar hela utkastet.
+  Kontextmätaren följer serverns procenttal, röstrutan visar procent från
+  85 och ger en enda artig uppläsning, även på smal pekskärm. Nytt samtal
+  återställer mätaren och gamla mätningar ignoreras.
 - [Skyttels textassistent](text-assistant.md): hela utkast,
   rättelse och samlat sparande, sena svar, avbrott, återfunna kvitton och
   samtidigt synliga objekt och samband i karta och detaljpanel även på

@@ -52,6 +52,29 @@
   margin: 0;
   font-size: 15px;
 }
+.conversation-context-meter {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--space-line);
+  font-size: 12px;
+}
+.conversation-context-meter meter {
+  flex: 1;
+  min-width: 0;
+  height: 8px;
+}
+.conversation-context-meter meter::-webkit-meter-bar {
+  background: var(--space-line);
+  border: 0;
+}
+.conversation-context-meter meter::-webkit-meter-optimum-value,
+.conversation-context-meter meter::-webkit-meter-suboptimum-value,
+.conversation-context-meter meter::-webkit-meter-even-less-good-value {
+  background: var(--space-accent);
+}
 .text-view-new {
   min-height: 36px;
   padding: 4px 12px;

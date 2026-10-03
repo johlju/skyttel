@@ -3,6 +3,8 @@
 Fallen provar att samma tillfälliga samtal följer text och röst, även efter
 utkaständringar, sparande, avbrott och fel. De provar också aktuella
 kommandon för nytt samtal och för att kasta hela utkastet.
+Kontextmätaren och röstrutans procenttal provas med kontrollerade
+leverantörsmätningar; de bevisar inte en verklig modells kapacitet.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 Kontrollerade röstspår är tysta; faktiskt hört tal redovisas separat.
 
@@ -169,3 +171,170 @@ och kastar utkastet”.
   Faktiskt hört tal, mikrofon och skärmläsare återstår att prova manuellt
   i en isolerad verklig röstinstallation enligt
   [röstguiden](voice-assistant.md#tal-01-familjeärendet-sparas-med-röst-och-bevarad-oskickad-formulärtext).
+
+## Kontextmätaren
+
+För dessa fall behövs inget Lo-förslag. Starta en ny kontrollerad
+installation och skapa Kontextprov enligt den allmänna förberedelsen.
+Terminalkommandona ändrar endast den externa provleverantörens nästa
+mätning. Servern och den tillfälliga SQLite-databasen är riktiga.
+`context` gäller den aktuella röstanslutningen. `text-context` gäller
+framtida textsvar; kommandot ändrar inte mätaren förrän ett svar släpps.
+
+### KONTEXT-04: textmätaren följer modellens mätning och nytt samtal tömmer den
+
+**Syfte:** Läsa serverns procenttal och börja om utan gamla samtalsrader.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Kontextprov har ett nytt samtal utan utkaständringar.
+
+**Integrationstest:**
+[conversation-capacity.spec.ts](../../tests/integration/conversation-capacity.spec.ts),
+testfallet “KONTEXT-04: textmätaren följer modellens mätning och nytt
+samtal tömmer den”.
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel** och **Godkänn och starta**. Läs **Kontext**
+   under textvyns rubrik. Kräv **0%**. Läs mätaren med skärmläsare och
+   kontrollera namnet, värdet och beskrivningen.
+2. Kör `text-context 84` i terminalen. Skriv **Första provfrågan** och
+   välj **Skicka**. Släpp det hållna anropet med `reply ANROP Ett provsvar.`;
+   ersätt `ANROP` med ID från `held`. Kräv **84%** efter svaret.
+3. Kör `text-context 92`. Skicka **Nästa provfråga** och släpp nästa
+   anrop med `reply ANROP Ett nytt provsvar.`. Kräv **92%**.
+4. Välj **Nytt samtal**. Kräv **0%** och att provfrågorna och svaren
+   är borta.
+
+**Förväntat resultat:**
+
+- Mätaren följer serverns värden för den konfigurerade textmodellen.
+  Flera svar summerar inte tidigare uppmätta procenttal.
+- Namnet är **Kontext**. Skärmläsaren kan läsa värdet som procent och
+  beskrivningen **Så mycket av samtalets kontext som är fylld. Nytt
+  samtal tömmer den.** Ingen ny automatisk uppläsning krävs för varje värde.
+- Automationen kontrollerar att mätaren står under rubriken och att
+  modellen använder sin verkligt konfigurerade kapacitet som nämnare.
+
+### KONTEXT-05: rösten visar procent från 85 och läser tröskeln en gång
+
+**Syfte:** Läsa den aktuella procenten utan upprepade skärmläsarbesked.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Ett nytt samtal, skärmläsare på och textvyn öppen.
+Den kontrollerade rösten är tyst och ersätter inte ett verkligt ljudprov.
+
+**Integrationstest:**
+[conversation-capacity.spec.ts](../../tests/integration/conversation-capacity.spec.ts),
+testfallet “KONTEXT-05: rösten visar procent från 85 och läser
+tröskeln en gång”.
+
+**Steg:**
+
+1. Välj **Prata med Skyttel**. Kör `context 84`. Kräv **84%** i textmätaren
+   och ingen kontextsymbol i röstrutan.
+2. Kör `context 85`. Kräv symbolen och **85%**. Läs symbolen med
+   skärmläsaren: **Kontexten är 85 procent full**. Kräv samma besked en
+   gång automatiskt, efter annan pågående uppläsning.
+3. Kör `context 96`. Kräv **96%** och namnet **Kontexten är 96 procent
+   full**, utan en ny automatisk uppläsning av procenttalet.
+4. Kör `context 70` och sedan `context 85`. Symbolen försvinner och kommer
+   tillbaka; inget nytt procentbesked ska läsas upp. Slå av och på
+   mikrofonen. Kräv fortfarande inget nytt procentbesked.
+5. Välj **Nytt samtal**. Kräv **0%** och ingen symbol. När den nya
+   röstanslutningen är klar, kör `context 85`. Kräv ett nytt enda
+   procentbesked för det nya samtalet.
+
+**Förväntat resultat:**
+
+- Symbolen börjar visas vid 85 procent och visar det aktuella talet.
+  Röstrutan får plats med symbolen utan att bli högre. Bredd och höjd
+  jämförs med pixelmått i automationen.
+- En separat artig uppläsning anger 85-procentströskeln en gång per
+  samtal. Högre tal, samma tröskel efter en nedgång och mikrofon av/på
+  ger inga nya procentbesked.
+- **Nytt samtal** återställer både procenttalet och den enda uppläsningen.
+
+### KONTEXT-06: ogiltig mätning och gamla rösthändelser ändrar inte den nya kontexten
+
+**Syfte:** Ignorera mätningar som inte hör till det aktuella samtalet.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Ett nytt samtal, textvyn öppen och mikrofonen på.
+
+**Integrationstest:**
+[conversation-capacity.spec.ts](../../tests/integration/conversation-capacity.spec.ts),
+testfallet “KONTEXT-06: ogiltig mätning och gamla rösthändelser ändrar
+inte den nya kontexten”.
+
+**Steg:**
+
+1. Kör `context 85` och kräv **85%** och kontextsymbolen.
+2. Kör `context-invalid`. Kräv oförändrade **85%**. Kör sedan
+   `capture-context-source` för att behålla den gamla provleverantörens
+   anslutning som testkälla.
+3. Välj **Nytt samtal** och vänta tills rösten är klar. Kräv **0%** och
+   ingen kontextsymbol. Kör `context-old 99`. Kräv fortfarande **0%**.
+4. Kör `context 20`. Kräv **20%**, utan kontextsymbol.
+
+**Förväntat resultat:**
+
+- Fel format och mätningar från den avslutade röstanslutningen ändrar
+  inte procenttalet. Bara aktuell giltig leverantörsmätning används.
+- Automationen provar även negativt värde, saknat värde och en
+  påhittad användningshändelse från webbläsarens externa röstprov.
+  Webbläsaren kan inte själv välja serverns procenttal.
+
+### KONTEXT-07: mätaren och röstrutans procent går att läsa på pekskärm
+
+**Syfte:** Läsa kontexten och använda samtalet på telefon och surfplatta.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Ett nytt samtal på en telefon eller surfplatta.
+Aktivera minskad rörelse. Prova både ljust och mörkt tema. Anteckna
+verklig enhet, operativsystem, webbläsare och skärmläsare separat.
+
+**Integrationstest:**
+[conversation-capacity.spec.ts](../../tests/integration/conversation-capacity.spec.ts),
+testfallet “KONTEXT-07: mätaren och röstrutans procent går att läsa på
+pekskärm”, under grupperna för 390 respektive 820 pixlars bredd.
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel**, godkänn och kör `text-context 90`.
+   Skicka **Ett prov på pekskärm** och släpp anropet med
+   `reply ANROP Ett provsvar.`. Läs **Kontext**, **90%** och beskrivningen.
+2. Välj **Prata med Skyttel** och kör `context 90`. Läs symbolen och
+   procenttalet. Kräv att statusord och **Avbryt**, när det visas,
+   fortfarande går att läsa och använda.
+3. Stäng och öppna textvyn. Kräv samma procenttal. Prova skärmläsarens
+   läsordning från rubriken till mätaren, samtalstexten och meddelandefältet.
+4. Prova 200 och 400 procents zoom där webbläsaren stöder det. Kontrollera
+   att värde, symbol och beskrivning fortfarande går att läsa utan att
+   behöva rulla hela sidan i sidled. Byt tema och upprepa läsningen.
+
+**Förväntat resultat:**
+
+- Procenttalet framgår av text och tillgängligt namn, oberoende av färg
+  och rörelse. Mätaren har samma beskrivning på alla skärmstorlekar.
+- Automationen provar två emulerade pekskärmar med minskad rörelse,
+  synlig mätare och symbol samt frånvaro av horisontell sidrullning.
+  Verklig enhet, tema, zoom och skärmläsarens tal provas manuellt.
+
+## Tillgänglighetsbedömning för kontextmätaren
+
+Designmålen enligt WCAG 2.2 AA är semantisk mätare med namn, värde och
+beskrivning (1.3.1 och 4.1.2), procenttext som inte kräver färgseende
+(1.4.1), läsbar kontrast i båda teman (1.4.3 och 1.4.11), omflöde vid
+zoom (1.4.10) och ett artigt statusbesked som väntar på sin tur (4.1.3).
+Mätaren och symbolen är läsinformation, utan nya tangentbordssteg.
+
+Automation verifierar namn, procentvärde, beskrivning, tröskelns enda
+uppdatering i en artig region, symbolens geometri och emulerat omflöde.
+Det verifierar inte faktisk skärmläsaruppläsning, kontrastmätning i alla
+teman, zoom på verklig enhet eller fullständig WCAG-överensstämmelse.
+KONTEXT-05 och KONTEXT-07 anger de manuella kontroller som återstår.

@@ -132,6 +132,19 @@ oberoende av om textvyn är öppen.
 
 ## Samtalets kontext
 
+Under rubriken i textvyn visar **Kontext** hur många procent av samtalets
+kontext som är fylld. Beskrivningen är **Så mycket av samtalets kontext
+som är fylld. Nytt samtal tömmer den.** Procenttalet bygger på
+leverantörens mätningar och uppskattningar mellan mätningarna, så det
+är ungefärligt. Text och röst kan ha olika kapacitet; mätaren visar den
+som är mest fylld. Procenttalet kan sjunka när leverantören frigör plats.
+
+Från 85 procent visar röstrutan en symbol och procenttalet. Rutan blir
+bredare, med samma höjd. Skärmläsaren säger **Kontexten är 85 procent
+full** en gång, utan att avbryta annan uppläsning. Högre värden läses
+inte upp automatiskt; du kan läsa det aktuella talet i röstrutan.
+**Nytt samtal** tömmer kontexten och återställer mätaren till noll.
+
 Skyttel har med sig hela det pågående samtalet, också efter att ett förslag
 har lagts i utkastet, efter sparande, avbrott eller fel. Du kan exempelvis
 säga eller skriva **Ändra den sista** för att rätta det senaste förslaget.

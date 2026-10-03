@@ -27,7 +27,11 @@ async function main() {
   const pending = new Map<string, Pending>();
   let sequence = 0;
   let offset = 0;
+  let textContextPercent: number | undefined;
   const live = liveProvider();
+  let retiredContextSource:
+    | (typeof live.channels extends Map<string, infer Channel> ? Channel : never)
+    | undefined;
   function describe(id: string, item: Pending) {
     const user = item.request.input.findLast((part) => part.role === 'user');
     const current = user && typeof user.content === 'string' ? JSON.parse(user.content) : {};
@@ -52,7 +56,17 @@ async function main() {
       }),
   );
   const app = await createInstallation(undefined, {
-    modelFetch: model.provider,
+    modelFetch: async (input, init) => {
+      const response = await model.provider(input, init);
+      if (textContextPercent === undefined) return response;
+      const body = await response.json();
+      body.usage.output_tokens = textContextPercent === 0 ? 0 : 30;
+      body.usage.input_tokens = 10_500 * textContextPercent - body.usage.output_tokens;
+      body.usage.total_tokens = body.usage.input_tokens + body.usage.output_tokens;
+      body.usage.input_tokens_details.cached_tokens = Math.min(20, body.usage.input_tokens);
+      body.usage.output_tokens_details.reasoning_tokens = Math.min(10, body.usage.output_tokens);
+      return Response.json(body, { headers: response.headers });
+    },
     liveFetch: live.provider,
     liveSideband: live.attach,
     browserProviderScript: liveBrowserFixtureSource,
@@ -94,6 +108,11 @@ async function main() {
               'assistant TEXT',
               'delegate',
               'usage SECONDS',
+              'context PERCENT',
+              'text-context PERCENT',
+              'capture-context-source',
+              'context-old PERCENT',
+              'context-invalid',
               'final SECONDS',
               'finalize on|off',
               'drop',
@@ -159,6 +178,37 @@ async function main() {
             offset_ms: offset,
             delegation: { id: `delegation_${randomUUID()}`, type: 'delegation', target: 'client' },
           });
+        } else if (command === 'capture-context-source') {
+          if (live.channels.size !== 1) throw new Error('Start exactly one voice session.');
+          retiredContextSource = [...live.channels.values()][0];
+        } else if (command === 'context-invalid') {
+          voiceEvent('session.usage.updated', {
+            usage: { seconds: 0 },
+            context_window: { usage_ratio: '0.99' },
+          });
+        } else if (
+          command === 'context' ||
+          command === 'text-context' ||
+          command === 'context-old'
+        ) {
+          const percent = Number(id);
+          if (!id || !Number.isInteger(percent) || percent < 0 || percent > 100)
+            throw new Error('Supply a whole percentage from 0 to 100.');
+          if (command === 'context')
+            voiceEvent('session.usage.updated', {
+              usage: { seconds: 0 },
+              context_window: { usage_ratio: percent / 100 },
+            });
+          else if (command === 'context-old') {
+            if (!retiredContextSource)
+              throw new Error('Use capture-context-source before Nytt samtal.');
+            retiredContextSource.emit('session.usage.updated', {
+              type: 'session.usage.updated',
+              event_id: randomUUID(),
+              usage: { seconds: 0 },
+              context_window: { usage_ratio: percent / 100 },
+            });
+          } else textContextPercent = percent;
         } else if (command === 'usage' || command === 'final') {
           const seconds = Number(id);
           if (!id || !Number.isFinite(seconds) || seconds < 0)

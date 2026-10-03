@@ -97,6 +97,17 @@
   height: 16px;
   color: var(--proposal-added, #187747);
 }
+.voice-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-size: 12px;
+}
+.voice-context svg {
+  width: 18px;
+  height: 18px;
+}
 
 .conversation-corner button.voice-stop,
 .household-map.workspace-shell .conversation-corner button.voice-stop {

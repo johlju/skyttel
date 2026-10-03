@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ContextAnnouncement, ContextSymbol } from './ConversationContext.js';
 import type { Conversation } from './use-conversation.js';
 import type { Voice } from './use-voice.js';
 import './voice-box.css';
@@ -102,7 +103,8 @@ export function VoiceBox({
   hideStop = false,
 }: {
   /** The voice, whether Skyttel works with a said or a written task, and how to stop the work. */
-  conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'>;
+  conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'> &
+    Partial<Pick<Conversation, 'session'>>;
   /** The button that turns the microphone on and off, where there is one. */
   microphoneButton?: () => HTMLElement | null;
   /** The visible control to focus when the stop icon disappears. */
@@ -170,6 +172,11 @@ export function VoiceBox({
       <p className="voice-announcement" aria-live="polite" aria-atomic="true">
         <span key={announcement.count}>{announcement.text}</span>
       </p>
+      <ContextAnnouncement
+        percentage={conversation.session?.contextPercentage ?? 0}
+        visible={Boolean(status)}
+        conversationKey={`${conversation.session?.id ?? ''}:${conversation.session?.contextRevision ?? 0}`}
+      />
       {status && (
         // biome-ignore lint/a11y/useSemanticElements: a named group that is not a form
         <div className="voice-box" role="group" aria-label="Röstruta">
@@ -187,6 +194,7 @@ export function VoiceBox({
             </svg>
           )}
           <span>{status.word}</span>
+          <ContextSymbol percentage={conversation.session?.contextPercentage ?? 0} />
           {status.stop && !hideStop && (
             <button
               type="button"

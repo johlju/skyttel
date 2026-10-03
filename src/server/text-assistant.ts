@@ -16,6 +16,7 @@ import { textAssistantInstructions } from './assistant-instructions.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { contentOwner } from './content-identities.js';
+import { ConversationCapacity } from './conversation-capacity.js';
 import type { ConversationConsents } from './conversation-consent.js';
 import { householdAccess } from './households.js';
 import { MapError } from './map.js';
@@ -48,6 +49,7 @@ type Session = TextAssistantView & {
   /** Version reached by this FIFO, unaffected by view reads of external edits. */
   workVersion?: number;
   accepted: Map<string, AcceptedMessage>;
+  capacity: ConversationCapacity;
   previousFailure?: string;
   pendingSave?: { operationId: string; version: number; contentVersion: number };
   displayed?: (value: boolean) => void;
@@ -166,6 +168,10 @@ export function textAssistantRoutes({
       id,
       revision,
       contextRevision,
+      contextPercentage: session.capacity.percent(
+        contextBytes(session),
+        Buffer.byteLength(JSON.stringify(session.conversation)),
+      ),
       discarded,
       canceled,
       completedReplies,
@@ -185,6 +191,17 @@ export function textAssistantRoutes({
       displayedSelection,
       displayedItem,
     };
+  }
+  function contextBytes(session: Session) {
+    if (!session.input.length && !session.conversation.length) return 0;
+    return Buffer.byteLength(
+      JSON.stringify({
+        instructions: `${session.mcp.instructions}\n\n${textAssistantInstructions}`,
+        tools: session.mcp.tools,
+        input: session.input,
+        dialogue: session.conversation.slice(session.contextOffset),
+      }),
+    );
   }
   async function call(
     session: Session,
@@ -455,6 +472,7 @@ export function textAssistantRoutes({
     session.conversation = [];
     session.contextOffset = 0;
     session.contextRevision = (session.contextRevision ?? 0) + 1;
+    session.capacity.reset();
     session.previousFailure = undefined;
     session.selection = undefined;
     session.displayedSelection = undefined;
@@ -663,6 +681,7 @@ export function textAssistantRoutes({
           throw new MapError('assistant_draft_changed', 409);
         if (response.status !== 'completed') throw new Error('assistant_incomplete');
         session.input.push(...toResponseInputItems(response.output));
+        session.capacity.text(response.usage, contextBytes(session));
         let calls = response.output.filter((item) => item.type === 'function_call');
         let combined:
           | { completion: 'draft' | 'save'; questions: string[]; callId: string }
@@ -1118,6 +1137,7 @@ export function textAssistantRoutes({
         input: [],
         conversation: [],
         contextOffset: 0,
+        capacity: new ConversationCapacity(),
         contextRevision: 0,
         queue: [],
         boundaryRevision: 0,
@@ -1465,6 +1485,13 @@ export function textAssistantRoutes({
     /** Private ephemeral context shared by text and every voice connection.
      * Never expose it in status responses or write it to the household. */
     conversation: (sessionId: string) => sessions.get(sessionId)?.conversation ?? [],
+    contextUsage: (sessionId: string, revision: number, source: string, ratio?: unknown) => {
+      const session = sessions.get(sessionId);
+      if (session && (session.contextRevision ?? 0) === revision) {
+        if (ratio === undefined) session.capacity.beginVoice(source);
+        else session.capacity.voice(source, ratio);
+      }
+    },
     transcript: (sessionId: string, role: 'user' | 'assistant', text: string) => {
       const session = sessions.get(sessionId);
       if (session) session.conversation.push({ role, text, partial: true });

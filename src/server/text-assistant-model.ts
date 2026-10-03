@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import OpenAI from 'openai';
 import type { ResponseInputItem, Tool } from 'openai/resources/responses/responses';
+import { textConversationModel } from './conversation-capacity.js';
 
 export interface TextModelAttempt {
   attemptId: string;
@@ -46,7 +47,7 @@ export function textModel(apiKey: string, modelFetch?: typeof fetch, record?: Te
       attemptId: randomUUID(),
       startedAt: new Date().toISOString(),
       endedAt: null,
-      model: 'gpt-5.6-terra',
+      model: textConversationModel.model,
       requestId: null,
       responseId: null,
       outcome: 'started',

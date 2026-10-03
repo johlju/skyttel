@@ -259,6 +259,7 @@ export function createApp({
     interrupt: textAssistant.interrupt,
     conversation: textAssistant.conversation,
     transcript: textAssistant.transcript,
+    contextUsage: textAssistant.contextUsage,
   });
   stopVoice = voiceAssistant.stopSession;
   newVoiceConversation = voiceAssistant.newConversation;

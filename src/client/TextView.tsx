@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { ContextMeter } from './ConversationContext.js';
 import { ConversationTranscript } from './ConversationTranscript.js';
 import type { Conversation } from './use-conversation.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
@@ -128,6 +129,7 @@ export function TextView({
           <WorkspaceIcon name="close" />
         </button>
       </header>
+      <ContextMeter percentage={session?.contextPercentage} />
       {onToggleDraft && (
         <button
           type="button"
