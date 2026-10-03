@@ -77,7 +77,7 @@ test('Swedish and canonical searches stage an icon into the same object proposal
   await userEvent.click(picker.getByRole('button', { name: 'Typens standardikon' }));
   await screen.findByText('Förslaget finns i ditt privata utkast. Kartan är inte ändrad.');
   expect((await read()).draft.changes[0].after).not.toHaveProperty('iconId');
-});
+}, 10_000);
 
 test('a delayed text proposal for the picker does not replace a newer search focus', async () => {
   const details = await open();

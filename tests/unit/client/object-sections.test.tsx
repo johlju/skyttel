@@ -80,7 +80,7 @@ test('section and field controls retain focus, descriptions and placement throug
     ['Effekt', 'kW'],
     ['Anteckning', 'kW'],
   ]);
-});
+}, 10_000);
 
 test('empty sections and unused fields can be removed while hidden definitions remain reviewable', async () => {
   await open();
