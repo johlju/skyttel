@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Conversation } from './use-conversation.js';
 import type { Voice } from './use-voice.js';
 import './voice-box.css';
@@ -90,6 +90,8 @@ export function VoiceBox({
   conversation,
   microphoneButton,
   focusAfterStop,
+  notice,
+  showErrors = false,
 }: {
   /** The voice, whether Skyttel works with a said or a written task, and how to stop the work. */
   conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'>;
@@ -97,6 +99,8 @@ export function VoiceBox({
   microphoneButton?: () => HTMLElement | null;
   /** The visible control to focus when the stop icon disappears. */
   focusAfterStop?: () => HTMLElement | null;
+  notice?: ReactNode;
+  showErrors?: boolean;
 }) {
   const { voice } = conversation;
   const status = voiceBoxStatus(voice, conversation.working);
@@ -134,8 +138,21 @@ export function VoiceBox({
     stopFocused.current = false;
     (focusAfterStopNow.current?.() ?? microphoneButtonNow.current?.())?.focus();
   }, [stopShown]);
+  const corner = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = corner.current;
+    if (!node) return;
+    const measure = () =>
+      node
+        .closest<HTMLElement>('.household-map')
+        ?.style.setProperty('--conversation-corner-height', `${node.offsetHeight}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   return (
-    <div className="conversation-corner">
+    <div className="conversation-corner" ref={corner}>
       {/* A new element each time, so that the same words are read again. */}
       <p className="voice-announcement" aria-live="polite" aria-atomic="true">
         <span key={announcement.count}>{announcement.text}</span>
@@ -168,6 +185,12 @@ export function VoiceBox({
             </button>
           )}
         </div>
+      )}
+      {notice}
+      {showErrors && !notice && voice.error && (
+        <p role="alert" className="conversation-notice">
+          {voice.error}
+        </p>
       )}
     </div>
   );

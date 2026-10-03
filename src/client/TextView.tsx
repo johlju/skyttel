@@ -24,6 +24,7 @@ export function TextView({
   hidden = false,
   onClose,
   children,
+  notice,
   draftOpen = false,
   draftCount = 0,
   onToggleDraft,
@@ -34,6 +35,8 @@ export function TextView({
   onClose: () => void;
   /** What is shown above the conversation text. */
   children?: ReactNode;
+  /** The conversation notice, immediately above the editable message field. */
+  notice?: ReactNode;
   draftOpen?: boolean;
   draftCount?: number;
   onToggleDraft?: () => void;
@@ -57,7 +60,13 @@ export function TextView({
   useLayoutEffect(() => {
     if (body.current && follow.current) body.current.scrollTop = body.current.scrollHeight;
   }, [transcript, working]);
-  const blocked = !session || pending || unknown || session.phase === 'recovery' || !text.trim();
+  const blocked =
+    conversation.inputBlocked ||
+    !session ||
+    pending ||
+    unknown ||
+    session.phase === 'recovery' ||
+    !text.trim();
   function send() {
     if (blocked) return;
     void conversation.send();
@@ -127,6 +136,7 @@ export function TextView({
             {children}
             <ConversationTranscript rows={transcript} working={working} />
           </div>
+          {notice}
           <form
             className="text-view-message"
             onSubmit={(event) => {

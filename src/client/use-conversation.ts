@@ -20,6 +20,13 @@ export type ConversationMode = 'voice' | 'text';
  * owns the conversation, so it survives whichever of them is shown.
  */
 export type Conversation = {
+  /** Conversation input is stopped; the unsent text remains editable. */
+  inputBlocked?: boolean;
+  disconnected?: boolean;
+  /** A press while idle asks to see the blocking notice, without opening a view. */
+  noticeRequested?: number;
+  taskFailed?: boolean;
+  showNotice?: () => void;
   /** Whether the server offers the conversation. Null until it has answered. */
   available: boolean | null;
   /** The conversation consent for this household, and the consent box that asks for it. */
@@ -122,6 +129,11 @@ export function useConversation({
   const path = `${household}/text-assistant`;
   const consentPath = `${household}/conversation-consent`;
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [connected, setConnected] = useState(navigator.onLine);
+  const connection = useRef(navigator.onLine);
+  const pauseCapture = useRef<() => void>(() => {});
+  const [noticeRequested, setNoticeRequested] = useState(0);
+  const [taskFailed, setTaskFailed] = useState(false);
   // Undefined until the server has answered.
   const [savedConsent, setSavedConsent] = useState<SavedConversationConsent | null>();
   const [visitConsent, setVisitConsent] = useState(false);
@@ -182,6 +194,8 @@ export function useConversation({
           text: next.reply,
         });
       }
+      if (next.revision !== previous?.revision || next.error !== previous?.error)
+        setTaskFailed(next.phase === 'error' && Boolean(next.error));
       if (
         next.modelReply &&
         (next.modelReply !== previous?.modelReply || next.revision !== previous?.revision)
@@ -249,7 +263,11 @@ export function useConversation({
         if (!controller.signal.aborted) setAvailable(result.available);
       })
       .catch(() => {
-        if (!controller.signal.aborted) setAvailable(false);
+        if (!controller.signal.aborted) {
+          connection.current = false;
+          pauseCapture.current();
+          setConnected(false);
+        }
       });
     void request<ConversationConsentView>(consentPath, undefined, controller.signal)
       .then((result) => {
@@ -281,7 +299,39 @@ export function useConversation({
     };
   }, [path, consentPath, enabled, clear]);
   useEffect(() => {
-    if (!session || unknown || pending) return;
+    if (!enabled) return;
+    const controller = new AbortController();
+    const offline = () => {
+      connection.current = false;
+      pauseCapture.current();
+      setConnected(false);
+    };
+    const check = async () => {
+      if (!navigator.onLine) return offline();
+      try {
+        const result = await request<{ available: boolean }>(path, undefined, controller.signal);
+        if (controller.signal.aborted) return;
+        if (!navigator.onLine) return offline();
+        connection.current = true;
+        setConnected(true);
+        setAvailable(result.available);
+        if (!result.available) pauseCapture.current();
+      } catch {
+        if (!controller.signal.aborted) offline();
+      }
+    };
+    window.addEventListener('offline', offline);
+    window.addEventListener('online', check);
+    const timer = setInterval(() => void check(), 5000);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      window.removeEventListener('offline', offline);
+      window.removeEventListener('online', check);
+    };
+  }, [enabled, path]);
+  useEffect(() => {
+    if (!session || unknown || pending || !connected) return;
     const controller = new AbortController();
     const epoch = requestEpoch.current;
     const relevant = () =>
@@ -304,7 +354,7 @@ export function useConversation({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [session, unknown, pending, path, update, fail]);
+  }, [session, unknown, pending, connected, path, update, fail]);
   const voice = useVoice({
     householdId,
     assistant: session,
@@ -314,8 +364,15 @@ export function useConversation({
     onAccessLost: fail,
     onTranscript: showTranscript,
     transcript,
+    inputBlocked: !connected || available === false,
     onRecoveryNeeded: () => setUnknown(true),
   });
+  pauseCapture.current = () => voice.pauseMicrophone?.();
+  const disconnected = !navigator.onLine || !connected || voice.disconnected;
+  const inputBlocked = disconnected || available === false;
+  useEffect(() => {
+    if (inputBlocked) pauseCapture.current();
+  }, [inputBlocked]);
   const consentValid = visitConsent || savedConsent?.textVersion === conversationConsentTextVersion;
   const start = useCallback(
     async (mode: ConversationMode) => {
@@ -353,8 +410,9 @@ export function useConversation({
   const answered = available !== null && savedConsent !== undefined;
   useEffect(() => {
     if (!requested || !answered) return;
-    if (!available) {
+    if (!available || !connection.current || !navigator.onLine) {
       setRequested(null);
+      setNoticeRequested((value) => value + 1);
       callbacks.current.onUnavailable?.();
     } else if (consentValid) {
       setRequested(null);
@@ -448,7 +506,8 @@ export function useConversation({
   );
   async function send() {
     const current = session;
-    if (!current || !text.trim()) return;
+    if (!current || !text.trim() || inputBlocked || !connection.current || !navigator.onLine)
+      return;
     const control = conversationCommand(text);
     if (control?.reset) {
       const sent = text;
@@ -465,6 +524,7 @@ export function useConversation({
     showTranscript({ id: crypto.randomUUID(), role: 'user', text: sent });
     setPending(true);
     setError('');
+    setTaskFailed(false);
     try {
       const result = await request<TextAssistantView>(`${path}/${current.id}/messages`, {
         revision: current.revision,
@@ -542,6 +602,11 @@ export function useConversation({
   const working = session?.phase === 'working';
   return {
     available,
+    disconnected,
+    inputBlocked,
+    noticeRequested,
+    taskFailed,
+    showNotice: () => setNoticeRequested((value) => value + 1),
     consent: {
       saved: savedConsent ?? null,
       visit: visitConsent,
@@ -568,6 +633,12 @@ export function useConversation({
     voice,
     setText,
     begin: (mode) => {
+      setTaskFailed(false);
+      if (inputBlocked || !connection.current || !navigator.onLine) {
+        setNoticeRequested((value) => value + 1);
+        callbacks.current.onUnavailable?.();
+        return;
+      }
       if (!session && !pending) {
         if (mode === 'voice' && consentValid && available === true) voice.prepareAudio?.();
         setRequested(mode);

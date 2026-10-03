@@ -211,6 +211,9 @@ export async function createInstallation(
     denyConsent(value: boolean) {
       consentDenied = value;
     },
+    setConversationAvailable(value: boolean) {
+      config.openaiApiKey = value ? 'synthetic-model-key' : undefined;
+    },
     // Arrange another household on the same installation for boundary checks.
     seedMembership(userId: string, householdId: string, name: string, role = 'member') {
       database.transaction(() => {

@@ -1,10 +1,19 @@
 import { useRef, useState } from 'react';
 import { ConversationConsent } from '../../src/client/ConversationConsent.js';
 import {
+  ConversationNoticeAnnouncements,
+  ConversationNoticeCard,
+  useConversationNotice,
+} from '../../src/client/ConversationNotice.js';
+import {
   type ConversationPresentation,
   ConversationWorkspace,
 } from '../../src/client/TextAssistant.js';
-import { type ConversationMode, useConversation } from '../../src/client/use-conversation.js';
+import {
+  type ConversationMode,
+  conversationOngoing,
+  useConversation,
+} from '../../src/client/use-conversation.js';
 import { VoiceBox } from '../../src/client/VoiceBox.js';
 import type { MapSelection } from '../../src/shared/text-assistant.js';
 import { conversationTools } from './conversation.js';
@@ -38,6 +47,29 @@ export function StandaloneConversation({
     onSelectItem,
   });
   const { voice } = conversation;
+  const noticeState = useConversationNotice({
+    conditions: {
+      disconnectedActive: Boolean(
+        conversation.disconnected && conversationOngoing(conversation, textViewOpen),
+      ),
+      disconnectedIdle: Boolean(
+        conversation.disconnected && !conversationOngoing(conversation, textViewOpen),
+      ),
+      unavailable: conversation.available === false,
+      taskFailed: Boolean(conversation.taskFailed),
+    },
+    ongoing: conversationOngoing(conversation, textViewOpen),
+    requested: conversation.noticeRequested ?? 0,
+    eventKey: `${conversation.session?.id}:${conversation.session?.revision}`,
+  });
+  const notice = noticeState.notice && (
+    <ConversationNoticeCard
+      notice={noticeState.notice}
+      closable={noticeState.closable}
+      onDismiss={noticeState.dismiss}
+      focusAfterRemoval={() => microphone.current}
+    />
+  );
   return (
     <>
       {(Object.keys(conversationTools) as ConversationMode[]).map((mode) => (
@@ -46,12 +78,17 @@ export function StandaloneConversation({
           ref={mode === 'voice' ? microphone : undefined}
           type="button"
           aria-pressed={mode === 'voice' ? voice.microphone === 'on' : undefined}
-          disabled={mode === 'voice' && Boolean(conversation.session) && voice.disabled}
+          disabled={
+            mode === 'voice' &&
+            Boolean(conversation.session) &&
+            (voice.disabled || conversation.inputBlocked)
+          }
           aria-expanded={mode === 'text' ? textViewOpen : undefined}
           onClick={(event) => {
             chosen.current = event.currentTarget;
             // In a conversation that is going on, the voice button is the microphone.
-            if (mode === 'voice' && conversation.session) voice.activate();
+            if (mode === 'voice' && conversation.session && !conversation.inputBlocked)
+              voice.activate();
             else if (conversation.session) setTextViewOpen(!textViewOpen);
             else conversation.begin(mode);
           }}
@@ -59,12 +96,18 @@ export function StandaloneConversation({
           {conversationTools[mode]}
         </button>
       ))}
-      <VoiceBox conversation={conversation} microphoneButton={() => microphone.current} />
+      <VoiceBox
+        conversation={conversation}
+        microphoneButton={() => microphone.current}
+        notice={textViewOpen ? null : notice}
+        showErrors={!textViewOpen}
+      />
+      <ConversationNoticeAnnouncements announcement={noticeState.announcement} />
       <ConversationConsent conversation={conversation} chosen={chosen} />
       <ConversationWorkspace
         conversation={conversation}
+        notice={notice}
         textViewOpen={textViewOpen}
-        onOpenTextView={() => setTextViewOpen(true)}
         onCloseTextView={() => setTextViewOpen(false)}
         {...presentation}
       />

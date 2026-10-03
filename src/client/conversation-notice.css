@@ -1,0 +1,92 @@
+.conversation-notice {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: start;
+  gap: 10px;
+  width: 350px;
+  max-width: calc(100vw - 112px);
+  padding: 12px;
+  border: 1px solid var(--space-control);
+  border-radius: 14px;
+  background: var(--space-surface);
+  color: var(--space-text);
+  box-shadow: var(--space-shadow);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.conversation-notice > svg {
+  width: 24px;
+  height: 24px;
+  color: var(--space-accent);
+}
+.conversation-notice[data-kind="event"] > svg {
+  color: var(--space-text);
+}
+.conversation-notice p {
+  margin: 0;
+}
+.conversation-notice-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.conversation-notice-content > button {
+  margin-top: 8px;
+}
+.household-map.workspace-shell .conversation-notice-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  margin: -10px -10px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--space-text);
+  font-size: 24px;
+}
+.notice-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.conversation-corner {
+  gap: 8px;
+}
+.text-view > .conversation-notice,
+.text-view-conversation > .conversation-notice {
+  flex: none;
+  width: auto;
+  max-width: none;
+  border-width: 1px 0 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.household-map.workspace-shell .workspace-tools button[data-unavailable="true"] {
+  opacity: 0.6;
+}
+@media (min-width: 701px) {
+  .household-map.workspace-shell:not(.workspace-open):has(.conversation-notice)
+    .workspace-feedback {
+    top: calc(var(--conversation-corner-height, 0px) + 36px);
+  }
+}
+@media (max-width: 700px) {
+  .household-map.workspace-shell .conversation-corner:has(.conversation-notice) {
+    left: 12px;
+  }
+  .conversation-corner .conversation-notice {
+    order: -1;
+    width: 100%;
+    max-width: none;
+  }
+  .household-map.workspace-shell.workspace-open:not(.workspace-revealing):has(
+    .conversation-notice
+  ) {
+    padding-bottom: calc(var(--conversation-corner-height, 0px) + 24px);
+  }
+}

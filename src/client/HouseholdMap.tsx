@@ -29,6 +29,11 @@ import { buildHeader, notifyOutdatedClient } from './build-guard.js';
 import { DraftStatus } from './DraftStatus.js';
 import './draft-status.css';
 import { ConversationConsent } from './ConversationConsent.js';
+import {
+  ConversationNoticeAnnouncements,
+  ConversationNoticeCard,
+  useConversationNotice,
+} from './ConversationNotice.js';
 import { ConversationSettings } from './ConversationSettings.js';
 import { LifecycleDetails, LifecycleStatus } from './Lifecycle.js';
 import { MapHistory } from './MapHistory.js';
@@ -265,12 +270,20 @@ export function HouseholdMap({
   const conversationChoice = useRef<HTMLElement | null>(null);
   /** How a target starts a conversation that is not yet going on. Null when it starts none. */
   function conversationStart(target: WorkspaceTarget): ConversationMode | null {
-    if (conversation.session || conversation.available === false) return null;
+    if (conversation.session) return null;
     return target === 'voice' ? 'voice' : target === 'conversation' ? 'text' : null;
   }
   function openWork(target: WorkspaceTarget, chosen?: HTMLElement) {
     workTrigger.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (
+      (target === 'voice' || target === 'conversation') &&
+      conversation.inputBlocked &&
+      (target === 'voice' || !ongoing)
+    ) {
+      conversation.showNotice?.();
+      return;
+    }
     const start = conversationStart(target);
     if (start) {
       // The conversation starts first, after the consent box when no consent
@@ -352,10 +365,8 @@ export function HouseholdMap({
     setErrorDetails({ message, imageObjectId });
   }, []);
   const [status, setStatus] = useState('');
-  const [statusOpen, setStatusOpen] = useState(false);
   const [conflictLinksOpen, setConflictLinksOpen] = useState(false);
   function returnFromStatus() {
-    setStatusOpen(false);
     routeOutsideFocus.current = null;
     if (!active) onReturnToMap?.();
   }
@@ -1402,7 +1413,7 @@ export function HouseholdMap({
     }
   }
   // The conversation belongs to the map, not to a panel. The toolbar, the
-  // status card and the text view all read it and call its commands.
+  // voice box, notice and text view all read it and call its commands.
   function showConversation() {
     setGuidance(false);
     setTextViewOpen(true);
@@ -1417,14 +1428,46 @@ export function HouseholdMap({
     },
     // The microphone opens no panel: the voice box follows the voice.
     onStarted: (mode) => (mode === 'voice' ? setGuidance(false) : showConversation()),
-    // The text view says that the conversation is not offered.
-    onUnavailable: showConversation,
     onAccessLost: loseAccess,
     onSelectItem: revealAssistantItem,
   });
+  const liveOngoing = conversationOngoing(conversation, textViewOpen);
+  const beforeConnection = useRef({ blocked: false, ongoing: false });
+  const interruptedConversation = useRef(false);
+  if (conversation.inputBlocked && !beforeConnection.current.blocked)
+    interruptedConversation.current = liveOngoing || beforeConnection.current.ongoing;
+  if (!conversation.inputBlocked) interruptedConversation.current = false;
+  const ongoing = liveOngoing || interruptedConversation.current;
+  beforeConnection.current = { blocked: Boolean(conversation.inputBlocked), ongoing };
+  const noticeState = useConversationNotice({
+    conditions: {
+      disconnectedActive: Boolean(conversation.disconnected && ongoing),
+      disconnectedIdle: Boolean(conversation.disconnected && !ongoing),
+      unavailable: conversation.available === false,
+      taskFailed: Boolean(conversation.taskFailed),
+    },
+    ongoing,
+    requested: conversation.noticeRequested ?? 0,
+    eventKey: `${conversation.session?.id}:${conversation.session?.revision}`,
+  });
+  const notice = noticeState.notice && (
+    <ConversationNoticeCard
+      key={noticeState.notice.id}
+      notice={noticeState.notice}
+      closable={noticeState.closable}
+      onDismiss={noticeState.dismiss}
+      focusAfterRemoval={() =>
+        active
+          ? (workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null)
+          : document.querySelector<HTMLElement>('.settings-return')
+      }
+    />
+  );
   const voiceBox = (
     <VoiceBox
       conversation={conversation}
+      notice={textViewOpen && active ? null : notice}
+      showErrors={!textViewOpen}
       microphoneButton={() =>
         workspace.current?.querySelector<HTMLElement>('.workspace-talk') ?? null
       }
@@ -1545,8 +1588,8 @@ export function HouseholdMap({
             Till samtalet med Skyttel
           </button>
           <WorkspaceTools
-            statusOpen={statusOpen}
-            onStatus={() => setStatusOpen((value) => !value)}
+            conversationUnavailable={Boolean(conversation.inputBlocked)}
+            conversationOngoing={ongoing}
             voiceControl={conversation.session ? conversation.voice : null}
             holdVoice={{
               canHold:
@@ -1628,6 +1671,7 @@ export function HouseholdMap({
       )}
       {/* Outside the map, where its tools are not shown, the voice box still says what the voice does. */}
       {!active && voiceBox}
+      <ConversationNoticeAnnouncements announcement={noticeState.announcement} />
       <div className="workspace-feedback">
         {status && !pending && !error && (
           <button
@@ -1734,113 +1778,94 @@ export function HouseholdMap({
       {state && (
         <ConversationWorkspace
           conversation={conversation}
-          statusOpen={statusOpen}
-          onOpenStatus={() => setStatusOpen(true)}
-          onCloseStatus={() => {
-            setStatusOpen(false);
-            const trigger = workspace.current?.querySelector<HTMLButtonElement>(
-              '.workspace-tools button[aria-label="Aktuell status"]',
-            );
-            if (trigger?.offsetHeight) trigger.focus();
-            else
-              workspace.current
-                ?.querySelector<HTMLButtonElement>(
-                  '.workspace-tools button[aria-label="Visa verktygens namn"]',
-                )
-                ?.focus();
-          }}
-          statusContent={({ working, needsAnswer, compact }) => (
-            <DraftStatus
-              compact={compact}
-              draft={state.draft}
-              operation={pendingOperation ?? operations[0]}
-              saving={Boolean(pending && saveAttempt.current)}
-              unknown={Boolean(blocked && saveAttempt.current && !pending)}
-              dirty={dirty}
-              unresolved={Boolean(unresolved)}
-              conflicts={conflictEntries.map((entry) => ({
-                id: entry.id,
-                label:
-                  conflictEntries.filter((other) => other.label === entry.label).length > 1
-                    ? `${entry.label} [${entry.entityId}]`
-                    : entry.label,
-              }))}
-              conflictLinks={{ open: conflictLinksOpen, onOpenChange: setConflictLinksOpen }}
-              expanded={statusOpen}
-              error={error}
-              imageError={
-                errorDetails.imageObjectId
-                  ? {
-                      name:
-                        displayed.get(errorDetails.imageObjectId)?.name ??
-                        objectPanels.find((panel) => panel.id === errorDetails.imageObjectId)
-                          ?.title ??
-                        'objektet',
-                      onReturn: () => {
-                        setStatusOpen(false);
-                        const id = errorDetails.imageObjectId;
-                        if (id && objectPanels.some((panel) => panel.id === id)) openPanel(id);
-                        else {
-                          const object = id ? displayed.get(id) : undefined;
-                          if (object) edit(object);
-                        }
-                        routeOutsideFocus.current = null;
-                        if (!active) onReturnToMap?.();
-                      },
-                    }
-                  : undefined
-              }
-              working={pending && !saveAttempt.current}
-              onRefresh={(origin) => reloadMap(origin)}
-              onRecover={
-                (saveAttempt.current || pendingOperation) && blocked
-                  ? () => {
-                      if (saveAttempt.current) void save(saveAttempt.current, true);
-                      else if (pendingOperation) retrySave(pendingOperation);
-                    }
-                  : undefined
-              }
-              pending={pending}
-              showSave={(statusOpen || !workOpen) && !working && !needsAnswer}
-              disabled={
-                pending ||
-                blocked ||
-                dirty ||
-                !hasChanges ||
-                Boolean(unresolved) ||
-                conflicts.length > 0
-              }
-              onSave={saveDraft}
-              onDraft={() => {
-                returnFromStatus();
-                openPanel(
-                  'work',
-                  document.getElementById(hasChanges ? 'draft-title' : 'save-operations-title'),
-                );
-              }}
-              onConflict={(id) => {
-                returnFromStatus();
-                openPanel('work', document.getElementById(id));
-              }}
-              onContinue={() => {
-                returnFromStatus();
-                const objectId = Object.keys(objectDirty).find((id) => objectDirty[id]);
-                if (objectId) openPanel(objectId, lastWorkFocus.current);
-                else openWork('list');
-              }}
-            />
+          draftFeedback={({ working, needsAnswer, compact }) => (
+            <>
+              <DraftStatus
+                compact={compact}
+                draft={state.draft}
+                operation={pendingOperation ?? operations[0]}
+                saving={Boolean(pending && saveAttempt.current)}
+                unknown={Boolean(blocked && saveAttempt.current && !pending)}
+                dirty={dirty}
+                unresolved={Boolean(unresolved)}
+                conflicts={conflictEntries.map((entry) => ({
+                  id: entry.id,
+                  label:
+                    conflictEntries.filter((other) => other.label === entry.label).length > 1
+                      ? `${entry.label} [${entry.entityId}]`
+                      : entry.label,
+                }))}
+                conflictLinks={{ open: conflictLinksOpen, onOpenChange: setConflictLinksOpen }}
+                expanded={false}
+                error={error}
+                imageError={
+                  errorDetails.imageObjectId
+                    ? {
+                        name:
+                          displayed.get(errorDetails.imageObjectId)?.name ??
+                          objectPanels.find((panel) => panel.id === errorDetails.imageObjectId)
+                            ?.title ??
+                          'objektet',
+                        onReturn: () => {
+                          const id = errorDetails.imageObjectId;
+                          if (id && objectPanels.some((panel) => panel.id === id)) openPanel(id);
+                          else {
+                            const object = id ? displayed.get(id) : undefined;
+                            if (object) edit(object);
+                          }
+                          routeOutsideFocus.current = null;
+                          if (!active) onReturnToMap?.();
+                        },
+                      }
+                    : undefined
+                }
+                working={pending && !saveAttempt.current}
+                onRefresh={(origin) => reloadMap(origin)}
+                onRecover={
+                  (saveAttempt.current || pendingOperation) && blocked
+                    ? () => {
+                        if (saveAttempt.current) void save(saveAttempt.current, true);
+                        else if (pendingOperation) retrySave(pendingOperation);
+                      }
+                    : undefined
+                }
+                pending={pending}
+                showSave={!workOpen && !working && !needsAnswer}
+                disabled={
+                  pending ||
+                  blocked ||
+                  dirty ||
+                  !hasChanges ||
+                  Boolean(unresolved) ||
+                  conflicts.length > 0
+                }
+                onSave={saveDraft}
+                onDraft={() => {
+                  returnFromStatus();
+                  openPanel(
+                    'work',
+                    document.getElementById(hasChanges ? 'draft-title' : 'save-operations-title'),
+                  );
+                }}
+                onConflict={(id) => {
+                  returnFromStatus();
+                  openPanel('work', document.getElementById(id));
+                }}
+                onContinue={() => {
+                  returnFromStatus();
+                  const objectId = Object.keys(objectDirty).find((id) => objectDirty[id]);
+                  if (objectId) openPanel(objectId, lastWorkFocus.current);
+                  else openWork('list');
+                }}
+              />
+            </>
           )}
           active={active}
           textViewOpen={textViewOpen}
           draft={state.draft}
           showDraftOnStart={conversationPreferences.preferences.showDraftOnStart}
           preferencesKnown={conversationPreferences.known}
-          onOpenTextView={() => {
-            setStatusOpen(false);
-            showConversation();
-            routeOutsideFocus.current = null;
-            if (!active) onReturnToMap?.();
-          }}
+          notice={active ? notice : null}
           onCloseTextView={closeTextView}
           householdId={householdId}
           renderWorkspace={(work, floatingStatus) => (
@@ -2973,7 +2998,6 @@ export function HouseholdMap({
                             unresolved ||
                             conflicts.length > 0
                           }
-                          hidden={statusOpen}
                           onClick={saveDraft}
                         >
                           Spara hela utkastet

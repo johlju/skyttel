@@ -313,24 +313,21 @@
   color: var(--space-text);
   border-color: var(--space-line);
 }
-.has-settings .workspace-status-card {
+.has-settings .workspace-draft-feedback {
   border: 0;
   border-radius: 0;
   padding: 0;
 }
-.has-settings .workspace-status-card[data-compact="true"],
-.has-settings .workspace-status-card[data-compact="true"] .voice-assistant,
-.has-settings .workspace-status-card[data-compact="true"] .conversation-controls,
-.has-settings .workspace-status-card[data-compact="true"] .voice-controls {
+.has-settings .workspace-draft-feedback .draft-status {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 16px;
 }
-.has-settings .workspace-status-card[data-compact="true"] :is(p, .voice-controls) {
+.has-settings .household-work-background .workspace-draft-feedback p {
   margin: 0;
 }
-.has-settings .workspace-status-card[data-compact="true"] .draft-status-actions:empty {
+.has-settings .workspace-draft-feedback .draft-status-actions:empty {
   display: none;
 }
 .has-settings .household-work-background .workspace-feedback:has(> :not(:empty)),

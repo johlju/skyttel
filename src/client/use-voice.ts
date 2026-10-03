@@ -40,6 +40,8 @@ export type Voice = {
   /** A held press starts input and releases it without stopping Skyttel's answer. */
   startHeld?: () => void;
   releaseHeld?: () => void;
+  /** Turn capture off without cutting off the current answer. It never resumes automatically. */
+  pauseMicrophone?: () => void;
   /** Closes the voice connection at once, and with it the work that came by voice. */
   stop: () => Promise<void>;
   /** Silences what Skyttel is saying. */
@@ -95,6 +97,7 @@ export function useVoice(options: {
   onTranscript?: (row: TranscriptRow) => void;
   /** Current ephemeral text to retain when interrupted output requires a fresh connection. */
   transcript?: TranscriptRow[];
+  /** Network or service conditions forbid sending microphone input. */
   inputBlocked?: boolean;
 }): Voice {
   const path = options.assistant
@@ -154,6 +157,7 @@ export function useVoice(options: {
         setVoice(result.voice);
       }
       setState('idle');
+      setDisconnected(false);
       if (attempt.voiceId && !result) {
         latest.current.onRecoveryNeeded?.();
         setError(
@@ -206,6 +210,14 @@ export function useVoice(options: {
     async (reuse?: RetainedInput, next?: TextAssistantView, history?: TranscriptRow[]) => {
       const initial = next ?? latest.current.assistant;
       if (!path || !initial || current.current) return;
+      if (latest.current.inputBlocked || !navigator.onLine) {
+        for (const track of reuse?.stream.getTracks() ?? []) track.stop();
+        prepared.current?.close();
+        prepared.current = null;
+        setOff(true);
+        setState('idle');
+        return;
+      }
       const attempt: Attempt = {
         path,
         controller: new AbortController(),
@@ -247,6 +259,10 @@ export function useVoice(options: {
       };
       const poll = async () => {
         if (!active() || !attempt.voiceId) return;
+        if (!navigator.onLine || latest.current.inputBlocked) {
+          attempt.poll = setTimeout(() => void poll(), 500);
+          return;
+        }
         try {
           const result = await request<VoiceAssistantResponse>(
             `${path}/${attempt.voiceId}/poll`,
@@ -270,7 +286,9 @@ export function useVoice(options: {
           }
           attempt.poll = setTimeout(() => void poll(), 500);
         } catch (failure) {
-          fail(failure);
+          if (!navigator.onLine || latest.current.inputBlocked)
+            attempt.poll = setTimeout(() => void poll(), 500);
+          else fail(failure);
         }
       };
       try {
@@ -287,7 +305,12 @@ export function useVoice(options: {
               if (active()) setState('connecting');
             },
             onReady: () => {
-              if (active()) setState('listening');
+              if (!active()) return;
+              if (latest.current.inputBlocked) {
+                attempt.transport?.setMicrophonePaused(true);
+                setOff(true);
+              }
+              setState('listening');
             },
             onClosed: () => {
               if (active())
@@ -368,6 +391,7 @@ export function useVoice(options: {
   const working = state === 'listening' && voice?.phase === 'working';
   const speaking = state === 'listening' && activity.speaker;
   const activate = useCallback(() => {
+    if (latest.current.inputBlocked || !navigator.onLine) return;
     if (state === 'idle') {
       held.current = null;
       prepareAudio();
@@ -511,6 +535,10 @@ export function useVoice(options: {
     prepareAudio,
     startHeld,
     releaseHeld,
+    pauseMicrophone: () => {
+      current.current?.transport?.setMicrophonePaused(true);
+      setOff(true);
+    },
     newConversation,
     stop: close,
     silence,

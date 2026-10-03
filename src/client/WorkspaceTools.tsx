@@ -74,11 +74,11 @@ export function WorkspaceTools({
   cameraMount,
   expanded,
   onExpandedChange,
-  statusOpen = false,
-  onStatus,
+  conversationUnavailable = false,
+  conversationOngoing = false,
 }: {
-  statusOpen?: boolean;
-  onStatus?: () => void;
+  conversationUnavailable?: boolean;
+  conversationOngoing?: boolean;
   /** Opens a tool. The chosen button is where a conversation's consent box opens. */
   onOpen: (target: WorkspaceTarget, chosen: HTMLElement) => void;
   account?: ReactNode;
@@ -111,6 +111,7 @@ export function WorkspaceTools({
     canHold: () =>
       Boolean(
         holdVoice?.canHold &&
+          !conversationUnavailable &&
           !voiceControl?.disabled &&
           !voiceControl?.starting &&
           voiceControl?.microphone !== 'on' &&
@@ -122,7 +123,7 @@ export function WorkspaceTools({
     short: () => {
       onExpandedChange(false);
       setUtility(null);
-      if (voiceControl) voiceControl.activate();
+      if (voiceControl && !conversationUnavailable) voiceControl.activate();
       else if (microphoneButton.current) onOpen('voice', microphoneButton.current);
     },
   });
@@ -133,9 +134,10 @@ export function WorkspaceTools({
     query.addEventListener('change', change);
     return () => query.removeEventListener('change', change);
   }, []);
-  const voiceDescription = voiceControl?.starting
+  const microphoneDescription = voiceControl?.starting
     ? 'Avbryt starten av rösten'
     : `Prata med Skyttel (${microphoneShortcut()}). Håll in för att tala tills du släpper.`;
+  const voiceDescription = `${microphoneDescription}${conversationUnavailable && !conversationOngoing ? ' Inte tillgängligt just nu.' : ''}`;
   const utilityPanel = useRef<HTMLElement>(null);
   useEffect(() => {
     if (utility) utilityPanel.current?.querySelector<HTMLElement>('h2')?.focus();
@@ -193,13 +195,38 @@ export function WorkspaceTools({
               ref={target === 'voice' ? microphoneButton : undefined}
               type="button"
               // The name stays. The description says what a press does while the voice starts.
-              title={target === 'voice' ? (touch ? undefined : voiceDescription) : label}
+              title={
+                target === 'voice'
+                  ? touch
+                    ? undefined
+                    : voiceDescription
+                  : target === 'conversation' && conversationUnavailable && !conversationOngoing
+                    ? `${label}. Inte tillgängligt just nu.`
+                    : label
+              }
               aria-label={label}
-              aria-description={target === 'voice' && !touch ? voiceDescription : undefined}
+              aria-description={
+                target === 'voice' && !touch
+                  ? voiceDescription
+                  : (target === 'voice' || target === 'conversation') &&
+                      conversationUnavailable &&
+                      !conversationOngoing
+                    ? `${label}. Inte tillgängligt just nu.`
+                    : undefined
+              }
               data-held={(target === 'voice' && microphonePress.held) || undefined}
               data-secondary={target === 'draft' || target === 'search' || undefined}
               className={target === 'voice' ? 'workspace-talk' : undefined}
-              disabled={target === 'voice' ? voiceControl?.disabled : undefined}
+              data-unavailable={
+                (conversationUnavailable &&
+                  (target === 'voice' || (target === 'conversation' && !conversationOngoing))) ||
+                undefined
+              }
+              disabled={
+                target === 'voice' && conversationOngoing
+                  ? voiceControl?.disabled || conversationUnavailable
+                  : undefined
+              }
               aria-pressed={target === 'voice' ? voiceControl?.microphone === 'on' : undefined}
               aria-expanded={target === 'conversation' ? textViewOpen : undefined}
               onClick={(event) => {
@@ -244,23 +271,6 @@ export function WorkspaceTools({
         )}
         <div className="workspace-camera-tools" ref={cameraMount} />
         <div className="workspace-tools-footer">
-          {onStatus && (
-            <button
-              type="button"
-              title="Aktuell status"
-              aria-label="Aktuell status"
-              aria-expanded={statusOpen}
-              data-secondary
-              onClick={() => {
-                setUtility(null);
-                onExpandedChange(false);
-                onStatus();
-              }}
-            >
-              <WorkspaceIcon name="activity" />
-              <span>Aktuell status</span>
-            </button>
-          )}
           {(
             [
               ['settings', 'Inställningar', 'settings'],

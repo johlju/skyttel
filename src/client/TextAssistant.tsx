@@ -10,34 +10,20 @@ import {
 import { createPortal } from 'react-dom';
 import type { MapDraft } from '../shared/map.js';
 import { ConversationDraft, draftCount } from './ConversationDraft.js';
-import { VoicePanel } from './VoiceAssistant.js';
 import './voice.css';
 import { TextView } from './TextView.js';
 import type { Conversation } from './use-conversation.js';
 
-function errorMessage(code: string) {
-  if (code === 'assistant_save_not_requested')
-    return 'Inget sparades. Skriv ett tydligt aktuellt sparbesked, till exempel ”Spara hela utkastet nu”, när du vill spara.';
-  if (code === 'assistant_draft_changed' || code === 'assistant_conflict')
-    return 'Utkastet eller kartan har ändrats. Hämta aktuellt underlag, red ut eventuella konflikter och ge ett nytt besked.';
-  if (code === 'operation_pending' || code === 'assistant_save_unknown')
-    return 'Sparresultatet behöver kontrolleras innan nytt arbete kan börja.';
-  return 'Skyttel kunde inte slutföra uppdraget. Kontrollera utkastet och tidigare sparförsök. Du kan fortsätta i kartans formulär.';
-}
-
 type AssistantActivity = { working: boolean; needsAnswer: boolean };
 
 export type ConversationPresentation = {
-  statusContent?: (assistant: AssistantActivity & { compact: boolean }) => ReactNode;
-  statusOpen?: boolean;
-  onCloseStatus?: () => void;
-  onOpenStatus?: () => void;
+  draftFeedback?: (assistant: AssistantActivity & { compact: boolean }) => ReactNode;
   active?: boolean;
   /** The text view is open. It shows the conversation text and the message field. */
   textViewOpen?: boolean;
-  onOpenTextView?: () => void;
   onCloseTextView?: () => void;
   householdId: string;
+  notice?: ReactNode;
   children?: ReactNode | ((assistant: AssistantActivity) => ReactNode);
   draft?: MapDraft;
   showDraftOnStart?: boolean;
@@ -50,7 +36,7 @@ export type ConversationPresentation = {
 };
 
 /**
- * Shows the conversation in the status card and the text view and calls its
+ * Shows the conversation text, draft and shared draft feedback and calls its
  * commands. The conversation itself is kept by the caller.
  */
 export function ConversationWorkspace({
@@ -63,17 +49,11 @@ export function ConversationWorkspace({
   inspector,
   renderWorkspace,
   textViewOpen = false,
-  onOpenTextView,
   onCloseTextView,
-  statusContent,
-  statusOpen = false,
-  onCloseStatus,
-  onOpenStatus,
+  draftFeedback,
+  notice,
 }: ConversationPresentation & { conversation: Conversation }) {
-  const { available, session, pending, error, unknown, needsAnswer } = conversation;
-  // The status card is shown in the text view, or floats over the map when
-  // the text view is not open. It is rendered where it is shown.
-  const [statusSlot, setStatusSlot] = useState<HTMLDivElement | null>(null);
+  const { session, needsAnswer } = conversation;
   const [floatingSlot, setFloatingSlot] = useState<HTMLDivElement | null>(null);
   const floatingVoice = useRef<HTMLDivElement | null>(null);
   const attachFloatingSlot = useCallback((element: HTMLDivElement | null) => {
@@ -81,13 +61,6 @@ export function ConversationWorkspace({
     setFloatingSlot(element);
   }, []);
   const workspace = useRef<HTMLElement>(null);
-  const floating = Boolean(
-    renderWorkspace && (session || statusContent) && (statusOpen || !workVisible || !textViewOpen),
-  );
-  const statusHost = floating ? floatingSlot : statusSlot;
-  const statusHeading = useRef<HTMLHeadingElement>(null);
-  const statusToggle = useRef<HTMLButtonElement>(null);
-  const compactStatus = !workVisible && !statusOpen;
   useLayoutEffect(() => {
     if (!renderWorkspace || !floatingSlot) return;
     const measure = () =>
@@ -99,9 +72,6 @@ export function ConversationWorkspace({
     observer.observe(floatingSlot);
     return () => observer.disconnect();
   }, [floatingSlot, renderWorkspace]);
-  useLayoutEffect(() => {
-    if (statusOpen && statusHost) statusHeading.current?.focus();
-  }, [statusOpen, statusHost]);
   const review = session?.review;
   const visibleDraft = draft && (!review || draft.version >= review.version) ? draft : review;
   const count = draftCount(visibleDraft);
@@ -126,131 +96,16 @@ export function ConversationWorkspace({
   }, [session, conversationKey, preferencesKnown, showDraftOnStart, count]);
   const activity = { working: conversation.working, needsAnswer };
   const work = typeof children === 'function' ? children(activity) : children;
-  const conversationControls = session && (
-    <div className="conversation-controls">
-      <div
-        className={`assistant-work-indicator${session.phase === 'working' ? ' is-working' : ''}`}
-      >
-        <p
-          role="status"
-          className={`assistant-work-status${session.phase === 'working' ? ' is-working' : ''}`}
-        >
-          {session.phase === 'working'
-            ? 'Skyttel arbetar… Du kan avbryta eller ge ett nytt uppdrag.'
-            : session.phase === 'recovery'
-              ? 'Kontrollera det tidigare sparförsöket innan du fortsätter.'
-              : needsAnswer
-                ? 'Skyttel behöver ett svar. Red ut frågorna före sparande.'
-                : session.receipt
-                  ? 'Sparat. Hela utkastet finns i hushållets karta.'
-                  : session.displayedSelection || session.displayedItem
-                    ? 'Markerat i kartan.'
-                    : 'Nya förslag är osparade tills du uttryckligen ber om ett samlat sparande.'}
+  const feedback = (
+    <section className="workspace-draft-feedback" aria-label="Utkastets återkoppling">
+      {session && !conversation.working && !needsAnswer && !session.receipt && (
+        <p role="status">
+          {session.displayedSelection || session.displayedItem
+            ? 'Markerat i kartan.'
+            : 'Nya förslag är osparade tills du uttryckligen ber om ett samlat sparande.'}
         </p>
-      </div>
-      {!compactStatus &&
-        session.reply &&
-        !session.receipt &&
-        !session.displayedSelection &&
-        !session.displayedItem && (
-          <div>
-            <h4>Besked från Skyttel</h4>
-            <p>{session.reply}</p>
-          </div>
-        )}
-      {session.error && <p role="alert">{errorMessage(session.error)}</p>}
-      {error && <p role="alert">{error}</p>}
-      {needsAnswer && (
-        <section aria-label="Nödvändigt svar" className="conversation-question">
-          {session.questions?.map((question) => (
-            <p key={question}>{question}</p>
-          ))}
-          {Boolean(review?.unresolvedIdentities.length) && (
-            <p>Vilka objekt avses? Utkastets obesvarade identiteter behöver redas ut.</p>
-          )}
-          {Boolean(review?.conflicts.length) && (
-            <p>Utkastet har konflikter. Red ut dem före ett nytt sparbesked.</p>
-          )}
-          {onOpenTextView && (
-            <button type="button" onClick={onOpenTextView}>
-              Svara i samtalet
-            </button>
-          )}
-        </section>
       )}
-      <div className="voice-controls">
-        {session.phase === 'working' && (
-          <button type="button" disabled={pending} onClick={() => void conversation.cancel()}>
-            Avbryt uppdrag
-          </button>
-        )}
-        {(unknown || session.phase === 'recovery') && (
-          <button type="button" disabled={pending} onClick={() => void conversation.recover()}>
-            Kontrollera sparresultat
-          </button>
-        )}
-      </div>
-    </div>
-  );
-  const voice = (
-    <section
-      aria-label="Samtal med Skyttel"
-      className="assistant-bar"
-      hidden={!workVisible && !session && !statusContent}
-    >
-      {session ? (
-        <VoicePanel voice={conversation.voice}>{conversationControls}</VoicePanel>
-      ) : floating ? (
-        <div className="assistant-bar-heading">
-          <span>Samtal med Skyttel</span>
-        </div>
-      ) : (
-        <>
-          <div className="assistant-bar-heading">
-            <h3>Tala med Skyttel</h3>
-          </div>
-          {available === null && (
-            <p className="assistant-loading">Hämtar samtalets tillgänglighet…</p>
-          )}
-          {available === false && (
-            <p>Samtal med Skyttel är inte tillgängligt. Du kan använda kartan och formulären.</p>
-          )}
-        </>
-      )}
-      {!session && error && <p role="alert">{error}</p>}
-    </section>
-  );
-  const status = (
-    <section
-      aria-label="Aktuell status"
-      className="workspace-status-card"
-      data-expanded={statusOpen}
-      data-compact={compactStatus}
-    >
-      {statusOpen && (
-        <div className="workspace-status-heading">
-          <h2 tabIndex={-1} ref={statusHeading}>
-            Aktuell status
-          </h2>
-          <button
-            type="button"
-            onClick={() => {
-              onCloseStatus?.();
-              if (!workVisible) requestAnimationFrame(() => statusToggle.current?.focus());
-            }}
-            aria-label="Stäng aktuell status"
-          >
-            ×
-          </button>
-        </div>
-      )}
-      {voice}
-      {statusContent?.({ ...activity, compact: compactStatus })}
-      {!workVisible && !statusOpen && (
-        <button type="button" ref={statusToggle} onClick={onOpenStatus} aria-expanded={false}>
-          Visa samtals- och utkastdetaljer
-        </button>
-      )}
+      {draftFeedback?.({ ...activity, compact: !workVisible })}
     </section>
   );
   return (
@@ -262,7 +117,7 @@ export function ConversationWorkspace({
       id="workspace-work"
       tabIndex={-1}
     >
-      {statusHost && createPortal(<div>{status}</div>, statusHost)}
+      {floatingSlot && createPortal(feedback, floatingSlot)}
       {renderWorkspace ? (
         renderWorkspace(
           <>
@@ -273,7 +128,7 @@ export function ConversationWorkspace({
         )
       ) : (
         <>
-          {!textViewOpen && <div ref={setStatusSlot} />}
+          {feedback}
           <div className="assistant-layout" hidden={!workVisible}>
             {work && <div className="assistant-map-panel">{work}</div>}
             {inspector && (
@@ -296,12 +151,33 @@ export function ConversationWorkspace({
             setDraftOpen(!draftOpen);
           }}
           draftContent={<ConversationDraft draft={visibleDraft} />}
+          notice={notice}
         >
-          <div ref={setStatusSlot} />
+          {!notice && conversation.error && <p role="alert">{conversation.error}</p>}
+          {!notice && conversation.voice.error && <p role="alert">{conversation.voice.error}</p>}
+          <div className="text-view-task-controls">
+            {session?.phase === 'working' && (
+              <button
+                type="button"
+                disabled={conversation.pending}
+                onClick={() => void conversation.cancel()}
+              >
+                Avbryt uppdrag
+              </button>
+            )}
+            {(conversation.unknown || session?.phase === 'recovery') && (
+              <button
+                type="button"
+                disabled={conversation.pending}
+                onClick={() => void conversation.recover()}
+              >
+                Kontrollera sparresultat
+              </button>
+            )}
+          </div>
         </TextView>
       )}
-      {/* In scroll flow, the floating status card must not shift a panel
-          heading that received focus during the same commit. */}
+      {/* Shared draft feedback stays outside the text view and the conversation notice. */}
       {renderWorkspace && <div ref={attachFloatingSlot} className="workspace-voice-controls" />}
     </section>
   );

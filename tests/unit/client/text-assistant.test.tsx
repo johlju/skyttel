@@ -91,7 +91,8 @@ test('the shared workspace keeps the map available before consent', async () => 
       <section aria-label="Hushållets karta">Kartan är tillgänglig</section>
     </StandaloneConversation>,
   );
-  expect(await screen.findByRole('region', { name: 'Samtal med Skyttel' })).toBeTruthy();
+  expect(await screen.findByRole('button', { name: 'Prata med Skyttel' })).toBeTruthy();
+  expect(screen.queryByRole('region', { name: 'Aktuell status' })).toBeNull();
   expect(screen.getByRole('region', { name: 'Hushållets karta' }).textContent).toContain(
     'Kartan är tillgänglig',
   );
@@ -268,14 +269,18 @@ test('recovery retains the pending operation until its durable receipt replaces 
   await userEvent.type(await screen.findByLabelText('Meddelande till Skyttel'), 'Nästa ändring');
   await userEvent.click(screen.getByRole('button', { name: 'Kontrollera sparresultat' }));
   expect((screen.getByRole('button', { name: 'Skicka' }) as HTMLButtonElement).disabled).toBe(true);
-  expect(screen.getByRole('status').textContent).toContain('Kontrollera det tidigare sparförsöket');
+  expect(
+    screen.queryByText('Kontrollera det tidigare sparförsöket innan du fortsätter.'),
+  ).toBeNull();
+  expect(screen.getByRole('button', { name: 'Kontrollera sparresultat' })).toBeDefined();
   await userEvent.click(screen.getByRole('button', { name: 'Kontrollera sparresultat' }));
   expect(requests).toEqual([
     { url: `${path}/session/recover`, body: {} },
     { url: `${path}/session/recover`, body: {} },
   ]);
   expect(screen.queryByRole('button', { name: 'Kontrollera sparresultat' })).toBeNull();
-  expect(await screen.findByText('Sparat. Hela utkastet finns i hushållets karta.')).toBeDefined();
+  expect(screen.queryByRole('region', { name: 'Aktuell status' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Kontrollera sparresultat' })).toBeNull();
   expect(screen.queryByText(/Ett obekräftat modellpåstående/)).toBeNull();
   expect(changed).toHaveBeenCalledTimes(2);
   expect((screen.getByRole('button', { name: 'Skicka' }) as HTMLButtonElement).disabled).toBe(
@@ -298,43 +303,41 @@ test('recovery retains the pending operation until its durable receipt replaces 
 });
 
 test.each([
-  ['assistant_save_not_requested', 'Inget sparades. Skriv ett tydligt aktuellt sparbesked'],
-  ['assistant_draft_changed', 'Utkastet eller kartan har ändrats.'],
-  ['assistant_conflict', 'Utkastet eller kartan har ändrats.'],
-  ['operation_pending', 'Sparresultatet behöver kontrolleras'],
-  ['provider_unavailable', 'Du kan fortsätta i kartans formulär.'],
-])(
-  'a %s reply explains the next safe action and preserves newly typed text',
-  async (code, message) => {
-    let release!: (response: Response) => void;
-    const current = session();
-    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
-      if (url === path)
-        return Response.json(init?.method === 'POST' ? current : { available: true });
-      if (url.endsWith('/stop')) return Response.json({ stopped: true });
-      if (url.endsWith('/messages'))
-        return new Promise<Response>((resolve) => {
-          release = resolve;
-        });
-      return Response.json(current);
-    });
-    showAssistant();
-    await startConversationWithText();
-    const input = await screen.findByLabelText('Meddelande till Skyttel');
-    await userEvent.type(input, 'Ändra hyran');
-    await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
-    await userEvent.clear(input);
-    await userEvent.type(input, 'Mitt nästa meddelande');
-    await act(async () =>
-      release(
-        Response.json({ ...current, phase: 'error', error: code, reply: 'Kontrollera förslaget.' }),
-      ),
-    );
-    expect(screen.getByRole('alert').textContent).toContain(message);
-    expect(screen.getByText('Kontrollera förslaget.')).toBeDefined();
-    expect((input as HTMLTextAreaElement).value).toBe('Mitt nästa meddelande');
-  },
-);
+  'assistant_save_not_requested',
+  'assistant_draft_changed',
+  'assistant_conflict',
+  'operation_pending',
+  'provider_unavailable',
+])('a %s task failure shows the shared notice and preserves newly typed text', async (code) => {
+  let release!: (response: Response) => void;
+  const current = session();
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === path) return Response.json(init?.method === 'POST' ? current : { available: true });
+    if (url.endsWith('/stop')) return Response.json({ stopped: true });
+    if (url.endsWith('/messages'))
+      return new Promise<Response>((resolve) => {
+        release = resolve;
+      });
+    return Response.json(current);
+  });
+  showAssistant();
+  await startConversationWithText();
+  const input = await screen.findByLabelText('Meddelande till Skyttel');
+  await userEvent.type(input, 'Ändra hyran');
+  await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
+  await userEvent.clear(input);
+  await userEvent.type(input, 'Mitt nästa meddelande');
+  await act(async () =>
+    release(
+      Response.json({ ...current, phase: 'error', error: code, reply: 'Kontrollera förslaget.' }),
+    ),
+  );
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+    'Skyttel kunde inte slutföra uppdraget. Försök igen.',
+  );
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect((input as HTMLTextAreaElement).value).toBe('Mitt nästa meddelande');
+});
 
 test('a working task can be cancelled and an expired session clears private text without removing household access', async () => {
   let current = { ...session(), phase: 'working' as const, revision: 3 } as TextAssistantView;
@@ -352,7 +355,9 @@ test('a working task can be cancelled and an expired session clears private text
   });
   showAssistant(vi.fn(), lost);
   await startConversationWithText();
-  expect(screen.getByRole('status').textContent).toContain('Skyttel arbetar');
+  expect(screen.getByRole('log', { name: 'Samtalstext' }).textContent).toContain(
+    'Skyttel arbetar…',
+  );
   await userEvent.click(screen.getByRole('button', { name: 'Avbryt uppdrag' }));
   expect(cancelled).toHaveBeenCalledExactlyOnceWith({ revision: 3 });
   expect(screen.queryByRole('button', { name: 'Avbryt uppdrag' })).toBeNull();
@@ -378,13 +383,16 @@ test.each([false, 'unreachable'])(
       return Response.json({ available: availability });
     });
     showAssistant();
-    expect(
-      await screen.findByText(
-        'Samtal med Skyttel är inte tillgängligt. Du kan använda kartan och formulären.',
-      ),
-    ).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Samtalsnotis' })).toBeNull();
     await openConversationText();
     expect(queryConsentBox()).toBeNull();
+    expect(await screen.findByRole('region', { name: 'Samtalsnotis' })).toBeDefined();
+    expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+      availability === 'unreachable'
+        ? 'Ingen kontakt med Skyttel. Försök igen när kontakten är tillbaka.'
+        : 'Samtal med Skyttel är inte tillgängligt just nu.',
+    );
+    expect(screen.queryByRole('region', { name: 'Skriv till Skyttel' })).toBeNull();
   },
 );
 

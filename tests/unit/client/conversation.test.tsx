@@ -661,13 +661,12 @@ test('the microphone and the voice connection outlive every presentation of the 
     ),
   );
   await waitFor(() => expect(conversation.voice.microphone).toBe('on'));
-  const status = () => screen.getByRole('region', { name: 'Aktuell status' });
-  expect(textView().contains(status())).toBe(true);
+  expect(screen.queryByRole('region', { name: 'Aktuell status' })).toBeNull();
+  expect(textView()).toBeDefined();
 
   for (const shown of ['map', 'settings', 'nothing', 'text view'] as const) {
     map.rerender(<Workspace shown={shown} />);
     if (shown === 'map' || shown === 'settings') {
-      expect(status().closest('.workspace-voice-controls')).not.toBeNull();
       expect(screen.queryByRole('region', { name: 'Skriv till Skyttel' })).toBeNull();
     }
     if (shown === 'nothing') expect(screen.queryByRole('region')).toBeNull();
@@ -679,7 +678,7 @@ test('the microphone and the voice connection outlive every presentation of the 
   expect(track.enabled).toBe(true);
   expect(track.stop).not.toHaveBeenCalled();
   expect(commands.filter((command) => command.endsWith('/stop'))).toEqual([]);
-  expect(textView().contains(status())).toBe(true);
+  expect(textView()).toBeDefined();
 
   map.rerender(<Workspace shown="nothing" />);
   await act(() => conversation.voice.stop());
