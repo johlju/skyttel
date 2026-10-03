@@ -1,7 +1,13 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import {
+  type APIRequestContext,
+  type APIResponse,
+  expect,
+  type Page,
+  test,
+} from '@playwright/test';
 import { bounds, contrast } from '../support/accessibility.js';
 import { createHousehold, openSettings, signIn } from '../support/client.js';
 import { specifiedConsentText } from '../support/conversation.js';
@@ -32,8 +38,8 @@ function installation(options: InstallationOptions = {}) {
     ...options,
   });
 }
-/** Signs in the installation's current identity and creates its household. */
-async function household(client: APIRequestContext, origin: string) {
+/** Signs in the installation's current identity, creates its household and gives its paths. */
+async function signInWithHousehold(client: APIRequestContext, origin: string) {
   await signIn(client, origin);
   const { household } = await (await createHousehold(client, origin, householdName)).json();
   const path = `${origin}/api/households/${household.id}`;
@@ -93,6 +99,41 @@ async function savedStatus(client: APIRequestContext, consentPath: string) {
   const date = new Date(saved.savedAt);
   return `Sparat den ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}.`;
 }
+/** Signs in Robin, who is invited to the household by its administrator and accepts. */
+async function joinAsRobin(
+  app: { origin: string; setIdentity: (identity: typeof robin) => void },
+  administrator: APIRequestContext,
+  path: string,
+  member: APIRequestContext,
+) {
+  app.setIdentity(robin);
+  await signIn(member, app.origin, 'microsoft');
+  const { user } = await (await member.get(`${app.origin}/api/bootstrap`)).json();
+  const join = async () => {
+    const invitation = await administrator.post(`${path}/invitations`, {
+      headers: { origin: app.origin },
+      data: { userId: user.id },
+    });
+    const accepted = await member.post(`${app.origin}/api/invitations/accept`, {
+      headers: { origin: app.origin },
+      data: { code: (await invitation.json()).code },
+    });
+    expect(accepted.status()).toBe(200);
+  };
+  await join();
+  return { userId: user.id as string, joinAgain: join };
+}
+/** Expects the server to refuse a request for conversation work, and to say why. */
+async function expectRefused(request: Promise<APIResponse>) {
+  const refused = await request;
+  expect(refused.status()).toBe(403);
+  expect(await refused.json()).toEqual(refusal);
+}
+/** Lets every request that the page sends to save or revoke the consent fail. */
+const loseConnection = (page: Page) =>
+  page.route(/\/conversation-consent(\/revoke)?$/, (route) =>
+    route.request().method() === 'POST' ? route.abort('connectionfailed') : route.continue(),
+  );
 const saveConsent = (client: APIRequestContext, origin: string, consentPath: string) =>
   client.post(consentPath, { headers: { origin }, data: { textVersion: 1 } });
 const microphones = (page: Page) =>
@@ -106,19 +147,9 @@ test('MEDGIVANDE-05: sidan Samtal med Skyttel visar medgivandet för alla medlem
 }) => {
   const app = await installation();
   try {
-    const { path } = await household(page.request, app.origin);
-    app.setIdentity(robin);
+    const { path } = await signInWithHousehold(page.request, app.origin);
     const member = await browser.newContext();
-    await signIn(member.request, app.origin, 'microsoft');
-    const { user } = await (await member.request.get(`${app.origin}/api/bootstrap`)).json();
-    const invitation = await page.request.post(`${path}/invitations`, {
-      headers: { origin: app.origin },
-      data: { userId: user.id },
-    });
-    await member.request.post(`${app.origin}/api/invitations/accept`, {
-      headers: { origin: app.origin },
-      data: { code: (await invitation.json()).code },
-    });
+    await joinAsRobin(app, page.request, path, member.request);
     const memberPage = await member.newPage();
 
     for (const [role, visitor] of [
@@ -186,7 +217,7 @@ test('MEDGIVANDE-06: Spara medgivandet sparar direkt utan att starta ett samtal'
 }) => {
   const app = await installation();
   try {
-    const { consentPath } = await household(page.request, app.origin);
+    const { consentPath } = await signInWithHousehold(page.request, app.origin);
     const sent = await openHousehold(page, app.origin);
     await openConversationSettings(page);
     const consent = consentPart(page);
@@ -204,8 +235,9 @@ test('MEDGIVANDE-06: Spara medgivandet sparar direkt utan att starta ett samtal'
     const { saved } = await (await page.request.get(consentPath)).json();
     expect(saved).toEqual({ textVersion: 1, savedAt: expect.any(String) });
     expect(Date.parse(saved.savedAt)).toBeGreaterThanOrEqual(before);
-    // Saving started no conversation.
+    // Saving started neither a conversation nor the microphone.
     expect(sent).toEqual([]);
+    expect(await microphones(page)).toEqual([]);
 
     // The next press on a conversation button starts the conversation directly.
     await returnToMap(page);
@@ -233,7 +265,7 @@ test('MEDGIVANDE-07: Återkalla medgivandet gäller genast och Skyttel frågar i
 }) => {
   const app = await installation();
   try {
-    const { consentPath, startPath } = await household(page.request, app.origin);
+    const { consentPath, startPath } = await signInWithHousehold(page.request, app.origin);
     await saveConsent(page.request, app.origin, consentPath);
     const status = await savedStatus(page.request, consentPath);
     const sent = await openHousehold(page, app.origin);
@@ -250,12 +282,9 @@ test('MEDGIVANDE-07: Återkalla medgivandet gäller genast och Skyttel frågar i
     await expect(consent.save).toBeFocused();
     expect(await (await page.request.get(consentPath)).json()).toEqual({ saved: null });
     // The server refuses a conversation for the user in the household, and says why.
-    const refused = await page.request.post(startPath, {
-      headers: { origin: app.origin },
-      data: {},
-    });
-    expect(refused.status()).toBe(403);
-    expect(await refused.json()).toEqual(refusal);
+    await expectRefused(
+      page.request.post(startPath, { headers: { origin: app.origin }, data: {} }),
+    );
 
     // The revocation stays after a reload, and both conversation buttons ask again.
     await page.reload();
@@ -277,13 +306,18 @@ test('MEDGIVANDE-07: Återkalla medgivandet gäller genast och Skyttel frågar i
 test('MEDGIVANDE-08: medgivande för besöket går att återkalla och att spara', async ({ page }) => {
   const app = await installation();
   try {
-    const { consentPath, startPath } = await household(page.request, app.origin);
+    const { consentPath, startPath } = await signInWithHousehold(page.request, app.origin);
     const sent = await openHousehold(page, app.origin);
     const consent = consentPart(page);
     const visit = 'Du har godkänt för det här besöket. Inget medgivande är sparat.';
 
     // Approved in the consent box without being saved: the page offers both to save and to revoke.
+    const started = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' && response.url() === startPath && response.ok(),
+    );
     await startConversationWithVoice(page);
+    const conversation = `${startPath}/${(await (await started).json()).id}`;
     await expect.poll(() => liveMicrophones(page)).toBe(1);
     await openConversationSettings(page);
     await expect(consent.status(visit)).toBeVisible();
@@ -296,14 +330,9 @@ test('MEDGIVANDE-08: medgivande för besöket går att återkalla och att spara'
     await expect(consent.status('Inget medgivande är sparat.')).toBeVisible();
     await expect(consent.buttons).toHaveText(['Spara medgivandet']);
     await expect(consent.save).toBeFocused();
-    // The microphone is off, and the server refuses a conversation for the user.
+    // The microphone is off, and the server refuses work with the conversation and says why.
     await expect.poll(() => liveMicrophones(page)).toBe(0);
-    const refused = await page.request.post(startPath, {
-      headers: { origin: app.origin },
-      data: {},
-    });
-    expect(refused.status()).toBe(403);
-    expect(await refused.json()).toEqual(refusal);
+    await expectRefused(page.request.get(conversation));
 
     // The next press asks again. A new consent for the visit can be saved while the conversation goes on.
     await returnToMap(page);
@@ -334,7 +363,7 @@ test('MEDGIVANDE-09: sidan visas och återkallar när samtalet inte är tillgän
   // Without a model key the server does not offer the conversation.
   const app = await createInstallation();
   try {
-    const { consentPath } = await household(page.request, app.origin);
+    const { consentPath } = await signInWithHousehold(page.request, app.origin);
     await saveConsent(page.request, app.origin, consentPath);
     const status = await savedStatus(page.request, consentPath);
     await openHousehold(page, app.origin);
@@ -351,8 +380,10 @@ test('MEDGIVANDE-09: sidan visas och återkallar när samtalet inte är tillgän
     await consent.revoke.click();
     await expect(consent.feedback).toHaveText('Medgivandet är återkallat');
     await expect(consent.status('Inget medgivande är sparat.')).toBeVisible();
-    // A consent cannot be saved while the conversation is not available.
+    // A consent cannot be saved while the conversation is not available. No
+    // button is left, so the focus goes to the heading of the part.
     await expect(consent.buttons).toHaveCount(0);
+    await expect(consent.part.getByRole('heading', { name: 'Medgivande' })).toBeFocused();
     await expect(unavailable).toBeVisible();
     expect(await (await page.request.get(consentPath)).json()).toEqual({ saved: null });
   } finally {
@@ -365,17 +396,14 @@ test('MEDGIVANDE-10: ett misslyckat sparande sägs och knappen behåller sitt l�
 }) => {
   const app = await installation();
   try {
-    const { consentPath } = await household(page.request, app.origin);
+    const { consentPath } = await signInWithHousehold(page.request, app.origin);
     await openHousehold(page, app.origin);
     await openConversationSettings(page);
     const consent = consentPart(page);
     await expect(consent.status('Inget medgivande är sparat.')).toBeVisible();
 
     // The connection is lost for what the page sends about the consent.
-    const lost = /\/conversation-consent(\/revoke)?$/;
-    await page.route(lost, (route) =>
-      route.request().method() === 'POST' ? route.abort('connectionfailed') : route.continue(),
-    );
+    await loseConnection(page);
     await consent.save.click();
     await expect(consent.feedback).toHaveText('Medgivandet kunde inte sparas. Försök igen.');
     await expect(consent.status('Inget medgivande är sparat.')).toBeVisible();
@@ -383,15 +411,13 @@ test('MEDGIVANDE-10: ett misslyckat sparande sägs och knappen behåller sitt l�
     await expect(consent.save).toBeFocused();
     expect(await (await page.request.get(consentPath)).json()).toEqual({ saved: null });
 
-    await page.unroute(lost);
+    await page.unrouteAll();
     await consent.save.click();
     await expect(consent.feedback).toHaveText('Medgivandet är sparat');
     const status = await savedStatus(page.request, consentPath);
     await expect(consent.status(status)).toBeVisible();
 
-    await page.route(lost, (route) =>
-      route.request().method() === 'POST' ? route.abort('connectionfailed') : route.continue(),
-    );
+    await loseConnection(page);
     await consent.revoke.click();
     await expect(consent.feedback).toHaveText('Medgivandet kunde inte återkallas. Försök igen.');
     await expect(consent.status(status)).toBeVisible();
@@ -399,7 +425,7 @@ test('MEDGIVANDE-10: ett misslyckat sparande sägs och knappen behåller sitt l�
     await expect(consent.revoke).toBeFocused();
     expect((await (await page.request.get(consentPath)).json()).saved).not.toBeNull();
 
-    await page.unroute(lost);
+    await page.unrouteAll();
     await consent.revoke.click();
     await expect(consent.feedback).toHaveText('Medgivandet är återkallat');
     await expect(consent.status('Inget medgivande är sparat.')).toBeVisible();
@@ -414,7 +440,7 @@ test('MEDGIVANDE-11: sidan sköts med tangentbord och pekskärm i båda teman', 
 }) => {
   const app = await installation();
   try {
-    const { path, consentPath } = await household(page.request, app.origin);
+    const { path, consentPath } = await signInWithHousehold(page.request, app.origin);
     await openHousehold(page, app.origin);
     await openConversationSettings(page);
     const consent = consentPart(page);
@@ -456,24 +482,14 @@ test('MEDGIVANDE-11: sidan sköts med tangentbord och pekskärm i båda teman', 
     await page.emulateMedia({ colorScheme: 'light' });
 
     // A narrow touch screen: the part fits without scrolling sideways, and the buttons are large enough to hit.
-    app.setIdentity(robin);
     const touch = await browser.newContext({ hasTouch: true });
-    await signIn(touch.request, app.origin, 'microsoft');
-    const { user } = await (await touch.request.get(`${app.origin}/api/bootstrap`)).json();
-    const invitation = await page.request.post(`${path}/invitations`, {
-      headers: { origin: app.origin },
-      data: { userId: user.id },
-    });
-    await touch.request.post(`${app.origin}/api/invitations/accept`, {
-      headers: { origin: app.origin },
-      data: { code: (await invitation.json()).code },
-    });
+    await joinAsRobin(app, page.request, path, touch.request);
     const touchPage = await touch.newPage();
     const touched = consentPart(touchPage);
     for (const width of [390, 320]) {
       await touchPage.setViewportSize({ width, height: 844 });
       await openHousehold(touchPage, app.origin);
-      const sent = touchPage.waitForResponse(
+      const answered = touchPage.waitForResponse(
         (response) => response.request().method() === 'POST' && /consent/.test(response.url()),
       );
       await openConversationSettings(touchPage);
@@ -490,13 +506,55 @@ test('MEDGIVANDE-11: sidan sköts med tangentbord och pekskärm i båda teman', 
       ).toBe(true);
       // The first width saves, and the second revokes what the first saved.
       await button.tap();
-      await sent;
+      await answered;
       await expect(touched.feedback, `${width}`).toHaveText(
         width === 390 ? 'Medgivandet är sparat' : 'Medgivandet är återkallat',
       );
       await expect(touched.feedback).toBeInViewport();
     }
     await touch.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test('MEDGIVANDE-12: en medlem som bjuds in igen har inget sparat medgivande', async ({
+  page,
+  browser,
+}) => {
+  const app = await installation();
+  try {
+    const { path, consentPath } = await signInWithHousehold(page.request, app.origin);
+    const member = await browser.newContext();
+    const { userId, joinAgain } = await joinAsRobin(app, page.request, path, member.request);
+    const memberPage = await member.newPage();
+    const consent = consentPart(memberPage);
+    await openHousehold(memberPage, app.origin);
+    await openConversationSettings(memberPage);
+    await consent.save.click();
+    await expect(consent.feedback).toHaveText('Medgivandet är sparat');
+    expect((await (await member.request.get(consentPath)).json()).saved).not.toBeNull();
+
+    // The administrator revokes the member's access and invites the same user again.
+    const removed = await page.request.post(`${path}/members/${userId}/revoke`, {
+      headers: { origin: app.origin },
+      data: {},
+    });
+    expect(removed.status()).toBe(200);
+    expect((await member.request.get(consentPath)).status()).toBe(403);
+    await joinAgain();
+
+    const sent = await openHousehold(memberPage, app.origin);
+    await openConversationSettings(memberPage);
+    await expect(consent.status('Inget medgivande är sparat.')).toBeVisible();
+    await expect(consent.buttons).toHaveText(['Spara medgivandet']);
+    await returnToMap(memberPage);
+    await chooseConversationVoice(memberPage);
+    await expect(consentBox(memberPage)).toBeVisible();
+    await expect(consentBoxFor(memberPage).remember).not.toBeChecked();
+    expect(sent).toEqual([]);
+    expect(await microphones(memberPage)).toEqual([]);
+    await member.close();
   } finally {
     await app.close();
   }
@@ -510,7 +568,7 @@ test('a consent that is saved for another version of the consent text is told as
   let app = await installation({ databasePath, consentTextVersion: 2 });
   try {
     // A release with another version of the consent text saves the user's consent to it.
-    const first = await household(page.request, app.origin);
+    const first = await signInWithHousehold(page.request, app.origin);
     const other = await page.request.post(first.consentPath, {
       headers: { origin: app.origin },
       data: { textVersion: 2 },
@@ -543,12 +601,13 @@ test('a consent that is saved for another version of the consent text is told as
   }
 });
 
-test('a revocation that reaches a spoken conversation from elsewhere ends it without loss of access, and the next start asks', async ({
+test('MEDGIVANDE-13: ett återkallande på en annan enhet avslutar samtalet', async ({
   page,
+  browser,
 }) => {
   const app = await installation();
   try {
-    const { consentPath } = await household(page.request, app.origin);
+    const { consentPath } = await signInWithHousehold(page.request, app.origin);
     await saveConsent(page.request, app.origin, consentPath);
     await openHousehold(page, app.origin);
     // The voice is connected before the consent is revoked, so that the refusal reaches the voice.
@@ -560,14 +619,17 @@ test('a revocation that reaches a spoken conversation from elsewhere ends it wit
     await connected;
     await expect.poll(() => liveMicrophones(page)).toBe(1);
 
-    // The same user revokes from elsewhere, here without the page.
-    const revoked = await page.request.post(`${consentPath}/revoke`, {
-      headers: { origin: app.origin },
-      data: {},
-    });
-    expect(revoked.status()).toBe(200);
+    // The same user revokes on another device.
+    const otherDevice = await browser.newContext();
+    await signIn(otherDevice.request, app.origin);
+    const otherPage = await otherDevice.newPage();
+    await openHousehold(otherPage, app.origin);
+    await openConversationSettings(otherPage);
+    await consentPart(otherPage).revoke.click();
+    await expect(consentPart(otherPage).feedback).toHaveText('Medgivandet är återkallat');
+
+    // The conversation on the first device ends. The map stays, and the next start asks.
     await expect.poll(() => liveMicrophones(page)).toBe(0);
-    // The household's map is still there, and the conversation buttons ask for the consent.
     await expect(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
     await expect(page.getByText('Åtkomsten har upphört.', { exact: true })).toHaveCount(0);
     await chooseConversationVoice(page);
@@ -575,6 +637,7 @@ test('a revocation that reaches a spoken conversation from elsewhere ends it wit
     await consentBoxFor(page).decline.click();
     await openConversationSettings(page);
     await expect(consentPart(page).status('Inget medgivande är sparat.')).toBeVisible();
+    await otherDevice.close();
   } finally {
     await app.close();
   }

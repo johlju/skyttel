@@ -5,9 +5,10 @@ Fallen omfattar medgivanderutan vid samtalets start: när den visas, vad
 och hur ett sparat medgivande följer användaren mellan enheter.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
-Fallen MEDGIVANDE-05 till MEDGIVANDE-11 omfattar sidan **Samtal med
-Skyttel** i Inställningar: var sidan står, vad delen **Medgivande** visar
-och hur medgivandet sparas och återkallas där.
+Fallen MEDGIVANDE-05 till MEDGIVANDE-13 omfattar sidan **Samtal med
+Skyttel** i Inställningar: var sidan står, vad delen **Medgivande** visar,
+hur medgivandet sparas och återkallas där, att återkallandet gäller på
+användarens alla enheter och att medgivandet följer medlemskapet.
 
 ## Konfigurerade användare
 
@@ -15,7 +16,9 @@ och hur medgivandet sparas och återkallas där.
   och loggar in med Google.
 - Robin Exempel är medlem i samma hushåll i MEDGIVANDE-03 och loggar in
   med Microsoft i en separat webbläsarprofil.
-- Robin är medlem på samma sätt i MEDGIVANDE-05.
+- Robin är medlem på samma sätt i MEDGIVANDE-05 och MEDGIVANDE-12.
+- Alex använder en andra webbläsarprofil som en andra enhet i
+  MEDGIVANDE-06 och MEDGIVANDE-13.
 - Den kontrollerade miljön använder inga verkliga externa konton.
 
 ## Allmän förberedelse
@@ -285,8 +288,6 @@ frågar igen”.
   **Inget medgivande är sparat.**, även efter omladdningen.
 - Båda samtalsknapparna visar medgivanderutan. Varken samtal eller
   mikrofon startar.
-- Integrationstestet kontrollerar dessutom att servern vägrar att starta
-  ett samtal för användaren och anger skälet.
 
 ### MEDGIVANDE-08: medgivande för besöket går att återkalla och att spara
 
@@ -357,6 +358,7 @@ tillgängligt”.
   datum. Bara **Återkalla medgivandet** visas.
 - Efter återkallandet visar statusraden **Inget medgivande är sparat.**
   **Spara medgivandet** visas inte så länge samtalet inte är tillgängligt.
+  Ingen knapp finns kvar, så fokus står på rubriken **Medgivande**.
 
 ### MEDGIVANDE-10: ett misslyckat sparande sägs och knappen behåller sitt läge
 
@@ -428,6 +430,66 @@ teman”.
   träffa med ett finger, och texten vid knappen syns utan att rulla.
 - Skärmläsaren läser upp texten vid knappen utan att fokus flyttas.
 
+### MEDGIVANDE-12: en medlem som bjuds in igen har inget sparat medgivande
+
+**Syfte:** Se att ett sparat medgivande tas bort med medlemskapet, så att
+Skyttel frågar på nytt när samma användare bjuds in igen.
+
+**Användare:** Alex och Robin.
+
+**Förutsättningar:** Robin är medlem enligt förutsättningarna i
+MEDGIVANDE-03 och har sparat medgivandet på sidan **Samtal med Skyttel**.
+
+**Integrationstest:**
+[conversation-settings.spec.ts](../../tests/integration/conversation-settings.spec.ts),
+testfallet “MEDGIVANDE-12: en medlem som bjuds in igen har inget sparat
+medgivande”.
+
+**Steg:**
+
+1. Som Alex, öppna **Inställningar** och **Administrera tillgång**. Välj
+   **Återkalla tillgång** för Robin under **Medlemmar** och bekräfta.
+2. Bjud in Robins användar-ID igen, och acceptera inbjudan som Robin.
+3. Som Robin, öppna sidan **Samtal med Skyttel** och läs statusraden.
+4. Välj **Tillbaka till kartan** och **Prata med Skyttel**.
+
+**Förväntat resultat:**
+
+- Statusraden visar **Inget medgivande är sparat.**, och knappen heter
+  **Spara medgivandet**.
+- **Prata med Skyttel** visar medgivanderutan, med omarkerad kryssruta.
+  Varken samtal eller mikrofon startar.
+
+### MEDGIVANDE-13: ett återkallande på en annan enhet avslutar samtalet
+
+**Syfte:** Se att ett återkallande gäller användarens samtal i hushållet
+även på en annan enhet, utan att kartan där går förlorad.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Alex har sparat medgivandet enligt steg 1 i
+MEDGIVANDE-06.
+
+**Integrationstest:**
+[conversation-settings.spec.ts](../../tests/integration/conversation-settings.spec.ts),
+testfallet “MEDGIVANDE-13: ett återkallande på en annan enhet avslutar
+samtalet”.
+
+**Steg:**
+
+1. Välj **Prata med Skyttel** i kartan. Vänta tills mikrofonen är på.
+2. Logga in som Alex i ytterligare en webbläsarprofil, som en andra
+   enhet. Öppna sidan **Samtal med Skyttel** där och välj
+   **Återkalla medgivandet**.
+3. Gå tillbaka till den första enheten. Vänta några sekunder och välj
+   sedan **Prata med Skyttel** igen.
+
+**Förväntat resultat:**
+
+- På den första enheten stängs mikrofonen av, och samtalet avslutas.
+  Kartan finns kvar, och ingen text säger att åtkomsten har upphört.
+- **Prata med Skyttel** visar medgivanderutan, med omarkerad kryssruta.
+
 ## Bedömning och återstående manuella prov
 
 Flödet är utformat mot WCAG 2.2 nivå AA. Kraven nedan är designmål, och
@@ -464,7 +526,7 @@ och ingen fysisk enhet är provad.
 | 1.4.3 Kontrast | Delen använder Inställningars färger för text, ytor och knappar i ljust och mörkt tema. | Kontrast mot ytan, minst 4,5:1 i båda teman, för rubrik, texter, statusrad, knappar och texten vid knappen. | Kontrast för fokusramen. |
 | 1.4.4, 1.4.10 Förstoring och omflöde | Texten bryts efter sidans bredd, och knapparna radbryts. | Ingen rullning i sidled på 390 och 320 px. | Verklig webbläsarzoom och textförstoring. |
 | 2.1.1 Tangentbord | Knapparna nås med Tab och används med Enter och mellanslag. | Spara och återkalla med enbart tangentbord. | Hjälpmedlens egna tangentkommandon. |
-| 2.4.3, 2.4.7, 3.2.2 Fokus | Fokus går till sidans rubrik när sidan öppnas. Det står kvar på knappen när den byter namn och går till den knapp som finns kvar när den tryckta försvinner. Inget annat flyttar fokus. | Fokus efter varje åtgärd och synlig fokusram. | Fokusordning med skärmläsare. |
+| 2.4.3, 2.4.7, 3.2.2 Fokus | Fokus går till sidans rubrik när sidan öppnas. Det står kvar på knappen när den byter namn och går till den knapp som finns kvar när den tryckta försvinner, eller till rubriken **Medgivande** när ingen knapp finns kvar. Inget annat flyttar fokus. | Fokus efter varje åtgärd och synlig fokusram. | Fokusordning med skärmläsare. |
 | 2.5.8 Pekmål | Knapparna är minst 44 px höga. | Mått på knappen på 390 och 320 px. | Träffsäkerhet på fysisk pekskärm. |
 | 4.1.3 Statusmeddelanden | Texten vid knappen är ett statusområde som finns från början och läses upp utan att fokus flyttas. Den töms före varje åtgärd, så att samma besked läses upp igen. | Områdets roll, att det finns före första åtgärden och textens ordalydelse. | Uppläsning av texten, även när samma besked upprepas. |
 <!-- markdownlint-enable MD013 -->

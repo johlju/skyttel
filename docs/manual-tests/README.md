@@ -112,8 +112,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   eller sparat per användare och hushåll på flera enheter samt tangentbord,
   pekskärm och placering vid verktygsraden. Sidan **Samtal med Skyttel** i
   Inställningar: plats i menyn för alla medlemmar, sparat och återkallat
-  medgivande, medgivande för besöket, otillgängligt samtal och misslyckat
-  sparande.
+  medgivande, medgivande för besöket, återkallande från en annan enhet,
+  otillgängligt samtal, misslyckat sparande och ny fråga efter en ny
+  inbjudan.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag, kompakt status,
   start efter medgivande, mikrofonpaus, ljudaktivitet, avbrott,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
