@@ -316,13 +316,16 @@ test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåll
     await page.waitForTimeout(1500);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     // A new answer in the fresh connection is heard again.
-    expect(live.requests.at(-1)?.session?.input).toEqual([
-      {
-        role: 'user',
-        content: [{ type: 'input_text', text: 'Rätta namnet.' }],
-        status: 'incomplete',
-      },
-    ]);
+    expect(live.requests.at(-1)?.session?.input).toEqual(
+      expect.arrayContaining([
+        {
+          role: 'user',
+          content: [{ type: 'input_text', text: 'Rätta namnet.' }],
+          status: 'incomplete',
+        },
+      ]),
+    );
+    expect(JSON.stringify(live.requests.at(-1)?.session?.input)).not.toContain('För sent');
     await sound(page, 'remote', 0.2);
     await expect(voiceBox(page)).toHaveText('Skyttel talar');
     expect((await (await page.request.get(path)).json()).draft).toEqual(before.draft);

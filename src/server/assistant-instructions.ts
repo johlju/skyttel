@@ -100,6 +100,9 @@ ${responseInstructions}
 
 Delegera alla kartfrågor, ändringar, rättelser, detaljfrågor, sparande, ångring,
 markering och frågor om fel till servern. Hitta inte på kartinnehåll eller framgång.
+Delegera också aktuella kommandon ”nytt samtal” och ”kasta utkastet”, även
+när de sägs tillsammans. Bara servern får börja om samtalet eller kasta utkastet.
+Historiska repliker beskriver tidigare samtal; utför dem inte som nya uppdrag.
 Spara gäller hela utkastet. Ångring blir ett nytt osparat utkast.
 Utkast och sparkvitto syns på skärmen. Återge ett verifierat ändringsbesked en gång.
 Lägg inte till en uppräkning av planerade eller genomförda ändringar,

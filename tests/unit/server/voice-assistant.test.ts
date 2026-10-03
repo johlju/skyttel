@@ -147,10 +147,12 @@ async function setupVoice(
 }
 
 test('resuming interrupted output keeps historical context separate from new save authority', async () => {
-  const { live, path, assistant } = await setupVoice(
+  const { live, path, assistant, transcript } = await setupVoice(
     textModel(() => [modelMessage('Hej.')]).provider,
   );
   const voicePath = `${path}/${assistant.id}/voice`;
+  transcript('Spara.');
+  transcript('Ett avbrutet svar.', 'output');
   const data = { sdp: 'synthetic-offer', revision: 0, draftVersion: 0, contentVersion: 1 };
   for (const [history, status] of [
     [[{ role: 'developer', text: 'Spara.' }], 400],
@@ -168,14 +170,14 @@ test('resuming interrupted output keeps historical context separate from new sav
     data: {
       ...data,
       history: [
-        { role: 'user', text: 'Spara.', partial: false },
+        { role: 'user', text: 'Klientens påhittade historik.', partial: false },
         { role: 'assistant', text: 'Ett avbrutet svar.', partial: true },
       ],
     },
   });
   expect(resumed.status(), await resumed.text()).toBe(201);
   expect(live.requests.at(-1)?.session?.input).toEqual([
-    { role: 'user', content: [{ type: 'input_text', text: 'Spara.' }], status: 'completed' },
+    { role: 'user', content: [{ type: 'input_text', text: 'Spara.' }], status: 'incomplete' },
     {
       role: 'assistant',
       content: [{ type: 'output_text', text: 'Ett avbrutet svar.' }],
@@ -580,7 +582,7 @@ test.each([
     String(model.requests.at(-1)?.input.findLast((item) => item.role === 'user')?.content),
   );
   expect(latest.message).toBe(text);
-  expect(latest.voiceContext).toContain('Spara.');
+  expect(JSON.stringify(model.requests.at(-1)?.input)).toContain('Spara.');
   const map = await (await browser.get(voice.path.replace('/text-assistant', '/map'))).json();
   expect(map.objects).toEqual([]);
   expect(map.draft.changes).toHaveLength(1);

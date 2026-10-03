@@ -53,6 +53,8 @@ export function voiceAssistantRoutes({
   liveUsage,
   recordUsage,
   interrupt,
+  conversation,
+  transcript,
 }: {
   config: Config;
   dispatch: LocalDispatch;
@@ -61,6 +63,10 @@ export function voiceAssistantRoutes({
   liveUsage?: LiveUsage;
   recordUsage?: LiveUsage;
   interrupt: (sessionId: string, revision: number) => void;
+  conversation?: (
+    sessionId: string,
+  ) => { role: 'user' | 'assistant'; text: string; partial?: boolean }[];
+  transcript?: (sessionId: string, role: 'user' | 'assistant', text: string) => void;
 }) {
   const routes = new Hono();
   const voices = new Map<string, Voice>();
@@ -185,6 +191,24 @@ export function voiceAssistantRoutes({
       }
     }
     for (const previous of voices.values()) if (previous.path === path) await close(previous);
+    const retained = conversation?.(context.req.param('sessionId'));
+    if (retained) {
+      history = retained.length
+        ? retained.map(({ role, text, partial }) =>
+            role === 'user'
+              ? {
+                  role,
+                  content: [{ type: 'input_text', text }],
+                  status: partial ? 'incomplete' : 'completed',
+                }
+              : {
+                  role,
+                  content: [{ type: 'output_text', text }],
+                  status: partial ? 'incomplete' : 'completed',
+                },
+          )
+        : undefined;
+    }
     const usage: LiveUsageAttempt = {
       attemptId: randomUUID(),
       sessionId: null,
@@ -294,6 +318,7 @@ export function voiceAssistantRoutes({
       voice.work = voiceWork({
         channel,
         initial: current,
+        transcript: (role, text) => transcript?.(context.req.param('sessionId'), role, text),
         interrupt: (revision) => interrupt(context.req.param('sessionId'), revision),
         request: async (action, body, signal) => {
           const response = await dispatch(
@@ -413,12 +438,13 @@ export function voiceAssistantRoutes({
     routes,
     // Live has no context-clearing event. Close the old provider session; the
     // browser reconnects with its existing microphone stream and pause state.
-    newConversation: (view: TextAssistantView) => {
+    newConversation: (view: TextAssistantView, deferVoiceClose = false) => {
       for (const voice of voices.values()) {
         if (voice.assistant.id !== view.id || voice.closed) continue;
         voice.assistant = view;
         voice.work?.reset(view);
-        void close(voice);
+        if (deferVoiceClose) voice.work?.stop();
+        else void close(voice);
       }
     },
     stopSession: (sessionId: string) => {

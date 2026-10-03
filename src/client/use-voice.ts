@@ -101,6 +101,7 @@ export function useVoice(options: {
   const prepared = useRef<VoicePlayback | null>(null);
   const epoch = useRef(0);
   const mounted = useRef(true);
+  const resetVoice = useRef<(view: TextAssistantView) => void>(() => {});
   const [state, setState] = useState<Voice['state']>('idle');
   const [voice, setVoice] = useState<VoiceAssistantView | null>(null);
   const [error, setError] = useState('');
@@ -243,6 +244,10 @@ export function useVoice(options: {
           );
           if (!active()) return;
           apply(result.assistant);
+          if ((result.assistant.contextRevision ?? 0) > (initial.contextRevision ?? 0)) {
+            resetVoice.current(result.assistant);
+            return;
+          }
           setVoice(result.voice);
           if (result.voice.phase === 'error') {
             fail(undefined, 'provider');
@@ -410,6 +415,9 @@ export function useVoice(options: {
     (reset: () => Promise<TextAssistantView>) => renew(reset),
     [renew],
   );
+  resetVoice.current = (view) => {
+    void newConversation(async () => view).catch(() => latest.current.onRecoveryNeeded?.());
+  };
   const silence = useCallback(
     (cancelWork?: () => Promise<void>) => {
       const attempt = current.current;

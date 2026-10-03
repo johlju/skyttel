@@ -15,6 +15,7 @@ export function voiceWork({
   interrupt,
   update,
   failed,
+  transcript,
 }: {
   channel: LiveSideband;
   initial: TextAssistantView;
@@ -23,6 +24,7 @@ export function voiceWork({
   /** The conversation as the voice last saw it, and whether the voice has a task in progress. */
   update: (view: TextAssistantView, working: boolean) => void;
   failed: () => void;
+  transcript?: (role: Fragment['role'], text: string) => void;
 }) {
   let rendered: Anchor = {
     revision: initial.revision,
@@ -142,6 +144,9 @@ export function voiceWork({
           },
           controller.signal,
         );
+        // A spoken reset retires this executor. Its new revision must not be
+        // mistaken for stale work and cancelled after the reset completes.
+        if ((view.contextRevision ?? 0) > (initial.contextRevision ?? 0)) return;
         if (!current()) {
           interrupt(view.revision);
           await request('cancel', { revision: view.revision }).catch(() => {});
@@ -214,6 +219,7 @@ export function voiceWork({
       return;
     }
     events.add(event.event_id);
+    transcript?.(role, event.delta);
     if (role === 'user') {
       cancel();
       anchor ??= { ...rendered };

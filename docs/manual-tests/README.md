@@ -135,6 +135,10 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   och oskickad text även vid dubbelklick under fördröjd omstart, och textvyn
   går att använda på pekskärm och smal skärm. Kontrollerade kommentarspaket
   och faktiskt hört tal provas separat.
+- [Samtalets kontext](conversation-context.md): samma tillfälliga samtal
+  genom utkast, sparande, avbrott, fel, mikrofon av och på samt byte mellan
+  röst och text. Äldre sparbesked ger inget nytt sparande. Skrivna och
+  talade kommandon börjar om samtalet och kastar hela utkastet.
 - [Skyttels textassistent](text-assistant.md): hela utkast,
   rättelse och samlat sparande, sena svar, avbrott, återfunna kvitton och
   samtidigt synliga objekt och samband i karta och detaljpanel även på

@@ -218,7 +218,9 @@ export function createApp({
   app.route('/api', profileImageRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
   let stopVoice: ((sessionId: string) => void) | undefined;
-  let newVoiceConversation: ((view: TextAssistantView) => void) | undefined;
+  let newVoiceConversation:
+    | ((view: TextAssistantView, deferVoiceClose?: boolean) => void)
+    | undefined;
   const textAssistant = textAssistantRoutes({
     database,
     auth,
@@ -234,7 +236,7 @@ export function createApp({
       modelUsage?.(attempt);
     },
     onStop: (sessionId) => stopVoice?.(sessionId),
-    onNewConversation: (view) => newVoiceConversation?.(view),
+    onNewConversation: (view, deferVoiceClose) => newVoiceConversation?.(view, deferVoiceClose),
   });
   app.route('/api', textAssistant.routes);
   app.route(
@@ -255,6 +257,8 @@ export function createApp({
     liveUsage,
     recordUsage: costs.live,
     interrupt: textAssistant.interrupt,
+    conversation: textAssistant.conversation,
+    transcript: textAssistant.transcript,
   });
   stopVoice = voiceAssistant.stopSession;
   newVoiceConversation = voiceAssistant.newConversation;

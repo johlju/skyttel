@@ -256,6 +256,10 @@ test('a new conversation needs a conversation, and one that is not answered keep
   expect(result.current.unknown).toBe(true);
   expect(result.current.error).toContain('Svaret saknas');
   expect(result.current.pending).toBe(false);
+  act(() => result.current.setText('Nytt samtal'));
+  await act(() => result.current.send());
+  expect(result.current.text).toBe('Nytt samtal');
+  expect(result.current.transcript.map((row) => row.text)).toEqual(['Lägg till cykeln.']);
 });
 
 test('a new conversation that is answered after the user has left the map changes nothing', async () => {

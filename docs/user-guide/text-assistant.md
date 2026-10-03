@@ -105,6 +105,20 @@ försöka igen.
 **Visa kvittot** och **Tidigare sparförsök** finns i **Utkast och historik**
 i kartans verktygsrad. Där kan du granska det beständiga sparresultatet,
 oberoende av om textvyn är öppen.
+## Samtalets kontext
+
+Skyttel har med sig hela det pågående samtalet, också efter att ett förslag
+har lagts i utkastet, efter sparande, avbrott eller fel. Du kan exempelvis
+säga eller skriva **Ändra den sista** för att rätta det senaste förslaget.
+Samma sammanhang följer med när mikrofonen stängs av och slås på igen och
+när du växlar mellan röst och text. Ett tidigare sparbesked ger aldrig ett
+nytt sparande; du behöver be om att spara det aktuella utkastet.
+
+Du kan också säga eller skriva **Nytt samtal**. Det gör samma sak som
+knappen och frågar inte om medgivande igen. Vill du kasta hela det
+osparade utkastet, säg eller skriv **Kasta utkastet**, eller
+**Nytt samtal och kasta utkastet** för att också börja om samtalet.
+Redan sparade uppgifter påverkas inte av att utkastet kastas.
 
 ## Följ samtalet
 

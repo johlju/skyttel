@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { conversationCommand } from '../shared/conversation-command.js';
 import {
   type ConversationConsentView,
   conversationConsentRequired,
@@ -166,6 +167,21 @@ export function useConversation({
         return;
       active.current = next;
       setSession(next);
+      if ((next.contextRevision ?? 0) > (previous?.contextRevision ?? 0)) {
+        setUnknown(false);
+        setError('');
+        setTranscript(
+          next.reply
+            ? [{ id: `new-${next.id}-${next.revision}`, role: 'assistant', text: next.reply }]
+            : [],
+        );
+      } else if (next.discarded && next.revision !== previous?.revision && next.reply) {
+        showTranscript({
+          id: `discard-${next.id}-${next.revision}`,
+          role: 'assistant',
+          text: next.reply,
+        });
+      }
       if (
         next.modelReply &&
         (next.modelReply !== previous?.modelReply || next.revision !== previous?.revision)
@@ -433,6 +449,17 @@ export function useConversation({
   async function send() {
     const current = session;
     if (!current || !text.trim()) return;
+    const control = conversationCommand(text);
+    if (control?.reset) {
+      const sent = text;
+      await newConversation(control.discard);
+      if (
+        active.current?.id === current.id &&
+        (active.current.contextRevision ?? 0) > (current.contextRevision ?? 0)
+      )
+        setText((value) => (value === sent ? '' : value));
+      return;
+    }
     const epoch = ++requestEpoch.current;
     const sent = text;
     showTranscript({ id: crypto.randomUUID(), role: 'user', text: sent });
@@ -456,7 +483,7 @@ export function useConversation({
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }
   }
-  async function newConversation() {
+  async function newConversation(discard = false) {
     const current = active.current;
     if (!current || resetInProgress.current) return;
     // A reset may interrupt a pending message, but a second reset must not
@@ -467,7 +494,7 @@ export function useConversation({
     setError('');
     try {
       const result = await voice.newConversation(() =>
-        request<TextAssistantView>(`${path}/${current.id}/new`, {}),
+        request<TextAssistantView>(`${path}/${current.id}/new`, { discard }),
       );
       if (epoch !== requestEpoch.current) return;
       setUnknown(false);

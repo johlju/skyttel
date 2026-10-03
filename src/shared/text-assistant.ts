@@ -18,6 +18,10 @@ export type TextAssistantResult = {
 export interface TextAssistantView {
   id: string;
   revision: number;
+  /** Advances only when the conversation text and context are explicitly cleared. */
+  contextRevision?: number;
+  /** Verified whole-draft discard, shown as conversation text. */
+  discarded?: boolean;
   phase: 'ready' | 'working' | 'error' | 'recovery';
   review: TextAssistantReview;
   reply?: string;
