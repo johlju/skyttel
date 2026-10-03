@@ -1521,8 +1521,10 @@ export function textAssistantRoutes({
     }
     if (session.task && !session.task.signal.aborted && body.queue === false)
       return context.json({ error: 'assistant_busy' }, 409);
-    if (session.accepted.size >= 200)
-      return context.json({ error: 'assistant_context_limit' }, 409);
+    // Keep delivery records for same-session retries, but only pending work
+    // consumes queue capacity. Completed or canceled turns do not end a conversation.
+    if (session.queue.length + Number(Boolean(session.task && !session.task.signal.aborted)) >= 200)
+      return context.json({ error: 'assistant_busy' }, 409);
     const message: Message = {
       id: body.requestId,
       text: body.text,
