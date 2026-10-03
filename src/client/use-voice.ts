@@ -82,6 +82,8 @@ type Attempt = {
   poll?: ReturnType<typeof setTimeout>;
   held?: HeldRequest;
   ready?: boolean;
+  /** Keep the microphone choice through the new peer's asynchronous ready event. */
+  contextRenewal?: boolean;
   summaryPausedAt?: number;
   providerGeneration?: number;
   output?: { text: string; heard: boolean; speaking: boolean; matched?: string };
@@ -388,6 +390,7 @@ export function useVoice(options: {
         path,
         controller: new AbortController(),
         held: held.current ?? undefined,
+        contextRenewal: summaryRenewal.current,
         output: { text: '', heard: false, speaking: false },
       };
       current.current = attempt;
@@ -512,6 +515,7 @@ export function useVoice(options: {
             onReady: () => {
               if (!active()) return;
               attempt.ready = true;
+              attempt.contextRenewal = false;
               if (latest.current.inputBlocked) {
                 attempt.transport?.setMicrophonePaused(true);
                 setOff(true);
@@ -952,6 +956,16 @@ export function useVoice(options: {
     state,
     phase: voice?.phase ?? null,
     microphone,
+    // Automatic context handoff temporarily pauses actual capture and starts
+    // a new peer. Announce user choices, including a release during that pause.
+    microphoneAnnouncement:
+      (contextPaused || summaryRenewal.current || current.current?.contextRenewal) &&
+      current.current &&
+      !off &&
+      !disconnected &&
+      !playbackBlocked
+        ? 'on'
+        : microphone,
     starting,
     speaking,
     userSpeaking: microphone === 'on' && activity.microphone,

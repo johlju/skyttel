@@ -176,6 +176,20 @@ for (const microphoneOn of [true, false]) {
       await send(page, 'Behåll vårt sammanhang.');
       await turnMicrophoneOn(page);
       if (!microphoneOn) await turnMicrophoneOff(page);
+      await field(page).focus();
+      // Observe actual polite microphone announcements during automatic renewal.
+      // A user choice must not be announced again because capture pauses internally.
+      const announcements = page.locator('.voice-announcement:not(.voice-context-announcement)');
+      await announcements.evaluate((element) => {
+        element.setAttribute('data-microphone-events', '[]');
+        new MutationObserver(() => {
+          const text = element.textContent?.trim();
+          if (text !== 'Lyssnar' && text !== 'Mikrofonen är av') return;
+          const events = JSON.parse(element.getAttribute('data-microphone-events') ?? '[]');
+          events.push(text);
+          element.setAttribute('data-microphone-events', JSON.stringify(events));
+        }).observe(element, { childList: true, subtree: true, characterData: true });
+      });
       const old = usage(live);
       await expect(log(page).getByRole('listitem').filter({ hasText: summaryLine })).toHaveCount(1);
       await expect.poll(() => live.requests.length).toBe(2);
@@ -186,6 +200,7 @@ for (const microphoneOn of [true, false]) {
       expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneRequests)).toBe(
         1,
       );
+      await expect(announcements).toHaveAttribute('data-microphone-events', '[]');
       await expect
         .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks[0]))
         .toEqual({ enabled: microphoneOn, state: 'live' });
@@ -230,7 +245,12 @@ for (const mode of ['text', 'voice'] as const) {
       await expect(log(page).getByRole('listitem').filter({ hasText: summaryLine })).toHaveCount(0);
       await field(page).fill('Detta ska inte skickas.');
       await expect(page.getByRole('button', { name: 'Skicka', exact: true })).toBeDisabled();
-      await expect(microphoneButton(page)).toHaveAttribute('aria-disabled', 'true');
+      await expect(microphoneButton(page)).toBeEnabled();
+      await expect(microphoneButton(page)).not.toHaveAttribute('aria-disabled', 'true');
+      await expect(microphoneButton(page)).toHaveAttribute(
+        'aria-description',
+        /Inte tillgängligt just nu\./,
+      );
       const requests = model.requests.length;
       await microphoneButton(page).focus();
       await page.keyboard.press('Enter');
