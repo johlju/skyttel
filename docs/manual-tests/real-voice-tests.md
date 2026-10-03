@@ -32,8 +32,12 @@ npm run test:real-voice
 
 The test uses temporary application storage and synthetic sign-in. It
 checks the changed price, resolved family draft, preserved unsent form
-text, one durable receipt, nonzero received audio energy, closed media
-resources and the same receipt after restart. Traces, screenshots and
+text, one durable receipt and nonzero received audio energy. With the
+microphone off, it checks disabled capture and senders while the connection
+remains available, then waits for the matching save reply's audio to drain.
+Reset closes the previous peers and retains a muted replacement; leaving
+the household closes all peers and ends capture tracks. The same receipt
+must remain after restart. Traces, screenshots and
 video are disabled. The supplied recording remains yours to remove.
 
 ## Interpreting the result

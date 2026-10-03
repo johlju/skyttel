@@ -877,6 +877,49 @@ uppläsningarna i tur”.
   rösten där. När **Avbryt** försvinner står fokus på **Tillbaka till
   kartan**.
 
+### TAL-18: Avbryt bevarar ett långt samtal med mikrofonen på eller av
+
+**Syfte:** Avbryta ett talat uppdrag efter en lång genomgång utan att
+förlora samtalets kontext, tidigare förslag eller mikrofonens valda läge.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Följ TAL-02:s förberedelse med Lo Exempel i utkastet.
+Samtalet är startat med text och mikrofonen är av.
+
+**Integrationstest:**
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
+testfallen “TAL-18: Avbryt bevarar ett långt samtal med mikrofonen på”
+och “TAL-18: Avbryt bevarar ett långt samtal med mikrofonen av”.
+
+**Steg:**
+
+1. För sju skrivna turer om hushållets abonnemang, tjänstekonton och
+   betalningar. Skriv cirka 1 800 tecken per tur och släpp varje hållet
+   anrop med ett lika långt svar. Numrera turerna **Genomgång 1** till
+   **Genomgång 7**. Kontrollera att alla sju frågor och svar visas.
+2. Slå på mikrofonen och kör
+   `user Rätta namnet till Lo Lind efter genomgången.` och `delegate`.
+   Låt anropet vara hållet. Anteckna utkastet och kör `stats()`.
+3. Välj **Avbryt** i röstrutan. Kör `sessions` och `stats()` igen.
+4. Släpp det gamla anropet med ett namnförslag **För sent**, enligt
+   TAL-02:s verktygssteg. Skriv **Vad gick vi igenom innan avbrottet?**
+   och kontrollera det nya anropets kontext före svaret.
+5. Upprepa steg 2–4 men slå av mikrofonen medan Skyttel arbetar,
+   före **Avbryt**.
+
+**Förväntat resultat:**
+
+- Steg 3 och 5: en ny röstanslutning skapas utan samtalsnotis. Samma
+  mikrofonspår används utan en ny tillståndsfråga. Spåret behåller valt
+  läge: på i steg 3, av i steg 5.
+- Samtalstexten visar tidigare turer. Det automatiserade provet granskar
+  också att den nya röstanslutningen får hela genomgången och det avbrutna
+  uppdraget som ofullständigt i sin kontext.
+- Steg 4 och 5: det nya modelluppdraget har **Genomgång 1** och
+  **Genomgång 7** i sin kontext. Förslaget **För sent** visas inte;
+  Lo-förslaget och utkastets version är oförändrade.
+
 ### TAL-17: röstrutan med riktig mikrofon, pekskärm och skärmläsare
 
 **Syfte:** Pröva det som de kontrollerade fallen inte kan visa: riktig

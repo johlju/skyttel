@@ -120,8 +120,6 @@ export function useVoice(options: {
   onRecoveryNeeded?: () => void;
   autoStart?: boolean;
   onTranscript?: (row: TranscriptRow) => void;
-  /** Current ephemeral text to retain when interrupted output requires a fresh connection. */
-  transcript?: TranscriptRow[];
   /** Network or service conditions forbid sending microphone input. */
   inputBlocked?: boolean;
   saveChecking?: boolean;
@@ -380,7 +378,7 @@ export function useVoice(options: {
     [],
   );
   const start = useCallback(
-    async (reuse?: RetainedInput, next?: TextAssistantView, history?: TranscriptRow[]) => {
+    async (reuse?: RetainedInput, next?: TextAssistantView, resetConversation = false) => {
       const initial = next ?? latest.current.assistant;
       if (!path || !initial || current.current || cancelledHeldStart.current) return;
       if (
@@ -576,17 +574,11 @@ export function useVoice(options: {
                   sdp,
                   ...anchor(),
                   microphoneOn: !(reuse?.paused ?? attempt.held?.released ?? false),
-                  ...(history
-                    ? {
-                        history: history.map(({ role, text, partial }) => ({
-                          role,
-                          text,
-                          partial,
-                        })),
-                      }
-                    : next && !summaryRenewal.current
-                      ? { newConversation: true }
-                      : {}),
+                  // The server supplies the authoritative conversation context.
+                  // Only an actual reset authorizes its spoken acknowledgement.
+                  ...(resetConversation && !summaryRenewal.current
+                    ? { newConversation: true }
+                    : {}),
                 },
                 options.signal,
               );
@@ -673,7 +665,7 @@ export function useVoice(options: {
   const renew = useCallback(
     async (
       reset: () => Promise<TextAssistantView>,
-      history?: TranscriptRow[],
+      resetConversation = false,
       preserveInput = false,
     ) => {
       const attempt = current.current;
@@ -719,7 +711,11 @@ export function useVoice(options: {
         }
         if (mounted.current && current.current === continuation) {
           current.current = null;
-          await start(stream ? { stream, paused: offRef.current } : undefined, assistant, history);
+          await start(
+            stream ? { stream, paused: offRef.current } : undefined,
+            assistant,
+            resetConversation,
+          );
         } else for (const track of stream?.getTracks() ?? []) track.stop();
         return assistant;
       } catch (failure) {
@@ -765,7 +761,7 @@ export function useVoice(options: {
       .catch(() => setPlaybackBlocked(true));
   }, [inputAllowed]);
   const newConversation = useCallback(
-    (reset: () => Promise<TextAssistantView>) => renew(reset),
+    (reset: () => Promise<TextAssistantView>) => renew(reset, true),
     [renew],
   );
   resetVoice.current = (view) => {
@@ -779,7 +775,7 @@ export function useVoice(options: {
         view.contextSummaryState === 'needed'
           ? request<TextAssistantView>(`${path?.replace(/\/voice$/, '')}/summarize`, {})
           : view,
-      undefined,
+      false,
       true,
     )
       .catch((failure) => {
@@ -816,7 +812,7 @@ export function useVoice(options: {
         if (!assistant) throw new Error('Conversation ended');
         apply(assistant);
         return assistant;
-      }, latest.current.transcript ?? []);
+      });
       const generation = epoch.current;
       return interrupted
         .then(() => undefined)

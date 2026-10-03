@@ -342,6 +342,121 @@ test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåll
   }
 });
 
+for (const microphoneOn of [true, false]) {
+  test(`TAL-18: Avbryt bevarar ett långt samtal med mikrofonen ${microphoneOn ? 'på' : 'av'}`, async ({
+    page,
+  }) => {
+    const requestText = (
+      'Vi planerar hushållets abonnemang, konton och betalningar inför nästa månad. ' +
+      'Lo använder musiktjänsten, Kim betalar familjeabonnemanget och vi vill behålla ' +
+      'okända uppgifter tills vi har läst avtalen. '
+    )
+      .repeat(9)
+      .trim();
+    const answerText = (
+      'Vi kan gå igenom ett avtal i taget och hålla tjänstekontot skilt från abonnemanget. ' +
+      'Kontrollera pris, betalningsintervall och vem som använder tjänsten innan vi ' +
+      'föreslår en ändring. '
+    )
+      .repeat(10)
+      .trim();
+    const interruptedText = 'Rätta namnet till Lo Lind efter genomgången.';
+    let release!: (output: unknown[]) => void;
+    let waiting = false;
+    const model = textModel((request) => {
+      const { message } = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      ) as { message: string };
+      if (message === interruptedText) {
+        waiting = true;
+        return new Promise<unknown[]>((resolve) => {
+          release = resolve;
+        });
+      }
+      if (message === 'Vad gick vi igenom innan avbrottet?') {
+        expect(JSON.stringify(request.input)).toContain(`Genomgång 1. ${requestText}`);
+        expect(JSON.stringify(request.input)).toContain(`Genomgång 7. ${requestText}`);
+        return [modelMessage('Vi gick igenom hushållets abonnemang och betalningar.')];
+      }
+      return [modelMessage(answerText)];
+    });
+    const { app, live } = await installation(model.provider);
+    try {
+      const { path, value } = await openMapWithDraft(page, app.origin);
+      await startConversationWithText(page);
+      const log = panel(page).getByRole('log', { name: 'Samtalstext' });
+      for (let turn = 1; turn <= 7; turn++) {
+        await sendMessage(page, `Genomgång ${turn}. ${requestText}`);
+        await expect(log).not.toContainText('Skyttel arbetar…');
+        await expect(log.getByRole('listitem').filter({ hasText: answerText })).toHaveCount(turn);
+      }
+      expect(Buffer.byteLength(await log.innerText(), 'utf8')).toBeGreaterThan(16_384);
+      const before = await (await page.request.get(path)).json();
+      await chooseConversationVoice(page);
+      await listening(page);
+      speak(live, interruptedText);
+      await expect.poll(() => waiting).toBe(true);
+      await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
+      if (!microphoneOn) {
+        await chooseConversationVoice(page);
+        await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+      }
+      const captureBoundary = await page.evaluate(
+        () => window.skyttelVoiceFixture.captureChanges().length,
+      );
+      const renewed = page.waitForResponse(
+        (response) => /\/voice$/u.test(response.url()) && response.request().method() === 'POST',
+      );
+      await stopIcon(page).click();
+      expect((await renewed).status()).toBe(201);
+      await expect.poll(() => live.requests.length).toBe(2);
+      await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', String(microphoneOn));
+      await expect.poll(async () => (await media(page)).openPeers).toBe(1);
+      expect((await media(page)).microphoneTracks).toEqual([
+        { enabled: microphoneOn, state: 'live' },
+      ]);
+      expect((await media(page)).microphoneRequests).toBe(1);
+      if (!microphoneOn)
+        expect(
+          await page.evaluate(
+            (boundary) => window.skyttelVoiceFixture.captureChanges().slice(boundary),
+            captureBoundary,
+          ),
+        ).not.toContainEqual(expect.objectContaining({ enabled: true }));
+      expect(answers(live)).toBe(0);
+      const canonical = live.requests[1].session.input;
+      for (let turn = 1; turn <= 7; turn++)
+        expect(JSON.stringify(canonical)).toContain(`Genomgång ${turn}. ${requestText}`);
+      expect(canonical).toEqual(
+        expect.arrayContaining([
+          {
+            role: 'user',
+            content: [{ type: 'input_text', text: interruptedText }],
+            status: 'incomplete',
+          },
+        ]),
+      );
+      release([
+        modelTool('propose_object', {
+          version: before.draft.version,
+          contentVersion: before.contentVersion,
+          id: 'lo',
+          baseRevision: null,
+          value: { ...value, name: 'För sent' },
+        }),
+      ]);
+      await sendMessage(page, 'Vad gick vi igenom innan avbrottet?');
+      await expect(log).toContainText('Vi gick igenom hushållets abonnemang och betalningar.');
+      await expect(log).toContainText(`Genomgång 1. ${requestText}`);
+      await expect(log).not.toContainText('För sent');
+      expect((await (await page.request.get(path)).json()).draft).toEqual(before.draft);
+      await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toHaveCount(0);
+    } finally {
+      await app.close();
+    }
+  });
+}
+
 test('TAL-13: ett skrivet meddelande visar aldrig röstrutan och stänger av mikrofonknappen', async ({
   page,
 }) => {

@@ -3,17 +3,19 @@ import { readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
-import { signIn } from '../support/client.js';
+import { openProfile, signIn } from '../support/client.js';
 import {
   chooseConversationVoice,
   microphoneButton,
   startConversationWithText,
+  voiceBox,
 } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 
 declare global {
   interface Window {
     skyttelRealPeers: RTCPeerConnection[];
+    skyttelRealMicrophones: MediaStreamTrack[];
   }
 }
 
@@ -45,9 +47,16 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
     });
     const context = await browser.newContext({ permissions: ['microphone'] });
     const page = await context.newPage();
-    // Observe actual peer connections without replacing media, SDP, events or providers.
+    // Observe actual media and peers without substituting audio, SDP, events or providers.
     await page.addInitScript(() => {
       window.skyttelRealPeers = [];
+      window.skyttelRealMicrophones = [];
+      const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = async (constraints) => {
+        const stream = await capture(constraints);
+        window.skyttelRealMicrophones.push(...stream.getAudioTracks());
+        return stream;
+      };
       window.RTCPeerConnection = new Proxy(window.RTCPeerConnection, {
         construct(Target, args: ConstructorParameters<typeof RTCPeerConnection>) {
           const peer = new Target(...args);
@@ -124,9 +133,49 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         { timeout: 30_000 },
       )
       .toBe(true);
-    // With the microphone off Skyttel says its answer to the end, and the connection then closes.
+    // OFF stops capture and sending while keeping the peer available for the answer.
     await chooseConversationVoice(page);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const tracks = window.skyttelRealMicrophones;
+          const peers = window.skyttelRealPeers;
+          return (
+            tracks.length > 0 &&
+            tracks.every((track) => !track.enabled || track.readyState === 'ended') &&
+            peers.some((peer) => peer.connectionState === 'connected') &&
+            peers.every((peer) =>
+              peer
+                .getSenders()
+                .every((sender) => !sender.track?.enabled || sender.track.readyState === 'ended'),
+            )
+          );
+        }),
+      )
+      .toBe(true);
+    // Sparat requires the canonical reply's words, observed output audio and its drain.
+    // It does not establish acoustic intelligibility or rule out later unsolicited output.
+    await expect(voiceBox(page)).toHaveText('Sparat', { timeout: 60_000 });
+    await expect(voiceBox(page)).toHaveCount(0, { timeout: 30_000 });
+    const peersBeforeReset = await page.evaluate(() => window.skyttelRealPeers.length);
+    await panel.getByRole('button', { name: 'Nytt samtal' }).click();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          (count) =>
+            window.skyttelRealPeers.length > count &&
+            window.skyttelRealPeers
+              .slice(0, count)
+              .every((peer) => peer.connectionState === 'closed'),
+          peersBeforeReset,
+        ),
+      )
+      .toBe(true);
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    // Reset replaces the peer with a muted one; leaving releases the retained microphone too.
+    await openProfile(page);
+    await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     await expect
       .poll(
         () =>
@@ -134,6 +183,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
             const peers = window.skyttelRealPeers;
             return (
               peers.length > 0 &&
+              window.skyttelRealMicrophones.every((track) => track.readyState === 'ended') &&
               peers.every(
                 (peer) =>
                   peer.connectionState === 'closed' &&
@@ -146,7 +196,6 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         { timeout: 60_000 },
       )
       .toBe(true);
-    await panel.getByRole('button', { name: 'Nytt samtal' }).click();
     await app.restart();
     const recovered = (await (await page.request.get(`${mapUrl}/history`)).json())
       .history as SaveReceipt[];
@@ -162,6 +211,9 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         models: ['gpt-live-1', 'gpt-5.6-terra'],
         receipt: added[0],
         receivedAudio: true,
+        microphoneOff: true,
+        savedReplyDrained: true,
+        resetClosedPreviousPeers: true,
         mediaClosed: true,
         receiptSurvivesRestart: true,
       }),

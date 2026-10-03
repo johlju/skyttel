@@ -578,7 +578,6 @@ export function useConversation({
     // A refusal for a revoked consent ends the conversation, not the access.
     onAccessLost: fail,
     onTranscript: showTranscript,
-    transcript,
     inputBlocked: !connected || available === false,
     saveChecking,
     contextFailed: session?.contextSummaryState === 'failed',
