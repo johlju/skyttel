@@ -33,7 +33,7 @@ export type Voice = {
   /** Closes the voice connection at once, and with it the work that came by voice. */
   stop: () => Promise<void>;
   /** Silences what Skyttel is saying. */
-  silence: () => void;
+  silence: (cancelWork?: () => Promise<void>) => void;
   /** Replace provider context and queued audio while keeping the authorized microphone. */
   newConversation: (reset: () => Promise<TextAssistantView>) => Promise<TextAssistantView>;
   playAudio: () => void;
@@ -82,6 +82,8 @@ export function useVoice(options: {
   onRecoveryNeeded?: () => void;
   autoStart?: boolean;
   onTranscript?: (row: TranscriptRow) => void;
+  /** Current ephemeral text to retain when interrupted output requires a fresh connection. */
+  transcript?: TranscriptRow[];
 }): Voice {
   const path = options.assistant
     ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
@@ -161,7 +163,7 @@ export function useVoice(options: {
     };
   }, [path, stop]);
   const start = useCallback(
-    async (reuse?: RetainedInput, next?: TextAssistantView) => {
+    async (reuse?: RetainedInput, next?: TextAssistantView, history?: TranscriptRow[]) => {
       const initial = next ?? latest.current.assistant;
       if (!path || !initial || current.current) return;
       const attempt: Attempt = { path, controller: new AbortController() };
@@ -170,6 +172,8 @@ export function useVoice(options: {
       setState('permission');
       setOff(reuse?.paused ?? false);
       setDisconnected(false);
+      setPlaybackBlocked(false);
+      setActivity({ microphone: false, speaker: false });
       setVoice(null);
       setError('');
       const active = () => mounted.current && current.current === attempt;
@@ -259,7 +263,21 @@ export function useVoice(options: {
             try {
               result = await request<VoiceAssistantResponse>(
                 path,
-                { sdp, ...anchor(), ...(next ? { newConversation: true } : {}) },
+                {
+                  sdp,
+                  ...anchor(),
+                  ...(history
+                    ? {
+                        history: history.map(({ role, text, partial }) => ({
+                          role,
+                          text,
+                          partial,
+                        })),
+                      }
+                    : next
+                      ? { newConversation: true }
+                      : {}),
+                },
                 options.signal,
               );
             } catch (failure) {
@@ -301,8 +319,8 @@ export function useVoice(options: {
   }, [state, starting, off, start, stop]);
   // Quiet gaps cannot prove that the final utterance or answer has finished.
   // The muted connection closes with the conversation, access loss or leaving the household.
-  const newConversation = useCallback(
-    async (reset: () => Promise<TextAssistantView>) => {
+  const renew = useCallback(
+    async (reset: () => Promise<TextAssistantView>, history?: TranscriptRow[]) => {
       const attempt = current.current;
       if (!attempt) return reset();
       current.current = null;
@@ -310,8 +328,8 @@ export function useVoice(options: {
       clearTimeout(attempt.poll);
       attempt.controller.abort();
       const stream = attempt.transport?.releaseMicrophone();
-      // Silence the old peer before requesting the reset. Its events cannot add
-      // old transcript rows while the server clears the conversation.
+      // Retire the old peer first. Its queued output and transcript events
+      // cannot reappear while the server prepares the new connection.
       attempt.transport?.close();
       const continuation: Attempt = {
         path: attempt.path,
@@ -324,7 +342,7 @@ export function useVoice(options: {
         const assistant = await reset();
         if (mounted.current && current.current === continuation) {
           current.current = null;
-          await start(stream ? { stream, paused: off } : undefined, assistant);
+          await start(stream ? { stream, paused: off } : undefined, assistant, history);
         } else for (const track of stream?.getTracks() ?? []) track.stop();
         return assistant;
       } catch (failure) {
@@ -340,7 +358,40 @@ export function useVoice(options: {
   );
   const close = useCallback(() => stop(), [stop]);
   const playAudio = useCallback(() => void current.current?.transport?.playAudio(), []);
-  const silence = useCallback(() => current.current?.transport?.silence(), []);
+  const newConversation = useCallback(
+    (reset: () => Promise<TextAssistantView>) => renew(reset),
+    [renew],
+  );
+  const silence = useCallback(
+    (cancelWork?: () => Promise<void>) => {
+      const attempt = current.current;
+      // Live has no output-cancel event. Retire the entire output stream, retaining
+      // the authorized input and conversation as historical text in a fresh session.
+      const interrupted = renew(async () => {
+        const [result] = await Promise.all([
+          attempt?.voiceId ? stopRemote(attempt.path, attempt.voiceId) : Promise.resolve(null),
+          cancelWork?.(),
+        ]);
+        if (attempt?.voiceId && !result)
+          throw new Error('Voice interruption could not be confirmed');
+        const shown = latest.current.assistant;
+        const view = result?.assistant;
+        const assistant = shown && (!view || shown.revision >= view.revision) ? shown : view;
+        if (!assistant) throw new Error('Conversation ended');
+        apply(assistant);
+        return assistant;
+      }, latest.current.transcript ?? []);
+      const generation = epoch.current;
+      void interrupted.catch(() => {
+        if (!mounted.current || epoch.current !== generation) return;
+        latest.current.onRecoveryNeeded?.();
+        setError(
+          'Rösten kunde inte fortsätta efter avbrottet. Starta rösten igen eller fortsätt med text.',
+        );
+      });
+    },
+    [renew, apply],
+  );
   const level = useCallback(() => current.current?.transport?.microphoneLevel() ?? 0, []);
   const microphone =
     state === 'listening' && !off && !disconnected && !playbackBlocked ? 'on' : 'off';

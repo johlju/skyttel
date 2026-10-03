@@ -159,8 +159,7 @@ export function VoiceBox({
               }}
               onClick={() => {
                 // Suggested changes stay in the draft. Only the work and the voice stop.
-                if (conversation.working) void conversation.cancel();
-                voice.silence();
+                voice.silence(conversation.working ? conversation.cancel : undefined);
               }}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">

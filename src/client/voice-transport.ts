@@ -28,9 +28,6 @@ export function createVoiceTransport(callbacks: {
     [];
   const samples = new Uint8Array(256);
   let playing = false;
-  // Skyttel's voice is silenced until what Skyttel is saying has ended.
-  let silenced = false;
-  let silentTicks = 0;
   let activity = { microphone: false, speaker: false };
   function meter(stream: MediaStream, input: boolean) {
     const source = audioContext.createMediaStreamSource(stream);
@@ -64,15 +61,6 @@ export function createVoiceTransport(callbacks: {
         if (input) next.microphone ||= audible(analyser);
         else next.speaker ||= audible(analyser);
       }
-    }
-    if (silenced) {
-      // A second without sound ends what Skyttel was saying when it was silenced.
-      silentTicks = next.speaker ? 0 : silentTicks + 1;
-      if (silentTicks >= 10) {
-        silenced = false;
-        audio.muted = false;
-      }
-      next.speaker = false;
     }
     if (next.microphone !== activity.microphone || next.speaker !== activity.speaker) {
       activity = next;
@@ -327,17 +315,6 @@ export function createVoiceTransport(callbacks: {
       let level = 0;
       for (const { analyser, input } of meters) if (input) level = Math.max(level, peak(analyser));
       return level;
-    },
-    /** Silences what Skyttel is saying. What Skyttel says next is heard again. */
-    silence() {
-      if (closed || stopped) return;
-      silenced = true;
-      silentTicks = 0;
-      audio.muted = true;
-      if (activity.speaker) {
-        activity = { ...activity, speaker: false };
-        callbacks.onAudioActivity?.(activity);
-      }
     },
     close,
     playAudio,

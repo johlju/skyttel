@@ -266,10 +266,10 @@ test("the bars follow the microphone's sound level while the user talks", async 
   expect(tallest()).toBe(0);
 });
 
-test('the stop icon silences Skyttel, stops work in progress and gives the focus to the microphone', async () => {
+test('Avbryt discards the interrupted output across long pauses and permits a fresh answer', async () => {
   const { signals } = meteredAudio();
   const cancel = vi.fn(async () => {});
-  const { component, view, audios, changed } = setup();
+  const { component, view, audios, changed, track, getUserMedia } = setup();
   const show = (phase: TextAssistantView['phase']) =>
     component.rerender(
       <StandaloneVoice
@@ -281,25 +281,39 @@ test('the stop icon silences Skyttel, stops work in progress and gives the focus
       />,
     );
   show('ready');
-  const { remote } = await startWithAudio();
-  expect(screen.queryByRole('button', { name: 'Avbryt' })).toBeNull();
+  const { peer, remote } = await startWithAudio();
   signals.set(remote, 22);
   await screen.findByText('Skyttel talar');
   await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
-  expect(audios[0].muted).toBe(true);
+  expect(peer.connectionState).toBe('closed');
+  expect(remote.stop).toHaveBeenCalled();
+  expect(audios[0].srcObject).toBeNull();
+  expect(track.stop).not.toHaveBeenCalled();
   expect(cancel).not.toHaveBeenCalled();
-  expect(voiceBox()?.textContent).toBe('Lyssnar');
   expect(document.activeElement).toBe(microphoneButton());
-  // What Skyttel says next is heard again, once the silenced words have ended.
+  await waitFor(() => expect(Peer.all[1]?.channel.readyState).toBe('open'));
+  vi.useFakeTimers();
   signals.set(remote, 0);
-  await waitFor(() => expect(audios[0].muted).toBe(false), { timeout: 3000 });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1500);
+  });
   signals.set(remote, 22);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(200);
+  });
+  expect(screen.queryByText('Skyttel talar')).toBeNull();
+  vi.useRealTimers();
+  await act(async () =>
+    Peer.all[1].channel.emit({ type: 'session.started', session: { id: 'new-provider-session' } }),
+  );
+  expect(voiceBox()?.textContent).toBe('Lyssnar');
+  expect(track.enabled).toBe(true);
+  expect(getUserMedia).toHaveBeenCalledOnce();
+  signals.set(Peer.all[1].remote, 22);
   await screen.findByText('Skyttel talar');
-  signals.set(remote, 0);
+  signals.set(Peer.all[1].remote, 0);
   await screen.findByText('Lyssnar');
-  // A written message counts while the microphone is on.
   show('working');
-  expect(voiceBox()?.textContent).toBe('Skyttel arbetar');
   await userEvent.click(screen.getByRole('button', { name: 'Avbryt' }));
   expect(cancel).toHaveBeenCalledOnce();
 });

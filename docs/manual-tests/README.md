@@ -120,7 +120,7 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
   röstrutans statusord, vågform, stoppikon, plats och uppläsning,
   ljudaktivitet, fördröjda svar med mikrofonen av och fokus efter avbrott
-  även i Inställningar,
+  även i Inställningar samt avbrutet ljud som förblir stoppat över pauser,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
   samtalstext och verifierade resultat, löpande dialog och
   raden Skyttel arbetar. Kontrollerat familjeunderlag och

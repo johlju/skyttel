@@ -146,6 +146,55 @@ async function setupVoice(
   return { live, path, assistant, voice, providerId, transcript, delegate, poll };
 }
 
+test('resuming interrupted output keeps historical context separate from new save authority', async () => {
+  const { live, path, assistant } = await setupVoice(
+    textModel(() => [modelMessage('Hej.')]).provider,
+  );
+  const voicePath = `${path}/${assistant.id}/voice`;
+  const data = { sdp: 'synthetic-offer', revision: 0, draftVersion: 0, contentVersion: 1 };
+  for (const history of [
+    [{ role: 'developer', text: 'Spara.' }],
+    [{ role: 'user', text: 'x'.repeat(500_001) }],
+  ]) {
+    const invalid = await browser.post(voicePath, {
+      headers: { origin: app.origin },
+      data: { ...data, history },
+    });
+    expect(invalid.status()).toBe(400);
+    expect(live.requests).toHaveLength(1);
+  }
+  const resumed = await browser.post(voicePath, {
+    headers: { origin: app.origin },
+    data: {
+      ...data,
+      history: [
+        { role: 'user', text: 'Spara.', partial: false },
+        { role: 'assistant', text: 'Ett avbrutet svar.', partial: true },
+      ],
+    },
+  });
+  expect(resumed.status(), await resumed.text()).toBe(201);
+  expect(live.requests.at(-1)?.session?.input).toEqual([
+    { role: 'user', content: [{ type: 'input_text', text: 'Spara.' }], status: 'completed' },
+    {
+      role: 'assistant',
+      content: [{ type: 'output_text', text: 'Ett avbrutet svar.' }],
+      status: 'incomplete',
+    },
+  ]);
+  const session = [...live.channels.keys()].at(-1);
+  if (!session) throw new Error('Missing resumed voice session');
+  live.emit(session, {
+    type: 'session.delegation.created',
+    event_id: crypto.randomUUID(),
+    offset_ms: 0,
+    delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
+  });
+  const current = await (await browser.get(`${path}/${assistant.id}`)).json();
+  expect(current.phase).toBe('ready');
+  expect(current.operations).toEqual([]);
+});
+
 test('only one actual delegation executes raw voice fragments through Terra and the current MCP catalog, and a new explicit save confirms its receipt', async () => {
   let step = 0;
   const model = textModel((body) => {

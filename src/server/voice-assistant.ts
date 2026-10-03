@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import OpenAI from 'openai';
+import type { InitialItem } from 'openai/resources/live/live';
 import { SidebandWS } from 'openai/resources/live/sideband/ws';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantView } from '../shared/voice-assistant.js';
@@ -155,6 +156,34 @@ export function voiceAssistantRoutes({
       body.contentVersion !== current.review.contentVersion
     )
       return context.json({ error: 'assistant_draft_changed' }, 409);
+    let history: InitialItem[] | undefined;
+    if (body.history !== undefined) {
+      if (
+        body.newConversation === true ||
+        !Array.isArray(body.history) ||
+        body.history.length > 2000
+      )
+        return context.json({ error: 'invalid_request' }, 400);
+      history = [];
+      let characters = 0;
+      for (const row of body.history) {
+        if (
+          !row ||
+          !['user', 'assistant'].includes(row.role) ||
+          typeof row.text !== 'string' ||
+          (row.partial !== undefined && typeof row.partial !== 'boolean')
+        )
+          return context.json({ error: 'invalid_request' }, 400);
+        characters += row.text.length;
+        if (characters > 500_000) return context.json({ error: 'invalid_request' }, 400);
+        const status = row.partial ? ('incomplete' as const) : ('completed' as const);
+        history.push(
+          row.role === 'user'
+            ? { role: 'user', content: [{ type: 'input_text', text: row.text }], status }
+            : { role: 'assistant', content: [{ type: 'output_text', text: row.text }], status },
+        );
+      }
+    }
     for (const previous of voices.values()) if (previous.path === path) await close(previous);
     const usage: LiveUsageAttempt = {
       attemptId: randomUUID(),
@@ -183,6 +212,9 @@ export function voiceAssistantRoutes({
             delegation: { type: 'client' },
             store: false,
             instructions: voiceAssistantInstructions,
+            // Historical rows only seed the provider. They never become voiceWork's
+            // pending user fragments, which alone can authorize a fresh save.
+            ...(history ? { input: history } : {}),
             client: {
               data_channel: {
                 allowed_client_events: ['session.close'],

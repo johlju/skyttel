@@ -710,8 +710,9 @@ men behåller förslagen”.
 3. Släpp det gamla anropet med ett `propose_object` som byter namnet till
    **För sent**.
 4. Kör `setSound('remote', true)`. Välj **Avbryt** och kör `stats()`.
-5. Kör `setSound('remote', false)`, vänta en sekund och kör
-   `setSound('remote', true)` igen.
+5. Kör `setSound('remote', false)`, vänta mer än en sekund och kontrollera
+   att de gamla inkommande spåren fortfarande är avslutade. Kör sedan
+   `setSound('remote', true)` för ett nytt svar i den nya anslutningen.
 
 **Förväntat resultat:**
 
@@ -719,10 +720,11 @@ men behåller förslagen”.
   **Prata med Skyttel**, som fortfarande är intryckt.
 - Steg 3: utkastet är oförändrat. Lo heter fortfarande Lo Exempel, och
   inget kommentarspaket skickas för det avbrutna uppdraget.
-- Steg 4: röstrutan visar **Lyssnar**. `silencedAudioElements` är 1:
-  Skyttels röst är tyst.
-- Steg 5: `silencedAudioElements` är 0, och röstrutan visar
-  **Skyttel talar** igen.
+- Steg 4: den gamla ljudutgången och dess spår avslutas direkt. Samma
+  mikrofonspår är kvar. En ny anslutning behåller samtalets tidigare text,
+  och röstrutan återgår till **Lyssnar**. Förslagen finns kvar.
+- Steg 5: det avbrutna ljudet kan inte återupptas efter en paus.
+  **Skyttel talar** visas för det nya svaret, som går att höra.
 
 ### TAL-13: ett skrivet meddelande visar aldrig röstrutan och stänger av mikrofonknappen
 

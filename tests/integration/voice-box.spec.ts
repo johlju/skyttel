@@ -26,8 +26,8 @@ const sound = (page: Page, source: Parameters<Fixture['setSound']>[0], level: nu
 const stopIcon = (page: Page) =>
   voiceBox(page).getByRole('button', { name: 'Avbryt', exact: true });
 const waveform = (page: Page) => voiceBox(page).locator('[aria-hidden="true"]').first();
-const panel = (page: Page) => page.getByRole('region', { name: 'Samtal och text', exact: true });
-const messageField = (page: Page) => page.getByLabel('Meddelande till textassistenten');
+const panel = (page: Page) => page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+const messageField = (page: Page) => page.getByLabel('Meddelande till Skyttel');
 async function sendMessage(page: Page, text: string) {
   await messageField(page).fill(text);
   await page.getByRole('button', { name: 'Skicka', exact: true }).click();
@@ -267,6 +267,15 @@ test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåll
 
     // Skyttel works: the stop icon stops the work, and the earlier suggestion stays.
     speak(live, 'Rätta namnet.');
+    await page.evaluate(() =>
+      window.skyttelVoiceFixture.emit({
+        type: 'session.input_transcript.delta',
+        event_id: crypto.randomUUID(),
+        delta: 'Rätta namnet.',
+        start_ms: 0,
+        end_ms: 100,
+      }),
+    );
     await expect.poll(() => model.waiting()).toBe(1);
     await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
     await expect(stopIcon(page)).toHaveAttribute('title', 'Avbryt');
@@ -291,17 +300,29 @@ test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåll
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(async () => (await media(page)).silencedAudioElements).toBe(0);
 
-    // Skyttel talks: the stop icon silences the voice, and the microphone stays on.
+    // Skyttel talks: retire that output stream, even if it later resumes after a pause.
     await sound(page, 'remote', 0.2);
     await expect(voiceBox(page)).toHaveText('Skyttel talar');
     expect((await media(page)).silencedAudioElements).toBe(0);
+    const previousTracks = (await media(page)).remoteTracks.length;
     await stopIcon(page).click();
-    await expect.poll(async () => (await media(page)).silencedAudioElements).toBe(1);
+    await expect
+      .poll(async () => (await media(page)).remoteTracks[previousTracks - 1].state)
+      .toBe('ended');
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
-    // What Skyttel says next is heard again.
+    expect((await media(page)).microphoneTracks).toEqual([{ enabled: true, state: 'live' }]);
     await sound(page, 'remote', 0);
-    await expect.poll(async () => (await media(page)).silencedAudioElements).toBe(0);
+    await page.waitForTimeout(1500);
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
+    // A new answer in the fresh connection is heard again.
+    expect(live.requests.at(-1)?.session?.input).toEqual([
+      {
+        role: 'user',
+        content: [{ type: 'input_text', text: 'Rätta namnet.' }],
+        status: 'incomplete',
+      },
+    ]);
     await sound(page, 'remote', 0.2);
     await expect(voiceBox(page)).toHaveText('Skyttel talar');
     expect((await (await page.request.get(path)).json()).draft).toEqual(before.draft);
@@ -565,7 +586,7 @@ test('TAL-16: hjälpmedel får röstrutans namn, knappens läge och uppläsninga
     await expect(
       page
         .getByRole('navigation', { name: 'Kartans verktyg' })
-        .getByRole('button', { name: 'Samtal och text', exact: true }),
+        .getByRole('button', { name: 'Skriv till Skyttel', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(stopIcon(page)).toBeFocused();

@@ -507,6 +507,7 @@ export function useConversation({
     // A refusal for a revoked consent ends the conversation, not the access.
     onAccessLost: fail,
     onTranscript: showTranscript,
+    transcript,
     onRecoveryNeeded: () => setUnknown(true),
   });
   const working = session?.phase === 'working';
