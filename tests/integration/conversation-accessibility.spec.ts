@@ -281,12 +281,12 @@ test('HJALP-03: samma arbete och kontexttröskel läses en gång över textvy, r
       type: 'session.usage.updated',
       event_id: crypto.randomUUID(),
       usage: { seconds: 1 },
-      // Stay below automatic summarization while checking that a higher value
+      // Stay below the 89% summary threshold while checking that a higher value
       // updates the accessible name without repeating the threshold notice.
-      context_window: { usage_ratio: 0.9 },
+      context_window: { usage_ratio: 0.88 },
     });
     await expect(voiceBox(page).getByRole('img')).toHaveAccessibleName(
-      'Kontexten är 90 procent full',
+      'Kontexten är 88 procent full',
     );
     await expect(context).toHaveText('Kontexten är 85 procent full');
     await microphoneButton(page).click();

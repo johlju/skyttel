@@ -521,16 +521,21 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
     expect(JSON.stringify(live.sent.at(-1))).toContain(
       'Skyttels resultat (verifierat): Objektet är markerat',
     );
-    speak(live, 'Spara hela utkastet nu.');
+    const saveDelegation = crypto.randomUUID();
+    speak(live, 'Spara hela utkastet nu.', saveDelegation);
     await expect(assistant(page).getByRole('log', { name: 'Samtalstext' })).toContainText(
       'Sparat.',
     );
-    await expect
-      .poll(
-        () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-      )
-      .toBe(6);
-    expect(JSON.stringify(live.sent.at(-1))).toContain('Sparat.');
+    // Save-check updates can also append commentary. Inspect the result of
+    // this spoken instruction separately from those independent updates.
+    const saveCommentary = () =>
+      live.sent.flatMap(({ event }) =>
+        event.type === 'session.commentary.append' && event.delegation_id === saveDelegation
+          ? [event.content]
+          : [],
+      );
+    await expect.poll(() => saveCommentary().length).toBe(1);
+    expect(saveCommentary()[0]).toContain('Sparat.');
     const receipts = await openConversationReceipts(page);
     await receipts.getByText('Visa kvittot', { exact: true }).first().click();
     await expect(receipts).toContainText('Sparat: Lo Exempel. Kvitto:');

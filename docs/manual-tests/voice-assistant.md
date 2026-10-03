@@ -362,8 +362,9 @@ kommentarspaket är inte bevis för hört tal.
    ```
 
 9. Öppna textvyn och kräv **Sparat.** i samtalstexten.
-   Öppna kvittot och återläs Lo. Kontrollera att det senaste
-   kommentarspaketets sparbesked är verifierat. Stäng av mikrofonen, välj
+   Öppna kvittot och återläs Lo. Kontrollera att kommentarspaketet för samma
+   sparuppdrag har ett verifierat sparbesked. En separat kontroll av sparandet
+   kan ge ett eget kommentarspaket. Stäng av mikrofonen, välj
    `quit` och kontrollera städningen enligt guiden.
 
 **Förväntat resultat:**

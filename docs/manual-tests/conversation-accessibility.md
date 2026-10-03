@@ -135,7 +135,7 @@ textvy, röstruta och inställningar”.
 1. Skriv **Beskriv kartan.** och skicka. Behåll `held`-anropet obesvarat.
 2. Läs röstrutan och raden **Skyttel arbetar…** i samtalstexten.
 3. Kör `context 85`. Besök **Inställningar**, välj **Tillbaka till kartan**
-   och kör `context 90`.
+   och kör `context 88`.
 4. Slå av mikrofonen under arbetet. Läs textvyn och släpp anropet med
    `reply REQUEST Kartan är redo.`.
 
@@ -145,7 +145,7 @@ textvy, röstruta och inställningar”.
   arbetet. Besöket i Inställningar och mikrofonens avslag läser inte
   upp samma arbete igen.
 - **Kontexten är 85 procent full** läses i tur en gång. Symbolens
-  tillgängliga namn uppdateras till **Kontexten är 90 procent full**
+  tillgängliga namn uppdateras till **Kontexten är 88 procent full**
   men högre värden annonseras inte igen. Sammanfattning förnyar inte
   förekomsten; ett uttryckligt **Nytt samtal** börjar en ny förekomst.
 - Ett skrivet uppdrag fortsätter när mikrofonen slås av. Den särskilda
