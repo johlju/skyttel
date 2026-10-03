@@ -188,7 +188,7 @@ async function populatedArchive() {
 
 test('archive 20 preserves relationship sections, fields and zero/false answers through private, saved and merged snapshots', async () => {
   const source = await populatedArchive();
-  expect(source.manifest.schemaVersion).toBe(22);
+  expect(source.manifest.schemaVersion).toBe(23);
   expect(source.content.relationshipTypeFields).toContainEqual({
     typeId: 'storage',
     fields: definition.fields,

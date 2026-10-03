@@ -236,7 +236,7 @@ test('legacy custom placement remains visible once while canonical presentation 
     review.getByText('Senast uppgiven skuld: Okänt — datum för uppgiften: 2026-09-01'),
   ).toBeTruthy();
   await userEvent.click(review.getByRole('button', { name: 'Spara hela utkastet' }));
-  await screen.findByText(/^Sparat:/);
+  await screen.findByText(/^Sparat:/, { selector: '[role="status"]' });
   expect((await read()).types.find(({ id }) => id === 'legacy')).not.toHaveProperty('sections');
   await userEvent.click(screen.getByRole('button', { name: 'Visa historik' }));
   const history = within(await screen.findByRole('region', { name: 'Ändringshistorik' }));
@@ -292,7 +292,7 @@ test('explicit custom-only order controls object editing and review without inve
   ).toEqual(['Andra fältet: Två', 'Första fältet: 0']);
   expect(review.getByText('Beskrivning: Gemensam text')).toBeTruthy();
   await userEvent.click(review.getByRole('button', { name: 'Spara hela utkastet' }));
-  await screen.findByText(/^Sparat:/);
+  await screen.findByText(/^Sparat:/, { selector: '[role="status"]' });
   const state = await read();
   expect(state.types.find(({ id }) => id === 'ordered')).not.toHaveProperty('builtins');
   expect(state.types.find(({ id }) => id === 'ordered')?.propertyOrder).toEqual([

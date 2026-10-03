@@ -3,6 +3,7 @@ import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
 import { cdp, page, userEvent } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import '../../src/client/styles.css';
+import { conversationConsentTextVersion } from '../../src/shared/conversation-consent.js';
 import type { MapState } from '../../src/shared/map.js';
 import { defaultViewSettings, type PersonalView } from '../../src/shared/personal-view.js';
 import { openConversationText } from '../support/conversation-browser.js';
@@ -43,7 +44,7 @@ async function open(width: number, mapState = state, positions: PersonalView['po
   await expect
     .poll(() => window.matchMedia('(min-width: 1100px) and (pointer: fine)').matches)
     .toBe(width >= 1100);
-  vi.stubGlobal('fetch', async (url: string) => {
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     if (url.endsWith('/view'))
       return Response.json({
         contentVersion: 1,
@@ -51,8 +52,27 @@ async function open(width: number, mapState = state, positions: PersonalView['po
         settings: { ...defaultViewSettings, version: 0 },
       });
     if (url.endsWith('/operations')) return Response.json({ operations: [] });
-    // The text view opens without a conversation when none is offered.
-    if (url.endsWith('/text-assistant')) return Response.json({ available: false });
+    if (url.endsWith('/conversation-preferences'))
+      return Response.json({ showDraftOnStart: false });
+    if (url.endsWith('/conversation-consent'))
+      return Response.json({ saved: { textVersion: conversationConsentTextVersion } });
+    if (url.endsWith('/text-assistant') && init?.method !== 'POST')
+      return Response.json({ available: true });
+    if (url.includes('/text-assistant'))
+      return Response.json({
+        id: 'layout-conversation',
+        revision: 0,
+        phase: 'ready',
+        operations: [],
+        review: {
+          ...mapState.draft,
+          contentVersion: 1,
+          readyToSave: false,
+          conflicts: [],
+          unresolvedIdentities: [],
+          pendingOperations: [],
+        },
+      });
     if (url.includes('/map?')) return Response.json(mapState);
     throw new Error(`Unexpected request: ${url}`);
   });
@@ -267,8 +287,9 @@ test('desktop keeps the map and the bounded text view, object and list panels av
   const bounds = surface?.getBoundingClientRect();
   expect(bounds?.width).toBeGreaterThan(1300);
   await openConversationText();
+  await expect.element(page.getByRole('region', { name: 'Skriv till Skyttel' })).toBeVisible();
   const speech = page
-    .getByRole('region', { name: 'Samtal med Skyttel' })
+    .getByRole('region', { name: 'Skriv till Skyttel' })
     .element()
     .getBoundingClientRect();
   expect(speech.height).toBeGreaterThan(0);
@@ -501,12 +522,12 @@ test('panel placement has reversible keyboard and click controls with a reset an
   expect(position()).toEqual(initial);
 });
 
-test('desktop panels reserve only the status column and retain chosen positions as the card changes', async () => {
+test('desktop panels reserve draft feedback and retain chosen positions across screen sizes', async () => {
   await open(1440);
   await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   const work = page.getByRole('region', { name: 'Lista och utkast', exact: true });
-  const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
+  const status = page.getByRole('region', { name: 'Utkastets återkoppling', exact: true });
   const handle = work.getByRole('button', { name: 'Flytta Lista och utkast', exact: true });
   const box = () => work.element().getBoundingClientRect();
   handle.element().focus();
@@ -523,13 +544,9 @@ test('desktop panels reserve only the status column and retain chosen positions 
   expect(body?.scrollHeight).toBeGreaterThan(body?.clientHeight ?? 0);
   const chosen = box().toJSON();
 
-  await page.getByRole('button', { name: 'Aktuell status', exact: true }).click();
   await expect
-    .poll(() => box().bottom)
-    .toBeLessThanOrEqual(status.element().getBoundingClientRect().top - 12);
-  expect(box().height).toBeLessThan(chosen.height);
-  await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
-  await expect.poll(() => box().toJSON()).toEqual(chosen);
+    .element(page.getByRole('button', { name: 'Aktuell status', exact: true }))
+    .not.toBeInTheDocument();
   await page.viewport(900, 960);
   await expect.poll(() => box().right).toBeLessThanOrEqual(876);
   await expect
@@ -544,7 +561,7 @@ test('desktop panels reserve only the status column and retain chosen positions 
 });
 
 test.each([390, 250])(
-  'wide short work at %i pixels keeps panel actions and status reachable',
+  'wide short work at %i pixels keeps panel actions and draft feedback reachable',
   async (height) => {
     await open(1440);
     await page.getByRole('button', { name: 'Stäng vägledningen', exact: true }).click();
@@ -552,7 +569,6 @@ test.each([390, 250])(
     const work = page.getByRole('region', { name: 'Lista och utkast', exact: true });
     work.getByRole('button', { name: 'Flytta Lista och utkast', exact: true }).element().focus();
     await userEvent.keyboard(`{Shift>}${'{ArrowRight}'.repeat(25)}{/Shift}`);
-    await page.getByRole('button', { name: 'Aktuell status', exact: true }).click();
     await page.viewport(1440, height);
     const handle = work.getByRole('button', { name: 'Flytta Lista och utkast', exact: true });
     await handle.click();
@@ -562,7 +578,9 @@ test.each([390, 250])(
     await page.getByLabelText('Objektets namn').fill('Behåll bred text');
     await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
-    await page.getByRole('button', { name: 'Stäng aktuell status', exact: true }).click();
+    await expect
+      .element(page.getByRole('region', { name: 'Utkastets återkoppling', exact: true }))
+      .toBeVisible();
     await expect.element(page.getByLabelText('Objektets namn')).toHaveValue('Behåll bred text');
   },
 );
@@ -867,7 +885,7 @@ test('phone opens the list from the map and preserves an edited name through map
     .element(page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }))
     .not.toBeInTheDocument();
   await expect
-    .element(page.getByRole('region', { name: 'Aktuell status', exact: true }))
+    .element(page.getByRole('region', { name: 'Utkastets återkoppling', exact: true }))
     .toBeVisible();
   await expect.element(page.elementLocator(objectElement)).not.toBeVisible();
   const bounds = document.querySelector('.spatial-surface')?.getBoundingClientRect();
@@ -882,7 +900,7 @@ test('phone opens the list from the map and preserves an edited name through map
     .toHaveValue('Alex ändrat');
   await page.getByRole('button', { name: 'Stäng arbetsytan', exact: true }).click();
   await openConversationText();
-  await expect.element(page.getByRole('region', { name: 'Samtal med Skyttel' })).toBeVisible();
+  await expect.element(page.getByRole('region', { name: 'Skriv till Skyttel' })).toBeVisible();
   // On a narrow screen the text view fills the screen, and the list takes its place.
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await expect

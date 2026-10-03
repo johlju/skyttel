@@ -166,8 +166,8 @@ test('KONTEXT-01: kontexten består efter utkast, sparande, avbrott och fel', as
     release([modelMessage('För sent.')]);
     await expect(log(page)).not.toContainText('För sent.');
     await send(page, 'Vad gjorde vi?');
-    await expect(page.getByRole('region', { name: 'Aktuell status' })).toContainText(
-      'aktuellt sparbesked',
+    await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toContainText(
+      'Skyttel kunde inte slutföra uppdraget. Försök igen.',
     );
     expect((await read()).objects).toEqual(saved.objects);
     await send(page, 'Finns samtalet kvar?');

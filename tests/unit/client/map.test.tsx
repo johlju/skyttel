@@ -179,7 +179,7 @@ test('current status distinguishes a previous verified receipt from newly staged
   await add('Lo Exempel');
   await save();
   await add('Blå cykeln');
-  const status = screen.getByRole('region', { name: 'Aktuell status' });
+  const status = screen.getByRole('region', { name: 'Utkastets återkoppling' });
   expect(status.textContent).toContain('1 förslag · privat utkast');
   expect(status.textContent).toContain('Tidigare sparande · kvitto bekräftat');
   expect(screen.getByRole('region', { name: 'Förslag i kartan' })).toBeTruthy();
@@ -637,7 +637,7 @@ test.each([
   await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
   expect((await screen.findByRole('alert')).textContent).toContain('Utfallet är okänt');
   expect(screen.getByRole('status').textContent).not.toContain('Sparat:');
-  expect(screen.getByRole('region', { name: 'Aktuell status' }).textContent).toContain(
+  expect(screen.getByRole('region', { name: 'Utkastets återkoppling' }).textContent).toContain(
     'Sparutfall okänt',
   );
   expect(screen.getByRole('region', { name: 'Förslag i kartan' })).toBeTruthy();
@@ -697,10 +697,10 @@ test('a confirmed receipt remains successful when refreshing the map fails', asy
   await userEvent.click(screen.getByRole('button', { name: 'Spara hela utkastet' }));
   expect((await screen.findByRole('alert')).textContent).toContain('sparade enligt kvittot');
   expect(screen.getByRole('status').textContent).toContain('Sparat: Lo Exempel');
-  expect(screen.getByRole('region', { name: 'Aktuell status' }).textContent).toContain(
+  expect(screen.getByRole('region', { name: 'Utkastets återkoppling' }).textContent).toContain(
     'Sparat · kvitto bekräftat',
   );
-  expect(screen.getByRole('region', { name: 'Aktuell status' }).textContent).not.toContain(
+  expect(screen.getByRole('region', { name: 'Utkastets återkoppling' }).textContent).not.toContain(
     'Sparutfall okänt',
   );
   expect(screen.queryByRole('button', { name: 'Hämta samma kvitto igen' })).toBeNull();

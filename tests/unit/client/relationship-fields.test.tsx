@@ -166,7 +166,7 @@ test('a draft-only relationship definition supplies four answer kinds and saves 
   expect(review.getByText('Belopp: 0')).toBeTruthy();
   expect(review.getByText('Bekräftat: Nej')).toBeTruthy();
   await userEvent.click(review.getByRole('button', { name: 'Spara hela utkastet' }));
-  await screen.findByText(/^Sparat:/);
+  await screen.findByText(/^Sparat:/, { selector: '[role="status"]' });
   const saved = await read();
   expect(Object.values(saved.relationships[0].customValues ?? {})).toEqual([
     'Låst',

@@ -176,7 +176,7 @@ test('an image error returns to the retained object and expires before an unrela
   await screen.findByText(/Bilden kunde inte behandlas/, { selector: '[role="alert"]' });
   const panel = within(screen.getByLabelText('Lo Exempel', { selector: 'section:not([hidden])' }));
   const status = within(
-    screen.getByLabelText('Aktuell status', { selector: 'section:not([hidden])' }),
+    screen.getByLabelText('Utkastets återkoppling', { selector: 'section:not([hidden])' }),
   );
   await userEvent.click(panel.getByLabelText('Stäng Lo Exempel', { selector: 'button' }));
   expect(screen.queryByRole('group', { name: 'Objektets detaljer' })).toBeNull();
@@ -333,7 +333,7 @@ test('a real image rejection preserves Settings focus until explicit return to t
     expect(await read()).toEqual(before);
     await user.click(
       within(
-        screen.getByLabelText('Aktuell status', { selector: 'section:not([hidden])' }),
+        screen.getByLabelText('Utkastets återkoppling', { selector: 'section:not([hidden])' }),
       ).getByRole('button', {
         name: 'Återgå till bilden för Lo Exempel',
       }),
@@ -426,18 +426,19 @@ test('the whole image and description proposal saves once with an exact expanded
       changes: [{ before: null, after: proposed.draft.changes[0].after }],
     });
     expect(receipt.changes).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: 'Aktuell status' }));
-    const status = within(screen.getByRole('region', { name: 'Aktuell status' }));
+    const status = within(screen.getByRole('region', { name: 'Utkastets återkoppling' }));
     expect(await status.findByText('Väntar på sparkvitto')).toBeTruthy();
-    expect(
-      status.getByText(`Sparförsök: ${receipt.operationId}. Slutresultatet är inte bekräftat.`),
-    ).toBeTruthy();
+    expect(screen.queryByText(`Sparat: Lo Exempel. Kvitto: ${receipt.operationId}.`)).toBeNull();
     expect(status.queryByText(/^Sparat:/)).toBeNull();
     expect(status.queryByText('Sparat · kvitto bekräftat')).toBeNull();
     release();
     await screen.findByText('Sparat · kvitto bekräftat');
+    await user.click(screen.getByText('Tidigare sparförsök', { selector: 'summary' }));
+    await user.click(screen.getByText('Visa kvittot', { selector: 'summary' }));
     expect(
-      await status.findByText(`Sparat: Lo Exempel. Kvitto: ${receipt.operationId}.`),
+      within(screen.getByRole('region', { name: 'Mina sparförsök' })).getByText(
+        `Sparat: Lo Exempel. Kvitto: ${receipt.operationId}.`,
+      ),
     ).toBeTruthy();
     const shared = await read();
     expect(shared.objects).toHaveLength(1);

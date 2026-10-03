@@ -17,7 +17,12 @@ type Reply = { data?: unknown; status?: number; error?: Error };
 const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
-  routes['/api/households/linden/text-assistant'] ??= [{ data: { available: false } }];
+  routes['/api/households/linden/text-assistant'] ??= Array.from({ length: 8 }, () => ({
+    data: { available: false },
+  }));
+  routes['/api/households/linden/map/conversation-preferences'] ??= [
+    { data: { showDraftOnStart: false } },
+  ];
   routes['/api/households/linden/conversation-consent'] ??= [{ data: { saved: null } }];
   routes['/api/households/linden/map?reload=0'] ??= [
     {
