@@ -138,8 +138,11 @@ test.each([
     // Approved for the visit: nothing is saved, and the start states the consent.
     expect(posts).toEqual([{ url: path, body: { consent: { textVersion: 2 } } }]);
     // jsdom has no microphone, so a start with voice says that the voice is not supported.
-    if (withVoice) expect((await screen.findByRole('alert')).textContent).toContain('röst');
-    else expect(screen.queryByRole('alert')).toBeNull();
+    if (withVoice)
+      expect((await screen.findByRole('region', { name: 'Samtalsnotis' })).textContent).toContain(
+        'Webbläsaren har inte stöd för röst. Du kan skriva till Skyttel.',
+      );
+    else expect(screen.queryByRole('region', { name: 'Samtalsnotis' })).toBeNull();
   },
 );
 
