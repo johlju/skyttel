@@ -307,7 +307,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
   }
 });
 
-test('UTKAST-13: a verified save keeps a newer field focused and current status opens explicitly', async ({
+test('UTKAST-13: a verified save keeps a newer field focused without the removed status controls', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -451,7 +451,7 @@ for (const viewport of [
   { width: 640, height: 500 },
   { width: 320, height: 250 },
 ])
-  test(`UTKAST-16: navigation and current status keep lower controls usable in both opening orders at ${viewport.width}px`, async ({
+  test(`UTKAST-16: navigation and draft feedback keep lower controls usable in both opening orders at ${viewport.width}px`, async ({
     page,
   }) => {
     const installation = await createInstallation();
