@@ -30,6 +30,9 @@ const assistant = (page: Page) => page.getByRole('region', { name: 'Arbetsyta', 
 async function signOut(page: Page) {
   await openProfile(page);
   await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Inloggningssätt', exact: true })).toBeVisible();
+  if ((page.viewportSize()?.width ?? 1280) <= 800)
+    await page.getByText('Välj inställning', { exact: true }).click();
   await page.getByRole('button', { name: 'Logga ut', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();
 }
