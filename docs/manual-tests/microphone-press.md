@@ -252,6 +252,36 @@ ljudstart efter släpp lämnar mikrofonen av”.
   tidigare tal. Automatiken mäter mikrofonspår och det utgående ljudet;
   den kontrollerade miljön verifierar inte faktiskt hört tal.
 
+### MIKROFONTRYCK-08: nytt samtal behåller mikrofonens läge efter väntande tal
+
+**Syfte:** Bevara samma godkända mikrofon när den nya anslutningen tar över.
+
+**Användare:** Användaren i det isolerade talprovet.
+
+**Förutsättningar:** Samma förberedelse som i fall 5. Öppna textvyn så att
+**Nytt samtal** är synlig.
+
+**Integrationstest:**
+[microphone-press.spec.ts](../../tests/integration/microphone-press.spec.ts),
+testfallet “MIKROFONTRYCK-08: nytt samtal behåller mikrofonen efter att
+väntande tal spelats klart”.
+
+**Steg:**
+
+1. Håll mikrofonen, tala efter tröskeln, släpp och låt det väntande talet
+   överföras. Vänta tills rösten är färdig.
+2. Tryck kort för att slå på mikrofonen och välj **Nytt samtal**. Tala
+   igen efter starten och kontrollera att rösten fortfarande fungerar.
+3. Stäng mikrofonen med kort tryck och välj **Nytt samtal** igen.
+
+**Förväntat resultat:**
+
+- Nytt samtal behåller samma mikrofon och dess på- eller avläge. Ett
+  tidigare avstängt läge blir inte på av sig självt.
+- Ingen ny tillåtelse för mikrofonen begärs. Automatiken kontrollerar
+  ett enda mikrofonanrop, ett levande spår och en ny ensam anslutning
+  för varje nytt samtal. Lyssnandet fungerar också efter övertagandet.
+
 ## Tillgänglighetsbedömning
 
 Designmålen omfattar tangentbord och inga tangentbordsfällor (WCAG 2.1.1,

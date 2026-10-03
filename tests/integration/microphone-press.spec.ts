@@ -221,6 +221,47 @@ test('MIKROFONTRYCK-07: spärrat ljud ger ingen inspelning och ljudstart efter s
   }
 });
 
+test('MIKROFONTRYCK-08: nytt samtal behåller mikrofonen efter att väntande tal spelats klart', async ({
+  page,
+}) => {
+  const { app } = await installation(page);
+  try {
+    await startConversationWithText(page);
+    await down(page);
+    await expect.poll(async () => (await tracks(page)).some((track) => track.enabled)).toBe(true);
+    await page.evaluate(() => window.skyttelVoiceFixture.setMicrophoneTone(440));
+    await page.waitForTimeout(250);
+    await page.mouse.up();
+    await expect(microphone(page)).not.toHaveAttribute('title', 'Avbryt starten av rösten');
+    await expect(microphone(page)).toHaveAttribute('aria-pressed', 'false');
+    await page.waitForTimeout(350);
+    await microphone(page).click();
+    await expect(microphone(page)).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await expect
+      .poll(async () => (await page.evaluate(() => window.skyttelVoiceFixture.stats())).peers)
+      .toBe(2);
+    await expect(microphone(page)).toHaveAttribute('aria-pressed', 'true');
+    const state = await page.evaluate(() => window.skyttelVoiceFixture.stats());
+    expect(state.microphoneRequests).toBe(1);
+    expect(state.microphoneTracks).toEqual([{ enabled: true, state: 'live' }]);
+    expect(state.openPeers).toBe(1);
+    await microphone(page).click();
+    await expect(microphone(page)).toHaveAttribute('aria-pressed', 'false');
+    await page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await expect
+      .poll(async () => (await page.evaluate(() => window.skyttelVoiceFixture.stats())).peers)
+      .toBe(3);
+    await expect(microphone(page)).toHaveAttribute('aria-pressed', 'false');
+    expect((await tracks(page))[0]).toEqual({ enabled: false, state: 'live' });
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneRequests)).toBe(
+      1,
+    );
+  } finally {
+    await app.close();
+  }
+});
+
 test('MIKROFONTRYCK-02: ett långt tryck utan medgivande gör som ett kort och startar inget i förväg', async ({
   page,
 }) => {
