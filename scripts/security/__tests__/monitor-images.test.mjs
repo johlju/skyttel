@@ -43,7 +43,7 @@ function evidence(reference, matches = []) {
       descriptor: {
         name: 'grype',
         version: '0.119.0',
-        db: { status: { valid: true, schemaVersion: '6.1.3', built: '2026-09-24T06:00:00Z' } },
+        db: { status: { valid: true, schemaVersion: 'v6.1.3', built: '2026-09-24T06:00:00Z' } },
       },
       matches,
     },
@@ -150,7 +150,7 @@ test('scans live and last distinct accepted rollback digests, without rebuilding
   assert.equal(result.targets[0].scannedAt, at);
   assert.equal(result.targets[0].scanner, 'grype-0.119.0');
   assert.deepEqual(result.targets[0].database, {
-    schemaVersion: '6.1.3',
+    schemaVersion: 'v6.1.3',
     built: '2026-09-24T06:00:00.000Z',
   });
   assert.equal(state.issues.length, 0);
@@ -182,6 +182,49 @@ test('automatic environment records do not hide accepted live and rollback image
       ],
     );
     assert.equal(state.issues.length, 0);
+  }
+});
+
+test('accepts Grype database schema versions with the published v prefix', async () => {
+  for (const schemaVersion of ['v6.1.10', '6.1.10']) {
+    const { run } = fixture();
+    const result = await run({
+      scan: async (reference) => {
+        const data = evidence(reference);
+        data.report.descriptor.db.status.schemaVersion = schemaVersion;
+        return data;
+      },
+    });
+    assert.equal(result.status, 'passed');
+    assert.ok(result.targets.every((target) => target.database.schemaVersion === schemaVersion));
+  }
+});
+
+test('malformed database schema versions keep image security unknown', async () => {
+  for (const schemaVersion of [
+    '',
+    'v',
+    '6',
+    '6.1',
+    'v6',
+    'v6.1',
+    '6.1.10.1',
+    'v6.1.10.1',
+    'v6.invalid',
+    'v6.1.10-extra',
+    null,
+  ]) {
+    const { state, run } = fixture();
+    const result = await run({
+      scan: async (reference) => {
+        const data = evidence(reference);
+        data.report.descriptor.db.status.schemaVersion = schemaVersion;
+        return data;
+      },
+    });
+    assert.equal(result.status, 'unknown');
+    assert.ok(result.targets.every((target) => target.reason === 'scan_evidence_unavailable'));
+    assert.equal(state.issues[0].state, 'open');
   }
 });
 
