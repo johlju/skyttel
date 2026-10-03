@@ -45,11 +45,12 @@ månadsantaganden utan att förväxla uppskattning med faktura.
 
 **Steg:**
 
-1. Välj **Starta röst**, vänta på **Lyssnar** och kör `delegate` i
+1. Välj **Prata med Skyttel**, vänta på **Lyssnar** och kör `delegate` i
    terminalen. Uppdraget går genom röstens verkliga Terra-arbete. Vänta på
    **Det kontrollerade kostnadsprovet är klart.**
-2. Kör `usage 90` och välj
-   **Stäng av rösten**. Vänta på avstängd röst.
+2. Kör `usage 90` och stäng av mikrofonen med **Prata med Skyttel**.
+   Vänta tills röstrutan har försvunnit och röstanslutningen har stängts,
+   några sekunder senare.
 3. Öppna **Månadskostnad**. Kontrollera aktuell månad i UTC, Render
    **72,50 SEK (7,25 USD)**, Live **0,75 SEK (0,075 USD)** och Terra
    **2,29 SEK (0,229 USD)**. Öppna **Visa mätvärden för Live** och
@@ -94,9 +95,9 @@ månadsantaganden utan att förväxla uppskattning med faktura.
 **Steg:**
 
 1. Skicka **Prova kostnadsunderlaget.** och vänta på det kontrollerade svaret.
-2. Starta rösten och vänta på **Lyssnar**. Kör `usage 12`, `usage 15`,
-   `usage 15` och `finalize off`, en rad i taget. Stäng rösten och vänta
-   på avstängd status.
+2. Välj **Prata med Skyttel** och vänta på **Lyssnar**. Kör `usage 12`,
+   `usage 15`, `usage 15` och `finalize off`, en rad i taget. Stäng av
+   mikrofonen och vänta tills röstanslutningen har stängts.
 3. Öppna **Månadskostnad** och **Visa mätvärden för Live** samt
    **Visa mätvärden för Terra**. Live ska visa ett försök, 15 rapporterade
    sekunder, osäkert slutunderlag och **0,13 SEK (0,0125 USD)**.
@@ -265,10 +266,11 @@ To generate Terra usage, choose **Samtal och text**, select
 **Prova kostnadsunderlaget.** The fixed response is
 **Det kontrollerade kostnadsprovet är klart.** No map change is proposed.
 
-To generate Live usage, choose **Starta röst**, wait for **Lyssnar. Du kan
-tala, rätta eller be att spara hela utkastet.**, then enter `usage` commands
-in the terminal. Keep the tab active
-until **Stäng av rösten** finishes. The fixture supplies silent media
+To generate Live usage, choose **Prata med Skyttel**, wait for **Lyssnar**
+in the voice box, then enter `usage` commands in the terminal. Choose
+**Prata med Skyttel** again to turn the microphone off, and keep the tab
+active until the voice connection closes a few seconds after Skyttel is
+quiet. The fixture supplies silent media
 tracks; it neither listens nor speaks. A new session requires a new start
 action. Set `finalize off` before stopping to preserve provisional usage.
 

@@ -33,7 +33,9 @@ formuläret. Att bara välja objektet eller sambandet öppnar inte formuläret.
    **Person**, med beskrivningen **Påhittad uppgift** i ditt utkast.
    Spara inte. TAL-01 har egna förberedelser nedan.
 3. För TAL-02 och TAL-03: välj **Samtal och text**, välj
-   **Godkänn och starta** i medgivanderutan och sedan **Starta röst**.
+   **Godkänn och starta** i medgivanderutan och sedan **Prata med Skyttel**
+   i **Kartans verktyg**. Knappen är intryckt, och röstrutan visar
+   **Lyssnar**.
    Kontrollerade kommandon nedan skrivs i startguidens
    terminal. Ersätt `REQUEST`, `VERSION`, `CONTENT` och objekt-ID med värden
    från första `held`-meddelandets `draft`. Efter ett verktyg som ändrar
@@ -120,7 +122,8 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    **Visa kvittot**. Återläs priset 189, Lo Lind, inloggningsadressen och
    befintliga betalningsroller. Utkastet ska vara tomt, osänd formulärtext
    bevarad och tidigare okända/osäkra uppgifter oförändrade.
-8. Stäng rösten och kontrollera avslutade spår enligt startguiden.
+8. Stäng av mikrofonen med **Prata med Skyttel**. Vänta tills röstrutan
+   har försvunnit och kontrollera avslutade spår enligt startguiden.
    Avsluta samtalet och välj **Samtal och text**. Det nya samtalet startar
    utan medgivanderuta under samma besök. Öppna
    **Tidigare sparförsök**. Familjens kvitto och sparade karta ska
@@ -134,8 +137,9 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
    Lo Exempel, typ Person, med beskrivningen Påhittad uppgift i utkastet.
    Välj Lo och skriv **Osänd text som ska finnas kvar** i beskrivningen
    utan att lägga texten i utkastet. Godkänn assistentens båda val.
-   Kontrollera att mikrofonen inte används före **Starta röst**. Starta
-   rösten och tillåt mikrofonen. Om ljud blockeras, välj **Spela upp ljud**.
+   Kontrollera att mikrofonen inte används före **Prata med Skyttel**.
+   Välj knappen och tillåt mikrofonen. Om ljud blockeras, välj
+   **Spela upp ljud**.
 2. Beskriv familjens Molnmusik med rösten: separat tjänstekonto, kontaktadress
    och inloggningsadress, Alex som avtalspart, Kim som betalare och ett kort
    som betalningsmedel. Lo använder tjänsten. Ange 149 kr per månad.
@@ -147,7 +151,7 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
 5. Säg **Rätta priset till 189 kr och spara**. Inget tangentbord behövs
    för kartarbetet efter röststart.
 6. Öppna kvittot och återläs roller, pris, kunskapsstatus och osänd text.
-   Stäng rösten. Fortsätt med ett normalt formulär.
+   Stäng av mikrofonen. Fortsätt med ett normalt formulär.
 7. Anteckna den faktiskt provade enheten, mikrofonen och ljudutgången.
    Ytterligare Windows-, iPhone- och iPad-prov hör till den uppskjutna
    enhetsmatrisen i #97. De är inga nya villkor för detta falls eller
@@ -194,7 +198,9 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
 3. Skriv `user Rätta namnet.` och `delegate`. Låt anropet vara hållet.
    Kopiera Lo-förslagets fullständiga `after`-värde och versioner från `held`.
 4. Kör `window.skyttelVoiceFixture.disconnect()` i webbläsarkonsolen.
-   Kräv avstängd mikrofon direkt och avslutad röst efter tre sekunder.
+   Kräv att **Prata med Skyttel** inte längre är intryckt och att
+   mikrofonspåret är avstängt direkt. Efter tre sekunder är rösten avslutad
+   och felet **Röstanslutningen avbröts** visas.
 5. Släpp det gamla anropet med `tool REQUEST propose_object` följt av JSON
    med ursprunglig `version`, `contentVersion`, Lo-förslagets `id`,
    `baseRevision:null` och `value` lika med kopierat `after`, men ändrat
@@ -221,7 +227,7 @@ and Terra”, provar inspelat svenskt tal genom verkliga leverantörer enligt
 **Förutsättningar:** Lo-förslaget finns och rösten är igång.
 Använd en telefonbred vy, 390 × 844 CSS-pixlar i det automatiska provet.
 Markeringen och detaljpanelens sammanfattning ska vara synliga samtidigt
-som röstkortet är öppet; kortet får inte täcka detaljpanelens kontroller.
+som statuskortet är öppet; kortet får inte täcka detaljpanelens kontroller.
 Prova även navigationen vid 640 × 500 och 320 × 250 CSS-pixlar.
 
 **Integrationstest:**
@@ -246,8 +252,10 @@ databasens sparande; redovisa inte det som ett prov av förlorat sådant svar.
    Avsluta nästa anrop med `reply REQUEST Försöket är förberett.`.
 3. Kräv väntande sparförsök och ingen sparbekräftelse. Anteckna det riktiga
    operation-ID:t från **Tidigare sparförsök**; modellens `tal-prov` är inte
-   kvittots ID. Stäng rösten och kör `restart` i terminalen.
-4. Ladda om webbläsaren, godkänn en ny assistentanslutning och starta rösten.
+   kvittots ID. Stäng av mikrofonen med **Prata med Skyttel** och vänta
+   tills röstrutan har försvunnit. Kör `restart` i terminalen.
+4. Ladda om webbläsaren, godkänn en ny assistentanslutning och välj
+   **Prata med Skyttel**.
    Skriv `user Slutför samma sparförsök.` och `delegate`. Inget Terra-svar
    behöver släppas: det exakta väntande försöket återhämtas via MCP.
 5. Kontrollera ett genomfört kvitto med samma operation-ID och Lo i kartan.
@@ -255,9 +263,11 @@ databasens sparande; redovisa inte det som ett prov av förlorat sådant svar.
    kvar även om ett ljudsvar inte hördes. Vänta på avstängd röst, ladda om
    och godkänn en ny textassistentanslutning. Öppna **Tidigare sparförsök**
    och kontrollera samma genomförda kvitto igen.
-6. Starta rösten igen. Kör `usage 12`, `usage 15` och `finalize off`.
-   Stäng rösten. Kontrollera nätverkssvarets `voice.seconds:15` och
-   `voice.usageFinal:false`. Återställ `finalize on` innan nästa prov.
+6. Slå på mikrofonen igen. Kör `usage 12`, `usage 15` och `finalize off`.
+   Stäng av mikrofonen. Röstanslutningen stängs några sekunder efter att
+   Skyttel har tystnat. Kontrollera stoppsvarets `voice.seconds:15` och
+   `voice.usageFinal:false` i nätverkspanelen. Återställ `finalize on`
+   innan nästa prov.
 
 **Förväntat resultat:**
 
@@ -277,9 +287,10 @@ när den gemensamma assistenten används genom rösten.
 
 **Förutsättningar:** Starta en ny installation enligt
 [röstförberedelsen](#controlled-voice-fixture). Skapa Talprov
-med Lo Exempel som osparat Person-förslag. Starta samtalet och rösten.
-Vänta på **Lyssnar**. Anteckna kartans aktuella urval. Tysta mediespår
-och terminalens kommentarspaket är inte bevis för hört tal.
+med Lo Exempel som osparat Person-förslag. Starta samtalet och slå på
+mikrofonen med **Prata med Skyttel**. Vänta på **Lyssnar** i röstrutan.
+Anteckna kartans aktuella urval. Tysta mediespår och terminalens
+kommentarspaket är inte bevis för hört tal.
 
 **Integrationstest:**
 [voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
@@ -287,24 +298,22 @@ och terminalens kommentarspaket är inte bevis för hört tal.
 
 **Steg:**
 
-1. Kontrollera röstens synliga förklaring: AI-rösten kan innehålla fel;
-   Skyttels status och kvitton bekräftar vad som har sparats eller markerats.
-2. Kör `user Kontrollera utkastet.` och `delegate` i terminalen. Vänta på
+1. Kör `user Kontrollera utkastet.` och `delegate` i terminalen. Vänta på
    `held` och ersätt `REQUEST` med anropets ID:
 
    ```text
    reply REQUEST Klart. Ändringarna är nu lagrade i hushållets karta.
    ```
 
-3. Kontrollera webbläsarens **Assistentens samtalstext – inte en
+2. Kontrollera webbläsarens **Assistentens samtalstext – inte en
    bekräftelse**, kvarvarande Lo-förslag och status utan bekräftat sparande
    eller ny markering.
-4. Kör `sessions`. Läs det senaste paketet med typen
+3. Kör `sessions`. Läs det senaste paketet med typen
    `session.commentary.append`. Beskedet **Utkast: 1 osparat förslag**
    ska beskriva det faktiska utkastet utan att bekräfta något sparande
    eller någon markering. Modellens svar ska stå separat, citerat under
    **Samtal (obekräftat)**.
-5. Upprepa `user Kontrollera utkastet.` och `delegate` för varje rad
+4. Upprepa `user Kontrollera utkastet.` och `delegate` för varje rad
    nedan. Använd det nya hållna anropets ID och släpp ett svar i taget:
 
    ```text
@@ -313,31 +322,31 @@ och terminalens kommentarspaket är inte bevis för hört tal.
    reply REQUEST Har du sparat tidigare, och vem betalar?
    ```
 
-6. Kontrollera oförändrat utkast och urval samt avsaknad av nytt kvitto.
+5. Kontrollera oförändrat utkast och urval samt avsaknad av nytt kvitto.
    Frågan ska finnas i samtalsdelen och som obekräftad text i det senaste
    kommentarspaketet.
-7. Kör `user Markera Lo Exempel.` och `delegate`. Kopiera Lo-förslagets
+6. Kör `user Markera Lo Exempel.` och `delegate`. Kopiera Lo-förslagets
    ID från `held.draft` och använd följande kommando:
 
    ```text
    tool REQUEST show_map_object {"objectId":"LO-ID"}
    ```
 
-8. Nästa `held.lastToolResult` ska visa `displayed:true`. Släpp med
+7. Nästa `held.lastToolResult` ska visa `displayed:true`. Släpp med
    `reply REQUEST Vem betalar?`. Kräv verkligt markerad Lo, bekräftad
    markeringsstatus och kvarvarande fråga som obekräftad samtalstext.
    Kontrollera samma uppdelning i det senaste kommentarspaketet.
-9. Kör `user Spara hela utkastet nu.` och `delegate`. Läs `version` och
+8. Kör `user Spara hela utkastet nu.` och `delegate`. Läs `version` och
    `contentVersion` från det nya `held.draft`. Ersätt markörerna och kör:
 
    ```text
    tool REQUEST save_draft {"version":VERSION,"contentVersion":CONTENT,"operationId":"voice-proof-save"}
    ```
 
-10. Kräv statusen **Sparat. Hela utkastet finns i hushållets karta.**
-    Öppna kvittot och återläs Lo. Kontrollera att det senaste
-    kommentarspaketets sparbesked är verifierat. Stäng rösten, välj
-    `quit` och kontrollera städningen enligt guiden.
+9. Kräv statusen **Sparat. Hela utkastet finns i hushållets karta.**
+   Öppna kvittot och återläs Lo. Kontrollera att det senaste
+   kommentarspaketets sparbesked är verifierat. Stäng av mikrofonen, välj
+   `quit` och kontrollera städningen enligt guiden.
 
 **Förväntat resultat:**
 
@@ -348,10 +357,10 @@ och terminalens kommentarspaket är inte bevis för hört tal.
 - De sista verktygsanropen ger faktisk markeringsbekräftelse respektive
   sparat innehåll och kvitto. De fria orden ersätter aldrig dessa bevis.
 
-### TAL-05: dialog, mikrofonpaus och arbetstid finns kvar under samtalet
+### TAL-05: dialog, avstängd mikrofon och arbetstid finns kvar under samtalet
 
-**Syfte:** Följa båda talarna, pausa mikrofonen utan att tappa samtalet och
-se väntetiden under kartarbete.
+**Syfte:** Följa båda talarna, stänga av mikrofonen utan att tappa samtalet
+och se väntetiden under kartarbete.
 
 **Användare:** Alex i den kontrollerade installationen.
 
@@ -361,7 +370,8 @@ tysta mediespår; verkligt tal redovisas separat i TAL-01.
 
 **Integrationstest:**
 [voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
-“TAL-05: dialog, mikrofonpaus och arbetstid finns kvar under samtalet”.
+“TAL-05: dialog, avstängd mikrofon och arbetstid finns kvar under
+samtalet”.
 
 **Steg:**
 
@@ -386,7 +396,8 @@ tysta mediespår; verkligt tal redovisas separat i TAL-01.
 2. Läs samtalet. **Du** har en sammanhållen rad med **Kim betalar för
    musiken.**, **Skyttel** har **Jag lyssnar. Berätta mer.** och den senare
    rättelsen **Rätta till Lo.** ligger på en ny rad.
-3. Välj **Pausa mikrofon**. Kräv **Mikrofonen är pausad** och kör:
+3. Välj **Prata med Skyttel**. Knappen är inte längre intryckt. Kör
+   genast, inom tre sekunder:
 
    ```javascript
    window.skyttelVoiceFixture.disconnect();
@@ -395,22 +406,23 @@ tysta mediespår; verkligt tal redovisas separat i TAL-01.
    ```
 
 4. Mikrofonspåret ska fortfarande ha `enabled: false` och `state: 'live'`.
-   Välj **Återuppta mikrofon** och kontrollera `enabled: true`, samma
+   Välj **Prata med Skyttel** igen och kontrollera `enabled: true`, samma
    antal anslutningar och kvarvarande dialog.
 5. Kör `user Kontrollera utkastet.` och `delegate` i terminalen. Låt
    modellanropet vara hållet och kontrollera att arbetsindikeringen syns
    längst ned med ökande tid. Släpp sedan det hållna anropet med
    `reply REQUEST Vem använder musiken?`, där `REQUEST` är dess ID.
-6. Kräv frågan i dialogen och avslutad arbetsindikering. Stäng rösten:
-   tidigare dialog finns kvar. Välj **Avsluta samtalet**:
+6. Kräv frågan i dialogen och avslutad arbetsindikering. Stäng av
+   mikrofonen: tidigare dialog finns kvar. Välj **Avsluta samtalet**:
    dialogen försvinner medan Lo-förslaget finns kvar i utkastet.
 
 **Förväntat resultat:**
 
 - Fragment visas löpande med talarroll och sammanhängande korta pauser.
   Tidigare rader ersätts inte av det senaste svaret.
-- Paus behåller samtal och ljuduppspelning. En återhämtad anslutning
-  startar inte en mikrofon som användaren har pausat.
+- Avstängd mikrofon behåller samtal och ljuduppspelning medan Skyttel
+  talar klart. En återhämtad anslutning slår inte på en mikrofon som
+  användaren har stängt av.
 - Arbetsstatus och tid skiljer väntan från ett färdigt svar. Klockan
   ger inga upprepade statusuppläsningar för skärmläsaren.
 - Dialogen är tillfällig och är inte ett sparkvitto. Avslut tar bort
@@ -438,20 +450,23 @@ finns kvar. Anteckna utkastets innehåll och version.
 3. Släpp det gamla anropet med ett `propose_object` som försöker byta
    Lo-förslagets namn till **För sent**. Använd det hållna anropets version,
    innehållsversion och hela tidigare objektvärde enligt TAL-01:s verktygssteg.
-4. Kräv avbrottsbesked och oförändrat utkast. Välj **Stäng av rösten**,
+4. Kräv avbrottsbesked och oförändrat utkast. Stäng av mikrofonen med
+   **Prata med Skyttel** och vänta tills röstrutan har försvunnit. Välj
    sedan **Öppna samtalet**. **Osänd rättelse** ska finnas kvar.
 5. Välj **Avsluta samtalet**. Samtalet försvinner, Lo-förslaget finns kvar.
 
 **Förväntat resultat:**
 
 - Avbrott stoppar det gamla uppdragets sena ändringar, utan att radera förslag.
-- Röst av, uppdragsavbrott och samtalsavslut är separata handlingar.
-- Röstresurser avslutas vid avstängning; oskickad text behålls tills samtalet avslutas.
+- Avstängd mikrofon, uppdragsavbrott och samtalsavslut är separata
+  handlingar.
+- Röstresurser avslutas när Skyttel har tystnat efter avstängningen;
+  oskickad text behålls tills samtalet avslutas.
 
-### TAL-07: uppmätt ljudaktivitet skiljs från mikrofonpaus och består i Inställningar
+### TAL-07: uppmätt ljudaktivitet skiljs från avstängd mikrofon och består i Inställningar
 
-**Syfte:** Skilja ljudaktivitet från mikrofonens tillstånd och bevara
-anslutningen vid paus och navigering.
+**Syfte:** Skilja ljudaktivitet från mikrofonens läge och bevara
+anslutningen medan Skyttel talar klart och användaren navigerar.
 
 **Användare:** Alex i den kontrollerade installationen.
 
@@ -461,42 +476,46 @@ svensk talförståelse, högtalare eller fysisk mikrofon.
 
 **Integrationstest:**
 [voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
-“TAL-07: uppmätt ljudaktivitet skiljs från mikrofonpaus och består i Inställningar”.
+“TAL-07: uppmätt ljudaktivitet skiljs från avstängd mikrofon och består i
+Inställningar”.
 
 **Steg:**
 
-1. Kräv stilla vågform. Kör i webbläsarkonsolen:
+1. Kräv sju stilla punkter i röstrutan. Kör i webbläsarkonsolen:
 
    ```javascript
    window.skyttelVoiceFixture.setSound('microphone', true);
    ```
 
 2. Kräv **Du talar** och rörlig vågform. Stäng signalen med samma anrop
-   och `false`. Starta sedan `setSound('remote', true)`; kräv **Skyttel talar**.
+   och `false`; röstrutan visar **Lyssnar**. Starta sedan
+   `setSound('remote', true)`; kräv **Skyttel talar**.
 3. Aktivera webbläsarens minskade rörelse. Vågformen ska finnas kvar men
    stå stilla, samtidigt som **Skyttel talar** visas.
-4. Pausa mikrofonen med kartverktygets cirkel och stoppruta. Kräv
-   **Mikrofonen är pausad** och fortsatt **Skyttel talar**. `stats()` ska
-   visa en öppen anslutning, ett ljudobjekt, levande avstängt mikrofonspår och
-   levande påslaget inkommande spår.
+4. Stäng av mikrofonen med **Prata med Skyttel**. Knappen visar samma
+   mikrofonsymbol men är inte längre intryckt, och röstrutan visar fortsatt
+   **Skyttel talar**. `stats()` ska visa en öppen anslutning, ett
+   ljudobjekt, levande avstängt mikrofonspår och levande påslaget
+   inkommande spår.
 5. Skriv **Kvar i samtalet** utan att skicka. Öppna Inställningar och
-   invänta sidrubrikens fokus. Kräv både **Mikrofonen är pausad** och
-   **Skyttel talar** i den kompakta statusytan.
-   Återuppta mikrofonen i kortet. Fokusera **Öppna samtalet** med tangentbord
-   och tryck Enter. Kräv kvarvarande text och fokus på samtalspanelens rubrik.
-6. Stoppa den inkommande signalen. **Skyttel talar** försvinner. Stäng
-   rösten: vågformen försvinner och resurserna avslutas.
+   invänta sidrubrikens fokus. Kräv **Skyttel talar** i röstrutan längst
+   ned. Fokusera **Öppna samtalet** med tangentbord och tryck Enter. Kräv
+   kvarvarande text och fokus på samtalspanelens rubrik.
+6. Stoppa den inkommande signalen. Röstrutan försvinner, och några
+   sekunder senare är resurserna avslutade.
 
 **Förväntat resultat:**
 
 - Vågformen följer uppmätt ljud i den befintliga anslutningen; tystnad
   eller transkript startar ingen animation. Minskad rörelse behåller status.
-- Mikrofonpaus stoppar eget ljud utan att stoppa inkommande ljud eller
-  skapa en ny leverantörsanslutning. Tangentbordsfokus följer återgången.
+- Avstängd mikrofon stoppar eget ljud utan att stoppa inkommande ljud
+  eller skapa en ny leverantörsanslutning. Tangentbordsfokus följer
+  återgången.
 - Prova även ljust och mörkt tema, smal skärm och faktisk webbläsarzoom
   200 och 400 procent. Kortets kontroller nås med tangentbord och rullning
   i kortet eller arbetsytan utan horisontell sidrullning. Prova även
-  kartmarkering och navigering med stängd dialog. Anteckna faktiskt provade storlekar.
+  kartmarkering och navigering med stängd dialog. Anteckna faktiskt
+  provade storlekar.
 
 ### TAL-08: nödvändiga frågor och fel nås med stängd samtalstext
 
@@ -557,13 +576,17 @@ avbruten start.
 2. Skicka ett textmeddelande och svara från startguiden. Mikrofonen ska
    fortfarande vara oanvänd och inga röstanslutningar skapade.
 3. Kör `window.skyttelVoiceFixture.setMicrophone('hold')` i konsolen.
-   Välj **Starta röst**. Kräv **Väntar på mikrofonåtkomst** och mikrofon av.
-   Välj **Avbryt talstart**, kör `releaseMicrophone()` på samma testobjekt
-   och kontrollera att det sena mikrofonspåret avslutas utan röstanslutning.
-4. Välj läget `deny` och starta igen. Kräv fel, bevarad dialog och
-   fungerande textfält. Byt till `allow`, sätt `setAutoStart(false)` och starta.
-5. Kräv **Ansluter rösten** med avstängd mikrofon. Kör `started()` på
-   testobjektet. Först nu får mikrofonen vara på.
+   Välj **Prata med Skyttel**. Kräv **Rösten startar** i röstrutan,
+   beskrivningen **Avbryt starten av rösten** på knappen och mikrofon av.
+   Välj **Prata med Skyttel** igen, kör `releaseMicrophone()` på samma
+   testobjekt och kontrollera att det sena mikrofonspåret avslutas utan
+   röstanslutning.
+4. Välj läget `deny` och välj knappen igen. Kräv fel, bevarad dialog och
+   fungerande textfält. Byt till `allow`, sätt `setAutoStart(false)` och
+   välj knappen.
+5. Kräv **Rösten startar** med avstängd mikrofon. Kör `started()` på
+   testobjektet. Först nu är knappen intryckt och röstrutan visar
+   **Lyssnar**.
 
 **Förväntat resultat:**
 
@@ -571,6 +594,353 @@ avbruten start.
   medgivanderutan eller använda text begär inte mikrofonåtkomst.
 - Sen mikrofonåtkomst återupplivar inte avbruten start. Avslag lämnar
   samtalet användbart. Klar anslutning och mikrofonåtkomst skiljs åt.
+
+## Mikrofonen och röstrutan
+
+Fallen TAL-10 till TAL-16 använder den
+[kontrollerade startguiden](#controlled-voice-fixture) med Talprov och
+Lo Exempel som osparat förslag, enligt förberedelsens steg 2. Starta en ny
+installation för varje fall. Kommandon som `setSound` och `stats()` körs i
+webbläsarkonsolen, och `user`, `delegate` och `reply` i startguidens
+terminal. TAL-17 kräver riktig utrustning.
+
+### TAL-10: Prata med Skyttel slår på och av mikrofonen utan att någon panel öppnas
+
+**Syfte:** Slå på och av mikrofonen med ett kort tryck, avbryta starten och
+se att bara röstrutan visas.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Kartan visar vägledningen. Inget medgivande är
+godkänt under besöket.
+
+**Integrationstest:**
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
+testfallet “TAL-10: Prata med Skyttel slår på och av mikrofonen utan att
+någon panel öppnas”.
+
+**Steg:**
+
+1. Kontrollera att **Prata med Skyttel** i **Kartans verktyg** visar en
+   mikrofon, inte är intryckt och har samma färg som de andra verktygen.
+2. Kör `window.skyttelVoiceFixture.setMicrophone('hold')`. Välj **Tala** i
+   vägledningen och **Godkänn och starta** i medgivanderutan.
+3. Läs röstrutan och för muspekaren över **Prata med Skyttel**.
+4. Välj **Prata med Skyttel**. Kör `releaseMicrophone()` och sedan
+   `setMicrophone('allow')` på samma testobjekt.
+5. Välj **Prata med Skyttel** igen.
+6. Välj **Prata med Skyttel** en gång till. Vänta några sekunder och kör
+   `window.skyttelVoiceFixture.stats()`.
+7. Välj **Prata med Skyttel** igen.
+
+**Förväntat resultat:**
+
+- Steg 3: röstrutan visar grå punkter och **Rösten startar**, utan
+  stoppikon. Knappen heter fortfarande **Prata med Skyttel**, är inte
+  intryckt och beskrivs **Avbryt starten av rösten**.
+- Steg 4: röstrutan försvinner. Det sena mikrofonspåret avslutas, och
+  ingen röstanslutning skapas.
+- Steg 5: knappen är intryckt och har accentfärg. Röstrutan visar sju
+  punkter och **Lyssnar**. Ingen panel öppnas, och samtalets textfält syns
+  inte.
+- Steg 6: knappen är inte intryckt, och röstrutan försvinner direkt.
+  Mikrofonspåret är avstängt från första stund och avslutat när
+  röstanslutningen har stängts: `openPeers: 0`.
+- Steg 7: samma samtal fortsätter utan medgivanderuta, och röstrutan visar
+  **Lyssnar**.
+
+### TAL-11: Skyttel arbetar färdigt och talar klart när mikrofonen stängs av
+
+**Syfte:** Låta Skyttel bearbeta det sagda och tala klart sitt svar när
+mikrofonen stängs av mitt i arbetet, utan att något mer ljud skickas.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Samtalet är startat med **Prata med Skyttel**, och
+röstrutan visar **Lyssnar**.
+
+**Integrationstest:**
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
+testfallet “TAL-11: Skyttel arbetar färdigt och talar klart när mikrofonen
+stängs av”.
+
+**Steg:**
+
+1. Kör `user Rätta namnet till Lo Lind.` och `delegate`. Låt anropet vara
+   hållet.
+2. Välj **Prata med Skyttel**. Kör `stats()`. Flytta fokus till
+   **Återställ vy** med Tab.
+3. Kör `setSound('remote', true)`. Släpp anropet med ett
+   `propose_object` som ändrar Lo-förslagets namn till **Lo Lind**, enligt
+   TAL-02:s verktygssteg, och nästa anrop med
+   `reply REQUEST Namnet är ändrat i utkastet.`.
+4. Kör `sessions`. Kör sedan `setSound('remote', false)` och vänta några
+   sekunder. Kör `stats()`.
+
+**Förväntat resultat:**
+
+- Steg 1: röstrutan visar **Skyttel arbetar** och stoppikonen **Avbryt**.
+- Steg 2: knappen är inte intryckt men går att välja. Mikrofonspåret har
+  `enabled: false` och `state: 'live'`. Röstrutan visar fortfarande
+  **Skyttel arbetar**.
+- Steg 3: utkastet visar **Lo Lind**. Röstrutan visar **Skyttel talar**.
+- Steg 4: `sessions` visar ett kommentarspaket för uppdraget. Röstrutan
+  försvinner när ljudet tystnar, och skärmläsaren får **Mikrofonen är av**.
+  Därefter är anslutningen stängd och mikrofonspåret avslutat. Inget fel
+  visas.
+
+### TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåller förslagen
+
+**Syfte:** Stoppa ett talat uppdrag och tysta Skyttels röst med
+stoppikonen, utan att redan föreslagna ändringar försvinner.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Mikrofonen är på. Anteckna utkastets innehåll.
+
+**Integrationstest:**
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
+testfallet “TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel
+men behåller förslagen”.
+
+**Steg:**
+
+1. Kör `user Rätta namnet.` och `delegate`. Låt anropet vara hållet.
+2. Gå med Tab till **Avbryt** i röstrutan och tryck Enter.
+3. Släpp det gamla anropet med ett `propose_object` som byter namnet till
+   **För sent**.
+4. Kör `setSound('remote', true)`. Välj **Avbryt** och kör `stats()`.
+5. Kör `setSound('remote', false)`, vänta en sekund och kör
+   `setSound('remote', true)` igen.
+
+**Förväntat resultat:**
+
+- Steg 2: röstrutan visar **Lyssnar** utan stoppikon. Fokus står på
+  **Prata med Skyttel**, som fortfarande är intryckt.
+- Steg 3: utkastet är oförändrat. Lo heter fortfarande Lo Exempel, och
+  inget kommentarspaket skickas för det avbrutna uppdraget.
+- Steg 4: röstrutan visar **Lyssnar**. `silencedAudioElements` är 1:
+  Skyttels röst är tyst.
+- Steg 5: `silencedAudioElements` är 0, och röstrutan visar
+  **Skyttel talar** igen.
+
+### TAL-13: ett skrivet meddelande visar aldrig röstrutan och stänger av mikrofonknappen
+
+**Syfte:** Hålla röstrutan borta från ett samtal med enbart text och låta
+mikrofonknappen vänta medan Skyttel arbetar med ett skrivet meddelande.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Samtalet är startat med **Samtal och text**.
+
+**Integrationstest:**
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
+testfallet “TAL-13: ett skrivet meddelande visar aldrig röstrutan och
+stänger av mikrofonknappen”.
+
+**Steg:**
+
+1. Skriv **Beskriv utkastet.** och välj **Skicka**. Låt anropet vara
+   hållet.
+2. Släpp anropet med `reply REQUEST Utkastet har ett förslag.`.
+3. Skicka ett nytt meddelande och välj **Avbryt uppdrag** medan anropet
+   är hållet.
+4. Välj **Prata med Skyttel**. Skicka **Beskriv det nu.** i textfältet och
+   välj **Avbryt** i röstrutan medan anropet är hållet.
+
+**Förväntat resultat:**
+
+- Steg 1: **Prata med Skyttel** är avstängd, och ingen röstruta visas.
+- Steg 2 och 3: knappen går att välja igen när Skyttel är klar eller
+  uppdraget är avbrutet. Ingen röstruta visas, och ingen mikrofon används.
+- Steg 4: med mikrofonen på visar röstrutan **Skyttel arbetar** med
+  stoppikonen. Efter **Avbryt** visar den **Lyssnar**.
+
+### TAL-14: röstrutan visar ett statusord åt gången och en vågform som följer rösten
+
+**Syfte:** Se statusordens ordning, vågformens fyra former och de två
+fasta formerna vid minskad rörelse.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Mikrofonen är på, och röstrutan visar **Lyssnar**.
+
+**Integrationstest:**
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
+testfallet “TAL-14: röstrutan visar ett statusord åt gången och en vågform
+som följer rösten”.
+
+**Steg:**
+
+1. Läs röstrutan. Kör `setSound('microphone', true, 0.08)` och sedan
+   `setSound('microphone', true, 0.9)`.
+2. Kör `setSound('remote', true)` med mikrofonljudet kvar.
+3. Kör `user Beskriv utkastet.` och `delegate`. Släpp sedan anropet med
+   `reply REQUEST Utkastet har ett förslag.`.
+4. Slå på minskad rörelse i operativsystemet eller i webbläsarens
+   utvecklarverktyg. Stoppa sedan Skyttels ljud och därefter
+   mikrofonljudet.
+
+**Förväntat resultat:**
+
+- Steg 1: **Lyssnar** har sju punkter i accentfärg. **Du talar** har
+  staplar i accentfärg som är låga vid svagt ljud och höga vid starkt ljud.
+- Steg 2: **Skyttel talar** går före **Du talar**. Staplarna rör sig
+  jämnt i textfärg, och stoppikonen visas.
+- Steg 3: **Skyttel arbetar** går före båda, med stilla punkter. Rutan blir
+  bredare men aldrig högre. Efter svaret visar den **Skyttel talar**.
+- Steg 4: vågformen rör sig inte. **Skyttel talar** och **Du talar** har
+  samma sju stilla staplar, som inte ändras med ljudnivån. **Lyssnar** har
+  sju punkter. Formerna byts utan övergång. Statusordet
+  **Mikrofonen är av** visas aldrig.
+
+### TAL-15: röstrutan står på sin plats och täcker aldrig kartans rad eller återkoppling
+
+**Syfte:** Placera röstrutan uppe till höger på dator och bred pekskärm och
+vid nederkanten till höger på smal skärm.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Mikrofonen är på. Prova ett fönster på 1280 × 800,
+820 × 1180 och 390 × 844 CSS-pixlar.
+
+**Integrationstest:**
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
+testfallen “TAL-15: röstrutan står på sin plats på dator och täcker aldrig
+kartans rad eller återkoppling”, samma titel med “bred pekskärm” och med
+“smal skärm”.
+
+**Steg:**
+
+1. Välj **Återställ vy** så att kartans återkoppling visas.
+2. Kör `user Beskriv utkastet.` och `delegate`.
+3. Öppna **Lista** och se var röstrutan står.
+
+**Förväntat resultat:**
+
+- På dator och bred pekskärm står röstrutan uppe till höger, och kartans
+  återkoppling står under den. På smal skärm står den till höger vid
+  nederkanten, ovanför statuskortet och återkopplingen.
+- Röstrutan täcker aldrig raden med **Återställ vy** eller kartans
+  återkoppling. Med **Skyttel arbetar** blir den bredare men står kvar på
+  samma plats och har samma höjd.
+- Med Lista öppen står röstrutan bredvid **Till kartan** på dator och vid
+  nederkanten på smal skärm. Sidan rullar inte i sidled.
+
+### TAL-16: hjälpmedel får röstrutans namn, knappens läge och uppläsningarna i tur
+
+**Syfte:** Ge skärmläsaren knappens läge, röstrutans namn och de tre
+uppläsningarna, en gång och utan att avbryta.
+
+**Användare:** Alex i den kontrollerade installationen, med skärmläsare
+om en sådan finns.
+
+**Förutsättningar:** Inget samtal pågår.
+
+**Integrationstest:**
+[voice-box.spec.ts](../../tests/integration/voice-box.spec.ts),
+testfallet “TAL-16: hjälpmedel får röstrutans namn, knappens läge och
+uppläsningarna i tur”.
+
+**Steg:**
+
+1. Starta samtalet med **Prata med Skyttel** och **Godkänn och starta**.
+   Välj knappen igen med fokus kvar på den.
+2. Kör `setMicrophone('hold')`, välj knappen och flytta fokus till
+   **Återställ vy**. Kör `releaseMicrophone()` och `setMicrophone('allow')`.
+3. Kör `setSound('microphone', true)` och sedan
+   `setSound('microphone', false)`.
+4. Kör `user Beskriv utkastet.`, `delegate`, släpp anropet med ett svar och
+   kör `setSound('remote', true)`.
+5. Gå med Tab från **Prata med Skyttel**.
+6. Välj **Prata med Skyttel**, flytta fokus till **Återställ vy** och kör
+   `setSound('remote', false)`.
+7. Slå på mikrofonen igen och öppna **Inställningar**.
+
+**Förväntat resultat:**
+
+- Steg 1: skärmläsaren säger knappens läge själv. Inget mer läses upp.
+- Steg 2: **Lyssnar** läses upp en gång när mikrofonen slås på.
+- Steg 3: **Du talar** läses inte upp, och **Lyssnar** läses inte upp igen.
+- Steg 4: **Skyttel arbetar** läses upp. **Skyttel talar** läses inte upp.
+  Stoppikonen heter **Avbryt**.
+- Steg 5: ordningen är **Prata med Skyttel**, **Samtal och text**,
+  **Avbryt**, **Sök i kartan**.
+- Steg 6: **Mikrofonen är av** läses upp när röstrutan försvinner.
+- Röstrutan är gruppen **Röstruta**, och vågformen läses inte. Alla
+  uppläsningar väntar på sin tur, och inga ljudsignaler hörs.
+- Steg 7: röstrutan står kvar i Inställningarnas statusrad och följer
+  rösten där.
+
+### TAL-17: röstrutan med riktig mikrofon, pekskärm och skärmläsare
+
+**Syfte:** Pröva det som de kontrollerade fallen inte kan visa: riktig
+mikrofon, riktig enhet och riktiga hjälpmedel.
+
+**Användare:** Alex i en isolerad installation med påhittade data och
+verklig röst, enligt
+[röstguidens verkliga setup](../development/devcontainer.md#optional-assistant-access).
+
+**Förutsättningar:** Chrome på Windows med NVDA, Chrome på macOS med
+VoiceOver, och Chrome på iPhone och iPad med VoiceOver. Verkliga
+leverantörsanrop kan kosta pengar.
+
+**Integrationstest:** Enbart manuellt. Inget automatiskt prov använder
+riktig mikrofon, enhet eller skärmläsare.
+
+**Steg:**
+
+1. Välj **Prata med Skyttel** och tillåt mikrofonen. Säg
+   **Lägg till en påhittad cykel.** och stäng av mikrofonen direkt efter.
+2. Lyssna medan Skyttel arbetar och svarar. Kontrollera i webbläsarens
+   adressfält eller i systemet när mikrofonen används.
+3. Slå på mikrofonen, tala i olika styrka och se vågformen. Låt Skyttel
+   svara och välj **Avbryt** medan Skyttel talar.
+4. Gör om stegen med skärmläsare och med fokus både på knappen och
+   någon annanstans. Lyssna efter dubbla eller avbrutna uppläsningar och
+   efter om skärmläsarens röst tolkas som tal.
+5. På iPhone i stående läge: se var röstrutan står och att den inte
+   täcker raden med **Återställ vy** eller kartans återkoppling. Gör om på
+   iPad och på liggande telefon.
+
+**Förväntat resultat:**
+
+- Skyttel bearbetar det sagda färdigt och talar klart efter att
+  mikrofonen är av. Webbläsaren slutar använda mikrofonen några sekunder
+  efter att Skyttel har tystnat.
+- Staplarna följer rösten. **Avbryt** tystar Skyttel direkt.
+- Uppläsningarna kommer en gång, i tur och med rätt text. Anteckna om
+  skärmläsarens röst tas upp av mikrofonen.
+- Röstrutan står uppe till höger på iPad och liggande telefon och vid
+  nederkanten på stående telefon. Anteckna enhet, system, webbläsare och
+  hjälpmedel för varje prov.
+
+### Bedömning mot WCAG 2.2 AA
+
+Flödet är utformat mot WCAG 2.2 nivå AA. Kraven nedan är designmål, och
+automationen visar bara det som anges. Ingen riktig mikrofon, skärmläsare,
+pekskärm eller fysisk enhet är provad, och fullständig överensstämmelse
+intygas inte.
+
+<!-- markdownlint-disable MD013 -->
+| Kriterium | Utformning | Automatisk kontroll | Återstår att prova manuellt |
+| --- | --- | --- | --- |
+| 1.1.1 Icke-textuellt innehåll | Vågformen är dold för hjälpmedel. Statusordet bär beskedet, och stoppikonen heter **Avbryt**. | Dold vågform, namn på stoppikonen. | Uppläsning med NVDA och VoiceOver. |
+| 1.3.1, 4.1.2 Namn, roll och värde | **Prata med Skyttel** är en växlingsknapp med samma namn i båda lägena. Röstrutan är gruppen **Röstruta**. Beskrivningen är **Avbryt starten av rösten** medan rösten startar. | Namn, roll, intryckt läge och beskrivning. | Hur skärmläsare säger läget. |
+| 1.4.1 Färg | Accentfärgen på knappen följs av intryckt läge, och vågformens färg av statusordet. | Intryckt läge och statusord i alla lägen. | – |
+| 1.4.3, 1.4.11 Kontrast | Rutan och knappen använder kartans färger i ljust och mörkt tema. De grå punkterna bär ingen egen information. | – | Kontrast för text, stoppikon och fokusram i båda teman. |
+| 1.4.4, 1.4.10 Förstoring och omflöde | Rutan har fast höjd och följer innehållets bredd, utan rullning i sidled. | Placering på 1280, 820 och 390 px utan rullning i sidled. | Verklig webbläsarzoom 200 och 400 procent. |
+| 2.1.1 Tangentbord | Knappen och stoppikonen nås med Tab. | Tangentordning och Enter på **Avbryt**. | Hjälpmedlens egna kommandon. |
+| 2.2.2 Paus, stopp, dölj | **Skyttel talar** rör sig medan Skyttel talar. **Avbryt** tystar Skyttel och stoppar rörelsen, och minskad rörelse ger fasta former. | Fasta former vid minskad rörelse. | Bedömning av rörelse som varar längre än fem sekunder. |
+| 2.3.3 Animering från interaktioner | Vid minskad rörelse rör sig inget, och formerna byts utan övergång. | Ingen animering och ingen övergång. | – |
+| 2.4.3, 2.4.7 Fokus | Ordningen är **Prata med Skyttel**, **Samtal och text**, **Avbryt**, sedan resten av verktygsraden. Försvinner **Avbryt** med fokus går fokus till **Prata med Skyttel**. | Tangentordning och fokus efter **Avbryt**. | Läsordning med VoiceOver när rutan står vid nederkanten. |
+| 2.5.8 Pekmål | Stoppikonen är 26 px och har en tryckyta på 44 px på mobil enhet. | Stoppikonens mått. | Träffsäkerhet på fysisk pekskärm. |
+| 4.1.3 Statusmeddelanden | **Lyssnar**, **Skyttel arbetar** och **Mikrofonen är av** läses upp i tur, utan att flytta fokus och utan ljudsignaler. | Uppläsningarnas text, tur och att de inte upprepas. | Att varje uppläsning kommer en gång med riktig skärmläsare. |
+<!-- markdownlint-enable MD013 -->
+
+Statuskortet och samtalspanelen säger i dag också att Skyttel arbetar.
+De ersätts av senare ärenden, och tills dess kan skärmläsaren höra det
+två gånger.
 
 ## Controlled voice fixture
 
@@ -619,8 +989,9 @@ family case opens its existing household. Otherwise, create **Talprov** through
 the normal form. Use only invented information.
 
 Choose **Samtal och text** from the map tools and select
-**Godkänn och starta** in the consent box. Then choose **Starta röst** in
-the conversation panel. The fixture needs no hardware microphone permission.
+**Godkänn och starta** in the consent box. Then choose **Prata med Skyttel**
+in the map tools to turn the microphone on. The fixture needs no hardware
+microphone permission.
 Keep the tab open and active: its normal status requests maintain the server's
 voice connection. Closing the tab is a connection-loss check, not a pause.
 
@@ -711,7 +1082,7 @@ Open this fixture's browser developer console. These controls exist only in
 the disposable fixture and change the external browser media substitute. They
 do not change production settings or the application's access rules.
 
-Before choosing **Starta röst**, simulate denied microphone access:
+Before choosing **Prata med Skyttel**, simulate denied microphone access:
 
 ```js
 window.skyttelVoiceFixture.setMicrophone('deny');
@@ -727,8 +1098,10 @@ window.skyttelVoiceFixture.setPlayback('blocked');
 
 Require the visible playback message and **Spela upp ljud** button. Set playback
 to `allow`, then press that button; the simulated playback warning should clear.
-No sound is produced. During an active session, the following console command
-simulates a broken native connection:
+No sound is produced. `setSound('microphone', true, 0.8)` and
+`setSound('remote', true)` simulate a loud user and Skyttel talking, and
+`false` ends either sound. During an active session, the following console
+command simulates a broken native connection:
 
 ```js
 window.skyttelVoiceFixture.disconnect();
@@ -736,7 +1109,9 @@ window.skyttelVoiceFixture.disconnect();
 
 Use `reconnect()` within three seconds for a transient interruption. Leave it
 disconnected for the application's timeout, or use `fail()` for immediate
-failure. `audioError()` emits a media-output error. After stopping, inspect:
+failure. `audioError()` emits a media-output error. After turning the
+microphone off, wait until the voice box is gone and the connection has
+closed, a few seconds after Skyttel is quiet. Then inspect:
 
 ```js
 window.skyttelVoiceFixture.stats();
@@ -750,7 +1125,8 @@ substitute controls; a new voice session follows normal application rules.
 
 ### Cleanup
 
-Stop voice, then type `quit` in the launcher terminal, or press Ctrl+C. Wait for
+Turn the microphone off, then type `quit` in the launcher terminal, or press
+Ctrl+C. Wait for
 `closed`, which prints the removed directory. From another terminal, set the
 variable to the exact directory printed by this launcher's `ready` event:
 

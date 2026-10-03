@@ -116,7 +116,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   otillgängligt samtal, misslyckat sparande och ny fråga efter en ny
   inbjudan.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag, kompakt status,
-  start efter medgivande, mikrofonpaus, ljudaktivitet, avbrott,
+  start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
+  röstrutans statusord, vågform, stoppikon, plats och uppläsning,
+  ljudaktivitet, avbrott,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
   samtalstext och verifierade resultat, löpande dialog och
   synlig arbetstid. Kontrollerat familjeunderlag och

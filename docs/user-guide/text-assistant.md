@@ -81,28 +81,38 @@ och ingår först när du lägger den i utkastet.
 
 ## Tala med Skyttel
 
-**Prata med Skyttel** startar rösten tillsammans med samtalet. I ett
-pågående samtal väljer du **Starta röst**. Tillåt mikrofonen i
-webbläsaren. Rösten använder samma utkast och regler som textassistenten.
-OpenAI behandlar ljudet när rösten är igång. Mikrofonen startar först när
-du väljer det och anslutningen är klar. Om webbläsaren blockerar ljudet,
-välj **Spela upp ljud**. Du kan fortsätta med text eller formulär när
+**Prata med Skyttel** i kartans verktyg slår på och av mikrofonen. Ett
+tryck slår på den, och nästa tryck stänger av den. Knappen har
+accentfärg medan mikrofonen är på. Ingen panel öppnas. Första gången under
+ett besök visas medgivanderutan först. Tillåt mikrofonen i webbläsaren.
+Medan rösten startar avbryter ett tryck starten. Rösten använder samma
+utkast och regler som textassistenten. OpenAI behandlar ljudet från
+mikrofonen medan den är på. Om webbläsaren blockerar ljudet, välj
+**Spela upp ljud**. Du kan fortsätta med text eller formulär när
 mikrofonen eller ljuduppspelningen inte fungerar.
 
 Om rösten inte startar visar felmeddelandet vad du kan prova. Om det visar
 **Felreferens**, skicka referensen till den som driver installationen för
 felsökning. Du kan fortsätta med text och formulär under tiden.
 
-**Lyssnar** betyder att rösten är ansluten. **Assistenten arbetar** visar
-att ett uppdrag pågår, med ökande tid i samtalskortet.
-Om ett sparresultat är oklart visas att det tidigare
-sparförsöket måste kontrolleras innan nya ändringar.
+Röstrutan visar vad rösten gör, med en vågform och ett ord. Den står
+uppe till höger, och nere till höger på en smal skärm. Röstrutan syns bara
+när du använder rösten:
 
-Mikrofonen visas separat som **av**, **på** eller **pausad**.
-Vågformen rör sig när anslutningen bär ljud och står stilla i tystnad.
-**Du talar** respektive **Skyttel talar** följer mikrofonens och
-uppspelningens ljudaktivitet. Med minskad rörelse står vågformen stilla
-även under ljud; statusen finns kvar. En nödvändig fråga visas med
+- **Rösten startar**: mikrofonen är inte på ännu.
+- **Lyssnar**: mikrofonen är på, och ingen talar.
+- **Du talar**: staplarna följer hur starkt du talar.
+- **Skyttel arbetar**: Skyttel arbetar med ditt uppdrag.
+- **Skyttel talar**: Skyttel svarar med rösten.
+
+Medan Skyttel arbetar eller talar finns stoppikonen **Avbryt** i
+röstrutan. Den stoppar arbetet och tystar Skyttel. Förslag som redan
+ligger i utkastet finns kvar. Med minskad rörelse i systemet står
+vågformen stilla. En skärmläsare får höra **Lyssnar** när mikrofonen slås
+på, **Skyttel arbetar** och **Mikrofonen är av** när röstrutan försvinner.
+
+Om ett sparresultat är oklart visas att det tidigare sparförsöket måste
+kontrolleras innan nya ändringar. En nödvändig fråga visas med
 **Svara i samtalet** så att du kan öppna dialogen och svara.
 
 Skyttel ger korta resultatbesked, exempelvis **Utkastet är uppdaterat**
@@ -112,9 +122,11 @@ ges även när vanliga bekräftelser är korta.
 
 I **Samtalet** visas både dina ord och Skyttels svar löpande. Tidigare
 rader finns kvar under samtalet. Korta pauser kan fortsätta samma rad.
-Välj **Pausa mikrofon** för att sluta skicka ljud utan att avsluta samtalet;
-du kan fortfarande höra Skyttel. **Återuppta mikrofon** fortsätter med
-samma anslutning. En pausad mikrofon förblir pausad efter en kort störning.
+När du stänger av mikrofonen arbetar Skyttel färdigt med det du sade och
+talar klart sitt svar. Inget mer ljud från mikrofonen skickas. Rösten
+stängs några sekunder efter att Skyttel har tystnat, och samtalet finns
+kvar. Medan Skyttel arbetar med ett skrivet meddelande går mikrofonen
+inte att slå på, förrän Skyttel är klar eller uppdraget är avbrutet.
 
 Beskriv ärendet på svenska, svara på följdfrågor och rätta uppgifter med
 rösten. Säg exempelvis **Rätta priset till 189 kr och spara** för ett
@@ -123,10 +135,9 @@ sparbesked ger inte tillåtelse för ett nytt sparande. Vid oklarheter
 behövs ett nytt tydligt besked. Kvittot och kartans verkliga markering
 är bekräftelsen även när du använder röst.
 
-**Stäng av rösten** stoppar mikrofonen och pågående röstarbete. Nytt tal
-kan också avbryta ett äldre uppdrag. Vid bruten anslutning stängs
-mikrofonen av medan anslutningen kontrolleras; en längre störning kräver
-ett nytt startval. Ett ljudsvar som inte hördes betyder inte att ett
+Nytt tal kan avbryta ett äldre uppdrag. Vid bruten anslutning stängs
+mikrofonen av medan anslutningen kontrolleras. Efter en längre störning
+slår du själv på den igen. Ett ljudsvar som inte hördes betyder inte att ett
 sparande misslyckades. Kontrollera sparresultat först. Du kan säga
 **Slutför samma sparförsök** när exakt ett väntande försök finns.
 Genomförda sparanden och deras kvitton finns kvar efter avstängning,
@@ -186,7 +197,7 @@ det pågående samtalet. Felminnet följer samtalet och försvinner när det
 avslutas. Ett oklart sparresultat behöver kontrolleras innan ett nytt
 uppdrag kan börja.
 
-**Stäng av rösten** behåller den synliga dialogen i det pågående samtalet.
+En avstängd mikrofon behåller den synliga dialogen i det pågående samtalet.
 **Avsluta samtalet**, under **Samtalskontroller** i det kompakta kortet,
 tar bort anslutningen och samtalsminnet.
 Dialogen försvinner också vid omladdning eller när åtkomsten upphör.

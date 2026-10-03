@@ -27,7 +27,7 @@ fallen anger formulär, samtal, profil eller administration.
    bjud in Robins ID från Alex profil. Acceptera som Robin; behåll rollen
    medlem. Befintliga sessioner påverkas inte av identitetsvalet.
    Välj **Samtal och text** och **Godkänn och starta** i medgivanderutan,
-   sedan **Starta röst** när ett fall kräver samtal. Miljön ersätter
+   sedan **Prata med Skyttel** när ett fall kräver röst. Miljön ersätter
    taltransporten och provar inte fysiskt ljud.
 3. Börja varje fall med en ny provinstallation eller ett tomt utkast utan
    pågående sparande. Behåll fliken och databasen under varje fall.
@@ -89,16 +89,17 @@ end on logout”.
 1. Skicka en textfråga om cykeln. Den kontrollerade miljön svarar automatiskt
    **Det kontrollerade kostnadsprovet är klart.** Anteckna svaret och skriv
    ett nytt svar utan att skicka det.
-2. Besök **Inloggningssätt**. Kontrollera att mikrofonen är på. Välj
-   **Pausa mikrofon** och återgå med **Till startsidan**.
-3. Kontrollera samtalets tidigare texter, det oskickade svaret och pausläget.
-   Återuppta mikrofonen.
+2. Besök **Inloggningssätt**. Kontrollera att röstrutan visar **Lyssnar**
+   och återgå med **Till startsidan**.
+3. Kontrollera samtalets tidigare texter, det oskickade svaret och att
+   mikrofonen fortfarande är på.
 4. Besök **Inloggningssätt** igen och välj **Logga ut**.
 
 **Förväntat resultat:**
 
-- Samtalstext och oskickat svar bevaras. Pausat lyssnande förblir pausat.
-- Mikrofonen går att styra i den andra vyn utan att starta ett nytt samtal.
+- Samtalstext och oskickat svar bevaras. Mikrofonen förblir på.
+- Röstrutan visar mikrofonens läge i den andra vyn utan att starta ett
+  nytt samtal.
 - Utloggning visar inloggningen, tar bort samtalet och stoppar mikrofonen.
   Den automatiserade mediegränsen verifierar stoppade ljudspår; ett
   fysiskt mikrofonprov redovisas separat.
@@ -419,7 +420,7 @@ till gemensamt kvitto och privat fortsatt arbete”.
 
    Släpp sedan ett vanligt `reply`. Kontrollera ett privat objekt,
    inget sparat objekt eller kvitto och Robins oförändrade privata notering.
-3. Välj **Starta röst**. Kör `user Kim Exempel betalar familjens Molnmusik.`
+3. Välj **Prata med Skyttel**. Kör `user Kim Exempel betalar familjens Molnmusik.`
    och `delegate` i terminalen. Släpp `propose_object` för **Kim Exempel**,
    typen **Person**, tom beskrivning och `baseRevision: null`.
    Använd aktuell version och typrevision. Nästa verktygsresultat ger
@@ -439,18 +440,18 @@ till gemensamt kvitto och privat fortsatt arbete”.
    **Oskickat om Kim**, utan att lägga i utkastet. Välj **Stäng Kim Exempel**,
    öppna samma uppgifter från Lista och kontrollera texten samt en enda
    panel för Kim. Använd inte åtgärden som kastar oskickad text.
-5. Skriv **Oskickat i samtalet** utan att skicka. Pausa mikrofonen och
-   öppna **Inställningar**. Rubriken ska få fokus och kartarbetet döljas.
+5. Skriv **Oskickat i samtalet** utan att skicka. Låt mikrofonen vara på
+   och öppna **Inställningar**. Rubriken ska få fokus och kartarbetet döljas.
    Inställningarnas innehåll ska komma före den kompakta statusytan.
    Läs de tre privata förslagens status och välj
    **Visa samtals- och utkastdetaljer**. Kontrollera rubrikfokus och beskedet
    om oskickat samtalsmeddelande. Välj **Stäng aktuell status** och kontrollera
-   att fokus återgår till detaljknappen. Återuppta mikrofonen där.
+   att fokus återgår till detaljknappen. Röstrutan visar **Lyssnar**.
    Välj **Tillbaka till kartan** och välj
    abonnemanget, Kim och samtalet genom **Öppna paneler**. Kontrollera
    rubrikfokus, samma beskrivningar, samma dialog och båda oskickade texter.
    Robins notering ska fortfarande vara privat. Automationen kontrollerar
-   att samma levande mediespår och anslutning används vid återupptagningen.
+   att samma levande mediespår och anslutning används efter Inställningar.
 6. Öppna **Visa hela utkastets detaljer** i samtalet. Granska två objekt,
    ett samband och **189 / SEK / månad**, med **Rättad för hand**.
    Ersätt samtalets oskickade text med **Spara hela utkastet nu.** och skicka.
@@ -462,7 +463,8 @@ till gemensamt kvitto och privat fortsatt arbete”.
    **Oskickat om Kim** fortfarande finns i formuläret men inte i sparad
    beskrivning. Återvänd till **Samtal och text** för kvittot och röstens
    kontroller. Robins privata notering ingår inte i kvittot.
-7. Välj **Stäng av rösten**. Kör `restart` i terminalen och ladda sedan om
+7. Stäng av mikrofonen med **Prata med Skyttel** och vänta tills
+   röstrutan har försvunnit. Kör `restart` i terminalen och ladda sedan om
    Alex flik. Öppna **Lista → Visa historik → Visa ändringarna** för samma
    kvitto. Kontrollera namn, rättad beskrivning, hela prisuppgiften,
    riktningen Kim till abonnemanget och **Betalar**. Oskickad lokal text
@@ -501,10 +503,10 @@ utan grafik eller ljud”.
 
 **Steg:**
 
-1. Följ ARBETE-08. Välj aldrig **Starta röst**. I steg 3 skriver och skickar
+1. Följ ARBETE-08. Välj aldrig **Prata med Skyttel**. I steg 3 skriver och skickar
    du **Kim Exempel betalar familjens Molnmusik.** i textfältet i stället
    för terminalens `user` och `delegate`. Släpp samma två verktyg i ordning.
-   Hoppa över mikrofonens paus, återupptagning och avstängning.
+   Hoppa över mikrofonens påslag och avstängning.
 2. När hushållet är öppet, skapa ett verkligt grafikavbrott i båda profilerna
    genom webbläsarkonsolen. Upprepa efter omladdning vid omstarten:
 

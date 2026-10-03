@@ -252,7 +252,7 @@ test('TAL-11: Skyttel arbetar färdigt och talar klart när mikrofonen stängs a
   }
 });
 
-test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel, och förslagen ligger kvar', async ({
+test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel men behåller förslagen', async ({
   page,
 }) => {
   const model = heldModel();
@@ -309,7 +309,7 @@ test('TAL-12: Avbryt i röstrutan stoppar arbetet och tystar Skyttel, och försl
   }
 });
 
-test('TAL-13: ett skrivet meddelande visar aldrig röstrutan och stänger av mikrofonknappen medan Skyttel arbetar', async ({
+test('TAL-13: ett skrivet meddelande visar aldrig röstrutan och stänger av mikrofonknappen', async ({
   page,
 }) => {
   const model = heldModel();

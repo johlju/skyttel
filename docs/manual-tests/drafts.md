@@ -567,8 +567,9 @@ private draft and an atomic household save”.
    lämna texten i formuläret.
 2. Välj **Samtal och text** och **Godkänn och starta**. Skriv
    **Lägg Molnmusik i utkastet**. Kontrollera två privata förslag i statusen.
-3. Starta rösten och säg **Lo använder Molnmusik**. Kontrollera att sambandet
-   ingår och att statusen visar tre privata förslag.
+3. Välj **Prata med Skyttel** och säg **Lo använder Molnmusik**.
+   Kontrollera att sambandet ingår och att statusen visar tre privata
+   förslag.
 4. Skriv ett oskickat samtalsmeddelande. Besök Inställningar och återgå
    till kartan. Stäng arbetsytan. Läs beskedet om separat oskickad
    formulärtext. Kontrollera som medlem att den sparade kartan är tom

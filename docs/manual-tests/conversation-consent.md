@@ -95,8 +95,9 @@ medgivandet gäller besöket”.
 **Steg:**
 
 1. Välj **Prata med Skyttel** och **Godkänn och starta** utan att markera
-   kryssrutan. Kontrollera **Mikrofonen är på** och att samtalet är öppet.
-2. Välj **Avsluta samtalet** under **Samtalskontroller**. Välj
+   kryssrutan. Kontrollera att knappen är intryckt, att röstrutan visar
+   **Lyssnar** och att ingen panel öppnas.
+2. Välj **Samtal och text** och **Avsluta samtalet**. Välj
    **Samtal och text**. Samtalet ska starta direkt, med mikrofonen av.
 3. Avsluta samtalet. Öppna **Inställningar** och välj
    **Tillbaka till kartan**. Välj **Samtal och text**; samtalet ska starta
