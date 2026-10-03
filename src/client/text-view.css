@@ -26,7 +26,8 @@
   background: var(--space-surface);
   color: var(--space-text);
   box-shadow: var(--space-shadow);
-  overflow: hidden;
+  /* Only the body scrolls. A focused field brought into view must not move the heading away. */
+  overflow: clip;
 }
 .text-view .visually-hidden {
   position: absolute;
