@@ -68,7 +68,18 @@ test('SPARKONTROLL-01: ett tappat sparbesked kontrolleras automatiskt före nytt
     await expect(notice(page)).toContainText(checking);
     await page.getByLabel('Meddelande till Skyttel').fill('Nästa uppdrag');
     await expect(page.getByRole('button', { name: 'Skicka', exact: true })).toBeDisabled();
-    await expect(microphoneButton(page)).toBeDisabled();
+    await expect(microphoneButton(page)).toBeEnabled();
+    await expect(microphoneButton(page)).toHaveAttribute(
+      'aria-description',
+      /Inte tillgängligt just nu\./,
+    );
+    let voiceStarts = 0;
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().endsWith('/voice')) voiceStarts++;
+    });
+    await microphoneButton(page).click();
+    expect(voiceStarts).toBe(0);
+    await expect(notice(page)).toContainText(checking);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await expect(
       page.getByRole('button', { name: 'Kontrollera om utkastet sparades', exact: true }),
@@ -509,7 +520,19 @@ for (const lostRevocationReply of [false, true])
       await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
       if (lostRevocationReply) {
         await expect(notice(page)).toContainText(checking);
-        await expect(microphoneButton(page)).toBeDisabled();
+        await expect(microphoneButton(page)).toBeEnabled();
+        await expect(microphoneButton(page)).toHaveAttribute(
+          'aria-description',
+          /Inte tillgängligt just nu\./,
+        );
+        const microphoneRequests = await page.evaluate(
+          () => window.skyttelVoiceFixture.stats().microphoneRequests,
+        );
+        await microphoneButton(page).click();
+        expect(
+          await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneRequests),
+        ).toBe(microphoneRequests);
+        await expect(notice(page)).toContainText(checking);
         await expect(page.getByRole('dialog', { name: 'Samtalsmedgivande' })).toHaveCount(0);
         release?.();
         await expect(
