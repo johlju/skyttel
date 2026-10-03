@@ -4,6 +4,7 @@ import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
 import { voiceErrorMessage } from './voice-error.js';
+import { createHeldInput, type HeldInput, prepareHeldInput } from './voice-held-input.js';
 import {
   createVoiceTransport,
   prepareVoicePlayback,
@@ -52,6 +53,13 @@ export type Voice = {
 };
 
 type RetainedInput = { stream: MediaStream; paused: boolean };
+type HeldRequest = {
+  released: boolean;
+  controller: AbortController;
+  input?: Promise<HeldInput>;
+  buffer?: HeldInput;
+  failed?: Error;
+};
 
 type Attempt = {
   path: string;
@@ -61,7 +69,7 @@ type Attempt = {
   /** Microphone owned while a conversation reset waits for the server. */
   retained?: MediaStream;
   poll?: ReturnType<typeof setTimeout>;
-  held?: { released: boolean };
+  held?: HeldRequest;
 };
 async function stopRemote(path: string, id: string) {
   const controller = new AbortController();
@@ -107,7 +115,8 @@ export function useVoice(options: {
   latest.current = options;
   const current = useRef<Attempt | null>(null);
   const prepared = useRef<VoicePlayback | null>(null);
-  const held = useRef<{ released: boolean } | null>(null);
+  const held = useRef<HeldRequest | null>(null);
+  const cancelledHeldStart = useRef(false);
   const epoch = useRef(0);
   const mounted = useRef(true);
   const resetVoice = useRef<(view: TextAssistantView) => void>(() => {});
@@ -119,6 +128,7 @@ export function useVoice(options: {
   // Microphone-off keeps the connection alive: Live has no reliable answer-complete event.
   const [off, setOff] = useState(false);
   const [activity, setActivity] = useState({ microphone: false, speaker: false });
+  const [heldListening, setHeldListening] = useState(false);
   const apply = useCallback((view: TextAssistantView) => {
     const shown = latest.current.assistant;
     if (
@@ -136,8 +146,23 @@ export function useVoice(options: {
       prepared.current?.close();
       prepared.current = null;
       const attempt = current.current;
+      const request = held.current;
+      request?.controller.abort();
+      request?.buffer?.capture(false);
+      if (!attempt?.transport) {
+        request?.buffer?.close();
+        for (const track of request?.buffer?.stream.getTracks() ?? []) track.stop();
+      }
       held.current = null;
-      if (!attempt) return;
+      if (mounted.current) setHeldListening(false);
+      if (!attempt) {
+        if (request) cancelledHeldStart.current = true;
+        if (mounted.current) {
+          setError(message);
+          setState('idle');
+        }
+        return;
+      }
       attempt.transport?.stopCapture();
       for (const track of attempt.retained?.getTracks() ?? []) track.stop();
       current.current = null;
@@ -184,6 +209,18 @@ export function useVoice(options: {
       epoch.current++;
     };
   }, [path, stop]);
+  useEffect(() => {
+    const householdId = options.householdId;
+    return () => {
+      // A held press may own local capture before a server session exists.
+      if (
+        held.current &&
+        !current.current &&
+        (!mounted.current || latest.current.householdId !== householdId)
+      )
+        void stop();
+    };
+  }, [options.householdId, stop]);
   const prepareAudio = useCallback(() => {
     if (
       prepared.current ||
@@ -195,6 +232,8 @@ export function useVoice(options: {
       return;
     try {
       prepared.current = prepareVoicePlayback();
+      // Load processor code during the initiating gesture, before the 450 ms timer.
+      void prepareHeldInput(prepared.current).catch(() => undefined);
     } catch {
       // Preparation is best effort; ordinary startup reports unsupported audio.
     }
@@ -209,7 +248,7 @@ export function useVoice(options: {
   const start = useCallback(
     async (reuse?: RetainedInput, next?: TextAssistantView, history?: TranscriptRow[]) => {
       const initial = next ?? latest.current.assistant;
-      if (!path || !initial || current.current) return;
+      if (!path || !initial || current.current || cancelledHeldStart.current) return;
       if (latest.current.inputBlocked || !navigator.onLine) {
         for (const track of reuse?.stream.getTracks() ?? []) track.stop();
         prepared.current?.close();
@@ -298,9 +337,13 @@ export function useVoice(options: {
           typeof AudioContext !== 'function'
         )
           throw new DOMException('Voice is not supported', 'NotSupportedError');
+        if (attempt.held?.failed) throw attempt.held.failed;
+        const buffered = await attempt.held?.input;
+        if (!active()) throw new DOMException('Held input cancelled', 'AbortError');
         const playback = prepared.current ?? undefined;
         attempt.transport = createVoiceTransport(
           {
+            inputAllowed: () => !latest.current.inputBlocked && navigator.onLine !== false,
             onMicrophoneReady: () => {
               if (active()) setState('connecting');
             },
@@ -335,6 +378,7 @@ export function useVoice(options: {
             },
           },
           playback,
+          buffered,
         );
         prepared.current = null;
         await attempt.transport.connect(
@@ -393,6 +437,11 @@ export function useVoice(options: {
   const activate = useCallback(() => {
     if (latest.current.inputBlocked || !navigator.onLine) return;
     if (state === 'idle') {
+      if (held.current) {
+        void stop();
+        return;
+      }
+      cancelledHeldStart.current = false;
       held.current = null;
       prepareAudio();
       void start();
@@ -415,6 +464,11 @@ export function useVoice(options: {
       clearTimeout(attempt.poll);
       attempt.controller.abort();
       const stream = attempt.transport?.releaseMicrophone();
+      // Renewal starts a new input context; retired startup speech cannot be replayed.
+      held.current?.buffer?.close();
+      held.current?.controller.abort();
+      held.current = null;
+      setHeldListening(false);
       // Retire the old peer first. Its queued output and transcript events
       // cannot reappear while the server prepares the new connection.
       attempt.transport?.close();
@@ -493,25 +547,88 @@ export function useVoice(options: {
     )
       return;
     if (current.current?.transport && state === 'listening') {
-      held.current = { released: false };
+      held.current = { released: false, controller: new AbortController() };
       current.current.held = held.current;
       current.current.transport.setMicrophonePaused(false);
       setOff(false);
       return;
     }
     if (current.current || (held.current && !held.current.released)) return;
-    held.current = { released: false };
     prepareAudio();
+    const request: HeldRequest = { released: false, controller: new AbortController() };
+    cancelledHeldStart.current = false;
+    held.current = request;
+    setState('permission');
+    setOff(false);
+    const playback = prepared.current;
+    if (playback) {
+      request.input = createHeldInput(playback, request.controller.signal).then((buffer) => {
+        request.buffer = buffer;
+        buffer.onFailure(() => {
+          const message = 'Mikrofonen kunde inte fortsätta. Försök igen.';
+          if (current.current) void stop(message);
+          else {
+            request.failed = new Error(message);
+            request.released = true;
+            buffer.discard();
+            buffer.close();
+            for (const track of buffer.stream.getTracks()) track.stop();
+            setHeldListening(false);
+            setOff(true);
+            setError(message);
+          }
+        });
+        const capture =
+          !request.released && !latest.current.inputBlocked && navigator.onLine !== false;
+        buffer.capture(capture);
+        if (held.current === request && mounted.current) {
+          setHeldListening(capture && buffer.ready);
+          setPlaybackBlocked(!buffer.ready);
+        }
+        return buffer;
+      });
+      // The conversation session can still be starting; own failure cleanup now,
+      // before transport startup has a chance to await this same promise.
+      void request.input.catch((failure) => {
+        if (held.current !== request || request.controller.signal.aborted) return;
+        const message = voiceErrorMessage(failure) ?? 'Mikrofonen kunde inte startas. Försök igen.';
+        if (current.current) void stop(message);
+        else {
+          // Keep the rejected request for the pending conversation's start.
+          // It must never fall back to starting an ordinary live microphone.
+          request.released = true;
+          setOff(true);
+          setHeldListening(false);
+          setError(message);
+        }
+      });
+    }
     if (latest.current.assistant) void start();
-  }, [state, start, prepareAudio]);
+  }, [state, start, prepareAudio, stop]);
   const releaseHeld = useCallback(() => {
     if (!held.current) return;
     held.current.released = true;
+    held.current.buffer?.capture(false);
     current.current?.transport?.setMicrophonePaused(true);
+    setHeldListening(false);
     setOff(true);
   }, []);
+  useEffect(() => {
+    const blocked = () => {
+      if (!latest.current.inputBlocked && navigator.onLine !== false) return;
+      releaseHeld();
+      held.current?.buffer?.discard();
+      current.current?.transport?.discardPendingInput();
+      setOff(true);
+    };
+    if (options.inputBlocked) blocked();
+    window.addEventListener('offline', blocked);
+    return () => window.removeEventListener('offline', blocked);
+  }, [options.inputBlocked, releaseHeld]);
   const microphone =
-    state === 'listening' && !off && !disconnected && !playbackBlocked ? 'on' : 'off';
+    (state === 'listening' || heldListening) && !off && !disconnected && !playbackBlocked
+      ? 'on'
+      : 'off';
   return {
     state,
     phase: voice?.phase ?? null,
@@ -536,6 +653,9 @@ export function useVoice(options: {
     startHeld,
     releaseHeld,
     pauseMicrophone: () => {
+      releaseHeld();
+      held.current?.buffer?.discard();
+      current.current?.transport?.discardPendingInput();
       current.current?.transport?.setMicrophonePaused(true);
       setOff(true);
     },

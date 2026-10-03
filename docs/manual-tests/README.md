@@ -136,7 +136,8 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
 
 - [Mikrofontryck](microphone-press.md): kort och långt tryck, släpp och
   systemavbrott, medgivande, pekfångst och tangentkombinationer på riktiga
-  Windows- och macOS-enheter.
+  Windows- och macOS-enheter; väntande tal under starten, avbrott och
+  spärrad ljuduppspelning.
 
 - [Textvyn](text-view.md): **Skriv till Skyttel** öppnar och stänger
   textvyn utan att samtalet avslutas, samtalstexten visar vem som skriver

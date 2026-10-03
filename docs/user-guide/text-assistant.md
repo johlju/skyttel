@@ -67,6 +67,12 @@ Lyssnandet fortsätter när pekaren eller fingret glider från knappen.
 När du släpper är mikrofonen av, och Skyttel talar klart sitt svar.
 Ett systemavbrott räknas som att du släpper.
 
+Om röstanslutningen dröjer bevaras det du säger under trycket tillfälligt
+i webbläsaren, efter godkänt medgivande och fungerande ljuduppspelning.
+Det talet överförs när anslutningen är färdig, även om du redan har släppt.
+Släpp stänger av ny inspelning direkt. Om du avbryter starten kasseras
+det väntande talet.
+
 Ctrl+Mellanslag på Windows och Linux, och Ctrl+Skift+Mellanslag på macOS,
 gör samma sak: tryck kort för att växla på och av eller håll för att tala
 tills du släpper. Utan giltigt medgivande visar långt tryck samma
@@ -189,7 +195,8 @@ Röstrutan visar vad rösten gör, med en vågform och ett ord. Den står
 uppe till höger, och nere till höger på en smal skärm. Röstrutan syns bara
 när du använder rösten:
 
-- **Rösten startar**: mikrofonen är inte på ännu.
+- **Rösten startar**: röstanslutningen förbereds. Vid långt tryck kan
+  mikrofonen redan lyssna lokalt medan du håller knappen.
 - **Lyssnar**: mikrofonen är på, och ingen talar.
 - **Du talar**: staplarna följer hur starkt du talar.
 - **Skyttel arbetar**: Skyttel arbetar med ditt uppdrag.

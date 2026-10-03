@@ -1,5 +1,6 @@
 import { type ExchangeSdp, OpenAILiveWebRTC } from 'openai/live/webrtc';
 import type { TranscriptRow } from './ConversationTranscript.js';
+import type { HeldInput } from './voice-held-input.js';
 import silentPlaybackUrl from './voice-silence.wav?no-inline';
 
 /** Unlock the eventual output element and audio meter during the user's start gesture. */
@@ -51,8 +52,10 @@ export function createVoiceTransport(
     onAudioActivity?: (activity: { microphone: boolean; speaker: boolean }) => void;
     /** Skyttel has taken on a task from what the user said. */
     onDelegation?: () => void;
+    inputAllowed?: () => boolean;
   },
   playback?: VoicePlayback,
+  buffered?: HeldInput,
 ) {
   const audio = playback?.audio ?? new Audio();
   const audioContext = playback?.audioContext ?? new AudioContext();
@@ -171,6 +174,7 @@ export function createVoiceTransport(
       await audio.play();
       if (!closed && !stopped) {
         playing = true;
+        buffered?.playbackReady();
         void audioContext.resume().catch(() => {});
         callbacks.onPlaybackBlocked(false);
         ready();
@@ -179,6 +183,7 @@ export function createVoiceTransport(
       if (!closed && !stopped) {
         playing = false;
         for (const track of microphone?.getTracks() ?? []) track.enabled = false;
+        buffered?.capture(false);
         callbacks.onPlaybackBlocked(true);
       }
     }
@@ -213,7 +218,19 @@ export function createVoiceTransport(
       return;
     clearTimeout(startupTimer);
     if (!playing) return;
+    if (callbacks.inputAllowed?.() === false) {
+      paused = true;
+      buffered?.discard();
+      for (const track of microphone?.getTracks() ?? []) track.enabled = false;
+      callbacks.onReady();
+      return;
+    }
     for (const track of microphone?.getTracks() ?? []) track.enabled = !paused;
+    if (buffered) {
+      buffered.capture(!paused);
+      for (const track of buffered.outgoing.getTracks()) track.enabled = true;
+      buffered.transmit(true);
+    }
     callbacks.onReady();
   }
   const connectionChanged = () => {
@@ -221,6 +238,9 @@ export function createVoiceTransport(
     if (live.peerConnection.connectionState === 'disconnected') {
       paused = true;
       for (const track of microphone?.getTracks() ?? []) track.enabled = false;
+      buffered?.capture(false);
+      buffered?.transmit(false);
+      for (const track of buffered?.outgoing.getTracks() ?? []) track.enabled = false;
       callbacks.onDisconnected(true);
       disconnectTimer ??= setTimeout(() => {
         if (!closed && !stopped) callbacks.onFailure('network');
@@ -262,6 +282,7 @@ export function createVoiceTransport(
     }),
   ];
   function stopCapture() {
+    buffered?.close();
     finish(userRow);
     finish(assistantRow);
     stopped = true;
@@ -309,15 +330,27 @@ export function createVoiceTransport(
       try {
         paused = retained?.paused ?? false;
         microphone =
-          retained?.stream ?? (await navigator.mediaDevices.getUserMedia({ audio: true }));
+          buffered?.stream ??
+          retained?.stream ??
+          (await navigator.mediaDevices.getUserMedia({ audio: true }));
         if (closed || stopped || signal.aborted) {
           stopCapture();
           throw new DOMException('Voice setup cancelled', 'AbortError');
         }
         for (const track of microphone.getTracks()) {
-          track.enabled = false;
+          if (!buffered) track.enabled = false;
           track.addEventListener('ended', microphoneEnded);
-          live.peerConnection.addTrack(track, microphone);
+          if (!buffered) live.peerConnection.addTrack(track, microphone);
+        }
+        if (buffered) {
+          buffered.onFailure(() => callbacks.onFailure('microphone'));
+          for (const track of buffered.outgoing.getTracks()) {
+            track.enabled = false;
+            live.peerConnection.addTrack(track, buffered.outgoing);
+          }
+          buffered.onDrained(() => {
+            if (paused) for (const track of buffered.outgoing.getTracks()) track.enabled = false;
+          });
         }
         meter(microphone, true);
         void audioContext.resume().catch(() => {});
@@ -351,9 +384,22 @@ export function createVoiceTransport(
       return stream;
     },
     stopCapture,
+    discardPendingInput() {
+      paused = true;
+      buffered?.discard();
+      for (const track of microphone?.getTracks() ?? []) track.enabled = false;
+    },
     setMicrophonePaused(value: boolean) {
-      paused = value;
+      paused = value || callbacks.inputAllowed?.() === false;
       if (closed || stopped) return;
+      if (buffered) {
+        buffered.capture(!paused);
+        if (!paused && connected && started && playing) {
+          for (const track of buffered.outgoing.getTracks()) track.enabled = true;
+          buffered.transmit(true);
+        }
+        return;
+      }
       for (const track of microphone?.getTracks() ?? [])
         track.enabled =
           !paused &&

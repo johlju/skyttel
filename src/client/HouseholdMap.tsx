@@ -1590,7 +1590,13 @@ export function HouseholdMap({
           <WorkspaceTools
             conversationUnavailable={Boolean(conversation.inputBlocked)}
             conversationOngoing={ongoing}
-            voiceControl={conversation.session ? conversation.voice : null}
+            voiceControl={
+              conversation.session ||
+              conversation.voice.microphone === 'on' ||
+              conversation.voice.starting
+                ? conversation.voice
+                : null
+            }
             holdVoice={{
               canHold:
                 conversation.consent.valid &&

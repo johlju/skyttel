@@ -155,6 +155,103 @@ systemavbrott släpper mikrofonen”.
 - Med VoiceOver räcker kort aktivering för samma arbete. Det finns
   alltid ett alternativ till att hålla.
 
+## Tal under starten
+
+### MIKROFONTRYCK-05: tal under starten förs över efter släpp utan ny inspelning
+
+**Syfte:** Bevara början av det som sades under trycket när röstanslutningen dröjer.
+
+**Användare:** Användaren i det isolerade talprovet.
+
+**Förutsättningar:** Starta ett samtal med text och godkänn medgivandet.
+Rösten är av. Välj långsamt nätverk i webbläsarens utvecklarverktyg så att
+röstens start tar minst två sekunder. Använd påhittade uppgifter.
+
+**Integrationstest:**
+[microphone-press.spec.ts](../../tests/integration/microphone-press.spec.ts),
+testfallet “MIKROFONTRYCK-05: tal under starten förs över efter släpp utan
+ny inspelning”.
+
+**Steg:**
+
+1. Håll **Prata med Skyttel**. Efter en halv sekund, säg **Beskriv vad
+   du kan göra** medan rösten fortfarande startar.
+2. Släpp före färdig anslutning. Kontrollera att mikrofonen stängs av.
+   Säg sedan **Detta ska inte spelas in** med mikrofonen av.
+3. Återställ nätverkshastigheten och lyssna på svaret. Kontrollera
+   samtalstexten. Tryck sedan kort för att börja tala igen.
+
+**Förväntat resultat:**
+
+- Mikrofonen lyssnar efter tröskeln medan trycket hålls, med godkänt
+  medgivande och fungerande ljuduppspelning. Början av det som sades
+  under starten följer med när anslutningen är färdig.
+- Släpp stänger av ny inspelning direkt. Det tidigare inspelade talet
+  kan fortfarande överföras och besvaras efter släpp. Orden som sägs
+  efter släpp ska inte komma med. Nytt kort tryck börjar lyssna igen.
+- Automatiken mäter verklig PCM i det utgående mediespåret: en ton från
+  trycket ska komma fram efter anslutning, medan en annan ton från tiden
+  efter släpp inte får komma fram. Mikrofonspårets tidsstämplar ska inte
+  visa någon ny aktivering efter släpp. Det ersätter inte riktiga talprov.
+
+### MIKROFONTRYCK-06: avbruten start kasserar inspelningen inför nästa start
+
+**Syfte:** Förhindra att tal från en avbruten start återkommer senare.
+
+**Användare:** Användaren i det isolerade talprovet.
+
+**Förutsättningar:** Samma långsamma nätverk och textstart som i fall 5.
+
+**Integrationstest:**
+[microphone-press.spec.ts](../../tests/integration/microphone-press.spec.ts),
+testfallet “MIKROFONTRYCK-06: avbruten start kasserar inspelningen inför
+nästa start”.
+
+**Steg:**
+
+1. Håll mikrofonknappen och säg **Notera färgen violett** efter tröskeln.
+2. Släpp medan rösten startar. Tryck kort igen för att avbryta starten.
+3. Återställ nätverket. Starta rösten igen med kort tryck och säg
+   **Beskriv vad du kan göra**.
+
+**Förväntat resultat:**
+
+- Avbrottet stänger mikrofonen och kasserar väntande tal från starten.
+- Den nya starten ska inte spela upp, överföra eller skriva in det
+  tidigare yttrandet. Automatiken mäter olika ljudtoner i det utgående
+  mediespåret och kontrollerar att gamla mikrofonspår har avslutats.
+
+### MIKROFONTRYCK-07: spärrat ljud ger ingen inspelning
+
+**Syfte:** Kräva fungerande uppspelning före inspelning och respektera släpp.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Starta den
+[kontrollerade röstmiljön](voice-assistant.md#controlled-voice-fixture),
+logga in, skapa Tryckprov och starta samtalet med text. Följ miljöns
+[ljudkontroller](voice-assistant.md#browser-transport-and-audio-controls)
+för att sätta `setPlayback('blocked')` före trycket.
+
+**Integrationstest:**
+[microphone-press.spec.ts](../../tests/integration/microphone-press.spec.ts),
+testfallet “MIKROFONTRYCK-07: spärrat ljud ger ingen inspelning och
+ljudstart efter släpp lämnar mikrofonen av”.
+
+**Steg:**
+
+1. Håll mikrofonknappen längre än tröskeln. Läs beskedet om spärrat ljud.
+2. Släpp. Sätt uppspelningen till `allow` enligt ljudkontrollerna och
+   välj **Spela upp ljud**.
+3. Kontrollera mikrofonen. Avsluta provmiljön enligt startguiden.
+
+**Förväntat resultat:**
+
+- Mikrofonen spelar inte in medan uppspelningen är spärrad.
+- Att tillåta ljud efter släpp lämnar mikrofonen av och skickar inget
+  tidigare tal. Automatiken mäter mikrofonspår och det utgående ljudet;
+  den kontrollerade miljön verifierar inte faktiskt hört tal.
+
 ## Tillgänglighetsbedömning
 
 Designmålen omfattar tangentbord och inga tangentbordsfällor (WCAG 2.1.1,

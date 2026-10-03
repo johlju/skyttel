@@ -13,6 +13,8 @@ export const liveBrowserFixtureSource = `
   let autoStart = true;
   let releaseMicrophone;
   const signals = new Map();
+  const sentAudio = [];
+  const captureChanges = [];
 
   function silentStream(tracks) {
     const context = new AudioContext();
@@ -22,9 +24,19 @@ export const liveBrowserFixtureSource = `
     gain.gain.value = 0;
     oscillator.connect(gain).connect(destination);
     oscillator.start();
-    signals.set(tracks, { context, gain });
+    signals.set(tracks, { context, gain, oscillator });
     for (const track of destination.stream.getTracks()) {
       tracks.push(track);
+      if (tracks === microphoneTracks) {
+        const enabled = Object.getOwnPropertyDescriptor(MediaStreamTrack.prototype, 'enabled');
+        Object.defineProperty(track, 'enabled', {
+          get: () => enabled.get.call(track),
+          set: value => {
+            enabled.set.call(track, value);
+            captureChanges.push({ enabled: value, at: performance.now() });
+          }
+        });
+      }
       const stop = track.stop.bind(track);
       track.stop = () => {
         stop();
@@ -55,9 +67,33 @@ export const liveBrowserFixtureSource = `
     localDescription = null;
     channel = new Channel();
     remote = null;
+    meters = [];
     constructor() { super(); peers.push(this); }
     createDataChannel() { return this.channel; }
-    addTrack() { return {}; }
+    addTrack(track, stream) {
+      // Observe the exact outgoing WebRTC media stream. This is not the
+      // hardware/source track or a request-count proxy for delivered sound.
+      const context = new AudioContext();
+      const source = context.createMediaStreamSource(stream);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      const wave = new Float32Array(analyser.fftSize);
+      const spectrum = new Float32Array(analyser.frequencyBinCount);
+      const timer = setInterval(() => {
+        if (!track.enabled) return;
+        analyser.getFloatTimeDomainData(wave);
+        const peak = Math.max(...wave.map(Math.abs));
+        if (peak < 0.04) return;
+        analyser.getFloatFrequencyData(spectrum);
+        let bin = 0;
+        for (let i = 1; i < spectrum.length; i++) if (spectrum[i] > spectrum[bin]) bin = i;
+        sentAudio.push({ peak, frequency: bin * context.sampleRate / analyser.fftSize, at: performance.now() });
+      }, 10);
+      this.meters.push({ context, source, timer });
+      void context.resume();
+      return {};
+    }
     async createOffer() { return { type: 'offer', sdp: 'synthetic-browser-offer' }; }
     async setLocalDescription(value) { this.localDescription = value; }
     async setRemoteDescription() {
@@ -91,6 +127,11 @@ export const liveBrowserFixtureSource = `
       if (this.connectionState === 'closed') return;
       this.change('closed');
       this.channel.close();
+      for (const meter of this.meters) {
+        clearInterval(meter.timer);
+        meter.source.disconnect();
+        void meter.context.close();
+      }
       for (const track of this.remote?.getTracks() ?? []) track.stop();
     }
   }
@@ -127,6 +168,14 @@ export const liveBrowserFixtureSource = `
     releaseMicrophone: () => releaseMicrophone?.(),
     setPlayback: (value) => { playback = value; },
     setAutoStart: (value) => { autoStart = value; },
+    sentAudio: () => sentAudio,
+    captureChanges: () => captureChanges,
+    setMicrophoneTone: (frequency) => {
+      const signal = signals.get(microphoneTracks);
+      signal.oscillator.frequency.value = frequency;
+      signal.gain.gain.value = 0.2;
+      void signal.context.resume();
+    },
     setSound: (source, active, level = 0.2) => {
       const signal = signals.get(source === 'microphone' ? microphoneTracks : remoteTracks);
       if (!signal) throw new Error('Missing media signal');
@@ -161,6 +210,9 @@ declare global {
       releaseMicrophone(): void;
       setPlayback(value: 'allow' | 'blocked' | 'error'): void;
       setAutoStart(value: boolean): void;
+      sentAudio(): { peak: number; frequency: number; at: number }[];
+      captureChanges(): { enabled: boolean; at: number }[];
+      setMicrophoneTone(frequency: number): void;
       /** The level is the sound's strength, from 0 to 1. A quiet voice when it is left out. */
       setSound(source: 'microphone' | 'remote', active: boolean, level?: number): void;
       stats(): {
