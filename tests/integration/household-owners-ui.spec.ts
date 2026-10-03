@@ -14,6 +14,14 @@ test('FLYTT-02: an uncertain explicit identity assignment is read back while bot
   const targetClient = targetContext.request;
   const page = await targetContext.newPage();
   const stale = await targetContext.newPage();
+  let releaseRecovery = () => {};
+  const heldRecovery = new Promise<void>((resolve) => {
+    releaseRecovery = resolve;
+  });
+  await targetContext.route('**/text-assistant/recover', async (route) => {
+    await heldRecovery;
+    await route.continue();
+  });
   try {
     await signIn(sourceClient, source.origin);
     const { household } = await (await createHousehold(sourceClient, source.origin)).json();
@@ -255,6 +263,7 @@ test('FLYTT-02: an uncertain explicit identity assignment is read back while bot
     expect((await targetClient.post(`${path}/map/save`, { headers, data: pending })).status()).toBe(
       409,
     );
+    releaseRecovery();
     await expect(stale.getByLabel('Objektets namn')).toHaveCount(0);
 
     await page.unroute('**/content-owners/assign');
@@ -279,6 +288,7 @@ test('FLYTT-02: an uncertain explicit identity assignment is read back while bot
     );
     expect(writes).toBe(1);
   } finally {
+    releaseRecovery();
     await sourceContext.close();
     await targetContext.close();
     await source.close();
