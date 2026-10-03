@@ -88,6 +88,7 @@ export function typeDifferences(
   after: ObjectType & RelationshipType,
 ) {
   const changes = [
+    ...difference('Namn', before.name, after.name),
     ...builtinPresentationChanges(before, after),
     ...difference('Beskrivning', valueText(before.description), valueText(after.description)),
   ];
