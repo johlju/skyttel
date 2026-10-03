@@ -8,8 +8,16 @@ export function prepareVoicePlayback(audio = new Audio(), audioContext = new Aud
   // It follows the existing same-origin content policy and requests no microphone.
   audio.src = silentPlaybackUrl;
   audio.loop = true;
-  void audioContext.resume().catch(() => {});
-  void audio.play().catch(() => {});
+  try {
+    void Promise.resolve(audioContext.resume()).catch(() => {});
+  } catch {
+    // A denied preparation is handled when the remote output is played.
+  }
+  try {
+    void Promise.resolve(audio.play()).catch(() => {});
+  } catch {
+    // Keep the element for ordinary playback and its explicit recovery button.
+  }
   return {
     audio,
     audioContext,
@@ -37,8 +45,9 @@ export function createVoiceTransport(
   },
   playback?: VoicePlayback,
 ) {
-  const live = new OpenAILiveWebRTC();
   const audio = playback?.audio ?? new Audio();
+  const audioContext = playback?.audioContext ?? new AudioContext();
+  const live = new OpenAILiveWebRTC();
   audio.autoplay = true;
   const remoteTracks = new Set<MediaStreamTrack>();
   let microphone: MediaStream | undefined;
@@ -48,7 +57,6 @@ export function createVoiceTransport(
   let playbackTransferred = false;
   let closed = false;
   let paused = false;
-  const audioContext = playback?.audioContext ?? new AudioContext();
   const meters: { source: MediaStreamAudioSourceNode; analyser: AnalyserNode; input: boolean }[] =
     [];
   const samples = new Uint8Array(256);

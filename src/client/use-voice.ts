@@ -173,8 +173,19 @@ export function useVoice(options: {
     };
   }, [path, stop]);
   const prepareAudio = useCallback(() => {
-    if (prepared.current || current.current || typeof AudioContext === 'undefined') return;
-    prepared.current = prepareVoicePlayback();
+    if (
+      prepared.current ||
+      current.current ||
+      typeof navigator.mediaDevices?.getUserMedia !== 'function' ||
+      typeof RTCPeerConnection !== 'function' ||
+      typeof AudioContext !== 'function'
+    )
+      return;
+    try {
+      prepared.current = prepareVoicePlayback();
+    } catch {
+      // Preparation is best effort; ordinary startup reports unsupported audio.
+    }
   }, []);
   useEffect(
     () => () => {
@@ -247,10 +258,13 @@ export function useVoice(options: {
         }
       };
       try {
-        if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection === 'undefined')
+        if (
+          typeof navigator.mediaDevices?.getUserMedia !== 'function' ||
+          typeof RTCPeerConnection !== 'function' ||
+          typeof AudioContext !== 'function'
+        )
           throw new DOMException('Voice is not supported', 'NotSupportedError');
         const playback = prepared.current ?? undefined;
-        prepared.current = null;
         attempt.transport = createVoiceTransport(
           {
             onMicrophoneReady: () => {
@@ -283,6 +297,7 @@ export function useVoice(options: {
           },
           playback,
         );
+        prepared.current = null;
         await attempt.transport.connect(
           async (sdp, options) => {
             let result: VoiceAssistantResponse;

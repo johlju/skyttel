@@ -856,11 +856,48 @@ test.each([
   },
 );
 
-test('unsupported browsers explain missing voice support before capturing audio', async () => {
+test.each(['microphone', 'WebRTC', 'audio context'])(
+  'missing %s skips playback preparation and explains unsupported voice before capturing',
+  async (missing) => {
+    const { calls, getUserMedia } = setup();
+    if (missing === 'microphone') Reflect.deleteProperty(navigator, 'mediaDevices');
+    else if (missing === 'WebRTC') vi.stubGlobal('RTCPeerConnection', undefined);
+    else vi.stubGlobal('AudioContext', undefined);
+    vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(() => {
+      throw new Error('Playback is unavailable');
+    });
+    await userEvent.click(microphoneButton());
+    expect((await screen.findByRole('alert')).textContent).toContain('saknar stöd för röstsamtal');
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  },
+);
+
+test('a playback preparation exception falls back to the ordinary voice startup and recovery', async () => {
   const { calls, getUserMedia } = setup();
-  vi.stubGlobal('RTCPeerConnection', undefined);
+  vi.mocked(HTMLMediaElement.prototype.play).mockImplementationOnce(() => {
+    throw new DOMException('Playback setup failed', 'NotSupportedError');
+  });
+  await startWithAudio();
+  expect(voiceBox()?.textContent).toBe('Lyssnar');
+  expect(getUserMedia).toHaveBeenCalledOnce();
+  expect(calls.filter((call) => call.url === base)).toHaveLength(1);
+});
+
+test('an audio context construction failure is reported by startup without escaping the click', async () => {
+  const { calls, getUserMedia } = setup();
+  vi.stubGlobal(
+    'AudioContext',
+    class {
+      constructor() {
+        throw new DOMException('Audio cannot open', 'NotSupportedError');
+      }
+    },
+  );
   await userEvent.click(microphoneButton());
   expect((await screen.findByRole('alert')).textContent).toContain('saknar stöd för röstsamtal');
+  expect(Peer.all).toHaveLength(0);
   expect(getUserMedia).not.toHaveBeenCalled();
   expect(calls).toHaveLength(0);
 });
