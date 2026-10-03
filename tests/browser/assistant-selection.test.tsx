@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import '../../src/client/styles.css';
+import { defaultConversationPreferences } from '../../src/shared/conversation-preferences.js';
 import type { MapState } from '../../src/shared/map.js';
 import { defaultViewSettings } from '../../src/shared/personal-view.js';
 import type { MapSelection, TextAssistantView } from '../../src/shared/text-assistant.js';
@@ -63,6 +64,8 @@ async function open(width = 1280, height = 900, mapState = state) {
   let target: MapSelection = { kind: 'object', id: 'lo' };
   const acknowledgements: { displayed: boolean; kind: string; id: string }[] = [];
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/conversation-preferences'))
+      return Response.json(defaultConversationPreferences);
     if (url.endsWith('/operations')) return Response.json({ operations: [] });
     if (url.endsWith('/view'))
       return Response.json({

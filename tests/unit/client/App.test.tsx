@@ -3,6 +3,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { App } from '../../../src/client/App.js';
+import { defaultConversationPreferences } from '../../../src/shared/conversation-preferences.js';
 import { defaultViewSettings } from '../../../src/shared/personal-view.js';
 
 const anonymous = { status: 'anonymous', providers: ['google', 'microsoft'] };
@@ -21,7 +22,7 @@ function serve(routes: Record<string, Reply[]>) {
     data: { available: false },
   }));
   routes['/api/households/linden/map/conversation-preferences'] ??= [
-    { data: { showDraftOnStart: false } },
+    { data: defaultConversationPreferences },
   ];
   routes['/api/households/linden/conversation-consent'] ??= [{ data: { saved: null } }];
   routes['/api/households/linden/map?reload=0'] ??= [

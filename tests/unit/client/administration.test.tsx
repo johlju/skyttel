@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { App } from '../../../src/client/App.js';
 import type { Administration, HouseholdInvitation } from '../../../src/shared/administration.js';
+import { defaultConversationPreferences } from '../../../src/shared/conversation-preferences.js';
 import { defaultViewSettings } from '../../../src/shared/personal-view.js';
 
 const household = { id: 'linden', name: 'Hushållet Linden', role: 'administrator' };
@@ -43,7 +44,7 @@ function serve(routes: Record<string, Reply[]>) {
     data: { available: false },
   }));
   routes['/api/households/linden/map/conversation-preferences'] ??= [
-    { data: { showDraftOnStart: false } },
+    { data: defaultConversationPreferences },
   ];
   routes['/api/households/linden/conversation-consent'] ??= [{ data: { saved: null } }];
   routes['/api/households/linden/erasure'] ??= Array.from({ length: 3 }, () => ({
@@ -633,6 +634,11 @@ describe('current household access', () => {
     serve({
       '/api/bootstrap': [{ data: ready }, { data: forbidden }],
       '/api/households/linden': [{ data: { household } }, { status: 403 }],
+      // Personal choices refresh when the window regains focus.
+      '/api/households/linden/map/conversation-preferences': [
+        { data: defaultConversationPreferences },
+        { data: defaultConversationPreferences },
+      ],
     });
     mount('/');
     await userEvent.click(await screen.findByRole('button', { name: 'Inställningar' }));

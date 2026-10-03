@@ -256,7 +256,7 @@ test('archive 21 preserves canonical property placement, sections and hidden val
   await object('first', 'solar', 'Privat text');
   await define({ ...definition, name: 'Privat typnamn' });
   const source = await archive();
-  expect(source.manifest.schemaVersion).toBe(23);
+  expect(source.manifest.schemaVersion).toBe(24);
   expect(source.content.objectTypeFields.find(({ typeId }) => typeId === 'solar')).toMatchObject({
     fields: definition.fields,
     sections: definition.sections,

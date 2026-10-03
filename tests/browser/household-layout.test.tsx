@@ -4,6 +4,7 @@ import { cdp, page, userEvent } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import '../../src/client/styles.css';
 import { conversationConsentTextVersion } from '../../src/shared/conversation-consent.js';
+import { defaultConversationPreferences } from '../../src/shared/conversation-preferences.js';
 import type { MapState } from '../../src/shared/map.js';
 import { defaultViewSettings, type PersonalView } from '../../src/shared/personal-view.js';
 import { openConversationText } from '../support/conversation-browser.js';
@@ -53,7 +54,7 @@ async function open(width: number, mapState = state, positions: PersonalView['po
       });
     if (url.endsWith('/operations')) return Response.json({ operations: [] });
     if (url.endsWith('/conversation-preferences'))
-      return Response.json({ showDraftOnStart: false });
+      return Response.json(defaultConversationPreferences);
     if (url.endsWith('/conversation-consent'))
       return Response.json({ saved: { textVersion: conversationConsentTextVersion } });
     if (url.endsWith('/text-assistant') && init?.method !== 'POST')
