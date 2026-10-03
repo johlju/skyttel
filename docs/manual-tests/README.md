@@ -157,7 +157,9 @@ sådan funktion. **Tillbaka till kartan** återger arbetet.
   textvyn utan att samtalet avslutas, samtalstexten visar vem som skriver
   och raden Skyttel arbetar sist, **Nytt samtal** behåller utkast, mikrofon
   och oskickad text även vid dubbelklick under fördröjd omstart, och textvyn
-  går att använda på pekskärm och smal skärm. Kontrollerade kommentarspaket
+  går att använda på pekskärm och smal skärm. Textknappens överlagrade
+  markeringar visar skrivet arbete, olästa svar och väntande frågor med
+  en enda artig uppläsning, fasta mått och minskad rörelse. Kommentarspaket
   och faktiskt hört tal provas separat. Mobilfallen provar iPhone och
   iPad, fast sidofält på bred pekskärm, kompakt rad vid kort synlig höjd,
   bibehållet fokus, 190 px synlig höjd med rösten på, fria kartkontroller

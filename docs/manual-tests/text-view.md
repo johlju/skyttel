@@ -594,6 +594,178 @@ JS
 - Grundbredderna, det markerade startvalet och det sparade medgivandet
   finns kvar efter import. Hushållsimport skriver inte över personliga val.
 
+## Textknappens markeringar
+
+För TEXTBRICKA-01–05 används den kontrollerade röstinstallationen enligt
+[röstguiden](voice-assistant.md#controlled-voice-fixture). Skapa ett nytt
+hushåll med tomt utkast; kör inte `seed-family`. Välj **Skriv till Skyttel**
+och godkänn för besöket. Terminalens `pending` visar det hållna modell-
+anropet. Släpp ett vanligt svar med `reply REQUEST TEXT`.
+Börja med en ny installation inför varje fall. Fysisk skärmläsare och
+röststyrning provas separat; de tysta mediespåren bevisar ingen uppläsning.
+
+### TEXTBRICKA-01: arbete och oläst svar
+
+**Syfte:** Följa ett skrivet uppdrag utan att öppna textvyn.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Textvyn är öppen, mikrofonen av och svaret hålls.
+
+**Integrationstest:**
+[text-button-status.spec.ts](../../tests/integration/text-button-status.spec.ts),
+testfallet “TEXTBRICKA-01: stängd textvy visar arbete och ett oläst svar utan
+att flytta verktygen”.
+
+**Steg:**
+
+1. Skriv **Beskriv mitt utkast.**, välj **Skicka** och stäng textvyn.
+2. Kräv arbetsmarkering och namnet **Skriv till Skyttel. Skyttel arbetar.**
+   Kontrollera att markeringen inte får en egen skärmläsaruppläsning.
+3. Släpp svaret med `reply REQUEST Det privata utkastet är fortfarande osparat.`.
+   Kräv tre punkter uppe till höger och namnet
+   **Skriv till Skyttel. Skyttel har svarat.**.
+4. Lyssna efter en enda uppläsning **Skyttel har svarat**, som väntar på
+   sin tur. Själva svaret ska inte läsas upp medan textvyn är stängd.
+5. Öppna **Din profil** och välj **Tillbaka till arbetet**. Fokus ska gå
+   tillbaka till samma textknapp även om dess statusnamn ändrats.
+6. Öppna textvyn. Läs svaret och stäng igen. Knappen har sitt vanliga namn.
+
+**Förväntat resultat:**
+
+- Verktygsraden och knappens mått flyttas inte. Fokus stannar på knappen.
+- Markeringen finns bara med stängd textvy. Ett redan läst svar ger ingen
+  ny bricka när textvyn stängs igen.
+
+### TEXTBRICKA-02: oläst fråga med mikrofonen av
+
+**Syfte:** Visa den uttryckliga frågesignalen utan en konkurrerande röstruta.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Textvyn är öppen och mikrofonen av.
+
+**Integrationstest:**
+[text-button-status.spec.ts](../../tests/integration/text-button-status.spec.ts),
+testfallet “TEXTBRICKA-02: en oläst nödvändig fråga får frågebricka och samma
+fråga ligger kvar med mikrofonen av”.
+
+**Steg:**
+
+1. Skicka **Red ut vilken Lo som avses.** och stäng textvyn.
+2. Släpp modellen med
+   `tool REQUEST ask_questions {"questions":["Vilken person avses med Lo?"]}`.
+3. Kräv frågetecken och namnet **Skriv till Skyttel. Skyttel väntar på ditt svar.**.
+   Uppläsningen är en enda **Skyttel väntar på ditt svar**, utan själva frågan.
+4. Slå på mikrofonen. När röstrutan syns har textknappen ingen bricka.
+   Slå av mikrofonen igen. En redan levererad fråga spelas inte upp i efterhand.
+   Om röstrutan är borta finns samma olästa frågebricka, utan ny uppläsning.
+5. Öppna textvyn. Frågan finns kvar. Stäng igen; den lästa frågan ger ingen bricka.
+
+**Förväntat resultat:**
+
+- Frågesymbolen skiljer sig från tre punkter och arbetsmarkeringen.
+- Mikrofonens läge ändrar inte frågan. Lästa frågor ger ingen ny markering.
+
+### TEXTBRICKA-03: röstruta och en enda brickuppläsning
+
+**Syfte:** Behålla en oläst förekomst vid byte mellan röst och text.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Textvyn är öppen, mikrofonen av och svaret hålls.
+
+**Integrationstest:**
+[text-button-status.spec.ts](../../tests/integration/text-button-status.spec.ts),
+testfallet “TEXTBRICKA-03: röstrutan ersätter brickan och samma olästa svar
+annonseras inte på nytt”.
+
+**Steg:**
+
+1. Skicka **Beskriv mitt utkast.**, stäng textvyn och släpp modellen med
+   `reply REQUEST Det första svaret.`. Kräv tre punkter och en uppläsning.
+2. Slå på och av mikrofonen två gånger utan att öppna textvyn. Brickan
+   döljs av röstrutan och återkommer när röstrutan försvinner. Samma
+   olästa svar ger ingen andra uppläsning av brickans namn.
+3. Slå på mikrofonen. I terminalen: `user Beskriv kartan.` och
+   `delegate`. Kontrollera den aktiva anslutningen med `sessions`.
+4. Slå av mikrofonen medan modellen hålls. Röstrutan säger **Skyttel arbetar**,
+   men textknappen har ingen arbetsmarkering för det talade uppdraget.
+5. Släpp modellen med `reply REQUEST Det talade svaret.`. Öppna textvyn och
+   läs även den raden. Kontrollera att inget ytterligare modelluppdrag skapats.
+
+**Förväntat resultat:**
+
+- Bara skrivet arbete får textknappens arbetsmarkering.
+- Röstrutan och svarsbrickan konkurrerar inte. En oläst förekomst
+  annonseras en gång även när röstrutan visas och försvinner igen.
+
+### TEXTBRICKA-04: minskad rörelse, teman och knappmått
+
+**Syfte:** Kunna urskilja markeringarna utan färg eller rörelse.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Textvyn är öppen och ett skrivet svar hålls.
+
+**Integrationstest:**
+[text-button-status.spec.ts](../../tests/integration/text-button-status.spec.ts),
+testfallen “TEXTBRICKA-04: minskad rörelse och fasta knappmått vid 390px i
+light tema”, motsvarande titel med “dark tema” samt båda varianterna med
+“1280px”. Automatiken mäter knapp, överlagring och textkontrast.
+
+**Steg:**
+
+1. Aktivera operativsystemets minskade rörelse. Prova ett 390 px fönster
+   och ett 1280 px fönster, i både ljust och mörkt tema.
+2. Skicka **Beskriv mitt utkast.**, stäng textvyn och välj
+   **Visa verktygens namn**. Kräv synlig text **Skriv till Skyttel**,
+   med stilla arbetsmarkering som inte täcker namnet.
+3. Avaktivera minskad rörelse. Arbetsmarkeringen roterar. Aktivera igen;
+   den står stilla utan övergång.
+4. Släpp `reply REQUEST Ett nytt svar.`. Tre punkter ersätter arbetsformen.
+   Verktygens placering, bredd och höjd förblir desamma.
+5. Kontrollera synlig kontrast och fokus, även vid zoom. Gör också
+   TEXTBRICKA-02 för att jämföra frågetecknets form med punkterna.
+
+**Förväntat resultat:**
+
+- Former och namn skiljer tillstånden åt utan färg. Minskad rörelse följer
+  operativsystemet; ingen särskild inställning i Skyttel behövs.
+- Markeringarna ändrar inte knappens tryckyta eller verktygsradens geometri.
+
+### TEXTBRICKA-05: köat arbete och avbrott
+
+**Syfte:** Ge pågående textarbete företräde över ett tidigare oläst svar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Textvyn är öppen på bred dator och mikrofonen av.
+
+**Integrationstest:**
+[text-button-status.spec.ts](../../tests/integration/text-button-status.spec.ts),
+testfallet “TEXTBRICKA-05: köat textarbete behåller arbetsmarkeringen före
+ett oläst svar och avbrott tar bort den”.
+
+**Steg:**
+
+1. Skicka **Beskriv mitt utkast.** och sedan **Beskriv sedan kartan.**.
+   Det andra meddelandet väntar. Stäng textvyn.
+2. Kräv arbetsmarkering. Släpp första anropet med
+   `reply REQUEST Första svaret är klart.` och håll det andra.
+3. Kräv fortsatt arbetsmarkering, utan svarsbricka eller brickuppläsning.
+   Det andra skrivna meddelandet behåller rätt arbetsmarkering i kön.
+4. Öppna textvyn, läs första svaret och tryck Escape i meddelandefältet.
+   Kräv avbrottstexten och stäng vyn. Arbetsmarkeringen försvinner.
+5. Släpp det avbrutna anropet med `reply REQUEST Det avbrutna svaret.`.
+   Öppna textvyn och kontrollera att det sena svaret saknas. Stäng igen.
+
+**Förväntat resultat:**
+
+- Arbete går före olästa svar. Ett talat uppdrag får aldrig textarbetsmarkering.
+- Avbrott och avslutat arbete tar bort arbetsmarkeringen. Ett sent avbrutet
+  svar får ingen bricka, och ett nytt samtal börjar utan gamla markeringar.
+
 ## Bedömning och återstående manuella prov
 
 Flödet är utformat mot WCAG 2.2 nivå AA. Kraven nedan är designmål, och
@@ -632,3 +804,20 @@ namn, roller, värden, dragning, piltangenter, bevarat fokus och text samt
 återställningens fokus. Verklig skärmläsaruppläsning, kontrast i båda teman
 och omflöde vid 200/400 procents zoom återstår. Detta är designmål och
 avgränsade kontroller, inte ett intyg om fullständig WCAG-överensstämmelse.
+
+Textknappens ändrade flöde har följande WCAG 2.2 AA-designmål:
+
+<!-- markdownlint-disable MD013 -->
+| Kriterium | Utformning och automatiskt prov | Återstående mänsklig verifiering |
+| --- | --- | --- |
+| 1.1.1, 1.3.1, 1.4.1, 4.1.2 | Dekorativa former är dolda; namnet beskriver arbete, svar eller fråga. Ring, punkter och frågetecken skiljer sig utan färg. | Symbolernas begriplighet och uppläsning på verkliga enheter. |
+| 1.4.3, 1.4.11, 1.4.10, 2.5.8 | Brickans textkontrast är minst 4,5:1 i båda teman; verktygsrad och minst 44 px knappmål behåller måtten vid 390 och 1280 px. | Förstoring, kantkontrast och fysisk pekskärm. |
+| 2.2.2, 2.3.1 | Arbetsmarkering är framsteg under användarens uppdrag, som kan avbrytas; minskad rörelse gör den stilla. Inga blinkningar. | Verkliga rörelseinställningar och upplevd animation. |
+| 2.4.3, 2.4.7, 2.5.3 | Samma synliga prefix och kontroll bevaras; status flyttar inte fokus eller verktyg. | NVDA, VoiceOver, röststyrning och synligt fokus vid zoom. |
+| 4.1.3 | En artig region annonserar varje ny oläst förekomst en gång. Inget autonomt arbetsnamn eller svar med stängd textvy. | Faktiskt hörbar turordning och frånvaro av dubbla uppläsningar. |
+<!-- markdownlint-enable MD013 -->
+
+Proven använder riktig server och tillfällig SQLite. Kontrollerade
+modell- och mediesvar, DOM-uppläsningar och emulerade fönstermått visar
+inte fullständig WCAG-överensstämmelse. Fysisk mikrofon, skärmläsare,
+röststyrning, zoom och pekskärm återstår enligt #220.

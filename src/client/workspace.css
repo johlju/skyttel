@@ -741,3 +741,57 @@ footer[hidden] {
   outline-offset: 5px;
   box-shadow: none;
 }
+
+/* Indicators overlay the fixed toolbar target; their shapes do not alter layout. */
+.workspace-text {
+  position: relative;
+}
+.text-button-marker {
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--space-surface);
+  border-radius: 50%;
+  background: var(--space-accent);
+  color: var(--space-bg);
+  font-size: 16px;
+  font-weight: 800;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: -1px;
+  pointer-events: none;
+}
+.text-button-marker[data-status="working"] {
+  left: 7px;
+  top: 7px;
+  right: auto;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--space-surface);
+  color: var(--space-accent);
+}
+.workspace-tools .text-button-marker svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  animation: text-button-work 1s linear infinite;
+}
+@keyframes text-button-work {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-tools .text-button-marker svg {
+    animation: none;
+  }
+}

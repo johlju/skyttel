@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import logo from '../../docs/images/shuttle-logo-transparent-small.png';
 import { microphoneShortcut, useMicrophonePress } from './use-microphone-press.js';
+import { type TextButtonStatus, textButtonStatusWords } from './use-text-button-status.js';
 import type { Voice } from './use-voice.js';
 
 const paths = {
@@ -71,6 +72,7 @@ export function WorkspaceTools({
   voiceBox,
   holdVoice,
   textViewOpen = false,
+  textButton,
   cameraMount,
   expanded,
   onExpandedChange,
@@ -95,6 +97,7 @@ export function WorkspaceTools({
   /** The voice box. It follows the conversation buttons in the reading order. */
   voiceBox?: ReactNode;
   textViewOpen?: boolean;
+  textButton?: { status: TextButtonStatus | null };
   cameraMount?: (element: HTMLDivElement | null) => void;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -204,7 +207,11 @@ export function WorkspaceTools({
                     ? `${label}. Inte tillgängligt just nu.`
                     : label
               }
-              aria-label={label}
+              aria-label={
+                target === 'conversation' && textButton?.status
+                  ? `${label}. ${textButtonStatusWords[textButton.status]}.`
+                  : label
+              }
               aria-description={
                 target === 'voice' && !touch
                   ? voiceDescription
@@ -216,7 +223,13 @@ export function WorkspaceTools({
               }
               data-held={(target === 'voice' && microphonePress.held) || undefined}
               data-secondary={target === 'draft' || target === 'search' || undefined}
-              className={target === 'voice' ? 'workspace-talk' : undefined}
+              className={
+                target === 'voice'
+                  ? 'workspace-talk'
+                  : target === 'conversation'
+                    ? 'workspace-text'
+                    : undefined
+              }
               data-unavailable={
                 (conversationUnavailable &&
                   (target === 'voice' || (target === 'conversation' && !conversationOngoing))) ||
@@ -251,6 +264,23 @@ export function WorkspaceTools({
             >
               <WorkspaceIcon name={icon} />
               <span>{label}</span>
+              {target === 'conversation' && textButton?.status && (
+                <i
+                  className="text-button-marker"
+                  data-status={textButton.status}
+                  aria-hidden="true"
+                >
+                  {textButton.status === 'working' ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 3a9 9 0 1 1-9 9" />
+                    </svg>
+                  ) : textButton.status === 'waiting' ? (
+                    '?'
+                  ) : (
+                    '•••'
+                  )}
+                </i>
+              )}
             </button>
             {target === 'conversation' && voiceBox}
           </Fragment>

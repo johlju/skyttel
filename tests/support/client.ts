@@ -1,4 +1,5 @@
 import { type APIRequestContext, expect, type Page, request } from '@playwright/test';
+import { textViewButtonAccessibleName } from './conversation.js';
 
 // These HTTP-only clients use default context options. Keep their authenticated
 // session across a deliberate server restart, but retire the old socket pool.
@@ -49,7 +50,10 @@ export async function openSettings(page: Page) {
 export async function utilityButton(page: Page, name: string) {
   const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
   await expect(tools).toBeVisible();
-  const button = tools.getByRole('button', { name, exact: true });
+  const button = tools.getByRole('button', {
+    name: name === 'Skriv till Skyttel' ? textViewButtonAccessibleName : name,
+    exact: true,
+  });
   if (!(await button.isVisible()))
     await tools.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
   return button;

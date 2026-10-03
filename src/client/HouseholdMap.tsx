@@ -75,6 +75,7 @@ import { type ConversationMode, conversationOngoing, useConversation } from './u
 import { useConversationPreferences } from './use-conversation-preferences.js';
 import { useConversationViewport } from './use-conversation-viewport.js';
 import { usePersonalView } from './use-personal-view.js';
+import { useTextButtonStatus } from './use-text-button-status.js';
 import { useWorkspaceTheme, WorkspaceTheme } from './WorkspaceTheme.js';
 
 function draftEntryId(kind: DraftConflict['kind'], id: string) {
@@ -218,7 +219,11 @@ export function HouseholdMap({
         ? [
             ...(workspace.current?.querySelectorAll<HTMLButtonElement>('.workspace-tools button') ??
               []),
-          ].find((button) => button.getAttribute('aria-label') === target)
+          ].find((button) =>
+            target === textViewButtonName
+              ? button.classList.contains('workspace-text')
+              : button.getAttribute('aria-label') === target,
+          )
         : target;
     if (!element?.isConnected || !element.offsetHeight || element.closest('[hidden], [inert]'))
       return false;
@@ -1452,6 +1457,7 @@ export function HouseholdMap({
   useEffect(() => {
     if (conversation.revocationReceipt) setStatus(receiptMessage(conversation.revocationReceipt));
   }, [conversation.revocationReceipt]);
+  const textButton = useTextButtonStatus(conversation, textViewOpen && active, active);
   const liveOngoing = conversationOngoing(conversation, textViewOpen);
   const beforeConnection = useRef({ blocked: false, ongoing: false });
   const interruptedConversation = useRef(false);
@@ -1586,7 +1592,9 @@ export function HouseholdMap({
           lastOutsideFocus.current = null;
         } else {
           lastOutsideFocus.current = event.target.closest('.workspace-tools')
-            ? event.target.getAttribute('aria-label')
+            ? event.target.classList.contains('workspace-text')
+              ? textViewButtonName
+              : event.target.getAttribute('aria-label')
             : event.target;
         }
       }}
@@ -1662,6 +1670,7 @@ export function HouseholdMap({
             }}
             voiceBox={voiceBox}
             textViewOpen={textViewOpen}
+            textButton={textButton}
             cameraMount={setCameraMount}
             expanded={toolsExpanded}
             onExpandedChange={setToolsExpanded}
@@ -1728,6 +1737,9 @@ export function HouseholdMap({
       {/* Outside the map, where its tools are not shown, the voice box still says what the voice does. */}
       {!active && voiceBox}
       <ConversationNoticeAnnouncements announcement={noticeState.announcement} />
+      <p className="visually-hidden text-button-announcement" aria-live="polite" aria-atomic="true">
+        <span key={textButton.announcement.count}>{textButton.announcement.text}</span>
+      </p>
       <div className="workspace-feedback">
         {status && !pending && !error && (
           <button

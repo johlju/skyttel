@@ -1,7 +1,12 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { vi } from 'vitest';
-import { consentBoxControls, consentBoxName, conversationSteps } from './conversation.js';
+import {
+  consentBoxControls,
+  consentBoxName,
+  conversationSteps,
+  textViewButtonAccessibleName,
+} from './conversation.js';
 
 // The conversation steps for Testing Library in jsdom.
 
@@ -44,7 +49,12 @@ export const {
   chooseConversationVoice,
 } = conversationSteps<HTMLElement>({
   ...lookup,
-  tool: (name) => shown(() => screen.getByRole('button', { name })),
+  tool: (name) =>
+    shown(() =>
+      screen.getByRole('button', {
+        name: name === 'Skriv till Skyttel' ? textViewButtonAccessibleName : name,
+      }),
+    ),
   asked: findConsentBox,
   expanded: (control) => control.getAttribute('aria-expanded') === 'true',
   tick: click,

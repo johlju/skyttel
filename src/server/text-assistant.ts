@@ -159,6 +159,7 @@ export function textAssistantRoutes({
       canceled,
       completedReplies,
       taskId,
+      taskSource,
       phase,
       review,
       reply,
@@ -186,6 +187,7 @@ export function textAssistantRoutes({
       canceled,
       completedReplies,
       taskId,
+      taskSource,
       queuedMessages: session.queue.length,
       saving: Boolean(
         session.pendingSave &&
@@ -472,6 +474,7 @@ export function textAssistantRoutes({
     session.queue = [];
     session.accepted.clear();
     session.taskId = undefined;
+    session.taskSource = undefined;
     session.canceled = undefined;
     session.completedReplies = [];
     session.revision++;
@@ -1047,6 +1050,7 @@ export function textAssistantRoutes({
     const task = new AbortController();
     session.task = task;
     session.taskId = message.id;
+    session.taskSource = message.voice ? 'voice' : 'text';
     session.revision++;
     session.phase = 'working';
     session.resetSource = undefined;
@@ -1109,6 +1113,7 @@ export function textAssistantRoutes({
           });
         session.task = undefined;
         session.taskId = undefined;
+        session.taskSource = undefined;
         accepted.result = {
           ...view(session),
           completedReplies: [...(session.completedReplies ?? [])],
@@ -1390,6 +1395,7 @@ export function textAssistantRoutes({
     session.task?.abort();
     session.queue = [];
     session.taskId = undefined;
+    session.taskSource = undefined;
     session.revision++;
     session.boundaryRevision = session.revision;
     session.canceled = true;

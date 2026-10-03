@@ -46,6 +46,8 @@ export interface TextAssistantView {
   /** Accepted messages waiting on the server, excluding the current task. */
   queuedMessages?: number;
   taskId?: string;
+  /** Origin of the current task; queued messages keep their own origin. */
+  taskSource?: 'text' | 'voice';
   taskStatus?: 'queued' | 'working' | 'completed' | 'canceled';
   /** Completed replies remain available when the next queued task starts. */
   completedReplies?: ConversationReply[];

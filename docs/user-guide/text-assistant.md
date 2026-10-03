@@ -216,9 +216,21 @@ ett skrivet svar bara som text. Alla dina ord och Skyttels svar finns i
 samtalstexten, även om du öppnar textvyn senare. Talade rader har ingen
 extra märkning och textvyn öppnas aldrig av ett svar.
 
-En skärmläsare läser bara Skyttels nya svar som inte sägs med rösten, och
-väntar på sin tur. Dina egna rader och gamla svar läses inte upp när du
+I den öppna textvyn läser en skärmläsare bara Skyttels nya svar som inte
+sägs med rösten, och väntar på sin tur. Dina egna rader och gamla svar
+läses inte upp när du
 öppnar textvyn. Du kan ändå läsa alla rader själv med skärmläsaren.
+
+När textvyn är stängd visar **Skriv till Skyttel** en arbetsmarkering för
+ett skrivet uppdrag. Den går före andra markeringar. När röstrutan inte
+syns visar knappen tre punkter för ett oläst svar eller ett frågetecken
+för en oläst fråga som väntar på ditt svar. Brickan försvinner när du
+öppnar textvyn. Ett talat uppdrag får ingen arbetsmarkering på textknappen.
+
+Knappens namn börjar alltid med **Skriv till Skyttel**. En skärmläsare
+får en enda artig uppläsning när en ny svarsbricka eller frågebricka visas,
+utan själva svaret. Arbetsmarkeringen ger ingen egen uppläsning.
+Med minskad rörelse står arbetsmarkeringen stilla.
 
 Röstrutans korta statusord visar vad rösten gör. **Skriv till Skyttel**
 öppnar samtalstexten, där du kan läsa frågor och svar. Samtalet, mikrofonen

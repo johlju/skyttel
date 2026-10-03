@@ -18,6 +18,9 @@ export const conversationTools = {
   text: 'Skriv till Skyttel',
 } as const;
 
+export const textViewButtonAccessibleName =
+  /^Skriv till Skyttel(?:\. Skyttel (?:arbetar|har svarat|väntar på ditt svar)\.)?$/;
+
 export const consentBoxName = 'Samtal med Skyttel';
 
 // The voice box, which shows what the voice does while no panel is open.
