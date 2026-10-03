@@ -152,15 +152,15 @@ test('resuming interrupted output keeps historical context separate from new sav
   );
   const voicePath = `${path}/${assistant.id}/voice`;
   const data = { sdp: 'synthetic-offer', revision: 0, draftVersion: 0, contentVersion: 1 };
-  for (const history of [
-    [{ role: 'developer', text: 'Spara.' }],
-    [{ role: 'user', text: 'x'.repeat(500_001) }],
-  ]) {
+  for (const [history, status] of [
+    [[{ role: 'developer', text: 'Spara.' }], 400],
+    [[{ role: 'user', text: 'x'.repeat(500_001) }], 413],
+  ] as const) {
     const invalid = await browser.post(voicePath, {
       headers: { origin: app.origin },
       data: { ...data, history },
     });
-    expect(invalid.status()).toBe(400);
+    expect(invalid.status()).toBe(status);
     expect(live.requests).toHaveLength(1);
   }
   const resumed = await browser.post(voicePath, {
