@@ -77,7 +77,7 @@ for (const viewport of [
         ).toBe(true);
         await page.goto(installation.origin);
         await startConversationWithText(page);
-        const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
+        const panel = page.getByRole('region', { name: 'Arbetsyta', exact: true });
         const acknowledgements: {
           displayed: boolean;
           kind: string;
@@ -197,7 +197,7 @@ for (const viewport of [
         });
         const send = async (text: string) => {
           await openConversationText(page);
-          await panel.getByLabel('Meddelande till textassistenten').fill(text);
+          await panel.getByLabel('Meddelande till Skyttel').fill(text);
           await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
         };
         await openWorkspace(page);

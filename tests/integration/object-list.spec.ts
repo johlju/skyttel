@@ -148,9 +148,9 @@ test('LISTA-03: a map result focuses only its direct neighbors and closes only t
     const lo = map.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
     await lo.click({ trial: true });
     await startConversationWithText(page);
-    const conversation = page.getByRole('region', { name: 'Samtal och text', exact: true });
+    const conversation = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
     await conversation
-      .getByLabel('Meddelande till textassistenten', { exact: true })
+      .getByLabel('Meddelande till Skyttel', { exact: true })
       .fill('Oskickat medan jag söker');
     await openWorkspace(page);
     const work = page.getByRole('region', { name: 'Lista och utkast', exact: true });
@@ -165,9 +165,9 @@ test('LISTA-03: a map result focuses only its direct neighbors and closes only t
     await work.getByRole('button', { name: 'Visa Lo Exempel i kartan', exact: true }).click();
     await expect(work).not.toBeVisible();
     await expect(conversation).toBeVisible();
-    await expect(
-      conversation.getByLabel('Meddelande till textassistenten', { exact: true }),
-    ).toHaveValue('Oskickat medan jag söker');
+    await expect(conversation.getByLabel('Meddelande till Skyttel', { exact: true })).toHaveValue(
+      'Oskickat medan jag söker',
+    );
     await expect(page.getByRole('region', { name: 'Lo Exempel', exact: true })).toHaveCount(0);
     await expect(lo).toHaveAttribute('aria-pressed', 'true');
     const kim = map.getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true });

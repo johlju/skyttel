@@ -304,7 +304,9 @@ test('KAMERA-04: short viewports retain a usable focus rectangle and reachable c
     await page.getByRole('button', { name: 'Rotera vänster', exact: true }).click();
     await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     await expand.click();
-    await page.getByRole('button', { name: 'Samtal och text', exact: true }).click({ trial: true });
+    await page
+      .getByRole('button', { name: 'Skriv till Skyttel', exact: true })
+      .click({ trial: true });
     await page.getByRole('button', { name: 'Visa detaljer', exact: true }).click({ trial: true });
     await focus.focus();
     await page.keyboard.press('Enter');

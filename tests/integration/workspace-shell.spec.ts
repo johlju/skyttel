@@ -191,7 +191,7 @@ test('YTA-02: theme choice returns focus and System follows the device', async (
         ['link', 'Hoppa till innehållet'],
         ['link', 'Till verktygen'],
         ['button', 'Till lista och formulär'],
-        ['button', 'Till samtal och text'],
+        ['button', 'Till samtalet med Skyttel'],
       ] as const) {
         const control = page.getByRole(role, { name, exact: true });
         await expect(control).toBeFocused();

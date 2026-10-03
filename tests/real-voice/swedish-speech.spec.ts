@@ -67,7 +67,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
       .click();
     await page.getByRole('button', { name: 'Redigera valt objekt', exact: true }).click();
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text från talprovet');
-    const panel = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
+    const panel = page.getByRole('region', { name: 'Arbetsyta', exact: true });
     await startConversationWithText(page);
     await chooseConversationVoice(page);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true', {
@@ -77,7 +77,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
       'Sparat. Hela utkastet finns i hushållets karta.',
       { timeout: 180_000 },
     );
-    await expect(panel.getByRole('log', { name: 'Samtalets dialog' })).toContainText(/Molnmusik/i);
+    await expect(panel.getByRole('log', { name: 'Samtalstext' })).toContainText(/Molnmusik/i);
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Osänd text från talprovet',
     );

@@ -6,7 +6,6 @@ import {
   openWorkspace,
   signIn,
 } from '../support/client.js';
-import { openConversationText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 
 test('LISTA-05: short-screen list returns preserve the visible result and keyboard focus', async ({
@@ -107,7 +106,8 @@ test('LISTA-06: an inactive visible list opens details on the first pointer clic
     await openWorkspace(page);
     const work = page.getByRole('region', { name: 'Lista och utkast', exact: true });
     const body = work.locator('.workspace-panel-body');
-    await openConversationText(page);
+    // Another panel takes the turn, and the list stays visible beside it.
+    await work.getByRole('button', { name: 'Uppgifter för Provobjekt 000', exact: true }).click();
     await expect(work).toBeVisible();
     await expect(work).toHaveAttribute('data-active', 'false');
     const result = work.getByRole('button', {

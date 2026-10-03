@@ -1,7 +1,11 @@
 import { expect, type Locator, test } from '@playwright/test';
 import type { MapObject, MapState } from '../../src/shared/map.js';
 import { createHousehold, openWorkspace, signIn } from '../support/client.js';
-import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
+import {
+  closeConversationText,
+  openConversationText,
+  startConversationWithText,
+} from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -114,7 +118,9 @@ test('PANEL-01: independent object panels preserve unsent work and reuse each ob
     for (const name of ['Cykeln', 'Bilen', 'Garaget']) {
       await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
     }
-    await expect(page.getByRole('region', { name: 'Samtal och text', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }),
+    ).toBeVisible();
     await page.getByLabel(/^Öppna paneler/).selectOption({ label: 'Cykeln' });
     await page.getByRole('button', { name: 'Stäng Cykeln', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Cykeln', exact: true })).not.toBeVisible();
@@ -206,18 +212,18 @@ test('PANEL-02: mobile panel choice retains conversation, object text and deskto
     await page.setViewportSize({ width: 1440, height: 1000 });
     await expect.poll(async () => (await bounds(panel)).x).toBe(position.x);
     await startConversationWithText(page);
-    const conversation = page.getByRole('region', { name: 'Samtal och text', exact: true });
-    await conversation.getByLabel('Meddelande till textassistenten').fill('Oskickad samtalstext');
+    const conversation = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+    await conversation.getByLabel('Meddelande till Skyttel').fill('Oskickad samtalstext');
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
       const chooser = page.getByLabel(/^Öppna paneler/);
+      // On a narrow screen the text view fills the screen, and the panels wait behind it.
+      await expect(conversation).toBeVisible();
+      await expect(chooser).toBeHidden();
+      await closeConversationText(page);
       await expect(chooser).toBeVisible();
-      await expect(chooser.locator('option')).toHaveText([
-        'Lista och utkast',
-        'Samtal och text',
-        'Cykeln',
-      ]);
-      for (const name of ['Cykeln', 'Lista och utkast', 'Samtal och text']) {
+      await expect(chooser.locator('option')).toHaveText(['Lista och utkast', 'Cykeln']);
+      for (const name of ['Cykeln', 'Lista och utkast']) {
         await chooser.selectOption({ label: name });
         const chosen = page.getByRole('region', { name, exact: true });
         const focusTarget =
@@ -260,14 +266,16 @@ test('PANEL-02: mobile panel choice retains conversation, object text and deskto
         .getByRole('button', { name: 'Uppgifter för Cykeln', exact: true })
         .click();
       await expect(panel.getByRole('heading', { name: 'Cykeln', exact: true })).toBeFocused();
-      await chooser.selectOption({ label: 'Samtal och text' });
-      await expect(conversation.getByLabel('Meddelande till textassistenten')).toHaveValue(
+      await openConversationText(page);
+      await expect(conversation.getByLabel('Meddelande till Skyttel')).toHaveValue(
         'Oskickad samtalstext',
       );
-      await page.getByRole('button', { name: 'Stäng Samtal och text', exact: true }).click();
-      await expect(chooser).toBeFocused();
+      await expect(page.locator('.workspace-window:visible')).toHaveCount(0);
+      // The panel that waited behind the text view comes back with the focus.
+      await conversation.getByRole('button', { name: 'Stäng textvyn', exact: true }).click();
+      await expect(panel.getByRole('heading', { name: 'Cykeln', exact: true })).toBeFocused();
       await openConversationText(page);
-      await expect(conversation.getByLabel('Meddelande till textassistenten')).toHaveValue(
+      await expect(conversation.getByLabel('Meddelande till Skyttel')).toHaveValue(
         'Oskickad samtalstext',
       );
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -338,9 +346,9 @@ test('PANEL-03: an intervening proposal for the same object preserves text and b
     );
     await expect(object.getByLabel('Objektets namn', { exact: true })).toHaveValue('Cykeln');
     await startConversationWithText(page);
-    const conversation = page.getByRole('region', { name: 'Samtal och text', exact: true });
+    const conversation = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
     await conversation
-      .getByLabel('Meddelande till textassistenten')
+      .getByLabel('Meddelande till Skyttel')
       .fill('Föreslå en ny beskrivning för cykeln.');
     await conversation.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect(conversation).toContainText('Det nya förslaget finns i ditt utkast.');

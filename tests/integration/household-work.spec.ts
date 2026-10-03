@@ -107,12 +107,12 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
     const before = await read();
     const viewBefore = await (await page.request.get(`${path}/map/view`)).json();
     await startConversation(page, installation.origin);
-    await page.getByLabel('Meddelande till textassistenten').fill('Berätta om lampan');
+    await page.getByLabel('Meddelande till Skyttel').fill('Berätta om lampan');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
-    await expect(page.getByRole('log', { name: 'Samtalets dialog' })).toContainText(
+    await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(
       'Vem använder cykeln?',
     );
-    await page.getByLabel('Meddelande till textassistenten').fill('Gammalt oskickat svar');
+    await page.getByLabel('Meddelande till Skyttel').fill('Gammalt oskickat svar');
     await openWorkspace(page);
     await otherPage.goto(installation.origin);
     await openWorkspace(otherPage);
@@ -176,10 +176,8 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
       .getByRole('link', { name: 'Permanent radering', exact: true })
       .click();
     await expect(otherPage.getByLabel('Objektets namn')).toHaveValue('Gammal oskickad cykel');
-    await expect(page.getByLabel('Meddelande till textassistenten')).toHaveValue(
-      'Gammalt oskickat svar',
-    );
     await expect(voiceBox(page)).toHaveText('Lyssnar');
+    await expect(page.getByLabel('Meddelande till Skyttel')).toHaveValue('Gammalt oskickat svar');
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
       { enabled: true, state: 'live' },
     ]);
@@ -210,8 +208,8 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
       })
       .toEqual([{ enabled: false, state: 'ended' }]);
     await expect(otherPage.getByLabel('Objektets namn')).toHaveCount(0, { timeout: 10000 });
-    await expect(page.getByLabel('Meddelande till textassistenten')).toHaveCount(0);
     await expect(voiceBox(page)).toHaveCount(0);
+    await expect(page.getByLabel('Meddelande till Skyttel')).toHaveCount(0);
     expect(await (await page.request.get(`${path}/map`)).json()).toEqual({
       error: 'content_maintenance',
     });
@@ -263,7 +261,7 @@ test('ARBETE-07: pending erasure retires microphone, unsent forms and an admitte
     await openConversationText(page);
     await expect(consentBox(page)).toBeVisible();
     await consentBoxFor(page).decline.click();
-    await expect(page.getByRole('log', { name: 'Samtalets dialog' })).toHaveCount(0);
+    await expect(page.getByRole('log', { name: 'Samtalstext' })).toHaveCount(0);
     await expect(page.getByLabel('Objektets namn')).toHaveCount(0);
     await expect(otherPage.getByLabel('Objektets namn')).toHaveCount(0);
     await expect(
@@ -356,12 +354,12 @@ test('ARBETE-02: conversation and microphone survive navigation and end on logou
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await startConversation(page, installation.origin);
-    await page.getByLabel('Meddelande till textassistenten').fill('Berätta om cykeln');
+    await page.getByLabel('Meddelande till Skyttel').fill('Berätta om cykeln');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
-    await expect(page.getByRole('log', { name: 'Samtalets dialog' })).toContainText(
+    await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(
       'Vem använder cykeln?',
     );
-    await page.getByLabel('Meddelande till textassistenten').fill('Oskickat svar');
+    await page.getByLabel('Meddelande till Skyttel').fill('Oskickat svar');
     await openProfile(page);
     await page.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
     // Outside the map the voice box still says that the microphone is on.
@@ -370,8 +368,8 @@ test('ARBETE-02: conversation and microphone survive navigation and end on logou
       { enabled: true, state: 'live' },
     ]);
     await page.getByRole('link', { name: 'Till startsidan', exact: true }).click();
-    await expect(page.getByLabel('Meddelande till textassistenten')).toHaveValue('Oskickat svar');
-    await expect(page.getByRole('log', { name: 'Samtalets dialog' })).toContainText(
+    await expect(page.getByLabel('Meddelande till Skyttel')).toHaveValue('Oskickat svar');
+    await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText(
       'Vem använder cykeln?',
     );
     await expect(voiceBox(page)).toHaveText('Lyssnar');
@@ -382,7 +380,7 @@ test('ARBETE-02: conversation and microphone survive navigation and end on logou
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
       { enabled: false, state: 'ended' },
     ]);
-    await expect(page.getByLabel('Meddelande till textassistenten')).toHaveCount(0);
+    await expect(page.getByLabel('Meddelande till Skyttel')).toHaveCount(0);
   } finally {
     await installation.close();
   }

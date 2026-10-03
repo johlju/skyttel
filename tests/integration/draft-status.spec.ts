@@ -191,7 +191,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     await page.getByLabel('Objektets namn').fill('Oskickad cykel');
     await page.getByLabel('Beskrivning', { exact: true }).fill('Texten ska finnas kvar');
     await startConversationWithText(page);
-    await page.getByLabel('Meddelande till textassistenten').fill('Lägg Molnmusik i utkastet.');
+    await page.getByLabel('Meddelande till Skyttel').fill('Lägg Molnmusik i utkastet.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     const status = page.getByRole('region', { name: 'Aktuell status', exact: true });
     await expect(status).toContainText('2 förslag · privat utkast');
@@ -213,7 +213,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
       delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
     });
     await expect(status).toContainText('3 förslag · privat utkast');
-    await page.getByLabel('Meddelande till textassistenten').fill('Oskickat samtalsmeddelande');
+    await page.getByLabel('Meddelande till Skyttel').fill('Oskickat samtalsmeddelande');
     await openSettings(page);
     await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
     await openMap(page);
@@ -413,7 +413,7 @@ test('UTKAST-15: a necessary answer gates both save actions until a fresh explic
     await page.getByRole('button', { name: 'Lägg i mitt utkast', exact: true }).click();
     await startConversationWithText(page);
     await page
-      .getByLabel('Meddelande till textassistenten')
+      .getByLabel('Meddelande till Skyttel')
       .fill('Förbered uppgiften och fråga vilket kort som avses.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     await openMap(page);
@@ -433,7 +433,7 @@ test('UTKAST-15: a necessary answer gates both save actions until a fresh explic
     expect((await read()).objects).toEqual([]);
     expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
     await status.getByRole('button', { name: 'Svara i samtalet', exact: true }).click();
-    await page.getByLabel('Meddelande till textassistenten').fill('Kortet Lo Exempel avses.');
+    await page.getByLabel('Meddelande till Skyttel').fill('Kortet Lo Exempel avses.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect(status.getByRole('region', { name: 'Nödvändigt svar' })).toHaveCount(0);
     await openMap(page);

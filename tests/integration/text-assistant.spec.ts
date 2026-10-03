@@ -5,15 +5,14 @@ import { openConversationText, startConversationWithText } from '../support/conv
 import { createInstallation } from '../support/installation.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
-const assistant = (page: Page) =>
-  page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
+const assistant = (page: Page) => page.getByRole('region', { name: 'Arbetsyta', exact: true });
 async function consent(page: Page) {
   await startConversationWithText(page);
-  await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toBeVisible();
+  await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeVisible();
 }
 async function send(page: Page, text: string) {
   await openConversationText(page);
-  await assistant(page).getByLabel('Meddelande till textassistenten').fill(text);
+  await assistant(page).getByLabel('Meddelande till Skyttel').fill(text);
   await assistant(page).getByRole('button', { name: 'Skicka', exact: true }).click();
 }
 async function arrange(page: Page, app: Awaited<ReturnType<typeof createInstallation>>) {
@@ -404,10 +403,7 @@ test('TEXT-05: markering kräver visning och skyddar oskickad text', async ({ pa
     await send(page, 'Markera Lo igen.');
     await expect(assistant(page).getByRole('status')).not.toContainText('Markerat');
     await expect(
-      assistant(page).getByRole('region', { name: 'Assistentens samtalstext', exact: true }),
-    ).toContainText('inte en bekräftelse');
-    await expect(
-      assistant(page).getByRole('region', { name: 'Assistentens samtalstext', exact: true }),
+      assistant(page).getByRole('log', { name: 'Samtalstext', exact: true }),
     ).toContainText('Markerat!');
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue('Osänd uppgift');
   } finally {
@@ -443,17 +439,10 @@ test('TEXT-06: obekräftad samtalstext skiljs från sparande och markering', asy
     const selected = await object.getAttribute('aria-pressed');
     for (const reply of replies) {
       await send(page, 'Beskriv mitt utkast.');
-      const conversation = assistant(page).getByRole('region', {
-        name: 'Assistentens samtalstext',
-        exact: true,
-      });
+      const conversation = assistant(page).getByRole('log', { name: 'Samtalstext', exact: true });
       await expect(conversation).toContainText(reply);
-      await expect(conversation.getByRole('heading')).toHaveText(
-        'Assistentens samtalstext – inte en bekräftelse',
-      );
-      await expect(conversation).toContainText(
-        'Sparande och markering bekräftas bara av Skyttels status och kvitton.',
-      );
+      // The reservation about errors stands in the consent text, not in the text view.
+      await expect(assistant(page)).not.toContainText('Samtalstexten kan innehålla fel');
       await expect(assistant(page).getByRole('status')).toContainText('Nya förslag är osparade');
       await expect(object).toHaveAttribute('aria-pressed', selected ?? 'false');
       const current = await (await page.request.get(path)).json();

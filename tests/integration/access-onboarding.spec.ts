@@ -108,10 +108,7 @@ test('ACCESS-15: first-use guidance opens voice, text and list without a mandato
       await guidance.getByRole('button', { name: action, exact: true }).click();
       if (action === 'Öppna listan')
         await expect(page.getByRole('button', { name: 'Nytt objekt', exact: true })).toBeVisible();
-      else
-        await expect(
-          page.getByRole('region', { name: 'Skyttels textassistent', exact: true }),
-        ).toBeVisible();
+      else await expect(page.getByRole('region', { name: 'Arbetsyta', exact: true })).toBeVisible();
       await expect(guidance).toHaveCount(0);
     }
     await page.goto(installation.origin);

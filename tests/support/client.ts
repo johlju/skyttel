@@ -27,6 +27,10 @@ export async function activatePanel(page: Page, title: string) {
 export async function openMap(page: Page) {
   const close = page.getByRole('button', { name: 'Stäng arbetsytan', exact: true });
   if (await close.isVisible()) await close.click();
+  // On a narrow screen the text view fills the screen. Closing it ends no conversation.
+  const textView = page.getByRole('button', { name: 'Stäng textvyn', exact: true });
+  if ((page.viewportSize()?.width ?? 1280) <= 700 && (await textView.isVisible()))
+    await textView.click();
   await expect(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
   const guidance = page.getByRole('button', { name: 'Stäng vägledningen', exact: true });
   if (await guidance.isVisible()) await guidance.click();

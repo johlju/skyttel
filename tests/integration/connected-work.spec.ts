@@ -220,15 +220,15 @@ for (const mode of ['voice', 'text'] as const) {
 
       // 3. Real text task reads the catalog, then proposes the private subscription.
       await startConversationWithText(page);
-      const assistant = page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
-      const message = assistant.getByLabel('Meddelande till textassistenten');
+      const assistant = page.getByRole('region', { name: 'Arbetsyta', exact: true });
+      const message = assistant.getByLabel('Meddelande till Skyttel');
       await message.fill(
         'Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK per månad.',
       );
       await assistant.getByRole('button', { name: 'Skicka', exact: true }).click();
       const proposals = assistant.getByRole('list', { name: 'Alla föreslagna ändringar' });
       await expect(proposals).toContainText('Familjens Molnmusik');
-      await expect(assistant.getByRole('log', { name: 'Samtalets dialog' })).toContainText(
+      await expect(assistant.getByRole('log', { name: 'Samtalstext' })).toContainText(
         'Familjeabonnemanget är föreslaget',
       );
       const initial = await read();
@@ -269,7 +269,7 @@ for (const mode of ['voice', 'text'] as const) {
       }
       await expect(proposals.getByRole('listitem')).toHaveCount(3);
       await expect(proposals).toContainText('Kim Exempel → Betalar → Familjens Molnmusik');
-      await expect(assistant.getByRole('log', { name: 'Samtalets dialog' })).toContainText(
+      await expect(assistant.getByRole('log', { name: 'Samtalstext' })).toContainText(
         'Förslagen är fortfarande privata.',
       );
       const proposed = await read();
@@ -365,7 +365,7 @@ for (const mode of ['voice', 'text'] as const) {
 
       // 6. Settings hides work, retains its exact values and keeps the same microphone.
       await openConversationText(page);
-      const dialogue = assistant.getByRole('log', { name: 'Samtalets dialog' });
+      const dialogue = assistant.getByRole('log', { name: 'Samtalstext' });
       const dialogueBeforeSettings = await dialogue.innerText();
       await message.fill('Oskickat i samtalet');
       await openSettings(page);
@@ -393,9 +393,8 @@ for (const mode of ['voice', 'text'] as const) {
       await expect(
         page.getByRole('heading', { name: 'Aktuell status', exact: true }),
       ).toBeFocused();
-      await expect(
-        page.getByText('Oskickat samtalsmeddelande finns kvar.', { exact: false }),
-      ).toBeVisible();
+      // The unsent message stays in the closed text view, without a button of its own here.
+      await expect(page.getByRole('button', { name: 'Fortsätt skriva' })).toHaveCount(0);
       const retainedText = await page
         .getByRole('region', { name: 'Aktuell status', exact: true })
         .evaluate((status) => {
@@ -453,9 +452,7 @@ for (const mode of ['voice', 'text'] as const) {
         'Oskickat om Kim',
       );
       await openConversationText(page);
-      await expect(
-        page.getByRole('heading', { name: 'Samtal och text', exact: true }),
-      ).toBeFocused();
+      await expect(message).toBeVisible();
       await expect(message).toHaveValue('Oskickat i samtalet');
       await expect(dialogue).toHaveText(dialogueBeforeSettings, { useInnerText: true });
       expect(await read()).toEqual(corrected);

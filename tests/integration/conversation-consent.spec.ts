@@ -38,11 +38,11 @@ async function openHousehold(page: Page, origin: string) {
   await expect(page.getByRole('navigation', { name: 'Kartans verktyg' })).toBeVisible();
   return starts;
 }
-const messageField = (page: Page) => page.getByLabel('Meddelande till textassistenten');
+const messageField = (page: Page) => page.getByLabel('Meddelande till Skyttel');
 const microphones = (page: Page) =>
   page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks);
-const endConversation = (page: Page) =>
-  page.getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
+const newConversation = (page: Page) =>
+  page.getByRole('button', { name: 'Nytt samtal', exact: true }).click();
 const bounds = async (control: Locator) => {
   const box = await control.boundingBox();
   if (!box) throw new Error('The control has no place on the screen');
@@ -82,12 +82,12 @@ test('MEDGIVANDE-01: samtalsknapparna visar medgivanderutan och Avbryt startar i
     const guidance = page.getByRole('complementary', { name: 'Kom igång med kartan' });
     const chosen: [string, () => Promise<Locator>][] = [
       ['verktygsradens röstknapp', () => utilityButton(page, 'Prata med Skyttel')],
-      ['verktygsradens textknapp', () => utilityButton(page, 'Samtal och text')],
+      ['verktygsradens textknapp', () => utilityButton(page, 'Skriv till Skyttel')],
       ['välkomstguidens Tala', async () => guidance.getByRole('button', { name: 'Tala' })],
       ['välkomstguidens Skriv', async () => guidance.getByRole('button', { name: 'Skriv' })],
       [
         'snabblänken till samtalet',
-        async () => page.getByRole('button', { name: 'Till samtal och text', exact: true }),
+        async () => page.getByRole('button', { name: 'Till samtalet med Skyttel', exact: true }),
       ],
     ];
     for (const [index, [name, find]] of chosen.entries()) {
@@ -120,9 +120,9 @@ test('MEDGIVANDE-01: samtalsknapparna visar medgivanderutan och Avbryt startar i
       await expect(box, name).toBeHidden();
       await expect(button, name).toBeFocused();
       await expect(messageField(page)).toHaveCount(0);
-      await expect(page.getByRole('region', { name: 'Samtal och text', exact: true })).toHaveCount(
-        0,
-      );
+      await expect(
+        page.getByRole('region', { name: 'Skriv till Skyttel', exact: true }),
+      ).toHaveCount(0);
     }
     await expect(approve).toHaveCount(0);
     expect(starts).toEqual([]);
@@ -152,19 +152,17 @@ test('MEDGIVANDE-02: vald knapp avgör röst eller text och medgivandet gäller 
     await expect.poll(() => microphones(page)).toEqual([{ enabled: true, state: 'live' }]);
     expect(starts).toEqual(['conversation', 'voice']);
 
-    // A new conversation during the same visit does not ask again, here with the text button.
+    // Nytt samtal does not ask again, and the microphone keeps its state.
     await openConversationText(page);
-    await endConversation(page);
-    await expect(messageField(page)).toHaveCount(0);
-    await openConversationText(page);
-    await expect(messageField(page)).toBeVisible();
+    await newConversation(page);
+    await expect(page.getByRole('log', { name: 'Samtalstext' })).toHaveText(
+      'Skyttel: Nytt samtal. Utkastet är tomt.',
+    );
     await expect(consentBox(page)).toBeHidden();
-    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
-    await expect(voiceBox(page)).toHaveCount(0);
-    expect(starts).toEqual(['conversation', 'voice', 'conversation']);
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
+    expect(starts).toEqual(['conversation', 'voice']);
 
     // Settings keep the map loaded, so the consent for the visit still applies afterwards.
-    await endConversation(page);
     await openSettings(page);
     await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
     await openConversationText(page);
@@ -279,7 +277,7 @@ test('MEDGIVANDE-04: medgivanderutan fungerar med tangentbord och pekskärm', as
       await expect(
         page.getByRole('region', { name: 'Hushållskarta', exact: true }),
       ).toHaveAttribute('data-theme', colorScheme);
-      await tools.getByRole('button', { name: 'Samtal och text', exact: true }).click();
+      await tools.getByRole('button', { name: 'Skriv till Skyttel', exact: true }).click();
       await expect(box).toBeVisible();
       for (const text of [
         box.getByRole('heading'),
@@ -296,7 +294,7 @@ test('MEDGIVANDE-04: medgivanderutan fungerar med tangentbord och pekskärm', as
     await page.emulateMedia({ colorScheme: 'light' });
 
     // The toolbar stands to the left: the box opens next to the chosen button.
-    for (const name of ['Prata med Skyttel', 'Samtal och text']) {
+    for (const name of ['Prata med Skyttel', 'Skriv till Skyttel']) {
       const button = tools.getByRole('button', { name, exact: true });
       const chosen = await bounds(button);
       await button.click();
@@ -324,7 +322,7 @@ test('MEDGIVANDE-04: medgivanderutan fungerar med tangentbord och pekskärm', as
 
     // A window that is too low still reaches every control, by scrolling inside the box.
     await page.setViewportSize({ width: 1024, height: 320 });
-    await tools.getByRole('button', { name: 'Samtal och text', exact: true }).click();
+    await tools.getByRole('button', { name: 'Skriv till Skyttel', exact: true }).click();
     await expect(box).toBeVisible();
     const low = await bounds(box);
     expect(low.y).toBeGreaterThanOrEqual(0);
@@ -336,7 +334,7 @@ test('MEDGIVANDE-04: medgivanderutan fungerar med tangentbord och pekskärm', as
     // The toolbar lies at the top of a narrow screen: the box opens under it.
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
-      const button = await utilityButton(page, 'Samtal och text');
+      const button = await utilityButton(page, 'Skriv till Skyttel');
       await button.click();
       await expect(box).toBeVisible();
       const place = await bounds(box);
@@ -361,7 +359,7 @@ test('MEDGIVANDE-04: medgivanderutan fungerar med tangentbord och pekskärm', as
 
     // Keyboard alone: open, remember, approve.
     await page.setViewportSize({ width: 1280, height: 800 });
-    await tools.getByRole('button', { name: 'Samtal och text', exact: true }).focus();
+    await tools.getByRole('button', { name: 'Skriv till Skyttel', exact: true }).focus();
     await page.keyboard.press('Enter');
     await expect(box.getByRole('heading', { name: 'Samtal med Skyttel' })).toBeFocused();
     const { remember, approve, decline } = consentBoxFor(page);
@@ -402,7 +400,7 @@ test('MEDGIVANDE-04: medgivanderutan fungerar med tangentbord och pekskärm', as
     });
     const touchPage = await touch.newPage();
     await openHousehold(touchPage, app.origin);
-    await (await utilityButton(touchPage, 'Samtal och text')).tap();
+    await (await utilityButton(touchPage, 'Skriv till Skyttel')).tap();
     await expect(consentBox(touchPage)).toBeVisible();
     await consentBoxFor(touchPage).approve.tap();
     await expect(messageField(touchPage)).toBeVisible();

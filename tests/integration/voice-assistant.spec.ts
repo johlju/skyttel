@@ -23,13 +23,12 @@ import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
-const assistant = (page: Page) =>
-  page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
 const openVoiceConnections = (page: Page) =>
   page.evaluate(() => window.skyttelVoiceFixture.stats().openPeers);
+const assistant = (page: Page) => page.getByRole('region', { name: 'Arbetsyta', exact: true });
 async function consent(page: Page) {
   await startConversationWithText(page);
-  await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toBeVisible();
+  await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeVisible();
 }
 // The conversation text stays open beside the voice, for what the cases read there.
 async function startVoice(page: Page) {
@@ -83,7 +82,7 @@ test('TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare för
   try {
     const { path, value } = await simpleMap(page, app);
     const before = await (await page.request.get(path)).json();
-    await assistant(page).getByLabel('Meddelande till textassistenten').fill('Osänd rättelse');
+    await assistant(page).getByLabel('Meddelande till Skyttel').fill('Osänd rättelse');
     speak(live, 'Rätta Lo.');
     await expect.poll(() => held).toBe(true);
     await openMap(page);
@@ -103,12 +102,18 @@ test('TAL-06: avbryt uppdrag från kartan och behåll samtalet och tidigare för
       .poll(async () => (await (await page.request.get(path)).json()).draft)
       .toEqual(before.draft);
     await turnMicrophoneOff(page);
-    await assistant(page).getByRole('button', { name: 'Öppna samtalet', exact: true }).click();
-    await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toHaveValue(
+    await openConversationText(page);
+    await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toHaveValue(
       'Osänd rättelse',
     );
-    await assistant(page).getByRole('button', { name: 'Avsluta samtalet', exact: true }).click();
-    await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toHaveCount(0);
+    // Nytt samtal empties the conversation text. The unsent text and the draft stay.
+    await assistant(page).getByRole('button', { name: 'Nytt samtal', exact: true }).click();
+    await expect(assistant(page).getByRole('log', { name: 'Samtalstext' })).toHaveText(
+      'Skyttel: Nytt samtal. 1 osparad ändring ligger kvar i ditt utkast.',
+    );
+    await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toHaveValue(
+      'Osänd rättelse',
+    );
     expect((await (await page.request.get(path)).json()).draft).toEqual(before.draft);
   } finally {
     await app.close();
@@ -156,20 +161,18 @@ test('TAL-07: uppmätt ljudaktivitet skiljs från avstängd mikrofon och består
       microphoneTracks: [{ enabled: false, state: 'live' }],
       remoteTracks: [{ enabled: true, state: 'live' }],
     });
-    await assistant(page).getByLabel('Meddelande till textassistenten').fill('Kvar i samtalet');
+    await assistant(page).getByLabel('Meddelande till Skyttel').fill('Kvar i samtalet');
     await openSettings(page);
     await expect(
       page.getByRole('heading', { name: 'Inställningar', level: 1, exact: true }),
     ).toBeFocused();
     await expect(box).toHaveText('Skyttel talar');
-    const open = assistant(page).getByRole('button', { name: 'Öppna samtalet', exact: true });
-    await open.focus();
-    await page.keyboard.press('Enter');
-    await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toHaveValue(
+    await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+    await openConversationText(page);
+    await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toHaveValue(
       'Kvar i samtalet',
     );
-    await expect(page.getByRole('heading', { name: 'Samtal och text', exact: true })).toBeFocused();
-    await expect(box).toHaveText('Skyttel talar');
+    await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeFocused();
     await page.evaluate(() => window.skyttelVoiceFixture.setSound('remote', false));
     await expect(box).toHaveCount(0);
     await expect.poll(() => openVoiceConnections(page), { timeout: 15_000 }).toBe(0);
@@ -220,7 +223,7 @@ test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async 
     value = map.value;
     const panel = assistant(page);
     await turnMicrophoneOff(page);
-    await panel.getByLabel('Meddelande till textassistenten').fill('Lägg till uppgiften.');
+    await panel.getByLabel('Meddelande till Skyttel').fill('Lägg till uppgiften.');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await openMap(page);
     await expect(panel.getByRole('status')).toContainText('Skyttel behöver ett svar');
@@ -230,7 +233,7 @@ test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async 
         .getByText('Vem använder tjänsten?', { exact: true }),
     ).toBeVisible();
     await panel.getByRole('button', { name: 'Svara i samtalet' }).click();
-    await panel.getByLabel('Meddelande till textassistenten').fill('Lo använder tjänsten.');
+    await panel.getByLabel('Meddelande till Skyttel').fill('Lo använder tjänsten.');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect.poll(() => stage).toBe(2);
     await openMap(page);
@@ -238,15 +241,18 @@ test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async 
     await expect(panel.getByRole('button', { name: 'Svara i samtalet' })).toHaveCount(0);
     release([modelMessage('Vill du läsa vidare?')]);
     await expect(panel.getByRole('status')).toContainText('Nya förslag är osparade');
-    await panel.getByRole('button', { name: 'Öppna samtalet' }).click();
-    await panel.getByLabel('Meddelande till textassistenten').fill('Berätta mer.');
+    await openConversationText(page);
+    await panel.getByLabel('Meddelande till Skyttel').fill('Berätta mer.');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await openMap(page);
     await expect(panel.getByRole('alert')).toContainText(
       'Assistenten kunde inte slutföra uppdraget',
     );
-    await panel.getByText('Samtalskontroller', { exact: true }).click();
-    await panel.getByRole('button', { name: 'Avsluta samtalet' }).click();
+    await openConversationText(page);
+    await panel.getByRole('button', { name: 'Nytt samtal' }).click();
+    await expect(panel.getByRole('log', { name: 'Samtalstext' })).toHaveText(
+      /^Skyttel: Nytt samtal\./,
+    );
     expect(
       (await (await page.request.get(map.path)).json()).draft.changes[0].after.description,
     ).toBe('Förslag väntar på svar');
@@ -271,13 +277,13 @@ test('TAL-09: starten kräver medgivande och återhämtar mikrofonavbrott', asyn
     await expect(consentBox(page)).toBeVisible();
     await consentBoxFor(page).decline.click();
     const panel = assistant(page);
-    await expect(panel.getByLabel('Meddelande till textassistenten')).toHaveCount(0);
+    await expect(panel.getByLabel('Meddelande till Skyttel')).toHaveCount(0);
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual(
       [],
     );
     expect(live.requests).toHaveLength(0);
     await startConversationWithText(page);
-    await panel.getByLabel('Meddelande till textassistenten').fill('Text utan mikrofon');
+    await panel.getByLabel('Meddelande till Skyttel').fill('Text utan mikrofon');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect(panel.getByRole('log')).toContainText('Texten fungerar.');
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual(
@@ -298,7 +304,7 @@ test('TAL-09: starten kräver medgivande och återhämtar mikrofonavbrott', asyn
     await chooseConversationVoice(page);
     await expect(panel.getByRole('alert')).toContainText('mikrofon');
     await expect(voiceBox(page)).toHaveCount(0);
-    await expect(panel.getByLabel('Meddelande till textassistenten')).toBeEditable();
+    await expect(panel.getByLabel('Meddelande till Skyttel')).toBeEditable();
     await expect(panel.getByRole('log')).toContainText('Texten fungerar.');
     await page.evaluate(() => {
       window.skyttelVoiceFixture.setMicrophone('allow');
@@ -381,10 +387,10 @@ test('TAL-05: dialog, avstängd mikrofon och arbetstid finns kvar under samtalet
         event,
       );
     }
-    const log = assistant(page).getByRole('log', { name: 'Samtalets dialog' });
+    const log = assistant(page).getByRole('log', { name: 'Samtalstext' });
     await expect(log.getByRole('listitem')).toHaveCount(3);
-    await expect(log.getByRole('listitem').nth(0)).toHaveText('DuKim betalar för musiken.');
-    await expect(log.getByRole('listitem').nth(1)).toHaveText('SkyttelJag lyssnar. Berätta mer.');
+    await expect(log.getByRole('listitem').nth(0)).toHaveText('Du: Kim betalar för musiken.');
+    await expect(log.getByRole('listitem').nth(1)).toHaveText('Skyttel: Jag lyssnar. Berätta mer.');
     // The microphone is turned off and on again while the voice connection stays.
     await chooseConversationVoice(page);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
@@ -404,19 +410,19 @@ test('TAL-05: dialog, avstängd mikrofon och arbetstid finns kvar under samtalet
     speak(live, 'Kontrollera utkastet.');
     await expect.poll(() => held).toBe(true);
     await expect(assistant(page).getByRole('status')).toContainText('Assistenten arbetar');
-    const elapsed = assistant(page).getByLabel('Tid för pågående arbete');
-    await expect(elapsed).toBeVisible();
-    await expect(elapsed).not.toHaveText('0 s');
+    // A spoken task shows the working row last in the conversation text, without a timer.
+    await expect(log.getByRole('listitem').last()).toHaveText('Skyttel arbetar…');
+    await expect(assistant(page).getByRole('timer')).toHaveCount(0);
     release([modelMessage('Vem använder musiken?')]);
     await expect(log).toContainText('Vem använder musiken?');
-    await expect(elapsed).toHaveCount(0);
-    await turnMicrophoneOff(page);
+    await expect(log.getByText('Skyttel arbetar…')).toHaveCount(0);
+    await assistant(page).getByRole('button', { name: 'Stäng av rösten' }).click();
     await expect(log).toContainText('Kim betalar för musiken.');
-    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
-    await expect(log).toHaveCount(0);
-    await expect(page.getByRole('region', { name: 'Hela mitt utkast' })).toContainText(
-      'Lo Exempel',
-    );
+    await assistant(page).getByRole('button', { name: 'Nytt samtal' }).click();
+    await expect(log).toHaveText(/^Skyttel: Nytt samtal\./);
+    await expect(
+      assistant(page).getByRole('region', { name: 'Assistentens hela utkast' }),
+    ).toContainText('Lo Exempel');
   } finally {
     await app.close();
   }
@@ -451,14 +457,8 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
     const selected = await object.getAttribute('aria-pressed');
     for (const [index, reply] of replies.entries()) {
       speak(live, 'Beskriv mitt utkast.');
-      const conversation = assistant(page).getByRole('region', {
-        name: 'Assistentens samtalstext',
-        exact: true,
-      });
+      const conversation = assistant(page).getByRole('log', { name: 'Samtalstext', exact: true });
       await expect(conversation).toContainText(reply);
-      await expect(conversation.getByRole('heading')).toHaveText(
-        'Assistentens samtalstext – inte en bekräftelse',
-      );
       await expect(assistant(page).getByRole('status')).toContainText('Nya förslag är osparade');
       await expect(object).toHaveAttribute('aria-pressed', selected ?? 'false');
       await expect
@@ -483,7 +483,7 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
     await expect(assistant(page).getByRole('status')).toHaveText('Markerat i kartan.');
     await expect(object).toHaveAttribute('aria-pressed', 'true');
     await expect(
-      assistant(page).getByRole('region', { name: 'Assistentens samtalstext', exact: true }),
+      assistant(page).getByRole('log', { name: 'Samtalstext', exact: true }),
     ).toContainText('Vem betalar?');
     await expect
       .poll(
@@ -619,9 +619,9 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
           .microphoneTracks.every((track) => track.state === 'ended'),
       ),
     ).toBe(true);
-    await assistant(page).getByRole('button', { name: 'Avsluta samtalet' }).click();
-    // The consent for the visit still applies: the new conversation starts directly.
-    await openConversationText(page);
+    // Nytt samtal does not ask for the consent again.
+    await assistant(page).getByRole('button', { name: 'Nytt samtal' }).click();
+    await expect(page.getByRole('dialog', { name: 'Samtal med Skyttel' })).toHaveCount(0);
     await assistant(page).getByText('Tidigare sparförsök', { exact: true }).click();
     await expect(
       assistant(page).locator('details').filter({ hasText: 'Tidigare sparförsök' }),
@@ -726,12 +726,12 @@ test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständrin
           .microphoneTracks.every((track) => track.state === 'ended'),
       ),
     ).toBe(true);
-    await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toBeEditable();
+    await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeEditable();
     const voicePanel = page.getByRole('region', { name: 'Skyttels röst', exact: true });
     await page.evaluate(() => window.skyttelVoiceFixture.setMicrophone('deny'));
     await chooseConversationVoice(page);
     await expect(voicePanel.getByRole('alert')).toContainText('Mikrofonen tilläts inte');
-    await expect(assistant(page).getByLabel('Meddelande till textassistenten')).toBeEditable();
+    await expect(assistant(page).getByLabel('Meddelande till Skyttel')).toBeEditable();
     await page.evaluate(() => {
       window.skyttelVoiceFixture.setMicrophone('allow');
       window.skyttelVoiceFixture.setPlayback('blocked');

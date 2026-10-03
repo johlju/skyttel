@@ -10,8 +10,7 @@ import {
 } from '../support/conversation-page.js';
 import { launchManualCosts } from '../support/manual-costs.js';
 
-const assistant = (page: Page) =>
-  page.getByRole('region', { name: 'Skyttels textassistent', exact: true });
+const assistant = (page: Page) => page.getByRole('region', { name: 'Arbetsyta', exact: true });
 const category = (page: Page, name: string) => page.getByRole('region', { name, exact: true });
 async function startAssistant(page: Page, origin: string) {
   await signIn(page.request, origin);
@@ -23,7 +22,7 @@ async function startAssistant(page: Page, origin: string) {
 async function sendText(page: Page) {
   await openConversationText(page);
   const panel = assistant(page);
-  await panel.getByLabel('Meddelande till textassistenten').fill('Prova kostnadsunderlaget.');
+  await panel.getByLabel('Meddelande till Skyttel').fill('Prova kostnadsunderlaget.');
   await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
   await expect(panel).toContainText('Det kontrollerade kostnadsprovet är klart.');
 }
