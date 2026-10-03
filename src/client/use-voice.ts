@@ -132,6 +132,16 @@ export function useVoice(options: {
     : null;
   const latest = useRef(options);
   latest.current = options;
+  // Permission promises and transport callbacks must read the same current
+  // admission rules before they can resume recording.
+  const inputAllowed = useCallback(() => {
+    return (
+      !latest.current.inputBlocked &&
+      !latest.current.saveChecking &&
+      !latest.current.contextFailed &&
+      navigator.onLine !== false
+    );
+  }, []);
   const current = useRef<Attempt | null>(null);
   const prepared = useRef<VoicePlayback | null>(null);
   const held = useRef<HeldRequest | null>(null);
@@ -504,11 +514,7 @@ export function useVoice(options: {
         const playback = prepared.current ?? undefined;
         attempt.transport = createVoiceTransport(
           {
-            inputAllowed: () =>
-              !latest.current.inputBlocked &&
-              !latest.current.saveChecking &&
-              !latest.current.contextFailed &&
-              navigator.onLine !== false,
+            inputAllowed,
             onMicrophoneReady: () => {
               if (active()) setState('connecting');
             },
@@ -631,7 +637,7 @@ export function useVoice(options: {
         fail(failure);
       }
     },
-    [path, apply, stop, setError],
+    [path, apply, stop, setError, inputAllowed],
   );
   useEffect(() => {
     if (options.autoStart) void start();
@@ -749,14 +755,7 @@ export function useVoice(options: {
     void Promise.all([playback.audio.play(), playback.audioContext.resume()])
       .then(() => {
         if (prepared.current !== playback || held.current !== request) return;
-        const capture = Boolean(
-          request &&
-            !request.released &&
-            !latest.current.inputBlocked &&
-            !latest.current.saveChecking &&
-            !latest.current.contextFailed &&
-            navigator.onLine !== false,
-        );
+        const capture = Boolean(request && !request.released && inputAllowed());
         // Playback readiness can enable the track; apply the current input gate first.
         request?.buffer?.capture(capture);
         request?.buffer?.playbackReady();
@@ -764,7 +763,7 @@ export function useVoice(options: {
         setPlaybackBlocked(false);
       })
       .catch(() => setPlaybackBlocked(true));
-  }, []);
+  }, [inputAllowed]);
   const newConversation = useCallback(
     (reset: () => Promise<TextAssistantView>) => renew(reset),
     [renew],
@@ -831,14 +830,7 @@ export function useVoice(options: {
   );
   const level = useCallback(() => current.current?.transport?.microphoneLevel() ?? 0, []);
   const startHeld = useCallback(() => {
-    if (
-      latest.current.inputBlocked ||
-      latest.current.saveChecking ||
-      latest.current.contextFailed ||
-      navigator.onLine === false ||
-      latest.current.assistant?.phase === 'working'
-    )
-      return;
+    if (!inputAllowed() || latest.current.assistant?.phase === 'working') return;
     if (current.current?.transport && state === 'listening') {
       held.current = { released: false, controller: new AbortController() };
       current.current.held = held.current;
@@ -872,12 +864,7 @@ export function useVoice(options: {
             setError(message);
           }
         });
-        const capture =
-          !request.released &&
-          !latest.current.inputBlocked &&
-          !latest.current.saveChecking &&
-          !latest.current.contextFailed &&
-          navigator.onLine !== false;
+        const capture = !request.released && inputAllowed();
         buffer.capture(capture);
         if (held.current === request && mounted.current) {
           setHeldListening(capture && buffer.ready);
@@ -902,7 +889,7 @@ export function useVoice(options: {
       });
     }
     if (latest.current.assistant) void start();
-  }, [state, start, prepareAudio, stop, setError]);
+  }, [state, start, prepareAudio, stop, setError, inputAllowed]);
   const releaseHeld = useCallback(() => {
     if (!held.current) return;
     held.current.released = true;
