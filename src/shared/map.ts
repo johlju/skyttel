@@ -125,6 +125,14 @@ export interface MapDraft {
   objectTypes?: ObjectTypeChange[];
   relationshipTypes?: RelationshipTypeChange[];
 }
+export function draftChangeCount(draft?: MapDraft) {
+  return draft
+    ? draft.changes.length +
+        (draft.relationships?.length ?? 0) +
+        (draft.objectTypes?.length ?? 0) +
+        (draft.relationshipTypes?.length ?? 0)
+    : 0;
+}
 export interface MapState {
   userId: string;
   contentVersion: number;

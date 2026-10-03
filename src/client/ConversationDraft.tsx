@@ -1,10 +1,12 @@
-import type { MapDraft } from '../shared/map.js';
+import { draftChangeCount, type MapDraft } from '../shared/map.js';
 import {
   objectDifferences,
   relationshipDifferences,
   typeDifferences,
 } from './DraftChangeSummary.js';
 import { relationshipDetails } from './relationship-description.js';
+
+export { draftChangeCount as draftCount } from '../shared/map.js';
 
 /** The same plus, pencil and cross as the map, with a textual action too. */
 function symbol(before: unknown, after: unknown) {
@@ -17,18 +19,9 @@ function symbol(before: unknown, after: unknown) {
   );
 }
 
-export function draftCount(draft?: MapDraft) {
-  return draft
-    ? draft.changes.length +
-        (draft.relationships?.length ?? 0) +
-        (draft.objectTypes?.length ?? 0) +
-        (draft.relationshipTypes?.length ?? 0)
-    : 0;
-}
-
 /** One row per proposal, including relationships and the household's own types. */
 export function ConversationDraft({ draft }: { draft?: MapDraft }) {
-  if (!draftCount(draft) || !draft) return <p>Utkastet är tomt.</p>;
+  if (!draftChangeCount(draft) || !draft) return <p>Utkastet är tomt.</p>;
   const rows = [
     ...draft.changes.map((change) => ({
       ...change,

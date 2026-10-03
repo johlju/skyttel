@@ -1,4 +1,4 @@
-import type { MapDraft } from '../shared/map.js';
+import { draftChangeCount, type MapDraft } from '../shared/map.js';
 
 /** Only server-owned wording may describe failures to the model or the person. */
 export function assistantFailureMessage(code: string): string {
@@ -48,11 +48,7 @@ export function assistantFailureMessage(code: string): string {
 
 /** What Skyttel says when a conversation starts over: how many unsaved changes the draft keeps. */
 export function newConversationMessage(draft: MapDraft): string {
-  const count =
-    draft.changes.length +
-    (draft.relationships?.length ?? 0) +
-    (draft.objectTypes?.length ?? 0) +
-    (draft.relationshipTypes?.length ?? 0);
+  const count = draftChangeCount(draft);
   if (!count) return 'Nytt samtal. Utkastet är tomt.';
   return `Nytt samtal. ${count === 1 ? '1 osparad ändring' : `${count} osparade ändringar`} ligger kvar i ditt utkast.`;
 }
