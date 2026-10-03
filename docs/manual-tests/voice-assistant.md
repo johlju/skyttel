@@ -525,7 +525,7 @@ Inställningar”.
   kartmarkering och navigering med stängd dialog. Anteckna faktiskt
   provade storlekar.
 
-### TAL-08: nödvändiga frågor och fel nås med stängd samtalstext
+### TAL-08: nödvändiga frågor finns i samtalet och fel visas i en samtalsnotis
 
 **Syfte:** Visa ett aktuellt svarskrav utan att tolka all frågande modelltext
 som ett hinder eller låta gamla frågor följa ett nytt uppdrag.
@@ -536,25 +536,27 @@ som ett hinder eller låta gamla frågor följa ett nytt uppdrag.
 
 **Integrationstest:**
 [voice-assistant.spec.ts](../../tests/integration/voice-assistant.spec.ts),
-“TAL-08: nödvändiga frågor och fel nås med stängd samtalstext”.
+“TAL-08: nödvändiga frågor finns i samtalet och fel visas i en samtalsnotis”.
 
 **Steg:**
 
-1. Be att rätta Lo och delegera. Släpp anropet med `submit_changes`,
+1. Stäng av mikrofonen, öppna textvyn och skicka **Lägg till uppgiften.**
+   Släpp anropet med `submit_changes`,
    `completion: "draft"`, `questions: ["Vem använder tjänsten?"]` och
    en `propose_object`-operation som behåller Lo men ändrar beskrivningen
    till **Förslag väntar på svar**. Använd det hållna utkastets versioner.
-2. Stäng dialogen. Frågan ska inte visas i en separat ruta.
+2. Stäng textvyn. Frågan ska inte visas i en separat ruta.
    Kontrollera frågans samtalstext genom att själv öppna textvyn; det
    syntetiska terminalfragmentet är inte bevis för att frågan hörs.
 3. Välj **Skriv till Skyttel**, skriv **Lo använder tjänsten.** och skicka.
-   Håll nästa anrop och stäng dialogen. Den gamla frågan ska vara borta
-   medan aktuell arbetsstatus visas.
+   Håll nästa anrop. Den gamla frågan ska vara borta och arbetsraden
+   ska stå sist i samtalstexten. Ett skrivet uppdrag med mikrofonen av
+   visar ingen röstruta.
 4. Släpp anropet med `reply REQUEST Vill du läsa vidare?`.
    Det vanliga svaret ska inte skapa ett nytt nödvändigt svarskrav.
 5. Öppna textvyn, skicka **Berätta mer.**, stäng arbetsytan och kör
    `fail REQUEST`. Kräv samtalsnotisen **Skyttel kunde inte slutföra
-   uppdraget. Skriv eller säg det igen.**
+   uppdraget. Försök igen.**
 6. Öppna textvyn och välj **Nytt samtal**.
    Beskrivningen **Förslag väntar på svar** ska fortfarande finnas i utkastet.
 

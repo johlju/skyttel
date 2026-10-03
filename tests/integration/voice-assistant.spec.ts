@@ -200,7 +200,9 @@ test('TAL-07: uppmätt ljudaktivitet skiljs från avstängd mikrofon och består
   }
 });
 
-test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async ({ page }) => {
+test('TAL-08: nödvändiga frågor finns i samtalet och fel visas i en samtalsnotis', async ({
+  page,
+}) => {
   let stage = 0;
   let value: Record<string, unknown> = {};
   let release!: (output: unknown[]) => void;
@@ -243,27 +245,35 @@ test('TAL-08: nödvändiga frågor och fel nås med stängd samtalstext', async 
     await turnMicrophoneOff(page);
     await panel.getByLabel('Meddelande till Skyttel').fill('Lägg till uppgiften.');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
-    await openMap(page);
-    await expect(panel.getByRole('status')).toContainText('Skyttel behöver ett svar');
-    await expect(
-      panel
-        .getByRole('region', { name: 'Nödvändigt svar' })
-        .getByText('Vem använder tjänsten?', { exact: true }),
-    ).toBeVisible();
-    await panel.getByRole('button', { name: 'Svara i samtalet' }).click();
+    await closeConversationText(page);
+    await expect
+      .poll(
+        async () =>
+          (await (await page.request.get(map.path)).json()).draft.changes[0].after.description,
+      )
+      .toBe('Förslag väntar på svar');
+    await expect(panel.getByRole('log')).toHaveCount(0);
+    await expect(voiceBox(page)).toHaveCount(0);
+    await openConversationText(page);
+    await expect(panel.getByRole('log', { name: 'Samtalstext' })).toContainText(
+      'Vem använder tjänsten?',
+    );
+    await expect(panel.getByRole('region', { name: 'Nödvändigt svar' })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: 'Svara i samtalet' })).toHaveCount(0);
     await panel.getByLabel('Meddelande till Skyttel').fill('Lo använder tjänsten.');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
     await expect.poll(() => stage).toBe(2);
-    await openMap(page);
-    await expect(panel.getByRole('status')).toContainText('Skyttel arbetar');
-    await expect(panel.getByRole('button', { name: 'Svara i samtalet' })).toHaveCount(0);
+    await expect(panel.getByRole('log').getByRole('listitem').last()).toContainText(
+      'Skyttel arbetar…',
+    );
     release([modelMessage('Vill du läsa vidare?')]);
-    await expect(panel.getByRole('status')).toContainText('Nya förslag är osparade');
-    await openConversationText(page);
+    await expect(panel.getByRole('log')).toContainText('Vill du läsa vidare?');
     await panel.getByLabel('Meddelande till Skyttel').fill('Berätta mer.');
     await panel.getByRole('button', { name: 'Skicka', exact: true }).click();
-    await openMap(page);
-    await expect(panel.getByRole('alert')).toContainText('Skyttel kunde inte slutföra uppdraget');
+    await closeConversationText(page);
+    await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toContainText(
+      'Skyttel kunde inte slutföra uppdraget',
+    );
     await openConversationText(page);
     await panel.getByRole('button', { name: 'Nytt samtal' }).click();
     await expect(panel.getByRole('log', { name: 'Samtalstext' })).toHaveText(
@@ -510,15 +520,15 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
       'Skyttels resultat (verifierat): Objektet är markerat',
     );
     speak(live, 'Spara hela utkastet nu.');
-    await expect(assistant(page).getByRole('status')).toHaveText(
-      'Sparat. Hela utkastet finns i hushållets karta.',
+    await expect(assistant(page).getByRole('log', { name: 'Samtalstext' })).toContainText(
+      'Sparat.',
     );
     await expect
       .poll(
         () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
       )
       .toBe(6);
-    expect(JSON.stringify(live.sent.at(-1))).toContain('Skyttels resultat (verifierat): Sparat.');
+    expect(JSON.stringify(live.sent.at(-1))).toContain('Sparat.');
     const receipts = await openConversationReceipts(page);
     await receipts.getByText('Visa kvittot', { exact: true }).first().click();
     await expect(receipts).toContainText('Sparat: Lo Exempel. Kvitto:');
@@ -599,8 +609,8 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await expect(await openConversationDraft(page)).toContainText('Lo Lind');
     await startVoice(page);
     speak(live, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
-    await expect(assistant(page).getByRole('status')).toHaveText(
-      'Sparat. Hela utkastet finns i hushållets karta.',
+    await expect(assistant(page).getByRole('log', { name: 'Samtalstext' })).toContainText(
+      'Sparat.',
     );
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Osänd text som ska finnas kvar',
