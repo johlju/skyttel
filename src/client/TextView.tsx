@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } f
 import { ContextMeter } from './ConversationContext.js';
 import { ConversationTranscript } from './ConversationTranscript.js';
 import type { Conversation } from './use-conversation.js';
+import { voiceBoxStatus } from './VoiceBox.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
 
 /**
@@ -168,6 +169,8 @@ export function TextView({
               working={working}
               queued={session?.queuedMessages ?? 0}
               computer={computer}
+              announce={!hidden}
+              announceWorking={voiceBoxStatus(conversation.voice, working)?.id !== 'working'}
             />
           </div>
           <p className="text-view-canceled" aria-live="polite" aria-atomic="true">

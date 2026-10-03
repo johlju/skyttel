@@ -161,7 +161,7 @@ export function createVoiceTransport(
       finish(userRow);
       if (!assistantRow || (assistantBoundary && now - assistantAt >= turnGap)) {
         finish(assistantRow);
-        assistantRow = { id: crypto.randomUUID(), role, text: '' };
+        assistantRow = { id: crypto.randomUUID(), role, text: '', voiced: true };
       }
       assistantRow.text += event.delta;
       assistantRow.partial = true;
