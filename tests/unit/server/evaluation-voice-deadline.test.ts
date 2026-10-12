@@ -190,3 +190,38 @@ test('normal closure clears deadlines and summary transitions start a fresh time
   expect(timeLimit).not.toHaveBeenCalled();
   expect(vi.getTimerCount()).toBe(0);
 });
+
+test.each([false, true])(
+  'normal shutdown drains final usage before retiring media (rejected: %s)',
+  {
+    tags: ['technical'],
+  },
+  async (rejected) => {
+    const { scenario, options, connection, environment, timeLimit } = setup(true);
+    scenario.steps.splice(1);
+    const original = environment.post.getMockImplementation();
+    if (!original) throw new Error('Missing post fixture');
+    let finishStop!: () => void;
+    environment.post.mockImplementation(async (path) => {
+      if (path.endsWith('/stop')) {
+        await new Promise<void>((resolve) => {
+          finishStop = resolve;
+        });
+        if (rejected) throw new Error('shutdown_failed');
+      }
+      return original(path);
+    });
+    const run = runVoiceScenario(scenario, {}, { ...options, judge: async () => [] });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(environment.post).toHaveBeenCalledWith('assistant/voice/voice/stop', {});
+    expect(connection.retire).not.toHaveBeenCalled();
+    expect(connection.close).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(12_000);
+    expect(timeLimit).not.toHaveBeenCalled();
+    finishStop();
+    if (rejected) await expect(run).rejects.toThrow('shutdown_failed');
+    else expect((await run).attempts[0].outcome).toBe('pass');
+    expect(connection.retire).toHaveBeenCalledOnce();
+    expect(connection.close).toHaveBeenCalledOnce();
+  },
+);

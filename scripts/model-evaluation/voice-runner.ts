@@ -103,7 +103,7 @@ export async function runVoiceScenario(
       await pending;
     }
   }
-  async function closeVoice() {
+  async function closeVoice(force = false) {
     clearTimeout(sessionTimer);
     sessionTimer = undefined;
     if (!connection) return closing;
@@ -112,12 +112,17 @@ export async function runVoiceScenario(
     connection = undefined;
     voiceId = undefined;
     closing = (async () => {
-      // Retire media before awaiting HTTP shutdown, including during startup.
+      // Normal shutdown keeps the primary connection alive while the server
+      // drains session.closed and final usage. Cancellation retires it first.
       try {
-        await active.retire();
+        try {
+          if (force) await active.retire();
+        } finally {
+          if (id) await environment.post(`${environment.path}/voice/${id}/stop`, {});
+        }
       } finally {
         try {
-          if (id) await environment.post(`${environment.path}/voice/${id}/stop`, {});
+          if (!force) await active.retire();
         } finally {
           await active.close();
         }
@@ -190,7 +195,7 @@ export async function runVoiceScenario(
                 () => {
                   sessionExpired = true;
                   options.sessionTimeLimit?.();
-                  void closeVoice().catch(() => {
+                  void closeVoice(true).catch(() => {
                     // Final cleanup awaits this same closure and reports its failure.
                   });
                 },
@@ -225,6 +230,7 @@ export async function runVoiceScenario(
           let latestOutput = startedAt;
           let latestEvent = startedAt;
           let fixed: string[] = [];
+          let stateFailures: string[] = [];
           // Measure from reference-audio end, including negative completion
           // times. Quiet observation is reported separately.
           for (;;) {
@@ -261,7 +267,8 @@ export async function runVoiceScenario(
             latestOutput = outputs.at(-1)?.at ?? startedAt;
             latestEvent = lastVoiceActivityAt(observed, startedAt);
             const actions = modelActions(observed);
-            fixed = await environment.check(step, view, actions);
+            stateFailures = await environment.check(step, view, actions);
+            fixed = [...stateFailures];
             if (scenario.selection && view.displayedSelection !== scenario.selection)
               fixed.push('selection_unconfirmed');
             const idle =
@@ -311,6 +318,7 @@ export async function runVoiceScenario(
             const followUp = await selectFollowUp({
               step,
               attempt: result,
+              stateFailures,
               questionPending: Boolean(view.questionPending),
               sources: {
                 backend: {
@@ -356,7 +364,7 @@ export async function runVoiceScenario(
       await options.record?.(result);
       if (result.outcome !== 'pass' && !continuing) {
         blocked = `${step.id}: ${result.outcome}`;
-        await closeVoice();
+        await closeVoice(result.outcome === 'error' || result.outcome === 'aborted');
       }
       async function judge(sources: JudgeInput['sources'], requirements: string[]) {
         if (options.stopped?.()) throw new Error(options.stopReason?.() ?? 'evaluation_stopped');
@@ -384,7 +392,7 @@ export async function runVoiceScenario(
     return { attempts, events, finalMap: await environment.read() };
   } finally {
     try {
-      await closeVoice();
+      await closeVoice(true);
     } finally {
       await environment.close();
     }

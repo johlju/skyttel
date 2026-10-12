@@ -23,6 +23,7 @@ export function scenarioUtterances(scenario: Scenario, followUps = false) {
 export async function selectFollowUp({
   step,
   attempt,
+  stateFailures,
   questionPending,
   sources,
   checkWaiting,
@@ -30,6 +31,7 @@ export async function selectFollowUp({
 }: {
   step: ScenarioStep;
   attempt: Attempt;
+  stateFailures: string[];
   questionPending: boolean;
   sources: JudgeInput['sources'];
   checkWaiting: (expected: Expected) => Promise<string[]>;
@@ -38,6 +40,8 @@ export async function selectFollowUp({
   if (
     !step.followUps?.length ||
     attempt.outcome !== 'fail' ||
+    !stateFailures.length ||
+    attempt.fixed.some((failure) => !stateFailures.includes(failure)) ||
     (step.expected.saves ?? 0) !== 0 ||
     !questionPending ||
     !judge ||

@@ -148,7 +148,8 @@ export async function runTextScenario(
           const observed = events.slice(offset);
           const actions = modelActions(observed);
           result.diagnostics = observationDiagnostics(observed, startedAt);
-          result.fixed.push(...(await environment.check(step, view, actions)));
+          const stateFailures = await environment.check(step, view, actions);
+          result.fixed.push(...stateFailures);
           if (step.expected.requirements.length) {
             result.content = options.judge
               ? await options.judge({
@@ -181,6 +182,7 @@ export async function runTextScenario(
             const followUp = await selectFollowUp({
               step,
               attempt: result,
+              stateFailures,
               questionPending: Boolean(view.questionPending),
               sources: {
                 backend: {

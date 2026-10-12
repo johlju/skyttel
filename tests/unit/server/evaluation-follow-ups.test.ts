@@ -169,6 +169,9 @@ test.each([
   'two-matches',
   'voice-omission',
   'judge-error',
+  'unexpected_selection',
+  'selection_unconfirmed',
+  'no-state-failure',
 ])('a follow-up never bypasses an unresolved gate: %s', { tags: ['technical'] }, async (mode) => {
   const step = structuredClone(scenario.steps[0]);
   if (mode === 'two-matches' && step.followUps)
@@ -187,6 +190,7 @@ test.each([
       { id: 'backend-0', outcome: mode === 'content-failure' ? 'fail' : 'pass', reason: 'Fixture' },
     ],
   };
+  if (mode === 'unexpected_selection' || mode === 'selection_unconfirmed') attempt.fixed.push(mode);
   const judge = vi.fn(async (input: JudgeInput) => {
     if (mode === 'judge-error') throw new Error('Provider rejected selection request');
     const pass = await passingJudge(input);
@@ -207,6 +211,7 @@ test.each([
   const selected = await selectFollowUp({
     step,
     attempt,
+    stateFailures: mode === 'no-state-failure' ? [] : ['effective_objects'],
     questionPending: mode !== 'no-question',
     sources: {
       backend: { text: 'A question.', complete: true },
@@ -219,7 +224,16 @@ test.each([
   expect(attempt.outcome).toBe('fail');
   if (mode === 'judge-error')
     expect(attempt.followUpSelection?.reason).toContain('selection failed');
-  if (['unsafe-state', 'content-failure', 'no-question'].includes(mode))
+  if (
+    [
+      'unsafe-state',
+      'content-failure',
+      'no-question',
+      'unexpected_selection',
+      'selection_unconfirmed',
+      'no-state-failure',
+    ].includes(mode)
+  )
     expect(judge).not.toHaveBeenCalled();
 });
 
