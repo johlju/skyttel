@@ -19,6 +19,8 @@
     "svarsdelen",
     "filhash",
     "backendsvar",
+    "backendbesked",
+    "backendbeskeden",
     "backendanrop",
     "backendeffort",
     "backendkolumnen",
