@@ -200,6 +200,30 @@
           "channels": 1,
           "sampleWidth": 2,
           "durationSeconds": 3.607458333333333
+        },
+        "oklarheter-pris-foljdsvar": {
+          "text": "Jag menar abonnemanget Molnlagring Plus.",
+          "file": "marin/oklarheter-pris-foljdsvar.wav",
+          "frames": 81425,
+          "sha256": "41d16ee4a45c68636cf554b2502246088f2cb16a5214906651fe353fb2712ae9",
+          "sampleRate": 24000,
+          "channels": 1,
+          "sampleWidth": 2,
+          "durationSeconds": 3.392708333333333,
+          "recipe": {
+            "model": "gpt-4o-mini-tts",
+            "instructions": "Läs den givna texten ordagrant på tydlig, naturlig svenska med normalt samtalstempo. Uttala svenska sammansatta ord sammanhängande och egennamn omsorgsfullt. Bevara alla namn, belopp och relationer. Låt det låta som en person som ger ett uppdrag i ett samtal.",
+            "speed": 1.15,
+            "generatorSha256": "d2a65b845b8644aacf76171b425e6c21067a5bfe12c271b91d54d220a3f9aa09"
+          },
+          "review": {
+            "status": "approved",
+            "reviewer": "user",
+            "date": "2026-10-12",
+            "statement": "Det låter okej.",
+            "sha256": "41d16ee4a45c68636cf554b2502246088f2cb16a5214906651fe353fb2712ae9"
+          },
+          "provenance": "tmp/voice-follow-up-price/manifest.dff167dd-03d3-4119-9284-bd50500882da.json"
         }
       }
     },
@@ -344,6 +368,30 @@
           "channels": 1,
           "sampleWidth": 2,
           "durationSeconds": 4.448083333333333
+        },
+        "oklarheter-pris-foljdsvar": {
+          "text": "Jag menar abonnemanget Molnlagring Plus.",
+          "file": "cedar/oklarheter-pris-foljdsvar.wav",
+          "frames": 86668,
+          "sha256": "db5c52e8bb60e10db390956598e600297e7aa70f0869b49abe6f77089924fb02",
+          "sampleRate": 24000,
+          "channels": 1,
+          "sampleWidth": 2,
+          "durationSeconds": 3.6111666666666666,
+          "recipe": {
+            "model": "gpt-4o-mini-tts",
+            "instructions": "Läs den givna texten ordagrant på tydlig, naturlig svenska med normalt samtalstempo. Uttala svenska sammansatta ord sammanhängande och egennamn omsorgsfullt. Bevara alla namn, belopp och relationer. Låt det låta som en person som ger ett uppdrag i ett samtal.",
+            "speed": 1.25,
+            "generatorSha256": "d2a65b845b8644aacf76171b425e6c21067a5bfe12c271b91d54d220a3f9aa09"
+          },
+          "review": {
+            "status": "approved",
+            "reviewer": "user",
+            "date": "2026-10-12",
+            "statement": "Det låter okej.",
+            "sha256": "db5c52e8bb60e10db390956598e600297e7aa70f0869b49abe6f77089924fb02"
+          },
+          "provenance": "tmp/voice-follow-up-price/manifest.dff167dd-03d3-4119-9284-bd50500882da.json"
         }
       }
     }
