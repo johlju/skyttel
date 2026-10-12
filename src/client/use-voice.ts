@@ -87,6 +87,7 @@ type Attempt = {
   summaryPausedAt?: number;
   providerGeneration?: number;
   output?: { text: string; heard: boolean; speaking: boolean; matched?: string };
+  acknowledgement?: { id: string; lastActivity: number; notified: boolean };
 };
 async function stopRemote(path: string, id: string) {
   const controller = new AbortController();
@@ -214,6 +215,7 @@ export function useVoice(options: {
     // observed, and then drain. Live offers no complete-turn event; future
     // unsolicited output cannot be ruled out by this bounded-word check.
     completedOutput.current.add(response.id);
+    setFailure((previous) => (previous?.noticeId === 'voiceReplyUnconfirmed' ? null : previous));
     attempt.output = { text: '', heard: false, speaking: false };
     if (response.questionPending) setSpokenQuestion(response.revision);
     if (
@@ -438,7 +440,11 @@ export function useVoice(options: {
         try {
           const result = await request<VoiceAssistantResponse>(
             `${path}/${attempt.voiceId}/poll`,
-            { ...anchor(), microphoneOn: !offRef.current },
+            {
+              ...anchor(),
+              microphoneOn: !offRef.current,
+              microphoneActive: !offRef.current && activityRef.current.microphone,
+            },
             attempt.controller.signal,
           );
           if (!active()) return;
@@ -477,6 +483,22 @@ export function useVoice(options: {
             return;
           }
           setVoice(result.voice);
+          const response = result.voice.response;
+          if (response && !completedOutput.current.has(response.id)) {
+            if (attempt.acknowledgement?.id !== response.id)
+              attempt.acknowledgement = {
+                id: response.id,
+                lastActivity: Date.now(),
+                notified: false,
+              };
+            const acknowledgement = attempt.acknowledgement;
+            if (activityRef.current.speaker || activityRef.current.microphone)
+              acknowledgement.lastActivity = Date.now();
+            if (!acknowledgement.notified && Date.now() - acknowledgement.lastActivity >= 15_000) {
+              acknowledgement.notified = true;
+              setError({ noticeId: 'voiceReplyUnconfirmed' });
+            }
+          }
           if (result.voice.phase === 'error') {
             fail(
               new MapRequestError(
@@ -543,6 +565,7 @@ export function useVoice(options: {
             },
             onOutputTranscript: (text) => {
               if (!active() || !attempt.output) return;
+              if (attempt.acknowledgement) attempt.acknowledgement.lastActivity = Date.now();
               attempt.output.text += text;
               checkOutput.current();
             },

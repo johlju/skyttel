@@ -306,3 +306,6 @@ prototypes
 *.db-*
 
 tests/browser/__screenshots__/
+
+# Private model evaluation requests, transcripts, reports and cost ledger
+/model-evaluation-results/

@@ -4,7 +4,7 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider } from '../../support/live-provider.js';
+import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -103,14 +103,12 @@ test.each([true, false])(
   },
 );
 
-test('a long typed answer reaches the voice intact in bounded UTF-8 commentary without truncating multibyte words', async () => {
+test('a long typed answer reaches the voice intact in bounded silent parts without truncating multibyte words', async () => {
   const answer = `Ett långt svar: ${'Åäö och cykeln 🚲. '.repeat(100)}`;
   const { live, send, poll } = await arrange(textModel(() => [modelMessage(answer)]).provider);
   await send('Beskriv allt.', 'long-reply');
   const result = await poll(true);
-  const parts = live.sent.flatMap(({ event }) =>
-    event.type === 'session.commentary.append' ? [event.content] : [],
-  );
+  const parts = voiceAnswerParts(live.sent);
   expect(parts.length).toBeGreaterThan(1);
   expect(parts.join('')).toBe(`Samtal (obekräftat): ${JSON.stringify(answer)}`);
   for (const part of parts) {
@@ -147,5 +145,55 @@ test('necessary typed questions are explicit, unchanged conversation data and do
       .map(({ event }) => (event.type === 'session.commentary.append' ? event.content : '')),
   ).toEqual([`Nödvändig fråga (samtalsdata): ${JSON.stringify(question)}`]);
   expect(await (await browser.get(`${householdPath}/map`)).json()).toEqual(before);
+  expect((await (await browser.get(`${householdPath}/map/history`)).json()).history).toEqual([]);
+});
+
+test('a typed partial change delivers its verified result and full follow-up to voice once', {
+  tags: ['technical'],
+}, async () => {
+  const question = 'Vilken cykel menar du?';
+  const { live, householdPath, send, poll } = await arrange(
+    textModel(() => [
+      modelTool('submit_changes', {
+        version: 0,
+        contentVersion: 1,
+        completion: 'draft',
+        questions: [question],
+        operations: [
+          {
+            name: 'propose_relationship_type',
+            arguments: {
+              id: 'shares',
+              baseRevision: null,
+              value: {
+                name: 'Delar',
+                description: '',
+                forwardLabel: 'delar med',
+                reverseLabel: 'delar med',
+              },
+            },
+          },
+        ],
+      }),
+    ]).provider,
+  );
+  const current = await send('Lägg till sambandstypen Delar och rätta cykeln. Spara.', 'partial');
+  expect(current.result).toEqual({ kind: 'draft', message: 'Utkastet är uppdaterat.' });
+  expect(current.questionPending).toBe(true);
+  expect(current.modelReply).toContain(question);
+  expect(current.modelReply).toContain('Din tidigare sparbegäran gäller inte längre.');
+  expect(current.receipt).toBeUndefined();
+  const result = await poll(true);
+  const parts = () => voiceAnswerParts(live.sent);
+  const content = parts().join('');
+  expect(content).toBe(
+    `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nNödvändig fråga (samtalsdata): ${JSON.stringify(current.modelReply)}`,
+  );
+  expect(result.voice.response).toMatchObject({
+    text: `Utkastet är uppdaterat.\n${current.modelReply}`,
+    questionPending: true,
+  });
+  await poll(true);
+  expect(parts().join('')).toBe(content);
   expect((await (await browser.get(`${householdPath}/map/history`)).json()).history).toEqual([]);
 });

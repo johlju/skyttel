@@ -10,6 +10,7 @@ export function liveProvider() {
   const channels = new Map<string, EventEmitter>();
   const sockets = new Map<string, EventEmitter & { readyState: number }>();
   let finalize = true;
+  let acknowledgeThinking = true;
   let seconds = 0;
   const provider: typeof fetch = async (_input, init) => {
     requests.push(JSON.parse(String(init?.body)));
@@ -27,6 +28,16 @@ export function liveProvider() {
       socket,
       send(event: ConnectClientEvent) {
         sent.push({ sessionId, event });
+        if (event.type === 'session.thinking.append' && acknowledgeThinking)
+          queueMicrotask(() =>
+            channel.emit('session.thinking.appended', {
+              type: 'session.thinking.appended',
+              event_id: randomUUID(),
+              client_event_id: event.event_id,
+              start_ms: 0,
+              end_ms: 0,
+            }),
+          );
         if (event.type === 'session.close' && finalize)
           queueMicrotask(() =>
             channel.emit('session.closed', {
@@ -57,12 +68,26 @@ export function liveProvider() {
     sent,
     channels,
     sockets,
-    configure(options: { finalize?: boolean; seconds?: number }) {
+    configure(options: { finalize?: boolean; seconds?: number; acknowledgeThinking?: boolean }) {
       finalize = options.finalize ?? finalize;
       seconds = options.seconds ?? seconds;
+      acknowledgeThinking = options.acknowledgeThinking ?? acknowledgeThinking;
     },
     emit(sessionId: string, event: Record<string, unknown>) {
       channels.get(sessionId)?.emit(String(event.type), event);
     },
   };
+}
+
+/** Reconstruct the source text carried by silent answer parts or short commentary. */
+export function voiceAnswerParts(sent: readonly { event: ConnectClientEvent }[]) {
+  return sent.flatMap(({ event }) => {
+    if (event.type === 'session.thinking.append') {
+      const part = JSON.parse(event.content);
+      return typeof part.answerId === 'string' && typeof part.text === 'string' ? [part.text] : [];
+    }
+    if (event.type === 'session.commentary.append')
+      return /^Svar [\w-]+ är komplett:/.test(event.content) ? [] : [event.content];
+    return [];
+  });
 }

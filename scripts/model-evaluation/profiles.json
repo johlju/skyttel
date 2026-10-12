@@ -1,0 +1,415 @@
+{
+  "profiles": [
+    {
+      "id": "terra-low",
+      "provider": "openai",
+      "model": "gpt-5.6-terra",
+      "role": "backend",
+      "effort": "low",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 2,
+        "cached": 0.2,
+        "cacheWrite": 2.5,
+        "output": 12,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "terra-medium",
+      "provider": "openai",
+      "model": "gpt-5.6-terra",
+      "role": "backend",
+      "effort": "medium",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 2,
+        "cached": 0.2,
+        "cacheWrite": 2.5,
+        "output": 12,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "terra-high",
+      "provider": "openai",
+      "model": "gpt-5.6-terra",
+      "role": "backend",
+      "effort": "high",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 2,
+        "cached": 0.2,
+        "cacheWrite": 2.5,
+        "output": 12,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "luna-low",
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "role": "backend",
+      "effort": "low",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 0.1,
+        "cached": 0.01,
+        "cacheWrite": 0.125,
+        "output": 0.5,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6-luna",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "luna-medium",
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "role": "backend",
+      "effort": "medium",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 0.1,
+        "cached": 0.01,
+        "cacheWrite": 0.125,
+        "output": 0.5,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6-luna",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "luna-high",
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "role": "backend",
+      "effort": "high",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 0.1,
+        "cached": 0.01,
+        "cacheWrite": 0.125,
+        "output": 0.5,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6-luna",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "luna-xhigh",
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "role": "backend",
+      "effort": "xhigh",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 0.1,
+        "cached": 0.01,
+        "cacheWrite": 0.125,
+        "output": 0.5,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6-luna",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "luna-max",
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "role": "backend",
+      "effort": "max",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 0.1,
+        "cached": 0.01,
+        "cacheWrite": 0.125,
+        "output": 0.5,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6-luna",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "sol-low",
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "role": "backend",
+      "effort": "low",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 2,
+        "cached": 0.1,
+        "cacheWrite": 2.5,
+        "output": 10,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "sol-medium",
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "role": "backend",
+      "effort": "medium",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 2,
+        "cached": 0.1,
+        "cacheWrite": 2.5,
+        "output": 10,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "sol-high",
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "role": "backend",
+      "effort": "high",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 2,
+        "cached": 0.1,
+        "cacheWrite": 2.5,
+        "output": 10,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "astra-low",
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "role": "backend",
+      "effort": "low",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-10",
+      "prices": {
+        "input": 10,
+        "cached": 1,
+        "cacheWrite": 12.5,
+        "output": 50,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6-astra",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "astra-medium",
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "role": "backend",
+      "effort": "medium",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-10",
+      "prices": {
+        "input": 10,
+        "cached": 1,
+        "cacheWrite": 12.5,
+        "output": 50,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6-astra",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "astra-high",
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "role": "backend",
+      "effort": "high",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 128000,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-10",
+      "prices": {
+        "input": 10,
+        "cached": 1,
+        "cacheWrite": 12.5,
+        "output": 50,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6-astra",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "judge-sol-high",
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "role": "judge",
+      "effort": "high",
+      "tokens": 1050000,
+      "maxInputTokens": 922000,
+      "modelMaxOutputTokens": 128000,
+      "maxOutputTokens": 4096,
+      "serviceTier": "default",
+      "checkedAt": "2026-10-11",
+      "prices": {
+        "input": 2,
+        "cached": 0.1,
+        "cacheWrite": 2.5,
+        "output": 10,
+        "longContextThreshold": 272000,
+        "longInputMultiplier": 2,
+        "longOutputMultiplier": 1.5
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    },
+    {
+      "id": "live-terra-low",
+      "provider": "openai",
+      "model": "gpt-live-1",
+      "role": "voice",
+      "backend": "terra-low",
+      "tokens": 128000,
+      "usdPerMinute": 0.05,
+      "checkedAt": "2026-10-10",
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-live-1",
+        "https://developers.openai.com/api/docs/pricing"
+      ]
+    }
+  ],
+  "counting": {
+    "supportedModels": ["gpt-5.6-terra", "gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra"],
+    "costVerified": false,
+    "usdPerRequest": null,
+    "sources": ["https://developers.openai.com/api/docs/guides/token-counting"],
+    "reason": "The official guide establishes counting support but does not confirm its fee. Exact counting is optional; whole-context reservations support backend and summary calls without a counting request."
+  }
+}

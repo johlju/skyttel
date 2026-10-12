@@ -44,6 +44,9 @@ export async function createInstallation(
     browserProviderScript?: string;
     consentTextVersion?: number;
     assistantDispatch?: Parameters<typeof createApp>[0]['assistantDispatch'];
+    modelProfile?: Parameters<typeof createApp>[0]['modelProfile'];
+    liveProfile?: Parameters<typeof createApp>[0]['liveProfile'];
+    observe?: Parameters<typeof createApp>[0]['observe'];
   } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
@@ -68,6 +71,7 @@ export async function createInstallation(
   let database: ReturnType<typeof openDatabase>;
   let server: ServerType;
   let closeApp: () => Promise<void>;
+  let summarizeForEvaluation: ReturnType<typeof createApp>['summarizeForEvaluation'];
   let handle: (request: Request) => Response | Promise<Response> = () =>
     new Response(null, { status: 503 });
   async function start() {
@@ -132,9 +136,13 @@ export async function createInstallation(
       liveSideband: databaseOptions.liveSideband,
       liveUsage: databaseOptions.liveUsage,
       assistantDispatch: databaseOptions.assistantDispatch,
+      modelProfile: databaseOptions.modelProfile,
+      liveProfile: databaseOptions.liveProfile,
+      observe: databaseOptions.observe,
       consentTextVersion: databaseOptions.consentTextVersion,
     });
     closeApp = app.close;
+    summarizeForEvaluation = app.summarizeForEvaluation;
     handle = async (request) => {
       // Model the original login-only callback while arranging a legacy
       // installation. Production always applies all migrations before serving.
@@ -195,6 +203,8 @@ export async function createInstallation(
   return {
     origin: config.origin,
     fetch: (request: Request) => handle(request),
+    summarizeForEvaluation: (...args: Parameters<typeof summarizeForEvaluation>) =>
+      summarizeForEvaluation(...args),
     seedDemo() {
       return seedDemo(database, config);
     },

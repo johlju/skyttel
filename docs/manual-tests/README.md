@@ -214,7 +214,7 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   och två medlemmars skilda utkast;
   samma fullständiga arbete provas med text och listor utan grafik eller ljud.
 
-- [Månadskostnad](costs.md): separata Render-, Live- och Terra-belopp,
+- [Månadskostnad](costs.md): separata belopp för Render, Live och textmodell,
   prisunderlag, månadens antaganden, okända värden, kumulativa mätningar,
   omstart, hämtningsfel, okänt sparresultat, tangentbordsfokus och
   installationens särskilda kostnadsbehörighet på mobil och dator.

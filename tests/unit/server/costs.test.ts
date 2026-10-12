@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { afterEach, expect, test, vi } from 'vitest';
+import { currentRates, summarizeAttempts } from '../../../src/server/cost-estimates.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { costProvider } from '../../support/cost-provider.js';
@@ -20,6 +21,39 @@ afterEach(async () => {
 });
 
 const month = () => new Date().toISOString().slice(0, 7);
+test('historical Terra rates and new Sol rates coexist without repricing old usage', {
+  tags: ['technical'],
+}, () => {
+  const legacy = {
+    ...currentRates,
+    id: 'openai-2026-09-25',
+    model: undefined,
+    terra: {
+      threshold: 272_000,
+      short: { input: 2, cached: 0.2, cacheWrite: 2.5, output: 12 },
+      long: { input: 4, cached: 0.4, cacheWrite: 5, output: 18 },
+    },
+  };
+  const attempts = [legacy, currentRates].map((rates, index) => ({
+    id: String(index),
+    kind: 'terra' as const,
+    month: '2026-10',
+    startedAt: '2026-10-12T00:00:00Z',
+    endedAt: '2026-10-12T00:00:01Z',
+    measurement: JSON.stringify({
+      kind: 'terra',
+      model: index ? 'gpt-6.1-sol' : 'gpt-5.6-terra',
+      tier: 'default',
+      outcome: 'completed',
+      usage: { input: 100000, cached: 20000, cacheWrite: 10000, output: 5000, reasoning: 2000 },
+    }),
+    rates: JSON.stringify(rates),
+  }));
+  const result = summarizeAttempts(attempts, 10);
+  expect(result.terra.estimatedUsd).toBeCloseTo(0.229 + 0.217, 10);
+  expect(result.terra.unpricedAttempts).toBe(0);
+  expect(result.rates).toHaveLength(2);
+});
 const headers = () => ({ origin: app.origin });
 async function costs(period = month()) {
   const response = await browser.get(`${app.origin}/api/operator/costs?month=${period}`);
@@ -87,7 +121,7 @@ async function setup(
   return { live, householdPath, path, assistant, message, settled, startVoice };
 }
 
-test('a missing effective model displays the requested Terra pricing assumption', async () => {
+test('a missing effective model displays the requested Sol pricing assumption', async () => {
   const provider = costProvider();
   const scene = await setup(async (input, init) => {
     const response = await provider.provider(input, init);
@@ -97,14 +131,15 @@ test('a missing effective model displays the requested Terra pricing assumption'
   });
   await scene.message();
   await scene.settled();
-  expect((await costs()).terra).toMatchObject({
-    estimatedUsd: 0.229,
+  const result = (await costs()).terra;
+  expect(result.estimatedUsd).toBeCloseTo(0.217, 10);
+  expect(result).toMatchObject({
     unpricedAttempts: 0,
     issues: [{ code: 'assumed_requested_model', count: 1 }],
   });
 });
 
-test('an aborted Terra request remains a durable unknown attempt', async () => {
+test('an aborted Sol request remains a durable unknown attempt', async () => {
   let held = false;
   const provider = costProvider(() => {
     held = true;
@@ -223,7 +258,7 @@ test('permanent household erasure and restart retain the global cost ledger and 
   expect((await costs()).terra).toEqual(before.terra);
 });
 
-test('the operator reads separate measured Terra cost and Render assumptions after a real model response and restart', async () => {
+test('the operator reads separate measured Sol cost and Render assumptions after a real model response and restart', async () => {
   const model = textModel(() => [modelMessage('Privat syntetiskt svar.')]);
   app = await createInstallation(undefined, { modelFetch: model.provider });
   browser = await request.newContext();
@@ -262,7 +297,7 @@ test('the operator reads separate measured Terra cost and Render assumptions aft
     attempts: 1,
     uncertainAttempts: 0,
     unpricedAttempts: 0,
-    estimatedUsd: 0.000564,
+    estimatedUsd: 0.000502,
   });
   expect(costs.terra.usage).toMatchObject({
     input: { known: 120, missing: 0 },
@@ -272,7 +307,7 @@ test('the operator reads separate measured Terra cost and Render assumptions aft
     reasoning: { known: 10, missing: 0 },
   });
   expect(costs.live.attempts).toBe(0);
-  expect(costs.total.estimatedUsd).toBeCloseTo(7.250564, 9);
+  expect(costs.total.estimatedUsd).toBeCloseTo(7.250502, 9);
   expect(JSON.stringify(costs)).not.toMatch(/Privat syntetisk|synthetic-model-key|access_token/);
   browser = await restartWithSession(browser, () => app.restart());
   const restored = await (await browser.get(costPath)).json();
@@ -440,7 +475,7 @@ test.each([
   {
     name: 'cache writes replace ordinary input and reasoning is already output',
     usage: measured,
-    usd: 0.000529,
+    usd: 0.000467,
     uncertain: 0,
     unpriced: 0,
   },
@@ -452,7 +487,7 @@ test.each([
       output_tokens: 10,
       input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
     },
-    usd: 0.54412,
+    usd: 0.5441,
     uncertain: 0,
     unpriced: 0,
   },
@@ -464,21 +499,21 @@ test.each([
       output_tokens: 10,
       input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
     },
-    usd: 1.088184,
+    usd: 1.088154,
     uncertain: 0,
     unpriced: 0,
   },
   {
     name: 'missing cache partition prices only known output',
     usage: { ...measured, input_tokens_details: { cached_tokens: 20 } },
-    usd: 0.00036,
+    usd: 0.0003,
     uncertain: 1,
     unpriced: 1,
   },
   {
     name: 'missing reasoning detail does not hide a known output price',
     usage: { ...measured, output_tokens_details: {} },
-    usd: 0.000529,
+    usd: 0.000467,
     uncertain: 1,
     unpriced: 0,
   },
@@ -596,11 +631,11 @@ test('an unfinished provider attempt is visible before its reply and a retry is 
   expect((await costs()).terra).toMatchObject({
     attempts: 2,
     uncertainAttempts: 0,
-    estimatedUsd: 0.001128,
+    estimatedUsd: 0.001004,
   });
 });
 
-test('a provider call spanning a UTC month remains in its start month for both Live and Terra', async () => {
+test('a provider call spanning a UTC month remains in its start month for both Live and Sol', async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-09-30T23:59:59.900Z'));
   let release!: (output: unknown[]) => void;

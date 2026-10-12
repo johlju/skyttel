@@ -23,7 +23,7 @@ const issueLabels: Record<CostIssue, string> = {
   inconsistent_usage: 'Mätvärden som inte går ihop',
   unsupported_model: 'Modell utan tillämpligt prisunderlag',
   unsupported_tier: 'Servicenivå utan tillämpligt prisunderlag',
-  assumed_requested_model: 'Begärd Terra-modell antas eftersom leverantörens modelluppgift saknas',
+  assumed_requested_model: 'Begärd textmodell antas eftersom leverantörens modelluppgift saknas',
   assumed_standard: 'Standardnivå antas eftersom leverantörens nivå saknas',
 };
 function Amount({ estimatedSek, estimatedUsd }: { estimatedSek: number; estimatedUsd: number }) {
@@ -138,10 +138,10 @@ function Overview({ data }: { data: CostMonth }) {
           </details>
         </section>
         <section aria-labelledby="terra-cost-heading">
-          <h2 id="terra-cost-heading">Terra – uppmätt hittills</h2>
+          <h2 id="terra-cost-heading">Textmodell – uppmätt hittills</h2>
           <Category value={data.terra} />
           <details>
-            <summary>Visa mätvärden för Terra</summary>
+            <summary>Visa mätvärden för textmodell</summary>
             <dl>
               <dt>Indata</dt>
               <dd>
@@ -204,17 +204,17 @@ function Overview({ data }: { data: CostMonth }) {
               och återbetalning kan skilja sig.
             </p>
             <p>
-              Terra: USD per miljon token. Över {number(rate.terra.threshold)} indatatoken används
-              det högre priset för hela anropet.
+              {rate.model ?? 'gpt-5.6-terra'}: USD per miljon token. Över{' '}
+              {number(rate.terra.threshold)} indatatoken används det högre priset för hela anropet.
             </p>
             <section
               className="cost-table-scroll"
-              aria-label={`Terra-priser ${rate.id}, rulla vid behov`}
+              aria-label={`Modellpriser ${rate.id}, rulla vid behov`}
               // biome-ignore lint/a11y/noNoninteractiveTabindex: The overflow table needs a keyboard-scroll target at narrow widths.
               tabIndex={0}
             >
               <table>
-                <caption>Terra-priser per miljon token</caption>
+                <caption>{rate.model ?? 'gpt-5.6-terra'} – priser per miljon token</caption>
                 <thead>
                   <tr>
                     <th scope="col">Indata i anropet</th>

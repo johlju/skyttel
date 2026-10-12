@@ -7,7 +7,7 @@ test('summary requests share the configured provider, preserve historical uncert
   const model = textModel(() => [modelMessage('Historiska fakta och obesvarad fråga.')]);
   const fetchProvider: typeof fetch = async (input, init) => {
     expect(String(input)).toBe('https://api.openai.com/v1/responses');
-    expect(JSON.parse(String(init?.body)).max_output_tokens).toBe(4096);
+    expect(JSON.parse(String(init?.body))).not.toHaveProperty('max_output_tokens');
     return model.provider(input, init);
   };
   const summary = await summarizeConversation(
@@ -20,7 +20,7 @@ test('summary requests share the configured provider, preserve historical uncert
   expect(model.requests).toHaveLength(2);
   expect(
     model.requests.every(
-      (request) => request.model === 'gpt-5.6-terra' && !request.store && !request.tools.length,
+      (request) => request.model === 'gpt-6.1-sol' && !request.store && !request.tools.length,
     ),
   ).toBe(true);
   expect(JSON.stringify(model.requests[0].input)).toContain('Privat första del.');

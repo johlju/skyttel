@@ -34,7 +34,6 @@ export async function summarizeConversation(
       ],
       [],
       signal,
-      4096,
     );
     guard();
     if (

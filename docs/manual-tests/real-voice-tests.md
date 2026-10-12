@@ -1,7 +1,7 @@
 # Automated Swedish speech check
 
 This opt-in Playwright check sends a fictional recorded Swedish request
-through the application's actual WebRTC connection, Live provider, Terra
+through the application's actual WebRTC connection, Live provider, Sol
 delegation, MCP and SQLite. Only sign-in and the physical microphone are
 substituted. It does not inject transcripts or provider replies.
 

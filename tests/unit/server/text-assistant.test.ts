@@ -308,8 +308,8 @@ test('a provider discovers the actual MCP catalog and makes a persistent proposa
   );
   for (const call of model.requests) {
     expect(call).toMatchObject({
-      model: 'gpt-5.6-terra',
-      reasoning: { effort: 'low' },
+      model: 'gpt-6.1-sol',
+      reasoning: { effort: 'high' },
       store: false,
     });
     expect(call.tools.find((tool) => tool.name === 'propose_object')).toMatchObject({
@@ -595,6 +595,7 @@ test.each(['draft', 'save'])(
           arguments: { id, baseRevision: null, value: { typeId, name: id, description: '' } },
         })),
         questions: completion === 'draft' ? ['Vem använder cykeln?'] : [],
+        continueResponse: completion === 'draft',
       }),
     ]);
     await setup(model.provider);
@@ -617,6 +618,7 @@ test.each(['draft', 'save'])(
       expect(map.objects).toEqual([]);
     } else {
       expect(status.receipt.changes).toHaveLength(3);
+      expect(status.reply).toBe('Sparat. Hela utkastet finns i hushållets karta.');
       expect(map.objects.map(({ id }: { id: string }) => id).sort()).toEqual([
         'bike',
         'helmet',
@@ -1126,6 +1128,40 @@ test('content replacement invalidates cached conversation and held provider work
   expect(model.requests).toHaveLength(1);
 });
 
+test('a lost automatic save response enters recovery and verifies the original operation without resaving', {
+  tags: ['technical'],
+}, async () => {
+  const model = textModel(() => [modelMessage('Utkastet är klart.')]);
+  let lost = false;
+  await setup(model.provider, undefined, async (request, dispatch) => {
+    const rpc =
+      request.method === 'POST' && new URL(request.url).pathname === '/mcp'
+        ? await request.clone().json()
+        : null;
+    const response = await dispatch(request);
+    if (rpc?.params?.name === 'save_draft' && !lost) {
+      lost = true;
+      throw new TypeError('Lost automatic save response after commit');
+    }
+    return response;
+  });
+  await webProposal();
+  const view = await message(await start(), 'Spara hela utkastet.');
+  expect(lost).toBe(true);
+  expect(view).toMatchObject({ phase: 'recovery', error: 'assistant_save_unknown' });
+  const mapPath = path.replace('/text-assistant', '/map');
+  const history = (await (await browser.get(`${mapPath}/history`)).json()).history;
+  expect(history).toHaveLength(1);
+  const recovered = await browser.post(`${path}/${view.id}/recover`, {
+    headers: { origin: app.origin },
+    data: {},
+  });
+  expect(recovered.status()).toBe(200);
+  expect(await recovered.json()).toMatchObject({ phase: 'ready', receipt: history[0] });
+  expect((await (await browser.get(`${mapPath}/history`)).json()).history).toEqual(history);
+  expect(model.requests).toHaveLength(1);
+});
+
 test('a new authorized session finds an interrupted persistent save before accepting work and retries only that exact operation', async () => {
   const model = textModel(() => [modelMessage('Fortsätt.')]);
   await setup(model.provider);
@@ -1516,7 +1552,7 @@ test('an incomplete provider response cannot execute a save and retains only kno
           object: 'response',
           created_at: 1,
           status: 'incomplete',
-          model: 'gpt-5.6-terra',
+          model: 'gpt-6.1-sol',
           output: [
             modelTool('save_draft', { version: 1, contentVersion: 1, operationId: 'partial-save' }),
           ],

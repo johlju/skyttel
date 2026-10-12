@@ -10,6 +10,8 @@ export interface CostAssumptions {
 export interface CostRateCard {
   id: string;
   checkedAt: string;
+  /** Absent on historical cards for GPT-5.6 Terra. */
+  model?: string;
   liveUsdPerMinute: number;
   liveMinimumSeconds: number;
   terra: {

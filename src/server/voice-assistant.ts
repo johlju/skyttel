@@ -8,9 +8,11 @@ import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantView } from '../shared/voice-assistant.js';
 import { voiceErrorGroup } from '../shared/voice-error.js';
 import { voiceAssistantInstructions } from './assistant-instructions.js';
+import type { ObserveAssistant } from './assistant-observation.js';
 import type { Config } from './config.js';
 import { voiceConversationModel } from './conversation-capacity.js';
 import type {
+  LiveModelProfile,
   LiveSideband,
   LiveSidebandFactory,
   LiveUsage,
@@ -60,6 +62,9 @@ export function voiceAssistantRoutes({
   transcript,
   contextUsage,
   prepareVoiceContext,
+  voiceInput,
+  observe,
+  liveProfile = voiceConversationModel,
 }: {
   config: Config;
   dispatch: LocalDispatch;
@@ -79,7 +84,17 @@ export function voiceAssistantRoutes({
     ratio?: unknown,
   ) => void;
   prepareVoiceContext?: (sessionId: string) => Promise<TextAssistantView | undefined>;
+  voiceInput?: (sessionId: string, pending: boolean, text?: string) => void;
+  observe?: ObserveAssistant;
+  liveProfile?: LiveModelProfile;
 }) {
+  if (
+    liveProfile.provider !== 'openai' ||
+    !/^[a-z0-9.-]+$/.test(liveProfile.model) ||
+    !Number.isSafeInteger(liveProfile.tokens) ||
+    liveProfile.tokens <= 0
+  )
+    throw new Error('invalid_live_profile');
   const routes = new Hono();
   const voices = new Map<string, Voice>();
   const client = config.openaiApiKey
@@ -247,7 +262,7 @@ export function voiceAssistantRoutes({
     const usage: LiveUsageAttempt = {
       attemptId: randomUUID(),
       sessionId: null,
-      model: 'gpt-live-1',
+      model: liveProfile.model,
       startedAt: new Date().toISOString(),
       endedAt: null,
       seconds: null,
@@ -266,7 +281,7 @@ export function voiceAssistantRoutes({
       const result = await client.live.create(
         {
           session: {
-            model: voiceConversationModel.model,
+            model: liveProfile.model,
             audio: { output: { voice: 'marin' } },
             delegation: { type: 'client' },
             store: false,
@@ -360,6 +375,8 @@ export function voiceAssistantRoutes({
         voice.finish?.();
       });
       voice.work = voiceWork({
+        observe: (kind, data) =>
+          observe?.({ at: Date.now(), sessionId: voice.assistant.id, kind, data }),
         channel,
         initial: current,
         response: (value) => {
@@ -370,6 +387,7 @@ export function voiceAssistantRoutes({
           voice.view.replyDelivery.push(value);
         },
         transcript: (role, text) => transcript?.(context.req.param('sessionId'), role, text),
+        input: (pending, text) => voiceInput?.(context.req.param('sessionId'), pending, text),
         interrupt: (revision) => interrupt(context.req.param('sessionId'), revision),
         request: async (action, body, signal) => {
           const response = await dispatch(
@@ -494,6 +512,7 @@ export function voiceAssistantRoutes({
       )
         return context.json({ error: 'invalid_request' }, 400);
       voice.work?.rendered(body);
+      voice.work?.activity(body.microphoneActive === true && body.microphoneOn === true);
       voice.work?.answer(voice.assistant, body.microphoneOn === true);
       voice.view.summaryReady = voice.work?.readyForSummary() ?? true;
       voice.heartbeat = Date.now();
@@ -511,10 +530,8 @@ export function voiceAssistantRoutes({
       for (const voice of active) {
         // An accepted delegate can race the last browser poll. Finish its
         // checked result before retiring context, rather than canceling it.
-        const deadline = Date.now() + 120_000;
         while (!voice.closed && voice.work && !voice.work.readyForSummary()) {
-          if (signal.aborted || Date.now() > deadline)
-            throw new Error('context_handoff_interrupted');
+          if (signal.aborted) throw new Error('context_handoff_interrupted');
           voice.heartbeat = Date.now();
           await new Promise((resolve) => setTimeout(resolve, 50));
         }

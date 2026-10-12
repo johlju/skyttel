@@ -1,0 +1,135 @@
+{
+  "decision": "https://github.com/viscalyx/skyttel/issues/187",
+  "scope": "Supplemental text regressions for the direction instruction. Uses the unchanged catalog fixture and oracle; not a replacement qualification catalog.",
+  "scenarios": [
+    {
+      "id": "direction-reverse",
+      "title": "Uttrycklig omvänd riktning",
+      "voice": false,
+      "steps": [
+        {
+          "id": "direction-reverse-explicit",
+          "text": "Tenant Norrsken Bygg ska leverera till Microsoft 365.",
+          "expected": {
+            "addRelationships": [
+              {
+                "source": "tenant",
+                "type": "Levererar till",
+                "target": "m365",
+                "knowledge": "known"
+              }
+            ],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående. Fråga inte om den redan uttryckliga riktningen."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "direction-correction",
+      "title": "Sen rättelse vänder riktningen",
+      "voice": false,
+      "steps": [
+        {
+          "id": "direction-correction-latest",
+          "text": "Microsoft 365 ska leverera till Tenant Norrsken Bygg. Nej, tvärtom: Tenant Norrsken Bygg ska leverera till Microsoft 365.",
+          "expected": {
+            "addRelationships": [
+              {
+                "source": "tenant",
+                "type": "Levererar till",
+                "target": "m365",
+                "knowledge": "known"
+              }
+            ],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående. Fråga inte om riktningen som den senaste rättelsen klargör."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "direction-list-followup",
+      "title": "Uppräkning följd av omvänd riktning",
+      "voice": false,
+      "steps": [
+        {
+          "id": "direction-list-unresolved",
+          "text": "Lägg till sambandet Levererar till: Microsoft 365, Tenant Norrsken Bygg.",
+          "expected": {
+            "addRelationships": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Fråga vilken av Microsoft 365 och Tenant Norrsken Bygg som levererar till den andra. Fråga inte efter den redan givna typen Levererar till."
+            ]
+          }
+        },
+        {
+          "id": "direction-list-resolved",
+          "text": "Tenant Norrsken Bygg ska leverera till Microsoft 365.",
+          "expected": {
+            "addRelationships": [
+              {
+                "source": "tenant",
+                "type": "Levererar till",
+                "target": "m365",
+                "knowledge": "known"
+              }
+            ],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående. Fråga inte igen om den klargjorda riktningen."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "direction-mixed-followup",
+      "title": "Oberoende ändring väntar bara på saknad riktning",
+      "voice": false,
+      "steps": [
+        {
+          "id": "direction-mixed-unresolved",
+          "text": "Ändra Lo Bergs beskrivning till Läser poesi. Skapa också ett samband av typen Levererar till mellan Microsoft 365 och Tenant Norrsken Bygg.",
+          "expected": {
+            "objects": { "lo": { "description": "Läser poesi." } },
+            "addRelationships": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Fråga vilken av Microsoft 365 och Tenant Norrsken Bygg som levererar till den andra. Fråga inte efter den redan givna typen Levererar till. Återge ett kort verifierat ändringsbesked om utkastet utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        },
+        {
+          "id": "direction-mixed-resolved",
+          "text": "Tenant Norrsken Bygg ska leverera till Microsoft 365.",
+          "expected": {
+            "addRelationships": [
+              {
+                "source": "tenant",
+                "type": "Levererar till",
+                "target": "m365",
+                "knowledge": "known"
+              }
+            ],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående. Fråga inte igen om den klargjorda riktningen."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

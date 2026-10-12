@@ -76,7 +76,7 @@ test.each(['connection loss'])(
       offset_ms: 100,
       delegation: { id: firstDelegation, type: 'delegation', target: 'client' },
     });
-    await expect.poll(() => model.requests.length).toBe(1);
+    await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(1);
     await expect.poll(() => providerSignal?.aborted).toBe(true);
     await expect.poll(async () => (await (await browser.get(path)).json()).phase).toBe('ready');
     expect(await (await browser.get(`${householdPath}/map`)).json()).toEqual(map);

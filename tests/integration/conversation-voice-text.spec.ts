@@ -11,7 +11,7 @@ import {
 } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 const region = (page: Page) =>
@@ -209,7 +209,7 @@ test('RÖSTTEXT-02: mikrofonen av ger bara text och gamla svar spelas inte upp n
 test('RÖSTTEXT-03: köns skrivna svar överlämnas till rösten en gång och samtalstexten läser aldrig egna eller talade rader', async ({
   page,
 }) => {
-  const { app, held, commentary } = await arrange(page);
+  const { app, held, live, commentary } = await arrange(page);
   try {
     await turnMicrophoneOn(page);
     await send(page, 'Första frågan.');
@@ -226,9 +226,9 @@ test('RÖSTTEXT-03: köns skrivna svar överlämnas till rösten en gång och sa
           .join(''),
       )
       .toContain('Andra svaret.');
-    const content = commentary()
-      .map((event) => event.content)
-      .join('');
+    // Long replies arrive as silent parts followed by one command to speak.
+    const content = voiceAnswerParts(live.sent).join('');
+    expect(commentary()).toHaveLength(2);
     expect(content.indexOf(first)).toBeGreaterThanOrEqual(0);
     expect(content.indexOf(first)).toBeLessThan(content.indexOf('Andra svaret.'));
     expect(content.split(first)).toHaveLength(2);

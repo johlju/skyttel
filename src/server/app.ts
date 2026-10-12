@@ -9,6 +9,7 @@ import { normalizeHouseholdName } from '../shared/household-name.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import { AdministrationError } from './administration.js';
 import { administrationRoutes } from './administration-routes.js';
+import type { ObserveAssistant } from './assistant-observation.js';
 import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
@@ -21,7 +22,7 @@ import { householdErasureRoutes } from './household-erasure-routes.js';
 import { householdExportRoutes } from './household-export-routes.js';
 import { householdImportRoutes } from './household-import-routes.js';
 import { createHousehold, householdAccess, isFirstAdmin, isInitialized } from './households.js';
-import type { LiveSidebandFactory, LiveUsage } from './live-provider.js';
+import type { LiveModelProfile, LiveSidebandFactory, LiveUsage } from './live-provider.js';
 import { createLoginMethods } from './login-methods.js';
 import { MapError } from './map.js';
 import { mapRoutes } from './map-routes.js';
@@ -29,7 +30,7 @@ import { profileImageRoutes } from './profile-image-routes.js';
 import { imageUploadLimit } from './profile-images.js';
 import { textAssistantRoutes } from './text-assistant.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
-import type { TextModelUsage } from './text-assistant-model.js';
+import type { TextModelProfile, TextModelUsage } from './text-assistant-model.js';
 import { voiceAssistantRoutes } from './voice-assistant.js';
 
 export function createApp({
@@ -44,6 +45,9 @@ export function createApp({
   liveSideband,
   liveUsage,
   assistantDispatch,
+  modelProfile,
+  liveProfile,
+  observe,
 }: {
   config: Config;
   database: Database.Database;
@@ -57,6 +61,9 @@ export function createApp({
   liveSideband?: LiveSidebandFactory;
   liveUsage?: LiveUsage;
   assistantDispatch?: (request: Request, dispatch: LocalDispatch) => Response | Promise<Response>;
+  modelProfile?: TextModelProfile;
+  liveProfile?: LiveModelProfile;
+  observe?: ObserveAssistant;
 }) {
   const app = new Hono();
   const costs = installationCosts(database);
@@ -235,6 +242,9 @@ export function createApp({
     consents,
     dispatch: dispatchAssistant,
     modelFetch,
+    modelProfile,
+    voiceTokens: liveProfile?.tokens,
+    observe,
     modelUsage: (attempt) => {
       costs.model(attempt);
       modelUsage?.(attempt);
@@ -257,6 +267,7 @@ export function createApp({
   );
   const voiceAssistant = voiceAssistantRoutes({
     config,
+    liveProfile,
     dispatch: dispatchAssistant,
     liveFetch,
     liveSideband,
@@ -265,6 +276,8 @@ export function createApp({
     interrupt: textAssistant.interrupt,
     conversation: textAssistant.conversation,
     transcript: textAssistant.transcript,
+    voiceInput: textAssistant.voiceInput,
+    observe,
     contextUsage: textAssistant.contextUsage,
     prepareVoiceContext: textAssistant.prepareVoiceContext,
   });
@@ -284,6 +297,7 @@ export function createApp({
     serveStatic({ path: './dist/client/index.html' }),
   );
   return Object.assign(app, {
+    summarizeForEvaluation: textAssistant.summarizeForEvaluation,
     close: async () => {
       await voiceAssistant.close();
       await textAssistant.close();

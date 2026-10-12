@@ -56,7 +56,7 @@ test('KOST-01: separata kostnader och månadens antaganden återläses efter oms
     await turnMicrophoneOff(page);
     await openCosts(page);
     const overview = category(page, 'Månadens kostnadsöversikt');
-    await expect(overview).toContainText('75,54 SEK');
+    await expect(overview).toContainText('75,42 SEK');
     const totalBounds = await overview.boundingBox();
     const renderBounds = await category(page, 'Render – hel månad').boundingBox();
     expect(
@@ -65,13 +65,15 @@ test('KOST-01: separata kostnader och månadens antaganden återläses efter oms
     await expect(category(page, 'Render – hel månad')).toContainText('72,50 SEK (7,25 USD)');
     await expect(category(page, 'Live – uppmätt hittills')).toContainText('0,75 SEK (0,075 USD)');
     await page.getByText('Visa mätvärden för Live', { exact: true }).click();
-    await page.getByText('Visa mätvärden för Terra', { exact: true }).click();
+    await page.getByText('Visa mätvärden för textmodell', { exact: true }).click();
     await expect(category(page, 'Live – uppmätt hittills')).toContainText(
       '90 sekunder rapporterade',
     );
-    await expect(category(page, 'Terra – uppmätt hittills')).toContainText('2,29 SEK (0,229 USD)');
-    await expect(category(page, 'Terra – uppmätt hittills')).toContainText('100 000 token');
-    const terra = category(page, 'Terra – uppmätt hittills');
+    await expect(category(page, 'Textmodell – uppmätt hittills')).toContainText(
+      '2,17 SEK (0,217 USD)',
+    );
+    await expect(category(page, 'Textmodell – uppmätt hittills')).toContainText('100 000 token');
+    const terra = category(page, 'Textmodell – uppmätt hittills');
     const usage = terra.locator('dd');
     await expect(usage).toHaveText([
       '100 000 token',
@@ -80,28 +82,30 @@ test('KOST-01: separata kostnader och månadens antaganden återläses efter oms
       '5 000 token',
       '2 000 token',
     ]);
-    await expect(page.locator('.cost-total')).toContainText('75,54 SEK (7,554 USD)');
+    await expect(page.locator('.cost-total')).toContainText('75,42 SEK (7,542 USD)');
     await expect(page.getByText(/Cirka 200 kronor per månad/)).toBeVisible();
     await category(page, 'Prisunderlag')
       .getByText(/Modellpriser kontrollerade/)
       .click();
-    await expect(page.getByRole('table', { name: 'Terra-priser per miljon token' })).toBeVisible();
+    await expect(
+      page.getByRole('table', { name: 'gpt-6.1-sol – priser per miljon token' }),
+    ).toBeVisible();
     const rates = category(page, 'Prisunderlag');
-    await expect(rates).toContainText('Modellpriser kontrollerade 2026-09-25');
+    await expect(rates).toContainText('Modellpriser kontrollerade 2026-10-12');
     await expect(rates).toContainText('0,05 USD/minut, beräknat per sekund');
     await expect(rates).toContainText('Startkrediten antas ingå i dessa sekunder');
     await expect(rates.getByRole('link', { name: 'GPT-Live', exact: true })).toHaveAttribute(
       'href',
       'https://developers.openai.com/api/docs/models/gpt-live-1',
     );
-    await expect(rates.getByRole('link', { name: 'GPT-5.6 Terra', exact: true })).toHaveAttribute(
+    await expect(rates.getByRole('link', { name: 'GPT-6.1 Sol', exact: true })).toHaveAttribute(
       'href',
-      'https://developers.openai.com/api/docs/models/gpt-5.6-terra',
+      'https://developers.openai.com/api/docs/models/gpt-6.1-sol',
     );
     await page.getByText('Ändra månadens antaganden', { exact: true }).click();
     await page.getByLabel('SEK per USD', { exact: true }).fill('11');
     await page.getByRole('button', { name: 'Spara månadens antaganden' }).click();
-    await expect(page.locator('.cost-total')).toContainText('83,09 SEK (7,554 USD)');
+    await expect(page.locator('.cost-total')).toContainText('82,96 SEK (7,542 USD)');
     const month = await page.getByLabel('Månad (UTC)').inputValue();
     const previous = new Date(`${month}-01T00:00:00Z`);
     previous.setUTCMonth(previous.getUTCMonth() - 1);
@@ -109,19 +113,19 @@ test('KOST-01: separata kostnader och månadens antaganden återläses efter oms
     await expect(category(page, 'Prisunderlag')).toContainText('1 USD = 10 SEK');
     await expect(page.getByText(/tidigare förbrukning är okänd/)).toBeVisible();
     await page.getByLabel('Månad (UTC)').fill(month);
-    await expect(page.locator('.cost-total')).toContainText('83,09 SEK');
+    await expect(page.locator('.cost-total')).toContainText('82,96 SEK');
     await app.command('restart', 'restarted');
     await page.reload();
     await page.getByText('Visa mätvärden för Live', { exact: true }).click();
-    await page.getByText('Visa mätvärden för Terra', { exact: true }).click();
-    await expect(page.locator('.cost-total')).toContainText('83,09 SEK (7,554 USD)');
+    await page.getByText('Visa mätvärden för textmodell', { exact: true }).click();
+    await expect(page.locator('.cost-total')).toContainText('82,96 SEK (7,542 USD)');
     await expect(category(page, 'Prisunderlag')).toContainText('1 USD = 11 SEK');
     await expect(category(page, 'Render – hel månad')).toContainText('79,75 SEK (7,25 USD)');
     await expect(category(page, 'Live – uppmätt hittills')).toContainText(
       '90 sekunder rapporterade',
     );
     await expect(category(page, 'Live – uppmätt hittills')).toContainText('0,83 SEK (0,075 USD)');
-    await expect(terra).toContainText('2,52 SEK (0,229 USD)');
+    await expect(terra).toContainText('2,39 SEK (0,217 USD)');
     await expect(usage).toHaveText([
       '100 000 token',
       '20 000 token',
@@ -151,7 +155,7 @@ test('KOST-02: saknade slutvärden och hämtningsfel bevarar känt underlag utan
     await turnMicrophoneOff(page);
     await openCosts(page);
     const live = category(page, 'Live – uppmätt hittills');
-    const terra = category(page, 'Terra – uppmätt hittills');
+    const terra = category(page, 'Textmodell – uppmätt hittills');
     await expect(live).toContainText('15 sekunder rapporterade');
     await expect(live).toContainText('1 registrerade försök; 1 med osäkert underlag');
     await expect(live).toContainText('0,13 SEK (0,0125 USD)');
@@ -348,7 +352,7 @@ for (const width of [1280, 390, 320]) {
       await category(page, 'Prisunderlag')
         .getByText(/Modellpriser kontrollerade/)
         .click();
-      const table = page.getByRole('region', { name: /Terra-priser .*rulla vid behov/ });
+      const table = page.getByRole('region', { name: /Modellpriser .*rulla vid behov/ });
       await expect(table.getByRole('table')).toBeVisible();
       await expect(table.getByRole('columnheader')).toHaveText([
         'Indata i anropet',
@@ -359,13 +363,13 @@ for (const width of [1280, 390, 320]) {
       ]);
       await expect(table.getByRole('cell')).toHaveText([
         '2',
-        '0,2',
+        '0,1',
         '2,5',
-        '12',
+        '10',
         '4',
-        '0,4',
+        '0,2',
         '5',
-        '18',
+        '15',
       ]);
       await table.focus();
       if (width <= 390) {

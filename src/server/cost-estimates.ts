@@ -7,18 +7,19 @@ import type {
 } from '../shared/costs.js';
 
 export const currentRates: CostRateCard = {
-  id: 'openai-2026-09-25',
-  checkedAt: '2026-09-25',
+  id: 'openai-sol-2026-10-12',
+  checkedAt: '2026-10-12',
+  model: 'gpt-6.1-sol',
   liveUsdPerMinute: 0.05,
   liveMinimumSeconds: 15,
   terra: {
     threshold: 272_000,
-    short: { input: 2, cached: 0.2, cacheWrite: 2.5, output: 12 },
-    long: { input: 4, cached: 0.4, cacheWrite: 5, output: 18 },
+    short: { input: 2, cached: 0.1, cacheWrite: 2.5, output: 10 },
+    long: { input: 4, cached: 0.2, cacheWrite: 5, output: 15 },
   },
   sources: [
     { title: 'GPT-Live', url: 'https://developers.openai.com/api/docs/models/gpt-live-1' },
-    { title: 'GPT-5.6 Terra', url: 'https://developers.openai.com/api/docs/models/gpt-5.6-terra' },
+    { title: 'GPT-6.1 Sol', url: 'https://developers.openai.com/api/docs/models/gpt-6.1-sol' },
     { title: 'Cache', url: 'https://developers.openai.com/api/docs/guides/prompt-caching' },
     {
       title: 'Live-initiering',
@@ -134,7 +135,8 @@ export function summarizeAttempts(attempts: CostAttempt[], sekPerUsd: number) {
     const inconsistent =
       (input !== null && cached !== null && cacheWrite !== null && cached + cacheWrite > input) ||
       (reasoning !== null && output !== null && reasoning > output);
-    const unsupportedModel = value.model !== null && value.model !== 'gpt-5.6-terra';
+    const unsupportedModel =
+      value.model !== null && value.model !== (rate.model ?? 'gpt-5.6-terra');
     const unsupportedTier = value.tier !== null && value.tier !== 'default';
     if (inconsistent || unsupportedModel || unsupportedTier) {
       if (inconsistent) issue(terra, 'inconsistent_usage');

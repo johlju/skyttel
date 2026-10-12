@@ -10,6 +10,7 @@ import { liveProvider } from '../../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
+vi.setConfig({ expect: { poll: { timeout: 5000 } } });
 let browser: APIRequestContext;
 const clients: APIRequestContext[] = [];
 afterEach(async () => {

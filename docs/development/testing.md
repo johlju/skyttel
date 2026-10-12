@@ -19,6 +19,52 @@ when the process exits, including after interruption. Use the npm scripts
 instead of launching test runners directly. These commands require Python 3
 on Linux or macOS; Python is included in the devcontainer.
 
+## Model evaluation history
+
+A **scenario** is a fixed starting map and a sequence of requests with
+expected results. An **evaluation run** executes selected scenarios with
+specified model profiles and repetitions. Its **run issue** is a GitHub
+issue labelled `model-evaluation`; **result history** is the collection of
+those issues and their versioned result comments, including corrections.
+
+The comparison baseline is the model currently configured in the application
+and its corresponding result in a labelled run issue. Every evaluation follows
+the same workflow and creates a separate run issue for each model, effort level
+and modality.
+
+Invoke `$evaluate-models` with one or more models, the intended comparison
+and the required payment authorization. A spending limit is optional; provide
+one only when a cost ceiling is wanted.
+One complete passing repetition qualifies the model for the evaluated modality.
+Additional repetitions run only when requested, and every planned check must
+pass. Previously tested models are compared using their recorded results and
+run again only when explicitly supplied for the new
+run. A supplied effort is tested directly; testing high does not require
+testing low or medium first. Other efforts are explored only for a requested
+effort survey. A stopped or incomplete run remains useful evidence but cannot
+establish a model's qualification.
+
+Model calls and test steps have no fixed processing deadline. Record elapsed
+time for each call and response; assess correctness before speed and cost.
+The user decides whether the measured speed is reasonable for its cost.
+User cancellation and transport failures still stop work.
+
+Identify the API provider for each model; specify it when the model name is
+ambiguous. Required credentials must be available to the evaluation process.
+Missing credentials stop paid execution with provider-specific setup guidance.
+
+Find past runs in
+[open and closed evaluation issues](https://github.com/viscalyx/skyttel/issues?q=is%3Aissue%20label%3Amodel-evaluation).
+Read the run manifest before comparing results: catalog, application commit,
+scoring configuration, modality and repetition plan must match. Review profile
+settings, limits and prices. Read every correction
+comment and the final recommendation. Raw provider requests and transcripts
+stay in ignored local artifacts; the issue carries shareable results.
+
+For a single provider integration regression, use the real-model or real-voice
+suites below. Use `$evaluate-models` for catalog qualification and model
+comparison. Both workflows require explicit authorization for billable calls.
+
 ## CI font profile
 
 CI uses the bundled DejaVu Sans regular and bold fonts for system-font
@@ -461,7 +507,7 @@ These commands require explicit private configuration:
 - `npm run test:real-model`: model interpretation through MCP. Follow the
   [model evaluation guide](../manual-tests/real-model-tests.md).
 - `npm run test:real-voice`: recorded Swedish speech through WebRTC, Live
-  and Terra. Follow the
+  and the application's text model. Follow the
   [speech evaluation guide](../manual-tests/real-voice-tests.md).
 - `npm run test:installation`: read-only checks of HTTPS, deployed version
   and security monitoring against actual Render images. Follow the

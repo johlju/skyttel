@@ -6,6 +6,17 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Conversation model
+
+The application uses GPT-6.1 Sol with high reasoning effort for text,
+voice backend work and conversation summaries. Before rollout, confirm that
+the configured OpenAI project permits this model. Monitor response times and
+spending after rollout. GPT-Live 1 continues to handle speech.
+
+New text model usage uses Sol prices. Earlier measurements keep their saved
+prices. The cost page combines text model usage and shows the model for each
+price table. Existing credentials and database content remain usable.
+
 ### Private type restoration
 
 Full household files can contain private proposals to restore removed type
@@ -139,6 +150,17 @@ cannot restore cost history after disk loss. Preserve installation recovery
 copies when that history is required; this upgrade adds no automatic backup.
 
 ### Built-in text and voice assistants
+
+Assistant responses and conversation summaries use the provider's output
+limit unless a lower limit is configured. A higher limit can increase the
+cost and duration of an individual request. After rollout, monitor actual
+token use, incomplete responses and response times before you set a lower
+limit. Output use includes internal reasoning as well as visible text.
+
+Assistant model calls and accepted tasks have no fixed processing deadline.
+Slow work stays active until it completes, fails or the user stops it. After
+rollout, monitor response times and active work. Use the stop control when
+work must end; a long response time alone no longer stops it automatically.
 
 Personal conversation choices remain in the installation database and apply
 to the user's households. Household export and import do not transfer or

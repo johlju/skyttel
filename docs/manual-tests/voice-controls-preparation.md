@@ -609,10 +609,16 @@ steg 4 till UI-steg 3 och steg 5 till UI-steg 4. Efter avbrottet ska
 1. Läs röstrutan. Kör `setSound('microphone', true, 0.08)` och sedan
    `setSound('microphone', true, 0.9)`.
 2. Kör `setSound('remote', true)` med mikrofonljudet kvar.
-3. Kör `user Beskriv utkastet.` och `delegate`. Släpp sedan anropet med
+3. Kör `user Beskriv utkastet.` och `delegate`. Stoppa mikrofonljudet med
+   `setSound('microphone', false)` och vänta tills anropet är hållet.
+   Återuppta mikrofonljudet med `setSound('microphone', true, 0.9)` och
+   kontrollera **Skyttel arbetar**. Stoppa mikrofonljudet igen med
+   `setSound('microphone', false)` och släpp anropet med
    `reply REQUEST Utkastet har ett förslag.`.
 4. Slå på minskad rörelse i operativsystemet eller i webbläsarens
-   utvecklarverktyg. Stoppa sedan Skyttels ljud och därefter mikrofonljudet.
+   utvecklarverktyg. Återuppta mikrofonljudet med
+   `setSound('microphone', true, 0.9)`. Stoppa sedan Skyttels ljud,
+   sänk mikrofonljudet till 0.08 och stoppa till sist mikrofonljudet.
 
 Separat måttunderlag för föregående TAL-14: automationen mäter röstrutans höjd
 till exakt 36 px vid Lyssnar, Du talar, Skyttel talar, Skyttel arbetar och

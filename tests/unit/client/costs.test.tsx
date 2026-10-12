@@ -87,11 +87,11 @@ test('separates full-month hosting from reported AI usage and labels missing val
   expect(live.textContent).toContain('1 saknar mätvärde');
   expect(live.textContent).toContain('15 sekunder i prisuppskattningen');
   expect(live.textContent).toContain('Saknat förbrukningsunderlag: 1');
-  const terra = screen.getByRole('region', { name: 'Terra – uppmätt hittills' });
+  const terra = screen.getByRole('region', { name: 'Textmodell – uppmätt hittills' });
   expect(terra.textContent).toContain('100 000');
   expect(terra.textContent).toContain('inklusive resonemang');
   expect(terra.textContent).toContain(
-    'Begärd Terra-modell antas eftersom leverantörens modelluppgift saknas: 1',
+    'Begärd textmodell antas eftersom leverantörens modelluppgift saknas: 1',
   );
   expect(screen.getByRole('region', { name: 'Månadens kostnadsöversikt' }).textContent).toContain(
     '75,83 SEK',
@@ -357,7 +357,7 @@ test('renders unknown-only consumption without a false zero amount and explains 
   const live = screen.getByRole('region', { name: 'Live – uppmätt hittills' });
   expect(live.textContent).toContain('Belopp saknas');
   expect(live.textContent).not.toContain('0,00 SEK');
-  const terra = screen.getByRole('region', { name: 'Terra – uppmätt hittills' });
+  const terra = screen.getByRole('region', { name: 'Textmodell – uppmätt hittills' });
   expect(terra.textContent).toContain('Mätvärden som inte går ihop: 1');
   expect(terra.textContent).toContain('Modell utan tillämpligt prisunderlag: 1');
   expect(terra.textContent).toContain('Servicenivå utan tillämpligt prisunderlag: 1');

@@ -200,7 +200,7 @@ resurser separat. Utför arbetsflödet en gång.
 **Förväntat resultat:**
 
 - Ett meddelande väntar bakom det första. Båda fullständiga svaren överlämnas en
-  gång och i ordning. Å, ä och ö bevaras över kommentarernas paketgränser. Båda
+  gång och i ordning. Å, ä och ö bevaras över svarens paketgränser. Båda
   svaren finns i samtalstexten.
 - Det talade tillägget finns som vanlig Skyttel-rad. Statusen för hjälpmedel
   erbjuder aldrig användarens egna rader eller svar som Skyttel säger med

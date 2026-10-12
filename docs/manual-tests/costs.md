@@ -65,7 +65,7 @@ månadsantaganden utan att förväxla uppskattning med faktura.
 
 Använd den befintliga [kostnadsinstallationen](#controlled-cost-fixture).
 Vid UI-steg 1, efter **Lyssnar**: kör `delegate` i terminalen. Det går
-genom serverns kontrollerade Terra-arbete. Bekräfta levererat uppdrag.
+genom serverns kontrollerade modellarbete. Bekräfta levererat uppdrag.
 Vid steg 2: kör `usage 90` och meddela **90 sekunders förbrukning förberedd**
 innan användaren stänger av mikrofonen. Vid steg 8: kör `restart`, behåll
 samma databas och invänta omstartens bekräftelse innan användaren laddar om.
@@ -80,27 +80,27 @@ Följ startguidens återställning mellan fall och `quit` efter provningen.
    mikrofonen med **Prata med Skyttel**. Vänta tills röstrutan har försvunnit
    och röstanslutningen har stängts, några sekunder senare.
 3. Öppna **Månadskostnad**. Kontrollera aktuell månad i UTC, Render **72,50 SEK
-   (7,25 USD)**, Live **0,75 SEK (0,075 USD)** och Terra **2,29 SEK (0,229
-   USD)**. Öppna **Visa mätvärden för Live** och **Visa mätvärden för Terra**.
-   Live visar 90 rapporterade sekunder. Terra visar 100 000 indatatoken med
+   (7,25 USD)**, Live **0,75 SEK (0,075 USD)** och Sol **2,17 SEK (0,217
+   USD)**. Öppna **Visa mätvärden för Live** och **Visa mätvärden för textmodell**.
+   Live visar 90 rapporterade sekunder. Sol visar 100 000 indatatoken med
    cache och resonemang separat.
-4. Kräv delsumman **75,54 SEK (7,554 USD)** före de tre raderna. Öppna **Visa
+4. Kräv delsumman **75,42 SEK (7,542 USD)** före de tre raderna. Öppna **Visa
    driftantagandet**. Läs att Render avser hel månad, tidigare förbrukning är
    okänd och cirka 200 kronor är ett riktmärke utan automatisk spärr.
 5. Öppna modellpriserna under **Prisunderlag**. Kontrollera datum, enheter,
    tabell, källor och uttryckligt antagande om 10 SEK per USD. Startkrediten för
    Live ska inte läggas på en gång till.
 6. Öppna **Ändra månadens antaganden**, ändra **SEK per USD** till 11 och välj
-   **Spara månadens antaganden**. Kräv **83,09 SEK (7,554 USD)**.
+   **Spara månadens antaganden**. Kräv **82,96 SEK (7,542 USD)**.
 7. Välj föregående månad. Dess förval är fortfarande 10 SEK per USD och tidigare
    förbrukning är okänd. Återgå till aktuell månad; den har 11.
 8. Be operatören starta om samma installation och invänta bekräftelse. Ladda om
    webbläsaren och öppna mätvärdena igen. Kontrollera samma uppdelning, ändrade
-   valutantagande och delsumman **83,09 SEK (7,554 USD)**.
+   valutantagande och delsumman **82,96 SEK (7,542 USD)**.
 
 **Förväntat resultat:**
 
-- Render, Live och Terra hålls isär. Cache ersätter motsvarande vanlig
+- Render, Live och Sol hålls isär. Cache ersätter motsvarande vanlig
   indata och resonemang läggs inte till utdata igen.
 - Månadsantagandet och mätningarna består efter omstart. En ändring av
   aktuell månad ändrar inte föregående månads antagande.
@@ -165,8 +165,8 @@ efter den lyckade återhämtningen.
    den kumulativa förbrukningen utan slutvärde och invänta bekräftelse. Stäng av
    mikrofonen och vänta tills röstanslutningen har stängts.
 3. Öppna **Månadskostnad** och **Visa mätvärden för Live** samt **Visa mätvärden
-   för Terra**. Live ska visa ett försök, 15 rapporterade sekunder, osäkert
-   slutunderlag och **0,13 SEK (0,0125 USD)**. Terra ska visa **Belopp saknas**
+   för textmodell**. Live ska visa ett försök, 15 rapporterade sekunder, osäkert
+   slutunderlag och **0,13 SEK (0,0125 USD)**. Sol ska visa **Belopp saknas**
    och saknade mätvärden.
 4. Läs texten om ofullständig delsumma. Anteckna delsumman. Be operatören starta
    om samma installation och invänta bekräftelse. Ladda om; kräv samma kända
@@ -310,7 +310,7 @@ KOST-05.
    Öppna **Tema**, välj **Mörkt** och kontrollera temaknappens fokus.
    Be operatören släppa svaret. Invänta bekräftelsen och sparbeskedet;
    temaknappen ska behålla fokus när beskedet kommer.
-4. Öppna **Prisunderlag** och modellpriserna. Fokusera Terra-tabellens
+4. Öppna **Prisunderlag** och modellpriserna. Fokusera modelltabellens
    rullbara region och tryck högerpil. Nå alla kolumner och priser utan
    att hela sidan måste rullas i sidled.
 
@@ -369,7 +369,7 @@ KOST-06.
    Öppna **Tema**, välj **Ljust** och kontrollera temaknappens fokus.
    Be operatören släppa svaret. Invänta bekräftelsen och sparbeskedet;
    temaknappen ska behålla fokus när beskedet kommer.
-4. Öppna **Prisunderlag** och modellpriserna. Fokusera Terra-tabellens
+4. Öppna **Prisunderlag** och modellpriserna. Fokusera modelltabellens
    rullbara region och tryck högerpil. Nå alla kolumner och priser utan
    att hela sidan måste rullas i sidled.
 
@@ -487,11 +487,11 @@ launcher for each case. Never reuse a real installation for these controls.
 <!-- markdownlint-disable MD013 -->
 | Command | Effect |
 | --- | --- |
-| `text known` | Future Terra replies report the worked example below; this is the default. |
-| `text missing` | Future Terra replies succeed without a usage object. |
-| `text held` | Future Terra requests wait until released or interrupted by the app. |
+| `text known` | Future Sol replies report the worked example below; this is the default. |
+| `text missing` | Future Sol replies succeed without a usage object. |
+| `text held` | Future Sol requests wait until released or interrupted by the app. |
 | `release` | Release held requests with the known measurements. |
-| `delegate` | Send the synthetic request through the active voice session to the actual Terra backend. |
+| `delegate` | Send the synthetic request through the active voice session to the actual Sol backend. |
 | `usage 90` | Send cumulative reported seconds to the single active Live session. Repeating a value does not mean extra usage. |
 | `finalize off` | Suppress the final Live measurement when the app closes the session. |
 | `finalize on` | Restore final measurements, using the latest `usage` value; this is the default. |
@@ -501,7 +501,7 @@ launcher for each case. Never reuse a real installation for these controls.
 | `quit` | Stop the application and remove its temporary directory. |
 <!-- markdownlint-enable MD013 -->
 
-To generate Terra usage, choose **Skriv till Skyttel**, then **Nytt samtal**,
+To generate Sol usage, choose **Skriv till Skyttel**, then **Nytt samtal**,
 select **Godkänn och starta** in the consent box, and send
 **Prova kostnadsunderlaget.** The fixed response is
 **Det kontrollerade kostnadsprovet är klart.** No map change is proposed.
@@ -516,17 +516,17 @@ action. Set `finalize off` before stopping to preserve provisional usage.
 
 KOST-01 uses `delegate` after voice startup. It sends the same synthetic
 request as a voice transcript fragment and delegation event. The actual
-server invokes Terra through the shared assistant, so both categories
+server invokes Sol through the shared assistant, so both categories
 come from one voice task. Wait for the fixed response before stopping.
 
-The known Terra example is 100,000 input tokens: 20,000 cache reads,
+The known Sol example is 100,000 input tokens: 20,000 cache reads,
 10,000 cache writes and 70,000 ordinary input. Its 5,000 output tokens
 already include 2,000 reasoning tokens. At the recorded Standard rates,
-this is `0.14 + 0.004 + 0.025 + 0.06 = 0.229 USD`.
+this is `0.14 + 0.002 + 0.025 + 0.05 = 0.217 USD`.
 A final 90-second Live session costs an estimated `0.075 USD`.
 Together with the default full-month Render assumption of `7.25 USD`,
-the estimated subtotal is `7.554 USD`, or `75.54 SEK` at the explicit
-assumption of 10 SEK/USD. Changing that assumption to 11 gives `83.09 SEK`
+the estimated subtotal is `7.542 USD`, or `75.42 SEK` at the explicit
+assumption of 10 SEK/USD. Changing that assumption to 11 gives `82.96 SEK`
 after presentation rounding. A fresh installation still shows incomplete
 month coverage; the known example does not establish earlier usage.
 

@@ -260,8 +260,8 @@ samtalsraden.
 **Användare:** Alex Exempel i den separata provinstallationen.
 
 **Förutsättningar:** Installation och konsolkontroll enligt allmän förberedelse.
-Lägg Lo Exempel i det privata utkastet. Kontrollerad modelltext används,
-inga sparverktyg. Se
+Lägg Lo Exempel i det privata utkastet. Uppdragets leverans bryts före
+mottagandet. Se
 [syntetiska ljudkontroller](voice-assistant.md#browser-transport-and-audio-controls).
 
 **Integrationstest:**
@@ -276,7 +276,7 @@ SPARKONTROLL-03.
     "spec": "tests/integration/save-check.spec.ts",
     "caseId": "SPARKONTROLL-03"
   },
-  "reference": "Privat Lo-förslag; mottaget uppdrag utan registrerat sparförsök, mikrofon av.",
+  "reference": "Privat Lo-förslag; uppdrag tappat före mottagandet, mikrofon av.",
   "outcomes": [
     "Varje kontroll får en förklaring; samma utfall dubblerar inte samtalsraden.",
     "Lo-förslaget finns kvar och historiken är tom. Förklaringen följer mikrofonvalet utan Sparat-symbol."
@@ -290,14 +290,12 @@ SPARKONTROLL-03.
 
 Använd [leveranskontrollen](save-preparation.md#samtals--och-kontrollsvar)
 i den befintliga provinstallationen. Före vardera Skicka i UI-steg 2 och 5: arma
-`message:drop-after`
-med `skyttelSaveDelivery.arm('message', 'drop-after')` och meddela
-**Nästa mottagna uppdrags svar tappas**. Arma `message:drop-after` igen för det
-andra uppdraget. Efter vardera Skicka: invänta dess verkliga hållna
-modellanrop och avsluta med `reply REQUEST Utkastet är kvar.`; använd
-inget sparverktyg. Kräv `application-completed message` med status 202
-för det mottagna uppdraget och meddela **Uppdraget mottaget, svaret
-tappat och modelltexten levererad utan sparande**. Behåll mikrofonvalet
+`message:drop-before`
+med `skyttelSaveDelivery.arm('message', 'drop-before')` och meddela
+**Nästa uppdrag tappas före mottagandet**. Arma `message:drop-before` igen
+för det andra uppdraget. Efter vardera Skicka: kontrollera att inget
+modellanrop väntar och meddela **Uppdraget tappat före mottagandet**.
+Behåll mikrofonvalet
 och följ fallets separata syntetiska ljudförberedelse.
 
 Använd samma provdatabas och session under fallet. Återställ kontrollen enligt
@@ -307,17 +305,16 @@ väntande utfallet är känt. Inga verkliga leverantörsanrop ingår.
 **Steg:**
 
 1. Öppna textsamtalet och behåll mikrofonen av.
-2. Be operatören förbereda första uppdragets tappade svar och invänta
-   bekräftelse. Skriv Spara hela utkastet. och välj Skicka. Be operatören
-   avsluta det verkliga modellanropet utan sparverktyg och invänta bekräftelse.
+2. Be operatören förbereda första uppdragets tappade leverans och invänta
+   bekräftelse. Skriv Spara hela utkastet. och välj Skicka. Invänta
+   operatörens bekräftelse att uppdraget tappats före mottagandet.
 3. Läs Kontrollen visar att utkastet inte sparades. Dina osparade ändringar
    ligger kvar. Kontrollera en enda sådan samtalsrad.
 4. Läs samma förklaring i samtalstexten. Slå på mikrofonen; det gamla svaret ska
    inte skickas till rösten.
-5. Be operatören förbereda nästa tappade svar och invänta bekräftelse. Skicka
-   Kontrollera ett nytt uppdrag. Be operatören leverera samma syntetiska
-   modelltext och invänta bekräftelse. Kräv två separata kontrollförklaringar
-   totalt.
+5. Be operatören förbereda nästa tappade leverans och invänta bekräftelse.
+   Skicka Kontrollera ett nytt uppdrag. Invänta samma operatörsbekräftelse.
+   Kräv två separata kontrollförklaringar totalt.
 6. Läs Lo Exempel i hela Utkastet och tom Ändringshistorik i Rapporter.
 
 **Förväntat resultat:**
@@ -334,8 +331,8 @@ samtalsraden.
 **Användare:** Alex Exempel i den separata provinstallationen.
 
 **Förutsättningar:** Installation och konsolkontroll enligt allmän förberedelse.
-Lägg Lo Exempel i det privata utkastet. Kontrollerad modelltext används,
-inga sparverktyg. Se
+Lägg Lo Exempel i det privata utkastet. Uppdragets leverans bryts före
+mottagandet. Se
 [syntetiska ljudkontroller](voice-assistant.md#browser-transport-and-audio-controls).
 
 **Integrationstest:**
@@ -350,7 +347,7 @@ SPARKONTROLL-08.
     "spec": "tests/integration/save-check.spec.ts",
     "caseId": "SPARKONTROLL-08"
   },
-  "reference": "Privat Lo-förslag; mottaget uppdrag utan registrerat sparförsök, mikrofon på.",
+  "reference": "Privat Lo-förslag; uppdrag tappat före mottagandet, mikrofon på.",
   "outcomes": [
     "Varje kontroll får en förklaring; samma utfall dubblerar inte samtalsraden.",
     "Lo-förslaget finns kvar och historiken är tom. Förklaringen följer mikrofonvalet utan Sparat-symbol."
@@ -370,14 +367,12 @@ Detta underlag verifierar inte fysisk fångst eller hörbar uppläsning.
 
 Använd [leveranskontrollen](save-preparation.md#samtals--och-kontrollsvar)
 i den befintliga provinstallationen. Före vardera Skicka i UI-steg 2 och 5: arma
-`message:drop-after`
-med `skyttelSaveDelivery.arm('message', 'drop-after')` och meddela
-**Nästa mottagna uppdrags svar tappas**. Arma `message:drop-after` igen för det
-andra uppdraget. Efter vardera Skicka: invänta dess verkliga hållna
-modellanrop och avsluta med `reply REQUEST Utkastet är kvar.`; använd
-inget sparverktyg. Kräv `application-completed message` med status 202
-för det mottagna uppdraget och meddela **Uppdraget mottaget, svaret
-tappat och modelltexten levererad utan sparande**. Behåll mikrofonvalet
+`message:drop-before`
+med `skyttelSaveDelivery.arm('message', 'drop-before')` och meddela
+**Nästa uppdrag tappas före mottagandet**. Arma `message:drop-before` igen
+för det andra uppdraget. Efter vardera Skicka: kontrollera att inget
+modellanrop väntar och meddela **Uppdraget tappat före mottagandet**.
+Behåll mikrofonvalet
 och följ fallets separata syntetiska ljudförberedelse.
 
 Använd samma provdatabas och session under fallet. Återställ kontrollen enligt
@@ -387,18 +382,17 @@ väntande utfallet är känt. Inga verkliga leverantörsanrop ingår.
 **Steg:**
 
 1. Öppna textsamtalet och slå på mikrofonen med Prata med Skyttel.
-2. Be operatören förbereda första uppdragets tappade svar och invänta
-   bekräftelse. Skriv Spara hela utkastet. och välj Skicka. Be operatören
-   avsluta det verkliga modellanropet utan sparverktyg och invänta bekräftelse.
+2. Be operatören förbereda första uppdragets tappade leverans och invänta
+   bekräftelse. Skriv Spara hela utkastet. och välj Skicka. Invänta
+   operatörens bekräftelse att uppdraget tappats före mottagandet.
 3. Läs Kontrollen visar att utkastet inte sparades. Dina osparade ändringar
    ligger kvar. Kontrollera en enda sådan samtalsrad.
 4. Låt operatören leverera syntetisk svarstext och hålla fjärrljud enligt
    separat förberedelse. Läs Skyttel talar. Låt operatören stoppa signalen och
    läs Lyssnar utan Sparat-symbol.
-5. Be operatören förbereda nästa tappade svar och invänta bekräftelse. Skicka
-   Kontrollera ett nytt uppdrag. Be operatören leverera samma syntetiska
-   modelltext och invänta bekräftelse. Kräv två separata kontrollförklaringar
-   totalt.
+5. Be operatören förbereda nästa tappade leverans och invänta bekräftelse.
+   Skicka Kontrollera ett nytt uppdrag. Invänta samma operatörsbekräftelse.
+   Kräv två separata kontrollförklaringar totalt.
 6. Läs Lo Exempel i hela Utkastet och tom Ändringshistorik i Rapporter.
 
 **Förväntat resultat:**

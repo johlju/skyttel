@@ -268,7 +268,8 @@ for (const microphoneOn of [false, true])
       await startConversationWithText(page);
       if (microphoneOn) await turnMicrophoneOn(page);
       await page.route('**/text-assistant/*/messages', async (route) => {
-        await route.fetch();
+        // Lose the request before admission: an admitted explicit save is
+        // completed by the application even when the model omits a save tool.
         await route.abort();
       });
       await page.getByLabel('Meddelande till Skyttel').fill('Spara hela utkastet.');

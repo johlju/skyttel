@@ -1,4 +1,8 @@
-import { type FinancialFact, financialFields } from '../shared/financial-facts.js';
+import {
+  type FinancialFact,
+  type FinancialFacts,
+  financialFields,
+} from '../shared/financial-facts.js';
 import type {
   CustomField,
   MapDraft,
@@ -22,6 +26,14 @@ function fact(value: FinancialFact | undefined) {
         ? 'okänt'
         : `${value.knowledge === 'uncertain' ? 'osäkert uppgivet: ' : ''}${value.value}`;
   return `${text}${value.reportedOn ? ` (${value.reportedOn})` : ''}`;
+}
+
+function price(facts: FinancialFacts | undefined) {
+  const value = facts?.price;
+  if (!value || !['known', 'uncertain'].includes(value.knowledge)) return fact(value);
+  const currency = facts?.currency;
+  const interval = facts?.paymentInterval;
+  return `${fact({ ...value, reportedOn: undefined })}${currency?.knowledge === 'known' ? ` ${currency.value}` : ''}${interval?.knowledge === 'known' ? ` / ${interval.value}` : ''}${value.reportedOn ? ` (${value.reportedOn})` : ''}`;
 }
 
 function lifecycle(value: RelationshipValue['lifecycle']) {
@@ -195,7 +207,9 @@ function details(
       const before = change.before?.financialFacts?.[key];
       const after = change.after?.financialFacts?.[key];
       if (JSON.stringify(before) !== JSON.stringify(after))
-        fields.push(`${label}: ${fact(before)} → ${fact(after)}`);
+        fields.push(
+          `${label}: ${key === 'price' ? price(change.before?.financialFacts) : fact(before)} → ${key === 'price' ? price(change.after?.financialFacts) : fact(after)}`,
+        );
     }
     for (const id of new Set([
       ...Object.keys(change.before?.customValues ?? {}),

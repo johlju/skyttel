@@ -2,7 +2,7 @@
 
 Use **Månadskostnad** at `/costs` to inspect the whole installation's
 estimated monthly cost. The view separates a full-month Render assumption,
-measured Live voice usage, and measured Terra model usage. The total is an
+measured Live voice usage, and measured text model usage. The total is an
 estimate in USD and SEK. About 200 SEK per month is a planning guideline;
 Skyttel does not stop work when an estimate reaches that amount.
 
@@ -78,25 +78,26 @@ An attempt belongs to the UTC month in which it starts, including a voice
 session that ends in the following month. Repeated updates replace the
 same attempt's measurements; a new provider attempt is counted separately.
 
-The included price assumptions dated 2026-09-25 are:
+The included price assumptions dated 2026-10-12 are:
 
 | Model or category | USD assumption |
 | :-- | :-- |
 | `gpt-live-1` | 0.05 per minute, calculated per second |
-| Terra ordinary input | 2.00 per million tokens |
-| Terra cache read | 0.20 per million tokens |
-| Terra cache write | 2.50 per million tokens |
-| Terra output, including reasoning | 12.00 per million tokens |
+| Sol ordinary input | 2.00 per million tokens |
+| Sol cache read | 0.10 per million tokens |
+| Sol cache write | 2.50 per million tokens |
+| Sol output, including reasoning | 10.00 per million tokens |
 
-For a `gpt-5.6-terra` request with more than 272,000 input tokens, the
-corresponding prices are USD 4.00, 0.40, 5.00 and 18.00 for the whole
+For a `gpt-6.1-sol` request with more than 272,000 input tokens, the
+corresponding prices are USD 4.00, 0.20, 5.00 and 15.00 for the whole
 request. Cache reads and writes replace the ordinary input price for those
 tokens. Reasoning tokens are part of output and are not charged a second
 time in the estimate. These assumptions use Standard pricing; other
 reported models or service tiers can remain unpriced. A missing effective
 service tier is shown as an assumed Standard tier. If the effective model
-is missing, the view explicitly identifies the requested Terra model as
-the pricing assumption.
+is missing, the view identifies the requested model on the stored rate card
+as the pricing assumption. Historical attempts retain their original model and
+rate card, including older Terra prices; upgrading does not reprice them.
 
 Live time includes the active session, including silence and waiting for
 backend work. Provider-reported seconds appear separately from estimated
@@ -104,8 +105,8 @@ billable seconds. The estimate assumes at least 15 seconds for a session
 with known duration, with the initial credit included in that duration.
 For example, 90 reported seconds gives USD 0.075, without an additional
 15-second charge. The provider's treatment of a short or interrupted session
-and refunds can differ. Missing duration remains unknown. Terra requests
-made during a voice session appear in the Terra category as well.
+and refunds can differ. Missing duration remains unknown. Text model requests
+made during a voice session appear in the text model category as well.
 
 The estimate excludes taxes, credits, negotiated or promotional prices,
 regional or other service-tier adjustments, Render traffic, build and domain

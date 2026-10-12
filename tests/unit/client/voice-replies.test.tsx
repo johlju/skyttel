@@ -99,6 +99,49 @@ const receipt = (operationId: string): SaveReceipt => ({
   changes: [],
 });
 
+test('an unconfirmed reply is shown with a notice after fifteen idle seconds while the voice remains connected', {
+  tags: ['technical'],
+}, async () => {
+  const { media, server, tick } = await arrange();
+  server.assistant = {
+    ...initial,
+    revision: 1,
+    modelReply: 'Vilken cykel menar du?',
+    questionPending: true,
+  };
+  server.response = {
+    id: 'unconfirmed',
+    revision: 1,
+    text: 'Vilken cykel menar du?',
+    questionPending: true,
+  };
+  await tick(500);
+  await tick(14_000);
+  expect(
+    screen.queryByText('Uppläsningen kunde inte bekräftas. Du kan läsa svaret i textvyn.'),
+  ).toBeNull();
+  await tick(1500);
+  expect(
+    screen.getAllByText('Uppläsningen kunde inte bekräftas. Du kan läsa svaret i textvyn.').length,
+  ).toBeGreaterThan(0);
+  expect(screen.getByLabelText('Levererade svar').textContent).toContain('Vilken cykel menar du?');
+  expect(button().getAttribute('aria-pressed')).toBe('true');
+  await act(async () =>
+    media.peers[0].channel.emit({
+      type: 'session.output_transcript.delta',
+      delta: server.response?.text,
+      start_ms: 0,
+      end_ms: 100,
+    }),
+  );
+  media.signals.set(media.peers[0].remote, 40);
+  await tick(100);
+  media.signals.set(media.peers[0].remote, 0);
+  await tick(100);
+  expect(box()?.textContent).toBe('Väntar på ditt svar');
+  expect(box()?.textContent).not.toContain('Uppläsningen kunde inte bekräftas.');
+});
+
 test('an explicit necessary question waits only after its matching voice audio is heard and drains', async () => {
   const { media, server, tick } = await arrange();
   server.assistant = { ...initial, revision: 1, questionPending: true, taskId: 'question-task' };

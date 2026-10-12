@@ -1,5 +1,8 @@
 import { type APIRequestContext, request } from '@playwright/test';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
+
+vi.setConfig({ expect: { poll: { timeout: 5000 } } });
+
 import type { MapState } from '../../../src/shared/map.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
@@ -85,6 +88,8 @@ async function restored(options: Parameters<typeof createInstallation>[1]) {
 
 test.each(['text', 'voice'] as const)(
   '%s confirms an imported owner save immediately and retries only the same pending receipt',
+  // Archive restoration and both speech turns include real quiet-input waits.
+  { timeout: 12_000 },
   async (mode) => {
     const live = liveProvider();
     const model = textModel((body) => {
@@ -310,7 +315,8 @@ test.each(['login actor', 'other owner', 'other household', 'other content gener
     expect(tampered).toBe(true);
     expect(status).toMatchObject({ phase: 'recovery', error: 'assistant_provider_failed' });
     expect(status.receipt).toBeUndefined();
-    expect(status.reply).toBeUndefined();
+    expect(status.reply).toContain('Uppdraget kunde inte slutföras.');
+    expect(status.reply).toContain('Din tidigare sparbegäran gäller inte längre.');
     const recovered: TextAssistantView = await (await post(`${route}/recover`, {})).json();
     expect(recovered).toMatchObject({
       phase: 'ready',

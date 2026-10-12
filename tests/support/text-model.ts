@@ -41,7 +41,7 @@ export function textModel(
         object: 'response',
         created_at: 1,
         status: 'completed',
-        model: 'gpt-5.6-terra',
+        model: body.model,
         output,
         usage: {
           input_tokens: 120,

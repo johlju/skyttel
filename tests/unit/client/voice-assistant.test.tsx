@@ -1404,6 +1404,7 @@ test.each([
       draftVersion: 3,
       contentVersion: 1,
       microphoneOn: true,
+      microphoneActive: false,
     });
   },
 );
@@ -1526,6 +1527,7 @@ test('an older voice reply cannot overwrite a newer displayed text revision', as
     draftVersion: 3,
     contentVersion: 1,
     microphoneOn: true,
+    microphoneActive: false,
   });
   expect(changed).not.toHaveBeenCalled();
 });

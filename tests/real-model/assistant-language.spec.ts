@@ -98,8 +98,8 @@ test('AI-12: verklig modell skiljer nekade och hypotetiska besked från rättels
       body: JSON.stringify(
         {
           client: 'Skyttel språkprov MCP SDK client',
-          model: 'gpt-5.6-terra',
-          reasoning: 'low',
+          model: 'gpt-6.1-sol',
+          reasoning: 'high',
           executedAt: new Date().toISOString(),
           turns: model?.turns ?? [],
           attempts: [...attempts.values()],
@@ -214,8 +214,8 @@ test('AI-08: verklig modell rättar och sparar hela familjeärendet genom MCP', 
       body: JSON.stringify(
         {
           client: 'Skyttel språkprov MCP SDK client',
-          model: 'gpt-5.6-terra',
-          reasoning: 'low',
+          model: 'gpt-6.1-sol',
+          reasoning: 'high',
           executedAt: new Date().toISOString(),
           turns: model?.turns ?? [],
           attempts: [...attempts.values()],

@@ -16,6 +16,7 @@ import type {
 } from '../shared/text-assistant.js';
 import { assistantFailureMessage, newConversationMessage } from './assistant-feedback.js';
 import { textAssistantInstructions } from './assistant-instructions.js';
+import type { ObserveAssistant } from './assistant-observation.js';
 import type { Auth } from './auth.js';
 import type { Config } from './config.js';
 import { contentOwner } from './content-identities.js';
@@ -30,7 +31,7 @@ import { householdAccess } from './households.js';
 import { householdMap, MapError } from './map.js';
 import { checkSaves } from './save-check.js';
 import { connectTextAssistant, type LocalDispatch } from './text-assistant-mcp.js';
-import { type TextModelUsage, textModel } from './text-assistant-model.js';
+import { type TextModelProfile, type TextModelUsage, textModel } from './text-assistant-model.js';
 import { draftResult, historyResult } from './text-assistant-results.js';
 
 type Mcp = Awaited<ReturnType<typeof connectTextAssistant>>;
@@ -40,6 +41,7 @@ type AcceptedMessage = {
   status: NonNullable<TextAssistantView['taskStatus']>;
   result?: TextAssistantView;
 };
+const savedReply = 'Sparat. Hela utkastet finns i hushållets karta.';
 type Session = TextAssistantView & {
   id: string;
   actorId: string;
@@ -66,6 +68,11 @@ type Session = TextAssistantView & {
   resetCompletion?: Promise<void>;
   previousFailure?: string;
   pendingSave?: { operationId: string; version: number; contentVersion: number };
+  /** Authority belongs to unfinished current work, never historical dialogue. */
+  saveIntent?: string;
+  inputSerial?: number;
+  voiceInputPending?: boolean;
+  lastVoiceInputAt?: number;
   displayed?: (value: boolean) => void;
 };
 
@@ -77,6 +84,9 @@ export function textAssistantRoutes({
   dispatch,
   modelFetch,
   modelUsage,
+  modelProfile,
+  voiceTokens = voiceConversationModel.tokens,
+  observe,
   onStop,
   onResetStart,
   onNewConversation,
@@ -89,6 +99,9 @@ export function textAssistantRoutes({
   dispatch: LocalDispatch;
   modelFetch?: typeof fetch;
   modelUsage?: TextModelUsage;
+  modelProfile?: TextModelProfile;
+  voiceTokens?: number;
+  observe?: ObserveAssistant;
   onStop?: (sessionId: string) => void;
   onResetStart?: (sessionId: string) => void;
   onSummary?: (sessionId: string, signal: AbortSignal) => Promise<void> | undefined;
@@ -107,7 +120,7 @@ export function textAssistantRoutes({
   const consentKey = (actorId: string, householdId: string) =>
     JSON.stringify([householdId, actorId]);
   const respond = config.openaiApiKey
-    ? textModel(config.openaiApiKey, modelFetch, modelUsage)
+    ? textModel(config.openaiApiKey, modelFetch, modelUsage, modelProfile)
     : null;
   function authorityLost(error: unknown) {
     return (
@@ -350,7 +363,24 @@ export function textAssistantRoutes({
     args: Record<string, unknown>,
     guard?: () => void,
   ) {
+    const at = Date.now();
+    observe?.({
+      at,
+      sessionId: session.id,
+      taskId: session.taskId,
+      revision: session.revision,
+      kind: 'mcp_started',
+      data: { name, args },
+    });
     const result = await session.mcp.call(name, args, guard);
+    observe?.({
+      at: Date.now(),
+      sessionId: session.id,
+      taskId: session.taskId,
+      revision: session.revision,
+      kind: 'mcp_completed',
+      data: { name, result, startedAt: at },
+    });
     if (!Array.isArray(result.content)) throw new Error('invalid_tool_result');
     const text = result.content.find((item) => item.type === 'text');
     if (!text || typeof text.text !== 'string') throw new Error('invalid_tool_result');
@@ -365,7 +395,7 @@ export function textAssistantRoutes({
   // This deliberately narrow command check is not general language
   // verification. Ambiguous, quoted, negative and hypothetical requests need
   // a new clear instruction; a model-supplied approval flag has no authority.
-  function descriptionForSaveCheck(description: string) {
+  function nominalTopicsForSaveCheck(description: string) {
     // A modifier such as "bara om" introduces a condition, even when its
     // subject and predicate also resemble a nominal topic. Keep it intact.
     if (
@@ -409,7 +439,7 @@ export function textAssistantRoutes({
     return description.replace(/\bom\b/gu, '');
   }
 
-  function requestsSave(text: string) {
+  function requestsSave(text: string, purpose: 'authority' | 'clarification' = 'authority') {
     // A negated map fact does not negate a separate save command. A correction
     // may precede that command in the same sentence, but its imperative must
     // itself be affirmative. Conditions and withheld saving still block it.
@@ -420,15 +450,20 @@ export function textAssistantRoutes({
     // The imperative introduces field data up to a sentence boundary or the
     // final save clause. Heading words and topic length do not grant authority;
     // the separate command and all remaining conditions are checked below.
-    const instruction = unquoted.replace(
-      /(^|[.!;]\s*)((?:ändra|rätta)\s+beskrivningen\s+till\s+)([^.!;?]+)/gu,
-      (_, boundary, correction, remainder: string) => {
-        const commandAt = remainder.search(/\b(?:och|sedan)\s+spara\b/u);
-        const payload = commandAt < 0 ? remainder : remainder.slice(0, commandAt);
-        const command = commandAt < 0 ? '' : remainder.slice(commandAt);
-        return `${boundary}${correction}${descriptionForSaveCheck(payload)}${command}`;
-      },
-    );
+    const instruction = unquoted
+      .replace(
+        /(^|[.!;]\s*)((?:ändra|rätta)\s+beskrivningen\s+till\s+)([^.!;?]+)/gu,
+        (_, boundary, correction, remainder: string) => {
+          const commandAt = remainder.search(/\b(?:och|sedan)\s+spara\b/u);
+          const payload = commandAt < 0 ? remainder : remainder.slice(0, commandAt);
+          const command = commandAt < 0 ? '' : remainder.slice(commandAt);
+          return `${boundary}${correction}${nominalTopicsForSaveCheck(payload)}${command}`;
+        },
+      )
+      .replace(
+        /(^|[.!;]\s*)(jag vill ordna (?:flera )?uppgifter\s+om\s+(?:våra|mina|era|dina)\s+[\p{L}\p{N}-]+)(?=[.!;]|$)/gu,
+        (_, boundary, topic: string) => `${boundary}${nominalTopicsForSaveCheck(topic)}`,
+      );
     const sentences = instruction
       .trim()
       .replace(/[.!;]+$/u, '')
@@ -456,7 +491,7 @@ export function textAssistantRoutes({
     const command =
       correction && !/\?|\b(spara|sparar|vänta)\b/u.test(correction[1]) ? correction[2] : plain;
     const suffix =
-      '(?:\\s+(?:nu|direkt|allt|allting|det|detta|det här|hela utkastet|utkastet|ändringarna|alla ändringar|förslaget|förslagen))*';
+      '(?:\\s+(?:nu|direkt|allt|allting|det|detta|det här|hela utkastet|utkastet|ändringarna|alla ändringar|förslaget|förslagen))*(?:\\s+med alla de här ändringarna)?';
     return (
       !/\b(inte|ej|ingenting|aldrig|utan|vänta|om|när|kanske|skulle|exempel|citat|förklara)\b/u.test(
         command,
@@ -466,10 +501,40 @@ export function textAssistantRoutes({
       ) ||
         (!command.includes('?') &&
           new RegExp(
-            `(?:^|[.!;]\\s*|\\boch\\s+|\\bsedan\\s+|\\bja,?\\s+)spara${suffix}[.!]?$`,
+            `(?:^|[.!;]\\s*|\\boch\\s+|\\bsedan\\s+|\\bja,?\\s+${purpose === 'clarification' ? '|\\s+' : ''})spara${suffix}[.!]?$`,
             'u',
           ).test(command.trim())))
     );
+  }
+  function withdrawsSave(text: string) {
+    return /\b(?:spara(?:r)?\s+(?:inte|ej|aldrig)|(?:inte|ej|aldrig)\s+spara|vänta\s+med\s+(?:att\s+)?spara)\b/iu.test(
+      text.replace(/["'“”«»].*?["'“”«»]/gu, ''),
+    );
+  }
+  async function saveReady(session: Session, serial: number, guard: () => void) {
+    const deadline = Date.now() + 180_000;
+    for (;;) {
+      guard();
+      if (!session.saveIntent || session.inputSerial !== serial || session.queue.length)
+        return false;
+      if (!session.voiceInputPending && Date.now() - (session.lastVoiceInputAt ?? 0) >= 2000)
+        return true;
+      if (Date.now() >= deadline) throw new MapError('assistant_input_incomplete', 409);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+  function currentSaveGuard(session: Session, serial: number, guard: () => void) {
+    return () => {
+      guard();
+      if (
+        !session.saveIntent ||
+        session.inputSerial !== serial ||
+        session.queue.length ||
+        session.voiceInputPending ||
+        Date.now() - (session.lastVoiceInputAt ?? 0) < 2000
+      )
+        throw new MapError('assistant_save_superseded', 409);
+    };
   }
   async function refresh(session: Session, guard?: () => void) {
     const review = await call(session, 'read_my_draft', {}, guard);
@@ -511,11 +576,15 @@ export function textAssistantRoutes({
       (item: { id: string }) => item.id === selection.id,
     );
   }
+  function verifiedReply(session: Session) {
+    return session.result?.message ?? (session.receipt ? savedReply : undefined);
+  }
   function saved(session: Session, receipt: TextAssistantView['receipt']) {
+    session.saveIntent = undefined;
     session.receipt = receipt;
     session.workVersion = receipt ? receipt.draftVersion + 1 : session.workVersion;
     session.pendingSave = undefined;
-    session.reply = 'Sparat. Hela utkastet finns i hushållets karta.';
+    session.reply = savedReply;
     session.conversation.push({ role: 'assistant', text: session.reply });
     session.modelReply = undefined;
     session.questions = undefined;
@@ -625,6 +694,8 @@ export function textAssistantRoutes({
     session.completedReplies = [];
     session.revision++;
     session.boundaryRevision = session.revision;
+    session.saveIntent = undefined;
+    session.voiceInputPending = false;
     await refresh(session);
     session.phase = session.pendingSave ? 'recovery' : 'ready';
     if (discard) {
@@ -666,6 +737,8 @@ export function textAssistantRoutes({
     task: AbortController,
     expected: { version: number; contentVersion: number },
   ) {
+    const serial = session.inputSerial ?? 0;
+    let originalSaveIntent = Boolean(session.saveIntent);
     const guard = () => {
       if (task.signal.aborted || session.revision !== revision || !sessions.has(session.id))
         throw new MapError('assistant_canceled', 409);
@@ -694,7 +767,7 @@ export function textAssistantRoutes({
       }
       let version = review.version;
       const mutations = new Set<string>();
-      const contentVersion = review.contentVersion;
+      let contentVersion = review.contentVersion;
       finishInterruptedInput(session);
       const dialogue = session.conversation.slice(session.contextOffset);
       session.contextOffset = session.conversation.length;
@@ -769,13 +842,14 @@ export function textAssistantRoutes({
           type: 'function',
           name: 'submit_changes',
           description:
-            'Utför ett färdigt uppdrag som en ordnad batch och avsluta utan en extra modellomgång. Varje operation använder samma vanliga MCP-verktyg och aktuella versioner. Behåll andra förslag. completion draft lämnar allt osparat; save kräver ett aktuellt uttryckligt besked om hela utkastet. questions är korta riktade följdfrågor, aldrig resultatpåståenden. Använd vanliga verktyg om fler mellanliggande läsningar behövs.',
+            'Utför ändringarna som en ordnad batch med vanliga MCP-verktyg och aktuella versioner. Behåll andra förslag. completion draft lämnar allt osparat; save kräver ett aktuellt uttryckligt besked om hela utkastet. questions är korta riktade följdfrågor, aldrig resultatpåståenden. Sätt continueResponse true om användaren också begär faktasvar, detaljer eller markering som återstår efter ändringarna; läs då resultatet och slutför resten i nästa modellomgång. Annars avslutar servern. Frågor till användaren stoppar alltid fortsättningen.',
           parameters: {
             type: 'object',
             properties: {
               version: { type: 'integer', minimum: 0 },
               contentVersion: { type: 'integer', minimum: 1 },
               completion: { type: 'string', enum: ['draft', 'save'] },
+              continueResponse: { type: 'boolean' },
               questions: { type: 'array', maxItems: 3, items: { type: 'string', maxLength: 240 } },
               operations: {
                 type: 'array',
@@ -833,11 +907,12 @@ export function textAssistantRoutes({
           type: 'function',
           name: 'report_result',
           description:
-            'Ge detaljer från aktuellt utkast eller ett verkligt sparande utan ytterligare modellomgång. latest_save hämtar senaste kvittot; save kräver operationId och userId från historiken. last_failure återger det senaste registrerade felet i samtalet utan att upprepa uppdraget. Texten skapas av servern från faktiska poster och fel, inte av modellen.',
+            'Ge detaljer från aktuellt utkast eller ett verkligt sparande. latest_save hämtar senaste kvittot; save kräver operationId och userId från historiken. last_failure återger det senaste registrerade felet i samtalet utan att upprepa uppdraget. Texten skapas av servern från faktiska poster och fel, inte av modellen. Sätt continueResponse true om andra beställda faktasvar eller markeringar återstår; serverns detaljer behålls och resten slutförs i nästa modellomgång. Annars avslutar servern och medföljande modelltext används inte.',
           parameters: {
             type: 'object',
             properties: {
               source: { type: 'string', enum: ['draft', 'latest_save', 'save', 'last_failure'] },
+              continueResponse: { type: 'boolean' },
               operationId: { type: 'string' },
               userId: { type: 'string' },
             },
@@ -867,8 +942,22 @@ export function textAssistantRoutes({
         session.input.push(...toResponseInputItems(response.output));
         session.capacity.text(response.usage, contextBytes(session));
         let calls = response.output.filter((item) => item.type === 'function_call');
+        for (const action of calls)
+          observe?.({
+            at: Date.now(),
+            sessionId: session.id,
+            taskId: session.taskId,
+            revision,
+            kind: 'model_action',
+            data: { name: action.name, arguments: action.arguments, callId: action.call_id },
+          });
         let combined:
-          | { completion: 'draft' | 'save'; questions: string[]; callId: string }
+          | {
+              completion: 'draft' | 'save';
+              questions: string[];
+              callId: string;
+              continueResponse: boolean;
+            }
           | undefined;
         if (calls.some((action) => action.name === 'submit_changes')) {
           if (calls.length !== 1) throw new MapError('invalid_request', 400);
@@ -877,6 +966,7 @@ export function textAssistantRoutes({
               version: z.number().int().nonnegative(),
               contentVersion: z.number().int().positive(),
               completion: z.enum(['draft', 'save']),
+              continueResponse: z.boolean().default(false),
               questions: z.array(z.string().min(1).max(240)).max(3).default([]),
               operations: z
                 .array(
@@ -893,7 +983,7 @@ export function textAssistantRoutes({
           const batch = parsed.data;
           if (batch.version !== version || batch.contentVersion !== contentVersion)
             throw new MapError('assistant_draft_changed', 409);
-          if (batch.completion === 'save' && !requestsSave(text))
+          if (batch.completion === 'save' && !session.saveIntent && !originalSaveIntent)
             throw new MapError('assistant_save_not_requested', 409);
           if (batch.completion === 'save' && batch.questions.length)
             throw new MapError('invalid_request', 400);
@@ -926,7 +1016,7 @@ export function textAssistantRoutes({
           if (response.output_text)
             session.conversation.push({ role: 'assistant', text: response.output_text });
           session.reply =
-            session.result?.message ??
+            verifiedReply(session) ??
             (session.displayedSelection ? 'Markerat i kartan.' : undefined);
           session.phase = session.pendingSave ? 'recovery' : 'ready';
           return;
@@ -945,7 +1035,7 @@ export function textAssistantRoutes({
               .parse(args);
             session.questions = value.questions;
             session.modelReply = value.questions.join(' ');
-            session.reply = session.result?.message;
+            session.reply = verifiedReply(session);
             session.phase = 'ready';
             session.input.push({
               type: 'function_call_output',
@@ -956,14 +1046,16 @@ export function textAssistantRoutes({
             return;
           }
           if (action.name === 'report_result') {
+            const continuation = { continueResponse: z.boolean().default(false) };
             const parsed = z
               .discriminatedUnion('source', [
-                z.object({ source: z.literal('draft') }).strict(),
-                z.object({ source: z.literal('latest_save') }).strict(),
-                z.object({ source: z.literal('last_failure') }).strict(),
+                z.object({ source: z.literal('draft'), ...continuation }).strict(),
+                z.object({ source: z.literal('latest_save'), ...continuation }).strict(),
+                z.object({ source: z.literal('last_failure'), ...continuation }).strict(),
                 z
                   .object({
                     source: z.literal('save'),
+                    ...continuation,
                     operationId: z.string().regex(/^[\w-]{1,128}$/),
                     userId: z.string().min(1).max(200),
                   })
@@ -1009,6 +1101,10 @@ export function textAssistantRoutes({
               call_id: action.call_id,
               output: JSON.stringify(session.result),
             });
+            if (report.continueResponse) {
+              session.phase = 'working';
+              break;
+            }
             return;
           }
           if (action.name === 'show_map_object' || action.name === 'show_map_item') {
@@ -1072,8 +1168,14 @@ export function textAssistantRoutes({
           if (!tool) throw new MapError('assistant_unknown_tool', 409);
           const isSave = action.name === 'save_draft' || action.name === 'prepare_save';
           let previousReview: TextAssistantReview | undefined;
-          if (isSave && !requestsSave(text))
+          if (isSave && !session.saveIntent && !originalSaveIntent)
             throw new MapError('assistant_save_not_requested', 409);
+          if (isSave && !(await saveReady(session, serial, guard))) {
+            session.phase = 'ready';
+            session.modelReply = undefined;
+            session.reply = undefined;
+            return;
+          }
           if (tool.annotations?.readOnlyHint !== true) {
             const current = (await call(
               session,
@@ -1095,15 +1197,31 @@ export function textAssistantRoutes({
             session.pendingSave ??= { operationId: randomUUID(), version, contentVersion };
             Object.assign(args, session.pendingSave);
             if (action.name === 'save_draft')
-              await call(session, 'prepare_save', session.pendingSave, guard);
+              await call(
+                session,
+                'prepare_save',
+                session.pendingSave,
+                currentSaveGuard(session, serial, guard),
+              );
           }
-          const value = await call(session, action.name, args, guard);
+          const value = await call(
+            session,
+            action.name,
+            args,
+            isSave ? currentSaveGuard(session, serial, guard) : guard,
+          );
           guard();
           if (action.name === 'save_draft') {
             if (!session.pendingSave) throw new Error('invalid_receipt');
             verifyReceipt(session, value.receipt, session.pendingSave);
             saved(session, value.receipt);
             await refreshConfirmed(session, guard);
+            originalSaveIntent = false;
+            if (combined) {
+              version = session.review.version;
+              contentVersion = session.review.contentVersion;
+              continue;
+            }
             session.input.push({
               type: 'function_call_output',
               call_id: action.call_id,
@@ -1145,7 +1263,7 @@ export function textAssistantRoutes({
           }
         }
         if (combined) {
-          session.reply = session.result?.message;
+          session.reply = verifiedReply(session);
           session.modelReply = combined.questions.join(' ') || undefined;
           session.questions = combined.questions.length ? combined.questions : undefined;
           session.phase = 'ready';
@@ -1154,6 +1272,8 @@ export function textAssistantRoutes({
             call_id: combined.callId,
             output: JSON.stringify({
               result: session.result,
+              receipt: session.receipt,
+              reply: session.reply,
               review: session.review,
               questions: combined.questions,
             }),
@@ -1161,6 +1281,10 @@ export function textAssistantRoutes({
           if (session.reply) session.conversation.push({ role: 'assistant', text: session.reply });
           if (session.modelReply)
             session.conversation.push({ role: 'assistant', text: session.modelReply });
+          if (combined.continueResponse && !combined.questions.length) {
+            session.phase = 'working';
+            continue;
+          }
           return;
         }
       }
@@ -1177,8 +1301,13 @@ export function textAssistantRoutes({
           : 'error';
       session.error = error instanceof MapError ? error.code : 'assistant_provider_failed';
       session.previousFailure = assistantFailureMessage(session.error);
+      if (session.saveIntent) {
+        session.saveIntent = undefined;
+        session.previousFailure +=
+          ' Din tidigare sparbegäran gäller inte längre. Be om sparande igen när detta är löst.';
+      }
       session.conversation.push({ role: 'assistant', text: session.previousFailure });
-      session.reply = undefined;
+      session.reply = session.previousFailure;
       session.modelReply = undefined;
       session.questions = undefined;
       try {
@@ -1209,6 +1338,8 @@ export function textAssistantRoutes({
     session.task = task;
     session.taskId = message.id;
     session.taskSource = message.voice ? 'voice' : 'text';
+    if (requestsSave(message.text) && !withdrawsSave(message.text))
+      session.saveIntent = message.text;
     session.revision++;
     session.phase = 'working';
     session.resetSource = undefined;
@@ -1249,6 +1380,55 @@ export function textAssistantRoutes({
         );
       } else {
         await run(session, message.text, revision, task, expected);
+        const guard = () => {
+          if (task.signal.aborted || session.revision !== revision || !sessions.has(session.id))
+            throw new MapError('assistant_canceled', 409);
+        };
+        if (
+          (session.questions?.length || session.modelReply?.includes('?')) &&
+          // Speech may omit the sentence boundary before a final save request.
+          // Explain renewal in that case without granting save authority.
+          (session.saveIntent || (message.voice && requestsSave(message.text, 'clarification')))
+        ) {
+          session.saveIntent = undefined;
+          const notice =
+            'Din tidigare sparbegäran gäller inte längre. Be om sparande igen när frågorna är lösta.';
+          session.modelReply = `${session.modelReply ?? ''} ${notice}`.trim();
+          session.conversation.push({ role: 'assistant', text: notice });
+        } else if (
+          session.phase === 'ready' &&
+          session.saveIntent &&
+          !session.receipt &&
+          !session.pendingSave
+        ) {
+          const serial = session.inputSerial ?? 0;
+          if (await saveReady(session, serial, guard)) {
+            const saveGuard = currentSaveGuard(session, serial, guard);
+            const review = await call(session, 'read_my_draft', {}, saveGuard);
+            if (review.conflicts.length) throw new MapError('assistant_conflict', 409);
+            if (
+              ![
+                review.changes,
+                review.relationships,
+                review.objectTypes,
+                review.relationshipTypes,
+              ].some((changes) => changes?.length)
+            ) {
+              session.saveIntent = undefined;
+              return;
+            }
+            session.pendingSave = {
+              operationId: randomUUID(),
+              version: review.version,
+              contentVersion: review.contentVersion,
+            };
+            await call(session, 'prepare_save', session.pendingSave, saveGuard);
+            const value = await call(session, 'save_draft', session.pendingSave, saveGuard);
+            verifyReceipt(session, value.receipt, session.pendingSave);
+            saved(session, value.receipt);
+            await refreshConfirmed(session, guard);
+          }
+        }
         if (
           !task.signal.aborted &&
           session.revision === revision &&
@@ -1266,13 +1446,21 @@ export function textAssistantRoutes({
     void execute()
       .catch(() => {
         if (task.signal.aborted || session.revision !== revision) return;
-        session.phase = 'error';
-        session.error = 'assistant_draft_changed';
+        session.phase = session.pendingSave ? 'recovery' : 'error';
+        session.error = session.pendingSave ? 'assistant_save_unknown' : 'assistant_draft_changed';
+        session.reply = assistantFailureMessage(session.error);
+        if (session.saveIntent)
+          session.reply +=
+            ' Din tidigare sparbegäran gäller inte längre. Be om sparande igen när detta är löst.';
+        session.saveIntent = undefined;
       })
       .finally(() => {
         if (task.signal.aborted || session.task !== task || !sessions.has(session.id)) return;
         accepted.status = 'completed';
-        if (session.modelReply || session.reply)
+        if (
+          (!session.saveIntent || (!session.queue.length && !session.voiceInputPending)) &&
+          (session.modelReply || session.reply)
+        )
           session.completedReplies?.push({
             id: message.id,
             text: session.modelReply ?? '',
@@ -1382,7 +1570,7 @@ export function textAssistantRoutes({
         input: [],
         conversation: [],
         contextOffset: 0,
-        capacity: new ConversationCapacity(),
+        capacity: new ConversationCapacity(modelProfile?.tokens, voiceTokens),
         contextRevision: 0,
         queue: [],
         boundaryRevision: 0,
@@ -1545,6 +1733,8 @@ export function textAssistantRoutes({
       contentVersion: current.contentVersion,
     };
     session.accepted.set(message.id, { hash: requestHash, status: 'queued' });
+    session.inputSerial = (session.inputSerial ?? 0) + 1;
+    if (withdrawsSave(message.text)) session.saveIntent = undefined;
     if (session.task && !session.task.signal.aborted) session.queue.push(message);
     else {
       session.review = current;
@@ -1600,6 +1790,8 @@ export function textAssistantRoutes({
     };
     session.task?.abort();
     session.summaryTask?.abort();
+    session.saveIntent = undefined;
+    session.voiceInputPending = false;
     session.queue = [];
     session.taskId = undefined;
     session.taskSource = undefined;
@@ -1784,6 +1976,52 @@ export function textAssistantRoutes({
   });
   return {
     routes,
+    /** No HTTP route: only isolated evaluation support can supply historical
+     * fixtures and force the ordinary summary generation/atomic installation. */
+    summarizeForEvaluation: async (
+      sessionId: string,
+      history: { role: 'user' | 'assistant'; text: string }[],
+    ) => {
+      const session = sessions.get(sessionId);
+      if (
+        !session ||
+        session.task ||
+        session.queue.length ||
+        session.pendingSave ||
+        session.summaryTask ||
+        session.voiceInputPending
+      )
+        throw new Error('evaluation_summary_not_idle');
+      await onSummary?.(sessionId, new AbortController().signal);
+      const conversation = [...session.conversation, ...history];
+      const source = JSON.stringify({
+        previousSummary: session.summary,
+        conversation: conversation.slice(session.summaryOffset ?? 0),
+        providerResults: session.input,
+      });
+      if (source.length > 240_000) throw new Error('evaluation_summary_source_too_large');
+      session.conversation = conversation;
+      const generation = session.contextGeneration ?? 0;
+      await summarize(session);
+      return {
+        source,
+        summary: session.summary,
+        installed: (session.contextGeneration ?? 0) === generation + 1,
+        retained: session.conversation.slice(session.summaryOffset),
+        view: view(session),
+      };
+    },
+    voiceInput: (sessionId: string, pending: boolean, text?: string) => {
+      const session = sessions.get(sessionId);
+      if (!session) return;
+      session.voiceInputPending = pending;
+      session.lastVoiceInputAt = Date.now();
+      if (text !== undefined) {
+        session.inputSerial = (session.inputSerial ?? 0) + 1;
+        session.lastVoiceInputAt = Date.now();
+        if (withdrawsSave(text)) session.saveIntent = undefined;
+      }
+    },
     /** Private ephemeral context shared by text and every voice connection.
      * Never expose it in status responses or write it to the household. */
     conversation: (sessionId: string) => {
@@ -1794,12 +2032,11 @@ export function textAssistantRoutes({
       const session = sessions.get(sessionId);
       if (!session) return;
       const bytes = Buffer.byteLength(JSON.stringify(providerConversation(session)));
-      if (!session.contextSummaryState && bytes / 3 >= voiceConversationModel.tokens * 0.89)
-        await summarize(session);
+      if (!session.contextSummaryState && bytes / 3 >= voiceTokens * 0.89) await summarize(session);
       if (sessions.get(sessionId) !== session) return;
       if (
         Buffer.byteLength(JSON.stringify(providerConversation(session))) / 3 >=
-        voiceConversationModel.tokens * 0.89
+        voiceTokens * 0.89
       )
         session.contextSummaryState = 'failed';
       return view(session);

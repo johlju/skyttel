@@ -29,6 +29,39 @@ const usageType: RelationshipType = {
   forwardLabel: 'används av',
 };
 
+test.each(['known', 'uncertain', 'unknown', 'none', 'missing'] as const)(
+  'price details keep the date last and preserve %s knowledge',
+  (knowledge) => {
+    const after = card({
+      financialFacts: {
+        currency: { knowledge: 'known', value: 'SEK' },
+        paymentInterval: { knowledge: 'known', value: 'månad' },
+        ...(knowledge === 'missing'
+          ? {}
+          : {
+              price:
+                knowledge === 'known' || knowledge === 'uncertain'
+                  ? { knowledge, value: '129', reportedOn: '2026-10-01' }
+                  : { knowledge, reportedOn: '2026-10-01' },
+            }),
+      },
+    });
+    const expected = {
+      known: '129 SEK / månad (2026-10-01)',
+      uncertain: 'osäkert uppgivet: 129 SEK / månad (2026-10-01)',
+      unknown: 'okänt (2026-10-01)',
+      none: 'uttryckligen inget (2026-10-01)',
+      missing: 'ej angivet',
+    }[knowledge];
+    const before = card({ financialFacts: { price: { knowledge: 'known', value: '119' } } });
+    for (const result of [
+      draftResult({ version: 1, changes: [{ id: after.id, type: cardType, before, after }] }),
+      historyResult(receipt({ changes: [{ type: cardType, before, after }] })),
+    ])
+      expect(result.message).toContain(`Pris: 119 → ${expected}`);
+  },
+);
+
 function card(value: Partial<MapObject> = {}): MapObject {
   return {
     id: 'household-card',
@@ -95,7 +128,7 @@ test('draft details report corrected card values, knowledge and dates without cl
   expect(result.kind).toBe('draft');
   expect(result.message).toContain('namn: Gamla kortnamnet → Hushållskortet');
   expect(result.message).toContain('beskrivning: Extrkort → tom');
-  expect(result.message).toContain('Pris: 119 → 129');
+  expect(result.message).toContain('Pris: 119 SEK → 129 SEK');
   expect(result.message).toContain(
     'Senast uppgiven skuld: 2500 (2026-08-01) → osäkert uppgivet: 2400 (2026-09-01)',
   );
@@ -190,7 +223,7 @@ test('history details distinguish missing facts, unknown facts and explicitly no
   expect(result.kind).toBe('history');
   expect(result.message).toContain('Sparandet: Ändrade Hushållskortet');
   expect(result.message).toContain('beskrivning: tom → Reserverat för hushållet');
-  expect(result.message).toContain('Pris: 0 → uttryckligen inget');
+  expect(result.message).toContain('Pris: 0 SEK → uttryckligen inget');
   expect(result.message).toContain('Valuta: SEK → okänt');
   expect(result.message).toContain('Betalningsintervall: ej angivet → månadsvis');
   expect(result.message).toContain('Startdatum: ej angivet → 2026-09-01');
@@ -333,7 +366,7 @@ test('requested details include the financial and custom values entered with a n
   const history = historyResult(receipt({ changes }));
 
   for (const result of [draft, history]) {
-    expect(result.message).toContain('Pris: ej angivet → 129');
+    expect(result.message).toContain('Pris: ej angivet → 129 SEK / månadsvis');
     expect(result.message).toContain('Valuta: ej angivet → SEK');
     expect(result.message).toContain('Betalningsintervall: ej angivet → månadsvis');
     expect(result.message).toContain('Sista siffror: ej angivet → 9876');

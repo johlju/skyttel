@@ -2,7 +2,10 @@ import { spawn } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { request } from '@playwright/test';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
+
+vi.setConfig({ expect: { poll: { timeout: 5000 } } });
+
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 

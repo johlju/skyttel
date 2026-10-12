@@ -2,7 +2,7 @@
 
 This guide is for developers checking Swedish instructions against a real
 model. The separate Playwright suite uses the configured production model,
-`gpt-5.6-terra` with low reasoning, through the production Responses adapter.
+`gpt-6.1-sol` with high reasoning, through the production Responses adapter.
 It starts a disposable local Skyttel installation with fictional household
 data and real HTTP, OAuth, MCP SDK and SQLite. Only identity-provider login
 is substituted. It does not open an existing household or use the normal

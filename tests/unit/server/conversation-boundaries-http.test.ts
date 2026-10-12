@@ -1,5 +1,6 @@
 import { type APIRequestContext, type APIResponse, request } from '@playwright/test';
 import { afterEach, expect, test } from 'vitest';
+import { assistantFailureMessage } from '../../../src/server/assistant-feedback.js';
 import type { MapState } from '../../../src/shared/map.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
@@ -214,7 +215,7 @@ test.each([
     const before = await map();
     const result = await message('Läs mitt utkast.');
     expect(result).toMatchObject({ phase: 'error', error });
-    expect(result.reply).toBeUndefined();
+    expect(result.reply).toBe(assistantFailureMessage(error));
     expect(result.receipt).toBeUndefined();
     expect(result.selection).toBeUndefined();
     expect(await map()).toEqual(before);
@@ -368,7 +369,7 @@ test.each([
     const before = await map();
     const failed = await message('Ändra typen enligt mitt uppdrag.');
     expect(failed).toMatchObject({ phase: 'error', error });
-    expect(failed.reply).toBeUndefined();
+    expect(failed.reply).toBe(assistantFailureMessage(error));
     expect(await map()).toEqual(before);
     reporting = true;
     expect(await message('Vad hindrade ändringen?')).toMatchObject({
@@ -611,7 +612,7 @@ test('a mutation followed by a historical failure request retains only its verif
   typeId = before.types[0].id;
   const result = await message('Lägg till mitt förslag och berätta om ett tidigare fel.');
   expect(result).toMatchObject({ phase: 'error', error: 'invalid_request' });
-  expect(result.reply).toBeUndefined();
+  expect(result.reply).toBe(assistantFailureMessage(result.error ?? 'assistant_provider_failed'));
   const after = await map();
   expect(after.objects).toEqual(before.objects);
   expect(after.draft.changes[0]).toEqual(before.draft.changes[0]);

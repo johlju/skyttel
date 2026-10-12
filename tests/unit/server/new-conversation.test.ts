@@ -144,6 +144,7 @@ test('a new conversation stops held work, leaves the draft and counts its unsave
 
 test.each(['ordinary', 'held-status', 'held-stop'] as const)(
   'a new conversation replaces the voice context and lets Skyttel say what remains: %s',
+  { timeout: 12_000 },
   async (boundary) => {
     const heldStatus = boundary === 'held-status';
     const heldStop = boundary === 'held-stop';
@@ -233,7 +234,8 @@ test.each(['ordinary', 'held-status', 'held-stop'] as const)(
         });
       say('Vem betalar musiken?');
       delegate();
-      await expect.poll(() => model.requests.length).toBe(1);
+      // Dispatch follows the ordinary two-second quiet-input collection window.
+      await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(1);
       const completed = heldStop
         ? ((await (await browser.get(`${path}/${session.id}`)).json()) as TextAssistantView)
         : await settled(session);
@@ -291,7 +293,7 @@ test.each(['ordinary', 'held-status', 'held-stop'] as const)(
       // What was said before the new conversation is not passed on with the next task.
       say('Vad kostar den?');
       delegate();
-      await expect.poll(() => model.requests.length).toBe(2);
+      await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(2);
       expect(model.requests[1].input).toHaveLength(1);
       const sentToModel = JSON.stringify(model.requests[1].input);
       expect(sentToModel).toContain('Vad kostar den?');

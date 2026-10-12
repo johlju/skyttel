@@ -1,0 +1,6 @@
+interface:
+  display_name: "Evaluate Models"
+  short_description: "Compare Skyttel models with recorded evidence"
+  default_prompt: "Use $evaluate-models to evaluate the models I supply, compare them with recorded results, apply a budget only if I specify one, and recommend a model based on correctness, response time and cost."
+policy:
+  allow_implicit_invocation: false

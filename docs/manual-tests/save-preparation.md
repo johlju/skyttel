@@ -158,7 +158,9 @@ komma strax innan fetch-anropet faktiskt hålls.
 redan genomfört kontrollsvar. `block('recover', true)` ger kontrollfel tills
 du kör `block('recover', false)`. `arm('revoke', 'drop-after')` tappar
 återkallandets riktiga svar; kräv status 200 och läs återkallat medgivande
-efteråt. `arm('message', 'drop-after')` tappar ett mottaget uppdrags svar
+efteråt. `arm('message', 'drop-before')` tappar uppdraget före mottagandet;
+inget modellanrop eller sparförsök registreras.
+`arm('message', 'drop-after')` tappar ett mottaget uppdrags svar
 utan att påstå att något sparades.
 
 Armning måste ske före den handling som skickar anropet. Vid omladdning

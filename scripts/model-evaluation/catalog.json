@@ -1,0 +1,1403 @@
+{
+  "source": "https://github.com/viscalyx/skyttel/blob/5007cb07bda14f77295f729821494becf4faacc0/docs/research/model-evaluation-scenarios.md",
+  "decision": "https://github.com/viscalyx/skyttel/issues/341",
+  "base": {
+    "objects": [
+      {
+        "id": "alex",
+        "type": "Person",
+        "name": "Alex Lind",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "lo",
+        "type": "Person",
+        "name": "Lo Berg",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "mira",
+        "type": "Person",
+        "name": "Mira Dahl",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "spotify-ab",
+        "type": "Företag",
+        "name": "Spotify AB",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "microsoft-ab",
+        "type": "Företag",
+        "name": "Microsoft AB",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "cloud-ab",
+        "type": "Företag",
+        "name": "Norrsken Molntjänster AB",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "spotify",
+        "type": "Tjänst",
+        "name": "Spotify",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "m365",
+        "type": "Tjänst",
+        "name": "Microsoft 365",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "cloud",
+        "type": "Tjänst",
+        "name": "Molnlagring Plus",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "tenant",
+        "type": "Tjänst",
+        "name": "Tenant Norrsken Bygg",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "spotify-sub",
+        "type": "Abonnemang",
+        "name": "Spotify Premium Family",
+        "description": "Påhittat katalogobjekt.",
+        "financialFacts": {
+          "price": {
+            "knowledge": "known",
+            "value": "179"
+          },
+          "currency": {
+            "knowledge": "known",
+            "value": "SEK"
+          },
+          "paymentInterval": {
+            "knowledge": "known",
+            "value": "månad"
+          }
+        }
+      },
+      {
+        "id": "cloud-sub",
+        "type": "Abonnemang",
+        "name": "Molnlagring Plus 2 TB",
+        "description": "Påhittat katalogobjekt.",
+        "financialFacts": {
+          "price": {
+            "knowledge": "known",
+            "value": "199"
+          },
+          "currency": {
+            "knowledge": "known",
+            "value": "SEK"
+          },
+          "paymentInterval": {
+            "knowledge": "known",
+            "value": "månad"
+          }
+        }
+      },
+      {
+        "id": "netflix-sub",
+        "type": "Abonnemang",
+        "name": "Netflix Standard",
+        "description": "Påhittat katalogobjekt.",
+        "financialFacts": {
+          "price": {
+            "knowledge": "known",
+            "value": "139"
+          },
+          "currency": {
+            "knowledge": "known",
+            "value": "SEK"
+          },
+          "paymentInterval": {
+            "knowledge": "known",
+            "value": "månad"
+          }
+        }
+      },
+      {
+        "id": "alex-work",
+        "type": "Tjänstekonto",
+        "name": "Alex arbete",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "lo-work",
+        "type": "Tjänstekonto",
+        "name": "Lo arbete",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "shared-email",
+        "type": "E-postadress",
+        "name": "m365@norrsken.test",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "alex-email",
+        "type": "E-postadress",
+        "name": "alex@norrsken.test",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "lo-email",
+        "type": "E-postadress",
+        "name": "lo@norrsken.test",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "house-email",
+        "type": "E-postadress",
+        "name": "hushall@norrsken.test",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "card",
+        "type": "Kort",
+        "name": "Hushållskortet",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "bank",
+        "type": "Bankkonto",
+        "name": "Bankkonto Hushåll",
+        "description": "Påhittat katalogobjekt."
+      },
+      {
+        "id": "reserve",
+        "type": "Bankkonto",
+        "name": "Bankkonto Reserv",
+        "description": "Påhittat katalogobjekt."
+      }
+    ],
+    "relationships": [
+      {
+        "source": "spotify-ab",
+        "type": "Erbjuder",
+        "target": "spotify",
+        "knowledge": "known"
+      },
+      {
+        "source": "microsoft-ab",
+        "type": "Erbjuder",
+        "target": "m365",
+        "knowledge": "known"
+      },
+      {
+        "source": "cloud-ab",
+        "type": "Erbjuder",
+        "target": "cloud",
+        "knowledge": "known"
+      },
+      {
+        "source": "spotify-sub",
+        "type": "Gäller",
+        "target": "spotify",
+        "knowledge": "known"
+      },
+      {
+        "source": "cloud-sub",
+        "type": "Gäller",
+        "target": "cloud",
+        "knowledge": "known"
+      },
+      {
+        "source": "alex-work",
+        "type": "Hör till",
+        "target": "m365",
+        "knowledge": "known"
+      },
+      {
+        "source": "lo-work",
+        "type": "Hör till",
+        "target": "m365",
+        "knowledge": "known"
+      },
+      {
+        "source": "mira",
+        "type": "Använder",
+        "target": "spotify",
+        "knowledge": "known"
+      },
+      {
+        "source": "lo",
+        "type": "Använder",
+        "target": "m365",
+        "knowledge": "known"
+      },
+      {
+        "source": "spotify-sub",
+        "type": "Står på avtalet",
+        "target": "alex",
+        "knowledge": "known"
+      },
+      {
+        "source": "mira",
+        "type": "Betalar",
+        "target": "spotify-sub",
+        "knowledge": "known"
+      },
+      {
+        "source": "spotify-sub",
+        "type": "Betalas med",
+        "target": "reserve",
+        "knowledge": "known"
+      },
+      {
+        "source": "cloud-sub",
+        "type": "Står på avtalet",
+        "target": "mira",
+        "knowledge": "known"
+      },
+      {
+        "source": "alex",
+        "type": "Betalar",
+        "target": "cloud-sub",
+        "knowledge": "known"
+      },
+      {
+        "source": "cloud-sub",
+        "type": "Betalas med",
+        "target": "card",
+        "knowledge": "known"
+      },
+      {
+        "source": "alex-work",
+        "type": "Inloggningsadress",
+        "target": "shared-email",
+        "knowledge": "known"
+      },
+      {
+        "source": "alex-work",
+        "type": "Kontaktadress",
+        "target": "shared-email",
+        "knowledge": "known"
+      },
+      {
+        "source": "lo-work",
+        "type": "Inloggningsadress",
+        "target": "shared-email",
+        "knowledge": "known"
+      },
+      {
+        "source": "lo-work",
+        "type": "Kontaktadress",
+        "target": "shared-email",
+        "knowledge": "known"
+      },
+      {
+        "source": "card",
+        "type": "Kontokoppling",
+        "target": "bank",
+        "knowledge": "known"
+      }
+    ],
+    "relationshipTypes": [
+      {
+        "name": "Levererar till",
+        "description": "",
+        "forwardLabel": "levererar till",
+        "reverseLabel": "får leverans från"
+      }
+    ],
+    "draft": {
+      "objects": {
+        "lo": {
+          "description": "Övar cello på tisdagar."
+        },
+        "netflix-sub": {
+          "financialFacts": {
+            "price": {
+              "knowledge": "known",
+              "value": "149"
+            },
+            "currency": {
+              "knowledge": "known",
+              "value": "SEK"
+            },
+            "paymentInterval": {
+              "knowledge": "known",
+              "value": "månad"
+            }
+          }
+        }
+      }
+    }
+  },
+  "variants": {
+    "ambiguities": {
+      "addObjects": [
+        {
+          "id": "alex-berg",
+          "type": "Person",
+          "name": "Alex Berg",
+          "description": "Påhittat katalogobjekt."
+        }
+      ],
+      "addRelationships": [
+        {
+          "source": "spotify-sub",
+          "type": "Står på avtalet",
+          "target": "lo",
+          "knowledge": "known"
+        },
+        {
+          "source": "spotify-sub",
+          "type": "Betalas med",
+          "target": "card",
+          "knowledge": "known"
+        }
+      ],
+      "removeRelationships": [
+        {
+          "source": "spotify-sub",
+          "type": "Står på avtalet",
+          "target": "alex",
+          "knowledge": "known"
+        },
+        {
+          "source": "spotify-sub",
+          "type": "Betalas med",
+          "target": "reserve",
+          "knowledge": "known"
+        }
+      ]
+    },
+    "known-cloud-user": {
+      "addRelationships": [
+        {
+          "source": "cloud",
+          "type": "Används av",
+          "target": "alex",
+          "knowledge": "known"
+        }
+      ]
+    },
+    "price-proposal": {
+      "draftObjects": {
+        "cloud-sub": {
+          "financialFacts": {
+            "price": {
+              "knowledge": "known",
+              "value": "229"
+            },
+            "currency": {
+              "knowledge": "known",
+              "value": "SEK"
+            },
+            "paymentInterval": {
+              "knowledge": "known",
+              "value": "månad"
+            }
+          }
+        }
+      }
+    }
+  },
+  "summaryHistory": [
+    {
+      "role": "user",
+      "text": "Vid bron fanns en grusad stig."
+    },
+    {
+      "role": "assistant",
+      "text": "Stigen ingick i vandringsberättelsen."
+    },
+    {
+      "role": "user",
+      "text": "Vid ladan syntes ett vitt tak."
+    },
+    {
+      "role": "assistant",
+      "text": "Ladan var en del av landskapet."
+    },
+    {
+      "role": "user",
+      "text": "Bredvid tallen låg en rund sten."
+    },
+    {
+      "role": "assistant",
+      "text": "Stenen låg intill tallen."
+    },
+    {
+      "role": "user",
+      "text": "Berättelsen slutade vid bron."
+    },
+    {
+      "role": "assistant",
+      "text": "Vandringsberättelsen var avslutad."
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "read-price-draft",
+      "title": "Läsa pris och beskriva utkastet",
+      "voice": false,
+      "steps": [
+        {
+          "id": "read",
+          "text": "Vad kostar Spotify Premium Family? Berätta vilka ändringar som ligger i mitt utkast.",
+          "expected": {
+            "objects": {},
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Spotify Premium Family kostar 179 kronor per månad enligt sparad karta.",
+              "Redovisa både Lo Bergs beskrivning Övar cello på tisdagar. och Netflix Standards pris 149 kronor som utkastförslag."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "change-price-payment",
+      "title": "Ändra pris och betalningsmedel",
+      "voice": true,
+      "steps": [
+        {
+          "id": "kort-utan-sparande",
+          "text": "Ändra priset för Molnlagring Plus till 229 kronor per månad och låt Spotify Premium Family betalas med Hushållskortet.",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "229"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "card",
+                "knowledge": "known"
+              }
+            ],
+            "removeRelationships": [
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "reserve",
+                "knowledge": "known"
+              }
+            ],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "late-price-correction",
+      "title": "Längre uppdrag med sen prisrättelse",
+      "voice": true,
+      "steps": [
+        {
+          "id": "sen-rattelse",
+          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 249 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Molnlagring Plus. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Jag rättar en sak: Molnlagring Plus ska kosta 229 kronor per månad, inte 249. Allt annat som jag bad om gäller fortfarande.",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "229"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [
+              {
+                "source": "alex",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "lo",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex",
+                "type": "Använder",
+                "target": "m365",
+                "knowledge": "known"
+              },
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "card",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Inloggningsadress",
+                "target": "alex-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Kontaktadress",
+                "target": "house-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "cloud-sub",
+                "type": "Betalas med",
+                "target": "bank",
+                "knowledge": "known"
+              },
+              {
+                "source": "lo",
+                "type": "Betalar",
+                "target": "cloud-sub",
+                "knowledge": "known"
+              },
+              {
+                "source": "mira",
+                "type": "Använder",
+                "target": "cloud",
+                "knowledge": "known"
+              }
+            ],
+            "removeRelationships": [
+              {
+                "source": "mira",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "reserve",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Inloggningsadress",
+                "target": "shared-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Kontaktadress",
+                "target": "shared-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "cloud-sub",
+                "type": "Betalas med",
+                "target": "card",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex",
+                "type": "Betalar",
+                "target": "cloud-sub",
+                "knowledge": "known"
+              }
+            ],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "save-last",
+      "title": "Längre uppdrag med sparbesked sist",
+      "voice": true,
+      "steps": [
+        {
+          "id": "sparbesked-sist",
+          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 229 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Molnlagring Plus. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Spara nu hela utkastet med alla de här ändringarna.",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "229"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [
+              {
+                "source": "alex",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "lo",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex",
+                "type": "Använder",
+                "target": "m365",
+                "knowledge": "known"
+              },
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "card",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Inloggningsadress",
+                "target": "alex-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Kontaktadress",
+                "target": "house-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "cloud-sub",
+                "type": "Betalas med",
+                "target": "bank",
+                "knowledge": "known"
+              },
+              {
+                "source": "lo",
+                "type": "Betalar",
+                "target": "cloud-sub",
+                "knowledge": "known"
+              },
+              {
+                "source": "mira",
+                "type": "Använder",
+                "target": "cloud",
+                "knowledge": "known"
+              }
+            ],
+            "removeRelationships": [
+              {
+                "source": "mira",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "reserve",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Inloggningsadress",
+                "target": "shared-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Kontaktadress",
+                "target": "shared-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "cloud-sub",
+                "type": "Betalas med",
+                "target": "card",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex",
+                "type": "Betalar",
+                "target": "cloud-sub",
+                "knowledge": "known"
+              }
+            ],
+            "objectTypes": [],
+            "saveAttempts": 1,
+            "saves": 1,
+            "requirements": [
+              "Ge ett kort verifierat sparbesked, utan obegärd uppräkning eller sammanfattning."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "two-ambiguities",
+      "title": "Två oklarheter, följdsvar och sparbesked",
+      "voice": true,
+      "startVariant": "ambiguities",
+      "steps": [
+        {
+          "id": "oklarheter-med-sparbegaran",
+          "text": "Lo Berg använder Spotify. Priset för Molnlagring Plus ska vara 229 kronor per månad. Alex använder Microsoft 365 och Spotify Premium Family ska betalas från bankkontot. Spara hela utkastet.",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "229"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [
+              {
+                "source": "lo",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              }
+            ],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Fråga om Alex Lind eller Alex Berg avses.",
+              "Fråga om Bankkonto Hushåll eller Bankkonto Reserv avses.",
+              "Säg att tidigare sparbegäran inte gäller längre och att användaren behöver be om sparande igen."
+            ]
+          }
+        },
+        {
+          "id": "oklarheter-foljdsvar",
+          "text": "Jag menar Alex Lind och Bankkonto Reserv.",
+          "expected": {
+            "objects": {},
+            "addRelationships": [
+              {
+                "source": "alex",
+                "type": "Använder",
+                "target": "m365",
+                "knowledge": "known"
+              },
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "reserve",
+                "knowledge": "known"
+              }
+            ],
+            "removeRelationships": [
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "card",
+                "knowledge": "known"
+              }
+            ],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        },
+        {
+          "id": "spara-hela-utkastet",
+          "text": "Spara hela utkastet.",
+          "expected": {
+            "objects": {},
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 1,
+            "saves": 1,
+            "requirements": ["Ge ett kort verifierat sparbesked."]
+          }
+        }
+      ]
+    },
+    {
+      "id": "relationship-direction",
+      "title": "Samband med oklar riktning",
+      "voice": true,
+      "steps": [
+        {
+          "id": "samband-utan-riktning",
+          "text": "Skapa ett samband av typen Levererar till mellan Microsoft 365 och Tenant Norrsken Bygg.",
+          "expected": {
+            "objects": {},
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Fråga vilken av Microsoft 365 och Tenant Norrsken Bygg som levererar till den andra. Fråga inte efter den redan givna typen Levererar till."
+            ]
+          }
+        },
+        {
+          "id": "samband-foljdsvar",
+          "text": "Microsoft 365 ska leverera till Tenant Norrsken Bygg.",
+          "expected": {
+            "objects": {},
+            "addRelationships": [
+              {
+                "source": "m365",
+                "type": "Levererar till",
+                "target": "tenant",
+                "knowledge": "known"
+              }
+            ],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "questions-and-changes",
+      "title": "Frågor blandade med ändringar",
+      "voice": true,
+      "steps": [
+        {
+          "id": "fragor-och-andringar",
+          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 229 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Molnlagring Plus. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Berätta också vad Spotify Premium Family kostar enligt den sparade kartan och vilka personer som använder Microsoft 365 enligt mitt utkast. Visa tjänstekontot Alex arbete i kartan när du är klar. Sammanfatta både ändringarna och svaren på mina frågor.",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "229"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [
+              {
+                "source": "alex",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "lo",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex",
+                "type": "Använder",
+                "target": "m365",
+                "knowledge": "known"
+              },
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "card",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Inloggningsadress",
+                "target": "alex-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Kontaktadress",
+                "target": "house-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "cloud-sub",
+                "type": "Betalas med",
+                "target": "bank",
+                "knowledge": "known"
+              },
+              {
+                "source": "lo",
+                "type": "Betalar",
+                "target": "cloud-sub",
+                "knowledge": "known"
+              },
+              {
+                "source": "mira",
+                "type": "Använder",
+                "target": "cloud",
+                "knowledge": "known"
+              }
+            ],
+            "removeRelationships": [
+              {
+                "source": "mira",
+                "type": "Använder",
+                "target": "spotify",
+                "knowledge": "known"
+              },
+              {
+                "source": "spotify-sub",
+                "type": "Betalas med",
+                "target": "reserve",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Inloggningsadress",
+                "target": "shared-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex-work",
+                "type": "Kontaktadress",
+                "target": "shared-email",
+                "knowledge": "known"
+              },
+              {
+                "source": "cloud-sub",
+                "type": "Betalas med",
+                "target": "card",
+                "knowledge": "known"
+              },
+              {
+                "source": "alex",
+                "type": "Betalar",
+                "target": "cloud-sub",
+                "knowledge": "known"
+              }
+            ],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Sammanfatta alla beställda ändringar och ge de begärda faktasvaren.",
+              "Spotify Premium Family kostar 179 kronor enligt sparad karta.",
+              "Alex Lind och Lo Berg använder Microsoft 365 enligt utkastet.",
+              "Bekräfta endast klientbekräftad markering av Alex arbete.",
+              "Ställ inga identitetsfrågor eller sparfrågor."
+            ]
+          }
+        }
+      ],
+      "selection": "alex-work"
+    },
+    {
+      "id": "hypothetical-save",
+      "title": "Prisändring med hypotetisk sparfråga",
+      "voice": true,
+      "steps": [
+        {
+          "id": "hypotetisk-sparavsikt",
+          "text": "Ändra priset för Molnlagring Plus till 229 kronor. Vad händer om vi sparar hela utkastet?",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "229"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Förklara att även tidigare förslag om Lo Berg och Netflix Standard skulle sparas tillsammans med prisändringen. Påstå inget faktiskt sparande."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "custom-type-date",
+      "title": "Skapa objekttyp, datumfält och objekt",
+      "voice": false,
+      "steps": [
+        {
+          "id": "custom-type",
+          "text": "Skapa objekttypen Solcellsanläggning med datumfältet Installationsdatum. Lägg till Soltak Norr 7 med installationsdatum 3 juni 2025.",
+          "expected": {
+            "objects": {
+              "solar": {
+                "type": "Solcellsanläggning",
+                "name": "Soltak Norr 7",
+                "description": "",
+                "customValues": {
+                  "Installationsdatum": "2025-06-03"
+                }
+              }
+            },
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [
+              {
+                "name": "Solcellsanläggning",
+                "fields": [
+                  {
+                    "name": "Installationsdatum",
+                    "kind": "date"
+                  }
+                ]
+              }
+            ],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "unknown-user",
+      "title": "Ange okänd användare",
+      "voice": false,
+      "startVariant": "known-cloud-user",
+      "steps": [
+        {
+          "id": "unknown-user",
+          "text": "Jag vet inte vem som använder Molnlagring Plus.",
+          "expected": {
+            "objects": {},
+            "addRelationships": [
+              {
+                "source": "cloud",
+                "type": "Används av",
+                "target": null,
+                "knowledge": "unknown"
+              }
+            ],
+            "removeRelationships": [
+              {
+                "source": "cloud",
+                "type": "Används av",
+                "target": "alex",
+                "knowledge": "known"
+              }
+            ],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående.",
+              "Om svaret beskriver användningen ska den vara okänd. Påstå inte att ingen använder tjänsten och peka inte ut en person. En allmän utkastbekräftelse räcker."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "no-user",
+      "title": "Ange att ingen använder tjänsten",
+      "voice": false,
+      "startVariant": "known-cloud-user",
+      "steps": [
+        {
+          "id": "no-user",
+          "text": "Ingen använder Molnlagring Plus.",
+          "expected": {
+            "objects": {},
+            "addRelationships": [
+              {
+                "source": "cloud",
+                "type": "Används av",
+                "target": null,
+                "knowledge": "none"
+              }
+            ],
+            "removeRelationships": [
+              {
+                "source": "cloud",
+                "type": "Används av",
+                "target": "alex",
+                "knowledge": "known"
+              }
+            ],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående.",
+              "Om svaret beskriver användningen ska det vara uttryckligen ingen användare. Påstå inte okänd användare och peka inte ut en person. En allmän utkastbekräftelse räcker."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "uncertain-user",
+      "title": "Ange en osäker användare",
+      "voice": false,
+      "startVariant": "known-cloud-user",
+      "steps": [
+        {
+          "id": "uncertain-user",
+          "text": "Uppgiften att Alex Lind använder Molnlagring Plus ska inte vara kvar. Ersätt den med den osäkra uppgiften att Mira Dahl använder tjänsten.",
+          "expected": {
+            "objects": {},
+            "addRelationships": [
+              {
+                "source": "cloud",
+                "type": "Används av",
+                "target": "mira",
+                "knowledge": "uncertain"
+              }
+            ],
+            "removeRelationships": [
+              {
+                "source": "cloud",
+                "type": "Används av",
+                "target": "alex",
+                "knowledge": "known"
+              }
+            ],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående.",
+              "Om svaret beskriver Mira Dahls användning ska osäkerheten bevaras. Påstå inte säker användning. En allmän utkastbekräftelse räcker."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "undo-price",
+      "title": "Ångra senaste osparade prisändringen",
+      "voice": false,
+      "startVariant": "price-proposal",
+      "steps": [
+        {
+          "id": "undo-price",
+          "text": "Ångra den senaste osparade prisändringen.",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "199"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "summary-last-price",
+      "title": "Två prisändringar, kort kontextsammanfattning och rätta den sista",
+      "voice": true,
+      "steps": [
+        {
+          "id": "kontext-forsta-andring",
+          "text": "Ändra priset för Spotify Premium Family till 189 kronor per månad.",
+          "expected": {
+            "objects": {
+              "spotify-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "189"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        },
+        {
+          "id": "kontext-sista-andring",
+          "text": "Ändra priset för Molnlagring Plus till 229 kronor per månad.",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "229"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+            ]
+          }
+        },
+        {
+          "id": "summary",
+          "transition": "summary",
+          "expected": {
+            "requirements": [
+              "Sammanfattningen anger först Spotify Premium Family 189 kronor per månad, därefter Molnlagring Plus 2 TB 229 kronor per månad, som genomförda utkaständringar. Påstå inte att dessa prisändringar är sparade. Äldre verifierade sparresultat får återges när de tydligt skiljs från de aktuella osparade ändringarna; obestyrkta sparpåståenden är fel."
+            ]
+          }
+        },
+        {
+          "id": "kontext-ratta-sista",
+          "text": "Rätta den sista till 239 kronor, spara inte.",
+          "expected": {
+            "objects": {
+              "cloud-sub": {
+                "financialFacts": {
+                  "price": {
+                    "knowledge": "known",
+                    "value": "239"
+                  },
+                  "currency": {
+                    "knowledge": "known",
+                    "value": "SEK"
+                  },
+                  "paymentInterval": {
+                    "knowledge": "known",
+                    "value": "månad"
+                  }
+                }
+              }
+            },
+            "addRelationships": [],
+            "removeRelationships": [],
+            "objectTypes": [],
+            "saveAttempts": 0,
+            "saves": 0,
+            "requirements": [
+              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående.",
+              "Fråga inte vilken prisändring som avses."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

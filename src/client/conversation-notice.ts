@@ -90,6 +90,13 @@ export const conversationNoticeDefinitions = [
     live: 'assertive',
   },
   {
+    id: 'voiceReplyUnconfirmed',
+    text: 'Uppläsningen kunde inte bekräftas. Du kan läsa svaret i textvyn.',
+    kind: 'event',
+    icon: 'warning',
+    live: 'polite',
+  },
+  {
     id: 'voiceAdministration',
     text: 'Rösten fungerar inte. Kontakta administratören.',
     kind: 'event',

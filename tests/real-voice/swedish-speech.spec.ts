@@ -237,7 +237,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         executedAt: new Date().toISOString(),
         recordingSha256: createHash('sha256').update(audio).digest('hex'),
         chromium: browser.version(),
-        models: ['gpt-live-1', 'gpt-5.6-terra'],
+        models: ['gpt-live-1', 'gpt-6.1-sol'],
         receipt: added[0],
         receivedAudio: true,
         microphoneOff: true,

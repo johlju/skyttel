@@ -1,0 +1,6 @@
+interface:
+  display_name: "Generate Speech Fixtures"
+  short_description: "Create reviewed audio for Skyttel scenarios"
+  default_prompt: "Use $generate-speech-fixtures to prepare the requested scenario recordings, preserve approved variants, record any pacing overrides, and install the files after listening approval."
+policy:
+  allow_implicit_invocation: true

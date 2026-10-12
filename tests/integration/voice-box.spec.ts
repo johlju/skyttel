@@ -566,13 +566,17 @@ test('TAL-14: röstrutan visar ett statusord åt gången och en vågform som fö
 
     // Skyttel arbetar goes before both: the dots are still.
     speak(live, 'Beskriv utkastet.');
+    // Finish the utterance before expecting the delegated task to start.
+    await sound(page, 'microphone', 0);
     await expect.poll(() => model.waiting()).toBe(1);
+    await sound(page, 'microphone', 0.9);
     await expect(box).toHaveText('Skyttel arbetar');
     await expect(wave).toHaveAttribute('data-form', 'still');
     expect(await heights()).toEqual(Array(7).fill(4));
     expect(await height()).toBe(36);
     // The width follows the word, and the height does not.
     expect((await bounds(box)).width).toBeGreaterThan(listeningWidth);
+    await sound(page, 'microphone', 0);
     model.release([modelMessage('Utkastet har ett förslag.')]);
     await expect(box).toHaveText('Skyttel talar');
 
@@ -582,6 +586,7 @@ test('TAL-14: röstrutan visar ett statusord åt gången och en vågform som fö
     await expect(bars.first()).toHaveCSS('transition-duration', '0s');
     const still = await heights();
     expect(Math.max(...still)).toBeGreaterThan(4);
+    await sound(page, 'microphone', 0.9);
     await sound(page, 'remote', 0);
     await expect(box).toHaveText('Du talar');
     expect(await heights()).toEqual(still);

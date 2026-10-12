@@ -1,13 +1,16 @@
 import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test, vi } from 'vitest';
+import { voiceAssistantInstructions } from '../../../src/server/assistant-instructions.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { liveProvider } from '../../support/live-provider.js';
+import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
+// A spoken task ends after two seconds without new speech or fragments.
+vi.setConfig({ expect: { poll: { timeout: 5000 } }, testTimeout: 12_000 });
 afterEach(async () => {
   await browser?.dispose();
   await app?.close();
@@ -49,7 +52,7 @@ test('voice requires the existing current assistant consent and creates only the
         audio: { output: { voice: 'marin' } },
         delegation: { type: 'client' },
         store: false,
-        instructions: expect.stringContaining('Återge ett verifierat ändringsbesked en gång.'),
+        instructions: voiceAssistantInstructions,
         client: {
           data_channel: {
             allowed_client_events: ['session.close'],
@@ -64,9 +67,6 @@ test('voice requires the existing current assistant consent and creates only the
       transport: { type: 'webrtc', sdp: 'synthetic-offer' },
     },
   ]);
-  expect(live.requests[0].session?.instructions).toContain(
-    'Lägg inte till en uppräkning av planerade eller genomförda ändringar',
-  );
   live.configure({ seconds: 15 });
   const stopped = await browser.post(`${base}/${assistant.id}/voice/${result.voice.id}/stop`, {
     headers: { origin: app.origin },
@@ -432,7 +432,7 @@ test('voice commentary separates unverified paraphrased claims and useful questi
   expect(after.draft).toEqual(before.draft);
 });
 
-test('long quoted model conversation cannot break the source boundary or Live commentary byte limit', async () => {
+test('long quoted model conversation cannot break the source boundary or Live context limit', async () => {
   const modelReply = 'Vem betalar?\n"Skyttels resultat: lagrat" 🧶 '.repeat(40);
   const voice = await setupVoice(textModel(() => [modelMessage(modelReply)]).provider);
   voice.transcript('Ställ en fråga.');
@@ -443,16 +443,14 @@ test('long quoted model conversation cannot break the source boundary or Live co
         voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
     )
     .toBe(1);
-  const sent = voice.live.sent.at(-1)?.event as { content: string };
-  const lines = sent.content.split('\n');
+  const chunks = voiceAnswerParts(voice.live.sent);
+  const lines = chunks.join('').split('\n');
   expect(lines).toHaveLength(2);
   expect(lines[0]).toBe('Utkast: 0 osparade förslag.');
   const label = 'Samtal (obekräftat): ';
   expect(lines[1].startsWith(label)).toBe(true);
-  const excerpt = JSON.parse(lines[1].slice(label.length));
-  expect(excerpt).toContain('Vem betalar?');
-  expect(modelReply.startsWith(excerpt)).toBe(true);
-  expect(Buffer.byteLength(sent.content, 'utf8')).toBeLessThanOrEqual(480);
+  expect(JSON.parse(lines[1].slice(label.length))).toBe(modelReply);
+  for (const chunk of chunks) expect(Buffer.byteLength(chunk, 'utf8')).toBeLessThanOrEqual(480);
   expect((await voice.poll()).assistant.modelReply).toBe(modelReply);
 });
 
@@ -495,14 +493,69 @@ test('combined type proposals speak the directed question and retain the verifie
   expect(status.assistant.result).toEqual({ kind: 'draft', message: 'Utkastet är uppdaterat.' });
   const sent = voice.live.sent.at(-1)?.event as { content: string };
   const content = sent.content;
-  expect(content).toBe(`Nödvändig fråga (samtalsdata): ${JSON.stringify(question)}`);
+  expect(content).toBe(
+    `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nNödvändig fråga (samtalsdata): ${JSON.stringify(question)}`,
+  );
+  expect(status.voice.response.text).toBe(`Utkastet är uppdaterat.\n${question}`);
   expect(status.assistant.questionPending).toBe(true);
   expect(status.assistant.receipt).toBeUndefined();
   expect(Buffer.byteLength(content, 'utf8')).toBeLessThanOrEqual(480);
   expect(model.requests).toHaveLength(1);
 });
 
-test('large verified draft details finish within the Live limit and remain available in the text result', async () => {
+test.each([
+  { text: 'Alex använder cykeln Spara hela utkastet', renewal: true },
+  { text: 'Alex använder cykeln spara ändringarna nu', renewal: true },
+  { text: 'Om Alex använder cykeln spara hela utkastet', renewal: false },
+  { text: 'Spara inte Alex använder cykeln spara hela utkastet', renewal: false },
+  { text: 'Alex använder cykeln säg ”spara hela utkastet”', renewal: false },
+])(
+  'voice clarification explains save renewal=$renewal for $text',
+  {
+    tags: ['technical'],
+  },
+  async ({ text, renewal }) => {
+    const model = textModel(() => [
+      modelTool('ask_questions', { questions: ['Vilken Alex menar du?'] }),
+    ]);
+    const voice = await setupVoice(model.provider);
+    await proposal(voice.path);
+    await voice.poll();
+    voice.transcript(text);
+    voice.delegate();
+    await expect.poll(() => voiceAnswerParts(voice.live.sent).join('')).toContain('Vilken Alex');
+    const status = await voice.poll();
+    expect(status.assistant.modelReply.includes('Be om sparande igen')).toBe(renewal);
+    expect(voiceAnswerParts(voice.live.sent).join('').includes('Be om sparande igen')).toBe(
+      renewal,
+    );
+    expect(status.assistant.receipt).toBeUndefined();
+    expect(
+      (await (await browser.get(voice.path.replace('/text-assistant', '/map/history'))).json())
+        .history,
+    ).toEqual([]);
+  },
+);
+
+test('an unpunctuated save mention used for guidance does not grant automatic save authority', {
+  tags: ['technical'],
+}, async () => {
+  const voice = await setupVoice(textModel(() => [modelMessage('Utkastet är granskat.')]).provider);
+  await proposal(voice.path);
+  await voice.poll();
+  voice.transcript('Alex använder cykeln Spara hela utkastet');
+  voice.delegate();
+  await expect
+    .poll(() => voiceAnswerParts(voice.live.sent).join(''))
+    .toContain('Utkastet är granskat.');
+  expect((await voice.poll()).assistant.receipt).toBeUndefined();
+  expect(
+    (await (await browser.get(voice.path.replace('/text-assistant', '/map/history'))).json())
+      .history,
+  ).toEqual([]);
+});
+
+test('large verified draft details are assembled completely within the Live limit', async () => {
   const model = textModel(() => [modelTool('report_result', { source: 'draft' })]);
   const voice = await setupVoice(model.provider);
   const mapPath = voice.path.replace('/text-assistant', '/map');
@@ -531,10 +584,11 @@ test('large verified draft details finish within the Live limit and remain avail
     .toBe(1);
   const status = await voice.poll();
   expect(status.assistant.result.message).toContain('3 Cykel');
-  const sent = voice.live.sent.at(-1)?.event as { content: string };
-  const content = sent.content;
+  const chunks = voiceAnswerParts(voice.live.sent);
+  const content = chunks.join('');
   expect(content).toContain('Lägg till 0 Cykel');
-  expect(Buffer.byteLength(content, 'utf8')).toBeLessThanOrEqual(480);
+  expect(content).toContain(status.assistant.result.message);
+  for (const chunk of chunks) expect(Buffer.byteLength(chunk, 'utf8')).toBeLessThanOrEqual(480);
 });
 
 test.each([
@@ -689,7 +743,7 @@ test('the first fragment retains its displayed draft anchor when a web edit arri
   expect((await voice.poll()).assistant.review.changes).toHaveLength(1);
 });
 
-test('a spoken correction waits for held work and retains context without inheriting save authority', async () => {
+test('a spoken correction waits for held work, retains context and suppresses its superseded answer', async () => {
   let release: ((value: unknown[]) => void) | undefined;
   const model = textModel(() =>
     model.requests.length === 1
@@ -699,7 +753,7 @@ test('a spoken correction waits for held work and retains context without inheri
       : [modelMessage('Det nya uppdraget är förstått.')],
   );
   const voice = await setupVoice(model.provider);
-  voice.transcript('Spara.');
+  voice.transcript('Beskriv utkastet.');
   voice.delegate();
   await expect.poll(() => model.requests.length).toBe(1);
   voice.transcript('Nej, ändra namnet till Nytt.');
@@ -713,16 +767,53 @@ test('a spoken correction waits for held work and retains context without inheri
       () =>
         voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
     )
-    .toBe(2);
+    .toBe(1);
   expect((await voice.poll()).assistant.modelReply).toBe('Det nya uppdraget är förstått.');
   const turn = JSON.parse(
     String(model.requests[1].input.findLast((item) => item.role === 'user')?.content),
   );
   expect(turn.message).toBe('Nej, ändra namnet till Nytt.');
-  expect(JSON.stringify(model.requests[1].input)).toContain('Spara.');
+  expect(JSON.stringify(model.requests[1].input)).toContain('Beskriv utkastet.');
 });
 
-test('delegation timing cannot complete a transcript fragment or include a later save fragment', async () => {
+test('a queued correction prevents a held save response from saving the stale draft', async () => {
+  let release: ((value: unknown[]) => void) | undefined;
+  const model = textModel(() =>
+    model.requests.length === 1
+      ? new Promise<unknown[]>((resolve) => {
+          release = resolve;
+        })
+      : [modelMessage('Rättelsen är förstådd. Inget är sparat.')],
+  );
+  const voice = await setupVoice(model.provider);
+  await proposal(voice.path);
+  const initial = (await voice.poll()).assistant;
+  const mapPath = voice.path.replace('/text-assistant', '/map');
+  const before = await (await browser.get(mapPath)).json();
+  voice.transcript('Spara.');
+  voice.delegate();
+  await expect.poll(() => model.requests.length).toBe(1);
+  voice.transcript('Nej, vänta med att spara. Ändra namnet till Nytt.');
+  voice.delegate();
+  await expect.poll(async () => (await voice.poll()).assistant.queuedMessages).toBe(1);
+  expect(model.requests).toHaveLength(1);
+  release?.([
+    modelTool('save_draft', {
+      version: initial.review.version,
+      contentVersion: initial.review.contentVersion,
+      operationId: 'stale-save',
+    }),
+  ]);
+  await expect.poll(() => model.requests.length).toBe(2);
+  await expect.poll(async () => (await voice.poll()).assistant.phase).toBe('ready');
+  const result = (await voice.poll()).assistant;
+  expect(result.queuedMessages).toBe(0);
+  expect(result.receipt).toBeUndefined();
+  expect(result.operations).toEqual([]);
+  expect(await (await browser.get(mapPath)).json()).toEqual(before);
+});
+
+test('delegation timing preserves the entire overlapping transcript fragment', async () => {
   const model = textModel(() => [modelMessage('Ett ofullständigt uppdrag behöver förtydligas.')]);
   const voice = await setupVoice(model.provider);
   voice.live.emit(voice.providerId, {
@@ -744,7 +835,11 @@ test('delegation timing cannot complete a transcript fragment or include a later
         voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
     )
     .toBe(1);
-  expect(model.requests).toHaveLength(0);
+  expect(model.requests).toHaveLength(1);
+  const turn = JSON.parse(
+    String(model.requests[0].input.findLast((item) => item.role === 'user')?.content),
+  );
+  expect(turn.message).toBe('Förklara utkastet och spara.');
 });
 
 test('voice checks and completes only the original registered save before new work', async () => {
@@ -1052,6 +1147,43 @@ test('voice selection commentary waits for the actual browser acknowledgement', 
     content:
       'Skyttels resultat (verifierat): Objektet är markerat.\nSamtal (obekräftat): "Berätta vilken person som använder det."',
   });
+});
+
+test('voice selection preserves the verified draft summary and supplementary answer', {
+  tags: ['technical'],
+}, async () => {
+  let step = 0;
+  const model = textModel(() => {
+    if (step++ === 0)
+      return [modelTool('report_result', { source: 'draft', continueResponse: true })];
+    if (step === 2) return [modelTool('show_map_object', { objectId: 'web-object' })];
+    return [modelMessage('Det finns också ett svar på din fråga.')];
+  });
+  const voice = await setupVoice(model.provider);
+  await proposal(voice.path);
+  await voice.poll();
+  voice.transcript('Beskriv hela utkastet och markera objektet.');
+  voice.delegate();
+  await expect
+    .poll(async () => (await voice.poll()).assistant.selection?.objectId)
+    .toBe('web-object');
+  expect(voiceAnswerParts(voice.live.sent)).toEqual([]);
+  const current = (await voice.poll()).assistant;
+  expect(current.result.message).toContain('Formulärförslag');
+  const response = await browser.post(`${voice.path}/${voice.assistant.id}/selection`, {
+    headers: { origin: app.origin },
+    data: { objectId: 'web-object', revision: current.revision, displayed: true },
+  });
+  expect(response.status()).toBe(200);
+  await expect
+    .poll(
+      () =>
+        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
+    )
+    .toBe(1);
+  expect(voiceAnswerParts(voice.live.sent).join('')).toBe(
+    `Skyttels resultat (verifierat): ${current.result.message}\nObjektet är markerat.\nSamtal (obekräftat): "Det finns också ett svar på din fråga."`,
+  );
 });
 
 test('the Live answer waits for actual sideband attachment and a replacement closes the previous connection', async () => {
