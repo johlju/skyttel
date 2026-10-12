@@ -243,6 +243,68 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
 
 ## Verifierade sparbesked
 
+### FRAGA-10: väntande fråga bevarar oberoende svar och nytt sparbesked
+
+**Syfte:** En oklar identitet pausar bara den berörda delen. Andra frågor
+besvaras och sparandet väntar på ett nytt uttryckligt uppdrag.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Lo Exempel finns i utkastet med obesvarad identitet
+enligt den allmänna förberedelsen.
+
+**Separat förberedelse:** Släpp den hållna identitetsfrågan med
+`continueResponse: true` enligt följande terminalrecept. Ersätt `REQUEST`
+med aktuellt hållnings-ID. På nästa hållning, använd det nya ID:t och släpp
+`reply REQUEST Lo Exempel är en person i ditt utkast.`. Återställ enligt
+[samtalsförberedelsen](conversation-preparation.md).
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST ask_questions {"questions":["Vilken person avses med Lo, och vilket namn ska objektet ha?"],"continueResponse":true}
+```
+<!-- markdownlint-enable MD013 -->
+
+**Automatiskt motsvarande test:**
+[conversation-questions.spec.ts](../../tests/integration/conversation-questions.spec.ts),
+FRAGA-10. Kontrollerad leverantör med riktig server och SQLite; ingen
+verklig taligenkänning eller uppläsning provas.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-questions.spec.ts",
+    "caseId": "FRAGA-10"
+  },
+  "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite.",
+  "outcomes": [
+    "Identitetsfrågan och svaret om objekttypen finns samtidigt i samtalstexten.",
+    "Både upphörd sparbegäran och behovet av ett nytt sparbesked framgår. Lo finns kvar i utkastet; inget sparas."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel → Nytt samtal → Godkänn och starta**.
+1. Skicka **Red ut vilken Lo som avses och berätta förslagets objekttyp.
+   Spara.** Låt operatören släppa frågan och det oberoende svaret.
+1. Läs båda svaren och sparbeskedet i **Samtalstext**.
+1. Öppna Lo-förslaget enligt läsanvisningen och kontrollera kartan.
+
+**Förväntat resultat:**
+
+- Identitetsfrågan och svaret om objekttypen finns samtidigt i samtalet.
+- Både att den tidigare sparbegäran upphört och att sparande måste begäras
+  igen när frågorna är lösta framgår.
+- Lo finns kvar som Person i utkastet. Inget har sparats.
+
 ### FRAGA-04: fyra sekunder börjar efter det talade sparbeskedet
 
 **Syfte:** Ett kvitto och observerat ljud krävs för det gröna sparbeskedet.

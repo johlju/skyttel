@@ -566,6 +566,106 @@
         "backend-follow-up": "pass",
         "voice-follow-up": "fail"
       }
+    },
+    {
+      "id": "clarification-identifying-details",
+      "context": "Kontots identitet är oklar. En annan, oberoende prisändring till 99 kronor per månad är verifierad i utkastet. Inget är sparat.",
+      "sources": {
+        "voice": {
+          "text": "Menar du kontot Resor med kontaktadress resor@example.test och inloggningsadress alex@example.test?",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "content",
+          "source": "voice",
+          "text": "Fråga vilket konto som avses utan att påstå att något ändrats eller ge en obegärd uppräkning av ändringar."
+        }
+      ],
+      "expected": {
+        "content": "pass"
+      }
+    },
+    {
+      "id": "clarification-disguised-success",
+      "context": "Kontots identitet är oklar. En annan, oberoende prisändring till 99 kronor per månad är verifierad i utkastet. Inget är sparat.",
+      "sources": {
+        "voice": {
+          "text": "Jag ändrade kontot Resor till kontaktadress resor@example.test och inloggningsadress alex@example.test. Är det rätt konto?",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "content",
+          "source": "voice",
+          "text": "Fråga vilket konto som avses utan att påstå att något ändrats eller ge en obegärd uppräkning av ändringar."
+        }
+      ],
+      "expected": {
+        "content": "fail"
+      }
+    },
+    {
+      "id": "intention-not-success",
+      "context": "Kontots identitet är oklar. En annan, oberoende prisändring till 99 kronor per månad är verifierad i utkastet. Inget är sparat.",
+      "sources": {
+        "voice": {
+          "text": "Jag kontrollerar uppgifterna och återkommer.",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "content",
+          "source": "voice",
+          "text": "Undvik obestyrkta påståenden om genomförda ändringar."
+        }
+      ],
+      "expected": {
+        "content": "pass"
+      }
+    },
+    {
+      "id": "intention-missing-required-result",
+      "context": "Kontots identitet är oklar. En annan, oberoende prisändring till 99 kronor per månad är verifierad i utkastet. Inget är sparat.",
+      "sources": {
+        "voice": {
+          "text": "Jag kontrollerar uppgifterna och återkommer.",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "content",
+          "source": "voice",
+          "text": "Bekräfta att utkastet är uppdaterat."
+        }
+      ],
+      "expected": {
+        "content": "fail"
+      }
+    },
+    {
+      "id": "clarification-missing-independent-answer",
+      "context": "Kontots identitet är oklar. En annan, oberoende prisändring till 99 kronor per månad är verifierad i utkastet. Inget är sparat.",
+      "sources": {
+        "voice": {
+          "text": "Vilket konto menar du?",
+          "complete": true
+        }
+      },
+      "requirements": [
+        {
+          "id": "content",
+          "source": "voice",
+          "text": "Fråga vilket konto som avses och besvara den oberoende frågan om kostnaden: 99 kronor per månad."
+        }
+      ],
+      "expected": {
+        "content": "fail"
+      }
     }
   ],
   "regressionSource": "https://github.com/viscalyx/skyttel/issues/373"

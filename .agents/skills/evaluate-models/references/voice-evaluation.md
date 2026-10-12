@@ -63,12 +63,26 @@ behavior. Report it as awaiting clarification, separately from task completion.
 Distinguish genuine ambiguity from unnecessary questions when the available
 evidence already resolves the request.
 
+Record recognition errors in names and addresses as accepted limitations when
+the assistant handles them safely with a relevant clarification. Count these
+separately from failures, with reference speech, recognized text, affected work
+and the assistant's response. A limitation remains visible even in a qualified
+run; zero failures does not mean zero limitations. Wrong changes, invented
+identities and unanswered independent requests remain failures.
+
 Use an approved catalog follow-up when it answers the actual question. If no
 matching follow-up exists, report a coverage gap and leave completion unassessed.
 For optional replies, use the conditional clarification policy in
 [run support](run-support.md#conditional-clarification).
 Preserve raw catalog checks and add the interpretation alongside them; a
 justified question alone neither fails the model nor qualifies the whole task.
+Report raw check counts as automated checks, not model-error counts. Review
+each discrepancy before assigning a behavioral verdict: completed, safely
+awaiting clarification, failed, or unassessed. Qualification with accepted
+limitations requires verified completion of the required work, including any
+approved clarification path. Missing follow-up coverage leaves completion
+unassessed. Link the evidence for each interpretation and preserve prior
+qualification records with a dated policy correction.
 Continue to report independent errors, including missing required guidance,
 incorrect changes and unsafe saves.
 

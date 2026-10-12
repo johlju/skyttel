@@ -48,7 +48,8 @@ including corrections. Identify comparable results by catalog, fixture, commit,
 profile, scoring configuration, modality, limits and repetitions. Explain gaps
 that prevent a comparison. One complete passing repetition qualifies a model
 for its evaluated modality. Run additional repetitions only when the user
-requests them; every planned check must pass. Reuse earlier complete passing
+requests them; every planned requirement must be verified under the modality's
+acceptance policy. Reuse earlier complete passing
 results under this rule, preserving original records and linking a policy
 correction when their recorded qualification changes.
 

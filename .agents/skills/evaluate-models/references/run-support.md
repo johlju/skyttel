@@ -160,7 +160,11 @@ the path; adding replies is scenario maintenance for a later run.
 
 Report unassisted outcomes and assisted completion separately, including the
 question, selected reply, additional calls, elapsed time and costs. A successful
-reply does not erase an unnecessary question or qualify a failed base round.
+reply does not erase an unnecessary question or an independent failure.
+For justified voice clarification, apply the acceptance policy in
+[voice evaluation](voice-evaluation.md#evidence-and-timing). The runner's raw
+qualification remains the unassisted result; publish the evidence-based
+behavioral assessment alongside it, including accepted limitations and gaps.
 Assess question necessity from recognized input and available facts. Include
 waiting and routing time in assisted completion time; never substitute it for
 the base attempt's timing. For voice, verify every possible reply's reviewed
@@ -213,7 +217,8 @@ required correction; start a new run only after the cause is resolved.
 Keep valid candidate failures in evaluation history.
 
 Present correctness first. Use one repetition by default. Qualification requires
-every fixed/content check to pass in the complete selected catalog; all
+every required outcome to be verified in the complete selected catalog under
+the modality's acceptance policy; all
 repetitions requested by the user must pass. Report equally weighted scenario
 medians, min/max, each repetition's total, costs and regressions. Label
 comparisons in text as well as red/yellow/green. Show response-time differences

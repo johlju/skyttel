@@ -25,6 +25,7 @@ export type ConversationReply = {
   /** Voice poll handoff disposition; absent until that connection consumes the reply. */
   voiced?: boolean;
   reply?: string;
+  requiredNotice?: string;
   questionPending?: boolean;
   receipt?: SaveReceipt;
   result?: TextAssistantResult;
@@ -63,6 +64,8 @@ export interface TextAssistantView {
   reply?: string;
   /** Provider conversation is never evidence of a saved or displayed result. */
   modelReply?: string;
+  /** Mandatory server guidance, also included in reply for text display. */
+  requiredNotice?: string;
   /** Explicit follow-up questions from a validated assistant action, never a save receipt. */
   questions?: string[];
   /** The server has asked a necessary question in this conversation and awaits an answer. */

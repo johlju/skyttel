@@ -160,6 +160,34 @@ test('FRAGA-01: en nödvändig identitetsfråga finns i samtalstexten med server
   }
 });
 
+test('FRAGA-10: en väntande fråga bevarar oberoende svar och besked om nytt sparande', async ({
+  page,
+}) => {
+  let call = 0;
+  const answer = 'Lo Exempel är en person i ditt utkast.';
+  const model = textModel(() =>
+    call++ === 0
+      ? [modelTool('ask_questions', { questions: [question], continueResponse: true })]
+      : [modelMessage(answer)],
+  );
+  const { app, path, views } = await fixture(page, model, true);
+  try {
+    await startConversationWithText(page);
+    await send(page, 'Red ut vilken Lo som avses och berätta förslagets objekttyp. Spara.');
+    const transcript = page.getByRole('log', { name: 'Samtalstext' });
+    await expect(transcript).toContainText(question);
+    await expect(transcript).toContainText(answer);
+    await expect(transcript).toContainText('Din tidigare sparbegäran gäller inte längre.');
+    await expect(transcript).toContainText('Be om sparande igen när frågorna är lösta.');
+    await expect.poll(() => views.at(-1)?.questionPending).toBe(true);
+    await readPrivateLo(page);
+    expect((await (await page.request.get(path)).json()).objects).toEqual([]);
+    expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});
+
 test('FRAGA-02: Skyttel frågar om en verklig konflikt i samtalet utan en genererad frågeruta', async ({
   page,
   browser,

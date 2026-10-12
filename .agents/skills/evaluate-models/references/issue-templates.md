@@ -79,11 +79,17 @@ with the application's recorded model. Correctness comes before time and cost.
 ## Result and decision
 
 - Status: pending
-- Attempts: <pass/fail/inconclusive/error/aborted/not run counts, or pending>
+- Automated checks: <pass/fail/inconclusive/error/aborted/not run counts;
+  raw outcomes, not counts of model errors>
+- Behavioral assessment: <completed, safely awaiting clarification, actual
+  failures and unassessed steps; evidence for each reinterpretation>
+- Accepted recognition limitations: <count, affected names/addresses and safe
+  handling; separate from actual failures, including in a qualified run>
 - Assistance: <extra replies, completion after help, question necessity and
   additional time/cost; preserve the unassisted outcomes>
-- Qualification: <qualified, failed or incomplete; one complete passing round
-  qualifies, every explicitly requested round must pass>
+- Qualification: <qualified, qualified with limitations, failed or incomplete;
+  one fully verified round qualifies under the modality's acceptance policy,
+  every explicitly requested round must meet it>
 - Response time and costs: <comparable results and regressions, or unavailable>
 - Recommendation: pending
 - Evidence: <links to versioned records in comments>

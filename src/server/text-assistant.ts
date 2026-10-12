@@ -146,6 +146,7 @@ export function textAssistantRoutes({
     session.reply = undefined;
     session.modelReply = undefined;
     session.questions = undefined;
+    session.requiredNotice = undefined;
     session.previousFailure = undefined;
     session.receipt = undefined;
     session.saveCheck = undefined;
@@ -192,6 +193,7 @@ export function textAssistantRoutes({
       review,
       reply,
       modelReply,
+      requiredNotice,
       questions,
       result,
       error,
@@ -230,6 +232,7 @@ export function textAssistantRoutes({
       review,
       reply,
       modelReply,
+      requiredNotice,
       questions,
       questionPending: Boolean(questions?.length),
       result,
@@ -579,6 +582,11 @@ export function textAssistantRoutes({
   function verifiedReply(session: Session) {
     return session.result?.message ?? (session.receipt ? savedReply : undefined);
   }
+  function rememberQuestions(session: Session, questions: string[]) {
+    if (!questions.length) return;
+    session.questions = [...new Set([...(session.questions ?? []), ...questions])];
+    session.modelReply = session.questions.join(' ');
+  }
   function saved(session: Session, receipt: TextAssistantView['receipt']) {
     session.saveIntent = undefined;
     session.receipt = receipt;
@@ -588,6 +596,7 @@ export function textAssistantRoutes({
     session.conversation.push({ role: 'assistant', text: session.reply });
     session.modelReply = undefined;
     session.questions = undefined;
+    session.requiredNotice = undefined;
     session.error = undefined;
     session.phase = 'ready';
     session.result = undefined;
@@ -718,6 +727,7 @@ export function textAssistantRoutes({
     session.modelReply = undefined;
     session.reply = undefined;
     session.questions = undefined;
+    session.requiredNotice = undefined;
     session.result = undefined;
     session.error = undefined;
     session.receipt = undefined;
@@ -842,7 +852,7 @@ export function textAssistantRoutes({
           type: 'function',
           name: 'submit_changes',
           description:
-            'Utför ändringarna som en ordnad batch med vanliga MCP-verktyg och aktuella versioner. Behåll andra förslag. completion draft lämnar allt osparat; save kräver ett aktuellt uttryckligt besked om hela utkastet. questions är korta riktade följdfrågor, aldrig resultatpåståenden. Sätt continueResponse true om användaren också begär faktasvar, detaljer eller markering som återstår efter ändringarna; läs då resultatet och slutför resten i nästa modellomgång. Annars avslutar servern. Frågor till användaren stoppar alltid fortsättningen.',
+            'Utför ändringarna som en ordnad batch med vanliga MCP-verktyg och aktuella versioner. Behåll andra förslag. completion draft lämnar allt osparat; save kräver ett aktuellt uttryckligt besked om hela utkastet. questions är korta riktade följdfrågor, aldrig resultatpåståenden. Sätt continueResponse true om oberoende faktasvar, detaljer eller markering återstår, även när frågor väntar. Servern behåller frågorna och hindrar sparande tills användaren svarar. Annars avslutar servern.',
           parameters: {
             type: 'object',
             properties: {
@@ -887,7 +897,7 @@ export function textAssistantRoutes({
           type: 'function',
           name: 'ask_questions',
           description:
-            'Ställ nödvändiga riktade frågor i samtalet och invänta svar. Använd även utan ändringsoperationer, till exempel för obesvarade identiteter eller konflikter. Beskriv de berörda namnen och konkreta valen från aktuellt underlag; gissa inga svar. Detta ändrar eller sparar ingenting.',
+            'Ställ nödvändiga riktade frågor i samtalet och invänta svar. Använd även utan ändringsoperationer, till exempel för obesvarade identiteter eller konflikter. Beskriv de berörda namnen och konkreta valen från aktuellt underlag; gissa inga svar. Sätt continueResponse true när oberoende beställda delar återstår. Frågorna behålls; detta ändrar eller sparar ingenting.',
           parameters: {
             type: 'object',
             properties: {
@@ -897,6 +907,7 @@ export function textAssistantRoutes({
                 maxItems: 3,
                 items: { type: 'string', maxLength: 240 },
               },
+              continueResponse: { type: 'boolean' },
             },
             required: ['questions'],
             additionalProperties: false,
@@ -1012,7 +1023,14 @@ export function textAssistantRoutes({
             calls.push({ ...original, name: 'save_draft', arguments: '{}' });
         }
         if (!calls.length) {
-          session.modelReply = response.output_text;
+          session.modelReply = [
+            response.output_text,
+            ...(session.questions ?? []).filter(
+              (question) => !response.output_text.includes(question),
+            ),
+          ]
+            .filter(Boolean)
+            .join('\n');
           if (response.output_text)
             session.conversation.push({ role: 'assistant', text: response.output_text });
           session.reply =
@@ -1030,11 +1048,11 @@ export function textAssistantRoutes({
             const value = z
               .object({
                 questions: z.array(z.string().trim().min(1).max(240)).min(1).max(3),
+                continueResponse: z.boolean().default(false),
               })
               .strict()
               .parse(args);
-            session.questions = value.questions;
-            session.modelReply = value.questions.join(' ');
+            rememberQuestions(session, value.questions);
             session.reply = verifiedReply(session);
             session.phase = 'ready';
             session.input.push({
@@ -1042,7 +1060,11 @@ export function textAssistantRoutes({
               call_id: action.call_id,
               output: JSON.stringify({ questionPending: true }),
             });
-            session.conversation.push({ role: 'assistant', text: session.modelReply });
+            session.conversation.push({ role: 'assistant', text: value.questions.join(' ') });
+            if (value.continueResponse) {
+              session.phase = 'working';
+              break;
+            }
             return;
           }
           if (action.name === 'report_result') {
@@ -1092,8 +1114,7 @@ export function textAssistantRoutes({
             }
             guard();
             session.reply = session.result.message;
-            session.modelReply = undefined;
-            session.questions = undefined;
+            session.modelReply = session.questions?.join(' ');
             session.phase = 'ready';
             session.conversation.push({ role: 'assistant', text: session.reply });
             session.input.push({
@@ -1168,6 +1189,10 @@ export function textAssistantRoutes({
           if (!tool) throw new MapError('assistant_unknown_tool', 409);
           const isSave = action.name === 'save_draft' || action.name === 'prepare_save';
           let previousReview: TextAssistantReview | undefined;
+          if (isSave && session.questions?.length) {
+            session.phase = 'ready';
+            return;
+          }
           if (isSave && !session.saveIntent && !originalSaveIntent)
             throw new MapError('assistant_save_not_requested', 409);
           if (isSave && !(await saveReady(session, serial, guard))) {
@@ -1264,8 +1289,7 @@ export function textAssistantRoutes({
         }
         if (combined) {
           session.reply = verifiedReply(session);
-          session.modelReply = combined.questions.join(' ') || undefined;
-          session.questions = combined.questions.length ? combined.questions : undefined;
+          rememberQuestions(session, combined.questions);
           session.phase = 'ready';
           session.input.push({
             type: 'function_call_output',
@@ -1281,7 +1305,7 @@ export function textAssistantRoutes({
           if (session.reply) session.conversation.push({ role: 'assistant', text: session.reply });
           if (session.modelReply)
             session.conversation.push({ role: 'assistant', text: session.modelReply });
-          if (combined.continueResponse && !combined.questions.length) {
+          if (combined.continueResponse) {
             session.phase = 'working';
             continue;
           }
@@ -1310,6 +1334,7 @@ export function textAssistantRoutes({
       session.reply = session.previousFailure;
       session.modelReply = undefined;
       session.questions = undefined;
+      session.requiredNotice = undefined;
       try {
         await refresh(session, guard);
       } catch {
@@ -1348,6 +1373,7 @@ export function textAssistantRoutes({
     session.reply = undefined;
     session.modelReply = undefined;
     session.questions = undefined;
+    session.requiredNotice = undefined;
     session.receipt = undefined;
     session.saveCheck = undefined;
     session.discarded = undefined;
@@ -1393,7 +1419,8 @@ export function textAssistantRoutes({
           session.saveIntent = undefined;
           const notice =
             'Din tidigare sparbegäran gäller inte längre. Be om sparande igen när frågorna är lösta.';
-          session.modelReply = `${session.modelReply ?? ''} ${notice}`.trim();
+          session.requiredNotice = notice;
+          session.reply = [session.reply, notice].filter(Boolean).join('\n');
           session.conversation.push({ role: 'assistant', text: notice });
         } else if (
           session.phase === 'ready' &&
@@ -1467,6 +1494,7 @@ export function textAssistantRoutes({
             revision,
             source: message.voice ? 'voice' : 'text',
             reply: session.reply,
+            requiredNotice: session.requiredNotice,
             questionPending: view(session).questionPending,
             receipt: session.receipt,
             result: session.result,
@@ -1804,6 +1832,7 @@ export function textAssistantRoutes({
     session.conversation.push({ role: 'assistant', text: session.reply });
     session.modelReply = undefined;
     session.questions = undefined;
+    session.requiredNotice = undefined;
     session.phase = session.pendingSave ? 'recovery' : 'ready';
     await refresh(session, checkContext);
     checkContext();
@@ -1872,6 +1901,7 @@ export function textAssistantRoutes({
     session.reply = checked.reply;
     session.modelReply = undefined;
     session.questions = undefined;
+    session.requiredNotice = undefined;
     session.error = undefined;
     session.result = undefined;
     session.pendingSave = undefined;

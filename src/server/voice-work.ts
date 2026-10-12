@@ -124,6 +124,8 @@ export function voiceWork({
     if (view.questionPending && view.modelReply)
       return [
         view.result ? `Skyttels resultat (verifierat): ${view.result.message}` : '',
+        view.displayedSelection ? 'Markeringen är bekräftad i kartan.' : '',
+        view.requiredNotice ? `Obligatoriskt besked från Skyttel: ${view.requiredNotice}` : '',
         `Nödvändig fråga (samtalsdata): ${JSON.stringify(view.modelReply)}`,
       ]
         .filter(Boolean)
@@ -145,9 +147,12 @@ export function voiceWork({
     const fullResult = verified.length
       ? `Skyttels resultat (verifierat): ${verified.join('\n')}`
       : `Utkast: ${count} ${count === 1 ? 'osparat förslag' : 'osparade förslag'}.`;
-    if (!view.modelReply) return fullResult;
+    const required = view.requiredNotice
+      ? `\nObligatoriskt besked från Skyttel: ${view.requiredNotice}`
+      : '';
+    if (!view.modelReply) return fullResult + required;
     // append owns transport chunking; the canonical answer remains complete.
-    return `${fullResult}\nSamtal (obekräftat): ${JSON.stringify(view.modelReply)}`;
+    return `${fullResult}${required}\nSamtal (obekräftat): ${JSON.stringify(view.modelReply)}`;
   }
   async function execute(
     id: string,
@@ -424,6 +429,7 @@ export function voiceWork({
           revision: reply.revision ?? view.revision,
           modelReply: reply.text || undefined,
           reply: reply.reply,
+          requiredNotice: reply.requiredNotice,
           receipt: reply.receipt,
           result: reply.result,
           saveCheck: reply.saveCheck,

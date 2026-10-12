@@ -181,16 +181,20 @@ test('a typed partial change delivers its verified result and full follow-up to 
   expect(current.result).toEqual({ kind: 'draft', message: 'Utkastet är uppdaterat.' });
   expect(current.questionPending).toBe(true);
   expect(current.modelReply).toContain(question);
-  expect(current.modelReply).toContain('Din tidigare sparbegäran gäller inte längre.');
+  expect(current.modelReply).toBe(question);
+  expect(current.requiredNotice).toBe(
+    'Din tidigare sparbegäran gäller inte längre. Be om sparande igen när frågorna är lösta.',
+  );
+  expect(current.reply).toContain(current.requiredNotice);
   expect(current.receipt).toBeUndefined();
   const result = await poll(true);
   const parts = () => voiceAnswerParts(live.sent);
   const content = parts().join('');
   expect(content).toBe(
-    `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nNödvändig fråga (samtalsdata): ${JSON.stringify(current.modelReply)}`,
+    `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nObligatoriskt besked från Skyttel: ${current.requiredNotice}\nNödvändig fråga (samtalsdata): ${JSON.stringify(current.modelReply)}`,
   );
   expect(result.voice.response).toMatchObject({
-    text: `Utkastet är uppdaterat.\n${current.modelReply}`,
+    text: `${current.reply}\n${current.modelReply}`,
     questionPending: true,
   });
   await poll(true);

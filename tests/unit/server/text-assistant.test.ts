@@ -595,7 +595,7 @@ test.each(['draft', 'save'])(
           arguments: { id, baseRevision: null, value: { typeId, name: id, description: '' } },
         })),
         questions: completion === 'draft' ? ['Vem använder cykeln?'] : [],
-        continueResponse: completion === 'draft',
+        continueResponse: false,
       }),
     ]);
     await setup(model.provider);
@@ -626,6 +626,116 @@ test.each(['draft', 'save'])(
       ]);
       expect(map.draft.changes).toEqual([]);
     }
+  },
+);
+
+test.each(['submit_changes', 'ask_questions'])(
+  'pending questions from %s preserve independent details and answers without allowing a save',
+  { tags: ['technical'] },
+  async (source) => {
+    let typeId = '';
+    const question = 'Vem använder cykeln?';
+    let index = -1;
+    const model = textModel(() => {
+      index++;
+      if (index === 0)
+        return [
+          modelTool(source, {
+            questions: [question],
+            continueResponse: true,
+            ...(source === 'submit_changes'
+              ? {
+                  version: 1,
+                  contentVersion: 1,
+                  completion: 'draft',
+                  operations: [
+                    {
+                      name: 'propose_object',
+                      arguments: {
+                        id: 'bike',
+                        baseRevision: null,
+                        value: { typeId, name: 'Cykeln', description: '' },
+                      },
+                    },
+                  ],
+                }
+              : {}),
+          }),
+        ];
+      if (index === 1)
+        return [modelTool('report_result', { source: 'draft', continueResponse: true })];
+      return [modelMessage('Hjälmen finns i ditt utkast.')];
+    });
+    await setup(model.provider);
+    typeId = (await webProposal('Hjälmen')).typeId;
+    const status = await message(
+      await start(),
+      'Lägg till cykeln med användaren. Beskriv utkastet och var hjälmen finns. Spara.',
+    );
+    expect(model.requests).toHaveLength(3);
+    expect(status).toMatchObject({ phase: 'ready', questionPending: true, questions: [question] });
+    expect(status.modelReply).toBe(`Hjälmen finns i ditt utkast.\n${question}`);
+    expect(status.reply).toContain('Hjälmen');
+    expect(status.reply).toContain(status.requiredNotice);
+    expect(status.requiredNotice).toContain('Be om sparande igen');
+    expect(status.receipt).toBeUndefined();
+    expect(status.operations).toEqual([]);
+    const next = await message(status, 'Var finns hjälmen?');
+    expect(next.questions).toBeUndefined();
+    expect(next.requiredNotice).toBeUndefined();
+    expect(next.receipt).toBeUndefined();
+  },
+);
+
+test.each(['prepare_save', 'save_draft', 'submit_changes'])(
+  'a model cannot save past an unanswered question through %s',
+  { tags: ['technical'] },
+  async (action) => {
+    let typeId = '';
+    let index = -1;
+    const model = textModel(() =>
+      ++index === 0
+        ? [
+            modelTool('ask_questions', {
+              questions: ['Vem använder cykeln?'],
+              continueResponse: true,
+            }),
+          ]
+        : [
+            modelTool(
+              action,
+              action === 'submit_changes'
+                ? {
+                    version: 1,
+                    contentVersion: 1,
+                    completion: 'save',
+                    operations: [
+                      {
+                        name: 'propose_object',
+                        arguments: {
+                          id: 'bike',
+                          baseRevision: null,
+                          value: { typeId, name: 'Cykeln', description: '' },
+                        },
+                      },
+                    ],
+                  }
+                : { version: 1, contentVersion: 1, operationId: 'blocked-save' },
+            ),
+          ],
+    );
+    await setup(model.provider);
+    typeId = (await webProposal()).typeId;
+    const status = await message(await start(), 'Lägg till cykeln med användaren. Spara.');
+    expect(status).toMatchObject({ phase: 'ready', questionPending: true });
+    expect(status.modelReply).toContain('Vem använder cykeln?');
+    expect(status.requiredNotice).toContain('Be om sparande igen');
+    expect(status.receipt).toBeUndefined();
+    expect(status.operations).toEqual([]);
+    const history = await (
+      await browser.get(`${path.replace('/text-assistant', '/map')}/history`)
+    ).json();
+    expect(history.history).toEqual([]);
   },
 );
 

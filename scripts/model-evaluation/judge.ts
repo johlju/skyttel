@@ -21,6 +21,10 @@ export const judgeInstructions =
   'även när de ryms i en enda kort mening utan punktlista. Ett krav på besked utan ' +
   'obegärd uppräkning uppfylls av en allmän bekräftelse om utkastet; kort längd ' +
   'gör inte en redovisning av enskilda ändringar till en sådan bekräftelse. ' +
+  'Identifierande uppgifter som behövs i en riktad följdfråga är inte en ' +
+  'redovisning av genomförda ändringar. Skilj en avsikt eller ett neutralt ' +
+  'mellanbesked från ett påstående om genomfört resultat. Avsikter ersätter ' +
+  'aldrig ett obligatoriskt resultatbesked. ' +
   'Obeställda sparfrågor och obestyrkta framgångsbesked är fail. ' +
   'Returnera ett utfall per krav-ID med en kort motivering.';
 
