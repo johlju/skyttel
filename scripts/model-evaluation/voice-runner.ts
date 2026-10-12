@@ -59,6 +59,50 @@ export async function runVoiceScenario(
   const queue: { step: ScenarioStep; parent?: string; startedAt?: number }[] = scenario.steps.map(
     (step) => ({ step }),
   );
+  async function judgeWithHeartbeat(input: JudgeInput) {
+    if (!options.judge) throw new Error('evaluation_judge_missing');
+    const id = voiceId;
+    if (!id) return options.judge(input);
+    let pending = Promise.resolve();
+    let polling = false;
+    let failure: unknown;
+    // The browser remains present while scoring; this is liveness, not a
+    // processing deadline. Finish each poll before playing the next input.
+    const timer = setInterval(() => {
+      if (polling || failure || id !== voiceId) return;
+      polling = true;
+      pending = (async () => {
+        const view = await environment.get<VoiceAssistantResponse['assistant']>(environment.path);
+        if (id !== voiceId) return;
+        const status = await environment.post<VoiceAssistantResponse>(
+          `${environment.path}/voice/${id}/poll`,
+          {
+            revision: view.revision,
+            draftVersion: view.review.version,
+            contentVersion: view.review.contentVersion,
+            microphoneOn: true,
+            microphoneActive: false,
+          },
+        );
+        if (status.voice.error) throw new Error(status.voice.error);
+      })()
+        .catch((error) => {
+          failure = error;
+        })
+        .finally(() => {
+          polling = false;
+        });
+    }, 1000);
+    try {
+      const result = await options.judge(input);
+      await pending;
+      if (failure) throw failure;
+      return result;
+    } finally {
+      clearInterval(timer);
+      await pending;
+    }
+  }
   async function closeVoice() {
     clearTimeout(sessionTimer);
     sessionTimer = undefined;
@@ -277,7 +321,7 @@ export async function runVoiceScenario(
               },
               checkWaiting: (waiting) =>
                 environment.check(step, view, modelActions(events.slice(offset)), waiting),
-              judge: options.judge,
+              judge: options.judge ? judgeWithHeartbeat : undefined,
             });
             if (followUp && !options.stopped?.()) {
               queue.splice(index + 1, 0, {
@@ -329,7 +373,7 @@ export async function runVoiceScenario(
           ),
         };
         return options.judge
-          ? options.judge(input)
+          ? judgeWithHeartbeat(input)
           : input.requirements.map((item) => ({
               id: item.id,
               outcome: 'inconclusive' as const,

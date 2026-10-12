@@ -12,7 +12,10 @@ import { runVoiceScenario } from '../../../scripts/model-evaluation/voice-runner
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 const scenario: Scenario = {
   id: 'conditional-price',
   title: 'Conditional price clarification',
@@ -230,73 +233,106 @@ test('conditional reply identities cannot collide with ordinary steps', {
   expect(() => scenarioUtterances(invalid, true)).toThrow('evaluation_duplicate_step_ids');
 });
 
-test('voice plays a selected reply in the same connection and retains the failed base attempt', {
-  tags: ['technical'],
-}, async () => {
-  let current = 'price';
-  let observe: NonNullable<Parameters<typeof environments.evaluationEnvironment>[1]>['observe'];
-  const view = () => ({
-    revision: 1,
-    review: { version: 1, contentVersion: 1 },
-    phase: 'ready',
-    queuedMessages: 0,
-    reply: 'Svar.',
-    modelReply: 'Menar du abonnemanget?',
-    questionPending: current === 'price',
-  });
-  const environment = {
-    path: 'assistant',
-    assistant: { id: 'assistant' },
-    get: async () => view(),
-    post: async (path: string) => {
-      if (path.endsWith('/poll')) {
-        observe?.({
-          at: Date.now() - 3000,
-          sessionId: 'test',
-          kind: 'voice_event',
-          data: { role: 'assistant', delta: 'Menar du abonnemanget?' },
-        });
-        observe?.({ at: Date.now() - 3000, sessionId: 'test', kind: 'voice_commentary', data: {} });
-      }
-      return { assistant: view(), voice: { phase: 'listening' } };
-    },
-    check: async (_step: unknown, _view: unknown, _actions: unknown, waiting?: unknown) =>
-      current === 'price' && !waiting ? ['effective_objects'] : [],
-    judgeContext: () => 'Fixture',
-    read: async () => ({}),
-    close: vi.fn(async () => {}),
-  };
-  vi.spyOn(environments, 'evaluationEnvironment').mockImplementation(async (_scenario, options) => {
-    observe = options?.observe;
-    return environment as unknown as Awaited<ReturnType<typeof environments.evaluationEnvironment>>;
-  });
-  const connection = {
-    start: vi.fn(async () => 'voice'),
-    play: vi.fn(async (id: string) => {
-      current = id;
-      return { startedAt: Date.now() - 4000, endedAt: Date.now() - 3000 };
-    }),
-    retire: vi.fn(async () => {}),
-    close: vi.fn(async () => {}),
-  };
-  vi.spyOn(speech, 'speechConnection').mockResolvedValue(
-    connection as unknown as Awaited<ReturnType<typeof speech.speechConnection>>,
-  );
-  vi.spyOn(speech, 'referenceSpeech').mockResolvedValue({
-    clip: { frames: 24000, sampleRate: 24000 },
-    pcm: '',
-  } as Awaited<ReturnType<typeof speech.referenceSpeech>>);
-  const result = await runVoiceScenario(
-    scenario,
-    {},
-    { profile: 'local', repetition: 1, followUps: true, judge: passingJudge },
-  );
-  expect(connection.play.mock.calls.map(([id]) => id)).toEqual(['price', 'clarify-price', 'next']);
-  expect(connection.start).toHaveBeenCalledOnce();
-  expect(connection.close).toHaveBeenCalledOnce();
-  expect(result.attempts.map((attempt) => attempt.outcome)).toEqual(['fail', 'pass', 'pass']);
-  expect(result.attempts[1].followUpFor).toBe('price');
-});
+test.each([0, 12000])(
+  'voice retains the base verdict and connection during %i ms judge calls',
+  {
+    tags: ['technical'],
+  },
+  async (judgeDelay) => {
+    vi.useFakeTimers();
+    let lastPoll = Date.now();
+    let current = 'price';
+    let observe: NonNullable<Parameters<typeof environments.evaluationEnvironment>[1]>['observe'];
+    const view = () => ({
+      revision: 1,
+      review: { version: 1, contentVersion: 1 },
+      phase: 'ready',
+      queuedMessages: 0,
+      reply: 'Svar.',
+      modelReply: 'Menar du abonnemanget?',
+      questionPending: current === 'price',
+    });
+    const environment = {
+      path: 'assistant',
+      assistant: { id: 'assistant' },
+      get: async () => view(),
+      post: async (path: string) => {
+        if (path.endsWith('/poll')) {
+          if (Date.now() - lastPoll > 10000) throw new Error('voice_connection_lost');
+          lastPoll = Date.now();
+          observe?.({
+            at: Date.now() - 3000,
+            sessionId: 'test',
+            kind: 'voice_event',
+            data: { role: 'assistant', delta: 'Menar du abonnemanget?' },
+          });
+          observe?.({
+            at: Date.now() - 3000,
+            sessionId: 'test',
+            kind: 'voice_commentary',
+            data: {},
+          });
+        }
+        return { assistant: view(), voice: { phase: 'listening' } };
+      },
+      check: async (_step: unknown, _view: unknown, _actions: unknown, waiting?: unknown) =>
+        current === 'price' && !waiting ? ['effective_objects'] : [],
+      judgeContext: () => 'Fixture',
+      read: async () => ({}),
+      close: vi.fn(async () => {}),
+    };
+    vi.spyOn(environments, 'evaluationEnvironment').mockImplementation(
+      async (_scenario, options) => {
+        observe = options?.observe;
+        return environment as unknown as Awaited<
+          ReturnType<typeof environments.evaluationEnvironment>
+        >;
+      },
+    );
+    const connection = {
+      start: vi.fn(async () => 'voice'),
+      play: vi.fn(async (id: string) => {
+        if (Date.now() - lastPoll > 10000) throw new Error('voice_connection_lost');
+        current = id;
+        return { startedAt: Date.now() - 4000, endedAt: Date.now() - 3000 };
+      }),
+      retire: vi.fn(async () => {}),
+      close: vi.fn(async () => {}),
+    };
+    vi.spyOn(speech, 'speechConnection').mockResolvedValue(
+      connection as unknown as Awaited<ReturnType<typeof speech.speechConnection>>,
+    );
+    vi.spyOn(speech, 'referenceSpeech').mockResolvedValue({
+      clip: { frames: 24000, sampleRate: 24000 },
+      pcm: '',
+    } as Awaited<ReturnType<typeof speech.referenceSpeech>>);
+    const run = runVoiceScenario(
+      scenario,
+      {},
+      {
+        profile: 'local',
+        repetition: 1,
+        followUps: true,
+        judge: async (input) => {
+          if (judgeDelay) await new Promise((resolve) => setTimeout(resolve, judgeDelay));
+          return passingJudge(input);
+        },
+      },
+    );
+    await vi.advanceTimersByTimeAsync(judgeDelay * 4);
+    const result = await run;
+    expect(connection.play.mock.calls.map(([id]) => id)).toEqual([
+      'price',
+      'clarify-price',
+      'next',
+    ]);
+    expect(connection.start).toHaveBeenCalledOnce();
+    expect(connection.close).toHaveBeenCalledOnce();
+    expect(result.attempts.map((attempt) => attempt.outcome)).toEqual(['fail', 'pass', 'pass']);
+    expect(result.attempts[1].followUpFor).toBe('price');
+    expect(vi.getTimerCount()).toBe(0);
+  },
+);
 
 test('missing optional audio stops voice before creating the application or session', {
   tags: ['technical'],
