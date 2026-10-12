@@ -3,6 +3,7 @@ import type { VoiceAssistantResponse } from '../../src/shared/voice-assistant.js
 import type { createInstallation } from '../../tests/support/installation.js';
 import catalog from './catalog.json' with { type: 'json' };
 import { evaluationEnvironment } from './environment.js';
+import { scenarioUtterances, selectFollowUp } from './follow-ups.js';
 import {
   concludeAttempt,
   failAttempt,
@@ -13,7 +14,7 @@ import {
 } from './observations.js';
 import type { RunOptions } from './runner.js';
 import { type ReferenceVoice, referenceSpeech, speechConnection } from './speech.js';
-import type { Attempt, JudgeInput, Scenario } from './types.js';
+import type { Attempt, JudgeInput, Scenario, ScenarioStep } from './types.js';
 
 /** Keeps ordinary multi-step dialogs connected, closes before the final judge,
  * and starts a second session only after the ordinary summary installation. */
@@ -26,6 +27,13 @@ export async function runVoiceScenario(
     sessionTimeLimit?: () => void;
   },
 ) {
+  // Optional branches must have reviewed, matching audio before opening a paid session.
+  if (options.followUps)
+    await Promise.all(
+      scenarioUtterances(scenario, true).map((step) =>
+        referenceSpeech(step.id, step.text, options.referenceVoice),
+      ),
+    );
   if (
     options.maximumSeconds !== undefined &&
     (!Number.isSafeInteger(options.maximumSeconds) ||
@@ -48,6 +56,9 @@ export async function runVoiceScenario(
   let sessionTimer: ReturnType<typeof setTimeout> | undefined;
   let closing: Promise<void> | undefined;
   let sessionExpired = false;
+  const queue: { step: ScenarioStep; parent?: string; startedAt?: number }[] = scenario.steps.map(
+    (step) => ({ step }),
+  );
   async function closeVoice() {
     clearTimeout(sessionTimer);
     sessionTimer = undefined;
@@ -71,7 +82,9 @@ export async function runVoiceScenario(
     return closing;
   }
   try {
-    for (const [index, step] of scenario.steps.entries()) {
+    for (const [index, entry] of queue.entries()) {
+      const { step } = entry;
+      let continuing = false;
       const result: Attempt = {
         scenario: scenario.id,
         step: step.id,
@@ -82,6 +95,7 @@ export async function runVoiceScenario(
         fixed: [],
         elapsedMs: null,
         backendCostUsd: 0,
+        ...(entry.parent ? { followUpFor: entry.parent } : {}),
       };
       const before = options.costs?.() ?? 0;
       const judgeBefore = options.judgeCosts?.() ?? 0;
@@ -234,7 +248,8 @@ export async function runVoiceScenario(
           result.diagnostics = observationDiagnostics(events.slice(offset), startedAt);
           const completionMs =
             stateAt === undefined ? null : Math.max(stateAt, latestOutput) - startedAt;
-          if (index === scenario.steps.length - 1) await closeVoice();
+          if (index === queue.length - 1 && !(options.followUps && step.followUps?.length))
+            await closeVoice();
           result.content = await judge(
             {
               backend: { text: [view.reply, view.modelReply].filter(Boolean).join('\n'), complete },
@@ -243,9 +258,45 @@ export async function runVoiceScenario(
             step.expected.requirements,
           );
           concludeAttempt(result, completionMs);
+          if (entry.startedAt !== undefined)
+            result.assistedElapsedMs =
+              result.outcome === 'pass' && completionMs !== null
+                ? startedAt + completionMs - entry.startedAt
+                : null;
+          if (options.followUps && !options.stopped?.()) {
+            const followUp = await selectFollowUp({
+              step,
+              attempt: result,
+              questionPending: Boolean(view.questionPending),
+              sources: {
+                backend: {
+                  text: [view.reply, view.modelReply].filter(Boolean).join('\n'),
+                  complete,
+                },
+                voice: { text: output, complete },
+              },
+              checkWaiting: (waiting) =>
+                environment.check(step, view, modelActions(events.slice(offset)), waiting),
+              judge: options.judge,
+            });
+            if (followUp && !options.stopped?.()) {
+              queue.splice(index + 1, 0, {
+                step: {
+                  id: followUp.id,
+                  text: followUp.text,
+                  expected: { requirements: followUp.requirements },
+                },
+                parent: step.id,
+                startedAt,
+              });
+              continuing = true;
+            }
+          }
+          if (index === queue.length - 1) await closeVoice();
         }
         if (sessionExpired) throw new Error('evaluation_live_time_limit');
-        if (options.stopped?.()) throw new Error(options.stopReason?.() ?? 'evaluation_stopped');
+        if (options.stopped?.() && !(result.outcome === 'fail' && result.followUpSelection))
+          throw new Error(options.stopReason?.() ?? 'evaluation_stopped');
       } catch (error) {
         failAttempt(result, error, Date.now() - startedAt, {
           stopped: options.stopped?.() ?? false,
@@ -259,7 +310,7 @@ export async function runVoiceScenario(
       result.judgeCostUsd = judgeAfter == null ? null : judgeAfter - judgeBefore;
       attempts.push(result);
       await options.record?.(result);
-      if (result.outcome !== 'pass') {
+      if (result.outcome !== 'pass' && !continuing) {
         blocked = `${step.id}: ${result.outcome}`;
         await closeVoice();
       }

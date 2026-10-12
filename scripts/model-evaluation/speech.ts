@@ -14,6 +14,8 @@ export async function referenceSpeech(
   const clips = manifest.voices[voice]?.clips;
   const clip = clips?.[id as keyof typeof clips];
   if (!clip) throw new Error('evaluation_audio_missing');
+  const review = 'review' in clip ? clip.review : manifest.review;
+  if (review.status !== 'approved') throw new Error('evaluation_audio_unreviewed');
   if (expectedText !== undefined && clip.text !== expectedText)
     throw new Error(`evaluation_audio_reference_mismatch:${id}`);
   const bytes = await readFile(new URL(`./audio/${clip.file}`, import.meta.url));

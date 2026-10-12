@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, test, vi } from 'vitest';
 import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
+import { scenarioUtterances } from '../../../scripts/model-evaluation/follow-ups.js';
 import { generateSpeech, speechRecipe } from '../../../scripts/model-evaluation/generate-speech.js';
 import type { Catalog } from '../../../scripts/model-evaluation/types.js';
 
@@ -43,8 +44,7 @@ test.each([undefined, [], ['kort-utan-sparande']])(
       ids ??
       (catalog as Catalog).scenarios
         .filter((scenario) => scenario.voice)
-        .flatMap((scenario) => scenario.steps)
-        .filter((step) => 'text' in step)
+        .flatMap((scenario) => scenarioUtterances(scenario, true))
         .map((step) => step.id);
     expect(result.records.map((record) => record.id)).toEqual(expected);
     expect(create).toHaveBeenCalledTimes(expected.length);

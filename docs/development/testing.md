@@ -44,6 +44,14 @@ testing low or medium first. Other efforts are explored only for a requested
 effort survey. A stopped or incomplete run remains useful evidence but cannot
 establish a model's qualification.
 
+Optional catalog replies can exercise clarification without replacing the
+base result. Enable them explicitly with `EvaluationPlan.followUps` and use
+the same policy for compared models. The runner sends a reply only after a
+matching question and a safe, declared waiting state. It records completion
+after help separately from the original verdict, including extra time and
+cost. A successful follow-up does not by itself establish qualification.
+Voice runs require reviewed audio for every possible reply before payment.
+
 Model calls and test steps have no fixed processing deadline. Record elapsed
 time for each call and response; assess correctness before speed and cost.
 The user decides whether the measured speed is reasonable for its cost.

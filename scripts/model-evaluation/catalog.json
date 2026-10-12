@@ -784,6 +784,30 @@
         {
           "id": "oklarheter-med-sparbegaran",
           "text": "Lo Berg använder Spotify. Priset för Molnlagring Plus ska vara 229 kronor per månad. Alex använder Microsoft 365 och Spotify Premium Family ska betalas från bankkontot. Spara hela utkastet.",
+          "followUps": [
+            {
+              "id": "oklarheter-pris-foljdsvar",
+              "text": "Jag menar abonnemanget Molnlagring Plus.",
+              "when": "Svaret ber uttryckligen användaren klargöra om månadspriset gäller tjänsten Molnlagring Plus eller dess abonnemang. Ett påstående om priset eller enbart frågor om person och bank uppfyller inte kravet.",
+              "waiting": {
+                "addRelationships": [
+                  {
+                    "source": "lo",
+                    "type": "Använder",
+                    "target": "spotify",
+                    "knowledge": "known"
+                  }
+                ],
+                "saves": 0,
+                "requirements": []
+              },
+              "requirements": [
+                "Fråga om Alex Lind eller Alex Berg avses.",
+                "Fråga om Bankkonto Hushåll eller Bankkonto Reserv avses.",
+                "Behandla prisets mål som klarlagt och påstå inte att utkastet är sparat."
+              ]
+            }
+          ],
           "expected": {
             "objects": {
               "cloud-sub": {

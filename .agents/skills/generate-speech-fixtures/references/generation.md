@@ -35,7 +35,8 @@ output directory for an intentional replacement. Select only the needed
 utterances and voices:
 
 - `--step <catalog-step-id>` selects an utterance; repeat for several.
-  Omitting it selects all voice utterances. Summary transitions have no audio.
+  This includes IDs of optional catalog follow-ups. Omitting it selects all
+  voice utterances, including those replies. Summary transitions have no audio.
 - `--voice <name>` selects a voice; repeat for several. Omitting it selects
   the recipe's voices.
 - `--speed <value>` overrides speed for the selected output batch. For an

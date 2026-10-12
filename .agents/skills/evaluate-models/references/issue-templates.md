@@ -50,6 +50,7 @@ with the application's recorded model. Correctness comes before time and cost.
 - Effort, service tier and limits: <settings>
 - Modality: <text or voice; voice model and backend profile when applicable>
 - Scenarios and repetitions: <complete catalog; one unless more are requested>
+- Conditional replies: <enabled or disabled; declared branches and policy>
 - Application model: <effective profile and recorded result issue, or missing>
 - Related results: <comparable issues; explicit rerun predecessor if present>
 - Voice backend selection: <linked text evidence and reason, explicit user
@@ -79,6 +80,8 @@ with the application's recorded model. Correctness comes before time and cost.
 
 - Status: pending
 - Attempts: <pass/fail/inconclusive/error/aborted/not run counts, or pending>
+- Assistance: <extra replies, completion after help, question necessity and
+  additional time/cost; preserve the unassisted outcomes>
 - Qualification: <qualified, failed or incomplete; one complete passing round
   qualifies, every explicitly requested round must pass>
 - Response time and costs: <comparable results and regressions, or unavailable>

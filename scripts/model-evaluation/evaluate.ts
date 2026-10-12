@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import audioManifest from './audio/manifest.json' with { type: 'json' };
 import { EvaluationBudget } from './budget.js';
 import rawCatalog from './catalog.json' with { type: 'json' };
+import { scenarioUtterances } from './follow-ups.js';
 import { contentJudge, judgeInstructions, verifyJudge } from './judge.js';
 import controls from './judge-controls.json' with { type: 'json' };
 import { budgetedLive, type LiveEvaluationProfile, verifiedLiveProfile } from './live.js';
@@ -44,6 +45,7 @@ export type EvaluationPlan = {
   voice?: boolean;
   voiceProfile?: LiveEvaluationProfile;
   referenceVoice?: ReferenceVoice;
+  followUps?: boolean;
   repetitions?: number[];
   references?: RecordedReference[];
   // Exact counting, including its verified billing, is supplied only by an
@@ -112,8 +114,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
     ? await Promise.all(
         catalog.scenarios
           .filter((scenario) => scenario.voice)
-          .flatMap((scenario) => scenario.steps)
-          .filter((step) => !step.transition)
+          .flatMap((scenario) => scenarioUtterances(scenario, plan.followUps))
           .map((step) => referenceSpeech(step.id, step.text, plan.referenceVoice)),
       )
     : [];
@@ -211,6 +212,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
       voice: plan.voice ?? false,
       voiceProfile,
       referenceVoice: plan.referenceVoice ?? 'marin',
+      followUps: plan.followUps ?? false,
       audio: audioManifest,
       frames: audio.reduce((sum, item) => sum + item.clip.frames, 0),
       budget: budget.snapshot(),
@@ -287,6 +289,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
             {
               profile: id,
               repetition,
+              followUps: plan.followUps,
               judge,
               beginStep: provider.beginStep,
               costs: backendCost,
@@ -326,12 +329,12 @@ export async function evaluateModels(plan: EvaluationPlan) {
           }
           const audioSeconds = (
             await Promise.all(
-              scenario.steps
-                .filter((step) => !step.transition)
-                .map((step) => referenceSpeech(step.id, step.text, plan.referenceVoice)),
+              scenarioUtterances(scenario, plan.followUps).map((step) =>
+                referenceSpeech(step.id, step.text, plan.referenceVoice),
+              ),
             )
           ).reduce((sum, item) => sum + item.clip.frames / item.clip.sampleRate, 0);
-          const utterances = scenario.steps.filter((step) => !step.transition).length;
+          const utterances = scenarioUtterances(scenario, plan.followUps).length;
           const maximumSeconds = Math.ceil(
             audioSeconds + utterances * 180 + 32 + (utterances - 1) * 120,
           );
@@ -358,6 +361,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
             {
               profile: id,
               referenceVoice: plan.referenceVoice,
+              followUps: plan.followUps,
               maximumSeconds,
               sessionTimeLimit: () => budget.stop('evaluation_live_time_limit'),
               repetition,
@@ -373,6 +377,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
                   scenario: scenario.id,
                   profile: id,
                   repetition,
+                  followUps: plan.followUps,
                   modality: 'voice',
                   event,
                 }),
@@ -415,6 +420,7 @@ export async function evaluateModels(plan: EvaluationPlan) {
           commit: plan.commit,
           catalogSha256,
           judgeSha256,
+          followUps: plan.followUps,
           baselineProfiles: plan.baselineProfiles,
         },
       );

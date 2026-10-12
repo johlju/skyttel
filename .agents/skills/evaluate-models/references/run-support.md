@@ -140,7 +140,33 @@ checks; use those facts to ground confirmations. Historical summaries describe
 earlier context. Required response content must appear in its designated source.
 Missing required content in complete text fails; incomplete collection without
 proof is inconclusive. Stop dependent steps after fail, error, aborted or
-inconclusive outcomes. Unrun steps have no judge result.
+inconclusive outcomes, except for the declared clarification path below.
+Unrun steps have no judge result.
+
+### Conditional clarification
+
+When requested, set `EvaluationPlan.followUps` to true. The catalog's optional
+replies are shared across models and selected by the meaning of an explicit
+question, using the calibrated judge. Record this policy before payment;
+compare runs with the same catalog, controls and assistance policy.
+
+Preserve the base attempt's verdict. A follow-up may continue a failed state
+check only when required response content passes and the complete state matches
+the branch's declared waiting state. That state must preserve independent work
+and save safety. Send one uniquely matched reply at most once for that step,
+in the same conversation. Check completion against the original target before
+continuing ordinary steps. Missing, ambiguous or unsupported questions stop
+the path; adding replies is scenario maintenance for a later run.
+
+Report unassisted outcomes and assisted completion separately, including the
+question, selected reply, additional calls, elapsed time and costs. A successful
+reply does not erase an unnecessary question or qualify a failed base round.
+Assess question necessity from recognized input and available facts. Include
+waiting and routing time in assisted completion time; never substitute it for
+the base attempt's timing. For voice, verify every possible reply's reviewed
+audio before payment, and require the question in both backend and voice.
+
+### Timing
 
 Timing starts at the selected modality's input boundary and finishes at the
 later of correct state and the final required response fragment. Report startup,

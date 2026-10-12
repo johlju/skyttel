@@ -3,6 +3,9 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
+import audioManifest from '../../../scripts/model-evaluation/audio/manifest.json' with {
+  type: 'json',
+};
 import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
 import {
   compareEvaluationProfiles,
@@ -187,6 +190,20 @@ test('voice references reject scenario wording that differs from their recorded 
   );
 });
 
+test('voice admission rejects unreviewed audio before any paid session', {
+  tags: ['technical'],
+}, async () => {
+  const status = audioManifest.review.status;
+  try {
+    audioManifest.review.status = 'pending';
+    await expect(referenceSpeech('kort-utan-sparande')).rejects.toThrow(
+      'evaluation_audio_unreviewed',
+    );
+  } finally {
+    audioManifest.review.status = status;
+  }
+});
+
 test('one supplied candidate can be recommended using a recorded text or voice reference', {
   tags: ['technical'],
 }, () => {
@@ -224,6 +241,15 @@ test('one supplied candidate can be recommended using a recorded text or voice r
       baselineProfiles: { [modality]: 'reference' },
     };
     const result = compareEvaluationProfiles([candidate], [reference], current);
+    const changedAssistance = compareEvaluationProfiles([candidate], [reference], {
+      ...current,
+      followUps: true,
+    });
+    expect(changedAssistance.recommendationBasis).toBeNull();
+    expect(changedAssistance.historicalComparisons[0]).toMatchObject({
+      label: 'Ej jämförbart',
+      changed: { followUps: true },
+    });
     expect(result.comparisons).toEqual([]);
     expect(result.historicalComparisons).toHaveLength(1);
     expect(result.recommendation).toContain('Bedöm redovisad svarstid och kostnad');

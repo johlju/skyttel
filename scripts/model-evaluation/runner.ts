@@ -4,6 +4,7 @@ import type { TextAssistantView } from '../../src/shared/text-assistant.js';
 import type { createInstallation } from '../../tests/support/installation.js';
 import rawCatalog from './catalog.json' with { type: 'json' };
 import { evaluationEnvironment } from './environment.js';
+import { scenarioUtterances, selectFollowUp } from './follow-ups.js';
 import {
   concludeAttempt,
   failAttempt,
@@ -12,12 +13,13 @@ import {
   retainedObservation,
 } from './observations.js';
 import type { ProviderCall } from './provider.js';
-import type { Attempt, Catalog, JudgeInput, JudgeResult, Scenario } from './types.js';
+import type { Attempt, Catalog, JudgeInput, JudgeResult, Scenario, ScenarioStep } from './types.js';
 
 const catalog = rawCatalog as Catalog;
 export type RunOptions = {
   profile: string;
   repetition: number;
+  followUps?: boolean;
   judge?: (input: JudgeInput) => Promise<JudgeResult>;
   record?: (attempt: Attempt) => Promise<void>;
   beginStep?: (audioMs?: number, context?: ProviderCall['context']) => void;
@@ -34,6 +36,7 @@ export async function runTextScenario(
   installationOptions: Parameters<typeof createInstallation>[1],
   options: RunOptions,
 ) {
+  scenarioUtterances(scenario, options.followUps);
   const events: AssistantObservation[] = [];
   const environment = await evaluationEnvironment(scenario, {
     ...installationOptions,
@@ -56,9 +59,15 @@ export async function runTextScenario(
     elapsedMs: null,
     backendCostUsd: 0,
   });
+  const queue: { step: ScenarioStep; parent?: string; startedAt?: number }[] = scenario.steps.map(
+    (step) => ({ step }),
+  );
   try {
-    for (const step of scenario.steps) {
+    for (const [index, entry] of queue.entries()) {
+      const { step } = entry;
       const result = attempt(step.id);
+      if (entry.parent) result.followUpFor = entry.parent;
+      let continuing = false;
       if (blocked) {
         result.reason = `Dependent step not run: ${blocked}`;
       } else {
@@ -165,6 +174,36 @@ export async function runTextScenario(
           if (options.stopped?.()) throw new Error(options.stopReason?.() ?? 'evaluation_stopped');
           concludeAttempt(result, finishedAt - startedAt);
           result.observedEndMs = finishedAt - startedAt;
+          if (entry.startedAt !== undefined)
+            result.assistedElapsedMs =
+              result.outcome === 'pass' ? finishedAt - entry.startedAt : null;
+          if (options.followUps && !options.stopped?.()) {
+            const followUp = await selectFollowUp({
+              step,
+              attempt: result,
+              questionPending: Boolean(view.questionPending),
+              sources: {
+                backend: {
+                  text: responseText,
+                  complete: !view.error && view.taskStatus !== 'canceled',
+                },
+              },
+              checkWaiting: (waiting) => environment.check(step, view, actions, waiting),
+              judge: options.judge,
+            });
+            if (followUp && !options.stopped?.()) {
+              queue.splice(index + 1, 0, {
+                step: {
+                  id: followUp.id,
+                  text: followUp.text,
+                  expected: { requirements: followUp.requirements },
+                },
+                parent: step.id,
+                startedAt,
+              });
+              continuing = true;
+            }
+          }
           result.backendCostUsd = options.costs
             ? options.costs() === null
               ? null
@@ -186,7 +225,7 @@ export async function runTextScenario(
           const judgeAfter = options.judgeCosts?.();
           result.judgeCostUsd = judgeAfter == null ? null : judgeAfter - judgeBefore;
         }
-        if (result.outcome !== 'pass') blocked = `${step.id}: ${result.outcome}`;
+        if (result.outcome !== 'pass' && !continuing) blocked = `${step.id}: ${result.outcome}`;
       }
       attempts.push(result);
       await options.record?.(result);

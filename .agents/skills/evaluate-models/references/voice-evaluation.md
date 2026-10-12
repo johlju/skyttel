@@ -65,6 +65,8 @@ evidence already resolves the request.
 
 Use an approved catalog follow-up when it answers the actual question. If no
 matching follow-up exists, report a coverage gap and leave completion unassessed.
+For optional replies, use the conditional clarification policy in
+[run support](run-support.md#conditional-clarification).
 Preserve raw catalog checks and add the interpretation alongside them; a
 justified question alone neither fails the model nor qualifies the whole task.
 Continue to report independent errors, including missing required guidance,

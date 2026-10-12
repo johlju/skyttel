@@ -6,7 +6,7 @@ import { createHousehold, signIn } from '../../tests/support/client.js';
 import { approvedForVisit } from '../../tests/support/conversation.js';
 import { createInstallation } from '../../tests/support/installation.js';
 import rawCatalog from './catalog.json' with { type: 'json' };
-import type { Catalog, NamedRelationship, Scenario } from './types.js';
+import type { Catalog, Expected, NamedRelationship, Scenario } from './types.js';
 
 const catalog = rawCatalog as Catalog;
 const sorted = <T>(values: T[]) =>
@@ -124,7 +124,15 @@ export async function evaluationEnvironment(
     let expectedSaves = 0;
     const initialHistory = (await get<{ history: unknown[] }>('map/history')).history.length;
     const objectIds = new Map(initialObjects.map((item) => [item.name, item.id]));
-    const appliedSteps = new Set<string>();
+    const appliedSteps = new Map<
+      string,
+      {
+        objects: typeof expectedObjects;
+        relationships: NamedRelationship[];
+        types: typeof expectedTypes;
+        saves: number;
+      }
+    >();
     let observedState: Record<string, unknown> | undefined;
     function normalObjects(map: MapState, effective: boolean) {
       const objects: (ObjectValue & { id: string })[] = [...map.objects];
@@ -214,10 +222,20 @@ export async function evaluationEnvironment(
         step: Scenario['steps'][number],
         view: TextAssistantView,
         actions: { name: string; completion?: string }[],
+        waiting?: Expected,
       ) {
         const failures: string[] = [];
         const expectation = step.expected;
         if (!appliedSteps.has(step.id)) {
+          appliedSteps.set(
+            step.id,
+            structuredClone({
+              objects: expectedObjects,
+              relationships: expectedRelationships,
+              types: expectedTypes,
+              saves: expectedSaves,
+            }),
+          );
           for (const [id, changes] of Object.entries(expectation.objects ?? {})) {
             const values = { ...changes } as Record<string, unknown>;
             expectedObjects.set(id, { ...expectedObjects.get(id), id, ...values });
@@ -230,12 +248,35 @@ export async function evaluationEnvironment(
           expectedRelationships.push(...(expectation.addRelationships ?? []));
           expectedTypes = [...expectedTypes, ...(expectation.objectTypes ?? [])];
           expectedSaves += expectation.saves ?? 0;
-          appliedSteps.add(step.id);
+        }
+        // Alternate waiting checks use the state before this step. They never
+        // alter the cumulative target used to assess completion after a reply.
+        const previous = appliedSteps.get(step.id);
+        if (!previous) throw new Error('evaluation_expected_state_missing');
+        const target = waiting
+          ? structuredClone(previous)
+          : {
+              objects: expectedObjects,
+              relationships: expectedRelationships,
+              types: expectedTypes,
+              saves: expectedSaves,
+            };
+        if (waiting) {
+          for (const [id, changes] of Object.entries(waiting.objects ?? {}))
+            target.objects.set(id, { ...target.objects.get(id), id, ...changes });
+          for (const edge of waiting.removeRelationships ?? []) {
+            const index = target.relationships.findIndex((item) => isDeepStrictEqual(item, edge));
+            if (index < 0) throw new Error('evaluation_invalid_expected_removal');
+            target.relationships.splice(index, 1);
+          }
+          target.relationships.push(...(waiting.addRelationships ?? []));
+          target.types.push(...(waiting.objectTypes ?? []));
+          target.saves += waiting.saves ?? 0;
         }
         const map = await read();
-        if (!isDeepStrictEqual(normalObjects(map, true), sorted([...expectedObjects.values()])))
+        if (!isDeepStrictEqual(normalObjects(map, true), sorted([...target.objects.values()])))
           failures.push('effective_objects');
-        if (!isDeepStrictEqual(normalRelationships(map, true), sorted(expectedRelationships)))
+        if (!isDeepStrictEqual(normalRelationships(map, true), sorted([...target.relationships])))
           failures.push('effective_relationships');
         const extraTypes = [
           ...map.types,
@@ -253,7 +294,7 @@ export async function evaluationEnvironment(
                 })),
               })),
             ),
-            sorted(expectedTypes),
+            sorted([...target.types]),
           )
         )
           failures.push('new_types');
@@ -270,14 +311,14 @@ export async function evaluationEnvironment(
           map.draft.relationshipTypes?.length
         )
           failures.push('relationship_types');
-        const saves = expectation.saves ?? 0;
+        const saves = (waiting ?? expectation).saves ?? 0;
         const operations = view.operations.filter(
           (operation) => operation.operationId !== 'evaluation-start',
         );
         const history = await get<{ history: unknown[] }>('map/history');
         if (
-          operations.length !== expectedSaves ||
-          history.history.length !== initialHistory + expectedSaves ||
+          operations.length !== target.saves ||
+          history.history.length !== initialHistory + target.saves ||
           operations.some((operation) => operation.status !== 'succeeded')
         )
           failures.push('save_receipts_history');
@@ -299,7 +340,7 @@ export async function evaluationEnvironment(
         )
           failures.push('save_incomplete');
         if (
-          !expectedSaves &&
+          !target.saves &&
           (!isDeepStrictEqual(map.objects, savedBaseline.objects) ||
             !isDeepStrictEqual(map.relationships, savedBaseline.relationships))
         )
