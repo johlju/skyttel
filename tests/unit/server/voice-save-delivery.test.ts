@@ -72,6 +72,10 @@ test.each(['complete', 'stop'])(
       delegation: { id: 'slow-task', target: 'client' },
     });
     await vi.advanceTimersByTimeAsync(2100);
+    expect(channel.send).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'session.instructions.append', delegation_id: 'slow-task' }),
+    );
+    channel.send.mockClear();
     vi.setSystemTime(Date.now() + 11 * 60_000);
     await vi.advanceTimersByTimeAsync(100);
     expect(work.readyForSummary()).toBe(false);
@@ -81,6 +85,12 @@ test.each(['complete', 'stop'])(
     completed = true;
     await vi.advanceTimersByTimeAsync(100);
     expect(failed).not.toHaveBeenCalled();
+    if (action === 'complete') {
+      expect(work.readyForSummary()).toBe(false);
+      for (const [event] of channel.send.mock.calls)
+        if (event.type === 'session.thinking.append')
+          channel.emit('session.thinking.appended', { client_event_id: event.event_id });
+    }
     expect(work.readyForSummary()).toBe(true);
     if (action === 'complete') expect(response).toHaveBeenCalledOnce();
     else {
@@ -162,6 +172,10 @@ test.each(['receipt', 'answer', 'stopped'])(
     });
     await vi.advanceTimersByTimeAsync(2100);
     expect(request.mock.calls.some(([action]) => action === 'messages')).toBe(true);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'session.instructions.append', delegation_id: 'save-task' }),
+    );
+    send.mockClear();
     work.activity(true);
     finish(view);
     await vi.advanceTimersByTimeAsync(100);

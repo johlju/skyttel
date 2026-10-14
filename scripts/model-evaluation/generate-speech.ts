@@ -6,17 +6,18 @@ import { parseArgs } from 'node:util';
 import type { SpeechCreateParams } from 'openai/resources/audio/speech';
 import { ModelClient } from '../../src/server/model-client.js';
 import catalog from './catalog.json' with { type: 'json' };
+import { scenarioUtterances } from './follow-ups.js';
 import type { Catalog } from './types.js';
 
 export const speechRecipe = {
   model: 'gpt-4o-mini-tts',
-  voices: ['marin', 'cedar'],
+  voices: ['marin'],
   instructions:
     'Läs den givna texten ordagrant på tydlig, naturlig svenska med normalt samtalstempo. Uttala svenska sammansatta ord sammanhängande och egennamn omsorgsfullt. Bevara alla namn, belopp och relationer. Låt det låta som en person som ger ett uppdrag i ett samtal.',
-  speeds: { marin: 1.15, cedar: 1.25 } as Record<string, number>,
+  speeds: { marin: 1.15 } as Record<string, number>,
   sampleRate: 24000,
   pricing: {
-    checkedAt: '2026-10-11',
+    checkedAt: '2026-10-12',
     inputUsdPerMillion: 0.6,
     outputUsdPerMillion: 12,
     source: 'https://developers.openai.com/api/docs/models/gpt-4o-mini-tts',
@@ -98,8 +99,7 @@ export async function generateSpeech({
   };
   const steps = (catalog as Catalog).scenarios
     .filter((scenario) => scenario.voice)
-    .flatMap((scenario) => scenario.steps)
-    .filter((step): step is typeof step & { text: string } => typeof step.text === 'string');
+    .flatMap((scenario) => scenarioUtterances(scenario, true));
   if (ids?.some((id) => !steps.some((step) => step.id === id)))
     throw new Error('unknown_speech_step');
   const records: SpeechRecord[] = [];

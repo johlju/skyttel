@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, test, vi } from 'vitest';
 import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
+import { scenarioUtterances } from '../../../scripts/model-evaluation/follow-ups.js';
 import { generateSpeech, speechRecipe } from '../../../scripts/model-evaluation/generate-speech.js';
 import type { Catalog } from '../../../scripts/model-evaluation/types.js';
 
@@ -43,8 +44,7 @@ test.each([undefined, [], ['kort-utan-sparande']])(
       ids ??
       (catalog as Catalog).scenarios
         .filter((scenario) => scenario.voice)
-        .flatMap((scenario) => scenario.steps)
-        .filter((step) => 'text' in step)
+        .flatMap((scenario) => scenarioUtterances(scenario, true))
         .map((step) => step.id);
     expect(result.records.map((record) => record.id)).toEqual(expected);
     expect(create).toHaveBeenCalledTimes(expected.length);
@@ -81,15 +81,15 @@ test('speech generation reuses complete matching audio without a second provider
   const create = vi.fn(async () => response());
   const options = { directory: output, create, ids: ['kort-utan-sparande'] };
   const result = await generateSpeech(options);
-  expect(result.records.map((record) => record.voice)).toEqual(['marin', 'cedar']);
-  expect(result.costUsd).toBeCloseTo(0.00072);
+  expect(result.records.map((record) => record.voice)).toEqual(['marin']);
+  expect(result.costUsd).toBeCloseTo(0.00036);
   const bytes = await readFile(join(output, 'marin/kort-utan-sparande.wav'));
   expect(bytes.toString('ascii', 0, 4)).toBe('RIFF');
   expect(bytes.readUInt32LE(24)).toBe(24000);
   expect(bytes.readUInt32LE(40)).toBe(4);
   expect(result.records[0].humanReview).toBe('pending');
   expect((await generateSpeech(options)).records).toEqual(result.records);
-  expect(create).toHaveBeenCalledTimes(2);
+  expect(create).toHaveBeenCalledOnce();
 });
 
 test.each(['text', 'audio'])(
@@ -108,7 +108,7 @@ test.each(['text', 'audio'])(
       await writeFile(`${stem}.request.json`, JSON.stringify(request));
     }
     await expect(generateSpeech(options)).rejects.toThrow('speech_artifact_mismatch');
-    expect(create).toHaveBeenCalledTimes(2);
+    expect(create).toHaveBeenCalledOnce();
   },
 );
 
@@ -132,7 +132,7 @@ test('invalid scenario selection fails before any provider call', {
     generateSpeech({ directory: await directory(), create, ids: ['missing'] }),
   ).rejects.toThrow('unknown_speech_step');
   expect(create).not.toHaveBeenCalled();
-  expect(speechRecipe.voices).toEqual(['marin', 'cedar']);
+  expect(speechRecipe.voices).toEqual(['marin']);
 });
 
 test('a selected voice and speed are recorded and reused without changing other defaults', {
@@ -143,28 +143,28 @@ test('a selected voice and speed are recorded and reused without changing other 
     directory: await directory(),
     create,
     ids: ['fragor-och-andringar'],
-    voices: ['cedar'],
+    voices: ['marin'],
     speed: 1.1,
   };
   const result = await generateSpeech(options);
   expect(create).toHaveBeenCalledExactlyOnceWith(
-    expect.objectContaining({ voice: 'cedar', speed: 1.1 }),
+    expect.objectContaining({ voice: 'marin', speed: 1.1 }),
   );
   expect(result.records).toHaveLength(1);
-  expect(result.recipe).toMatchObject({ voices: ['cedar'], speeds: { cedar: 1.1 } });
+  expect(result.recipe).toMatchObject({ voices: ['marin'], speeds: { marin: 1.1 } });
   await generateSpeech(options);
   expect(create).toHaveBeenCalledOnce();
   await expect(generateSpeech({ ...options, speed: 1.2 })).rejects.toThrow(
     'speech_artifact_mismatch',
   );
   expect(create).toHaveBeenCalledOnce();
-  expect(speechRecipe.speeds).toEqual({ marin: 1.15, cedar: 1.25 });
+  expect(speechRecipe.speeds).toEqual({ marin: 1.15 });
 });
 
 test.each([
   { voices: ['unknown'] },
   { voices: [] },
-  { voices: ['cedar', 'cedar'] },
+  { voices: ['marin', 'marin'] },
   { speed: Number.NaN },
   { speed: 0 },
   { speed: 5 },

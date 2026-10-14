@@ -1,9 +1,13 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
+import audioManifest from '../../../scripts/model-evaluation/audio/manifest.json' with {
+  type: 'json',
+};
 import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
+import { scenarioUtterances } from '../../../scripts/model-evaluation/follow-ups.js';
 import {
   compareEvaluationProfiles,
   compareProfiles,
@@ -11,7 +15,7 @@ import {
   summarizeProfile,
 } from '../../../scripts/model-evaluation/report.js';
 import { referenceSpeech } from '../../../scripts/model-evaluation/speech.js';
-import type { Attempt } from '../../../scripts/model-evaluation/types.js';
+import type { Attempt, Catalog } from '../../../scripts/model-evaluation/types.js';
 
 test.each(['json', 'md'])(
   'reporter refuses to overwrite existing %s evidence in a reused directory',
@@ -154,25 +158,36 @@ test('qualification needs every step and repetition, with equal scenario weighti
   });
 });
 
-test.each(['marin', 'cedar'] as const)(
+test.each(['marin'] as const)(
   '%s has verified PCM matching every voice utterance',
   {
     tags: ['technical'],
   },
   async (voice) => {
-    const steps = catalog.scenarios
+    const steps = (catalog as Catalog).scenarios
       .filter((scenario) => scenario.voice)
-      .flatMap((scenario) => scenario.steps.filter((step) => 'text' in step));
-    expect(steps).toHaveLength(13);
+      .flatMap((scenario) => scenarioUtterances(scenario, true));
+    expect(steps).toHaveLength(21);
+    const files = new Set<string>();
     for (const step of steps) {
       const reference = await referenceSpeech(step.id, step.text, voice);
       expect(reference.clip.sampleRate).toBe(24000);
-      expect(reference.clip.file).toBe(`${voice}/${step.id}.wav`);
+      expect(reference.clip.file.startsWith(`${voice}/`)).toBe(true);
+      files.add(reference.clip.file);
       expect(Buffer.from(reference.pcm, 'base64').length).toBe(reference.clip.frames * 2);
       expect(reference.clip.durationSeconds).toBe(
         reference.clip.frames / reference.clip.sampleRate,
       );
     }
+    expect(Object.keys(audioManifest.voices[voice].clips).sort()).toEqual(
+      steps.map((step) => step.id).sort(),
+    );
+    const installed = await readdir(
+      new URL(`../../../scripts/model-evaluation/audio/${voice}/`, import.meta.url),
+    );
+    expect(installed.filter((file) => file.endsWith('.wav')).sort()).toEqual(
+      [...files].map((file) => file.slice(voice.length + 1)).sort(),
+    );
   },
 );
 
@@ -185,6 +200,20 @@ test('voice references reject scenario wording that differs from their recorded 
   await expect(referenceSpeech(id, `${reference.clip.text} Extra text.`)).rejects.toThrow(
     `evaluation_audio_reference_mismatch:${id}`,
   );
+});
+
+test('voice admission rejects unreviewed audio before any paid session', {
+  tags: ['technical'],
+}, async () => {
+  const status = audioManifest.review.status;
+  try {
+    audioManifest.review.status = 'pending';
+    await expect(referenceSpeech('kort-utan-sparande')).rejects.toThrow(
+      'evaluation_audio_unreviewed',
+    );
+  } finally {
+    audioManifest.review.status = status;
+  }
 });
 
 test('one supplied candidate can be recommended using a recorded text or voice reference', {
@@ -224,6 +253,15 @@ test('one supplied candidate can be recommended using a recorded text or voice r
       baselineProfiles: { [modality]: 'reference' },
     };
     const result = compareEvaluationProfiles([candidate], [reference], current);
+    const changedAssistance = compareEvaluationProfiles([candidate], [reference], {
+      ...current,
+      followUps: true,
+    });
+    expect(changedAssistance.recommendationBasis).toBeNull();
+    expect(changedAssistance.historicalComparisons[0]).toMatchObject({
+      label: 'Ej jämförbart',
+      changed: { followUps: true },
+    });
     expect(result.comparisons).toEqual([]);
     expect(result.historicalComparisons).toHaveLength(1);
     expect(result.recommendation).toContain('Bedöm redovisad svarstid och kostnad');

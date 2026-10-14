@@ -260,6 +260,7 @@ test('only one actual delegation executes raw voice fragments through Terra and 
   const map = await (await browser.get(voice.path.replace('/text-assistant', '/map'))).json();
   expect(map.objects).toMatchObject([{ id: 'family-music' }]);
   expect(map.draft.changes).toEqual([]);
+  const beforeDetails = voice.live.sent.length;
   voice.transcript('Vad sparades?');
   voice.delegate();
   await expect
@@ -268,11 +269,13 @@ test('only one actual delegation executes raw voice fragments through Terra and 
         voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
     )
     .toBe(3);
-  const detail = voice.live.sent.at(-1)?.event as { content: string };
-  expect(detail.content).toContain('Skyttels resultat (verifierat):');
-  expect(detail.content).toContain('Familjens musik');
+  const detail = voiceAnswerParts(voice.live.sent.slice(beforeDetails)).join('');
+  expect(detail).toContain('Skyttels resultat (verifierat):');
+  expect(detail).toContain('Familjens musik');
   expect((await voice.poll()).assistant.result.message).toContain('Familjens musik');
-  expect(Buffer.byteLength(detail.content, 'utf8')).toBeLessThanOrEqual(480);
+  for (const { event } of voice.live.sent.slice(beforeDetails))
+    if ('content' in event)
+      expect(Buffer.byteLength(event.content, 'utf8')).toBeLessThanOrEqual(480);
 });
 
 async function proposal(path: string) {
@@ -422,7 +425,7 @@ test('voice commentary separates unverified paraphrased claims and useful questi
   expect(assistant.receipt).toBeUndefined();
   expect(assistant.displayedSelection).toBeUndefined();
   const sent = voice.live.sent.at(-1)?.event as { content: string };
-  const [result, conversation] = sent.content.split('\n');
+  const [result, conversation] = voiceAnswerParts(voice.live.sent).join('').split('\n');
   expect(result).toBe('Utkast: 1 osparat förslag.');
   expect(result).not.toContain('lagrade');
   expect(conversation).toBe(`Samtal (obekräftat): ${JSON.stringify(modelReply)}`);
@@ -491,8 +494,7 @@ test('combined type proposals speak the directed question and retain the verifie
     .toBe(1);
   const status = await voice.poll();
   expect(status.assistant.result).toEqual({ kind: 'draft', message: 'Utkastet är uppdaterat.' });
-  const sent = voice.live.sent.at(-1)?.event as { content: string };
-  const content = sent.content;
+  const content = voiceAnswerParts(voice.live.sent).join('');
   expect(content).toBe(
     `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nNödvändig fråga (samtalsdata): ${JSON.stringify(question)}`,
   );
@@ -525,7 +527,9 @@ test.each([
     voice.delegate();
     await expect.poll(() => voiceAnswerParts(voice.live.sent).join('')).toContain('Vilken Alex');
     const status = await voice.poll();
-    expect(status.assistant.modelReply.includes('Be om sparande igen')).toBe(renewal);
+    expect(Boolean(status.assistant.requiredNotice?.includes('Be om sparande igen'))).toBe(renewal);
+    expect(status.assistant.modelReply).not.toContain('Be om sparande igen');
+    if (renewal) expect(status.assistant.reply).toContain(status.assistant.requiredNotice);
     expect(voiceAnswerParts(voice.live.sent).join('').includes('Be om sparande igen')).toBe(
       renewal,
     );
@@ -612,9 +616,13 @@ test.each([
   await expect
     .poll(
       () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
+        voice.live.sent.filter(
+          ({ event }) =>
+            event.type === 'session.instructions.append' && event.content.startsWith('Återge svar'),
+        ).length,
     )
     .toBe(1);
+  expect(voiceAnswerParts(voice.live.sent).join('')).toContain('Be om sparande igen');
   await proposal(voice.path);
   await voice.poll();
   voice.transcript('Vill du spara?', 'output');
@@ -625,7 +633,7 @@ test.each([
       () =>
         voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
     )
-    .toBe(2);
+    .toBe(1);
   const result = await voice.poll();
   expect(result.assistant.error).toBe('assistant_save_not_requested');
   expect(voice.live.sent.at(-1)?.event).toMatchObject({
@@ -1144,47 +1152,62 @@ test('voice selection commentary waits for the actual browser acknowledgement', 
     .toBe(1);
   expect(voice.live.sent.at(-1)?.event).toMatchObject({
     type: 'session.commentary.append',
-    content:
-      'Skyttels resultat (verifierat): Objektet är markerat.\nSamtal (obekräftat): "Berätta vilken person som använder det."',
   });
-});
-
-test('voice selection preserves the verified draft summary and supplementary answer', {
-  tags: ['technical'],
-}, async () => {
-  let step = 0;
-  const model = textModel(() => {
-    if (step++ === 0)
-      return [modelTool('report_result', { source: 'draft', continueResponse: true })];
-    if (step === 2) return [modelTool('show_map_object', { objectId: 'web-object' })];
-    return [modelMessage('Det finns också ett svar på din fråga.')];
-  });
-  const voice = await setupVoice(model.provider);
-  await proposal(voice.path);
-  await voice.poll();
-  voice.transcript('Beskriv hela utkastet och markera objektet.');
-  voice.delegate();
-  await expect
-    .poll(async () => (await voice.poll()).assistant.selection?.objectId)
-    .toBe('web-object');
-  expect(voiceAnswerParts(voice.live.sent)).toEqual([]);
-  const current = (await voice.poll()).assistant;
-  expect(current.result.message).toContain('Formulärförslag');
-  const response = await browser.post(`${voice.path}/${voice.assistant.id}/selection`, {
-    headers: { origin: app.origin },
-    data: { objectId: 'web-object', revision: current.revision, displayed: true },
-  });
-  expect(response.status()).toBe(200);
-  await expect
-    .poll(
-      () =>
-        voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
-    )
-    .toBe(1);
   expect(voiceAnswerParts(voice.live.sent).join('')).toBe(
-    `Skyttels resultat (verifierat): ${current.result.message}\nObjektet är markerat.\nSamtal (obekräftat): "Det finns också ett svar på din fråga."`,
+    'Skyttels resultat (verifierat): Objektet är markerat.\nSamtal (obekräftat): "Berätta vilken person som använder det."',
   );
 });
+
+test.each([false, true])(
+  'voice selection preserves the verified draft summary and supplementary answer with question=%s',
+  {
+    tags: ['technical'],
+  },
+  async (pendingQuestion) => {
+    let step = 0;
+    const model = textModel(() => {
+      if (step++ === 0)
+        return [modelTool('report_result', { source: 'draft', continueResponse: true })];
+      if (pendingQuestion && step === 2)
+        return [
+          modelTool('ask_questions', {
+            questions: ['Vilken cykel menar du?'],
+            continueResponse: true,
+          }),
+        ];
+      if (step === (pendingQuestion ? 3 : 2))
+        return [modelTool('show_map_object', { objectId: 'web-object' })];
+      return [modelMessage('Det finns också ett svar på din fråga.')];
+    });
+    const voice = await setupVoice(model.provider);
+    await proposal(voice.path);
+    await voice.poll();
+    voice.transcript('Beskriv hela utkastet och markera objektet.');
+    voice.delegate();
+    await expect
+      .poll(async () => (await voice.poll()).assistant.selection?.objectId)
+      .toBe('web-object');
+    expect(voiceAnswerParts(voice.live.sent)).toEqual([]);
+    const current = (await voice.poll()).assistant;
+    expect(current.result.message).toContain('Formulärförslag');
+    const response = await browser.post(`${voice.path}/${voice.assistant.id}/selection`, {
+      headers: { origin: app.origin },
+      data: { objectId: 'web-object', revision: current.revision, displayed: true },
+    });
+    expect(response.status()).toBe(200);
+    await expect
+      .poll(
+        () =>
+          voice.live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
+      )
+      .toBe(1);
+    expect(voiceAnswerParts(voice.live.sent).join('')).toBe(
+      pendingQuestion
+        ? `Skyttels resultat (verifierat): ${current.result.message}\nMarkeringen är bekräftad i kartan.\nNödvändig fråga (samtalsdata): ${JSON.stringify('Det finns också ett svar på din fråga.\nVilken cykel menar du?')}`
+        : `Skyttels resultat (verifierat): ${current.result.message}\nObjektet är markerat.\nSamtal (obekräftat): "Det finns också ett svar på din fråga."`,
+    );
+  },
+);
 
 test('the Live answer waits for actual sideband attachment and a replacement closes the previous connection', async () => {
   const voice = await setupVoice(textModel(() => []).provider, (live) => {

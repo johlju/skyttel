@@ -54,7 +54,7 @@
       {
         "id": "cloud",
         "type": "Tjänst",
-        "name": "Molnlagring Plus",
+        "name": "Norrsken Molnlagring",
         "description": "Påhittat katalogobjekt."
       },
       {
@@ -86,7 +86,7 @@
       {
         "id": "cloud-sub",
         "type": "Abonnemang",
-        "name": "Molnlagring Plus 2 TB",
+        "name": "Molnlagring Plus",
         "description": "Påhittat katalogobjekt.",
         "financialFacts": {
           "price": {
@@ -509,7 +509,42 @@
             "requirements": [
               "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
             ]
-          }
+          },
+          "followUps": [
+            {
+              "id": "kort-pris-foljdsvar",
+              "text": "Jag menar abonnemanget Molnlagring Plus.",
+              "when": "Svaret ber användaren bekräfta att prisändringen avser det befintliga abonnemanget Molnlagring Plus. Inga andra obesvarade frågor kräver ett annat följdsvar.",
+              "waiting": {
+                "objects": {},
+                "addRelationships": [
+                  {
+                    "source": "spotify-sub",
+                    "type": "Betalas med",
+                    "target": "card",
+                    "knowledge": "known"
+                  }
+                ],
+                "removeRelationships": [
+                  {
+                    "source": "spotify-sub",
+                    "type": "Betalas med",
+                    "target": "reserve",
+                    "knowledge": "known"
+                  }
+                ],
+                "objectTypes": [],
+                "saveAttempts": 0,
+                "saves": 0,
+                "requirements": [
+                  "Bekräfta endast verifierade utkaständringar och skilj dem från det som väntar på förtydligande. Påstå inte att hela uppdraget är klart eller sparat och ställ ingen sparfråga."
+                ]
+              },
+              "requirements": [
+                "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+              ]
+            }
+          ]
         }
       ]
     },
@@ -520,7 +555,7 @@
       "steps": [
         {
           "id": "sen-rattelse",
-          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 249 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Molnlagring Plus. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Jag rättar en sak: Molnlagring Plus ska kosta 229 kronor per månad, inte 249. Allt annat som jag bad om gäller fortfarande.",
+          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 249 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Norrsken Molnlagring. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Jag rättar en sak: Molnlagring Plus ska kosta 229 kronor per månad, inte 249. Allt annat som jag bad om gäller fortfarande.",
           "expected": {
             "objects": {
               "cloud-sub": {
@@ -640,7 +675,101 @@
             "requirements": [
               "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
             ]
-          }
+          },
+          "followUps": [
+            {
+              "id": "sen-rattelse-identiteter",
+              "text": "Ja, jag menar personen Mira Dahl och tjänstekontot Alex arbete som redan finns i kartan. Använd den befintliga kontaktadressen hushall, snabel-a, norrsken, punkt test. Hushall stavas med a utan ring.",
+              "when": "Svaret ber om bekräftelse av den befintliga personen Mira Dahl, tjänstekontot Alex arbete och kontaktadressen hushall@norrsken.test utan å. Alla tre frågorna ställs och inga andra obesvarade frågor kräver ett annat följdsvar.",
+              "waiting": {
+                "objects": {
+                  "cloud-sub": {
+                    "financialFacts": {
+                      "price": {
+                        "knowledge": "known",
+                        "value": "229"
+                      },
+                      "currency": {
+                        "knowledge": "known",
+                        "value": "SEK"
+                      },
+                      "paymentInterval": {
+                        "knowledge": "known",
+                        "value": "månad"
+                      }
+                    }
+                  }
+                },
+                "addRelationships": [
+                  {
+                    "source": "alex",
+                    "type": "Använder",
+                    "target": "spotify",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "lo",
+                    "type": "Använder",
+                    "target": "spotify",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "alex",
+                    "type": "Använder",
+                    "target": "m365",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "spotify-sub",
+                    "type": "Betalas med",
+                    "target": "card",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "cloud-sub",
+                    "type": "Betalas med",
+                    "target": "bank",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "lo",
+                    "type": "Betalar",
+                    "target": "cloud-sub",
+                    "knowledge": "known"
+                  }
+                ],
+                "removeRelationships": [
+                  {
+                    "source": "spotify-sub",
+                    "type": "Betalas med",
+                    "target": "reserve",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "cloud-sub",
+                    "type": "Betalas med",
+                    "target": "card",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "alex",
+                    "type": "Betalar",
+                    "target": "cloud-sub",
+                    "knowledge": "known"
+                  }
+                ],
+                "objectTypes": [],
+                "saveAttempts": 0,
+                "saves": 0,
+                "requirements": [
+                  "Bekräfta endast verifierade utkaständringar och skilj dem från det som väntar på förtydligande. Påstå inte att hela uppdraget är klart eller sparat och ställ ingen sparfråga."
+                ]
+              },
+              "requirements": [
+                "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+              ]
+            }
+          ]
         }
       ]
     },
@@ -651,7 +780,7 @@
       "steps": [
         {
           "id": "sparbesked-sist",
-          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 229 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Molnlagring Plus. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Spara nu hela utkastet med alla de här ändringarna.",
+          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 229 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Norrsken Molnlagring. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Spara nu hela utkastet med alla de här ändringarna.",
           "expected": {
             "objects": {
               "cloud-sub": {
@@ -771,7 +900,102 @@
             "requirements": [
               "Ge ett kort verifierat sparbesked, utan obegärd uppräkning eller sammanfattning."
             ]
-          }
+          },
+          "followUps": [
+            {
+              "id": "sparbesked-identiteter",
+              "text": "Ja, jag menar den befintliga tjänsten Microsoft 365 och tjänstekontot Alex arbete. Inloggningsadressen är alex, snabel-a, norrsken, punkt test. Kontaktadressen är hushall, snabel-a, norrsken, punkt test, med a utan ring i hushall. Mira ska använda den befintliga tjänsten Norrsken Molnlagring. Gör klart ändringarna. Jag ber nu på nytt: spara hela utkastet.",
+              "when": "Svaret ber om bekräftelse av tjänsten Microsoft 365, tjänstekontot Alex arbete med inloggningsadressen alex@norrsken.test och kontaktadressen hushall@norrsken.test samt tjänsten Norrsken Molnlagring för Miras användning. Alla dessa frågor ställs och inga andra obesvarade frågor kräver ett annat följdsvar.",
+              "waiting": {
+                "objects": {
+                  "cloud-sub": {
+                    "financialFacts": {
+                      "price": {
+                        "knowledge": "known",
+                        "value": "229"
+                      },
+                      "currency": {
+                        "knowledge": "known",
+                        "value": "SEK"
+                      },
+                      "paymentInterval": {
+                        "knowledge": "known",
+                        "value": "månad"
+                      }
+                    }
+                  }
+                },
+                "addRelationships": [
+                  {
+                    "source": "alex",
+                    "type": "Använder",
+                    "target": "spotify",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "lo",
+                    "type": "Använder",
+                    "target": "spotify",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "spotify-sub",
+                    "type": "Betalas med",
+                    "target": "card",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "cloud-sub",
+                    "type": "Betalas med",
+                    "target": "bank",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "lo",
+                    "type": "Betalar",
+                    "target": "cloud-sub",
+                    "knowledge": "known"
+                  }
+                ],
+                "removeRelationships": [
+                  {
+                    "source": "mira",
+                    "type": "Använder",
+                    "target": "spotify",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "spotify-sub",
+                    "type": "Betalas med",
+                    "target": "reserve",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "cloud-sub",
+                    "type": "Betalas med",
+                    "target": "card",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "alex",
+                    "type": "Betalar",
+                    "target": "cloud-sub",
+                    "knowledge": "known"
+                  }
+                ],
+                "objectTypes": [],
+                "saveAttempts": 0,
+                "saves": 0,
+                "requirements": [
+                  "Bekräfta endast verifierade utkaständringar och skilj dem från det som väntar på förtydligande. Påstå inget genomfört sparande.",
+                  "Förmedla att den tidigare sparbegäran inte räcker och att användaren behöver be om sparande igen när frågorna är lösta. Innebörden får uttryckas tillsammans eller med annan formulering."
+                ]
+              },
+              "requirements": [
+                "Ge ett kort verifierat sparbesked, utan obegärd uppräkning eller sammanfattning."
+              ]
+            }
+          ]
         }
       ]
     },
@@ -784,6 +1008,30 @@
         {
           "id": "oklarheter-med-sparbegaran",
           "text": "Lo Berg använder Spotify. Priset för Molnlagring Plus ska vara 229 kronor per månad. Alex använder Microsoft 365 och Spotify Premium Family ska betalas från bankkontot. Spara hela utkastet.",
+          "followUps": [
+            {
+              "id": "oklarheter-pris-foljdsvar",
+              "text": "Jag menar abonnemanget Molnlagring Plus.",
+              "when": "Svaret ber uttryckligen användaren bekräfta att månadspriset avser det befintliga abonnemanget Molnlagring Plus. Frågan får gälla ett osäkert uppfattat namn eller skilja abonnemanget från tjänsten. Ett påstående om priset eller enbart frågor om person och bank uppfyller inte kravet. Övriga obesvarade frågor gäller endast vilken Alex och vilket bankkonto som avses.",
+              "waiting": {
+                "addRelationships": [
+                  {
+                    "source": "lo",
+                    "type": "Använder",
+                    "target": "spotify",
+                    "knowledge": "known"
+                  }
+                ],
+                "saves": 0,
+                "requirements": []
+              },
+              "requirements": [
+                "Fråga om Alex Lind eller Alex Berg avses.",
+                "Fråga om Bankkonto Hushåll eller Bankkonto Reserv avses.",
+                "Behandla prisets mål som klarlagt och påstå inte att utkastet är sparat."
+              ]
+            }
+          ],
           "expected": {
             "objects": {
               "cloud-sub": {
@@ -912,7 +1160,28 @@
             "requirements": [
               "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
             ]
-          }
+          },
+          "followUps": [
+            {
+              "id": "samband-identitet",
+              "text": "Ja, det är den befintliga tjänsten Microsoft 365. Den ska leverera till Tenant Norrsken Bygg.",
+              "when": "Svaret frågar om den namngivna levererande tjänsten avser befintliga Microsoft 365. Den redan angivna riktningen till Tenant Norrsken Bygg ifrågasätts inte. Inga andra obesvarade frågor kräver ett annat följdsvar.",
+              "waiting": {
+                "objects": {},
+                "addRelationships": [],
+                "removeRelationships": [],
+                "objectTypes": [],
+                "saveAttempts": 0,
+                "saves": 0,
+                "requirements": [
+                  "Bekräfta endast verifierade utkaständringar och skilj dem från det som väntar på förtydligande. Påstå inte att hela uppdraget är klart eller sparat och ställ ingen sparfråga."
+                ]
+              },
+              "requirements": [
+                "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+              ]
+            }
+          ]
         }
       ]
     },
@@ -923,7 +1192,7 @@
       "steps": [
         {
           "id": "fragor-och-andringar",
-          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 229 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Molnlagring Plus. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Berätta också vad Spotify Premium Family kostar enligt den sparade kartan och vilka personer som använder Microsoft 365 enligt mitt utkast. Visa tjänstekontot Alex arbete i kartan när du är klar. Sammanfatta både ändringarna och svaren på mina frågor.",
+          "text": "Jag vill ordna flera uppgifter om våra tjänster. Alex Lind och Lo Berg använder Spotify, men Mira Dahl använder inte den tjänsten. Lägg till användningen för Alex och Lo och ta bort den för Mira. Alex Lind använder också Microsoft 365. Spotify Premium Family ska betalas med Hushållskortet. Det är fortfarande Alex som står på abonnemanget, så ändra inte den uppgiften. Tjänstekontot Alex arbete hos Microsoft 365 ska ha alex@norrsken.test som inloggningsadress och hushall@norrsken.test som kontaktadress. Det är två olika roller, och du ska inte byta namnet på tjänstekontot. Abonnemanget Molnlagring Plus kostar 229 kronor per månad och ska betalas från Bankkonto Hushåll. Lo betalar det abonnemanget men Mira använder tjänsten Norrsken Molnlagring. Ändra bara de uppgifter som jag har nämnt och lämna våra andra abonnemang som de är. Berätta också vad Spotify Premium Family kostar enligt den sparade kartan och vilka personer som använder Microsoft 365 enligt mitt utkast. Visa tjänstekontot Alex arbete i kartan när du är klar. Sammanfatta både ändringarna och svaren på mina frågor.",
           "expected": {
             "objects": {
               "cloud-sub": {
@@ -1047,7 +1316,119 @@
               "Bekräfta endast klientbekräftad markering av Alex arbete.",
               "Ställ inga identitetsfrågor eller sparfrågor."
             ]
-          }
+          },
+          "followUps": [
+            {
+              "id": "fragor-personer",
+              "text": "Ja, jag menar personerna Alex Lind och Mira Dahl som redan finns i kartan. Gör klart ändringarna och sammanfatta dem tillsammans med svaren på mina frågor.",
+              "when": "Svaret ber om bekräftelse av de befintliga personerna Alex Lind och Mira Dahl för deras användning av tjänsterna. Båda frågorna ställs och inga andra obesvarade frågor kräver ett annat följdsvar.",
+              "waiting": {
+                "objects": {
+                  "cloud-sub": {
+                    "financialFacts": {
+                      "price": {
+                        "knowledge": "known",
+                        "value": "229"
+                      },
+                      "currency": {
+                        "knowledge": "known",
+                        "value": "SEK"
+                      },
+                      "paymentInterval": {
+                        "knowledge": "known",
+                        "value": "månad"
+                      }
+                    }
+                  }
+                },
+                "addRelationships": [
+                  {
+                    "source": "lo",
+                    "type": "Använder",
+                    "target": "spotify",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "spotify-sub",
+                    "type": "Betalas med",
+                    "target": "card",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "alex-work",
+                    "type": "Inloggningsadress",
+                    "target": "alex-email",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "alex-work",
+                    "type": "Kontaktadress",
+                    "target": "house-email",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "cloud-sub",
+                    "type": "Betalas med",
+                    "target": "bank",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "lo",
+                    "type": "Betalar",
+                    "target": "cloud-sub",
+                    "knowledge": "known"
+                  }
+                ],
+                "removeRelationships": [
+                  {
+                    "source": "spotify-sub",
+                    "type": "Betalas med",
+                    "target": "reserve",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "alex-work",
+                    "type": "Inloggningsadress",
+                    "target": "shared-email",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "alex-work",
+                    "type": "Kontaktadress",
+                    "target": "shared-email",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "cloud-sub",
+                    "type": "Betalas med",
+                    "target": "card",
+                    "knowledge": "known"
+                  },
+                  {
+                    "source": "alex",
+                    "type": "Betalar",
+                    "target": "cloud-sub",
+                    "knowledge": "known"
+                  }
+                ],
+                "objectTypes": [],
+                "saveAttempts": 0,
+                "saves": 0,
+                "requirements": [
+                  "Sammanfatta alla genomförda oberoende ändringar enligt det verifierade utkastet: Lo använder Spotify, Spotify betalas med Hushållskortet, Alex arbete har separata inloggnings- och kontaktadresser, Molnlagring Plus kostar 229 kronor per månad, betalas från Bankkonto Hushåll och betalas av Lo. Personändringarna för Alex och Mira väntar på förtydligande. Påstå inget sparande.",
+                  "Spotify Premium Family kostar 179 kronor enligt sparad karta. Lo Berg använder Microsoft 365 enligt det aktuella utkastet; Alex användning väntar på förtydligande.",
+                  "Bekräfta endast klientbekräftad markering av Alex arbete. Ställ ingen sparfråga."
+                ]
+              },
+              "requirements": [
+                "Sammanfatta alla beställda ändringar och ge de begärda faktasvaren.",
+                "Spotify Premium Family kostar 179 kronor enligt sparad karta.",
+                "Alex Lind och Lo Berg använder Microsoft 365 enligt utkastet.",
+                "Bekräfta endast klientbekräftad markering av Alex arbete.",
+                "Ställ inga identitetsfrågor eller sparfrågor."
+              ]
+            }
+          ]
         }
       ],
       "selection": "alex-work"
@@ -1087,7 +1468,28 @@
             "requirements": [
               "Förklara att även tidigare förslag om Lo Berg och Netflix Standard skulle sparas tillsammans med prisändringen. Påstå inget faktiskt sparande."
             ]
-          }
+          },
+          "followUps": [
+            {
+              "id": "hypotetisk-pris-foljdsvar",
+              "text": "Jag menar abonnemanget Molnlagring Plus.",
+              "when": "Svaret ber användaren bekräfta att prisändringen avser det befintliga abonnemanget Molnlagring Plus. Inga andra obesvarade frågor kräver ett annat följdsvar.",
+              "waiting": {
+                "objects": {},
+                "addRelationships": [],
+                "removeRelationships": [],
+                "objectTypes": [],
+                "saveAttempts": 0,
+                "saves": 0,
+                "requirements": [
+                  "Förklara att ett sparande av hela utkastet även skulle omfatta de tidigare förslagen om Lo Bergs beskrivning och Netflix Standards pris. Prisändringen väntar på förtydligande. Påstå inget faktiskt sparande och be inte om sparande."
+                ]
+              },
+              "requirements": [
+                "Förklara att även tidigare förslag om Lo Berg och Netflix Standard skulle sparas tillsammans med prisändringen. Påstå inget faktiskt sparande."
+              ]
+            }
+          ]
         }
       ]
     },
@@ -1140,7 +1542,7 @@
       "steps": [
         {
           "id": "unknown-user",
-          "text": "Jag vet inte vem som använder Molnlagring Plus.",
+          "text": "Jag vet inte vem som använder Norrsken Molnlagring.",
           "expected": {
             "objects": {},
             "addRelationships": [
@@ -1178,7 +1580,7 @@
       "steps": [
         {
           "id": "no-user",
-          "text": "Ingen använder Molnlagring Plus.",
+          "text": "Ingen använder Norrsken Molnlagring.",
           "expected": {
             "objects": {},
             "addRelationships": [
@@ -1216,7 +1618,7 @@
       "steps": [
         {
           "id": "uncertain-user",
-          "text": "Uppgiften att Alex Lind använder Molnlagring Plus ska inte vara kvar. Ersätt den med den osäkra uppgiften att Mira Dahl använder tjänsten.",
+          "text": "Uppgiften att Alex Lind använder Norrsken Molnlagring ska inte vara kvar. Ersätt den med den osäkra uppgiften att Mira Dahl använder tjänsten.",
           "expected": {
             "objects": {},
             "addRelationships": [
@@ -1353,14 +1755,35 @@
             "requirements": [
               "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
             ]
-          }
+          },
+          "followUps": [
+            {
+              "id": "kontext-pris-foljdsvar",
+              "text": "Jag menar abonnemanget Molnlagring Plus.",
+              "when": "Svaret ber användaren bekräfta att prisändringen avser det befintliga abonnemanget Molnlagring Plus. Inga andra obesvarade frågor kräver ett annat följdsvar.",
+              "waiting": {
+                "objects": {},
+                "addRelationships": [],
+                "removeRelationships": [],
+                "objectTypes": [],
+                "saveAttempts": 0,
+                "saves": 0,
+                "requirements": [
+                  "Fråga efter prisobjektets identitet utan att påstå att den väntande prisändringen är genomförd eller att något är sparat. Ställ ingen sparfråga."
+                ]
+              },
+              "requirements": [
+                "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående."
+              ]
+            }
+          ]
         },
         {
           "id": "summary",
           "transition": "summary",
           "expected": {
             "requirements": [
-              "Sammanfattningen anger först Spotify Premium Family 189 kronor per månad, därefter Molnlagring Plus 2 TB 229 kronor per månad, som genomförda utkaständringar. Påstå inte att dessa prisändringar är sparade. Äldre verifierade sparresultat får återges när de tydligt skiljs från de aktuella osparade ändringarna; obestyrkta sparpåståenden är fel."
+              "Sammanfattningen anger först Spotify Premium Family 189 kronor per månad, därefter Molnlagring Plus 229 kronor per månad, som genomförda utkaständringar. Påstå inte att dessa prisändringar är sparade. Äldre verifierade sparresultat får återges när de tydligt skiljs från de aktuella osparade ändringarna; obestyrkta sparpåståenden är fel."
             ]
           }
         },

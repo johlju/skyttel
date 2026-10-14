@@ -20,7 +20,23 @@ export type Expected = {
   saves?: number;
   requirements: string[];
 };
-export type ScenarioStep = { id: string; text?: string; transition?: string; expected: Expected };
+export type FollowUp = {
+  id: string;
+  text: string;
+  /** Semantic question that this answer resolves; shared by all candidate models. */
+  when: string;
+  /** Complete allowed waiting delta; requirements validate the clarification
+   * and still-answerable content instead of the parent's completion response. */
+  waiting: Expected;
+  requirements: string[];
+};
+export type ScenarioStep = {
+  id: string;
+  text?: string;
+  transition?: string;
+  expected: Expected;
+  followUps?: FollowUp[];
+};
 export type Scenario = {
   id: string;
   title: string;
@@ -80,5 +96,12 @@ export type Attempt = {
   backendCostUsd: number | null;
   judgeCostUsd?: number | null;
   voiceCostUsd?: number | null;
+  followUpFor?: string;
+  assistedElapsedMs?: number | null;
+  followUpSelection?: {
+    selected?: string;
+    candidates: { id: string; fixed: string[]; content?: JudgeResult }[];
+    reason: string;
+  };
   diagnostics?: ReturnType<typeof import('./observations.js').observationDiagnostics>;
 };

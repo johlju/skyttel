@@ -648,9 +648,10 @@ test('a spoken saved relationship selection waits for actual acknowledgement and
     .toBe(1);
   expect(live.sent.at(-1)?.event).toMatchObject({
     type: 'session.commentary.append',
-    content:
-      'Skyttels resultat (verifierat): Sambandet är markerat.\nSamtal (obekräftat): "Här finns sambandet."',
   });
+  expect(voiceAnswerParts(live.sent).join('')).toBe(
+    'Skyttels resultat (verifierat): Sambandet är markerat.\nSamtal (obekräftat): "Här finns sambandet."',
+  );
   expect((await poll()).assistant.displayedItem).toEqual({ kind: 'relationship', id: 'edge' });
   expect(await readMap()).toEqual(before);
 });

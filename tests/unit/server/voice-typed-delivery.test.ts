@@ -86,11 +86,7 @@ test.each([true, false])(
     await send('Vad vet vi?', 'first');
     const consumed = await poll(on);
     expect(consumed.voice.replyDelivery).toContainEqual({ id: 'first', voiced: on });
-    const spoken = () =>
-      live.sent
-        .filter(({ event }) => event.type === 'session.commentary.append')
-        .map(({ event }) => (event.type === 'session.commentary.append' ? event.content : ''))
-        .join('');
+    const spoken = () => voiceAnswerParts(live.sent).join('');
     expect(spoken()).toBe(on ? 'Samtal (obekräftat): "Första svaret."' : '');
     await poll(true);
     expect(spoken()).toBe(on ? 'Samtal (obekräftat): "Första svaret."' : '');
@@ -139,11 +135,47 @@ test('necessary typed questions are explicit, unchanged conversation data and do
   expect(current.receipt).toBeUndefined();
   const result = await poll(true);
   expect(result.voice.response).toMatchObject({ text: question, questionPending: true });
-  expect(
-    live.sent
-      .filter(({ event }) => event.type === 'session.commentary.append')
-      .map(({ event }) => (event.type === 'session.commentary.append' ? event.content : '')),
-  ).toEqual([`Nödvändig fråga (samtalsdata): ${JSON.stringify(question)}`]);
+  expect(voiceAnswerParts(live.sent).join('')).toBe(
+    `Nödvändig fråga (samtalsdata): ${JSON.stringify(question)}`,
+  );
+  expect(await (await browser.get(`${householdPath}/map`)).json()).toEqual(before);
+  expect((await (await browser.get(`${householdPath}/map/history`)).json()).history).toEqual([]);
+});
+
+test('a spoken clarification reaches a typed pending question without a Live delegation', {
+  tags: ['technical'],
+}, async () => {
+  const model = textModel(() =>
+    model.requests.length === 1
+      ? [modelTool('ask_questions', { questions: ['Vilken cykel menar du?'] })]
+      : [modelMessage('Jag menar nu den gröna cykeln.')],
+  );
+  const { live, path, householdPath, send, poll } = await arrange(model.provider);
+  const before = await (await browser.get(`${householdPath}/map`)).json();
+  await send('Vilken cykel talar vi om?', 'question');
+  await poll(true);
+  const providerId = [...live.channels.keys()][0];
+  live.emit(providerId, {
+    type: 'session.input_transcript.delta',
+    event_id: 'clarification',
+    delta: 'Den gröna cykeln.',
+    start_ms: 1000,
+    end_ms: 2000,
+  });
+  await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(2);
+  await expect.poll(async () => (await (await browser.get(path)).json()).phase).toBe('ready');
+  expect(JSON.stringify(model.requests[1])).toContain('Den gröna cykeln.');
+  const completed: TextAssistantView = await (await browser.get(path)).json();
+  expect(completed.questionPending).toBe(false);
+  expect(completed.completedReplies).toContainEqual(expect.objectContaining({ source: 'voice' }));
+  live.emit(providerId, {
+    type: 'session.delegation.created',
+    event_id: 'late-delegation',
+    offset_ms: 2500,
+    delegation: { id: 'late-task', type: 'delegation', target: 'client' },
+  });
+  await poll(true);
+  expect(model.requests).toHaveLength(2);
   expect(await (await browser.get(`${householdPath}/map`)).json()).toEqual(before);
   expect((await (await browser.get(`${householdPath}/map/history`)).json()).history).toEqual([]);
 });
@@ -181,16 +213,20 @@ test('a typed partial change delivers its verified result and full follow-up to 
   expect(current.result).toEqual({ kind: 'draft', message: 'Utkastet är uppdaterat.' });
   expect(current.questionPending).toBe(true);
   expect(current.modelReply).toContain(question);
-  expect(current.modelReply).toContain('Din tidigare sparbegäran gäller inte längre.');
+  expect(current.modelReply).toBe(question);
+  expect(current.requiredNotice).toBe(
+    'Din tidigare sparbegäran gäller inte längre. Be om sparande igen när frågorna är lösta.',
+  );
+  expect(current.reply).toContain(current.requiredNotice);
   expect(current.receipt).toBeUndefined();
   const result = await poll(true);
   const parts = () => voiceAnswerParts(live.sent);
   const content = parts().join('');
   expect(content).toBe(
-    `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nNödvändig fråga (samtalsdata): ${JSON.stringify(current.modelReply)}`,
+    `Obligatoriskt besked från Skyttel: ${current.requiredNotice}\nSkyttels resultat (verifierat): Utkastet är uppdaterat.\nNödvändig fråga (samtalsdata): ${JSON.stringify(current.modelReply)}`,
   );
   expect(result.voice.response).toMatchObject({
-    text: `Utkastet är uppdaterat.\n${current.modelReply}`,
+    text: `${current.reply}\n${current.modelReply}`,
     questionPending: true,
   });
   await poll(true);

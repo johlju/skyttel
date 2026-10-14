@@ -38,13 +38,9 @@ Keep ordinary dialogs connected, close before final judging and summary, then
 reopen after summary installation. Use the actual audio path rather than
 replacement speech or injected delegations/transcripts.
 
-Declare voice order and outcome policy before payment. The default is Marin
-first, then Cedar as a diagnostic investigation of a failed scenario. Select
-the variant with `EvaluationPlan.referenceVoice` or `runVoiceScenario`'s
-`referenceVoice` option. Keep the first verdict and record each alternate
-attempt's voice, audio hash, cost and outcome separately from qualification.
-An alternate success does not replace a failure or establish qualification.
-Use a different acceptance policy only when the user explicitly selects it.
+Use the approved Marin recordings for every scenario and conditional reply.
+Set `referenceVoice` to `marin`. Preserve each attempt's outcome; investigate
+failures using its evidence and record any explicitly requested rerun separately.
 
 Replay the complete affected scenario from its original isolated fixture,
 including preceding utterances. Continue ordinary multi-step conversations
@@ -54,21 +50,66 @@ against already changed state does not provide a comparable result.
 Include remaining active dialog time in reservations before each paid call.
 Account for open judge waits and close active voice sessions promptly on stop.
 
+## Behavioral assessment
+
+Assess the actual recognized utterance, available map and tool evidence,
+backend answer, spoken answer and resulting state. Report these outcomes:
+
+- **Passed:** the entire prescribed scenario completes, including any
+  clarification already written into its ordinary steps, without extra
+  clarification. For step counts, identify these as passing steps rather than
+  claiming that their whole scenario passed.
+- **Accepted — correct clarification:** an extra question is necessary,
+  relevant and answerable; clear independent changes and factual answers are
+  complete, state and save safety hold, and required guidance reaches both
+  backend and speech. Identify the unresolved work and the question that
+  enables it. A matching recorded answer is optional for this assessment.
+- **Completed after extra clarification:** an approved additional reply leads
+  to verified completion. Retain the accepted clarification and its cost;
+  distinguish this assisted result from a scenario that passed directly.
+- **Failed:** incorrect changes, invented identities, unnecessary questions,
+  missing independent answers or required guidance, or unsafe saves.
+- **Unassessed:** missing evidence or unrun work.
+
+Accept a correct clarification as reasonable handling of the user's input.
+Expecting a cooperative user's answer to enable progress is a stated assumption;
+completion after that answer remains unverified until exercised. An accepted
+question is a valid endpoint for assessing the current response. Reserve
+end-to-end completion claims for observed complete dialogs.
+
+Record recognition errors in names and addresses as accepted limitations when
+the assistant handles them safely with a relevant clarification. Count these
+separately from failures, with reference speech, recognized text, affected work
+and the assistant's response. A limitation remains visible even in a qualified
+run; zero failures does not mean zero limitations.
+
+For each clarification, record the scenario/step ID, model and effort, whether
+it belongs to the ordinary dialog or is extra, reference wording and recognized
+wording relevant to the ambiguity, and the actual backend and spoken questions.
+Include the blocked work, why the question is justified, any selected reply and
+its outcome. Keep these entries in the issue, using stable step IDs to compare
+recurring ambiguities across runs while accounting for catalog/audio revisions.
+Recommend additional replies when repeated questions make them useful; adding
+scenarios or reviewed audio remains separate work.
+
+When evaluating continuation, use an approved catalog follow-up that answers
+the actual question under the conditional clarification policy in
+[run support](run-support.md#conditional-clarification).
+Keep representative dialog tests for forwarding and applying answers, renewed
+save permission and context transitions. Full reply coverage for every possible
+extra question is unnecessary. Declare which tests require end-to-end completion
+before execution; retain every prescribed ordinary step. A stopped dependent
+step stays unrun, even when the preceding question is accepted.
+
+Preserve raw catalog checks and automated qualification separately from this
+behavioral assessment. Report counts for complete scenarios and individual
+steps separately. A fully passing run completes every prescribed scenario
+without extra clarification. Report acceptance with clarifications separately,
+with explicit scope and any unverified continuation; all designated dialog
+tests must still complete before claiming full qualification. Link evidence
+for each interpretation and date policy corrections to earlier results.
+
 ## Evidence and timing
-
-Assess clarifications against the actual recognized utterance and the available
-map and tool evidence. A necessary, relevant follow-up that preserves clear
-independent changes and avoids invented facts or unauthorized saves is correct
-behavior. Report it as awaiting clarification, separately from task completion.
-Distinguish genuine ambiguity from unnecessary questions when the available
-evidence already resolves the request.
-
-Use an approved catalog follow-up when it answers the actual question. If no
-matching follow-up exists, report a coverage gap and leave completion unassessed.
-Preserve raw catalog checks and add the interpretation alongside them; a
-justified question alone neither fails the model nor qualifies the whole task.
-Continue to report independent errors, including missing required guidance,
-incorrect changes and unsafe saves.
 
 Private observations retain fragment/delegation/request IDs, offsets, arrival
 times, actual backend text, MCP calls/results, commentary and output

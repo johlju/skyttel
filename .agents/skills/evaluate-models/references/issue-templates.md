@@ -50,6 +50,7 @@ with the application's recorded model. Correctness comes before time and cost.
 - Effort, service tier and limits: <settings>
 - Modality: <text or voice; voice model and backend profile when applicable>
 - Scenarios and repetitions: <complete catalog; one unless more are requested>
+- Conditional replies: <enabled or disabled; declared branches and policy>
 - Application model: <effective profile and recorded result issue, or missing>
 - Related results: <comparable issues; explicit rerun predecessor if present>
 - Voice backend selection: <linked text evidence and reason, explicit user
@@ -78,9 +79,22 @@ with the application's recorded model. Correctness comes before time and cost.
 ## Result and decision
 
 - Status: pending
-- Attempts: <pass/fail/inconclusive/error/aborted/not run counts, or pending>
-- Qualification: <qualified, failed or incomplete; one complete passing round
-  qualifies, every explicitly requested round must pass>
+- Automated checks: <pass/fail/inconclusive/error/aborted/not run counts;
+  raw outcomes, not counts of model errors>
+- Behavioral assessment: <passed without extra clarification, accepted correct
+  clarification, completed after extra clarification, failed or unassessed;
+  separate scenario and step counts; evidence for each reinterpretation>
+- Accepted recognition limitations: <count, affected names/addresses and safe
+  handling; separate from actual failures, including in a qualified run>
+- Assistance: <extra replies, completion after help, question necessity and
+  additional time/cost; preserve the unassisted outcomes>
+- Clarification log: <scenario/step, model/effort, ordinary or extra question,
+  reference and recognized wording, actual backend/spoken question, blocked
+  work, justification, selected reply and outcome; recurring questions and
+  potential additional replies>
+- Qualification: <qualified, accepted with clarifications, failed or incomplete;
+  one fully verified round qualifies under the modality's acceptance policy,
+  every explicitly requested round must meet it>
 - Response time and costs: <comparable results and regressions, or unavailable>
 - Recommendation: pending
 - Evidence: <links to versioned records in comments>

@@ -2,13 +2,13 @@ import { randomUUID } from 'node:crypto';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import { assistantFailureMessage } from './assistant-feedback.js';
 import type { LiveSideband } from './live-provider.js';
-import { voiceCommentary } from './voice-commentary.js';
+import { type VoiceAnswer, voiceAnswerText, voiceCommentary } from './voice-commentary.js';
 
 type Anchor = { revision: number; draftVersion: number; contentVersion: number };
 type Fragment = { role: 'user' | 'assistant'; text: string; startMs: number; endMs: number };
 
-/** One executor for the server sideband. Raw deltas stay in memory; only a
- * delegation makes a task, and only its new user deltas can authorize a save. */
+/** One executor for delegated tasks and replies to pending server questions.
+ * Only new user deltas can authorize a save; conversation context cannot. */
 export function voiceWork({
   channel,
   initial,
@@ -47,13 +47,17 @@ export function voiceWork({
   };
   let anchor: Anchor | undefined;
   let fragments: Fragment[] = [];
-  let pending: Fragment[] = [];
+  let pending: (Fragment & { inputVersion: number; anchor: Anchor })[] = [];
   let generation = 0;
   let inputVersion = 0;
   let lastInputAt = 0;
   let microphoneActive = false;
   let collecting: symbol | undefined;
   let stopped = false;
+  let questionRevision = initial.revision;
+  let questionPending = initial.phase === 'ready' && Boolean(initial.questionPending);
+  let questionInputVersion = 0;
+  let automaticReplyConsumed = false;
   let owned: number | undefined;
   let dispatching: AbortController | undefined;
   let canceling: Promise<{ revision: number; view: TextAssistantView } | undefined> =
@@ -64,6 +68,25 @@ export function voiceWork({
   const answered = new Set<number>([initial.revision]);
   const answeredReplies = new Set((initial.completedReplies ?? []).map((reply) => reply.id));
   const commentary = voiceCommentary(channel, (event) => observe?.('voice_event', event));
+
+  function rememberQuestion(view: TextAssistantView) {
+    if (view.revision < questionRevision) return;
+    if (view.questionPending && (!questionPending || view.revision > questionRevision))
+      questionInputVersion = inputVersion;
+    questionRevision = view.revision;
+    questionPending = view.phase === 'ready' && Boolean(view.questionPending);
+  }
+  function collectReply() {
+    if (
+      !stopped &&
+      questionPending &&
+      inputVersion > questionInputVersion &&
+      pending.length &&
+      !collecting &&
+      !inFlight.size
+    )
+      void collect(null);
+  }
 
   function cancel() {
     commentary.cancel();
@@ -89,7 +112,8 @@ export function voiceWork({
       })
       .catch(() => undefined);
   }
-  function append(delegationId: string | null, content: string, view?: TextAssistantView) {
+  function append(delegationId: string | null, answer: VoiceAnswer, view?: TextAssistantView) {
+    const content = voiceAnswerText(answer);
     observe?.('voice_commentary', { delegationId, content, revision: view?.revision });
     // The acknowledgement of this command is transport receipt, never proof
     // that a person heard it. No transcript/audio is logged or persisted here.
@@ -97,11 +121,14 @@ export function voiceWork({
     const acceptedInput = inputVersion;
     commentary.send(
       delegationId,
-      content,
+      answer,
       () =>
         !stopped &&
         generation === task &&
         (Boolean(view?.receipt) || inputVersion === acceptedInput),
+      view && !view.receipt && view.phase === 'ready' && !view.saveCheck
+        ? 'unconfirmed'
+        : undefined,
     );
     if (view) {
       answered.add(view.revision);
@@ -118,16 +145,19 @@ export function voiceWork({
       });
     }
   }
-  function completion(view: TextAssistantView) {
+  function completion(view: TextAssistantView): VoiceAnswer {
     if (view.saveCheck) return view.saveCheck.reply + (view.receipt ? ' Sparat.' : '');
     if (view.receipt) return 'Sparat.';
     if (view.questionPending && view.modelReply)
       return [
-        view.result ? `Skyttels resultat (verifierat): ${view.result.message}` : '',
-        `Nödvändig fråga (samtalsdata): ${JSON.stringify(view.modelReply)}`,
-      ]
-        .filter(Boolean)
-        .join('\n');
+        { kind: 'notice', text: view.requiredNotice ?? '' },
+        { kind: 'result', text: view.result?.message ?? '' },
+        {
+          kind: 'status',
+          text: view.displayedSelection ? 'Markeringen är bekräftad i kartan.' : '',
+        },
+        { kind: 'question', text: view.modelReply },
+      ];
     if (view.phase === 'recovery')
       return 'Det är oklart om utkastet sparades. Skyttel kontrollerar det.';
     if (view.error) return view.reply ?? assistantFailureMessage(view.error);
@@ -142,15 +172,19 @@ export function voiceWork({
         ? `${view.displayedItem?.kind === 'relationship' ? 'Sambandet' : 'Objektet'} är markerat.`
         : undefined,
     ].filter(Boolean);
-    const fullResult = verified.length
-      ? `Skyttels resultat (verifierat): ${verified.join('\n')}`
-      : `Utkast: ${count} ${count === 1 ? 'osparat förslag' : 'osparade förslag'}.`;
-    if (!view.modelReply) return fullResult;
-    // append owns transport chunking; the canonical answer remains complete.
-    return `${fullResult}\nSamtal (obekräftat): ${JSON.stringify(view.modelReply)}`;
+    return [
+      { kind: 'notice', text: view.requiredNotice ?? '' },
+      {
+        kind: verified.length ? 'result' : 'status',
+        text: verified.length
+          ? verified.join('\n')
+          : `Utkast: ${count} ${count === 1 ? 'osparat förslag' : 'osparade förslag'}.`,
+      },
+      { kind: 'conversation', text: view.modelReply ?? '' },
+    ];
   }
   async function execute(
-    id: string,
+    id: string | null,
     text: string,
     expected: Anchor,
     context: string,
@@ -230,6 +264,7 @@ export function voiceWork({
         }
       }
       if (!current()) return;
+      rememberQuestion(view);
       observe?.('backend_result', { delegationId: id, view });
       while (
         current() &&
@@ -277,6 +312,7 @@ export function voiceWork({
       const remaining = (inFlight.get(task) ?? 1) - 1;
       if (remaining) inFlight.set(task, remaining);
       else inFlight.delete(task);
+      if (current()) collectReply();
     }
   }
   function fragment(
@@ -308,7 +344,14 @@ export function voiceWork({
       lastInputAt = Date.now();
       input?.(true, event.delta);
       anchor ??= { ...rendered };
-      pending.push({ role, text: event.delta, startMs: event.start_ms, endMs: event.end_ms });
+      pending.push({
+        role,
+        text: event.delta,
+        startMs: event.start_ms,
+        endMs: event.end_ms,
+        inputVersion,
+        anchor: { ...rendered },
+      });
       if (pending.map((item) => item.text).join('').length > 4000) {
         failed();
         return;
@@ -316,8 +359,9 @@ export function voiceWork({
     }
     fragments.push({ role, text: event.delta, startMs: event.start_ms, endMs: event.end_ms });
     while (fragments.length > 40 || JSON.stringify(fragments).length > 8000) fragments.shift();
+    if (role === 'user') collectReply();
   }
-  async function collect(id: string) {
+  async function collect(id: string | null) {
     const collection = Symbol();
     collecting = collection;
     const task = generation;
@@ -329,12 +373,23 @@ export function voiceWork({
       await new Promise((resolve) => setTimeout(resolve, 50));
     if (!current()) return;
     collecting = undefined;
-    const text = pending.map((item) => item.text).join('');
-    const expected = anchor;
+    // A typed answer or another task may have resolved the question while
+    // the person was speaking. Unsolicited tasks still require delegation.
+    if (id === null && (!questionPending || inFlight.size)) return;
+    // Speech preceding the question remains context, never authority for its
+    // automatic reply. A normal delegation retains its original input batch.
+    const selected =
+      id === null ? pending.filter((item) => item.inputVersion > questionInputVersion) : pending;
+    const text = selected.map((item) => item.text).join('');
+    const expected = id === null ? selected[0]?.anchor : anchor;
     pending = [];
     anchor = undefined;
     input?.(false);
-    if (text.trim() && expected) void execute(id, text, expected, JSON.stringify(fragments), task);
+    if (text.trim() && expected) {
+      automaticReplyConsumed = id === null;
+      commentary.working(id);
+      void execute(id, text, expected, JSON.stringify(fragments), task);
+    }
   }
   channel.on('session.input_transcript.delta', (event) => fragment('user', event));
   channel.on('session.output_transcript.delta', (event) => fragment('assistant', event));
@@ -358,6 +413,9 @@ export function voiceWork({
     observe?.('voice_event', event);
     const selected = pending.filter((item) => item.startMs <= event.offset_ms);
     if (!anchor || !selected.some((item) => item.text.trim())) {
+      // Live can delegate after the application has already forwarded a reply.
+      // Without fresh input this is neither a second task nor a new save request.
+      if (automaticReplyConsumed && !selected.length) return;
       pending = pending.filter((item) => !selected.includes(item));
       if (!pending.length) anchor = undefined;
       input?.(pending.length > 0 || microphoneActive);
@@ -401,6 +459,8 @@ export function voiceWork({
     /** Consume each typed FIFO completion once, including while the next task works. */
     answer(view: TextAssistantView, microphoneOn = true) {
       if (stopped) return;
+      rememberQuestion(view);
+      collectReply();
       for (const reply of view.completedReplies ?? []) {
         if (answeredReplies.has(reply.id)) continue;
         if (reply.saveCheck && reply.revision !== undefined && answered.has(reply.revision)) {
@@ -424,6 +484,7 @@ export function voiceWork({
           revision: reply.revision ?? view.revision,
           modelReply: reply.text || undefined,
           reply: reply.reply,
+          requiredNotice: reply.requiredNotice,
           receipt: reply.receipt,
           result: reply.result,
           saveCheck: reply.saveCheck,
@@ -431,17 +492,16 @@ export function voiceWork({
           error: undefined,
         };
         // Keep the complete reply and source boundary through silent assembly.
-        const content =
-          reply.receipt || reply.questionPending || reply.saveCheck
+        const content: VoiceAnswer =
+          reply.receipt || reply.questionPending || reply.saveCheck || reply.requiredNotice
             ? completion(completed)
             : [
-                reply.reply ? `Skyttels resultat (verifierat): ${reply.reply}` : '',
-                reply.text ? `Samtal (obekräftat): ${JSON.stringify(reply.text)}` : '',
-              ]
-                .filter(Boolean)
-                .join('\n');
-        if (content) append(null, content, completed);
-        delivered?.({ id: reply.id, voiced: Boolean(content) });
+                { kind: 'result', text: reply.reply ?? '' },
+                { kind: 'conversation', text: reply.text },
+              ];
+        const hasContent = Boolean(voiceAnswerText(content));
+        if (hasContent) append(null, content, completed);
+        delivered?.({ id: reply.id, voiced: hasContent });
       }
       if (!microphoneOn) {
         if (view.phase !== 'working') answered.add(view.revision);

@@ -4,13 +4,73 @@ import { join } from 'node:path';
 import { expect, test, vi } from 'vitest';
 import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
 import { type EvaluationPlan, evaluateModels } from '../../../scripts/model-evaluation/evaluate.js';
+import * as judgeModule from '../../../scripts/model-evaluation/judge.js';
 import controls from '../../../scripts/model-evaluation/judge-controls.json' with { type: 'json' };
 import type { LiveEvaluationProfile } from '../../../scripts/model-evaluation/live.js';
 import profiles from '../../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 import { verifiedProfile } from '../../../scripts/model-evaluation/provider.js';
 import * as speech from '../../../scripts/model-evaluation/speech.js';
 import type { Catalog } from '../../../scripts/model-evaluation/types.js';
+import * as voiceRunner from '../../../scripts/model-evaluation/voice-runner.js';
 import * as modelClient from '../../../src/server/model-client.js';
+
+test('voice plans validate optional audio and enable clarification in the runner', {
+  tags: ['technical'],
+}, async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'skyttel-evaluation-followups-'));
+  const audio = vi.spyOn(speech, 'referenceSpeech').mockResolvedValue({
+    clip: { frames: 24000, sampleRate: 24000 },
+    pcm: '',
+  } as Awaited<ReturnType<typeof speech.referenceSpeech>>);
+  const calibration = vi.spyOn(judgeModule, 'verifyJudge').mockResolvedValue(true);
+  const runner = vi
+    .spyOn(voiceRunner, 'runVoiceScenario')
+    .mockRejectedValue(new Error('stop_before_voice_session'));
+  const network = vi.spyOn(modelClient, 'modelTransport').mockRejectedValue(new Error('network'));
+  try {
+    await expect(
+      evaluateModels({
+        issue: 341,
+        directory,
+        apiKey: 'not-a-real-key',
+        authorized: true,
+        priorUsd: 0,
+        priorSource: 'Isolated non-billable clarification plan.',
+        commit: 'test',
+        textProfiles: [],
+        voice: true,
+        followUps: true,
+        referenceVoice: 'marin',
+        voiceProfile: profiles.profiles.find(
+          (item) => item.role === 'voice',
+        ) as LiveEvaluationProfile,
+        judgeProfile: verifiedProfile('judge-sol-high'),
+        baselineProfiles: { voice: 'live' },
+        localVerification: {
+          passed: true,
+          commands: ['npm run test:unit'],
+          evidence: 'Local test.',
+        },
+      }),
+    ).resolves.toMatchObject({
+      budget: { stopped: true, reason: 'stop_before_voice_session', spentUsd: 0 },
+    });
+    expect(audio).toHaveBeenCalledWith(
+      'oklarheter-pris-foljdsvar',
+      'Jag menar abonnemanget Molnlagring Plus.',
+      'marin',
+    );
+    expect(runner).toHaveBeenCalledOnce();
+    expect(runner.mock.calls[0][2]).toMatchObject({ followUps: true, referenceVoice: 'marin' });
+    expect(network).not.toHaveBeenCalled();
+  } finally {
+    audio.mockRestore();
+    calibration.mockRestore();
+    runner.mockRestore();
+    network.mockRestore();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test('an explicitly selected high-effort model is accounted for without adding prior models', {
   tags: ['technical'],
@@ -100,7 +160,7 @@ test('an explicitly selected high-effort model is accounted for without adding p
   }
 });
 
-test.each(['marin', 'cedar'] as const)(
+test.each(['marin'] as const)(
   'voice preflight validates only scenario utterances for %s',
   { tags: ['technical'] },
   async (referenceVoice) => {

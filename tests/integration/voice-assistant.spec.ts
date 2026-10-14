@@ -29,7 +29,7 @@ import {
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
-import { liveProvider } from '../support/live-provider.js';
+import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
@@ -492,6 +492,7 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
     const object = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
     const selected = await object.getAttribute('aria-pressed');
     for (const [index, reply] of replies.entries()) {
+      const replyOffset = live.sent.length;
       speak(live, 'Beskriv mitt utkast.');
       const conversation = assistant(page).getByRole('log', { name: 'Samtalstext', exact: true });
       await expect(conversation).toContainText(reply);
@@ -504,8 +505,9 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
           () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
         )
         .toBe(index + 1);
-      const commentary = live.sent.at(-1)?.event as { content: string };
-      const [result, modelText] = commentary.content.split('\n');
+      const [result, modelText] = voiceAnswerParts(live.sent.slice(replyOffset))
+        .join('')
+        .split('\n');
       expect(result).toBe('Utkast: 1 osparat förslag.');
       expect(modelText).toBe(`Samtal (obekräftat): ${JSON.stringify(reply)}`);
       await readVoiceProposal(page);
@@ -516,6 +518,7 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
       expect(current.draft).toEqual(before.draft);
       expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
     }
+    const selectionOffset = live.sent.length;
     speak(live, 'Markera Lo Exempel.');
     await expect(object).toHaveAttribute('aria-pressed', 'true');
     await openConversationText(page);
@@ -528,7 +531,7 @@ test('TAL-04: samtalstext hålls isär från verifierade röstresultat', async (
         () => live.sent.filter(({ event }) => event.type === 'session.commentary.append').length,
       )
       .toBe(5);
-    expect(JSON.stringify(live.sent.at(-1))).toContain(
+    expect(voiceAnswerParts(live.sent.slice(selectionOffset)).join('')).toContain(
       'Skyttels resultat (verifierat): Objektet är markerat',
     );
     const saveDelegation = crypto.randomUUID();

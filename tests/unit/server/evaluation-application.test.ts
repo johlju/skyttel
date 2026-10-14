@@ -67,12 +67,16 @@ test('a mixed price and draft request keeps verified details and completes its f
   expect(model.requests).toHaveLength(2);
 });
 
-test.each(['draft', 'save'] as const)(
-  'a mixed %s request can continue to client-confirmed selection and factual answers',
+test.each([
+  { completion: 'draft', prefix: '' },
+  { completion: 'save', prefix: '' },
+  { completion: 'save', prefix: 'Jag vill ordna uppgifter om våra tillgångar- ' },
+] as const)(
+  'a mixed $completion request with heading "$prefix" continues to selection and factual answers',
   {
     tags: ['technical'],
   },
-  async (completion) => {
+  async ({ completion, prefix }) => {
     const scenario: Scenario = {
       id: 'local-mixed-changes',
       title: 'Mixed changes and questions',
@@ -81,7 +85,7 @@ test.each(['draft', 'save'] as const)(
       steps: [
         {
           id: 'mixed',
-          text: `Rätta Lo Bergs beskrivning till Läser poesi. Visa Alex arbete och berätta vad Spotify kostar. Läs upp ändringarna.${completion === 'save' ? ' Spara hela utkastet.' : ''}`,
+          text: `${prefix}Rätta Lo Bergs beskrivning till Läser poesi. Visa Alex arbete och berätta vad Spotify kostar. Läs upp ändringarna.${completion === 'save' ? ' Spara hela utkastet.' : ''}`,
           expected: {
             objects: { lo: { description: 'Läser poesi.' } },
             saves: completion === 'save' ? 1 : 0,
@@ -173,6 +177,37 @@ test.each([
     allowed: true,
   },
   { text: 'Jag vill ordna uppgifter om våra tjänster. Spara hela utkastet.', allowed: true },
+  {
+    text: catalog.scenarios
+      .find((item) => item.id === 'save-last')
+      ?.steps[0].text?.replace('tjänster. Alex', 'tjänste- Alex'),
+    allowed: true,
+  },
+  {
+    text: 'Jag vill ordna uppgifter om mina fordon – Lo använder bilen. Spara hela utkastet.',
+    allowed: true,
+  },
+  {
+    text: 'Jag vill ordna uppgifter om era avtal — hyran är ändrad. Spara hela utkastet.',
+    allowed: true,
+  },
+  { text: 'Ändra beskrivningen till uppgifter om bilen - spara hela utkastet.', allowed: true },
+  { text: 'Spara inte - spara hela utkastet.', allowed: false },
+  { text: 'Spara - inte. Spara hela utkastet.', allowed: false },
+  { text: 'Spara — inte — spara hela utkastet.', allowed: false },
+  { text: 'Vänta med att spara — spara hela utkastet.', allowed: false },
+  { text: 'Om Lo säger ja – spara hela utkastet.', allowed: false },
+  { text: 'Vad händer om - spara hela utkastet?', allowed: false },
+  { text: 'Exempel — spara hela utkastet.', allowed: false },
+  { text: 'Läs citatet ”Spara — hela utkastet”.', allowed: false },
+  {
+    text: 'Jag vill ordna uppgifter om mina fordon – om bilen startar. Spara hela utkastet.',
+    allowed: false,
+  },
+  {
+    text: 'Jag vill ordna uppgifter om era avtal — spara inte ännu. Spara hela utkastet.',
+    allowed: false,
+  },
   { text: 'Ändra uppgifter om priset stämmer. Spara hela utkastet.', allowed: false },
   { text: 'Ändra uppgifter bara om Lo säger ja. Spara hela utkastet.', allowed: false },
   { text: 'Ändra uppgifter om Mira går med på det. Spara hela utkastet.', allowed: false },

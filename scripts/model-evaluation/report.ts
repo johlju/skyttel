@@ -47,6 +47,21 @@ export function summarizeProfile(
   const values = attempts.filter(
     (attempt) => attempt.profile === profile && attempt.modality === modality,
   );
+  const baseValues = values.filter((attempt) => !attempt.followUpFor);
+  const followUps = values.filter((attempt) => attempt.followUpFor);
+  const assistedCompletions = baseValues.filter(
+    (attempt) =>
+      attempt.outcome === 'fail' &&
+      attempt.followUpSelection?.selected &&
+      followUps.some(
+        (reply) =>
+          reply.scenario === attempt.scenario &&
+          reply.repetition === attempt.repetition &&
+          reply.followUpFor === attempt.step &&
+          reply.step === attempt.followUpSelection?.selected &&
+          reply.outcome === 'pass',
+      ),
+  );
   const totals: number[] = [];
   const scenarioTimes: { scenario: string; medianMs: number; minMs: number; maxMs: number }[] = [];
   let qualified = repetitions.length > 0 && scenarios.length > 0;
@@ -88,6 +103,22 @@ export function summarizeProfile(
     modality,
     qualified,
     finalQualified: qualified,
+    assistance: {
+      replies: followUps.filter((attempt) => attempt.outcome !== 'not_run').length,
+      completedSteps: assistedCompletions.map(({ scenario, step, repetition }) => ({
+        scenario,
+        step,
+        repetition,
+      })),
+      outcomes: Object.fromEntries(
+        ['pass', 'fail', 'inconclusive', 'error', 'aborted', 'not_run'].map((outcome) => [
+          outcome,
+          followUps.filter((attempt) => attempt.outcome === outcome).length,
+        ]),
+      ),
+      interpretation:
+        'Assisted completion preserves the original verdict; review whether each extra question was necessary before qualification.',
+    },
     meanScenarioMedianMs:
       qualified && scenarioTimes.length
         ? scenarioTimes.reduce((sum, item) => sum + item.medianMs, 0) / scenarioTimes.length
@@ -97,7 +128,7 @@ export function summarizeProfile(
     outcomes: Object.fromEntries(
       ['pass', 'fail', 'inconclusive', 'error', 'aborted', 'not_run'].map((outcome) => [
         outcome,
-        values.filter((attempt) => attempt.outcome === outcome).length,
+        baseValues.filter((attempt) => attempt.outcome === outcome).length,
       ]),
     ),
     backendCostUsd: values.every((attempt) => attempt.backendCostUsd !== null)
@@ -105,10 +136,7 @@ export function summarizeProfile(
       : null,
   };
 }
-export function compareProfiles(
-  reference: ReturnType<typeof summarizeProfile>,
-  candidate: ReturnType<typeof summarizeProfile>,
-) {
+export function compareProfiles(reference: ProfileSummary, candidate: ProfileSummary) {
   if (!reference.finalQualified && reference.outcomes.fail > 0 && candidate.finalQualified)
     return {
       label: 'Ej jämförbart',
@@ -156,13 +184,15 @@ export function compareProfiles(
   };
 }
 
-type ProfileSummary = ReturnType<typeof summarizeProfile>;
+type ProfileSummary = Omit<ReturnType<typeof summarizeProfile>, 'assistance'> &
+  Partial<Pick<ReturnType<typeof summarizeProfile>, 'assistance'>>;
 export type RecordedReference = {
   issue: number;
   url: string;
   commit: string;
   catalogSha256: string;
   judgeSha256?: string;
+  followUps?: boolean;
   summary: ProfileSummary;
 };
 
@@ -175,6 +205,7 @@ export function compareEvaluationProfiles(
     commit: string;
     catalogSha256: string;
     judgeSha256: string;
+    followUps?: boolean;
     baselineProfiles: Partial<Record<'text' | 'voice', string>>;
   },
 ) {
@@ -206,7 +237,8 @@ export function compareEvaluationProfiles(
         baseline: reference.summary.profile === current.baselineProfiles[candidate.modality],
         ...(reference.commit === current.commit &&
         reference.catalogSha256 === current.catalogSha256 &&
-        reference.judgeSha256 === current.judgeSha256
+        reference.judgeSha256 === current.judgeSha256 &&
+        (reference.followUps ?? false) === (current.followUps ?? false)
           ? compareProfiles(
               { ...reference.summary, finalQualified: reference.summary.qualified },
               candidate,
@@ -214,11 +246,12 @@ export function compareEvaluationProfiles(
           : {
               label: 'Ej jämförbart',
               recommendation:
-                'Ändrad eller okänd kod, katalog eller bedömarkonfiguration: bedöm skillnaderna innan jämförelse.',
+                'Ändrad eller okänd kod, katalog, bedömarkonfiguration eller följdsvarspolicy: bedöm skillnaderna innan jämförelse.',
               changed: {
                 commit: reference.commit !== current.commit,
                 catalog: reference.catalogSha256 !== current.catalogSha256,
                 judge: reference.judgeSha256 !== current.judgeSha256,
+                followUps: (reference.followUps ?? false) !== (current.followUps ?? false),
               },
             }),
       })),

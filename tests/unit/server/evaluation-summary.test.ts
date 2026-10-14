@@ -40,7 +40,7 @@ test('the evaluation summary uses real price turns and atomically installs ordin
       source = JSON.parse(String(body.input[0].content)).source;
       return [
         modelMessage(
-          'En äldre sparoperation för startkartan är verifierad. Spotify ändrades först till 189 kronor per månad. Den senaste ändringen är Molnlagring Plus 2 TB till 229 kronor per månad. Dessa ändringar är osparade.',
+          'En äldre sparoperation för startkartan är verifierad. Spotify ändrades först till 189 kronor per månad. Den senaste ändringen är Molnlagring Plus till 229 kronor per månad. Dessa ändringar är osparade.',
         ),
       ];
     }
@@ -141,6 +141,13 @@ test('the evaluation summary uses real price turns and atomically installs ordin
     ).toBe('239');
     expect(context.observedState.saveReceipt).toBeNull();
     expect(context.observedState.saveOperations).toEqual([]);
+    expect(context.observedState.historicalSaveOperations).toEqual([
+      expect.objectContaining({
+        operationId: 'evaluation-start',
+        status: 'succeeded',
+        receipt: expect.objectContaining({ savedAt: expect.any(String) }),
+      }),
+    ]);
     expect(context.observedState.historyChanges).toBe(0);
   } finally {
     await environment.close();

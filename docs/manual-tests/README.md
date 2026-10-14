@@ -272,7 +272,8 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   NOT-24 kräver hört besked. NOT-11 har
   en separat körbar mänsklig granskning av alla symbolformer och typfärger.
 - [Frågor och talade sparbesked](conversation-questions.md): identiteter,
-  konflikter, väntan med mikrofonen av, beständigt kvitto och fyra
+  konflikter, oberoende svar under väntande frågor, förnyad sparbegäran,
+  väntan med mikrofonen av, beständigt kvitto och fyra
   sekunders sparbesked efter ljud eller stopp. Talad och skriven ingång
   har skilda vanliga fall; uppläsning och faktiskt ljud har FRAGA-08/09.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag,

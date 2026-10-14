@@ -370,8 +370,10 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
 
 2. Kontrollera svaret i samtalstexten, kvarvarande Lo-förslag genom antalet på
    **Visa utkastet**, samt avsaknad av nytt kvitto och ny markering.
-3. Kör `sessions`. Läs det senaste paketet med typen
-   `session.commentary.append`. Beskedet **Utkast: 1 osparat förslag** ska
+3. Kör `sessions`. Läs senaste svarets `session.thinking.append`-paket.
+   Gruppera deras JSON-innehåll efter `answerId` och sammanfoga `text` i
+   `part`-ordning. Efter delarna ska `session.commentary.append` ange att
+   samma svar är komplett. Beskedet **Utkast: 1 osparat förslag** ska
    beskriva det faktiska utkastet utan att bekräfta något sparande eller någon
    markering. Modellens svar ska stå separat, citerat under
    **Samtal (obekräftat)**.
@@ -385,8 +387,8 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    ```
 
 5. Kontrollera oförändrat utkast och urval samt avsaknad av nytt kvitto. Frågan
-   ska finnas i samtalsdelen och som obekräftad text i det senaste
-   kommentarspaketet.
+   ska finnas i samtalsdelen och som obekräftad text i senaste svarets
+   sammanfogade delar.
 6. Kör `user Markera Lo Exempel.` och `delegate`. Kopiera Lo-förslagets ID från
    `held.draft` och använd följande kommando:
 
@@ -397,7 +399,7 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
 7. Nästa `held.lastToolResult` ska visa `displayed:true`. Släpp med
    `reply REQUEST Vem betalar?`. Kräv verkligt markerad Lo, bekräftad visning
    och kvarvarande fråga som obekräftad samtalstext. Kontrollera samma
-   uppdelning i det senaste kommentarspaketet.
+   uppdelning i senaste svarets sammanfogade delar.
 8. Kör `user Spara hela utkastet nu.` och `delegate`. Läs `version` och
    `contentVersion` från det nya `held.draft`. Ersätt markörerna och kör:
 
@@ -1011,7 +1013,8 @@ efter fallet och avsluta med `quit`.
 1. Slå på **Prata med Skyttel**. Skicka **Berätta om ordningen.** och låt
    svaret vara hållet. Läs röstrutan och arbetsraden.
 2. Stäng textvyn. Släpp svaret med **Vi tar ett förslag i taget.**. Kör
-   `sessions` och kontrollera hela svaret i kommentarerna.
+   `sessions` och kontrollera hela svaret i svarspaketens sammanfogade
+   `text`, enligt [TAL-04](#tidslinje-tal-04).
 3. Skicka samma text som transportfragment och slå på ljudaktiviteten enligt
    förberedelsen. Öppna textvyn först efter att svaret har kommit.
 4. På verklig utrustning: upprepa uppdraget med mikrofonen på, stäng textvyn och
@@ -1033,7 +1036,9 @@ efter fallet och avsluta med `quit`.
 
 1. Skicka **Första frågan.** och **Andra frågan.** utan att släppa svar. Släpp
    första svaret med **Första svaret med åäö.**, upprepat 30 gånger i samma
-   svar. Släpp sedan **Andra svaret.** och läs `sessions`.
+   svar. Släpp sedan **Andra svaret.** och läs `sessions`. Sammanfoga
+   delarna för varje svar enligt [TAL-04](#tidslinje-tal-04). Kontrollera
+   två fullständiga svar i ordning och ett uppspelningsbesked per svar.
 2. Skicka **Ett talat tillägg.** som transportfragment och slå på och av
    ljudaktiviteten. Läs raden i samtalstexten.
 3. Stäng av mikrofonen. Skicka **Min egen text ska inte läsas.** och släpp
@@ -1044,7 +1049,9 @@ efter fallet och avsluta med `quit`.
 ### Tidslinje RÖSTTEXT-04
 
 1. Skicka **Berätta om utkastet.**. Släpp provsvaret med **Sparat.**, utan att
-   anropa något sparverktyg. Läs svaret och kör `sessions`.
+   anropa något sparverktyg. Läs svaret och kör `sessions`. Sammanfoga
+   delarna enligt [TAL-04](#tidslinje-tal-04) och kontrollera att **Sparat.**
+   är märkt som **Samtal (obekräftat)**.
 2. Skicka **Sparat.** som transportfragment, slå på ljudaktiviteten och avsluta
    den. Kontrollera röstrutan och det tomma utkastet genom **Visa utkastet** i
    textvyn. Öppna **Rapporter → Ändringshistorik** och kontrollera att inget

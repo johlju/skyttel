@@ -325,7 +325,7 @@ export function useConversation({
             voiced,
             voicePending,
           });
-        else if (reply.result && reply.reply)
+        else if ((reply.result || reply.requiredNotice) && reply.reply)
           showTranscript({
             id: `result-${next.id}-${reply.revision}`,
             role: 'assistant',
@@ -367,7 +367,7 @@ export function useConversation({
           voicePending: voiced === undefined && voiceConnected.current,
         });
       if (
-        next.result &&
+        (next.result || next.requiredNotice) &&
         next.reply &&
         !next.receipt &&
         !(next.completedReplies ?? []).some(

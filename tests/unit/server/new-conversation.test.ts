@@ -245,6 +245,7 @@ test.each(['ordinary', 'held-status', 'held-stop'] as const)(
         await expect.poll(() => cancelHeld).toBe(true);
       }
 
+      const resetEventOffset = live.sent.length;
       resetting = heldStatus;
       resettingRequest = newConversation(session);
       try {
@@ -268,8 +269,9 @@ test.each(['ordinary', 'held-status', 'held-stop'] as const)(
       // A prompt to ignore old context does not clear the provider's history.
       // The old session closes; the browser establishes a fresh one.
       await expect.poll(() => live.channels.has(providerId)).toBe(false);
+      const resetEvents = live.sent.slice(resetEventOffset).map(({ event }) => event.type);
       expect(live.sent.map(({ event }) => event.type)).toContain('session.close');
-      expect(live.sent.map(({ event }) => event.type)).not.toContain('session.instructions.append');
+      expect(resetEvents).not.toContain('session.instructions.append');
       const replacement = await post(`${path}/${session.id}/voice`, {
         sdp: 'synthetic-replacement-offer',
         revision: renewed.revision,

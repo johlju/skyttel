@@ -140,7 +140,46 @@ checks; use those facts to ground confirmations. Historical summaries describe
 earlier context. Required response content must appear in its designated source.
 Missing required content in complete text fails; incomplete collection without
 proof is inconclusive. Stop dependent steps after fail, error, aborted or
-inconclusive outcomes. Unrun steps have no judge result.
+inconclusive outcomes, except for the declared clarification path below.
+Unrun steps have no judge result.
+
+### Conditional clarification
+
+When requested, set `EvaluationPlan.followUps` to true. The catalog's optional
+replies are shared across models and selected by the meaning of an explicit
+question, using the calibrated judge. Record this policy before payment;
+compare runs with the same catalog, controls and assistance policy.
+
+Preserve the base attempt's verdict. A follow-up requires the complete state
+to match the branch's declared waiting state, preserving independent work and
+save safety. Validate its waiting-response requirements against that state in
+each response source. Without a separate waiting-response contract, require all
+original response requirements to pass. A waiting contract must retain factual
+answers, requested details and required save guidance that remain answerable;
+only completion of work blocked by the question may wait.
+
+Send one uniquely matched reply at most once for that step, in the same
+conversation. Check completion against the original target before continuing
+ordinary steps. If clarification cancels a save request, a reply that completes
+the save path must explicitly request saving again. Missing, ambiguous or
+unsupported questions stop the path; adding replies is scenario maintenance
+for a later run.
+
+Report unassisted outcomes and assisted completion separately, including the
+question, selected reply, additional calls, elapsed time and costs. A successful
+reply does not erase an unnecessary question or an independent failure.
+For justified voice clarification, apply the acceptance policy in
+[voice evaluation](voice-evaluation.md#behavioral-assessment). The runner's raw
+qualification remains the unassisted result; publish the evidence-based
+behavioral assessment alongside it, including accepted limitations and gaps.
+An accepted voice question does not require an optional reply; continuation
+testing and its existing safety gates remain separate from that assessment.
+Assess question necessity from recognized input and available facts. Include
+waiting and routing time in assisted completion time; never substitute it for
+the base attempt's timing. For voice, verify every possible reply's reviewed
+audio before payment, and require the question in both backend and voice.
+
+### Timing
 
 Timing starts at the selected modality's input boundary and finishes at the
 later of correct state and the final required response fragment. Report startup,
@@ -187,7 +226,8 @@ required correction; start a new run only after the cause is resolved.
 Keep valid candidate failures in evaluation history.
 
 Present correctness first. Use one repetition by default. Qualification requires
-every fixed/content check to pass in the complete selected catalog; all
+every required outcome to be verified in the complete selected catalog under
+the modality's acceptance policy; all
 repetitions requested by the user must pass. Report equally weighted scenario
 medians, min/max, each repetition's total, costs and regressions. Label
 comparisons in text as well as red/yellow/green. Show response-time differences

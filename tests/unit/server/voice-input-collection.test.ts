@@ -58,7 +58,7 @@ function arrange() {
 test('a delegation inside a word waits for the late suffix and delivers the complete answer', {
   tags: ['technical'],
 }, async () => {
-  const { work, fragment, delegate, messages, response } = arrange();
+  const { work, fragment, delegate, messages, response, channel } = arrange();
   work.activity(true);
   fragment('prefix', 'Betala med hushållsk', 9400, 9600);
   delegate();
@@ -82,6 +82,13 @@ test('a delegation inside a word waits for the late suffix and delivers the comp
   });
   expect(response).toHaveBeenCalledOnce();
   expect(response.mock.calls[0][0].text).toBe('Hela svaret.');
+  expect(work.readyForSummary()).toBe(false);
+  const parts = channel.send.mock.calls
+    .map(([event]) => event)
+    .filter((event) => event.type === 'session.thinking.append');
+  expect(parts.length).toBeGreaterThan(0);
+  for (const part of parts)
+    channel.emit('session.thinking.appended', { client_event_id: part.event_id });
   expect(work.readyForSummary()).toBe(true);
 });
 

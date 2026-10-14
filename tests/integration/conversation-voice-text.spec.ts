@@ -69,7 +69,7 @@ async function output(page: Page, text: string) {
 test('RÖSTTEXT-01: skrivet uppdrag med mikrofonen på får röst och text utan att öppna textvyn', async ({
   page,
 }) => {
-  const { app, held, commentary } = await arrange(page);
+  const { app, held, live, commentary } = await arrange(page);
   try {
     await turnMicrophoneOn(page);
     await send(page, 'Berätta om ordningen.');
@@ -80,12 +80,9 @@ test('RÖSTTEXT-01: skrivet uppdrag med mikrofonen på får röst och text utan 
     await closeConversationText(page);
     held[0]([modelMessage('Vi tar ett förslag i taget.')]);
     await expect
-      .poll(() =>
-        commentary()
-          .map((event) => event.content)
-          .join(''),
-      )
+      .poll(() => voiceAnswerParts(live.sent).join(''))
       .toContain('Vi tar ett förslag i taget.');
+    await expect.poll(() => commentary().length).toBe(1);
     await expect(region(page)).toHaveCount(0);
     await output(page, 'Vi tar ett förslag i taget.');
     await expect(voiceBox(page)).toHaveText('Skyttel talar');
@@ -116,19 +113,16 @@ test('RÖSTTEXT-01: skrivet uppdrag med mikrofonen på får röst och text utan 
 test('RÖSTTEXT-04: ett skrivet obekräftat sparpåstående blir inget verifierat talat sparbesked', async ({
   page,
 }) => {
-  const { app, held, commentary, mapPath } = await arrange(page);
+  const { app, held, live, commentary, mapPath } = await arrange(page);
   try {
     await turnMicrophoneOn(page);
     await send(page, 'Berätta om utkastet.');
     await expect.poll(() => held.length).toBe(1);
     held[0]([modelMessage('Sparat.')]);
     await expect
-      .poll(() =>
-        commentary()
-          .map((event) => event.content)
-          .join(''),
-      )
+      .poll(() => voiceAnswerParts(live.sent).join(''))
       .toContain('Samtal (obekräftat): "Sparat."');
+    await expect.poll(() => commentary().length).toBe(1);
     await expect(log(page)).toContainText('Sparat.');
     await output(page, 'Sparat.');
     await expect(voiceBox(page)).toHaveText('Skyttel talar');
@@ -219,16 +213,10 @@ test('RÖSTTEXT-03: köns skrivna svar överlämnas till rösten en gång och sa
     held[0]([modelMessage(first)]);
     await expect.poll(() => held.length).toBe(2);
     held[1]([modelMessage('Andra svaret.')]);
-    await expect
-      .poll(() =>
-        commentary()
-          .map((event) => event.content)
-          .join(''),
-      )
-      .toContain('Andra svaret.');
+    await expect.poll(() => voiceAnswerParts(live.sent).join('')).toContain('Andra svaret.');
     // Long replies arrive as silent parts followed by one command to speak.
     const content = voiceAnswerParts(live.sent).join('');
-    expect(commentary()).toHaveLength(2);
+    await expect.poll(() => commentary().length).toBe(2);
     expect(content.indexOf(first)).toBeGreaterThanOrEqual(0);
     expect(content.indexOf(first)).toBeLessThan(content.indexOf('Andra svaret.'));
     expect(content.split(first)).toHaveLength(2);
