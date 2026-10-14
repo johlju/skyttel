@@ -252,6 +252,21 @@ Det är skilt från att användningen är okänd.
 En uppgift som lämnas med osäkerhet, exempelvis att någon tror att Lo
 använder en tjänst.
 
+## Användarens inställningar
+
+**Temaval**:
+Valet av ljust, mörkt eller systemtema i Skyttel.
+För en inloggad Skyttel-användare gäller samma val på alla enheter och
+webbläsare; systemtema följer respektive enhets och webbläsares inställning.
+
+**Ihågkommen inloggning**:
+Skyttel-användarens uttryckliga val att låta inloggningen bestå mellan
+webbläsarsessioner i den aktuella webbläsaren.
+
+**Nödvändig lagring**:
+Lagring som behövs för en funktion som Skyttel-användaren eller besökaren
+uttryckligen begär.
+
 ## Samtal med Skyttel
 
 **Samtal**:
