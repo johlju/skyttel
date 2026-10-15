@@ -133,6 +133,95 @@ test('binding loss, occupied bindings and canonical origin checks fail closed', 
   }
 });
 
+test('partial cookie restoration revokes the identifiable older binding before reinitializing', {
+  tag: '@technical',
+}, async ({ playwright }) => {
+  const installation = await createInstallation();
+  const { origin } = installation;
+  const old = await playwright.request.newContext();
+  const recovered = await playwright.request.newContext();
+  const vacant = await playwright.request.newContext();
+  try {
+    await signIn(old, origin);
+    const start = await old.post(`${origin}/api/auth/sign-in/social`, {
+      headers: { origin },
+      data: { provider: 'google', callbackURL: '/' },
+    });
+    expect(start.status()).toBe(200);
+    const pending = (await start.json()).url;
+    const saved = await old.storageState();
+    const oldBinding = saved.cookies.find((item) => item.name === 'skyttel_binding');
+    if (!oldBinding) throw new Error('Missing binding');
+    const response = await vacant.post(`${origin}/api/browser-binding/candidate`, {
+      headers: { origin },
+      data: {},
+    });
+    expect(response.status()).toBe(200);
+    const replacement = await response.json();
+    await recovered.addCookies(saved.cookies);
+    await recovered.addCookies([
+      { name: replacement.cookieName, value: replacement.candidate, url: origin, sameSite: 'Lax' },
+    ]);
+    expect(await (await recovered.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+
+    // The valid auth cookie still identifies the older occupied binding,
+    // even when a different, valid vacant binding cookie is restored with it.
+    const candidate = await recovered.post(`${origin}/api/browser-binding/candidate`, {
+      headers: { origin },
+      data: {},
+    });
+    expect(candidate.status()).toBe(200);
+    const binding = await candidate.json();
+    await recovered.addCookies([
+      { name: binding.cookieName, value: binding.candidate, url: origin, sameSite: 'Lax' },
+    ]);
+    expect(
+      (
+        await recovered.post(`${origin}/api/browser-binding/register`, {
+          headers: { origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(200);
+    expect(await (await old.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    expect(
+      (
+        await old.post(`${origin}/api/auth/sign-in/social`, {
+          headers: { origin },
+          data: { provider: 'google' },
+        })
+      ).status(),
+    ).toBe(409);
+    expect((await old.get(pending, { maxRedirects: 0 })).headers().location).toBe(
+      `${origin}/?error=binding_invalid`,
+    );
+    // Replaying the original full cookie pair cannot restore the revoked access.
+    await recovered.addCookies([oldBinding]);
+    expect(await (await recovered.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    await recovered.addCookies([
+      { name: binding.cookieName, value: binding.candidate, url: origin, sameSite: 'Lax' },
+    ]);
+    await signIn(recovered, origin);
+    expect(await (await recovered.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'setup',
+    });
+    expect(await (await old.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+  } finally {
+    await old.dispose();
+    await recovered.dispose();
+    await vacant.dispose();
+    await installation.close();
+  }
+});
+
 test('ACCESS-24: simultaneous first HTTPS tabs confirm one browser binding before provider start', async ({
   browser,
 }) => {

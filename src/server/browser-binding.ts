@@ -75,8 +75,6 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
     const headers = context.req.raw.headers;
     const existing = lookup(headers);
     const current = await rawSession(headers);
-    if (existing && (!existing.sessionId || existing.sessionId === current?.session.id))
-      return context.json({ candidate: cookie(headers), cookieName, origin });
     // An auth key without its binding grants only the right to terminate its
     // own identifiable old binding. It never grants protected application access.
     const previous = current
@@ -84,6 +82,12 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
           .prepare('SELECT id FROM browser_binding WHERE sessionId = ?')
           .get(current.session.id) as { id: string } | undefined)
       : undefined;
+    if (
+      existing &&
+      (!existing.sessionId || existing.sessionId === current?.session.id) &&
+      (!previous || previous.id === existing.id)
+    )
+      return context.json({ candidate: cookie(headers), cookieName, origin });
     if (
       (existing?.sessionId && existing.sessionId !== current?.session.id) ||
       (cookie(headers) && !previous)
