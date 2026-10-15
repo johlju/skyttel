@@ -1502,6 +1502,9 @@ arrangerar inkompatibla lagrade versioner, ändamål, beslutstider och
 absoluta gränser. Den offentliga HTTP-gränsen får då bara bekräfta vanlig
 inloggning och ska neka åtkomst exakt vid åtta timmar. Det är separat
 serverunderlag med styrd installationstid, inga manuellt utförda prov.
+Separata prov med olika frister för session och bindning visar att en ny
+start följer sessionens serverfrist och inte kan avsluta en levande
+session med enbart bindningskakan.
 
 [access.spec.ts](../../tests/integration/access.spec.ts) behåller sex
 requestdrivna kontroller: båda installationernas administratörsidentiteter,
@@ -1522,6 +1525,10 @@ Microsoft-inloggning i webbläsaren.
 [browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts)
 provar separat överlappande leverantörssvar för samma och olika användare,
 ersatt sessionsnyckel efter omstart och isolering mellan bindningar.
+Vid exakt åtta timmar nekas gammal åtkomst, men uttrycklig ny inloggning
+kan ersätta en känd utgången bindning och få en egen sessionsfrist.
+Gamla kakpar och återanrop förblir nekade; okända kakor och upptagna
+levande bindningar utan auth-kaka får ingen ny bindning.
 Utloggning under pågående kontokoppling får inte lägga till en identitet.
 Ett faktiskt fördröjt HTTPS-svar skriver över webbläsarens auth-kaka efter
 ett senare lyckat byte, men ger ingen gammal serveråtkomst. Provet använder

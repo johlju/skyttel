@@ -2,6 +2,120 @@ import { expect, test } from '@playwright/test';
 import { signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 
+test('explicit login replaces a known expired binding without reviving its old access', {
+  tag: '@technical',
+}, async ({ playwright }) => {
+  let time = Date.now();
+  const installation = await createInstallation(undefined, { now: () => time });
+  const { origin } = installation;
+  const client = await playwright.request.newContext();
+  const bindingOnly = await playwright.request.newContext();
+  const unknown = await playwright.request.newContext();
+  const independent = await playwright.request.newContext();
+  let stale: Awaited<ReturnType<typeof playwright.request.newContext>> | undefined;
+  const candidate = (request: typeof client) =>
+    request.post(`${origin}/api/browser-binding/candidate`, { headers: { origin }, data: {} });
+  try {
+    await signIn(client, origin);
+    const saved = await client.storageState();
+    const oldBinding = saved.cookies.find((item) => item.name === 'skyttel_binding');
+    if (!oldBinding) throw new Error('Missing binding');
+    expect(oldBinding.expires).toBe(-1);
+    stale = await playwright.request.newContext({ storageState: saved });
+    await bindingOnly.addCookies([oldBinding]);
+    expect((await candidate(bindingOnly)).status()).toBe(409);
+    expect(await (await client.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'setup',
+    });
+    await unknown.addCookies([{ ...oldBinding, value: 'f'.repeat(64) }]);
+    expect((await candidate(unknown)).status()).toBe(409);
+
+    time += 28_799_999;
+    expect(await (await client.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'setup',
+    });
+    expect((await candidate(bindingOnly)).status()).toBe(409);
+    const pending = await client.post(`${origin}/api/auth/sign-in/social`, {
+      headers: { origin },
+      data: { provider: 'google', callbackURL: '/' },
+    });
+    expect(pending.status()).toBe(200);
+    const oldCallback = (await pending.json()).url;
+    await signIn(independent, origin);
+
+    time += 1;
+    expect(await (await client.get(`${origin}/api/auth/get-session`)).json()).toBeNull();
+    expect(await (await client.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    expect(
+      (
+        await client.post(`${origin}/api/browser-binding/register`, {
+          headers: { origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(409);
+    const replacement = await candidate(client);
+    expect(replacement.status()).toBe(200);
+    expect(replacement.headers()['set-cookie']).toBeUndefined();
+    const binding = await replacement.json();
+    expect(binding.candidate).not.toBe(oldBinding.value);
+    await client.addCookies([
+      { name: binding.cookieName, value: binding.candidate, url: origin, sameSite: 'Lax' },
+    ]);
+    expect(
+      (
+        await client.post(`${origin}/api/browser-binding/register`, {
+          headers: { origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(200);
+    expect(await (await client.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    const started = await client.post(`${origin}/api/auth/sign-in/social`, {
+      headers: { origin },
+      data: { provider: 'google', callbackURL: '/' },
+    });
+    expect(started.status()).toBe(200);
+    const completed = await client.get((await started.json()).url, { maxRedirects: 0 });
+    expect(completed.status()).toBe(302);
+    const proof = new URL(completed.headers().location, origin).searchParams.get(
+      'loginConfirmation',
+    );
+    expect(proof).toMatch(/^[a-f0-9]{64}$/);
+    expect(
+      await (
+        await client.get(`${origin}/api/browser-binding/confirmation?proof=${proof}`, {
+          headers: { origin },
+        })
+      ).json(),
+    ).toMatchObject({ remembered: false, expiresAt: time + 28_800_000 });
+    expect(await (await client.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'setup',
+    });
+    expect(await (await stale.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    expect((await stale.get(oldCallback, { maxRedirects: 0 })).headers().location).toBe(
+      `${origin}/?error=binding_invalid`,
+    );
+    expect(await (await independent.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'setup',
+    });
+    expect((await candidate(unknown)).status()).toBe(409);
+  } finally {
+    await client.dispose();
+    await bindingOnly.dispose();
+    await unknown.dispose();
+    await independent.dispose();
+    await stale?.dispose();
+    await installation.close();
+  }
+});
+
 for (const sameUser of [true, false]) {
   test(`first successful callback cancels an already verifying ${sameUser ? 'same' : 'different'} user`, {
     tag: '@technical',

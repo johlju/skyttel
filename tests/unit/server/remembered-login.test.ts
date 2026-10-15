@@ -4,6 +4,67 @@ import { applicationFixture } from './fixture.js';
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
 afterEach(() => fixture?.close());
 
+test.each(['session policy', 'binding'] as const)(
+  'explicit login checks the associated session policy when only the %s deadline has elapsed',
+  async (expired) => {
+    let time = Date.now();
+    fixture = await applicationFixture({ now: () => time });
+    const client = fixture.client();
+    await client.signIn();
+    const start = await client.json('/api/auth/sign-in/social', {
+      provider: 'google',
+      callbackURL: '/',
+      rememberMe: true,
+      informationVersion: 1,
+    });
+    const completed = await client.request((await start.json()).url);
+    const proof = new URL(
+      completed.headers.get('location') ?? '',
+      fixture.config.origin,
+    ).searchParams.get('loginConfirmation');
+    const confirmation = await client.request(`/api/browser-binding/confirmation?proof=${proof}`, {
+      headers: { origin: fixture.config.origin },
+    });
+    const { sessionId } = await confirmation.json();
+    const binding = await (await client.json('/api/browser-binding/candidate', {})).json();
+    // Arrange mismatched durable deadlines through the installation boundary.
+    // A cookie alone is safe to retire only after its actual session expires.
+    fixture.database
+      .prepare(
+        expired === 'session policy'
+          ? 'UPDATE session SET absoluteExpiresAt = ? WHERE id = ?'
+          : 'UPDATE browser_binding SET expiresAt = ? WHERE sessionId = ?',
+      )
+      .run(time + 60_000, sessionId);
+    const initialize = () =>
+      fixture.app.request(`${fixture.config.origin}/api/browser-binding/candidate`, {
+        method: 'POST',
+        headers: {
+          origin: fixture.config.origin,
+          cookie: `${binding.cookieName}=${binding.candidate}`,
+        },
+      });
+    time += 59_999;
+    expect((await initialize()).status).toBe(409);
+    time += 1;
+    const initialized = await initialize();
+    expect(initialized.status).toBe(expired === 'session policy' ? 200 : 409);
+    if (expired === 'session policy') {
+      expect((await initialized.json()).candidate).not.toBe(binding.candidate);
+      expect(await (await client.request('/api/auth/get-session')).json()).toBeNull();
+    } else {
+      // Restoring only the binding deadline proves the live session survived
+      // the unauthenticated initialization attempt.
+      fixture.database
+        .prepare('UPDATE browser_binding SET expiresAt = ? WHERE sessionId = ?')
+        .run(time + 60_000, sessionId);
+      expect(await (await client.request('/api/auth/get-session')).json()).toMatchObject({
+        session: { id: sessionId },
+      });
+    }
+  },
+);
+
 // Corrupt persisted records at the installation boundary. HTTP callers cannot
 // create these incompatible server records through the normalized login API.
 // Observe only confirmation, ordinary application access and outgoing cookies.

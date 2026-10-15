@@ -143,12 +143,15 @@ export function browserBindings(
         ? 'invalid'
         : null;
   }
-  function lookup(headers: Headers): Binding | undefined {
+  function recordedBinding(headers: Headers): Binding | undefined {
     const value = cookie(headers);
     if (!value || !/^[a-f0-9]{64}$/.test(value)) return;
-    const binding = database
-      .prepare('SELECT * FROM browser_binding WHERE id = ?')
-      .get(key(value)) as Binding | undefined;
+    return database.prepare('SELECT * FROM browser_binding WHERE id = ?').get(key(value)) as
+      | Binding
+      | undefined;
+  }
+  function lookup(headers: Headers): Binding | undefined {
+    const binding = recordedBinding(headers);
     return binding && binding.expiresAt > now() ? binding : undefined;
   }
   async function session(headers: Headers) {
@@ -177,8 +180,16 @@ export function browserBindings(
   });
   routes.post('/candidate', async (context) => {
     const headers = context.req.raw.headers;
-    const existing = lookup(headers);
     const current = await rawSession(headers);
+    const recorded = recordedBinding(headers);
+    const selected = recorded?.sessionId ? policy(recorded.sessionId) : undefined;
+    // Only an explicit new login may retire a known expired binding. Its
+    // session policy must also have expired: a binding cookie alone can never
+    // terminate another user's live session, even if the binding deadline did.
+    const expired =
+      recorded &&
+      (recorded.sessionId ? selected && deadline(selected) <= now() : recorded.expiresAt <= now());
+    const existing = expired ? undefined : lookup(headers);
     // An auth key without its binding grants only the right to terminate its
     // own identifiable old binding. It never grants protected application access.
     const previous = current
@@ -194,7 +205,7 @@ export function browserBindings(
       return context.json({ candidate: cookie(headers), cookieName, origin });
     if (
       (existing?.sessionId && existing.sessionId !== current?.session.id) ||
-      (cookie(headers) && !previous)
+      (cookie(headers) && !previous && !expired)
     )
       return context.json(
         { error: existing?.sessionId ? 'binding_occupied' : 'binding_invalid' },
@@ -203,6 +214,7 @@ export function browserBindings(
     if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
     const candidate = randomBytes(32).toString('hex');
     database.transaction(() => {
+      if (expired) database.prepare('DELETE FROM browser_binding WHERE id = ?').run(recorded.id);
       if (previous && current) {
         database.prepare('DELETE FROM browser_binding WHERE id = ?').run(previous.id);
         database.prepare('DELETE FROM session WHERE id = ?').run(current.session.id);
