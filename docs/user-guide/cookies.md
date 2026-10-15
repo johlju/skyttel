@@ -31,13 +31,25 @@ du stänger ett fönster: webbläsaren kan återställa sessionen. Logga ut på
 en delad dator.
 
 Stäng av **Ihågkommen inloggning** på lagringssidan och välj
-**Spara inställningar**. Servern avslutar den gamla nyckeln och äldre
+**Spara inställningar**. Snabbåtgärden **Stäng av ihågkommen inloggning**
+ändrar bara formuläret. **Ångra ändring** återgår till det senast
+bekräftade valet. Om du lämnar osparade ändringar får du välja mellan att
+fortsätta redigera och att kasta ändringarna. Servern avslutar den gamla
+nyckeln och äldre
 påbörjade inloggnings- och kontokopplingsförsök i samma bindning. Dina
 andra webbläsare och redan kopplade konton påverkas inte. Återstående
 session gäller längst till det tidigare slutet eller åtta timmar från
 avstängningen, med 30 minuters inaktivitet. Upprepad avstängning
 förlänger inte tiden. Ny aktivering kräver ny inloggning och ett nytt
 aktivt **Kom ihåg mig**-val.
+
+**Återställ valfri lagring** öppnar en separat bekräftelse innan någon
+ändring begärs. Återställningen stänger av ihågkommen inloggning i den
+aktuella webbläsarbindningen genom samma säkra avstängning som sparknappen.
+Kontots tema, personliga vyer, hushållets information och samtalsmedgivande
+bevaras. Flikens återhämtningsuppgifter för import och permanent radering
+med osäkert utfall bevaras också. **Avbryt** lämnar både formuläret och
+servervalet oförändrade. Andra webbläsarbindningar påverkas inte.
 
 **Ihågkommen inloggning är avstängd.** bekräftar serverändringen.
 **Du är fortfarande inloggad.** visas bara efter en separat kontroll av

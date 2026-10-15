@@ -1,8 +1,10 @@
 // Layout adapted from Viscalyx CookieSettings; see CookieStorage.LICENSE.
-import { useLayoutEffect, useRef } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { rememberedLoginInformation } from '../shared/remembered-login.js';
 import referenceLicense from './CookieStorage.LICENSE?url&no-inline';
+import { FormLossGuard } from './FormLossGuard.js';
+import { trapDialogTab, usableFocusTarget } from './modal-focus.js';
 import { useStoragePreference } from './use-storage-preference.js';
 import './cookie-storage.css';
 
@@ -54,6 +56,9 @@ const entries = [
 
 export function CookieStorage({ userId }: { userId?: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const [resetOrigin, setResetOrigin] = useState<HTMLButtonElement | null>(null);
+  const [resultPlace, setResultPlace] = useState<'save' | 'reset'>('save');
+  const resetUser = useRef(userId);
   const {
     saved,
     requested,
@@ -65,12 +70,80 @@ export function CookieStorage({ userId }: { userId?: string }) {
     recoveryMessage,
     dirty,
     setRequested,
+    undo,
+    reset,
     save,
     checkAgain,
   } = useStoragePreference(userId);
+  const blocked = state === 'saving' || state === 'checking' || state === 'unknown';
   useLayoutEffect(() => heading.current?.focus(), []);
+  useLayoutEffect(() => {
+    if (resetUser.current !== userId) {
+      resetUser.current = userId;
+      setResetOrigin(null);
+      setResultPlace('save');
+    }
+  }, [userId]);
+  const feedback = (
+    <div className="cookie-storage-feedback">
+      <p role="status">
+        {state === 'saved' && (
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="m5 12 4 4L19 6" strokeWidth="2" />
+          </svg>
+        )}
+        {state === 'saving'
+          ? 'Sparar…'
+          : state === 'checking'
+            ? 'Kontrollerar samma åtgärd…'
+            : state === 'saved'
+              ? `Ihågkommen inloggning är avstängd. ${reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'}`
+              : ''}
+        {state === 'saved' && recoveryMessage ? ` ${recoveryMessage}` : ''}
+      </p>
+      <p role="alert">
+        {['rejected', 'unknown', 'unavailable'].includes(state) && (
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="m12 3 10 18H2Z M12 9v5m0 3v1" strokeWidth="2" />
+          </svg>
+        )}
+        {state === 'rejected'
+          ? 'Ändringen kunde inte sparas. Försök igen.'
+          : state === 'unknown'
+            ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.'
+            : state === 'unavailable'
+              ? recoveryMessage ||
+                'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
+              : ''}
+        {state === 'unknown' && recoveryMessage ? ` ${recoveryMessage}` : ''}
+      </p>
+      {requiresLogin && (
+        <p>
+          <Link to="/login">Logga in igen</Link>
+        </p>
+      )}
+      {(state === 'unknown' || state === 'checking' || resultChecked) && (
+        <button type="button" aria-disabled={state !== 'unknown'} onClick={() => void checkAgain()}>
+          Kontrollera igen
+        </button>
+      )}
+    </div>
+  );
   return (
     <article className="cookie-storage">
+      {userId && (
+        <FormLossGuard
+          dirty={dirty || state === 'unknown'}
+          busy={state === 'saving' || state === 'checking'}
+          onDiscard={undo}
+          onBlocked={() => {}}
+          description={
+            state === 'unknown'
+              ? 'Utfallet är fortfarande okänt. Åtgärdens referens bevaras i fliken. Du kan behöva logga in igen för att kontrollera samma resultat. Att lämna sidan skickar inget nytt sparande.'
+              : 'Dina osparade lagringsval försvinner. Serverns senast bekräftade val ändras inte när du lämnar formuläret.'
+          }
+        />
+      )}
       <header className="cookie-storage-header">
         <div className="cookie-storage-title">
           <svg
@@ -92,10 +165,48 @@ export function CookieStorage({ userId }: { userId?: string }) {
           den här webbläsaren.
         </p>
       </header>
+      <section className="cookie-storage-quick" aria-labelledby="storage-quick-title">
+        <h2 id="storage-quick-title">Snabbåtgärder</h2>
+        <div className="cookie-storage-quick-buttons">
+          <button
+            type="button"
+            className="cookie-storage-primary"
+            aria-disabled={!saved?.remembered || !requested || blocked}
+            onClick={() => {
+              if (saved?.remembered && requested && !blocked) setRequested(false);
+            }}
+          >
+            Stäng av ihågkommen inloggning
+          </button>
+          <button
+            type="button"
+            aria-disabled={!dirty || blocked}
+            onClick={() => {
+              if (dirty && !blocked) undo();
+            }}
+          >
+            Ångra ändring
+          </button>
+          <button
+            type="button"
+            className="cookie-storage-reset"
+            aria-disabled={!saved?.remembered || blocked}
+            onClick={(event) => {
+              if (saved?.remembered && !blocked) setResetOrigin(event.currentTarget);
+            }}
+          >
+            Återställ valfri lagring
+          </button>
+        </div>
+        <p>Snabbvalet ändrar formuläret. Spara längst ned för att ändra din inloggning.</p>
+        {userId && resultPlace === 'reset' && feedback}
+      </section>
       <h2>Lagringskategorier</h2>
       <section className="cookie-storage-card" aria-labelledby="necessary-storage-title">
-        <h3 id="necessary-storage-title">Nödvändig lagring</h3>
-        <p className="cookie-storage-badge">Vid begärd funktion</p>
+        <div className="cookie-storage-card-header">
+          <h3 id="necessary-storage-title">Nödvändig lagring</h3>
+          <span className="cookie-storage-badge">Vid begärd funktion</span>
+        </div>
         <p>
           Kakor behövs för säker inloggning och kontokoppling. Fliklagring hjälper dig att följa
           samma import eller permanenta radering som du begär. Den här lagringen har inget
@@ -126,8 +237,25 @@ export function CookieStorage({ userId }: { userId?: string }) {
         </details>
       </section>
       <section className="cookie-storage-card" aria-labelledby="remember-storage-title">
-        <h3 id="remember-storage-title">Ihågkommen inloggning</h3>
-        <p>
+        <div className="cookie-storage-card-header">
+          <h3 id="remember-storage-title">Ihågkommen inloggning</h3>
+          {userId && saved && (
+            <label className="cookie-storage-choice">
+              <input
+                type="checkbox"
+                role="switch"
+                aria-label="Ihågkommen inloggning"
+                aria-describedby="storage-remember-description"
+                aria-checked={requested}
+                checked={requested}
+                disabled={!saved.remembered || blocked}
+                onChange={(event) => setRequested(event.target.checked)}
+              />
+              <span aria-hidden="true" />
+            </label>
+          )}
+        </div>
+        <p id="storage-remember-description">
           Valfri lagring för att behålla inloggningen mellan webbläsarsessioner. Valet gäller den
           aktuella webbläsarbindningen, inte andra enheter eller webbläsare. Ett aktivt val kräver
           en uttrycklig handling; att stänga informationen eller fortsätta använda Skyttel
@@ -146,24 +274,6 @@ export function CookieStorage({ userId }: { userId?: string }) {
           En sessionskaka garanterar inte utloggning när du stänger ett fönster. Webbläsare kan
           återställa sessioner. Logga ut på en delad dator.
         </p>
-        {userId && saved && (
-          <label className="cookie-storage-choice">
-            <span>Ihågkommen inloggning</span>
-            <input
-              type="checkbox"
-              role="switch"
-              aria-checked={requested}
-              checked={requested}
-              disabled={
-                !saved.remembered ||
-                state === 'saving' ||
-                state === 'checking' ||
-                state === 'unknown'
-              }
-              onChange={(event) => setRequested(event.target.checked)}
-            />
-          </label>
-        )}
         {saved && !saved.remembered && (
           <p>
             <Link to="/login">Logga in på nytt och välj Kom ihåg mig.</Link>
@@ -226,46 +336,18 @@ export function CookieStorage({ userId }: { userId?: string }) {
               tiden.
             </p>
           )}
-          <p role="status">
-            {state === 'saving'
-              ? 'Sparar…'
-              : state === 'checking'
-                ? 'Kontrollerar samma åtgärd…'
-                : state === 'saved'
-                  ? `Ihågkommen inloggning är avstängd. ${reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'}`
-                  : ''}
-          </p>
-          <p role="alert">
-            {state === 'rejected'
-              ? 'Ändringen kunde inte sparas. Försök igen.'
-              : state === 'unknown'
-                ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.'
-                : state === 'unavailable'
-                  ? recoveryMessage ||
-                    'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
-                  : ''}
-            {state === 'unknown' && recoveryMessage ? ` ${recoveryMessage}` : ''}
-          </p>
-          {requiresLogin && (
-            <p>
-              <Link to="/login">Logga in igen</Link>
-            </p>
-          )}
-          {(state === 'unknown' || state === 'checking' || resultChecked) && (
-            <button
-              type="button"
-              aria-disabled={state !== 'unknown'}
-              onClick={() => void checkAgain()}
-            >
-              Kontrollera igen
-            </button>
-          )}
+          {resultPlace === 'save' && feedback}
           <button
             type="button"
             aria-disabled={
               !dirty || state === 'saving' || state === 'checking' || state === 'unknown'
             }
-            onClick={() => void save()}
+            className="cookie-storage-primary"
+            onClick={() => {
+              if (!dirty || blocked) return;
+              setResultPlace('save');
+              void save();
+            }}
           >
             Spara inställningar
           </button>
@@ -275,7 +357,81 @@ export function CookieStorage({ userId }: { userId?: string }) {
         Formulärets utseende bygger på Viscalyx CookieSettings.{' '}
         <a href={referenceLicense}>Licens för formulärets förebild (MIT)</a>
       </p>
+      {resetOrigin && (
+        <StorageResetDialog
+          origin={resetOrigin}
+          onCancel={() => setResetOrigin(null)}
+          onConfirm={() => {
+            setResetOrigin(null);
+            setResultPlace('reset');
+            void reset();
+          }}
+        />
+      )}
     </article>
+  );
+}
+
+function StorageResetDialog({
+  origin,
+  onCancel,
+  onConfirm,
+}: {
+  origin: HTMLButtonElement;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const cancel = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  useLayoutEffect(() => {
+    const shown = dialog.current;
+    shown?.showModal();
+    cancel.current?.focus();
+    return () => {
+      shown?.close();
+      if (usableFocusTarget(origin)) origin.focus({ preventScroll: true });
+    };
+  }, [origin]);
+  return (
+    <dialog
+      ref={dialog}
+      className="cookie-storage-reset-dialog"
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-description`}
+      onKeyDown={trapDialogTab}
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+    >
+      <h2 id={`${id}-title`}>Återställ valfri lagring?</h2>
+      <div id={`${id}-description`}>
+        <p>
+          Återställningen stänger av ihågkommen inloggning i den aktuella webbläsarbindningen. Den
+          gamla inloggningsnyckeln slutar gälla och äldre påbörjade inloggnings- och
+          kontokopplingsförsök här avslutas. Andra webbläsarbindningar påverkas inte.
+        </p>
+        <p>
+          Du får en vanlig inloggning längst till det tidigare slutet eller åtta timmar från
+          avstängningen, med 30 minuters inaktivitet. Fortsatt inloggning kontrolleras separat; du
+          kan behöva logga in igen. Ny aktivering kräver ny inloggning och Kom ihåg mig.
+        </p>
+        <p>
+          Flikens återhämtningsuppgifter för import och permanent radering med osäkert utfall,
+          kontots tema, personliga vyer, hushållets information och samtalsmedgivande bevaras.
+          Nödvändig lagring rensas inte. Google och Microsoft styr sin egen lagring.
+        </p>
+      </div>
+      <footer>
+        <button ref={cancel} type="button" onClick={onCancel}>
+          Avbryt
+        </button>
+        <button type="button" className="cookie-storage-reset" onClick={onConfirm}>
+          Återställ
+        </button>
+      </footer>
+    </dialog>
   );
 }
 

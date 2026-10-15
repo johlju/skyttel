@@ -105,7 +105,9 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
 
 - [Kakor och lagring](cookies.md): publik information, första besök,
   profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före
-  hushållsstart och efter återkallad tillgång samt separat skärmläsarprov.
+  hushållsstart och efter återkallad tillgång, snabbval, ångra,
+  navigationsskydd, bekräftad återställning, fel och bevarade
+  återhämtningsuppgifter samt separat skärmläsarprov.
   Kontroll av samma okända avstängning efter serveromstart och ny
   inloggning bevarar ett nytt aktivt val. Nekat återhämtningsminne,
   skadad eller förlorad referens och utgånget resultat ger ingen gissad

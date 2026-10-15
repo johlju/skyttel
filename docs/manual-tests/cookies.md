@@ -1,7 +1,8 @@
 # Manuella testfall för kakor och lagring
 
-Fallen omfattar den publika informationssidan, första informationen och
-profilvägen tillbaka till kartan. Anteckna commit, webbläsare, bredd och
+Fallen omfattar den publika informationssidan, första informationen,
+profilvägen tillbaka till kartan och formulärets lagringsval.
+Anteckna commit, webbläsare, bredd och
 godkänt eller underkänt resultat vid körning. Automatiska prov använder
 den befintliga testinstallationen med syntetiska inloggningsleverantörer.
 De bevisar inte skärmläsarens uppläsning eller fullständig WCAG-efterlevnad.
@@ -33,7 +34,8 @@ De bevisar inte skärmläsarens uppläsning eller fullständig WCAG-efterlevnad.
 **Förutsättningar:** Ren webbläsarprofil, bredd 1280 pixlar.
 
 **Automatiskt motsvarande test:**
-[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts), KAK-01.
+[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts) ,
+KAK-01.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -85,7 +87,8 @@ De bevisar inte skärmläsarens uppläsning eller fullständig WCAG-efterlevnad.
 förväntade resultat i KAK-01.
 
 **Automatiskt motsvarande test:**
-[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts), KAK-02.
+[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts) ,
+KAK-02.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -117,7 +120,8 @@ förväntade resultat i KAK-01.
 förväntade resultat i KAK-01.
 
 **Automatiskt motsvarande test:**
-[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts), KAK-03.
+[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts) ,
+KAK-03.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -151,7 +155,8 @@ förväntade resultat i KAK-01.
 medlemsroll. Samma användare behåller rollen efter flödet.
 
 **Automatiskt motsvarande test:**
-[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts), KAK-09.
+[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts) ,
+KAK-09.
 
 <!--
 ```manual-mapping
@@ -197,7 +202,8 @@ den första delen. För andra delen behöver en annan administratör kunna
 [åtkomstfallen](access.md). Behåll alltid en annan administratör.
 
 **Automatiskt motsvarande test:**
-[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts), KAK-08.
+[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts) ,
+KAK-08.
 
 <!--
 ```manual-mapping
@@ -242,7 +248,8 @@ den första delen. För andra delen behöver en annan administratör kunna
 **Förutsättningar:** Inloggad i provhushållets karta, bredd 1280 pixlar.
 
 **Automatiskt motsvarande test:**
-[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts), KAK-04.
+[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts) ,
+KAK-04.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -289,7 +296,8 @@ den första delen. För andra delen behöver en annan administratör kunna
 resultat i KAK-04. Fäll ut kartverktygen om det behövs.
 
 **Automatiskt motsvarande test:**
-[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts), KAK-05.
+[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts) ,
+KAK-05.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -321,7 +329,8 @@ resultat i KAK-04. Fäll ut kartverktygen om det behövs.
 resultat i KAK-04. Fäll ut kartverktygen om det behövs.
 
 **Automatiskt motsvarande test:**
-[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts), KAK-06.
+[cookie-storage.spec.ts](../../tests/integration/cookie-storage.spec.ts) ,
+KAK-06.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -354,6 +363,8 @@ skärmläsare. Prova 1280, 390 och 320 pixlar i ljust och mörkt tema.
 
 **Kräver mänsklig observation:** Lyssna på skärmläsarens uppläsning av
 rubriker, länkar, stängningsknapp och utvecklingsbara lagringsdetaljer.
+Lyssna även på formulärval, navigationsskydd, återställningsdialog och
+sparbesked. Den här mänskliga kontrollen är ännu inte utförd.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -363,10 +374,11 @@ rubriker, länkar, stängningsknapp och utvecklingsbara lagringsdetaljer.
     "kind": "screen-reader",
     "observation": "Lyssna på namn, läsordning, öppnade detaljer och fokus efter stängning, sidbyte och återgång till kartan med verklig skärmläsare."
   },
-  "reference": "Fullständiga KAK-01–KAK-06 med skärmläsare, tangentbord, båda teman och 1280/390/320 pixlar.",
+  "reference": "Fullständiga KAK-01–KAK-06 och KAK-10–KAK-16 med skärmläsare, tangentbord, båda teman och 1280/390/320 pixlar. Mänskligt prov återstår.",
   "outcomes": [
     "Läsordning och namn förklarar handlingarna",
-    "Sidfokus och återgång annonseras begripligt"
+    "Sidfokus och återgång annonseras begripligt",
+    "Varje nytt status- eller felbesked läses en gång utan fokusförlust"
   ],
   "evidence": [
     {
@@ -384,6 +396,14 @@ rubriker, länkar, stängningsknapp och utvecklingsbara lagringsdetaljer.
       "spec": "tests/integration/cookie-storage.spec.ts",
       "caseId": "KAK-06",
       "purpose": "Automatiskt stöd för profilväg och fokus vid 320 pixlar"
+    },
+    {
+      "kind": "overlap",
+      "runner": "playwright",
+      "suite": "integration",
+      "spec": "tests/integration/cookie-storage-form.spec.ts",
+      "caseId": "KAK-13",
+      "purpose": "Tangentbord, navigationsskydd, dialog och fokuserad återkomst vid 320 pixlar; ingen fysisk uppläsning"
     }
   ]
 }
@@ -393,16 +413,382 @@ rubriker, länkar, stängningsknapp och utvecklingsbara lagringsdetaljer.
 
 **Steg:**
 
-1. Följ KAK-01–KAK-06 med skärmläsaren och enbart tangentbord där det stöds.
+1. Följ KAK-01–KAK-06 och KAK-10–KAK-16 med skärmläsaren och enbart
+   tangentbord där det stöds.
 2. Lyssna på rubriker och kontroller. Öppna och stäng lagringsdetaljerna.
 3. Kontrollera synligt fokus, läsordning, pekmål, kontrast och omflöde
    även med förstoring. Anteckna hinder separat från automatiska resultat.
+4. Lyssna på sparande, avvisning och okänd sparstatus. Kontrollera att
+   samma besked läses en gång och att fokus ligger kvar på åtgärden.
 
 **Förväntat resultat:**
 
 - Information och kontroller går att förstå och använda utan visuell
   navigering. Fokus försvinner inte vid stängning eller sidbyte.
 - Detaljernas öppna eller stängda läge förmedlas begripligt.
+
+## Formulärets lagringsval
+
+### KAK-10: Snabbval och ångra föregår uttryckligt sparande på dator
+
+**Syfte:** Skilja formulärändringar från serverns bekräftade val.
+
+**Användare:** Hushållets administratör.
+
+**Förutsättningar:** Bredd 1280 pixlar. Logga in med ett aktivt
+**Kom ihåg mig**-val och öppna **Kakor och lagring**.
+
+**Automatiskt motsvarande test:**
+[cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
+KAK-10. Testet använder verklig HTTP och syntetisk inloggningsleverantör.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/cookie-storage-form.spec.ts",
+    "caseId": "KAK-10"
+  },
+  "reference": "1280 pixlar. Verkligt sparande via HTTP; syntetisk Google-inloggning. Ingen fysisk webbläsaromstart eller skärmläsaruppläsning ingår.",
+  "outcomes": [
+    "Snabbval ändrar bara formuläret",
+    "Ångra återgår till senast bekräftat värde",
+    "Sparknappen bekräftar avstängning och fortsatt inloggning separat",
+    "Fokus ligger kvar på sparknappen"
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Fokusera **Stäng av ihågkommen inloggning** och tryck Enter.
+2. Kontrollera att reglaget är av och att **Osparad ändring.** visas.
+3. Välj **Ångra ändring** och kontrollera att reglaget återgår till på.
+4. Stäng av igen och välj **Spara inställningar** längst ned.
+
+**Förväntat resultat:**
+
+- Snabbvalet och ångra skickar inget sparande.
+- Efter sparande visas **Ihågkommen inloggning är avstängd.** och,
+  efter separat kontroll, **Du är fortfarande inloggad.**
+- Sparknappen behåller fokus. Ny aktivering hänvisar till ny inloggning.
+
+### KAK-11: Navigation och bekräftad återställning bevarar annat arbete
+
+**Syfte:** Skydda osparade lagringsval och begränsa återställningen.
+
+**Användare:** Hushållets administratör.
+
+**Förutsättningar:** Bredd 1280 pixlar, aktiv ihågkommen inloggning,
+sparat kontotema, personlig vy och samtalsmedgivande. En annan webbläsare
+har en egen giltig inloggning för samma användare.
+
+**Separat förberedelse:** Använd en isolerad provmiljö. Förbered
+återhämtningsuppgifter enligt fallen för
+[återimport](household-import.md) och [permanent radering](household-erasure.md)
+om dessa förlopp ska följas efteråt. Automation placerar syntetiska
+återhämtningsreferenser i fliken och kontrollerar att de bevaras; den
+genomför ingen import eller radering i detta fall.
+
+**Automatiskt motsvarande test:**
+[cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
+KAK-11. Verklig HTTP används för lagringsval och bevarade serveruppgifter.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/cookie-storage-form.spec.ts",
+    "caseId": "KAK-11"
+  },
+  "reference": "1280 pixlar, mörkt tema. Syntetisk Google-inloggning och återhämtningsreferenser; verklig HTTP för inställningar och avstängning. Separat skärmläsarprov krävs.",
+  "outcomes": [
+    "Profil, inställningslänk och Tillbaka till kartan skyddar osparade val",
+    "Fortsatt redigering återger fokus och behåller valet",
+    "Dialogens avbryt ändrar ingenting och återger fokus",
+    "Bekräftad återställning använder samma säkra avstängning",
+    "Återhämtningsreferenser, tema, personlig vy, karta, medgivande och andra bindningar bevaras"
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna **Kakor och lagring**. Öppna och stäng **Visa nödvändig lagring**
+   med Enter. Välj snabbåtgärden för avstängning, välj **Ångra ändring**
+   och kontrollera att reglaget återgår till på och att fokus stannar.
+   Stäng av med snabbåtgärden igen.
+2. Försök lämna sidan via **Din profil**, **Inloggningssätt** och
+   **Tillbaka till kartan**. Avbryt varje gång med Escape. Öppna
+   **Välj inställning** först om navigationen är hopfälld.
+3. Försök återgå till kartan igen och välj
+   **Kasta ändringarna och fortsätt**. Öppna lagringssidan igen.
+4. Välj **Återställ valfri lagring**. Läs omfattning och bevarade uppgifter.
+   Flytta fokus med Tab och Skift+Tab och avbryt med Escape.
+5. Öppna återställningen igen och välj **Återställ**. Kontrollera beskedet
+   vid snabbåtgärderna. Fokusera den spärrade **Spara inställningar** och
+   tryck Enter; beskedet ska stanna vid återställningen.
+6. Kontrollera kontotema, personlig vy, hushållets information,
+   samtalsmedgivande och den andra webbläsarens inloggning.
+   Följ vid behov samma återhämtningsförsök från förberedelsen.
+
+**Förväntat resultat:**
+
+- Avbruten navigation behåller formulärvärdet och återger fokus till
+  vald länk. Kasta ändringarna ändrar inte servervalet.
+- Återställningsdialogen fokuserar **Avbryt**, håller tangentbordsfokus
+  inom dialogen och återger det till **Återställ valfri lagring**.
+- Endast bekräftad återställning begär serverändringen. Avstängning och
+  fortsatt inloggning får separata besked vid formulärets åtgärder.
+- Förberedda inställningar, uppgifter och återhämtningsreferenser finns
+  kvar. Den andra webbläsaren påverkas inte.
+
+### KAK-12: Hela formulärflödet fungerar vid 390 pixlar
+
+**Syfte:** Samma skyddade förlopp som KAK-11 på en smal skärm.
+
+**Användare och förutsättningar:** Följ KAK-11 med bredd 390 pixlar.
+Öppna **Välj inställning** för profilen och inställningslänkarna.
+
+**Automatiskt motsvarande test:**
+[cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
+KAK-12. Samma verkliga HTTP och syntetiska förberedelse som KAK-11.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/cookie-storage-form.spec.ts",
+    "caseId": "KAK-12"
+  },
+  "reference": "390 pixlar, mörkt tema; hela KAK-11 med tangentbord och verklig HTTP. Återhämtningsreferenserna är syntetiska.",
+  "outcomes": ["Snabbval och ångra behåller fokus", "Navigation skyddar osparade värden", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:** Följ samtliga steg i KAK-11 med tangentbord.
+
+**Förväntat resultat:** Samma utfall som KAK-11. Alla kontroller och
+besked är läsbara utan horisontell sidrullning.
+
+### KAK-14: Avvisad återställning behåller ett osparat val
+
+**Syfte:** Skilja återställningens serverutfall från ett förlorat svar.
+
+**Användare:** Hushållets administratör.
+
+**Förutsättningar:** Bredd 320 pixlar, aktiv ihågkommen inloggning.
+Bevara flikens återhämtningsuppgifter för osäker import och permanent
+radering enligt förberedelsen i KAK-11.
+
+**Separat förberedelse:** Förbered avvisat avstängningsanrop enligt
+[ACCESS-30](access.md#access-30-avvisat-sparande-behåller-det-osparade-valet).
+Det ersätter nästa avstängningsanrop före servern. Återställ ersättningen efter
+fallet genom omladdning.
+
+**Automatiskt motsvarande test:**
+[cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
+KAK-14. Felstyrningen ersätter eller stoppar endast det angivna anropet.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/cookie-storage-form.spec.ts",
+    "caseId": "KAK-14"
+  },
+  "reference": "320 pixlar, syntetisk Google-inloggning. Kontrollerat avslag före avstängningens serverändring; import- och raderingsreferenser bevaras.",
+  "outcomes": ["Avslag behåller AV som osparat och servervalet på", "Ångra tar bort felet, återgår till på och behåller fokus", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras", "Ingen automatisk upprepning av sparandet"]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna **Kakor och lagring**, välj **Återställ valfri lagring** och
+   bekräfta med **Återställ**.
+2. Kontrollera besked och fokus. Följ den erbjudna åtgärden enligt
+   förväntat resultat.
+3. Kontrollera att flikens återhämtningsuppgifter finns kvar.
+
+**Förväntat resultat:**
+
+**Ändringen kunde inte sparas. Försök igen.** visas vid snabbåtgärden. Begärt AV
+ligger kvar som osparat och servervalet är på. **Ångra ändring** återgår till
+på, tar bort felet och behåller fokus.
+
+Fokus återgår till **Återställ valfri lagring** när dialogen stängs.
+Återhämtningsuppgifterna bevaras och inget nytt sparande skickas automatiskt.
+
+### KAK-15: Förlorat återställningssvar ger okänd status utan nytt sparande
+
+**Syfte:** Skilja återställningens serverutfall från ett förlorat svar.
+
+**Användare:** Hushållets administratör.
+
+**Förutsättningar:** Bredd 320 pixlar, aktiv ihågkommen inloggning.
+Bevara flikens återhämtningsuppgifter för osäker import och permanent
+radering enligt förberedelsen i KAK-11.
+
+**Separat förberedelse:** Förbered svarsförlust efter serverändringen enligt
+[ACCESS-31](access.md#access-31-förlorat-svar-ger-okänd-sparstatus). Vanligt
+offlineläge bevisar inte denna svarsförlust. Ladda om efter fallet för att ta
+bort felstyrningen.
+
+**Automatiskt motsvarande test:**
+[cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
+KAK-15. Felstyrningen ersätter eller stoppar endast det angivna anropet.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/cookie-storage-form.spec.ts",
+    "caseId": "KAK-15"
+  },
+  "reference": "320 pixlar, syntetisk Google-inloggning. Svaret stoppas efter verklig serverändring för att pröva okänd status; import- och raderingsreferenser bevaras.",
+  "outcomes": ["Förlorat svar ger okänd status och erbjuder Kontrollera igen", "Spärrade spara, ångra och återställ skickar ingen ny ändring", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras"]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna **Kakor och lagring**, välj **Återställ valfri lagring** och
+   bekräfta med **Återställ**.
+2. Kontrollera besked och fokus. Följ den erbjudna åtgärden enligt
+   förväntat resultat.
+3. Kontrollera att flikens återhämtningsuppgifter finns kvar.
+
+**Förväntat resultat:**
+
+**Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.** visas som
+larm vid snabbåtgärden. Sidan påstår inte att servervalet är oförändrat.
+**Kontrollera igen** erbjuds. Nytt sparande, ångra och återställning är
+spärrade; tangentbordsaktivering skickar inget nytt sparande.
+
+Fokus återgår till **Återställ valfri lagring** när dialogen stängs.
+Återhämtningsuppgifterna bevaras och inget nytt sparande skickas automatiskt.
+
+### KAK-16: Bekräftad återställning består när fortsatt inloggning inte kan bekräftas
+
+**Syfte:** Skilja återställningens serverutfall från ett förlorat svar.
+
+**Användare:** Hushållets administratör.
+
+**Förutsättningar:** Bredd 320 pixlar, aktiv ihågkommen inloggning.
+Bevara flikens återhämtningsuppgifter för osäker import och permanent
+radering enligt förberedelsen i KAK-11.
+
+**Separat förberedelse:** Kör följande i webbläsarens konsol på den isolerade
+testadressen efter inloggning och innan återställningen. Det stoppar endast
+nästa registreringskontroll efter serverns avstängning. Ladda om efter fallet
+för att ta bort ersättningen.
+
+```js
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  if (String(args[0]) === '/api/browser-binding/register') {
+    window.fetch = originalFetch;
+    throw new TypeError('Synthetic confirmation loss');
+  }
+  return originalFetch(...args);
+};
+```
+
+**Automatiskt motsvarande test:**
+[cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
+KAK-16. Felstyrningen ersätter eller stoppar endast det angivna anropet.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/cookie-storage-form.spec.ts",
+    "caseId": "KAK-16"
+  },
+  "reference": "320 pixlar, syntetisk Google-inloggning. Registreringskontrollen stoppas efter verklig avstängning för att skilja känt resultat från fortsatt inloggning; import- och raderingsreferenser bevaras.",
+  "outcomes": ["Bekräftad avstängning består när fortsatt inloggning inte kan bekräftas", "Logga in igen erbjuds utan felaktigt avslag eller okänd status", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras", "Ingen automatisk upprepning av sparandet"]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna **Kakor och lagring**, välj **Återställ valfri lagring** och
+   bekräfta med **Återställ**.
+2. Kontrollera besked och fokus. Följ den erbjudna åtgärden enligt
+   förväntat resultat.
+3. Kontrollera att flikens återhämtningsuppgifter finns kvar.
+
+**Förväntat resultat:**
+
+**Ihågkommen inloggning är avstängd. Logga in igen för att fortsätta.** visas
+som status vid snabbåtgärden. Länken **Logga in igen** visas. Avstängningen
+förvandlas inte till okänd status eller avvisat sparande.
+
+Fokus återgår till **Återställ valfri lagring** när dialogen stängs.
+Återhämtningsuppgifterna bevaras och inget nytt sparande skickas automatiskt.
+
+### KAK-13: Hela formulärflödet fungerar vid 320 pixlar
+
+**Syfte:** Samma skyddade förlopp som KAK-11 på en smal skärm.
+
+**Användare och förutsättningar:** Följ KAK-11 med bredd 320 pixlar.
+Öppna **Välj inställning** för profilen och inställningslänkarna.
+
+**Automatiskt motsvarande test:**
+[cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
+KAK-13. Samma verkliga HTTP och syntetiska förberedelse som KAK-11.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/cookie-storage-form.spec.ts",
+    "caseId": "KAK-13"
+  },
+  "reference": "320 pixlar, mörkt tema; hela KAK-11 med tangentbord och verklig HTTP. Återhämtningsreferenserna är syntetiska.",
+  "outcomes": ["Snabbval och ångra behåller fokus", "Navigation skyddar osparade värden", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:** Följ samtliga steg i KAK-11 med tangentbord.
+
+**Förväntat resultat:** Samma utfall som KAK-11. Alla kontroller och
+besked är läsbara utan horisontell sidrullning.
 
 ## Kontrollera en okänd ändring
 
