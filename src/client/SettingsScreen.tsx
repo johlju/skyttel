@@ -125,6 +125,7 @@ export function SettingsScreen({
   userName,
   operator,
   personal,
+  anonymous = false,
   signOut,
 }: {
   children: ReactNode;
@@ -132,6 +133,7 @@ export function SettingsScreen({
   userName: string;
   operator: boolean;
   personal: boolean;
+  anonymous?: boolean;
   signOut: ReactNode;
 }) {
   const location = useLocation();
@@ -140,18 +142,21 @@ export function SettingsScreen({
   const focusedPath = useRef<string | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(() => window.innerWidth > 800);
   const mapPath = household ? `/households/${encodeURIComponent(household.id)}` : '/';
-  const entries = personal
-    ? [
-        { to: '/profile', title: 'Din profil', group: 'Ditt Skyttel' },
-        { to: '/login-methods', title: 'Inloggningssätt', group: 'Ditt Skyttel' },
-        { to: '/assistants', title: 'Assistentanslutningar', group: 'Ditt Skyttel' },
-      ].filter((entry) => location.pathname !== '/profile' || entry.to === '/profile')
-    : [
-        ...(household
-          ? [{ to: `${mapPath}/settings`, title: 'Översikt', group: 'Inställningar' }]
-          : []),
-        ...settingsEntries(household, operator),
-      ];
+  const entries = anonymous
+    ? [{ to: '/cookies', title: 'Kakor och lagring', group: 'Skyttel' }]
+    : personal
+      ? [
+          { to: '/profile', title: 'Din profil', group: 'Ditt Skyttel' },
+          { to: '/login-methods', title: 'Inloggningssätt', group: 'Ditt Skyttel' },
+          { to: '/assistants', title: 'Assistentanslutningar', group: 'Ditt Skyttel' },
+          { to: '/cookies', title: 'Kakor och lagring', group: 'Ditt Skyttel' },
+        ].filter((entry) => location.pathname !== '/profile' || entry.to === '/profile')
+      : [
+          ...(household
+            ? [{ to: `${mapPath}/settings`, title: 'Översikt', group: 'Inställningar' }]
+            : []),
+          ...settingsEntries(household, operator),
+        ];
   useEffect(() => {
     const media = window.matchMedia('(min-width: 801px)');
     const update = () => setNavigationOpen(media.matches);
@@ -172,14 +177,21 @@ export function SettingsScreen({
   return (
     <section className="settings-screen">
       <header className="settings-header">
-        <Link className="settings-brand" to={mapPath} aria-label="Skyttel, till kartan">
+        <Link
+          className="settings-brand"
+          to={mapPath}
+          aria-label={household ? 'Skyttel, till kartan' : 'Skyttel, startsida'}
+        >
           <img src={logo} alt="" />
           <span>
-            Skyttel<small>{personal ? 'Ditt konto' : 'Inställningar'}</small>
+            Skyttel
+            <small>
+              {anonymous ? 'Kakor och lagring' : personal ? 'Ditt konto' : 'Inställningar'}
+            </small>
           </span>
         </Link>
         <div className="settings-actions">
-          <WorkspaceTheme mode={theme.mode} onChange={theme.changeMode} />
+          {!anonymous && <WorkspaceTheme mode={theme.mode} onChange={theme.changeMode} />}
           <Link to={mapPath} className="settings-return">
             {household ? 'Tillbaka till kartan' : 'Till startsidan'}
           </Link>
@@ -188,7 +200,13 @@ export function SettingsScreen({
       <div className="settings-layout">
         <nav
           className="settings-navigation"
-          aria-label={personal ? 'Dina kontosidor' : 'Inställningarnas sidor'}
+          aria-label={
+            anonymous
+              ? 'Informationssidor'
+              : personal
+                ? 'Dina kontosidor'
+                : 'Inställningarnas sidor'
+          }
         >
           <details
             open={navigationOpen}
@@ -198,11 +216,13 @@ export function SettingsScreen({
             <p className="settings-identity">
               {personal ? userName : (household?.name ?? 'Installationen')}
               <small>
-                {personal
-                  ? 'Din Skyttel-användare'
-                  : household
-                    ? 'Hushållets inställningar'
-                    : 'Driftens inställningar'}
+                {anonymous
+                  ? 'Utan inloggning'
+                  : personal
+                    ? 'Din Skyttel-användare'
+                    : household
+                      ? 'Hushållets inställningar'
+                      : 'Driftens inställningar'}
               </small>
             </p>
             {Array.from(new Set(entries.map((entry) => entry.group))).map((group) => (

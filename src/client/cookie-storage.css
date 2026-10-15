@@ -1,0 +1,82 @@
+/* Layout adapted from Viscalyx CookieSettings. See CookieStorage.LICENSE. */
+.cookie-storage {
+  max-width: 896px;
+  margin: 0 auto;
+  line-height: 1.625;
+  overflow-wrap: anywhere;
+}
+.cookie-storage-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cookie-storage-title svg {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  color: #2563eb;
+}
+[data-theme="dark"] .cookie-storage-title svg {
+  color: #93b8ff;
+}
+.cookie-storage .cookie-storage-title h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.2;
+}
+.cookie-storage-header {
+  margin-bottom: 32px;
+}
+.cookie-storage-card {
+  padding: 24px;
+  margin: 20px 0;
+  border: 1px solid var(--space-line, #95a6ae);
+  border-radius: 8px;
+  background: var(--space-surface, #fff);
+}
+.cookie-storage-card h3 {
+  margin: 0;
+}
+.cookie-storage-badge {
+  font-size: 14px;
+}
+.cookie-storage summary {
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+.cookie-storage-entry {
+  border-top: 1px solid var(--space-line, #95a6ae);
+  padding: 16px 0;
+}
+.cookie-storage-entry h4 {
+  margin: 0 0 12px;
+}
+.cookie-storage dt {
+  font-weight: 600;
+}
+.cookie-storage dd {
+  margin: 0 0 12px;
+}
+.storage-introduction {
+  padding: 20px;
+  border: 1px solid var(--access-line, #95a6ae);
+  border-radius: 12px;
+  width: min(100%, 680px);
+  box-sizing: border-box;
+}
+.storage-introduction h2 {
+  margin-top: 0;
+}
+.storage-introduction button {
+  display: block;
+  margin-top: 16px;
+}
+@media (max-width: 480px) {
+  .cookie-storage-card {
+    padding: 16px;
+  }
+  .cookie-storage .cookie-storage-title h1 {
+    font-size: 25px;
+  }
+}

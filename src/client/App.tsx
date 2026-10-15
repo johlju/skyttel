@@ -23,6 +23,7 @@ import { householdNameMaxLength, normalizeHouseholdName } from '../shared/househ
 import type { PersonalView } from '../shared/personal-view.js';
 import { Assistants } from './Assistants.js';
 import { ContentOwners } from './ContentOwners.js';
+import { CookieStorage, StorageIntroduction } from './CookieStorage.js';
 import { Costs } from './Costs.js';
 import { FormLeaveProvider, useFormLeave } from './FormLeave.js';
 import { HouseholdErasure } from './HouseholdErasure.js';
@@ -1280,6 +1281,7 @@ function Application() {
     useState<HTMLDivElement | null>(null);
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
+  const [storageIntroductionClosed, setStorageIntroductionClosed] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
   const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
@@ -1304,21 +1306,27 @@ function Application() {
   const mapActive =
     data?.status === 'ready' && Boolean(matchPath('/households/:id', location.pathname));
   const authenticated = data && data.status !== 'anonymous';
-  const personal = ['/profile', '/login-methods', '/assistants', '/assistant-consent'].includes(
-    location.pathname,
-  );
+  const storagePage = location.pathname === '/cookies';
+  const personal = [
+    '/profile',
+    '/login-methods',
+    '/assistants',
+    '/assistant-consent',
+    '/cookies',
+  ].includes(location.pathname);
   const settingsPage =
-    authenticated &&
+    (authenticated || storagePage) &&
     !mapActive &&
     (personal ||
       location.pathname === '/costs' ||
-      (data.status === 'ready' &&
+      (data?.status === 'ready' &&
         Boolean(matchPath('/households/:id/settings/*', location.pathname))) ||
-      (data.status === 'ready' &&
+      (data?.status === 'ready' &&
         Boolean(matchPath('/households/:id/administration', location.pathname))));
   const household = data?.status === 'ready' ? data.household : undefined;
   const accessGate =
-    data?.status === 'anonymous' || (authenticated && data.status !== 'ready' && !settingsPage);
+    !storagePage &&
+    (data?.status === 'anonymous' || (authenticated && data.status !== 'ready' && !settingsPage));
   const logout = (
     <>
       <button
@@ -1357,6 +1365,7 @@ function Application() {
       <div className="settings-profile-links">
         <Link to="/login-methods">Inloggningssätt</Link>
         <Link to="/assistants">Assistentanslutningar</Link>
+        <Link to="/cookies">Kakor och lagring</Link>
       </div>
       {logout}
     </>
@@ -1400,7 +1409,7 @@ function Application() {
             <Link to="/">Till startsidan</Link>
           </section>
         ))}
-      {!['/login-methods', '/profile', '/costs'].includes(location.pathname) &&
+      {!['/login-methods', '/profile', '/costs', '/cookies'].includes(location.pathname) &&
         (data.status === 'ready' || data.status === 'setup') && (
           <Routes>
             <Route path="/assistant-consent" element={<Assistants consent />} />
@@ -1519,16 +1528,31 @@ function Application() {
       <main id="main" tabIndex={-1}>
         {bootstrap.status === 'loading' && <Loading />}
         {bootstrap.status === 'error' && <Failure onRetry={reload} />}
-        {data?.status === 'anonymous' && <Login providers={data.providers} />}
+        {data?.status === 'anonymous' && !storagePage && (
+          <>
+            <Login providers={data.providers} />
+            {!storageIntroductionClosed && (
+              <StorageIntroduction
+                onClose={() => {
+                  setStorageIntroductionClosed(true);
+                  document
+                    .querySelector<HTMLButtonElement>('.access-gate button:not(:disabled)')
+                    ?.focus();
+                }}
+              />
+            )}
+          </>
+        )}
         {settingsPage ? (
           <SettingsScreen
             household={household}
-            userName={data.user.name}
-            operator={data.operator}
+            userName={data?.user?.name ?? 'Besökare'}
+            operator={data?.operator ?? false}
             personal={personal}
-            signOut={location.pathname === '/profile' ? null : logout}
+            anonymous={!authenticated}
+            signOut={!authenticated || location.pathname === '/profile' ? null : logout}
           >
-            {pages}
+            {storagePage ? <CookieStorage /> : pages}
           </SettingsScreen>
         ) : (
           pages
@@ -1555,7 +1579,9 @@ function Application() {
           </>
         )}
       </main>
-      <footer hidden={mapActive || Boolean(settingsPage)}>Det som hör ihop, samlat.</footer>
+      <footer hidden={mapActive || Boolean(settingsPage)}>
+        Det som hör ihop, samlat. <Link to="/cookies">Kakor och lagring</Link>
+      </footer>
     </div>
   );
 }

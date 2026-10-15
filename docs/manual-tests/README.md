@@ -89,7 +89,8 @@ Stäng den med **Stäng uppgifterna** före kartgester om den tar plats.
 Stäng text med **Stäng textvyn** när ett fall behöver själva kartan.
 
 **Din profil** innehåller användar-ID, inbjudningar, **Inloggningssätt**,
-**Assistentanslutningar** och **Logga ut**. **Inställningar** öppnar en egen
+**Assistentanslutningar**, **Kakor och lagring** och **Logga ut**.
+**Inställningar** öppnar en egen
 sida med **Typer och egna fält**, **Administrera tillgång** för
 administratören och **Månadskostnad** för driftansvarig. Mobilnavigationen
 öppnas med **Välj inställning**. **Tillbaka till kartan** återger arbetet.
@@ -101,6 +102,10 @@ utfall följer du formulärets uttryckliga kontroll före nytt försök.
 Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
 
 ## Områden
+
+- [Kakor och lagring](cookies.md): publik information, första besök,
+  profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före
+  hushållsstart och efter återkallad tillgång samt separat skärmläsarprov.
 
 - [Samtalets samlade hjälpmedelsflöde](conversation-accessibility.md):
   naturlig läs- och tabbordning över verktyg, röstruta och flyttad notis,
