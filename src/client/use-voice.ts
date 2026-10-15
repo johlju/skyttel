@@ -564,22 +564,15 @@ export function useVoice(options: {
               void request<VoiceAssistantResponse>(`${path}/${attempt.voiceId}/poll`, {
                 ...anchor(),
                 microphoneOn: false,
-              }).then(
-                (result) => {
-                  if (active())
-                    void stop(
-                      voiceErrorNotice(
-                        result.voice.error
-                          ? new MapRequestError(503, result.voice.error)
-                          : undefined,
-                        'interrupted',
-                      ),
-                    );
-                },
-                (failure) => {
-                  if (active()) void stop(voiceErrorNotice(failure, 'interrupted'));
-                },
-              );
+              }).then((result) => {
+                if (active())
+                  void stop(
+                    voiceErrorNotice(
+                      result.voice.error ? new MapRequestError(503, result.voice.error) : undefined,
+                      'interrupted',
+                    ),
+                  );
+              }, fail);
             },
             onFailure: () => fail(),
             onPlaybackBlocked: (blocked) => {

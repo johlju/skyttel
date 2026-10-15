@@ -1545,3 +1545,66 @@ test('expired login authority stops capture and asks for the entire voice instru
   expect(track.stop).toHaveBeenCalled();
   expect(accessLost).toHaveBeenCalledOnce();
 });
+
+test('a remote close with expired authority reports access loss before the next periodic poll', async () => {
+  const { track, accessLost, getUserMedia } = setup();
+  await userEvent.click(microphoneButton());
+  await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+  const peer = Peer.all[0];
+  await act(async () =>
+    peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
+  );
+  expect(track.enabled).toBe(true);
+  vi.useFakeTimers();
+  vi.mocked(fetch).mockResolvedValue(
+    Response.json({ error: 'voice_session_expired' }, { status: 401 }),
+  );
+  await act(async () =>
+    peer.channel.emit({ type: 'session.closed', session: { id: 'provider-session' } }),
+  );
+  expect(track.enabled).toBe(false);
+  expect(track.stop).toHaveBeenCalled();
+  expect(accessLost).toHaveBeenCalledOnce();
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+    'Din inloggning har gått ut. Logga in igen. Lämna hela instruktionen på nytt.',
+  );
+  const announcement = document.querySelector('[aria-live="assertive"]')?.firstElementChild;
+  expect(announcement?.textContent).toContain('Lämna hela instruktionen på nytt.');
+  await act(async () => {
+    peer.channel.emit({ type: 'session.closed', session: { id: 'provider-session' } });
+    peer.channel.emit({ type: 'session.started', session: { id: 'provider-session' } });
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(accessLost).toHaveBeenCalledOnce();
+  expect(getUserMedia).toHaveBeenCalledOnce();
+  expect(track.enabled).toBe(false);
+  expect(peer.connectionState).toBe('closed');
+  expect(document.querySelector('[aria-live="assertive"]')?.firstElementChild).toBe(announcement);
+});
+
+test.each([
+  { status: 403, code: 'forbidden', accessLostCount: 1 },
+  { status: 404, code: 'voice_session_expired', accessLostCount: 0 },
+])(
+  'a remote close with $status preserves the distinction between lost access and interrupted voice',
+  async ({ status, code, accessLostCount }) => {
+    const { track, accessLost } = setup();
+    await userEvent.click(microphoneButton());
+    await waitFor(() => expect(Peer.all[0]?.channel.readyState).toBe('open'));
+    await act(async () =>
+      Peer.all[0].channel.emit({ type: 'session.started', session: { id: 'provider-session' } }),
+    );
+    vi.useFakeTimers();
+    vi.mocked(fetch).mockResolvedValue(Response.json({ error: code }, { status }));
+    await act(async () =>
+      Peer.all[0].channel.emit({ type: 'session.closed', session: { id: 'provider-session' } }),
+    );
+    expect(track.enabled).toBe(false);
+    expect(track.stop).toHaveBeenCalled();
+    expect(accessLost).toHaveBeenCalledTimes(accessLostCount);
+    expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+      'Rösten avbröts',
+    );
+    expect(screen.queryByText(/Din inloggning har gått ut/)).toBeNull();
+  },
+);
