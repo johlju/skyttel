@@ -68,3 +68,28 @@ inte läsas som redan verifierade driftfakta.
 Google och Microsoft styr lagringen på sina egna webbplatser.
 **Samtalsmedgivande** till OpenAI är ett separat val under
 **Samtal med Skyttel**; information om kakor ger inget sådant medgivande.
+
+## Kontrollera en okänd sparstatus
+
+Välj **Kontrollera igen** vid **Sparstatus okänd**. Kontrollen läser
+resultatet av samma åtgärd och skickar inget nytt sparande. Om kontrollen
+kräver det, logga in igen som samma användare i samma flik och återgå till
+**Kakor och lagring**. Det ursprungliga resultatet går att kontrollera
+under 24 timmar från ändringen, även efter en serveromstart.
+
+Fliken behåller en referens till den begärda åtgärden i `sessionStorage`.
+Referensen ger ingen åtkomst och är ingen kopia av ditt lagringsval.
+Den tas bort när resultatet blir känt. Rensa inte fliklagringen innan du
+har kontrollerat resultatet. Om uppgifterna försvinner kan fliken inte
+identifiera den tidigare åtgärden; Skyttel gissar inte utfallet och
+upprepar inte sparandet. När fliken inte kan spara referensen stoppas
+ändringen innan den skickas. Kontrollera webbläsarens lagringsinställningar
+och försök sedan spara igen.
+
+Ett saknat eller utgånget resultat betyder att utfallet fortfarande är
+okänt. Ett nätverksfel bevisar varken avvisning eller återställning.
+Inget nytt sparande erbjuds medan det tidigare utfallet är okänt.
+
+Efter ny inloggning gäller resultatet fortfarande den tidigare begäran.
+Det ändrar inte ett nytt aktivt **Kom ihåg mig**-val. Sidan hämtar det
+aktuella valet separat och skiljer det från resultatet av din gamla åtgärd.

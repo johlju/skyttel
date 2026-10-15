@@ -10,10 +10,12 @@ const identity = values.microsoft ? robin : alex;
 let holdInitialization: 'candidate' | 'register' | null = null;
 let releaseInitialization: (() => void) | undefined;
 let dropLoginCookie = false;
+let clockOffset = 0;
 const installation = await createInstallation(
   { provider, subject: identity.subject },
   {
     https: values.https,
+    now: () => Date.now() + clockOffset,
     async deliverResponse(request, response) {
       if (dropLoginCookie && new URL(request.url).pathname.startsWith('/api/auth/callback/')) {
         const headers = new Headers(response.headers);
@@ -57,7 +59,7 @@ try {
     }),
   );
   console.log(
-    'provider-down | provider-up | deny-consent | allow-consent | drop-login-cookie | allow-login-cookie | hold-initialization | hold-registration | release-initialization | restart | quit',
+    'provider-down | provider-up | deny-consent | allow-consent | drop-login-cookie | allow-login-cookie | hold-initialization | hold-registration | release-initialization | advance-day | restart | quit',
   );
   for await (const line of input) {
     const command = line.trim();
@@ -68,6 +70,7 @@ try {
     else if (command === 'allow-consent') installation.denyConsent(false);
     else if (command === 'drop-login-cookie') dropLoginCookie = true;
     else if (command === 'allow-login-cookie') dropLoginCookie = false;
+    else if (command === 'advance-day') clockOffset += 86_400_000;
     else if (command === 'hold-initialization' && !releaseInitialization)
       holdInitialization = 'candidate';
     else if (command === 'hold-registration' && !releaseInitialization)

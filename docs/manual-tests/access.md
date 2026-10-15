@@ -1645,6 +1645,11 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
 5. Skriv `restart` endast när samma databas ska behållas. Skriv `quit`
    för att stänga installationen och ta bort dess tillfälliga databas.
    Starta kommandot igen inför nästa fall för att få en tom installation.
+6. För KAK-24 flyttar `advance-day` den isolerade installationens
+   serverklocka framåt ett dygn. Den ändrar inte datorns eller webbläsarens
+   klocka. Använd bara kommandot när fallet anger det och avsluta med
+   `quit` efteråt. Det simulerar en tidsgräns och bevisar inte faktisk
+   gallring eller naturligt förfluten tid.
 
 ## Separat tekniskt underlag och observationer
 
