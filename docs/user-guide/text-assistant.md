@@ -478,9 +478,18 @@ En avstängd mikrofon behåller samtalstexten i det pågående samtalet.
 **Nytt samtal** tömmer samtalstexten och kontexten.
 Samtalet avslutas när du lämnar hushållets karta, laddar om sidan eller
 när åtkomsten upphör.
-Anslutningen upphör senast efter 30 minuter eller när dess medgivande
-återkallas. Utkast, sparade uppgifter och kvitton finns kvar. Återimport
-eller byte av innehållsägare kräver en ny anslutning.
+En skriven instruktion som servern tar emot medan du är inloggad får bli
+klar inom 30 minuter från mottagandet, även om inloggningen går ut under
+tiden. Köväntan ingår i tiden. Nya instruktioner och nya sparbegäranden
+kräver fortsatt giltig inloggning. En ny inloggning skickar inget uppdrag
+och sparar inget automatiskt.
+
+Utloggning, återkallat medgivande eller återkallad åtkomst stoppar fortsatt
+arbete. Återimport eller byte av innehållsägare kräver en ny anslutning.
+Redan lagrade förslag finns i ditt utkast efter ny inloggning. Sparade
+uppgifter och kvitton finns också kvar. Vid serveromstart fortsätter inget
+modellarbete, och samtalstexten sparas inte. Ett svar som servern gör klart
+är ingen bekräftelse på att det har nått din webbläsare.
 
 ## Vilka uppgifter behandlas?
 

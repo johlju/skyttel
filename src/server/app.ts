@@ -91,8 +91,13 @@ export function createApp({
   const costs = installationCosts(database);
   const linking = createLoginMethods(database, auth, config.origin, bindings);
   const consents = conversationConsents(database, consentTextVersion);
+  let revalidateWork: (() => void) | undefined;
   app.use('*', async (context, next) => {
-    await next();
+    try {
+      await next();
+    } finally {
+      revalidateWork?.();
+    }
     if (bindings) {
       const controlled = await bindings.output(context.req.raw, context.res);
       // Hono's response setter restores the previous Set-Cookie headers.
@@ -299,6 +304,7 @@ export function createApp({
     auth,
     config,
     consents,
+    now,
     dispatch: dispatchAssistant,
     modelFetch,
     modelProfile,
@@ -314,6 +320,7 @@ export function createApp({
     onNewConversation: (view, deferVoiceClose) => newVoiceConversation?.(view, deferVoiceClose),
   });
   app.route('/api', textAssistant.routes);
+  revalidateWork = textAssistant.stopUnauthorizedWork;
   app.route(
     '/api',
     conversationConsentRoutes(

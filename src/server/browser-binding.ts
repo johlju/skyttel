@@ -64,7 +64,7 @@ function rememberedSession(policy: SessionPolicy) {
     policy.absoluteExpiresAt <= created + rememberedLifetime
   );
 }
-function deadline(policy: SessionPolicy) {
+export function sessionDeadline(policy: SessionPolicy) {
   const created = new Date(policy.createdAt).getTime();
   return Math.min(
     new Date(policy.expiresAt).getTime(),
@@ -74,6 +74,7 @@ function deadline(policy: SessionPolicy) {
       : (policy.ordinaryStartedAt ?? created) + ordinaryLifetime,
   );
 }
+const deadline = sessionDeadline;
 function responseHeaders(request: Request, response: Response) {
   const headers = new Headers(request.headers);
   const cookies = new Map(
@@ -223,7 +224,14 @@ export function browserBindings(
     const candidate = randomBytes(32).toString('hex');
     database.transaction(() => {
       if (expired) database.prepare('DELETE FROM browser_binding WHERE id = ?').run(recorded.id);
+      if (expired)
+        database
+          .prepare('DELETE FROM assistant_connection WHERE browserBindingId = ?')
+          .run(recorded.id);
       if (previous && current) {
+        database
+          .prepare('DELETE FROM assistant_connection WHERE browserSessionId = ?')
+          .run(current.session.id);
         database.prepare('DELETE FROM browser_binding WHERE id = ?').run(previous.id);
         database.prepare('DELETE FROM session WHERE id = ?').run(current.session.id);
       }
@@ -630,6 +638,10 @@ export function browserBindings(
                   current.session.id,
                 );
               if (binding.sessionId && current.session.id !== binding.sessionId)
+                database
+                  .prepare('DELETE FROM assistant_connection WHERE browserSessionId = ?')
+                  .run(binding.sessionId);
+              if (binding.sessionId && current.session.id !== binding.sessionId)
                 database.prepare('DELETE FROM session WHERE id = ?').run(binding.sessionId);
               database
                 .prepare('DELETE FROM browser_binding_attempt WHERE bindingId = ?')
@@ -658,18 +670,27 @@ export function browserBindings(
     async logout(request: Request, operation: () => Promise<Response>) {
       if (!canonicalRequest(request) || request.headers.get('origin') !== origin)
         return Response.json({ error: 'forbidden' }, { status: 403 });
-      const binding = await authorized(request.headers);
-      if (!binding?.sessionId) return Response.json({ error: 'unauthenticated' }, { status: 401 });
+      // A known browser can explicitly stop its accepted work after ordinary
+      // expiry, even when Better Auth has already removed its session row.
+      const current = await librarySession(request.headers);
+      const binding = recordedBinding(request.headers);
+      if (!binding?.confirmed || (current && current.session.id !== binding.sessionId))
+        return Response.json({ error: 'unauthenticated' }, { status: 401 });
       if (database.inTransaction) return Response.json({ error: 'binding_busy' }, { status: 409 });
       const changed = database
         .transaction(() => {
-          const fresh = lookup(request.headers);
+          const fresh = recordedBinding(request.headers);
           if (fresh?.revision !== binding.revision || fresh.sessionId !== binding.sessionId)
             return false;
           database
             .prepare('DELETE FROM browser_binding_attempt WHERE bindingId = ?')
             .run(binding.id);
-          database.prepare('DELETE FROM session WHERE id = ?').run(binding.sessionId);
+          database
+            .prepare(`DELETE FROM assistant_connection
+            WHERE browserBindingId = ? OR browserSessionId = ?`)
+            .run(binding.id, binding.sessionId);
+          if (binding.sessionId)
+            database.prepare('DELETE FROM session WHERE id = ?').run(binding.sessionId);
           database
             .prepare(
               'UPDATE browser_binding SET revision = revision + 1, expiresAt = ? WHERE id = ?',

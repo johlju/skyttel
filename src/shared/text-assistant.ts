@@ -53,7 +53,14 @@ export interface TextAssistantView {
   taskId?: string;
   /** Origin of the current task; queued messages keep their own origin. */
   taskSource?: 'text' | 'voice';
-  taskStatus?: 'queued' | 'working' | 'completed' | 'canceled';
+  taskStatus?: 'queued' | 'working' | 'completed' | 'canceled' | 'expired';
+  /** Process-local work only. Available text is not a delivery acknowledgement. */
+  tasks?: {
+    id: string;
+    receivedAt: number;
+    deadline: number;
+    status: NonNullable<TextAssistantView['taskStatus']>;
+  }[];
   /** Completed replies remain available when the next queued task starts. */
   completedReplies?: ConversationReply[];
   canceled?: boolean;

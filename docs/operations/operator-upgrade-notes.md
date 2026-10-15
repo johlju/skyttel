@@ -6,6 +6,15 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Accepted text work at login expiry
+
+Verify that an accepted text instruction can finish after normal login
+expiry, within thirty minutes of receipt including queue time. New
+instructions and save requests must require a valid login. Logout, consent
+revocation and access removal must stop further work. After a restart,
+check the existing draft and save results; model work does not resume.
+Do not report a completed server response as confirmed browser delivery.
+
 ### Browser login after upgrade
 
 Sessions from before the upgrade no longer grant application access. Tell

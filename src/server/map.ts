@@ -36,6 +36,7 @@ import type {
   RelationshipFormOutcome,
   RelationshipFormResult,
 } from '../shared/relationship-form.js';
+import { assistantTaskAccess } from './assistant-auth.js';
 import { contentOwner } from './content-identities.js';
 import { assertContentAvailable, assertContentVersion } from './content-maintenance.js';
 import { readFinancialFacts } from './financial-facts.js';
@@ -55,6 +56,7 @@ export { MapError } from './map-error.js';
 export function householdMap(database: Database.Database, actorId: string, householdId: string) {
   const userId = database
     .transaction(() => {
+      assistantTaskAccess.getStore()?.();
       if (!householdAccess(database, actorId, householdId)) throw new MapError('forbidden', 403);
       assertContentAvailable(database, householdId);
       return contentOwner(database, householdId, actorId);
@@ -67,6 +69,8 @@ export function householdMap(database: Database.Database, actorId: string, house
   const operations = mapOperations(database, userId, householdId);
   const tombstones = mapTombstones(database, householdId);
   function authorize() {
+    // Runs inside the same immediate transaction as a mutation or save registration.
+    assistantTaskAccess.getStore()?.();
     if (!householdAccess(database, actorId, householdId)) throw new MapError('forbidden', 403);
     assertContentAvailable(database, householdId);
     if (contentOwner(database, householdId, actorId) !== userId)
