@@ -2,6 +2,11 @@ import { request } from './map-request.js';
 
 export const browserBindingLock = 'skyttel-browser-binding';
 
+function writeBindingCookie(pair: string, expiresAt?: number) {
+  // biome-ignore lint/suspicious/noDocumentCookie: All binding writes are synchronous while holding the same origin lock.
+  document.cookie = `${pair}; Path=/; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}${expiresAt === undefined ? '' : `; Expires=${new Date(expiresAt).toUTCString()}`}`;
+}
+
 async function initialize(signal?: AbortSignal) {
   try {
     const result = await request<{ candidate: string; cookieName: string; origin: string }>(
@@ -21,8 +26,7 @@ async function initialize(signal?: AbortSignal) {
     )
       throw new Error('binding_unavailable');
     if (!document.cookie.split(';').some((part) => part.trim() === `${name}=${result.candidate}`)) {
-      // biome-ignore lint/suspicious/noDocumentCookie: The approved protocol requires a synchronous write while holding the origin lock.
-      document.cookie = `${name}=${result.candidate}; Path=/; SameSite=Lax${https ? '; Secure' : ''}`;
+      writeBindingCookie(`${name}=${result.candidate}`);
     }
     if (!document.cookie.split(';').some((part) => part.trim() === `${name}=${result.candidate}`))
       throw new Error('binding_unavailable');
@@ -88,8 +92,7 @@ export async function confirmBrowserLogin(proof: string, signal: AbortSignal) {
     // Absolute Expires cannot gain a fresh lifetime when delivery is delayed.
     // The confirmation is authenticated by the current cookie pair; its proof
     // is a correlation value, never a replacement authentication key.
-    // biome-ignore lint/suspicious/noDocumentCookie: All binding writes hold the same origin lock.
-    document.cookie = `${pair}; Path=/; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}${result.remembered ? `; Expires=${new Date(result.expiresAt).toUTCString()}` : ''}`;
+    writeBindingCookie(pair, result.remembered ? result.expiresAt : undefined);
     try {
       const current = await read();
       if (
@@ -104,8 +107,7 @@ export async function confirmBrowserLogin(proof: string, signal: AbortSignal) {
       // read. Demote only the same cookie that this operation just wrote,
       // including on abort. An unconfirmed old choice cannot leave persistence.
       if (document.cookie.split(';').some((part) => part.trim() === pair)) {
-        // biome-ignore lint/suspicious/noDocumentCookie: Failed post-write confirmation is cleaned up before releasing the same lock.
-        document.cookie = `${pair}; Path=/; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+        writeBindingCookie(pair);
       }
       throw error;
     }
