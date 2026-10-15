@@ -6,6 +6,17 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Browser login after upgrade
+
+Sessions from before the upgrade no longer grant application access. Tell
+users to sign in again. Before rollout, confirm that supported browsers
+allow necessary cookies and provide Web Locks. Users must open Skyttel
+directly at its configured HTTPS address.
+
+After upgrade, verify Google and Microsoft sign-in through the production
+HTTPS ingress in the supported browsers. Check that the ingress preserves
+the configured public host and that users regain household access.
+
 ### Account theme and household files
 
 Use the upgraded application to read new full household files. Supported
