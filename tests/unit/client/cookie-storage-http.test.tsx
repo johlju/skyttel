@@ -10,6 +10,7 @@ import { createInstallation, robin } from '../../support/installation.js';
 
 let installation: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
+let ownerId: string;
 beforeEach(async () => {
   sessionStorage.clear();
   installation = await createInstallation();
@@ -20,6 +21,7 @@ beforeEach(async () => {
     data: { provider: 'google', callbackURL: '/', rememberMe: true, informationVersion: 1 },
   });
   await client.get((await start.json()).url, { maxRedirects: 0 });
+  ownerId = (await (await client.get(`${installation.origin}/api/bootstrap`)).json()).user.id;
   (
     globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
   ).jsdom.reconfigure({ url: installation.origin });
@@ -63,6 +65,65 @@ test('checking a lost committed OFF result reads that operation without saving a
   ]);
   expect(writes).toBe(1);
 });
+
+test('a forged Origin cannot use browser fetch metadata to read the storage preference', async () => {
+  const response = await client.get(`${installation.origin}/api/browser-binding/preference`, {
+    headers: { origin: 'https://attacker.example', 'sec-fetch-site': 'same-origin' },
+  });
+  expect(response.status()).toBe(403);
+});
+
+test('a different owner in the separate authentication read cannot replace a confirmed earlier OFF result', async () => {
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  const other = await request.newContext();
+  try {
+    installation.setIdentity(robin);
+    await signIn(other, installation.origin, 'microsoft');
+    const start = await other.post(`${installation.origin}/api/auth/sign-in/social`, {
+      headers: { origin: installation.origin },
+      data: { provider: 'microsoft', callbackURL: '/', rememberMe: true, informationVersion: 1 },
+    });
+    await other.get((await start.json()).url, { maxRedirects: 0 });
+    const wrongOwnerTransport = authenticatedHttpFetch(other, installation.origin);
+    let delivered = () => {};
+    const currentRead = new Promise<void>((resolve) => {
+      delivered = resolve;
+    });
+    let resultRead = false;
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (resultRead && path === '/api/browser-binding/preference') {
+        const response = await wrongOwnerTransport(input, init);
+        delivered();
+        return response;
+      }
+      const response = await transport(input, init);
+      if (path === '/api/browser-binding/revoke') throw new TypeError('Committed reply lost');
+      if (path.startsWith('/api/browser-binding/results/')) resultRead = true;
+      return response;
+    });
+    render(page());
+    await userEvent.click(await turnOff());
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('Sparstatus okänd'),
+    );
+    installation.setIdentity({
+      subject: 'alex-google',
+      name: 'Alex Exempel',
+      email: 'alex@example.test',
+    });
+    await signIn(client, installation.origin);
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
+      await currentRead;
+    });
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('Logga in igen för att fortsätta.');
+    expect(screen.getByRole('status').textContent).not.toContain('Du har loggat in på nytt.');
+  } finally {
+    await other.dispose();
+  }
+});
 afterEach(async () => {
   cleanup();
   vi.restoreAllMocks();
@@ -73,7 +134,7 @@ afterEach(async () => {
     globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
   ).jsdom.reconfigure({ url: 'http://localhost:3000' });
 });
-const page = (userId = 'current-owner') => (
+const page = (userId = ownerId) => (
   <BrowserRouter>
     <CookieStorage userId={userId} />
   </BrowserRouter>
@@ -163,7 +224,7 @@ test('a late saved OFF reply from the previous user cannot replace the new user 
     }
     return response;
   });
-  const view = render(page('alex'));
+  const view = render(page());
   await userEvent.click(await turnOff());
   await captured;
   // The response is already committed and held outside the application.
@@ -172,8 +233,10 @@ test('a late saved OFF reply from the previous user cannot replace the new user 
   try {
     installation.setIdentity(robin);
     await signIn(other, installation.origin, 'microsoft');
+    const otherId = (await (await other.get(`${installation.origin}/api/bootstrap`)).json()).user
+      .id;
     vi.stubGlobal('fetch', authenticatedHttpFetch(other, installation.origin));
-    view.rerender(page('robin'));
+    view.rerender(page(otherId));
     await screen.findByRole('link', { name: 'Logga in på nytt och välj Kom ihåg mig.' });
     await act(async () => {
       release();
@@ -223,14 +286,16 @@ test('a previous user preference reply cannot replace the newer user server choi
     }
     return response;
   });
-  const view = render(page('alex'));
+  const view = render(page());
   await captured;
   const other = await request.newContext();
   try {
     installation.setIdentity(robin);
     await signIn(other, installation.origin, 'microsoft');
+    const otherId = (await (await other.get(`${installation.origin}/api/bootstrap`)).json()).user
+      .id;
     vi.stubGlobal('fetch', authenticatedHttpFetch(other, installation.origin));
-    view.rerender(page('robin'));
+    view.rerender(page(otherId));
     await screen.findByRole('link', { name: 'Logga in på nytt och välj Kom ihåg mig.' });
     await act(async () => {
       release();

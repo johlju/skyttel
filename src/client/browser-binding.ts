@@ -115,6 +115,7 @@ export async function confirmBrowserLogin(proof: string, signal: AbortSignal) {
 }
 
 export type StoragePreference = {
+  userId: string;
   remembered: boolean;
   sessionId: string;
   bindingId: string;
@@ -131,6 +132,7 @@ export async function revokeRememberedLogin(id: string, expected: StoragePrefere
       started = true;
       const result = await request<
         StoragePreference & {
+          id: string;
           status: string;
           candidate: string;
           cookieName: string;
@@ -141,7 +143,12 @@ export async function revokeRememberedLogin(id: string, expected: StoragePrefere
         sessionId: expected.sessionId,
         bindingId: expected.bindingId,
       });
-      if (result.status !== 'completed' || result.remembered !== false)
+      if (
+        result.status !== 'completed' ||
+        result.remembered !== false ||
+        result.id !== id ||
+        result.userId !== expected.userId
+      )
         throw new Error('revocation_unconfirmed');
       // The server change is confirmed independently of replacement-cookie
       // registration. A failure below cannot undo that confirmed OFF result.
@@ -168,6 +175,7 @@ export async function revokeRememberedLogin(id: string, expected: StoragePrefere
         return {
           result,
           continued:
+            current.userId === result.userId &&
             current.sessionId === result.sessionId &&
             current.bindingId === result.bindingId &&
             !current.remembered &&

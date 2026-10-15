@@ -4,7 +4,7 @@ import { MapRequestError, request } from './map-request.js';
 
 type Operation = { id: string; sessionId: string };
 type State = 'idle' | 'saving' | 'saved' | 'rejected' | 'unknown' | 'checking' | 'unavailable';
-type Result = { id: string; status: string; expiresAt: number };
+type Result = { id: string; userId: string; status: string; expiresAt: number };
 
 /** The tab retains only the requested operation, never a preference or authority. */
 export function useStoragePreference(userId?: string) {
@@ -79,6 +79,7 @@ export function useStoragePreference(userId?: string) {
     void request<StoragePreference>('/api/browser-binding/preference', undefined, controller.signal)
       .then((current) => {
         if (controller.signal.aborted || generation.current !== ticket) return;
+        if (current.userId !== userId) throw new Error('owner_changed');
         setSaved(current);
         if (!recovering) updateRequested(current.remembered);
       })
@@ -185,6 +186,7 @@ export function useStoragePreference(userId?: string) {
       if (generation.current !== ticket) return;
       if (
         result.id !== selected.id ||
+        result.userId !== userId ||
         result.status !== 'completed' ||
         !Number.isFinite(result.expiresAt)
       )
@@ -198,6 +200,7 @@ export function useStoragePreference(userId?: string) {
       try {
         const current = await request<StoragePreference>('/api/browser-binding/preference');
         if (generation.current !== ticket) return;
+        if (current.userId !== userId) throw new Error('owner_changed');
         setSaved(current);
         updateRequested(current.remembered);
         const sameLogin = current.sessionId === selected.sessionId;

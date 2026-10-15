@@ -184,6 +184,7 @@ export function browserBindings(
   }
   routes.use('*', async (context, next) => {
     const sameOriginRead =
+      context.req.header('Origin') === undefined &&
       context.req.method === 'GET' &&
       (context.req.path === '/api/browser-binding/preference' ||
         context.req.path.startsWith('/api/browser-binding/results/')) &&
@@ -295,6 +296,7 @@ export function browserBindings(
     const selected = current && policy(current.session.id);
     if (!selected) return context.json({ error: 'unauthenticated' }, 401);
     return context.json({
+      userId: current.user.id,
       remembered: rememberedSession(selected),
       sessionId: selected.id,
       bindingId: lookup(context.req.raw.headers)?.id,
@@ -307,7 +309,7 @@ export function browserBindings(
     if (!current) return context.json({ error: 'unauthenticated' }, 401);
     const result = database
       .prepare(
-        'SELECT id, status, completedAt, checkUntil, sessionExpiresAt AS expiresAt FROM storage_action_result WHERE id = ? AND userId = ? AND checkUntil > ?',
+        'SELECT id, userId, status, completedAt, checkUntil, sessionExpiresAt AS expiresAt FROM storage_action_result WHERE id = ? AND userId = ? AND checkUntil > ?',
       )
       .get(context.req.param('id'), current.user.id, now());
     return result ? context.json(result) : context.json({ error: 'result_unavailable' }, 404);
@@ -398,6 +400,7 @@ export function browserBindings(
           .run(body.id, current.user.id, completedAt, completedAt + 86_400_000, expiresAt);
         return {
           id: body.id,
+          userId: current.user.id,
           status: 'completed',
           remembered: false,
           completedAt,
