@@ -33,6 +33,16 @@ cookies expire by the original deadline. Verify the confirmation failure
 message when the browser does not accept the login cookie. Browser session
 restore and real provider compatibility still need production verification.
 
+Verify turning off remembered sign-in through the production ingress.
+The old key and pending sign-in and linking attempts must lose authority
+immediately. The replacement login must use session cookies and keep the
+earlier deadline or eight hours from the change, whichever comes first.
+A delayed old cookie can require a new sign-in; it must not restore access.
+Check the separate messages for a saved change, confirmed continued
+sign-in and a lost response. Action results remain available only to
+their owner for 24 hours. Include these records in restricted database
+backup handling; they stay outside household files.
+
 Session choice records are part of the installation database and its
 restricted backups. They stay outside full household files. Use the
 upgraded reader for new household files; supported older files remain

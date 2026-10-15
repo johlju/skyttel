@@ -1,4 +1,4 @@
-import { request } from './map-request.js';
+import { MapRequestError, request } from './map-request.js';
 
 export const browserBindingLock = 'skyttel-browser-binding';
 
@@ -112,4 +112,73 @@ export async function confirmBrowserLogin(proof: string, signal: AbortSignal) {
       throw error;
     }
   }, signal);
+}
+
+export type StoragePreference = {
+  remembered: boolean;
+  sessionId: string;
+  bindingId: string;
+  expiresAt: number;
+  inactiveAfterMs: number;
+};
+
+export async function revokeRememberedLogin(id: string, expected: StoragePreference) {
+  // Failure to acquire the lock happens before the save request. Once saving
+  // starts, a transport error has an unknown outcome and must never be retried.
+  let started = false;
+  try {
+    return await withBindingLock(async () => {
+      started = true;
+      const result = await request<
+        StoragePreference & {
+          status: string;
+          candidate: string;
+          cookieName: string;
+          origin: string;
+        }
+      >('/api/browser-binding/revoke', {
+        id,
+        sessionId: expected.sessionId,
+        bindingId: expected.bindingId,
+      });
+      if (result.status !== 'completed' || result.remembered !== false)
+        throw new Error('revocation_unconfirmed');
+      // The server change is confirmed independently of replacement-cookie
+      // registration. A failure below cannot undo that confirmed OFF result.
+      try {
+        const name =
+          window.location.protocol === 'https:' ? '__Host-skyttel_binding' : 'skyttel_binding';
+        if (
+          result.origin !== window.location.origin ||
+          result.cookieName !== name ||
+          !/^[a-f0-9]{64}$/.test(result.candidate)
+        )
+          throw new Error('binding_unconfirmed');
+        const pair = `${name}=${result.candidate}`;
+        writeBindingCookie(pair);
+        if (!document.cookie.split(';').some((part) => part.trim() === pair))
+          throw new Error('binding_unconfirmed');
+        const signal = AbortSignal.timeout(10_000);
+        await request('/api/browser-binding/register', {}, signal);
+        const current = await request<StoragePreference>(
+          '/api/browser-binding/preference',
+          {},
+          signal,
+        );
+        return {
+          result,
+          continued:
+            current.sessionId === result.sessionId &&
+            current.bindingId === result.bindingId &&
+            !current.remembered &&
+            current.expiresAt === result.expiresAt,
+        };
+      } catch {
+        return { result, continued: false };
+      }
+    });
+  } catch (error) {
+    if (!started) throw new MapRequestError(409, 'binding_unavailable');
+    throw error;
+  }
 }

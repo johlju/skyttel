@@ -1619,7 +1619,7 @@ function Application() {
               anonymous={!authenticated}
               signOut={!authenticated || location.pathname === '/profile' ? null : logout}
             >
-              {storagePage ? <CookieStorage /> : pages}
+              {storagePage ? <CookieStorage userId={data?.user?.id} /> : pages}
             </SettingsScreen>
           ) : (
             pages

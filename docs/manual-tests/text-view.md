@@ -1305,7 +1305,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { unzipSync, zipSync } from 'fflate';
 const parts = unzipSync(readFileSync(process.env.TEXTBREDD_ARCHIVE));
 const manifest = JSON.parse(Buffer.from(parts['manifest.json']).toString());
-if (manifest.format !== 'skyttel-household' || manifest.schemaVersion !== 28)
+if (manifest.format !== 'skyttel-household' || manifest.schemaVersion !== 29)
   throw Error('En provexport med schemaversion 28 krävs');
 manifest.schemaVersion = 23;
 parts['manifest.json'] = Buffer.from(JSON.stringify(manifest));

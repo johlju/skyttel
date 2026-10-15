@@ -1,8 +1,10 @@
 // Layout adapted from Viscalyx CookieSettings; see CookieStorage.LICENSE.
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { rememberedLoginInformation } from '../shared/remembered-login.js';
+import { revokeRememberedLogin, type StoragePreference } from './browser-binding.js';
 import referenceLicense from './CookieStorage.LICENSE?url&no-inline';
+import { MapRequestError, request } from './map-request.js';
 import './cookie-storage.css';
 
 const entries = [
@@ -44,8 +46,57 @@ const entries = [
   },
 ];
 
-export function CookieStorage() {
+export function CookieStorage({ userId }: { userId?: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const generation = useRef(0);
+  const [saved, setSaved] = useState<StoragePreference>();
+  const [requested, setRequested] = useState(false);
+  const [state, setState] = useState<
+    'idle' | 'saving' | 'saved' | 'rejected' | 'unknown' | 'unavailable'
+  >('idle');
+  const [continued, setContinued] = useState(false);
+  useEffect(() => {
+    generation.current += 1;
+    const controller = new AbortController();
+    setSaved(undefined);
+    setState('idle');
+    if (userId)
+      request<StoragePreference>('/api/browser-binding/preference', {}, controller.signal)
+        .then((result) => {
+          if (!controller.signal.aborted) {
+            setSaved(result);
+            setRequested(result.remembered);
+          }
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setState('unavailable');
+        });
+    return () => {
+      generation.current += 1;
+      controller.abort();
+    };
+  }, [userId]);
+  const dirty = saved && saved.remembered !== requested;
+  async function save() {
+    if (!saved || !dirty || state === 'saving' || state === 'unknown' || requested) return;
+    setState('saving');
+    const savingGeneration = generation.current;
+    try {
+      const result = await revokeRememberedLogin(crypto.randomUUID(), saved);
+      if (generation.current !== savingGeneration) return;
+      setSaved(result.result);
+      setRequested(false);
+      setContinued(result.continued);
+      setState('saved');
+    } catch (error) {
+      if (generation.current !== savingGeneration) return;
+      setState(
+        error instanceof MapRequestError && [400, 401, 403, 409].includes(error.status)
+          ? 'rejected'
+          : 'unknown',
+      );
+    }
+  }
   useLayoutEffect(() => heading.current?.focus(), []);
   return (
     <article className="cookie-storage">
@@ -124,6 +175,28 @@ export function CookieStorage() {
           En sessionskaka garanterar inte utloggning när du stänger ett fönster. Webbläsare kan
           återställa sessioner. Logga ut på en delad dator.
         </p>
+        {userId && saved && (
+          <label className="cookie-storage-choice">
+            <span>Ihågkommen inloggning</span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-checked={requested}
+              checked={requested}
+              disabled={!saved.remembered || state === 'saving' || state === 'unknown'}
+              onChange={(event) => {
+                setRequested(event.target.checked);
+                setState('idle');
+              }}
+            />
+          </label>
+        )}
+        {saved && !saved.remembered && (
+          <p>
+            <Link to="/login">Logga in på nytt och välj Kom ihåg mig.</Link>
+          </p>
+        )}
+        {userId && !saved && state !== 'unavailable' && <p>Läser aktuellt val…</p>}
       </section>
       <section className="cookie-storage-card" aria-labelledby="server-storage-title">
         <h3 id="server-storage-title">Uppgifter på Skyttels server</h3>
@@ -141,6 +214,12 @@ export function CookieStorage() {
         <p>
           Resultat av begärd import och permanent radering finns på servern för återhämtning. Ett
           lokalt åtgärds-ID ersätter aldrig serverns behörighetskontroll.
+        </p>
+        <p>
+          Efter avstängning av ihågkommen inloggning sparar servern ett minimalt åtgärdsresultat för
+          din användare. Resultatet kan kontrolleras under 24 timmar från ändringen, vid behov efter
+          ny inloggning. Referensen ger ingen egen åtkomst och finns inte i en separat historik över
+          tidigare val.
         </p>
         <p>
           Serverns behörighet kan upphöra före kakans livstid. Utgången behörighet bevisar inte
@@ -164,6 +243,46 @@ export function CookieStorage() {
           kakor ger inget medgivande till behandling av samtalets uppgifter.
         </p>
       </section>
+      {userId && (
+        <div className="cookie-storage-actions">
+          {dirty && state !== 'unknown' && <p>Osparad ändring.</p>}
+          {saved && (
+            <p>
+              Efter avstängning gäller inloggningen längst till det tidigare slutet eller åtta
+              timmar från avstängningen, med 30 minuters inaktivitet. Upprepning förlänger inte
+              tiden.
+            </p>
+          )}
+          <p role="status">
+            {state === 'saving'
+              ? 'Sparar…'
+              : state === 'saved'
+                ? `Ihågkommen inloggning är avstängd. ${continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'}`
+                : ''}
+          </p>
+          <p role="alert">
+            {state === 'rejected'
+              ? 'Ändringen kunde inte sparas. Försök igen.'
+              : state === 'unknown'
+                ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.'
+                : state === 'unavailable'
+                  ? 'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
+                  : ''}
+          </p>
+          {state === 'saved' && !continued && (
+            <p>
+              <Link to="/login">Logga in igen</Link>
+            </p>
+          )}
+          <button
+            type="button"
+            aria-disabled={!dirty || state === 'saving' || state === 'unknown'}
+            onClick={() => void save()}
+          >
+            Spara inställningar
+          </button>
+        </div>
+      )}
       <p>
         Formulärets utseende bygger på Viscalyx CookieSettings.{' '}
         <a href={referenceLicense}>Licens för formulärets förebild (MIT)</a>

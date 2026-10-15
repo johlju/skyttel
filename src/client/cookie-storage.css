@@ -40,6 +40,25 @@
 .cookie-storage-badge {
   font-size: 14px;
 }
+.cookie-storage-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.cookie-storage-choice input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+.cookie-storage-actions {
+  margin: 24px 0;
+}
+.cookie-storage-actions button {
+  min-height: 44px;
+}
 .cookie-storage summary {
   padding: 12px 0;
   cursor: pointer;

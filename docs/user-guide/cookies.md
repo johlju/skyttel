@@ -30,6 +30,28 @@ En sessionskaka garanterar inte att du loggas ut när
 du stänger ett fönster: webbläsaren kan återställa sessionen. Logga ut på
 en delad dator.
 
+Stäng av **Ihågkommen inloggning** på lagringssidan och välj
+**Spara inställningar**. Servern avslutar den gamla nyckeln och äldre
+påbörjade inloggnings- och kontokopplingsförsök i samma bindning. Dina
+andra webbläsare och redan kopplade konton påverkas inte. Återstående
+session gäller längst till det tidigare slutet eller åtta timmar från
+avstängningen, med 30 minuters inaktivitet. Upprepad avstängning
+förlänger inte tiden. Ny aktivering kräver ny inloggning och ett nytt
+aktivt **Kom ihåg mig**-val.
+
+**Ihågkommen inloggning är avstängd.** bekräftar serverändringen.
+**Du är fortfarande inloggad.** visas bara efter en separat kontroll av
+den nya inloggningsnyckeln. Annars visas **Logga in igen för att fortsätta.**
+Avstängningen gäller även om ett sent svar lämnar en gammal beständig
+kaka i webbläsaren; kakan ger ingen återställd åtkomst.
+
+Vid **Ändringen kunde inte sparas. Försök igen.** ligger ditt begärda
+val kvar som osparat. **Sparstatus okänd** betyder att svaret förloras
+och att ändringen kan vara genomförd. Valet ligger kvar utan besked om
+att det tidigare valet fortfarande gäller. Sidan skickar inget nytt
+sparande automatiskt och erbjuder inget nytt sparande medan utfallet
+är okänt.
+
 Flikar med samma bekräftade webbläsarbindning delar aktuell inloggning.
 Den första lyckade nya inloggningen ersätter den tidigare och avslutar
 andra redan påbörjade försök. En misslyckad inloggning byter inte användare.

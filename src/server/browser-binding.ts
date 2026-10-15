@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
+import { serializeSigned } from 'hono/utils/cookie';
 import { rememberedLoginInformation } from '../shared/remembered-login.js';
 import type { Auth } from './auth.js';
 import { stageAuthCallback } from './auth-callback-transaction.js';
@@ -35,6 +36,8 @@ type SessionPolicy = Choice & {
   expiresAt: string;
   absoluteExpiresAt: number | null;
   loginConfirmation: string | null;
+  ordinaryStartedAt: number | null;
+  lastActivityAt: number | null;
 };
 const ordinaryLifetime = 8 * 60 * 60_000;
 const rememberedLifetime = 7 * 24 * 60 * 60_000;
@@ -66,7 +69,9 @@ function deadline(policy: SessionPolicy) {
   return Math.min(
     new Date(policy.expiresAt).getTime(),
     policy.absoluteExpiresAt ?? Number.POSITIVE_INFINITY,
-    created + (rememberedSession(policy) ? rememberedLifetime : ordinaryLifetime),
+    rememberedSession(policy)
+      ? created + rememberedLifetime
+      : (policy.ordinaryStartedAt ?? created) + ordinaryLifetime,
   );
 }
 function responseHeaders(request: Request, response: Response) {
@@ -102,6 +107,9 @@ export function browserBindings(
   const cookieName = bindingCookieName(origin);
   const routes = new Hono();
   const completing = new Set<string>();
+  // Only the committed revocation response may issue a key for a replacement
+  // binding that the browser has not registered yet. No old-key redemption.
+  const replacements = new WeakMap<Response, string>();
   const invalidCallback = (request: Request) => {
     const state = new URL(request.url).searchParams.get('state');
     const linking = state && linkingAttempt(database, state);
@@ -228,7 +236,8 @@ export function browserBindings(
   routes.post('/register', async (context) => {
     const binding = lookup(context.req.raw.headers);
     if (!binding) return context.json({ error: 'binding_invalid' }, 409);
-    if (binding.sessionId && !(await authorized(context.req.raw.headers)))
+    const current = binding.sessionId ? await rawSession(context.req.raw.headers) : null;
+    if (binding.sessionId && current?.session.id !== binding.sessionId)
       return context.json({ error: 'binding_occupied' }, 409);
     if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
     const result = database
@@ -265,6 +274,129 @@ export function browserBindings(
       origin,
     });
   });
+  routes.on(['GET', 'POST'], '/preference', async (context) => {
+    const current = await session(context.req.raw.headers);
+    const selected = current && policy(current.session.id);
+    if (!selected) return context.json({ error: 'unauthenticated' }, 401);
+    return context.json({
+      remembered: rememberedSession(selected),
+      sessionId: selected.id,
+      bindingId: lookup(context.req.raw.headers)?.id,
+      expiresAt: deadline(selected),
+      inactiveAfterMs: 30 * 60_000,
+    });
+  });
+  routes.on(['GET', 'POST'], '/results/:id', async (context) => {
+    const current = await session(context.req.raw.headers);
+    if (!current) return context.json({ error: 'unauthenticated' }, 401);
+    const result = database
+      .prepare(
+        'SELECT id, status, completedAt, checkUntil, sessionExpiresAt AS expiresAt FROM storage_action_result WHERE id = ? AND userId = ? AND checkUntil > ?',
+      )
+      .get(context.req.param('id'), current.user.id, now());
+    return result ? context.json(result) : context.json({ error: 'result_unavailable' }, 404);
+  });
+  routes.post('/revoke', async (context) => {
+    const body = (await context.req.json().catch(() => null)) as {
+      id?: unknown;
+      sessionId?: unknown;
+      bindingId?: unknown;
+    } | null;
+    if (
+      typeof body?.id !== 'string' ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.id)
+    )
+      return context.json({ error: 'invalid_request' }, 400);
+    const authContext = await auth.$context;
+    const current = await session(context.req.raw.headers);
+    const binding = lookup(context.req.raw.headers);
+    if (!current || !binding) return context.json({ error: 'unauthenticated' }, 401);
+    const token = randomBytes(32).toString('hex');
+    const candidate = randomBytes(32).toString('hex');
+    const signed = await serializeSigned(
+      authContext.authCookies.sessionToken.name,
+      token,
+      authContext.secret,
+      {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'Lax',
+        secure: origin.startsWith('https:'),
+      },
+    );
+    if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
+    const committed = database
+      .transaction(() => {
+        const fresh = lookup(context.req.raw.headers);
+        const selected = policy(current.session.id);
+        if (
+          !fresh ||
+          fresh.id !== binding.id ||
+          fresh.revision !== binding.revision ||
+          fresh.sessionId !== current.session.id ||
+          (body.sessionId !== undefined && body.sessionId !== current.session.id) ||
+          (body.bindingId !== undefined && body.bindingId !== fresh.id) ||
+          !selected ||
+          selected.token !== current.session.token ||
+          deadline(selected) <= now()
+        )
+          return null;
+        // Reusing a correlation reference never repeats a mutation or supplies a
+        // replacement key. Result recovery has its own authenticated read route.
+        if (database.prepare('SELECT 1 FROM storage_action_result WHERE id = ?').get(body.id))
+          return null;
+        const completedAt = now();
+        const expiresAt = Math.min(deadline(selected), completedAt + ordinaryLifetime);
+        const ordinaryStartedAt = rememberedSession(selected)
+          ? completedAt
+          : (selected.ordinaryStartedAt ?? new Date(selected.createdAt).getTime());
+        database.prepare('DELETE FROM login_link WHERE sessionId = ?').run(selected.id);
+        database.prepare('DELETE FROM browser_binding WHERE id = ?').run(binding.id);
+        database
+          .prepare(`UPDATE session SET token = ?, rememberMe = 0, absoluteExpiresAt = ?,
+        expiresAt = ?, ordinaryStartedAt = ?, lastActivityAt = ?, loginConfirmation = NULL,
+        choiceSchemaVersion = 1, informationVersion = ?, choicePurpose = ?, decidedAt = ? WHERE id = ?`)
+          .run(
+            token,
+            expiresAt,
+            new Date(expiresAt).toISOString(),
+            ordinaryStartedAt,
+            rememberedSession(selected) ? completedAt : (selected.lastActivityAt ?? completedAt),
+            rememberedLoginInformation.version,
+            rememberedLoginInformation.purpose,
+            completedAt,
+            selected.id,
+          );
+        database
+          .prepare('INSERT INTO browser_binding (id, sessionId, expiresAt) VALUES (?, ?, ?)')
+          .run(key(candidate), selected.id, expiresAt);
+        database
+          .prepare(`INSERT INTO storage_action_result
+        (id, userId, kind, status, completedAt, checkUntil, sessionExpiresAt)
+        VALUES (?, ?, 'revoke', 'completed', ?, ?, ?)`)
+          .run(body.id, current.user.id, completedAt, completedAt + 86_400_000, expiresAt);
+        return {
+          id: body.id,
+          status: 'completed',
+          remembered: false,
+          completedAt,
+          checkUntil: completedAt + 86_400_000,
+          expiresAt,
+          inactiveAfterMs: 30 * 60_000,
+          sessionId: selected.id,
+          bindingId: key(candidate),
+          candidate,
+          cookieName,
+          origin,
+        };
+      })
+      .immediate();
+    if (!committed) return context.json({ error: 'revocation_rejected' }, 409);
+    context.header('Set-Cookie', signed);
+    const response = context.json(committed);
+    replacements.set(response, key(candidate));
+    return response;
+  });
   return {
     routes,
     session,
@@ -279,7 +411,12 @@ export function browserBindings(
         ? await rawSession(responseHeaders(request, response))
         : null;
       const selected = current && policy(current.session.id);
-      const binding = lookup(request.headers);
+      const replacement = replacements.get(response);
+      const binding = replacement
+        ? (database.prepare('SELECT * FROM browser_binding WHERE id = ?').get(replacement) as
+            | Binding
+            | undefined)
+        : lookup(request.headers);
       for (const item of issued) {
         const [pair, ...attributes] = item.split(';');
         const name = pair.split('=')[0];

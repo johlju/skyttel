@@ -40,6 +40,168 @@ fallen anger formulär, samtal, profil eller administration.
 
 ## Skapa och öppna hushållet
 
+### ACCESS-29: Spara avstängd ihågkommen inloggning
+
+**Syfte:** Skilja sparad avstängning från bekräftad fortsatt inloggning.
+
+**Användare:** Alex i den kontrollerade HTTPS-installationen.
+
+**Förutsättningar:** Starta den
+[kontrollerade identitetsinstallationen](#kontrollerad-identitetsinstallation)
+med `--https`. Logga in med Google och markera **Kom ihåg mig** innan du
+fortsätter till leverantören. Hushåll behövs inte.
+
+**Automatiskt motsvarande test:**
+[remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts),
+ACCESS-29. Verklig HTTPS, SQLite och kakor; syntetisk leverantör.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-revocation.spec.ts",
+    "caseId": "ACCESS-29"
+  },
+  "reference": "Dator, HTTPS och aktiv ihågkommen inloggning.",
+  "outcomes": [
+    "Uttryckligt sparande bekräftar avstängningen.",
+    "Fortsatt inloggning bekräftas separat och fokus stannar på sparknappen.",
+    "Ny aktivering hänvisar till en ny inloggning."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna `/cookies` direkt i samma webbläsare.
+2. Stäng av reglaget **Ihågkommen inloggning**. Kontrollera **Osparad
+   ändring.** och välj **Spara inställningar**.
+3. Kontrollera beskedet och tangentbordsfokus.
+
+**Förväntat resultat:**
+
+- **Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.**
+  ligger kvar vid åtgärderna. Fokus ligger kvar på sparknappen.
+- Reglaget är av och sidan visar **Logga in på nytt och välj Kom ihåg mig.**
+- Uppgifterna anger högst tidigare slut eller åtta timmar från
+  avstängningen och 30 minuters inaktivitet.
+
+### ACCESS-30: Avvisat sparande behåller det osparade valet
+
+**Syfte:** Ett säkert avvisat anrop får inte visas som sparat.
+
+**Användare och förutsättningar:** Samma som ACCESS-29, i en ny installation.
+
+**Separat förberedelse:** Öppna utvecklarverktygens konsol på Skyttels
+isolerade testadress och kör följande. Det ersätter endast nästa
+avstängningsanrop med ett avvisande före servern. Ladda om sidan efter
+fallet för att ta bort ersättningen.
+
+```js
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  if (String(args[0]) === '/api/browser-binding/revoke') {
+    window.fetch = originalFetch;
+    return Response.json({ error: 'revocation_rejected' }, { status: 409 });
+  }
+  return originalFetch(...args);
+};
+```
+
+**Automatiskt motsvarande test:**
+[remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts),
+ACCESS-30. Automationen ersätter samma anrop före servern med HTTP 409.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-revocation.spec.ts",
+    "caseId": "ACCESS-30"
+  },
+  "reference": "HTTPS och avvisat avstängningsanrop före servern.",
+  "outcomes": [
+    "Avvisningen visas som fel, inte som sparad avstängning.",
+    "Begärt AV ligger kvar som osparat och sparknappen behåller fokus."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna `/cookies`, stäng av reglaget och välj
+   **Spara inställningar**.
+2. Kontrollera besked, reglage, osparad status och fokus.
+
+**Förväntat resultat:** **Ändringen kunde inte sparas. Försök igen.**
+visas som larm. Begärt AV ligger kvar med **Osparad ändring.** Sparknappen
+kan användas igen och har kvar fokus.
+
+### ACCESS-31: Förlorat svar ger okänd sparstatus
+
+**Syfte:** Ett svar som försvinner efter ändringen får inte ge falskt
+avvisande, framgång eller automatiskt nytt sparande.
+
+**Användare och förutsättningar:** Samma som ACCESS-29, i en ny installation.
+
+**Separat förberedelse:** Kör följande i konsolen på den isolerade
+testadressen. Det låter servern slutföra anropet men kastar bort svaret
+innan formuläret får läsa det. Ladda om sidan efter fallet. Automationen
+håller i stället det faktiska HTTP-svaret och avbryter leveransen efter
+serverns svar; båda varianterna styr svarsförlust efter ändringen.
+
+```js
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+  if (String(args[0]) === '/api/browser-binding/revoke') {
+    window.fetch = originalFetch;
+    throw new TypeError('Synthetic response loss');
+  }
+  return response;
+};
+```
+
+**Automatiskt motsvarande test:**
+[remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts),
+ACCESS-31. Syntetisk leverantör, verklig serverändring och kontrollerad
+svarsförlust; ingen verklig leverantörskontroll.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-revocation.spec.ts",
+    "caseId": "ACCESS-31"
+  },
+  "reference": "Kontrollerad HTTPS-installation med förlorat svar efter serverändring.",
+  "outcomes": [
+    "Sparstatus okänd skiljs från framgång och avvisning.",
+    "Begärt AV behålls och inget nytt sparande erbjuds medan utfallet är okänt."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna `/cookies`, stäng av reglaget och välj
+   **Spara inställningar**.
+2. Kontrollera beskedet och försök aktivera sparknappen igen.
+
+**Förväntat resultat:** **Sparstatus okänd. Vi kunde inte bekräfta om
+ändringen genomfördes.** visas som larm. Reglaget visar begärt AV och
+sparknappen behåller fokus, men skickar inget nytt anrop. Sidan påstår
+inte att tidigare val fortfarande gäller.
+
 ### ACCESS-27: Kom ihåg mig gäller bara den nya inloggningen
 
 **Syfte:** Kontrollera aktivt val, avmarkerad ny start och bevarad giltig
@@ -1474,7 +1636,7 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
 3. Öppna adressen i terminalens `origin` i en ny webbläsarprofil. Google
    är första administratör, syntetiska Alex. För ACCESS-22 lägger du till
    `--microsoft` i kommandot; då är Microsoft första administratör, Robin.
-   För ACCESS-24 till ACCESS-28 lägger du i stället till `--https`.
+   För ACCESS-24 till ACCESS-31 lägger du i stället till `--https`.
    Installationen skapar ett självsignerat certifikat enbart för provet.
    Godkänn det endast för den isolerade lokala testadressen. Det verifierar
    inte produktionsmiljöns certifikat eller proxy.
@@ -1485,6 +1647,22 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
    Starta kommandot igen inför nästa fall för att få en tom installation.
 
 ## Separat tekniskt underlag och observationer
+
+[remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts)
+släpper faktiskt fördröjda beständiga HTTPS-kakor efter tidig, sen och
+upprepad avstängning. Den gamla kakan kan ligga kvar beständigt, men får
+ingen serveråtkomst eller längre tidsgräns. Separata aktuella kakpar
+behåller sessionsidentiteten. Andra bindningar och redan kopplade konton
+påverkas inte. Pågående callbacks och verifierade kontokopplingsbevis
+annulleras. Ägarens resultat kan läsas efter omstart och ny inloggning,
+men inte av en annan användare eller från exakt 24 timmar efter ändringen.
+Det är syntetiskt tekniskt underlag, inte manuellt utförd driftverifiering.
+
+[cookie-storage-http.test.tsx](../../tests/unit/client/cookie-storage-http.test.tsx)
+visar formulärets sparutfall mot verklig HTTP och SQLite, inklusive
+förlorad fortsatt-inloggningskontroll och sena svar för en tidigare
+användare. Ett äldre osparat val får inte rotera en nyare inloggning.
+Det ersätter inte faktisk skärmläsaruppläsning eller Chromium-kakpolicyn.
 
 [remembered-login.spec.ts](../../tests/integration/remembered-login.spec.ts)
 kontrollerar vanlig och ihågkommen inloggning före, exakt vid och efter
