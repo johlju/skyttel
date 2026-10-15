@@ -292,6 +292,7 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   har skilda vanliga fall; uppläsning och faktiskt ljud har FRAGA-08/09.
 - [Hela svarstexten](conversation-delivery.md): fullständig tillfällig
   textreserv, ljudnotis, leverans vid utgång och rensning vid ny inloggning.
+  Korta statusbesked bevarar fokus och upprepas inte vid kvittens.
   Verkligt ljud och skärmläsare bedöms separat.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,

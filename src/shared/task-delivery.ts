@@ -5,12 +5,28 @@ export const audioDeliveryNotice =
 export const deliveryFailureNotice =
   'Hela svaret kunde inte levereras. Redan lagrat arbete finns kvar i ditt utkast eller sparresultat. Ingen instruktion skickas igen automatiskt.';
 
+export const deliverySaveStatus = {
+  saved: 'Sparat. Hela utkastet finns i hushållets karta.',
+  uncertain: 'Det är oklart om utkastet sparades. Kontrollera sparresultatet efter inloggning.',
+  unconfirmed: 'Inget nytt sparande är bekräftat.',
+};
+export type DeliverySaveState = keyof typeof deliverySaveStatus;
+
+export function assistantSaveState(view: TextAssistantView): DeliverySaveState {
+  return view.receipt
+    ? 'saved'
+    : view.saving || view.phase === 'recovery'
+      ? 'uncertain'
+      : 'unconfirmed';
+}
+
 export type TaskDelivery = {
   taskId: string;
   deadline: number;
   state: 'waiting' | 'awaiting-receipt' | 'received' | 'failed';
   audio?: boolean;
   text?: string;
+  saveState?: DeliverySaveState;
 };
 
 /** Freeze checked results, every question and conversation part together.
@@ -39,11 +55,7 @@ export function completeAssistantText(view: TextAssistantView): string {
     ...(view.questions ?? []).filter(
       (question) => !view.modelReply?.includes(question) && !view.reply?.includes(question),
     ),
-    view.receipt
-      ? 'Sparat. Hela utkastet finns i hushållets karta.'
-      : view.saving || view.phase === 'recovery'
-        ? 'Det är oklart om utkastet sparades. Kontrollera sparresultatet efter inloggning.'
-        : 'Inget nytt sparande är bekräftat.',
+    deliverySaveStatus[assistantSaveState(view)],
   ];
   return [...new Set(parts.filter((part): part is string => Boolean(part?.trim())))].join('\n\n');
 }

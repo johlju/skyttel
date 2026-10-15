@@ -56,7 +56,7 @@ leverantörer. Det bevisar inte mänsklig läsning eller verklig uppläsning.
   },
   "reference": "1280 × 800; vanlig inloggning och kontrollerad servergräns. En hållen skriven instruktion återkommer efter utgång på samma redan öppna anslutning.",
   "outcomes": [
-    "Hela svaret med sista frågan och korrekt sparstatus visas vid inloggningssidan utan ljudnotis.",
+    "Hela svaret med sista frågan och korrekt sparstatus visas vid inloggningssidan utan ljudnotis. Ett kort tillgängligt statusbesked uppdateras en gång utan att fokus flyttas.",
     "Texten ryms utan rullning i sidled. Ny inloggning som samma användare rensar svaret utan att instruktionen skickas igen."
   ]
 }
@@ -68,9 +68,11 @@ leverantörer. Det bevisar inte mänsklig läsning eller verklig uppläsning.
 
 1. Välj **Skriv till Skyttel → Nytt samtal** och godkänn samtalet.
    Skriv **Beskriv hela svaret.** och välj **Skicka** före tidsgränsen.
-2. Vänta tills **Välkommen till Skyttel** visas. Släpp modellsvaret enligt
-   förberedelsen. Läs **Hela svaret som text**, från första till sista del
-   och frågan. Kontrollera beskedet om sparande.
+2. Vänta tills **Välkommen till Skyttel** visas. Flytta fokus till
+   **Fortsätt med Google** utan att aktivera knappen. Släpp modellsvaret
+   enligt förberedelsen. Läs **Hela svaret som text**, från första till
+   sista del och frågan. Kontrollera beskedet om sparande och att fokus
+   ligger kvar.
 3. Logga in igen som Alex. Kontrollera att det gamla svaret rensas utan
    att instruktionen skickas igen.
 
@@ -78,6 +80,9 @@ leverantörer. Det bevisar inte mänsklig läsning eller verklig uppläsning.
 
 - Hela svaret och frågan visas med **Inget nytt sparande är bekräftat.**
   Ingen ljudnotis visas för textarbete utan begärt ljud.
+- Ett kort statusbesked om hela texten och korrekt sparstatus finns för
+  hjälpmedel. Kvittensen upprepar inte beskedet och fokus ligger kvar.
+  Verklig uppläsning bedöms separat i LEV-03.
 - Texten ryms utan rullning i sidled. Ny inloggning rensar svaret och
   återupptar inget modellarbete.
 
@@ -108,7 +113,7 @@ Det gäller en skriven instruktion med röst på; tal får inget undantag.
   },
   "reference": "390 × 800; syntetiska medier och hållen skriven instruktion med aktiv röst. Samma tidsgräns och nya inloggning som LEV-01.",
   "outcomes": [
-    "Hela svaret med slutfråga och korrekt sparstatus visas efter utgång med beskedet att ljudleveransen inte kan bekräftas.",
+    "Hela svaret med slutfråga och korrekt sparstatus visas efter utgång med beskedet att ljudleveransen inte kan bekräftas. Ett kort tillgängligt statusbesked uppdateras en gång utan att fokus flyttas.",
     "Text och notis ryms utan rullning i sidled. Ny inloggning rensar svaret utan modellåterspelning."
   ]
 }
@@ -121,14 +126,19 @@ Det gäller en skriven instruktion med röst på; tal får inget undantag.
 1. Starta ett samtal med text och godkänn det. Välj **Prata med Skyttel**
    och invänta **Lyssnar**. Skriv **Beskriv hela svaret.** i textvyn och
    välj **Skicka** före tidsgränsen.
-2. Vänta på inloggningssidan och släpp modellsvaret enligt förberedelsen.
-   Läs hela texten, frågan, sparstatus och ljudnotisen.
+2. Vänta på inloggningssidan. Flytta fokus till **Fortsätt med Google**
+   utan att aktivera knappen och släpp modellsvaret enligt förberedelsen.
+   Läs hela texten, frågan, sparstatus och ljudnotisen. Kontrollera att
+   fokus ligger kvar.
 3. Logga in igen som Alex och kontrollera att texten rensas.
 
 **Förväntat resultat:**
 
 - Hela texten visas tillsammans med **Ljudleveransen kan inte bekräftas.**
   Notisen skiljer mottagen text från uppspelning, läsning och förståelse.
+- Ett enda kort statusbesked om texten, sparstatus och ljudet finns för
+  hjälpmedel. Kvittensen upprepar inte beskedet och fokus ligger kvar.
+  Verklig uppläsning bedöms separat i LEV-03.
 - Röststoppet ger ingen ny instruktion. Texten ryms i sidled och ny
   inloggning återspelar inget arbete.
 
@@ -182,8 +192,12 @@ denna bedömning.
 
 1. Starta röstläge och be om en lång förklaring med flera delar och en
    avslutande fråga. Bryt ljudutgången medan svaret kommer.
-2. Läs hela **Hela svaret som text** med tangentbord och skärmläsare.
-   Kontrollera sista delen, frågan, sparstatus och ljudnotisen.
+2. Behåll fokus på en inloggningskontroll när textreserven kommer.
+   Kontrollera att skärmläsaren ger ett kort besked om hela texten och
+   korrekt sparstatus samt ljudnotisen. Beskedet ska komma en gång och
+   inte läsa upp hela svaret automatiskt. Läs sedan hela **Hela svaret
+   som text** med tangentbord och skärmläsare. Kontrollera sista delen,
+   frågan, sparstatus och ljudnotisen.
 3. Förstora till 200 och 400 procent och prova den smala bredden. Följ
    läsordningen till inloggningskontrollerna utan att välja en åtgärd.
 

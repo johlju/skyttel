@@ -99,7 +99,9 @@ test('natural anonymous expiry preserves bounded text but a new owner rejects la
   expect(screen.getByRole('region', { name: 'Hela svaret som text' }).textContent).toContain(
     'Alex hela svar.',
   );
-  expect(screen.queryByRole('status')).toBeNull();
+  expect(screen.getByRole('status').textContent).toBe(
+    'Hela svaret finns här som text. Kontrollera sparstatus i svaret.',
+  );
   view.rerender(<Application actorId="robin" />);
   expect(screen.queryByRole('region', { name: 'Hela svaret som text' })).toBeNull();
   act(() => socket.receive({ ...packet, text: 'Försenat privat svar från Alex.' }));
@@ -185,4 +187,102 @@ test('retirement clears old text and the next new instruction gets a new channel
     }),
   );
   expect(screen.queryByText('Försenat efter nytt samtal.')).toBeNull();
+});
+
+test('a text answer after workspace expiry announces its checked save result once without moving focus', async () => {
+  vi.stubGlobal('WebSocket', BrowserSocket);
+  let manager: ReturnType<typeof useTaskDelivery>;
+  function Application({ signedIn }: { signedIn: boolean }) {
+    manager = useTaskDelivery(signedIn ? 'alex' : undefined);
+    return (
+      <TaskDeliveryContext value={manager.client}>
+        {signedIn && <section aria-label="Arbetsyta">Samtalstext</section>}
+        <button type="button">Logga in</button>
+        <TaskDeliveryResults results={manager.results} />
+      </TaskDeliveryContext>
+    );
+  }
+  const view = render(<Application signedIn />);
+  const status = screen.getByRole('status');
+  expect(status.textContent).toBe('');
+  act(() => {
+    void manager.client.connect('/api/households/home/text-assistant/chat');
+  });
+  const socket = BrowserSocket.opened[0];
+  act(() => socket.receive({ type: 'connected', id: 'channel' }));
+  view.rerender(<Application signedIn={false} />);
+  expect(screen.queryByRole('region', { name: 'Arbetsyta' })).toBeNull();
+  const login = screen.getByRole('button', { name: 'Logga in' });
+  login.focus();
+  const packet = {
+    type: 'delivery',
+    taskId: 'saved-answer',
+    deadline: Date.now() + 30_000,
+    state: 'awaiting-receipt',
+    text: `${'Alla delar av svaret. '.repeat(100)}\n\nSparat. Hela utkastet finns i hushållets karta.`,
+    saveState: 'saved',
+    audio: false,
+  };
+  act(() => socket.receive(packet));
+  await waitFor(() =>
+    expect(status.textContent).toBe(
+      'Hela svaret finns här som text. Sparat. Hela utkastet finns i hushållets karta.',
+    ),
+  );
+  expect(document.activeElement).toBe(login);
+  expect(screen.getByRole('region', { name: 'Hela svaret som text' }).textContent).toContain(
+    packet.text,
+  );
+  const changes: MutationRecord[] = [];
+  const observer = new MutationObserver((records) => changes.push(...records));
+  observer.observe(status, { childList: true, subtree: true, characterData: true });
+  act(() => socket.receive({ ...packet, state: 'received' }));
+  await act(async () => {});
+  observer.disconnect();
+  expect(changes).toEqual([]);
+  expect(document.activeElement).toBe(login);
+});
+
+test('audio text announces uncertain saving without treating model words or a failed receipt as success', async () => {
+  vi.stubGlobal('WebSocket', BrowserSocket);
+  let manager: ReturnType<typeof useTaskDelivery>;
+  function Application() {
+    manager = useTaskDelivery('alex');
+    return (
+      <TaskDeliveryContext value={manager.client}>
+        <TaskDeliveryResults results={manager.results} />
+      </TaskDeliveryContext>
+    );
+  }
+  render(<Application />);
+  const status = screen.getByRole('status');
+  act(() => {
+    void manager.client.connect('/api/households/home/text-assistant/chat');
+  });
+  const socket = BrowserSocket.opened[0];
+  act(() => socket.receive({ type: 'connected', id: 'channel' }));
+  const packet = {
+    type: 'delivery',
+    taskId: 'uncertain-answer',
+    deadline: Date.now() + 30_000,
+    state: 'awaiting-receipt',
+    text: 'Samtal (obekräftat): Sparat!\n\nDet är oklart om utkastet sparades. Kontrollera sparresultatet efter inloggning.',
+    saveState: 'uncertain',
+    audio: true,
+  };
+  act(() => socket.receive(packet));
+  await waitFor(() =>
+    expect(status.textContent).toBe(
+      'Hela svaret finns här som text. Det är oklart om utkastet sparades. Kontrollera sparresultatet efter inloggning. Ljudleveransen kan inte bekräftas.',
+    ),
+  );
+  expect(screen.getAllByRole('status')).toHaveLength(1);
+  expect(screen.getByText(/Mottagen text betyder inte att ljudet har spelats upp/)).toBeTruthy();
+  const availability = status.textContent;
+  act(() => socket.receive({ ...packet, state: 'failed', text: undefined }));
+  expect(screen.getByRole('alert').textContent).toContain('Hela svaret kunde inte levereras.');
+  expect(status.textContent).toBe(availability);
+  expect(screen.getByRole('region', { name: 'Hela svaret som text' }).textContent).toContain(
+    packet.text,
+  );
 });

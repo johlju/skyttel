@@ -10,7 +10,7 @@ import {
   conversationConsentRequired,
   conversationConsentRevoked,
 } from '../shared/conversation-consent.js';
-import { completeAssistantText } from '../shared/task-delivery.js';
+import { assistantSaveState, completeAssistantText } from '../shared/task-delivery.js';
 import type {
   MapSelection,
   TextAssistantReview,
@@ -1717,7 +1717,10 @@ export function textAssistantRoutes({
           completedReplies: [...(session.completedReplies ?? [])],
         };
         if (accepted.status === 'completed' && session.phase === 'ready')
-          accepted.delivery?.freeze(completeAssistantText(accepted.result));
+          accepted.delivery?.freeze(
+            completeAssistantText(accepted.result),
+            assistantSaveState(accepted.result),
+          );
         else accepted.delivery?.stop();
         nextMessage(session);
       });

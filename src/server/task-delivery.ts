@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { TaskDelivery } from '../shared/task-delivery.js';
+import type { DeliverySaveState, TaskDelivery } from '../shared/task-delivery.js';
 
 export type DeliverySocket = {
   send: (text: string) => void;
@@ -102,7 +102,12 @@ export function taskDeliveries(now: () => number) {
         audio,
         state: channel ? 'waiting' : 'failed',
       };
-      if (!channel) return { value, freeze: (_text: string) => {}, stop: () => {} };
+      if (!channel)
+        return {
+          value,
+          freeze: (_text: string, _saveState?: DeliverySaveState) => {},
+          stop: () => {},
+        };
       const task = {
         value,
         guard,
@@ -115,7 +120,7 @@ export function taskDeliveries(now: () => number) {
         get value() {
           return task.value;
         },
-        freeze(text: string) {
+        freeze(text: string, saveState?: DeliverySaveState) {
           if (!channel.open || task.value.state !== 'waiting') return;
           try {
             guard();
@@ -125,7 +130,7 @@ export function taskDeliveries(now: () => number) {
               now() >= deadline
             )
               throw new Error('incomplete_delivery');
-            task.value = { taskId, deadline, text, audio, state: 'awaiting-receipt' };
+            task.value = { taskId, deadline, text, audio, saveState, state: 'awaiting-receipt' };
             task.receiptBy = Math.min(deadline, now() + 5000);
             clearTimeout(task.timer);
             task.timer = setTimeout(

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import {
   audioDeliveryNotice,
   deliveryFailureNotice,
+  deliverySaveStatus,
   type TaskDelivery,
 } from '../shared/task-delivery.js';
 
@@ -145,6 +146,7 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
             state: body.state,
             text: body.text ?? previous.find((item) => item.taskId === body.taskId)?.text,
             audio: body.audio,
+            saveState: body.saveState,
           },
         ]);
       });
@@ -183,6 +185,26 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
 
 export function TaskDeliveryResults({ results }: { results: TaskDelivery[] }) {
   const client = useContext(TaskDeliveryContext);
+  const announced = useRef(new Set<string>());
+  const [announcement, setAnnouncement] = useState({ count: 0, text: '' });
+  useEffect(() => {
+    const current = new Set(results.map((item) => item.taskId));
+    announced.current = new Set([...announced.current].filter((id) => current.has(id)));
+    const notices: string[] = [];
+    for (const item of results) {
+      if (!item.text || item.state === 'failed' || announced.current.has(item.taskId)) continue;
+      announced.current.add(item.taskId);
+      notices.push(
+        'Hela svaret finns här som text.',
+        item.saveState ? deliverySaveStatus[item.saveState] : 'Kontrollera sparstatus i svaret.',
+      );
+      if (item.audio) notices.push('Ljudleveransen kan inte bekräftas.');
+    }
+    if (notices.length)
+      setAnnouncement(({ count }) => ({ count: count + 1, text: notices.join(' ') }));
+    else if (!results.length)
+      setAnnouncement((value) => (value.text ? { ...value, text: '' } : value));
+  }, [results]);
   // Layout effects run after the entire accessible fallback is committed.
   // Receipt never waits for a human to read or confirm it.
   useLayoutEffect(() => {
@@ -190,17 +212,23 @@ export function TaskDeliveryResults({ results }: { results: TaskDelivery[] }) {
       if (item.state === 'awaiting-receipt' && item.text) client?.received(item.taskId, item.text);
   }, [client, results]);
   const visible = results.filter((item) => item.state !== 'waiting');
-  if (!visible.length) return null;
   return (
-    <section className="task-delivery-results panel" aria-label="Hela svaret som text">
-      <h2>Hela svaret som text</h2>
-      {visible.map((item) => (
-        <article key={item.taskId}>
-          {item.audio && item.text && <p role="status">{audioDeliveryNotice}</p>}
-          {item.text && <div className="task-delivery-text">{item.text}</div>}
-          {item.state === 'failed' && <p role="alert">{deliveryFailureNotice}</p>}
-        </article>
-      ))}
-    </section>
+    <>
+      <p className="task-delivery-announcement" role="status" aria-live="polite" aria-atomic="true">
+        <span key={announcement.count}>{announcement.text}</span>
+      </p>
+      {!!visible.length && (
+        <section className="task-delivery-results panel" aria-label="Hela svaret som text">
+          <h2>Hela svaret som text</h2>
+          {visible.map((item) => (
+            <article key={item.taskId}>
+              {item.audio && item.text && <p>{audioDeliveryNotice}</p>}
+              {item.text && <div className="task-delivery-text">{item.text}</div>}
+              {item.state === 'failed' && <p role="alert">{deliveryFailureNotice}</p>}
+            </article>
+          ))}
+        </section>
+      )}
+    </>
   );
 }

@@ -60,6 +60,21 @@ for (const scenario of [
       await expect.poll(() => frames.some((frame) => frame.state === 'waiting')).toBe(true);
       clock += 60_000;
       await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();
+      const login = page.getByRole('button', { name: 'Fortsätt med Google' });
+      await login.focus();
+      const announcement = page.locator('.task-delivery-announcement');
+      await expect(announcement).toHaveAttribute('role', 'status');
+      await expect(announcement).toHaveAttribute('aria-live', 'polite');
+      await expect(announcement).toHaveText('');
+      await announcement.evaluate((element) => {
+        const records: string[] = [];
+        new MutationObserver(() => records.push(element.textContent ?? '')).observe(element, {
+          childList: true,
+          characterData: true,
+          subtree: true,
+        });
+        Object.assign(window, { deliveryAnnouncements: records });
+      });
       const full = `${'Alla delar i ett långt svar med åäö och 🚲. '.repeat(60)}Sista frågan: vem använder cykeln?`;
       release([modelMessage(full)]);
       const panel = page.getByRole('region', { name: 'Hela svaret som text', exact: true });
@@ -70,9 +85,20 @@ for (const scenario of [
       expect(receipts[0].text).toBe(
         frames.find((frame) => frame.state === 'awaiting-receipt')?.text,
       );
-      if (scenario.audio)
-        await expect(panel.getByRole('status')).toContainText('Ljudleveransen kan inte bekräftas.');
-      else await expect(panel.getByRole('status')).toHaveCount(0);
+      expect(frames.find((frame) => frame.state === 'awaiting-receipt')?.saveState).toBe(
+        'unconfirmed',
+      );
+      await expect(announcement).toHaveText(
+        `Hela svaret finns här som text. Inget nytt sparande är bekräftat.${scenario.audio ? ' Ljudleveransen kan inte bekräftas.' : ''}`,
+      );
+      await expect(login).toBeFocused();
+      expect(
+        await page.evaluate(
+          () => (window as Window & { deliveryAnnouncements?: string[] }).deliveryAnnouncements,
+        ),
+      ).toHaveLength(1);
+      if (scenario.audio) await expect(panel).toContainText('Ljudleveransen kan inte bekräftas.');
+      else await expect(panel).not.toContainText('Ljudleveransen kan inte bekräftas.');
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
