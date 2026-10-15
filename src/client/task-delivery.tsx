@@ -214,7 +214,12 @@ export function TaskDeliveryResults({ results }: { results: TaskDelivery[] }) {
   const visible = results.filter((item) => item.state !== 'waiting');
   return (
     <>
-      <p className="task-delivery-announcement" role="status" aria-live="polite" aria-atomic="true">
+      <p
+        className="task-delivery-announcement"
+        role={announcement.text ? 'status' : undefined}
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <span key={announcement.count}>{announcement.text}</span>
       </p>
       {!!visible.length && (

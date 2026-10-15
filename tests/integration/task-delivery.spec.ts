@@ -63,7 +63,7 @@ for (const scenario of [
       const login = page.getByRole('button', { name: 'Fortsätt med Google' });
       await login.focus();
       const announcement = page.locator('.task-delivery-announcement');
-      await expect(announcement).toHaveAttribute('role', 'status');
+      await expect(announcement).not.toHaveAttribute('role', 'status');
       await expect(announcement).toHaveAttribute('aria-live', 'polite');
       await expect(announcement).toHaveText('');
       await announcement.evaluate((element) => {
@@ -91,6 +91,7 @@ for (const scenario of [
       await expect(announcement).toHaveText(
         `Hela svaret finns här som text. Inget nytt sparande är bekräftat.${scenario.audio ? ' Ljudleveransen kan inte bekräftas.' : ''}`,
       );
+      await expect(announcement).toHaveAttribute('role', 'status');
       await expect(login).toBeFocused();
       expect(
         await page.evaluate(

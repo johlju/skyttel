@@ -203,8 +203,10 @@ test('a text answer after workspace expiry announces its checked save result onc
     );
   }
   const view = render(<Application signedIn />);
-  const status = screen.getByRole('status');
-  expect(status.textContent).toBe('');
+  const status = view.container.querySelector('[aria-live="polite"][aria-atomic="true"]');
+  expect(status).not.toBeNull();
+  expect(screen.queryByRole('status')).toBeNull();
+  expect(status?.textContent).toBe('');
   act(() => {
     void manager.client.connect('/api/households/home/text-assistant/chat');
   });
@@ -225,17 +227,22 @@ test('a text answer after workspace expiry announces its checked save result onc
   };
   act(() => socket.receive(packet));
   await waitFor(() =>
-    expect(status.textContent).toBe(
+    expect(status?.textContent).toBe(
       'Hela svaret finns här som text. Sparat. Hela utkastet finns i hushållets karta.',
     ),
   );
+  expect(screen.getByRole('status')).toBe(status);
   expect(document.activeElement).toBe(login);
   expect(screen.getByRole('region', { name: 'Hela svaret som text' }).textContent).toContain(
     packet.text,
   );
   const changes: MutationRecord[] = [];
   const observer = new MutationObserver((records) => changes.push(...records));
-  observer.observe(status, { childList: true, subtree: true, characterData: true });
+  observer.observe(screen.getByRole('status'), {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
   act(() => socket.receive({ ...packet, state: 'received' }));
   await act(async () => {});
   observer.disconnect();
@@ -254,8 +261,10 @@ test('audio text announces uncertain saving without treating model words or a fa
       </TaskDeliveryContext>
     );
   }
-  render(<Application />);
-  const status = screen.getByRole('status');
+  const view = render(<Application />);
+  const status = view.container.querySelector('[aria-live="polite"][aria-atomic="true"]');
+  expect(status).not.toBeNull();
+  expect(screen.queryByRole('status')).toBeNull();
   act(() => {
     void manager.client.connect('/api/households/home/text-assistant/chat');
   });
@@ -272,16 +281,17 @@ test('audio text announces uncertain saving without treating model words or a fa
   };
   act(() => socket.receive(packet));
   await waitFor(() =>
-    expect(status.textContent).toBe(
+    expect(status?.textContent).toBe(
       'Hela svaret finns här som text. Det är oklart om utkastet sparades. Kontrollera sparresultatet efter inloggning. Ljudleveransen kan inte bekräftas.',
     ),
   );
+  expect(screen.getByRole('status')).toBe(status);
   expect(screen.getAllByRole('status')).toHaveLength(1);
   expect(screen.getByText(/Mottagen text betyder inte att ljudet har spelats upp/)).toBeTruthy();
-  const availability = status.textContent;
+  const availability = status?.textContent;
   act(() => socket.receive({ ...packet, state: 'failed', text: undefined }));
   expect(screen.getByRole('alert').textContent).toContain('Hela svaret kunde inte levereras.');
-  expect(status.textContent).toBe(availability);
+  expect(status?.textContent).toBe(availability);
   expect(screen.getByRole('region', { name: 'Hela svaret som text' }).textContent).toContain(
     packet.text,
   );
