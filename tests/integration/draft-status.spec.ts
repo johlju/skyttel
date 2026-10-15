@@ -36,7 +36,7 @@ async function closeSaveDialog(page: Page) {
   if (await modal.isVisible()) await page.keyboard.press('Escape');
 }
 
-for (const theme of ['light', 'dark'])
+for (const theme of ['light', 'dark'] as const)
   test(`${theme === 'dark' ? 'UTKAST-94' : 'UTKAST-25'}: filtered legend matches map colours and retains only displayed categories in ${theme}`, async ({
     page,
   }) => {
@@ -92,7 +92,7 @@ for (const theme of ['light', 'dark'])
         baseRevision: edge.revision,
         value: { ...edge, sourceId: 'music', targetId: 'lo' },
       });
-      await page.addInitScript((value) => localStorage.setItem('skyttel-theme', value), theme);
+      await page.emulateMedia({ colorScheme: theme });
       await page.goto(app.origin);
       const legend = page.getByRole('region', { name: 'Teckenförklaring i kartan', exact: true });
       await expect(legend).toContainText('Grönt +');

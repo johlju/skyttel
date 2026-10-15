@@ -34,15 +34,22 @@ afterEach(() => fixture.close());
 
 test('household archives exclude personal conversation choices and import preserves them', async () => {
   const preferences = { showDraftOnStart: true, textWidth: 624, draftWidth: 460 };
+  expect((await client.json('/api/theme-preference', { mode: 'dark' })).status).toBe(200);
   expect((await client.json(`${path}/map/conversation-preferences`, preferences)).status).toBe(200);
   const prepared = await (await client.json(`${path}/exports`, {})).json();
   const bytes = new Uint8Array(
     await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
   );
   const parts = unzipSync(bytes);
-  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(25);
+  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(26);
   const encoded = new TextDecoder().decode(parts['content.json']);
-  for (const field of ['showDraftOnStart', 'textWidth', 'draftWidth', 'conversationPreferences'])
+  for (const field of [
+    'showDraftOnStart',
+    'textWidth',
+    'draftWidth',
+    'conversationPreferences',
+    'themePreference',
+  ])
     expect(encoded).not.toContain(field);
   const ready = await (await upload(bytes)).json();
   expect(
@@ -53,6 +60,9 @@ test('household archives exclude personal conversation choices and import preser
       })
     ).status,
   ).toBe(200);
+  expect(await (await client.request('/api/theme-preference')).json()).toMatchObject({
+    mode: 'dark',
+  });
   expect(await (await client.request(`${path}/map/conversation-preferences`)).json()).toEqual(
     preferences,
   );

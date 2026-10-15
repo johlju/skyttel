@@ -31,6 +31,7 @@ import { imageUploadLimit } from './profile-images.js';
 import { textAssistantRoutes } from './text-assistant.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
 import type { TextModelProfile, TextModelUsage } from './text-assistant-model.js';
+import { themePreferenceRoutes } from './theme-preference-routes.js';
 import { voiceAssistantRoutes } from './voice-assistant.js';
 
 export function createApp({
@@ -226,6 +227,7 @@ export function createApp({
   app.route('/api', linking.routes);
   app.route('/api', mapRoutes(database, auth, config.origin));
   app.route('/api', profileImageRoutes(database, auth, config.origin));
+  app.route('/api', themePreferenceRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
   let stopVoice: ((sessionId: string) => void) | undefined;
   let retireVoiceWork: ((sessionId: string) => void) | undefined;

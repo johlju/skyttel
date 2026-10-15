@@ -6,6 +6,13 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Account theme and household files
+
+Use the upgraded application to read new full household files. Supported
+older files remain readable. Account theme choices stay outside household
+files and remain unchanged when household content is imported. Use the
+database backup to recover account choices with the installation.
+
 ### Conversation model
 
 The application uses GPT-6.1 Sol with high reasoning effort for text,

@@ -112,7 +112,7 @@ export function SettingsOverview({ entries }: { entries: Entry[] }) {
         <h2>Utseende</h2>
         <p>
           Välj ljust, mörkt eller systemstyrt tema med temaknappen högst upp. Ditt val följer med
-          mellan kartan och inställningarna.
+          till alla enheter och webbläsare där du använder samma konto.
         </p>
       </section>
     </section>

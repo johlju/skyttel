@@ -1,8 +1,18 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import './workspace-theme.css';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
-const themeChangeEvent = 'skyttel-theme-change';
+import type { ThemeMode, ThemePreference } from '../shared/theme-preference.js';
+import { request } from './map-request.js';
+
+export type { ThemeMode } from '../shared/theme-preference.js';
 
 const themeOptions: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: 'Ljust' },
@@ -10,39 +20,115 @@ const themeOptions: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: 'System' },
 ];
 
+type AccountTheme = {
+  mode: ThemeMode;
+  theme: 'light' | 'dark';
+  pending: boolean;
+  feedback: { error: boolean; text: string } | null;
+  dismissFeedback: () => void;
+  changeMode: (mode: ThemeMode) => void;
+};
+
+export const WorkspaceThemeContext = createContext<AccountTheme>({
+  mode: 'system',
+  theme: 'light',
+  pending: false,
+  feedback: null,
+  dismissFeedback: () => {},
+  changeMode: () => {},
+});
+
 export function useWorkspaceTheme() {
-  const [mode, setMode] = useState<ThemeMode>(() => {
-    try {
-      const saved = localStorage.getItem('skyttel-theme');
-      return saved === 'light' || saved === 'dark' ? saved : 'system';
-    } catch {
-      return 'system';
-    }
-  });
-  const changeMode = (value: ThemeMode) => {
-    setMode(value);
-    try {
-      localStorage.setItem('skyttel-theme', value);
-    } catch {
-      /* Theme also works without browser storage. */
-    }
-    window.dispatchEvent(new CustomEvent(themeChangeEvent, { detail: value }));
-  };
+  return useContext(WorkspaceThemeContext);
+}
+
+export function useAccountTheme(userId: string | undefined): AccountTheme {
+  const [saved, setSaved] = useState<{ userId?: string; mode: ThemeMode }>({ mode: 'system' });
+  const [pending, setPending] = useState(false);
+  const [feedback, setFeedback] = useState<AccountTheme['feedback']>(null);
+  const activeUser = useRef(userId);
+  const generation = useRef(0);
+  const saving = useRef(false);
+  useLayoutEffect(() => {
+    activeUser.current = userId;
+    generation.current++;
+    saving.current = false;
+    setPending(false);
+    setFeedback(null);
+    setSaved({ userId, mode: 'system' });
+  }, [userId]);
   useEffect(() => {
-    const synchronize = (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      const value = event.detail;
-      if (value === 'light' || value === 'dark' || value === 'system') setMode(value);
-    };
-    window.addEventListener(themeChangeEvent, synchronize);
-    return () => window.removeEventListener(themeChangeEvent, synchronize);
+    // Legacy copies are discarded, never imported into an account.
+    for (const storage of ['localStorage', 'sessionStorage'] as const) {
+      try {
+        window[storage].removeItem('skyttel-theme');
+      } catch {
+        /* Storage may be denied. */
+      }
+    }
   }, []);
+  useEffect(() => {
+    if (!userId) return;
+    let closed = false;
+    const refresh = async () => {
+      if (saving.current) return;
+      const ticket = ++generation.current;
+      try {
+        const result = await request<ThemePreference>('/api/theme-preference');
+        if (closed || generation.current !== ticket || activeUser.current !== userId) return;
+        if (result.userId !== userId) return;
+        setSaved(result);
+      } catch {
+        if (!closed && generation.current === ticket && activeUser.current === userId)
+          setFeedback({
+            error: true,
+            text: 'Temavalet kunde inte hämtas. Försök igen genom att öppna Skyttel på nytt.',
+          });
+      }
+    };
+    void refresh();
+    window.addEventListener('focus', refresh);
+    const visible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      closed = true;
+      generation.current++;
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, [userId]);
+  const changeMode = async (mode: ThemeMode) => {
+    if (!userId || saving.current) return;
+    saving.current = true;
+    const ticket = ++generation.current;
+    setPending(true);
+    setFeedback({ error: false, text: 'Sparar temavalet…' });
+    try {
+      const result = await request<ThemePreference>('/api/theme-preference', { mode });
+      if (generation.current !== ticket || activeUser.current !== userId) return;
+      if (result.userId !== userId) throw new Error('theme_owner_changed');
+      setSaved(result);
+      setFeedback({ error: false, text: 'Temavalet har sparats på ditt konto.' });
+    } catch {
+      if (generation.current !== ticket || activeUser.current !== userId) return;
+      setFeedback({
+        error: true,
+        text: 'Temavalet kunde inte bekräftas som sparat på ditt konto. Försök igen.',
+      });
+    } finally {
+      if (generation.current === ticket && activeUser.current === userId) {
+        saving.current = false;
+        setPending(false);
+      }
+    }
+  };
   const [systemDark, setSystemDark] = useState(
     () =>
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches,
   );
-
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
     const preference = window.matchMedia('(prefers-color-scheme: dark)');
@@ -51,9 +137,15 @@ export function useWorkspaceTheme() {
     preference.addEventListener('change', update);
     return () => preference.removeEventListener('change', update);
   }, []);
-
-  const theme = mode === 'system' ? (systemDark ? 'dark' : 'light') : mode;
-  return { mode, theme, changeMode };
+  const mode = saved.userId === userId ? saved.mode : 'system';
+  return {
+    mode,
+    theme: mode === 'system' ? (systemDark ? 'dark' : 'light') : mode,
+    pending,
+    feedback,
+    dismissFeedback: () => setFeedback(null),
+    changeMode,
+  };
 }
 
 function ThemeIcon({ mode }: { mode: ThemeMode }) {
@@ -92,6 +184,7 @@ export function WorkspaceTheme({
   mode: ThemeMode;
   onChange: (mode: ThemeMode) => void;
 }) {
+  const { pending, feedback, dismissFeedback } = useWorkspaceTheme();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 12, left: 12 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -173,6 +266,22 @@ export function WorkspaceTheme({
         <ThemeIcon mode={mode} />
         <span className="workspace-label">Tema</span>
       </button>
+      {feedback && (
+        <p className="workspace-theme-feedback" role={feedback.error ? 'alert' : 'status'}>
+          <span aria-hidden="true">{feedback.error ? '⚠ ' : pending ? '… ' : '✓ '}</span>
+          {feedback.text}
+          <button
+            type="button"
+            aria-label="Stäng temabeskedet"
+            onClick={() => {
+              dismissFeedback();
+              buttonRef.current?.focus();
+            }}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </p>
+      )}
       {open && (
         <div
           id={popupId}
@@ -192,7 +301,7 @@ export function WorkspaceTheme({
             }
           }}
         >
-          <fieldset>
+          <fieldset disabled={pending}>
             <legend id={titleId}>Tema</legend>
             {themeOptions.map((option) => (
               <label key={option.value} className="workspace-theme-option">

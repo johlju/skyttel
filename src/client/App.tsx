@@ -32,7 +32,7 @@ import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
-import { useWorkspaceTheme } from './WorkspaceTheme.js';
+import { useAccountTheme, WorkspaceThemeContext } from './WorkspaceTheme.js';
 import './access.css';
 
 type Provider = 'google' | 'microsoft';
@@ -1274,7 +1274,6 @@ function Application() {
   const { requestLeave } = useFormLeave();
   const navigate = useNavigate();
   const location = useLocation();
-  const theme = useWorkspaceTheme();
   const [mapSettingsTarget, setMapSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [typeSettingsTarget, setTypeSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [conversationSettingsTarget, setConversationSettingsTarget] =
@@ -1286,6 +1285,7 @@ function Application() {
   const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
   const data = bootstrap.status === 'loaded' ? bootstrap.data : undefined;
+  const theme = useAccountTheme(data?.user?.id);
   async function signOut() {
     setSigningOut(true);
     setSignOutError(false);
@@ -1501,87 +1501,89 @@ function Application() {
     </>
   );
   return (
-    <div
-      className={`app-shell${mapActive ? ' has-workspace' : ''}${settingsPage ? ' has-settings' : ''}${accessGate ? ' access-shell' : ''}`}
-      data-theme={theme.theme}
-    >
-      <a className="skip-link" href="#main">
-        Hoppa till innehållet
-      </a>
-      <header className="site-header" hidden={mapActive || Boolean(settingsPage)}>
-        <Link className="brand" to="/" aria-label="Skyttel, startsida">
-          <img className="brand-logo" src={logo} alt="" />
-          Skyttel
-        </Link>
-        {authenticated ? (
-          <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
-            <Link to="/profile">Din profil</Link>
-            <Link to="/login-methods">Inloggningssätt</Link>
-            {data.operator && <Link to="/costs">Månadskostnad</Link>}
-            <span className="session-name">{data.user.name}</span>
-            {logout}
-          </div>
-        ) : (
-          <span className="header-note">Ett hushåll. En gemensam bild.</span>
-        )}
-      </header>
-      <main id="main" tabIndex={-1}>
-        {bootstrap.status === 'loading' && <Loading />}
-        {bootstrap.status === 'error' && <Failure onRetry={reload} />}
-        {data?.status === 'anonymous' && !storagePage && (
-          <>
-            <Login providers={data.providers} />
-            {!storageIntroductionClosed && (
-              <StorageIntroduction
-                onClose={() => {
-                  setStorageIntroductionClosed(true);
-                  document
-                    .querySelector<HTMLButtonElement>('.access-gate button:not(:disabled)')
-                    ?.focus();
-                }}
-              />
-            )}
-          </>
-        )}
-        {settingsPage ? (
-          <SettingsScreen
-            household={household}
-            userName={data?.user?.name ?? 'Besökare'}
-            operator={data?.operator ?? false}
-            personal={personal}
-            anonymous={!authenticated}
-            signOut={!authenticated || location.pathname === '/profile' ? null : logout}
-          >
-            {storagePage ? <CookieStorage /> : pages}
-          </SettingsScreen>
-        ) : (
-          pages
-        )}
-        {data?.status === 'ready' && (
-          <HouseholdWork
-            key={data.user.id}
-            account={account}
-            onSessionExpired={reload}
-            typeSettingsTarget={typeSettingsTarget}
-            mapSettingsTarget={mapSettingsTarget}
-            conversationSettingsTarget={conversationSettingsTarget}
-          />
-        )}
-        {data?.status === 'forbidden' && !settingsPage && (
-          <>
-            <Forbidden />
-            <InvitationEntry
-              userId={data.user.id}
-              showInvitation
-              onAccepted={created}
-              onReload={reload}
+    <WorkspaceThemeContext value={theme}>
+      <div
+        className={`app-shell${mapActive ? ' has-workspace' : ''}${settingsPage ? ' has-settings' : ''}${accessGate ? ' access-shell' : ''}`}
+        data-theme={theme.theme}
+      >
+        <a className="skip-link" href="#main">
+          Hoppa till innehållet
+        </a>
+        <header className="site-header" hidden={mapActive || Boolean(settingsPage)}>
+          <Link className="brand" to="/" aria-label="Skyttel, startsida">
+            <img className="brand-logo" src={logo} alt="" />
+            Skyttel
+          </Link>
+          {authenticated ? (
+            <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
+              <Link to="/profile">Din profil</Link>
+              <Link to="/login-methods">Inloggningssätt</Link>
+              {data.operator && <Link to="/costs">Månadskostnad</Link>}
+              <span className="session-name">{data.user.name}</span>
+              {logout}
+            </div>
+          ) : (
+            <span className="header-note">Ett hushåll. En gemensam bild.</span>
+          )}
+        </header>
+        <main id="main" tabIndex={-1}>
+          {bootstrap.status === 'loading' && <Loading />}
+          {bootstrap.status === 'error' && <Failure onRetry={reload} />}
+          {data?.status === 'anonymous' && !storagePage && (
+            <>
+              <Login providers={data.providers} />
+              {!storageIntroductionClosed && (
+                <StorageIntroduction
+                  onClose={() => {
+                    setStorageIntroductionClosed(true);
+                    document
+                      .querySelector<HTMLButtonElement>('.access-gate button:not(:disabled)')
+                      ?.focus();
+                  }}
+                />
+              )}
+            </>
+          )}
+          {settingsPage ? (
+            <SettingsScreen
+              household={household}
+              userName={data?.user?.name ?? 'Besökare'}
+              operator={data?.operator ?? false}
+              personal={personal}
+              anonymous={!authenticated}
+              signOut={!authenticated || location.pathname === '/profile' ? null : logout}
+            >
+              {storagePage ? <CookieStorage /> : pages}
+            </SettingsScreen>
+          ) : (
+            pages
+          )}
+          {data?.status === 'ready' && (
+            <HouseholdWork
+              key={data.user.id}
+              account={account}
+              onSessionExpired={reload}
+              typeSettingsTarget={typeSettingsTarget}
+              mapSettingsTarget={mapSettingsTarget}
+              conversationSettingsTarget={conversationSettingsTarget}
             />
-          </>
-        )}
-      </main>
-      <footer hidden={mapActive || Boolean(settingsPage)}>
-        Det som hör ihop, samlat. <Link to="/cookies">Kakor och lagring</Link>
-      </footer>
-    </div>
+          )}
+          {data?.status === 'forbidden' && !settingsPage && (
+            <>
+              <Forbidden />
+              <InvitationEntry
+                userId={data.user.id}
+                showInvitation
+                onAccepted={created}
+                onReload={reload}
+              />
+            </>
+          )}
+        </main>
+        <footer hidden={mapActive || Boolean(settingsPage)}>
+          Det som hör ihop, samlat. <Link to="/cookies">Kakor och lagring</Link>
+        </footer>
+      </div>
+    </WorkspaceThemeContext>
   );
 }

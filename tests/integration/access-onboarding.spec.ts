@@ -186,9 +186,12 @@ test('ACCESS-15: first visits use toolbar entries and optional help', async ({ p
   }
 });
 
-test('ACCESS-18: the chosen map theme also applies when returning to login', async ({ page }) => {
+test('ACCESS-18: signing out restores the device theme on login and protected addresses', async ({
+  page,
+}) => {
   const installation = await createInstallation();
   try {
+    await page.emulateMedia({ colorScheme: 'light' });
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
     await page.goto(installation.origin);
@@ -198,13 +201,13 @@ test('ACCESS-18: the chosen map theme also applies when returning to login', asy
     await page.getByRole('button', { name: 'Logga ut' }).click();
     await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toHaveCSS(
       'color',
-      'rgb(237, 242, 249)',
+      'rgb(29, 53, 67)',
     );
     for (const path of ['/costs', '/login-methods']) {
       await page.goto(`${installation.origin}${path}`);
       await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toHaveCSS(
         'color',
-        'rgb(237, 242, 249)',
+        'rgb(29, 53, 67)',
       );
       await page.getByRole('button', { name: 'Fortsätt med Google' }).click();
       await expect(page.getByRole('button', { name: 'Fortsätt till Google' })).toBeFocused();

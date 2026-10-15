@@ -188,6 +188,9 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   Gamla fria fönsters placeringsfall är pensionerade utan återanvända ID:n.
   PANEL-03 använder två riktiga browserklienter och PANEL-09 anger
   faktiskt mikrofon- och ljudprov.
+- [Kontots temaval](theme-preference.md): kontosparande utan hushåll,
+  flera enheter och flikar, fokus, systemtema, fel och sena temasvar över
+  kontobyte. Faktisk skärmläsning redovisas separat.
 - [Kartans arbetsyta](workspace-shell.md): kompakt och expanderad verktygslåda,
   teman, läsbara hopplänkar och fokus, hjälp i det kompakta verktygsfältet,
   samtalshjälp med

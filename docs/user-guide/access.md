@@ -7,6 +7,22 @@ Microsoft-konto. En administratör bestämmer vilka Skyttel-användare som
 får tillgång till hushållet. Ett namn eller en e-postadress ger ingen
 tillgång i sig. Se [Kom igång](getting-started.md) för första inloggningen.
 
+## Välj tema
+
+Öppna **Tema** i kartans verktyg eller på en kontosida som **Din profil**.
+Välj **Ljust**, **Mörkt** eller **System**. Invänta beskedet att temavalet
+har sparats på ditt konto. Valet gäller samma Skyttel-användare på alla
+enheter och webbläsare, även utan ett aktivt hushåll. Andra öppna flikar
+hämtar valet när de återfår fokus.
+
+**System** följer varje enhets egen inställning. Före inloggning och efter
+utloggning använder Skyttel alltid systemtemat. Skyttel sparar ingen lokal
+kopia av temavalet i webbläsaren.
+
+Om ett fel visas har sparandet inte kunnat bekräftas. Det senast
+bekräftade temat ligger kvar. Ladda om för att hämta kontots aktuella val
+eller välj tema igen när anslutningen fungerar.
+
 ## Roller och gemensamt innehåll
 
 En **Medlem** kan läsa och redigera hela hushållets gemensamma karta.

@@ -1108,18 +1108,18 @@ operator can open costs”.
   medlemskapet.
 - Kostnadsöversikten är tillgänglig för Alex utan hushållsmedlemskap.
 
-### ACCESS-18: Kartans temaval följer med till inloggningen
+### ACCESS-18: Utloggning återställer enhetens tema
 
-**Syfte:** Behålla det valda temat när användaren lämnar kartan.
+**Syfte:** Återgå till systemtemat när användaren loggar ut.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Alex är inloggad och hushållets karta är öppen.
+**Förutsättningar:** Alex är inloggad, hushållets karta är öppen och
+enheten använder ljust systemtema.
 
 **Integrationstest:**
 [access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
-testfallet “ACCESS-18: the chosen map theme also applies when returning
-to login”.
+ACCESS-18.
 
 <!--
 ```manual-mapping
@@ -1130,7 +1130,7 @@ to login”.
   },
   "reference": "Mörkt karttema, utloggning, /costs och /login-methods",
   "outcomes": [
-    "Mörkt tema behålls på inloggningen även vid skyddade direktadresser"
+    "Ljust systemtema återställs efter utloggning även vid skyddade direktadresser"
   ]
 }
 ```
@@ -1145,10 +1145,10 @@ to login”.
 
 **Förväntat resultat:**
 
-- Välkomstsidan använder det mörka temat direkt efter utloggningen.
-- Båda de skyddade adresserna visar samma mörka inloggningssida och
+- Välkomstsidan använder enhetens ljusa systemtema efter utloggningen.
+- Båda de skyddade adresserna visar samma ljusa inloggningssida och
   övergång. Fortsättningsknappen får fokus när Google väljs.
-- Inloggningssätt och felbesked förblir läsbara i det valda temat.
+- Inloggningssätt och felbesked förblir läsbara i systemtemat.
 
 ## Real identity provider preparation
 
