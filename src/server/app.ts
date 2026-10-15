@@ -173,9 +173,13 @@ export function createApp({
   ]);
   app.on(['GET', 'POST'], '/api/auth/*', async (context) => {
     if (!authRoutes.has(context.req.path)) return context.json({ error: 'not_found' }, 404);
-    if (context.req.path === '/api/auth/oauth2/authorize') {
+    if (
+      context.req.path === '/api/auth/oauth2/authorize' ||
+      context.req.path === '/api/auth/oauth2/register'
+    ) {
       const url = new URL(context.req.url);
-      url.searchParams.set('prompt', 'consent');
+      if (context.req.path === '/api/auth/oauth2/authorize')
+        url.searchParams.set('prompt', 'consent');
       const request = new Request(url, context.req.raw);
       // Better Auth's internal session lookup must not accept an auth cookie
       // which Skyttel's browser-binding boundary rejects. Keep its ordinary

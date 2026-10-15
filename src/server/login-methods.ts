@@ -73,6 +73,7 @@ export function createLoginMethods(
     return exclusive(session.session.id, async () => {
       const step = context.req.param('step');
       if (step === 'cancel') {
+        if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
         const attempt = database
           .prepare('SELECT stage FROM login_link WHERE sessionId = ?')
           .get(session.session.id) as { stage: string } | undefined;
@@ -96,6 +97,9 @@ export function createLoginMethods(
           : existing || attempt?.stage !== 'verified' || attempt.expiresAt <= Date.now()
       )
         return context.json({ error: 'verification_required' }, 409);
+      // These synchronous writes must commit independently of unrelated
+      // asynchronous work using the shared connection.
+      if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
       // Consume the previous proof before issuing another OAuth request.
       database
         .prepare('DELETE FROM login_link WHERE sessionId = ? OR expiresAt <= ?')
@@ -118,6 +122,7 @@ export function createLoginMethods(
       const { url } = (await response.clone().json()) as { url: string };
       const state = new URL(url).searchParams.get('state');
       if (!state) return context.json({ error: 'provider_error' }, 502);
+      if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
       database
         .prepare(
           'INSERT INTO login_link (sessionId, userId, state, provider, stage, expiresAt) VALUES (?, ?, ?, ?, ?, ?)',

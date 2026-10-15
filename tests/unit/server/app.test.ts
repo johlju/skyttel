@@ -11,6 +11,50 @@ afterEach(() => {
 });
 
 describe('public application HTTP interface', () => {
+  test('OAuth registration gives ownership only to a browser-bound login', async () => {
+    const client = fixture.client();
+    const signedIn = await client.signIn();
+    const { user } = await (await client.request('/api/bootstrap')).json();
+    const registration = {
+      application_type: 'native',
+      client_name: 'Synthetic assistant',
+      redirect_uris: ['http://127.0.0.1:7777/callback'],
+      token_endpoint_auth_method: 'none',
+    };
+    const owned = await client.json('/api/auth/oauth2/register', registration);
+    expect(owned.status, await owned.clone().text()).toBe(201);
+    expect(await owned.json()).toMatchObject({ user_id: user.id });
+    const authCookie = signedIn.headers
+      .getSetCookie()
+      .find((cookie) => cookie.startsWith('better-auth.session_token='))
+      ?.split(';', 1)[0];
+    expect(authCookie).toBeDefined();
+    for (const cookie of [
+      '',
+      authCookie as string,
+      `${authCookie}; skyttel_binding=${'f'.repeat(64)}`,
+    ]) {
+      const response = await fixture.app.request('/api/auth/oauth2/register', {
+        method: 'POST',
+        headers: { origin: fixture.config.origin, 'content-type': 'application/json', cookie },
+        body: JSON.stringify(registration),
+      });
+      expect(response.status).toBe(201);
+      expect(await response.json()).not.toHaveProperty('user_id');
+    }
+    const invalidBearer = await fixture.app.request('/api/auth/oauth2/register', {
+      method: 'POST',
+      headers: {
+        origin: fixture.config.origin,
+        'content-type': 'application/json',
+        cookie: authCookie as string,
+        authorization: 'Bearer invalid',
+      },
+      body: JSON.stringify(registration),
+    });
+    expect(invalidBearer.status).toBe(401);
+    expect(await invalidBearer.json()).toMatchObject({ error: 'invalid_token' });
+  });
   test.each(['response', 'redirect'] as const)(
     'a post-provider %s failure preserves the current login and identity links',
     async (mode) => {
