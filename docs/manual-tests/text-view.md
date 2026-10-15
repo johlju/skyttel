@@ -849,7 +849,7 @@ shared, private and historical content after restart”.
 
 **Förväntat resultat:**
 
-- Exporten använder schemaversion 30. Personliga samtalsval och medgivande
+- Exporten använder schemaversion 32. Personliga samtalsval och medgivande
   ingår inte i hushållsfilen; automationen granskar detta.
 - En giltig schemaversion 23 går att kontrollera och återimportera genom
   gränssnittet. Lo-förslaget bevaras. Aktuell version provas också.
@@ -1294,7 +1294,7 @@ skärmtangentbordsfunktion. Inga pensionerade ID återanvänds.
 ## Förbered äldre arkiv vid den faktiska hämtningen
 
 Operatören utför följande **efter TEXTBREDD-05 steg 2** och före steg 4.
-Indata är den nyss hämtade, fiktiva schema 30-filen, tillgänglig på maskinen
+Indata är den nyss hämtade, fiktiva schema 32-filen, tillgänglig på maskinen
 som kör kommandot. Ersätt dess absoluta sökväg. Utdata är en separat
 schema 23-kopia; hushållsinnehåll och kontrollsummor ändras inte.
 
@@ -1306,7 +1306,7 @@ import { unzipSync, zipSync } from 'fflate';
 const parts = unzipSync(readFileSync(process.env.TEXTBREDD_ARCHIVE));
 const manifest = JSON.parse(Buffer.from(parts['manifest.json']).toString());
 if (manifest.format !== 'skyttel-household' || manifest.schemaVersion !== 32)
-  throw Error('En provexport med schemaversion 30 krävs');
+  throw Error('En provexport med schemaversion 32 krävs');
 manifest.schemaVersion = 23;
 parts['manifest.json'] = Buffer.from(JSON.stringify(manifest));
 writeFileSync('/tmp/skyttel-schema-23.zip', zipSync(parts), { mode: 0o600 });
