@@ -172,7 +172,7 @@ test.each(['', '-1', '0'])(
 
 test('opens cost navigation for the installation operator without household membership', async () => {
   const paths: string[] = [];
-  vi.stubGlobal('fetch', async (path: string) => {
+  vi.stubGlobal('fetch', async (path: string, init?: RequestInit) => {
     paths.push(path);
     if (path === '/api/bootstrap')
       return Response.json({
@@ -181,6 +181,8 @@ test('opens cost navigation for the installation operator without household memb
         providers: ['google'],
         user: { id: 'operator', name: 'Alex' },
       });
+    if (path === '/api/theme-preference' && (init?.method ?? 'GET') === 'GET')
+      return Response.json({ userId: 'operator', mode: 'system' });
     return Response.json(sample);
   });
   render(
@@ -368,8 +370,10 @@ test.each(['setup', 'forbidden', 'ready'])(
   'denies /costs to a nonoperator with %s household status',
   async (status) => {
     const paths: string[] = [];
-    vi.stubGlobal('fetch', async (path: string) => {
+    vi.stubGlobal('fetch', async (path: string, init?: RequestInit) => {
       paths.push(path);
+      if (path === '/api/theme-preference' && (init?.method ?? 'GET') === 'GET')
+        return Response.json({ userId: 'other', mode: 'system' });
       return Response.json({
         status,
         operator: false,
@@ -387,7 +391,7 @@ test.each(['setup', 'forbidden', 'ready'])(
       await screen.findByRole('heading', { name: /Endast installationens driftansvarige/ }),
     ).toBeDefined();
     expect(screen.queryByRole('link', { name: 'Månadskostnad' })).toBeNull();
-    expect(paths).toEqual(['/api/bootstrap']);
+    expect(paths).toEqual(['/api/bootstrap', '/api/theme-preference']);
   },
 );
 

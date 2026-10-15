@@ -68,7 +68,7 @@ function serve(routes: Record<string, Reply[]>) {
     { data: { operations: [] } },
     { data: { operations: [] } },
   ];
-  const fetch = vi.fn(async (input: string | URL | Request, _init?: RequestInit) => {
+  const fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const path =
       typeof input === 'string'
         ? input
@@ -77,15 +77,17 @@ function serve(routes: Record<string, Reply[]>) {
           : new URL(input.url).pathname;
     const reply =
       routes[path]?.shift() ??
-      (path === '/api/households/linden/map/view'
-        ? {
-            data: {
-              contentVersion: 1,
-              positions: [],
-              settings: { ...defaultViewSettings, version: 0 },
-            },
-          }
-        : undefined);
+      (path === '/api/theme-preference' && (init?.method ?? 'GET') === 'GET'
+        ? { data: { userId: ready.user.id, mode: 'system' } }
+        : path === '/api/households/linden/map/view'
+          ? {
+              data: {
+                contentVersion: 1,
+                positions: [],
+                settings: { ...defaultViewSettings, version: 0 },
+              },
+            }
+          : undefined);
     if (!reply) {
       unexpectedRequests.push(path);
       throw new Error(`Unexpected synthetic HTTP request: ${path}`);

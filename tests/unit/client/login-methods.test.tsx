@@ -8,9 +8,11 @@ import { applicationFixture } from '../server/fixture.js';
 const user = { id: 'alex', name: 'Alex Exempel' };
 type Reply = { data?: unknown; status?: number; response?: Promise<Response> };
 function mount(replies: Reply[], path = '/login-methods', status = 'forbidden') {
-  const fetch = vi.fn(async (path: string) => {
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
     if (path === '/api/bootstrap')
       return Response.json({ status, providers: ['google', 'microsoft'], user });
+    if (path === '/api/theme-preference' && (init?.method ?? 'GET') === 'GET')
+      return Response.json({ userId: user.id, mode: 'system' });
     const reply = replies.shift();
     if (!reply) throw new Error(`Unexpected request: ${path}`);
     return reply.response ?? Response.json(reply.data ?? {}, { status: reply.status ?? 200 });
