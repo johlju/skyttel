@@ -382,7 +382,11 @@ test('AVTAL-06: upgrading preserves household definitions and an older private d
         .filter((name) => name.endsWith('.sql') && name >= '007')
         .map((name) => copyFile(join('migrations', name), join(migrationsDirectory, name))),
     );
-    await installation.restart();
+    await installation.upgradeLegacyLogin();
+    expect(
+      (await request.get(`${installation.origin}/api/households/${household.id}/map`)).status(),
+    ).toBe(401);
+    await signIn(request, installation.origin);
     const path = `${installation.origin}/api/households/${household.id}/map`;
     const response = await request.get(path, { maxRetries: 1 });
     expect(response.status()).toBe(200);

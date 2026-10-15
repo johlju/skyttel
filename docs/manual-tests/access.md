@@ -1653,6 +1653,19 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
 
 ## Separat tekniskt underlag och observationer
 
+[legacy-login-upgrade.test.ts](../../tests/unit/server/legacy-login-upgrade.test.ts)
+provar en verklig SQLite-installation från före den nya valmodellen med
+två inloggade enheter, ett påbörjat återanrop, lagrat utkast och sparkvitto.
+Efter stopp och kontrollerad uppgradering nekas gamla nycklar och försök.
+Ny inloggning och omstart ska behålla samma användare och beständiga arbete
+utan att upprepa sparandet. Separata syntetiska processprov kontrollerar
+att stopp avslutar pågående text, röst och leveranskanal. Det är tekniskt
+underlag; verkliga leverantörer, operatörens värd och skärmläsaruppläsning
+behöver separata bevis. Följ operatörens
+[uppgraderingsförfarande](../operations/login-upgrade.md) på en disponibel
+installation. Använd inte proceduren på återställd kopia som genväg förbi
+återställningskontroller.
+
 [remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts)
 släpper faktiskt fördröjda beständiga HTTPS-kakor efter tidig, sen och
 upprepad avstängning. Den gamla kakan kan ligga kvar beständigt, men får

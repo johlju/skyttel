@@ -74,7 +74,11 @@ test('schema 17 definitions and private values upgrade without presentation conf
         ]),
         JSON.stringify([{ id: saved.id, before: beforeType, after: afterType }]),
       );
-    openDatabase(fixture.config.databasePath).close();
+    await fixture.upgradeLegacyLogin();
+    expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    await client.signIn();
     const state: MapState = await (await client.request(path)).json();
     expect(state.types.find(({ id }) => id === saved.id)).toEqual(beforeType);
     expect(state.draft.objectTypes?.[0]).toMatchObject({ before: beforeType, after: afterType });

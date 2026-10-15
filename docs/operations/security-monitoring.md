@@ -149,8 +149,10 @@ image. Run monitoring again and check both retained images. The previous
 image can remain blocked as the rollback target after the running image is
 fixed; it stays visible until it is covered by a valid exception or replaced
 in the retained set by a later successfully deployed release. Monitoring
-never performs an automatic rollback. Database compatibility is a separate
-requirement for any recovery image.
+never performs an automatic rollback. The `rollback` role is a retained-image
+inventory label, not permission to run an older application. The login
+transition supports only repair with a corrected newer version. Data recovery
+requires its separate authority and permanent-erasure checks.
 
 If issue delivery fails, the scan exits unsuccessfully and records unknown
 status with `notification: failed`. Use Actions failure notifications and
@@ -188,8 +190,9 @@ Do not delete an image or its deployment record to silence an alarm.
 
 The maintenance scope covers the running installation and retained
 rollback image. Fixes are delivered through a new verified release for
-the running installation; recovery still requires a compatible image and
-database.
+the running installation. Retention and a successful scan do not authorize
+running an older application against the installation or restoring old
+authentication authority.
 
 ## Verification boundaries
 

@@ -10,6 +10,7 @@ import { createApp } from '../../src/server/app.js';
 import { createAuth, verifyAuthSchema } from '../../src/server/auth.js';
 import type { Config } from '../../src/server/config.js';
 import { openDatabase } from '../../src/server/database.js';
+import { adoptLegacyInstallationAuthority } from '../../src/server/legacy-login-upgrade.js';
 import type { LiveSidebandFactory, LiveUsage } from '../../src/server/live-provider.js';
 import { attachTaskDelivery } from '../../src/server/task-delivery-transport.js';
 import type { TextModelUsage } from '../../src/server/text-assistant-model.js';
@@ -321,6 +322,18 @@ export async function createInstallation(
       await stop();
       await copyFile(source, config.databasePath);
       config.authorityFence = authorityFence;
+      await start();
+    },
+    async upgradeLegacyLogin() {
+      // Explicit operator maintenance, never an automatic fixture startup step.
+      await stop();
+      const upgraded = openDatabase(config.databasePath, databaseOptions);
+      try {
+        adoptLegacyInstallationAuthority(upgraded, config.authorityFence.generation);
+      } finally {
+        upgraded.close();
+      }
+      databaseOptions.legacyAuthCallbacks = false;
       await start();
     },
     async close() {

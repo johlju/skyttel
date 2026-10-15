@@ -222,13 +222,14 @@ adding `--volumes` deletes it and its household data.
 
 Before updating, read the [operator upgrade notes](operator-upgrade-notes.md),
 download a [complete household export](../user-guide/household-export.md), and
-retain the matching application image. Build the
-new image, keep the same volume and secret, and run `docker compose up -d`
-again. Do not run old and new application versions against the same SQLite
-volume at the same time. To return to an older image after a schema change,
-establish compatibility first. An export restores household content through
-a compatible application; it does not roll back the database schema or
-restore authentication state. See [recovery and moving](recovery.md).
+retain its identity for investigation. Build the new image and follow the
+[controlled login upgrade](login-upgrade.md) before its first start against
+an existing installation. Keep the same volume and secret. Do not run old
+and new application versions against the same SQLite volume at the same
+time. This transition supports roll forward only. Keep access closed and
+install a corrected newer image if checks fail. An export restores
+household content through a compatible application; it does not restore
+authentication state. See [recovery and moving](recovery.md).
 
 ## Deploy on a container host
 

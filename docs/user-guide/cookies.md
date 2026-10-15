@@ -99,6 +99,19 @@ Google och Microsoft styr lagringen på sina egna webbplatser.
 **Samtalsmedgivande** till OpenAI är ett separat val under
 **Samtal med Skyttel**; information om kakor ger inget sådant medgivande.
 
+## Efter uppdaterad inloggningshantering
+
+När en äldre inloggning avslutas vid uppdateringen behöver du logga in
+igen på varje berörd enhet. **Kom ihåg mig** börjar avmarkerat. Pågående
+samtalsarbete avslutas och startar inte om automatiskt. Ditt lagrade
+utkast, hushållets information och sparkvitton finns kvar. Kontrollera
+ett osäkert sparresultat innan du försöker spara igen.
+
+Om Skyttel säkert kan identifiera orsaken visas **Vi har uppdaterat
+hanteringen av inloggning. Logga in igen för att fortsätta.** Annars visas
+det vanliga beskedet om avslutad inloggning. Ett vanligt utgångsbesked
+bevisar därför inte vad som avslutar inloggningen.
+
 ## Kontrollera en okänd sparstatus
 
 Välj **Kontrollera igen** vid **Sparstatus okänd**. Kontrollen läser

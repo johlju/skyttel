@@ -783,29 +783,23 @@ Inspect migration state on the existing disk with a maintainer when needed.
 Share sanitized reason codes and version identity, not databases, household
 screenshots, cookies, credentials, raw provider responses, or full logs.
 
-### Recover with older code only when compatible
+### Repair forward after the login transition
 
-1. Have a maintainer establish that the older image supports the current
-   database schema and migration checksums. Read the release guidance and
-   test compatibility on synthetic data. If compatibility is unknown,
-   keep access closed and repair forward.
-1. Verify the older image's release evidence. Wait for any active
-   deployment to finish, then update the saved image reference under the
-   service's **Settings** to the verified digest.
-1. Choose **Manual Deploy → Deploy latest reference** so the saved
-   reference and requested deployment agree.
-1. Verify the live digest, database readiness, application page, anonymous
-   bootstrap, and real household access using the checks above.
-1. Retry the GitHub release job only after the service and database state
-   are reconciled and the intended next release is safe to deploy.
+Follow the [controlled login upgrade](login-upgrade.md) before opening an
+existing installation with the new login model. Keep public access closed
+and stop the old service before the maintenance process uses its disk.
+If the host cannot provide that maintenance boundary, block the release
+until a maintainer arranges it. Do not run an upgrade command beside a
+live old service.
 
-Deploying older code does not restore the database. Do not use a rollback
-button as a substitute for establishing schema compatibility. An image
-override on a deploy hook does not update the saved service reference and
-can select an older image on a later deployment. For maintainer-assisted
-recovery, see Render's
-[update service API](https://api-docs.render.com/reference/update-service)
-and [deploy API](https://api-docs.render.com/reference/create-deploy).
+Use a corrected newer image for failures after this transition. Verify
+its release evidence, wait for active deployments to finish, and set the
+saved image reference to that digest. Deploy the saved reference and
+verify its live digest, database readiness, anonymous page and household
+access before reopening. Retry the release job only after the service
+and database are reconciled. Older application versions and image
+rollback are unsupported. Restoring data is a separate controlled
+operation and must never restore old authentication authority.
 
 ## What automated checks cover
 
@@ -814,6 +808,10 @@ the first accepted deployment. It checks the running digest and retained
 rollback image, maintains one current status issue, and requires verified
 delivery to the selected operator. Check fresh monitoring evidence before
 approving a production update.
+
+The monitor's retained-image role named `rollback` is an inventory label.
+Scanning that image does not permit running it against the upgraded
+installation or restoring its authentication records.
 
 Release checks use disposable containers with synthetic household content.
 They verify restart and replacement on the same disk, including private

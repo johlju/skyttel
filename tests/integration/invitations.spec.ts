@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, request, test } from '@playwright/test';
 import Database from 'better-sqlite3';
-import { createHousehold, signIn } from '../support/client.js';
+import { createHousehold, restartWithSession, signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 
 test('upgrading an existing household preserves its membership and enables invitations', {
@@ -13,7 +13,7 @@ test('upgrading an existing household preserves its membership and enables invit
   await copyFile('migrations/001_initial.sql', join(migrationsDirectory, '001_initial.sql'));
   const options = { migrationsDirectory, legacyAuthCallbacks: true };
   const installation = await createInstallation(undefined, options);
-  const administrator = await request.newContext();
+  let administrator = await request.newContext();
   const recipient = await request.newContext();
   const { origin } = installation;
   const headers = { origin };
@@ -45,7 +45,14 @@ test('upgrading an existing household preserves its membership and enables invit
         .map((name) => copyFile(join('migrations', name), join(migrationsDirectory, name))),
     );
     options.legacyAuthCallbacks = false;
-    await installation.restart();
+    administrator = await restartWithSession(administrator, () =>
+      installation.upgradeLegacyLogin(),
+    );
+    expect((await administrator.get(`${origin}/api/bootstrap`)).status()).toBe(200);
+    expect(await (await administrator.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    await signIn(administrator, origin);
     expect(
       await (
         await administrator.get(`${origin}/api/households/${household.id}`, { maxRetries: 1 })

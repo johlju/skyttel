@@ -6,6 +6,21 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Controlled login transition and roll forward
+
+Stop every old application process and close public access before the
+one-time login transition. Use the controlled maintenance procedure and
+an independently stored installation generation. Normal startup refuses
+an existing installation until its old authority is invalidated. All
+affected devices must sign in again and make a new remembered-login choice.
+Stored household work and save results remain; AI work does not resume.
+
+Use a corrected newer version if verification fails. Do not return to an
+older application or restore old login authority. A data restoration is a
+separate controlled operation with its own erasure review. Keep delivery
+blocked until required provider, HTTPS, accessibility and backup evidence
+is available.
+
 ### Authentication data cleanup
 
 Keep the upgraded service running so that startup and background cleanup
@@ -135,7 +150,8 @@ price table. Existing credentials and database content remain usable.
 
 Full household files can contain private proposals to restore removed type
 definitions. Use the upgraded application to read these files. Supported older
-files remain readable. Keep the database backup and matching image for rollback.
+files remain readable. Keep restricted database recovery copies; recovery
+requires the current or a corrected newer application.
 
 Import retains these proposals but requires a new explicit review against
 current content before saving. Import does not transfer earlier restoration
@@ -147,7 +163,8 @@ review these retained proposals before they save their drafts.
 
 The upgraded database retains private evidence of complete relationship form
 attempts so a lost response can be checked before retrying. Keep the database
-and matching application image together for rollback. This evidence is scoped
+under the installation's recovery controls. Repair application failures
+with a corrected newer version. This evidence is scoped
 to its household and owner; recovery reads current content alongside the earlier
 outcome and does not restore an earlier draft over later work.
 
@@ -167,18 +184,19 @@ continue to use durable save receipts.
 
 Older private object merge proposals are not supported by this release.
 Resolve or discard those proposals before upgrade. Keep a database backup
-and its matching image for rollback. Saved history remains readable; removal
+for controlled data recovery. Use a corrected newer application for repair.
+Saved history remains readable; removal
 of the actions does not permanently erase historical content.
 
 ### Database compatibility and rollout
 
 This release adds database storage and changes saved content formats. Before
-upgrade, back up the persistent database and retain its matching application
-image. Keep the same persistent disk and authentication secret during rollout.
-Use the upgraded image with the upgraded database. To return to an older image,
-stop the application and restore its matching database backup. Changing the
-image alone does not reverse database changes. Changes after the backup will
-not be present after restoration.
+upgrade, back up the persistent database and record its application identity.
+Keep the same persistent disk and authentication secret during rollout.
+Use the upgraded image with the upgraded database. Repair failures with a
+corrected newer application. A separate controlled data restoration must
+invalidate old authority and review permanent erasure before reopening.
+Changes after the backup will not be present after restoration.
 
 Ask users to preserve unsent text and reload open browser sessions after
 rollout. Outdated sessions cannot submit changes. After an interrupted save,
@@ -207,8 +225,9 @@ This release stores each object's selected icon with its other content.
 Objects without a selection use their type's default icon. Full household
 archives from this release need an upgraded reader. The upgraded application
 also accepts supported older archives and uses default icons where no
-selection exists. Use the database backup and matching image procedure above
-for rollback; changing the image alone does not remove icon storage.
+selection exists. Use the controlled database recovery procedure above
+for controlled recovery with the current or a corrected newer application;
+changing the image alone does not remove icon storage.
 
 Refresh connected assistants' tool catalogs after rollout. Older clients
 that omit the icon field retain the current selection. An explicit reset
@@ -234,8 +253,8 @@ assistants' tool catalogs after rollout so they can change sections and
 field placement. Older clients that omit section or built-in property
 information retain the existing placement. Custom answers and built-in
 property references remain separate contracts. Use the database backup
-and matching image procedure
-above for rollback.
+and controlled data recovery procedure above. Repair forward with a newer
+application.
 
 ### Relationship fields and archive compatibility
 
@@ -248,7 +267,8 @@ household content, including private drafts and recovery copies.
 Refresh connected assistants' tool catalogs after rollout. Clients that omit
 custom fields or answers retain existing data when the relationship type is
 unchanged. Clearing answers requires an explicit empty value set. Use the
-database backup and matching image procedure above for rollback.
+controlled database recovery procedure above. Repair forward with a newer
+application.
 
 ### Installation cost measurements
 
@@ -271,16 +291,17 @@ cost and duration of an individual request. After rollout, monitor actual
 token use, incomplete responses and response times before you set a lower
 limit. Output use includes internal reasoning as well as visible text.
 
-Assistant model calls and accepted tasks have no fixed processing deadline.
-Slow work stays active until it completes, fails or the user stops it. After
+Accepted text work has a thirty-minute bound from receipt, including queue
+time and delivery. Active voice work ends at the login deadline. After
 rollout, monitor response times and active work. Use the stop control when
-work must end; a long response time alone no longer stops it automatically.
+work must end.
 
 Personal conversation choices remain in the installation database and apply
 to the user's households. Household export and import do not transfer or
 restore these choices. Include them in installation backups if they must
-survive disk replacement. Follow the matching database backup and image
-procedure above for rollback.
+survive disk replacement. Follow the controlled database recovery
+procedure above for controlled data recovery with the current or a newer
+application. Older application versions are unsupported.
 
 New household archives need an upgraded reader. The upgraded application
 continues to read supported older archives.
@@ -310,7 +331,7 @@ check action. Retain the original operation and its durable result.
 
 This release stores a saved conversation consent for each Skyttel user and
 household, with its date and the version of the consent text. Use the database
-backup and matching image procedure above for rollback; changing the image
+backup procedure above for controlled data recovery; changing the image
 alone does not remove this storage. Backups and recovery copies retain these
 consent records. Apply household access and retention restrictions to them.
 
@@ -331,9 +352,10 @@ Release stops new recording immediately.
 
 A user can revoke the consent in Settings. The revocation removes the saved
 consent and ends that user's conversations in the household. A restored
-database backup contains the consents that were saved when the backup was
-made. After a restoration, tell users that a consent which they revoked
-after the backup applies again until they revoke it again.
+database backup can contain earlier consent records. A controlled restore
+must invalidate old authentication and assistant authority before reopening.
+Retained household conversation choices do not reactivate old connections
+or permit automatic model work.
 
 ### Household export, replacement and recovery
 
@@ -454,7 +476,8 @@ GitHub. Review the latest successful scan of the running and retained recovery
 images before each production update and at least monthly. Missing or stale
 evidence means that current status is unknown. Check security updates and
 exception expiry each week. An older image with an unresolved finding remains
-unsafe for recovery after a fixed image enters production.
+unsafe after a fixed image enters production. Retained-image monitoring does
+not authorize running an older application after the login transition.
 
 Before using a published image, verify its source and signed evidence. Read
 the guidance attached to that release and select the image by its digest.

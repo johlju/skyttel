@@ -5,6 +5,7 @@ import { createApp } from '../../../src/server/app.js';
 import { createAuth, verifyAuthSchema } from '../../../src/server/auth.js';
 import { readConfig } from '../../../src/server/config.js';
 import { openDatabase } from '../../../src/server/database.js';
+import { adoptLegacyInstallationAuthority } from '../../../src/server/legacy-login-upgrade.js';
 import { legacyAuth } from '../../support/legacy-auth.js';
 
 export function configurationEnvironment(databasePath = '/synthetic/skyttel.sqlite') {
@@ -40,55 +41,58 @@ export async function applicationFixture({
   const hasAuthority = database
     .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'installation_authority'")
     .get();
-  const auth = hasAuthority ? createAuth(config, database) : legacyAuth(config, database);
-  await verifyAuthSchema(auth);
+  let auth = hasAuthority ? createAuth(config, database) : legacyAuth(config, database);
   let subject: unknown = config.firstAdmin.subject;
   let providerFails = false;
   let callbackFailure: 'response' | 'redirect' | undefined;
-  const handleAuth = auth.handler;
-  auth.handler = async (request: Request) => {
-    const response = await handleAuth(request);
-    if (!callbackFailure || !new URL(request.url).pathname.startsWith('/api/auth/callback/'))
-      return response;
-    const failure = callbackFailure;
-    callbackFailure = undefined;
-    const headers = new Headers(response.headers);
-    if (failure === 'redirect') headers.set('location', `${config.origin}/?authError=1`);
-    return new Response(null, { status: failure === 'response' ? 500 : 302, headers });
-  };
   let providerPause: { entered: () => void; wait: Promise<void> } | undefined;
-  const context = await auth.$context;
-  for (const provider of context.socialProviders) {
-    // Substitute only the external identity provider; authentication and
-    // SQLite persistence remain the actual application implementation.
-    provider.createAuthorizationURL = async ({ state, redirectURI }) => {
-      const callback = new URL(redirectURI);
-      callback.searchParams.set('state', state);
-      callback.searchParams.set('code', 'synthetic-code');
-      return callback;
+  async function configureAuth() {
+    await verifyAuthSchema(auth);
+    const handleAuth = auth.handler;
+    auth.handler = async (request: Request) => {
+      const response = await handleAuth(request);
+      if (!callbackFailure || !new URL(request.url).pathname.startsWith('/api/auth/callback/'))
+        return response;
+      const failure = callbackFailure;
+      callbackFailure = undefined;
+      const headers = new Headers(response.headers);
+      if (failure === 'redirect') headers.set('location', `${config.origin}/?authError=1`);
+      return new Response(null, { status: failure === 'response' ? 500 : 302, headers });
     };
-    provider.validateAuthorizationCode = async () => {
-      if (providerPause) {
-        providerPause.entered();
-        await providerPause.wait;
-      }
-      if (providerFails) throw new Error('Synthetic provider outage');
-      return { accessToken: 'synthetic-token', tokenType: 'bearer' };
-    };
-    provider.getUserInfo = async () => {
-      const profile = {
-        sub: subject,
-        oid: subject,
-        name: 'Alex Exempel',
-        email: 'alex@example.test',
+    const context = await auth.$context;
+    for (const provider of context.socialProviders) {
+      // Substitute only the external identity provider; authentication and
+      // SQLite persistence remain the actual application implementation.
+      provider.createAuthorizationURL = async ({ state, redirectURI }) => {
+        const callback = new URL(redirectURI);
+        callback.searchParams.set('state', state);
+        callback.searchParams.set('code', 'synthetic-code');
+        return callback;
       };
-      const mapped = await provider.options?.mapProfileToUser?.(profile);
-      return {
-        user: { name: profile.name, email: profile.email, emailVerified: true, ...mapped },
-        data: profile,
+      provider.validateAuthorizationCode = async () => {
+        if (providerPause) {
+          providerPause.entered();
+          await providerPause.wait;
+        }
+        if (providerFails) throw new Error('Synthetic provider outage');
+        return { accessToken: 'synthetic-token', tokenType: 'bearer' };
       };
-    };
+      provider.getUserInfo = async () => {
+        const profile = {
+          sub: subject,
+          oid: subject,
+          name: 'Alex Exempel',
+          email: 'alex@example.test',
+        };
+        const mapped = await provider.options?.mapProfileToUser?.(profile);
+        return {
+          user: { name: profile.name, email: profile.email, emailVerified: true, ...mapped },
+          data: profile,
+        };
+      };
+    }
   }
+  await configureAuth();
   let app = createApp({ config, database, auth, identity, now });
   function client() {
     const cookies = new Map<string, string>();
@@ -133,12 +137,23 @@ export async function applicationFixture({
   return {
     config,
     database,
-    auth,
+    get auth() {
+      return auth;
+    },
     get app() {
       return app;
     },
     async restart() {
       await app.close();
+      app = createApp({ config, database, auth, identity, now });
+    },
+    async upgradeLegacyLogin() {
+      // Tests invoke the same stopped-process boundary as the operator command.
+      await app.close();
+      openDatabase(config.databasePath).close();
+      adoptLegacyInstallationAuthority(database, config.authorityFence.generation);
+      auth = createAuth(config, database);
+      await configureAuth();
       app = createApp({ config, database, auth, identity, now });
     },
     client,

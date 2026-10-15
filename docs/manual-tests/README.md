@@ -103,6 +103,11 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
 
 ## Områden
 
+Åtkomstområdets separata tekniska underlag omfattar också kontrollerad
+övergång från äldre inloggningar: gamla nycklar och påbörjade försök nekas
+efter uppgradering och omstart medan lagrade utkast och sparkvitton bevaras.
+Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
+
 - [Kakor och lagring](cookies.md): publik information och konkret register
   över kakor, fliklagring, serverposter och tillfälligt samtalsminne, första besök,
   profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före
