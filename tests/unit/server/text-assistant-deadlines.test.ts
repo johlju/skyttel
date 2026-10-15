@@ -1,7 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
 import Database from 'better-sqlite3';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
+import { beginAssistant, callAssistant } from '../../support/assistant.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
@@ -13,6 +15,104 @@ afterEach(async () => {
   await browser?.dispose();
   await app?.close();
 });
+
+test.each(['missing', 'invalid'])(
+  '%s auth with an occupied live binding cannot stop its session, accepted task or login attempt',
+  async (auth) => {
+    const held: ((output: unknown[]) => void)[] = [];
+    const model = textModel(() => new Promise<unknown[]>((resolve) => held.push(resolve)));
+    app = await createInstallation(undefined, { modelFetch: model.provider });
+    browser = await request.newContext();
+    await signIn(browser, app.origin);
+    const original = await (await browser.get(`${app.origin}/api/auth/get-session`)).json();
+    const { household } = await (await createHousehold(browser, app.origin)).json();
+    const mapPath = `${app.origin}/api/households/${household.id}/map`;
+    const map = await (await browser.get(mapPath)).json();
+    const path = `${app.origin}/api/households/${household.id}/text-assistant`;
+    const session = await (
+      await browser.post(path, { headers: { origin: app.origin }, data: approvedForVisit })
+    ).json();
+    expect(
+      (
+        await browser.post(`${path}/${session.id}/messages`, {
+          headers: { origin: app.origin },
+          data: {
+            requestId: 'held',
+            revision: 0,
+            draftVersion: 0,
+            contentVersion: 1,
+            text: 'Lägg till Behållet arbete.',
+          },
+        })
+      ).status(),
+    ).toBe(202);
+    await expect.poll(() => held.length).toBe(1);
+    const started = await browser.post(`${app.origin}/api/auth/sign-in/social`, {
+      headers: { origin: app.origin },
+      data: { provider: 'google', callbackURL: '/' },
+    });
+    expect(started.status()).toBe(200);
+    const state = await browser.storageState();
+    state.cookies = state.cookies.flatMap((cookie) =>
+      cookie.name.endsWith('better-auth.session_token')
+        ? auth === 'missing'
+          ? []
+          : [{ ...cookie, value: 'invalid-authentication' }]
+        : [cookie],
+    );
+    const unauthenticated = await request.newContext({ storageState: state });
+    try {
+      expect(
+        (
+          await unauthenticated.post(`${app.origin}/api/auth/sign-out`, {
+            headers: { origin: app.origin },
+            data: {},
+          })
+        ).status(),
+      ).toBe(401);
+      expect((await browser.get(mapPath)).status()).toBe(200);
+      held[0]([
+        modelTool('submit_changes', {
+          version: 0,
+          contentVersion: 1,
+          completion: 'draft',
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'preserved',
+                baseRevision: null,
+                value: { typeId: map.types[0].id, name: 'Behållet arbete', description: '' },
+              },
+            },
+          ],
+        }),
+      ]);
+      await expect
+        .poll(async () => (await (await browser.get(mapPath)).json()).draft.changes)
+        .toMatchObject([{ id: 'preserved', after: { name: 'Behållet arbete' } }]);
+      const callback = await browser.get((await started.json()).url, { maxRedirects: 0 });
+      expect(callback.status()).toBe(302);
+      expect(callback.headers().location).not.toContain('binding_invalid');
+      expect((await browser.get(mapPath)).status()).toBe(200);
+      expect(
+        (await (await browser.get(`${app.origin}/api/auth/get-session`)).json()).session.id,
+      ).not.toBe(original.session.id);
+      expect(
+        (
+          await browser.post(`${app.origin}/api/auth/sign-out`, {
+            headers: { origin: app.origin },
+            data: {},
+          })
+        ).status(),
+      ).toBe(200);
+      expect((await browser.get(mapPath)).status()).toBe(401);
+    } finally {
+      held[0]?.([modelMessage('Klart.')]);
+      await unauthenticated.dispose();
+    }
+  },
+);
 
 test('a known browser binding cannot use another binding’s auth cookie to log its session out', async () => {
   app = await createInstallation();
@@ -36,6 +136,148 @@ test('a known browser binding cannot use another binding’s auth cookie to log 
     expect((await (await other.get(`${app.origin}/api/bootstrap`)).json()).status).toBe('setup');
   } finally {
     await other.dispose();
+  }
+});
+
+test('OFF preserves accepted text and its original login end, then logout after natural cleanup stops the rotated binding’s task', async () => {
+  const startedAt = Date.now();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(startedAt);
+  const held: ((output: unknown[]) => void)[] = [];
+  const model = textModel(() => new Promise<unknown[]>((resolve) => held.push(resolve)));
+  const other = await request.newContext();
+  try {
+    app = await createInstallation(undefined, {
+      now: () => Date.now(),
+      modelFetch: model.provider,
+    });
+    browser = await request.newContext();
+    await signIn(browser, app.origin);
+    const started = await browser.post(`${app.origin}/api/auth/sign-in/social`, {
+      headers: { origin: app.origin },
+      data: { provider: 'google', callbackURL: '/', rememberMe: true, informationVersion: 1 },
+    });
+    const callback = await browser.get((await started.json()).url, { maxRedirects: 0 });
+    const proof = new URL(callback.headers().location, app.origin).searchParams.get(
+      'loginConfirmation',
+    );
+    const confirmed = await (
+      await browser.get(`${app.origin}/api/browser-binding/confirmation?proof=${proof}`, {
+        headers: { origin: app.origin },
+      })
+    ).json();
+    expect(confirmed).toMatchObject({ remembered: true, expiresAt: startedAt + 604_800_000 });
+    const { household } = await (await createHousehold(browser, app.origin)).json();
+    const mapPath = `${app.origin}/api/households/${household.id}/map`;
+    const map = await (await browser.get(mapPath)).json();
+    const path = `${app.origin}/api/households/${household.id}/text-assistant`;
+    vi.setSystemTime(confirmed.expiresAt - 1_000);
+    await signIn(other, app.origin);
+    const external = await beginAssistant(other, app.origin);
+    const consented = await external.consent(household.id);
+    const tokens = await external.exchange((await consented.json()).url);
+    const { access_token: externalToken } = await tokens.json();
+    expect((await callAssistant(app.origin, externalToken, 'read_map')).status).toBe(200);
+    const session = await (
+      await browser.post(path, { headers: { origin: app.origin }, data: approvedForVisit })
+    ).json();
+    const post = async (requestId: string, draftVersion: number) => {
+      const view = await (await browser.get(`${path}/${session.id}`)).json();
+      return browser.post(`${path}/${session.id}/messages`, {
+        headers: { origin: app.origin },
+        data: {
+          requestId,
+          revision: view.revision,
+          draftVersion,
+          contentVersion: 1,
+          text: `Lägg till ${requestId}.`,
+        },
+      });
+    };
+    expect((await post('before-off', 0)).status()).toBe(202);
+    await expect.poll(() => held.length).toBe(1);
+    const revoked = await browser.post(`${app.origin}/api/browser-binding/revoke`, {
+      headers: { origin: app.origin },
+      data: { id: randomUUID() },
+    });
+    expect(revoked.status()).toBe(200);
+    const replacement = await revoked.json();
+    expect(replacement).toMatchObject({
+      sessionId: confirmed.sessionId,
+      expiresAt: confirmed.expiresAt,
+    });
+    await browser.addCookies([
+      {
+        name: replacement.cookieName,
+        value: replacement.candidate,
+        url: app.origin,
+        sameSite: 'Lax',
+      },
+    ]);
+    expect(
+      (
+        await browser.post(`${app.origin}/api/browser-binding/register`, {
+          headers: { origin: app.origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(200);
+    const proposal = (id: string, version: number) => [
+      modelTool('submit_changes', {
+        version,
+        contentVersion: 1,
+        completion: 'draft',
+        operations: [
+          {
+            name: 'propose_object',
+            arguments: {
+              id,
+              baseRevision: null,
+              value: { typeId: map.types[0].id, name: id, description: '' },
+            },
+          },
+        ],
+      }),
+    ];
+    held[0](proposal('before-off', 0));
+    await expect
+      .poll(async () => (await (await browser.get(mapPath)).json()).draft.changes)
+      .toMatchObject([{ id: 'before-off' }]);
+    await expect
+      .poll(async () => (await (await browser.get(`${path}/${session.id}`)).json()).phase)
+      .not.toBe('working');
+    expect((await post('stopped-after-off', 1)).status()).toBe(202);
+    await expect.poll(() => held.length).toBe(2);
+    vi.setSystemTime(confirmed.expiresAt + 1_000);
+    expect((await (await browser.get(`${app.origin}/api/bootstrap`)).json()).status).toBe(
+      'anonymous',
+    );
+    // Bootstrap uses Better Auth's real natural-expiry cleanup. Only the
+    // replacement binding and its accepted-task context remain for logout.
+    expect(
+      (
+        await browser.post(`${app.origin}/api/auth/sign-out`, {
+          headers: { origin: app.origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(200);
+    held[1](proposal('stopped-after-off', 1));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect((await (await other.get(mapPath)).json()).draft.changes).toMatchObject([
+      { id: 'before-off' },
+    ]);
+    expect((await (await other.get(mapPath)).json()).draft.changes).toHaveLength(1);
+    expect((await callAssistant(app.origin, externalToken, 'read_map')).status).toBe(200);
+    await signIn(browser, app.origin);
+    expect((await (await browser.get(mapPath)).json()).draft.changes).toMatchObject([
+      { id: 'before-off' },
+    ]);
+    expect((await (await browser.get(mapPath)).json()).draft.changes).toHaveLength(1);
+  } finally {
+    for (const release of held) release([modelMessage('Klart.')]);
+    await other.dispose();
+    vi.useRealTimers();
   }
 });
 

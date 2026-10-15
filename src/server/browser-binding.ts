@@ -379,6 +379,11 @@ export function browserBindings(
           .prepare('INSERT INTO browser_binding (id, sessionId, expiresAt) VALUES (?, ?, ?)')
           .run(key(candidate), selected.id, expiresAt);
         database
+          .prepare(
+            'UPDATE assistant_connection SET browserBindingId = ? WHERE browserSessionId = ?',
+          )
+          .run(key(candidate), selected.id);
+        database
           .prepare(`INSERT INTO storage_action_result
         (id, userId, kind, status, completedAt, checkUntil, sessionExpiresAt)
         VALUES (?, ?, 'revoke', 'completed', ?, ?, ?)`)
@@ -670,17 +675,55 @@ export function browserBindings(
     async logout(request: Request, operation: () => Promise<Response>) {
       if (!canonicalRequest(request) || request.headers.get('origin') !== origin)
         return Response.json({ error: 'forbidden' }, { status: 403 });
-      // A known browser can explicitly stop its accepted work after ordinary
-      // expiry, even when Better Auth has already removed its session row.
+      const recorded = recordedBinding(request.headers);
+      // Capture policy before Better Auth may naturally remove an expired row.
+      const selected = recorded?.sessionId ? policy(recorded.sessionId) : undefined;
       const current = await librarySession(request.headers);
       const binding = recordedBinding(request.headers);
-      if (!binding?.confirmed || (current && current.session.id !== binding.sessionId))
+      function permitted(fresh: Binding) {
+        if (!fresh.confirmed || (current && current.session.id !== fresh.sessionId)) return false;
+        const protectedPolicy = (fresh.sessionId ? policy(fresh.sessionId) : undefined) ?? selected;
+        if (protectedPolicy) {
+          const expiresAt = deadline(protectedPolicy);
+          return (
+            Number.isFinite(expiresAt) &&
+            (expiresAt <= now() || current?.session.token === protectedPolicy.token)
+          );
+        }
+        // A cleaned session needs both proven natural expiry and its persisted
+        // private task context. A binding cookie never ends live authority.
+        return (
+          Number.isFinite(fresh.expiresAt) &&
+          fresh.expiresAt <= now() &&
+          !!database
+            .prepare(`SELECT 1 FROM assistant_connection
+            WHERE browserBindingId = ? AND browserSessionId IS NOT NULL
+            AND (? IS NULL OR browserSessionId = ?) AND taskExpiresAt > ?`)
+            .get(fresh.id, fresh.sessionId, fresh.sessionId, now())
+        );
+      }
+      if (
+        !binding ||
+        binding.revision !== recorded?.revision ||
+        (binding.sessionId !== recorded.sessionId &&
+          !(
+            binding.sessionId === null &&
+            selected &&
+            Number.isFinite(deadline(selected)) &&
+            deadline(selected) <= now()
+          )) ||
+        !permitted(binding)
+      )
         return Response.json({ error: 'unauthenticated' }, { status: 401 });
       if (database.inTransaction) return Response.json({ error: 'binding_busy' }, { status: 409 });
       const changed = database
         .transaction(() => {
           const fresh = recordedBinding(request.headers);
-          if (fresh?.revision !== binding.revision || fresh.sessionId !== binding.sessionId)
+          if (
+            fresh?.revision !== binding.revision ||
+            fresh.sessionId !== binding.sessionId ||
+            !permitted(fresh)
+          )
             return false;
           database
             .prepare('DELETE FROM browser_binding_attempt WHERE bindingId = ?')

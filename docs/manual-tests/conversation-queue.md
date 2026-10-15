@@ -86,6 +86,22 @@ avbryter bara i textvyn”.
     },
     {
       "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant-deadlines.test.ts",
+      "title": "invalid auth with an occupied live binding cannot stop its session, accepted task or login attempt",
+      "purpose": "HTTP-bevis för att ogiltig autentisering inte kan avbryta behörigt arbete, inloggning eller ett väntande inloggningsförsök genom säkerhetskakan."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant-deadlines.test.ts",
+      "title": "OFF preserves accepted text and its original login end, then logout after natural cleanup stops the rotated binding’s task",
+      "purpose": "Installationsbevis för att avstängd ihågkommen inloggning bevarar mottaget textarbete och ursprunglig sluttid, medan uttrycklig utloggning efter naturlig sessionsgallring stoppar sent arbete utan att påverka annan bindning eller extern assistent."
+    },
+    {
+      "kind": "technical",
       "runner": "playwright",
       "suite": "integration",
       "spec": "tests/integration/text-task-deadlines.spec.ts",
@@ -103,6 +119,9 @@ avbryter bara i textvyn”.
 Den separata tekniska evidensen styr serverklockan och fördröjer modell
 eller verktyg. Den är inte ett utfört manuellt prov och bekräftar inte
 att ett färdigt svar når webbläsaren vid frånkoppling.
+Den prövar också avstängd ihågkommen inloggning följd av naturlig
+sessionsutgång och uttrycklig utloggning samt avvisar utloggning utan
+giltig autentisering medan inloggningen fortfarande gäller.
 
 1. Skicka **Första uppdraget.**, **Andra uppdraget.** och **Tredje
    uppdraget.** utan att släppa något svar. Läs arbetsraden.
