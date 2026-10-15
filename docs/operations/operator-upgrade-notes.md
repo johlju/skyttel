@@ -6,6 +6,21 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Authentication data cleanup
+
+Keep the upgraded service running so that startup and background cleanup
+can remove ended login records and expired attempts without browser
+traffic. Verify removal from the live database across restart, the
+24-hour action-result window and rejection of old cookies and callbacks.
+Investigate cleanup failures. Accepted text work must keep its original
+bounded stop link until its deadline. Household content and save receipts
+must remain available.
+
+Database cleanup does not prove deletion from backups or snapshots.
+Restrict recovery copies and verify their actual deletion separately;
+the maximum is thirty days from original copying. Record missing host
+evidence before claiming these periods as actual production behavior.
+
 ### Accepted text work at login expiry
 
 Verify that an accepted text instruction can finish after normal login

@@ -12,6 +12,7 @@ import { administrationRoutes } from './administration-routes.js';
 import type { ObserveAssistant } from './assistant-observation.js';
 import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
+import { authenticationCleanup } from './authentication-cleanup.js';
 import { browserBindings } from './browser-binding.js';
 import type { Config } from './config.js';
 import { contentOwnerRoutes } from './content-owner-routes.js';
@@ -360,6 +361,16 @@ export function createApp({
   summarizeVoice = voiceAssistant.summarizeSession;
   newVoiceConversation = voiceAssistant.newConversation;
   app.route('/api', voiceAssistant.routes);
+  const stopCleanup = hasBindings
+    ? authenticationCleanup({
+        database,
+        now,
+        revalidate: () => {
+          revalidateWork?.();
+          revalidateVoice?.();
+        },
+      })
+    : undefined;
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));
   app.get(
@@ -374,6 +385,7 @@ export function createApp({
     prepareTaskDelivery: textAssistant.prepareDelivery,
     summarizeForEvaluation: textAssistant.summarizeForEvaluation,
     close: async () => {
+      stopCleanup?.();
       await voiceAssistant.close();
       await textAssistant.close();
     },

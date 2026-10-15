@@ -111,7 +111,9 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   Kontroll av samma okända avstängning efter serveromstart och ny
   inloggning bevarar ett nytt aktivt val. Nekat återhämtningsminne,
   skadad eller förlorad referens och utgånget resultat ger ingen gissad
-  framgång eller automatisk upprepning.
+  framgång eller automatisk upprepning. Tekniska serverprov kontrollerar
+  verklig gallring utan användartrafik och oförändrade frister vid omstart;
+  produktionens gallring och säkerhetskopiors radering behöver egna bevis.
 
 - [Samtalets samlade hjälpmedelsflöde](conversation-accessibility.md):
   naturlig läs- och tabbordning över verktyg, röstruta och flyttad notis,

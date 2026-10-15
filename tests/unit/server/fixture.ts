@@ -88,7 +88,7 @@ export async function applicationFixture({
       };
     };
   }
-  const app = createApp({ config, database, auth, identity, now });
+  let app = createApp({ config, database, auth, identity, now });
   function client() {
     const cookies = new Map<string, string>();
     async function request(path: string, init: RequestInit = {}) {
@@ -133,7 +133,13 @@ export async function applicationFixture({
     config,
     database,
     auth,
-    app,
+    get app() {
+      return app;
+    },
+    async restart() {
+      await app.close();
+      app = createApp({ config, database, auth, identity, now });
+    },
     client,
     setSubject(value: unknown) {
       subject = value;
@@ -157,6 +163,8 @@ export async function applicationFixture({
       return { reached, resume };
     },
     close() {
+      // Stop the app's background lifecycle before removing its database.
+      void app.close();
       if (database.open) database.close();
       rmSync(directory, { recursive: true, force: true });
     },

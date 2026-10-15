@@ -306,12 +306,15 @@ export function CookieStorage({ userId }: { userId?: string }) {
         </p>
         <p>
           Serverns behörighet kan upphöra före kakans livstid. Utgången behörighet bevisar inte
-          fysisk radering av serveruppgifter eller säkerhetskopior. Beslutade gallringsfrister är
-          inte verifierade driftfakta: avslutade sessioner och förbrukade eller utgångna
-          OAuth-försök ska gallras inom 24 timmar från avslut respektive förbrukning eller utgång.
-          Resultatkontroll ska ha 24 timmar från ändringen. Berörda säkerhetskopior ska behållas
-          högst 30 dygn från ursprunglig kopiering. Faktisk gallring och hantering av kopior behöver
-          verifieras i drift.
+          fysisk radering av serveruppgifter eller säkerhetskopior. Automatisk gallring startar vid
+          serverstart och varje minut medan tjänsten är igång. Avslutade sessioner och förbrukade
+          eller utgångna OAuth-försök ska gallras inom 24 timmar från avslut respektive förbrukning
+          eller utgång. Resultatkontroll har 24 timmar från ändringen. Minimala spärruppgifter får
+          bara finnas tills berörda nycklar och försök är ogiltiga, högst sju dygn från återkallelse
+          eller utloggning och ytterligare högst 24 timmar för gallring. Det är tak, inte
+          standardtider. Berörda säkerhetskopior ska behållas högst 30 dygn från ursprunglig
+          kopiering. Beslutade frister är inte verifierade driftfakta. Faktisk gallring och
+          hantering av kopior behöver verifieras i drift.
         </p>
       </section>
       <section className="cookie-storage-card" aria-labelledby="external-storage-title">

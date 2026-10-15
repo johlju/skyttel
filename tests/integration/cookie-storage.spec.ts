@@ -34,6 +34,16 @@ for (const [width, caseId] of [
       await expect(
         page.getByRole('heading', { name: 'better-auth.session_token', exact: true }),
       ).toBeVisible();
+      const serverStorage = page.getByRole('region', { name: 'Uppgifter på Skyttels server' });
+      await expect(serverStorage).toContainText(
+        'Automatisk gallring startar vid serverstart och varje minut',
+      );
+      await expect(serverStorage).toContainText(
+        'högst sju dygn från återkallelse eller utloggning',
+      );
+      await expect(serverStorage).toContainText(
+        'Beslutade frister är inte verifierade driftfakta.',
+      );
       const licensePath = await page
         .getByRole('link', { name: 'Licens för formulärets förebild (MIT)' })
         .getAttribute('href');

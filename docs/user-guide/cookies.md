@@ -77,6 +77,17 @@ säkerhetskopior. En utgången kaka eller avslutad behörighet betyder inte
 att alla serverkopior är fysiskt raderade. Beslutade gallringsfrister ska
 inte läsas som redan verifierade driftfakta.
 
+Programmet gallrar vid serverstart och varje minut medan tjänsten körs,
+även utan besök. Avslutade sessioner och förbrukade eller utgångna
+inloggningsförsök ska försvinna inom 24 timmar från avslut respektive
+förbrukning eller utgång. Minimala spärruppgifter får bara finnas tills
+de berörda försöken och nycklarna är ogiltiga, högst sju dygn från
+återkallelse eller utloggning och högst ytterligare 24 timmar för gallring.
+Fristerna är tak och startar inte om vid serveromstart. Resultatfönstrets
+24 timmar räknas från ändringen. För säkerhetskopior gäller högst 30 dygn
+från den ursprungliga kopieringen; faktisk radering kräver separat
+driftkontroll.
+
 Google och Microsoft styr lagringen på sina egna webbplatser.
 **Samtalsmedgivande** till OpenAI är ett separat val under
 **Samtal med Skyttel**; information om kakor ger inget sådant medgivande.

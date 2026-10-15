@@ -74,6 +74,10 @@ KAK-01.
 - Informationen anger att stängning och fortsatt användning inte ger ett val.
 - Nödvändig lagring saknar avstängningsreglage. Ihågkommen inloggning
   förklaras som valfri och knuten till webbläsarbindningen.
+- Serverinformationen skiljer automatisk gallring vid start och varje
+  minut från verifierad drift och säkerhetskopior. Frister räknas från
+  avslut, ändring, återkallelse eller kopiering enligt respektive ändamål;
+  sju dygn för minimala spärrar är ett tak, inte standardlagring.
 - Tillbaka på startsidan fokuseras välkomstrubriken. Efter omladdningen
   visas första informationen igen. Innehållet ryms utan sidledsrullning.
 
@@ -1034,6 +1038,10 @@ också framåt under dina handlingar och visar ett utgånget resultat.
 [storage-result-recovery.spec.ts](../../tests/integration/storage-result-recovery.spec.ts),
 KAK-24. Filens tekniska ägarprov visar dessutom strax före, exakt vid
 och efter kontrollfönstrets slut efter omstart.
+Det stödjande serverprovet nedan kontrollerar faktisk borttagning utan
+användartrafik samt bevarade ursprungliga frister vid upprepad gallring
+och omstart av applikationens livscykel. Det bevisar inte radering av
+säkerhetskopior eller produktionens faktiska drift.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -1046,6 +1054,16 @@ och efter kontrollfönstrets slut efter omstart.
     "caseId": "KAK-24"
   },
   "reference": "Utgånget resultat efter verklig avstängning med svarsförlust. Delad serverklocka styr exakt 24 timmar i automationen.",
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/authentication-cleanup.test.ts",
+      "title": "session expiry and the action result window keep their original anchors across restart and repeated cleanup",
+      "purpose": "Faktisk SQLite-gallring vid ursprungliga frister utan användaranrop och utan förnyelse vid omstart eller upprepning."
+    }
+  ],
   "outcomes": [
     "Utgånget resultat lämnar sparstatus okänd.",
     "Resultatkontrollen och försök att aktivera spärrat sparande skickar inget nytt sparande.",
