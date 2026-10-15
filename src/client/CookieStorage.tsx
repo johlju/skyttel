@@ -54,6 +54,57 @@ const entries = [
   },
 ];
 
+const serverEntries = [
+  {
+    name: 'user och account',
+    content:
+      'Ditt Skyttel-konto, kopplade leverantörsidentiteter och krypterade leverantörstoken behövs för att känna igen rätt person. Kontolänkarna är inte ett Kom ihåg mig-val.',
+    time: 'Kontot och kopplingarna finns kvar efter utloggning. De har ingen sessionsfrist. En kontrollerad återställning ogiltigförklarar gamla token men bevarar identitetskopplingarna. Permanent radering av hushållet hanteras separat.',
+  },
+  {
+    name: 'session',
+    content:
+      'Sessionsnyckeln, ägaren, valets struktur- och informationsversion, beslutstid och absoluta slut samt senaste användarhandling styr just denna inloggning. Ett tidsbegränsat arbetsankare kan pausa inaktiviteten under mottaget AI-arbete och leverans. Ingen handlingshistorik skapas.',
+    time: 'Vanlig åtkomst upphör efter 30 minuters inaktivitet eller högst åtta timmar från inloggningen. Ihågkommen åtkomst upphör högst sju dygn från inloggningen. Avstängning och uttrycklig utloggning kan avsluta åtkomsten tidigare. Utgångna sessioner gallras automatiskt; omstart förlänger inte gränserna eller återupptar arbete.',
+  },
+  {
+    name: 'browser_binding och browser_binding_attempt',
+    content:
+      'En hash av säkerhetskakans nyckel, bekräftelse, revision och koppling till aktuell session samordnar samma webbläsare. Försöket binder OAuth-svaret till rätt bindning, inloggningsleverantör och versionsbundna val. Bindningen ger ingen egen hushållsåtkomst.',
+    time: 'Ett inloggningsförsök har högst tio minuter från serverns registrering. Ny inloggning, avstängning och utloggning avslutar berörda äldre försök. Bindningen gallras efter sin frist när ingen session eller tillåten ändlig uppgift behöver den för säkert stopp.',
+  },
+  {
+    name: 'verification och login_link',
+    content:
+      'Kortlivade OAuth-kontroller och kontokopplingsbevis behövs för att verifiera ett uttryckligen begärt försök. De är skilda från leverantörens egen inloggning.',
+    time: 'Kontokopplingsförsök har tio minuter från starten. OAuth-kontroller följer sin registrerade utgång och förbrukas vid kontroll. Förbrukade eller utgångna uppgifter gallras automatiskt; de blir inte giltiga igen vid omstart.',
+  },
+  {
+    name: 'storage_action_result',
+    content:
+      'Åtgärds-ID, rätt användare, bekräftad avstängning, ändringstid, kontrollfrist och den tidigare sessionens slut låter dig kontrollera samma resultat efter ett förlorat svar. Ingen separat valhistorik förs.',
+    time: 'Kan läsas av rätt inloggade användare under 24 timmar från ändringen. Därefter gallras resultatet. Ett saknat resultat bevisar inte att ändringen avvisades eller genomfördes.',
+  },
+  {
+    name: 'installation_authority',
+    content:
+      'Installationens aktuella säkerhetsgeneration och, vid en bekräftad återställning, dess ursprung och fasta bekräftelsetid hindrar gamla åtkomstnycklar från att återaktiveras. Den styrande deklarationen hålls separat av driftansvarig.',
+    time: 'Den aktuella posten behövs så länge installationen används och ersätts vid nästa kontrollerade övergång. Den är ingen historik över lagringsval. En återställning måste spärras innan tjänsten öppnas igen; en äldre databas får inte ensam bestämma giltig åtkomst.',
+  },
+  {
+    name: 'theme_preferences och conversation_preferences',
+    content:
+      'Ditt kontos temaval och samtalsvyer används på dina enheter. Temavalet kopieras inte till localStorage, sessionStorage eller en temakaka. Äldre lokala skyttel-theme-nycklar tas bort när appen öppnas.',
+    time: 'Kontoval består efter utloggning och ändras genom respektive inställning. Utan inloggning följer temat enhetens systemval. Återställ valfri lagring tar inte bort kontoval.',
+  },
+  {
+    name: 'assistant_connection, oauthClient, oauthConsent, oauthAccessToken, oauthRefreshToken, oauthClientAssertion och jwks',
+    content:
+      'Samtals- och assistentbehörighet, medgivanden, klientregistreringar och signeringsnycklar behövs för begärd åtkomst. Privat arbete i Skyttels samtal är bundet till ursprunglig användare, inloggning och uppgift. Självständigt anslutna assistenter har egen behörighet och medgivande.',
+    time: 'Mottaget textarbete har högst 30 minuter från mottagningen, inklusive kö och leverans; fritt röstläge stannar vid inloggningens gräns. Gamla privata arbetsbehörigheter tas bort vid serverstart. Självständiga externa anslutningars åtkomsttoken har normalt en timme och deras förnyelsenycklar högst 30 dygn från respektive utgivning; tidigare återkallelse gäller. Utgångna token och klientbevis gallras efter sina egna frister. Minimala spärrar mot återanvändning kan behövas tills berörda nycklar är ogiltiga. Giltiga externa anslutningar och nödvändiga signeringsnycklar är inte vanliga webbläsarsessioner och tas inte bort bara för att du loggar ut här.',
+  },
+];
+
 export function CookieStorage({ userId }: { userId?: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const [resetOrigin, setResetOrigin] = useState<HTMLButtonElement | null>(null);
@@ -283,6 +334,24 @@ export function CookieStorage({ userId }: { userId?: string }) {
       </section>
       <section className="cookie-storage-card" aria-labelledby="server-storage-title">
         <h3 id="server-storage-title">Uppgifter på Skyttels server</h3>
+        <details>
+          <summary>Visa serverns lagringsposter</summary>
+          <p>
+            Följande poster finns i Skyttels serverdatabas, med Skyttel som leverantör. Namnen
+            hjälper dig att skilja uppgifterna åt; de är inga ytterligare webbläsarkakor.
+          </p>
+          {serverEntries.map((entry) => (
+            <section className="cookie-storage-entry" key={entry.name}>
+              <h4>{entry.name}</h4>
+              <dl>
+                <dt>Innehåll och ändamål</dt>
+                <dd>{entry.content}</dd>
+                <dt>Giltighet, gallring och konsekvenser</dt>
+                <dd>{entry.time}</dd>
+              </dl>
+            </section>
+          ))}
+        </details>
         <p>
           Skyttel lagrar kontot, kopplade Google- och Microsoft-identiteter, krypterade
           leverantörstoken, sessioner och tidsbegränsade verifierings- och kontokopplingsförsök. Det
@@ -303,6 +372,16 @@ export function CookieStorage({ userId }: { userId?: string }) {
           din användare. Resultatet kan kontrolleras under 24 timmar från ändringen, vid behov efter
           ny inloggning. Referensen ger ingen egen åtkomst och finns inte i en separat historik över
           tidigare val.
+        </p>
+        <p>
+          Pågående samtal och leveransanslutningar har också tillfälliga uppgifter i serverns och
+          den öppna appens arbetsminne: samtalstext, uppgiftens ursprungliga tidsgräns, fryst helt
+          svar och transportstatus. De är inga Web Storage-nycklar och återupptas inte efter
+          serveromstart. Kvittens av hela texten krävs inom högst fem sekunder från att svaret
+          fryses, alltid inom uppgiftens tidsgräns. Kvittensen bevisar inte att någon har läst, hört
+          eller förstått svaret. Redan mottagen text kan visas medan appen är öppen; ny inloggning,
+          uttryckligt avslut och stängning av appen kan ta bort den lokala visningen. Hushållets
+          karta, ditt utkast, sparförsök och sparkvitton har separat beständig lagring.
         </p>
         <p>
           Serverns behörighet kan upphöra före kakans livstid. Utgången behörighet bevisar inte

@@ -66,7 +66,10 @@ KAK-01.
    **Fortsätt med Google**.
 3. Välj sidfotens **Kakor och lagring**. Kontrollera sidrubrikens fokus.
 4. Öppna **Visa nödvändig lagring** och läs namn, plats, innehåll och tider.
-5. Ladda om sidan. Välj **Till startsidan**.
+5. Öppna **Visa serverns lagringsposter**. Läs posterna för inloggning,
+   resultatkontroll och installationens säkerhetsgeneration samt informationen
+   om samtalets arbetsminne och transportkvittens.
+6. Ladda om sidan. Välj **Till startsidan**.
 
 **Förväntat resultat:**
 
@@ -78,6 +81,9 @@ KAK-01.
   minut från verifierad drift och säkerhetskopior. Frister räknas från
   avslut, ändring, återkallelse eller kopiering enligt respektive ändamål;
   sju dygn för minimala spärrar är ett tak, inte standardlagring.
+- Serverposterna anger namn, innehåll och ändamål. Resultatkontrollens
+  24 timmar räknas från ändringen. Kvittens av hela texten har högst fem
+  sekunder från fryst svar och bevisar inte läsning eller hörande.
 - Tillbaka på startsidan fokuseras välkomstrubriken. Efter omladdningen
   visas första informationen igen. Innehållet ryms utan sidledsrullning.
 

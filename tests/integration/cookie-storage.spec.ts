@@ -35,6 +35,16 @@ for (const [width, caseId] of [
         page.getByRole('heading', { name: 'better-auth.session_token', exact: true }),
       ).toBeVisible();
       const serverStorage = page.getByRole('region', { name: 'Uppgifter på Skyttels server' });
+      await serverStorage.getByText('Visa serverns lagringsposter', { exact: true }).click();
+      await expect(
+        serverStorage.getByRole('heading', { name: 'session', exact: true }),
+      ).toBeVisible();
+      await expect(
+        serverStorage.getByRole('heading', { name: 'installation_authority', exact: true }),
+      ).toBeVisible();
+      await expect(serverStorage).toContainText('24 timmar från ändringen');
+      await expect(serverStorage).toContainText('högst fem sekunder');
+      await expect(serverStorage).toContainText('läst, hört eller förstått');
       await expect(serverStorage).toContainText(
         'Automatisk gallring startar vid serverstart och varje minut',
       );

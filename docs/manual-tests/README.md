@@ -103,7 +103,8 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
 
 ## Områden
 
-- [Kakor och lagring](cookies.md): publik information, första besök,
+- [Kakor och lagring](cookies.md): publik information och konkret register
+  över kakor, fliklagring, serverposter och tillfälligt samtalsminne, första besök,
   profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före
   hushållsstart och efter återkallad tillgång, snabbval, ångra,
   navigationsskydd, bekräftad återställning, fel och bevarade

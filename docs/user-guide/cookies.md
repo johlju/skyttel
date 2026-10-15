@@ -20,6 +20,13 @@ import eller permanent radering. Den har inget avstängningsreglage.
 Rensa inte flikens återhämtningsuppgifter om du behöver kontrollera en
 pågående åtgärd.
 
+Under **Uppgifter på Skyttels server** öppnar du
+**Visa serverns lagringsposter** för namn, innehåll och gallring av
+inloggningsuppgifter, resultatkontroll och installationens säkerhetsgeneration.
+Tillfällig samtalstext och transportstatus i arbetsminnet beskrivs separat
+från kakor och fliklagring. En transportkvittens bevisar inte att du har
+läst eller hört svaret.
+
 **Ihågkommen inloggning** är valfri och gäller den aktuella
 webbläsarbindningen. Markera **Kom ihåg mig** innan du fortsätter till
 Google eller Microsoft för högst sju dygn från inloggningen. Valet börjar
