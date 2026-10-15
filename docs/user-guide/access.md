@@ -23,6 +23,19 @@ Om ett fel visas har sparandet inte kunnat bekräftas. Det senast
 bekräftade temat ligger kvar. Ladda om för att hämta kontots aktuella val
 eller välj tema igen när anslutningen fungerar.
 
+## När webbläsaren hindrar inloggning
+
+Skyttel behöver nödvändiga kakor och stöd för säkra webbläsarlås för att
+öppna Google eller Microsoft. Öppna Skyttels egen adress direkt i en
+aktuell webbläsare och tillåt webbplatsens nödvändiga kakor. Ett hinder
+visas på inloggningssidan; Skyttel försöker inte automatiskt igen.
+
+Om bara en del av Skyttels kakor finns kvar kan inloggningen stoppas.
+Rensa då Skyttels kakor och börja om genom att uttryckligen välja
+inloggningssätt. Efter fullständig radering kan en äldre inloggning som
+Skyttel inte längre kan identifiera finnas kvar till sin egen utgång.
+Raderingen avslutar inte inloggningar på andra enheter.
+
 ## Roller och gemensamt innehåll
 
 En **Medlem** kan läsa och redigera hela hushållets gemensamma karta.

@@ -89,10 +89,10 @@ export async function applicationFixture({
       }
       return response;
     }
-    async function json(path: string, body: unknown) {
+    async function json(path: string, body: unknown, headers: Record<string, string> = {}) {
       return request(path, {
         method: 'POST',
-        headers: { origin: config.origin, 'content-type': 'application/json' },
+        headers: { origin: config.origin, 'content-type': 'application/json', ...headers },
         body: JSON.stringify(body),
       });
     }
@@ -100,6 +100,15 @@ export async function applicationFixture({
       request,
       json,
       async signIn(provider = 'google') {
+        if (database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'browser_binding'").get()) {
+          const headers: Record<string, string> = identity
+            ? { 'X-Skyttel-Build': `${identity.commit}:${identity.version}` }
+            : {};
+          const candidate = await json('/api/browser-binding/candidate', {}, headers);
+          const binding = (await candidate.json()) as { cookieName: string; candidate: string };
+          cookies.set(binding.cookieName, binding.candidate);
+          await json('/api/browser-binding/register', {}, headers);
+        }
         const response = await json('/api/auth/sign-in/social', { provider, callbackURL: '/' });
         const result = (await response.json()) as { url: string };
         return request(result.url);

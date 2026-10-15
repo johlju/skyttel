@@ -1,6 +1,8 @@
 import { type APIRequestContext, expect, type Page, request } from '@playwright/test';
 import { textViewButtonAccessibleName } from './conversation.js';
 
+const bindingOrigins = new WeakMap<APIRequestContext, string>();
+
 // These HTTP-only clients use default context options. Keep their authenticated
 // session across a deliberate server restart, but retire the old socket pool.
 export async function restartWithSession(
@@ -91,6 +93,40 @@ export async function utilityButton(page: Page, name: string) {
 }
 
 export async function signIn(client: APIRequestContext, origin: string, provider = 'google') {
+  // Distinct HTTP test installations can share a host with different ports.
+  // They are separate canonical sites, so explicitly reset the fixture jar
+  // when changing installations instead of reusing the other site's cookies.
+  const previousOrigin = bindingOrigins.get(client);
+  if (previousOrigin && previousOrigin !== origin) await client.clearCookies();
+  bindingOrigins.set(client, origin);
+  // HTTP-only fixtures perform the same explicit candidate/write/register
+  // protocol. Native Web Locks and synchronous document.cookie are exercised
+  // separately by the browser-binding browser scenarios.
+  const candidate = await client.post(`${origin}/api/browser-binding/candidate`, {
+    headers: { origin },
+    data: {},
+  });
+  if (candidate.status() !== 404) {
+    expect(candidate.status()).toBe(200);
+    const binding = await candidate.json();
+    await client.addCookies([
+      {
+        name: binding.cookieName,
+        value: binding.candidate,
+        url: origin,
+        secure: origin.startsWith('https:'),
+        sameSite: 'Lax',
+      },
+    ]);
+    expect(
+      (
+        await client.post(`${origin}/api/browser-binding/register`, {
+          headers: { origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(200);
+  }
   const response = await client.post(`${origin}/api/auth/sign-in/social`, {
     headers: { origin },
     data: { provider, callbackURL: '/', errorCallbackURL: '/?authError=1' },

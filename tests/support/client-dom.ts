@@ -1,5 +1,16 @@
 import { vi } from 'vitest';
 
+// jsdom has no origin-wide lock service. Native locking and secure cookie
+// policy are verified against the real HTTPS installation in Chromium.
+Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+Object.defineProperty(navigator, 'locks', {
+  configurable: true,
+  value: {
+    request: async (_name: string, _options: unknown, operation: () => Promise<unknown>) =>
+      operation(),
+  },
+});
+
 // jsdom has no WebGL. Keep the real map and camera; Chromium tests verify rendering.
 vi.mock('three', async (importOriginal) => {
   const three = await importOriginal<typeof import('three')>();

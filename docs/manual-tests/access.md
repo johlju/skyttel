@@ -40,6 +40,156 @@ fallen anger formulär, samtal, profil eller administration.
 
 ## Skapa och öppna hushållet
 
+### ACCESS-24: Samtidiga första flikar kan starta säkert
+
+**Syfte:** Kontrollera samtidiga starter och en separat webbläsarprofil.
+
+**Användare:** Alex i en ny webbläsarprofil.
+
+**Förutsättningar:** Starta den
+[kontrollerade identitetsinstallationen](#kontrollerad-identitetsinstallation)
+med `--https`. Profilen ska sakna Skyttel-kakor. Skriv `provider-down`
+i terminalen före de två första flikarnas start. Skriv `provider-up`
+innan den separata profilens inloggning.
+
+**Automatiskt motsvarande test:**
+[browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts),
+ACCESS-24. Automationen kör verklig HTTPS, kakor och SQLite med syntetisk
+identitetsleverantör. Leverantörsstartens svar för de första flikarna
+hålls vid ett kontrollerat fel; deras säkerhetsbindning verifieras tekniskt.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/browser-binding.spec.ts",
+    "caseId": "ACCESS-24"
+  },
+  "reference": "HTTPS, 1280 × 720; två flikar med leverantörsfel, ny profil",
+  "outcomes": [
+    "Båda flikarna återfår inloggningsvalet efter leverantörsfelet",
+    "En separat profil kan logga in oberoende av den första profilens försök"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna Skyttels startsida i två flikar i samma nya profil.
+2. Välj **Fortsätt med Google** i båda. Läs övergångsbeskeden och välj
+   **Fortsätt till Google** i snabb följd i båda flikarna.
+3. Kontrollera felbesked och att båda inloggningssätten går att välja igen.
+4. Öppna en separat ny webbläsarprofil. Återställ leverantören och logga in
+   med Alex Google-identitet där.
+
+**Förväntat resultat:** Båda första flikarna visar ett begripligt
+leverantörsfel och användbara val. Den separata profilen når
+hushållets namngivning utan att den första profilens försök behöver avslutas.
+
+### ACCESS-25: Saknade skydd stoppar inloggningen
+
+**Syfte:** Kontrollera stopp utan automatisk omstart vid saknade
+webbläsarlås, blockerade kakor och utebliven registreringsbekräftelse.
+
+**Användare:** Utloggad besökare i en ny profil för varje variant.
+
+**Separat förberedelse:** Starta den kontrollerade identitetsinstallationen
+med `--https`. Prova
+först en webbläsare utan stöd för Web Locks. Prova sedan en ny profil
+med stöd för Web Locks men med webbplatsens kakor blockerade i
+webbläsarens inställningar. Återställ kakinställningen efter provet.
+För den tredje varianten skriver du `hold-registration` i terminalen
+före inloggningsstarten. Invänta `registration_held`, slå på offline-läge
+i webbläsarens nätverksverktyg och skriv `release-initialization`.
+Servern registrerar bindningen men webbläsaren får ingen bekräftelse.
+Återställ nätverksanslutningen efter felbeskedet.
+
+**Automatiskt motsvarande test:**
+[browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts),
+ACCESS-25. Automationen tar bort lås-API:t för första varianten och
+använder Chromiums inbyggda avstängning av dokumentkakor för den andra.
+Den tredje tappar den verkliga serverns registreringssvar.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/browser-binding.spec.ts",
+    "caseId": "ACCESS-25"
+  },
+  "reference": "HTTPS; saknat lås, blockerade kakor, tappat registreringssvar",
+  "outcomes": [
+    "Ett tydligt hinder visas innan Google öppnas",
+    "Fokus återgår till inloggningssättet utan automatiskt nytt försök"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna startsidan och välj **Fortsätt med Google**.
+2. Välj **Fortsätt till Google** med tangentbordet.
+3. Läs hindret och kontrollera tangentbordsfokus.
+4. Upprepa med de andra förberedda varianterna.
+
+**Förväntat resultat:** Beskedet börjar med **Säker inloggning kan inte
+bekräftas i webbläsaren**. Google öppnas inte. Fokus återgår till
+**Fortsätt med Google**. Ett nytt försök kräver ett uttryckligt val.
+Skärmläsarens faktiska uppläsning behöver verifieras separat.
+
+### ACCESS-26: Avbruten initialisering kan inte ersätta en annan fliks start
+
+**Syfte:** Kontrollera ett sent svar efter avbruten inloggning.
+
+**Användare:** Alex i två nya flikar i samma profil.
+
+**Separat förberedelse:** Starta den kontrollerade identitetsinstallationen
+med `--https`. Skriv `hold-initialization` i terminalen. Nästa
+initialiseringssvar hålls efter serverbehandlingen; invänta terminalens
+`initialization_held` innan du avbryter. Övrig trafik fortsätter.
+Skriv `release-initialization` för att släppa det gamla svaret efter den
+andra flikens inloggning. `quit` släpper också ett kvarvarande svar.
+
+**Automatiskt motsvarande test:**
+[browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts),
+ACCESS-26. Svaret från den verkliga servern hålls i nätverksgränsen och
+släpps först efter att den andra flikens inloggning är bekräftad.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/browser-binding.spec.ts",
+    "caseId": "ACCESS-26"
+  },
+  "reference": "Chromium, HTTPS, 1280 × 720; verkligt fördröjt initialiseringssvar",
+  "outcomes": [
+    "Avbryt återgår till val av inloggningssätt",
+    "Den andra flikens inloggning består när det gamla svaret släpps"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Välj Google och **Fortsätt till Google** i första fliken. Välj
+   **Avbryt** medan initialiseringen väntar.
+2. Logga in med Google i den andra fliken.
+3. Släpp det fördröjda svaret. Ladda om den andra fliken.
+
+**Förväntat resultat:** Första fliken visar att inloggningen avbryts och
+erbjuder inloggningssätten. Andra fliken når och behåller namngivningen
+av hushållet även när det äldre svaret levereras.
+
 ### ACCESS-23: En tom installation erbjuder båda inloggningssätten
 
 **Syfte:** Kontrollera startsidan innan någon session eller något hushåll finns.
@@ -1221,6 +1371,10 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
 3. Öppna adressen i terminalens `origin` i en ny webbläsarprofil. Google
    är första administratör, syntetiska Alex. För ACCESS-22 lägger du till
    `--microsoft` i kommandot; då är Microsoft första administratör, Robin.
+   För ACCESS-24 till ACCESS-26 lägger du i stället till `--https`.
+   Installationen skapar ett självsignerat certifikat enbart för provet.
+   Godkänn det endast för den isolerade lokala testadressen. Det verifierar
+   inte produktionsmiljöns certifikat eller proxy.
 4. Skriv `provider-down` eller `deny-consent` för det fel fallet anger.
    `provider-up` respektive `allow-consent` återställer felet.
 5. Skriv `restart` endast när samma databas ska behållas. Skriv `quit`

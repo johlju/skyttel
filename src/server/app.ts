@@ -12,6 +12,7 @@ import { administrationRoutes } from './administration-routes.js';
 import type { ObserveAssistant } from './assistant-observation.js';
 import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
+import { browserBindings } from './browser-binding.js';
 import type { Config } from './config.js';
 import { contentOwnerRoutes } from './content-owner-routes.js';
 import { conversationConsents } from './conversation-consent.js';
@@ -37,7 +38,7 @@ import { voiceAssistantRoutes } from './voice-assistant.js';
 export function createApp({
   config,
   database,
-  auth,
+  auth: originalAuth,
   identity = buildIdentity,
   consentTextVersion,
   modelFetch,
@@ -67,8 +68,23 @@ export function createApp({
   observe?: ObserveAssistant;
 }) {
   const app = new Hono();
+  // Historical test installations can intentionally stop before this migration.
+  const hasBindings = !!database
+    .prepare("SELECT 1 FROM sqlite_master WHERE name = 'browser_binding' AND type = 'table'")
+    .get();
+  const bindings = hasBindings ? browserBindings(database, originalAuth, config.origin) : undefined;
+  const auth = bindings
+    ? ({
+        ...originalAuth,
+        api: {
+          ...originalAuth.api,
+          getSession: ((options: { headers: Headers }) =>
+            bindings.session(options.headers)) as Auth['api']['getSession'],
+        },
+      } as Auth)
+    : originalAuth;
   const costs = installationCosts(database);
-  const linking = createLoginMethods(database, auth, config.origin);
+  const linking = createLoginMethods(database, auth, config.origin, bindings);
   const consents = conversationConsents(database, consentTextVersion);
   app.use(
     '*',
@@ -141,6 +157,7 @@ export function createApp({
   app.get('/api/version', (context) =>
     context.json({ ...identity, database: databaseReadiness() }),
   );
+  if (bindings) app.route('/api/browser-binding', bindings.routes);
   const authRoutes = new Set([
     '/api/auth/sign-in/social',
     '/api/auth/callback/google',
@@ -161,9 +178,15 @@ export function createApp({
       url.searchParams.set('prompt', 'consent');
       return auth.handler(new Request(url, context.req.raw));
     }
-    return context.req.path.startsWith('/api/auth/callback/')
-      ? linking.handleCallback(context.req.raw)
-      : auth.handler(context.req.raw);
+    if (context.req.path === '/api/auth/get-session' && bindings)
+      return context.json(await bindings.session(context.req.raw.headers));
+    if (context.req.path === '/api/auth/sign-in/social' && bindings)
+      return bindings.start(context.req.raw, () => auth.handler(context.req.raw));
+    if (context.req.path.startsWith('/api/auth/callback/'))
+      return bindings
+        ? bindings.callback(context.req.raw, () => linking.handleCallback(context.req.raw))
+        : linking.handleCallback(context.req.raw);
+    return auth.handler(context.req.raw);
   });
 
   app.get('/api/bootstrap', async (context) => {

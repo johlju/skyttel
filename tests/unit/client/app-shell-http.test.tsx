@@ -14,6 +14,8 @@ let installation: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
 let other: APIRequestContext;
 beforeEach(async () => {
+  // biome-ignore lint/suspicious/noDocumentCookie: Reset jsdom's cookie boundary between independent installations.
+  document.cookie = 'skyttel_binding=; Max-Age=0; Path=/';
   installation = await createInstallation();
   client = await request.newContext();
   other = await request.newContext();
@@ -27,6 +29,9 @@ afterEach(async () => {
   await client?.dispose();
   await other?.dispose();
   await installation?.close();
+  (
+    globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
+  ).jsdom.reconfigure({ url: 'http://localhost:3000' });
 });
 
 function mount(path = '/') {
@@ -421,6 +426,9 @@ test('a saved report direct link opens the saved operation and returns to the sa
 }, 30_000);
 
 test('return from a cancelled external sign-in restores provider choice and ignores its late real reply', async () => {
+  (
+    globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
+  ).jsdom.reconfigure({ url: installation.origin });
   const transport = authenticatedHttpFetch(client, installation.origin);
   let release: (() => void) | undefined;
   const held = new Promise<void>((resolve) => {

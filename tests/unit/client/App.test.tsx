@@ -18,6 +18,16 @@ type Reply = { data?: unknown; status?: number; error?: Error; response?: Promis
 const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
+  routes['/api/browser-binding/candidate'] ??= Array.from({ length: 8 }, () => ({
+    data: {
+      candidate: 'a'.repeat(64),
+      cookieName: 'skyttel_binding',
+      origin: window.location.origin,
+    },
+  }));
+  routes['/api/browser-binding/register'] ??= Array.from({ length: 8 }, () => ({
+    data: { status: 'confirmed', revision: 0 },
+  }));
   routes['/api/households/linden/text-assistant'] ??= Array.from({ length: 8 }, () => ({
     data: { available: false },
   }));

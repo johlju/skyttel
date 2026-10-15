@@ -33,7 +33,7 @@ test('migration 024 retains an existing actor draft choice while adding default 
       });
       expect(
         upgraded.prepare('SELECT MAX(version) AS version FROM schema_migration').get(),
-      ).toEqual({ version: 26 });
+      ).toEqual({ version: 27 });
     } finally {
       upgraded.close();
     }

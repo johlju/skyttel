@@ -22,6 +22,7 @@ import type { Administration, HouseholdInvitation } from '../shared/administrati
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
 import type { PersonalView } from '../shared/personal-view.js';
 import { Assistants } from './Assistants.js';
+import { withBrowserBinding } from './browser-binding.js';
 import { ContentOwners } from './ContentOwners.js';
 import { CookieStorage, StorageIntroduction } from './CookieStorage.js';
 import { Costs } from './Costs.js';
@@ -189,16 +190,20 @@ function Login({ providers }: { providers: Provider[] }) {
     setPending(true);
     setError(null);
     try {
-      const result = await request<{ url: string }>(
-        '/api/auth/sign-in/social',
-        {
-          provider,
-          callbackURL: location.pathname === '/costs' ? '/costs' : '/',
-          ...(location.pathname === '/assistant-consent'
-            ? { oauth_query: location.search.slice(1) }
-            : {}),
-          errorCallbackURL: '/?authError=1',
-        },
+      const result = await withBrowserBinding(
+        () =>
+          request<{ url: string }>(
+            '/api/auth/sign-in/social',
+            {
+              provider,
+              callbackURL: location.pathname === '/costs' ? '/costs' : '/',
+              ...(location.pathname === '/assistant-consent'
+                ? { oauth_query: location.search.slice(1) }
+                : {}),
+              errorCallbackURL: '/?authError=1',
+            },
+            controller.signal,
+          ),
         controller.signal,
       );
       if (controller.signal.aborted) return;
@@ -206,11 +211,16 @@ function Login({ providers }: { providers: Provider[] }) {
       const url = new URL(result.url, window.location.origin);
       if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid_redirect');
       window.location.assign(url.href);
-    } catch {
+    } catch (cause) {
       if (controller.signal.aborted) return;
       setPending(false);
       setSelected(null);
-      setError('failed');
+      setError(
+        (cause instanceof Error && cause.message.startsWith('binding_')) ||
+          (cause instanceof RequestError && cause.code.startsWith('binding_'))
+          ? 'binding_invalid'
+          : 'failed',
+      );
     }
   }
   return (
@@ -272,11 +282,13 @@ function Login({ providers }: { providers: Provider[] }) {
       )}
       {error && (
         <p className="error access-note" role="alert">
-          {error === 'access_denied'
-            ? 'Inloggningen kunde inte slutföras eftersom den avbröts hos leverantören. Du är tillbaka i Skyttel och kan försöka igen.'
-            : ['state_mismatch', 'state_not_found', 'state_invalid'].includes(error)
-              ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
-              : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
+          {error.startsWith('binding_')
+            ? 'Säker inloggning kan inte bekräftas i webbläsaren. Tillåt nödvändiga kakor och öppna Skyttel direkt i en webbläsare med stöd för säkra webbläsarlås. Om kakor saknas kan du behöva rensa Skyttels kakor och börja om. Ingen ny inloggning har bekräftats.'
+            : error === 'access_denied'
+              ? 'Inloggningen kunde inte slutföras eftersom den avbröts hos leverantören. Du är tillbaka i Skyttel och kan försöka igen.'
+              : ['state_mismatch', 'state_not_found', 'state_invalid'].includes(error)
+                ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
+                : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
         </p>
       )}
       <p className="muted">

@@ -15,6 +15,23 @@ export function authenticatedHttpFetch(client: APIRequestContext, origin: string
       headers.set(key, value);
     });
     const method = init.method ?? request?.method ?? 'GET';
+    // Mirror jsdom's explicit security-cookie write into the real HTTP jar;
+    // jsdom supplies no native shared cookie transport.
+    if (typeof document !== 'undefined' && url.pathname === '/api/browser-binding/register') {
+      const binding = document.cookie
+        .split(';')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith('skyttel_binding='));
+      if (binding)
+        await client.addCookies([
+          {
+            name: 'skyttel_binding',
+            value: binding.slice('skyttel_binding='.length),
+            url: origin,
+            sameSite: 'Lax',
+          },
+        ]);
+    }
     if (method !== 'GET' && method !== 'HEAD') headers.set('origin', origin);
     const body = init.body ?? (request ? await request.text() : undefined);
     if (body !== undefined && body !== null && typeof body !== 'string')

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import type { Auth } from './auth.js';
+import type { browserBindings } from './browser-binding.js';
 
 export function stateKey(state: string) {
   return createHash('sha256').update(state).digest('hex');
@@ -21,7 +22,12 @@ export function linkingAttempt(database: Database.Database, state: string) {
     | undefined;
 }
 
-export function createLoginMethods(database: Database.Database, auth: Auth, origin: string) {
+export function createLoginMethods(
+  database: Database.Database,
+  auth: Auth,
+  origin: string,
+  bindings?: ReturnType<typeof browserBindings>,
+) {
   // The supported deployment runs one application instance. Serialize each
   // session's linking operations across OAuth's asynchronous verification so
   // cancellation cannot report success while an account is being attached.
@@ -92,16 +98,20 @@ export function createLoginMethods(database: Database.Database, auth: Auth, orig
       database
         .prepare('DELETE FROM login_link WHERE sessionId = ? OR expiresAt <= ?')
         .run(session.session.id, Date.now());
-      const response = await auth.api.linkSocialAccount({
-        headers: context.req.raw.headers,
-        body: {
-          provider,
-          callbackURL: '/login-methods',
-          errorCallbackURL: '/login-methods?failed=1',
-          disableRedirect: true,
-        },
-        asResponse: true,
-      });
+      const createAttempt = () =>
+        auth.api.linkSocialAccount({
+          headers: context.req.raw.headers,
+          body: {
+            provider,
+            callbackURL: '/login-methods',
+            errorCallbackURL: '/login-methods?failed=1',
+            disableRedirect: true,
+          },
+          asResponse: true,
+        });
+      const response = bindings
+        ? await bindings.start(context.req.raw, createAttempt)
+        : await createAttempt();
       if (!response.ok) return response;
       const { url } = (await response.clone().json()) as { url: string };
       const state = new URL(url).searchParams.get('state');

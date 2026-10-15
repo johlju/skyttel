@@ -471,6 +471,8 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   oskickad text och oberoende privata förslag.
 
 - [Inloggning och hushållets start](access.md): skapa hushåll, använda
+  säkra gemensamma starter i flera flikar, stoppa blockerade kakor eller
+  saknade webbläsarlås och avbryta fördröjd initialisering,
   tangentbord, avbryta extern inloggning, återhämta utgångna försök, börja
   med kartans verktyg utan startdialoger, hantera förlorad tillgång och länka
   inloggningssätt. Inloggningsstartens nätverksavbrott och leverantörsfel

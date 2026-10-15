@@ -1,4 +1,7 @@
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { createServer as createHttpsServer } from 'node:https';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type ServerType, serve } from '@hono/node-server';
@@ -47,9 +50,38 @@ export async function createInstallation(
     modelProfile?: Parameters<typeof createApp>[0]['modelProfile'];
     liveProfile?: Parameters<typeof createApp>[0]['liveProfile'];
     observe?: Parameters<typeof createApp>[0]['observe'];
+    https?: boolean;
+    deliverResponse?: (request: Request, response: Response) => Response | Promise<Response>;
   } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
+  let tls: { key: Buffer; cert: Buffer } | undefined;
+  if (databaseOptions.https) {
+    const key = join(directory, 'tls.key');
+    const certificate = join(directory, 'tls.crt');
+    execFileSync(
+      'openssl',
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'rsa:2048',
+        '-nodes',
+        '-keyout',
+        key,
+        '-out',
+        certificate,
+        '-days',
+        '1',
+        '-subj',
+        '/CN=localhost',
+        '-addext',
+        'subjectAltName=IP:127.0.0.1,DNS:localhost',
+      ],
+      { stdio: 'ignore' },
+    );
+    tls = { key: readFileSync(key), cert: readFileSync(certificate) };
+  }
   const config: Config = {
     origin: 'http://127.0.0.1',
     databasePath: databaseOptions.databasePath ?? join(directory, 'skyttel.db'),
@@ -79,6 +111,7 @@ export async function createInstallation(
       fetch: (request) => handle(request),
       hostname: config.host,
       port: config.port,
+      ...(tls ? { createServer: createHttpsServer, serverOptions: tls } : {}),
     });
     await new Promise<void>((resolve, reject) => {
       server.once('listening', resolve);
@@ -87,7 +120,7 @@ export async function createInstallation(
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('No test address');
     config.port = address.port;
-    config.origin = `http://127.0.0.1:${address.port}`;
+    config.origin = `${tls ? 'https' : 'http'}://127.0.0.1:${address.port}`;
     database = openDatabase(config.databasePath, databaseOptions);
     const hasOAuth = database
       .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'oauthClient'")
@@ -179,7 +212,9 @@ export async function createInstallation(
           },
         );
       }
-      return response;
+      return databaseOptions.deliverResponse
+        ? databaseOptions.deliverResponse(request, response)
+        : response;
     };
   }
   async function stop() {
