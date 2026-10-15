@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { conversationCommand } from '../shared/conversation-command.js';
 import {
   type ConversationConsentView,
@@ -12,6 +12,7 @@ import type { SaveCheck } from '../shared/save-check.js';
 import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
+import { TaskDeliveryContext } from './task-delivery.js';
 import { useVoice, type Voice } from './use-voice.js';
 
 /** How a conversation starts: with the microphone, or with the conversation text. */
@@ -146,6 +147,7 @@ export function useConversation({
 }): Conversation {
   const household = `/api/households/${encodeURIComponent(householdId)}`;
   const path = `${household}/text-assistant`;
+  const delivery = useContext(TaskDeliveryContext);
   const consentPath = `${household}/conversation-consent`;
   const [available, setAvailable] = useState<boolean | null>(null);
   const [connected, setConnected] = useState(navigator.onLine);
@@ -164,6 +166,10 @@ export function useConversation({
   const [savingConsent, setSavingConsent] = useState(false);
   const [consentError, setConsentError] = useState('');
   const [session, setSession] = useState<TextAssistantView | null>(null);
+  const deliverySessionId = session?.id;
+  useEffect(() => {
+    if (deliverySessionId) void delivery?.connect(`${path}/${deliverySessionId}`);
+  }, [delivery, path, deliverySessionId]);
   const [text, setText] = useState('');
   const [startWithVoice, setStartWithVoice] = useState(false);
   const [pending, setPending] = useState(false);
@@ -969,6 +975,8 @@ export function useConversation({
     setError('');
     setTaskFailed(false);
     try {
+      const deliveryConnectionId = await delivery?.connect(`${path}/${current.id}`);
+      if (epoch !== requestEpoch.current) return;
       const result = await request<TextAssistantView>(`${path}/${current.id}/messages`, {
         revision: current.revision,
         draftVersion: current.review.version,
@@ -976,6 +984,8 @@ export function useConversation({
         requestId: crypto.randomUUID(),
         text: sent,
         queue,
+        deliveryConnectionId,
+        deliveryAudio: voiceConnected.current,
       });
       if (epoch !== requestEpoch.current) return;
       update(result);

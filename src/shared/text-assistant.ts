@@ -1,6 +1,7 @@
 import type { DraftConflict } from './draft-conflicts.js';
 import type { MapDraft, ObjectType, RelationshipType, SaveOperation, SaveReceipt } from './map.js';
 import type { SaveCheck } from './save-check.js';
+import type { TaskDelivery } from './task-delivery.js';
 
 export type TextAssistantReview = MapDraft & {
   contentVersion: number;
@@ -60,6 +61,7 @@ export interface TextAssistantView {
     receivedAt: number;
     deadline: number;
     status: NonNullable<TextAssistantView['taskStatus']>;
+    delivery?: TaskDelivery;
   }[];
   /** Completed replies remain available when the next queued task starts. */
   completedReplies?: ConversationReply[];

@@ -922,7 +922,9 @@
     "backendkrav",
     "applikationskoden",
     "scenariespecifika",
-    "ljudhashar"
+    "ljudhashar",
+    "modellåterspelning",
+    "skärmläsarbedömning"
   ],
   "overrides": [
     {

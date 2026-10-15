@@ -456,6 +456,7 @@ export function voiceAssistantRoutes({
         void close(voice);
         voice.finish?.();
       });
+      const deliveryConnectionId = body.deliveryConnectionId;
       voice.work = voiceWork({
         now,
         allowed: () => {
@@ -487,7 +488,16 @@ export function voiceAssistantRoutes({
             new Request(`${config.origin}${path}${action ? `/${action}` : ''}`, {
               method: action && !action.startsWith('messages/') ? 'POST' : 'GET',
               headers: requestHeaders,
-              body: action ? JSON.stringify(body) : undefined,
+              body: action
+                ? JSON.stringify(
+                    action === 'messages'
+                      ? {
+                          ...(body as Record<string, unknown>),
+                          deliveryConnectionId,
+                        }
+                      : body,
+                  )
+                : undefined,
               signal,
             }),
           );

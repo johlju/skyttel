@@ -10,6 +10,7 @@ import {
   conversationConsentRequired,
   conversationConsentRevoked,
 } from '../shared/conversation-consent.js';
+import { completeAssistantText } from '../shared/task-delivery.js';
 import type {
   MapSelection,
   TextAssistantReview,
@@ -32,6 +33,7 @@ import {
 import { householdAccess } from './households.js';
 import { householdMap, MapError } from './map.js';
 import { checkSaves } from './save-check.js';
+import { type DeliverySocket, taskDeliveries } from './task-delivery.js';
 import { connectTextAssistant, type LocalDispatch } from './text-assistant-mcp.js';
 import { type TextModelProfile, type TextModelUsage, textModel } from './text-assistant-model.js';
 import { draftResult, historyResult } from './text-assistant-results.js';
@@ -49,10 +51,12 @@ type Message = {
 };
 type AcceptedMessage = {
   hash: string;
+  voice: boolean;
   status: NonNullable<TextAssistantView['taskStatus']>;
   result?: TextAssistantView;
   receivedAt: number;
   deadline: number;
+  delivery?: ReturnType<ReturnType<typeof taskDeliveries>['bind']>;
 };
 const savedReply = 'Sparat. Hela utkastet finns i hushållets karta.';
 type Session = TextAssistantView & {
@@ -128,6 +132,8 @@ export function textAssistantRoutes({
 }) {
   const routes = new Hono<{ Variables: { actorId: string; browserSessionId: string } }>();
   const sessions = new Map<string, Session>();
+  const deliveries = taskDeliveries(now);
+  const deliveryOwners = new Map<string, Session>();
   const textWork = new AsyncLocalStorage<{
     session: Session;
     guard: () => void;
@@ -158,12 +164,19 @@ export function textAssistantRoutes({
     clearTimeout(session.activeMessage?.timer);
     for (const message of session.queue) clearTimeout(message.timer);
   }
-  async function stop(session: Session) {
+  async function stop(session: Session, retireDelivery = true) {
     sessions.delete(session.id);
+    for (const [id, owner] of deliveryOwners) {
+      if (owner !== session) continue;
+      if (retireDelivery) deliveries.retire(id);
+      else deliveries.close(id);
+      deliveryOwners.delete(id);
+    }
     session.task?.abort();
     clearWorkTimers(session);
     session.summaryTask?.abort();
     session.queue = [];
+    for (const accepted of session.accepted.values()) accepted.delivery?.stop();
     session.accepted.clear();
     onStop?.(session.id);
     session.displayed?.(false);
@@ -273,6 +286,7 @@ export function textAssistantRoutes({
         receivedAt: accepted.receivedAt,
         deadline: accepted.deadline,
         status: accepted.status,
+        delivery: accepted.delivery?.value,
       })),
       queuedMessages: session.queue.length,
       saving: Boolean(
@@ -762,6 +776,7 @@ export function textAssistantRoutes({
     // Retire the old executor before its task records disappear. A delayed
     // status response must not cancel work belonging to the new conversation.
     onResetStart?.(session.id);
+    for (const [id, owner] of deliveryOwners) if (owner === session) deliveries.retire(id);
     session.task?.abort();
     clearWorkTimers(session);
     session.summaryTask?.abort();
@@ -772,6 +787,7 @@ export function textAssistantRoutes({
     session.contextSummaries = [];
     session.contextGeneration = 0;
     session.queue = [];
+    for (const accepted of session.accepted.values()) accepted.delivery?.stop();
     session.accepted.clear();
     session.taskId = undefined;
     session.taskSource = undefined;
@@ -1453,20 +1469,26 @@ export function textAssistantRoutes({
         'Uppgiftens tid är slut. Redan lagrat arbete finns kvar i ditt utkast eller sparresultat.';
     }
     accepted.result = view(session);
+    accepted.delivery?.stop();
     nextMessage(session);
   }
   function expireConversation(session: Session) {
     const activeUntil = Math.max(
       0,
       ...[...session.accepted.values()]
-        .filter((accepted) => ['queued', 'working'].includes(accepted.status))
+        .filter(
+          (accepted) =>
+            ['queued', 'working'].includes(accepted.status) ||
+            ['waiting', 'awaiting-receipt'].includes(accepted.delivery?.value.state ?? ''),
+        )
         .map((accepted) => accepted.deadline),
     );
     if (activeUntil > now()) {
       session.timer = setTimeout(() => expireConversation(session), activeUntil - now()).unref();
-    } else void stop(session);
+    } else void stop(session, false);
   }
   function expireVoiceWork(session: Session) {
+    for (const accepted of session.accepted.values()) if (accepted.voice) accepted.delivery?.stop();
     const queued = session.queue.filter((message) => message.voice);
     session.queue = session.queue.filter((message) => !message.voice);
     for (const message of queued) {
@@ -1474,6 +1496,7 @@ export function textAssistantRoutes({
       const accepted = session.accepted.get(message.id);
       if (accepted) {
         accepted.status = 'canceled';
+        accepted.delivery?.stop();
         accepted.result = view(session);
       }
     }
@@ -1490,6 +1513,7 @@ export function textAssistantRoutes({
       session.phase = session.pendingSave ? 'recovery' : 'ready';
       if (accepted) {
         accepted.status = 'canceled';
+        accepted.delivery?.stop();
         accepted.result = view(session);
       }
     }
@@ -1509,6 +1533,24 @@ export function textAssistantRoutes({
     } // Explicit revocation stops every source.
     expireVoiceWork(session);
     return true;
+  }
+  function messageAccess(session: Session, message: Message) {
+    if (sessions.get(session.id) !== session || revoked.has(session.id))
+      throw new MapError('forbidden', 403);
+    if (!Number.isFinite(message.deadline) || now() >= message.deadline)
+      throw new MapError('assistant_task_expired', 409);
+    session.mcp.checkTaskAccess();
+    if (contentOwner(database, session.householdId, session.actorId) !== message.owner)
+      throw new MapError('forbidden', 403);
+    const generation = database
+      .prepare('SELECT contentVersion FROM household WHERE id = ?')
+      .get(session.householdId) as { contentVersion: number } | undefined;
+    if (generation?.contentVersion !== message.contentVersion)
+      throw new MapError('assistant_content_changed', 409);
+    if (message.voice)
+      textWork.exit(() =>
+        authorize(session.actorId, session.browserSessionId, session.householdId),
+      );
   }
   function beginMessage(session: Session, message: Message) {
     const accepted = session.accepted.get(message.id);
@@ -1550,16 +1592,7 @@ export function textAssistantRoutes({
         throw new MapError('assistant_canceled', 409);
       if (!Number.isFinite(message.deadline) || now() >= message.deadline)
         throw new MapError('assistant_task_expired', 409);
-      if (revoked.has(session.id)) throw new MapError('forbidden', 403);
-      session.mcp.checkTaskAccess();
-      if (contentOwner(database, session.householdId, session.actorId) !== message.owner)
-        throw new MapError('forbidden', 403);
-      const generation = database
-        .prepare('SELECT contentVersion FROM household WHERE id = ?')
-        .get(session.householdId) as { contentVersion: number } | undefined;
-      if (generation?.contentVersion !== message.contentVersion)
-        throw new MapError('assistant_content_changed', 409);
-      if (message.voice) authorize(session.actorId, session.browserSessionId, session.householdId);
+      messageAccess(session, message);
     };
     const expected = {
       version: session.workVersion ?? session.review.version,
@@ -1683,6 +1716,9 @@ export function textAssistantRoutes({
           ...view(session),
           completedReplies: [...(session.completedReplies ?? [])],
         };
+        if (accepted.status === 'completed' && session.phase === 'ready')
+          accepted.delivery?.freeze(completeAssistantText(accepted.result));
+        else accepted.delivery?.stop();
         nextMessage(session);
       });
   }
@@ -1938,6 +1974,13 @@ export function textAssistantRoutes({
     if (session.queue.length + Number(Boolean(session.task && !session.task.signal.aborted)) >= 200)
       return context.json({ error: 'assistant_busy' }, 409);
     const receivedAt = now();
+    if (
+      body.deliveryConnectionId !== undefined &&
+      (typeof body.deliveryConnectionId !== 'string' ||
+        deliveryOwners.get(body.deliveryConnectionId) !== session ||
+        !deliveries.has(body.deliveryConnectionId))
+    )
+      return context.json({ error: 'assistant_delivery_unavailable' }, 409);
     const message: Message = {
       id: body.requestId,
       text: body.text,
@@ -1953,9 +1996,17 @@ export function textAssistantRoutes({
     session.mcp.acceptTask(message.deadline);
     session.accepted.set(message.id, {
       hash: requestHash,
+      voice: message.voice,
       status: 'queued',
       receivedAt: message.receivedAt,
       deadline: message.deadline,
+      delivery: deliveries.bind(
+        body.deliveryConnectionId,
+        message.id,
+        message.deadline,
+        () => messageAccess(session, message),
+        message.voice || body.deliveryAudio === true,
+      ),
     });
     message.timer = setTimeout(
       () => expireMessage(session, message),
@@ -1995,7 +2046,11 @@ export function textAssistantRoutes({
     if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
     const accepted = session.accepted.get(context.req.param('requestId'));
     if (!accepted) return context.json({ error: 'assistant_turn_changed' }, 409);
-    return context.json({ ...(accepted.result ?? view(session)), taskStatus: accepted.status });
+    return context.json({
+      ...(accepted.result ?? view(session)),
+      tasks: view(session).tasks,
+      taskStatus: accepted.status,
+    });
   });
   routes.post(`${base}/:sessionId/cancel`, async (context) => {
     const session = sessions.get(context.req.param('sessionId'));
@@ -2038,6 +2093,7 @@ export function textAssistantRoutes({
     await refresh(session, checkContext);
     checkContext();
     for (const accepted of session.accepted.values()) {
+      accepted.delivery?.stop();
       if (accepted.status === 'queued' || accepted.status === 'working') {
         accepted.status = 'canceled';
         accepted.result = view(session);
@@ -2207,6 +2263,83 @@ export function textAssistantRoutes({
   });
   return {
     routes,
+    /** Handshake uses normal browser auth. The returned synchronous binder
+     * repeats every check after the async auth wait and immediately before use. */
+    prepareDelivery: async (request: Request) => {
+      const url = new URL(request.url);
+      const match = /^\/api\/households\/([^/]+)\/text-assistant\/([^/]+)\/delivery$/.exec(
+        url.pathname,
+      );
+      if (!match || request.headers.get('Origin') !== config.origin) return;
+      const login = await auth.api.getSession({ headers: request.headers });
+      const session = sessions.get(match[2]);
+      if (
+        !login ||
+        !session ||
+        session.householdId !== match[1] ||
+        session.actorId !== login.user.id ||
+        session.browserSessionId !== login.session.id
+      )
+        return;
+      const originalBinding = database
+        .prepare(`SELECT id, revision FROM browser_binding
+        WHERE sessionId = ? AND confirmed = 1 AND expiresAt > ?`)
+        .get(login.session.id, now()) as { id: string; revision: number } | undefined;
+      if (!originalBinding) return;
+      const guard = () => {
+        if (sessions.get(session.id) !== session) throw new MapError('forbidden', 403);
+        const current = database
+          .prepare(`SELECT 1 FROM session JOIN browser_binding
+          ON browser_binding.sessionId = session.id WHERE session.id = ? AND session.token = ?
+          AND browser_binding.id = ? AND browser_binding.revision = ?
+          AND browser_binding.confirmed = 1 AND browser_binding.expiresAt > ?`)
+          .get(
+            login.session.id,
+            login.session.token,
+            originalBinding.id,
+            originalBinding.revision,
+            now(),
+          );
+        if (!current) throw new MapError('forbidden', 403);
+        textWork.exit(() => {
+          authorize(session.actorId, session.browserSessionId, session.householdId);
+          checkViewAccess(session);
+        });
+      };
+      try {
+        guard();
+      } catch {
+        return;
+      }
+      return (socket: DeliverySocket) => {
+        guard();
+        if ([...deliveryOwners.values()].filter((owner) => owner === session).length >= 8)
+          throw new MapError('assistant_busy', 409);
+        const id = deliveries.open(socket);
+        deliveryOwners.set(id, session);
+        let timer: NodeJS.Timeout;
+        const retire = () => {
+          const end = loginDeadline(session.actorId, session.browserSessionId);
+          if (now() < end) {
+            timer = setTimeout(retire, end - now()).unref();
+            return;
+          }
+          if (!deliveries.pending(id)) {
+            deliveries.close(id);
+            return;
+          }
+          timer = setTimeout(retire, 1000).unref();
+        };
+        timer = setTimeout(
+          retire,
+          Math.max(1, loginDeadline(session.actorId, session.browserSessionId) - now()),
+        ).unref();
+        socket.on('close', () => {
+          clearTimeout(timer);
+          deliveryOwners.delete(id);
+        });
+      };
+    },
     /** No HTTP route: only isolated evaluation support can supply historical
      * fixtures and force the ordinary summary generation/atomic installation. */
     summarizeForEvaluation: async (
@@ -2319,12 +2452,22 @@ export function textAssistantRoutes({
     /** Request mutations publish explicit stops before returning. Natural login
      * expiry does not delete the private grant and cannot enter this path. */
     stopUnauthorizedWork: () => {
+      // Retire explicit access loss before natural-expiry socket cleanup, so
+      // clients clear old content even after their task has already completed.
       for (const session of [...sessions.values()]) {
         try {
           session.mcp.checkTaskAccess();
         } catch {
           void stop(session);
         }
+      }
+      deliveries.revalidate();
+      for (const [id, session] of deliveryOwners) {
+        if (
+          now() >= loginDeadline(session.actorId, session.browserSessionId) &&
+          !deliveries.pending(id)
+        )
+          deliveries.close(id);
       }
     },
     /**
@@ -2369,11 +2512,11 @@ export function textAssistantRoutes({
           }
         }
       }
-      await Promise.all(ending.map(stop));
+      await Promise.all(ending.map((session) => stop(session)));
       return receipts;
     },
     close: async () => {
-      await Promise.all([...sessions.values()].map(stop));
+      await Promise.all([...sessions.values()].map((session) => stop(session, false)));
     },
   };
 }

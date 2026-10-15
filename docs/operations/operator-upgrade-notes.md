@@ -74,6 +74,22 @@ instruction needs a new login and the complete instruction again; it must
 not restart automatically. Confirm that stored drafts and save receipts
 remain available after login and restart.
 
+### Complete conversation text delivery
+
+Before rollout, verify WebSocket upgrades through the HTTPS ingress and
+the supported browsers. A connection opened during a valid login can
+deliver an already accepted text task after normal login expiry, within
+its original thirty-minute limit. It must not allow household reads,
+new instructions or a new connection after expiry. Verify that logout,
+consent withdrawal and access removal end outstanding deliveries.
+
+Check the complete text fallback and its audio notice with keyboard and
+screen reader users. Receipt confirms that the complete text reaches
+the browser; it does not confirm audio playback, reading or understanding.
+A lost connection, missing receipt or restart ends delivery without
+automatic replay. Check existing drafts and save results after login;
+temporary conversation text does not become stored conversation history.
+
 ### Conversation model
 
 The application uses GPT-6.1 Sol with high reasoning effort for text,

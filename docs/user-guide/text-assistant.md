@@ -522,3 +522,20 @@ Ditt lagrade utkast och redan genomförda sparanden finns kvar. Ett sent
 **inte** gör inte ett redan genomfört sparande ogjort. Kontrollera
 utkastet och eventuella sparförsök eller sparkvitton efter ny inloggning
 innan du ber om ett nytt sparande.
+
+## Hela svaret som text
+
+När ljudleveransen inte kan bekräftas visas hela svaret eller följdfrågan
+under **Hela svaret som text**, tillsammans med en samtalsnotis om ljudet.
+Texten innehåller även beskedet om sparande. Mottagen text betyder att
+webbläsaren får hela texten; den säger inget om uppspelat ljud, läsning
+eller förståelse. Du behöver inte bekräfta eller läsa svaret för att
+uppgiften ska avslutas.
+
+En redan mottagen skriven instruktion kan få sitt svar där efter att
+inloggningen går ut, om samma anslutning fortfarande är öppen. Uppgiftens
+ursprungliga gräns på 30 minuter gäller även leveransen. Ett avbrott,
+utebliven mottagning eller omstart ger ett leveransfel. Ingen instruktion
+skickas igen automatiskt och samtalstexten sparas inte för återanslutning.
+Redan lagrat utkast och sparresultat finns kvar. Kontrollera dem efter ny
+inloggning innan du ber om ett nytt sparande.

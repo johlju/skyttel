@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { createAuth, verifyAuthSchema } from './auth.js';
 import { ConfigurationError, readConfig } from './config.js';
 import { DatabaseInitializationError, openDatabase } from './database.js';
+import { attachTaskDelivery } from './task-delivery-transport.js';
 
 async function main() {
   const config = readConfig();
@@ -14,6 +15,7 @@ async function main() {
     const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, () => {
       console.info(JSON.stringify({ event: 'server_ready' }));
     });
+    attachTaskDelivery(server, config.origin, app.prepareTaskDelivery);
     server.on('error', async () => {
       console.error(JSON.stringify({ event: 'listener_failed' }));
       await app.close();
@@ -24,8 +26,9 @@ async function main() {
     const shutdown = () => {
       if (closing) return;
       closing = true;
+      const closed = app.close();
       server.close(async () => {
-        await app.close();
+        await closed;
         database.close();
         process.exitCode = 0;
       });

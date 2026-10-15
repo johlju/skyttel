@@ -4,6 +4,7 @@ import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
+import { TaskDeliveryContext } from './task-delivery.js';
 import { type VoiceFailure, voiceErrorNotice, voiceFailureMessage } from './voice-error.js';
 import { createHeldInput, type HeldInput, prepareHeldInput } from './voice-held-input.js';
 import { VoiceSessionContext } from './voice-session-context.js';
@@ -128,6 +129,7 @@ export function useVoice(options: {
   contextFailed?: boolean;
 }): Voice {
   const voiceSession = useContext(VoiceSessionContext);
+  const delivery = useContext(TaskDeliveryContext);
   const path = options.assistant
     ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
     : null;
@@ -614,10 +616,12 @@ export function useVoice(options: {
           async (sdp, options) => {
             let result: VoiceAssistantResponse;
             try {
+              const deliveryConnectionId = await delivery?.connect(path.replace(/\/voice$/, ''));
               result = await request<VoiceAssistantResponse>(
                 path,
                 {
                   sdp,
+                  deliveryConnectionId,
                   ...anchor(),
                   microphoneOn: !(reuse?.paused ?? attempt.held?.released ?? false),
                   // The server supplies the authoritative conversation context.
@@ -675,7 +679,7 @@ export function useVoice(options: {
         fail(failure);
       }
     },
-    [path, apply, stop, setError, inputAllowed],
+    [path, apply, stop, setError, inputAllowed, delivery],
   );
   useEffect(() => {
     if (options.autoStart) void start();

@@ -290,6 +290,9 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   väntan med mikrofonen av, beständigt kvitto och fyra
   sekunders sparbesked efter ljud eller stopp. Talad och skriven ingång
   har skilda vanliga fall; uppläsning och faktiskt ljud har FRAGA-08/09.
+- [Hela svarstexten](conversation-delivery.md): fullständig tillfällig
+  textreserv, ljudnotis, leverans vid utgång och rensning vid ny inloggning.
+  Verkligt ljud och skärmläsare bedöms separat.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
   röstrutans statusord, vågform, stoppikon, plats och uppläsning,

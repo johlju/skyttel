@@ -39,6 +39,7 @@ import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
+import { TaskDeliveryContext, TaskDeliveryResults, useTaskDelivery } from './task-delivery.js';
 import { VoiceSessionContext } from './voice-session-context.js';
 import { useAccountTheme, WorkspaceThemeContext } from './WorkspaceTheme.js';
 import './access.css';
@@ -46,10 +47,10 @@ import './access.css';
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
 type Bootstrap = { providers: Provider[]; operator: boolean } & (
-  | { status: 'anonymous'; user?: never }
-  | { status: 'setup'; user: { id: string; name: string } }
-  | { status: 'forbidden'; user: { id: string; name: string } }
-  | { status: 'ready'; user: { id: string; name: string }; household: Household }
+  | { status: 'anonymous'; user?: never; loginId?: never }
+  | { status: 'setup'; user: { id: string; name: string }; loginId: string }
+  | { status: 'forbidden'; user: { id: string; name: string }; loginId: string }
+  | { status: 'ready'; user: { id: string; name: string }; household: Household; loginId: string }
 );
 type LoadState<T> =
   | { status: 'loading' }
@@ -1355,6 +1356,7 @@ function Application() {
   const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
   const data = bootstrap.status === 'loaded' ? bootstrap.data : undefined;
+  const taskDelivery = useTaskDelivery(data?.user?.id, data?.loginId);
   const theme = useAccountTheme(data?.user?.id);
   useEffect(() => {
     if (data?.user?.id) {
@@ -1384,6 +1386,7 @@ function Application() {
     setSignOutError(false);
     try {
       await request('/api/auth/sign-out', {});
+      taskDelivery.clear();
       navigate('/', { replace: true });
       reload();
     } catch {
@@ -1631,6 +1634,9 @@ function Application() {
             {expiryNotice}
           </p>
           {expired && <p>{expiryNotice}</p>}
+          <TaskDeliveryContext value={taskDelivery.client}>
+            <TaskDeliveryResults results={taskDelivery.results} />
+          </TaskDeliveryContext>
           {bootstrap.status === 'loading' && <Loading />}
           {bootstrap.status === 'error' && <Failure onRetry={reload} />}
           {(data?.status === 'anonymous' || loginPage) && data && !storagePage && (
@@ -1665,14 +1671,16 @@ function Application() {
           )}
           {data?.status === 'ready' && (
             <VoiceSessionContext value={voiceSession}>
-              <HouseholdWork
-                key={data.user.id}
-                account={account}
-                onSessionExpired={reload}
-                typeSettingsTarget={typeSettingsTarget}
-                mapSettingsTarget={mapSettingsTarget}
-                conversationSettingsTarget={conversationSettingsTarget}
-              />
+              <TaskDeliveryContext value={taskDelivery.client}>
+                <HouseholdWork
+                  key={data.user.id}
+                  account={account}
+                  onSessionExpired={reload}
+                  typeSettingsTarget={typeSettingsTarget}
+                  mapSettingsTarget={mapSettingsTarget}
+                  conversationSettingsTarget={conversationSettingsTarget}
+                />
+              </TaskDeliveryContext>
             </VoiceSessionContext>
           )}
           {data?.status === 'forbidden' && !settingsPage && (

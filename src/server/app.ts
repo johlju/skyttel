@@ -235,13 +235,15 @@ export function createApp({
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
     if (!session) return context.json({ status: 'anonymous', providers, operator: false });
     const user = { id: session.user.id, name: session.user.name };
+    const loginId = session.session.id;
     const operator = isFirstAdmin(database, user.id, config);
     const household = householdAccess(database, user.id);
-    if (household) return context.json({ status: 'ready', providers, user, household, operator });
+    if (household)
+      return context.json({ status: 'ready', providers, user, household, operator, loginId });
     if (!isInitialized(database) && isFirstAdmin(database, user.id, config)) {
-      return context.json({ status: 'setup', providers, user, operator });
+      return context.json({ status: 'setup', providers, user, operator, loginId });
     }
-    return context.json({ status: 'forbidden', providers, user, operator });
+    return context.json({ status: 'forbidden', providers, user, operator, loginId });
   });
 
   app.post('/api/households', async (context) => {
@@ -369,6 +371,7 @@ export function createApp({
     serveStatic({ path: './dist/client/index.html' }),
   );
   return Object.assign(app, {
+    prepareTaskDelivery: textAssistant.prepareDelivery,
     summarizeForEvaluation: textAssistant.summarizeForEvaluation,
     close: async () => {
       await voiceAssistant.close();

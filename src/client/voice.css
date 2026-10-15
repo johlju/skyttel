@@ -9,3 +9,7 @@
 .workspace-voice-controls .assistant-bar h4 {
   margin-block: 8px 0;
 }
+.task-delivery-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
