@@ -21,7 +21,12 @@ Rensa inte flikens återhämtningsuppgifter om du behöver kontrollera en
 pågående åtgärd.
 
 **Ihågkommen inloggning** är valfri och gäller den aktuella
-webbläsarbindningen. En sessionskaka garanterar inte att du loggas ut när
+webbläsarbindningen. Markera **Kom ihåg mig** innan du fortsätter till
+Google eller Microsoft för högst sju dygn från inloggningen. Valet börjar
+avmarkerat vid varje ny inloggning. Vanlig inloggning gäller högst åtta
+timmar. Ingen av tiderna förlängs vid läsning eller återbesök.
+På lagringssidan kan du läsa den versionsbundna informationen och valflödet.
+En sessionskaka garanterar inte att du loggas ut när
 du stänger ett fönster: webbläsaren kan återställa sessionen. Logga ut på
 en delad dator.
 

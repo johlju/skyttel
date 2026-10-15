@@ -7,6 +7,26 @@ Microsoft-konto. En administratör bestämmer vilka Skyttel-användare som
 får tillgång till hushållet. Ett namn eller en e-postadress ger ingen
 tillgång i sig. Se [Kom igång](getting-started.md) för första inloggningen.
 
+## Välj inloggningens längd
+
+När du väljer Google eller Microsoft kan du aktivt markera **Kom ihåg mig**
+innan du fortsätter. Valet börjar avmarkerat vid varje ny inloggning.
+Vanlig inloggning använder sessionskakor och gäller högst åtta timmar från
+inloggningen. Ihågkommen inloggning gäller högst sju dygn i just den här
+webbläsaren. Läsning och återbesök förlänger inte tiden.
+
+Välj bara ihågkommen inloggning på en egen enhet. Webbläsaren kan återställa
+sessionskakor när den öppnas igen, så logga ut på en delad dator.
+Efter återkomsten kontrollerar Skyttel den aktuella inloggningen. Ett
+bekräftat resultat lovar inte att webbläsaren behåller kakorna efter omstart.
+Om inloggningen inte kan bekräftas visas ett besked med möjlighet att börja
+om. Tillåt Skyttels kakor om problemet kvarstår.
+
+Du kan välja **Logga in på nytt** under **Ditt konto** i **Din profil** utan
+att först logga ut. En lyckad ny inloggning ersätter den tidigare i samma
+webbläsarbindning. Ett misslyckat försök bevarar den tidigare giltiga
+inloggningen. **Tillbaka till din inloggning** återgår till den.
+
 ## Välj tema
 
 Öppna **Tema** i kartans verktyg eller på en kontosida som **Din profil**.

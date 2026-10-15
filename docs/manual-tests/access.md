@@ -40,6 +40,109 @@ fallen anger formulär, samtal, profil eller administration.
 
 ## Skapa och öppna hushållet
 
+### ACCESS-27: Kom ihåg mig gäller bara den nya inloggningen
+
+**Syfte:** Kontrollera aktivt val, avmarkerad ny start och bevarad giltig
+inloggning när ett nytt försök misslyckas.
+
+**Användare:** Alex i en ny webbläsarprofil utan hushåll.
+
+**Separat förberedelse:** Starta den
+[kontrollerade identitetsinstallationen](#kontrollerad-identitetsinstallation)
+med `--https`. Använd `provider-down` för felet i steg 4 och `provider-up`
+innan steg 5. Återställ installationen efter fallet.
+
+**Automatiskt motsvarande test:**
+[remembered-login.spec.ts](../../tests/integration/remembered-login.spec.ts),
+ACCESS-27. Verklig HTTPS, kakor och SQLite; syntetisk leverantör.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-login.spec.ts",
+    "caseId": "ACCESS-27"
+  },
+  "reference": "HTTPS, 1280 × 720; aktivt val, avbruten ny start och leverantörsfel",
+  "outcomes": [
+    "Kom ihåg mig börjar avmarkerat vid varje ny inloggning",
+    "Ett aktivt val kan ge bekräftad ihågkommen inloggning",
+    "Ett misslyckat nytt försök bevarar tidigare giltig inloggning",
+    "Ny inloggning utan valet använder vanlig session"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Välj **Fortsätt med Google**. Kontrollera att **Kom ihåg mig** är
+   avmarkerat och läs informationen. Markera valet och fortsätt till Google.
+2. Invänta **Skapa ditt hushåll**. Öppna **Din profil** och välj
+   **Logga in på nytt**. Välj Google och kontrollera att valet är avmarkerat.
+3. Markera valet men välj **Avbryt**. Välj Google igen; valet ska åter
+   börja avmarkerat.
+4. Slå på leverantörsfelet och fortsätt utan valet. Kontrollera felbeskedet.
+   Öppna startsidan och kontrollera att den tidigare inloggningen finns kvar.
+5. Återställ leverantören. Öppna **Logga in på nytt** igen, välj Google
+   och fortsätt utan **Kom ihåg mig**. Invänta **Skapa ditt hushåll**.
+
+**Förväntat resultat:** Varje ny start har eget avmarkerat val. Avbrytande
+och leverantörsfel tar inte bort den tidigare giltiga inloggningen.
+Automationen kontrollerar båda kakornas beständighet efter bekräftelsen och
+sessionsläge efter den sista inloggningen samt avsaknad av lokal valhistorik.
+Det bevisar inte webbläsarens framtida beteende efter omstart.
+
+### ACCESS-28: Saknad autentiseringskaka ger inget bekräftat resultat
+
+**Syfte:** Kontrollera att leverantörens återkomst inte ensam räcker för
+att bekräfta inloggning eller göra säkerhetskakan beständig.
+
+**Användare:** Alex i en ny webbläsarprofil utan tidigare Skyttel-kakor.
+
+**Separat förberedelse:** Starta den kontrollerade identitetsinstallationen
+med `--https` och skriv `drop-login-cookie`. Kommandot tar bort just
+autentiseringskakan från det riktiga callbacksvaret efter serverns commit.
+Detta är en kontrollerad utebliven kaka, inget bevis för en fysisk
+webbläsares alla blockeringslägen. Skriv `allow-login-cookie` efter fallet
+och stäng installationen. Rensa provprofilens kakor innan en ny start.
+
+**Automatiskt motsvarande test:**
+[remembered-login.spec.ts](../../tests/integration/remembered-login.spec.ts),
+ACCESS-28.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-login.spec.ts",
+    "caseId": "ACCESS-28"
+  },
+  "reference": "HTTPS, 1280 × 720; callbacksvaret saknar autentiseringskaka",
+  "outcomes": [
+    "Exakt besked om obekräftad inloggning visas",
+    "Ingen skyddad åtkomst bekräftas och säkerhetskakan förblir sessionskaka",
+    "Inloggningssätten är fortsatt åtkomliga"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Välj Google, markera **Kom ihåg mig** och fortsätt till Google.
+2. Invänta återkomsten. Läs felbeskedet och kontrollera att inloggningssätten
+   går att välja igen, medan hushållets start inte öppnas.
+
+**Förväntat resultat:** **Inloggningen kunde inte bekräftas. Försök logga
+in igen. Kontrollera att webbläsaren tillåter kakor för Skyttel om problemet
+kvarstår.** visas som larm. Automationen kontrollerar nekad serveråtkomst
+och att säkerhetskakan inte blir beständig.
+
 ### ACCESS-24: Samtidiga första flikar kan starta säkert
 
 **Syfte:** Kontrollera samtidiga starter och en separat webbläsarprofil.
@@ -1371,7 +1474,7 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
 3. Öppna adressen i terminalens `origin` i en ny webbläsarprofil. Google
    är första administratör, syntetiska Alex. För ACCESS-22 lägger du till
    `--microsoft` i kommandot; då är Microsoft första administratör, Robin.
-   För ACCESS-24 till ACCESS-26 lägger du i stället till `--https`.
+   För ACCESS-24 till ACCESS-28 lägger du i stället till `--https`.
    Installationen skapar ett självsignerat certifikat enbart för provet.
    Godkänn det endast för den isolerade lokala testadressen. Det verifierar
    inte produktionsmiljöns certifikat eller proxy.
@@ -1382,6 +1485,23 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
    Starta kommandot igen inför nästa fall för att få en tom installation.
 
 ## Separat tekniskt underlag och observationer
+
+[remembered-login.spec.ts](../../tests/integration/remembered-login.spec.ts)
+kontrollerar vanlig och ihågkommen inloggning före, exakt vid och efter
+absolut utgång genom installationens gemensamma klocka. Omstart, fördröjd
+kakutgivning, läsningar, förfalskade val och direkta auth-vägar får inte
+förlänga tiden. Bekräftelse kräver rätt aktuella sessionsnyckel och bindning;
+en korrelationsreferens ensam ger ingen behörighet. Dessa requestdrivna
+prov är tekniskt underlag, ingen fysisk omstarts- eller leverantörskontroll.
+Ett separat tekniskt Chromium-prov håller ett riktigt bekräftelsesvar över
+en ny vanlig inloggning. Det gamla svaret får varken ge framgångsbesked
+eller lämna säkerhetskakan beständig efter den nekade efterkontrollen.
+
+[remembered-login.test.ts](../../tests/unit/server/remembered-login.test.ts)
+arrangerar inkompatibla lagrade versioner, ändamål, beslutstider och
+absoluta gränser. Den offentliga HTTP-gränsen får då bara bekräfta vanlig
+inloggning och ska neka åtkomst exakt vid åtta timmar. Det är separat
+serverunderlag med styrd installationstid, inga manuellt utförda prov.
 
 [access.spec.ts](../../tests/integration/access.spec.ts) behåller sex
 requestdrivna kontroller: båda installationernas administratörsidentiteter,

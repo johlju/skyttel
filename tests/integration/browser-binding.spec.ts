@@ -233,7 +233,10 @@ test('successful account proof keeps a separately registered login attempt valid
       stage: 'verified',
     });
     resume();
-    expect((await pending).headers().location).toBe('/');
+    const returned = new URL((await pending).headers().location, origin);
+    expect(returned.origin).toBe(origin);
+    expect(returned.pathname).toBe('/');
+    expect(returned.searchParams.get('loginConfirmation')).toMatch(/^[a-f0-9]{64}$/);
     expect(await (await login.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
       user: { name: robin.name },
     });
@@ -280,13 +283,23 @@ for (const sharedIdentity of [false, true]) {
         ? robin
         : { ...robin, subject: 'separate-microsoft', name: 'Kim Exempel' };
       installation.setIdentity(fastIdentity);
-      expect((await fastClient.get(fastUrl, { maxRedirects: 0 })).headers().location).toBe('/');
+      const fastRedirect = new URL(
+        (await fastClient.get(fastUrl, { maxRedirects: 0 })).headers().location,
+        origin,
+      );
+      expect(fastRedirect.origin).toBe(origin);
+      expect(fastRedirect.pathname).toBe('/');
+      expect(fastRedirect.searchParams.get('loginConfirmation')).toMatch(/^[a-f0-9]{64}$/);
       const fast = await (await fastClient.get(`${origin}/api/bootstrap`)).json();
       resume();
       const slow = await slowResponse;
-      expect(slow.headers().location).toBe(
-        sharedIdentity ? `${origin}/?error=binding_invalid` : '/',
-      );
+      if (sharedIdentity) expect(slow.headers().location).toBe(`${origin}/?error=binding_invalid`);
+      else {
+        const slowRedirect = new URL(slow.headers().location, origin);
+        expect(slowRedirect.origin).toBe(origin);
+        expect(slowRedirect.pathname).toBe('/');
+        expect(slowRedirect.searchParams.get('loginConfirmation')).toMatch(/^[a-f0-9]{64}$/);
+      }
       const after = await (await slowClient.get(`${origin}/api/bootstrap`)).json();
       expect(after.user.id === original.user.id).toBe(sharedIdentity);
       expect(await (await fastClient.get(`${origin}/api/bootstrap`)).json()).toEqual(fast);

@@ -21,8 +21,12 @@ import logo from '../../docs/images/shuttle-logo-transparent-small.png';
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
 import type { PersonalView } from '../shared/personal-view.js';
+import {
+  loginConfirmationFailure,
+  rememberedLoginInformation,
+} from '../shared/remembered-login.js';
 import { Assistants } from './Assistants.js';
-import { withBrowserBinding } from './browser-binding.js';
+import { confirmBrowserLogin, withBrowserBinding } from './browser-binding.js';
 import { ContentOwners } from './ContentOwners.js';
 import { CookieStorage, StorageIntroduction } from './CookieStorage.js';
 import { Costs } from './Costs.js';
@@ -146,6 +150,7 @@ function Failure({ onRetry }: { onRetry: () => void }) {
 function Login({ providers }: { providers: Provider[] }) {
   const location = useLocation();
   const [selected, setSelected] = useState<Provider | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
   const [pending, setPending] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const [error, setError] = useState(() => {
@@ -196,11 +201,13 @@ function Login({ providers }: { providers: Provider[] }) {
             '/api/auth/sign-in/social',
             {
               provider,
+              rememberMe,
+              informationVersion: rememberedLoginInformation.version,
               callbackURL: location.pathname === '/costs' ? '/costs' : '/',
               ...(location.pathname === '/assistant-consent'
                 ? { oauth_query: location.search.slice(1) }
                 : {}),
-              errorCallbackURL: '/?authError=1',
+              errorCallbackURL: '/login?authError=1',
             },
             controller.signal,
           ),
@@ -236,6 +243,17 @@ function Login({ providers }: { providers: Provider[] }) {
           <p className="access-note">
             Du går vidare till {label}. Efter inloggningen kommer du tillbaka till Skyttel.
           </p>
+          <label className="remember-login">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              disabled={pending}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              aria-describedby="remember-login-information"
+            />
+            {rememberedLoginInformation.label}
+          </label>
+          <p id="remember-login-information">{rememberedLoginInformation.text}</p>
           <div className="access-actions">
             <button
               ref={continueButton}
@@ -264,6 +282,7 @@ function Login({ providers }: { providers: Provider[] }) {
                 lastProvider.current = provider;
                 setCancelled(false);
                 setError(null);
+                setRememberMe(false);
                 setSelected(provider);
               }}
             >
@@ -282,13 +301,15 @@ function Login({ providers }: { providers: Provider[] }) {
       )}
       {error && (
         <p className="error access-note" role="alert">
-          {error.startsWith('binding_')
-            ? 'Säker inloggning kan inte bekräftas i webbläsaren. Tillåt nödvändiga kakor och öppna Skyttel direkt i en webbläsare med stöd för säkra webbläsarlås. Om kakor saknas kan du behöva rensa Skyttels kakor och börja om. Ingen ny inloggning har bekräftats.'
-            : error === 'access_denied'
-              ? 'Inloggningen kunde inte slutföras eftersom den avbröts hos leverantören. Du är tillbaka i Skyttel och kan försöka igen.'
-              : ['state_mismatch', 'state_not_found', 'state_invalid'].includes(error)
-                ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
-                : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
+          {error === 'unconfirmed'
+            ? loginConfirmationFailure
+            : error.startsWith('binding_')
+              ? 'Säker inloggning kan inte bekräftas i webbläsaren. Tillåt nödvändiga kakor och öppna Skyttel direkt i en webbläsare med stöd för säkra webbläsarlås. Om kakor saknas kan du behöva rensa Skyttels kakor och börja om. Ingen ny inloggning har bekräftats.'
+              : error === 'access_denied'
+                ? 'Inloggningen kunde inte slutföras eftersom den avbröts hos leverantören. Du är tillbaka i Skyttel och kan försöka igen.'
+                : ['state_mismatch', 'state_not_found', 'state_invalid'].includes(error)
+                  ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
+                  : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
         </p>
       )}
       <p className="muted">
@@ -1275,10 +1296,36 @@ function HouseholdPage({
 }
 
 export function App() {
+  const location = useLocation();
+  const proof = new URLSearchParams(location.search).get('loginConfirmation');
   return (
     <FormLeaveProvider>
-      <Application />
+      {proof ? <LoginConfirmation key={proof} proof={proof} /> : <Application />}
     </FormLeaveProvider>
+  );
+}
+
+function LoginConfirmation({ proof }: { proof: string }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    const controller = new AbortController();
+    void confirmBrowserLogin(proof, controller.signal)
+      .then(() => {
+        if (controller.signal.aborted) return;
+        const query = new URLSearchParams(location.search);
+        query.delete('loginConfirmation');
+        navigate({ pathname: location.pathname, search: query.toString() }, { replace: true });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) navigate('/login?error=unconfirmed', { replace: true });
+      });
+    return () => controller.abort();
+  }, [proof, navigate, location.pathname, location.search]);
+  return (
+    <main id="main" tabIndex={-1}>
+      <p role="status">Kontrollerar inloggningen…</p>
+    </main>
   );
 }
 
@@ -1319,6 +1366,7 @@ function Application() {
     data?.status === 'ready' && Boolean(matchPath('/households/:id', location.pathname));
   const authenticated = data && data.status !== 'anonymous';
   const storagePage = location.pathname === '/cookies';
+  const loginPage = location.pathname === '/login';
   const personal = [
     '/profile',
     '/login-methods',
@@ -1338,7 +1386,9 @@ function Application() {
   const household = data?.status === 'ready' ? data.household : undefined;
   const accessGate =
     !storagePage &&
-    (data?.status === 'anonymous' || (authenticated && data.status !== 'ready' && !settingsPage));
+    (loginPage ||
+      data?.status === 'anonymous' ||
+      (authenticated && data.status !== 'ready' && !settingsPage));
   const logout = (
     <>
       <button
@@ -1378,6 +1428,7 @@ function Application() {
         <Link to="/login-methods">Inloggningssätt</Link>
         <Link to="/assistants">Assistentanslutningar</Link>
         <Link to="/cookies">Kakor och lagring</Link>
+        <Link to="/login">Logga in på nytt</Link>
       </div>
       {logout}
     </>
@@ -1421,7 +1472,9 @@ function Application() {
             <Link to="/">Till startsidan</Link>
           </section>
         ))}
-      {!['/login-methods', '/profile', '/costs', '/cookies'].includes(location.pathname) &&
+      {!['/login-methods', '/profile', '/costs', '/cookies', '/login'].includes(
+        location.pathname,
+      ) &&
         (data.status === 'ready' || data.status === 'setup') && (
           <Routes>
             <Route path="/assistant-consent" element={<Assistants consent />} />
@@ -1541,9 +1594,10 @@ function Application() {
         <main id="main" tabIndex={-1}>
           {bootstrap.status === 'loading' && <Loading />}
           {bootstrap.status === 'error' && <Failure onRetry={reload} />}
-          {data?.status === 'anonymous' && !storagePage && (
+          {(data?.status === 'anonymous' || loginPage) && data && !storagePage && (
             <>
               <Login providers={data.providers} />
+              {authenticated && <Link to="/">Tillbaka till din inloggning</Link>}
               {!storageIntroductionClosed && (
                 <StorageIntroduction
                   onClose={() => {

@@ -65,6 +65,21 @@
   background: color-mix(in srgb, var(--access-accent) 10%, var(--access-surface));
 }
 
+.remember-login {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.access-shell .remember-login input {
+  width: 24px;
+  min-height: 24px;
+  margin: 0;
+  accent-color: var(--access-accent);
+}
+
 .access-shell .primary {
   background: var(--access-accent);
   color: var(--access-ink);

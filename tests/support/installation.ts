@@ -51,6 +51,7 @@ export async function createInstallation(
     liveProfile?: Parameters<typeof createApp>[0]['liveProfile'];
     observe?: Parameters<typeof createApp>[0]['observe'];
     https?: boolean;
+    now?: () => number;
     deliverResponse?: (request: Request, response: Response) => Response | Promise<Response>;
   } = {},
 ) {
@@ -181,6 +182,7 @@ export async function createInstallation(
       liveProfile: databaseOptions.liveProfile,
       observe: databaseOptions.observe,
       consentTextVersion: databaseOptions.consentTextVersion,
+      now: databaseOptions.now,
     });
     closeApp = app.close;
     summarizeForEvaluation = app.summarizeForEvaluation;

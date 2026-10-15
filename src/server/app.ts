@@ -50,6 +50,7 @@ export function createApp({
   modelProfile,
   liveProfile,
   observe,
+  now = () => Date.now(),
 }: {
   config: Config;
   database: Database.Database;
@@ -66,13 +67,17 @@ export function createApp({
   modelProfile?: TextModelProfile;
   liveProfile?: LiveModelProfile;
   observe?: ObserveAssistant;
+  /** Installation time in milliseconds since the Unix epoch. */
+  now?: () => number;
 }) {
   const app = new Hono();
   // Historical test installations can intentionally stop before this migration.
   const hasBindings = !!database
     .prepare("SELECT 1 FROM sqlite_master WHERE name = 'browser_binding' AND type = 'table'")
     .get();
-  const bindings = hasBindings ? browserBindings(database, originalAuth, config.origin) : undefined;
+  const bindings = hasBindings
+    ? browserBindings(database, originalAuth, config.origin, now)
+    : undefined;
   const auth = bindings
     ? ({
         ...originalAuth,
@@ -86,6 +91,17 @@ export function createApp({
   const costs = installationCosts(database);
   const linking = createLoginMethods(database, auth, config.origin, bindings);
   const consents = conversationConsents(database, consentTextVersion);
+  app.use('*', async (context, next) => {
+    await next();
+    if (bindings) {
+      const controlled = await bindings.output(context.req.raw, context.res);
+      // Hono's response setter restores the previous Set-Cookie headers.
+      // Replace the actual outgoing headers after the handler has completed.
+      context.res.headers.delete('set-cookie');
+      for (const cookie of controlled.headers.getSetCookie())
+        context.res.headers.append('set-cookie', cookie);
+    }
+  });
   app.use(
     '*',
     secureHeaders({
@@ -180,7 +196,12 @@ export function createApp({
       const url = new URL(context.req.url);
       if (context.req.path === '/api/auth/oauth2/authorize')
         url.searchParams.set('prompt', 'consent');
-      const request = new Request(url, context.req.raw);
+      const request = new Request(url, {
+        method: context.req.method,
+        headers: new Headers(context.req.raw.headers),
+        ...(context.req.method === 'POST' ? { body: await context.req.raw.arrayBuffer() } : {}),
+        signal: context.req.raw.signal,
+      });
       // Better Auth's internal session lookup must not accept an auth cookie
       // which Skyttel's browser-binding boundary rejects. Keep its ordinary
       // anonymous OAuth/login response and validation behavior.
@@ -190,7 +211,7 @@ export function createApp({
     if (context.req.path === '/api/auth/get-session' && bindings)
       return context.json(await bindings.session(context.req.raw.headers));
     if (context.req.path === '/api/auth/sign-in/social' && bindings)
-      return bindings.start(context.req.raw, () => auth.handler(context.req.raw));
+      return bindings.start(context.req.raw, (request) => auth.handler(request));
     if (context.req.path === '/api/auth/sign-out' && bindings)
       return bindings.logout(context.req.raw, () => auth.handler(context.req.raw));
     if (context.req.path.startsWith('/api/auth/callback/'))

@@ -471,6 +471,8 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   oskickad text och oberoende privata förslag.
 
 - [Inloggning och hushållets start](access.md): skapa hushåll, använda
+  aktivt Kom ihåg mig-val, börja varje ny inloggning avmarkerat och visa
+  hinder när inloggningen efter återkomsten inte kan bekräftas,
   säkra gemensamma starter i flera flikar, stoppa blockerade kakor eller
   saknade webbläsarlås och avbryta fördröjd initialisering,
   tangentbord, avbryta extern inloggning, återhämta utgångna försök, börja

@@ -31,7 +31,7 @@ export function createAuth(config: Config, database: Database.Database) {
     trustedOrigins: [config.origin],
     logger: { disabled: true },
     telemetry: { enabled: false },
-    session: { cookieCache: { enabled: false } },
+    session: { disableSessionRefresh: true, cookieCache: { enabled: false } },
     account: {
       accountLinking: {
         enabled: true,

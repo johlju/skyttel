@@ -13,7 +13,9 @@ Börja med några få uppgifter och komplettera när du vet mer.
 2. Välj **Fortsätt med Google** eller **Fortsätt med Microsoft**, beroende
    på vilka alternativ installationen erbjuder. Använd inloggningen som
    hör till din Skyttel-användare.
-3. Läs övergången och välj **Fortsätt till Google** eller
+3. Läs övergången. **Kom ihåg mig** börjar avmarkerat; välj det bara på en
+   egen enhet om du vill behålla inloggningen i högst sju dygn. Utan valet
+   gäller inloggningen högst åtta timmar. Välj **Fortsätt till Google** eller
    **Fortsätt till Microsoft**. Du loggar in hos leverantören och kommer
    sedan tillbaka till Skyttel. **Avbryt** återgår till valet av
    inloggningssätt. Om försöket går ut börjar du ett nytt försök.

@@ -116,7 +116,7 @@ export function createLoginMethods(
           asResponse: true,
         });
       const response = bindings
-        ? await bindings.start(context.req.raw, createAttempt)
+        ? await bindings.start(context.req.raw, createAttempt, provider)
         : await createAttempt();
       if (!response.ok) return response;
       const { url } = (await response.clone().json()) as { url: string };

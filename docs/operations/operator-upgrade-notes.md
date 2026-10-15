@@ -24,6 +24,20 @@ binding. Other browser bindings and separately approved assistant
 connections must keep their access. A delayed cookie response can require
 another sign-in; it must not restore an ended login.
 
+Verify both ordinary and remembered sign-in through the HTTPS ingress.
+Ordinary sign-in must use session cookies and end within eight hours.
+Remembered sign-in needs a new active choice and must end within seven days.
+Reads and restart must not extend either deadline. Check that the auth
+cookie has HttpOnly, Secure and SameSite=Lax, and that both persistent
+cookies expire by the original deadline. Verify the confirmation failure
+message when the browser does not accept the login cookie. Browser session
+restore and real provider compatibility still need production verification.
+
+Session choice records are part of the installation database and its
+restricted backups. They stay outside full household files. Use the
+upgraded reader for new household files; supported older files remain
+readable. Do not return to an older application after this upgrade.
+
 ### Account theme and household files
 
 Use the upgraded application to read new full household files. Supported

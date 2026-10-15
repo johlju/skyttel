@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
+import { rememberedLoginInformation } from '../shared/remembered-login.js';
 import type { Auth } from './auth.js';
 import { stageAuthCallback } from './auth-callback-transaction.js';
 import { linkingAttempt } from './login-methods.js';
@@ -13,7 +14,76 @@ type Binding = {
   sessionId: string | null;
   expiresAt: number;
 };
-type Attempt = { bindingId: string; revision: number; sessionId: string | null; expiresAt: number };
+type Choice = {
+  choiceSchemaVersion: number | null;
+  rememberMe: number | null;
+  informationVersion: number | null;
+  choicePurpose: string | null;
+  decidedAt: number | null;
+};
+type Attempt = Choice & {
+  bindingId: string;
+  revision: number;
+  sessionId: string | null;
+  expiresAt: number;
+  provider: string | null;
+};
+type SessionPolicy = Choice & {
+  id: string;
+  token: string;
+  createdAt: string;
+  expiresAt: string;
+  absoluteExpiresAt: number | null;
+  loginConfirmation: string | null;
+};
+const ordinaryLifetime = 8 * 60 * 60_000;
+const rememberedLifetime = 7 * 24 * 60 * 60_000;
+function remembered(choice: Choice) {
+  return (
+    choice.choiceSchemaVersion === 1 &&
+    choice.rememberMe === 1 &&
+    choice.informationVersion === rememberedLoginInformation.version &&
+    choice.choicePurpose === rememberedLoginInformation.purpose &&
+    typeof choice.decidedAt === 'number' &&
+    Number.isSafeInteger(choice.decidedAt) &&
+    choice.decidedAt >= 0
+  );
+}
+function rememberedSession(policy: SessionPolicy) {
+  const created = new Date(policy.createdAt).getTime();
+  return (
+    remembered(policy) &&
+    policy.decidedAt !== null &&
+    policy.decidedAt <= created &&
+    typeof policy.absoluteExpiresAt === 'number' &&
+    Number.isSafeInteger(policy.absoluteExpiresAt) &&
+    policy.absoluteExpiresAt > created &&
+    policy.absoluteExpiresAt <= created + rememberedLifetime
+  );
+}
+function deadline(policy: SessionPolicy) {
+  const created = new Date(policy.createdAt).getTime();
+  return Math.min(
+    new Date(policy.expiresAt).getTime(),
+    policy.absoluteExpiresAt ?? Number.POSITIVE_INFINITY,
+    created + (rememberedSession(policy) ? rememberedLifetime : ordinaryLifetime),
+  );
+}
+function responseHeaders(request: Request, response: Response) {
+  const headers = new Headers(request.headers);
+  const cookies = new Map(
+    (headers.get('cookie') ?? '').split(';').map((item) => {
+      const [name, ...value] = item.trim().split('=');
+      return [name, value.join('=')];
+    }),
+  );
+  for (const item of response.headers.getSetCookie()) {
+    const [name, ...value] = item.split(';', 1)[0].split('=');
+    cookies.set(name, value.join('='));
+  }
+  headers.set('cookie', [...cookies].map(([name, value]) => `${name}=${value}`).join('; '));
+  return headers;
+}
 
 export function bindingCookieName(origin: string) {
   return origin.startsWith('https:') ? '__Host-skyttel_binding' : 'skyttel_binding';
@@ -23,7 +93,12 @@ function key(value: string) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-export function browserBindings(database: Database.Database, auth: Auth, origin: string) {
+export function browserBindings(
+  database: Database.Database,
+  auth: Auth,
+  origin: string,
+  now: () => number = () => Date.now(),
+) {
   const cookieName = bindingCookieName(origin);
   const routes = new Hono();
   const completing = new Set<string>();
@@ -43,7 +118,22 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
     // the browser separately confirms the exact HTTPS origin before writing.
     return new URL(request.url).host === new URL(origin).host;
   }
-  const rawSession = (headers: Headers) => auth.api.getSession({ headers });
+  const librarySession = (headers: Headers) => auth.api.getSession({ headers });
+  function policy(id: string) {
+    return database.prepare('SELECT * FROM session WHERE id = ?').get(id) as
+      | SessionPolicy
+      | undefined;
+  }
+  async function rawSession(headers: Headers) {
+    const current = await librarySession(headers);
+    if (!current) return null;
+    const protectedPolicy = policy(current.session.id);
+    return protectedPolicy &&
+      protectedPolicy.token === current.session.token &&
+      deadline(protectedPolicy) > now()
+      ? current
+      : null;
+  }
   function cookie(headers: Headers) {
     const values = (headers.get('cookie') ?? '').split(';').map((part) => part.trim());
     const matches = values.filter((part) => part.startsWith(`${cookieName}=`));
@@ -59,7 +149,7 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
     const binding = database
       .prepare('SELECT * FROM browser_binding WHERE id = ?')
       .get(key(value)) as Binding | undefined;
-    return binding && binding.expiresAt > Date.now() ? binding : undefined;
+    return binding && binding.expiresAt > now() ? binding : undefined;
   }
   async function session(headers: Headers) {
     const current = await rawSession(headers);
@@ -119,7 +209,7 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
       }
       database
         .prepare('INSERT INTO browser_binding (id, expiresAt) VALUES (?, ?)')
-        .run(key(candidate), Date.now() + attemptLifetime);
+        .run(key(candidate), now() + attemptLifetime);
     })();
     return context.json({ candidate, cookieName, origin });
   });
@@ -133,19 +223,123 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
       .prepare(
         'UPDATE browser_binding SET confirmed = 1 WHERE id = ? AND revision = ? AND sessionId IS ? AND expiresAt > ?',
       )
-      .run(binding.id, binding.revision, binding.sessionId, Date.now());
+      .run(binding.id, binding.revision, binding.sessionId, now());
     if (result.changes !== 1) return context.json({ error: 'binding_invalid' }, 409);
     return context.json({ status: 'confirmed', revision: binding.revision });
+  });
+  routes.on(['GET', 'POST'], '/confirmation', async (context) => {
+    const current = await session(context.req.raw.headers);
+    const binding = lookup(context.req.raw.headers);
+    const proof = context.req.query('proof');
+    const selected = current && policy(current.session.id);
+    if (
+      !current ||
+      !binding ||
+      !selected ||
+      !proof ||
+      !/^[a-f0-9]{64}$/.test(proof) ||
+      selected.loginConfirmation !== key(proof)
+    )
+      return context.json({ error: 'unconfirmed' }, 401);
+    return context.json({
+      status: 'confirmed',
+      sessionId: current.session.id,
+      revision: binding.revision,
+      remembered: rememberedSession(selected),
+      informationVersion: selected.informationVersion,
+      decidedAt: selected.decidedAt,
+      expiresAt: deadline(selected),
+      cookieName,
+      origin,
+    });
   });
   return {
     routes,
     session,
-    async start(request: Request, operation: () => Promise<Response>) {
+    async output(request: Request, response: Response) {
+      const headers = new Headers(response.headers);
+      headers.delete('set-cookie');
+      const issued = response.headers.getSetCookie();
+      if (!issued.length) return response;
+      const current = issued.some((item) =>
+        item.split(';', 1)[0].split('=')[0].endsWith('better-auth.session_token'),
+      )
+        ? await rawSession(responseHeaders(request, response))
+        : null;
+      const selected = current && policy(current.session.id);
+      const binding = lookup(request.headers);
+      for (const item of issued) {
+        const [pair, ...attributes] = item.split(';');
+        const name = pair.split('=')[0];
+        if (name.endsWith('better-auth.dont_remember') || name === cookieName) continue;
+        if (!name.endsWith('better-auth.session_token')) {
+          headers.append('set-cookie', item);
+          continue;
+        }
+        if (attributes.some((attribute) => /^\s*max-age=0$/i.test(attribute))) {
+          headers.append('set-cookie', item);
+          continue;
+        }
+        if (
+          !selected ||
+          !binding ||
+          binding.sessionId !== selected.id ||
+          deadline(selected) <= now()
+        )
+          continue;
+        headers.append(
+          'set-cookie',
+          `${pair}; Path=/; HttpOnly; SameSite=Lax${origin.startsWith('https:') ? '; Secure' : ''}${rememberedSession(selected) ? `; Expires=${new Date(deadline(selected)).toUTCString()}` : ''}`,
+        );
+      }
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    },
+    async start(
+      request: Request,
+      operation: (request: Request) => Promise<Response>,
+      linkingProvider?: string,
+    ) {
       if (!canonicalRequest(request) || request.headers.get('origin') !== origin)
         return Response.json({ error: 'forbidden' }, { status: 403 });
       const binding = await authorized(request.headers);
       if (!binding) return Response.json({ error: 'binding_required' }, { status: 409 });
-      const response = await operation();
+      const signingIn = new URL(request.url).pathname === '/api/auth/sign-in/social';
+      const body = signingIn
+        ? ((await request
+            .clone()
+            .json()
+            .catch(() => null)) as Record<string, unknown> | null)
+        : { provider: linkingProvider };
+      if (
+        signingIn &&
+        (request.method !== 'POST' ||
+          !body ||
+          body.idToken ||
+          !['google', 'microsoft'].includes(String(body.provider)))
+      )
+        return Response.json({ error: 'invalid_request' }, { status: 400 });
+      const active =
+        signingIn &&
+        body?.rememberMe === true &&
+        body.informationVersion === rememberedLoginInformation.version;
+      const decidedAt = now();
+      let providerRequest = request;
+      if (signingIn && body) {
+        // additionalData is attacker-controlled. It must not inject link or
+        // choice metadata into the provider's protected state.
+        const {
+          additionalData: _additionalData,
+          rememberMe: _rememberMe,
+          informationVersion: _version,
+          ...providerBody
+        } = body;
+        providerRequest = new Request(request, { body: JSON.stringify(providerBody) });
+      }
+      const response = await operation(providerRequest);
       if (!response.ok) return response;
       const result = (await response.clone().json()) as { url?: string };
       const state = result.url ? new URL(result.url, origin).searchParams.get('state') : null;
@@ -157,14 +351,24 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
       if (database.inTransaction) return Response.json({ error: 'binding_busy' }, { status: 409 });
       database
         .prepare(
-          'INSERT INTO browser_binding_attempt (state, bindingId, revision, sessionId, expiresAt) VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO browser_binding_attempt (state, bindingId, revision, sessionId, expiresAt, choiceSchemaVersion, rememberMe, informationVersion, choicePurpose, decidedAt, provider) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         )
         .run(
           key(state),
           binding.id,
           binding.revision,
           binding.sessionId,
-          Date.now() + attemptLifetime,
+          now() + attemptLifetime,
+          1,
+          active ? 1 : 0,
+          signingIn &&
+            typeof body?.rememberMe === 'boolean' &&
+            body.informationVersion === rememberedLoginInformation.version
+            ? rememberedLoginInformation.version
+            : null,
+          rememberedLoginInformation.purpose,
+          decidedAt,
+          String(body?.provider ?? ''),
         );
       return response;
     },
@@ -179,7 +383,8 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
       const binding = await authorized(request.headers);
       if (
         !attempt ||
-        attempt.expiresAt <= Date.now() ||
+        attempt.expiresAt <= now() ||
+        (attempt.provider && !new URL(request.url).pathname.endsWith(`/${attempt.provider}`)) ||
         !binding ||
         attempt.bindingId !== binding.id ||
         attempt.revision !== binding.revision ||
@@ -191,19 +396,7 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
       completing.add(attemptKey);
       try {
         return await stageAuthCallback(database, operation, async (response, commit) => {
-          const headers = new Headers(request.headers);
-          const cookies = new Map(
-            (headers.get('cookie') ?? '').split(';').map((item) => {
-              const [name, ...value] = item.trim().split('=');
-              return [name, value.join('=')];
-            }),
-          );
-          for (const item of response.headers.getSetCookie()) {
-            const [name, ...value] = item.split(';', 1)[0].split('=');
-            cookies.set(name, value.join('='));
-          }
-          headers.set('cookie', [...cookies].map(([name, value]) => `${name}=${value}`).join('; '));
-          const current = await rawSession(headers);
+          const current = await librarySession(responseHeaders(request, response));
           const location = response.headers.get('location');
           const destination = location ? new URL(location, origin) : undefined;
           const redirected =
@@ -227,9 +420,9 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
                 .prepare('SELECT * FROM browser_binding_attempt WHERE state = ?')
                 .get(attemptKey) as Attempt | undefined;
               const previous = binding.sessionId
-                ? (database
-                    .prepare('SELECT expiresAt FROM session WHERE id = ?')
-                    .get(binding.sessionId) as { expiresAt: string } | undefined)
+                ? (database.prepare('SELECT * FROM session WHERE id = ?').get(binding.sessionId) as
+                    | SessionPolicy
+                    | undefined)
                 : undefined;
               if (
                 !fresh ||
@@ -240,9 +433,8 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
                 registered.bindingId !== binding.id ||
                 registered.revision !== binding.revision ||
                 registered.sessionId !== binding.sessionId ||
-                registered.expiresAt <= Date.now() ||
-                (binding.sessionId &&
-                  (!previous || new Date(previous.expiresAt).getTime() <= Date.now()))
+                registered.expiresAt <= now() ||
+                (binding.sessionId && (!previous || deadline(previous) <= now()))
               )
                 return invalidCallback(request);
               if (!success) {
@@ -268,6 +460,26 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
                   .run(attemptKey);
                 return response;
               }
+              const authenticatedAt = now();
+              const expiresAt =
+                authenticatedAt + (remembered(registered) ? rememberedLifetime : ordinaryLifetime);
+              const confirmation = randomBytes(32).toString('hex');
+              database
+                .prepare(
+                  'UPDATE session SET createdAt = ?, expiresAt = ?, choiceSchemaVersion = ?, rememberMe = ?, informationVersion = ?, choicePurpose = ?, decidedAt = ?, absoluteExpiresAt = ?, loginConfirmation = ? WHERE id = ?',
+                )
+                .run(
+                  new Date(authenticatedAt).toISOString(),
+                  new Date(expiresAt).toISOString(),
+                  1,
+                  remembered(registered) ? 1 : 0,
+                  registered.informationVersion,
+                  registered.choicePurpose,
+                  registered.decidedAt,
+                  expiresAt,
+                  key(confirmation),
+                  current.session.id,
+                );
               if (binding.sessionId && current.session.id !== binding.sessionId)
                 database.prepare('DELETE FROM session WHERE id = ?').run(binding.sessionId);
               database
@@ -277,8 +489,12 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
                 .prepare(
                   'UPDATE browser_binding SET sessionId = ?, revision = revision + 1, expiresAt = ? WHERE id = ?',
                 )
-                .run(current.session.id, new Date(current.session.expiresAt).getTime(), binding.id);
-              return response;
+                .run(current.session.id, expiresAt, binding.id);
+              const headers = new Headers(response.headers);
+              const destination = new URL(headers.get('location') ?? '/', origin);
+              destination.searchParams.set('loginConfirmation', confirmation);
+              headers.set('location', destination.href);
+              return new Response(response.body, { status: response.status, headers });
             })
             .immediate();
         });
@@ -309,7 +525,7 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
             .prepare(
               'UPDATE browser_binding SET revision = revision + 1, expiresAt = ? WHERE id = ?',
             )
-            .run(Date.now() + attemptLifetime, binding.id);
+            .run(now() + attemptLifetime, binding.id);
           return true;
         })
         .immediate();
