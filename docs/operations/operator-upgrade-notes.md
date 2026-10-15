@@ -64,6 +64,16 @@ older files remain readable. Account theme choices stay outside household
 files and remain unchanged when household content is imported. Use the
 database backup to recover account choices with the installation.
 
+### Voice session expiry
+
+After upgrade, verify that an active voice connection stops at the server
+login deadline through the production HTTPS ingress, including when the
+browser sends no status requests. Verify logout, consent withdrawal and
+removed household access with a live connection. An interrupted voice
+instruction needs a new login and the complete instruction again; it must
+not restart automatically. Confirm that stored drafts and save receipts
+remain available after login and restart.
+
 ### Conversation model
 
 The application uses GPT-6.1 Sol with high reasoning effort for text,

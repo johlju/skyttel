@@ -9,6 +9,7 @@ import {
   type ConversationNoticeConditions,
   firstConversationNotice,
 } from '../../../src/client/conversation-notice.js';
+import { VoiceSessionContext } from '../../../src/client/voice-session-context.js';
 
 afterEach(cleanup);
 
@@ -24,6 +25,7 @@ test.each([
   ['microphoneBusy', 'assertive'],
   ['voiceUnsupported', 'assertive'],
   ['voiceStartFailed', 'assertive'],
+  ['voiceSessionExpired', 'assertive'],
   ['voiceInterrupted', 'assertive'],
   ['voiceAdministration', 'assertive'],
   ['consentRevoked', 'assertive'],
@@ -64,6 +66,7 @@ test('all conversation situations follow the single priority order, including fu
     'microphoneBusy',
     'voiceUnsupported',
     'voiceStartFailed',
+    'voiceSessionExpired',
     'voiceInterrupted',
     'voiceAdministration',
     'consentRevoked',
@@ -113,4 +116,37 @@ test('a notice announces its action once and moving its card keeps the existing 
   await act(() => view.rerender(<Screen textOpen />));
   expect(live()).toBe(first);
   expect(screen.getAllByRole('region', { name: 'Samtalsnotis' })).toHaveLength(1);
+});
+
+test('an application-owned voice expiry stays visible without a second conversation announcement', () => {
+  function Screen() {
+    const state = useConversationNotice({
+      conditions: { voiceSessionExpired: true },
+      ongoing: false,
+      requested: 0,
+      eventKey: 'expired',
+    });
+    return (
+      <>
+        <ConversationNoticeAnnouncements announcement={state.announcement} />
+        {state.notice && (
+          <ConversationNoticeCard
+            notice={state.notice}
+            closable={false}
+            onDismiss={() => {}}
+            focusAfterRemoval={() => null}
+          />
+        )}
+      </>
+    );
+  }
+  render(
+    <VoiceSessionContext value={{ active: () => {}, expired: () => {} }}>
+      <Screen />
+    </VoiceSessionContext>,
+  );
+  expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
+    'Din inloggning har gått ut. Logga in igen. Lämna hela instruktionen på nytt.',
+  );
+  expect(document.querySelector('[aria-live="assertive"]')?.textContent).toBe('');
 });

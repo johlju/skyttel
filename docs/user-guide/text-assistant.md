@@ -510,3 +510,15 @@ tar inte tillbaka uppgifter som redan har skickats. Läs
 [OpenAI:s datavillkor](https://developers.openai.com/api/docs/guides/your-data).
 Hushållets administratör hanterar användare, export, återimport och
 permanent radering i Skyttels egna administrationsvyer.
+
+## När inloggningen går ut under tal
+
+Fritt röstläge stannar när inloggningen går ut. Att du börjar tala före
+utgången betyder inte att en fullständig instruktion har hunnit tas emot.
+Logga in igen och lämna hela instruktionen på nytt. Skyttel skickar inte
+det avvisade talet igen automatiskt.
+
+Ditt lagrade utkast och redan genomförda sparanden finns kvar. Ett sent
+**inte** gör inte ett redan genomfört sparande ogjort. Kontrollera
+utkastet och eventuella sparförsök eller sparkvitton efter ny inloggning
+innan du ber om ett nytt sparande.

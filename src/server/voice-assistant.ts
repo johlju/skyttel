@@ -32,6 +32,8 @@ type Voice = {
   heartbeat: number;
   finalized: boolean;
   timer: NodeJS.Timeout;
+  deadlineTimer?: NodeJS.Timeout;
+  access: () => number;
   closed?: Promise<void>;
   finish?: () => void;
   work?: ReturnType<typeof voiceWork>;
@@ -65,7 +67,13 @@ export function voiceAssistantRoutes({
   voiceInput,
   observe,
   liveProfile = voiceConversationModel,
+  now = () => Date.now(),
+  voiceAccess,
+  expireVoiceWork,
 }: {
+  now?: () => number;
+  voiceAccess: (sessionId: string) => { expiresAt: number; guard: () => number } | undefined;
+  expireVoiceWork: (sessionId: string) => void;
   config: Config;
   dispatch: LocalDispatch;
   liveFetch?: typeof fetch;
@@ -83,7 +91,10 @@ export function voiceAssistantRoutes({
     source: string,
     ratio?: unknown,
   ) => void;
-  prepareVoiceContext?: (sessionId: string) => Promise<TextAssistantView | undefined>;
+  prepareVoiceContext?: (
+    sessionId: string,
+    signal?: AbortSignal,
+  ) => Promise<TextAssistantView | undefined>;
   voiceInput?: (sessionId: string, pending: boolean, text?: string) => void;
   observe?: ObserveAssistant;
   liveProfile?: LiveModelProfile;
@@ -97,6 +108,7 @@ export function voiceAssistantRoutes({
     throw new Error('invalid_live_profile');
   const routes = new Hono();
   const voices = new Map<string, Voice>();
+  const starting = new Set<() => number>();
   const client = config.openaiApiKey
     ? new OpenAI({
         apiKey: config.openaiApiKey,
@@ -139,7 +151,9 @@ export function voiceAssistantRoutes({
   }
   function close(voice: Voice, error?: string) {
     if (voice.closed) return voice.closed;
-    const canceling = voice.work?.stop();
+    const authorityEnded = error === 'voice_session_expired' || error === 'voice_access_lost';
+    const canceling = authorityEnded ? undefined : voice.work?.stop();
+    if (authorityEnded) voice.work?.retire();
     voice.view.phase = 'closing';
     voice.view.error = error;
     if (error) {
@@ -156,6 +170,7 @@ export function voiceAssistantRoutes({
       );
     }
     clearInterval(voice.timer);
+    clearTimeout(voice.deadlineTimer);
     let resolve!: () => void;
     voice.closed = new Promise<void>((done) => {
       resolve = done;
@@ -183,6 +198,12 @@ export function voiceAssistantRoutes({
     voice.finish = finish;
     try {
       voice.channel.send({ type: 'session.close' });
+      if (authorityEnded) {
+        if (voice.channel.socket.readyState !== 0) finish();
+        // The SDK queues sends while connecting. Let its opening handshake
+        // flush the close instead of dropping it, within the same close cap.
+        else voice.channel.socket.on('open', () => voice.finish?.());
+      }
     } catch {
       finish();
     }
@@ -206,12 +227,6 @@ export function voiceAssistantRoutes({
       body.contentVersion !== current.review.contentVersion
     )
       return context.json({ error: 'assistant_draft_changed' }, 409);
-    current = (await prepareVoiceContext?.(context.req.param('sessionId'))) ?? current;
-    current = await assistant(path, requestHeaders);
-    if (current.contextSummaryState === 'failed')
-      return context.json({ error: 'assistant_context_summary_failed' }, 409);
-    if (current.contextSummaryState === 'summarizing')
-      return context.json({ error: 'assistant_busy' }, 409);
     let history: InitialItem[] | undefined;
     if (body.history !== undefined) {
       if (
@@ -241,24 +256,9 @@ export function voiceAssistantRoutes({
       }
     }
     for (const previous of voices.values()) if (previous.path === path) await close(previous);
-    const retained = conversation?.(context.req.param('sessionId'));
-    if (retained) {
-      history = retained.length
-        ? retained.map(({ role, text, partial }) =>
-            role === 'user'
-              ? {
-                  role,
-                  content: [{ type: 'input_text', text }],
-                  status: partial ? 'incomplete' : 'completed',
-                }
-              : {
-                  role,
-                  content: [{ type: 'output_text', text }],
-                  status: partial ? 'incomplete' : 'completed',
-                },
-          )
-        : undefined;
-    }
+    const sessionId = context.req.param('sessionId');
+    const access = voiceAccess(sessionId);
+    if (!access) throw new MapError('voice_session_expired', 401);
     const usage: LiveUsageAttempt = {
       attemptId: randomUUID(),
       sessionId: null,
@@ -276,8 +276,83 @@ export function voiceAssistantRoutes({
     } catch {
       console.error(JSON.stringify({ event: 'live_usage_unavailable' }));
     }
-    let stage = 'create';
+    const startup = new AbortController();
+    const abortedStartup = () => startup.abort();
+    context.req.raw.signal.addEventListener('abort', abortedStartup, { once: true });
+    if (context.req.raw.signal.aborted) startup.abort();
+    let activeVoice: Voice | undefined;
+    let deadlineTimer: NodeJS.Timeout | undefined;
+    let expired = false;
+    let endReason = 'voice_session_expired';
+    let effectiveDeadline = access.expiresAt;
+    const expire = (reason = endReason) => {
+      endReason = reason;
+      expired = true;
+      startup.abort();
+      expireVoiceWork(sessionId);
+      if (activeVoice) void close(activeVoice, endReason);
+    };
+    const check = () => {
+      if (expired) throw new MapError(endReason, 401);
+      try {
+        const expiresAt = access.guard();
+        const previousDeadline = effectiveDeadline;
+        effectiveDeadline = expiresAt;
+        if (!Number.isFinite(expiresAt) || expiresAt <= now())
+          throw new MapError('voice_session_expired', 401);
+        if (deadlineTimer && previousDeadline === expiresAt) return expiresAt;
+        clearTimeout(deadlineTimer);
+        deadlineTimer = setTimeout(
+          () => {
+            deadlineTimer = undefined;
+            // A real action may have moved the inactivity bound. Re-read the
+            // same authoritative policy at its previously effective deadline.
+            try {
+              check();
+            } catch {
+              // check() synchronously retires the rejected lease.
+            }
+          },
+          Math.max(1, expiresAt - now()),
+        ).unref();
+        if (activeVoice) activeVoice.deadlineTimer = deadlineTimer;
+        return expiresAt;
+      } catch (error) {
+        expire(effectiveDeadline <= now() ? 'voice_session_expired' : 'voice_access_lost');
+        throw error;
+      }
+    };
+    let stage = 'prepare';
+    starting.add(check);
     try {
+      check();
+      current = (await prepareVoiceContext?.(sessionId, startup.signal)) ?? current;
+      check();
+      current = await assistant(path, requestHeaders);
+      check();
+      if (current.contextSummaryState === 'failed')
+        return context.json({ error: 'assistant_context_summary_failed' }, 409);
+      if (current.contextSummaryState === 'summarizing')
+        return context.json({ error: 'assistant_busy' }, 409);
+      const retained = conversation?.(context.req.param('sessionId'));
+      if (retained) {
+        history = retained.length
+          ? retained.map(({ role, text, partial }) =>
+              role === 'user'
+                ? {
+                    role,
+                    content: [{ type: 'input_text', text }],
+                    status: partial ? 'incomplete' : 'completed',
+                  }
+                : {
+                    role,
+                    content: [{ type: 'output_text', text }],
+                    status: partial ? 'incomplete' : 'completed',
+                  },
+            )
+          : undefined;
+      }
+      stage = 'create';
       const result = await client.live.create(
         {
           session: {
@@ -305,7 +380,7 @@ export function voiceAssistantRoutes({
           },
           transport: { type: 'webrtc', sdp: body.sdp },
         },
-        { signal: context.req.raw.signal },
+        { signal: startup.signal },
       );
       if (
         !/^[\w-]{1,200}$/.test(result.session.id) ||
@@ -319,18 +394,25 @@ export function voiceAssistantRoutes({
         ? liveSideband(client, result.session.id)
         : new SidebandWS(client, { session_id: result.session.id, graceful_close: true });
       const voice: Voice = {
+        access: check,
+        deadlineTimer,
         view: { id: randomUUID(), phase: 'connecting', seconds: null, usageFinal: false },
         path,
         headers: requestHeaders,
         assistant: current,
         channel,
         usage,
-        heartbeat: Date.now(),
+        heartbeat: now(),
         finalized: false,
         timer: setInterval(() => {
-          if (Date.now() - voice.heartbeat > 10_000) void close(voice, 'voice_connection_lost');
+          if (now() - voice.heartbeat > 10_000) void close(voice, 'voice_connection_lost');
         }, 1000).unref(),
       };
+      activeVoice = voice;
+      // Provider creation may resolve despite an abort. Attach only to close
+      // that session; no work or provider event may regain its authority.
+      if (expired) void close(voice, endReason);
+      check();
       const contextRevision = current.contextRevision ?? 0;
       contextUsage?.(context.req.param('sessionId'), contextRevision, voice.view.id);
       channel.on('error', () => {
@@ -375,8 +457,18 @@ export function voiceAssistantRoutes({
         voice.finish?.();
       });
       voice.work = voiceWork({
+        now,
+        allowed: () => {
+          if (voice.closed) return false;
+          try {
+            check();
+            return true;
+          } catch {
+            return false;
+          }
+        },
         observe: (kind, data) =>
-          observe?.({ at: Date.now(), sessionId: voice.assistant.id, kind, data }),
+          observe?.({ at: now(), sessionId: voice.assistant.id, kind, data }),
         channel,
         initial: current,
         response: (value) => {
@@ -390,6 +482,7 @@ export function voiceAssistantRoutes({
         input: (pending, text) => voiceInput?.(context.req.param('sessionId'), pending, text),
         interrupt: (revision) => interrupt(context.req.param('sessionId'), revision),
         request: async (action, body, signal) => {
+          check();
           const response = await dispatch(
             new Request(`${config.origin}${path}${action ? `/${action}` : ''}`, {
               method: action && !action.startsWith('messages/') ? 'POST' : 'GET',
@@ -398,8 +491,11 @@ export function voiceAssistantRoutes({
               signal,
             }),
           );
+          check();
           if (!response.ok) throw new Error('voice_request_failed');
-          return response.json();
+          const result = await response.json();
+          check();
+          return result;
         },
         update: (view, working) => {
           voice.assistant = view;
@@ -425,17 +521,32 @@ export function voiceAssistantRoutes({
       try {
         if (channel.socket.readyState !== 1)
           await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('live_attach_timeout')), 10_000);
-            channel.socket.on('open', () => {
+            const cleanup = () => {
               clearTimeout(timeout);
+              startup.signal.removeEventListener('abort', aborted);
+            };
+            const aborted = () => {
+              cleanup();
+              reject(new Error('live_start_interrupted'));
+            };
+            const timeout = setTimeout(() => {
+              cleanup();
+              reject(new Error('live_attach_timeout'));
+            }, 10_000);
+            channel.socket.on('open', () => {
+              cleanup();
               resolve();
             });
             channel.socket.on('error', () => {
-              clearTimeout(timeout);
+              cleanup();
               reject(new Error('live_attach_failed'));
             });
+            startup.signal.addEventListener('abort', aborted, { once: true });
+            if (startup.signal.aborted) aborted();
           });
+        check();
         voice.assistant = await assistant(path, requestHeaders);
+        check();
         if (voice.closed) throw new Error('live_start_interrupted');
         voice.view.phase = voice.assistant.phase === 'recovery' ? 'recovery' : 'listening';
         if (body.newConversation === true && voice.assistant.reply) {
@@ -469,7 +580,7 @@ export function voiceAssistantRoutes({
       report(usage);
       if (error instanceof MapError && error.code === conversationConsentRevoked)
         return context.json({ error: error.code }, 403);
-      const code = startupErrorCode(error);
+      const code = expired ? endReason : startupErrorCode(error);
       console.error(
         JSON.stringify({
           event: 'voice_start_failed',
@@ -487,8 +598,17 @@ export function voiceAssistantRoutes({
       );
       return context.json(
         { error: code, voiceErrorGroup: voiceErrorGroup(code), diagnosticId: usage.attemptId },
-        503,
+        expired ? 401 : 503,
       );
+    } finally {
+      starting.delete(check);
+      context.req.raw.signal.removeEventListener('abort', abortedStartup);
+      if (!activeVoice || activeVoice.closed) clearTimeout(deadlineTimer);
+      if (usage.outcome === 'starting') {
+        usage.outcome = 'failed';
+        usage.endedAt = new Date().toISOString();
+        report(usage);
+      }
     }
   });
   routes.post(`${base}/:voiceId/:action`, async (context) => {
@@ -498,7 +618,9 @@ export function voiceAssistantRoutes({
       return context.json({ error: 'voice_session_expired', voiceErrorGroup: 'interrupted' }, 404);
     if (context.req.header('Origin') !== config.origin)
       return context.json({ error: 'forbidden' }, 403);
+    voice.access();
     voice.assistant = await assistant(path, headers(context.req.raw.headers));
+    voice.access();
     if (context.req.param('action') === 'stop') await close(voice);
     else if (context.req.param('action') === 'poll') {
       const body = await context.req.json().catch(() => null);
@@ -515,12 +637,27 @@ export function voiceAssistantRoutes({
       voice.work?.activity(body.microphoneActive === true && body.microphoneOn === true);
       voice.work?.answer(voice.assistant, body.microphoneOn === true);
       voice.view.summaryReady = voice.work?.readyForSummary() ?? true;
-      voice.heartbeat = Date.now();
+      voice.heartbeat = now();
     } else return context.json({ error: 'not_found' }, 404);
     return context.json({ voice: voice.view, assistant: voice.assistant });
   });
   return {
     routes,
+    revalidate: () => {
+      // Run after requests that can replace a login or revoke access, including
+      // OAuth callbacks and mutations whose response later fails. No dispatch
+      // occurs here: the captured guard checks server state synchronously.
+      for (const check of [
+        ...starting,
+        ...[...voices.values()].filter((voice) => !voice.closed).map((voice) => voice.access),
+      ]) {
+        try {
+          check();
+        } catch {
+          // The guard synchronously retires its voice before throwing.
+        }
+      }
+    },
     retireSessionWork: (sessionId: string) => {
       for (const voice of voices.values())
         if (voice.assistant.id === sessionId && !voice.closed) voice.work?.retire();
@@ -532,7 +669,7 @@ export function voiceAssistantRoutes({
         // checked result before retiring context, rather than canceling it.
         while (!voice.closed && voice.work && !voice.work.readyForSummary()) {
           if (signal.aborted) throw new Error('context_handoff_interrupted');
-          voice.heartbeat = Date.now();
+          voice.heartbeat = now();
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
         await close(voice);

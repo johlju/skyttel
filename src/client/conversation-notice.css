@@ -84,7 +84,8 @@
   position: absolute;
   inset: -4px 0;
 }
-.notice-announcement {
+.notice-announcement,
+.session-expiry-announcement {
   position: absolute;
   width: 1px;
   height: 1px;

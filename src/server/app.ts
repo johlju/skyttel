@@ -92,11 +92,13 @@ export function createApp({
   const linking = createLoginMethods(database, auth, config.origin, bindings);
   const consents = conversationConsents(database, consentTextVersion);
   let revalidateWork: (() => void) | undefined;
+  let revalidateVoice: (() => void) | undefined;
   app.use('*', async (context, next) => {
     try {
       await next();
     } finally {
       revalidateWork?.();
+      revalidateVoice?.();
     }
     if (bindings) {
       const controlled = await bindings.output(context.req.raw, context.res);
@@ -332,6 +334,9 @@ export function createApp({
     ),
   );
   const voiceAssistant = voiceAssistantRoutes({
+    now,
+    voiceAccess: textAssistant.voiceAccess,
+    expireVoiceWork: textAssistant.expireVoiceWork,
     config,
     liveProfile,
     dispatch: dispatchAssistant,
@@ -347,6 +352,7 @@ export function createApp({
     contextUsage: textAssistant.contextUsage,
     prepareVoiceContext: textAssistant.prepareVoiceContext,
   });
+  revalidateVoice = voiceAssistant.revalidate;
   stopVoice = voiceAssistant.stopSession;
   retireVoiceWork = voiceAssistant.retireSessionWork;
   summarizeVoice = voiceAssistant.summarizeSession;

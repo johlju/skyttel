@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { conversationConsentRevoked } from '../shared/conversation-consent.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
@@ -6,6 +6,7 @@ import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
 import { type VoiceFailure, voiceErrorNotice, voiceFailureMessage } from './voice-error.js';
 import { createHeldInput, type HeldInput, prepareHeldInput } from './voice-held-input.js';
+import { VoiceSessionContext } from './voice-session-context.js';
 import {
   createVoiceTransport,
   prepareVoicePlayback,
@@ -126,6 +127,7 @@ export function useVoice(options: {
   saveChecking?: boolean;
   contextFailed?: boolean;
 }): Voice {
+  const voiceSession = useContext(VoiceSessionContext);
   const path = options.assistant
     ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
     : null;
@@ -152,14 +154,20 @@ export function useVoice(options: {
   const summaryRenewal = useRef(false);
   const [contextPaused, setContextPaused] = useState(false);
   const [state, setState] = useState<Voice['state']>('idle');
+  useEffect(() => {
+    voiceSession?.active(state === 'permission' || state === 'connecting' || state === 'listening');
+    return () => voiceSession?.active(false);
+  }, [voiceSession, state]);
   const [voice, setVoice] = useState<VoiceAssistantView | null>(null);
   const [failure, setFailure] = useState<(VoiceFailure & { occurrence: number }) | null>(null);
   const error = voiceFailureMessage(failure);
   const failedCount = useRef(0);
   const setError = useCallback(
-    (value: VoiceFailure | null) =>
-      setFailure(value ? { ...value, occurrence: ++failedCount.current } : null),
-    [],
+    (value: VoiceFailure | null) => {
+      if (value?.noticeId === 'voiceSessionExpired') voiceSession?.expired();
+      setFailure(value ? { ...value, occurrence: ++failedCount.current } : null);
+    },
+    [voiceSession],
   );
   const [playbackBlocked, setPlaybackBlocked] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
@@ -549,7 +557,29 @@ export function useVoice(options: {
               setState('listening');
             },
             onClosed: () => {
-              if (active()) void stop(voiceErrorNotice(undefined, 'interrupted'));
+              if (!active()) return;
+              // Stop capture immediately. A read-only status check can then
+              // distinguish expired authority from an ordinary provider close.
+              attempt.transport?.suspendInput();
+              void request<VoiceAssistantResponse>(`${path}/${attempt.voiceId}/poll`, {
+                ...anchor(),
+                microphoneOn: false,
+              }).then(
+                (result) => {
+                  if (active())
+                    void stop(
+                      voiceErrorNotice(
+                        result.voice.error
+                          ? new MapRequestError(503, result.voice.error)
+                          : undefined,
+                        'interrupted',
+                      ),
+                    );
+                },
+                (failure) => {
+                  if (active()) void stop(voiceErrorNotice(failure, 'interrupted'));
+                },
+              );
             },
             onFailure: () => fail(),
             onPlaybackBlocked: (blocked) => {

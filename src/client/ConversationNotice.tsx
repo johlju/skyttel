@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   type ConversationNotice,
   type ConversationNoticeConditions,
   firstConversationNotice,
 } from './conversation-notice.js';
+import { VoiceSessionContext } from './voice-session-context.js';
 import './conversation-notice.css';
 
 const icons = {
@@ -33,6 +34,7 @@ export function useConversationNotice({
   eventKey: string;
   diagnostic?: { noticeId: ConversationNotice['id']; reference?: string };
 }) {
+  const voiceSession = useContext(VoiceSessionContext);
   const [dismissed, setDismissed] = useState('');
   const [usedRequest, setUsedRequest] = useState(0);
   const definition = firstConversationNotice(conditions);
@@ -63,7 +65,11 @@ export function useConversationNotice({
     before.current = { notice, identity: notice ? identity : '' };
     let text = '';
     let live: 'polite' | 'assertive' = 'polite';
-    if (notice && previous.identity !== identity) {
+    if (
+      notice &&
+      previous.identity !== identity &&
+      !(voiceSession && notice.id === 'voiceSessionExpired')
+    ) {
       text = `${notice.text}${notice.action ? ` ${notice.action}.` : ''}`;
       live = notice.live;
     }
@@ -82,7 +88,7 @@ export function useConversationNotice({
         polite: [resolved, live === 'polite' ? text : ''].filter(Boolean).join(' '),
         assertive: live === 'assertive' ? text : '',
       }));
-  }, [notice, identity, conditions]);
+  }, [notice, identity, conditions, voiceSession]);
   return { notice, closable, dismiss: () => setDismissed(identity), announcement };
 }
 

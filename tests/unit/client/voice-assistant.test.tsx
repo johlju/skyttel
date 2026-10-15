@@ -1531,3 +1531,17 @@ test('an older voice reply cannot overwrite a newer displayed text revision', as
   });
   expect(changed).not.toHaveBeenCalled();
 });
+
+test('expired login authority stops capture and asks for the entire voice instruction again', async () => {
+  const { track, accessLost } = setup();
+  vi.mocked(fetch).mockResolvedValueOnce(
+    Response.json({ error: 'voice_session_expired' }, { status: 401 }),
+  );
+  await userEvent.click(microphoneButton());
+  const alert = await screen.findByRole('region', { name: 'Samtalsnotis' });
+  expect(alert.textContent).toContain(
+    'Din inloggning har gått ut. Logga in igen. Lämna hela instruktionen på nytt.',
+  );
+  expect(track.stop).toHaveBeenCalled();
+  expect(accessLost).toHaveBeenCalledOnce();
+});

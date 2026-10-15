@@ -455,7 +455,9 @@ describe('Skyttel application interface', () => {
       fetch.mock.calls.find(([url]) => url === '/api/households/linden/map/view') ?? [];
     expect(init?.signal?.aborted).toBe(true);
     await act(async () => delayed.reject(Error('An obsolete private-view network failure')));
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(document.querySelector('[aria-live="assertive"]')?.textContent).toBe(
+      'Din inloggning har gått ut. Logga in igen.',
+    );
     expect(screen.queryByRole('button', { name: 'Försök igen' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Arbetsyta' })).toBeNull();
     expect(document.activeElement).toBe(chosen);

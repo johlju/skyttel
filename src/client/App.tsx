@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -25,6 +26,7 @@ import {
   loginConfirmationFailure,
   rememberedLoginInformation,
 } from '../shared/remembered-login.js';
+import { voiceSessionExpiredMessage } from '../shared/voice-assistant.js';
 import { Assistants } from './Assistants.js';
 import { confirmBrowserLogin, withBrowserBinding } from './browser-binding.js';
 import { ContentOwners } from './ContentOwners.js';
@@ -37,6 +39,7 @@ import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
+import { VoiceSessionContext } from './voice-session-context.js';
 import { useAccountTheme, WorkspaceThemeContext } from './WorkspaceTheme.js';
 import './access.css';
 
@@ -1339,13 +1342,44 @@ function Application() {
     useState<HTMLDivElement | null>(null);
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceExpired, setVoiceExpired] = useState(false);
+  const voiceSession = useMemo(
+    () => ({ active: setVoiceActive, expired: () => setVoiceExpired(true) }),
+    [],
+  );
+  const previouslyAuthenticated = useRef(false);
+  const signOutRequested = useRef(false);
   const [storageIntroductionClosed, setStorageIntroductionClosed] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
   const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
   const data = bootstrap.status === 'loaded' ? bootstrap.data : undefined;
   const theme = useAccountTheme(data?.user?.id);
+  useEffect(() => {
+    if (data?.user?.id) {
+      previouslyAuthenticated.current = true;
+      signOutRequested.current = false;
+    }
+  }, [data?.user?.id]);
+  useEffect(() => {
+    // A fresh successful bootstrap confirms current access, including a new
+    // login for the same user without an intermediate anonymous render.
+    if (data?.user?.id) setVoiceExpired(false);
+  }, [data]);
+  const expired =
+    data?.status === 'anonymous' && previouslyAuthenticated.current && !signOutRequested.current;
+  useEffect(() => {
+    if (expired && voiceActive) setVoiceExpired(true);
+  }, [expired, voiceActive]);
+  const expiryNotice =
+    voiceExpired || (expired && voiceActive)
+      ? voiceSessionExpiredMessage
+      : expired
+        ? 'Din inloggning har gått ut. Logga in igen.'
+        : '';
   async function signOut() {
+    signOutRequested.current = true;
     setSigningOut(true);
     setSignOutError(false);
     try {
@@ -1353,6 +1387,7 @@ function Application() {
       navigate('/', { replace: true });
       reload();
     } catch {
+      signOutRequested.current = false;
       setSignOutError(true);
     } finally {
       setSigningOut(false);
@@ -1592,6 +1627,10 @@ function Application() {
           )}
         </header>
         <main id="main" tabIndex={-1}>
+          <p className="session-expiry-announcement" aria-live="assertive" aria-atomic="true">
+            {expiryNotice}
+          </p>
+          {expired && <p>{expiryNotice}</p>}
           {bootstrap.status === 'loading' && <Loading />}
           {bootstrap.status === 'error' && <Failure onRetry={reload} />}
           {(data?.status === 'anonymous' || loginPage) && data && !storagePage && (
@@ -1625,14 +1664,16 @@ function Application() {
             pages
           )}
           {data?.status === 'ready' && (
-            <HouseholdWork
-              key={data.user.id}
-              account={account}
-              onSessionExpired={reload}
-              typeSettingsTarget={typeSettingsTarget}
-              mapSettingsTarget={mapSettingsTarget}
-              conversationSettingsTarget={conversationSettingsTarget}
-            />
+            <VoiceSessionContext value={voiceSession}>
+              <HouseholdWork
+                key={data.user.id}
+                account={account}
+                onSessionExpired={reload}
+                typeSettingsTarget={typeSettingsTarget}
+                mapSettingsTarget={mapSettingsTarget}
+                conversationSettingsTarget={conversationSettingsTarget}
+              />
+            </VoiceSessionContext>
           )}
           {data?.status === 'forbidden' && !settingsPage && (
             <>

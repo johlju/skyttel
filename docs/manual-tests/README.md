@@ -294,10 +294,11 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   samtalstext och verifierade resultat, löpande dialog och
   raden Skyttel arbetar. Kontrollerat familjeunderlag och
   verkligt tal redovisas separat. TAL-18/19 skiljer mikrofonlägena;
-  TAL-20–22 skiljer placeringarna och TAL-17/23–25 kräver verkliga
+  TAL-20–22 skiljer placeringarna och TAL-17/23–26 kräver verkliga
   mikrofon-, ljud-, system- eller skärmläsarobservationer. TAL-24 behåller
   TAL-16:s exakta hörda fokus-/aktivitetssekvens, inklusive statusord som
-  inte ska läsas upp, och skiljer den från verkligt tal.
+  inte ska läsas upp, och skiljer den från verkligt tal. TAL-26 provar
+  fysisk mikrofon, tillgängligt utgångsbesked och hel ny instruktion.
 - [Utkastet i samtalet](conversation-draft.md): tabellen och dess symboler,
   personligt val mellan hushåll och enheter, första förslaget, tomt utkast,
   sparåterkoppling och kvittots plats i Rapporter → Ändringshistorik.

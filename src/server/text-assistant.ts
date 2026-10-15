@@ -336,9 +336,15 @@ export function textAssistantRoutes({
     parentGuard?: () => void,
     continuation: ResponseInputItem[] = [],
     handoff = false,
+    parentSignal?: AbortSignal,
   ) {
     if (session.summaryTask || session.contextSummaryState === 'failed') return;
     const task = new AbortController();
+    // A voice startup owns only the summary it starts here. An already active
+    // text summary returns above and never inherits this signal.
+    const aborted = () => task.abort();
+    parentSignal?.addEventListener('abort', aborted, { once: true });
+    if (parentSignal?.aborted) aborted();
     session.summaryTask = task;
     const revision = session.revision;
     const guard = () => {
@@ -408,6 +414,7 @@ export function textAssistantRoutes({
       session.contextSummaryState = 'failed';
       // A distinct DTO state, not a generic task/provider failure.
     } finally {
+      parentSignal?.removeEventListener('abort', aborted);
       if (session.summaryTask === task) {
         session.summaryTask = undefined;
         if (session.contextSummaryState === 'summarizing') session.contextSummaryState = 'needed';
@@ -2252,12 +2259,13 @@ export function textAssistantRoutes({
       const session = sessions.get(sessionId);
       return session ? providerConversation(session) : [];
     },
-    prepareVoiceContext: async (sessionId: string) => {
+    prepareVoiceContext: async (sessionId: string, signal?: AbortSignal) => {
       const session = sessions.get(sessionId);
       if (!session) return;
       const bytes = Buffer.byteLength(JSON.stringify(providerConversation(session)));
-      if (!session.contextSummaryState && bytes / 3 >= voiceTokens * 0.89) await summarize(session);
-      if (sessions.get(sessionId) !== session) return;
+      if (!session.contextSummaryState && bytes / 3 >= voiceTokens * 0.89)
+        await summarize(session, undefined, [], false, signal);
+      if (signal?.aborted || sessions.get(sessionId) !== session) return;
       if (
         Buffer.byteLength(JSON.stringify(providerConversation(session))) / 3 >=
         voiceTokens * 0.89
