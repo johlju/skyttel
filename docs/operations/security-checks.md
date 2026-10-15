@@ -146,6 +146,38 @@ container policy and reports unknown status when required evidence or
 notification delivery fails. Its synthetic failure cases run with
 `npm run test:gates`.
 
+## Cookie and storage release evidence
+
+The new login and storage model's delivery evidence is incomplete.
+Local HTTP and HTTPS fixtures use synthetic providers and temporary
+SQLite files. They can verify application behavior, cookie attributes,
+committed results and controlled restart boundaries. They do not verify
+the deployed infrastructure or physical devices.
+
+The following mandatory evidence is unavailable for this candidate:
+
+<!-- markdownlint-disable MD013 -->
+| Evidence | Required observation |
+| :-- | :-- |
+| Real identity providers | Fresh Google and Microsoft exchanges through the intended public origin, including the supported account categories. |
+| Hosted HTTPS and proxy | Actual ingress, canonical host, cookie handling and WebSocket upgrade behavior for the deployed release. |
+| Browser restart and session restore | Physical browser restart and restored windows in each supported browser, with ordinary and remembered logins. |
+| Manual accessibility and audio | Complete keyboard and screen-reader flows, focus, status once, contrast, zoom and reflow at desktop and mobile widths; expiry warnings, actual microphone stop and accessible complete-text fallback. |
+| Backup access and deletion | Applicable copies, original copy times, restricted access, actual deletion within the retention limit, and the independent old-access barrier before reopening a restored installation. |
+<!-- markdownlint-enable MD013 -->
+
+Record the release, environment, device or browser, check date, responsible
+operator and observable result when evidence becomes available. Keep
+authentication values and personal data out of shared records. Snapshot
+listings or disappearance alone do not establish physical deletion.
+Automated DOM checks do not establish screen-reader or audio behavior.
+
+Keep the affected delivery tickets open and treat release acceptance as
+blocked while mandatory evidence is missing. Continue to distinguish
+completed code and synthetic checks from unperformed human or operational
+checks in [Spec 444](https://github.com/viscalyx/skyttel/issues/444) and
+[the final delivery ticket](https://github.com/viscalyx/skyttel/issues/464).
+
 ## Upstream references
 
 - [CodeQL result severity](https://docs.github.com/en/code-security/how-tos/manage-security-alerts/manage-code-scanning-alerts/triage-alerts-in-pull-requests)
