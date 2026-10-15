@@ -35,7 +35,7 @@ const entries = [
     name: 'skyttel-storage-operation:<användar-ID>',
     place: 'Webbläsarens sessionStorage i den aktuella fliken.',
     content:
-      'Referens till en uttryckligen begärd avstängning och den ursprungliga inloggningens ID. Gör att samma resultat kan kontrolleras efter ett förlorat svar och ny inloggning. Referensen ger ingen behörighet och innehåller inget lagringsval.',
+      'Referens till en uttryckligen begärd avstängning, den ursprungliga inloggningens ID och installationens säkerhetsgeneration. Gör att samma resultat kan kontrolleras efter ett förlorat svar och ny inloggning. Referensen ger ingen behörighet och innehåller inget lagringsval.',
     time: 'Skapas först när du väljer att spara eller bekräftar återställning. Tas bort när utfallet bekräftas eller avvisas. Flikens lagring kan försvinna; rensning kan hindra återhämtning men upprepar inte ändringen. Serverns kontrollfönster är 24 timmar från ändringen.',
   },
   {
@@ -153,7 +153,7 @@ export function CookieStorage({ userId }: { userId?: string }) {
         {state === 'saved' && recoveryMessage ? ` ${recoveryMessage}` : ''}
       </p>
       <p role="alert">
-        {['rejected', 'unknown', 'unavailable'].includes(state) && (
+        {['rejected', 'unknown', 'unavailable', 'restored'].includes(state) && (
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="m12 3 10 18H2Z M12 9v5m0 3v1" strokeWidth="2" />
           </svg>
@@ -167,6 +167,7 @@ export function CookieStorage({ userId }: { userId?: string }) {
                 'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
               : ''}
         {state === 'unknown' && recoveryMessage ? ` ${recoveryMessage}` : ''}
+        {state === 'restored' ? recoveryMessage : ''}
       </p>
       {requiresLogin && (
         <p>

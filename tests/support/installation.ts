@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, mkdtemp, rm } from 'node:fs/promises';
 import { createServer as createHttpsServer } from 'node:https';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -54,6 +54,7 @@ export async function createInstallation(
     https?: boolean;
     now?: () => number;
     deliverResponse?: (request: Request, response: Response) => Response | Promise<Response>;
+    authorityFence?: Config['authorityFence'];
   } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
@@ -89,6 +90,9 @@ export async function createInstallation(
     databasePath: databaseOptions.databasePath ?? join(directory, 'skyttel.db'),
     firstAdmin,
     authSecret: 'synthetic-test-secret-with-at-least-32-characters',
+    authorityFence: databaseOptions.authorityFence ?? {
+      generation: '11111111-1111-4111-8111-111111111111',
+    },
     google: { clientId: 'fake-google', clientSecret: 'fake-secret' },
     microsoft: { clientId: 'fake-microsoft', clientSecret: 'fake-secret' },
     port: 0,
@@ -125,10 +129,17 @@ export async function createInstallation(
     config.port = address.port;
     config.origin = `${tls ? 'https' : 'http'}://127.0.0.1:${address.port}`;
     database = openDatabase(config.databasePath, databaseOptions);
-    const hasOAuth = database
-      .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'oauthClient'")
+    const hasAuthority = database
+      .prepare(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'installation_authority'",
+      )
       .get();
-    const auth = hasOAuth ? createAuth(config, database) : legacyAuth(config, database);
+    // Historical migration exercises explicitly use their historical factory.
+    // The production factory always requires the current authority barrier.
+    const auth =
+      hasAuthority && !databaseOptions.legacyAuthCallbacks
+        ? createAuth(config, database)
+        : legacyAuth(config, database);
     await verifyAuthSchema(auth);
     const context = await auth.$context;
     for (const provider of context.socialProviders) {
@@ -302,6 +313,14 @@ export async function createInstallation(
     },
     async restart() {
       await stop();
+      await start();
+    },
+    // A controlled operator action: stop every old connection, restore a real
+    // SQLite backup, and supply host configuration that is outside that copy.
+    async restoreDatabase(source: string, authorityFence: Config['authorityFence']) {
+      await stop();
+      await copyFile(source, config.databasePath);
+      config.authorityFence = authorityFence;
       await start();
     },
     async close() {

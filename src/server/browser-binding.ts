@@ -5,6 +5,7 @@ import { serializeSigned } from 'hono/utils/cookie';
 import { rememberedLoginInformation } from '../shared/remembered-login.js';
 import type { Auth } from './auth.js';
 import { stageAuthCallback } from './auth-callback-transaction.js';
+import { installationAuthority } from './installation-authority.js';
 import { linkingAttempt } from './login-methods.js';
 
 const attemptLifetime = 10 * 60_000;
@@ -163,6 +164,15 @@ export function browserBindings(
     const binding = recordedBinding(headers);
     return binding && binding.expiresAt > now() ? binding : undefined;
   }
+  function canReset(headers: Headers, current: unknown) {
+    const value = cookie(headers);
+    return (
+      !current &&
+      typeof value === 'string' &&
+      /^[a-f0-9]{64}$/.test(value) &&
+      !recordedBinding(headers)
+    );
+  }
   async function session(headers: Headers) {
     const current = await rawSession(headers);
     const binding = lookup(headers);
@@ -226,7 +236,10 @@ export function browserBindings(
       (cookie(headers) && !previous && !expired)
     )
       return context.json(
-        { error: existing?.sessionId ? 'binding_occupied' : 'binding_invalid' },
+        {
+          error: existing?.sessionId ? 'binding_occupied' : 'binding_invalid',
+          ...(canReset(headers, current) ? { canReset: true } : {}),
+        },
         409,
       );
     if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
@@ -249,6 +262,14 @@ export function browserBindings(
         .run(key(candidate), now() + attemptLifetime);
     })();
     return context.json({ candidate, cookieName, origin });
+  });
+  routes.post('/reset-check', async (context) => {
+    const headers = context.req.raw.headers;
+    const current = await rawSession(headers);
+    if (!canReset(headers, current)) return context.json({ error: 'binding_invalid' }, 409);
+    // This check removes no server state and gives no authentication authority.
+    // The browser clears only its explicitly confirmed, unchanged cookie.
+    return context.json({ status: 'reset_allowed' });
   });
   routes.post('/register', async (context) => {
     const binding = lookup(context.req.raw.headers);
@@ -302,6 +323,7 @@ export function browserBindings(
       bindingId: lookup(context.req.raw.headers)?.id,
       expiresAt: deadline(selected),
       inactiveAfterMs: 30 * 60_000,
+      generation: installationAuthority(database)?.generation,
     });
   });
   routes.on(['GET', 'POST'], '/results/:id', async (context) => {
@@ -312,7 +334,19 @@ export function browserBindings(
         'SELECT id, userId, status, completedAt, checkUntil, sessionExpiresAt AS expiresAt FROM storage_action_result WHERE id = ? AND userId = ? AND checkUntil > ?',
       )
       .get(context.req.param('id'), current.user.id, now());
-    return result ? context.json(result) : context.json({ error: 'result_unavailable' }, 404);
+    if (result) return context.json(result);
+    const restoredFrom = installationAuthority(database)?.restoredFrom;
+    if (
+      restoredFrom &&
+      restoredFrom !== 'legacy' &&
+      context.req.query('generation') === restoredFrom
+    )
+      return context.json({
+        id: context.req.param('id'),
+        userId: current.user.id,
+        status: 'unavailable_after_restore',
+      });
+    return context.json({ error: 'result_unavailable' }, 404);
   });
   routes.post('/revoke', async (context) => {
     const body = (await context.req.json().catch(() => null)) as {

@@ -4,6 +4,10 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "providerstart",
+    "providerfönster",
+    "providerhandling",
+    "kopiehantering",
     "fliklagringen",
     "flikreferens",
     "Köväntan",

@@ -23,6 +23,9 @@ openssl rand -base64 48
 ```
 
 Save the generated value in `BETTER_AUTH_SECRET` in `.devcontainer/.env`.
+Generate a UUID with `node -p 'crypto.randomUUID()'` and save it in
+`SKYTTEL_AUTHORITY_GENERATION` in the same private file. Keep it stable
+across ordinary restarts and keep the file outside the database volume.
 Keep an existing secret when rebuilding. The file is ignored by Git;
 keep its credentials and personal identity values private.
 

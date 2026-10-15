@@ -421,6 +421,7 @@ and update the GitHub `production` environment's `SKYTTEL_ORIGIN` as well.
    | `SKYTTEL_FIRST_ADMIN_PROVIDER` | `google` or `microsoft`, matching the intended administrator's login. |
    | `SKYTTEL_FIRST_ADMIN_SUBJECT` | For a new installation, `not-configured` until the production lookup in step 6. After lookup, replace it with the verified identifier. Retain the existing value for an established household. |
    | `BETTER_AUTH_SECRET` | The random secret generated in step 4. Keep it stable. |
+   | `SKYTTEL_AUTHORITY_GENERATION` | A new UUID generated with `node -p 'crypto.randomUUID()'`, held in these private host settings outside the persistent disk. Keep it stable for ordinary restart. Before each database or disk restore, follow the [controlled restore procedure](database-restore.md). |
    | `GOOGLE_CLIENT_ID` | The Google web application's client ID. |
    | `GOOGLE_CLIENT_SECRET` | The Google web application's client secret. |
    | `MICROSOFT_CLIENT_ID` | The Microsoft application's client ID. |

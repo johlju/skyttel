@@ -7,6 +7,7 @@ export class MapRequestError extends Error {
     readonly code: string = 'request_failed',
     readonly diagnosticId?: string,
     readonly voiceErrorGroup?: VoiceErrorGroup,
+    readonly bindingResetAvailable = false,
   ) {
     super(code);
   }
@@ -40,6 +41,7 @@ export async function request<T>(path: string, body?: unknown, signal?: AbortSig
       ['startup', 'interrupted', 'administration'].includes(result.voiceErrorGroup)
         ? result.voiceErrorGroup
         : undefined,
+      result.error === 'binding_invalid' && result.canReset === true,
     );
   }
   return response.json() as Promise<T>;

@@ -108,6 +108,8 @@ kräver det, logga in igen som samma användare i samma flik och återgå till
 under 24 timmar från ändringen, även efter en serveromstart.
 
 Fliken behåller en referens till den begärda åtgärden i `sessionStorage`.
+Den innehåller också installationens säkerhetsgeneration för att skilja
+en belagd återställning från ett vanligt saknat resultat.
 Referensen ger ingen åtkomst och är ingen kopia av ditt lagringsval.
 Den tas bort när resultatet blir känt. Rensa inte fliklagringen innan du
 har kontrollerat resultatet. Om uppgifterna försvinner kan fliken inte
@@ -123,3 +125,17 @@ Inget nytt sparande erbjuds medan det tidigare utfallet är okänt.
 Efter ny inloggning gäller resultatet fortfarande den tidigare begäran.
 Det ändrar inte ett nytt aktivt **Kom ihåg mig**-val. Sidan hämtar det
 aktuella valet separat och skiljer det från resultatet av din gamla åtgärd.
+
+Efter en bekräftad återställning av installationens säkerhetskopia kan
+ett äldre resultat saknas. Om ett tillförlitligt resultat finns används
+det fortfarande. Annars visar Skyttel det exakta återställningsbeskedet
+och tillåter ett nytt uttryckligt val efter ny inloggning. **Kom ihåg mig**
+börjar avmarkerat. Skyttel upprepar inget gammalt sparande och beskedet
+bekräftar inte hur den gamla ändringen slutar. Ett nätverksfel eller ett
+saknat resultat utan belagd återställning ger inget sådant undantag.
+
+Om den gamla webbläsarkopplingen hindrar en ny inloggning stoppas försöket.
+När Skyttel erbjuder **Börja om i den här webbläsaren** kan du uttryckligen
+rensa den gamla kopplingen. Välj därefter Google eller Microsoft på nytt.
+Åtgärden loggar inte in dig automatiskt och påverkar inte andra webbläsare
+eller hushållets uppgifter.

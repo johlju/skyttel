@@ -21,6 +21,7 @@ import {
 import logo from '../../docs/images/shuttle-logo-transparent-small.png';
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
+import { installationRestoredMessage } from '../shared/installation-restore.js';
 import type { PersonalView } from '../shared/personal-view.js';
 import {
   loginConfirmationFailure,
@@ -28,7 +29,12 @@ import {
 } from '../shared/remembered-login.js';
 import { voiceSessionExpiredMessage } from '../shared/voice-assistant.js';
 import { Assistants } from './Assistants.js';
-import { confirmBrowserLogin, withBrowserBinding } from './browser-binding.js';
+import {
+  BrowserBindingResetRequired,
+  confirmBrowserLogin,
+  resetBrowserBinding,
+  withBrowserBinding,
+} from './browser-binding.js';
 import { ContentOwners } from './ContentOwners.js';
 import { CookieStorage, StorageIntroduction } from './CookieStorage.js';
 import { Costs } from './Costs.js';
@@ -47,7 +53,7 @@ import './access.css';
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
 type Bootstrap = { providers: Provider[]; operator: boolean } & (
-  | { status: 'anonymous'; user?: never; loginId?: never }
+  | { status: 'anonymous'; user?: never; loginId?: never; restored?: true }
   | { status: 'setup'; user: { id: string; name: string }; loginId: string }
   | { status: 'forbidden'; user: { id: string; name: string }; loginId: string }
   | { status: 'ready'; user: { id: string; name: string }; household: Household; loginId: string }
@@ -157,6 +163,8 @@ function Login({ providers }: { providers: Provider[] }) {
   const [rememberMe, setRememberMe] = useState(false);
   const [pending, setPending] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+  const [resetPair, setResetPair] = useState<string>();
+  const [resetDone, setResetDone] = useState(false);
   const [error, setError] = useState(() => {
     const query = new URLSearchParams(location.search);
     return query.get('error') ?? (query.has('authError') ? 'failed' : null);
@@ -198,6 +206,8 @@ function Login({ providers }: { providers: Provider[] }) {
     attempt.current = controller;
     setPending(true);
     setError(null);
+    setResetPair(undefined);
+    setResetDone(false);
     try {
       const result = await withBrowserBinding(
         () =>
@@ -226,12 +236,36 @@ function Login({ providers }: { providers: Provider[] }) {
       if (controller.signal.aborted) return;
       setPending(false);
       setSelected(null);
+      if (cause instanceof BrowserBindingResetRequired) setResetPair(cause.observed);
       setError(
         (cause instanceof Error && cause.message.startsWith('binding_')) ||
           (cause instanceof RequestError && cause.code.startsWith('binding_'))
           ? 'binding_invalid'
           : 'failed',
       );
+    }
+  }
+  async function reset() {
+    if (!resetPair || pending) return;
+    const controller = new AbortController();
+    attempt.current = controller;
+    setPending(true);
+    try {
+      await resetBrowserBinding(resetPair, controller.signal);
+      if (controller.signal.aborted) return;
+      setError(null);
+      setResetPair(undefined);
+      setRememberMe(false);
+      setSelected(null);
+      setResetDone(true);
+      options.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    } catch {
+      if (!controller.signal.aborted) {
+        setResetPair(undefined);
+        setError('binding_invalid');
+      }
+    } finally {
+      if (!controller.signal.aborted) setPending(false);
     }
   }
   return (
@@ -285,6 +319,7 @@ function Login({ providers }: { providers: Provider[] }) {
               onClick={() => {
                 lastProvider.current = provider;
                 setCancelled(false);
+                setResetDone(false);
                 setError(null);
                 setRememberMe(false);
                 setSelected(provider);
@@ -297,11 +332,16 @@ function Login({ providers }: { providers: Provider[] }) {
       )}
       {pending && (
         <p className="muted" role="status">
-          Öppnar {label} för att verifiera din inloggning…
+          {resetPair
+            ? 'Rensar den gamla inloggningskopplingen…'
+            : `Öppnar ${label} för att verifiera din inloggning…`}
         </p>
       )}
       {cancelled && (
         <p role="status">Inloggningen avbröts. Välj ett inloggningssätt när du vill fortsätta.</p>
+      )}
+      {resetDone && (
+        <p role="status">Klart för en ny inloggning. Välj Google eller Microsoft igen.</p>
       )}
       {error && (
         <p className="error access-note" role="alert">
@@ -315,6 +355,17 @@ function Login({ providers }: { providers: Provider[] }) {
                   ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
                   : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
         </p>
+      )}
+      {resetPair && (
+        <div className="access-note">
+          <p>
+            Rensa den gamla inloggningskopplingen i den här webbläsaren innan du väljer inloggning
+            på nytt. Hushållets uppgifter och andra webbläsare påverkas inte.
+          </p>
+          <button type="button" disabled={pending} onClick={() => void reset()}>
+            Börja om i den här webbläsaren
+          </button>
+        </div>
       )}
       <p className="muted">
         Använd det inloggningssätt som är kopplat till din tillgång till hushållet.
@@ -1641,6 +1692,21 @@ function Application() {
           {bootstrap.status === 'error' && <Failure onRetry={reload} />}
           {(data?.status === 'anonymous' || loginPage) && data && !storagePage && (
             <>
+              {data.status === 'anonymous' && data.restored && (
+                <p className="error access-note" role="alert">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="m12 3 10 18H2Z M12 9v5m0 3v1" strokeWidth="2" />
+                  </svg>
+                  {installationRestoredMessage}
+                </p>
+              )}
               <Login providers={data.providers} />
               {authenticated && <Link to="/">Tillbaka till din inloggning</Link>}
               {!storageIntroductionClosed && (

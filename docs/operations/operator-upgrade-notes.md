@@ -21,6 +21,21 @@ Restrict recovery copies and verify their actual deletion separately;
 the maximum is thirty days from original copying. Record missing host
 evidence before claiming these periods as actual production behavior.
 
+### Installation restore barrier
+
+Before upgrade, configure a unique authority generation in private host
+settings outside the database and restored volume. Missing configuration
+stops startup. Keep it stable for normal restart. Before every complete
+database or disk restore, keep the service closed, change this generation
+and record a fixed restore declaration with trusted permanent-erasure
+clearance. Follow the controlled restore procedure before reopening.
+
+Old browser and assistant access must be invalid before readiness. Preserve
+the independent declaration across restart and recopy. Verify old cookies,
+pending callbacks, authorization codes, refresh tokens and JWTs through
+the production ingress. Actual copy inventories, restricted access and
+physical deletion within thirty days still require operator evidence.
+
 ### Accepted text work at login expiry
 
 Verify that an accepted text instruction can finish after normal login

@@ -2,12 +2,46 @@ import { MapRequestError, request } from './map-request.js';
 
 export const browserBindingLock = 'skyttel-browser-binding';
 
+function bindingPair() {
+  const name = window.location.protocol === 'https:' ? '__Host-skyttel_binding' : 'skyttel_binding';
+  const matches = document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith(`${name}=`));
+  return matches.length === 1 && /^[a-f0-9]{64}$/.test(matches[0].slice(name.length + 1))
+    ? matches[0]
+    : undefined;
+}
+
+export class BrowserBindingResetRequired extends Error {
+  constructor(readonly observed: string) {
+    super('binding_reset_required');
+  }
+}
+
+/** A separate explicit user action, never a retry of the rejected sign-in. */
+export async function resetBrowserBinding(observed: string, signal: AbortSignal) {
+  await withBindingLock(async () => {
+    if (bindingPair() !== observed) throw new Error('binding_changed');
+    const result = await request<{ status: string }>(
+      '/api/browser-binding/reset-check',
+      {},
+      signal,
+    );
+    if (signal.aborted || result.status !== 'reset_allowed' || bindingPair() !== observed)
+      throw new Error('binding_changed');
+    writeBindingCookie(`${observed.split('=', 1)[0]}=`, 0);
+    if (bindingPair()) throw new Error('binding_unconfirmed');
+  }, signal);
+}
+
 function writeBindingCookie(pair: string, expiresAt?: number) {
   // biome-ignore lint/suspicious/noDocumentCookie: All binding writes are synchronous while holding the same origin lock.
   document.cookie = `${pair}; Path=/; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}${expiresAt === undefined ? '' : `; Expires=${new Date(expiresAt).toUTCString()}`}`;
 }
 
 async function initialize(signal?: AbortSignal) {
+  const observed = bindingPair();
   try {
     const result = await request<{ candidate: string; cookieName: string; origin: string }>(
       '/api/browser-binding/candidate',
@@ -37,7 +71,14 @@ async function initialize(signal?: AbortSignal) {
     );
     if (registration.status !== 'confirmed' || signal?.aborted)
       throw new Error('binding_unavailable');
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof MapRequestError &&
+      error.bindingResetAvailable &&
+      observed &&
+      bindingPair() === observed
+    )
+      throw new BrowserBindingResetRequired(observed);
     throw new Error('binding_unconfirmed');
   }
 }
@@ -121,6 +162,7 @@ export type StoragePreference = {
   bindingId: string;
   expiresAt: number;
   inactiveAfterMs: number;
+  generation?: string;
 };
 
 export async function revokeRememberedLogin(id: string, expected: StoragePreference) {

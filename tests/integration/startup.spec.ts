@@ -18,6 +18,7 @@ function start(databasePath: string, port: number, overrides: NodeJS.ProcessEnv 
       SKYTTEL_FIRST_ADMIN_PROVIDER: 'google',
       SKYTTEL_FIRST_ADMIN_SUBJECT: 'synthetic-private-subject',
       BETTER_AUTH_SECRET: 'synthetic-private-auth-secret-at-least-32-characters',
+      SKYTTEL_AUTHORITY_GENERATION: '11111111-1111-4111-8111-111111111111',
       GOOGLE_CLIENT_ID: 'synthetic-google-client',
       GOOGLE_CLIENT_SECRET: 'synthetic-private-google-secret',
       MICROSOFT_CLIENT_ID: 'synthetic-microsoft-client',

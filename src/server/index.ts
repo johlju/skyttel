@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { createAuth, verifyAuthSchema } from './auth.js';
 import { ConfigurationError, readConfig } from './config.js';
 import { DatabaseInitializationError, openDatabase } from './database.js';
+import { InstallationAuthorityError } from './installation-authority.js';
 import { attachTaskDelivery } from './task-delivery-transport.js';
 
 async function main() {
@@ -48,7 +49,9 @@ main().catch((error: unknown) => {
       ? { event: 'configuration_invalid', variable: error.variable }
       : error instanceof DatabaseInitializationError
         ? { event: 'database_initialization_failed', reason: error.reason }
-        : { event: 'startup_failed' };
+        : error instanceof InstallationAuthorityError
+          ? { event: 'installation_authority_failed', reason: error.reason }
+          : { event: 'startup_failed' };
   console.error(JSON.stringify(status));
   process.exitCode = 1;
 });

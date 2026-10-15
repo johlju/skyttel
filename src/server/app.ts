@@ -24,6 +24,7 @@ import { householdErasureRoutes } from './household-erasure-routes.js';
 import { householdExportRoutes } from './household-export-routes.js';
 import { householdImportRoutes } from './household-import-routes.js';
 import { createHousehold, householdAccess, isFirstAdmin, isInitialized } from './households.js';
+import { installationAuthority } from './installation-authority.js';
 import type { LiveModelProfile, LiveSidebandFactory, LiveUsage } from './live-provider.js';
 import { createLoginMethods } from './login-methods.js';
 import { MapError } from './map.js';
@@ -234,7 +235,13 @@ export function createApp({
   app.get('/api/bootstrap', async (context) => {
     const providers = ['google', 'microsoft'] as const;
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
-    if (!session) return context.json({ status: 'anonymous', providers, operator: false });
+    if (!session)
+      return context.json({
+        status: 'anonymous',
+        providers,
+        operator: false,
+        ...(installationAuthority(database)?.restoredFrom ? { restored: true } : {}),
+      });
     const user = { id: session.user.id, name: session.user.name };
     const loginId = session.session.id;
     const operator = isFirstAdmin(database, user.id, config);

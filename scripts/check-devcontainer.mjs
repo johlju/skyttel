@@ -270,6 +270,7 @@ async function checkProfile(profile, composePath) {
         SKYTTEL_FIRST_ADMIN_PROVIDER: 'google',
         SKYTTEL_FIRST_ADMIN_SUBJECT: 'devcontainer-check-administrator',
         BETTER_AUTH_SECRET: 'synthetic-devcontainer-persistence-secret',
+        SKYTTEL_AUTHORITY_GENERATION: '11111111-1111-4111-8111-111111111111',
         GOOGLE_CLIENT_ID: 'synthetic-google-client',
         GOOGLE_CLIENT_SECRET: 'synthetic-google-secret',
         MICROSOFT_CLIENT_ID: 'synthetic-microsoft-client',

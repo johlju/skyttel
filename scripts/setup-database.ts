@@ -1,5 +1,6 @@
 import { ConfigurationError, readConfig } from '../src/server/config.js';
 import { DatabaseInitializationError, openDatabase } from '../src/server/database.js';
+import { prepareInstallationAuthority } from '../src/server/installation-authority.js';
 import { seedDemo } from './seeds/demo.js';
 
 let database: ReturnType<typeof openDatabase> | undefined;
@@ -32,6 +33,7 @@ try {
       for (const { name } of tables) {
         connection.exec(`DELETE FROM "${name.replaceAll('"', '""')}"`);
       }
+      prepareInstallationAuthority(connection, config.authorityFence);
       return seedDemo(connection, config);
     })
     .immediate();

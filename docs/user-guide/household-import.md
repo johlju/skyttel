@@ -23,7 +23,7 @@ Nuvarande medlemmar, administratörer, inbjudningar och inloggningar behålls.
 
 Om någon ändrar innehållet under förberedelsen måste filen förberedas igen.
 En trasig, ofullständig eller okänd export avvisas före ersättning. Stöd
-finns för formatversion 1 från databasversion 14–30. Gränserna är cirka
+finns för formatversion 1 från databasversion 14–32. Gränserna är cirka
 1,1 GB för ZIP-filen, 32 MiB för innehållsfilen och 1 GiB för bilddelen.
 Förberedda kopior rensas efter tio minuter eller vid serverns nästa start.
 

@@ -1148,3 +1148,126 @@ synlig text och DOM-fokus men fastställer inte faktisk uppläsning.
 Fokus flyttas inte av statusuppdateringen. Begärt val, aktuell inloggning
 och äldre åtgärdsresultat kan förstås separat. Anteckna återstående hinder;
 fallet är inte utfört enbart för att automatiken är grön.
+
+## Kontrollerad databasåterställning
+
+Förbered enbart påhittade uppgifter i den isolerade HTTPS-installationen:
+
+```sh
+npm run build
+npm run test:env -- node --import tsx scripts/manual-access.ts --https
+```
+
+Använd den utskrivna adressen i samma flik. Logga in som Alex med
+**Kom ihåg mig**. Kommandot `save-copy` tar en faktisk SQLite-testkopia.
+`lose-storage-reply` ger ett avbrutet resultat efter verkligt genomförd
+avstängning; `allow-storage-reply` återställer svaren. `restore-copy`
+stoppar installationen, återställer filen och tillför en separat ny
+testgeneration och fast återställningsdeklaration. Den isolerade kopian
+innehåller inga verkliga raderingar. Verktyget verifierar inte driftens
+kopior, leverantörsåtkomst eller fysisk radering.
+
+### KAK-30: Nytt uttryckligt val efter belagd återställning
+
+**Syfte:** Ett saknat resultat efter bekräftad återställning tillåter ett
+nytt val utan att ett tidigare sparande påstås vara genomfört.
+
+**Användare:** Alex i samma flik, bredd 390 pixlar.
+
+**Förutsättningar:** Ta `save-copy` före avstängningen. Aktivera
+`lose-storage-reply`. Stäng av ihågkommen inloggning på `/cookies` och
+välj **Spara inställningar**. Vänta på **Sparstatus okänd**. Kör sedan
+`restore-copy` och `allow-storage-reply`. Behåll flikens återhämtningsreferens.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/database-restore.spec.ts",
+    "caseId": "KAK-30"
+  },
+  "reference": "390 pixlar och isolerad HTTPS-installation med faktisk äldre SQLite-kopia, syntetisk provider och tappat svar efter verkligt genomförd avstängning. Extern kopiehantering och skärmläsaruppläsning återstår.",
+  "outcomes": [
+    "Det exakta återställningsbeskedet visas utan historisk sparbekräftelse.",
+    "Ny inloggning börjar med Kom ihåg mig avmarkerat och kräver nytt uttryckligt val.",
+    "Kontrollera igen använder återställningsundantaget utan automatiskt nytt sparande.",
+    "Ett nytt uttryckligt sparande fungerar och fokus bevaras efter kontroll."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna `/login` och läs återställningsbeskedet.
+2. Välj **Fortsätt med Google**. Kontrollera att **Kom ihåg mig** börjar
+   avmarkerat. Försök fortsätta. Om den gamla webbläsarkopplingen hindrar
+   starten väljer du uttryckligen **Börja om i den här webbläsaren**.
+   Välj därefter Google på nytt och kontrollera det avmarkerade valet igen.
+3. Markera **Kom ihåg mig** som ett nytt val och logga in.
+4. Öppna `/cookies` och välj **Kontrollera igen**. Läs beskedet och
+   kontrollera att fokus ligger kvar på knappen.
+5. Stäng av det nya valet och välj **Spara inställningar** uttryckligen.
+
+**Förväntat resultat:** **Skyttel har återställts från en säkerhetskopia.
+Gamla inloggningar kan inte längre användas. Logga in igen för att
+fortsätta.** visas. Den gamla åtgärden får ingen sparbekräftelse och
+upprepas inte. Det nya inloggningsvalet visas separat och det sista
+uttryckliga sparandet får en egen bekräftelse. Ingen sidledsrullning
+uppstår. Faktisk skärmläsaruppläsning måste verifieras separat.
+
+### KAK-31: Kvarvarande resultat används efter återställning
+
+**Syfte:** En riktig återställning får inte ersätta ett tillförlitligt
+befintligt resultat med ett undantag eller en ny kontrollfrist.
+
+**Användare:** Alex med tangentbord, bredd 1280 pixlar.
+
+**Förutsättningar:** Starta samma isolerade HTTPS-installation. Logga in
+med **Kom ihåg mig**, kör `lose-storage-reply` och stäng av valet genom
+**Spara inställningar**. Efter **Sparstatus okänd** kör du `save-copy`.
+Kopian innehåller därmed det verkliga resultatet. Kör `restore-copy` och
+`allow-storage-reply`. Behåll samma flik.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/database-restore.spec.ts",
+    "caseId": "KAK-31"
+  },
+  "reference": "1280 pixlar, faktisk SQLite-kopia efter avstängning med förlorat svar, syntetisk provider och omstart. Automatiken kontrollerar också ursprunglig beslutstid och 24-timmarsfrist genom den ägarbehöriga resultatläsningen.",
+  "outcomes": [
+    "Tillförlitligt kvarvarande resultat visas som resultatet av den tidigare begäran.",
+    "Ett nytt aktivt ihågkommet val bevaras separat och inget sparande upprepas.",
+    "Fokus stannar på Kontrollera igen och den ursprungliga kontrollfristen förlängs inte vid återställning eller omstart."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna `/login`. Försök logga in och välj vid behov uttryckligen
+   **Börja om i den här webbläsaren** när den gamla kopplingen avvisas.
+2. Välj Google på nytt. Kontrollera att **Kom ihåg mig** börjar avmarkerat,
+   markera det och slutför den nya inloggningen.
+3. Öppna `/cookies` och välj **Kontrollera igen**. Läs beskedet utan att
+   starta något nytt sparande.
+4. Kontrollera att det nya ihågkomna valet fortfarande är på och att
+   fokus ligger kvar på **Kontrollera igen**. Kör `restart` och ladda om.
+
+**Förväntat resultat:** **Ihågkommen inloggning är avstängd. Resultatet
+gäller din tidigare begäran. Du har loggat in på nytt.** visas vid
+kontrollen. Det gäller den gamla begäran och ändrar inte det nya aktiva
+valet. Återställningen används inte som ersättning för ett tillförlitligt
+resultat. Omstart upprepar inte sparandet. Resultatets ursprungliga
+24-timmarsfrist består.

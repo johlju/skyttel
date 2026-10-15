@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
@@ -60,9 +61,56 @@ test('checking a lost committed OFF result reads that operation without saving a
     expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.'),
   );
   expect(reads).toEqual([
-    `/api/browser-binding/results/${id}`,
-    `/api/browser-binding/results/${id}`,
+    `/api/browser-binding/results/${id}?generation=11111111-1111-4111-8111-111111111111`,
+    `/api/browser-binding/results/${id}?generation=11111111-1111-4111-8111-111111111111`,
   ]);
+  expect(writes).toBe(1);
+});
+
+test('a proven restore reads the fresh ordinary preference rather than a cached remembered login', async () => {
+  const backup = join(installation.directory, 'before-uncertain-operation.sqlite');
+  await installation.saveDatabase(backup);
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  let writes = 0;
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    const response = await transport(input, init);
+    if (String(input) === '/api/browser-binding/revoke') {
+      writes++;
+      throw new TypeError('Reply lost after the real commit');
+    }
+    return response;
+  });
+  render(page());
+  await userEvent.click(await turnOff());
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Sparstatus okänd'));
+  await installation.restoreDatabase(backup, {
+    generation: '22222222-2222-4222-8222-222222222222',
+    restore: {
+      fromGeneration: '11111111-1111-4111-8111-111111111111',
+      confirmedAt: Date.now(),
+      erasureReviewed: true,
+    },
+  });
+  expect(
+    (
+      await client.post(`${installation.origin}/api/browser-binding/reset-check`, {
+        headers: { origin: installation.origin },
+        data: {},
+      })
+    ).status(),
+  ).toBe(200);
+  await client.clearCookies({ name: 'skyttel_binding' });
+  await signIn(client, installation.origin);
+  // The same mounted owner view still holds S1's remembered preference.
+  // Only a fresh authenticated preference read establishes ordinary S2.
+  await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
+  await waitFor(() =>
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Skyttel har återställts från en säkerhetskopia.',
+    ),
+  );
+  await waitFor(() => expect((screen.getByRole('switch') as HTMLInputElement).checked).toBe(false));
+  expect(screen.getByRole('status').textContent).not.toContain('Ihågkommen inloggning är avstängd');
   expect(writes).toBe(1);
 });
 

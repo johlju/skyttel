@@ -1728,3 +1728,121 @@ webbläsarunderlag. Faktiskt upplästa skärmläsarbesked, fysisk mikrofon,
 ljud och enhetsbehörigheter måste observeras separat; fallen här gör
 ingen sådan verifiering. Verkliga leverantörer dokumenteras i den
 separata förberedelsen ovan och ingår inte i den kontrollerade installationen.
+
+## Uttrycklig ny start efter okänd webbläsarkoppling
+
+Förbered ACCESS-32 och ACCESS-33 i en ren profil mot den isolerade
+HTTPS-installationen:
+
+```sh
+npm run build
+npm run test:env -- node --import tsx scripts/manual-access.ts --https
+```
+
+Öppna den utskrivna adressen. Lägg endast i denna tomma provprofil in
+en syntetisk okänd bindning genom webbläsarens konsol:
+
+```js
+document.cookie = `__Host-skyttel_binding=${'f'.repeat(64)}; Path=/; Secure; SameSite=Lax`;
+```
+
+Ingen riktig inloggning eller hushållsinformation får finnas i profilen.
+Återställ mellan fallen genom att stänga provprofilen och börja med en ny.
+Fördröjningen i ACCESS-33 styrs med `hold-reset-check` och
+`release-initialization` i testinstallationens terminal. Dessa verktyg
+finns endast i provinstallationen och ändrar inte produktionsinställningar.
+
+### ACCESS-32: Okänd koppling kräver en separat uttrycklig omstart
+
+**Syfte:** Ett avvisat inloggningsförsök ger ingen automatisk ny bindning,
+inloggning eller återanvänt ihågkommet val.
+
+**Användare:** Alex utan inloggning, bredd 1280 pixlar.
+
+**Förutsättningar:** Den syntetiska okända bindningen enligt förberedelsen.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/login-binding-reset.spec.ts",
+    "caseId": "ACCESS-32"
+  },
+  "reference": "Ren HTTPS-provprofil med en syntetisk okänd bindningskaka, 1280 pixlar och syntetisk Google-provider. Automatiken kontrollerar att ingen providerstart sker före det nya uttryckliga valet.",
+  "outcomes": [
+    "Första försöket stoppas utan bekräftad inloggning eller falskt återställningsbesked.",
+    "Separat uttrycklig rensning återför fokus till Google-knappen utan automatisk providerstart.",
+    "Nästa inloggningsval börjar avmarkerat och en ny vanlig inloggning kan slutföras."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna `/login`, välj **Fortsätt med Google**, markera **Kom ihåg mig**
+   och välj **Fortsätt till Google**.
+2. Läs att säker inloggning inte kan bekräftas. Kontrollera att sidan
+   inte påstår en databasåterställning eller en lyckad inloggning.
+3. Läs omfattningen och välj **Börja om i den här webbläsaren**.
+4. Kontrollera att fokus återgår till **Fortsätt med Google** och att
+   inget providerfönster öppnas automatiskt.
+5. Välj Google på nytt. Kontrollera att **Kom ihåg mig** är avmarkerat.
+   Lämna det avmarkerat och välj **Fortsätt till Google**.
+
+**Förväntat resultat:** Första försöket stoppas. Rensningen sker först
+efter den separata handlingen. **Klart för en ny inloggning. Välj Google
+eller Microsoft igen.** visas. Nästa providerhandling skapar en vanlig
+inloggning och visar **Skapa ditt hushåll**. Ingen annan webbläsare eller
+hushållsinformation påverkas.
+
+### ACCESS-33: Avbruten rensning bevarar en annan fliks nya inloggning
+
+**Syfte:** Ett sent kontrollsvar får inte rensa en nyare bindning eller
+dess session.
+
+**Användare:** Alex i två flikar i samma provprofil.
+
+**Förutsättningar:** Samma okända syntetiska bindning som ACCESS-32. Kör
+`hold-reset-check` före den första rensningen. Använd 1280 pixlar.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/login-binding-reset.spec.ts",
+    "caseId": "ACCESS-33"
+  },
+  "reference": "Två verkliga Chromium-flikar delar HTTPS-kakor och Web Locks. Provinstallationen håller det första reset-check-svaret efter serverkontrollen och släpper det först efter en ny bekräftad inloggning i den andra fliken.",
+  "outcomes": [
+    "Navigering avbryter den väntande rensningen och frigör webbläsarlåset.",
+    "Den andra fliken kan uttryckligen rensa den gamla kopplingen och skapa en ny vanlig inloggning.",
+    "Det sena gamla svaret varken rensar den nya bindningen eller avslutar den nya sessionen."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Följ ACCESS-32 till det avvisade första försöket. Välj **Börja om i
+   den här webbläsaren** och vänta tills terminalen visar `reset_held`.
+2. Skriv `/cookies` i adressfältet i samma flik för att lämna inloggningen.
+3. Öppna `/login` i den andra fliken. Gör det avvisade försöket och välj
+   uttryckligen **Börja om i den här webbläsaren** där.
+4. Välj Google på nytt, lämna **Kom ihåg mig** avmarkerat och logga in.
+   Vänta på **Skapa ditt hushåll**.
+5. Kör `release-initialization`. Ladda startsidan i den första fliken.
+
+**Förväntat resultat:** Den andra fliken behåller sin nya inloggning
+efter det sena svaret. Den första fliken visar samma inloggade tillstånd
+vid återbesök. Ingen automatisk ny providerhandling startas av det gamla
+kontrollsvaret. Faktisk skärmläsaruppläsning ingår inte i detta prov.

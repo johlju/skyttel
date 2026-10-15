@@ -115,6 +115,9 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   framgång eller automatisk upprepning. Tekniska serverprov kontrollerar
   verklig gallring utan användartrafik och oförändrade frister vid omstart;
   produktionens gallring och säkerhetskopiors radering behöver egna bevis.
+  Kontrollerad återställning av en faktisk SQLite-kopia skiljer förlorat
+  resultat från ett kvarvarande ägarbehörigt resultat och bevarar dess
+  ursprungliga kontrollfrist.
 
 - [Samtalets samlade hjälpmedelsflöde](conversation-accessibility.md):
   naturlig läs- och tabbordning över verktyg, röstruta och flyttad notis,
@@ -491,6 +494,8 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   hinder när inloggningen efter återkomsten inte kan bekräftas,
   säkra gemensamma starter i flera flikar, stoppa blockerade kakor eller
   saknade webbläsarlås och avbryta fördröjd initialisering,
+  uttryckligen rensa en okänd gammal koppling utan automatisk
+  inloggning och bevara en annan fliks nya session vid ett sent kontrollsvar,
   tangentbord, avbryta extern inloggning, återhämta utgångna försök, börja
   med kartans verktyg utan startdialoger, hantera förlorad tillgång och länka
   inloggningssätt. Inloggningsstartens nätverksavbrott och leverantörsfel

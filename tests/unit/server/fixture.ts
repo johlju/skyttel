@@ -14,6 +14,7 @@ export function configurationEnvironment(databasePath = '/synthetic/skyttel.sqli
     SKYTTEL_FIRST_ADMIN_PROVIDER: 'google',
     SKYTTEL_FIRST_ADMIN_SUBJECT: 'synthetic-admin',
     BETTER_AUTH_SECRET: 'synthetic-unit-test-secret-at-least-32-characters',
+    SKYTTEL_AUTHORITY_GENERATION: '11111111-1111-4111-8111-111111111111',
     GOOGLE_CLIENT_ID: 'synthetic-google',
     GOOGLE_CLIENT_SECRET: 'synthetic-secret',
     MICROSOFT_CLIENT_ID: 'synthetic-microsoft',
@@ -36,10 +37,10 @@ export async function applicationFixture({
   const config = readConfig(configurationEnvironment(join(directory, 'skyttel.sqlite')));
   if (databaseSnapshot) copyFileSync(databaseSnapshot, config.databasePath);
   const database = openDatabase(config.databasePath, { migrationsDirectory });
-  const hasOAuth = database
-    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'oauthClient'")
+  const hasAuthority = database
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'installation_authority'")
     .get();
-  const auth = hasOAuth ? createAuth(config, database) : legacyAuth(config, database);
+  const auth = hasAuthority ? createAuth(config, database) : legacyAuth(config, database);
   await verifyAuthSchema(auth);
   let subject: unknown = config.firstAdmin.subject;
   let providerFails = false;

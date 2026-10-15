@@ -1,10 +1,19 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { installationRestoredMessage } from '../shared/installation-restore.js';
 import { revokeRememberedLogin, type StoragePreference } from './browser-binding.js';
 import { MapRequestError, request } from './map-request.js';
 
-type Operation = { id: string; sessionId: string };
-type State = 'idle' | 'saving' | 'saved' | 'rejected' | 'unknown' | 'checking' | 'unavailable';
-type Result = { id: string; userId: string; status: string; expiresAt: number };
+type Operation = { id: string; sessionId: string; generation?: string };
+type State =
+  | 'idle'
+  | 'saving'
+  | 'saved'
+  | 'rejected'
+  | 'unknown'
+  | 'checking'
+  | 'unavailable'
+  | 'restored';
+type Result = { id: string; userId: string; status: string; expiresAt?: number };
 
 /** The tab retains only the requested operation, never a preference or authority. */
 export function useStoragePreference(userId?: string) {
@@ -62,7 +71,13 @@ export function useStoragePreference(userId?: string) {
           typeof value.sessionId === 'string' &&
           value.sessionId.length > 0
         )
-          operation.current = { id: value.id, sessionId: value.sessionId };
+          operation.current = {
+            id: value.id,
+            sessionId: value.sessionId,
+            ...(typeof value.generation === 'string' && /^[a-f0-9-]{36}$/.test(value.generation)
+              ? { generation: value.generation }
+              : {}),
+          };
         else
           setRecoveryMessage(
             'Åtgärdens referens saknas eller är skadad. Utfallet är fortfarande okänt.',
@@ -125,7 +140,11 @@ export function useStoragePreference(userId?: string) {
       (!reset && (requested || !saved.remembered))
     )
       return;
-    const selected = { id: crypto.randomUUID(), sessionId: saved.sessionId };
+    const selected = {
+      id: crypto.randomUUID(),
+      sessionId: saved.sessionId,
+      ...(saved.generation ? { generation: saved.generation } : {}),
+    };
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(selected));
       if (sessionStorage.getItem(storageKey) !== JSON.stringify(selected))
@@ -181,13 +200,35 @@ export function useStoragePreference(userId?: string) {
     const ticket = ++generation.current;
     try {
       const result = await request<Result>(
-        `/api/browser-binding/results/${encodeURIComponent(selected.id)}`,
+        `/api/browser-binding/results/${encodeURIComponent(selected.id)}${
+          selected.generation ? `?generation=${encodeURIComponent(selected.generation)}` : ''
+        }`,
       );
       if (generation.current !== ticket) return;
+      if (result.id !== selected.id || result.userId !== userId) throw new Error('owner_changed');
+      if (result.status === 'unavailable_after_restore' && selected.generation) {
+        forget();
+        setState('restored');
+        setSaved(undefined);
+        updateRequested(false);
+        setRequiresLogin(true);
+        setRecoveryMessage(installationRestoredMessage);
+        try {
+          const current = await request<StoragePreference>('/api/browser-binding/preference');
+          if (generation.current !== ticket) return;
+          if (current.userId !== userId) throw new Error('owner_changed');
+          setSaved(current);
+          updateRequested(current.remembered);
+          setRequiresLogin(false);
+        } catch {
+          // The restore is confirmed, but the old cached preference is not
+          // evidence of the current login or its newly selected choice.
+        }
+        return;
+      }
       if (
-        result.id !== selected.id ||
-        result.userId !== userId ||
         result.status !== 'completed' ||
+        typeof result.expiresAt !== 'number' ||
         !Number.isFinite(result.expiresAt)
       )
         throw new Error('result_unconfirmed');
