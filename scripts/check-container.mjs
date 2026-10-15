@@ -170,6 +170,19 @@ try {
     'for manager in apk npm npx yarn yarnpkg corepack; do if command -v "$manager"; then exit 1; fi; done; ' +
       'test ! -e /usr/local/lib/node_modules/corepack',
   ]);
+  await command([
+    'exec',
+    fresh,
+    'node',
+    '--input-type=module',
+    '-e',
+    `import assert from 'node:assert/strict';
+     import { spawnSync } from 'node:child_process';
+     const result = spawnSync(process.execPath, ['dist/server/upgrade-legacy-login.js'], { encoding: 'utf8' });
+     assert.equal(result.status, 1);
+     assert.equal(result.stdout, '');
+     assert.deepEqual(JSON.parse(result.stderr), { event: 'legacy_login_upgrade_failed' });`,
+  ]);
   const loginPage = await request(fresh, '/');
   assert.equal(loginPage.status, 200);
   assert.match(loginPage.body, /<html/u);
