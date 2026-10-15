@@ -1,10 +1,9 @@
 // Layout adapted from Viscalyx CookieSettings; see CookieStorage.LICENSE.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { rememberedLoginInformation } from '../shared/remembered-login.js';
-import { revokeRememberedLogin, type StoragePreference } from './browser-binding.js';
 import referenceLicense from './CookieStorage.LICENSE?url&no-inline';
-import { MapRequestError, request } from './map-request.js';
+import { useStoragePreference } from './use-storage-preference.js';
 import './cookie-storage.css';
 
 const entries = [
@@ -31,6 +30,13 @@ const entries = [
     time: 'Kakan gäller i fem minuter från starten och tas bort när svaret kontrolleras. OAuth-försökets serverfrist är separat. En avbruten inloggning ger ingen tillgång till hushållet.',
   },
   {
+    name: 'skyttel-storage-operation:<användar-ID>',
+    place: 'Webbläsarens sessionStorage i den aktuella fliken.',
+    content:
+      'Referens till en uttryckligen begärd avstängning och den ursprungliga inloggningens ID. Gör att samma resultat kan kontrolleras efter ett förlorat svar och ny inloggning. Referensen ger ingen behörighet och innehåller inget lagringsval.',
+    time: 'Skapas först när du väljer att spara eller bekräftar återställning. Tas bort när utfallet bekräftas eller avvisas. Flikens lagring kan försvinna; rensning kan hindra återhämtning men upprepar inte ändringen. Serverns kontrollfönster är 24 timmar från ändringen.',
+  },
+  {
     name: 'skyttel-import:<hushålls-ID>',
     place: 'Webbläsarens sessionStorage i den aktuella fliken.',
     content:
@@ -48,55 +54,20 @@ const entries = [
 
 export function CookieStorage({ userId }: { userId?: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
-  const generation = useRef(0);
-  const [saved, setSaved] = useState<StoragePreference>();
-  const [requested, setRequested] = useState(false);
-  const [state, setState] = useState<
-    'idle' | 'saving' | 'saved' | 'rejected' | 'unknown' | 'unavailable'
-  >('idle');
-  const [continued, setContinued] = useState(false);
-  useEffect(() => {
-    generation.current += 1;
-    const controller = new AbortController();
-    setSaved(undefined);
-    setState('idle');
-    if (userId)
-      request<StoragePreference>('/api/browser-binding/preference', {}, controller.signal)
-        .then((result) => {
-          if (!controller.signal.aborted) {
-            setSaved(result);
-            setRequested(result.remembered);
-          }
-        })
-        .catch(() => {
-          if (!controller.signal.aborted) setState('unavailable');
-        });
-    return () => {
-      generation.current += 1;
-      controller.abort();
-    };
-  }, [userId]);
-  const dirty = saved && saved.remembered !== requested;
-  async function save() {
-    if (!saved || !dirty || state === 'saving' || state === 'unknown' || requested) return;
-    setState('saving');
-    const savingGeneration = generation.current;
-    try {
-      const result = await revokeRememberedLogin(crypto.randomUUID(), saved);
-      if (generation.current !== savingGeneration) return;
-      setSaved(result.result);
-      setRequested(false);
-      setContinued(result.continued);
-      setState('saved');
-    } catch (error) {
-      if (generation.current !== savingGeneration) return;
-      setState(
-        error instanceof MapRequestError && [400, 401, 403, 409].includes(error.status)
-          ? 'rejected'
-          : 'unknown',
-      );
-    }
-  }
+  const {
+    saved,
+    requested,
+    state,
+    continued,
+    reauthenticated,
+    requiresLogin,
+    resultChecked,
+    recoveryMessage,
+    dirty,
+    setRequested,
+    save,
+    checkAgain,
+  } = useStoragePreference(userId);
   useLayoutEffect(() => heading.current?.focus(), []);
   return (
     <article className="cookie-storage">
@@ -183,11 +154,13 @@ export function CookieStorage({ userId }: { userId?: string }) {
               role="switch"
               aria-checked={requested}
               checked={requested}
-              disabled={!saved.remembered || state === 'saving' || state === 'unknown'}
-              onChange={(event) => {
-                setRequested(event.target.checked);
-                setState('idle');
-              }}
+              disabled={
+                !saved.remembered ||
+                state === 'saving' ||
+                state === 'checking' ||
+                state === 'unknown'
+              }
+              onChange={(event) => setRequested(event.target.checked)}
             />
           </label>
         )}
@@ -245,7 +218,7 @@ export function CookieStorage({ userId }: { userId?: string }) {
       </section>
       {userId && (
         <div className="cookie-storage-actions">
-          {dirty && state !== 'unknown' && <p>Osparad ändring.</p>}
+          {dirty && state !== 'unknown' && state !== 'checking' && <p>Osparad ändring.</p>}
           {saved && (
             <p>
               Efter avstängning gäller inloggningen längst till det tidigare slutet eller åtta
@@ -256,9 +229,11 @@ export function CookieStorage({ userId }: { userId?: string }) {
           <p role="status">
             {state === 'saving'
               ? 'Sparar…'
-              : state === 'saved'
-                ? `Ihågkommen inloggning är avstängd. ${continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'}`
-                : ''}
+              : state === 'checking'
+                ? 'Kontrollerar samma åtgärd…'
+                : state === 'saved'
+                  ? `Ihågkommen inloggning är avstängd. ${reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'}`
+                  : ''}
           </p>
           <p role="alert">
             {state === 'rejected'
@@ -266,17 +241,30 @@ export function CookieStorage({ userId }: { userId?: string }) {
               : state === 'unknown'
                 ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.'
                 : state === 'unavailable'
-                  ? 'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
+                  ? recoveryMessage ||
+                    'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
                   : ''}
+            {state === 'unknown' && recoveryMessage ? ` ${recoveryMessage}` : ''}
           </p>
-          {state === 'saved' && !continued && (
+          {requiresLogin && (
             <p>
               <Link to="/login">Logga in igen</Link>
             </p>
           )}
+          {(state === 'unknown' || state === 'checking' || resultChecked) && (
+            <button
+              type="button"
+              aria-disabled={state !== 'unknown'}
+              onClick={() => void checkAgain()}
+            >
+              Kontrollera igen
+            </button>
+          )}
           <button
             type="button"
-            aria-disabled={!dirty || state === 'saving' || state === 'unknown'}
+            aria-disabled={
+              !dirty || state === 'saving' || state === 'checking' || state === 'unknown'
+            }
             onClick={() => void save()}
           >
             Spara inställningar

@@ -11,6 +11,9 @@ export function authenticatedHttpFetch(client: APIRequestContext, origin: string
     const url = new URL(request?.url ?? String(input), origin);
     if (url.origin !== origin) throw new Error('HTTP fixture only serves its own application');
     const headers = new Headers(request?.headers);
+    // Native browser fetch supplies this metadata for same-origin GET reads,
+    // where it does not necessarily send an Origin header.
+    headers.set('sec-fetch-site', 'same-origin');
     new Headers(init.headers).forEach((value, key) => {
       headers.set(key, value);
     });

@@ -11,6 +11,7 @@ import { createInstallation, robin } from '../../support/installation.js';
 let installation: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
 beforeEach(async () => {
+  sessionStorage.clear();
   installation = await createInstallation();
   client = await request.newContext();
   await signIn(client, installation.origin);
@@ -23,6 +24,44 @@ beforeEach(async () => {
     globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
   ).jsdom.reconfigure({ url: installation.origin });
   vi.stubGlobal('fetch', authenticatedHttpFetch(client, installation.origin));
+});
+
+test('checking a lost committed OFF result reads that operation without saving again', async () => {
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  let writes = 0;
+  let id = '';
+  const reads: string[] = [];
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input);
+    if (path.includes('/api/browser-binding/results/')) {
+      expect(init?.method).toBe('GET');
+      reads.push(path);
+    }
+    const response = await transport(input, init);
+    if (path === '/api/browser-binding/revoke') {
+      writes++;
+      id = JSON.parse(String(init?.body)).id;
+      throw new TypeError('Reply lost after the real server commit');
+    }
+    return response;
+  });
+  render(page());
+  const save = await turnOff();
+  await userEvent.click(save);
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Sparstatus okänd'));
+  // The old binding cannot read results. A new authenticated login is required.
+  await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
+  await screen.findByRole('link', { name: 'Logga in igen' });
+  await signIn(client, installation.origin);
+  await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.'),
+  );
+  expect(reads).toEqual([
+    `/api/browser-binding/results/${id}`,
+    `/api/browser-binding/results/${id}`,
+  ]);
+  expect(writes).toBe(1);
 });
 afterEach(async () => {
   cleanup();

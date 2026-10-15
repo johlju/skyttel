@@ -183,7 +183,15 @@ export function browserBindings(
       : undefined;
   }
   routes.use('*', async (context, next) => {
-    if (context.req.header('Origin') !== origin || !canonicalRequest(context.req.raw))
+    const sameOriginRead =
+      context.req.method === 'GET' &&
+      (context.req.path === '/api/browser-binding/preference' ||
+        context.req.path.startsWith('/api/browser-binding/results/')) &&
+      context.req.header('Sec-Fetch-Site') === 'same-origin';
+    if (
+      (!sameOriginRead && context.req.header('Origin') !== origin) ||
+      !canonicalRequest(context.req.raw)
+    )
       return context.json({ error: 'forbidden' }, 403);
     await next();
   });
