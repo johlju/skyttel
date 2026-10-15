@@ -176,15 +176,24 @@ export function createApp({
     if (context.req.path === '/api/auth/oauth2/authorize') {
       const url = new URL(context.req.url);
       url.searchParams.set('prompt', 'consent');
-      return auth.handler(new Request(url, context.req.raw));
+      const request = new Request(url, context.req.raw);
+      // Better Auth's internal session lookup must not accept an auth cookie
+      // which Skyttel's browser-binding boundary rejects. Keep its ordinary
+      // anonymous OAuth/login response and validation behavior.
+      if (bindings && !(await bindings.session(request.headers))) request.headers.delete('cookie');
+      return auth.handler(request);
     }
     if (context.req.path === '/api/auth/get-session' && bindings)
       return context.json(await bindings.session(context.req.raw.headers));
     if (context.req.path === '/api/auth/sign-in/social' && bindings)
       return bindings.start(context.req.raw, () => auth.handler(context.req.raw));
+    if (context.req.path === '/api/auth/sign-out' && bindings)
+      return bindings.logout(context.req.raw, () => auth.handler(context.req.raw));
     if (context.req.path.startsWith('/api/auth/callback/'))
       return bindings
-        ? bindings.callback(context.req.raw, () => linking.handleCallback(context.req.raw))
+        ? linking.handleCallback(context.req.raw, (operation) =>
+            bindings.callback(context.req.raw, operation),
+          )
         : linking.handleCallback(context.req.raw);
     return auth.handler(context.req.raw);
   });

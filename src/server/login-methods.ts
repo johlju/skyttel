@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import type { Auth } from './auth.js';
+import { authDatabase } from './auth-callback-transaction.js';
 import type { browserBindings } from './browser-binding.js';
 
 export function stateKey(state: string) {
@@ -28,6 +29,7 @@ export function createLoginMethods(
   origin: string,
   bindings?: ReturnType<typeof browserBindings>,
 ) {
+  database = authDatabase(database);
   // The supported deployment runs one application instance. Serialize each
   // session's linking operations across OAuth's asynchronous verification so
   // cancellation cannot report success while an account is being attached.
@@ -133,11 +135,18 @@ export function createLoginMethods(
   });
   return {
     routes,
-    async handleCallback(request: Request) {
+    async handleCallback(
+      request: Request,
+      guard?: (operation: () => Promise<Response>) => Promise<Response>,
+    ) {
       const state = new URL(request.url).searchParams.get('state');
       const attempt = state ? linkingAttempt(database, state) : undefined;
-      if (!attempt) return auth.handler(request);
-      return exclusive(attempt.sessionId, () => handleAuthCallback(request, database, auth));
+      const complete = () =>
+        attempt ? handleAuthCallback(request, database, auth) : auth.handler(request);
+      const guarded = () => (guard ? guard(complete) : complete());
+      // Keep cancellation serialized through the final publication, including
+      // the binding guard. Staged account changes are not completion yet.
+      return attempt ? exclusive(attempt.sessionId, guarded) : guarded();
     },
   };
 }
@@ -160,8 +169,10 @@ async function handleAuthCallback(request: Request, database: Database.Database,
     response = Response.redirect(new URL('/login-methods?failed=1', request.url));
   }
   const success =
-    response.headers.get('location') === new URL('/login-methods', request.url).href ||
-    response.headers.get('location') === '/login-methods';
+    response.status >= 300 &&
+    response.status < 400 &&
+    (response.headers.get('location') === new URL('/login-methods', request.url).href ||
+      response.headers.get('location') === '/login-methods');
   database
     .prepare('UPDATE login_link SET stage = ?, state = NULL WHERE sessionId = ? AND state = ?')
     .run(

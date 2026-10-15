@@ -480,7 +480,8 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   Länkningens två steg visar aktuell verifiering, båda tjänsternas status
   och övergången till respektive tjänst. Microsoft-inloggning efter
   omstart behåller profil och hushåll; requestdrivet identitetsbevis redovisas
-  separat som tekniskt underlag.
+  separat som tekniskt underlag. Tekniskt underlag täcker även överlappande
+  inloggningar, utloggning under koppling och sena kakskrivande svar.
   Avbruten länkning bekräftas med bevarad tillgång och krav på ny verifiering.
   Utgången länkning förklarar ny verifiering och bevarar eget utkast och
   identitet.

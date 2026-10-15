@@ -41,6 +41,18 @@ export async function applicationFixture({
   await verifyAuthSchema(auth);
   let subject: unknown = config.firstAdmin.subject;
   let providerFails = false;
+  let callbackFailure: 'response' | 'redirect' | undefined;
+  const handleAuth = auth.handler;
+  auth.handler = async (request: Request) => {
+    const response = await handleAuth(request);
+    if (!callbackFailure || !new URL(request.url).pathname.startsWith('/api/auth/callback/'))
+      return response;
+    const failure = callbackFailure;
+    callbackFailure = undefined;
+    const headers = new Headers(response.headers);
+    if (failure === 'redirect') headers.set('location', `${config.origin}/?authError=1`);
+    return new Response(null, { status: failure === 'response' ? 500 : 302, headers });
+  };
   let providerPause: { entered: () => void; wait: Promise<void> } | undefined;
   const context = await auth.$context;
   for (const provider of context.socialProviders) {
@@ -126,6 +138,9 @@ export async function applicationFixture({
     },
     failProvider() {
       providerFails = true;
+    },
+    failNextCallbackAfterAuthentication(mode: 'response' | 'redirect') {
+      callbackFailure = mode;
     },
     pauseProvider() {
       let entered: () => void = () => {};

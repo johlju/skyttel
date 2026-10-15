@@ -100,6 +100,7 @@ export async function createInstallation(
   let identity = alex;
   let providerFails = false;
   let consentDenied = false;
+  let providerPause: { entered: () => void; wait: Promise<void> } | undefined;
   let database: ReturnType<typeof openDatabase>;
   let server: ServerType;
   let closeApp: () => Promise<void>;
@@ -143,11 +144,18 @@ export async function createInstallation(
         return { accessToken: 'synthetic-provider-token', tokenType: 'bearer' };
       };
       provider.getUserInfo = async () => {
+        const selected = identity;
+        const pause = providerPause;
+        providerPause = undefined;
+        if (pause) {
+          pause.entered();
+          await pause.wait;
+        }
         const profile = {
-          sub: identity.subject,
-          oid: identity.subject,
-          name: identity.name,
-          email: identity.email,
+          sub: selected.subject,
+          oid: selected.subject,
+          name: selected.name,
+          email: selected.email,
           email_verified: true,
         };
         // Preserve the application's profile mapping while substituting only
@@ -249,6 +257,18 @@ export async function createInstallation(
     directory,
     setIdentity(value: Identity) {
       identity = value;
+    },
+    pauseNextProvider() {
+      let entered: () => void = () => {};
+      let resume: () => void = () => {};
+      const reached = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const wait = new Promise<void>((resolve) => {
+        resume = resolve;
+      });
+      providerPause = { entered, wait };
+      return { reached, resume };
     },
     failProvider(value: boolean) {
       providerFails = value;

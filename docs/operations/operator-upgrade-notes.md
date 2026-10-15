@@ -17,6 +17,13 @@ After upgrade, verify Google and Microsoft sign-in through the production
 HTTPS ingress in the supported browsers. Check that the ingress preserves
 the configured public host and that users regain household access.
 
+Verify overlapping sign-in, account linking and logout through the ingress.
+One successful sign-in must replace the previous login in the same browser
+binding. Logout must stop pending sign-in and linking callbacks in that
+binding. Other browser bindings and separately approved assistant
+connections must keep their access. A delayed cookie response can require
+another sign-in; it must not restore an ended login.
+
 ### Account theme and household files
 
 Use the upgraded application to read new full household files. Supported

@@ -1399,6 +1399,20 @@ anrop från rätt ursprung och förfalskad verifiering provas separat.
 Ingen av dessa kontroller ersätter ACCESS-09:s klick, profil och nya
 Microsoft-inloggning i webbläsaren.
 
+[browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts)
+provar separat överlappande leverantörssvar för samma och olika användare,
+ersatt sessionsnyckel efter omstart och isolering mellan bindningar.
+Utloggning under pågående kontokoppling får inte lägga till en identitet.
+Ett faktiskt fördröjt HTTPS-svar skriver över webbläsarens auth-kaka efter
+ett senare lyckat byte, men ger ingen gammal serveråtkomst. Provet använder
+installationsfixturens kontrollerade svar och identiteter; det verifierar
+inte verkliga leverantörer eller manuellt skärmläsarbeteende.
+
+[assistants.spec.ts](../../tests/integration/assistants.spec.ts) kontrollerar
+tekniskt att saknad bindning nekar sessionskontroll, utloggning och nytt
+assistentmedgivande. Ersatt inloggning och utloggning påverkar inte en
+separat godkänd MCP-anslutning med fortsatt hushållstillgång.
+
 Tangentbordsfokus, omflöde och läsbara statusbesked är syntetiskt
 webbläsarunderlag. Faktiskt upplästa skärmläsarbesked, fysisk mikrofon,
 ljud och enhetsbehörigheter måste observeras separat; fallen här gör

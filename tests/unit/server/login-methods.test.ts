@@ -65,6 +65,25 @@ test('public linking endpoints reject unauthenticated, cross-origin and malforme
   expect((await client.json('/api/login-methods/add', { provider: 'google' })).status).toBe(409);
 });
 
+test('an account-link failure after provider verification rolls back its identity change', async () => {
+  const client = fixture.client();
+  await client.signIn();
+  const before = await (await client.request('/api/bootstrap')).json();
+  await client.request(await begin(client));
+  const callback = await begin(client, 'add', 'microsoft');
+  fixture.setSubject('rejected-microsoft-link');
+  fixture.failNextCallbackAfterAuthentication('response');
+  await client.request(callback);
+  expect(await (await client.request('/api/bootstrap')).json()).toEqual(before);
+  expect(await (await client.request('/api/login-methods')).json()).toEqual({
+    providers: ['google'],
+    stage: 'failed',
+  });
+  await client.signIn('microsoft');
+  const after = await (await client.request('/api/bootstrap')).json();
+  expect(after.user.id).not.toBe(before.user.id);
+});
+
 test('expired existing proof cannot authorize linking', async () => {
   const client = fixture.client();
   await client.signIn();

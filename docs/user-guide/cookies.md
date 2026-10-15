@@ -25,6 +25,14 @@ webbläsarbindningen. En sessionskaka garanterar inte att du loggas ut när
 du stänger ett fönster: webbläsaren kan återställa sessionen. Logga ut på
 en delad dator.
 
+Flikar med samma bekräftade webbläsarbindning delar aktuell inloggning.
+Den första lyckade nya inloggningen ersätter den tidigare och avslutar
+andra redan påbörjade försök. En misslyckad inloggning byter inte användare.
+Utloggning avslutar inloggningen och pågående försök i bindningen; andra
+enheter och webbläsare påverkas inte. Ett sent svar kan lämna en gammal
+kaka i webbläsaren. Den återställer ingen avslutad åtkomst och kan kräva
+att du loggar in igen.
+
 Sidan skiljer webbläsarens kakor och fliklagring från serveruppgifter och
 säkerhetskopior. En utgången kaka eller avslutad behörighet betyder inte
 att alla serverkopior är fysiskt raderade. Beslutade gallringsfrister ska

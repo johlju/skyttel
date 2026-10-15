@@ -11,6 +11,77 @@ afterEach(() => {
 });
 
 describe('public application HTTP interface', () => {
+  test.each(['response', 'redirect'] as const)(
+    'a post-provider %s failure preserves the current login and identity links',
+    async (mode) => {
+      const client = fixture.client();
+      await client.signIn();
+      const before = await (await client.request('/api/bootstrap')).json();
+      fixture.setSubject('rejected-new-identity');
+      fixture.failNextCallbackAfterAuthentication(mode);
+      const response = await client.signIn('microsoft');
+      expect(
+        response.headers.getSetCookie().some((cookie) => cookie.includes('session_token=')),
+      ).toBe(false);
+      expect(await (await client.request('/api/bootstrap')).json()).toEqual(before);
+      expect(await (await client.request('/api/login-methods')).json()).toMatchObject({
+        providers: ['google'],
+      });
+      // The rejected identity has no link to the original user. A later,
+      // explicitly successful sign-in creates its own stable Skyttel user.
+      await client.signIn('microsoft');
+      expect((await (await client.request('/api/bootstrap')).json()).user.id).not.toBe(
+        before.user.id,
+      );
+    },
+  );
+  test('logout cancels a callback already waiting for the provider', async () => {
+    const client = fixture.client();
+    await client.signIn();
+    const start = await client.json('/api/auth/sign-in/social', {
+      provider: 'google',
+      callbackURL: '/',
+    });
+    const { url } = (await start.json()) as { url: string };
+    const pause = fixture.pauseProvider();
+    const callback = client.request(url);
+    await pause.reached;
+    const logout = await client.json('/api/auth/sign-out', {});
+    expect(logout.status).toBe(200);
+    pause.resume();
+    expect((await callback).headers.get('location')).toBe(
+      `${fixture.config.origin}/?error=binding_invalid`,
+    );
+    expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
+      status: 'anonymous',
+    });
+  });
+
+  test('callback publication and logout never report a commit inside another live transaction', async () => {
+    const client = fixture.client();
+    await client.signIn();
+    const before = await (await client.request('/api/bootstrap')).json();
+    const started = await client.json('/api/auth/sign-in/social', {
+      provider: 'google',
+      callbackURL: '/',
+    });
+    const pause = fixture.pauseProvider();
+    const pending = client.request((await started.json()).url);
+    await pause.reached;
+    fixture.database.exec('BEGIN IMMEDIATE');
+    try {
+      pause.resume();
+      const response = await pending;
+      expect(response.headers.get('location')).toContain('error=binding_invalid');
+      expect(response.headers.getSetCookie()).toEqual([]);
+      expect((await client.json('/api/auth/sign-out', {})).status).toBe(409);
+    } finally {
+      pause.resume();
+      fixture.database.exec('ROLLBACK');
+    }
+    expect(await (await client.request('/api/bootstrap')).json()).toEqual(before);
+    expect((await client.json('/api/auth/sign-out', {})).status).toBe(200);
+  });
   test('rejects outdated or absent browser identity before changing household content', async () => {
     fixture.close();
     const identity = { commit: 'a'.repeat(40), version: '0.1.0-preview.2+2' };

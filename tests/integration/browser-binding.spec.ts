@@ -1,6 +1,311 @@
 import { expect, test } from '@playwright/test';
 import { signIn } from '../support/client.js';
-import { createInstallation } from '../support/installation.js';
+import { alex, createInstallation, robin } from '../support/installation.js';
+
+for (const sameUser of [true, false]) {
+  test(`first successful callback cancels an already verifying ${sameUser ? 'same' : 'different'} user`, {
+    tag: '@technical',
+  }, async ({ playwright }) => {
+    const installation = await createInstallation();
+    const { origin } = installation;
+    const first = await playwright.request.newContext();
+    let second: Awaited<ReturnType<typeof playwright.request.newContext>> | undefined;
+    let original: Awaited<ReturnType<typeof playwright.request.newContext>> | undefined;
+    let independent: Awaited<ReturnType<typeof playwright.request.newContext>> | undefined;
+    let resume = () => {};
+    try {
+      await signIn(first, origin);
+      const before = await (await first.get(`${origin}/api/bootstrap`)).json();
+      const saved = await first.storageState();
+      second = await playwright.request.newContext({ storageState: saved });
+      original = await playwright.request.newContext({ storageState: saved });
+      independent = await playwright.request.newContext();
+      await signIn(independent, origin);
+      async function start(client: typeof first) {
+        const response = await client.post(`${origin}/api/auth/sign-in/social`, {
+          headers: { origin },
+          data: { provider: 'google', callbackURL: '/' },
+        });
+        expect(response.status()).toBe(200);
+        return (await response.json()).url as string;
+      }
+      const slowUrl = await start(first);
+      const fastUrl = await start(second);
+      const paused = installation.pauseNextProvider();
+      resume = paused.resume;
+      const slow = first.get(slowUrl, { maxRedirects: 0 });
+      await paused.reached;
+      installation.setIdentity(sameUser ? alex : robin);
+      expect((await second.get(fastUrl, { maxRedirects: 0 })).status()).toBe(302);
+      const winner = await (await second.get(`${origin}/api/bootstrap`)).json();
+      expect(winner.user.name).toBe(sameUser ? alex.name : robin.name);
+      paused.resume();
+      expect((await slow).headers().location).toBe(`${origin}/?error=binding_invalid`);
+      expect(await (await first.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+        status: 'anonymous',
+      });
+      expect(await (await original.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+        status: 'anonymous',
+      });
+      expect(await (await independent.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
+      await installation.restart();
+      expect(await (await original.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+        status: 'anonymous',
+      });
+      expect(await (await second.get(`${origin}/api/bootstrap`)).json()).toEqual(winner);
+      expect((await first.get(slowUrl, { maxRedirects: 0 })).headers().location).toBe(
+        `${origin}/?error=binding_invalid`,
+      );
+    } finally {
+      resume();
+      await first.dispose();
+      await second?.dispose();
+      await original?.dispose();
+      await independent?.dispose();
+      await installation.close();
+    }
+  });
+}
+
+test('a genuinely delayed callback header overwrites the browser cookie without reviving its old session', {
+  tag: '@technical',
+}, async ({ browser, playwright }) => {
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let capture: (cookies: string[]) => void = () => {};
+  const captured = new Promise<string[]>((resolve) => {
+    capture = resolve;
+  });
+  let delay = false;
+  const installation = await createInstallation(undefined, {
+    https: true,
+    async deliverResponse(request, response) {
+      if (delay && new URL(request.url).pathname.startsWith('/api/auth/callback/')) {
+        delay = false;
+        capture(response.headers.getSetCookie());
+        await held;
+      }
+      return response;
+    },
+  });
+  const { origin } = installation;
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  let current: Awaited<ReturnType<typeof playwright.request.newContext>> | undefined;
+  try {
+    await signIn(context.request, origin);
+    const start = await context.request.post(`${origin}/api/auth/sign-in/social`, {
+      headers: { origin },
+      data: { provider: 'google', callbackURL: '/' },
+    });
+    expect(start.status()).toBe(200);
+    delay = true;
+    const oldResponse = context.request.get((await start.json()).url, { maxRedirects: 0 });
+    const issued = await captured;
+    // The installation's response-delivery seam exposes the issued key only
+    // to the fixture. A second client arranges a later authorized replacement
+    // while the original real HTTP response is still held outside the server.
+    current = await playwright.request.newContext({
+      ignoreHTTPSErrors: true,
+      storageState: await context.request.storageState(),
+    });
+    const oldAuth = issued.find((item) => item.startsWith('__Secure-better-auth.session_token='));
+    if (!oldAuth) throw new Error('Missing issued auth cookie');
+    const [name, ...parts] = oldAuth.split(';', 1)[0].split('=');
+    await current.addCookies([
+      { name, value: parts.join('='), url: origin, secure: true, httpOnly: true, sameSite: 'Lax' },
+    ]);
+    installation.setIdentity(robin);
+    await signIn(current, origin);
+    const winner = await current.storageState();
+    await context.addCookies(winner.cookies);
+    const winningKey = (await context.cookies()).find((cookie) => cookie.name === name)?.value;
+    expect(await (await context.request.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      user: { name: robin.name },
+    });
+    release();
+    expect((await oldResponse).status()).toBe(302);
+    const lateKey = (await context.cookies()).find((cookie) => cookie.name === name)?.value;
+    expect(lateKey).toBe(parts.join('='));
+    expect(lateKey).not.toBe(winningKey);
+    expect(await (await context.request.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    expect(await (await current.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      user: { name: robin.name },
+    });
+    await installation.restart();
+    expect(await (await context.request.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+  } finally {
+    release();
+    await current?.dispose();
+    await context.close();
+    await installation.close();
+  }
+});
+
+test('logout cancels a provider callback and its account linking effects without touching another binding', {
+  tag: '@technical',
+}, async ({ playwright }) => {
+  const installation = await createInstallation();
+  const { origin } = installation;
+  const client = await playwright.request.newContext();
+  const other = await playwright.request.newContext();
+  let resume = () => {};
+  try {
+    await signIn(client, origin);
+    await signIn(other, origin);
+    async function link(step: string, provider: string) {
+      const response = await client.post(`${origin}/api/login-methods/${step}`, {
+        headers: { origin },
+        data: { provider },
+      });
+      expect(response.status()).toBe(200);
+      return (await response.json()).url as string;
+    }
+    await client.get(await link('prove', 'google'));
+    const pending = await link('add', 'microsoft');
+    installation.setIdentity({ ...alex, subject: 'uncommitted-microsoft' });
+    const paused = installation.pauseNextProvider();
+    resume = paused.resume;
+    const callback = client.get(pending, { maxRedirects: 0 });
+    await paused.reached;
+    expect(
+      (
+        await client.post(`${origin}/api/auth/sign-out`, { headers: { origin }, data: {} })
+      ).status(),
+    ).toBe(200);
+    paused.resume();
+    expect((await callback).headers().location).toBe(`${origin}/?error=binding_invalid`);
+    expect(await (await client.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    expect(await (await other.get(`${origin}/api/login-methods`)).json()).toMatchObject({
+      providers: ['google'],
+    });
+    installation.setIdentity(alex);
+    await signIn(client, origin);
+    expect(await (await client.get(`${origin}/api/login-methods`)).json()).toMatchObject({
+      providers: ['google'],
+    });
+  } finally {
+    resume();
+    await client.dispose();
+    await other.dispose();
+    await installation.close();
+  }
+});
+
+test('successful account proof keeps a separately registered login attempt valid', {
+  tag: '@technical',
+}, async ({ playwright }) => {
+  const installation = await createInstallation();
+  const { origin } = installation;
+  const login = await playwright.request.newContext();
+  let linking: Awaited<ReturnType<typeof playwright.request.newContext>> | undefined;
+  let resume = () => {};
+  try {
+    await signIn(login, origin);
+    linking = await playwright.request.newContext({ storageState: await login.storageState() });
+    const started = await login.post(`${origin}/api/auth/sign-in/social`, {
+      headers: { origin },
+      data: { provider: 'microsoft', callbackURL: '/' },
+    });
+    const proof = await linking.post(`${origin}/api/login-methods/prove`, {
+      headers: { origin },
+      data: { provider: 'google' },
+    });
+    expect(started.status()).toBe(200);
+    expect(proof.status()).toBe(200);
+    installation.setIdentity(robin);
+    const pause = installation.pauseNextProvider();
+    resume = pause.resume;
+    const pending = login.get((await started.json()).url, { maxRedirects: 0 });
+    await pause.reached;
+    installation.setIdentity(alex);
+    expect(
+      (await linking.get((await proof.json()).url, { maxRedirects: 0 })).headers().location,
+    ).toBe('/login-methods');
+    expect(await (await linking.get(`${origin}/api/login-methods`)).json()).toMatchObject({
+      stage: 'verified',
+    });
+    resume();
+    expect((await pending).headers().location).toBe('/');
+    expect(await (await login.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      user: { name: robin.name },
+    });
+    expect(await (await linking.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
+      status: 'anonymous',
+    });
+  } finally {
+    resume();
+    await login.dispose();
+    await linking?.dispose();
+    await installation.close();
+  }
+});
+
+for (const sharedIdentity of [false, true]) {
+  test(`concurrent ${sharedIdentity ? 'identical' : 'unrelated'} provider identities in independent bindings preserve committed accounts`, {
+    tag: '@technical',
+  }, async ({ playwright }) => {
+    const installation = await createInstallation();
+    const { origin } = installation;
+    const slowClient = await playwright.request.newContext();
+    const fastClient = await playwright.request.newContext();
+    let resume = () => {};
+    try {
+      await signIn(slowClient, origin);
+      await signIn(fastClient, origin);
+      const original = await (await slowClient.get(`${origin}/api/bootstrap`)).json();
+      async function start(client: typeof slowClient) {
+        const response = await client.post(`${origin}/api/auth/sign-in/social`, {
+          headers: { origin },
+          data: { provider: 'microsoft', callbackURL: '/' },
+        });
+        expect(response.status()).toBe(200);
+        return (await response.json()).url as string;
+      }
+      const slowUrl = await start(slowClient);
+      const fastUrl = await start(fastClient);
+      installation.setIdentity(robin);
+      const pause = installation.pauseNextProvider();
+      resume = pause.resume;
+      const slowResponse = slowClient.get(slowUrl, { maxRedirects: 0 });
+      await pause.reached;
+      const fastIdentity = sharedIdentity
+        ? robin
+        : { ...robin, subject: 'separate-microsoft', name: 'Kim Exempel' };
+      installation.setIdentity(fastIdentity);
+      expect((await fastClient.get(fastUrl, { maxRedirects: 0 })).headers().location).toBe('/');
+      const fast = await (await fastClient.get(`${origin}/api/bootstrap`)).json();
+      resume();
+      const slow = await slowResponse;
+      expect(slow.headers().location).toBe(
+        sharedIdentity ? `${origin}/?error=binding_invalid` : '/',
+      );
+      const after = await (await slowClient.get(`${origin}/api/bootstrap`)).json();
+      expect(after.user.id === original.user.id).toBe(sharedIdentity);
+      expect(await (await fastClient.get(`${origin}/api/bootstrap`)).json()).toEqual(fast);
+      expect(await (await slowClient.get(`${origin}/api/login-methods`)).json()).toMatchObject({
+        providers: [sharedIdentity ? 'google' : 'microsoft'],
+      });
+      if (sharedIdentity) {
+        installation.setIdentity(robin);
+        await signIn(slowClient, origin, 'microsoft');
+        expect(await (await slowClient.get(`${origin}/api/bootstrap`)).json()).toEqual(fast);
+      } else expect(after.user.id).not.toBe(fast.user.id);
+    } finally {
+      resume();
+      await slowClient.dispose();
+      await fastClient.dispose();
+      await installation.close();
+    }
+  });
+}
 
 test('binding registration is required before provider start and never writes a binding header', {
   tag: '@technical',

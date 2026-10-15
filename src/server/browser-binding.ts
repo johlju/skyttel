@@ -2,6 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import type { Auth } from './auth.js';
+import { stageAuthCallback } from './auth-callback-transaction.js';
+import { linkingAttempt } from './login-methods.js';
 
 const attemptLifetime = 10 * 60_000;
 type Binding = {
@@ -24,6 +26,18 @@ function key(value: string) {
 export function browserBindings(database: Database.Database, auth: Auth, origin: string) {
   const cookieName = bindingCookieName(origin);
   const routes = new Hono();
+  const completing = new Set<string>();
+  const invalidCallback = (request: Request) => {
+    const state = new URL(request.url).searchParams.get('state');
+    const linking = state && linkingAttempt(database, state);
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: new URL(linking ? '/login-methods?failed=1' : '/?error=binding_invalid', origin)
+          .href,
+      },
+    });
+  };
   function canonicalRequest(request: Request) {
     // TLS can terminate at the configured ingress. Preserve the public Host;
     // the browser separately confirms the exact HTTPS origin before writing.
@@ -96,6 +110,7 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
         { error: existing?.sessionId ? 'binding_occupied' : 'binding_invalid' },
         409,
       );
+    if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
     const candidate = randomBytes(32).toString('hex');
     database.transaction(() => {
       if (previous && current) {
@@ -113,6 +128,7 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
     if (!binding) return context.json({ error: 'binding_invalid' }, 409);
     if (binding.sessionId && !(await authorized(context.req.raw.headers)))
       return context.json({ error: 'binding_occupied' }, 409);
+    if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
     const result = database
       .prepare(
         'UPDATE browser_binding SET confirmed = 1 WHERE id = ? AND revision = ? AND sessionId IS ? AND expiresAt > ?',
@@ -138,6 +154,7 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
       const fresh = await authorized(request.headers);
       if (!state || fresh?.id !== binding.id || fresh.revision !== binding.revision)
         return Response.json({ error: 'binding_invalid' }, { status: 409 });
+      if (database.inTransaction) return Response.json({ error: 'binding_busy' }, { status: 409 });
       database
         .prepare(
           'INSERT INTO browser_binding_attempt (state, bindingId, revision, sessionId, expiresAt) VALUES (?, ?, ?, ?, ?)',
@@ -152,6 +169,7 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
       return response;
     },
     async callback(request: Request, operation: () => Promise<Response>) {
+      if (!canonicalRequest(request) || request.method !== 'GET') return invalidCallback(request);
       const state = new URL(request.url).searchParams.get('state');
       const attempt = state
         ? (database
@@ -167,34 +185,135 @@ export function browserBindings(database: Database.Database, auth: Auth, origin:
         attempt.revision !== binding.revision ||
         attempt.sessionId !== binding.sessionId
       )
-        return Response.redirect(new URL('/?error=binding_invalid', origin));
-      const response = await operation();
-      database.prepare('DELETE FROM browser_binding_attempt WHERE state = ?').run(key(state ?? ''));
-      const headers = new Headers(request.headers);
-      const cookies = new Map(
-        (headers.get('cookie') ?? '').split(';').map((item) => {
-          const [name, ...value] = item.trim().split('=');
-          return [name, value.join('=')];
-        }),
-      );
-      for (const item of response.headers.getSetCookie()) {
-        const [name, ...value] = item.split(';', 1)[0].split('=');
-        cookies.set(name, value.join('='));
-      }
-      headers.set('cookie', [...cookies].map(([name, value]) => `${name}=${value}`).join('; '));
-      const current = await rawSession(headers);
-      if (current && current.session.id !== binding.sessionId)
-        database
-          .prepare(
-            'UPDATE browser_binding SET sessionId = ?, revision = revision + 1, expiresAt = ? WHERE id = ? AND revision = ?',
-          )
-          .run(
-            current.session.id,
-            new Date(current.session.expiresAt).getTime(),
-            binding.id,
-            binding.revision,
+        return invalidCallback(request);
+      const attemptKey = key(state ?? '');
+      if (completing.has(attemptKey)) return invalidCallback(request);
+      completing.add(attemptKey);
+      try {
+        return await stageAuthCallback(database, operation, async (response, commit) => {
+          const headers = new Headers(request.headers);
+          const cookies = new Map(
+            (headers.get('cookie') ?? '').split(';').map((item) => {
+              const [name, ...value] = item.trim().split('=');
+              return [name, value.join('=')];
+            }),
           );
-      return response;
+          for (const item of response.headers.getSetCookie()) {
+            const [name, ...value] = item.split(';', 1)[0].split('=');
+            cookies.set(name, value.join('='));
+          }
+          headers.set('cookie', [...cookies].map(([name, value]) => `${name}=${value}`).join('; '));
+          const current = await rawSession(headers);
+          const location = response.headers.get('location');
+          const destination = location ? new URL(location, origin) : undefined;
+          const redirected =
+            response.status >= 300 &&
+            response.status < 400 &&
+            destination?.origin === origin &&
+            !['error', 'authError', 'failed'].some((name) => destination.searchParams.has(name));
+          const linked =
+            location &&
+            new URL(location, origin).pathname === '/login-methods' &&
+            !new URL(location, origin).search;
+          const success =
+            redirected && current && (current.session.id !== binding.sessionId || linked);
+          // Better Auth can briefly hold a transaction for independent OAuth
+          // client registration. Do not make this publication its savepoint.
+          if (database.inTransaction) return invalidCallback(request);
+          return database
+            .transaction(() => {
+              const fresh = lookup(request.headers);
+              const registered = database
+                .prepare('SELECT * FROM browser_binding_attempt WHERE state = ?')
+                .get(attemptKey) as Attempt | undefined;
+              const previous = binding.sessionId
+                ? (database
+                    .prepare('SELECT expiresAt FROM session WHERE id = ?')
+                    .get(binding.sessionId) as { expiresAt: string } | undefined)
+                : undefined;
+              if (
+                !fresh ||
+                fresh.id !== binding.id ||
+                fresh.revision !== binding.revision ||
+                fresh.sessionId !== binding.sessionId ||
+                !registered ||
+                registered.bindingId !== binding.id ||
+                registered.revision !== binding.revision ||
+                registered.sessionId !== binding.sessionId ||
+                registered.expiresAt <= Date.now() ||
+                (binding.sessionId &&
+                  (!previous || new Date(previous.expiresAt).getTime() <= Date.now()))
+              )
+                return invalidCallback(request);
+              if (!success) {
+                commit(['login_link', 'verification']);
+                database
+                  .prepare('DELETE FROM browser_binding_attempt WHERE state = ?')
+                  .run(attemptKey);
+                // A failed library response can contain a cookie minted before
+                // a later hook failed. Never publish an uncommitted auth key.
+                const headers = new Headers(response.headers);
+                headers.delete('set-cookie');
+                for (const cookie of response.headers.getSetCookie())
+                  if (!cookie.split(';', 1)[0].split('=')[0].endsWith('better-auth.session_token'))
+                    headers.append('set-cookie', cookie);
+                return new Response(response.body, { status: response.status, headers });
+              }
+              commit();
+              if (current.session.id === binding.sessionId) {
+                // Linking publishes account changes under the same guard; it
+                // does not replace the login or cancel independent login work.
+                database
+                  .prepare('DELETE FROM browser_binding_attempt WHERE state = ?')
+                  .run(attemptKey);
+                return response;
+              }
+              if (binding.sessionId && current.session.id !== binding.sessionId)
+                database.prepare('DELETE FROM session WHERE id = ?').run(binding.sessionId);
+              database
+                .prepare('DELETE FROM browser_binding_attempt WHERE bindingId = ?')
+                .run(binding.id);
+              database
+                .prepare(
+                  'UPDATE browser_binding SET sessionId = ?, revision = revision + 1, expiresAt = ? WHERE id = ?',
+                )
+                .run(current.session.id, new Date(current.session.expiresAt).getTime(), binding.id);
+              return response;
+            })
+            .immediate();
+        });
+      } catch {
+        if (!database.inTransaction)
+          database.prepare('DELETE FROM browser_binding_attempt WHERE state = ?').run(attemptKey);
+        return invalidCallback(request);
+      } finally {
+        completing.delete(attemptKey);
+      }
+    },
+    async logout(request: Request, operation: () => Promise<Response>) {
+      if (!canonicalRequest(request) || request.headers.get('origin') !== origin)
+        return Response.json({ error: 'forbidden' }, { status: 403 });
+      const binding = await authorized(request.headers);
+      if (!binding?.sessionId) return Response.json({ error: 'unauthenticated' }, { status: 401 });
+      if (database.inTransaction) return Response.json({ error: 'binding_busy' }, { status: 409 });
+      const changed = database
+        .transaction(() => {
+          const fresh = lookup(request.headers);
+          if (fresh?.revision !== binding.revision || fresh.sessionId !== binding.sessionId)
+            return false;
+          database
+            .prepare('DELETE FROM browser_binding_attempt WHERE bindingId = ?')
+            .run(binding.id);
+          database.prepare('DELETE FROM session WHERE id = ?').run(binding.sessionId);
+          database
+            .prepare(
+              'UPDATE browser_binding SET revision = revision + 1, expiresAt = ? WHERE id = ?',
+            )
+            .run(Date.now() + attemptLifetime, binding.id);
+          return true;
+        })
+        .immediate();
+      return changed ? operation() : Response.json({ error: 'unauthenticated' }, { status: 401 });
     },
   };
 }
