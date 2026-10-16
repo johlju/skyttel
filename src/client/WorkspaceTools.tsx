@@ -35,6 +35,7 @@ const paths = {
   draft: 'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',
   save: 'M4 3h13l3 3v15H4zM8 3v6h8V3M8 21v-8h8v8',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
+  download: 'M12 3v12m-5-5 5 5 5-5M5 15v6h14v-6',
   warning: 'm12 3 10 18H2zM12 9v5M12 17h.01',
   detail: 'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',
   reports: 'M4 13h4v7H4zM10 9h4v11h-4zM16 4h4v16h-4z',

@@ -31,6 +31,12 @@ aktuell webbläsare över utloggning och kontobyte, tills du ändrar eller
 Det har ingen fast tolvmånadersgräns. Beslutstiden är skild från policyns
 uppdateringsdatum och inloggningens gränser.
 
+**Exportera data** laddar ned en JSON-fil med ditt sparade lagringssamtycke,
+beslutstid och lagringsregistret som visas på sidan. Osparade formulärval
+ingår inte. Exporten ändrar inga val och innehåller inte hushållets
+information, inloggningsnycklar eller flikens återhämtningsreferenser.
+Om exporten misslyckas visas ett fel och du kan försöka igen.
+
 När Preferenskakor tillåts vid en lyckad inloggning får du en separat
 fråga: **Kom ihåg mig i Skyttel**, **Inte nu** eller **Fråga inte igen**.
 Frågan upprepas inte vid omladdning för samma inloggning. Funktionen avser

@@ -118,6 +118,12 @@ article.cookie-storage a {
   flex-wrap: wrap;
   gap: 12px;
 }
+.cookie-storage-quick-buttons svg {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
 .cookie-storage-quick button,
 .cookie-storage-actions button,
 .cookie-storage-feedback button {
@@ -164,6 +170,15 @@ article.cookie-storage a {
   background: var(--storage-danger-bg);
   color: var(--storage-danger);
   border-color: transparent;
+}
+.cookie-storage button.cookie-storage-export {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: transparent;
+}
+[data-theme="dark"] .cookie-storage button.cookie-storage-export {
+  color: #93b8ff;
+  background: #172554;
 }
 .cookie-storage button:is(:disabled, [aria-disabled="true"]) {
   opacity: 0.55;

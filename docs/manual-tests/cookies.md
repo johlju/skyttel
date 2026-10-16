@@ -436,7 +436,7 @@ sparbesked. Den här mänskliga kontrollen är ännu inte utförd.
 
 ## Formulärets lagringsval
 
-### KAK-10: Snabbval och ångra föregår uttryckligt sparande på dator
+### KAK-10: Snabbval föregår uttryckligt sparande på dator
 
 **Syfte:** Skilja formulärändringar från serverns bekräftade val.
 
@@ -462,7 +462,6 @@ KAK-10. Testet använder verklig HTTP och syntetisk inloggningsleverantör.
   "reference": "1280 pixlar. Verkligt sparande via HTTP; syntetisk Google-inloggning. Ingen fysisk webbläsaromstart eller skärmläsaruppläsning ingår.",
   "outcomes": [
     "Snabbval ändrar bara formuläret",
-    "Ångra återgår till senast bekräftat värde",
     "Sparknappen bekräftar avstängning och fortsatt inloggning separat",
     "Fokus ligger kvar på sparknappen"
   ]
@@ -475,12 +474,11 @@ KAK-10. Testet använder verklig HTTP och syntetisk inloggningsleverantör.
 
 1. Fokusera **Stäng av ihågkommen inloggning** och tryck Enter.
 2. Kontrollera att reglaget är av och att **Osparad ändring.** visas.
-3. Välj **Ångra ändring** och kontrollera att reglaget återgår till på.
-4. Stäng av igen och välj **Spara Preferenser** längst ned.
+3. Välj **Spara Preferenser** längst ned.
 
 **Förväntat resultat:**
 
-- Snabbvalet och ångra skickar inget sparande.
+- Snabbvalet skickar inget sparande.
 - Efter sparande visas **Ihågkommen inloggning är avstängd.** och,
   efter separat kontroll, **Du är fortfarande inloggad.**
 - Sparknappen behåller fokus. Ny uttrycklig aktivering är tillgänglig med
@@ -533,9 +531,8 @@ KAK-11. Verklig HTTP används för lagringsval och bevarade serveruppgifter.
 **Steg:**
 
 1. Öppna **Kakor och lagring**. Öppna och stäng **Visa nödvändig lagring**
-   med Enter. Välj snabbåtgärden för avstängning, välj **Ångra ändring**
-   och kontrollera att reglaget återgår till på och att fokus stannar.
-   Stäng av med snabbåtgärden igen.
+   med Enter. Välj snabbåtgärden för avstängning. Kontrollera att reglaget
+   är av och att fokus stannar på snabbåtgärden.
 2. Försök lämna sidan via **Din profil**, **Inloggningssätt** och
    **Tillbaka till kartan**. Avbryt varje gång med Escape. Öppna
    **Välj inställning** först om navigationen är hopfälld.
@@ -583,7 +580,7 @@ KAK-12. Samma verkliga HTTP och syntetiska förberedelse som KAK-11.
     "caseId": "KAK-12"
   },
   "reference": "390 pixlar, mörkt tema; hela KAK-11 med tangentbord och verklig HTTP. Återhämtningsreferenserna är syntetiska.",
-  "outcomes": ["Snabbval och ångra behåller fokus", "Navigation skyddar osparade värden", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
+  "outcomes": ["Snabbval behåller fokus", "Navigation skyddar osparade värden", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
 }
 ```
 -->
@@ -624,7 +621,7 @@ KAK-14. Felstyrningen ersätter eller stoppar endast det angivna anropet.
     "caseId": "KAK-14"
   },
   "reference": "320 pixlar, syntetisk Google-inloggning. Kontrollerat avslag före avstängningens serverändring; import- och raderingsreferenser bevaras.",
-  "outcomes": ["Avslag behåller AV som osparat och servervalet på", "Ångra tar bort felet, återgår till på och behåller fokus", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras", "Ingen automatisk upprepning av sparandet"]
+  "outcomes": ["Avslag behåller AV som osparat och servervalet på", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras", "Ingen automatisk upprepning av sparandet"]
 }
 ```
 -->
@@ -641,8 +638,8 @@ KAK-14. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 **Förväntat resultat:**
 
 **Ändringen kunde inte sparas. Försök igen.** visas vid snabbåtgärden. Begärt AV
-ligger kvar som osparat och servervalet är på. **Ångra ändring** återgår till
-på, tar bort felet och behåller fokus.
+ligger kvar som osparat och servervalet är på. Inget nytt sparande skickas
+automatiskt.
 
 Fokus återgår till **Återställ samtycke** när dialogen stängs.
 Återhämtningsuppgifterna bevaras och inget nytt sparande skickas automatiskt.
@@ -677,7 +674,7 @@ KAK-15. Felstyrningen ersätter eller stoppar endast det angivna anropet.
     "caseId": "KAK-15"
   },
   "reference": "320 pixlar, syntetisk Google-inloggning. Svaret stoppas efter verklig serverändring för att pröva okänd status; import- och raderingsreferenser bevaras.",
-  "outcomes": ["Förlorat svar ger okänd status och erbjuder Kontrollera igen", "Spärrade spara, ångra och återställ skickar ingen ny ändring", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras"]
+  "outcomes": ["Förlorat svar ger okänd status och erbjuder Kontrollera igen", "Spärrade spara och återställ skickar ingen ny ändring", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras"]
 }
 ```
 -->
@@ -695,7 +692,7 @@ KAK-15. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 **Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.** visas som
 larm vid snabbåtgärden. Sidan påstår inte att servervalet är oförändrat.
-**Kontrollera igen** erbjuds. Nytt sparande, ångra och återställning är
+**Kontrollera igen** erbjuds. Nytt sparande och återställning är
 spärrade; tangentbordsaktivering skickar inget nytt sparande.
 
 Fokus återgår till **Återställ samtycke** när dialogen stängs.
@@ -787,7 +784,7 @@ KAK-13. Samma verkliga HTTP och syntetiska förberedelse som KAK-11.
     "caseId": "KAK-13"
   },
   "reference": "320 pixlar, mörkt tema; hela KAK-11 med tangentbord och verklig HTTP. Återhämtningsreferenserna är syntetiska.",
-  "outcomes": ["Snabbval och ångra behåller fokus", "Navigation skyddar osparade värden", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
+  "outcomes": ["Snabbval behåller fokus", "Navigation skyddar osparade värden", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
 }
 ```
 -->
@@ -1811,6 +1808,126 @@ KAK-42.
   ändring upprepas automatiskt.
 - Resultatkontroll bekräftar den tidigare aktiveringen separat från den nya
   vanliga inloggningen. Det aktuella reglaget är av.
+
+### KAK-43: Export av sparat lagringssamtycke och register
+
+**Syfte:** Hämta det sparade samtycket utan att spara påbörjade formulärval
+eller ta med andra lagrade uppgifter.
+
+**Användare:** Besökare utan inloggning.
+
+**Förutsättningar:** En ny provwebbläsare utan lagringssamtycke. Bredd
+320 pixlar. Öppna `/cookies` direkt.
+
+**Automatiskt motsvarande test:**
+[storage-consent-export.spec.ts](../../tests/integration/storage-consent-export.spec.ts),
+KAK-43. Automationen kontrollerar även JSON-format, beslutstid,
+registerposter och att andra lagrade värden inte följer med.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent-export.spec.ts",
+    "caseId": "KAK-43"
+  },
+  "reference": "Publik policy utan inloggning vid 320 pixlar.",
+  "outcomes": [
+    "Exporten visar inget sparat samtycke före första sparandet.",
+    "Sparat samtycke exporteras även när formuläret har ett annat osparat val.",
+    "Exporten innehåller registret men ändrar inte samtycke eller övrig lagring.",
+    "Fokus stannar på exportknappen och knapparna ryms på smal skärm."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Välj **Exportera data**. Öppna den hämtade JSON-filen och kontrollera
+   att den innehåller registret men inget sparat samtycke.
+2. Välj **Acceptera Alla** och **Spara Preferenser**. Läs sparbekräftelsen.
+3. Välj **Endast nödvändiga** utan att spara. Kontrollera att Preferenskakor
+   är av i formuläret.
+4. Fokusera **Exportera data** och tryck Enter. Öppna filen och kontrollera
+   att den visar det sparade samtycket till Preferenskakor.
+5. Kontrollera fokus, formulärval, nedladdningsikon och återställningens
+   papperskorgsikon. Kontrollera att sidan inte rullar i sidled.
+
+**Förväntat resultat:**
+
+- En fil med namnet `skyttel-lagringssamtycke.json` kan hämtas även utan
+  ett sparat samtycke.
+- Exporten följer det sparade samtycket. Påbörjade formulärval sparas inte.
+- Lagringsregistret ingår; övriga lagrade uppgifter ändras inte.
+- Fokus stannar på exportknappen. Knapparna har läsbara namn och ikoner,
+  och sidan fungerar vid 320 pixlar utan sidledsrullning.
+
+### KAK-44: Misslyckad samtyckesexport kan göras om
+
+**Syfte:** Ett fel vid filskapandet ger ett begripligt besked och ändrar
+inte det sparade samtycket.
+
+**Användare:** Besökare utan inloggning.
+
+**Förutsättningar:** Öppna `/cookies` i en isolerad provinstallation.
+Välj **Endast nödvändiga** och **Spara Preferenser**.
+
+**Separat förberedelse:** Kör följande i provsidans utvecklarkonsol.
+Det stoppar nästa filskapande före nedladdningen. Nästa försök fungerar
+normalt. Omladdning tar bort ersättningen helt.
+
+```js
+(() => {
+  const create = URL.createObjectURL;
+  let fail = true;
+  URL.createObjectURL = function (blob) {
+    if (fail) {
+      fail = false;
+      throw new DOMException('Synthetic blocked export', 'SecurityError');
+    }
+    return create.call(this, blob);
+  };
+})();
+```
+
+**Automatiskt motsvarande test:**
+[storage-consent-export.spec.ts](../../tests/integration/storage-consent-export.spec.ts),
+KAK-44. Samma felgräns används i Chromium.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent-export.spec.ts",
+    "caseId": "KAK-44"
+  },
+  "reference": "Publik policy med ett kontrollerat fel vid filskapande.",
+  "outcomes": [
+    "Exportfel visas utan att ändra det sparade samtycket.",
+    "Ett nytt exportförsök kan hämta filen och tar bort felbeskedet.",
+    "Fokus stannar på exportknappen."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Välj **Exportera data** och läs felet.
+2. Kontrollera att Preferenskakor fortfarande är av och att fokus stannar
+   på exportknappen.
+3. Välj **Exportera data** igen. Öppna filen och läs det sparade valet.
+
+**Förväntat resultat:**
+
+- **Uppgifterna kunde inte exporteras. Försök igen.** visas som fel.
+- Det nya försöket hämtar filen och tar bort exportfelet.
+- Det sparade samtycket ändras inte av något av försöken.
 
 ### Förberedelse för KAK-39
 

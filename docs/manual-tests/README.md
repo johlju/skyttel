@@ -127,7 +127,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   Konkret register
   över kakor, fliklagring, serverposter och tillfälligt samtalsminne, första besök,
   profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före
-  hushållsstart och efter återkallad tillgång, snabbval, ångra,
+  hushållsstart och efter återkallad tillgång, snabbval, samtyckesexport,
   navigationsskydd, bekräftad återställning, fel och bevarade
   återhämtningsuppgifter samt separat skärmläsarprov.
   Kontroll av samma okända avstängning efter serveromstart och ny

@@ -300,7 +300,7 @@ export function ConsentIcon({
 }
 
 type StorageEntry = { name: string; purpose: string; duration: string };
-const necessaryStorageEntries: StorageEntry[] = [
+export const necessaryStorageEntries: StorageEntry[] = [
   {
     name: 'better-auth.session_token',
     purpose: 'Sessionsnyckel för säker inloggning. Vid HTTPS: __Secure-better-auth.session_token.',
@@ -349,7 +349,7 @@ const necessaryStorageEntries: StorageEntry[] = [
     duration: 'Till avslutad återhämtning eller tills fliklagringen försvinner.',
   },
 ];
-const preferenceStorageEntries: StorageEntry[] = [
+export const preferenceStorageEntries: StorageEntry[] = [
   {
     name: 'better-auth.session_token',
     purpose: 'Behåller din inloggning i Skyttel. Vid HTTPS: __Secure-better-auth.session_token.',

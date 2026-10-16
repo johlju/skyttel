@@ -8,11 +8,15 @@ import { trapDialogTab, usableFocusTarget } from './modal-focus.js';
 import {
   ConsentCategories,
   ConsentFeedback,
+  necessaryStorageEntries,
+  preferenceStorageEntries,
   StorageConsentProvider,
   useConsentManagerContext,
 } from './StorageConsent.js';
 import './cookie-storage.css';
 import { readLoginOffer, setLoginOffers } from './login-offer.js';
+import { readStorageConsent, storageConsentKey } from './storage-consent.js';
+import { WorkspaceIcon } from './WorkspaceTools.js';
 
 const entries = [
   {
@@ -130,6 +134,50 @@ function CookieStorageContents({ userId }: { userId?: string }) {
   const [returnToFeature, setReturnToFeature] = useState(false);
   const [ask, setAsk] = useState(() => (userId ? readLoginOffer(userId).ask : true));
   const [offerError, setOfferError] = useState('');
+  const [exportError, setExportError] = useState('');
+  function exportData() {
+    setExportError('');
+    let url: string | undefined;
+    let link: HTMLAnchorElement | undefined;
+    try {
+      // Fail explicitly if the browser denies reading the saved choice.
+      localStorage.getItem(storageConsentKey);
+      const consent = readStorageConsent();
+      const data = {
+        schemaVersion: 1,
+        exportedAt: new Date().toISOString(),
+        policyPublishedAt: cookiePolicyPublishedAt,
+        consent: consent
+          ? {
+              schemaVersion: consent.schemaVersion,
+              informationVersion: consent.informationVersion,
+              preferences: consent.preferences,
+              decidedAt: consent.decidedAt,
+            }
+          : null,
+        storageRegister: {
+          necessary: necessaryStorageEntries,
+          preferences: preferenceStorageEntries,
+          browserDetails: entries,
+          server: serverEntries,
+          provider: 'Skyttel',
+        },
+      };
+      url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      );
+      link = document.createElement('a');
+      link.href = url;
+      link.download = 'skyttel-lagringssamtycke.json';
+      document.body.append(link);
+      link.click();
+    } catch {
+      setExportError('Uppgifterna kunde inte exporteras. Försök igen.');
+    } finally {
+      link?.remove();
+      if (url) URL.revokeObjectURL(url);
+    }
+  }
   useEffect(() => {
     setAsk(userId ? readLoginOffer(userId).ask : true);
     setOfferError('');
@@ -263,14 +311,9 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           <button type="button" disabled={blocked} onClick={() => setPreferences(false)}>
             Endast nödvändiga
           </button>
-          <button
-            type="button"
-            aria-disabled={!dirty || blocked}
-            onClick={() => {
-              if (!blocked) undo();
-            }}
-          >
-            Ångra ändring
+          <button type="button" className="cookie-storage-export" onClick={exportData}>
+            <WorkspaceIcon name="download" />
+            Exportera data
           </button>
           <button
             type="button"
@@ -280,10 +323,19 @@ function CookieStorageContents({ userId }: { userId?: string }) {
               if (!blocked) setResetOrigin(event.currentTarget);
             }}
           >
+            <WorkspaceIcon name="trash" />
             Återställ samtycke
           </button>
         </div>
         <p>Snabbval ändrar bara formuläret. Spara Preferenser bekräftar ditt val.</p>
+        <p>
+          Exportera data laddar ned ditt sparade lagringssamtycke och lagringsregistret som JSON.
+        </p>
+        {exportError && (
+          <div className="cookie-storage-feedback">
+            <p role="alert">{exportError}</p>
+          </div>
+        )}
         {resultPlace === 'reset' && feedback}
       </section>
       <h2>Kakinställningar</h2>

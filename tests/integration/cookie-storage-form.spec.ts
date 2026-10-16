@@ -96,7 +96,7 @@ for (const [caseId, outcome] of [
       expect(await recovery()).toEqual(before);
       if (outcome === 'unknown') {
         await expect(page.getByText('Osparad ändring.', { exact: true })).toHaveCount(0);
-        for (const name of ['Återställ samtycke', 'Ångra ändring', 'Spara Preferenser']) {
+        for (const name of ['Återställ samtycke', 'Spara Preferenser']) {
           const button = page.getByRole('button', { name, exact: true });
           await expect(button).toHaveAttribute('aria-disabled', 'true');
           await button.focus();
@@ -115,14 +115,10 @@ for (const [caseId, outcome] of [
             })
           ).json(),
         ).toMatchObject({ remembered: true });
-        const undo = page.getByRole('button', { name: 'Ångra ändring', exact: true });
-        await undo.focus();
-        await page.keyboard.press('Enter');
-        await expect(
-          page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }),
-        ).toBeChecked();
-        await expect(feedback.getByRole('alert')).toBeEmpty();
-        await expect(undo).toBeFocused();
+        const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
+        await expect(choice).not.toBeChecked();
+        await expect(page.getByText('Osparad ändring.', { exact: true })).toBeVisible();
+        expect(saves).toBe(1);
       }
     } finally {
       await installation.close();
@@ -130,7 +126,7 @@ for (const [caseId, outcome] of [
   });
 }
 
-test('KAK-10: quick actions and undo change only the form before explicit saving at 1280px', async ({
+test('KAK-10: quick actions change only the form before explicit saving at 1280px', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -153,12 +149,6 @@ test('KAK-10: quick actions and undo change only the form before explicit saving
         })
       ).json(),
     ).toMatchObject({ remembered: true });
-    const undo = page.getByRole('button', { name: 'Ångra ändring', exact: true });
-    await undo.focus();
-    await page.keyboard.press('Enter');
-    await expect(undo).toBeFocused();
-    await expect(choice).toBeChecked();
-    await quick.click();
     const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
     await save.click();
     await expect(page.getByRole('status')).toHaveText(
@@ -249,13 +239,7 @@ for (const [width, caseId] of [
       await quick.focus();
       await page.keyboard.press('Enter');
       await expect(quick).toBeFocused();
-      const undo = page.getByRole('button', { name: 'Ångra ändring', exact: true });
-      await undo.focus();
-      await page.keyboard.press('Enter');
-      await expect(undo).toBeFocused();
-      await expect(choice).toBeChecked();
-      await quick.focus();
-      await page.keyboard.press('Enter');
+      await expect(choice).not.toBeChecked();
       const navigation = page.getByRole('navigation', { name: 'Dina kontosidor', exact: true });
       if (!(await navigation.getByRole('link', { name: 'Din profil', exact: true }).isVisible())) {
         await navigation.getByText('Välj inställning', { exact: true }).focus();
