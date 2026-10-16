@@ -62,7 +62,6 @@ test('KAK-20: a lost committed OFF reply is checked after restart and a new reme
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await expect(choice).toBeChecked();
     await choice.uncheck();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText(
       'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.',
     );
@@ -203,14 +202,12 @@ test('KAK-21: denied recovery storage stops the OFF request and preserves existi
     });
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await expect(choice).toBeChecked();
-    await choice.uncheck();
-    const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
-    await save.click();
+    await choice.click();
     await expect(page.getByRole('alert')).toContainText(
       'Flikens återhämtningsuppgifter kunde inte sparas. Ingen ändring har skickats.',
     );
-    await expect(save).toBeFocused();
-    await expect(choice).not.toBeChecked();
+    await expect(choice).toBeFocused();
+    await expect(choice).toBeChecked();
     expect(writes).toBe(0);
     expect(
       await (
@@ -255,7 +252,6 @@ for (const [caseId, lost] of [
       });
       await page.goto(`${origin}/cookies`);
       await page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }).uncheck();
-      await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
       await expect(page.getByRole('alert')).toContainText('Sparstatus okänd');
       await page.evaluate((remove) => {
         const key = Object.keys(sessionStorage).find((name) =>
@@ -288,7 +284,7 @@ for (const [caseId, lost] of [
         );
         await page.getByRole('button', { name: 'Kontrollera igen', exact: true }).click();
         await expect(
-          page.getByRole('button', { name: 'Spara Preferenser', exact: true }),
+          page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }),
         ).toHaveAttribute('aria-disabled', 'true');
       }
       await expect(page.getByRole('status')).not.toContainText(
@@ -321,8 +317,8 @@ test('KAK-24: an expired result remains unknown and checking never grants a new 
       await route.abort('failed');
     });
     await page.goto(`${origin}/cookies`);
-    await page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }).uncheck();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
+    const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
+    await choice.uncheck();
     await expect(page.getByRole('alert')).toContainText('Sparstatus okänd');
     await signIn(context.request, origin);
     time += 86_400_000;
@@ -334,10 +330,9 @@ test('KAK-24: an expired result remains unknown and checking never grants a new 
       'Resultatet kan inte hämtas. Det kan saknas eller ha passerat kontrollfönstret på 24 timmar. Utfallet är fortfarande okänt.',
     );
     await expect(check).toBeFocused();
-    const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
-    await expect(save).toHaveAttribute('aria-disabled', 'true');
-    await save.focus();
-    await page.keyboard.press('Enter');
+    await expect(choice).toHaveAttribute('aria-disabled', 'true');
+    await choice.focus();
+    await page.keyboard.press('Space');
     await expect(page.getByRole('status')).not.toContainText('Ihågkommen inloggning är avstängd.');
     await expect(page.getByRole('alert')).not.toContainText('Skyttel har återställts');
     expect(writes).toBe(1);

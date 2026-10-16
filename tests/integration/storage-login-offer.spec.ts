@@ -42,7 +42,7 @@ test('KAK-33: permission allows a separate post-login offer and declining future
     ).toBeVisible();
     await expect(offer).not.toBeVisible();
     await page.goto(`${origin}/cookies`);
-    await page.getByRole('button', { name: 'Kom ihåg mig i Skyttel', exact: true }).click();
+    await page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }).check();
     await expect(page.getByRole('status')).toContainText('Ihågkommen inloggning är aktiverad.');
     expect(
       await (

@@ -129,9 +129,8 @@ export function CookieStorage({ userId }: { userId?: string }) {
 function CookieStorageContents({ userId }: { userId?: string }) {
   const manager = useConsentManagerContext();
   if (!manager) throw new Error('consent_context_required');
-  const [preferences, setPreferences] = useState(manager.consent?.preferences ?? false);
+  const preferences = manager.consent?.preferences ?? false;
   const [contact, setContact] = useState<string | null>(null);
-  const [returnToFeature, setReturnToFeature] = useState(false);
   const [ask, setAsk] = useState(() => (userId ? readLoginOffer(userId).ask : true));
   const [offerError, setOfferError] = useState('');
   const [exportError, setExportError] = useState('');
@@ -182,10 +181,6 @@ function CookieStorageContents({ userId }: { userId?: string }) {
     setAsk(userId ? readLoginOffer(userId).ask : true);
     setOfferError('');
   }, [userId]);
-  const activateButton = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    setPreferences(manager.consent?.preferences ?? false);
-  }, [manager.consent?.preferences]);
   useEffect(() => {
     const controller = new AbortController();
     void fetch('/api/policy-contact', { signal: controller.signal, cache: 'no-store' })
@@ -198,50 +193,53 @@ function CookieStorageContents({ userId }: { userId?: string }) {
   }, []);
   const heading = useRef<HTMLHeadingElement>(null);
   const [resetOrigin, setResetOrigin] = useState<HTMLButtonElement | null>(null);
-  const [resultPlace, setResultPlace] = useState<'save' | 'reset'>('save');
+  const [resultPlace, setResultPlace] = useState<'quick' | 'consent' | 'remembered' | 'reset'>(
+    'remembered',
+  );
   const resetUser = useRef(userId);
-  const { saved, requested, state, dirty, setRequested, undo, save } = manager.preference;
+  const { saved, requested, state } = manager.preference;
   const blocked = manager.blocked;
-  const consentDirty = preferences !== (manager.consent?.preferences ?? false);
-  async function saveAll() {
-    if (!manager) return;
+  const actionOrigin = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
     if (blocked) return;
-    if (!consentDirty && manager.consent && dirty) {
-      await save();
-      return;
-    }
-    const hadConsent = manager.consent?.preferences;
-    if (!(await manager.save(preferences))) return;
-    if (preferences && hadConsent && dirty) await save();
-    if (returnToFeature) {
-      setReturnToFeature(false);
-      activateButton.current?.focus();
-    }
+    const origin = actionOrigin.current;
+    actionOrigin.current = null;
+    if (document.activeElement === document.body && usableFocusTarget(origin))
+      origin.focus({ preventScroll: true });
+  });
+  function beginAction(place: 'quick' | 'consent' | 'remembered') {
+    actionOrigin.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setResultPlace(place);
+  }
+  function saveConsent(value: boolean, place: 'quick' | 'consent') {
+    if (!manager || blocked) return;
+    beginAction(place);
+    void manager.save(value, { showConfirmation: false });
+  }
+  function changeRemembered(value: boolean) {
+    if (!manager || blocked) return;
+    beginAction('remembered');
+    void manager.preference.change(value);
   }
   useLayoutEffect(() => heading.current?.focus(), []);
   useLayoutEffect(() => {
     if (resetUser.current !== userId) {
       resetUser.current = userId;
       setResetOrigin(null);
-      setResultPlace('save');
+      setResultPlace('remembered');
     }
   }, [userId]);
-  const feedback = <ConsentFeedback alwaysRender />;
+  const feedback = !resetOrigin && <ConsentFeedback alwaysRender quietSuccess />;
   return (
     <article className="cookie-storage">
-      {(userId || consentDirty) && (
-        <FormLossGuard
-          dirty={dirty || consentDirty || state === 'unknown'}
-          busy={manager.saving || state === 'saving' || state === 'checking'}
-          onDiscard={undo}
-          onBlocked={() => {}}
-          description={
-            state === 'unknown'
-              ? 'Utfallet är fortfarande okänt. Åtgärdens referens bevaras i fliken. Du kan behöva logga in igen för att kontrollera samma resultat. Att lämna sidan skickar inget nytt sparande.'
-              : 'Dina osparade lagringsval försvinner. Serverns senast bekräftade val ändras inte när du lämnar formuläret.'
-          }
-        />
-      )}
+      <FormLossGuard
+        dirty={state === 'unknown'}
+        busy={manager.saving || state === 'saving' || state === 'checking'}
+        onDiscard={() => {}}
+        onBlocked={() => {}}
+        description="Utfallet är fortfarande okänt. Åtgärdens referens bevaras i fliken. Du kan behöva logga in igen för att kontrollera samma resultat. Att lämna sidan skickar inget nytt sparande."
+      />
       <header className="cookie-storage-header">
         <div className="cookie-storage-title">
           <svg
@@ -303,12 +301,12 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           <button
             type="button"
             className="cookie-storage-primary"
-            disabled={blocked}
-            onClick={() => setPreferences(true)}
+            aria-disabled={blocked}
+            onClick={() => saveConsent(true, 'quick')}
           >
             Acceptera Alla
           </button>
-          <button type="button" disabled={blocked} onClick={() => setPreferences(false)}>
+          <button type="button" aria-disabled={blocked} onClick={() => saveConsent(false, 'quick')}>
             Endast nödvändiga
           </button>
           <button type="button" className="cookie-storage-export" onClick={exportData}>
@@ -327,7 +325,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
             Återställ samtycke
           </button>
         </div>
-        <p>Snabbval ändrar bara formuläret. Spara Preferenser bekräftar ditt val.</p>
+        <p>Dina val sparas direkt när du ändrar dem.</p>
         <p>
           Exportera data laddar ned ditt sparade lagringssamtycke och lagringsregistret som JSON.
         </p>
@@ -336,7 +334,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
             <p role="alert">{exportError}</p>
           </div>
         )}
-        {resultPlace === 'reset' && feedback}
+        {(resultPlace === 'quick' || resultPlace === 'reset') && feedback}
       </section>
       <h2>Kakinställningar</h2>
       {manager.consent && (
@@ -345,7 +343,12 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           Detta är skilt från policyns uppdateringsdatum.
         </p>
       )}
-      <ConsentCategories preferences={preferences} onChange={setPreferences} disabled={blocked} />
+      <ConsentCategories
+        preferences={preferences}
+        onChange={(value) => saveConsent(value, 'consent')}
+        disabled={blocked}
+        feedback={resultPlace === 'consent' && feedback}
+      />
       <h2>Detaljerat lagringsregister</h2>
       <section className="cookie-storage-card" aria-labelledby="necessary-storage-title">
         <div className="cookie-storage-card-header">
@@ -382,6 +385,12 @@ function CookieStorageContents({ userId }: { userId?: string }) {
         </details>
       </section>
       <section className="cookie-storage-card" aria-labelledby="remember-storage-title">
+        {saved && !saved.remembered && !preferences && (
+          <p id="storage-remember-warning" className="cookie-storage-warning">
+            Ihågkommen inloggning behöver samtycke till Preferenskakor för beständiga
+            inloggningskakor.
+          </p>
+        )}
         <div className="cookie-storage-card-header">
           <h3 id="remember-storage-title">Ihågkommen inloggning</h3>
           {userId && saved && (
@@ -390,11 +399,16 @@ function CookieStorageContents({ userId }: { userId?: string }) {
                 type="checkbox"
                 role="switch"
                 aria-label="Ihågkommen inloggning"
-                aria-describedby="storage-remember-description"
+                aria-describedby={
+                  !saved.remembered && !preferences
+                    ? 'storage-remember-warning storage-remember-description'
+                    : 'storage-remember-description'
+                }
                 aria-checked={requested}
                 checked={requested}
-                disabled={!manager.consent?.preferences || blocked}
-                onChange={(event) => setRequested(event.target.checked)}
+                disabled={!manager.consent?.preferences}
+                aria-disabled={!manager.consent?.preferences || blocked}
+                onChange={(event) => changeRemembered(event.target.checked)}
               />
               <span aria-hidden="true" />
             </label>
@@ -406,16 +420,12 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           en uttrycklig handling; att stänga informationen eller fortsätta använda Skyttel
           registrerar inget val.
         </p>
-        {userId && (
-          <button
-            type="button"
-            aria-disabled={!saved?.remembered || !requested || blocked}
-            onClick={() => {
-              if (saved?.remembered && requested && !blocked) setRequested(false);
-            }}
-          >
-            Stäng av ihågkommen inloggning
-          </button>
+        {resultPlace === 'remembered' && feedback}
+        {saved && (
+          <p>
+            Efter avstängning gäller inloggningen längst till det tidigare slutet eller åtta timmar
+            från avstängningen, med 30 minuters inaktivitet. Upprepning förlänger inte tiden.
+          </p>
         )}
         <details>
           <summary>Information och valflöde, version {rememberedLoginInformation.version}</summary>
@@ -430,56 +440,29 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           En sessionskaka garanterar inte utloggning när du stänger ett fönster. Webbläsare kan
           återställa sessioner. Logga ut på en delad dator.
         </p>
-        {saved && !saved.remembered && (
-          <p>
-            {manager.consent?.preferences ? (
-              <button
-                ref={activateButton}
-                type="button"
-                disabled={blocked}
-                onClick={() => void manager.preference.change(true)}
-              >
-                Kom ihåg mig i Skyttel
-              </button>
-            ) : (
-              <>
-                <span>
-                  Kom ihåg mig behöver samtycke till Preferenskakor för beständiga inloggningskakor.
-                </span>{' '}
-                <button
-                  ref={activateButton}
-                  type="button"
-                  onClick={() => {
-                    setReturnToFeature(true);
-                    document
-                      .querySelector<HTMLInputElement>('[aria-label="Preferenskakor"]')
-                      ?.focus();
-                  }}
-                >
-                  Öppna Preferenskakor
-                </button>
-              </>
-            )}
-          </p>
-        )}
         {userId && !saved && state !== 'unavailable' && <p>Läser aktuellt val…</p>}
         {userId && (
           <>
-            <label>
-              <input
-                type="checkbox"
-                checked={ask}
-                onChange={(event) => {
-                  try {
-                    setLoginOffers(userId, event.target.checked);
-                    setAsk(event.target.checked);
-                    setOfferError('');
-                  } catch {
-                    setOfferError('Förslagsvalet kunde inte sparas. Försök igen.');
-                  }
-                }}
-              />{' '}
-              Fråga om ihågkommen inloggning efter framtida inloggningar
+            <label className="cookie-storage-offer-choice">
+              <span>Fråga om ihågkommen inloggning efter framtida inloggningar</span>
+              <span className="cookie-storage-choice">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  aria-checked={ask}
+                  checked={ask}
+                  onChange={(event) => {
+                    try {
+                      setLoginOffers(userId, event.target.checked);
+                      setAsk(event.target.checked);
+                      setOfferError('');
+                    } catch {
+                      setOfferError('Förslagsvalet kunde inte sparas. Försök igen.');
+                    }
+                  }}
+                />
+                <span aria-hidden="true" />
+              </span>
             </label>
             {offerError && <p role="alert">{offerError}</p>}
           </>
@@ -568,30 +551,6 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           kakor ger inget medgivande till behandling av samtalets uppgifter.
         </p>
       </section>
-      <div className="cookie-storage-actions">
-        {(dirty || consentDirty) && state !== 'unknown' && state !== 'checking' && (
-          <p>Osparad ändring.</p>
-        )}
-        {saved && (
-          <p>
-            Efter avstängning gäller inloggningen längst till det tidigare slutet eller åtta timmar
-            från avstängningen, med 30 minuters inaktivitet. Upprepning förlänger inte tiden.
-          </p>
-        )}
-        {resultPlace === 'save' && feedback}
-        <button
-          type="button"
-          aria-disabled={blocked}
-          className="cookie-storage-primary"
-          onClick={() => {
-            if (blocked) return;
-            setResultPlace('save');
-            void saveAll();
-          }}
-        >
-          Spara Preferenser
-        </button>
-      </div>
       <p>
         Formulärets utseende bygger på Viscalyx CookieSettings.{' '}
         <a href={referenceLicense}>Licens för formulärets förebild (MIT)</a>
@@ -671,7 +630,7 @@ function StorageResetDialog({
           rensas inte. Google och Microsoft styr sin egen lagring.
         </p>
       </div>
-      <ConsentFeedback />
+      <ConsentFeedback quietSuccess />
       <footer>
         <button ref={cancel} type="button" disabled={pending} onClick={onCancel}>
           {unknown ? 'Lämna med okänt utfall' : 'Avbryt'}

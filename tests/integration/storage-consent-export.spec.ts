@@ -9,7 +9,7 @@ async function contents(download: Download) {
   return JSON.parse(await readFile(path, 'utf8'));
 }
 
-test('KAK-43: cookie data export contains the saved consent and public register while unsaved choices and unrelated storage stay unchanged', async ({
+test('KAK-43: cookie data export contains the saved consent and public register and follows immediate choices without changing unrelated storage', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -22,8 +22,8 @@ test('KAK-43: cookie data export contains the saved consent and public register 
     await button.click();
     expect((await contents(await firstDownload)).consent).toBeNull();
     await page.getByRole('button', { name: 'Acceptera Alla', exact: true }).click();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
-    await expect(page.getByRole('status')).toHaveText('Dina lagringspreferenser är sparade.');
+    await expect(page.getByRole('status')).toBeEmpty();
+    await page.getByRole('button', { name: 'Endast nödvändiga', exact: true }).click();
     const saved = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('skyttel-storage-consent') ?? 'null'),
     );
@@ -43,7 +43,6 @@ test('KAK-43: cookie data export contains the saved consent and public register 
       local: { ...localStorage },
       tab: { ...sessionStorage },
     }));
-    await page.getByRole('button', { name: 'Endast nödvändiga', exact: true }).click();
     const choice = page.getByRole('switch', { name: 'Preferenskakor', exact: true });
     await expect(choice).not.toBeChecked();
     await button.focus();
@@ -51,7 +50,7 @@ test('KAK-43: cookie data export contains the saved consent and public register 
     await page.keyboard.press('Enter');
     const exported = await contents(await download);
     expect(exported.consent).toEqual(saved);
-    expect(exported.consent.preferences).toBe(true);
+    expect(exported.consent.preferences).toBe(false);
     expect(exported.schemaVersion).toBe(1);
     expect(Number.isFinite(Date.parse(exported.exportedAt))).toBe(true);
     expect(exported.policyPublishedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -93,8 +92,7 @@ test('KAK-44: a failed cookie export explains the failure and can be retried wit
   try {
     await page.goto(`${installation.origin}/cookies`);
     await page.getByRole('button', { name: 'Endast nödvändiga', exact: true }).click();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
-    await expect(page.getByRole('status')).toHaveText('Dina lagringspreferenser är sparade.');
+    await expect(page.getByRole('status')).toBeEmpty();
     const saved = await page.evaluate(() => localStorage.getItem('skyttel-storage-consent'));
     await page.evaluate(() => {
       const create = URL.createObjectURL;

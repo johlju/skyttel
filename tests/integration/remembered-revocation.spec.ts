@@ -182,18 +182,17 @@ for (const [caseId, outcome] of [
         });
       await page.goto(`${origin}/cookies`);
       const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
+      const field = page.getByRole('region', { name: 'Ihågkommen inloggning', exact: true });
       await expect(choice).toBeChecked();
       await choice.uncheck();
-      await expect(page.getByText('Osparad ändring.', { exact: true })).toBeVisible();
-      const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
-      await save.click();
       if (outcome === 'confirmed') {
-        await expect(page.getByRole('status')).toHaveText(
+        await expect(field.getByRole('status')).toHaveText(
           'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.',
         );
-        await expect(
-          page.getByRole('button', { name: 'Kom ihåg mig i Skyttel', exact: true }),
-        ).toBeVisible();
+        const box = await field.getByRole('status').boundingBox();
+        expect(box?.width).toBeLessThanOrEqual(1);
+        expect(box?.height).toBeLessThanOrEqual(1);
+        await expect(choice).toBeEnabled();
         expect(
           (await context.cookies())
             .filter(
@@ -202,19 +201,19 @@ for (const [caseId, outcome] of [
             .every((cookie) => cookie.expires === -1),
         ).toBe(true);
       } else if (outcome === 'rejected') {
-        await expect(page.getByRole('alert')).toHaveText(
+        await expect(field.getByRole('alert')).toHaveText(
           'Ändringen kunde inte sparas. Försök igen.',
         );
-        await expect(page.getByText('Osparad ändring.', { exact: true })).toBeVisible();
-        await expect(save).toBeEnabled();
+        await expect(choice).toBeEnabled();
       } else {
-        await expect(page.getByRole('alert')).toHaveText(
+        await expect(field.getByRole('alert')).toHaveText(
           'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.',
         );
-        await expect(save).toHaveAttribute('aria-disabled', 'true');
+        await expect(choice).toHaveAttribute('aria-disabled', 'true');
       }
-      await expect(choice).not.toBeChecked();
-      await expect(save).toBeFocused();
+      if (outcome === 'rejected') await expect(choice).toBeChecked();
+      else await expect(choice).not.toBeChecked();
+      await expect(choice).toBeFocused();
     } finally {
       await context.close();
       await installation.close();

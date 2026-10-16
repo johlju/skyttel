@@ -41,7 +41,6 @@ test('KAK-30: a proven older restore permits a fresh explicit choice without rep
     await page.goto(`${origin}/cookies`);
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await choice.uncheck();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Sparstatus okänd');
     await installation.restoreDatabase(backup, {
       generation: '22222222-2222-4222-8222-222222222222',
@@ -85,7 +84,6 @@ test('KAK-30: a proven older restore permits a fresh explicit choice without rep
     );
     await page.unroute('**/api/browser-binding/revoke');
     await choice.uncheck();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('article').getByRole('status')).toContainText(
       'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.',
     );
@@ -127,7 +125,6 @@ test('KAK-31: a trustworthy retained result survives restore and restart with it
     await page.goto(`${origin}/cookies`);
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await choice.uncheck();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Sparstatus okänd');
     const backup = join(installation.directory, 'retained-result.sqlite');
     await installation.saveDatabase(backup);

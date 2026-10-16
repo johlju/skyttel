@@ -61,8 +61,8 @@ test('checking a lost committed OFF result reads that operation without saving a
     return response;
   });
   render(page());
-  const save = await turnOff();
-  await userEvent.click(save);
+  const choice = await rememberedChoice();
+  await userEvent.click(choice);
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Sparstatus okänd'));
   // The old binding cannot read results. A new authenticated login is required.
   await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
@@ -93,7 +93,7 @@ test('a proven restore reads the fresh ordinary preference rather than a cached 
     return response;
   });
   render(page());
-  await userEvent.click(await turnOff());
+  await userEvent.click(await rememberedChoice());
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Sparstatus okänd'));
   await installation.restoreDatabase(backup, {
     generation: '22222222-2222-4222-8222-222222222222',
@@ -167,7 +167,7 @@ test('a different owner in the separate authentication read cannot replace a con
       return response;
     });
     render(page());
-    await userEvent.click(await turnOff());
+    await userEvent.click(await rememberedChoice());
     await waitFor(() =>
       expect(screen.getByRole('alert').textContent).toContain('Sparstatus okänd'),
     );
@@ -203,11 +203,27 @@ const page = (userId = ownerId) => (
     <CookieStorage userId={userId} />
   </BrowserRouter>
 );
-async function turnOff() {
+test('necessary-only consent saves immediately and disables remembered login without a separate save or consent success notice', async () => {
+  render(page());
+  await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
+  await userEvent.click(screen.getByRole('button', { name: 'Endast nödvändiga' }));
+  await waitFor(() => expect(readStorageConsent()?.preferences).toBe(false));
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.'),
+  );
+  expect(screen.queryByText('Dina lagringspreferenser är sparade.')).toBeNull();
+  expect(
+    await (
+      await client.get(`${installation.origin}/api/browser-binding/preference`, {
+        headers: { origin: installation.origin },
+      })
+    ).json(),
+  ).toMatchObject({ remembered: false });
+});
+async function rememberedChoice() {
   const choice = await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
   await waitFor(() => expect((choice as HTMLInputElement).checked).toBe(true));
-  await userEvent.click(choice);
-  return screen.getByRole('button', { name: 'Spara Preferenser' });
+  return choice;
 }
 
 test.each([
@@ -240,8 +256,8 @@ test.each([
       return response;
     });
     render(page());
-    const save = await turnOff();
-    await userEvent.click(save);
+    const choice = await rememberedChoice();
+    await userEvent.click(choice);
     if (outcome === 'continued' || outcome === 'confirmation lost') {
       await waitFor(() =>
         expect(screen.getByRole('status').textContent).toBe(
@@ -249,7 +265,7 @@ test.each([
         ),
       );
       expect(confirmation).toBe(true);
-      expect(screen.getByRole('button', { name: 'Kom ihåg mig i Skyttel' })).toBeTruthy();
+      expect(screen.getByRole('switch', { name: 'Ihågkommen inloggning' })).toBeTruthy();
     } else {
       await waitFor(() =>
         expect(screen.getByRole('alert').textContent).toBe(
@@ -258,11 +274,11 @@ test.each([
             : 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.',
         ),
       );
-      if (outcome !== 'rejected') await userEvent.click(save);
+      if (outcome !== 'rejected') await userEvent.click(choice);
       expect(saves).toBe(1);
       expect(
         (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
-      ).toBe(false);
+      ).toBe(outcome === 'rejected');
     }
   },
   20_000,
@@ -289,7 +305,7 @@ test('a late saved OFF reply from the previous user cannot replace the new user 
     return response;
   });
   const view = render(page());
-  await userEvent.click(await turnOff());
+  await userEvent.click(await rememberedChoice());
   await captured;
   // The response is already committed and held outside the application.
   // Another real browser binding has its own new user and ordinary choice.
@@ -301,7 +317,7 @@ test('a late saved OFF reply from the previous user cannot replace the new user 
       .id;
     vi.stubGlobal('fetch', authenticatedHttpFetch(other, installation.origin));
     view.rerender(page(otherId));
-    await screen.findByRole('button', { name: 'Kom ihåg mig i Skyttel' });
+    await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
     await act(async () => {
       release();
       await held;
@@ -319,12 +335,12 @@ test('a late saved OFF reply from the previous user cannot replace the new user 
   }
 }, 20_000);
 
-test('an unsaved choice from an older session cannot rotate a newer login for the same user', async () => {
+test('a change from an older session cannot rotate a newer login for the same user', async () => {
   render(page());
-  const save = await turnOff();
+  const choice = await rememberedChoice();
   await signIn(client, installation.origin);
   const current = await (await client.get(`${installation.origin}/api/auth/get-session`)).json();
-  await userEvent.click(save);
+  await userEvent.click(choice);
   await waitFor(() =>
     expect(screen.getByRole('alert').textContent).toBe('Ändringen kunde inte sparas. Försök igen.'),
   );
@@ -334,7 +350,6 @@ test('an unsaved choice from an older session cannot rotate a newer login for th
   expect(
     (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
   ).toBe(false);
-  expect(screen.queryByText('Osparad ändring.')).toBeNull();
 });
 
 test('a previous user preference reply cannot replace the newer user server choice', async () => {
@@ -365,7 +380,7 @@ test('a previous user preference reply cannot replace the newer user server choi
       .id;
     vi.stubGlobal('fetch', authenticatedHttpFetch(other, installation.origin));
     view.rerender(page(otherId));
-    await screen.findByRole('button', { name: 'Kom ihåg mig i Skyttel' });
+    await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
     await act(async () => {
       release();
       await held;
@@ -408,8 +423,8 @@ test.each(['unreadable', 'missing session', 'invalid id'])(
       'Åtgärdens referens saknas eller är skadad. Utfallet är fortfarande okänt.',
     );
     expect(
-      (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).disabled,
-    ).toBe(true);
+      screen.getByRole('switch', { name: 'Ihågkommen inloggning' }).getAttribute('aria-disabled'),
+    ).toBe('true');
     expect(mutations).toEqual([]);
     expect(results).toEqual([]);
     expect(sessionStorage.getItem(`skyttel-storage-operation:${ownerId}`)).toBe(value);
@@ -438,7 +453,7 @@ test.each(['read', 'write', 'silently discarded'])(
       );
       expect(screen.queryByRole('switch', { name: 'Ihågkommen inloggning' })).toBeNull();
     } else {
-      const save = await turnOff();
+      const choice = await rememberedChoice();
       const write = Storage.prototype.setItem;
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
         this: Storage,
@@ -452,7 +467,7 @@ test.each(['read', 'write', 'silently discarded'])(
         }
         write.call(this, key, value);
       });
-      await userEvent.click(save);
+      await userEvent.click(choice);
       await waitFor(() =>
         expect(screen.getByRole('alert').textContent).toContain(
           'Flikens återhämtningsuppgifter kunde inte sparas. Ingen ändring har skickats.',
@@ -460,8 +475,7 @@ test.each(['read', 'write', 'silently discarded'])(
       );
       expect(
         (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
-      ).toBe(false);
-      expect(screen.getByText('Osparad ändring.')).toBeTruthy();
+      ).toBe(true);
     }
     expect(writes).toEqual([]);
     expect(
@@ -499,21 +513,22 @@ test('an unavailable earlier result remains unknown after reload without resendi
   expect(results).toEqual([`/api/browser-binding/results/${id}`]);
   expect(writes).toEqual([]);
   expect(
-    (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).disabled,
-  ).toBe(true);
+    screen.getByRole('switch', { name: 'Ihågkommen inloggning' }).getAttribute('aria-disabled'),
+  ).toBe('true');
 });
 
 test('failed deletion of the local reference cannot undo a confirmed server change', async () => {
   render(page());
-  const save = await turnOff();
+  const choice = await rememberedChoice();
   vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
     throw new DOMException('Browser storage denied', 'SecurityError');
   });
-  await userEvent.click(save);
+  await userEvent.click(choice);
   await waitFor(() =>
-    expect(screen.getByRole('status').textContent).toContain(
-      'Resultatet är bekräftat men flikens referens kunde inte tas bort.',
-    ),
+    expect(
+      within(screen.getByRole('region', { name: 'Ihågkommen inloggning' })).getByRole('alert')
+        .textContent,
+    ).toContain('Resultatet är bekräftat men flikens referens kunde inte tas bort.'),
   );
   expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.');
   expect(
@@ -538,7 +553,7 @@ test('failed consent cleanup keeps confirmed OFF separate from an incomplete bro
   const dialog = screen.getByRole('dialog', { name: 'Återställ samtycke?' });
   await userEvent.click(within(dialog).getByRole('button', { name: 'Återställ' }));
   await waitFor(() =>
-    expect(dialog.textContent).toContain(
+    expect(within(dialog).getByRole('alert').textContent).toContain(
       'Avstängningen är bekräftad men lagringssamtycket kunde inte återställas.',
     ),
   );
@@ -613,7 +628,6 @@ test('failed browser withdrawal still disables the remembered session on the ser
     remove.call(this, key);
   });
   await userEvent.click(screen.getByRole('button', { name: 'Endast nödvändiga' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Spara Preferenser' }));
   await waitFor(() =>
     expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.'),
   );
@@ -631,7 +645,9 @@ test('failed browser withdrawal still disables the remembered session on the ser
   expect(readStorageConsent()).toBeNull();
   expect(readStorageConsent()).toBeNull();
   expect(get.call(localStorage, 'skyttel-storage-consent')).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Kom ihåg mig i Skyttel' })).toBeNull();
+  expect(
+    (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).disabled,
+  ).toBe(true);
   expect(
     await (
       await client.get(`${installation.origin}/api/browser-binding/preference`, {

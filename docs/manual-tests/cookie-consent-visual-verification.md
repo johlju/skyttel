@@ -46,8 +46,11 @@ controls use the same visual language. No analytics or marketing controls
 are presented as Skyttel features.
 
 The settings captures precede the quick-action update: the current page
-omits undo, uses a trash icon for consent reset, and adds a download action
-for the saved browser consent and published storage register. Current
+omits undo and the separate save action, saves choices directly, uses a
+trash icon for consent reset, and adds a download action for the saved
+browser consent and published storage register. The login-offer choice
+uses the same switch style as other choices. Successful outcomes are
+announced to assistive technology; errors appear beside their controls. Current
 functional cases cover these actions; the older frames below do not show
 the updated button row.
 

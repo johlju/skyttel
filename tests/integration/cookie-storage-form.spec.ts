@@ -95,8 +95,7 @@ for (const [caseId, outcome] of [
       expect(saves).toBe(1);
       expect(await recovery()).toEqual(before);
       if (outcome === 'unknown') {
-        await expect(page.getByText('Osparad ändring.', { exact: true })).toHaveCount(0);
-        for (const name of ['Återställ samtycke', 'Spara Preferenser']) {
+        for (const name of ['Acceptera Alla', 'Endast nödvändiga', 'Återställ samtycke']) {
           const button = page.getByRole('button', { name, exact: true });
           await expect(button).toHaveAttribute('aria-disabled', 'true');
           await button.focus();
@@ -116,8 +115,7 @@ for (const [caseId, outcome] of [
           ).json(),
         ).toMatchObject({ remembered: true });
         const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
-        await expect(choice).not.toBeChecked();
-        await expect(page.getByText('Osparad ändring.', { exact: true })).toBeVisible();
+        await expect(choice).toBeChecked();
         expect(saves).toBe(1);
       }
     } finally {
@@ -126,7 +124,7 @@ for (const [caseId, outcome] of [
   });
 }
 
-test('KAK-10: quick actions change only the form before explicit saving at 1280px', async ({
+test('KAK-10: the remembered-login switch saves immediately and preserves focus at 1280px', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -136,25 +134,13 @@ test('KAK-10: quick actions change only the form before explicit saving at 1280p
     await page.goto(`${installation.origin}/cookies`);
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await expect(choice).toBeChecked();
-    const quick = page.getByRole('button', { name: 'Stäng av ihågkommen inloggning', exact: true });
-    await quick.focus();
-    await page.keyboard.press('Enter');
-    await expect(quick).toBeFocused();
-    await expect(choice).not.toBeChecked();
-    await expect(page.getByText('Osparad ändring.', { exact: true })).toBeVisible();
-    expect(
-      await (
-        await page.request.get(`${installation.origin}/api/browser-binding/preference`, {
-          headers: { origin: installation.origin },
-        })
-      ).json(),
-    ).toMatchObject({ remembered: true });
-    const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
-    await save.click();
+    await choice.focus();
+    await page.keyboard.press('Space');
     await expect(page.getByRole('status')).toHaveText(
       'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.',
     );
-    await expect(save).toBeFocused();
+    await expect(choice).not.toBeChecked();
+    await expect(choice).toBeFocused();
     expect(
       await (
         await page.request.get(`${installation.origin}/api/browser-binding/preference`, {
@@ -162,9 +148,7 @@ test('KAK-10: quick actions change only the form before explicit saving at 1280p
         })
       ).json(),
     ).toMatchObject({ remembered: false });
-    await expect(
-      page.getByRole('button', { name: 'Kom ihåg mig i Skyttel', exact: true }),
-    ).toBeVisible();
+    await expect(choice).toBeEnabled();
   } finally {
     await installation.close();
   }
@@ -183,6 +167,7 @@ for (const [width, caseId] of [
     const other = await createPreparedContext(browser);
     const { origin } = installation;
     const headers = { origin };
+    let release = () => {};
     try {
       await page.setViewportSize({ width, height: 900 });
       const household = await rememberedHousehold(page, origin);
@@ -232,41 +217,46 @@ for (const [width, caseId] of [
         page.getByRole('heading', { name: 'better-auth.session_token', exact: true }),
       ).toBeVisible();
       await page.keyboard.press('Enter');
-      const quick = page.getByRole('button', {
-        name: 'Stäng av ihågkommen inloggning',
-        exact: true,
+      let captured = () => {};
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
       });
-      await quick.focus();
-      await page.keyboard.press('Enter');
-      await expect(quick).toBeFocused();
-      await expect(choice).not.toBeChecked();
+      const committed = new Promise<void>((resolve) => {
+        captured = resolve;
+      });
+      await page.route('**/api/browser-binding/revoke', async (route) => {
+        const response = await route.fetch();
+        captured();
+        await held;
+        await route.fulfill({ response });
+      });
+      await choice.focus();
+      await page.keyboard.press('Space');
+      await committed;
+      await expect(page.getByRole('status')).toHaveText('Sparar…');
       const navigation = page.getByRole('navigation', { name: 'Dina kontosidor', exact: true });
       if (!(await navigation.getByRole('link', { name: 'Din profil', exact: true }).isVisible())) {
         await navigation.getByText('Välj inställning', { exact: true }).focus();
         await page.keyboard.press('Enter');
       }
-      const guard = page.getByRole('dialog', { name: 'Lämna ändrade uppgifter?', exact: true });
       for (const name of ['Din profil', 'Inloggningssätt', 'Tillbaka till kartan']) {
         const destination = page.getByRole('link', { name, exact: true });
         await destination.focus();
         await page.keyboard.press('Enter');
-        await expect(guard).toBeVisible();
-        await expect(
-          guard.getByRole('button', { name: 'Fortsätt redigera', exact: true }),
-        ).toBeFocused();
-        await page.keyboard.press('Escape');
-        await expect(guard).not.toBeVisible();
-        await expect(destination).toBeFocused();
         await expect(page).toHaveURL(`${origin}/cookies`);
-        await expect(choice).not.toBeChecked();
+        await expect(page.getByRole('status')).toHaveText('Sparar…');
       }
+      release();
+      await expect(page.getByRole('status')).toHaveText(
+        'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.',
+      );
+      await page.unroute('**/api/browser-binding/revoke');
       await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
-      await guard
-        .getByRole('button', { name: 'Kasta ändringarna och fortsätt', exact: true })
-        .click();
       await expect(page).toHaveURL(`${origin}/households/${household.id}`);
-      expect(await read(preference)).toMatchObject({ remembered: true });
+      expect(await read(preference)).toMatchObject({ remembered: false });
       await page.goto(`${origin}/cookies`);
+      await choice.check();
+      await expect(page.getByRole('status')).toContainText('Ihågkommen inloggning är aktiverad.');
       const reset = page.getByRole('button', { name: 'Återställ samtycke', exact: true });
       await expect(reset).toBeVisible();
       await reset.focus();
@@ -293,12 +283,6 @@ for (const [width, caseId] of [
       await expect(page.locator('.cookie-storage-quick').getByRole('status')).toContainText(
         'Ihågkommen inloggning är avstängd.',
       );
-      const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
-      await expect(save).toHaveAttribute('aria-disabled', 'false');
-      await save.focus();
-      await page.keyboard.press('Enter');
-      await expect(page.getByRole('status')).toContainText('Ihågkommen inloggning är avstängd.');
-      await expect(save).toBeFocused();
       expect(await read(preference)).toMatchObject({ remembered: false });
       expect(await page.evaluate(() => ({ ...sessionStorage }))).toEqual(recoveryBefore);
       expect(
@@ -316,6 +300,7 @@ for (const [width, caseId] of [
         true,
       );
     } finally {
+      release();
       await other.close();
       await installation.close();
     }

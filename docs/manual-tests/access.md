@@ -70,7 +70,7 @@ ACCESS-29. Verklig HTTPS, SQLite och kakor; syntetisk leverantör.
   "reference": "Dator, HTTPS och aktiv ihågkommen inloggning.",
   "outcomes": [
     "Uttryckligt sparande bekräftar avstängningen.",
-    "Fortsatt inloggning bekräftas separat och fokus stannar på sparknappen.",
+    "Fokus stannar på reglaget utan grön resultatbox.",
     "Ny aktivering är ett separat uttryckligt val på lagringssidan."
   ]
 }
@@ -80,20 +80,17 @@ ACCESS-29. Verklig HTTPS, SQLite och kakor; syntetisk leverantör.
 **Steg:**
 
 1. Öppna `/cookies` direkt i samma webbläsare.
-2. Stäng av reglaget **Ihågkommen inloggning**. Kontrollera **Osparad
-   ändring.** och välj **Spara Preferenser**.
+2. Stäng av reglaget **Ihågkommen inloggning**. Ändringen skickas direkt.
 3. Kontrollera beskedet och tangentbordsfokus.
 
 **Förväntat resultat:**
 
-- **Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.**
-  ligger kvar vid åtgärderna. Fokus ligger kvar på sparknappen.
-- Reglaget är av och sidan visar **Kom ihåg mig i Skyttel** för manuell
-  aktivering.
+- Reglaget är av och behåller fokus. Ingen grön resultatbox visas.
+- Reglaget kan användas för en ny uttrycklig aktivering.
 - Uppgifterna anger högst tidigare slut eller åtta timmar från
   avstängningen och 30 minuters inaktivitet.
 
-### ACCESS-30: Avvisat sparande behåller det osparade valet
+### ACCESS-30: Avvisad ändring behåller det bekräftade valet
 
 **Syfte:** Ett säkert avvisat anrop får inte visas som sparat.
 
@@ -131,7 +128,7 @@ ACCESS-30. Automationen ersätter samma anrop före servern med HTTP 409.
   "reference": "HTTPS och avvisat avstängningsanrop före servern.",
   "outcomes": [
     "Avvisningen visas som fel, inte som sparad avstängning.",
-    "Begärt AV ligger kvar som osparat och sparknappen behåller fokus."
+    "Det bekräftade värdet återställs och reglaget behåller fokus."
   ]
 }
 ```
@@ -139,13 +136,12 @@ ACCESS-30. Automationen ersätter samma anrop före servern med HTTP 409.
 
 **Steg:**
 
-1. Öppna `/cookies`, stäng av reglaget och välj
-   **Spara Preferenser**.
-2. Kontrollera besked, reglage, osparad status och fokus.
+1. Öppna `/cookies` och stäng av reglaget. Ändringen skickas direkt.
+2. Kontrollera felet vid reglaget, dess värde och fokus.
 
 **Förväntat resultat:** **Ändringen kunde inte sparas. Försök igen.**
-visas som larm. Begärt AV ligger kvar med **Osparad ändring.** Sparknappen
-kan användas igen och har kvar fokus.
+visas som larm vid reglaget. Det bekräftade värdet är fortfarande på.
+Reglaget kan användas för ett nytt försök och har kvar fokus.
 
 ### ACCESS-31: Förlorat svar ger okänd sparstatus
 
@@ -197,13 +193,12 @@ svarsförlust; ingen verklig leverantörskontroll.
 
 **Steg:**
 
-1. Öppna `/cookies`, stäng av reglaget och välj
-   **Spara Preferenser**.
-2. Kontrollera beskedet och försök aktivera sparknappen igen.
+1. Öppna `/cookies` och stäng av reglaget. Ändringen skickas direkt.
+2. Kontrollera beskedet vid reglaget och försök ändra det igen.
 
 **Förväntat resultat:** **Sparstatus okänd. Vi kunde inte bekräfta om
 ändringen genomfördes.** visas som larm. Reglaget visar begärt AV och
-sparknappen behåller fokus, men skickar inget nytt anrop. Sidan påstår
+reglaget behåller fokus, men skickar inget nytt anrop. Sidan påstår
 inte att tidigare val fortfarande gäller.
 
 ### ACCESS-27: Kom ihåg mig gäller bara den nya inloggningen
@@ -1686,7 +1681,7 @@ Det är syntetiskt tekniskt underlag, inte manuellt utförd driftverifiering.
 [cookie-storage-http.test.tsx](../../tests/unit/client/cookie-storage-http.test.tsx)
 visar formulärets sparutfall mot verklig HTTP och SQLite, inklusive
 förlorad fortsatt-inloggningskontroll och sena svar för en tidigare
-användare. Ett äldre osparat val får inte rotera en nyare inloggning.
+användare. En ändring från en äldre inloggning får inte rotera en nyare inloggning.
 Det ersätter inte faktisk skärmläsaruppläsning eller Chromium-kakpolicyn.
 
 [remembered-login.spec.ts](../../tests/integration/remembered-login.spec.ts)

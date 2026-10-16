@@ -436,9 +436,10 @@ sparbesked. Den här mänskliga kontrollen är ännu inte utförd.
 
 ## Formulärets lagringsval
 
-### KAK-10: Snabbval föregår uttryckligt sparande på dator
+### KAK-10: Reglaget sparar inloggningsvalet direkt på dator
 
-**Syfte:** Skilja formulärändringar från serverns bekräftade val.
+**Syfte:** Reglaget sparar direkt och bekräftar avstängning och fortsatt
+inloggning separat.
 
 **Användare:** Hushållets administratör.
 
@@ -461,9 +462,9 @@ KAK-10. Testet använder verklig HTTP och syntetisk inloggningsleverantör.
   },
   "reference": "1280 pixlar. Verkligt sparande via HTTP; syntetisk Google-inloggning. Ingen fysisk webbläsaromstart eller skärmläsaruppläsning ingår.",
   "outcomes": [
-    "Snabbval ändrar bara formuläret",
-    "Sparknappen bekräftar avstängning och fortsatt inloggning separat",
-    "Fokus ligger kvar på sparknappen"
+    "Reglaget sparar direkt utan separat sparknapp",
+    "Avstängning och fortsatt inloggning bekräftas separat",
+    "Fokus ligger kvar på reglaget"
   ]
 }
 ```
@@ -472,21 +473,18 @@ KAK-10. Testet använder verklig HTTP och syntetisk inloggningsleverantör.
 
 **Steg:**
 
-1. Fokusera **Stäng av ihågkommen inloggning** och tryck Enter.
-2. Kontrollera att reglaget är av och att **Osparad ändring.** visas.
-3. Välj **Spara Preferenser** längst ned.
+1. Fokusera reglaget **Ihågkommen inloggning** och tryck mellanslag.
+2. Vänta på resultatet och kontrollera att reglaget är av.
 
 **Förväntat resultat:**
 
-- Snabbvalet skickar inget sparande.
-- Efter sparande visas **Ihågkommen inloggning är avstängd.** och,
-  efter separat kontroll, **Du är fortfarande inloggad.**
-- Sparknappen behåller fokus. Ny uttrycklig aktivering är tillgänglig med
-  samtycke till Preferenskakor.
+- Reglaget sparar direkt utan en separat sparknapp och behåller fokus.
+- Ingen grön resultatbox visas. Fel visas vid reglaget.
+- Ny uttrycklig aktivering med reglaget kräver samtycke till Preferenskakor.
 
 ### KAK-11: Navigation och bekräftad återställning bevarar annat arbete
 
-**Syfte:** Skydda osparade lagringsval och begränsa återställningen.
+**Syfte:** Skydda pågående sparande och begränsa återställningen.
 
 **Användare:** Hushållets administratör.
 
@@ -499,7 +497,9 @@ har en egen giltig inloggning för samma användare.
 [återimport](household-import.md) och [permanent radering](household-erasure.md)
 om dessa förlopp ska följas efteråt. Automation placerar syntetiska
 återhämtningsreferenser i fliken och kontrollerar att de bevaras; den
-genomför ingen import eller radering i detta fall.
+genomför ingen import eller radering i detta fall. Kör
+`hold-next-storage-reply` i den kontrollerade identitetsinstallationens
+terminal före steg 1. Kör `release-storage-reply` före steg 3.
 
 **Automatiskt motsvarande test:**
 [cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
@@ -517,8 +517,8 @@ KAK-11. Verklig HTTP används för lagringsval och bevarade serveruppgifter.
   },
   "reference": "1280 pixlar, mörkt tema. Syntetisk Google-inloggning och återhämtningsreferenser; verklig HTTP för inställningar och avstängning. Separat skärmläsarprov krävs.",
   "outcomes": [
-    "Profil, inställningslänk och Tillbaka till kartan skyddar osparade val",
-    "Fortsatt redigering återger fokus och behåller valet",
+    "Profil, inställningslänk och Tillbaka till kartan väntar på pågående sparande",
+    "Bekräftat sparande tillåter navigation utan varning om osparade val",
     "Dialogens avbryt ändrar ingenting och återger fokus",
     "Bekräftad återställning använder samma säkra avstängning",
     "Återhämtningsreferenser, tema, personlig vy, karta, medgivande och andra bindningar bevaras"
@@ -531,30 +531,29 @@ KAK-11. Verklig HTTP används för lagringsval och bevarade serveruppgifter.
 **Steg:**
 
 1. Öppna **Kakor och lagring**. Öppna och stäng **Visa nödvändig lagring**
-   med Enter. Välj snabbåtgärden för avstängning. Kontrollera att reglaget
-   är av och att fokus stannar på snabbåtgärden.
+   med Enter. Stäng av reglaget **Ihågkommen inloggning** med mellanslag.
+   Kontrollera att **Sparar…** visas vid reglaget medan svaret hålls.
 2. Försök lämna sidan via **Din profil**, **Inloggningssätt** och
-   **Tillbaka till kartan**. Avbryt varje gång med Escape. Öppna
-   **Välj inställning** först om navigationen är hopfälld.
-3. Försök återgå till kartan igen och välj
-   **Kasta ändringarna och fortsätt**. Öppna lagringssidan igen.
+   **Tillbaka till kartan**. Öppna **Välj inställning** först om
+   navigationen är hopfälld. Sidan ska stanna medan ändringen pågår.
+3. Släpp svaret enligt förberedelsen. Kontrollera att reglaget är av.
+   Gå tillbaka till kartan. Öppna lagringssidan och slå på reglaget igen.
 4. Välj **Återställ samtycke**. Läs omfattning och bevarade uppgifter.
    Flytta fokus med Tab och Skift+Tab och avbryt med Escape.
-5. Öppna återställningen igen och välj **Återställ**. Kontrollera beskedet
-   vid snabbåtgärderna. Fokusera den spärrade **Spara Preferenser** och
-   tryck Enter; beskedet ska stanna vid återställningen.
+5. Öppna återställningen igen och välj **Återställ**. Kontrollera att
+   dialogen stängs och att fokus återgår till återställningsknappen.
 6. Kontrollera kontotema, personlig vy, hushållets information,
    samtalsmedgivande och den andra webbläsarens inloggning.
    Följ vid behov samma återhämtningsförsök från förberedelsen.
 
 **Förväntat resultat:**
 
-- Avbruten navigation behåller formulärvärdet och återger fokus till
-  vald länk. Kasta ändringarna ändrar inte servervalet.
+- Navigation väntar medan ändringen pågår. Efter bekräftat sparande kan
+  sidan lämnas utan varning om osparade val.
 - Återställningsdialogen fokuserar **Avbryt**, håller tangentbordsfokus
   inom dialogen och återger det till **Återställ samtycke**.
 - Endast bekräftad återställning begär serverändringen. Avstängning och
-  fortsatt inloggning får separata besked vid formulärets åtgärder.
+  fortsatt inloggning kontrolleras separat. Ingen grön resultatbox visas.
 - Förberedda inställningar, uppgifter och återhämtningsreferenser finns
   kvar. Den andra webbläsaren påverkas inte.
 
@@ -580,7 +579,7 @@ KAK-12. Samma verkliga HTTP och syntetiska förberedelse som KAK-11.
     "caseId": "KAK-12"
   },
   "reference": "390 pixlar, mörkt tema; hela KAK-11 med tangentbord och verklig HTTP. Återhämtningsreferenserna är syntetiska.",
-  "outcomes": ["Snabbval behåller fokus", "Navigation skyddar osparade värden", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
+  "outcomes": ["Reglaget behåller fokus", "Navigation väntar på pågående sparande", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
 }
 ```
 -->
@@ -591,7 +590,7 @@ KAK-12. Samma verkliga HTTP och syntetiska förberedelse som KAK-11.
 **Förväntat resultat:** Samma utfall som KAK-11. Alla kontroller och
 besked är läsbara utan horisontell sidrullning.
 
-### KAK-14: Avvisad återställning behåller ett osparat val
+### KAK-14: Avvisad återställning behåller det bekräftade valet
 
 **Syfte:** Skilja återställningens serverutfall från ett förlorat svar.
 
@@ -602,7 +601,7 @@ Bevara flikens återhämtningsuppgifter för osäker import och permanent
 radering enligt förberedelsen i KAK-11.
 
 **Separat förberedelse:** Förbered avvisat avstängningsanrop enligt
-[ACCESS-30](access.md#access-30-avvisat-sparande-behåller-det-osparade-valet).
+[ACCESS-30](access.md#access-30-avvisad-ändring-behåller-det-bekräftade-valet).
 Det ersätter nästa avstängningsanrop före servern. Återställ ersättningen efter
 fallet genom omladdning.
 
@@ -621,7 +620,7 @@ KAK-14. Felstyrningen ersätter eller stoppar endast det angivna anropet.
     "caseId": "KAK-14"
   },
   "reference": "320 pixlar, syntetisk Google-inloggning. Kontrollerat avslag före avstängningens serverändring; import- och raderingsreferenser bevaras.",
-  "outcomes": ["Avslag behåller AV som osparat och servervalet på", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras", "Ingen automatisk upprepning av sparandet"]
+  "outcomes": ["Avslag behåller det bekräftade servervalet på", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras", "Ingen automatisk upprepning av sparandet"]
 }
 ```
 -->
@@ -637,8 +636,8 @@ KAK-14. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 **Förväntat resultat:**
 
-**Ändringen kunde inte sparas. Försök igen.** visas vid snabbåtgärden. Begärt AV
-ligger kvar som osparat och servervalet är på. Inget nytt sparande skickas
+**Ändringen kunde inte sparas. Försök igen.** visas vid snabbåtgärden. Det bekräftade
+servervalet visas fortfarande som på. Inget nytt sparande skickas
 automatiskt.
 
 Fokus återgår till **Återställ samtycke** när dialogen stängs.
@@ -674,7 +673,7 @@ KAK-15. Felstyrningen ersätter eller stoppar endast det angivna anropet.
     "caseId": "KAK-15"
   },
   "reference": "320 pixlar, syntetisk Google-inloggning. Svaret stoppas efter verklig serverändring för att pröva okänd status; import- och raderingsreferenser bevaras.",
-  "outcomes": ["Förlorat svar ger okänd status och erbjuder Kontrollera igen", "Spärrade spara och återställ skickar ingen ny ändring", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras"]
+  "outcomes": ["Förlorat svar ger okänd status och erbjuder Kontrollera igen", "Spärrade reglage och återställ skickar ingen ny ändring", "Fokus återgår till återställningsknappen", "Återhämtningsreferenser bevaras"]
 }
 ```
 -->
@@ -692,7 +691,7 @@ KAK-15. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 **Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.** visas som
 larm vid snabbåtgärden. Sidan påstår inte att servervalet är oförändrat.
-**Kontrollera igen** erbjuds. Nytt sparande och återställning är
+**Kontrollera igen** erbjuds. Reglagen och återställning är
 spärrade; tangentbordsaktivering skickar inget nytt sparande.
 
 Fokus återgår till **Återställ samtycke** när dialogen stängs.
@@ -755,8 +754,8 @@ KAK-16. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 **Förväntat resultat:**
 
-**Ihågkommen inloggning är avstängd. Logga in igen för att fortsätta.** visas
-som status vid snabbåtgärden. Länken **Logga in igen** visas. Avstängningen
+**Fortsatt inloggning kunde inte bekräftas.** visas
+vid snabbåtgärden med länken **Logga in igen**. Avstängningen
 förvandlas inte till okänd status eller avvisat sparande.
 
 Fokus återgår till **Återställ samtycke** när dialogen stängs.
@@ -784,7 +783,7 @@ KAK-13. Samma verkliga HTTP och syntetiska förberedelse som KAK-11.
     "caseId": "KAK-13"
   },
   "reference": "320 pixlar, mörkt tema; hela KAK-11 med tangentbord och verklig HTTP. Återhämtningsreferenserna är syntetiska.",
-  "outcomes": ["Snabbval behåller fokus", "Navigation skyddar osparade värden", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
+  "outcomes": ["Reglaget behåller fokus", "Navigation väntar på pågående sparande", "Bekräftad återställning bevarar övrigt arbete och återger fokus", "Ingen horisontell sidrullning"]
 }
 ```
 -->
@@ -903,7 +902,7 @@ skickas och redan befintliga import- och raderingsreferenser bevaras.
   "reference": "HTTPS med kontrollerat nekat skrivande av just lagringsoperationens referens. Befintliga import- och raderingsreferenser ska bevaras.",
   "outcomes": [
     "Ingen ändring skickas när referensen inte kan sparas.",
-    "Begärt AV ligger kvar, serverns aktuella val är på och fokus stannar på sparknappen.",
+    "Serverns aktuella val visas som på och fokus stannar på reglaget.",
     "Andra återhämtningsreferenser bevaras."
   ]
 }
@@ -913,13 +912,13 @@ skickas och redan befintliga import- och raderingsreferenser bevaras.
 
 **Steg:**
 
-1. Stäng av reglaget och välj **Spara Preferenser**.
-2. Läs hindret, kontrollera begärt val och tangentbordsfokus.
+1. Försök stänga av reglaget.
+2. Läs hindret vid reglaget, kontrollera dess värde och tangentbordsfokus.
 
 **Förväntat resultat:** **Flikens återhämtningsuppgifter kunde inte sparas.
 Ingen ändring har skickats.** visas med råd att kontrollera
-lagringsinställningarna. Sparknappen behåller fokus, begärt AV ligger
-kvar och sidan ger ingen falsk bekräftelse eller okänd serverändring.
+lagringsinställningarna. Reglaget behåller fokus och visar det bekräftade
+värdet på. Sidan ger ingen falsk bekräftelse eller okänd serverändring.
 
 ### KAK-22: Skadad referens ger fortsatt okänt utfall
 
@@ -974,7 +973,7 @@ kontrollerat skadad flikreferens och en ny vanlig inloggning.
 
 **Förväntat resultat:** **Åtgärdens referens saknas eller är skadad.
 Utfallet är fortfarande okänt.** ligger kvar. Sidan påstår inget om
-det gamla utfallet, och **Spara Preferenser** skickar inget nytt anrop.
+det gamla utfallet, och spärrade reglage skickar inget nytt anrop.
 
 ### KAK-23: Förlorad referens ger ingen påhittad tidigare bekräftelse
 
@@ -1081,7 +1080,7 @@ säkerhetskopior eller produktionens faktiska drift.
 
 1. Logga in som Alex igen utan **Kom ihåg mig** och öppna `/cookies`.
 2. Välj **Kontrollera igen**. Läs beskedet och kontrollera fokus.
-3. Fokusera **Spara Preferenser** med tangentbordet och tryck Retur.
+3. Kontrollera att reglagen och **Återställ samtycke** är spärrade.
 
 **Förväntat resultat:** **Resultatet kan inte hämtas. Det kan saknas eller
 ha passerat kontrollfönstret på 24 timmar. Utfallet är fortfarande
@@ -1172,8 +1171,8 @@ nytt val utan att ett tidigare sparande påstås vara genomfört.
 **Användare:** Alex i samma flik, bredd 390 pixlar.
 
 **Förutsättningar:** Ta `save-copy` före avstängningen. Aktivera
-`lose-storage-reply`. Stäng av ihågkommen inloggning på `/cookies` och
-välj **Spara Preferenser**. Vänta på **Sparstatus okänd**. Kör sedan
+`lose-storage-reply`. Stäng av ihågkommen inloggning på `/cookies`.
+Ändringen skickas direkt. Vänta på **Sparstatus okänd**. Kör sedan
 `restore-copy` och `allow-storage-reply`. Behåll flikens återhämtningsreferens.
 
 <!-- markdownlint-disable MD013 -->
@@ -1209,7 +1208,7 @@ välj **Spara Preferenser**. Vänta på **Sparstatus okänd**. Kör sedan
    **Kom ihåg mig i Skyttel** uttryckligen i erbjudandet efter inloggningen.
 4. Öppna `/cookies` och välj **Kontrollera igen**. Läs beskedet och
    kontrollera att fokus ligger kvar på knappen.
-5. Stäng av det nya valet och välj **Spara Preferenser** uttryckligen.
+5. Stäng av det nya valet. Ändringen skickas direkt.
 
 **Förväntat resultat:** **Skyttel har återställts från en säkerhetskopia.
 Gamla inloggningar kan inte längre användas. Logga in igen för att
@@ -1227,8 +1226,8 @@ befintligt resultat med ett undantag eller en ny kontrollfrist.
 
 **Förutsättningar:** Starta samma isolerade HTTPS-installation. Tillåt
 Preferenskakor och logga in. Välj sedan
-**Kom ihåg mig i Skyttel**, kör `lose-storage-reply` och stäng av valet genom
-**Spara Preferenser**. Efter **Sparstatus okänd** kör du `save-copy`.
+**Kom ihåg mig i Skyttel**, kör `lose-storage-reply` och stäng av reglaget.
+Efter **Sparstatus okänd** kör du `save-copy`.
 Kopian innehåller därmed det verkliga resultatet. Kör `restore-copy` och
 `allow-storage-reply`. Behåll samma flik.
 
@@ -1504,7 +1503,7 @@ KAK-33.
 2. Välj Inte nu i Kom ihåg mig i Skyttel. Ladda om. Öppna sedan den
    förberedda återkomstlänken och kontrollera att erbjudandet inte upprepas.
 3. Öppna /login och logga in igen. Välj Fråga inte igen i erbjudandet.
-4. Logga in en tredje gång. Öppna /cookies och aktivera Kom ihåg mig i Skyttel
+4. Logga in en tredje gång. Öppna /cookies och slå på reglaget Ihågkommen inloggning
    manuellt.
 
 **Förväntat resultat:**
@@ -1515,9 +1514,9 @@ KAK-33.
   webbläsare.
 - Manuell aktivering finns kvar och kräver separat serverbekräftelse.
 
-### KAK-34: Snabbval kräver sparande och återställning bevarar avstå-val
+### KAK-34: Snabbval sparas direkt och återställning bevarar avstå-val
 
-**Syfte:** Snabbval ändrar formuläret och behöver separat Spara Preferenser.
+**Syfte:** Snabbval sparas direkt och återställning bevarar förslagsvalet.
 
 **Användare:** Alex i den isolerade provinstallationen.
 
@@ -1538,9 +1537,10 @@ KAK-34.
     "spec": "tests/integration/storage-consent.spec.ts",
     "caseId": "KAK-34"
   },
-  "reference": "Inloggad användare, direkt publik policyingång",
+  "reference": "Inloggad användare, direkt publik policyingång vid 320 pixlar i båda teman",
   "outcomes": [
-    "Snabbval ändrar formuläret och behöver separat Spara Preferenser. Policysidans sparande bekräftas med Dina lagringspreferenser är sparade.",
+    "Utan samtycke visas en bärnstensfärgad varning ovanför Ihågkommen inloggning.",
+    "Snabbval sparas direkt utan separat sparknapp eller vanlig sparbekräftelse.",
     "Återställning kräver bekräftelse, rensar samtycket och bevarar avstå-valet.",
     "Bannern visas igen när policysidan lämnas."
   ]
@@ -1551,17 +1551,22 @@ KAK-34.
 
 **Steg:**
 
-1. Öppna /cookies direkt. Läs Kakpolicy utan täckande banner.
-2. Välj Acceptera Alla. Kontrollera Preferenskakor och välj Spara Preferenser.
-   Kontrollera att **Dina lagringspreferenser är sparade.** visas på policysidan.
-3. Avmarkera Fråga om ihågkommen inloggning efter framtida inloggningar.
+1. Öppna /cookies direkt. Läs Kakpolicy utan täckande banner. Vid 320 pixlar
+   i ljust och mörkt tema: kontrollera den bärnstensfärgade varningen ovanför
+   Ihågkommen inloggning och att sidan saknar sidledsrullning.
+2. Välj Acceptera Alla. Kontrollera att Preferenskakor slås på och att
+   valet finns kvar efter omladdning.
+3. Slå av reglaget Fråga om ihågkommen inloggning efter framtida
+   inloggningar. Ladda om och kontrollera att valet finns kvar.
 4. Välj Återställ samtycke och bekräfta Återställ. Kontrollera
    förslagsvalet och välj Till startsidan.
 
 **Förväntat resultat:**
 
-- Snabbval ändrar formuläret och behöver separat Spara Preferenser.
-- Policysidans sparande bekräftas med **Dina lagringspreferenser är sparade.**
+- Snabbval sparas direkt utan separat sparknapp eller vanlig sparbekräftelse.
+- Utan samtycke visas en bärnstensfärgad varning ovanför Ihågkommen
+  inloggning. Den försvinner när Preferenskakor tillåts och återkommer efter
+  återställning. Tillståndet aktiverar inte ihågkommen inloggning.
 - Återställning kräver bekräftelse, rensar samtycket och bevarar avstå-valet.
 - Bannern visas igen när policysidan lämnas.
 
@@ -1639,7 +1644,8 @@ KAK-39.
   "reference": "Ren webbläsare, kontrollerat nekat skrivande av samtyckesposten",
   "outcomes": [
     "Lagringsfel förklaras och ett sparförsök ger ingen falsk bekräftelse.",
-    "Vanlig inloggning fungerar och kan följas av ett nytt kakval."
+    "Vanlig inloggning fungerar och kan följas av ett nytt kakval.",
+    "På /cookies visas felet vid Preferenskakor och reglaget förblir avstängt."
   ]
 }
 ```
@@ -1652,11 +1658,13 @@ KAK-39.
 2. Välj Fortsätt med endast nödvändig lagring. Logga in med Google.
 3. Kontrollera att bannern återkommer och att ihågkommen inloggning inte påstås
    vara aktiverad.
+4. Öppna `/cookies` via adressfältet och försök slå på Preferenskakor.
 
 **Förväntat resultat:**
 
 - Lagringsfel förklaras och ett sparförsök ger ingen falsk bekräftelse.
 - Vanlig inloggning fungerar och kan följas av ett nytt kakval.
+- På /cookies visas felet vid Preferenskakor och reglaget förblir avstängt.
 
 ### KAK-40: Saknat eller äldre samtycke stänger av ihågkommen inloggning
 
@@ -1716,7 +1724,7 @@ KAK-40.
 **Användare:** Alex i den isolerade provinstallationen.
 
 **Förutsättningar och separat förberedelse:** Logga in, öppna /cookies, tillåt
-Preferenskakor med Spara Preferenser och aktivera Kom ihåg mig i Skyttel.
+Preferenskakor och slå sedan på reglaget Ihågkommen inloggning.
 
 **Automatiskt motsvarande test:**
 [storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
@@ -1745,9 +1753,9 @@ KAK-41.
 **Steg:**
 
 1. Öppna /cookies i en andra flik. Kontrollera att ihågkommen inloggning är på.
-2. Välj Endast nödvändiga och Spara Preferenser i den första fliken.
+2. Välj Endast nödvändiga i den första fliken.
 3. Läs Preferenskakor och Ihågkommen inloggning i den andra fliken efter
-   bekräftelsen.
+   att reglagen uppdateras.
 
 **Förväntat resultat:**
 
@@ -1811,8 +1819,7 @@ KAK-42.
 
 ### KAK-43: Export av sparat lagringssamtycke och register
 
-**Syfte:** Hämta det sparade samtycket utan att spara påbörjade formulärval
-eller ta med andra lagrade uppgifter.
+**Syfte:** Hämta det sparade samtycket utan att ta med andra lagrade uppgifter.
 
 **Användare:** Besökare utan inloggning.
 
@@ -1836,7 +1843,7 @@ registerposter och att andra lagrade värden inte följer med.
   "reference": "Publik policy utan inloggning vid 320 pixlar.",
   "outcomes": [
     "Exporten visar inget sparat samtycke före första sparandet.",
-    "Sparat samtycke exporteras även när formuläret har ett annat osparat val.",
+    "Exporten följer det senaste direkt sparade valet.",
     "Exporten innehåller registret men ändrar inte samtycke eller övrig lagring.",
     "Fokus stannar på exportknappen och knapparna ryms på smal skärm."
   ]
@@ -1848,11 +1855,10 @@ registerposter och att andra lagrade värden inte följer med.
 
 1. Välj **Exportera data**. Öppna den hämtade JSON-filen och kontrollera
    att den innehåller registret men inget sparat samtycke.
-2. Välj **Acceptera Alla** och **Spara Preferenser**. Läs sparbekräftelsen.
-3. Välj **Endast nödvändiga** utan att spara. Kontrollera att Preferenskakor
-   är av i formuläret.
+2. Välj **Acceptera Alla**. Kontrollera att Preferenskakor slås på.
+3. Välj **Endast nödvändiga**. Kontrollera att Preferenskakor slås av.
 4. Fokusera **Exportera data** och tryck Enter. Öppna filen och kontrollera
-   att den visar det sparade samtycket till Preferenskakor.
+   att den visar det senaste sparade valet utan Preferenskakor.
 5. Kontrollera fokus, formulärval, nedladdningsikon och återställningens
    papperskorgsikon. Kontrollera att sidan inte rullar i sidled.
 
@@ -1860,7 +1866,7 @@ registerposter och att andra lagrade värden inte följer med.
 
 - En fil med namnet `skyttel-lagringssamtycke.json` kan hämtas även utan
   ett sparat samtycke.
-- Exporten följer det sparade samtycket. Påbörjade formulärval sparas inte.
+- Exporten följer det senaste sparade samtycket och ändrar inga val.
 - Lagringsregistret ingår; övriga lagrade uppgifter ändras inte.
 - Fokus stannar på exportknappen. Knapparna har läsbara namn och ikoner,
   och sidan fungerar vid 320 pixlar utan sidledsrullning.
@@ -1873,7 +1879,7 @@ inte det sparade samtycket.
 **Användare:** Besökare utan inloggning.
 
 **Förutsättningar:** Öppna `/cookies` i en isolerad provinstallation.
-Välj **Endast nödvändiga** och **Spara Preferenser**.
+Välj **Endast nödvändiga**. Valet sparas direkt.
 
 **Separat förberedelse:** Kör följande i provsidans utvecklarkonsol.
 Det stoppar nästa filskapande före nedladdningen. Nästa försök fungerar

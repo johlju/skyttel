@@ -390,10 +390,12 @@ export function ConsentCategories({
   preferences,
   onChange,
   disabled = false,
+  feedback,
 }: {
   preferences: boolean;
   onChange: (value: boolean) => void;
   disabled?: boolean;
+  feedback?: ReactNode;
 }) {
   return (
     <div className="consent-categories">
@@ -448,6 +450,7 @@ export function ConsentCategories({
           ihåg mig; funktionen väljer du separat efter inloggningen. Det gäller Skyttel, inte ditt
           Google- eller Microsoft-konto.
         </p>
+        {feedback}
         <StorageDetails
           title="Visa preferenskakornas lagringsuppgifter"
           entries={preferenceStorageEntries}
@@ -460,9 +463,11 @@ export function ConsentCategories({
 export function ConsentFeedback({
   alwaysRender = false,
   onLogin,
+  quietSuccess = false,
 }: {
   alwaysRender?: boolean;
   onLogin?: () => void;
+  quietSuccess?: boolean;
 }) {
   const manager = useContext(ConsentContext);
   if (!manager) return null;
@@ -479,8 +484,20 @@ export function ConsentFeedback({
   )
     return null;
   return (
-    <div className="cookie-storage-feedback">
-      <p role="status">
+    <div
+      className={`cookie-storage-feedback${quietSuccess ? ' cookie-storage-feedback-quiet' : ''}`}
+    >
+      <p
+        role="status"
+        className={
+          quietSuccess &&
+          !manager.saving &&
+          !preference.resultChecked &&
+          !['saving', 'checking'].includes(preference.state)
+            ? 'sr-only'
+            : undefined
+        }
+      >
         {manager.saving || preference.state === 'saving'
           ? 'Sparar…'
           : preference.state === 'checking'
@@ -488,7 +505,7 @@ export function ConsentFeedback({
             : preference.state === 'saved'
               ? `Ihågkommen inloggning är ${preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}. ${preference.reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : preference.continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'} ${message}`.trim()
               : message}
-        {preference.state === 'saved' && preference.recoveryMessage
+        {!quietSuccess && preference.state === 'saved' && preference.recoveryMessage
           ? ` ${preference.recoveryMessage}`
           : ''}
       </p>
@@ -508,9 +525,17 @@ export function ConsentFeedback({
         {preference.state === 'unknown' && preference.recoveryMessage
           ? ` ${preference.recoveryMessage}`
           : ''}
+        {quietSuccess &&
+        ['saved', 'rejected'].includes(preference.state) &&
+        preference.recoveryMessage
+          ? ` ${preference.recoveryMessage}`
+          : ''}
       </p>
       {preference.requiresLogin && (
         <p>
+          {quietSuccess &&
+            preference.state === 'saved' &&
+            'Fortsatt inloggning kunde inte bekräftas. '}
           <Link to="/login" onClick={onLogin}>
             Logga in igen
           </Link>

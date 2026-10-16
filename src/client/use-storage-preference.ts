@@ -189,18 +189,6 @@ export function useStoragePreference(userId?: string) {
   }
 
   const blocked = state === 'saving' || state === 'unknown' || state === 'checking';
-  function setRequested(value: boolean) {
-    if (busy.current || blocked || !saved) return;
-    updateRequested(value);
-    setState('idle');
-    setRecoveryMessage('');
-  }
-  function undo() {
-    if (busy.current || blocked || !saved) return;
-    updateRequested(saved.remembered);
-    setState('idle');
-    setRecoveryMessage('');
-  }
   async function change(remembered: boolean, reset = false, resetConsentAt?: number) {
     if (
       !userId ||
@@ -262,6 +250,7 @@ export function useStoragePreference(userId?: string) {
       if (generation.current !== ticket) return;
       if (error instanceof MapRequestError && [400, 401, 403, 409].includes(error.status)) {
         setRequiresLogin([401, 403].includes(error.status));
+        updateRequested(saved.remembered);
         setState('rejected');
         forget();
         if (error.code === 'binding_changed') {
@@ -387,11 +376,6 @@ export function useStoragePreference(userId?: string) {
     requiresLogin,
     resultChecked,
     recoveryMessage,
-    dirty: Boolean(saved && saved.remembered !== requested),
-    setRequested,
-    undo,
-    save: () => change(requested),
-    reset: () => change(false, true),
     change,
     checkAgain,
   };

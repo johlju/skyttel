@@ -85,7 +85,7 @@ for (const [caseId, width, theme] of [
   });
 }
 
-test('KAK-34: public policy quick choices need saving and reset preserves the user’s suppressed login offers', async ({
+test('KAK-34: public policy quick choices save immediately and reset preserves the user’s suppressed login offers', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -97,24 +97,65 @@ test('KAK-34: public policy quick choices need saving and reset preserves the us
     await expect(
       page.getByRole('dialog', { name: 'Vi använder kakor', exact: true }),
     ).not.toBeVisible();
+    const remembered = page.getByRole('region', { name: 'Ihågkommen inloggning', exact: true });
+    const warning = remembered.getByText(
+      'Ihågkommen inloggning behöver samtycke till Preferenskakor för beständiga inloggningskakor.',
+      { exact: true },
+    );
+    await page.setViewportSize({ width: 320, height: 900 });
+    for (const [theme, color] of [
+      ['light', 'rgb(146, 64, 14)'],
+      ['dark', 'rgb(251, 191, 36)'],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(warning).toHaveCSS('color', color);
+      const warningBox = await warning.boundingBox();
+      const headingBox = await remembered.getByRole('heading').boundingBox();
+      if (!warningBox || !headingBox) throw new Error('Warning and heading must be visible');
+      expect(warningBox.y + warningBox.height).toBeLessThanOrEqual(headingBox.y);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    }
+    await expect(
+      remembered.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }),
+    ).toBeDisabled();
     await page.getByRole('button', { name: 'Acceptera Alla', exact: true }).click();
     await expect(page.getByRole('switch', { name: 'Preferenskakor', exact: true })).toBeChecked();
-    expect(await page.evaluate(() => localStorage.getItem('skyttel-storage-consent'))).toBeNull();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
-    await expect(page.getByRole('status')).toHaveText('Dina lagringspreferenser är sparade.');
+    await expect(warning).not.toBeVisible();
+    await expect(
+      remembered.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }),
+    ).toBeEnabled();
+    await expect(
+      remembered.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }),
+    ).not.toBeChecked();
+    expect(
+      await page.evaluate(
+        () => JSON.parse(localStorage.getItem('skyttel-storage-consent') ?? 'null').preferences,
+      ),
+    ).toBe(true);
+    await expect(page.getByRole('status')).toBeEmpty();
     await page
-      .getByRole('checkbox', {
+      .getByRole('switch', {
         name: 'Fråga om ihågkommen inloggning efter framtida inloggningar',
         exact: true,
       })
       .uncheck();
+    await page.reload();
+    await expect(
+      page.getByRole('switch', {
+        name: 'Fråga om ihågkommen inloggning efter framtida inloggningar',
+        exact: true,
+      }),
+    ).not.toBeChecked();
     await page.getByRole('button', { name: 'Återställ samtycke', exact: true }).click();
     const reset = page.getByRole('dialog', { name: 'Återställ samtycke?', exact: true });
     await reset.getByRole('button', { name: 'Återställ', exact: true }).click();
     await expect(reset).not.toBeVisible();
+    await expect(warning).toBeVisible();
     expect(await page.evaluate(() => localStorage.getItem('skyttel-storage-consent'))).toBeNull();
     await expect(
-      page.getByRole('checkbox', {
+      page.getByRole('switch', {
         name: 'Fråga om ihågkommen inloggning efter framtida inloggningar',
         exact: true,
       }),
@@ -161,6 +202,16 @@ test('KAK-39: denied consent storage offers ordinary access and does not invent 
       ).json(),
     ).toMatchObject({ remembered: false });
     expect(await page.evaluate(() => localStorage.getItem('skyttel-storage-consent'))).toBeNull();
+    await page.goto(`${installation.origin}/cookies`);
+    const preferences = page.getByRole('region', { name: 'Preferenskakor', exact: true });
+    await preferences.getByRole('switch', { name: 'Preferenskakor', exact: true }).click();
+    await expect(preferences.getByRole('alert')).toContainText(
+      'Kakvalet kunde inte sparas och bekräftas.',
+    );
+    await expect(
+      preferences.getByRole('switch', { name: 'Preferenskakor', exact: true }),
+    ).not.toBeChecked();
+    expect(await page.evaluate(() => localStorage.getItem('skyttel-storage-consent'))).toBeNull();
   } finally {
     await installation.close();
   }
@@ -191,7 +242,7 @@ test('KAK-40: missing or obsolete browser consent safely disables an existing re
       .toBe(false);
     await banner.getByRole('button', { name: 'Acceptera Alla', exact: true }).click();
     await page.goto(`${origin}/cookies`);
-    await page.getByRole('button', { name: 'Kom ihåg mig i Skyttel', exact: true }).click();
+    await page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }).check();
     await expect(page.getByRole('status')).toContainText('Ihågkommen inloggning är aktiverad.');
     await page.evaluate(() =>
       localStorage.setItem(
@@ -236,8 +287,7 @@ test('KAK-41: browser tabs re-read shared consent and the confirmed server state
     await signIn(page.request, origin);
     await page.goto(`${origin}/cookies`);
     await page.getByRole('button', { name: 'Acceptera Alla', exact: true }).click();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
-    await page.getByRole('button', { name: 'Kom ihåg mig i Skyttel', exact: true }).click();
+    await page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }).check();
     await expect(page.getByRole('status')).toContainText('Ihågkommen inloggning är aktiverad.');
     const other = await page.context().newPage();
     await other.goto(`${origin}/cookies`);
@@ -245,7 +295,6 @@ test('KAK-41: browser tabs re-read shared consent and the confirmed server state
       other.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }),
     ).toBeChecked();
     await page.getByRole('button', { name: 'Endast nödvändiga', exact: true }).click();
-    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(
       other.getByRole('switch', { name: 'Preferenskakor', exact: true }),
     ).not.toBeChecked();

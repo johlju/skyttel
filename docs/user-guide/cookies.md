@@ -24,16 +24,17 @@ När du är inloggad öppnar du profilikonen, **Din profil**, och väljer
 **Kakor och lagring** under **Ditt konto**. Välj **Tillbaka till kartan**
 för att återgå till ditt arbete.
 
-På hela sidan ändrar **Acceptera Alla** och **Endast nödvändiga** bara
-formuläret. Välj **Spara Preferenser** för att bekräfta. Samtycket gäller
+På hela sidan sparas **Acceptera Alla**, **Endast nödvändiga** och ändringar
+i reglagen direkt. Ingen separat sparknapp eller vanlig sparbekräftelse
+visas. Samtycket gäller
 aktuell webbläsare över utloggning och kontobyte, tills du ändrar eller
 återställer det, rensar lagringen eller ett nytt ändamål kräver förnyelse.
 Det har ingen fast tolvmånadersgräns. Beslutstiden är skild från policyns
 uppdateringsdatum och inloggningens gränser.
 
 **Exportera data** laddar ned en JSON-fil med ditt sparade lagringssamtycke,
-beslutstid och lagringsregistret som visas på sidan. Osparade formulärval
-ingår inte. Exporten ändrar inga val och innehåller inte hushållets
+beslutstid och lagringsregistret som visas på sidan. Exporten ändrar inga
+val och innehåller inte hushållets
 information, inloggningsnycklar eller flikens återhämtningsreferenser.
 Om exporten misslyckas visas ett fel och du kan försöka igen.
 
@@ -42,13 +43,16 @@ fråga: **Kom ihåg mig i Skyttel**, **Inte nu** eller **Fråga inte igen**.
 Frågan upprepas inte vid omladdning för samma inloggning. Funktionen avser
 Skyttel, inte Google eller Microsoft. **Fråga inte igen** gäller dig i
 den aktuella webbläsaren över senare inloggningar. Andra användare och
-webbläsare påverkas inte. Du kan slå på frågan igen på lagringssidan.
+webbläsare påverkas inte. Du kan slå på frågan igen med reglaget
+**Fråga om ihågkommen inloggning efter framtida inloggningar** på
+lagringssidan. Även detta val sparas direkt.
 Återställning av samtycke ändrar inte förslagsvalet.
 
 Om du tillåter Preferenskakor först under en pågående inloggning väntar
-förslaget till nästa inloggning. Manuell aktivering finns direkt under
-**Ihågkommen inloggning** på lagringssidan. Saknas samtycke visar
-**Öppna Preferenskakor** rätt reglage. Spara samtycket och välj sedan
+förslaget till nästa inloggning. Manuell aktivering görs med reglaget
+**Ihågkommen inloggning** på lagringssidan. Saknas samtycke visas en
+bärnstensfärgad varning ovanför rubriken. Tillåt **Preferenskakor** med
+reglaget ovanför. Samtycket sparas direkt; välj sedan
 funktionen uttryckligen. Sparat samtycke aktiverar den inte automatiskt.
 
 Aktivering bekräftas av servern utan ett nytt besök hos leverantören.
@@ -59,7 +63,7 @@ upprepade anrop förlänger inte gränserna. En sessionskaka garanterar inte
 att du loggas ut när du stänger ett fönster: webbläsaren kan återställa
 sessionen. Logga ut på en delad dator.
 
-Stäng av **Ihågkommen inloggning** och välj **Spara Preferenser**, eller
+Stäng av **Ihågkommen inloggning** i reglaget, eller
 återkalla tillståndet till Preferenskakor. Skyttel avslutar den gamla
 inloggningsnyckeln och pågående försök i samma webbläsarbindning. Vanlig
 åtkomst kan fortsätta när den bekräftas separat, längst till det tidigare
@@ -79,15 +83,18 @@ leverantör, tider och gallring. Rensa inte flikens återhämtningsuppgifter
 om du behöver kontrollera en pågående åtgärd. Transportkvittens av ett
 samtalssvar bevisar inte att du har läst eller hört det.
 
-**Ihågkommen inloggning är avstängd.** bekräftar serverändringen.
-**Du är fortfarande inloggad.** visas bara efter en separat kontroll av
-den nya inloggningsnyckeln. Annars visas **Logga in igen för att fortsätta.**
+Reglaget visar det bekräftade inloggningsvalet. Positiva resultat läses
+av hjälpmedel utan en synlig grön ruta. Fortsatt inloggning kontrolleras
+separat. Om den inte kan bekräftas visas det vid kontrollen tillsammans
+med **Logga in igen**.
 Avstängningen gäller även om ett sent svar lämnar en gammal beständig
 kaka i webbläsaren; kakan ger ingen återställd åtkomst.
 
-Vid **Ändringen kunde inte sparas. Försök igen.** ligger ditt begärda
-val kvar som osparat. **Sparstatus okänd** betyder att svaret förloras
-och att ändringen kan vara genomförd. Valet ligger kvar utan besked om
+Fel visas vid kontrollen som startade ändringen. Vid
+**Ändringen kunde inte sparas. Försök igen.** visar reglaget det senast
+bekräftade värdet och kan användas för ett nytt försök. **Sparstatus okänd**
+betyder att svaret förloras och att ändringen kan vara genomförd.
+Valet ligger kvar utan besked om
 att det tidigare valet fortfarande gäller. Sidan skickar inget nytt
 sparande automatiskt och erbjuder inget nytt sparande medan utfallet
 är okänt.
