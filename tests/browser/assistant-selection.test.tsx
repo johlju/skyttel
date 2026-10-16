@@ -291,13 +291,80 @@ test.each([
     expect(app.acknowledgements[0].displayed).toBe(true);
     const objectPanel = page.getByRole('region', { name: 'Lo', exact: true });
     const inspector = objectPanel.element();
-    const scroller = inspector.querySelector('.object-property-body') as HTMLElement;
+    const body = inspector.querySelector('.object-property-body') as HTMLElement;
+    // Compact readers scroll the window; taller readers scroll only its body.
+    const scroller = [body, inspector].find((element) =>
+      /^(auto|scroll)$/.test(getComputedStyle(element).overflowY),
+    );
+    expect(scroller).toBeDefined();
+    if (!scroller) throw new Error('The object details need a scroll container');
+    expect(body.clientHeight).toBeGreaterThanOrEqual(
+      Number.parseFloat(getComputedStyle(body).lineHeight),
+    );
     expect(scroller.clientHeight).toBeGreaterThanOrEqual(
       Number.parseFloat(getComputedStyle(scroller).lineHeight),
     );
     expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight);
     expect(scroller.getBoundingClientRect().bottom).toBeLessThanOrEqual(innerHeight);
+    function expectOnscreen(element: Element, box = element.getBoundingClientRect()) {
+      expect(box.width).toBeGreaterThan(0);
+      expect(box.height).toBeGreaterThan(0);
+      expect(box.left).toBeGreaterThanOrEqual(0);
+      expect(box.right).toBeLessThanOrEqual(innerWidth);
+      expect(box.top).toBeGreaterThanOrEqual(0);
+      expect(box.bottom).toBeLessThanOrEqual(innerHeight);
+      expect(
+        element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)),
+      ).toBe(true);
+    }
+    function expectSelectionAndHeader() {
+      const selected = page.getByRole('button', { name: 'Välj objekt: Lo', exact: true });
+      expect(selected.element()).toHaveAttribute('aria-pressed', 'true');
+      expectOnscreen(selected.element());
+      expectOnscreen(objectPanel.getByRole('heading', { name: 'Lo', exact: true }).element());
+      const close = objectPanel.getByRole('button', { name: 'Stäng uppgifterna', exact: true });
+      expect(close.element()).toBeEnabled();
+      expectOnscreen(close.element());
+      expect(close.element().getBoundingClientRect().width).toBeGreaterThanOrEqual(44);
+      expect(close.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    }
+    const expectReadable = (element: Element, box = element.getBoundingClientRect()) => {
+      expectOnscreen(element, box);
+      const bounds = scroller.getBoundingClientRect();
+      const header = inspector.querySelector('header') as HTMLElement;
+      expect(box.top).toBeGreaterThanOrEqual(
+        Math.max(bounds.top, header.getBoundingClientRect().bottom),
+      );
+      expect(box.bottom).toBeLessThanOrEqual(bounds.bottom);
+    };
+    const description = body.querySelector('.household-table-description') as HTMLElement;
+    const lines = document.createRange();
+    lines.selectNodeContents(description);
+    expectReadable(description, lines.getClientRects()[0]);
+    expectSelectionAndHeader();
+    description.scrollIntoView({ block: 'end' });
+    await expect.poll(() => scroller.scrollTop).toBeGreaterThan(0);
+    expectReadable(description, [...lines.getClientRects()].at(-1));
+    expectSelectionAndHeader();
+    const lastDetail = body.querySelector('dl > div:last-child dd') as HTMLElement;
+    lastDetail.scrollIntoView({ block: 'center' });
+    expectReadable(lastDetail);
+    expectSelectionAndHeader();
     expect(inspector.querySelector('form')).toBeNull();
+    const edit = objectPanel.getByRole('button', { name: 'Redigera Lo', exact: true });
+    edit.element().focus();
+    await expect.element(edit).toHaveFocus();
+    const actions = objectPanel.getByRole('toolbar', {
+      name: 'Objektåtgärder för Lo',
+      exact: true,
+    });
+    for (const action of actions.element().querySelectorAll('button')) {
+      action.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      expectOnscreen(action);
+      expect(action.getBoundingClientRect().width).toBeGreaterThanOrEqual(44);
+      expect(action.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    }
+    expectSelectionAndHeader();
     await objectPanel.getByRole('button', { name: 'Redigera Lo', exact: true }).click();
     await expect.element(page.getByLabelText('Namn', { exact: true })).toHaveValue('Lo');
   },
