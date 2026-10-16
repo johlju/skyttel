@@ -61,7 +61,7 @@ slutet eller åtta timmar från avstängningen, med 30 minuters inaktivitet.
 Ett nytt uttryckligt val kan aktivera funktionen igen inom den
 ursprungliga sjudygnsgränsen om vanligt tillträde fortfarande gäller.
 
-**Återställ valfri lagring** kräver en separat bekräftelse. Åtgärden
+**Återställ samtycke** kräver en separat bekräftelse. Åtgärden
 stänger av ihågkommen inloggning, rensar lagringssamtycket och visar
 kakbannern igen när du lämnar policysidan. Kontots tema, personliga vyer,
 **Fråga inte igen**, hushållets information, samtalsmedgivande och

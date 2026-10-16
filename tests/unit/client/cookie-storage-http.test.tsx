@@ -528,14 +528,14 @@ test('failed deletion of the local reference cannot undo a confirmed server chan
 test('failed consent cleanup keeps confirmed OFF separate from an incomplete browser reset', async () => {
   render(page());
   await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
-  await userEvent.click(screen.getByRole('button', { name: 'Återställ valfri lagring' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Återställ samtycke' }));
   const remove = Storage.prototype.removeItem;
   vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key) {
     if (key === 'skyttel-storage-consent')
       throw new DOMException('Synthetic denied cleanup', 'SecurityError');
     remove.call(this, key);
   });
-  const dialog = screen.getByRole('dialog', { name: 'Återställ valfri lagring?' });
+  const dialog = screen.getByRole('dialog', { name: 'Återställ samtycke?' });
   await userEvent.click(within(dialog).getByRole('button', { name: 'Återställ' }));
   await waitFor(() =>
     expect(dialog.textContent).toContain(
@@ -572,8 +572,8 @@ test('a delayed reset preserves a newer browser consent choice', async () => {
   });
   render(page());
   await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
-  await userEvent.click(screen.getByRole('button', { name: 'Återställ valfri lagring' }));
-  const dialog = screen.getByRole('dialog', { name: 'Återställ valfri lagring?' });
+  await userEvent.click(screen.getByRole('button', { name: 'Återställ samtycke' }));
+  const dialog = screen.getByRole('dialog', { name: 'Återställ samtycke?' });
   try {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Återställ' }));
     await committed;

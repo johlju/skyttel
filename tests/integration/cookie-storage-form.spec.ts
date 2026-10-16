@@ -59,11 +59,11 @@ for (const [caseId, outcome] of [
       });
       if (outcome === 'confirmation lost')
         await page.route('**/api/browser-binding/register', (route) => route.abort());
-      const reset = page.getByRole('button', { name: 'Återställ valfri lagring', exact: true });
+      const reset = page.getByRole('button', { name: 'Återställ samtycke', exact: true });
       await expect(reset).toHaveAttribute('aria-disabled', 'false');
       await reset.focus();
       await page.keyboard.press('Enter');
-      const dialog = page.getByRole('dialog', { name: 'Återställ valfri lagring?', exact: true });
+      const dialog = page.getByRole('dialog', { name: 'Återställ samtycke?', exact: true });
       await dialog.getByRole('button', { name: 'Återställ', exact: true }).focus();
       await page.keyboard.press('Enter');
       if (outcome !== 'confirmation lost')
@@ -96,7 +96,7 @@ for (const [caseId, outcome] of [
       expect(await recovery()).toEqual(before);
       if (outcome === 'unknown') {
         await expect(page.getByText('Osparad ändring.', { exact: true })).toHaveCount(0);
-        for (const name of ['Återställ valfri lagring', 'Ångra ändring', 'Spara Preferenser']) {
+        for (const name of ['Återställ samtycke', 'Ångra ändring', 'Spara Preferenser']) {
           const button = page.getByRole('button', { name, exact: true });
           await expect(button).toHaveAttribute('aria-disabled', 'true');
           await button.focus();
@@ -283,11 +283,11 @@ for (const [width, caseId] of [
       await expect(page).toHaveURL(`${origin}/households/${household.id}`);
       expect(await read(preference)).toMatchObject({ remembered: true });
       await page.goto(`${origin}/cookies`);
-      const reset = page.getByRole('button', { name: 'Återställ valfri lagring', exact: true });
+      const reset = page.getByRole('button', { name: 'Återställ samtycke', exact: true });
       await expect(reset).toBeVisible();
       await reset.focus();
       await page.keyboard.press('Enter');
-      const dialog = page.getByRole('dialog', { name: 'Återställ valfri lagring?', exact: true });
+      const dialog = page.getByRole('dialog', { name: 'Återställ samtycke?', exact: true });
       await expect(dialog).toContainText('personliga vyer');
       await expect(dialog).toContainText('återhämtningsuppgifter');
       await expect(dialog.getByRole('button', { name: 'Avbryt', exact: true })).toBeFocused();

@@ -541,7 +541,7 @@ KAK-11. Verklig HTTP används för lagringsval och bevarade serveruppgifter.
    **Välj inställning** först om navigationen är hopfälld.
 3. Försök återgå till kartan igen och välj
    **Kasta ändringarna och fortsätt**. Öppna lagringssidan igen.
-4. Välj **Återställ valfri lagring**. Läs omfattning och bevarade uppgifter.
+4. Välj **Återställ samtycke**. Läs omfattning och bevarade uppgifter.
    Flytta fokus med Tab och Skift+Tab och avbryt med Escape.
 5. Öppna återställningen igen och välj **Återställ**. Kontrollera beskedet
    vid snabbåtgärderna. Fokusera den spärrade **Spara Preferenser** och
@@ -555,7 +555,7 @@ KAK-11. Verklig HTTP används för lagringsval och bevarade serveruppgifter.
 - Avbruten navigation behåller formulärvärdet och återger fokus till
   vald länk. Kasta ändringarna ändrar inte servervalet.
 - Återställningsdialogen fokuserar **Avbryt**, håller tangentbordsfokus
-  inom dialogen och återger det till **Återställ valfri lagring**.
+  inom dialogen och återger det till **Återställ samtycke**.
 - Endast bekräftad återställning begär serverändringen. Avstängning och
   fortsatt inloggning får separata besked vid formulärets åtgärder.
 - Förberedda inställningar, uppgifter och återhämtningsreferenser finns
@@ -632,7 +632,7 @@ KAK-14. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 **Steg:**
 
-1. Öppna **Kakor och lagring**, välj **Återställ valfri lagring** och
+1. Öppna **Kakor och lagring**, välj **Återställ samtycke** och
    bekräfta med **Återställ**.
 2. Vänta på utfallet. Välj **Avbryt** i dialogen.
    Läs beskedet vid snabbåtgärderna och kontrollera fokus.
@@ -644,7 +644,7 @@ KAK-14. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 ligger kvar som osparat och servervalet är på. **Ångra ändring** återgår till
 på, tar bort felet och behåller fokus.
 
-Fokus återgår till **Återställ valfri lagring** när dialogen stängs.
+Fokus återgår till **Återställ samtycke** när dialogen stängs.
 Återhämtningsuppgifterna bevaras och inget nytt sparande skickas automatiskt.
 
 ### KAK-15: Förlorat återställningssvar ger okänd status utan nytt sparande
@@ -685,7 +685,7 @@ KAK-15. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 **Steg:**
 
-1. Öppna **Kakor och lagring**, välj **Återställ valfri lagring** och
+1. Öppna **Kakor och lagring**, välj **Återställ samtycke** och
    bekräfta med **Återställ**.
 2. Vänta på utfallet. Välj **Lämna med okänt utfall** i dialogen.
    Läs beskedet vid snabbåtgärderna och kontrollera fokus.
@@ -698,7 +698,7 @@ larm vid snabbåtgärden. Sidan påstår inte att servervalet är oförändrat.
 **Kontrollera igen** erbjuds. Nytt sparande, ångra och återställning är
 spärrade; tangentbordsaktivering skickar inget nytt sparande.
 
-Fokus återgår till **Återställ valfri lagring** när dialogen stängs.
+Fokus återgår till **Återställ samtycke** när dialogen stängs.
 Återhämtningsuppgifterna bevaras och inget nytt sparande skickas automatiskt.
 
 ### KAK-16: Bekräftad återställning består när fortsatt inloggning inte kan bekräftas
@@ -750,7 +750,7 @@ KAK-16. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 **Steg:**
 
-1. Öppna **Kakor och lagring**, välj **Återställ valfri lagring** och
+1. Öppna **Kakor och lagring**, välj **Återställ samtycke** och
    bekräfta med **Återställ**.
 2. Kontrollera besked och fokus. Följ den erbjudna åtgärden enligt
    förväntat resultat.
@@ -762,7 +762,7 @@ KAK-16. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 som status vid snabbåtgärden. Länken **Logga in igen** visas. Avstängningen
 förvandlas inte till okänd status eller avvisat sparande.
 
-Fokus återgår till **Återställ valfri lagring** när dialogen stängs.
+Fokus återgår till **Återställ samtycke** när dialogen stängs.
 Återhämtningsuppgifterna bevaras och inget nytt sparande skickas automatiskt.
 
 ### KAK-13: Hela formulärflödet fungerar vid 320 pixlar
@@ -1558,7 +1558,7 @@ KAK-34.
 2. Välj Acceptera Alla. Kontrollera Preferenskakor och välj Spara Preferenser.
    Kontrollera att **Dina lagringspreferenser är sparade.** visas på policysidan.
 3. Avmarkera Fråga om ihågkommen inloggning efter framtida inloggningar.
-4. Välj Återställ valfri lagring och bekräfta Återställ. Kontrollera
+4. Välj Återställ samtycke och bekräfta Återställ. Kontrollera
    förslagsvalet och välj Till startsidan.
 
 **Förväntat resultat:**

@@ -101,7 +101,7 @@ const serverEntries = [
     name: 'theme_preferences och conversation_preferences',
     content:
       'Ditt kontos temaval och samtalsvyer används på dina enheter. Temavalet kopieras inte till localStorage, sessionStorage eller en temakaka. Äldre lokala skyttel-theme-nycklar tas bort när appen öppnas.',
-    time: 'Kontoval består efter utloggning och ändras genom respektive inställning. Utan inloggning följer temat enhetens systemval. Återställ valfri lagring tar inte bort kontoval.',
+    time: 'Kontoval består efter utloggning och ändras genom respektive inställning. Utan inloggning följer temat enhetens systemval. Återställ samtycke tar inte bort kontoval.',
   },
   {
     name: 'assistant_connection, oauthClient, oauthConsent, oauthAccessToken, oauthRefreshToken, oauthClientAssertion och jwks',
@@ -280,7 +280,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
               if (!blocked) setResetOrigin(event.currentTarget);
             }}
           >
-            Återställ valfri lagring
+            Återställ samtycke
           </button>
         </div>
         <p>Snabbval ändrar bara formuläret. Spara Preferenser bekräftar ditt val.</p>
@@ -599,7 +599,7 @@ function StorageResetDialog({
         if (!pending) onCancel();
       }}
     >
-      <h2 id={`${id}-title`}>Återställ valfri lagring?</h2>
+      <h2 id={`${id}-title`}>Återställ samtycke?</h2>
       <div id={`${id}-description`}>
         <p>
           Återställningen stänger av ihågkommen inloggning i den aktuella webbläsarbindningen. Den

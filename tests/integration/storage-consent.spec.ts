@@ -108,8 +108,8 @@ test('KAK-34: public policy quick choices need saving and reset preserves the us
         exact: true,
       })
       .uncheck();
-    await page.getByRole('button', { name: 'Återställ valfri lagring', exact: true }).click();
-    const reset = page.getByRole('dialog', { name: 'Återställ valfri lagring?', exact: true });
+    await page.getByRole('button', { name: 'Återställ samtycke', exact: true }).click();
+    const reset = page.getByRole('dialog', { name: 'Återställ samtycke?', exact: true });
     await reset.getByRole('button', { name: 'Återställ', exact: true }).click();
     await expect(reset).not.toBeVisible();
     expect(await page.evaluate(() => localStorage.getItem('skyttel-storage-consent'))).toBeNull();
