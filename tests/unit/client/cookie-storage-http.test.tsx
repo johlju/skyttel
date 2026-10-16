@@ -246,6 +246,33 @@ test('a successful consent choice does not inherit a rejected remembered-login r
   expect(screen.queryByText('Ändringen kunde inte sparas. Försök igen.')).toBeNull();
 });
 
+test('automatic demotion after another tab withdraws consent exposes a lost result after a consent-only action', async () => {
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  let mutations = 0;
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    const response = await transport(input, init);
+    if (String(input) === '/api/browser-binding/revoke') {
+      mutations++;
+      throw new TypeError('Lost automatic demotion reply after commit');
+    }
+    return response;
+  });
+  render(page());
+  await rememberedChoice();
+  await userEvent.click(screen.getByRole('button', { name: 'Acceptera Alla' }));
+  await act(async () => {
+    localStorage.removeItem('skyttel-storage-consent');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'skyttel-storage-consent' }));
+  });
+  const remembered = within(screen.getByRole('region', { name: 'Ihågkommen inloggning' }));
+  await waitFor(() =>
+    expect(remembered.getByRole('alert').textContent).toContain('Sparstatus okänd'),
+  );
+  expect(remembered.getByRole('button', { name: 'Kontrollera igen' })).toBeTruthy();
+  expect(sessionStorage.getItem(`skyttel-storage-operation:${ownerId}`)).toBeTruthy();
+  expect(mutations).toBe(1);
+});
+
 test('a successful remembered-login change does not inherit an earlier consent write error', async () => {
   render(page());
   const choice = await rememberedChoice();

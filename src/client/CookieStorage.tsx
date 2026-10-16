@@ -202,6 +202,12 @@ function CookieStorageContents({ userId }: { userId?: string }) {
   const resetUser = useRef(userId);
   const { saved, requested, state } = manager.preference;
   const blocked = manager.blocked;
+  useLayoutEffect(() => {
+    if (feedbackSource === 'consent' && ['saving', 'checking', 'unknown'].includes(state)) {
+      setResultPlace('remembered');
+      setFeedbackSource('preference');
+    }
+  }, [feedbackSource, state]);
   const actionOrigin = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     if (blocked) return;
@@ -460,7 +466,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
                   id="storage-login-offer-description"
                   className="cookie-storage-offer-description"
                 >
-                  Dialogen visas bara om du har gett samtycke till Preferenskakor.
+                  Dialogen visas bara vid inloggning om du har gett samtycke till Preferenskakor.
                 </small>
               </span>
               <span className="cookie-storage-choice">
