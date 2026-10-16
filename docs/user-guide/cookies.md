@@ -46,6 +46,7 @@ den aktuella webbläsaren över senare inloggningar. Andra användare och
 webbläsare påverkas inte. Du kan slå på frågan igen med reglaget
 **Fråga om ihågkommen inloggning efter framtida inloggningar** på
 lagringssidan. Även detta val sparas direkt.
+Dialogen visas bara om du har gett samtycke till Preferenskakor.
 Återställning av samtycke ändrar inte förslagsvalet.
 
 Om du tillåter Preferenskakor först under en pågående inloggning väntar

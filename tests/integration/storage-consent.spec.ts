@@ -99,7 +99,7 @@ test('KAK-34: public policy quick choices save immediately and reset preserves t
     ).not.toBeVisible();
     const remembered = page.getByRole('region', { name: 'Ihågkommen inloggning', exact: true });
     const warning = remembered.getByText(
-      'Ihågkommen inloggning behöver samtycke till Preferenskakor för beständiga inloggningskakor.',
+      'Ihågkommen inloggning behöver samtycke till Preferenskakor för att kunna lagra den nödvändiga kakan',
       { exact: true },
     );
     await page.setViewportSize({ width: 320, height: 900 });

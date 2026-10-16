@@ -216,6 +216,11 @@ article.cookie-storage a {
   gap: 16px;
   margin-top: 16px;
 }
+.cookie-storage-offer-description {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+}
 .cookie-storage-choice input {
   position: absolute;
   inset: 0;

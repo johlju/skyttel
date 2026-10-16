@@ -464,23 +464,28 @@ export function ConsentFeedback({
   alwaysRender = false,
   onLogin,
   quietSuccess = false,
+  source = 'all',
 }: {
   alwaysRender?: boolean;
   onLogin?: () => void;
   quietSuccess?: boolean;
+  source?: 'all' | 'consent' | 'preference';
 }) {
   const manager = useContext(ConsentContext);
   if (!manager) return null;
-  const { preference, error, message } = manager;
+  const preference = source === 'consent' ? null : manager.preference;
+  const error = source === 'preference' ? '' : manager.error;
+  const message = source === 'preference' ? '' : manager.message;
+  const saving = source !== 'preference' && manager.saving;
   if (
     !alwaysRender &&
     !error &&
     !message &&
-    !preference.recoveryMessage &&
+    !preference?.recoveryMessage &&
     !['saving', 'checking', 'saved', 'unknown', 'rejected', 'unavailable', 'restored'].includes(
-      preference.state,
+      preference?.state ?? 'idle',
     ) &&
-    !manager.saving
+    !saving
   )
     return null;
   return (
@@ -491,47 +496,47 @@ export function ConsentFeedback({
         role="status"
         className={
           quietSuccess &&
-          !manager.saving &&
-          !preference.resultChecked &&
-          !['saving', 'checking'].includes(preference.state)
+          !saving &&
+          !preference?.resultChecked &&
+          !['saving', 'checking'].includes(preference?.state ?? 'idle')
             ? 'sr-only'
             : undefined
         }
       >
-        {manager.saving || preference.state === 'saving'
+        {saving || preference?.state === 'saving'
           ? 'Sparar…'
-          : preference.state === 'checking'
+          : preference?.state === 'checking'
             ? 'Kontrollerar samma åtgärd…'
-            : preference.state === 'saved'
+            : preference?.state === 'saved'
               ? `Ihågkommen inloggning är ${preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}. ${preference.reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : preference.continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'} ${message}`.trim()
               : message}
-        {!quietSuccess && preference.state === 'saved' && preference.recoveryMessage
+        {!quietSuccess && preference?.state === 'saved' && preference.recoveryMessage
           ? ` ${preference.recoveryMessage}`
           : ''}
       </p>
       <p role="alert">
         {error}
         {error ? ' ' : ''}
-        {preference.state === 'unknown'
+        {preference?.state === 'unknown'
           ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.'
-          : preference.state === 'rejected'
+          : preference?.state === 'rejected'
             ? 'Ändringen kunde inte sparas. Försök igen.'
-            : preference.state === 'unavailable'
+            : preference?.state === 'unavailable'
               ? preference.recoveryMessage ||
                 'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
-              : preference.state === 'restored'
+              : preference?.state === 'restored'
                 ? preference.recoveryMessage
                 : ''}
-        {preference.state === 'unknown' && preference.recoveryMessage
+        {preference?.state === 'unknown' && preference.recoveryMessage
           ? ` ${preference.recoveryMessage}`
           : ''}
         {quietSuccess &&
-        ['saved', 'rejected'].includes(preference.state) &&
-        preference.recoveryMessage
+        ['saved', 'rejected'].includes(preference?.state ?? 'idle') &&
+        preference?.recoveryMessage
           ? ` ${preference.recoveryMessage}`
           : ''}
       </p>
-      {preference.requiresLogin && (
+      {preference?.requiresLogin && (
         <p>
           {quietSuccess &&
             preference.state === 'saved' &&
@@ -541,9 +546,9 @@ export function ConsentFeedback({
           </Link>
         </p>
       )}
-      {(preference.state === 'unknown' ||
-        preference.state === 'checking' ||
-        preference.resultChecked) && (
+      {(preference?.state === 'unknown' ||
+        preference?.state === 'checking' ||
+        preference?.resultChecked) && (
         <button
           type="button"
           aria-disabled={preference.state !== 'unknown'}

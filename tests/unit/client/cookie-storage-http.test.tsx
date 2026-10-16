@@ -226,6 +226,48 @@ async function rememberedChoice() {
   return choice;
 }
 
+test('a successful consent choice does not inherit a rejected remembered-login result', async () => {
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
+    String(input) === '/api/browser-binding/revoke'
+      ? Promise.resolve(Response.json({ error: 'revocation_rejected' }, { status: 409 }))
+      : transport(input, init),
+  );
+  render(page());
+  await userEvent.click(await rememberedChoice());
+  await waitFor(() =>
+    expect(screen.getByRole('alert').textContent).toContain('Ändringen kunde inte sparas.'),
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Acceptera Alla' }));
+  expect(readStorageConsent()?.preferences).toBe(true);
+  expect(
+    within(screen.getByRole('region', { name: 'Snabbåtgärder' })).getByRole('alert').textContent,
+  ).toBe('');
+  expect(screen.queryByText('Ändringen kunde inte sparas. Försök igen.')).toBeNull();
+});
+
+test('a successful remembered-login change does not inherit an earlier consent write error', async () => {
+  render(page());
+  const choice = await rememberedChoice();
+  const write = Storage.prototype.setItem;
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key === 'skyttel-storage-consent') throw new DOMException('Denied', 'SecurityError');
+    write.call(this, key, value);
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Acceptera Alla' }));
+  await waitFor(() =>
+    expect(screen.getByRole('alert').textContent).toContain('Kakvalet kunde inte sparas'),
+  );
+  await userEvent.click(choice);
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.'),
+  );
+  expect(
+    within(screen.getByRole('region', { name: 'Ihågkommen inloggning' })).getByRole('alert')
+      .textContent,
+  ).toBe('');
+});
+
 test.each([
   'continued',
   'confirmation lost',

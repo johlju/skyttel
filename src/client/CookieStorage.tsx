@@ -196,6 +196,9 @@ function CookieStorageContents({ userId }: { userId?: string }) {
   const [resultPlace, setResultPlace] = useState<'quick' | 'consent' | 'remembered' | 'reset'>(
     'remembered',
   );
+  const [feedbackSource, setFeedbackSource] = useState<'all' | 'consent' | 'preference'>(
+    'preference',
+  );
   const resetUser = useRef(userId);
   const { saved, requested, state } = manager.preference;
   const blocked = manager.blocked;
@@ -215,11 +218,13 @@ function CookieStorageContents({ userId }: { userId?: string }) {
   function saveConsent(value: boolean, place: 'quick' | 'consent') {
     if (!manager || blocked) return;
     beginAction(place);
+    setFeedbackSource(!value && manager.preference.saved?.remembered ? 'all' : 'consent');
     void manager.save(value, { showConfirmation: false });
   }
   function changeRemembered(value: boolean) {
     if (!manager || blocked) return;
     beginAction('remembered');
+    setFeedbackSource('preference');
     void manager.preference.change(value);
   }
   useLayoutEffect(() => heading.current?.focus(), []);
@@ -228,9 +233,12 @@ function CookieStorageContents({ userId }: { userId?: string }) {
       resetUser.current = userId;
       setResetOrigin(null);
       setResultPlace('remembered');
+      setFeedbackSource('preference');
     }
   }, [userId]);
-  const feedback = !resetOrigin && <ConsentFeedback alwaysRender quietSuccess />;
+  const feedback = !resetOrigin && (
+    <ConsentFeedback alwaysRender quietSuccess source={feedbackSource} />
+  );
   return (
     <article className="cookie-storage">
       <FormLossGuard
@@ -387,8 +395,8 @@ function CookieStorageContents({ userId }: { userId?: string }) {
       <section className="cookie-storage-card" aria-labelledby="remember-storage-title">
         {saved && !saved.remembered && !preferences && (
           <p id="storage-remember-warning" className="cookie-storage-warning">
-            Ihågkommen inloggning behöver samtycke till Preferenskakor för beständiga
-            inloggningskakor.
+            Ihågkommen inloggning behöver samtycke till Preferenskakor för att kunna lagra den
+            nödvändiga kakan
           </p>
         )}
         <div className="cookie-storage-card-header">
@@ -444,11 +452,23 @@ function CookieStorageContents({ userId }: { userId?: string }) {
         {userId && (
           <>
             <label className="cookie-storage-offer-choice">
-              <span>Fråga om ihågkommen inloggning efter framtida inloggningar</span>
+              <span>
+                <span id="storage-login-offer-title">
+                  Fråga om ihågkommen inloggning efter framtida inloggningar
+                </span>
+                <small
+                  id="storage-login-offer-description"
+                  className="cookie-storage-offer-description"
+                >
+                  Dialogen visas bara om du har gett samtycke till Preferenskakor.
+                </small>
+              </span>
               <span className="cookie-storage-choice">
                 <input
                   type="checkbox"
                   role="switch"
+                  aria-labelledby="storage-login-offer-title"
+                  aria-describedby="storage-login-offer-description"
                   aria-checked={ask}
                   checked={ask}
                   onChange={(event) => {
@@ -563,6 +583,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           onCancel={() => setResetOrigin(null)}
           onConfirm={() => {
             setResultPlace('reset');
+            setFeedbackSource('all');
             void manager.save(false, { reset: true }).then((saved) => {
               if (saved) setResetOrigin(null);
             });
