@@ -209,7 +209,7 @@ for (const [caseId, outcome] of [
         await expect(save).toBeEnabled();
       } else {
         await expect(page.getByRole('alert')).toHaveText(
-          'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.',
+          'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.',
         );
         await expect(save).toHaveAttribute('aria-disabled', 'true');
       }

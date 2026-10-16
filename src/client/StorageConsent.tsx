@@ -484,7 +484,7 @@ export function ConsentFeedback({
           : preference.state === 'checking'
             ? 'Kontrollerar samma åtgärd…'
             : preference.state === 'saved'
-              ? `Ihågkommen inloggning är ${preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}. ${preference.reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : preference.continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'} ${message}`
+              ? `Ihågkommen inloggning är ${preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}. ${preference.reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : preference.continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'} ${message}`.trim()
               : message}
         {preference.state === 'saved' && preference.recoveryMessage
           ? ` ${preference.recoveryMessage}`

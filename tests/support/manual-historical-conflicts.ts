@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, expect } from '@playwright/test';
+import { prepareStorageChoice } from './test.js';
 
 /** Exercise the documented command loop and its actual browser, without replacing HTTP. */
 export async function launchHistoricalPreparation() {
@@ -96,6 +97,8 @@ export async function launchHistoricalPreparation() {
       })
       .toBe(true);
     if (!page) throw new Error('Missing prepared browser page');
+    await prepareStorageChoice(page.context());
+    await page.reload();
     return { page, origin };
   }
   async function close() {

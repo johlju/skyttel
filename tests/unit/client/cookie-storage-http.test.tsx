@@ -255,7 +255,7 @@ test.each([
         expect(screen.getByRole('alert').textContent).toBe(
           outcome === 'rejected'
             ? 'Ändringen kunde inte sparas. Försök igen.'
-            : 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.',
+            : 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.',
         ),
       );
       if (outcome !== 'rejected') await userEvent.click(save);

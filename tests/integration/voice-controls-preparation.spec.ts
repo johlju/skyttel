@@ -9,7 +9,7 @@ import {
   startConversationWithText,
   voiceBox,
 } from '../support/conversation-page.js';
-import { expect, test } from '../support/test.js';
+import { expect, prepareStorageChoice, test } from '../support/test.js';
 import {
   voiceControlsPreparationSource,
   voiceTonePreparationSource,
@@ -273,7 +273,9 @@ for (const { seeded, viewport } of references)
         const endpoint = controls.find(({ event }) => event === 'ready')?.endpoint;
         if (!endpoint) throw new Error('Missing observation runner endpoint');
         controlled = await chromium.connectOverCDP(endpoint);
-        const observed = controlled.contexts()[0].pages()[0];
+        const observedContext = controlled.contexts()[0];
+        await prepareStorageChoice(observedContext);
+        const observed = observedContext.pages()[0];
         expect(await observed.evaluate(() => ({ width: innerWidth, height: innerHeight }))).toEqual(
           viewport,
         );

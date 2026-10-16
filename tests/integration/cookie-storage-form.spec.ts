@@ -77,7 +77,7 @@ for (const [caseId, outcome] of [
       const feedback = page.locator('.cookie-storage-quick');
       if (outcome === 'confirmation lost') {
         await expect(feedback.getByRole('status')).toHaveText(
-          'Ihågkommen inloggning är avstängd. Logga in igen för att fortsätta.',
+          'Ihågkommen inloggning är avstängd. Logga in igen för att fortsätta. Lagringssamtycket är återställt.',
         );
         await expect(feedback.getByRole('alert')).toBeEmpty();
         await expect(
@@ -87,7 +87,7 @@ for (const [caseId, outcome] of [
         await expect(feedback.getByRole('alert')).toHaveText(
           outcome === 'rejected'
             ? 'Ändringen kunde inte sparas. Försök igen.'
-            : 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.',
+            : 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.',
         );
         await expect(feedback.getByRole('status')).toBeEmpty();
       }
@@ -304,7 +304,7 @@ for (const [width, caseId] of [
       await expect(dialog).toHaveCount(0);
       await expect(reset).toBeFocused();
       await expect(page.getByRole('status')).toHaveText(
-        'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.',
+        'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad. Lagringssamtycket är återställt.',
       );
       await expect(page.locator('.cookie-storage-quick').getByRole('status')).toContainText(
         'Ihågkommen inloggning är avstängd.',

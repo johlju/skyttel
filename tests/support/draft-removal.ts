@@ -6,6 +6,7 @@ import { prepareDraftReview } from './draft-review.js';
 import { alex, type createInstallation, robin } from './installation.js';
 import { stageRelationshipAndClose } from './relationship-dialog.js';
 import { readRemovalProposals } from './removal-reading.js';
+import { createPreparedContext } from './test.js';
 
 /** A distinct admitted member keeps meaningful native work throughout recovery. */
 export async function prepareRemovalMember(
@@ -15,7 +16,7 @@ export async function prepareRemovalMember(
   householdId: string,
 ) {
   const { origin } = installation;
-  const context = await browser.newContext();
+  const context = await createPreparedContext(browser);
   try {
     installation.setIdentity(robin);
     try {
