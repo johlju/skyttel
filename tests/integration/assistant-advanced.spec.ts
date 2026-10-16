@@ -275,6 +275,8 @@ test('MCP-06: importerad historik läses och vanliga rättelser använder färsk
       saved,
     ]);
   } finally {
+    // Close the browser's connections before waiting for the servers to stop.
+    await page.close();
     await sdk.close();
     await target.close();
     await source.close();
