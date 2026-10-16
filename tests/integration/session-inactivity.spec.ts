@@ -154,6 +154,17 @@ async function expiredStatusRace(page: Page, width: number) {
     await expect(page.locator('.session-expiry-announcement')).toHaveText(
       'Du har varit inaktiv i 30 minuter. Logga in igen.',
     );
+    await expect(page.locator('.session-warning')).toHaveText('');
+    await expect(page.locator('.session-warning')).not.toHaveAttribute('role', 'status');
+    await expect
+      .poll(() =>
+        page
+          .locator('.app-shell')
+          .evaluate((element) =>
+            getComputedStyle(element).getPropertyValue('--session-warning-height'),
+          ),
+      )
+      .toBe('');
     release();
     expect(
       await page.evaluate(

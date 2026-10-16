@@ -26,6 +26,7 @@ export function useSessionActivity(
   policyRevision: number,
   onExpired: () => void,
   anonymousStatus?: SessionStatus,
+  confirmedAnonymous = false,
 ) {
   const [warning, setWarning] = useState(false);
   const [reason, setReason] = useState<'absolute' | 'inactivity'>();
@@ -43,7 +44,10 @@ export function useSessionActivity(
   }, []);
   useEffect(() => {
     const revision = ++generation.current;
-    if (!loginId) return;
+    if (!loginId) {
+      if (confirmedAnonymous) setWarning(false);
+      return;
+    }
     if (owner.current !== loginId) {
       owner.current = loginId;
       policy.current = undefined;
@@ -183,9 +187,9 @@ export function useSessionActivity(
       window.removeEventListener('popstate', historyNavigation);
       window.removeEventListener('focus', foreground);
     };
-  }, [loginId, onExpired, policyRevision]);
+  }, [loginId, onExpired, policyRevision, confirmedAnonymous]);
   return {
-    warning,
+    warning: warning && !confirmedAnonymous,
     reason: anonymousStatus ? expiryReason(anonymousStatus, policy.current, owner.current) : reason,
     clear,
   };

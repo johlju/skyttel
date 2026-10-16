@@ -1431,6 +1431,7 @@ function Application() {
     revision,
     reload,
     data?.status === 'anonymous' ? data.sessionStatus : undefined,
+    data?.status === 'anonymous',
   );
   const warningElement = useRef<HTMLParagraphElement>(null);
   useLayoutEffect(() => {

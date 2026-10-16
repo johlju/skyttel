@@ -66,6 +66,7 @@ INAK-06. Kontrollsvaret fördröjs medan sidan får serverns aktuella besked.
   "reference": "1280, 390 och 320 pixlar, fördröjt kontrollsvar.",
   "outcomes": [
     "Inaktivitetsbeskedet visas en gång trots att ett kontrollsvar fortfarande väntar.",
+    "Förvarningen försvinner före kontrollsvaret när inloggningen är utgången.",
     "Det fördröjda svaret ändrar inte orsaken eller återställer åtkomst.",
     "Kartverktygens fokus är synligt nedanför förvarningen."
   ]
@@ -84,11 +85,14 @@ INAK-06. Kontrollsvaret fördröjs medan sidan får serverns aktuella besked.
    till fliken utan att skriva. Vänta på terminalens `session_status_held`.
 4. Kontrollera att inloggningssidan visar **Du har varit inaktiv i 30
    minuter. Logga in igen.** utan ett föregående besked med annan orsak.
+   Förvarningen om högst fem minuter ska försvinna samtidigt och inte
+   lämna ett tomt utrymme ovanför sidan.
 5. Kör `release-session-status`. Kontrollera att beskedet finns kvar en
    gång och att kartan inte återkommer utan ny inloggning.
 
 **Förväntat resultat:** Serverns aktuella besked avgör orsaken även när
-kontrollsvaret kommer senare. Inloggningen återupplivas inte.
+kontrollsvaret kommer senare. Förvarningen ersätts av utgångsbeskedet.
+Inloggningen återupplivas inte.
 
 ### INAK-01: Dator visar förvarning och delar skrivaktivitet mellan flikar
 
