@@ -327,7 +327,7 @@ ljudet innan fyra sekunder börjar”.
     "spec": "tests/integration/conversation-questions.spec.ts",
     "caseId": "FRAGA-04"
   },
-  "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Angiven talad eller skriven ingång skyddar nödvändig väntan och verifierat sparbesked.",
+  "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Hela det aktuella talbeskedet levereras i fragment, även när samma kvitto kontrolleras före röstsvaret.",
   "outcomes": [
     "Ingen tid räknas från kvittot, ett ofullständigt ord eller enbart transporttext före det kontrollerade ljudet. **Skyttel talar** består medan ljudet är aktivt.",
     "Efter ljudet visas **Sparat** i fyra sekunder, med en grön bock mellan vågformen och ordet. Bocken är dold för hjälpmedel. Sparbeskedet under hushållsnamnet annonseras artigt en gång vid kvittot; röstrutan upprepar ingen sparannons. Textvyn öppnas inte av sig själv.",
@@ -345,8 +345,10 @@ Vid UI-steg 1: kör `user Spara hela utkastet.` och `delegate`.
 Släpp det verkliga hållna uppdragets `save_draft` enligt det befintliga
 receptet och meddela **Samma sparande är bekräftat** efter lyckat
 genomförande, före användarens sparbeskedsläsning.
-Vid steg 2: starta signalen, skicka Spar och avsluta signalen med
-det befintliga fragmentreceptet. Bekräfta varje gräns utan nytt kvitto.
+Vid steg 2: starta signalen, skicka hela beskedet fram till och med Spar
+och avsluta signalen med det befintliga fragmentreceptet. Om servern först
+bekräftar att samma sparande kontrolleras ingår även den förklaringen i
+fragmentet. Bekräfta varje gräns utan nytt kvitto.
 Vid steg 3: skicka at. med signalen av och bekräfta leveransen;
 vänta minst fyra sekunder innan signalen startas igen. Bekräfta
 starten och behåll signalen minst fyra sekunder. Vid steg 4: avsluta
@@ -363,9 +365,9 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
 1. Be operatören leverera det kontrollerade talade sparuppdraget och släppa
    samma sparverktyg enligt förberedelsen. Invänta bekräftelse. Läs **Utkastet
    är sparat** under hushållsnamnet i tre sekunder.
-2. Be operatören starta signalen, leverera fragmentet **Spar** och avsluta
-   signalen enligt förberedelsen. Invänta bekräftelse. Kontrollera att det gröna
-   sparbeskedet inte visas.
+2. Be operatören starta signalen, leverera beskedet fram till och med
+   fragmentet **Spar** och avsluta signalen enligt förberedelsen. Invänta
+   bekräftelse. Kontrollera att det gröna sparbeskedet inte visas.
 3. Be operatören leverera fragmentet **at.** medan signalen är av och invänta
    bekräftelse. Vänta minst fyra sekunder. Be sedan operatören starta signalen
    igen och invänta bekräftelse. Håll provet i minst fyra sekunder.

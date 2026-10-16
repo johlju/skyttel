@@ -364,7 +364,15 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
     const announcement = page.getByRole('status', { name: 'Sparbekräftelse' });
     await expect(announcement).toHaveText('Utkastet är sparat');
     await expect(announcement).toHaveAttribute('aria-live', 'polite');
-    expect(commentary(live).at(-1)?.event).toMatchObject({ content: 'Sparat.' });
+    const spokenReply = commentary(live).at(-1)?.event.content;
+    if (typeof spokenReply !== 'string') throw new Error('Missing verified spoken save reply');
+    // Recovery can verify the same committed save before voice work completes.
+    // Replay the complete actual reply, including that explanation when present.
+    expect([
+      'Sparat.',
+      'Kontrollen visar att hela utkastet sparades. Ändringarna finns i hushållets karta. Sparat.',
+    ]).toContain(spokenReply);
+    await expect.poll(() => responses.at(-1)?.response?.text).toBe(spokenReply);
     const operations = await (await page.request.get(`${path}/operations`)).json();
     expect(operations.operations[0]).toMatchObject({
       status: 'succeeded',
@@ -373,7 +381,7 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
     // An early pause after the first part cannot complete the acknowledgement.
     await sound(page, true);
     await expect(voiceBox(page)).toContainText('Skyttel talar');
-    await output(page, 'Spar');
+    await output(page, spokenReply.slice(0, -3));
     await sound(page, false);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     // The final transcript arrives before its audio starts. No four-second timeout yet.
