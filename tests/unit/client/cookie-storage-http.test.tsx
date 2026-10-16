@@ -356,3 +356,130 @@ test('a previous user preference reply cannot replace the newer user server choi
     await other.dispose();
   }
 });
+
+test.each(['unreadable', 'missing session', 'invalid id'])(
+  'a %s recovery reference preserves unknown status without guessing or repeating a write',
+  async (reference) => {
+    const value =
+      reference === 'unreadable'
+        ? '{damaged'
+        : JSON.stringify({
+            id: reference === 'invalid id' ? 'not-an-operation' : crypto.randomUUID(),
+            ...(reference === 'missing session' ? {} : { sessionId: 'earlier-login' }),
+          });
+    sessionStorage.setItem(`skyttel-storage-operation:${ownerId}`, value);
+    const transport = authenticatedHttpFetch(client, installation.origin);
+    const mutations: string[] = [];
+    const results: string[] = [];
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') mutations.push(String(input));
+      if (String(input).startsWith('/api/browser-binding/results/')) results.push(String(input));
+      return transport(input, init);
+    });
+    render(page());
+    await screen.findByRole('switch');
+    await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Åtgärdens referens saknas eller är skadad. Utfallet är fortfarande okänt.',
+    );
+    expect((screen.getByRole('switch') as HTMLInputElement).disabled).toBe(true);
+    expect(mutations).toEqual([]);
+    expect(results).toEqual([]);
+    expect(sessionStorage.getItem(`skyttel-storage-operation:${ownerId}`)).toBe(value);
+  },
+);
+
+test.each(['read', 'write', 'silently discarded'])(
+  'denied tab recovery storage during %s prevents sending the storage change',
+  async (failure) => {
+    const transport = authenticatedHttpFetch(client, installation.origin);
+    const writes: string[] = [];
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') writes.push(String(input));
+      return transport(input, init);
+    });
+    if (failure === 'read')
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('Browser storage denied', 'SecurityError');
+      });
+    render(page());
+    if (failure === 'read') {
+      await waitFor(() =>
+        expect(screen.getByRole('alert').textContent).toContain(
+          'Flikens återhämtningsuppgifter kunde inte läsas. Ingen ny ändring skickas.',
+        ),
+      );
+      expect(screen.queryByRole('switch')).toBeNull();
+    } else {
+      const save = await turnOff();
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        if (failure === 'write') throw new DOMException('Browser storage denied', 'SecurityError');
+      });
+      await userEvent.click(save);
+      await waitFor(() =>
+        expect(screen.getByRole('alert').textContent).toContain(
+          'Flikens återhämtningsuppgifter kunde inte sparas. Ingen ändring har skickats.',
+        ),
+      );
+      expect((screen.getByRole('switch') as HTMLInputElement).checked).toBe(false);
+      expect(screen.getByText('Osparad ändring.')).toBeTruthy();
+    }
+    expect(writes).toEqual([]);
+    expect(
+      await (
+        await client.get(`${installation.origin}/api/browser-binding/preference`, {
+          headers: { origin: installation.origin },
+        })
+      ).json(),
+    ).toMatchObject({ remembered: true });
+  },
+);
+
+test('an unavailable earlier result remains unknown after reload without resending the change', async () => {
+  const id = crypto.randomUUID();
+  sessionStorage.setItem(
+    `skyttel-storage-operation:${ownerId}`,
+    JSON.stringify({ id, sessionId: 'earlier-session' }),
+  );
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  const results: string[] = [];
+  const writes: string[] = [];
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).startsWith('/api/browser-binding/results/')) results.push(String(input));
+    if (init?.method === 'POST') writes.push(String(input));
+    return transport(input, init);
+  });
+  render(page());
+  await screen.findByRole('switch');
+  await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
+  await waitFor(() =>
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Det kan saknas eller ha passerat kontrollfönstret på 24 timmar. Utfallet är fortfarande okänt.',
+    ),
+  );
+  expect(results).toEqual([`/api/browser-binding/results/${id}`]);
+  expect(writes).toEqual([]);
+  expect((screen.getByRole('switch') as HTMLInputElement).disabled).toBe(true);
+});
+
+test('failed deletion of the local reference cannot undo a confirmed server change', async () => {
+  render(page());
+  const save = await turnOff();
+  vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    throw new DOMException('Browser storage denied', 'SecurityError');
+  });
+  await userEvent.click(save);
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain(
+      'Resultatet är bekräftat men flikens referens kunde inte tas bort.',
+    ),
+  );
+  expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.');
+  expect(
+    await (
+      await client.get(`${installation.origin}/api/browser-binding/preference`, {
+        headers: { origin: installation.origin },
+      })
+    ).json(),
+  ).toMatchObject({ remembered: false });
+});
