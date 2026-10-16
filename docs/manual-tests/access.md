@@ -1772,11 +1772,28 @@ finns endast i provinstallationen och ändrar inte produktionsinställningar.
 ### ACCESS-32: Okänd koppling kräver en separat uttrycklig omstart
 
 **Syfte:** Ett avvisat inloggningsförsök ger ingen automatisk ny bindning,
-inloggning eller återanvänt ihågkommet val.
+inloggning eller återanvänt ihågkommet val. Misslyckad rensning ger logiskt
+fokus utan att flytta det från ett nyare inloggningsval.
 
 **Användare:** Alex utan inloggning, bredd 1280 pixlar.
 
 **Förutsättningar:** Den syntetiska okända bindningen enligt förberedelsen.
+
+**Separat förberedelse:** Prova först rensning utan nätverksanslutning.
+Återanslut efter felbeskedet och gör ett nytt avvisat inloggningsförsök.
+Prova därefter en ändrad koppling: kör `hold-reset-check` före rensningen,
+vänta på `reset_held` och ändra provkakan i konsolen innan du kör
+`release-initialization`:
+
+```js
+document.cookie = `__Host-skyttel_binding=${'a'.repeat(64)}; Path=/; Secure; SameSite=Lax`;
+```
+
+Gör även ett nytt avvisat försök där du håller rensningen, ändrar provkakan
+till 64 `b` och väljer Microsoft. Flytta fokus med tangentbord till
+**Avbryt** innan svaret släpps. Avbryt sedan och gör ett nytt avvisat
+Google-försök inför den lyckade rensningen i steg 3. Stäng provprofilen
+efter fallet.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -1788,9 +1805,10 @@ inloggning eller återanvänt ihågkommet val.
     "spec": "tests/integration/login-binding-reset.spec.ts",
     "caseId": "ACCESS-32"
   },
-  "reference": "Ren HTTPS-provprofil med en syntetisk okänd bindningskaka, 1280 pixlar och syntetisk Google-provider. Automatiken kontrollerar att ingen providerstart sker före det nya uttryckliga valet.",
+  "reference": "Ren HTTPS-provprofil med syntetisk okänd bindningskaka, 1280 pixlar och syntetisk Google-provider. Rensning provas med förlorat kontrollsvar och ändrad kaka medan svaret hålls, även med nyare Microsoft-val. Automatiken kontrollerar att ingen providerstart sker före det nya uttryckliga valet.",
   "outcomes": [
     "Första försöket stoppas utan bekräftad inloggning eller falskt återställningsbesked.",
+    "Misslyckad rensning återför fokus till Google-knappen; ett nyare inloggningsvals fokus bevaras.",
     "Separat uttrycklig rensning återför fokus till Google-knappen utan automatisk providerstart.",
     "Nästa inloggningsval börjar avmarkerat och en ny vanlig inloggning kan slutföras."
   ]
@@ -1805,6 +1823,9 @@ inloggning eller återanvänt ihågkommet val.
    och välj **Fortsätt till Google**.
 2. Läs att säker inloggning inte kan bekräftas. Kontrollera att sidan
    inte påstår en databasåterställning eller en lyckad inloggning.
+   Genomför felvarianterna enligt förberedelsen. Kontrollera att fokus
+   återgår till **Fortsätt med Google** vid fel och att inget klartbesked
+   visas. Med ett nyare Microsoft-val ska fokus stanna på **Avbryt**.
 3. Läs omfattningen och välj **Börja om i den här webbläsaren**.
 4. Kontrollera att fokus återgår till **Fortsätt med Google** och att
    inget providerfönster öppnas automatiskt.
@@ -1812,7 +1833,8 @@ inloggning eller återanvänt ihågkommet val.
    Lämna det avmarkerat och välj **Fortsätt till Google**.
 
 **Förväntat resultat:** Första försöket stoppas. Rensningen sker först
-efter den separata handlingen. **Klart för en ny inloggning. Välj Google
+efter den separata handlingen. Felvarianten ger ett felbesked och logiskt
+fokus utan automatisk providerstart. **Klart för en ny inloggning. Välj Google
 eller Microsoft igen.** visas. Nästa providerhandling skapar en vanlig
 inloggning och visar **Skapa ditt hushåll**. Ingen annan webbläsare eller
 hushållsinformation påverkas.
@@ -1840,6 +1862,7 @@ dess session.
   "reference": "Två verkliga Chromium-flikar delar HTTPS-kakor och Web Locks. Provinstallationen håller det första reset-check-svaret efter serverkontrollen och släpper det först efter en ny bekräftad inloggning i den andra fliken.",
   "outcomes": [
     "Navigering avbryter den väntande rensningen och frigör webbläsarlåset.",
+    "Fokus på Kakor och lagring bevaras när det sena kontrollsvaret kommer.",
     "Den andra fliken kan uttryckligen rensa den gamla kopplingen och skapa en ny vanlig inloggning.",
     "Det sena gamla svaret varken rensar den nya bindningen eller avslutar den nya sessionen."
   ]
@@ -1857,7 +1880,8 @@ dess session.
    uttryckligen **Börja om i den här webbläsaren** där.
 4. Välj Google på nytt, lämna **Kom ihåg mig** avmarkerat och logga in.
    Vänta på **Skapa ditt hushåll**.
-5. Kör `release-initialization`. Ladda startsidan i den första fliken.
+5. Kör `release-initialization`. Kontrollera att den första fliken
+   behåller fokus på rubriken **Kakor och lagring**. Ladda startsidan där.
 
 **Förväntat resultat:** Den andra fliken behåller sin nya inloggning
 efter det sena svaret. Den första fliken visar samma inloggade tillstånd

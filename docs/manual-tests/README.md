@@ -513,7 +513,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   säkra gemensamma starter i flera flikar, stoppa blockerade kakor eller
   saknade webbläsarlås och avbryta fördröjd initialisering,
   uttryckligen rensa en okänd gammal koppling utan automatisk
-  inloggning och bevara en annan fliks nya session vid ett sent kontrollsvar,
+  inloggning, bevara tangentbordsfokus vid misslyckad rensning och en annan
+  fliks nya session vid ett sent kontrollsvar,
   tangentbord, avbryta extern inloggning, återhämta utgångna försök, börja
   med kartans verktyg utan startdialoger, hantera förlorad tillgång och länka
   inloggningssätt. Inloggningsstartens nätverksavbrott och leverantörsfel

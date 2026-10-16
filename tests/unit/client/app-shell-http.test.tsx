@@ -94,6 +94,102 @@ async function installModel(model: ReturnType<typeof textModel>) {
   return `/households/${household.id}`;
 }
 
+async function rejectUnknownBinding() {
+  (
+    globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
+  ).jsdom.reconfigure({ url: installation.origin });
+  // biome-ignore lint/suspicious/noDocumentCookie: Seed the same unknown security cookie in jsdom and its HTTP transport.
+  document.cookie = `skyttel_binding=${'f'.repeat(64)}; Path=/; SameSite=Lax`;
+  await client.addCookies([
+    { name: 'skyttel_binding', value: 'f'.repeat(64), url: installation.origin },
+  ]);
+  mount('/login');
+  await userEvent.click(await screen.findByRole('button', { name: 'Fortsätt med Google' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Fortsätt till Google' }));
+  await screen.findByRole('button', { name: 'Börja om i den här webbläsaren' });
+}
+
+test('a confirmed binding reset restores provider focus and requires a fresh unchecked choice', async () => {
+  await rejectUnknownBinding();
+  await userEvent.click(screen.getByRole('button', { name: 'Börja om i den här webbläsaren' }));
+  await screen.findByText('Klart för en ny inloggning. Välj Google eller Microsoft igen.');
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Fortsätt med Google' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Fortsätt med Microsoft' }));
+  expect((screen.getByRole('checkbox', { name: 'Kom ihåg mig' }) as HTMLInputElement).checked).toBe(
+    false,
+  );
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Fortsätt till Microsoft' }),
+  );
+});
+
+test.each(['network', 'binding-changed', 'new-provider', 'navigation', 'cancelled'] as const)(
+  'a rejected binding reset preserves the appropriate keyboard focus after %s',
+  async (failure) => {
+    let release = () => {};
+    let reached = () => {};
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const received = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const transport = authenticatedHttpFetch(client, installation.origin);
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const response = await transport(input, init);
+      if (String(input) === '/api/browser-binding/reset-check') {
+        reached();
+        await pending;
+        if (failure === 'network') throw new TypeError('Reset check reply lost');
+      }
+      return response;
+    });
+    try {
+      await rejectUnknownBinding();
+      await userEvent.click(screen.getByRole('button', { name: 'Börja om i den här webbläsaren' }));
+      await received;
+      let target = screen.getByRole('button', { name: 'Fortsätt med Google' });
+      if (failure === 'binding-changed' || failure === 'new-provider') {
+        // biome-ignore lint/suspicious/noDocumentCookie: Change the browser cookie while an actual reset-check response is delayed.
+        document.cookie = `skyttel_binding=${'a'.repeat(64)}; Path=/; SameSite=Lax`;
+      }
+      if (failure === 'new-provider') {
+        await userEvent.click(screen.getByRole('button', { name: 'Fortsätt med Microsoft' }));
+        target = screen.getByRole('button', { name: 'Avbryt' });
+        target.focus();
+      } else if (failure === 'navigation') {
+        await userEvent.click(
+          within(screen.getByRole('contentinfo')).getByRole('link', { name: 'Kakor och lagring' }),
+        );
+        target = await screen.findByRole('heading', { name: 'Kakor och lagring' });
+      } else if (failure === 'cancelled') {
+        await act(async () =>
+          window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })),
+        );
+        await userEvent.click(screen.getByRole('button', { name: 'Fortsätt med Microsoft' }));
+        target = screen.getByRole('button', { name: 'Fortsätt till Microsoft' });
+      }
+      await act(async () => release());
+      if (failure === 'network' || failure === 'binding-changed' || failure === 'new-provider') {
+        await waitFor(() =>
+          expect(
+            screen.queryByRole('button', { name: 'Börja om i den här webbläsaren' }),
+          ).toBeNull(),
+        );
+        expect(screen.getByRole('alert').textContent).toContain(
+          'Ingen ny inloggning har bekräftats.',
+        );
+      }
+      expect(document.activeElement).toBe(target);
+      expect(
+        screen.queryByText('Klart för en ny inloggning. Välj Google eller Microsoft igen.'),
+      ).toBeNull();
+    } finally {
+      release();
+    }
+  },
+);
+
 test('a lost setup reply is recovered through status without creating another household', async () => {
   await signIn(client, installation.origin);
   const transport = authenticatedHttpFetch(client, installation.origin);

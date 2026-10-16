@@ -185,6 +185,7 @@ function Login({ providers }: { providers: Provider[] }) {
   const options = useRef<HTMLFieldSetElement>(null);
   const continueButton = useRef<HTMLButtonElement>(null);
   const attempt = useRef<AbortController | null>(null);
+  const failedResetFocus = useRef<AbortController | null>(null);
   const lastProvider = useRef<Provider | null>(null);
   const label = selected === 'google' ? 'Google' : 'Microsoft';
   useEffect(() => {
@@ -194,6 +195,18 @@ function Login({ providers }: { providers: Provider[] }) {
         ?.querySelector<HTMLButtonElement>(`[data-provider="${lastProvider.current}"]`)
         ?.focus();
   }, [selected]);
+  useEffect(() => {
+    const controller = failedResetFocus.current;
+    failedResetFocus.current = null;
+    if (
+      !resetPair &&
+      !selected &&
+      controller &&
+      !controller.signal.aborted &&
+      attempt.current === controller
+    )
+      options.current?.querySelector<HTMLButtonElement>('button')?.focus();
+  }, [resetPair, selected]);
   useEffect(() => {
     const returned = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
@@ -274,6 +287,7 @@ function Login({ providers }: { providers: Provider[] }) {
       options.current?.querySelector<HTMLButtonElement>('button')?.focus();
     } catch {
       if (!controller.signal.aborted) {
+        failedResetFocus.current = controller;
         setResetPair(undefined);
         setError('binding_invalid');
       }

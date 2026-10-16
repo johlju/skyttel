@@ -34,6 +34,66 @@ test('ACCESS-32: an unknown binding needs a separate explicit reset and a fresh 
     await rejectedLogin(page);
     expect(providerStarts).toBe(0);
     await expect(page.getByRole('alert')).not.toContainText('återställts från en säkerhetskopia');
+    for (const failure of ['network', 'binding-changed', 'new-provider'] as const) {
+      let release = () => {};
+      let reached = () => {};
+      const pending = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const received = new Promise<void>((resolve) => {
+        reached = resolve;
+      });
+      await page.route('**/api/browser-binding/reset-check', async (route) => {
+        const response = await route.fetch();
+        reached();
+        await pending;
+        if (failure === 'network') await route.abort('failed');
+        else await route.fulfill({ response });
+      });
+      try {
+        const reset = page.getByRole('button', {
+          name: 'Börja om i den här webbläsaren',
+          exact: true,
+        });
+        await reset.click();
+        await received;
+        if (failure !== 'network') {
+          await context.addCookies([
+            {
+              name: '__Host-skyttel_binding',
+              value: (failure === 'binding-changed' ? 'a' : 'b').repeat(64),
+              url: installation.origin,
+              secure: true,
+              sameSite: 'Lax',
+            },
+          ]);
+        }
+        if (failure === 'new-provider') {
+          await page.getByRole('button', { name: 'Fortsätt med Microsoft', exact: true }).click();
+          await page.getByRole('button', { name: 'Avbryt', exact: true }).focus();
+        }
+        release();
+        await expect(reset).not.toBeVisible();
+        await expect(
+          page.getByRole('button', {
+            name: failure === 'new-provider' ? 'Avbryt' : 'Fortsätt med Google',
+            exact: true,
+          }),
+        ).toBeFocused();
+        await expect(
+          page.getByRole('status').filter({ hasText: 'Klart för en ny inloggning' }),
+        ).not.toBeVisible();
+        await expect(page.getByRole('alert')).toContainText('Ingen ny inloggning har bekräftats.');
+        expect(providerStarts).toBe(0);
+        if (failure === 'new-provider') {
+          await page.getByRole('button', { name: 'Avbryt', exact: true }).click();
+        }
+      } finally {
+        release();
+        await page.unroute('**/api/browser-binding/reset-check');
+      }
+      await rejectedLogin(page);
+    }
     await page.getByRole('button', { name: 'Börja om i den här webbläsaren', exact: true }).click();
     await expect(
       page.getByRole('button', { name: 'Fortsätt med Google', exact: true }),
@@ -107,6 +167,8 @@ test('ACCESS-33: a cancelled delayed binding reset cannot clear another tabs new
     await received;
     // Navigation aborts the pending action and releases the origin's Web Lock.
     await first.goto(`${installation.origin}/cookies`);
+    const storageHeading = first.getByRole('heading', { level: 1, name: 'Kakor och lagring' });
+    await expect(storageHeading).toBeFocused();
     const second = await context.newPage();
     await second.goto(`${installation.origin}/login`);
     await rejectedLogin(second);
@@ -128,6 +190,7 @@ test('ACCESS-33: a cancelled delayed binding reset cannot clear another tabs new
     expect(Boolean(freshBinding)).toBe(true);
     release();
     await expect.poll(() => delivered).toBe(true);
+    await expect(storageHeading).toBeFocused();
     expect(
       (await context.cookies()).find((cookie) => cookie.name === '__Host-skyttel_binding')
         ?.value === freshBinding,
