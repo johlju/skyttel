@@ -5,6 +5,7 @@ import {
   deliverySaveStatus,
   type TaskDelivery,
 } from '../shared/task-delivery.js';
+import { useAppShellReservedHeight } from './use-app-shell-reserved-height.js';
 
 export type TaskDeliveryConnection = {
   id: string;
@@ -238,27 +239,7 @@ export function TaskDeliveryResults({
   const surface = useRef<HTMLElement>(null);
   const visible = results.filter((item) => item.state !== 'waiting');
   const hasResults = visible.length > 0;
-  useLayoutEffect(() => {
-    const element = surface.current;
-    const shell = element?.closest<HTMLElement>('.app-shell');
-    if (!workspace || !hasResults || !element || !shell) return;
-    const measure = () => {
-      shell.style.setProperty(
-        '--task-delivery-height',
-        `${element.getBoundingClientRect().height}px`,
-      );
-      window.dispatchEvent(new Event('resize'));
-    };
-    measure();
-    const observer =
-      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
-    observer?.observe(element);
-    return () => {
-      observer?.disconnect();
-      shell.style.removeProperty('--task-delivery-height');
-      window.dispatchEvent(new Event('resize'));
-    };
-  }, [workspace, hasResults]);
+  useAppShellReservedHeight(surface, workspace && hasResults, '--task-delivery-height');
   const announced = useRef(new Set<string>());
   const [announcement, setAnnouncement] = useState({ count: 0, text: '' });
   useEffect(() => {

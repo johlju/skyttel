@@ -53,6 +53,7 @@ import { MapRequestError as RequestError, request } from './map-request.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
 import { useSessionActivity } from './session-activity.js';
 import { TaskDeliveryContext, TaskDeliveryResults, useTaskDelivery } from './task-delivery.js';
+import { useAppShellReservedHeight } from './use-app-shell-reserved-height.js';
 import { VoiceSessionContext } from './voice-session-context.js';
 import { useAccountTheme, WorkspaceThemeContext } from './WorkspaceTheme.js';
 import './access.css';
@@ -1448,32 +1449,7 @@ function Application() {
     data?.status === 'anonymous',
   );
   const warningElement = useRef<HTMLParagraphElement>(null);
-  useLayoutEffect(() => {
-    const element = warningElement.current;
-    const shell = element?.closest<HTMLElement>('.app-shell');
-    if (!element || !shell) return;
-    if (!activity.warning) {
-      shell.style.removeProperty('--session-warning-height');
-      window.dispatchEvent(new Event('resize'));
-      return;
-    }
-    const measure = () => {
-      shell.style.setProperty(
-        '--session-warning-height',
-        `${element.getBoundingClientRect().height}px`,
-      );
-      window.dispatchEvent(new Event('resize'));
-    };
-    measure();
-    const observer =
-      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
-    observer?.observe(element);
-    return () => {
-      observer?.disconnect();
-      shell.style.removeProperty('--session-warning-height');
-      window.dispatchEvent(new Event('resize'));
-    };
-  }, [activity.warning]);
+  useAppShellReservedHeight(warningElement, activity.warning, '--session-warning-height');
   const taskDelivery = useTaskDelivery(data?.user?.id, data?.loginId);
   const theme = useAccountTheme(data?.user?.id);
   useEffect(() => {
