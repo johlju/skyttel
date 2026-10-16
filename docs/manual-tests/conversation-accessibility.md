@@ -49,8 +49,8 @@ Google-knapp. Inga administrativa rättigheter krävs för samtalet.
 5. För egen hjälpmedelsbedömning: aktivera den skärmläsare som ska provas och
    anteckna dess version. Kontrollera både uppläsning och läsordning med dess
    vanliga läskommandon. Automatiska DOM-prov bevisar inte vad en verklig
-   skärmläsare säger. Enhetsprov enligt
-   [#220](https://github.com/viscalyx/skyttel/issues/220) kräver en människa.
+   skärmläsare säger. Redovisa hjälpmedelsflöden enligt
+   [Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260).
 6. Avsluta med `quit`. Provdatabasen tas bort. Återställ nätverk och
    operativsystemets rörelseinställning efter respektive fall.
 
@@ -412,8 +412,9 @@ Kvarstående begränsning: den externa rösttransporten ger ingen säker signal 
 allt framtida ljud efter en tyst paus. Sparat använder känt verifierat svar,
 faktisk ljudaktivitet och definitivt avbrott enligt
 [sparbeskedets prov](conversation-questions.md). Automatiken bevisar inte att
-ett godtyckligt framtida ljudsegment är omöjligt. Lyssningsprov,
-mikrofonbehörighet och full hjälpmedelsbedömning hör till #220. Ingen sådan
+ett godtyckligt framtida ljudsegment är omöjligt. Ansvar för fysiska prov,
+hjälpmedelsflöden och driftens ljudavbrott anges i
+[ansvarsfördelningen](README.md#ansvar-och-delade-resultat). Ingen sådan
 mänsklig körning redovisas här.
 
 ### Mänsklig slutkontroll
@@ -421,12 +422,17 @@ mänsklig körning redovisas här.
 Utför
 [TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
 med NVDA och Chrome på Windows samt VoiceOver och Chrome på macOS, iPhone och
-iPad. Prova först riktigt iPhone-tangentbord, ett fingertryck som hålls och de
-två plattformarnas tangentkombinationer. Kör även MIKROFONTRYCK-03/04,
-TEXTMOBIL-02/03, NOT-07/08 och HJALP-01–03/05–10. Anteckna enhet, system,
-webbläsare, hjälpmedel, byggversion och resultat för varje kombination i
-[#220](https://github.com/viscalyx/skyttel/issues/220). Alla dessa mänskliga
-resultat återstår.
+iPad. Följ HJALP-11 för faktiskt hörda besked och HJALP-12 för fysisk
+inmatning, zoom och rörelse. Använd TEXTMOBIL-13 för riktigt
+skärmtangentbord och MIKROFONTRYCK-10–12 för fysiska tangentkombinationer
+och håll/släpp. De automatiserade fallen behöver inte handköras igen.
+Redovisa läsordning, uppläsningar, skärmtangentbord, zoom och layout i
+[Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260).
+Redovisa mikrofonstyrning, tangentkombinationer, OS-behörighet, rörelse och
+upptaget skärmläsarljud i
+[Prova mikrofonstyrning, tangentkombinationer, rörelse och skärmläsarljud](https://github.com/viscalyx/skyttel/issues/220).
+Anteckna varje kombination enligt
+[ansvar och delade resultat](README.md#ansvar-och-delade-resultat).
 
 Låt **Skyttel talar** pågå längre än fem sekunder med normal rörelse och bedöm
 vågformen enligt
@@ -671,6 +677,9 @@ HTTPS-adress och konfigurerad inloggning.
 **Kräver mänsklig observation:** Hör verklig avbrytande respektive köad
 uppläsning och bedöm läsordning utan dubbla mikrofon- eller arbetsbesked.
 
+**Resultatansvar:**
+[Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260).
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -718,6 +727,12 @@ HTTPS-adress och konfigurerad inloggning.
 
 **Kräver mänsklig observation:** Bedöm verklig pekning, tangentkommandon,
 200/400 procents zoom, textavstånd och rörelse längre än fem sekunder.
+
+**Resultatansvar:** Rörelse och mikrofonens tangentkombinationer hör till
+[Prova mikrofonstyrning, tangentkombinationer, rörelse och skärmläsarljud](https://github.com/viscalyx/skyttel/issues/220).
+Zoom, textavstånd, pekning och hela hjälpmedelsflöden hör till
+[Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260).
+Länka samma körning när den faktiskt täcker båda slags observationer.
 
 <!-- markdownlint-disable MD013 -->
 <!--

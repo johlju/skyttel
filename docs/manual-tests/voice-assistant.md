@@ -3,8 +3,12 @@
 Fallen provar samtal med röst, samma privata utkast, MCP-regler och kvitton som
 samtal med text. Anteckna commit, webbläsare, operativsystem, mikrofon, modell
 eller kontrollerad ersättare samt resultat. De kontrollerade flödena verifieras
-automatiskt. I [#97](https://github.com/viscalyx/skyttel/issues/97) återstår
-mänsklig bedömning av faktiskt hört ljud och användning med egen utrustning.
+automatiskt.
+[Mänskliga bekräftelser efter specifikation #31](https://github.com/viscalyx/skyttel/issues/97)
+markerar svenska talbeskeds begriplighet och lyssningskomfort som klara.
+Saknad resultatmetadata innebär inte krav på nytt lyssningsprov.
+Övriga fysiska observationer redovisas enligt
+[ansvar och delade resultat](README.md#ansvar-och-delade-resultat).
 
 ## Konfigurerade användare
 
@@ -1668,11 +1672,12 @@ familjeärende, rättelser, fullständigt sparande och fortsatt formulärarbete.
    återläs roller, pris
    och kunskapsstatus. Välj **Tillbaka till arbetet**, stäng av mikrofonen och
    fortsätt med ett normalt formulär.
-7. Anteckna den faktiskt provade enheten, mikrofonen och ljudutgången. Chrome på
-   Windows, macOS, iPhone och iPad med riktiga mikrofoner och hjälpmedel ingår i
-   den kvarstående mänskliga kontrollen i
-   [#220](https://github.com/viscalyx/skyttel/issues/220). Redovisa varje
-   kombination separat, inklusive mikrofonavslag och ljuduppspelning.
+7. Anteckna den faktiskt provade enheten, mikrofonen och ljudutgången.
+   Redovisa det hela hushållsflödet med verklig röst i
+   [Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260).
+   Mikrofonstyrning och upptaget skärmläsarljud hör till
+   [Prova mikrofonstyrning, tangentkombinationer, rörelse och skärmläsarljud](https://github.com/viscalyx/skyttel/issues/220).
+   Redovisa varje kombination separat och länka delade observationer.
 
 ### TAL-24: riktig skärmläsare och tal samtidigt
 
@@ -1777,6 +1782,9 @@ HTTPS-adress och konfigurerad inloggning.
 **Kräver mänsklig observation:** Bedöm operativsystemets och webbläsarens
 riktiga mikrofonprompt, återkallad behörighet och användningsindikator.
 
+**Resultatansvar:**
+[Prova mikrofonstyrning, tangentkombinationer, rörelse och skärmläsarljud](https://github.com/viscalyx/skyttel/issues/220).
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -1831,6 +1839,10 @@ medgivande. Håll sessionen aktiv med verkliga handlingar före provet.
 mikrofonindikator och ljud, samt hör beskedet med riktig skärmläsare.
 Syntetisk serverkontroll bevisar inte att mikrofonen fysiskt stannar eller
 att skärmläsaren läser beskedet korrekt.
+
+**Resultatansvar:**
+[Verifiera inloggning, tillgänglighet och säkerhetskopior i faktisk drift](https://github.com/viscalyx/skyttel/issues/465).
+Den absoluta tidsgränsen bedöms separat från inaktivitetsutgång i INAK-05.
 
 <!-- markdownlint-disable MD013 -->
 <!--

@@ -11,8 +11,10 @@ manuella och körs inte i CI.
 
 Fallen fungerar som körbara beskrivningar och stöd för felsökning.
 Automatiserade fall behöver inte upprepas manuellt för specifikation #31.
-Den separata [restlistan #97](https://github.com/viscalyx/skyttel/issues/97)
-innehåller bara kvarvarande mänskliga bedömningar och bekräftelser.
+Den separata
+[Mänskliga bekräftelser efter specifikation #31](https://github.com/viscalyx/skyttel/issues/97)
+samlar personliga kontoval och medgivanden samt markerade bekräftelser av
+svenska talbesked och mottagna aviseringar.
 Förberedelsen för dessa finns i
 [ärendets kommentar](https://github.com/viscalyx/skyttel/issues/97#issuecomment-5835778540).
 Registrera automatiska körningar med version och resultat; skilj dem från
@@ -22,11 +24,35 @@ Separata automatiska [modellprov](real-model-tests.md) och
 [talprov](real-voice-tests.md) använder verkliga leverantörer.
 De körs uttryckligen med privat konfiguration och redovisas separat från CI.
 
-För det förenklade samtalet finns en separat kvarstående
-[mänsklig verifiering #220](https://github.com/viscalyx/skyttel/issues/220).
-Den omfattar verklig mikrofon, skärmtangentbord och skärmläsare på
-Chrome för Windows, macOS, iPhone och iPad. Automatiska DOM-, medie- och
-fönsterprov ska redovisas separat från de resultaten.
+## Ansvar och delade resultat
+
+Restlistorna finns i respektive ärende. Guiderna beskriver hur proven utförs.
+
+- [Funktionstesta Codex CLI och VS Code-tillägget i devcontainern](https://github.com/viscalyx/skyttel/issues/25)
+  samlar klienternas container-, sandbox- och sessionsprov. Personliga
+  inloggningar och medgivanden hämtas från bekräftelseärendet ovan.
+- [Prova mikrofonstyrning, tangentkombinationer, rörelse och skärmläsarljud på riktiga enheter](https://github.com/viscalyx/skyttel/issues/220)
+  samlar fysisk mikrofonstyrning, OS-behörighet, tangentkombinationer,
+  rörelse och skärmläsarljud som mikrofonen fångar upp.
+- [Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260)
+  samlar hela hushållsflöden, samtalets vanliga uppläsningar, fysiskt
+  skärmtangentbord, layout och zoom.
+- [Verifiera inloggning, tillgänglighet och säkerhetskopior i faktisk drift](https://github.com/viscalyx/skyttel/issues/465)
+  samlar faktisk ingress, lagring, webbläsaromstart, kakflöden, tidsgränser,
+  fullständig textreserv vid ljudavbrott och återställning av säkerhetskopior.
+
+Dokumentera en körning på en ansvarig plats och länka till den från andra
+berörda ärenden. Ange faktisk release/commit, datum, miljö, kontokategori,
+klient/enhet, OS, webbläsare, hjälpmedel och versioner samt provansvarig,
+utförda steg, förväntat och faktiskt utfall. Använd Godkänt, Underkänt,
+Blockerat eller Ej utfört per observation. Länka sanerat underlag utan
+personuppgifter eller autentiseringsvärden.
+
+Återanvänd resultat när version, miljö och faktiskt utförda steg täcker
+samma observation. Gemensam inloggning eller utrustning räcker inte för
+att godkänna ett annat utfall. Skilj automatiska DOM-, medie- och fönsterprov
+från faktiskt hörda besked och fysisk användning. Använd dokumentationen
+från den release som provas; en äldre körning godkänner inte ändrade flöden.
 
 ## Köra och förbereda prov
 
