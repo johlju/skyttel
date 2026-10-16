@@ -833,6 +833,18 @@ export function SpatialMap({
         for (let center = size / 2 + 8; center <= end; center += 24) values.push(center);
         return values;
       };
+      // A narrow free slot can fall between grid steps. Try the exact edges
+      // of nearby obstacles too, without multiplying their X/Y combinations.
+      for (const other of nearby(origin)) {
+        const offsetX = (other.width + origin.width) / 2 + 5;
+        const offsetY = (other.height + origin.height) / 2 + 5;
+        available.push(
+          { ...origin, x: other.x - offsetX },
+          { ...origin, x: other.x + offsetX },
+          { ...origin, y: other.y - offsetY },
+          { ...origin, y: other.y + offsetY },
+        );
+      }
       // The last free slot on a small surface can lie beyond the grid's
       // final step. Include the boundary centers in the collision search.
       for (const y of centers(origin.height, surfaceHeight))

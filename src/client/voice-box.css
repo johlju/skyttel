@@ -143,6 +143,10 @@
 .household-map.workspace-shell[data-narrow="true"].text-view-open:has(.voice-box) .text-view-body {
   padding-bottom: 44px;
 }
+.household-map.workspace-shell[data-work-layout="minimal"][data-wide-touch="true"].text-view-open
+  .conversation-corner {
+  right: calc(var(--text-view-space) + 12px);
+}
 
 /*
  * The waveform. The colour says who is heard: the accent colour for the user,

@@ -247,6 +247,42 @@ for (const viewport of [
           endpointsVisible: true,
           visible: true,
         });
+        if (viewport.width <= 700) {
+          const context = page.getByRole('region', { name: 'Kartans sammanhang', exact: true });
+          await context.focus();
+          await expect(context).toBeFocused();
+          await expect
+            .poll(() =>
+              context.evaluate((element) => {
+                const box = element.getBoundingClientRect();
+                const reply = document
+                  .querySelector('[aria-label="Hela svaret som text"]')
+                  ?.getBoundingClientRect();
+                return (
+                  box.top >= (reply?.bottom ?? 0) &&
+                  // Native focus can round scrolling by a CSS pixel while
+                  // the reply's reserved height is fractional.
+                  box.bottom <= innerHeight + 1 &&
+                  element.contains(
+                    document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+                  )
+                );
+              }),
+            )
+            .toBe(true);
+          await page.keyboard.press('End');
+          const lastSymbol = context.getByText('Punkter: etikettens koppling');
+          await expect
+            .poll(() =>
+              lastSymbol.evaluate((element) => {
+                const box = element.getBoundingClientRect();
+                return element.contains(
+                  document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+                );
+              }),
+            )
+            .toBe(true);
+        }
         const before = await read();
         await send('Visa Lo igen.');
         await expect.poll(() => model.requests.length).toBe(5);

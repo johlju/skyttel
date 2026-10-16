@@ -326,8 +326,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   avbrott i långa samtal med bevarad kontext och mikrofonval,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
   samtalstext och verifierade resultat, löpande dialog och
-  raden Skyttel arbetar. Kontrollerat familjeunderlag och
-  verkligt tal redovisas separat. TAL-18/19 skiljer mikrofonlägena;
+  raden Skyttel arbetar. TAL-03 skyddar läsbar beskrivning i korta
+  uppgiftsfönster även efter hela svaret som text. Kontrollerat
+  familjeunderlag och verkligt tal redovisas separat. TAL-18/19 skiljer mikrofonlägena;
   TAL-20–22 skiljer placeringarna och TAL-17/23–26 kräver verkliga
   mikrofon-, ljud-, system- eller skärmläsarobservationer. TAL-24 behåller
   TAL-16:s exakta hörda fokus-/aktivitetssekvens, inklusive statusord som
@@ -404,6 +405,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   TEXT-07 är pensionerat till SAMTALSUTKAST-01 utan återanvänt ID.
   TEXT-04 återfinner den verkliga sparidentifieraren efter genomfört
   sparande med tappat svar och omstart. Varje TEXT-08-storlek har eget ID.
+  På smal skärm provas även tangentbordsåtkomst till kartans sammanhang
+  efter ett nytt urval medan hela svaret finns kvar ovanför arbetsytan.
   [Operatörsförberedelsen](text-conversation-preparation.md) skiljer
   leveransfel och rått protokoll från vanliga UI-steg. Kontrollerade lokala
   leverantörssvar och verklig modellförståelse redovisas separat.

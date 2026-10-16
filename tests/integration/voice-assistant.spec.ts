@@ -1062,6 +1062,32 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
           .getByRole('definition')
           .filter({ hasText: 'Lo Exempel' }),
       ).toBeVisible();
+      await expect
+        .poll(() =>
+          page.getByRole('region', { name: 'Lo Exempel', exact: true }).evaluate((element) => {
+            const description = element.querySelector('.household-table-description');
+            const body = element.querySelector('.object-property-body');
+            if (!description || !body) return false;
+            const box = description.getBoundingClientRect();
+            const clip = body.getBoundingClientRect();
+            const panel = element.getBoundingClientRect();
+            const line = Math.min(
+              box.height,
+              Number.parseFloat(getComputedStyle(description).lineHeight),
+            );
+            return (
+              line > 0 &&
+              box.top >= clip.top &&
+              box.top + line <= clip.bottom &&
+              box.top >= panel.top &&
+              box.top + line <= panel.bottom &&
+              description.contains(
+                document.elementFromPoint(box.x + box.width / 2, box.top + line / 2),
+              )
+            );
+          }),
+        )
+        .toBe(true);
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await openConversationText(page);

@@ -454,6 +454,9 @@ finns nedan.
    **Visa sambandet mellan Lo och Molnmusik.** Släpp sambandsvisningen.
    Läs båda objekten och det markerade sambandet samtidigt med
    **Lo Exempel → Använder → Molnmusik** i detaljpanelen.
+   På smal skärm: använd Tab eller Skift+Tab till **Kartans sammanhang**
+   längre ned i arbetsytan. Läs statusen och använd End för att nå
+   teckenförklaringens sista rad, **Punkter: etikettens koppling**.
 3. Skicka **Visa Lo igen.** Håll svaret, stäng textvyn och välj
    **Redigera valt samband** med tangentbord. Kontrollera Molnmusik i
    **Till objekt** och ändra till Lo utan att lägga ändringen i utkastet.
@@ -469,6 +472,9 @@ finns nedan.
   detaljpanelen, även på telefon.
 - Kamera och vy anpassas till urvalet utan att personliga placeringar
   eller hushållets innehåll ändras.
+- Kartans sammanhang och teckenförklaring går att fokusera och läsa med
+  tangentbord på smal skärm. Detaljpanelen och hela svaret som text täcker
+  inte den fokuserade ytan.
 - Oskickad formulärtext förhindrar ett nytt urval. Ingen ny bekräftad
   markering påstås, och formulärets uppgifter finns kvar.
 
@@ -600,6 +606,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
   "reference": "390 × 844 CSS-pixlar; smal karta med samtidig detaljläsning.",
   "outcomes": [
     "Objekt och samband visas med läsbara detaljer före bekräftelsen.",
+    "Kartans sammanhang och teckenförklaring går att läsa med tangentbord efter ett nytt urval.",
     "Oskickad Till objekt-rättelse bevaras och hindrar ett nytt urval."
   ]
 }
@@ -639,6 +646,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
   "reference": "640 × 500 CSS-pixlar; kort smal karta.",
   "outcomes": [
     "Objekt och samband visas med läsbara detaljer före bekräftelsen.",
+    "Kartans sammanhang och teckenförklaring går att läsa med tangentbord efter ett nytt urval.",
     "Oskickad Till objekt-rättelse bevaras och hindrar ett nytt urval."
   ]
 }
@@ -678,6 +686,7 @@ testfallet “TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitt
   "reference": "320 × 250 CSS-pixlar; ytterst kort karta och nåbara detaljer.",
   "outcomes": [
     "Objekt och samband visas med läsbara detaljer före bekräftelsen.",
+    "Kartans sammanhang och teckenförklaring går att läsa med tangentbord efter ett nytt urval.",
     "Oskickad Till objekt-rättelse bevaras och hindrar ett nytt urval."
   ]
 }

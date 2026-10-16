@@ -222,7 +222,8 @@ TAL-03.
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
-    "Bekräfta verklig markering och återhämta samma beständiga sparförsök."
+    "Bekräfta verklig markering och återhämta samma beständiga sparförsök.",
+    "Beskrivningen går att läsa i korta uppgiftsfönster efter hela svaret."
   ]
 }
 ```
@@ -239,7 +240,8 @@ till TAL-17/23/24.
 1. Låt det kontrollerade markeringsuppdraget visa Lo Exempel. Läs vald Lo och
    dess uppgifter. Vid 640 × 500 och 320 × 250, fokusera Lo med tangentbordet
    och Shift+F10 → Fokusera markering. Panorera genom Navigera och stäng med
-   Stäng navigering. Lo ska förbli synlig och vald.
+   Stäng navigering. Lo ska förbli synlig och vald. Läs även **Påhittad
+   uppgift** i uppgiftsfönstret efter att hela svaret visas ovanför kartan.
 2. Återgå till 390 × 844. Förbered den blockerade kontrollen och det väntande
    sparförsöket enligt tidslinjen. Läs Skyttel kunde inte kontrollera om
    utkastet sparades. Mikrofonen är av.
@@ -260,6 +262,7 @@ till TAL-17/23/24.
 
 - Markering bekräftas först efter den verkliga webbläsarens återkoppling. Ett
   accepterat kommentarspaket är inte bevis för hörbart tal.
+- Beskrivningens text går att läsa även i det kortaste uppgiftsfönstret.
 - Omstart glömmer samtalet men bevarar utkast och sparförsök. Samma försök
   slutförs exakt en gång; korta ja eller nya allmänna uppdrag ersätter det inte.
 - Avbrutet ljud återtar inget genomfört sparande. Saknad slutlig mätning förblir
