@@ -304,6 +304,10 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 - [Hela svarstexten](conversation-delivery.md): fullständig tillfällig
   textreserv, ljudnotis, leverans vid utgång och rensning vid ny inloggning.
   Korta statusbesked bevarar fokus och upprepas inte vid kvittens.
+  Saknad leveranskanal lämnar texten oskickad och hindrar röststart
+  tills användaren uttryckligen försöker igen.
+  Förlust före första uppgiftsnotisen ger tydligt leveransfel; lagrat
+  utkast finns kvar efter utgång och ny inloggning utan återspelning.
   Verkligt ljud och skärmläsare bedöms separat.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,

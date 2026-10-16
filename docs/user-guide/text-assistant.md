@@ -525,6 +525,17 @@ innan du ber om ett nytt sparande.
 
 ## Hela svaret som text
 
+Om anslutningen för hela svaret inte kan öppnas skickas din skrivna
+instruktion inte. Texten finns kvar i fältet och du får ett felbesked.
+Försök igen när kontakten fungerar. Samma fel hindrar röststart;
+mikrofonen stängs. Skyttel skickar eller startar ingenting automatiskt
+när kontakten kommer tillbaka.
+
+Om instruktionen redan är mottagen men anslutningen sedan bryts får du
+ett leveransfel. Det betyder inte att arbetet misslyckas eller att inget
+sparas. Redan lagrat utkast och sparresultat finns kvar; kontrollera dem
+innan du ber om samma arbete igen.
+
 När ljudleveransen inte kan bekräftas visas hela svaret eller följdfrågan
 under **Hela svaret som text**, tillsammans med en samtalsnotis om ljudet.
 Texten innehåller även beskedet om sparande. Mottagen text betyder att

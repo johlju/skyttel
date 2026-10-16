@@ -1,7 +1,8 @@
 # Manuella testfall för hela svarstexten
 
 Fallen provar en redan mottagen skriven instruktion, hela svaret vid
-inloggningens utgång och rensning vid ny inloggning. En skriven instruktion
+inloggningens utgång och rensning vid ny inloggning. De provar även tydlig
+avvisning när anslutningen för hela svaret saknas. En skriven instruktion
 med aktiv röst är fortfarande textarbete. Anteckna version, webbläsare och
 resultat vid körning. Verkligt ljud och skärmläsare återstår i LEV-03.
 
@@ -141,6 +142,181 @@ Det gäller en skriven instruktion med röst på; tal får inget undantag.
   Verklig uppläsning bedöms separat i LEV-03.
 - Röststoppet ger ingen ny instruktion. Texten ryms i sidled och ny
   inloggning återspelar inget arbete.
+
+## Saknad leveranskanal
+
+### LEV-04: oskickad instruktion och röststart kräver uttryckligt återförsök
+
+**Syfte:** Saknad anslutning för hela svaret får inte ge ett tyst
+leveransfel eller starta ett uppdrag som användaren tror är skickat.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Starta en tom installation enligt den allmänna
+förberedelsens första steg. Provet använder inte tidsgränsen. Ha
+textvyn öppen utan ett pågående samtal.
+
+**Separat förberedelse:** Öppna webbläsarens utvecklarkonsol och kör
+följande innan du startar samtalet. Det stänger av nya leveranskanaler
+utan att stänga av vanliga sidförfrågningar.
+
+```javascript
+const originalWebSocket = window.WebSocket;
+window.WebSocket = undefined;
+```
+
+Återställ anslutningsstödet när stegen säger det genom att köra
+`window.WebSocket = originalWebSocket;` i samma konsol. Ladda om sidan
+efter provet för att återställa hela förberedelsen.
+
+**Automatiskt motsvarande integrationstest:**
+[task-delivery.spec.ts](../../tests/integration/task-delivery.spec.ts), LEV-04.
+Riktig produktsida och HTTP med syntetiska medier och leverantörer provar
+avvisning före start samt verklig WebSocket vid uttryckligt återförsök.
+Automatiken stänger även en redan öppnad anslutning före serverns
+mottagning och kontrollerar samma tydliga avvisning. Fysisk mikrofon och
+skärmläsare ingår inte.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/task-delivery.spec.ts",
+    "caseId": "LEV-04"
+  },
+  "reference": "Saknat WebSocket-stöd före start; syntetisk mikrofon och faktisk HTTP/WebSocket efter återställning. Text och röst provar samma saknade leveranskanal.",
+  "outcomes": [
+    "Skriven instruktion skickas inte, texten finns kvar och ett tydligt fel visas utan att instruktionen hamnar i samtalstexten.",
+    "Röststart misslyckas tydligt och mikrofonen stängs. Återställd anslutning skickar eller startar ingenting automatiskt.",
+    "Uttryckligt återförsök skickar instruktionen en gång och ger hela svaret; uttrycklig röststart fungerar igen."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Starta ett samtal med text och godkänn det. Skriv **Beskriv cykeln.**
+   och välj **Skicka**. Läs felbeskedet och kontrollera att texten finns
+   kvar i fältet och inte visas som skickad i samtalstexten.
+2. Välj **Prata med Skyttel**. Kontrollera beskedet att rösten inte kan
+   starta och att mikrofonen är av.
+3. Återställ anslutningsstödet enligt förberedelsen. Kontrollera att
+   texten finns kvar och att rösten inte startar automatiskt.
+4. Välj **Skicka**. Släpp modellsvaret enligt den allmänna förberedelsen
+   och läs det under **Hela svaret som text**. Välj sedan **Prata med
+   Skyttel** och invänta **Lyssnar**.
+
+**Förväntat resultat:**
+
+- Beskedet säger att instruktionen inte skickas och att texten finns kvar
+  för ett nytt försök. Samtalstexten påstår inte att den är skickad.
+- Saknad anslutning hindrar även röststart med ett tydligt besked.
+  Mikrofonen stängs. Inget skickas eller startar automatiskt vid
+  återställningen.
+- Endast ett uttryckligt nytt försök skickar texten och tömmer fältet.
+  Hela svaret kan läsas. Rösten kan startas med ett uttryckligt nytt val.
+
+### LEV-05: leveransfel efter mottagen instruktion bevarar lagrat utkast
+
+**Syfte:** Förlust före den första uppgiftsnotisen ska ge ett tydligt
+leveransfel även när instruktionen redan är mottagen och arbetet kan
+slutföras. Felet får inte betyda att ett sparat resultat saknas.
+
+**Användare:** Alex i den kontrollerade installationen.
+
+**Förutsättningar:** Starta en tom installation enligt den allmänna
+förberedelsens första steg. Logga in utan **Kom ihåg mig**. Ha textvyn
+öppen utan ett pågående samtal och låt mikrofonen vara av.
+
+**Separat förberedelse av felet:** Kör följande i webbläsarens
+utvecklarkonsol innan samtalet startar. Den riktiga anslutningen öppnas,
+men den första uppgiftsnotisen släpps inte till appen och anslutningen
+stängs. Vanliga sidförfrågningar påverkas inte. Ladda om sidan efter
+provet för att ta bort felstyrningen.
+
+```javascript
+const OriginalWebSocket = window.WebSocket;
+window.WebSocket = class extends OriginalWebSocket {
+  constructor(...args) {
+    super(...args);
+    if (!String(args[0]).endsWith('/delivery')) return;
+    this.addEventListener('message', (event) => {
+      const frame = JSON.parse(event.data);
+      if (frame.type !== 'delivery' || frame.state !== 'waiting') return;
+      event.stopImmediatePropagation();
+      this.close();
+    });
+  }
+};
+```
+
+**Separat styrning av modellsvaret:** När instruktionen är mottagen,
+använd **pending** i startguidens terminal. Släpp det väntande försöket
+med `tool REQUEST read_type_catalog {}`. Läs nästa försöks
+**lastToolResult**, anteckna Person-typens id och läs **version** och
+**contentVersion** i **draft**. Släpp det försöket med
+`tool REQUEST propose_object JSON`, där JSON innehåller de lästa
+versionsvärdena, `id: "lo-delivery"`, `baseRevision: null` och
+`value: {typeId: TYPENS_ID, name: "Lo Exempel", description: ""}`.
+Använd giltig JSON med citattecken kring nycklarna och det lästa typ-id:t.
+Släpp sedan det sista försöket med
+`reply REQUEST Förslaget finns i ditt utkast.`. REQUEST betyder det
+aktuella försöksnumret från terminalen, inte ett nytt modellförsök.
+
+**Automatiskt motsvarande integrationstest:**
+[task-delivery.spec.ts](../../tests/integration/task-delivery.spec.ts), LEV-05.
+Riktig produktsida, HTTP, WebSocket och SQLite använder syntetisk modell.
+Automatiken passerar den vanliga tidsgränsen med serverklockan först
+efter slutfört arbete. Mänsklig körning väntar på verklig utgång.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/task-delivery.spec.ts",
+    "caseId": "LEV-05"
+  },
+  "reference": "Mottagen skriven instruktion med förlorad första uppgiftsnotis; faktisk stängd anslutning, syntetiskt förslag via MCP och SQLite. Automatiken passerar vanlig utgång efter slutfört arbete.",
+  "outcomes": [
+    "Textfältet töms för den mottagna instruktionen, men ett tydligt leveransfel visas även utan en första uppgiftsnotis. Felet påstår inte att lagrat arbete saknas.",
+    "Det tillåtna arbetet kan skapa Lo Exempel i utkastet. Leveransfelet finns kvar vid vanlig utgång.",
+    "Ny inloggning rensar den tillfälliga notisen och visar det beständiga förslaget utan att instruktionen skickas igen."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Starta ett samtal med text och godkänn det. Skriv **Lägg till Lo
+   Exempel i mitt utkast.** och välj **Skicka**. Kontrollera att fältet
+   töms och att ett tydligt leveransfel visas under **Hela svaret som
+   text**.
+2. Släpp modellens verktyg och svar enligt förberedelsen. Öppna
+   **Visa utkastet** och kontrollera att **Lo Exempel** finns där.
+3. Låt den vanliga inloggningen gå ut utan nya handlingar. Kontrollera
+   att leveransfelet finns kvar när **Välkommen till Skyttel** visas.
+4. Logga in som Alex igen. Kontrollera att leveransnotisen rensas.
+   Starta ett nytt samtal med text och öppna utkastet. Kontrollera att
+   **Lo Exempel** finns kvar utan att skicka instruktionen igen.
+
+**Förväntat resultat:**
+
+- En mottagen instruktion skiljs från misslyckad leverans. Fältet töms,
+  leveransfelet är tydligt och inget nytt försök startar automatiskt.
+- Det lagrade förslaget finns kvar och kan läsas efter ny inloggning.
+  Felet finns kvar vid utgång men rensas vid den nya inloggningen.
+- Ingen förnyad instruktion eller bekräftat sparande påstås på grund av
+  leveransfelet. Ny inloggning återspelar inget modellarbete.
 
 ## Mänsklig ljud- och hjälpmedelsbedömning
 

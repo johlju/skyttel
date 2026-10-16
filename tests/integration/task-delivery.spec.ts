@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import {
+  chooseConversationVoice,
+  microphoneButton,
+  openConversationDraft,
   startConversationWithText,
   turnMicrophoneOn,
   voiceBox,
@@ -8,7 +11,204 @@ import {
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
-import { modelMessage, textModel } from '../support/text-model.js';
+import { modelMessage, modelTool, textModel } from '../support/text-model.js';
+
+test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text och röst', async ({
+  page,
+}) => {
+  const model = textModel(() => [modelMessage('Svaret efter ditt uttryckliga återförsök.')]);
+  const live = liveProvider();
+  const app = await createInstallation(undefined, {
+    modelFetch: model.provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  const messages: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/messages'))
+      messages.push(request.postData() ?? '');
+  });
+  try {
+    await page.addInitScript({ content: liveBrowserFixtureSource });
+    await page.addInitScript(() => {
+      const originalWebSocket = new Proxy(window.WebSocket, {
+        construct(target, args) {
+          const socket = Reflect.construct(target, args) as WebSocket;
+          if (String(args[0]).endsWith('/delivery'))
+            Object.assign(window, { deliverySocket: socket });
+          return socket;
+        },
+      });
+      Object.assign(window, { originalWebSocket });
+      Object.defineProperty(window, 'WebSocket', { configurable: true, value: undefined });
+    });
+    await signIn(page.request, app.origin);
+    await createHousehold(page.request, app.origin, 'Leveransprov');
+    await page.goto(app.origin);
+    await startConversationWithText(page);
+    const textView = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+    const input = textView.getByRole('textbox', { name: 'Meddelande till Skyttel' });
+    const send = textView.getByRole('button', { name: 'Skicka', exact: true });
+    await input.fill('Beskriv cykeln.');
+    await send.click();
+    await expect(textView.getByRole('alert')).toHaveText(
+      'Instruktionen skickades inte. Skyttel kunde inte öppna anslutningen för hela svaret. Texten finns kvar; försök igen när kontakten fungerar.',
+    );
+    await expect(input).toHaveValue('Beskriv cykeln.');
+    await expect(textView.getByRole('log', { name: 'Samtalstext' })).not.toContainText('Du:');
+    expect(messages).toEqual([]);
+    expect(model.requests).toEqual([]);
+    await chooseConversationVoice(page);
+    await expect(page.getByRole('region', { name: 'Samtalsnotis', exact: true })).toContainText(
+      'Rösten kunde inte starta just nu. Försök igen om en stund.',
+    );
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.stats()))
+      .toMatchObject({
+        openPeers: 0,
+        microphoneTracks: [{ state: 'ended' }],
+      });
+    expect(live.requests).toEqual([]);
+    await page.evaluate(() => {
+      Object.defineProperty(window, 'WebSocket', {
+        configurable: true,
+        value: (window as Window & { originalWebSocket?: typeof WebSocket }).originalWebSocket,
+      });
+    });
+    // Restoring the transport alone never sends the retained instruction.
+    await expect(input).toHaveValue('Beskriv cykeln.');
+    await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    expect(messages).toEqual([]);
+    expect(live.requests).toEqual([]);
+    await send.click();
+    await expect(input).toHaveValue('');
+    await expect(
+      page.getByRole('region', { name: 'Hela svaret som text', exact: true }),
+    ).toContainText('Svaret efter ditt uttryckliga återförsök.');
+    expect(messages).toHaveLength(1);
+    expect(model.requests).toHaveLength(1);
+    await turnMicrophoneOn(page);
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
+    expect(live.requests).toHaveLength(1);
+    // The server also proves rejection if a once-ready channel disappears
+    // before admission; that is not an unknown save or an accepted task.
+    await page.route('**/messages', async (route) => {
+      await page.evaluate(async () => {
+        const socket = (window as Window & { deliverySocket?: WebSocket }).deliverySocket;
+        if (!socket) throw new Error('The original delivery socket must exist');
+        await new Promise<void>((resolve) => {
+          socket.addEventListener('close', () => resolve(), { once: true });
+          socket.close();
+        });
+      });
+      await route.continue();
+    });
+    await input.fill('Skapa inget nytt.');
+    const denied = page.waitForResponse(
+      (response) => response.url().endsWith('/messages') && response.status() === 409,
+    );
+    await send.click();
+    expect((await (await denied).json()).error).toBe('assistant_delivery_unavailable');
+    await expect(textView.getByRole('alert')).toHaveText(
+      'Instruktionen skickades inte. Skyttel kunde inte öppna anslutningen för hela svaret. Texten finns kvar; försök igen när kontakten fungerar.',
+    );
+    await expect(input).toHaveValue('Skapa inget nytt.');
+    await expect(textView.getByRole('log', { name: 'Samtalstext' })).not.toContainText(
+      'Skapa inget nytt.',
+    );
+    expect(model.requests).toHaveLength(1);
+  } finally {
+    await page.close();
+    await app.close();
+  }
+});
+
+test('LEV-05: förlorad första leveransram ger tydligt fel och bevarat utkast efter ny inloggning', async ({
+  page,
+}) => {
+  let clock = Date.now();
+  let release: (output: unknown[]) => void = () => {};
+  let first = true;
+  const model = textModel(() => {
+    if (!first) return [modelMessage('Förslaget finns i ditt utkast.')];
+    first = false;
+    return new Promise<unknown[]>((resolve) => {
+      release = resolve;
+    });
+  });
+  const app = await createInstallation(undefined, { now: () => clock, modelFetch: model.provider });
+  try {
+    await page.addInitScript(() => {
+      const OriginalWebSocket = window.WebSocket;
+      window.WebSocket = class extends OriginalWebSocket {
+        constructor(url: string | URL, protocols?: string | string[]) {
+          super(url, protocols);
+          if (!String(url).endsWith('/delivery')) return;
+          this.addEventListener('message', (event) => {
+            const frame = JSON.parse(String(event.data));
+            if (frame.type !== 'delivery' || frame.state !== 'waiting') return;
+            // Simulate loss before the App sees its first task frame. The
+            // actual authenticated socket and HTTP admission remain real.
+            event.stopImmediatePropagation();
+            this.close();
+          });
+        }
+      };
+    });
+    await signIn(page.request, app.origin);
+    const { household } = await (
+      await createHousehold(page.request, app.origin, 'Leveransprov')
+    ).json();
+    const map = await (
+      await page.request.get(`${app.origin}/api/households/${household.id}/map`)
+    ).json();
+    await page.goto(app.origin);
+    await startConversationWithText(page);
+    const textView = page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
+    const input = textView.getByRole('textbox', { name: 'Meddelande till Skyttel' });
+    await input.fill('Lägg till Lo Exempel i mitt utkast.');
+    const accepted = page.waitForResponse(
+      (response) => response.url().endsWith('/messages') && response.status() === 202,
+    );
+    await textView.getByRole('button', { name: 'Skicka', exact: true }).click();
+    const admission = await (await accepted).json();
+    expect(admission.tasks).toHaveLength(1);
+    expect(['waiting', 'failed']).toContain(admission.tasks[0].delivery.state);
+    await expect(input).toHaveValue('');
+    const failure = page
+      .getByRole('alert')
+      .filter({ hasText: 'Hela svaret kunde inte levereras.' });
+    await expect(failure).toBeVisible();
+    expect(model.requests).toHaveLength(1);
+    release([
+      modelTool('propose_object', {
+        version: map.draft.version,
+        contentVersion: map.contentVersion,
+        id: 'lo-delivery',
+        baseRevision: null,
+        value: { typeId: map.types[0].id, name: 'Lo Exempel', description: '' },
+      }),
+    ]);
+    await expect(textView.getByRole('log', { name: 'Samtalstext' })).toContainText(
+      'Förslaget finns i ditt utkast.',
+    );
+    await expect(await openConversationDraft(page)).toContainText('Lo Exempel');
+    expect(model.requests).toHaveLength(2);
+    clock += 8 * 60 * 60_000;
+    await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();
+    await expect(failure).toBeVisible();
+    await signIn(page.request, app.origin);
+    await expect(failure).toHaveCount(0, { timeout: 8000 });
+    await startConversationWithText(page);
+    await expect(await openConversationDraft(page)).toContainText('Lo Exempel');
+    expect(model.requests).toHaveLength(2);
+  } finally {
+    release([modelMessage('Avslutat prov.')]);
+    await page.close();
+    await app.close();
+  }
+});
 
 for (const scenario of [
   { id: 'LEV-01', audio: false, width: 1280 },

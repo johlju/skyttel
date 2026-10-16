@@ -15,6 +15,9 @@ import { MapRequestError, request } from './map-request.js';
 import { TaskDeliveryContext } from './task-delivery.js';
 import { useVoice, type Voice } from './use-voice.js';
 
+const deliveryUnavailableMessage =
+  'Instruktionen skickades inte. Skyttel kunde inte öppna anslutningen för hela svaret. Texten finns kvar; försök igen när kontakten fungerar.';
+
 /** How a conversation starts: with the microphone, or with the conversation text. */
 export type ConversationMode = 'voice' | 'text';
 
@@ -970,29 +973,44 @@ export function useConversation({
     }
     const epoch = ++requestEpoch.current;
     const sent = text;
-    showTranscript({ id: crypto.randomUUID(), role: 'user', text: sent });
+    const messageId = crypto.randomUUID();
     setPending(true);
     setError('');
     setTaskFailed(false);
     try {
-      const deliveryConnectionId = await delivery?.connect(`${path}/${current.id}`);
+      const deliveryConnection = await delivery?.connect(`${path}/${current.id}`);
       if (epoch !== requestEpoch.current) return;
+      if (delivery && !deliveryConnection) {
+        setError(deliveryUnavailableMessage);
+        return;
+      }
+      showTranscript({ id: messageId, role: 'user', text: sent });
       const result = await request<TextAssistantView>(`${path}/${current.id}/messages`, {
         revision: current.revision,
         draftVersion: current.review.version,
         contentVersion: current.review.contentVersion,
-        requestId: crypto.randomUUID(),
+        requestId: messageId,
         text: sent,
         queue,
-        deliveryConnectionId,
+        deliveryConnectionId: deliveryConnection?.id,
         deliveryAudio: voiceConnected.current,
       });
       if (epoch !== requestEpoch.current) return;
+      const accepted = result.tasks?.find((task) => task.id === messageId)?.delivery;
+      if (accepted) deliveryConnection?.observeAccepted(accepted);
       update(result);
       setText((value) => (value === sent ? '' : value));
       setUnknown(false);
     } catch (failure) {
-      if (epoch === requestEpoch.current) fail(failure);
+      if (epoch === requestEpoch.current) {
+        if (
+          failure instanceof MapRequestError &&
+          failure.code === 'assistant_delivery_unavailable'
+        ) {
+          setError(deliveryUnavailableMessage);
+          setTranscript((rows) => rows.filter((row) => row.id !== messageId));
+        } else fail(failure);
+      }
     } finally {
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }

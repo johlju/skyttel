@@ -6,8 +6,13 @@ import {
   type TaskDelivery,
 } from '../shared/task-delivery.js';
 
+export type TaskDeliveryConnection = {
+  id: string;
+  /** Observe this connection's authenticated admission, never HTTP answer text. */
+  observeAccepted: (delivery: TaskDelivery) => void;
+};
 type DeliveryClient = {
-  connect: (path: string) => Promise<string | undefined>;
+  connect: (path: string) => Promise<TaskDeliveryConnection | undefined>;
   received: (taskId: string, text: string) => void;
 };
 export const TaskDeliveryContext = createContext<DeliveryClient | null>(null);
@@ -20,14 +25,16 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
       string,
       {
         socket: WebSocket;
-        ready: Promise<string | undefined>;
+        ready: Promise<TaskDeliveryConnection | undefined>;
         awaiting: Map<string, string>;
       }
     >(),
   );
   const [results, setResults] = useState<TaskDelivery[]>([]);
   const owner = useRef({ actorId, loginId });
+  const ownerGeneration = useRef(0);
   const close = () => {
+    ownerGeneration.current++;
     const previous = [...connections.current.values()];
     connections.current.clear();
     for (const connection of previous) connection.socket.close();
@@ -46,6 +53,7 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
   });
   useEffect(
     () => () => {
+      ownerGeneration.current++;
       const previous = [...connections.current.values()];
       connections.current.clear();
       for (const connection of previous) connection.socket.close();
@@ -59,11 +67,19 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
       if (typeof WebSocket === 'undefined') return;
       const url = new URL(`${path}/delivery`, window.location.href);
       url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-      const socket = new WebSocket(url);
+      let socket: WebSocket;
+      try {
+        socket = new WebSocket(url);
+      } catch {
+        return;
+      }
       const tasks = new Set<string>();
       const timers = new Map<string, ReturnType<typeof setTimeout>>();
-      let finish: (id?: string) => void = () => {};
-      const ready = new Promise<string | undefined>((resolve) => {
+      const generation = ownerGeneration.current;
+      let open = true;
+      let retired = false;
+      let finish: (connection?: TaskDeliveryConnection) => void = () => {};
+      const ready = new Promise<TaskDeliveryConnection | undefined>((resolve) => {
         finish = resolve;
       });
       const awaiting = new Map<string, string>();
@@ -73,6 +89,50 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
         finish();
         socket.close();
       }, 5000);
+      const expire = (taskId: string, deadline: number) => {
+        if (timers.has(taskId)) return;
+        timers.set(
+          taskId,
+          setTimeout(
+            () => {
+              setResults((previous) =>
+                previous.map((item) =>
+                  item.taskId === taskId && item.state !== 'received'
+                    ? { ...item, state: 'failed' }
+                    : item,
+                ),
+              );
+              timers.delete(taskId);
+            },
+            Math.max(1, deadline - Date.now()),
+          ),
+        );
+      };
+      const observeAccepted = (value: TaskDelivery) => {
+        if (retired || generation !== ownerGeneration.current || value.state === 'received') return;
+        tasks.add(value.taskId);
+        const failed = !open || value.state === 'failed';
+        if (failed) {
+          clearTimeout(timers.get(value.taskId));
+          timers.delete(value.taskId);
+        } else expire(value.taskId, value.deadline);
+        setResults((previous) => {
+          const existing = previous.find((item) => item.taskId === value.taskId);
+          if (existing?.state === 'received' || existing?.state === 'failed') return previous;
+          if (existing && !failed) return previous;
+          return [
+            ...previous.filter((item) => item.taskId !== value.taskId),
+            existing
+              ? { ...existing, state: 'failed' }
+              : {
+                  taskId: value.taskId,
+                  deadline: value.deadline,
+                  audio: value.audio,
+                  state: failed ? 'failed' : 'waiting',
+                },
+          ];
+        });
+      };
       socket.addEventListener('message', (event) => {
         if (connections.current.get(path) !== connection) return;
         let body: TaskDelivery & { type: string; id?: string };
@@ -84,10 +144,11 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
         }
         if (body.type === 'connected' && typeof body.id === 'string') {
           clearTimeout(timeout);
-          finish(body.id);
+          finish({ id: body.id, observeAccepted });
           return;
         }
         if (body.type === 'retired') {
+          retired = true;
           clearTimeout(timeout);
           for (const timer of timers.values()) clearTimeout(timer);
           connections.current.delete(path);
@@ -110,25 +171,7 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
           awaiting.delete(body.taskId);
           clearTimeout(timers.get(body.taskId));
           timers.delete(body.taskId);
-        } else if (!timers.has(body.taskId)) {
-          const taskId = body.taskId;
-          timers.set(
-            taskId,
-            setTimeout(
-              () => {
-                setResults((previous) =>
-                  previous.map((item) =>
-                    item.taskId === taskId && item.state !== 'received'
-                      ? { ...item, state: 'failed' }
-                      : item,
-                  ),
-                );
-                timers.delete(taskId);
-              },
-              Math.max(1, body.deadline - Date.now()),
-            ),
-          );
-        }
+        } else expire(body.taskId, body.deadline);
         // One complete WebSocket message is required. No fragment or receipt
         // for another answer can become a full-text acknowledgement.
         if (body.state === 'awaiting-receipt') {
@@ -151,6 +194,7 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
         ]);
       });
       const ended = () => {
+        open = false;
         clearTimeout(timeout);
         for (const timer of timers.values()) clearTimeout(timer);
         finish();
