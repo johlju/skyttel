@@ -24,8 +24,8 @@ The reusable `Security checks` workflow adds:
 - Trivy configuration scanning with High and Critical failures.
 - Gitleaks scanning of the fetched Git history with redacted output. Any
   detected secret blocks. Exact synthetic fixture values are allowlisted only
-  in their test files and the disposable ZAP setup; no file or historical
-  commit is exempted.
+  in their test files, disposable research probes and the disposable ZAP
+  setup; no file or historical commit is exempted.
   GitHub secret scanning and push protection are also
   required repository settings; push protection alone is not a CI result.
 - Syft SPDX JSON for the final production image and Grype against that same

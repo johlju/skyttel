@@ -19,6 +19,15 @@ regexTarget = "secret"
 regexes = ['''^synthetic-ci-secret-at-least-32-characters$''']
 paths = ['''^(\.github/workflows/security\.yml|scripts/security/scan-running-image\.sh)$''']
 
+# Historical disposable Better Auth probe: in-memory SQLite, loopback origin
+# and a synthetic identity provider. Match this literal and this path only.
+[[rules.allowlists]]
+description = "Known synthetic authentication secret in the browser-binding research probe"
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^synthetic-secret-for-441-at-least-thirty-two-characters$''']
+paths = ['''^research/browser-binding-probe\.mjs$''']
+
 # Verified SHA-256 of docs/manual-tests/access.md at 020273b1. The history
 # scan includes the regression baseline branch, which records this checksum.
 [[rules.allowlists]]
