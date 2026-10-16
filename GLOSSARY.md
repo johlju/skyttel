@@ -57,6 +57,11 @@ hushållets karta samt fullständig export, återimport och permanent
 radering av hushållets information.
 Rollen ger inte större insyn i den gemensamma kartans innehåll.
 
+**Installationsansvarig**:
+En Skyttel-användare med ansvar för installationens drift och gemensamma
+inställningar.
+Rollen är skild från hushållets administratör.
+
 **Företag**:
 En verksamhet som finns representerad i kartan och exempelvis kan erbjuda
 tjänster eller vara part i avtal.
@@ -259,9 +264,21 @@ Valet av ljust, mörkt eller systemtema i Skyttel.
 För en inloggad Skyttel-användare gäller samma val på alla enheter och
 webbläsare; systemtema följer respektive enhets och webbläsares inställning.
 
+**Lagringssamtycke**:
+Besökarens eller Skyttel-användarens uttryckliga tillstånd till valfri
+lagring i den aktuella webbläsaren för ett angivet ändamål.
+Tillståndet är skilt från valet att använda funktionen som lagringen
+möjliggör.
+
+**Preferenskakor**:
+Valfri lagring i webbläsaren för att möjliggöra ihågkommen inloggning.
+Lagringssamtycke för preferenskakor är skilt från valet att aktivera
+ihågkommen inloggning.
+
 **Ihågkommen inloggning**:
 Skyttel-användarens uttryckliga val att låta inloggningen bestå mellan
 webbläsarsessioner i den aktuella webbläsaren.
+Valet är skilt från lagringssamtycket för ändamålet.
 
 **Nödvändig lagring**:
 Lagring som behövs för en funktion som Skyttel-användaren eller besökaren
