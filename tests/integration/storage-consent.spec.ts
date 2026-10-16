@@ -39,6 +39,14 @@ for (const [caseId, width, theme] of [
       await expect(
         settings.getByRole('switch', { name: 'Nödvändig lagring, alltid aktiv' }),
       ).toBeDisabled();
+      if (width === 390) {
+        await page.setViewportSize({ width: 320, height: 900 });
+        expect(await settings.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+        await expect(
+          settings.getByRole('button', { name: 'Spara Preferenser', exact: true }),
+        ).toBeInViewport();
+        await page.setViewportSize({ width, height: 900 });
+      }
       expect(await settings.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
       await settings.getByRole('switch', { name: 'Preferenskakor', exact: true }).check();
       await page.keyboard.press('Escape');

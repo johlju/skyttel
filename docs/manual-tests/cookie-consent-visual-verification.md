@@ -76,7 +76,10 @@ actions; policy frames show the page introduction without a banner.
 The automated cookie cases check accessible control names, keyboard use,
 Escape behavior, focus containment and return, background clicks, pending
 and unknown saves, mobile overflow and a public policy without an overlay.
-Existing policy and reset cases cover a 320-pixel viewport. These checks
+Policy, reset and expanded-banner cases cover a 320-pixel viewport. A
+320-pixel development-browser inspection also shows equal dialog content
+and scroll widths, with all three 44-pixel save buttons inside the viewport.
+These checks
 support WCAG 2.2 AA assessment; they do not establish full conformance.
 
 Human screen-reader reading and announcements, actual browser zoom and

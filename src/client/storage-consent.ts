@@ -11,12 +11,27 @@ export type StorageConsent = {
   decidedAt: number;
 };
 
-function rawConsent() {
+const unreadableConsent = Symbol('unreadable_consent');
+let rejectedConsent: string | null | typeof unreadableConsent | undefined;
+function storedConsent() {
   try {
     return localStorage.getItem(storageConsentKey);
   } catch {
-    return null;
+    return undefined;
   }
+}
+function rawConsent() {
+  const raw = storedConsent();
+  if (raw === undefined) return null;
+  // A failed withdrawal cannot make the old permission usable again in this
+  // document. A genuinely new saved decision or confirmed write can replace it.
+  if (
+    (rejectedConsent === unreadableConsent && raw !== null) ||
+    (rejectedConsent !== undefined && raw === rejectedConsent)
+  )
+    return null;
+  rejectedConsent = undefined;
+  return raw;
 }
 export function readStorageConsent(): StorageConsent | null {
   try {
@@ -40,8 +55,17 @@ export function writeStorageConsent(preferences: boolean) {
     decidedAt: Math.max(Date.now(), (readStorageConsent()?.decidedAt ?? 0) + 1),
   };
   const value = JSON.stringify(choice);
-  localStorage.setItem(storageConsentKey, value);
-  if (localStorage.getItem(storageConsentKey) !== value) throw new Error('consent_unconfirmed');
+  try {
+    localStorage.setItem(storageConsentKey, value);
+    if (localStorage.getItem(storageConsentKey) !== value) throw new Error('consent_unconfirmed');
+  } catch (error) {
+    if (!preferences) {
+      rejectedConsent = storedConsent() ?? unreadableConsent;
+      window.dispatchEvent(new Event(storageConsentEvent));
+    }
+    throw error;
+  }
+  rejectedConsent = undefined;
   window.dispatchEvent(new Event(storageConsentEvent));
   return choice;
 }

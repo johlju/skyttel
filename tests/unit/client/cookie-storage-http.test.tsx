@@ -5,6 +5,8 @@ import { userEvent } from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { CookieStorage } from '../../../src/client/CookieStorage.js';
+import { StorageConsentProvider } from '../../../src/client/StorageConsent.js';
+import { readStorageConsent, writeStorageConsent } from '../../../src/client/storage-consent.js';
 import { authenticatedHttpFetch } from '../../support/authenticated-http-fetch.js';
 import { activateRememberedLogin, signIn } from '../../support/client.js';
 import { createInstallation, robin } from '../../support/installation.js';
@@ -548,4 +550,127 @@ test('failed consent cleanup keeps confirmed OFF separate from an incomplete bro
       })
     ).json(),
   ).toMatchObject({ remembered: false });
+});
+
+test('a delayed reset preserves a newer browser consent choice', async () => {
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  let release = () => {};
+  let reached = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const committed = new Promise<void>((resolve) => {
+    reached = resolve;
+  });
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    const response = await transport(input, init);
+    if (String(input) === '/api/browser-binding/revoke') {
+      reached();
+      await held;
+    }
+    return response;
+  });
+  render(page());
+  await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
+  await userEvent.click(screen.getByRole('button', { name: 'Återställ valfri lagring' }));
+  const dialog = screen.getByRole('dialog', { name: 'Återställ valfri lagring?' });
+  try {
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Återställ' }));
+    await committed;
+    let newer: ReturnType<typeof writeStorageConsent> | undefined;
+    await act(async () => {
+      newer = writeStorageConsent(true);
+      release();
+      await held;
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain(
+        'Avstängningen är bekräftad. Ett nyare lagringsval bevaras.',
+      ),
+    );
+    expect(readStorageConsent()).toEqual(newer);
+    expect(
+      (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
+    ).toBe(false);
+  } finally {
+    release();
+  }
+});
+
+test('failed browser withdrawal still disables the remembered session on the server', async () => {
+  render(page());
+  await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
+  const set = Storage.prototype.setItem;
+  const remove = Storage.prototype.removeItem;
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key === 'skyttel-storage-consent')
+      throw new DOMException('Synthetic denied consent write', 'QuotaExceededError');
+    set.call(this, key, value);
+  });
+  vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key) {
+    if (key === 'skyttel-storage-consent')
+      throw new DOMException('Synthetic denied consent cleanup', 'SecurityError');
+    remove.call(this, key);
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Endast nödvändiga' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Spara Preferenser' }));
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.'),
+  );
+  expect(screen.getByRole('alert').textContent).toContain(
+    'Kakvalet kunde inte sparas och bekräftas.',
+  );
+  expect(JSON.parse(localStorage.getItem('skyttel-storage-consent') ?? 'null').preferences).toBe(
+    true,
+  );
+  expect(readStorageConsent()).toBeNull();
+  const get = Storage.prototype.getItem;
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementationOnce(() => {
+    throw new DOMException('Synthetic temporary read failure', 'SecurityError');
+  });
+  expect(readStorageConsent()).toBeNull();
+  expect(readStorageConsent()).toBeNull();
+  expect(get.call(localStorage, 'skyttel-storage-consent')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Kom ihåg mig i Skyttel' })).toBeNull();
+  expect(
+    await (
+      await client.get(`${installation.origin}/api/browser-binding/preference`, {
+        headers: { origin: installation.origin },
+      })
+    ).json(),
+  ).toMatchObject({ remembered: false });
+});
+
+test('the banner announces an unavailable preference and offers a fresh login', async () => {
+  localStorage.removeItem('skyttel-storage-consent');
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === '/api/browser-binding/preference')
+      throw new TypeError('Synthetic preference reply unavailable');
+    return transport(input, init);
+  });
+  render(
+    <BrowserRouter>
+      <StorageConsentProvider userId={ownerId}>
+        <main>
+          <h1>Skyttel</h1>
+          <button type="button">Fortsätt med Google</button>
+        </main>
+      </StorageConsentProvider>
+    </BrowserRouter>,
+  );
+  const dialog = screen.getByRole('dialog', { name: 'Vi använder kakor' });
+  await waitFor(() =>
+    expect(within(dialog).getByRole('alert').textContent).toContain(
+      'Aktuellt val kunde inte hämtas.',
+    ),
+  );
+  expect(within(dialog).getByRole('link', { name: 'Logga in igen' }).getAttribute('href')).toBe(
+    '/login',
+  );
+  await userEvent.click(within(dialog).getByRole('link', { name: 'Logga in igen' }));
+  expect(screen.queryByRole('dialog', { name: 'Vi använder kakor' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Fortsätt med Google' }).hasAttribute('disabled')).toBe(
+    false,
+  );
 });

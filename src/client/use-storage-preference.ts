@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { installationRestoredMessage } from '../shared/installation-restore.js';
-import { revokeRememberedLogin, type StoragePreference } from './browser-binding.js';
+import { changeRememberedLogin, type StoragePreference } from './browser-binding.js';
 import { MapRequestError, request } from './map-request.js';
 import { resetStorageConsent } from './storage-consent.js';
 
@@ -240,7 +240,7 @@ export function useStoragePreference(userId?: string) {
     setResultChecked(false);
     const ticket = ++generation.current;
     try {
-      const result = await revokeRememberedLogin(selected.id, saved, remembered);
+      const result = await changeRememberedLogin(selected.id, saved, remembered);
       if (generation.current !== ticket) return;
       setSaved(result.result);
       setConfirmedRemembered(remembered);

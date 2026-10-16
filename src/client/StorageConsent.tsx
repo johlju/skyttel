@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Link } from 'react-router';
 import { browserBindingLock } from './browser-binding.js';
 import { claimLoginOffer, setLoginOffers } from './login-offer.js';
 import { trapDialogTab, usableFocusTarget } from './modal-focus.js';
@@ -75,16 +76,34 @@ function useConsentManager(userId?: string) {
     setError('');
     setMessage('');
     try {
-      if (!preferences && preference.saved) invalidatedBinding.current = preference.saved.bindingId;
       // Remove permission before any server await. Other tabs re-read this
       // record before explicit activation; notifications confer no authority.
-      const choice = writeStorageConsent(preferences);
+      let choice: ReturnType<typeof writeStorageConsent> | undefined;
+      let consentFailed = false;
+      try {
+        choice = writeStorageConsent(preferences);
+      } catch (error) {
+        if (preferences) throw error;
+        consentFailed = true;
+        // A failed write must not leave an earlier permission in place when
+        // deletion remains available. Server demotion is still required even
+        // when both browser operations fail.
+        try {
+          resetStorageConsent();
+        } catch {
+          /* Keep the browser failure explicit after the independent demotion. */
+        }
+        setError('Lagringsvalet kunde inte sparas. Avstängningen kontrolleras separat.');
+      }
       if (userId && !preference.saved) throw new Error('session_unconfirmed');
       if (!preferences && preference.saved?.remembered) {
-        if (!(await preference.change(false, reset, choice.decidedAt))) return false;
-      } else if (reset) resetStorageConsent();
+        invalidatedBinding.current = preference.saved.bindingId;
+        if (!(await preference.change(false, reset && !consentFailed, choice?.decidedAt)))
+          return false;
+      } else if (reset && !consentFailed) resetStorageConsent(choice?.decidedAt);
       if (ticket !== generation.current) return false;
-      if (reset && readStorageConsent()?.decidedAt === choice.decidedAt)
+      if (consentFailed) throw new Error('consent_unconfirmed');
+      if (reset && readStorageConsent()?.decidedAt === choice?.decidedAt)
         throw new Error('consent_reset_unconfirmed');
       setMessage(
         reset
@@ -97,7 +116,7 @@ function useConsentManager(userId?: string) {
       return true;
     } catch {
       setError(
-        'Kakvalet kunde inte sparas och bekräftas. Försök spara igen. Du kan fortsätta med endast nödvändig lagring.',
+        'Kakvalet kunde inte sparas och bekräftas. Försök spara igen. Ett tidigare sparat val kan finnas kvar i andra flikar eller efter omladdning. Du kan fortsätta med endast nödvändig lagring.',
       );
       return false;
     } finally {
@@ -131,15 +150,18 @@ export function StorageConsentProvider({
     <ConsentContext value={manager}>
       {children}
       {show && <ConsentBanner onLeave={() => setBypassed(true)} />}
-      {!suppressBanner && !show && manager.preference.state === 'saved' && (
-        <p className="cookie-storage storage-notice" role="status">
-          Ihågkommen inloggning är{' '}
-          {manager.preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}.{' '}
-          {manager.preference.continued
-            ? 'Du är fortfarande inloggad.'
-            : 'Logga in igen för att fortsätta.'}
-        </p>
-      )}
+      {!suppressBanner &&
+        !show &&
+        (['saving', 'checking', 'saved', 'unknown', 'rejected', 'restored'].includes(
+          manager.preference.state,
+        ) ||
+          manager.preference.recoveryMessage ||
+          manager.error ||
+          manager.message) && (
+          <div className="cookie-storage storage-notice">
+            <ConsentFeedback />
+          </div>
+        )}
       {userId && loginId && !show && <RememberedLoginOffer userId={userId} loginId={loginId} />}
     </ConsentContext>
   );
@@ -203,7 +225,7 @@ function RememberedLoginOffer({ userId, loginId }: { userId: string; loginId: st
         från den ursprungliga inloggningen. Detta ändrar inte ditt Google- eller Microsoft-konto.
         Välj bara detta på en egen enhet.
       </p>
-      <ConsentFeedback />
+      <ConsentFeedback onLogin={() => setOpen(false)} />
       {error && <p role="alert">{error}</p>}
       <footer>
         <button
@@ -383,15 +405,24 @@ export function ConsentCategories({
   );
 }
 
-export function ConsentFeedback() {
+export function ConsentFeedback({
+  alwaysRender = false,
+  onLogin,
+}: {
+  alwaysRender?: boolean;
+  onLogin?: () => void;
+}) {
   const manager = useContext(ConsentContext);
   if (!manager) return null;
   const { preference, error, message } = manager;
   if (
+    !alwaysRender &&
     !error &&
     !message &&
     !preference.recoveryMessage &&
-    !['saving', 'checking', 'unknown', 'rejected', 'unavailable'].includes(preference.state) &&
+    !['saving', 'checking', 'saved', 'unknown', 'rejected', 'unavailable', 'restored'].includes(
+      preference.state,
+    ) &&
     !manager.saving
   )
     return null;
@@ -402,19 +433,45 @@ export function ConsentFeedback() {
           ? 'Sparar…'
           : preference.state === 'checking'
             ? 'Kontrollerar samma åtgärd…'
-            : message}
+            : preference.state === 'saved'
+              ? `Ihågkommen inloggning är ${preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}. ${preference.reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : preference.continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'} ${message}`
+              : message}
+        {preference.state === 'saved' && preference.recoveryMessage
+          ? ` ${preference.recoveryMessage}`
+          : ''}
       </p>
       <p role="alert">
-        {error ||
-          (preference.state === 'unknown'
-            ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.'
-            : preference.state === 'rejected'
-              ? 'Ändringen kunde inte sparas. Försök igen.'
-              : '')}
+        {error}
+        {error ? ' ' : ''}
+        {preference.state === 'unknown'
+          ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes. Åtgärdens referens bevaras. Att lämna vyn skickar inget nytt sparande.'
+          : preference.state === 'rejected'
+            ? 'Ändringen kunde inte sparas. Försök igen.'
+            : preference.state === 'unavailable'
+              ? preference.recoveryMessage ||
+                'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
+              : preference.state === 'restored'
+                ? preference.recoveryMessage
+                : ''}
+        {preference.state === 'unknown' && preference.recoveryMessage
+          ? ` ${preference.recoveryMessage}`
+          : ''}
       </p>
-      {preference.recoveryMessage && <p>{preference.recoveryMessage}</p>}
-      {preference.state === 'unknown' && (
-        <button type="button" onClick={() => void preference.checkAgain()}>
+      {preference.requiresLogin && (
+        <p>
+          <Link to="/login" onClick={onLogin}>
+            Logga in igen
+          </Link>
+        </p>
+      )}
+      {(preference.state === 'unknown' ||
+        preference.state === 'checking' ||
+        preference.resultChecked) && (
+        <button
+          type="button"
+          aria-disabled={preference.state !== 'unknown'}
+          onClick={() => void preference.checkAgain()}
+        >
           Kontrollera igen
         </button>
       )}
@@ -521,7 +578,7 @@ function ConsentBanner({ onLeave }: { onLeave: () => void }) {
             </div>
           </div>
         )}
-        <ConsentFeedback />
+        <ConsentFeedback onLogin={onLeave} />
         <div className="consent-banner-buttons">
           <button ref={reject} type="button" disabled={manager.blocked} onClick={() => save(false)}>
             Endast nödvändiga
@@ -557,11 +614,18 @@ function ConsentBanner({ onLeave }: { onLeave: () => void }) {
             </button>
           )}
         </div>
-        {manager.error && !pending && !unknown && (
-          <button type="button" onClick={onLeave}>
-            Fortsätt med endast nödvändig lagring
-          </button>
-        )}
+        {manager.error &&
+          !pending &&
+          !unknown &&
+          (manager.preference.saved?.remembered || manager.preference.requiresLogin ? (
+            <Link to="/login" onClick={onLeave}>
+              Logga in på nytt med endast nödvändig lagring
+            </Link>
+          ) : (
+            <button type="button" onClick={onLeave}>
+              Fortsätt med endast nödvändig lagring
+            </button>
+          ))}
         {unknown && (
           <button type="button" onClick={onLeave}>
             Fortsätt med okänt utfall

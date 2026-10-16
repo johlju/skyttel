@@ -1320,8 +1320,9 @@ KAK-32.
 
 1. Öppna startsidan med kartan. Kontrollera Vi använder kakor. Tryck Escape och
    kontrollera fokus på Endast nödvändiga.
-2. Välj Läs mer. Slå på Preferenskakor och tryck Escape. Öppna Anpassa
-   Inställningar igen.
+2. Välj Läs mer. Tryck Tab, Enter och Tab. Kontrollera att nödvändiga
+   lagringsuppgifter öppnas och att fokus sedan når Preferenskakor.
+   Slå på Preferenskakor och tryck Escape. Öppna Anpassa Inställningar igen.
 3. Kontrollera att påbörjat val finns kvar. Välj Spara Preferenser och ladda om.
 
 **Förväntat resultat:**
@@ -1355,7 +1356,7 @@ KAK-36.
     "spec": "tests/integration/storage-consent.spec.ts",
     "caseId": "KAK-36"
   },
-  "reference": "390 pixlar, ljust tema",
+  "reference": "390 och 320 pixlar, ljust tema",
   "outcomes": [
     "Samma val, fokus och sparande som på dator fungerar på mobil."
   ]
@@ -1368,6 +1369,8 @@ KAK-36.
 
 1. Följ KAK-32 vid 390 pixlar. Kontrollera att kategorier och knappar går att nå
    utan sidledsrullning.
+2. Prova även det utökade bannerläget vid 320 pixlar. Kontrollera att
+   sparknapparna syns och kategorierna går att läsa utan sidledsrullning.
 
 **Förväntat resultat:**
 
@@ -1436,7 +1439,7 @@ KAK-38.
     "spec": "tests/integration/storage-consent.spec.ts",
     "caseId": "KAK-38"
   },
-  "reference": "390 pixlar, mörkt systemtema",
+  "reference": "390 och 320 pixlar, mörkt systemtema",
   "outcomes": [
     "Samma val, fokus och sparande fungerar på mobil i mörkt tema."
   ]
@@ -1448,6 +1451,8 @@ KAK-38.
 **Steg:**
 
 1. Följ KAK-32 i mörkt tema vid 390 pixlar.
+2. Prova även det utökade bannerläget vid 320 pixlar. Kontrollera att
+   sparknapparna syns och kategorierna går att läsa utan sidledsrullning.
 
 **Förväntat resultat:**
 

@@ -173,7 +173,12 @@ eller hushållets uppgifter.
 
 Läs felbeskedet och försök spara igen. Du kan fortsätta med endast
 nödvändig lagring; ihågkommen inloggning kräver ett sparat, bekräftat
-samtycke. Ett skickat serveranrop med förlorat svar har däremot okänt
+samtycke. Om ett äldre tillstånd inte heller kan tas bort kan det finnas
+kvar i andra flikar eller efter omladdning. Skyttel spärrar det äldre
+tillståndet i den öppna sidan och kontrollerar avstängningen separat.
+Kontrollera webbläsarens lagringsinställningar och spara valet igen.
+
+Ett skickat serveranrop med förlorat svar har däremot okänt
 utfall. Dialogen kan inte stängas medan anropet pågår. Efter en timeout
 kan du lämna efter varningen, behålla åtgärdens referens och senare välja
 **Kontrollera igen**. Skyttel skickar inte ändringen igen automatiskt.

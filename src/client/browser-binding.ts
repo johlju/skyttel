@@ -175,7 +175,7 @@ export type StoragePreference = {
   generation?: string;
 };
 
-export async function revokeRememberedLogin(
+export async function changeRememberedLogin(
   id: string,
   expected: StoragePreference,
   remembered = false,

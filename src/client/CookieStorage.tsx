@@ -1,6 +1,5 @@
 // Layout adapted from Viscalyx CookieSettings; see CookieStorage.LICENSE.
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
 import { rememberedLoginInformation } from '../shared/remembered-login.js';
 import { cookiePolicyPublishedAt } from '../shared/storage-consent.js';
 import referenceLicense from './CookieStorage.LICENSE?url&no-inline';
@@ -42,7 +41,7 @@ const entries = [
     name: 'skyttel-storage-operation:<användar-ID>',
     place: 'Webbläsarens sessionStorage i den aktuella fliken.',
     content:
-      'Referens till en uttryckligen begärd avstängning, den ursprungliga inloggningens ID och installationens säkerhetsgeneration. Gör att samma resultat kan kontrolleras efter ett förlorat svar och ny inloggning. Referensen ger ingen behörighet och innehåller inget lagringsval.',
+      'Referens till en uttryckligen begärd aktivering eller avstängning, den ursprungliga inloggningens ID och installationens säkerhetsgeneration. Begärans riktning, eventuell återställning och det berörda samtyckets beslutstid gör att samma åtgärd kan kontrolleras efter ett förlorat svar och ny inloggning. Detta är en avsikt för återhämtning, inte ett bekräftat aktuellt lagringsval eller en behörighet.',
     time: 'Skapas först när du väljer att spara eller bekräftar återställning. Tas bort när utfallet bekräftas eller avvisas. Flikens lagring kan försvinna; rensning kan hindra återhämtning men upprepar inte ändringen. Serverns kontrollfönster är 24 timmar från ändringen.',
   },
   {
@@ -89,7 +88,7 @@ const serverEntries = [
   {
     name: 'storage_action_result',
     content:
-      'Åtgärds-ID, rätt användare, bekräftad avstängning, ändringstid, kontrollfrist och den tidigare sessionens slut låter dig kontrollera samma resultat efter ett förlorat svar. Ingen separat valhistorik förs.',
+      'Åtgärds-ID, rätt användare, bekräftad aktivering eller avstängning, ändringstid, kontrollfrist och den berörda sessionens slut låter dig kontrollera samma resultat efter ett förlorat svar. Ingen separat valhistorik förs.',
     time: 'Kan läsas av rätt inloggade användare under 24 timmar från ändringen. Därefter gallras resultatet. Ett saknat resultat bevisar inte att ändringen avvisades eller genomfördes.',
   },
   {
@@ -153,21 +152,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
   const [resetOrigin, setResetOrigin] = useState<HTMLButtonElement | null>(null);
   const [resultPlace, setResultPlace] = useState<'save' | 'reset'>('save');
   const resetUser = useRef(userId);
-  const {
-    saved,
-    requested,
-    state,
-    continued,
-    reauthenticated,
-    requiresLogin,
-    resultChecked,
-    recoveryMessage,
-    dirty,
-    setRequested,
-    undo,
-    save,
-    checkAgain,
-  } = manager.preference;
+  const { saved, requested, state, dirty, setRequested, undo, save } = manager.preference;
   const blocked = manager.blocked;
   const consentDirty = preferences !== (manager.consent?.preferences ?? false);
   async function saveAll() {
@@ -193,55 +178,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
       setResultPlace('save');
     }
   }, [userId]);
-  const feedback = (
-    <div className="cookie-storage-feedback">
-      <p role="status">
-        {state === 'saved' && (
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="m5 12 4 4L19 6" strokeWidth="2" />
-          </svg>
-        )}
-        {state === 'saving'
-          ? 'Sparar…'
-          : state === 'checking'
-            ? 'Kontrollerar samma åtgärd…'
-            : state === 'saved'
-              ? `Ihågkommen inloggning är ${manager.preference.confirmedRemembered ? 'aktiverad' : 'avstängd'}. ${reauthenticated ? 'Resultatet gäller din tidigare begäran. Du har loggat in på nytt.' : continued ? 'Du är fortfarande inloggad.' : 'Logga in igen för att fortsätta.'}`
-              : manager.saving
-                ? 'Sparar…'
-                : manager.message}
-        {state === 'saved' && recoveryMessage ? ` ${recoveryMessage}` : ''}
-      </p>
-      <p role="alert">
-        {['rejected', 'unknown', 'unavailable', 'restored'].includes(state) && (
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="m12 3 10 18H2Z M12 9v5m0 3v1" strokeWidth="2" />
-          </svg>
-        )}
-        {state === 'rejected'
-          ? 'Ändringen kunde inte sparas. Försök igen.'
-          : state === 'unknown'
-            ? 'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.'
-            : state === 'unavailable'
-              ? recoveryMessage ||
-                'Aktuellt val kunde inte hämtas. Logga in igen för att fortsätta.'
-              : ''}
-        {state === 'unknown' && recoveryMessage ? ` ${recoveryMessage}` : ''}
-        {state === 'restored' ? recoveryMessage : ''}
-        {manager.error}
-      </p>
-      {requiresLogin && (
-        <p>
-          <Link to="/login">Logga in igen</Link>
-        </p>
-      )}
-      {(state === 'unknown' || state === 'checking' || resultChecked) && (
-        <button type="button" aria-disabled={state !== 'unknown'} onClick={() => void checkAgain()}>
-          Kontrollera igen
-        </button>
-      )}
-    </div>
-  );
+  const feedback = <ConsentFeedback alwaysRender />;
   return (
     <article className="cookie-storage">
       {(userId || consentDirty) && (
@@ -539,10 +476,10 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           lokalt åtgärds-ID ersätter aldrig serverns behörighetskontroll.
         </p>
         <p>
-          Efter avstängning av ihågkommen inloggning sparar servern ett minimalt åtgärdsresultat för
-          din användare. Resultatet kan kontrolleras under 24 timmar från ändringen, vid behov efter
-          ny inloggning. Referensen ger ingen egen åtkomst och finns inte i en separat historik över
-          tidigare val.
+          Efter aktivering eller avstängning av ihågkommen inloggning sparar servern ett minimalt
+          åtgärdsresultat för din användare. Resultatet kan kontrolleras under 24 timmar från
+          ändringen, vid behov efter ny inloggning. Referensen ger ingen egen åtkomst och finns inte
+          i en separat historik över tidigare val.
         </p>
         <p>
           Pågående samtal och leveransanslutningar har också tillfälliga uppgifter i serverns och
@@ -682,7 +619,7 @@ function StorageResetDialog({
           rensas inte. Google och Microsoft styr sin egen lagring.
         </p>
       </div>
-      <ConsentResetFeedback />
+      <ConsentFeedback />
       <footer>
         <button ref={cancel} type="button" disabled={pending} onClick={onCancel}>
           {unknown ? 'Lämna med okänt utfall' : 'Avbryt'}
@@ -697,22 +634,5 @@ function StorageResetDialog({
         </button>
       </footer>
     </dialog>
-  );
-}
-
-function ConsentResetFeedback() {
-  const manager = useConsentManagerContext();
-  return (
-    <>
-      <ConsentFeedback />
-      {manager?.preference.state === 'saved' && (
-        <p role="status">
-          Avstängningen är bekräftad.{' '}
-          {manager.preference.continued
-            ? 'Du är fortfarande inloggad.'
-            : 'Kontrollera aktuell inloggning innan du fortsätter.'}
-        </p>
-      )}
-    </>
   );
 }
