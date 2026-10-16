@@ -58,13 +58,13 @@ const serverEntries = [
   {
     name: 'user och account',
     content:
-      'Ditt Skyttel-konto, kopplade leverantörsidentiteter och krypterade leverantörstoken behövs för att känna igen rätt person. Kontolänkarna är inte ett Kom ihåg mig-val.',
+      'Ditt Skyttel-konto med visningsnamn och teknisk identitetsadress, kopplade leverantörsidentiteter och krypterade leverantörstoken behövs för att känna igen rätt person. Kontolänkarna är inte ett Kom ihåg mig-val.',
     time: 'Kontot och kopplingarna finns kvar efter utloggning. De har ingen sessionsfrist. En kontrollerad återställning ogiltigförklarar gamla token men bevarar identitetskopplingarna. Permanent radering av hushållet hanteras separat.',
   },
   {
     name: 'session',
     content:
-      'Sessionsnyckeln, ägaren, valets struktur- och informationsversion, beslutstid och absoluta slut samt senaste användarhandling styr just denna inloggning. Ett tidsbegränsat arbetsankare kan pausa inaktiviteten under mottaget AI-arbete och leverans. Ingen handlingshistorik skapas.',
+      'Sessionsnyckeln, ägaren, valets struktur- och informationsversion, beslutstid och absoluta slut samt senaste användarhandling styr just denna inloggning. Better Auth registrerar också IP-adress och webbläsarens identifikation när de finns i inloggningsanropet. Ett tidsbegränsat arbetsankare kan pausa inaktiviteten under mottaget AI-arbete och leverans. Ingen handlingshistorik skapas.',
     time: 'Vanlig åtkomst upphör efter 30 minuters inaktivitet eller högst åtta timmar från inloggningen. Ihågkommen åtkomst upphör högst sju dygn från inloggningen. Avstängning och uttrycklig utloggning kan avsluta åtkomsten tidigare. Utgångna sessioner gallras automatiskt; omstart förlänger inte gränserna eller återupptar arbete.',
   },
   {
