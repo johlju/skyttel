@@ -227,8 +227,38 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
   return { client: client.current, results, clear: close };
 }
 
-export function TaskDeliveryResults({ results }: { results: TaskDelivery[] }) {
+export function TaskDeliveryResults({
+  results,
+  workspace = false,
+}: {
+  results: TaskDelivery[];
+  workspace?: boolean;
+}) {
   const client = useContext(TaskDeliveryContext);
+  const surface = useRef<HTMLElement>(null);
+  const visible = results.filter((item) => item.state !== 'waiting');
+  const hasResults = visible.length > 0;
+  useLayoutEffect(() => {
+    const element = surface.current;
+    const shell = element?.closest<HTMLElement>('.app-shell');
+    if (!workspace || !hasResults || !element || !shell) return;
+    const measure = () => {
+      shell.style.setProperty(
+        '--task-delivery-height',
+        `${element.getBoundingClientRect().height}px`,
+      );
+      window.dispatchEvent(new Event('resize'));
+    };
+    measure();
+    const observer =
+      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
+    observer?.observe(element);
+    return () => {
+      observer?.disconnect();
+      shell.style.removeProperty('--task-delivery-height');
+      window.dispatchEvent(new Event('resize'));
+    };
+  }, [workspace, hasResults]);
   const announced = useRef(new Set<string>());
   const [announcement, setAnnouncement] = useState({ count: 0, text: '' });
   useEffect(() => {
@@ -255,7 +285,6 @@ export function TaskDeliveryResults({ results }: { results: TaskDelivery[] }) {
     for (const item of results)
       if (item.state === 'awaiting-receipt' && item.text) client?.received(item.taskId, item.text);
   }, [client, results]);
-  const visible = results.filter((item) => item.state !== 'waiting');
   return (
     <>
       <p
@@ -267,7 +296,13 @@ export function TaskDeliveryResults({ results }: { results: TaskDelivery[] }) {
         <span key={announcement.count}>{announcement.text}</span>
       </p>
       {!!visible.length && (
-        <section className="task-delivery-results panel" aria-label="Hela svaret som text">
+        <section
+          ref={surface}
+          className="task-delivery-results panel"
+          aria-label="Hela svaret som text"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: The named scroll region needs keyboard scrolling without a pointer.
+          tabIndex={0}
+        >
           <h2>Hela svaret som text</h2>
           {visible.map((item) => (
             <article key={item.taskId}>

@@ -543,6 +543,10 @@ webbläsaren får hela texten; den säger inget om uppspelat ljud, läsning
 eller förståelse. Du behöver inte bekräfta eller läsa svaret för att
 uppgiften ska avslutas.
 
+Långa svar rullas inuti svarsrutan. Du kan flytta fokus till rutan med
+tangentbordet och rulla till sista raden. Kartans verktyg och
+Inställningar går fortfarande att använda medan svaret finns kvar.
+
 En redan mottagen skriven instruktion kan få sitt svar där efter att
 inloggningen går ut, om samma anslutning fortfarande är öppen. Uppgiftens
 ursprungliga gräns på 30 minuter gäller även leveransen. Ett avbrott,

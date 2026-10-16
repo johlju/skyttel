@@ -55,7 +55,7 @@ leverantörer. Det bevisar inte mänsklig läsning eller verklig uppläsning.
     "spec": "tests/integration/task-delivery.spec.ts",
     "caseId": "LEV-01"
   },
-  "reference": "1280 × 800; vanlig inloggning och kontrollerad servergräns. En hållen skriven instruktion återkommer efter utgång på samma redan öppna anslutning.",
+  "reference": "1280 × 800; vanlig inloggning och kontrollerad servergräns. En hållen skriven instruktion återkommer efter utgång på samma redan öppna anslutning. Lång text rullas med tangentbord vid 1280, 390 och 320 pixlar.",
   "outcomes": [
     "Hela svaret med sista frågan och korrekt sparstatus visas vid inloggningssidan utan ljudnotis. Ett kort tillgängligt statusbesked uppdateras en gång utan att fokus flyttas.",
     "Texten ryms utan rullning i sidled. Ny inloggning som samma användare rensar svaret utan att instruktionen skickas igen."
@@ -73,7 +73,10 @@ leverantörer. Det bevisar inte mänsklig läsning eller verklig uppläsning.
    **Fortsätt med Google** utan att aktivera knappen. Släpp modellsvaret
    enligt förberedelsen. Läs **Hela svaret som text**, från första till
    sista del och frågan. Kontrollera beskedet om sparande och att fokus
-   ligger kvar.
+   ligger kvar. Flytta sedan fokus till svarsrutan med tangentbordet och
+   rulla till slutfrågan. Upprepa läsningen vid 1280, 390 och 320 pixlars
+   bredd. Hela svarsrutan ska rymmas och texten rullas inuti den utan
+   rullning i sidled.
 3. Logga in igen som Alex. Kontrollera att det gamla svaret rensas utan
    att instruktionen skickas igen.
 
@@ -112,7 +115,7 @@ Det gäller en skriven instruktion med röst på; tal får inget undantag.
     "spec": "tests/integration/task-delivery.spec.ts",
     "caseId": "LEV-02"
   },
-  "reference": "390 × 800; syntetiska medier och hållen skriven instruktion med aktiv röst. Samma tidsgräns och nya inloggning som LEV-01.",
+  "reference": "390 × 800; syntetiska medier och hållen skriven instruktion med aktiv röst. Samma tidsgräns och nya inloggning som LEV-01. Lång text rullas med tangentbord vid 1280, 390 och 320 pixlar.",
   "outcomes": [
     "Hela svaret med slutfråga och korrekt sparstatus visas efter utgång med beskedet att ljudleveransen inte kan bekräftas. Ett kort tillgängligt statusbesked uppdateras en gång utan att fokus flyttas.",
     "Text och notis ryms utan rullning i sidled. Ny inloggning rensar svaret utan modellåterspelning."
@@ -130,7 +133,9 @@ Det gäller en skriven instruktion med röst på; tal får inget undantag.
 2. Vänta på inloggningssidan. Flytta fokus till **Fortsätt med Google**
    utan att aktivera knappen och släpp modellsvaret enligt förberedelsen.
    Läs hela texten, frågan, sparstatus och ljudnotisen. Kontrollera att
-   fokus ligger kvar.
+   fokus ligger kvar. Flytta sedan fokus till svarsrutan med tangentbordet
+   och rulla till slutfrågan. Upprepa läsningen vid 1280, 390 och 320
+   pixlars bredd utan rullning i sidled.
 3. Logga in igen som Alex och kontrollera att texten rensas.
 
 **Förväntat resultat:**
@@ -154,7 +159,8 @@ leveransfel eller starta ett uppdrag som användaren tror är skickat.
 
 **Förutsättningar:** Starta en tom installation enligt den allmänna
 förberedelsens första steg. Provet använder inte tidsgränsen. Ha
-textvyn öppen utan ett pågående samtal.
+textvyn öppen utan ett pågående samtal. Använd systemtema med mörkt läge
+i operativsystemet.
 
 **Separat förberedelse:** Öppna webbläsarens utvecklarkonsol och kör
 följande innan du startar samtalet. Det stänger av nya leveranskanaler
@@ -187,11 +193,12 @@ skärmläsare ingår inte.
     "spec": "tests/integration/task-delivery.spec.ts",
     "caseId": "LEV-04"
   },
-  "reference": "Saknat WebSocket-stöd före start; syntetisk mikrofon och faktisk HTTP/WebSocket efter återställning. Text och röst provar samma saknade leveranskanal.",
+  "reference": "Saknat WebSocket-stöd före start; syntetisk mikrofon och faktisk HTTP/WebSocket efter återställning. Text och röst provar samma saknade leveranskanal. Lång svarstext med synligt tangentbordsfokus och rullning i mörkt systemtema, kartans verktyg och Inställningar vid 1280, 390 och 320 pixlar; höjden minskar från 800 till 600 pixlar i den smalaste varianten.",
   "outcomes": [
     "Skriven instruktion skickas inte, texten finns kvar och ett tydligt fel visas utan att instruktionen hamnar i samtalstexten.",
     "Röststart misslyckas tydligt och mikrofonen stängs. Återställd anslutning skickar eller startar ingenting automatiskt.",
-    "Uttryckligt återförsök skickar instruktionen en gång och ger hela svaret; uttrycklig röststart fungerar igen."
+    "Uttryckligt återförsök skickar instruktionen en gång och ger hela svaret; uttrycklig röststart fungerar igen.",
+    "Hela svarstexten går att rulla med tangentbord utan att täcka kartans verktyg eller skjuta undan Inställningar och kartans återkoppling."
   ]
 }
 ```
@@ -207,9 +214,19 @@ skärmläsare ingår inte.
    starta och att mikrofonen är av.
 3. Återställ anslutningsstödet enligt förberedelsen. Kontrollera att
    texten finns kvar och att rösten inte startar automatiskt.
-4. Välj **Skicka**. Släpp modellsvaret enligt den allmänna förberedelsen
-   och läs det under **Hela svaret som text**. Välj sedan **Prata med
-   Skyttel** och invänta **Lyssnar**.
+4. Välj **Skicka**. Släpp ett långt modellsvar enligt den allmänna
+   förberedelsen och läs det under **Hela svaret som text**. Flytta fokus
+   till svarsrutan med tangentbordet och kontrollera den tydliga
+   fokusmarkeringen. Rulla till sista raden. Kartans verktyg ska finnas
+   nedanför svarsrutan och gå att använda.
+5. Öppna **Inställningar**. Rubriken ska få fokus och vara synlig.
+   Svarsrutan och kartans återkoppling ska rymmas samtidigt. Välj
+   **Tillbaka till kartan**. Upprepa steg 4:s läsning och steg 5 vid 1280,
+   390 och 320 pixlars bredd utan att skicka instruktionen igen.
+6. Välj **Prata med Skyttel** och invänta **Lyssnar**.
+7. Öppna installationens inloggningssida och logga in igen som Alex.
+   Det gamla svaret ska försvinna och kartans verktyg återgå till platsen
+   högst upp utan tomt utrymme efter svarsrutan.
 
 **Förväntat resultat:**
 
@@ -220,6 +237,8 @@ skärmläsare ingår inte.
   återställningen.
 - Endast ett uttryckligt nytt försök skickar texten och tömmer fältet.
   Hela svaret kan läsas. Rösten kan startas med ett uttryckligt nytt val.
+- Svarsrutan rullas med tangentbord och täcker inte kartans verktyg.
+  Inställningarnas rubrik, svarsrutan och kartans återkoppling är synliga.
 
 ### LEV-05: leveransfel efter mottagen instruktion bevarar lagrat utkast
 

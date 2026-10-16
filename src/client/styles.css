@@ -77,7 +77,7 @@ main:focus {
   border-bottom: 2px solid #8c6811;
 }
 .app-shell .household-map.workspace-shell {
-  top: var(--session-warning-height, 0px);
+  top: calc(var(--session-warning-height, 0px) + var(--task-delivery-height, 0px));
 }
 .site-header {
   width: min(1120px, 100%);

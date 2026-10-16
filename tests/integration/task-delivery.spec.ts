@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { createHousehold, signIn } from '../support/client.js';
+import { measureContrast } from '../support/accessibility.js';
+import { createHousehold, signIn, utilityButton } from '../support/client.js';
 import {
   chooseConversationVoice,
   microphoneButton,
@@ -17,7 +18,8 @@ import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text och röst', async ({
   page,
 }) => {
-  const model = textModel(() => [modelMessage('Svaret efter ditt uttryckliga återförsök.')]);
+  const full = `${'Svaret efter ditt uttryckliga återförsök. '.repeat(80)}Sista raden i hela svaret.`;
+  const model = textModel(() => [modelMessage(full)]);
   const live = liveProvider();
   const app = await createInstallation(undefined, {
     modelFetch: model.provider,
@@ -89,6 +91,51 @@ test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text oc
     ).toContainText('Svaret efter ditt uttryckliga återförsök.');
     expect(messages).toHaveLength(1);
     expect(model.requests).toHaveLength(1);
+    const delivered = page.getByRole('region', { name: 'Hela svaret som text', exact: true });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'dark');
+    for (const width of [1280, 390, 320]) {
+      await page.setViewportSize({ width, height: width === 320 ? 600 : 800 });
+      await expect(delivered).toBeInViewport({ ratio: 1 });
+      await expect(delivered).toContainText(full);
+      await page.keyboard.press('Tab');
+      await delivered.focus();
+      await expect(delivered).toBeFocused();
+      expect(await delivered.evaluate((element) => element.matches(':focus-visible'))).toBe(true);
+      expect(await delivered.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe(
+        'solid',
+      );
+      await page.keyboard.press('Control+End');
+      expect(
+        await delivered.evaluate(measureContrast, 'outlineColor' as const),
+      ).toBeGreaterThanOrEqual(3);
+      await expect
+        .poll(() => delivered.evaluate((element) => element.scrollTop))
+        .toBeGreaterThan(0);
+      await expect
+        .poll(() =>
+          delivered.evaluate(
+            (element) => element.scrollHeight - element.clientHeight - element.scrollTop,
+          ),
+        )
+        .toBeLessThanOrEqual(1);
+      const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
+      await expect(tools).toBeInViewport({ ratio: 1 });
+      await expect
+        .poll(async () => {
+          const result = await delivered.boundingBox();
+          const navigation = await tools.boundingBox();
+          return Boolean(result && navigation && navigation.y >= result.y + result.height);
+        })
+        .toBe(true);
+      await (await utilityButton(page, 'Inställningar')).click();
+      const heading = page.getByRole('heading', { level: 1, name: 'Inställningar', exact: true });
+      await expect(heading).toBeFocused();
+      await expect(heading).toBeInViewport({ ratio: 1 });
+      await expect(delivered).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('.household-work-background')).toBeInViewport({ ratio: 1 });
+      await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+    }
     await turnMicrophoneOn(page);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     expect(live.requests).toHaveLength(1);
@@ -119,6 +166,11 @@ test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text oc
       'Skapa inget nytt.',
     );
     expect(model.requests).toHaveLength(1);
+    await signIn(page.request, app.origin);
+    await expect(delivered).toHaveCount(0, { timeout: 8000 });
+    const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
+    await expect(tools).toBeInViewport({ ratio: 1 });
+    await expect.poll(async () => (await tools.boundingBox())?.y).toBeLessThan(50);
   } finally {
     await page.close();
     await app.close();
@@ -306,6 +358,25 @@ for (const scenario of [
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
+      for (const width of [1280, 390, 320]) {
+        await page.setViewportSize({ width, height: 800 });
+        await panel.scrollIntoViewIfNeeded();
+        await expect(panel).toBeInViewport({ ratio: 1 });
+        await panel.focus();
+        await page.keyboard.press('Control+End');
+        await expect.poll(() => panel.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+        await expect
+          .poll(() =>
+            panel.evaluate(
+              (element) => element.scrollHeight - element.clientHeight - element.scrollTop,
+            ),
+          )
+          .toBeLessThanOrEqual(1);
+        await expect(panel).toContainText('Sista frågan: vem använder cykeln?');
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true);
+      }
       expect(model.requests).toHaveLength(1);
       // Same-user replacement must clear even an already closed delivery's
       // transient text. Bootstrap provides correlation, never new authority.

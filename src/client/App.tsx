@@ -1753,7 +1753,7 @@ function Application() {
           </p>
           {expired && <p>{expiryNotice}</p>}
           <TaskDeliveryContext value={taskDelivery.client}>
-            <TaskDeliveryResults results={taskDelivery.results} />
+            <TaskDeliveryResults results={taskDelivery.results} workspace={mapActive} />
           </TaskDeliveryContext>
           {bootstrap.status === 'loading' && <Loading />}
           {bootstrap.status === 'error' && <Failure onRetry={reload} />}

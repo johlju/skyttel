@@ -311,6 +311,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 - [Hela svarstexten](conversation-delivery.md): fullständig tillfällig
   textreserv, ljudnotis, leverans vid utgång och rensning vid ny inloggning.
   Korta statusbesked bevarar fokus och upprepas inte vid kvittens.
+  Långa svar rullas med tangentbord i en avgränsad ruta som lämnar plats
+  för kartans verktyg, Inställningar och kartans återkoppling.
   Saknad leveranskanal lämnar texten oskickad och hindrar röststart
   tills användaren uttryckligen försöker igen.
   Förlust före första uppgiftsnotisen ger tydligt leveransfel; lagrat
