@@ -227,6 +227,11 @@
     margin-top: 6px;
     padding-top: 6px;
   }
+  .household-map.workspace-shell:not([data-work-layout="tall"])
+    .object-property-actions
+    button:focus-visible {
+    outline-offset: -3px;
+  }
 }
 
 @media (max-width: 700px) {

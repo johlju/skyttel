@@ -142,6 +142,106 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+test.each([
+  [320, 250],
+  [390, 844],
+  [640, 500],
+  [1280, 900],
+])(
+  'object action keyboard navigation reveals the complete target at %i×%i',
+  { tags: ['technical'] },
+  async (width, height) => {
+    const app = await open(width, height);
+    await app.show({ kind: 'object', id: 'lo' });
+    await expect.poll(() => app.acknowledgements.length, { timeout: 7_000 }).toBe(1);
+    const panel = page.getByRole('region', { name: 'Lo', exact: true });
+    const toolbar = panel.getByRole('toolbar', { name: 'Objektåtgärder för Lo', exact: true });
+    const buttons = [...toolbar.element().querySelectorAll('button')];
+    const selected = page.getByRole('button', { name: 'Välj objekt: Lo', exact: true });
+    const selectedBounds = selected.element().getBoundingClientRect().toJSON();
+    panel.getByRole('button', { name: 'Redigera Lo', exact: true }).element().focus();
+
+    async function expectCurrentAction(index: number, keyboard = true) {
+      const action = buttons[index];
+      expect(action).toHaveFocus();
+      await expect
+        .poll(() => {
+          const box = action.getBoundingClientRect();
+          const bounds = toolbar.element().getBoundingClientRect();
+          return (
+            box.width >= 44 &&
+            box.height >= 44 &&
+            box.left >= Math.max(0, bounds.left) &&
+            box.right <= Math.min(innerWidth, bounds.right) &&
+            box.top >= Math.max(0, bounds.top) &&
+            box.bottom <= Math.min(innerHeight, bounds.bottom) &&
+            action.contains(
+              document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+            )
+          );
+        })
+        .toBe(true);
+      if (keyboard) {
+        expect(action.matches(':focus-visible')).toBe(true);
+        const style = getComputedStyle(action);
+        expect(Number.parseFloat(style.outlineWidth)).toBeGreaterThan(0);
+        expect(style.outlineStyle).not.toBe('none');
+        const outset = Math.max(
+          0,
+          Number.parseFloat(style.outlineOffset) + Number.parseFloat(style.outlineWidth),
+        );
+        const box = action.getBoundingClientRect();
+        expect(box.left - outset).toBeGreaterThanOrEqual(0);
+        expect(box.right + outset).toBeLessThanOrEqual(innerWidth);
+        expect(box.top - outset).toBeGreaterThanOrEqual(0);
+        expect(box.bottom + outset).toBeLessThanOrEqual(innerHeight);
+        for (let ancestor = action.parentElement; ancestor; ancestor = ancestor.parentElement) {
+          const clipping = getComputedStyle(ancestor);
+          const bounds = ancestor.getBoundingClientRect();
+          if (clipping.overflowX !== 'visible') {
+            expect(box.left - outset).toBeGreaterThanOrEqual(bounds.left);
+            expect(box.right + outset).toBeLessThanOrEqual(bounds.right);
+          }
+          if (clipping.overflowY !== 'visible') {
+            expect(box.top - outset).toBeGreaterThanOrEqual(bounds.top);
+            expect(box.bottom + outset).toBeLessThanOrEqual(bounds.bottom);
+          }
+        }
+      }
+      expect(selected.element()).toHaveAttribute('aria-pressed', 'true');
+      expect(selected.element().getBoundingClientRect().toJSON()).toEqual(selectedBounds);
+      expect(panel.element().querySelector('form')).toBeNull();
+      const close = panel.getByRole('button', { name: 'Stäng uppgifterna', exact: true }).element();
+      const box = close.getBoundingClientRect();
+      expect(box.top).toBeGreaterThanOrEqual(0);
+      expect(box.bottom).toBeLessThanOrEqual(innerHeight);
+      expect(
+        close.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)),
+      ).toBe(true);
+    }
+
+    await expectCurrentAction(0, false);
+    for (let index = 1; index < buttons.length; index++) {
+      await userEvent.keyboard('{ArrowRight}');
+      await expectCurrentAction(index);
+    }
+    await userEvent.keyboard('{ArrowRight}');
+    await expectCurrentAction(0);
+    await userEvent.keyboard('{ArrowLeft}');
+    await expectCurrentAction(buttons.length - 1);
+    for (let index = buttons.length - 2; index >= 0; index--) {
+      await userEvent.keyboard('{ArrowLeft}');
+      await expectCurrentAction(index);
+    }
+    await userEvent.keyboard('{End}');
+    await expectCurrentAction(buttons.length - 1);
+    await userEvent.keyboard('{Home}');
+    await expectCurrentAction(0);
+    await userEvent.keyboard('{Enter}');
+    await expect.element(page.getByLabelText('Namn', { exact: true })).toHaveValue('Lo');
+  },
+);
+
 test('assistant display shows the map and populated inspector before confirming the actual object and relationship', async () => {
   const app = await open();
   await app.show({ kind: 'object', id: 'lo' });

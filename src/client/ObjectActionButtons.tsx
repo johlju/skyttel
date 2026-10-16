@@ -25,7 +25,12 @@ export function moveObjectActionFocus(event: KeyboardEvent<HTMLElement>) {
       : event.key === 'End'
         ? buttons.length - 1
         : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
-  buttons[next]?.focus();
+  const button = buttons[next];
+  if (button) {
+    button.focus({ preventScroll: true });
+    // Native focus can leave a partially visible action clipped in compact readers.
+    button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 }
 
 /** Shared object actions for the context toolbar and movable property windows. */
