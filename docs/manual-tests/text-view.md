@@ -545,7 +545,10 @@ riktiga samtalet”, i gruppen “valt mobilt samtalsflöde”.
 - Automationen fångar appens riktiga ytor efter produktionsbygge, med riktig
   server och tillfällig SQLite. Den ersätter externa modeller och medier.
   Den ritar inget tangentbord och verifierar inte fysisk mikrofon eller
-  iOS-tangentbord; dessa prov återstår enligt #220.
+  iOS-tangentbord. Mikrofonstyrning redovisas i
+  [Prova mikrofonstyrning, tangentkombinationer, rörelse och skärmläsarljud](https://github.com/viscalyx/skyttel/issues/220)
+  och skärmtangentbord enligt TEXTMOBIL-13 i
+  [Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260).
 
 ## Personliga bredder på dator
 
@@ -1460,6 +1463,9 @@ länkade fysiska förberedelsen.
 OS-skärmtangentbordet, rotera enheten och tryck fält, Skicka, Avbryt och Stäng
 notisen.
 
+**Resultatansvar:**
+[Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260).
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -1836,8 +1842,10 @@ Textknappens ändrade flöde har följande WCAG 2.2 AA-designmål:
 
 Proven använder riktig server och tillfällig SQLite. Kontrollerade modell- och
 mediesvar, DOM-uppläsningar och emulerade fönstermått visar inte fullständig
-WCAG-överensstämmelse. Fysisk mikrofon, skärmläsare, röststyrning, zoom och
-pekskärm återstår enligt #220.
+WCAG-överensstämmelse. Mikrofonstyrning och rörelse redovisas i
+[Prova mikrofonstyrning, tangentkombinationer, rörelse och skärmläsarljud](https://github.com/viscalyx/skyttel/issues/220).
+Skärmläsare, röststyrning, zoom och pekskärm redovisas i
+[Manuell verifiering av hushållsarbetet med skärmläsare och fysiska enheter](https://github.com/viscalyx/skyttel/issues/260).
 
 ## Separata brickkonfigurationer och observationer
 
