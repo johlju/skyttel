@@ -280,6 +280,10 @@ for (const width of [1280, 390, 320]) {
       await expect(
         page.getByText('Din driftbehörighet är fristående', { exact: false }),
       ).toBeVisible();
+      const costStatus = page
+        .locator('section.costs-panel')
+        .filter({ has: page.getByRole('heading', { name: 'Månadskostnad', exact: true }) })
+        .getByRole('status');
       const edit = page.getByRole('button', { name: 'Ändra månadens antaganden', exact: true });
       await edit.click();
       const rate = page.getByLabel('SEK per USD', { exact: true });
@@ -300,7 +304,7 @@ for (const width of [1280, 390, 320]) {
       await expect(save).toBeDisabled();
       await expect(category(page, 'Månadens kostnadsöversikt')).toContainText('72,50 SEK');
       await page.getByRole('button', { name: 'Uppdatera underlaget' }).click();
-      await expect(page.getByRole('status')).toContainText('Aktuella antaganden är hämtade');
+      await expect(costStatus).toContainText('Aktuella antaganden är hämtade');
       await expect(category(page, 'Månadens kostnadsöversikt')).toContainText('87,00 SEK');
       await expect(page.getByRole('button', { name: 'Uppdatera underlaget' })).toBeFocused();
       expect(writes).toBe(1);
@@ -322,7 +326,7 @@ for (const width of [1280, 390, 320]) {
       await expect(rate).toBeFocused();
       await rate.fill('13');
       await save.click();
-      await expect(page.getByRole('status')).toHaveText('Månadens antaganden är sparade.');
+      await expect(costStatus).toHaveText('Månadens antaganden är sparade.');
       await expect(edit).toBeFocused();
       await edit.click();
       await page.getByRole('button', { name: 'Stäng redigering' }).click();
@@ -339,15 +343,18 @@ for (const width of [1280, 390, 320]) {
         await route.fulfill({ response });
       });
       await save.click();
-      await expect(page.getByRole('status')).toHaveText('Sparar antaganden…');
+      await expect(costStatus).toHaveText('Sparar antaganden…');
       const themeButton = page.getByRole('button', { name: /Tema:.*Byt tema/ });
       await themeButton.click();
       await page
         .getByRole('radio', { name: width === 390 ? 'Mörkt' : 'Ljust', exact: true })
         .click();
       await expect(themeButton).toBeFocused();
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Temavalet har sparats på ditt konto.' }),
+      ).toBeVisible();
       release();
-      await expect(page.getByRole('status')).toHaveText('Månadens antaganden är sparade.');
+      await expect(costStatus).toHaveText('Månadens antaganden är sparade.');
       await expect(themeButton).toBeFocused();
       await category(page, 'Prisunderlag')
         .getByText(/Modellpriser kontrollerade/)

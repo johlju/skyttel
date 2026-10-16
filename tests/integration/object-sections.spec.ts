@@ -236,9 +236,9 @@ for (const width of [1280, 390, 320]) {
         }
       }
       await member.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }).click();
-      await expect(member.getByRole('status')).toContainText(
-        'Förslaget finns i ditt privata utkast',
-      );
+      await expect(
+        member.getByRole('status', { name: 'Hushållsarbetets status', exact: true }),
+      ).toContainText('Förslaget finns i ditt privata utkast');
       const own = await (await context.request.get(path)).json();
       expect(own.draft.objectTypes[0].after).toMatchObject({
         sections: [{ name: 'Kontakt' }],

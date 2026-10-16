@@ -226,6 +226,13 @@ for (const width of [1440, 390, 320]) {
       await expect(
         page.getByRole('region', { name: 'Hushållskarta', exact: true }),
       ).toHaveAttribute('data-theme', 'dark');
+      const themeFeedback = tools
+        .getByRole('status')
+        .filter({ hasText: 'Temavalet har sparats på ditt konto.' });
+      await expect(themeFeedback).toBeVisible();
+      await themeFeedback.getByRole('button', { name: 'Stäng temabeskedet' }).click();
+      await expect(themeFeedback).toHaveCount(0);
+      await tools.getByRole('button', { name: 'Dölj verktygens namn', exact: true }).click();
       const mark = table.getByRole('button', { name: 'Redigera Kim Exempel', exact: true });
       await mark.hover();
       expect(

@@ -968,13 +968,14 @@ test('MEDGIVANDE-18: nästa textförsök visar återkallandet på en annan enhet
   page,
   browser,
 }) => {
-  const app = await installation();
+  const model = textModel(() => [modelMessage('Ett provsvar.')]);
+  const app = await installation({ modelFetch: model.provider });
   const other = await browser.newContext();
   try {
     const { path, consentPath } = await signInWithHousehold(page.request, app.origin);
     await arrangeDraft(page, path, app.origin);
     await saveConsent(page.request, app.origin, consentPath);
-    await openHousehold(page, app.origin);
+    const sent = await openHousehold(page, app.origin);
     await signIn(other.request, app.origin);
     const second = await other.newPage();
     await openHousehold(second, app.origin);
@@ -985,14 +986,18 @@ test('MEDGIVANDE-18: nästa textförsök visar återkallandet på en annan enhet
         response.url() === `${path}/text-assistant` && response.request().method() === 'POST',
     );
     await textView(page).getByRole('button', { name: 'Nytt samtal', exact: true }).click();
-    expect((await started).status()).toBe(201);
+    const startedResponse = await started;
+    expect(startedResponse.status()).toBe(201);
+    const conversation = await startedResponse.json();
     await message(page).fill('Text som inte hunnit skickas.');
     await openConversationSettings(second);
     await consentPart(second).revoke.click();
     await expect(consentPart(second).feedback).toHaveText('Medgivandet är återkallat');
     const refusal = page.waitForResponse(
       (response) =>
-        /\/text-assistant\/[^/]+\/messages$/.test(response.url()) && response.status() === 403,
+        response.url() === `${path}/text-assistant/${conversation.id}` &&
+        response.request().method() === 'GET' &&
+        response.status() === 403,
     );
     await textView(page).getByRole('button', { name: 'Skicka', exact: true }).click();
     expect(await (await refusal).json()).toEqual({ error: 'conversation_consent_revoked' });
@@ -1000,6 +1005,8 @@ test('MEDGIVANDE-18: nästa textförsök visar återkallandet på en annan enhet
       'Medgivandet är återkallat. Samtalet är avslutat. Utkastet ligger kvar.',
     );
     await expect(textView(page)).toHaveCount(0);
+    expect(sent).toEqual(['start']);
+    expect(model.requests).toHaveLength(0);
     await expect(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
     expect((await (await page.request.get(`${path}/map`)).json()).draft.changes).toHaveLength(1);
     await startConversationWithText(page);
