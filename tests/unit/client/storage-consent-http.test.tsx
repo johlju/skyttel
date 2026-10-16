@@ -62,6 +62,7 @@ test.each(['necessary', 'all', 'custom'] as const)(
       );
     }
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByRole('status')).toBeNull();
     expect(readStorageConsent()?.preferences).toBe(choice !== 'necessary');
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Skyttel' }));
     expect((await client.get(`${installation.origin}/api/auth/get-session`)).status()).toBe(200);

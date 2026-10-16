@@ -67,7 +67,7 @@ function useConsentManager(userId?: string) {
     void preference.change(false);
   }, [consent?.preferences, blocked, preference.saved, preference.change]);
 
-  async function save(preferences: boolean, reset = false) {
+  async function save(preferences: boolean, { reset = false, showConfirmation = true } = {}) {
     if (busy.current || blocked || owner.current !== userId) return false;
     busy.current = true;
     const ticket = generation.current;
@@ -110,7 +110,9 @@ function useConsentManager(userId?: string) {
           ? readStorageConsent()
             ? 'Avstängningen är bekräftad. Ett nyare lagringsval bevaras.'
             : 'Lagringssamtycket är återställt.'
-          : 'Dina lagringspreferenser är sparade.',
+          : showConfirmation
+            ? 'Dina lagringspreferenser är sparade.'
+            : '',
       );
       setBannerPending(false);
       return true;
@@ -565,7 +567,7 @@ function ConsentBanner({ onLeave }: { onLeave: () => void }) {
   }, [expanded]);
   const save = (value: boolean) => {
     setPreferences(value);
-    void manager.save(value);
+    void manager.save(value, { showConfirmation: false });
   };
   return (
     <dialog

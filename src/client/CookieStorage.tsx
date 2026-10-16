@@ -552,7 +552,7 @@ function CookieStorageContents({ userId }: { userId?: string }) {
           onCancel={() => setResetOrigin(null)}
           onConfirm={() => {
             setResultPlace('reset');
-            void manager.save(false, true).then((saved) => {
+            void manager.save(false, { reset: true }).then((saved) => {
               if (saved) setResetOrigin(null);
             });
           }}

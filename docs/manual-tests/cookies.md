@@ -1309,7 +1309,7 @@ KAK-32.
   "outcomes": [
     "Bannern visas även på den inloggade kartan. Nödvändig lagring är alltid aktiv och kan inte väljas bort.",
     "Escape sparar inte och påbörjade val bevaras mellan bannerlägen.",
-    "Ett sparat lagringssamtycke stänger bannern, men aktiverar inte ihågkommen inloggning eller ett förslag under pågående inloggning."
+    "Ett sparat lagringssamtycke stänger bannern utan separat sparbekräftelse, men aktiverar inte ihågkommen inloggning eller ett förslag under pågående inloggning."
   ]
 }
 ```
@@ -1324,15 +1324,16 @@ KAK-32.
    lagringsuppgifter öppnas som separata poster med namn, ändamål,
    varaktighet och leverantör och att fokus sedan når Preferenskakor.
    Slå på Preferenskakor och tryck Escape. Öppna Anpassa Inställningar igen.
-3. Kontrollera att påbörjat val finns kvar. Välj Spara Preferenser och ladda om.
+3. Kontrollera att påbörjat val finns kvar. Välj Spara Preferenser. Kontrollera
+   att bannern stängs utan separat sparbekräftelse och ladda sedan om.
 
 **Förväntat resultat:**
 
 - Bannern visas även på den inloggade kartan. Nödvändig lagring är alltid aktiv
   och kan inte väljas bort.
 - Escape sparar inte och påbörjade val bevaras mellan bannerlägen.
-- Ett sparat lagringssamtycke stänger bannern, men aktiverar inte ihågkommen
-  inloggning eller ett förslag under pågående inloggning.
+- Ett sparat lagringssamtycke stänger bannern utan separat sparbekräftelse, men
+  aktiverar inte ihågkommen inloggning eller ett förslag under pågående inloggning.
 
 ### KAK-36: Två bannerlägen på mobil i ljust tema
 
@@ -1542,7 +1543,7 @@ KAK-34.
   },
   "reference": "Inloggad användare, direkt publik policyingång",
   "outcomes": [
-    "Snabbval ändrar formuläret och behöver separat Spara Preferenser.",
+    "Snabbval ändrar formuläret och behöver separat Spara Preferenser. Policysidans sparande bekräftas med Dina lagringspreferenser är sparade.",
     "Återställning kräver bekräftelse, rensar samtycket och bevarar avstå-valet.",
     "Bannern visas igen när policysidan lämnas."
   ]
@@ -1555,6 +1556,7 @@ KAK-34.
 
 1. Öppna /cookies direkt. Läs Kakpolicy utan täckande banner.
 2. Välj Acceptera Alla. Kontrollera Preferenskakor och välj Spara Preferenser.
+   Kontrollera att **Dina lagringspreferenser är sparade.** visas på policysidan.
 3. Avmarkera Fråga om ihågkommen inloggning efter framtida inloggningar.
 4. Välj Återställ valfri lagring och bekräfta Återställ. Kontrollera
    förslagsvalet och välj Till startsidan.
@@ -1562,6 +1564,7 @@ KAK-34.
 **Förväntat resultat:**
 
 - Snabbval ändrar formuläret och behöver separat Spara Preferenser.
+- Policysidans sparande bekräftas med **Dina lagringspreferenser är sparade.**
 - Återställning kräver bekräftelse, rensar samtycket och bevarar avstå-valet.
 - Bannern visas igen när policysidan lämnas.
 

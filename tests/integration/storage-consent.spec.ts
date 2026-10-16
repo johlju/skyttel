@@ -61,6 +61,7 @@ for (const [caseId, width, theme] of [
       ).toBeChecked();
       await settings.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
       await expect(settings).not.toBeVisible();
+      await expect(page.locator('.storage-notice')).toHaveCount(0);
       await page.reload();
       await expect(banner).not.toBeVisible();
       await expect
@@ -100,6 +101,7 @@ test('KAK-34: public policy quick choices need saving and reset preserves the us
     await expect(page.getByRole('switch', { name: 'Preferenskakor', exact: true })).toBeChecked();
     expect(await page.evaluate(() => localStorage.getItem('skyttel-storage-consent'))).toBeNull();
     await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Dina lagringspreferenser är sparade.');
     await page
       .getByRole('checkbox', {
         name: 'Fråga om ihågkommen inloggning efter framtida inloggningar',

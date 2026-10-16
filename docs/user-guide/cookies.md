@@ -11,6 +11,7 @@ du begär. **Acceptera Alla** tillåter även **Preferenskakor** för
 bannern. Där kan du läsa kategoriernas lagringsuppgifter och ändra
 Preferenskakor. Nödvändig lagring är alltid aktiv. **Spara Preferenser**,
 **Acceptera Alla** och **Endast nödvändiga** sparar direkt i bannern.
+När valet sparas stängs bannern utan separat sparbekräftelse.
 Krysset och Escape återgår till första läget utan att spara; påbörjade
 val finns kvar när du öppnar inställningarna igen. I första läget flyttar
 Escape fokus till **Endast nödvändiga**.
