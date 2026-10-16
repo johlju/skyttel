@@ -88,6 +88,33 @@ creating the container, so recreate it after changing those settings.
 The container database is `/data/skyttel.sqlite`; ordinary startup applies
 pending migrations and preserves application data.
 
+### Upgrade an existing development login database
+
+If backend startup reports `authority_initialization_required`, an existing
+development database needs the one-time login upgrade. Vite can remain
+running while its API proxy reports `ECONNREFUSED` on port 3300; the page
+then reports an interrupted connection.
+
+Stop `dev:all`, `dev:prodlike` and any other application process using that
+database. Run the following from the repository root in your terminal:
+
+```sh
+npm run build
+node --env-file="${SKYTTEL_DEV_ENV_FILE:-.devcontainer/.env}" \
+  dist/server/upgrade-legacy-login.js \
+  --confirm-legacy-upgrade --confirm-service-stopped
+npm run dev:all
+```
+
+Require `legacy_login_upgrade_completed` before restarting. Sign in again:
+the upgrade ends old logins and assistant access but preserves users,
+household information, stored drafts and save results. Keep the configured
+generation stable afterward. The command refuses a second upgrade.
+
+This procedure applies to an existing original development database without
+an authority record. For `restore_declaration_required`, use the
+[controlled restore procedure](../operations/database-restore.md) instead.
+
 ## Set up local sign-in
 
 Both Google and Microsoft client IDs and secrets must be present in the
