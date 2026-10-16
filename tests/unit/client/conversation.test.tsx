@@ -1,6 +1,7 @@
 import { act, cleanup, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { ConversationWorkspace } from '../../../src/client/TextAssistant.js';
+import { TaskDeliveryContext } from '../../../src/client/task-delivery.js';
 import {
   type Conversation,
   conversationOngoing,
@@ -170,6 +171,81 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
+
+test.each(['replacement', 'retry', 'unmount'] as const)(
+  'a late refused-channel authority check cannot retire a conversation after %s',
+  async (change) => {
+    const { commands } = server();
+    const transport = globalThis.fetch;
+    let hold = false;
+    let release: ((response: Response) => void) | undefined;
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+      if (hold && url === `${path}/session` && init?.method === 'GET')
+        return new Promise<Response>((resolve) => {
+          release = resolve;
+        });
+      return transport(url, init);
+    });
+    const onEnded = vi.fn();
+    const onAccessLost = vi.fn();
+    let canDeliver = false;
+    const delivery = {
+      connect: async () =>
+        canDeliver ? { id: 'new-channel', observeAccepted: () => {} } : undefined,
+      received: () => {},
+    };
+    const hook = renderHook(
+      ({ enabled }) => useConversation({ ...household, enabled, onEnded, onAccessLost }),
+      {
+        initialProps: { enabled: true },
+        wrapper: ({ children }) => (
+          <TaskDeliveryContext value={delivery}>{children}</TaskDeliveryContext>
+        ),
+      },
+    );
+    await waitFor(() => expect(hook.result.current.available).toBe(true));
+    act(() => hook.result.current.begin('text'));
+    await act(async () => hook.result.current.approve(false));
+    act(() => hook.result.current.setText('Den första oskickade instruktionen'));
+    hold = true;
+    let sending = Promise.resolve();
+    act(() => {
+      sending = hook.result.current.send();
+    });
+    await waitFor(() => expect(release).toBeDefined());
+    expect(hook.result.current.pending).toBe(false);
+    expect(hook.result.current.error).toContain('Instruktionen skickades inte.');
+    expect(hook.result.current.text).toBe('Den första oskickade instruktionen');
+    expect(hook.result.current.transcript).toEqual([]);
+    if (change === 'replacement') {
+      hook.rerender({ enabled: false });
+      hook.rerender({ enabled: true });
+      await waitFor(() => expect(hook.result.current.available).toBe(true));
+      act(() => hook.result.current.begin('text'));
+      await act(async () => hook.result.current.approve(false));
+      act(() => hook.result.current.setText('Den nya instruktionen'));
+    } else if (change === 'retry') {
+      canDeliver = true;
+      await act(async () => hook.result.current.send());
+      expect(hook.result.current.working).toBe(true);
+      act(() => hook.result.current.setText('Den nya instruktionen'));
+    } else hook.unmount();
+    await act(async () => {
+      release?.(Response.json({ error: 'conversation_consent_revoked' }, { status: 403 }));
+      await sending;
+    });
+    expect(commands.filter((command) => command.endsWith('/messages'))).toEqual(
+      change === 'retry' ? ['/session/messages'] : [],
+    );
+    expect(onEnded).not.toHaveBeenCalled();
+    expect(onAccessLost).not.toHaveBeenCalled();
+    if (change !== 'unmount') {
+      expect(hook.result.current.session?.id).toBe('session');
+      expect(hook.result.current.text).toBe('Den nya instruktionen');
+      expect(hook.result.current.consent.valid).toBe(true);
+    }
+  },
+);
 
 const quiet: Parameters<typeof conversationOngoing>[0] = {
   transcript: [],

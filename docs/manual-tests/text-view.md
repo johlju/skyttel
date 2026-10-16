@@ -1866,7 +1866,7 @@ första UI-handlingen. Textsvaret kan hållas och släppas separat.
     "spec": "tests/browser/text-button-status.test.tsx",
     "caseId": "TEXTBRICKA-06"
   },
-  "reference": "Chromium 390 × 844, mörkt tema; verklig hushållskarta och produktionsstilar, kontrollerade textsvar och emulerad minskad/normal rörelse. Ingen verklig HTTP-kontroll av medgivande eller beständigt sparande.",
+  "reference": "Chromium 390 × 844, mörkt systemtema; verklig hushållskarta och produktionsstilar, kontrollerade svar för kontots temaval och samtalstext samt emulerad minskad/normal rörelse. Ingen verklig HTTP-kontroll av medgivande eller beständigt sparande.",
   "outcomes": [
     "Arbets- och svarsformer ändrar varken knappmått eller verktygsplacering.",
     "Markeringen är läsbar och respekterar den emulerade rörelseinställningen.",
@@ -1915,7 +1915,7 @@ första UI-handlingen. Textsvaret kan hållas och släppas separat.
     "spec": "tests/browser/text-button-status.test.tsx",
     "caseId": "TEXTBRICKA-07"
   },
-  "reference": "Chromium 1280 × 844, ljust tema; verklig hushållskarta och produktionsstilar, kontrollerade textsvar och emulerad minskad/normal rörelse. Ingen verklig HTTP-kontroll av medgivande eller beständigt sparande.",
+  "reference": "Chromium 1280 × 844, ljust systemtema; verklig hushållskarta och produktionsstilar, kontrollerade svar för kontots temaval och samtalstext samt emulerad minskad/normal rörelse. Ingen verklig HTTP-kontroll av medgivande eller beständigt sparande.",
   "outcomes": [
     "Arbets- och svarsformer ändrar varken knappmått eller verktygsplacering.",
     "Markeringen är läsbar och respekterar den emulerade rörelseinställningen.",

@@ -153,7 +153,7 @@ try {
         })
         .immediate();
       console.log(
-        'Prepared legacy.sqlite before migration 007. Start the current app on that file to upgrade. No sessions or provider tokens were copied.',
+        'Prepared legacy.sqlite before migration 007. With the service stopped and the legacy database configuration, run node dist/server/upgrade-legacy-login.js --confirm-legacy-upgrade --confirm-service-stopped before starting the app. Follow docs/manual-tests/contracts.md. No sessions or provider tokens were copied.',
       );
     } finally {
       legacy?.close();

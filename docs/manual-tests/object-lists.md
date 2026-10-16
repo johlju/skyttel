@@ -1218,7 +1218,7 @@ beständigt sparande.
     "spec": "tests/browser/object-search.test.tsx",
     "caseId": "SÖK-12"
   },
-  "reference": "Chromium vid 1280 × 720, ljust och mörkt systemtema samt manuellt temaval; fullständigt kontrollerat kartsvar och profilbilder, produktens stilar och verklig canvasmätning.",
+  "reference": "Chromium vid 1280 × 720, ljust och mörkt systemtema samt manuellt temaval; kontrollerade svar för kontots temaval, fullständigt kartsvar och profilbilder, produktens stilar och verklig canvasmätning.",
   "outcomes": [
     "Kunna följa linjerna från kartobjekt till deras etiketter."
   ]
@@ -1242,8 +1242,10 @@ both themes”.
 
 Provet använder samma fullständiga kontrollerade kartsvar och profilbilder
 som SÖK-11. Produktkontrasten mäts genom kartans faktiska linje, opacitet,
-bakgrund och teckenförklaring. De sex tekniska kontrastberäkningarna i
-hjälpsviten ersätter inte detta produktprov. Det provar inga serversparanden.
+bakgrund och teckenförklaring. Kontots temaval använder produktens
+temahantering med kontrollerade HTTP-svar. De sex tekniska
+kontrastberäkningarna i hjälpsviten ersätter inte detta produktprov. Det
+provar inga serversparanden.
 
 **Steg:**
 

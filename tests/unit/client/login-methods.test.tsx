@@ -320,7 +320,11 @@ test('a real cancellation before a stale add click refreshes absent state withou
       providers: ['google'],
       stage: null,
     });
-    expect(mutations).toEqual(['/api/login-methods/add']);
+    expect(mutations).toEqual([
+      '/api/browser-binding/status',
+      '/api/browser-binding/activity',
+      '/api/login-methods/add',
+    ]);
     expect(await (await client.request('/api/bootstrap')).json()).toEqual(identity);
     expect(await (await client.request(path)).json()).toEqual(before);
   } finally {

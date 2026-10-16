@@ -158,6 +158,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   och synliga streckade etikettlinjer i båda teman. SÖK-11/15 och SÖK-12
   körs genom kartans publika kontroller i Chromium med produktens stilar,
   fullständigt kontrollerat kartsvar och profilbilder från tabellförberedelsen.
+  SÖK-12 använder kontrollerade svar för kontots temaval genom produktens
+  temahantering.
   De behåller sina ID och ersätter tre integrationsexekveringar; övriga
   sökfall behåller verklig HTTP och jämförelse av hushållets tillstånd.
   Webbläsarfallen bevisar inte beständigt sparande.
@@ -807,7 +809,8 @@ svar. Första macOS-genvägens medgivande provas i MIKROFONTRYCK-09; hela
 formulär-, utkast-, samtals- och återkallandekedjan körs i YTA-07 och upprepas
 inte oberoende på macOS.
 TEXTBRICKA-06/07 använder Chromium med hushållskartan, produktionsstilar och
-kontrollerade textsvar för 390 px mörkt respektive 1280 px ljust.
+kontrollerade svar för kontots temaval och samtalstext för 390 px mörkt
+systemtema respektive 1280 px ljust systemtema.
 TEXTBRICKA-04/08 behåller hela serverflödet vid 390 px ljust respektive
 1280 px mörkt; medgivande och HTTP-flöde körs inte separat i de andra två
 kombinationerna.

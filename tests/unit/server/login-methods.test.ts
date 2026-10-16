@@ -38,9 +38,15 @@ test.each(['google', 'microsoft'])(
       providers: ['google', 'microsoft'],
       stage: 'complete',
     });
+    expect(await (await client.request('/api/bootstrap')).json()).toEqual(before);
     await client.json('/api/auth/sign-out', {});
     await client.signIn(target);
-    expect(await (await client.request('/api/bootstrap')).json()).toEqual(before);
+    const { loginId: originalLoginId, ...originalIdentity } = before;
+    const { loginId, ...identity } = await (await client.request('/api/bootstrap')).json();
+    expect(originalLoginId).toEqual(expect.any(String));
+    expect(loginId).toEqual(expect.any(String));
+    expect(loginId).not.toBe(originalLoginId);
+    expect(identity).toEqual(originalIdentity);
   },
 );
 

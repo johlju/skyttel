@@ -982,6 +982,21 @@ export function useConversation({
       if (epoch !== requestEpoch.current) return;
       if (delivery && !deliveryConnection) {
         setError(deliveryUnavailableMessage);
+        setPending(false);
+        try {
+          // A refused socket cannot expose its authentication failure. Check
+          // existing authority without admitting or retrying this instruction.
+          await request<TextAssistantView>(`${path}/${current.id}`);
+        } catch (failure) {
+          if (
+            mounted.current &&
+            epoch === requestEpoch.current &&
+            active.current?.id === current.id &&
+            failure instanceof MapRequestError &&
+            [401, 403, 404].includes(failure.status)
+          )
+            fail(failure);
+        }
         return;
       }
       showTranscript({ id: messageId, role: 'user', text: sent });

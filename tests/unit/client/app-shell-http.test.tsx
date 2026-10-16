@@ -4,7 +4,10 @@ import { userEvent } from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { App } from '../../../src/client/App.js';
-import { authenticatedHttpFetch } from '../../support/authenticated-http-fetch.js';
+import {
+  authenticatedHttpFetch,
+  authenticatedHttpWebSocket,
+} from '../../support/authenticated-http-fetch.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { prepareHouseholdReading } from '../../support/household-reading.js';
 import { createInstallation, robin } from '../../support/installation.js';
@@ -13,6 +16,7 @@ import { modelMessage, textModel } from '../../support/text-model.js';
 let installation: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
 let other: APIRequestContext;
+let delivery: Awaited<ReturnType<typeof authenticatedHttpWebSocket>> | undefined;
 beforeEach(async () => {
   // biome-ignore lint/suspicious/noDocumentCookie: Reset jsdom's cookie boundary between independent installations.
   document.cookie = 'skyttel_binding=; Max-Age=0; Path=/';
@@ -24,6 +28,8 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   cleanup();
+  delivery?.close();
+  delivery = undefined;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   await client?.dispose();
@@ -83,6 +89,8 @@ async function installModel(model: ReturnType<typeof textModel>) {
   vi.stubGlobal('fetch', authenticatedHttpFetch(client, installation.origin));
   await signIn(client, installation.origin);
   const { household } = await (await createHousehold(client, installation.origin)).json();
+  delivery = await authenticatedHttpWebSocket(client, installation.origin);
+  vi.stubGlobal('WebSocket', delivery.WebSocket);
   return `/households/${household.id}`;
 }
 
@@ -627,6 +635,12 @@ test('cancelling real in-flight model work retires its reply while keeping house
 test('consent revoked through public HTTP retires the conversation while retaining unsent text and household access', async () => {
   const model = textModel(() => [modelMessage('Ett svar innan återkallandet.')]);
   const path = await installModel(model);
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  const sent: string[] = [];
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).endsWith('/messages')) sent.push(String(input));
+    return transport(input, init);
+  });
   mount(path);
   await screen.findByRole('region', { name: 'Arbetsyta' });
   await userEvent.click(screen.getByRole('button', { name: /^Skriv till Skyttel/ }));
@@ -656,6 +670,8 @@ test('consent revoked through public HTTP retires the conversation while retaini
   expect((screen.getByLabelText('Meddelande till Skyttel') as HTMLTextAreaElement).value).toBe(
     'Text efter återkallat medgivande',
   );
+  expect(sent).toEqual([]);
+  expect(model.requests).toHaveLength(0);
   const { household } = await (await client.get(`${installation.origin}/api/bootstrap`)).json();
   expect(household.role).toBe('administrator');
   expect(screen.getByRole('heading', { name: 'Hushållet Linden' })).toBeTruthy();

@@ -4,6 +4,7 @@ import { cdp, page, userEvent } from 'vitest/browser';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import '../../src/client/styles.css';
 import type { MapState } from '../../src/shared/map.js';
+import { createAccountThemeFixture } from '../support/account-theme-browser.js';
 import captured from '../support/household-table-browser.json' with { type: 'json' };
 
 let imageSession: ReturnType<typeof cdp>;
@@ -44,9 +45,11 @@ async function open(width: number, height = 900) {
   await page.viewport(width, height);
   const state = structuredClone(captured.state) as MapState;
   const requests: { url: string; method: string }[] = [];
+  const theme = createAccountThemeFixture(state.userId);
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     requests.push({ url, method });
+    if (url === '/api/theme-preference') return theme.respond(init);
     if (method !== 'GET') throw new Error(`Unexpected search mutation: ${method} ${url}`);
     if (url.endsWith('/view')) return Response.json(captured.view);
     if (url.endsWith('/operations')) return Response.json(captured.operations);
@@ -56,11 +59,13 @@ async function open(width: number, height = 900) {
     throw new Error(`Unexpected search request: ${url}`);
   });
   render(
-    <main>
-      <section className="panel household-panel">
-        <HouseholdMap householdId={state.objects[0].householdId} />
-      </section>
-    </main>,
+    <theme.Boundary>
+      <main>
+        <section className="panel household-panel">
+          <HouseholdMap householdId={state.objects[0].householdId} />
+        </section>
+      </main>
+    </theme.Boundary>,
   );
   await expect.element(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
   await expect.poll(() => document.querySelectorAll('.spatial-portrait').length).toBeGreaterThan(0);
@@ -86,7 +91,6 @@ async function mapFilters() {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  localStorage.removeItem('skyttel-theme');
 });
 
 for (const width of [1280, 390])

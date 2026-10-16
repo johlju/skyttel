@@ -1,4 +1,36 @@
+import { createRequire } from 'node:module';
 import type { APIRequestContext } from '@playwright/test';
+
+const NodeWebSocket = createRequire(import.meta.url)('ws') as new (
+  url: URL,
+  options: { headers: Record<string, string> },
+) => WebSocket;
+
+/** Supply jsdom's missing same-origin WebSocket cookie transport. The real
+ * server still authenticates its handshake, frames and complete receipts. */
+export async function authenticatedHttpWebSocket(client: APIRequestContext, origin: string) {
+  const cookies = (await client.storageState()).cookies
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join('; ');
+  const sockets = new Set<WebSocket>();
+  class BrowserWebSocket extends NodeWebSocket {
+    constructor(input: string | URL) {
+      const path = new URL(input);
+      const target = new URL(`${path.pathname}${path.search}`, origin);
+      target.protocol = target.protocol === 'https:' ? 'wss:' : 'ws:';
+      super(target, { headers: { Cookie: cookies, Origin: origin } });
+      sockets.add(this);
+      this.addEventListener('close', () => sockets.delete(this), { once: true });
+    }
+  }
+  return {
+    WebSocket: BrowserWebSocket,
+    close() {
+      for (const socket of sockets) socket.close();
+      sockets.clear();
+    },
+  };
+}
 
 /** Adapt the browser transport to an authenticated public HTTP client.
  * Every response comes from the real application and SQLite. This replaces
