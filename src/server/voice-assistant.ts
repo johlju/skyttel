@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import type { InitialItem } from 'openai/resources/live/live';
 import { SidebandWS } from 'openai/resources/live/sideband/ws';
 import { conversationConsentRevoked } from '../shared/conversation-consent.js';
+import { sessionWarningMessage } from '../shared/session-activity.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantView } from '../shared/voice-assistant.js';
 import { voiceErrorGroup } from '../shared/voice-error.js';
@@ -33,6 +34,10 @@ type Voice = {
   finalized: boolean;
   timer: NodeJS.Timeout;
   deadlineTimer?: NodeJS.Timeout;
+  warningTimer?: NodeJS.Timeout;
+  warnedUntil?: number;
+  quietAt?: number;
+  warn: () => void;
   access: () => number;
   closed?: Promise<void>;
   finish?: () => void;
@@ -171,6 +176,7 @@ export function voiceAssistantRoutes({
     }
     clearInterval(voice.timer);
     clearTimeout(voice.deadlineTimer);
+    clearTimeout(voice.warningTimer);
     let resolve!: () => void;
     voice.closed = new Promise<void>((done) => {
       resolve = done;
@@ -282,6 +288,7 @@ export function voiceAssistantRoutes({
     if (context.req.raw.signal.aborted) startup.abort();
     let activeVoice: Voice | undefined;
     let deadlineTimer: NodeJS.Timeout | undefined;
+    let warningTimer: NodeJS.Timeout | undefined;
     let expired = false;
     let endReason = 'voice_session_expired';
     let effectiveDeadline = access.expiresAt;
@@ -291,6 +298,42 @@ export function voiceAssistantRoutes({
       startup.abort();
       expireVoiceWork(sessionId);
       if (activeVoice) void close(activeVoice, endReason);
+    };
+    const scheduleWarning = (delay: number) => {
+      clearTimeout(warningTimer);
+      warningTimer = setTimeout(warn, Math.max(1, delay)).unref();
+      if (activeVoice) activeVoice.warningTimer = warningTimer;
+    };
+    const warn = () => {
+      clearTimeout(warningTimer);
+      warningTimer = undefined;
+      const voice = activeVoice;
+      if (expired || voice?.closed) return;
+      if (!voice) return scheduleWarning(250);
+      try {
+        const end = access.guard();
+        if (end !== effectiveDeadline) {
+          check();
+          return;
+        }
+        if (end <= now()) return expire();
+        if (voice.warnedUntil === end) return;
+        if (end - now() > 5 * 60_000) return scheduleWarning(end - now() - 5 * 60_000);
+        if (
+          voice.quietAt === undefined ||
+          now() - voice.quietAt > 1000 ||
+          !voice.work?.readyForSummary()
+        )
+          return scheduleWarning(250);
+        voice.channel.send({
+          type: 'session.commentary.append',
+          delegation_id: null,
+          content: sessionWarningMessage,
+        });
+        voice.warnedUntil = end;
+      } catch {
+        expire(effectiveDeadline <= now() ? 'voice_session_expired' : 'voice_access_lost');
+      }
     };
     const check = () => {
       if (expired) throw new MapError(endReason, 401);
@@ -316,6 +359,7 @@ export function voiceAssistantRoutes({
           Math.max(1, expiresAt - now()),
         ).unref();
         if (activeVoice) activeVoice.deadlineTimer = deadlineTimer;
+        scheduleWarning(expiresAt - now() - 5 * 60_000);
         return expiresAt;
       } catch (error) {
         expire(effectiveDeadline <= now() ? 'voice_session_expired' : 'voice_access_lost');
@@ -395,7 +439,9 @@ export function voiceAssistantRoutes({
         : new SidebandWS(client, { session_id: result.session.id, graceful_close: true });
       const voice: Voice = {
         access: check,
+        warn,
         deadlineTimer,
+        warningTimer,
         view: { id: randomUUID(), phase: 'connecting', seconds: null, usageFinal: false },
         path,
         headers: requestHeaders,
@@ -613,7 +659,10 @@ export function voiceAssistantRoutes({
     } finally {
       starting.delete(check);
       context.req.raw.signal.removeEventListener('abort', abortedStartup);
-      if (!activeVoice || activeVoice.closed) clearTimeout(deadlineTimer);
+      if (!activeVoice || activeVoice.closed) {
+        clearTimeout(deadlineTimer);
+        clearTimeout(warningTimer);
+      }
       if (usage.outcome === 'starting') {
         usage.outcome = 'failed';
         usage.endedAt = new Date().toISOString();
@@ -646,6 +695,9 @@ export function voiceAssistantRoutes({
       voice.work?.rendered(body);
       voice.work?.activity(body.microphoneActive === true && body.microphoneOn === true);
       voice.work?.answer(voice.assistant, body.microphoneOn === true);
+      voice.quietAt =
+        body.microphoneActive !== true && body.speakerActive !== true ? now() : undefined;
+      voice.warn();
       voice.view.summaryReady = voice.work?.readyForSummary() ?? true;
       voice.heartbeat = now();
     } else return context.json({ error: 'not_found' }, 404);

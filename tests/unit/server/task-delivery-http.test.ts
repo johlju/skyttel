@@ -5,6 +5,7 @@ import { createHousehold, restartWithSession, signIn } from '../../support/clien
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
+import { advanceActiveLogin } from '../../support/session-time.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 type Socket = {
@@ -71,6 +72,7 @@ async function arrange(
     NonNullable<Parameters<typeof createInstallation>[1]>,
     'liveFetch' | 'liveSideband' | 'assistantDispatch'
   > = {},
+  boundary: 'absolute' | 'inactivity' = 'absolute',
 ) {
   const started = Date.now();
   let clock = started;
@@ -83,7 +85,10 @@ async function arrange(
   await signIn(browser, app.origin);
   const { household } = await (await createHousehold(browser, app.origin)).json();
   const path = `${app.origin}/api/households/${household.id}/text-assistant`;
-  clock += 8 * 60 * 60_000 - remaining;
+  const elapsed = boundary === 'absolute' ? 8 * 60 * 60_000 - remaining : 25 * 60_000;
+  await advanceActiveLogin(browser, app.origin, elapsed, (elapsed) => {
+    clock += elapsed;
+  });
   const session = await (
     await browser.post(path, {
       headers: { origin: app.origin },
@@ -114,6 +119,63 @@ async function arrange(
     },
   };
 }
+
+test.each(['receipt', 'late-failure'] as const)(
+  'idle restarts at bounded whole delivery %s, never at a delayed observation or unanswered question',
+  async (ending) => {
+    let turn = 0;
+    const fixture = await arrange(
+      textModel(() =>
+        ++turn === 1
+          ? [
+              modelTool('ask_questions', {
+                questions: ['Var finns cykeln?'],
+                continueResponse: true,
+              }),
+            ]
+          : [modelMessage('Hela frågan och svaret.')],
+      ),
+      60_000,
+      {},
+      'inactivity',
+    );
+    expect((await fixture.post()).status()).toBe(202);
+    await expect
+      .poll(() => fixture.channel.messages.find((item) => item.state === 'awaiting-receipt'))
+      .toBeTruthy();
+    const full = fixture.channel.messages.find((item) => item.state === 'awaiting-receipt');
+    const readPolicy = async () =>
+      await (
+        await browser.post(`${app.origin}/api/browser-binding/status`, {
+          headers: { origin: app.origin },
+          data: {},
+        })
+      ).json();
+    const waiting = await readPolicy();
+    expect(waiting.expiresAt).toBe(waiting.serverTime + 5_000 + 30 * 60_000);
+    fixture.advance(ending === 'receipt' ? 4_000 : 10 * 60_000);
+    if (ending === 'receipt') {
+      fixture.channel.socket.send(
+        JSON.stringify({ type: 'received', taskId: 'answer', text: full?.text }),
+      );
+      await expect
+        .poll(() => fixture.channel.messages.some((item) => item.state === 'received'))
+        .toBe(true);
+    } else {
+      await browser.get(fixture.endpoint);
+      await expect
+        .poll(() => fixture.channel.messages.some((item) => item.state === 'failed'))
+        .toBe(true);
+    }
+    const terminal = await readPolicy();
+    const expected = waiting.serverTime + (ending === 'receipt' ? 4_000 : 5_000) + 30 * 60_000;
+    expect(terminal.expiresAt).toBe(expected);
+    fixture.advance(expected - terminal.serverTime);
+    expect((await (await browser.get(`${app.origin}/api/bootstrap`)).json()).status).toBe(
+      'anonymous',
+    );
+  },
+);
 
 test('missing transport receipt fails after five seconds without waiting for reading or reconnect', async () => {
   const fixture = await arrange(textModel(() => [modelMessage('Hela svaret.')]));
@@ -627,7 +689,9 @@ test('the bound browser receives the whole long answer after natural expiry and 
   await signIn(browser, app.origin);
   const { household } = await (await createHousehold(browser, app.origin)).json();
   const path = `${app.origin}/api/households/${household.id}/text-assistant`;
-  clock += 8 * 60 * 60_000 - 1;
+  await advanceActiveLogin(browser, app.origin, 8 * 60 * 60_000 - 1, (elapsed) => {
+    clock += elapsed;
+  });
   const session = await (
     await browser.post(path, {
       headers: { origin: app.origin },

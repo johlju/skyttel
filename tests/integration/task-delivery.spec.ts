@@ -11,6 +11,7 @@ import {
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { advanceActiveLogin } from '../support/session-time.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text och röst', async ({
@@ -244,7 +245,9 @@ for (const scenario of [
       await page.addInitScript({ content: liveBrowserFixtureSource });
       await signIn(page.request, app.origin);
       await createHousehold(page.request, app.origin, 'Leveransprov');
-      clock += 8 * 60 * 60_000 - 60_000;
+      await advanceActiveLogin(page.request, app.origin, 8 * 60 * 60_000 - 60_000, (elapsed) => {
+        clock += elapsed;
+      });
       await page.goto(app.origin);
       await startConversationWithText(page);
       if (scenario.audio) {

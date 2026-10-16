@@ -1,4 +1,5 @@
 import { type RefObject, useLayoutEffect, useState } from 'react';
+import { availableViewport as viewport } from './available-viewport.js';
 
 export type WindowPosition = { x: number; y: number };
 type Size = { width: number; height: number };
@@ -6,15 +7,6 @@ type Rectangle = WindowPosition & Size;
 const reservedSurfaces =
   '.text-view, .voice-box, .conversation-notice, .map-selection-details:not(.object-property-window)';
 export type FloatingArea = { viewport: Rectangle; obstacles: Rectangle[] };
-
-function viewport(): Rectangle {
-  return {
-    x: window.visualViewport?.offsetLeft ?? 0,
-    y: window.visualViewport?.offsetTop ?? 0,
-    width: window.visualViewport?.width ?? window.innerWidth,
-    height: window.visualViewport?.height ?? window.innerHeight,
-  };
-}
 
 export function measureFloatingArea(element: HTMLElement): FloatingArea {
   const workspace = element.closest('.household-map') ?? element;

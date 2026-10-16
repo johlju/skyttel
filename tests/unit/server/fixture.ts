@@ -118,6 +118,11 @@ export async function applicationFixture({
     return {
       request,
       json,
+      async registerBinding(binding: { cookieName: string; candidate: string }) {
+        // The browser writes only this explicit candidate before registration.
+        cookies.set(binding.cookieName, binding.candidate);
+        return json('/api/browser-binding/register', {});
+      },
       async signIn(provider = 'google') {
         if (database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'browser_binding'").get()) {
           const headers: Record<string, string> = identity

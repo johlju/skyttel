@@ -15,14 +15,14 @@ const entries = [
       'Säkerhetskaka på Skyttels kanoniska HTTPS-adress. Lokal utveckling på HTTP-loopback använder skyttel_binding.',
     content:
       'En slumpmässig, ogenomskinlig nyckel binder begärda inloggningsförsök i samma webbläsare. Skapas först när du begär inloggning. Första lyckade inloggningen ersätter den tidigare inom bindningen och avslutar andra påbörjade försök. Utloggning avslutar åtkomsten och pågående försök här, utan att påverka andra bindningar. Nyckeln ger ingen egen åtkomst och är inte en separat kopia av lagringsvalet.',
-    time: 'Börjar som sessionskaka. Efter bekräftad ihågkommen inloggning gäller beständigheten till just den sessionens absoluta utgång, högst sju dygn från inloggningen. Vanlig inloggning använder sessionskaka och gäller högst åtta timmar. Den har Secure vid HTTPS, SameSite=Lax och Path=/, saknar Domain och kan läsas av JavaScript för samordnad registrering. Serverns behörighet är separat från kakans lagringstid.',
+    time: 'Börjar som sessionskaka. Efter bekräftad ihågkommen inloggning gäller beständigheten till just den sessionens absoluta utgång, högst sju dygn från inloggningen. Vanlig inloggning använder sessionskaka och gäller högst åtta timmar, med 30 minuters inaktivitet. Den har Secure vid HTTPS, SameSite=Lax och Path=/, saknar Domain och kan läsas av JavaScript för samordnad registrering. Serverns behörighet är separat från kakans lagringstid.',
   },
   {
     name: 'better-auth.session_token',
     place: 'Kaka i den här webbläsaren. Vid HTTPS: __Secure-better-auth.session_token.',
     content:
       'Signerad, ogenomskinlig sessionsnyckel. Skyttel använder den för att identifiera din inloggning; den innehåller inte hushållets karta.',
-    time: 'Vanlig inloggning använder sessionskaka och gäller högst åtta timmar från inloggningen. Bara ett aktivt Kom ihåg mig-val ger beständig kaka till sessionens absoluta utgång, högst sju dygn från inloggningen. Läsning, återförsök och ny kakutgivning förlänger inte tiden. Utloggning avslutar serveråtkomsten och tar bort kakan. Kakans livstid är inte samma sak som fysisk radering på servern.',
+    time: 'Vanlig inloggning använder sessionskaka och gäller högst åtta timmar från inloggningen, med 30 minuters inaktivitet. Bara ett aktivt Kom ihåg mig-val ger beständig kaka till sessionens absoluta utgång, högst sju dygn från inloggningen utan separat inaktivitetsgräns. Läsning, återförsök och ny kakutgivning förlänger inte tiden. Utloggning avslutar serveråtkomsten och tar bort kakan. Kakans livstid är inte samma sak som fysisk radering på servern.',
   },
   {
     name: 'better-auth.state',
@@ -363,6 +363,13 @@ export function CookieStorage({ userId }: { userId?: string }) {
           Valets strukturversion, aktiva val, informationsversion och serverns beslutstid binds till
           rätt försök. Den skapade sessionen får samma valunderlag och en absolut utgång. Det är
           ingen kontopreferens eller separat valhistorik.
+        </p>
+        <p>
+          Sessionen har en tidpunkt för senaste användarhandling. Under faktiskt mottaget AI-arbete
+          och ändlig leverans sparas också arbetets ursprungliga tidsgräns. Uppgifterna används för
+          att upprätthålla inaktivitetsgränsen, delas av flikar med samma inloggning och gallras med
+          sessionen. De är ingen historik över dina handlingar. Om tjänsten startar om återupptas
+          inte arbetet och tidsgränsen startas inte om.
         </p>
         <p>
           Resultat av begärd import och permanent radering finns på servern för återhämtning. Ett

@@ -17,6 +17,8 @@ let loseStorageReply = false;
 let copyGeneration = '11111111-1111-4111-8111-111111111111';
 let generation = copyGeneration;
 let hasCopy = false;
+let holdSessionStatus = false;
+let releaseSessionStatus: (() => void) | undefined;
 const installation = await createInstallation(
   { provider, subject: identity.subject },
   {
@@ -29,6 +31,18 @@ const installation = await createInstallation(
         response.ok
       )
         return new Response(null, { status: 502 });
+      if (
+        holdSessionStatus &&
+        new URL(request.url).pathname === '/api/browser-binding/status' &&
+        (await response.clone().json()).state === 'expired'
+      ) {
+        holdSessionStatus = false;
+        await new Promise<void>((resolve) => {
+          releaseSessionStatus = resolve;
+          console.log(JSON.stringify({ event: 'session_status_held' }));
+        });
+        releaseSessionStatus = undefined;
+      }
       if (dropLoginCookie && new URL(request.url).pathname.startsWith('/api/auth/callback/')) {
         const headers = new Headers(response.headers);
         headers.delete('set-cookie');
@@ -76,10 +90,11 @@ try {
     }),
   );
   console.log(
-    'provider-down | provider-up | deny-consent | allow-consent | drop-login-cookie | allow-login-cookie | hold-initialization | hold-registration | hold-reset-check | release-initialization | save-copy | restore-copy | lose-storage-reply | allow-storage-reply | advance-day | restart | quit',
+    'provider-down | provider-up | deny-consent | allow-consent | drop-login-cookie | allow-login-cookie | hold-initialization | hold-registration | hold-reset-check | release-initialization | save-copy | restore-copy | lose-storage-reply | allow-storage-reply | hold-session-status | release-session-status | advance-minutes N (1–480) | advance-day | restart | quit',
   );
   for await (const line of input) {
     const command = line.trim();
+    const minutes = /^advance-minutes ([1-9]\d{0,2})$/.exec(command);
     if (command === 'quit') break;
     if (command === 'provider-down') installation.failProvider(true);
     else if (command === 'provider-up') installation.failProvider(false);
@@ -103,6 +118,11 @@ try {
       });
       console.log(JSON.stringify({ event: 'synthetic_copy_restored' }));
     } else if (command === 'advance-day') clockOffset += 86_400_000;
+    else if (command === 'hold-session-status' && !releaseSessionStatus) holdSessionStatus = true;
+    else if (command === 'release-session-status') {
+      releaseSessionStatus?.();
+      holdSessionStatus = false;
+    } else if (minutes && Number(minutes[1]) <= 480) clockOffset += Number(minutes[1]) * 60_000;
     else if (command === 'hold-initialization' && !releaseInitialization)
       holdInitialization = 'candidate';
     else if (command === 'hold-registration' && !releaseInitialization)
@@ -113,6 +133,8 @@ try {
       releaseInitialization?.();
       holdInitialization = null;
     } else if (command === 'restart') {
+      releaseSessionStatus?.();
+      holdSessionStatus = false;
       releaseInitialization?.();
       holdInitialization = null;
       await installation.restart();
@@ -123,6 +145,7 @@ try {
     console.log(JSON.stringify({ event: 'configured', command }));
   }
 } finally {
+  releaseSessionStatus?.();
   releaseInitialization?.();
   input.close();
   await installation.close();

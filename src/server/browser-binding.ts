@@ -3,6 +3,7 @@ import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import { serializeSigned } from 'hono/utils/cookie';
 import { rememberedLoginInformation } from '../shared/remembered-login.js';
+import type { SessionStatus } from '../shared/session-activity.js';
 import type { Auth } from './auth.js';
 import { stageAuthCallback } from './auth-callback-transaction.js';
 import { installationAuthority } from './installation-authority.js';
@@ -39,6 +40,7 @@ type SessionPolicy = Choice & {
   loginConfirmation: string | null;
   ordinaryStartedAt: number | null;
   lastActivityAt: number | null;
+  idleWorkUntil?: number | null;
 };
 const ordinaryLifetime = 8 * 60 * 60_000;
 const rememberedLifetime = 7 * 24 * 60 * 60_000;
@@ -65,7 +67,7 @@ function rememberedSession(policy: SessionPolicy) {
     policy.absoluteExpiresAt <= created + rememberedLifetime
   );
 }
-export function sessionDeadline(policy: SessionPolicy) {
+export function absoluteSessionDeadline(policy: SessionPolicy) {
   const created = new Date(policy.createdAt).getTime();
   return Math.min(
     new Date(policy.expiresAt).getTime(),
@@ -73,6 +75,25 @@ export function sessionDeadline(policy: SessionPolicy) {
     rememberedSession(policy)
       ? created + rememberedLifetime
       : (policy.ordinaryStartedAt ?? created) + ordinaryLifetime,
+  );
+}
+export function sessionDeadline(policy: SessionPolicy) {
+  return Math.min(
+    absoluteSessionDeadline(policy),
+    rememberedSession(policy)
+      ? Number.POSITIVE_INFINITY
+      : Math.max(
+          policy.lastActivityAt ?? new Date(policy.createdAt).getTime(),
+          validWorkDeadline(policy) ? (policy.idleWorkUntil ?? 0) : 0,
+        ) +
+          30 * 60_000,
+  );
+}
+function validWorkDeadline(policy: SessionPolicy) {
+  return (
+    Number.isSafeInteger(policy.idleWorkUntil) &&
+    (policy.idleWorkUntil ?? 0) >= new Date(policy.createdAt).getTime() &&
+    (policy.idleWorkUntil ?? 0) <= absoluteSessionDeadline(policy) + 30 * 60_000
   );
 }
 const deadline = sessionDeadline;
@@ -106,6 +127,42 @@ export function browserBindings(
   origin: string,
   now: () => number = () => Date.now(),
 ) {
+  const hasWorkDeadline = (
+    database.prepare('PRAGMA table_info(session)').all() as { name: string }[]
+  ).some((column) => column.name === 'idleWorkUntil');
+  // Process-local tasks never resume. Resolve their bounded crash anchors
+  // before background cleanup can examine the effective session policy.
+  if (hasWorkDeadline) {
+    try {
+      if (database.inTransaction) throw new Error('cleanup_busy');
+      let count: number;
+      do {
+        count = database
+          .transaction(() => {
+            const abandoned = database
+              .prepare('SELECT * FROM session WHERE idleWorkUntil IS NOT NULL LIMIT 100')
+              .all() as SessionPolicy[];
+            for (const selected of abandoned)
+              database
+                .prepare('UPDATE session SET lastActivityAt = ?, idleWorkUntil = NULL WHERE id = ?')
+                .run(
+                  validWorkDeadline(selected)
+                    ? Math.max(
+                        selected.lastActivityAt ?? new Date(selected.createdAt).getTime(),
+                        Math.min(now(), selected.idleWorkUntil ?? 0),
+                      )
+                    : selected.lastActivityAt,
+                  selected.id,
+                );
+            return abandoned.length;
+          })
+          .immediate();
+      } while (count === 100);
+    } catch {
+      console.error(JSON.stringify({ event: 'authentication_cleanup_failed' }));
+      throw new Error('authentication_cleanup_failed');
+    }
+  }
   const cookieName = bindingCookieName(origin);
   const routes = new Hono();
   const completing = new Set<string>();
@@ -133,6 +190,12 @@ export function browserBindings(
     return database.prepare('SELECT * FROM session WHERE id = ?').get(id) as
       | SessionPolicy
       | undefined;
+  }
+  function activity(id: string) {
+    const selected = policy(id);
+    if (!selected || deadline(selected) <= now() || database.inTransaction) return false;
+    database.prepare('UPDATE session SET lastActivityAt = ? WHERE id = ?').run(now(), id);
+    return true;
   }
   async function rawSession(headers: Headers) {
     const current = await librarySession(headers);
@@ -205,6 +268,62 @@ export function browserBindings(
     )
       return context.json({ error: 'forbidden' }, 403);
     await next();
+  });
+  function status(selected: SessionPolicy, binding: Binding): SessionStatus {
+    const expiresAt = deadline(selected);
+    const reason = expiresAt < absoluteSessionDeadline(selected) ? 'inactivity' : 'absolute';
+    const identity = {
+      sessionId: selected.id,
+      bindingId: binding.id,
+      bindingRevision: binding.revision,
+    };
+    return expiresAt <= now()
+      ? { state: 'expired', serverTime: now(), reason, ...identity }
+      : { state: 'active', serverTime: now(), expiresAt, reason, ...identity };
+  }
+  async function readStatus(headers: Headers): Promise<SessionStatus> {
+    // Capture a known policy before the library can remove an expired row.
+    const binding = recordedBinding(headers);
+    const selected = binding?.sessionId ? policy(binding.sessionId) : undefined;
+    const current = await session(headers);
+    const fresh = recordedBinding(headers);
+    if (binding && fresh?.id === binding.id && fresh.revision === binding.revision) {
+      const latest = fresh.sessionId ? policy(fresh.sessionId) : undefined;
+      if (current && latest?.id === current.session.id && latest.token === current.session.token)
+        return status(latest, fresh);
+      const ended = latest ?? (fresh.sessionId === null ? selected : undefined);
+      if (
+        fresh.confirmed &&
+        ended &&
+        ended.id === selected?.id &&
+        (!latest || latest.token === selected.token) &&
+        deadline(ended) <= now()
+      )
+        return status(ended, fresh);
+    }
+    return {
+      state: 'anonymous',
+      serverTime: now(),
+      bindingId: fresh?.id,
+      bindingRevision: fresh?.revision,
+    };
+  }
+  routes.post('/status', async (context) =>
+    context.json(await readStatus(context.req.raw.headers)),
+  );
+  routes.post('/activity', async (context) => {
+    const body = await context.req.json().catch(() => null);
+    if (!['write', 'speak', 'navigate', 'search', 'edit', 'save'].includes(body?.kind))
+      return context.json({ error: 'invalid_request' }, 400);
+    const current = await session(context.req.raw.headers);
+    const selected = current && policy(current.session.id);
+    const binding = lookup(context.req.raw.headers);
+    if (!selected || !binding) return context.json({ error: 'unauthenticated' }, 401);
+    if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
+    // Admission above validates the old deadline: activity arriving at the
+    // exact end cannot resurrect a login. Absolute limits never move.
+    activity(selected.id);
+    return context.json(status(policy(selected.id) ?? selected, binding));
   });
   routes.post('/candidate', async (context) => {
     const headers = context.req.raw.headers;
@@ -307,7 +426,7 @@ export function browserBindings(
       remembered: rememberedSession(selected),
       informationVersion: selected.informationVersion,
       decidedAt: selected.decidedAt,
-      expiresAt: deadline(selected),
+      expiresAt: absoluteSessionDeadline(selected),
       cookieName,
       origin,
     });
@@ -321,7 +440,7 @@ export function browserBindings(
       remembered: rememberedSession(selected),
       sessionId: selected.id,
       bindingId: lookup(context.req.raw.headers)?.id,
-      expiresAt: deadline(selected),
+      expiresAt: absoluteSessionDeadline(selected),
       inactiveAfterMs: 30 * 60_000,
       generation: installationAuthority(database)?.generation,
     });
@@ -398,7 +517,10 @@ export function browserBindings(
         if (database.prepare('SELECT 1 FROM storage_action_result WHERE id = ?').get(body.id))
           return null;
         const completedAt = now();
-        const expiresAt = Math.min(deadline(selected), completedAt + ordinaryLifetime);
+        const expiresAt = Math.min(
+          absoluteSessionDeadline(selected),
+          completedAt + ordinaryLifetime,
+        );
         const ordinaryStartedAt = rememberedSession(selected)
           ? completedAt
           : (selected.ordinaryStartedAt ?? new Date(selected.createdAt).getTime());
@@ -456,6 +578,29 @@ export function browserBindings(
     return response;
   });
   return {
+    status: readStatus,
+    activity,
+    work(id: string, until: number | undefined) {
+      if (!hasWorkDeadline || database.inTransaction) return false;
+      const selected = policy(id);
+      if (!selected) return false;
+      if (until !== undefined && until > now() && until <= now() + 30 * 60_000) {
+        if (selected.idleWorkUntil === until) return false;
+        database.prepare('UPDATE session SET idleWorkUntil = ? WHERE id = ?').run(until, id);
+      } else {
+        if (selected.idleWorkUntil == null) return false;
+        database
+          .prepare('UPDATE session SET lastActivityAt = ?, idleWorkUntil = NULL WHERE id = ?')
+          .run(
+            Math.max(
+              selected.lastActivityAt ?? new Date(selected.createdAt).getTime(),
+              Math.min(now(), selected.idleWorkUntil),
+            ),
+            id,
+          );
+      }
+      return true;
+    },
     routes,
     session,
     async output(request: Request, response: Response) {

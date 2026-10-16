@@ -1689,6 +1689,10 @@ kakutgivning, läsningar, förfalskade val och direkta auth-vägar får inte
 förlänga tiden. Bekräftelse kräver rätt aktuella sessionsnyckel och bindning;
 en korrelationsreferens ensam ger ingen behörighet. Dessa requestdrivna
 prov är tekniskt underlag, ingen fysisk omstarts- eller leverantörskontroll.
+De vanliga inloggningarnas absoluta gräns arrangeras med uttryckliga
+användarhandlingar med mindre än 30 minuters mellanrum. Bakgrundsläsning
+håller inte dessa sessioner aktiva. Separata
+[inaktivitetsfall](session-inactivity.md) provar utgång utan sådan aktivitet.
 Ett separat tekniskt Chromium-prov håller ett riktigt bekräftelsesvar över
 en ny vanlig inloggning. Det gamla svaret får varken ge framgångsbesked
 eller lämna säkerhetskakan beständig efter den nekade efterkontrollen.

@@ -121,7 +121,14 @@ test.each([
       expiresAt: time + 28_800_000,
     });
     expect(ordinary.headers.getSetCookie()).toEqual([]);
-    time += 28_799_999;
+    const beforeEnd = time + 28_799_999;
+    while (time + 29 * 60_000 < beforeEnd) {
+      time += 29 * 60_000;
+      expect(
+        (await client.json('/api/browser-binding/activity', { kind: 'navigate' })).status,
+      ).toBe(200);
+    }
+    time = beforeEnd;
     expect((await confirmation()).status).toBe(200);
     time += 1;
     expect((await confirmation()).status).toBe(401);

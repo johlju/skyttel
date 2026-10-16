@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { availableViewport } from './available-viewport.js';
 import { clampWindow, type WindowPosition } from './floating-windows.js';
 
 /** Independent viewport placement. Pointer capture keeps window drags off the map. */
@@ -25,7 +26,7 @@ export function useMovableWindow(
     origin: WindowPosition;
   } | null>(null);
   function clamp(value: WindowPosition) {
-    const viewport = window.visualViewport;
+    const viewport = availableViewport();
     return clampWindow(
       value,
       {
@@ -33,10 +34,10 @@ export function useMovableWindow(
         height: panel.current?.offsetHeight ?? 0,
       },
       {
-        x: (viewport?.offsetLeft ?? 0) + 8,
-        y: (viewport?.offsetTop ?? 0) + 8,
-        width: (viewport?.width ?? window.innerWidth) - 16,
-        height: (viewport?.height ?? window.innerHeight) - 16,
+        x: viewport.x + 8,
+        y: viewport.y + 8,
+        width: viewport.width - 16,
+        height: viewport.height - 16,
       },
     );
   }
@@ -45,22 +46,18 @@ export function useMovableWindow(
     if (!active || !element) return;
     function fitToViewport() {
       if (!element?.offsetWidth || !element.offsetHeight) return;
-      const viewport = window.visualViewport;
-      const width = viewport?.width ?? window.innerWidth;
-      const height = viewport?.height ?? window.innerHeight;
+      const viewport = availableViewport();
+      const { width, height } = viewport;
       const text = element?.closest('.household-map')?.querySelector('.text-view');
       const textBounds = text?.getBoundingClientRect();
       const right = textBounds?.width
-        ? Math.min((viewport?.offsetLeft ?? 0) + width, textBounds.left)
-        : (viewport?.offsetLeft ?? 0) + width;
+        ? Math.min(viewport.x + width, textBounds.left)
+        : viewport.x + width;
       const search = element.closest('.household-map')?.querySelector('.map-object-search');
       const initialTop =
         width <= 700 && height <= 450
-          ? Math.max(
-              (viewport?.offsetTop ?? 0) + 8,
-              (search?.getBoundingClientRect().bottom ?? 0) + 8,
-            )
-          : (viewport?.offsetTop ?? 0) + (height < 600 ? 8 : 100);
+          ? Math.max(viewport.y + 8, (search?.getBoundingClientRect().bottom ?? 0) + 8)
+          : viewport.y + (height < 600 ? 8 : 100);
       const initial = {
         x: right - element.offsetWidth - 24 - (offset % 5) * 24,
         y: initialTop + (offset % 5) * 24,
@@ -72,8 +69,8 @@ export function useMovableWindow(
           height: element.offsetHeight,
         },
         {
-          x: (viewport?.offsetLeft ?? 0) + 8,
-          y: (viewport?.offsetTop ?? 0) + 8,
+          x: viewport.x + 8,
+          y: viewport.y + 8,
           width: width - 16,
           height: height - 16,
         },

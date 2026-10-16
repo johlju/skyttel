@@ -463,6 +463,7 @@ export function useVoice(options: {
               ...anchor(),
               microphoneOn: !offRef.current,
               microphoneActive: !offRef.current && activityRef.current.microphone,
+              speakerActive: activityRef.current.speaker,
             },
             attempt.controller.signal,
           );

@@ -9,6 +9,7 @@ import { beginAssistant, callAssistant } from '../../support/assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
+import { advanceActiveLogin } from '../../support/session-time.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -48,7 +49,10 @@ test.each(['logout', 'deadline', 'restart'] as const)(
     const { household } = await (await createHousehold(browser, app.origin)).json();
     const mapPath = `${app.origin}/api/households/${household.id}/map`;
     const map = await (await browser.get(mapPath)).json();
-    time = end - 1_000;
+    await advanceActiveLogin(browser, app.origin, end - 1_000 - time, (elapsed) => {
+      time += elapsed;
+      vi.setSystemTime(time);
+    });
     vi.setSystemTime(time);
     await signIn(other, app.origin);
     const external = await beginAssistant(other, app.origin);
@@ -154,6 +158,14 @@ test.each(['logout', 'deadline', 'restart'] as const)(
       // grant is unnecessary even though the original deadline is in future.
       expect(count('assistant_connection', 'browserSessionId IS NOT NULL')).toBe(0);
       await swept(() => count('browser_binding', 'sessionId IS NULL'));
+      expect(
+        (
+          await other.post(`${app.origin}/api/browser-binding/activity`, {
+            headers: { origin: app.origin },
+            data: { kind: 'navigate' },
+          })
+        ).status(),
+      ).toBe(200);
       time += 1;
       await swept(() => count('oauthClient'), 1);
       expect(count('assistant_connection', 'browserSessionId IS NULL')).toBe(1);
@@ -187,6 +199,14 @@ test.each(['logout', 'deadline', 'restart'] as const)(
       await vi.advanceTimersByTimeAsync(60_100);
       vi.setSystemTime(time);
       expect(count('assistant_connection', 'browserSessionId IS NOT NULL')).toBe(1);
+      expect(
+        (
+          await other.post(`${app.origin}/api/browser-binding/activity`, {
+            headers: { origin: app.origin },
+            data: { kind: 'navigate' },
+          })
+        ).status(),
+      ).toBe(200);
       time += 1;
       await swept(() => count('assistant_connection', 'browserSessionId IS NOT NULL'));
       await swept(() => count('browser_binding', 'sessionId IS NULL'));

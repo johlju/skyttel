@@ -1,6 +1,7 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import { signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { advanceActiveLogin } from '../support/session-time.js';
 
 test('ordinary login uses a session cookie and never emits a remembered-choice mirror', {
   tag: '@technical',
@@ -377,10 +378,18 @@ for (const remembered of [false, true]) {
         item.name.endsWith('better-auth.session_token'),
       );
       expect(cookie?.expires).toBe(remembered ? Math.floor(expiresAt / 1000) : -1);
-      time += 3_600_000;
+      if (remembered) time += 3_600_000;
+      else
+        await advanceActiveLogin(request, origin, 3_600_000, (elapsed) => {
+          time += elapsed;
+        });
       await installation.restart();
       expect(await (await read()).json()).toMatchObject({ expiresAt });
-      time = expiresAt - 1;
+      if (remembered) time = expiresAt - 1;
+      else
+        await advanceActiveLogin(request, origin, expiresAt - 1 - time, (elapsed) => {
+          time += elapsed;
+        });
       expect((await read()).status()).toBe(200);
       expect(
         (await request.get(`${origin}/api/auth/get-session`)).headers()['set-cookie'],

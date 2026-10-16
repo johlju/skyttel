@@ -51,21 +51,26 @@ test('session expiry and the action result window keep their original anchors ac
   await client.signIn();
   const session = (await (await client.request('/api/auth/get-session')).json()).session;
   const id = 'f01ac83d-bd0d-4b20-a8c0-c28600c4c799';
-  expect(
-    (
-      await client.json('/api/browser-binding/revoke', {
-        id,
-        sessionId: session.id,
-        rememberMe: false,
-      })
-    ).status,
-  ).toBe(200);
+  const revoked = await client.json('/api/browser-binding/revoke', {
+    id,
+    sessionId: session.id,
+    rememberMe: false,
+  });
+  expect(revoked.status).toBe(200);
+  expect((await client.registerBinding(await revoked.json())).status).toBe(200);
   const count = (table: string) =>
     (fixture.database.prepare(`SELECT count(*) AS count FROM ${table}`).get() as { count: number })
       .count;
   vi.useFakeTimers({ toFake: [...timerTypes] });
   await fixture.restart();
-  time = startedAt + 28_799_999;
+  const beforeEnd = startedAt + 28_799_999;
+  while (time + 29 * 60_000 < beforeEnd) {
+    time += 29 * 60_000;
+    expect((await client.json('/api/browser-binding/activity', { kind: 'navigate' })).status).toBe(
+      200,
+    );
+  }
+  time = beforeEnd;
   await vi.advanceTimersByTimeAsync(60_100);
   expect(count('session')).toBe(1);
   time += 1;

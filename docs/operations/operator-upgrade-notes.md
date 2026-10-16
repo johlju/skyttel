@@ -21,6 +21,21 @@ separate controlled operation with its own erasure review. Keep delivery
 blocked until required provider, HTTPS, accessibility and backup evidence
 is available.
 
+### Ordinary login inactivity
+
+Verify that ordinary logins end after thirty minutes without meaningful
+user actions, including after remembered login is turned off. Background
+requests and a silent microphone must not keep a login active. Check the
+warning before expiry and the exact access boundary with text and voice.
+Remembered logins retain their seven-day absolute limit without a separate
+inactivity limit. Activity never extends an absolute login limit.
+
+Accepted work and finite delivery pause inactivity within the original
+task deadline. A service restart ends that work without replay. Verify
+that restart or a delayed completion cannot renew the inactivity period
+beyond its original bounded work deadline. Stored drafts and save
+receipts must remain available after a new login.
+
 ### Authentication data cleanup
 
 Keep the upgraded service running so that startup and background cleanup

@@ -4,6 +4,7 @@ import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation, robin } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
+import { advanceActiveLogin } from '../../support/session-time.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -58,7 +59,9 @@ async function setup(
   expect(proposed.status(), await proposed.text()).toBe(200);
   // Start just before the absolute server deadline. Provider offsets and the
   // browser clock cannot move this server-owned boundary.
-  time += 8 * 60 * 60_000 - remaining;
+  await advanceActiveLogin(client, app.origin, 8 * 60 * 60_000 - remaining, (elapsed) => {
+    time += elapsed;
+  });
   const started = await client.post(path, {
     headers: { origin: app.origin },
     data: approvedForVisit,

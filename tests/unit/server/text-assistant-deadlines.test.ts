@@ -7,6 +7,7 @@ import { beginAssistant, callAssistant } from '../../support/assistant.js';
 import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
+import { advanceActiveLogin } from '../../support/session-time.js';
 import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -392,7 +393,9 @@ test('accepted text finishes after natural login expiry and its committed draft 
   const map = await (await browser.get(mapPath)).json();
   typeId = map.types.find((type: { name: string }) => type.name === 'Person').id;
   const path = `${app.origin}/api/households/${household.id}/text-assistant`;
-  clock += 8 * 60 * 60_000 - 1_000;
+  await advanceActiveLogin(browser, app.origin, 8 * 60 * 60_000 - 1_000, (elapsed) => {
+    clock += elapsed;
+  });
   const session = await (
     await browser.post(path, {
       headers: { origin: app.origin },
@@ -564,7 +567,9 @@ test.each(['logout after expiry', 'consent revocation', 'membership revocation']
       ).status(),
     ).toBe(200);
     const path = `${app.origin}/api/households/${household.id}/text-assistant`;
-    clock += 8 * 60 * 60_000 - 1_000;
+    await advanceActiveLogin(browser, app.origin, 8 * 60 * 60_000 - 1_000, (elapsed) => {
+      clock += elapsed;
+    });
     const session = await (
       await browser.post(path, {
         headers: { origin: app.origin },
@@ -709,7 +714,9 @@ test('a late voice result before its timer runs preserves already accepted queue
   const mapPath = `${app.origin}/api/households/${household.id}/map`;
   const map = await (await browser.get(mapPath)).json();
   const path = `${app.origin}/api/households/${household.id}/text-assistant`;
-  clock += 8 * 60 * 60_000 - 1_000;
+  await advanceActiveLogin(browser, app.origin, 8 * 60 * 60_000 - 1_000, (elapsed) => {
+    clock += elapsed;
+  });
   const session = await (
     await browser.post(path, {
       headers: { origin: app.origin },

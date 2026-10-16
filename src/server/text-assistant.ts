@@ -111,6 +111,8 @@ export function textAssistantRoutes({
   onResetStart,
   onNewConversation,
   onSummary,
+  onWork,
+  onActivity,
   now = () => Date.now(),
 }: {
   database: Database.Database;
@@ -126,13 +128,35 @@ export function textAssistantRoutes({
   onStop?: (sessionId: string) => void;
   onResetStart?: (sessionId: string) => void;
   onSummary?: (sessionId: string, signal: AbortSignal) => Promise<void> | undefined;
+  onWork?: (browserSessionId: string, until: number | undefined) => void;
+  onActivity?: (browserSessionId: string) => void;
   /** A conversation has started over, so its voice can do the same and say the statement. */
   onNewConversation?: (view: TextAssistantView, deferVoiceClose?: boolean) => void;
   now?: () => number;
 }) {
   const routes = new Hono<{ Variables: { actorId: string; browserSessionId: string } }>();
   const sessions = new Map<string, Session>();
-  const deliveries = taskDeliveries(now);
+  const pausedSessions = new Set<string>();
+  function syncWork() {
+    const active = new Map<string, number>();
+    for (const session of sessions.values())
+      for (const accepted of session.accepted.values()) {
+        const until = ['queued', 'working'].includes(accepted.status)
+          ? accepted.deadline
+          : ['waiting', 'awaiting-receipt'].includes(accepted.delivery?.value.state ?? '')
+            ? (accepted.delivery?.pendingUntil ?? 0)
+            : 0;
+        if (until > now())
+          active.set(
+            session.browserSessionId,
+            Math.max(active.get(session.browserSessionId) ?? 0, until),
+          );
+      }
+    for (const id of new Set([...pausedSessions, ...active.keys()])) onWork?.(id, active.get(id));
+    pausedSessions.clear();
+    for (const id of active.keys()) pausedSessions.add(id);
+  }
+  const deliveries = taskDeliveries(now, syncWork);
   const deliveryOwners = new Map<string, Session>();
   const textWork = new AsyncLocalStorage<{
     session: Session;
@@ -178,6 +202,7 @@ export function textAssistantRoutes({
     session.queue = [];
     for (const accepted of session.accepted.values()) accepted.delivery?.stop();
     session.accepted.clear();
+    syncWork();
     onStop?.(session.id);
     session.displayed?.(false);
     session.input = [];
@@ -790,6 +815,7 @@ export function textAssistantRoutes({
     for (const accepted of session.accepted.values()) accepted.delivery?.stop();
     session.accepted.clear();
     session.taskId = undefined;
+    syncWork();
     session.taskSource = undefined;
     session.canceled = undefined;
     session.completedReplies = [];
@@ -1470,6 +1496,7 @@ export function textAssistantRoutes({
     }
     accepted.result = view(session);
     accepted.delivery?.stop();
+    syncWork();
     nextMessage(session);
   }
   function expireConversation(session: Session) {
@@ -1518,6 +1545,7 @@ export function textAssistantRoutes({
       }
     }
     session.voiceInputPending = false;
+    syncWork();
     nextMessage(session);
   }
   function stopExpiredVoice(session: Session) {
@@ -1722,6 +1750,7 @@ export function textAssistantRoutes({
             assistantSaveState(accepted.result),
           );
         else accepted.delivery?.stop();
+        syncWork();
         nextMessage(session);
       });
   }
@@ -2011,6 +2040,7 @@ export function textAssistantRoutes({
         message.voice || body.deliveryAudio === true,
       ),
     });
+    syncWork();
     message.timer = setTimeout(
       () => expireMessage(session, message),
       Math.max(1, message.deadline - now()),
@@ -2102,6 +2132,7 @@ export function textAssistantRoutes({
         accepted.result = view(session);
       }
     }
+    syncWork();
     return context.json(view(session));
   });
   // Nytt samtal: the conversation text and the context are emptied, and
@@ -2384,6 +2415,7 @@ export function textAssistantRoutes({
       session.voiceInputPending = pending;
       session.lastVoiceInputAt = now();
       if (text !== undefined) {
+        if (text.trim()) onActivity?.(session.browserSessionId);
         session.inputSerial = (session.inputSerial ?? 0) + 1;
         session.lastVoiceInputAt = now();
         if (withdrawsSave(text)) session.saveIntent = undefined;
@@ -2463,8 +2495,11 @@ export function textAssistantRoutes({
         } catch {
           void stop(session);
         }
+        for (const message of [session.activeMessage, ...session.queue])
+          if (message && now() >= message.deadline) expireMessage(session, message);
       }
       deliveries.revalidate();
+      syncWork();
       for (const [id, session] of deliveryOwners) {
         if (
           now() >= loginDeadline(session.actorId, session.browserSessionId) &&

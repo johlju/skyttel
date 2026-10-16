@@ -21,7 +21,7 @@ type Channel = {
 
 /** Process-local connection identity. IDs correlate an authenticated socket;
  * only that actual socket can acknowledge its immutable task bindings. */
-export function taskDeliveries(now: () => number) {
+export function taskDeliveries(now: () => number, changed: () => void = () => {}) {
   const channels = new Map<string, Channel>();
   function publish(channel: Channel, value: TaskDelivery) {
     if (!channel.open) return;
@@ -35,6 +35,7 @@ export function taskDeliveries(now: () => number) {
     if (task.value.state === 'received' || task.value.state === 'failed') return;
     clearTimeout(task.timer);
     task.value = { ...task.value, state: 'failed', text: undefined };
+    changed();
     publish(channel, task.value);
   }
   function close(channel: Channel) {
@@ -75,6 +76,7 @@ export function taskDeliveries(now: () => number) {
           if (now() >= task.receiptBy) throw new Error('expired');
           clearTimeout(task.timer);
           task.value = { ...task.value, state: 'received' };
+          changed();
           publish(channel, task.value);
         } catch {
           fail(channel, task);
@@ -105,6 +107,7 @@ export function taskDeliveries(now: () => number) {
       if (!channel)
         return {
           value,
+          pendingUntil: 0,
           freeze: (_text: string, _saveState?: DeliverySaveState) => {},
           stop: () => {},
         };
@@ -120,6 +123,9 @@ export function taskDeliveries(now: () => number) {
         get value() {
           return task.value;
         },
+        get pendingUntil() {
+          return task.receiptBy;
+        },
         freeze(text: string, saveState?: DeliverySaveState) {
           if (!channel.open || task.value.state !== 'waiting') return;
           try {
@@ -132,6 +138,7 @@ export function taskDeliveries(now: () => number) {
               throw new Error('incomplete_delivery');
             task.value = { taskId, deadline, text, audio, saveState, state: 'awaiting-receipt' };
             task.receiptBy = Math.min(deadline, now() + 5000);
+            changed();
             clearTimeout(task.timer);
             task.timer = setTimeout(
               () => fail(channel, task),

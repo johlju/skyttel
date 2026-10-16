@@ -234,13 +234,20 @@ export function createApp({
 
   app.get('/api/bootstrap', async (context) => {
     const providers = ['google', 'microsoft'] as const;
-    const session = await auth.api.getSession({ headers: context.req.raw.headers });
+    let session = await auth.api.getSession({ headers: context.req.raw.headers });
+    const sessionStatus = !session ? await bindings?.status(context.req.raw.headers) : undefined;
+    if (!session && sessionStatus?.state === 'active')
+      session = await auth.api.getSession({ headers: context.req.raw.headers });
     if (!session)
       return context.json({
         status: 'anonymous',
         providers,
         operator: false,
         ...(installationAuthority(database)?.restoredFrom ? { restored: true } : {}),
+        sessionStatus:
+          sessionStatus && (sessionStatus.state === 'expired' || sessionStatus.bindingId)
+            ? sessionStatus
+            : undefined,
       });
     const user = { id: session.user.id, name: session.user.name };
     const loginId = session.session.id;
@@ -318,6 +325,12 @@ export function createApp({
     consents,
     now,
     dispatch: dispatchAssistant,
+    onWork: (id, until) => {
+      if (bindings?.work(id, until)) revalidateVoice?.();
+    },
+    onActivity: (id) => {
+      if (bindings?.activity(id)) revalidateVoice?.();
+    },
     modelFetch,
     modelProfile,
     voiceTokens: liveProfile?.tokens,

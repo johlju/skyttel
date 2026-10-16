@@ -27,6 +27,12 @@ import {
   loginConfirmationFailure,
   rememberedLoginInformation,
 } from '../shared/remembered-login.js';
+import {
+  expiredSessionMessage,
+  inactiveSessionMessage,
+  type SessionStatus,
+  sessionWarningMessage,
+} from '../shared/session-activity.js';
 import { voiceSessionExpiredMessage } from '../shared/voice-assistant.js';
 import { Assistants } from './Assistants.js';
 import {
@@ -45,6 +51,7 @@ import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
+import { useSessionActivity } from './session-activity.js';
 import { TaskDeliveryContext, TaskDeliveryResults, useTaskDelivery } from './task-delivery.js';
 import { VoiceSessionContext } from './voice-session-context.js';
 import { useAccountTheme, WorkspaceThemeContext } from './WorkspaceTheme.js';
@@ -53,7 +60,13 @@ import './access.css';
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
 type Bootstrap = { providers: Provider[]; operator: boolean } & (
-  | { status: 'anonymous'; user?: never; loginId?: never; restored?: true }
+  | {
+      status: 'anonymous';
+      user?: never;
+      loginId?: never;
+      restored?: true;
+      sessionStatus?: SessionStatus;
+    }
   | { status: 'setup'; user: { id: string; name: string }; loginId: string }
   | { status: 'forbidden'; user: { id: string; name: string }; loginId: string }
   | { status: 'ready'; user: { id: string; name: string }; household: Household; loginId: string }
@@ -1397,7 +1410,13 @@ function Application() {
   const [voiceActive, setVoiceActive] = useState(false);
   const [voiceExpired, setVoiceExpired] = useState(false);
   const voiceSession = useMemo(
-    () => ({ active: setVoiceActive, expired: () => setVoiceExpired(true) }),
+    () => ({
+      active: setVoiceActive,
+      expired: () => {
+        setVoiceExpired(true);
+        setRevision((value) => value + 1);
+      },
+    }),
     [],
   );
   const previouslyAuthenticated = useRef(false);
@@ -1407,6 +1426,39 @@ function Application() {
   const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
   const data = bootstrap.status === 'loaded' ? bootstrap.data : undefined;
+  const activity = useSessionActivity(
+    signOutRequested.current ? undefined : data?.loginId,
+    revision,
+    reload,
+    data?.status === 'anonymous' ? data.sessionStatus : undefined,
+  );
+  const warningElement = useRef<HTMLParagraphElement>(null);
+  useLayoutEffect(() => {
+    const element = warningElement.current;
+    const shell = element?.closest<HTMLElement>('.app-shell');
+    if (!element || !shell) return;
+    if (!activity.warning) {
+      shell.style.removeProperty('--session-warning-height');
+      window.dispatchEvent(new Event('resize'));
+      return;
+    }
+    const measure = () => {
+      shell.style.setProperty(
+        '--session-warning-height',
+        `${element.getBoundingClientRect().height}px`,
+      );
+      window.dispatchEvent(new Event('resize'));
+    };
+    measure();
+    const observer =
+      typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
+    observer?.observe(element);
+    return () => {
+      observer?.disconnect();
+      shell.style.removeProperty('--session-warning-height');
+      window.dispatchEvent(new Event('resize'));
+    };
+  }, [activity.warning]);
   const taskDelivery = useTaskDelivery(data?.user?.id, data?.loginId);
   const theme = useAccountTheme(data?.user?.id);
   useEffect(() => {
@@ -1426,10 +1478,14 @@ function Application() {
     if (expired && voiceActive) setVoiceExpired(true);
   }, [expired, voiceActive]);
   const expiryNotice =
-    voiceExpired || (expired && voiceActive)
-      ? voiceSessionExpiredMessage
+    expired && (voiceExpired || voiceActive)
+      ? activity.reason === 'inactivity'
+        ? voiceSessionExpiredMessage.replace(expiredSessionMessage, inactiveSessionMessage)
+        : voiceSessionExpiredMessage
       : expired
-        ? 'Din inloggning har gått ut. Logga in igen.'
+        ? activity.reason === 'inactivity'
+          ? inactiveSessionMessage
+          : expiredSessionMessage
         : '';
   async function signOut() {
     signOutRequested.current = true;
@@ -1438,6 +1494,7 @@ function Application() {
     try {
       await request('/api/auth/sign-out', {});
       taskDelivery.clear();
+      activity.clear();
       navigate('/', { replace: true });
       reload();
     } catch {
@@ -1680,6 +1737,15 @@ function Application() {
             <span className="header-note">Ett hushåll. En gemensam bild.</span>
           )}
         </header>
+        <p
+          ref={warningElement}
+          className="session-warning"
+          role={activity.warning ? 'status' : undefined}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {activity.warning && sessionWarningMessage}
+        </p>
         <main id="main" tabIndex={-1}>
           <p className="session-expiry-announcement" aria-live="assertive" aria-atomic="true">
             {expiryNotice}

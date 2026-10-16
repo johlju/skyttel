@@ -86,7 +86,7 @@
   color: var(--space-text);
 }
 .household-map.workspace-shell .map-navigation {
-  top: var(--context-bottom, 110px);
+  top: calc(var(--work-offset, 0px) + var(--context-bottom, 110px));
 }
 
 /* Floating windows can cross the legend and all map controls. The ordinary

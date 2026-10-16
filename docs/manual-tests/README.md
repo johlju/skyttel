@@ -108,6 +108,10 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
 efter uppgradering och omstart medan lagrade utkast och sparkvitton bevaras.
 Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 
+- [Inaktivitet och förvarning](session-inactivity.md): gemensam aktivitet
+  mellan flikar, kvarliggande besked utan fokusflytt och korrekt utgång
+  vid 1280, 390 och 320 CSS-pixlar. Faktisk skärmläsare och uppläsning med
+  fysisk mikrofon på mobil och dator har separata kvarstående fall.
 - [Kakor och lagring](cookies.md): publik information och konkret register
   över kakor, fliklagring, serverposter och tillfälligt samtalsminne, första besök,
   profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före

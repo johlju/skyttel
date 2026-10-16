@@ -12,8 +12,26 @@ tillgång i sig. Se [Kom igång](getting-started.md) för första inloggningen.
 När du väljer Google eller Microsoft kan du aktivt markera **Kom ihåg mig**
 innan du fortsätter. Valet börjar avmarkerat vid varje ny inloggning.
 Vanlig inloggning använder sessionskakor och gäller högst åtta timmar från
-inloggningen. Ihågkommen inloggning gäller högst sju dygn i just den här
-webbläsaren. Läsning och återbesök förlänger inte tiden.
+inloggningen och avslutas efter 30 minuters inaktivitet. Ihågkommen
+inloggning har ingen separat inaktivitetsgräns och gäller högst sju dygn
+i just den här webbläsaren. Läsning och återbesök förlänger inte tiden.
+
+Att skriva, tala, navigera, söka, redigera eller spara i Skyttel räknas som
+aktivitet i alla flikar med samma inloggning. Fokus, musrörelser,
+bakgrundshämtningar, en öppen flik och en tyst mikrofon räknas inte.
+Mottaget AI-arbete och dess ändliga leverans pausar inaktiviteten.
+När arbetet och leveransen avslutas, eller arbetet får ett tydligt fel,
+börjar en ny period på 30 minuter. Väntan på nästa svar eller på
+återanslutning pausar inte tiden. Åttatimmars- och sjudygnsgränserna flyttas
+aldrig av aktivitet.
+
+Fem minuter före den aktuella gränsen visar Skyttel ett kvarliggande
+besked. I röstläge begär Skyttel uppläsning vid nästa lämpliga paus utan
+att avbryta dig eller ett pågående svar. Beskedet flyttar inte fokus och
+förlänger inte tiden. Fritt röstläge avslutas vid inloggningens gräns.
+Vid inaktivitet visas **Du har varit inaktiv i 30 minuter. Logga in igen.**
+Vid den absoluta gränsen visas **Din inloggning har gått ut. Logga in
+igen.** Redan lagrade utkast och sparkvitton finns kvar.
 
 Välj bara ihågkommen inloggning på en egen enhet. Webbläsaren kan återställa
 sessionskakor när den öppnas igen, så logga ut på en delad dator.

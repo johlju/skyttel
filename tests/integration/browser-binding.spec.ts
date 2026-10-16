@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
+import { advanceActiveLogin } from '../support/session-time.js';
 
 test('explicit login replaces a known expired binding without reviving its old access', {
   tag: '@technical',
@@ -30,7 +31,9 @@ test('explicit login replaces a known expired binding without reviving its old a
     await unknown.addCookies([{ ...oldBinding, value: 'f'.repeat(64) }]);
     expect((await candidate(unknown)).status()).toBe(409);
 
-    time += 28_799_999;
+    await advanceActiveLogin(client, origin, 28_799_999, (elapsed) => {
+      time += elapsed;
+    });
     expect(await (await client.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
       status: 'setup',
     });
@@ -129,12 +132,12 @@ for (const sameUser of [true, false]) {
     let resume = () => {};
     try {
       await signIn(first, origin);
-      const before = await (await first.get(`${origin}/api/bootstrap`)).json();
       const saved = await first.storageState();
       second = await playwright.request.newContext({ storageState: saved });
       original = await playwright.request.newContext({ storageState: saved });
       independent = await playwright.request.newContext();
       await signIn(independent, origin);
+      const independentBefore = await (await independent.get(`${origin}/api/bootstrap`)).json();
       async function start(client: typeof first) {
         const response = await client.post(`${origin}/api/auth/sign-in/social`, {
           headers: { origin },
@@ -161,7 +164,9 @@ for (const sameUser of [true, false]) {
       expect(await (await original.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
         status: 'anonymous',
       });
-      expect(await (await independent.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
+      expect(await (await independent.get(`${origin}/api/bootstrap`)).json()).toEqual(
+        independentBefore,
+      );
       await installation.restart();
       expect(await (await original.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
         status: 'anonymous',
@@ -423,7 +428,10 @@ for (const sharedIdentity of [false, true]) {
       if (sharedIdentity) {
         installation.setIdentity(robin);
         await signIn(slowClient, origin, 'microsoft');
-        expect(await (await slowClient.get(`${origin}/api/bootstrap`)).json()).toEqual(fast);
+        const replacement = await (await slowClient.get(`${origin}/api/bootstrap`)).json();
+        expect(replacement).toEqual({ ...fast, loginId: replacement.loginId });
+        expect(replacement.loginId).not.toBe(fast.loginId);
+        expect(replacement.loginId).not.toBe(original.loginId);
       } else expect(after.user.id).not.toBe(fast.user.id);
     } finally {
       resume();
