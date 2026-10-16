@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { MapState, ObjectType, RelationshipType, SaveReceipt } from '../../src/shared/map.js';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import {
@@ -29,6 +29,7 @@ import {
 import { alex, createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 declare global {
@@ -268,7 +269,7 @@ for (const mode of ['voice', 'text'] as const) {
       liveFetch: live.provider,
       liveSideband: live.attach,
     });
-    const memberContext = await browser.newContext();
+    const memberContext = await createPreparedContext(browser);
     const member = await memberContext.newPage();
     try {
       // 1. Visible first login and household setup, including keyboard focus.

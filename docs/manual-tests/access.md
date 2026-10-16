@@ -1,7 +1,8 @@
 # Manuella testfall för inloggning och hushållets start
 
 Testfallen omfattar första hushållet, återhämtning vid anslutningsfel,
-utloggning, kartans verktyg och frivilliga hjälp och länkning av Google och Microsoft.
+utloggning, kartans verktyg och frivilliga hjälp och länkning av Google och
+Microsoft.
 Övergången till vald leverantör visar vad som händer och kan avbrytas.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
@@ -33,7 +34,8 @@ fallen anger formulär, samtal, profil eller administration.
    testdatabaser för att undvika att en Microsoft-identitet redan är kopplad.
 3. När ett fall anger **Fortsätt med Google** eller **Fortsätt med Microsoft**,
    läs övergången och välj sedan **Fortsätt till Google** respektive
-   **Fortsätt till Microsoft**. **Avbryt** återgår till valet av inloggningssätt.
+   **Fortsätt till Microsoft**. **Avbryt** återgår till valet av
+  inloggningssätt.
 4. Använd en webbläsare med utvecklarverktyg för nätverksfel. Ta bort
    blockeringar och återställ nätverksanslutningen efter varje fall.
    Använd aldrig felinjicering på en installation med riktiga hushåll.
@@ -48,8 +50,9 @@ fallen anger formulär, samtal, profil eller administration.
 
 **Förutsättningar:** Starta den
 [kontrollerade identitetsinstallationen](#kontrollerad-identitetsinstallation)
-med `--https`. Logga in med Google och markera **Kom ihåg mig** innan du
-fortsätter till leverantören. Hushåll behövs inte.
+med `--https`. Tillåt Preferenskakor, logga in med Google och välj sedan
+**Kom ihåg mig i Skyttel** i erbjudandet efter inloggningen. Hushåll behövs
+inte.
 
 **Automatiskt motsvarande test:**
 [remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts),
@@ -68,7 +71,7 @@ ACCESS-29. Verklig HTTPS, SQLite och kakor; syntetisk leverantör.
   "outcomes": [
     "Uttryckligt sparande bekräftar avstängningen.",
     "Fortsatt inloggning bekräftas separat och fokus stannar på sparknappen.",
-    "Ny aktivering hänvisar till en ny inloggning."
+    "Ny aktivering är ett separat uttryckligt val på lagringssidan."
   ]
 }
 ```
@@ -78,14 +81,15 @@ ACCESS-29. Verklig HTTPS, SQLite och kakor; syntetisk leverantör.
 
 1. Öppna `/cookies` direkt i samma webbläsare.
 2. Stäng av reglaget **Ihågkommen inloggning**. Kontrollera **Osparad
-   ändring.** och välj **Spara inställningar**.
+   ändring.** och välj **Spara Preferenser**.
 3. Kontrollera beskedet och tangentbordsfokus.
 
 **Förväntat resultat:**
 
 - **Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.**
   ligger kvar vid åtgärderna. Fokus ligger kvar på sparknappen.
-- Reglaget är av och sidan visar **Logga in på nytt och välj Kom ihåg mig.**
+- Reglaget är av och sidan visar **Kom ihåg mig i Skyttel** för manuell
+  aktivering.
 - Uppgifterna anger högst tidigare slut eller åtta timmar från
   avstängningen och 30 minuters inaktivitet.
 
@@ -136,7 +140,7 @@ ACCESS-30. Automationen ersätter samma anrop före servern med HTTP 409.
 **Steg:**
 
 1. Öppna `/cookies`, stäng av reglaget och välj
-   **Spara inställningar**.
+   **Spara Preferenser**.
 2. Kontrollera besked, reglage, osparad status och fokus.
 
 **Förväntat resultat:** **Ändringen kunde inte sparas. Försök igen.**
@@ -194,7 +198,7 @@ svarsförlust; ingen verklig leverantörskontroll.
 **Steg:**
 
 1. Öppna `/cookies`, stäng av reglaget och välj
-   **Spara inställningar**.
+   **Spara Preferenser**.
 2. Kontrollera beskedet och försök aktivera sparknappen igen.
 
 **Förväntat resultat:** **Sparstatus okänd. Vi kunde inte bekräfta om
@@ -229,7 +233,7 @@ ACCESS-27. Verklig HTTPS, kakor och SQLite; syntetisk leverantör.
   },
   "reference": "HTTPS, 1280 × 720; aktivt val, avbruten ny start och leverantörsfel",
   "outcomes": [
-    "Kom ihåg mig börjar avmarkerat vid varje ny inloggning",
+    "Ihågkommen inloggning kräver ett separat val efter varje lyckad inloggning",
     "Ett aktivt val kan ge bekräftad ihågkommen inloggning",
     "Ett misslyckat nytt försök bevarar tidigare giltig inloggning",
     "Ny inloggning utan valet använder vanlig session"
@@ -240,22 +244,21 @@ ACCESS-27. Verklig HTTPS, kakor och SQLite; syntetisk leverantör.
 
 **Steg:**
 
-1. Välj **Fortsätt med Google**. Kontrollera att **Kom ihåg mig** är
-   avmarkerat och läs informationen. Markera valet och fortsätt till Google.
-2. Invänta **Skapa ditt hushåll**. Öppna **Din profil** och välj
-   **Logga in på nytt**. Välj Google och kontrollera att valet är avmarkerat.
-3. Markera valet men välj **Avbryt**. Välj Google igen; valet ska åter
-   börja avmarkerat.
-4. Slå på leverantörsfelet och fortsätt utan valet. Kontrollera felbeskedet.
-   Öppna startsidan och kontrollera att den tidigare inloggningen finns kvar.
-5. Återställ leverantören. Öppna **Logga in på nytt** igen, välj Google
-   och fortsätt utan **Kom ihåg mig**. Invänta **Skapa ditt hushåll**.
+1. Välj **Acceptera Alla** i kakbannern. Välj Google och slutför
+   inloggningen. Välj **Kom ihåg mig i Skyttel** i det separata erbjudandet.
+2. Invänta **Skapa ditt hushåll**. Öppna `/login`, välj Google men
+   avbryt före leverantörsbesöket.
+3. Välj Google igen. Slå på leverantörsfelet och fortsätt. Läs felbeskedet
+   och kontrollera att den tidigare inloggningen bevaras.
+4. Återställ leverantören, välj Google igen och slutför inloggningen.
+   Välj **Inte nu** i erbjudandet efter inloggning.
 
-**Förväntat resultat:** Varje ny start har eget avmarkerat val. Avbrytande
-och leverantörsfel tar inte bort den tidigare giltiga inloggningen.
-Automationen kontrollerar båda kakornas beständighet efter bekräftelsen och
-sessionsläge efter den sista inloggningen samt avsaknad av lokal valhistorik.
-Det bevisar inte webbläsarens framtida beteende efter omstart.
+**Förväntat resultat:** Tillstånd till lagring aktiverar inte funktionen.
+Varje lyckad inloggning kräver eget uttryckligt funktionsval. Avbrytande
+eller leverantörsfel tar inte bort tidigare giltig inloggning. Efter sista
+inloggningen används vanlig session. Automationen kontrollerar kakornas
+beständighet och säkerhetsattribut; det bevisar inte webbläsarens beteende
+vid en fysisk omstart.
 
 ### ACCESS-28: Saknad autentiseringskaka ger inget bekräftat resultat
 
@@ -296,7 +299,7 @@ ACCESS-28.
 
 **Steg:**
 
-1. Välj Google, markera **Kom ihåg mig** och fortsätt till Google.
+1. Välj **Endast nödvändiga** i bannern. Välj Google och fortsätt till Google.
 2. Invänta återkomsten. Läs felbeskedet och kontrollera att inloggningssätten
    går att välja igen, medan hushållets start inte öppnas.
 
@@ -1814,7 +1817,7 @@ efter fallet.
     "Första försöket stoppas utan bekräftad inloggning eller falskt återställningsbesked.",
     "Misslyckad rensning återför fokus till Google-knappen; ett nyare inloggningsvals fokus bevaras.",
     "Separat uttrycklig rensning återför fokus till Google-knappen utan automatisk providerstart.",
-    "Nästa inloggningsval börjar avmarkerat och en ny vanlig inloggning kan slutföras."
+    "En ny vanlig inloggning kan slutföras utan att aktivera ihågkommen inloggning."
   ]
 }
 ```
@@ -1823,7 +1826,7 @@ efter fallet.
 
 **Steg:**
 
-1. Öppna `/login`, välj **Fortsätt med Google**, markera **Kom ihåg mig**
+1. Öppna `/login`, välj **Fortsätt med Google**
    och välj **Fortsätt till Google**.
 2. Läs att säker inloggning inte kan bekräftas. Kontrollera att sidan
    inte påstår en databasåterställning eller en lyckad inloggning.
@@ -1833,8 +1836,7 @@ efter fallet.
 3. Läs omfattningen och välj **Börja om i den här webbläsaren**.
 4. Kontrollera att fokus återgår till **Fortsätt med Google** och att
    inget providerfönster öppnas automatiskt.
-5. Välj Google på nytt. Kontrollera att **Kom ihåg mig** är avmarkerat.
-   Lämna det avmarkerat och välj **Fortsätt till Google**.
+5. Välj Google på nytt och välj **Fortsätt till Google**.
 
 **Förväntat resultat:** Första försöket stoppas. Rensningen sker först
 efter den separata handlingen. Felvarianten ger ett felbesked och logiskt
@@ -1882,7 +1884,7 @@ dess session.
 2. Skriv `/cookies` i adressfältet i samma flik för att lämna inloggningen.
 3. Öppna `/login` i den andra fliken. Gör det avvisade försöket och välj
    uttryckligen **Börja om i den här webbläsaren** där.
-4. Välj Google på nytt, lämna **Kom ihåg mig** avmarkerat och logga in.
+4. Välj Google på nytt och slutför en vanlig inloggning.
    Vänta på **Skapa ditt hushåll**.
 5. Kör `release-initialization`. Kontrollera att den första fliken
    behåller fokus på rubriken **Kakor och lagring**. Ladda startsidan där.

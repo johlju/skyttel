@@ -23,10 +23,7 @@ import type { Administration, HouseholdInvitation } from '../shared/administrati
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
 import { installationRestoredMessage } from '../shared/installation-restore.js';
 import type { PersonalView } from '../shared/personal-view.js';
-import {
-  loginConfirmationFailure,
-  rememberedLoginInformation,
-} from '../shared/remembered-login.js';
+import { loginConfirmationFailure } from '../shared/remembered-login.js';
 import {
   expiredSessionMessage,
   inactiveSessionMessage,
@@ -42,7 +39,7 @@ import {
   withBrowserBinding,
 } from './browser-binding.js';
 import { ContentOwners } from './ContentOwners.js';
-import { CookieStorage, StorageIntroduction } from './CookieStorage.js';
+import { CookieStorage } from './CookieStorage.js';
 import { Costs } from './Costs.js';
 import { FormLeaveProvider, useFormLeave } from './FormLeave.js';
 import { HouseholdErasure } from './HouseholdErasure.js';
@@ -50,7 +47,9 @@ import { HouseholdExport } from './HouseholdExport.js';
 import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
+import { PolicyContact } from './PolicyContact.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
+import { StorageConsentProvider } from './StorageConsent.js';
 import { useSessionActivity } from './session-activity.js';
 import { TaskDeliveryContext, TaskDeliveryResults, useTaskDelivery } from './task-delivery.js';
 import { useAppShellReservedHeight } from './use-app-shell-reserved-height.js';
@@ -177,7 +176,6 @@ function Failure({ onRetry }: { onRetry: () => void }) {
 function Login({ providers }: { providers: Provider[] }) {
   const location = useLocation();
   const [selected, setSelected] = useState<Provider | null>(null);
-  const [rememberMe, setRememberMe] = useState(false);
   const [pending, setPending] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const [resetPair, setResetPair] = useState<string>();
@@ -245,8 +243,6 @@ function Login({ providers }: { providers: Provider[] }) {
             '/api/auth/sign-in/social',
             {
               provider,
-              rememberMe,
-              informationVersion: rememberedLoginInformation.version,
               callbackURL: location.pathname === '/costs' ? '/costs' : '/',
               ...(location.pathname === '/assistant-consent'
                 ? { oauth_query: location.search.slice(1) }
@@ -285,7 +281,6 @@ function Login({ providers }: { providers: Provider[] }) {
       if (controller.signal.aborted) return;
       setError(null);
       setResetPair(undefined);
-      setRememberMe(false);
       setSelected(null);
       setResetDone(true);
       options.current?.querySelector<HTMLButtonElement>('button')?.focus();
@@ -312,17 +307,6 @@ function Login({ providers }: { providers: Provider[] }) {
           <p className="access-note">
             Du går vidare till {label}. Efter inloggningen kommer du tillbaka till Skyttel.
           </p>
-          <label className="remember-login">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              disabled={pending}
-              onChange={(event) => setRememberMe(event.target.checked)}
-              aria-describedby="remember-login-information"
-            />
-            {rememberedLoginInformation.label}
-          </label>
-          <p id="remember-login-information">{rememberedLoginInformation.text}</p>
           <div className="access-actions">
             <button
               ref={continueButton}
@@ -352,7 +336,6 @@ function Login({ providers }: { providers: Provider[] }) {
                 setCancelled(false);
                 setResetDone(false);
                 setError(null);
-                setRememberMe(false);
                 setSelected(provider);
               }}
             >
@@ -1439,7 +1422,6 @@ function Application() {
   );
   const previouslyAuthenticated = useRef(false);
   const signOutRequested = useRef(false);
-  const [storageIntroductionClosed, setStorageIntroductionClosed] = useState(false);
   const [signOutError, setSignOutError] = useState(false);
   const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
@@ -1518,7 +1500,7 @@ function Application() {
     (authenticated || storagePage) &&
     !mapActive &&
     (personal ||
-      location.pathname === '/costs' ||
+      ['/costs', '/policy-contact'].includes(location.pathname) ||
       (data?.status === 'ready' &&
         Boolean(matchPath('/households/:id/settings/*', location.pathname))) ||
       (data?.status === 'ready' &&
@@ -1612,7 +1594,9 @@ function Application() {
             <Link to="/">Till startsidan</Link>
           </section>
         ))}
-      {!['/login-methods', '/profile', '/costs', '/cookies', '/login'].includes(
+      {location.pathname === '/policy-contact' &&
+        (data.operator ? <PolicyContact /> : <Forbidden />)}
+      {!['/login-methods', '/profile', '/costs', '/cookies', '/login', '/policy-contact'].includes(
         location.pathname,
       ) &&
         (data.status === 'ready' || data.status === 'setup') && (
@@ -1711,119 +1695,115 @@ function Application() {
         className={`app-shell${mapActive ? ' has-workspace' : ''}${settingsPage ? ' has-settings' : ''}${accessGate ? ' access-shell' : ''}`}
         data-theme={theme.theme}
       >
-        <a className="skip-link" href="#main">
-          Hoppa till innehållet
-        </a>
-        <header className="site-header" hidden={mapActive || Boolean(settingsPage)}>
-          <Link className="brand" to="/" aria-label="Skyttel, startsida">
-            <img className="brand-logo" src={logo} alt="" />
-            Skyttel
-          </Link>
-          {authenticated ? (
-            <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
-              <Link to="/profile">Din profil</Link>
-              <Link to="/login-methods">Inloggningssätt</Link>
-              {data.operator && <Link to="/costs">Månadskostnad</Link>}
-              <span className="session-name">{data.user.name}</span>
-              {logout}
-            </div>
-          ) : (
-            <span className="header-note">Ett hushåll. En gemensam bild.</span>
-          )}
-        </header>
-        <p
-          ref={warningElement}
-          className="session-warning"
-          role={activity.warning ? 'status' : undefined}
-          aria-live="polite"
-          aria-atomic="true"
+        <StorageConsentProvider
+          userId={data?.user?.id}
+          loginId={data?.loginId}
+          suppressBanner={storagePage}
         >
-          {activity.warning && sessionWarningMessage}
-        </p>
-        <main id="main" tabIndex={-1}>
-          <p className="session-expiry-announcement" aria-live="assertive" aria-atomic="true">
-            {expiryNotice}
+          <a className="skip-link" href="#main">
+            Hoppa till innehållet
+          </a>
+          <header className="site-header" hidden={mapActive || Boolean(settingsPage)}>
+            <Link className="brand" to="/" aria-label="Skyttel, startsida">
+              <img className="brand-logo" src={logo} alt="" />
+              Skyttel
+            </Link>
+            {authenticated ? (
+              <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
+                <Link to="/profile">Din profil</Link>
+                <Link to="/login-methods">Inloggningssätt</Link>
+                {data.operator && <Link to="/costs">Månadskostnad</Link>}
+                <span className="session-name">{data.user.name}</span>
+                {logout}
+              </div>
+            ) : (
+              <span className="header-note">Ett hushåll. En gemensam bild.</span>
+            )}
+          </header>
+          <p
+            ref={warningElement}
+            className="session-warning"
+            role={activity.warning ? 'status' : undefined}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {activity.warning && sessionWarningMessage}
           </p>
-          {expired && <p>{expiryNotice}</p>}
-          <TaskDeliveryContext value={taskDelivery.client}>
-            <TaskDeliveryResults results={taskDelivery.results} workspace={mapActive} />
-          </TaskDeliveryContext>
-          {bootstrap.status === 'loading' && <Loading />}
-          {bootstrap.status === 'error' && <Failure onRetry={reload} />}
-          {(data?.status === 'anonymous' || loginPage) && data && !storagePage && (
-            <>
-              {data.status === 'anonymous' && data.restored && (
-                <p className="error access-note" role="alert">
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <path d="m12 3 10 18H2Z M12 9v5m0 3v1" strokeWidth="2" />
-                  </svg>
-                  {installationRestoredMessage}
-                </p>
-              )}
-              <Login providers={data.providers} />
-              {authenticated && <Link to="/">Tillbaka till din inloggning</Link>}
-              {!storageIntroductionClosed && (
-                <StorageIntroduction
-                  onClose={() => {
-                    setStorageIntroductionClosed(true);
-                    document
-                      .querySelector<HTMLButtonElement>('.access-gate button:not(:disabled)')
-                      ?.focus();
-                  }}
+          <main id="main" tabIndex={-1}>
+            <p className="session-expiry-announcement" aria-live="assertive" aria-atomic="true">
+              {expiryNotice}
+            </p>
+            {expired && <p>{expiryNotice}</p>}
+            <TaskDeliveryContext value={taskDelivery.client}>
+              <TaskDeliveryResults results={taskDelivery.results} workspace={mapActive} />
+            </TaskDeliveryContext>
+            {bootstrap.status === 'loading' && <Loading />}
+            {bootstrap.status === 'error' && <Failure onRetry={reload} />}
+            {(data?.status === 'anonymous' || loginPage) && data && !storagePage && (
+              <>
+                {data.status === 'anonymous' && data.restored && (
+                  <p className="error access-note" role="alert">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      width="20"
+                      height="20"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path d="m12 3 10 18H2Z M12 9v5m0 3v1" strokeWidth="2" />
+                    </svg>
+                    {installationRestoredMessage}
+                  </p>
+                )}
+                <Login providers={data.providers} />
+                {authenticated && <Link to="/">Tillbaka till din inloggning</Link>}
+              </>
+            )}
+            {settingsPage ? (
+              <SettingsScreen
+                household={household}
+                userName={data?.user?.name ?? 'Besökare'}
+                operator={data?.operator ?? false}
+                personal={personal}
+                anonymous={!authenticated}
+                signOut={!authenticated || location.pathname === '/profile' ? null : logout}
+              >
+                {storagePage ? <CookieStorage userId={data?.user?.id} /> : pages}
+              </SettingsScreen>
+            ) : (
+              pages
+            )}
+            {data?.status === 'ready' && (
+              <VoiceSessionContext value={voiceSession}>
+                <TaskDeliveryContext value={taskDelivery.client}>
+                  <HouseholdWork
+                    key={data.user.id}
+                    account={account}
+                    onSessionExpired={reload}
+                    typeSettingsTarget={typeSettingsTarget}
+                    mapSettingsTarget={mapSettingsTarget}
+                    conversationSettingsTarget={conversationSettingsTarget}
+                  />
+                </TaskDeliveryContext>
+              </VoiceSessionContext>
+            )}
+            {data?.status === 'forbidden' && !settingsPage && (
+              <>
+                <Forbidden />
+                <InvitationEntry
+                  userId={data.user.id}
+                  showInvitation
+                  onAccepted={created}
+                  onReload={reload}
                 />
-              )}
-            </>
-          )}
-          {settingsPage ? (
-            <SettingsScreen
-              household={household}
-              userName={data?.user?.name ?? 'Besökare'}
-              operator={data?.operator ?? false}
-              personal={personal}
-              anonymous={!authenticated}
-              signOut={!authenticated || location.pathname === '/profile' ? null : logout}
-            >
-              {storagePage ? <CookieStorage userId={data?.user?.id} /> : pages}
-            </SettingsScreen>
-          ) : (
-            pages
-          )}
-          {data?.status === 'ready' && (
-            <VoiceSessionContext value={voiceSession}>
-              <TaskDeliveryContext value={taskDelivery.client}>
-                <HouseholdWork
-                  key={data.user.id}
-                  account={account}
-                  onSessionExpired={reload}
-                  typeSettingsTarget={typeSettingsTarget}
-                  mapSettingsTarget={mapSettingsTarget}
-                  conversationSettingsTarget={conversationSettingsTarget}
-                />
-              </TaskDeliveryContext>
-            </VoiceSessionContext>
-          )}
-          {data?.status === 'forbidden' && !settingsPage && (
-            <>
-              <Forbidden />
-              <InvitationEntry
-                userId={data.user.id}
-                showInvitation
-                onAccepted={created}
-                onReload={reload}
-              />
-            </>
-          )}
-        </main>
-        <footer hidden={mapActive || Boolean(settingsPage)}>
-          Det som hör ihop, samlat. <Link to="/cookies">Kakor och lagring</Link>
-        </footer>
+              </>
+            )}
+          </main>
+          <footer hidden={mapActive || Boolean(settingsPage)}>
+            Det som hör ihop, samlat. <Link to="/cookies">Kakor och lagring</Link>
+          </footer>
+        </StorageConsentProvider>
       </div>
     </WorkspaceThemeContext>
   );

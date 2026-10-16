@@ -1,8 +1,9 @@
-import { type APIRequestContext, expect, test } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import { createHousehold, signIn, utilityButton } from '../support/client.js';
 import { readCommittedHistoryCard } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function setup(client: APIRequestContext, origin: string) {
   await signIn(client, origin);

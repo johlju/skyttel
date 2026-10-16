@@ -1,5 +1,8 @@
 /* Layout adapted from Viscalyx CookieSettings. See CookieStorage.LICENSE. */
 .cookie-storage {
+  --space-surface: #fff;
+  --space-text: #111827;
+  --space-line: #d1d5db;
   --storage-subtle: #f9fafb;
   --storage-blue: #2563eb;
   --storage-danger: #b91c1c;
@@ -10,10 +13,26 @@
   margin: 0 auto;
   line-height: 1.625;
   overflow-wrap: anywhere;
+  font-family: Inter, system-ui, sans-serif;
+  font-synthesis: weight;
+  color: var(--space-text);
 }
+.settings-content:has(> .cookie-storage) {
+  background: #fff;
+}
+[data-theme="dark"] .settings-content:has(> .cookie-storage) {
+  background: #111827;
+}
+article.cookie-storage a {
+  color: var(--storage-blue);
+}
+
 [data-theme="dark"] .cookie-storage {
-  --storage-subtle: #223246;
-  --storage-blue: #93b8ff;
+  --space-surface: #111827;
+  --space-text: #f9fafb;
+  --space-line: #4b5563;
+  --storage-subtle: #1f2937;
+  --storage-blue: #60a5fa;
   --storage-danger: #ffb4b4;
   --storage-danger-bg: #502a34;
   --storage-success: #86efac;
@@ -30,12 +49,11 @@
   height: 32px;
   color: #2563eb;
 }
-[data-theme="dark"] .cookie-storage-title svg {
-  color: #93b8ff;
-}
+
 .cookie-storage .cookie-storage-title h1 {
   margin: 0;
   font-size: 30px;
+  font-weight: 700;
   line-height: 1.2;
 }
 .cookie-storage-header {
@@ -47,6 +65,26 @@
   border: 1px solid var(--space-line, #95a6ae);
   border-radius: 8px;
   background: var(--space-surface, #fff);
+}
+.cookie-policy {
+  margin-bottom: 48px;
+}
+.cookie-policy h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 32px 0 16px;
+}
+.cookie-policy h3 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 32px 0 16px;
+}
+.cookie-storage-decision {
+  padding: 16px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: var(--storage-success-bg);
+  color: var(--storage-success);
 }
 .cookie-storage-card h3 {
   margin: 0;
@@ -73,6 +111,7 @@
 .cookie-storage-quick h2 {
   margin-top: 0;
   font-size: 18px;
+  font-weight: 600;
 }
 .cookie-storage-quick-buttons {
   display: flex;
@@ -90,10 +129,36 @@
   font-size: 14px;
   margin-bottom: 0;
 }
+.cookie-storage-actions button {
+  display: block;
+  margin-left: auto;
+}
+.cookie-storage-reset-dialog button {
+  min-height: 44px;
+  padding: 10px 16px;
+}
+.cookie-storage button {
+  min-height: 44px;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+[data-theme="dark"] .cookie-storage button {
+  background: #1f2937;
+  color: #d1d5db;
+}
 .cookie-storage button.cookie-storage-primary {
   background: #2563eb;
   color: #fff;
   border-color: #2563eb;
+}
+.cookie-storage button:hover:enabled {
+  background: #e5e7eb;
+}
+[data-theme="dark"] .cookie-storage button:hover:enabled {
+  background: #374151;
+}
+.cookie-storage button.cookie-storage-primary:hover:enabled {
+  background: #1d4ed8;
 }
 .cookie-storage button.cookie-storage-reset {
   background: var(--storage-danger-bg);
@@ -156,10 +221,7 @@
 .cookie-storage-actions {
   margin: 24px 0;
 }
-.cookie-storage-actions button {
-  display: block;
-  margin-left: auto;
-}
+
 .cookie-storage-feedback :is([role="status"], [role="alert"]):not(:empty) {
   padding: 16px;
   border: 1px solid currentColor;
@@ -201,10 +263,7 @@
   justify-content: flex-end;
   gap: 12px;
 }
-.cookie-storage-reset-dialog button {
-  min-height: 44px;
-  padding: 10px 16px;
-}
+
 .cookie-storage summary {
   padding: 12px 0;
   cursor: pointer;
@@ -225,20 +284,6 @@
 .cookie-storage dd {
   margin: 0 0 12px;
 }
-.storage-introduction {
-  padding: 20px;
-  border: 1px solid var(--access-line, #95a6ae);
-  border-radius: 12px;
-  width: min(100%, 680px);
-  box-sizing: border-box;
-}
-.storage-introduction h2 {
-  margin-top: 0;
-}
-.storage-introduction button {
-  display: block;
-  margin-top: 16px;
-}
 @media (max-width: 480px) {
   .cookie-storage-card,
   .cookie-storage-quick {
@@ -247,7 +292,33 @@
   .cookie-storage-quick button {
     width: 100%;
   }
-  .cookie-storage .cookie-storage-title h1 {
-    font-size: 25px;
-  }
+}
+
+.storage-notice {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 20;
+  padding: 16px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: var(--storage-success-bg);
+  color: var(--storage-success);
+}
+[data-theme="dark"] .cookie-storage-title svg {
+  color: #93b8ff;
+}
+
+.cookie-storage input[type="email"] {
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid #64748b;
+  border-radius: 8px;
+  background: var(--space-surface);
+  color: var(--space-text);
+}
+.cookie-storage :is(button, input):focus-visible {
+  outline: 2px solid var(--storage-blue);
+  outline-offset: 3px;
 }

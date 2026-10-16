@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openDraftReview, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { createRelationshipFixture } from '../support/relationship-fixture.js';
+import { expect, test } from '../support/test.js';
 
 test('SAMBAND-10: a request that never reached the server is checked before safe retry and later duplicate removal is reported truthfully', async ({
   page,

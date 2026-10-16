@@ -2,61 +2,75 @@
 
 [Till användarguidens innehåll](README.md)
 
-Öppna **Kakor och lagring** längst ned på inloggningssidan. Du behöver
-inte logga in för att läsa sidan eller öppna `/cookies` direkt.
-Informationen vid första besöket kan stängas med **Stäng informationen**.
-Stängningen gäller bara medan appen är öppen. Varken stängningen eller
-fortsatt användning registrerar något aktivt lagringsval.
+Vid första besöket visas **Vi använder kakor**, även om du redan är
+inloggad. **Endast nödvändiga** behåller säker inloggning och funktioner
+du begär. **Acceptera Alla** tillåter även **Preferenskakor** för
+**Ihågkommen inloggning**. Tillståndet aktiverar inte funktionen.
 
+**Läs mer** och **Anpassa Inställningar** öppnar **Kakinställningar** i
+bannern. Där kan du läsa kategoriernas lagringsuppgifter och ändra
+Preferenskakor. Nödvändig lagring är alltid aktiv. **Spara Preferenser**,
+**Acceptera Alla** och **Endast nödvändiga** sparar direkt i bannern.
+Krysset och Escape återgår till första läget utan att spara; påbörjade
+val finns kvar när du öppnar inställningarna igen. I första läget flyttar
+Escape fokus till **Endast nödvändiga**.
+
+Öppna **Kakor och lagring** längst ned på inloggningssidan. Du behöver
+inte logga in för att läsa kakpolicyn eller öppna `/cookies` direkt.
+Policysidan kan läsas utan en täckande banner och visar policyversionens
+uppdateringsdatum samt installationens kontaktväg.
 När du är inloggad öppnar du profilikonen, **Din profil**, och väljer
 **Kakor och lagring** under **Ditt konto**. Välj **Tillbaka till kartan**
-för att återgå till ditt arbete. Även du som ännu saknar ett hushåll kan
-nå sidan genom **Din profil**.
+för att återgå till ditt arbete.
 
-Under **Nödvändig lagring** kan du öppna **Visa nödvändig lagring** och
-läsa namn, plats, innehåll, ändamål och tider. Den lagringen behövs för
-funktioner du begär, till exempel säker inloggning och återhämtning av en
-import eller permanent radering. Den har inget avstängningsreglage.
-Rensa inte flikens återhämtningsuppgifter om du behöver kontrollera en
-pågående åtgärd.
+På hela sidan ändrar **Acceptera Alla** och **Endast nödvändiga** bara
+formuläret. Välj **Spara Preferenser** för att bekräfta. Samtycket gäller
+aktuell webbläsare över utloggning och kontobyte, tills du ändrar eller
+återställer det, rensar lagringen eller ett nytt ändamål kräver förnyelse.
+Det har ingen fast tolvmånadersgräns. Beslutstiden är skild från policyns
+uppdateringsdatum och inloggningens gränser.
 
-Under **Uppgifter på Skyttels server** öppnar du
-**Visa serverns lagringsposter** för namn, innehåll och gallring av
-inloggningsuppgifter, resultatkontroll och installationens säkerhetsgeneration.
-Tillfällig samtalstext och transportstatus i arbetsminnet beskrivs separat
-från kakor och fliklagring. En transportkvittens bevisar inte att du har
-läst eller hört svaret.
+När Preferenskakor tillåts vid en lyckad inloggning får du en separat
+fråga: **Kom ihåg mig i Skyttel**, **Inte nu** eller **Fråga inte igen**.
+Frågan upprepas inte vid omladdning för samma inloggning. Funktionen avser
+Skyttel, inte Google eller Microsoft. **Fråga inte igen** gäller dig i
+den aktuella webbläsaren över senare inloggningar. Andra användare och
+webbläsare påverkas inte. Du kan slå på frågan igen på lagringssidan.
+Återställning av samtycke ändrar inte förslagsvalet.
 
-**Ihågkommen inloggning** är valfri och gäller den aktuella
-webbläsarbindningen. Markera **Kom ihåg mig** innan du fortsätter till
-Google eller Microsoft för högst sju dygn från inloggningen. Valet börjar
-avmarkerat vid varje ny inloggning. Vanlig inloggning gäller högst åtta
-timmar. Ingen av tiderna förlängs vid läsning eller återbesök.
-På lagringssidan kan du läsa den versionsbundna informationen och valflödet.
-En sessionskaka garanterar inte att du loggas ut när
-du stänger ett fönster: webbläsaren kan återställa sessionen. Logga ut på
-en delad dator.
+Om du tillåter Preferenskakor först under en pågående inloggning väntar
+förslaget till nästa inloggning. Manuell aktivering finns direkt under
+**Ihågkommen inloggning** på lagringssidan. Saknas samtycke visar
+**Öppna Preferenskakor** rätt reglage. Spara samtycket och välj sedan
+funktionen uttryckligen. Sparat samtycke aktiverar den inte automatiskt.
 
-Stäng av **Ihågkommen inloggning** på lagringssidan och välj
-**Spara inställningar**. Snabbåtgärden **Stäng av ihågkommen inloggning**
-ändrar bara formuläret. **Ångra ändring** återgår till det senast
-bekräftade valet. Om du lämnar osparade ändringar får du välja mellan att
-fortsätta redigera och att kasta ändringarna. Servern avslutar den gamla
-nyckeln och äldre
-påbörjade inloggnings- och kontokopplingsförsök i samma bindning. Dina
-andra webbläsare och redan kopplade konton påverkas inte. Återstående
-session gäller längst till det tidigare slutet eller åtta timmar från
-avstängningen, med 30 minuters inaktivitet. Upprepad avstängning
-förlänger inte tiden. Ny aktivering kräver ny inloggning och ett nytt
-aktivt **Kom ihåg mig**-val.
+Aktivering bekräftas av servern utan ett nytt besök hos leverantören.
+Ihågkommen inloggning gäller högst sju dygn från den ursprungliga
+inloggningen, även om du aktiverar funktionen senare. Vanlig inloggning
+gäller högst åtta timmar med 30 minuters inaktivitet. Återbesök och
+upprepade anrop förlänger inte gränserna. En sessionskaka garanterar inte
+att du loggas ut när du stänger ett fönster: webbläsaren kan återställa
+sessionen. Logga ut på en delad dator.
 
-**Återställ valfri lagring** öppnar en separat bekräftelse innan någon
-ändring begärs. Återställningen stänger av ihågkommen inloggning i den
-aktuella webbläsarbindningen genom samma säkra avstängning som sparknappen.
-Kontots tema, personliga vyer, hushållets information och samtalsmedgivande
-bevaras. Flikens återhämtningsuppgifter för import och permanent radering
-med osäkert utfall bevaras också. **Avbryt** lämnar både formuläret och
-servervalet oförändrade. Andra webbläsarbindningar påverkas inte.
+Stäng av **Ihågkommen inloggning** och välj **Spara Preferenser**, eller
+återkalla tillståndet till Preferenskakor. Skyttel avslutar den gamla
+inloggningsnyckeln och pågående försök i samma webbläsarbindning. Vanlig
+åtkomst kan fortsätta när den bekräftas separat, längst till det tidigare
+slutet eller åtta timmar från avstängningen, med 30 minuters inaktivitet.
+Ett nytt uttryckligt val kan aktivera funktionen igen inom den
+ursprungliga sjudygnsgränsen om vanligt tillträde fortfarande gäller.
+
+**Återställ valfri lagring** kräver en separat bekräftelse. Åtgärden
+stänger av ihågkommen inloggning, rensar lagringssamtycket och visar
+kakbannern igen när du lämnar policysidan. Kontots tema, personliga vyer,
+**Fråga inte igen**, hushållets information, samtalsmedgivande och
+nödvändiga återhämtningsuppgifter bevaras. Andra webbläsare påverkas inte.
+
+Under **Visa nödvändig lagring**, kategoriernas utvecklingsbara detaljer
+och **Visa serverns lagringsposter** kan du läsa faktiska namn, ändamål,
+leverantör, tider och gallring. Rensa inte flikens återhämtningsuppgifter
+om du behöver kontrollera en pågående åtgärd. Transportkvittens av ett
+samtalssvar bevisar inte att du har läst eller hört det.
 
 **Ihågkommen inloggning är avstängd.** bekräftar serverändringen.
 **Du är fortfarande inloggad.** visas bara efter en separat kontroll av
@@ -102,7 +116,8 @@ Google och Microsoft styr lagringen på sina egna webbplatser.
 ## Efter uppdaterad inloggningshantering
 
 När en äldre inloggning avslutas vid uppdateringen behöver du logga in
-igen på varje berörd enhet. **Kom ihåg mig** börjar avmarkerat. Pågående
+igen på varje berörd enhet. Ihågkommen inloggning kräver ett nytt uttryckligt
+val efter inloggning. Pågående
 samtalsarbete avslutas och startar inte om automatiskt. Ditt lagrade
 utkast, hushållets information och sparkvitton finns kvar. Kontrollera
 ett osäkert sparresultat innan du försöker spara igen.
@@ -143,7 +158,8 @@ Efter en bekräftad återställning av installationens säkerhetskopia kan
 ett äldre resultat saknas. Om ett tillförlitligt resultat finns används
 det fortfarande. Annars visar Skyttel det exakta återställningsbeskedet
 och tillåter ett nytt uttryckligt val efter ny inloggning. **Kom ihåg mig**
-börjar avmarkerat. Skyttel upprepar inget gammalt sparande och beskedet
+kräver ett separat uttryckligt val. Skyttel upprepar inget gammalt sparande och
+beskedet
 bekräftar inte hur den gamla ändringen slutar. Ett nätverksfel eller ett
 saknat resultat utan belagd återställning ger inget sådant undantag.
 
@@ -152,3 +168,12 @@ När Skyttel erbjuder **Börja om i den här webbläsaren** kan du uttryckligen
 rensa den gamla kopplingen. Välj därefter Google eller Microsoft på nytt.
 Åtgärden loggar inte in dig automatiskt och påverkar inte andra webbläsare
 eller hushållets uppgifter.
+
+## När lagringsvalet inte kan sparas
+
+Läs felbeskedet och försök spara igen. Du kan fortsätta med endast
+nödvändig lagring; ihågkommen inloggning kräver ett sparat, bekräftat
+samtycke. Ett skickat serveranrop med förlorat svar har däremot okänt
+utfall. Dialogen kan inte stängas medan anropet pågår. Efter en timeout
+kan du lämna efter varningen, behålla åtgärdens referens och senare välja
+**Kontrollera igen**. Skyttel skickar inte ändringen igen automatiskt.

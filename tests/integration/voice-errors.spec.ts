@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import {
   microphoneButton,
@@ -8,6 +7,7 @@ import {
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 const notice = (page: import('@playwright/test').Page) =>

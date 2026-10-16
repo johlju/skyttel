@@ -1,7 +1,7 @@
 import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test, vi } from 'vitest';
 import { sessionWarningMessage } from '../../../src/shared/session-activity.js';
-import { createHousehold, signIn } from '../../support/client.js';
+import { activateRememberedLogin, createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
@@ -33,6 +33,7 @@ test('Live warning waits for both sides to pause and is requested once without c
     data: { provider: 'google', callbackURL: '/', rememberMe: true, informationVersion: 1 },
   });
   await client.get((await started.json()).url);
+  await activateRememberedLogin(client, app.origin);
   const { household } = await (await createHousehold(client, app.origin)).json();
   clock = end - 300_001;
   const path = `${app.origin}/api/households/${household.id}/text-assistant`;

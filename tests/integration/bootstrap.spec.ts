@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import { openProfile } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('ACCESS-23: a new installation offers login and protects direct household requests', async ({
   page,

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import {
   closeTextView,
@@ -25,6 +25,7 @@ import { closeTableObject, editTableObject, readTableObject } from '../support/d
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 async function addObject(page: Page, name: string, description = '') {
@@ -320,7 +321,7 @@ test('PANEL-03: an intervening proposal preserves local text and rejects stale c
     await editTableObject(page, 'Cykeln');
     const form = page.getByRole('dialog', { name: 'Redigera Cykeln', exact: true });
     await form.getByLabel('Beskrivning', { exact: true }).fill('Min oskickade text');
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     try {
       await signIn(other.request, installation.origin);
       const second = await other.newPage();

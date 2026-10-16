@@ -4,7 +4,12 @@ import { type APIRequestContext, request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { afterEach, expect, test, vi } from 'vitest';
 import { beginAssistant, callAssistant } from '../../support/assistant.js';
-import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
+import {
+  activateRememberedLogin,
+  createHousehold,
+  restartWithSession,
+  signIn,
+} from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { advanceActiveLogin } from '../../support/session-time.js';
@@ -159,6 +164,7 @@ test('OFF preserves accepted text and its original login end, then logout after 
       data: { provider: 'google', callbackURL: '/', rememberMe: true, informationVersion: 1 },
     });
     const callback = await browser.get((await started.json()).url, { maxRedirects: 0 });
+    await activateRememberedLogin(browser, app.origin);
     const proof = new URL(callback.headers().location, app.origin).searchParams.get(
       'loginConfirmation',
     );

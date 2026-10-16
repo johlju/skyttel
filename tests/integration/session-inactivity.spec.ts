@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function foreground(page: Page) {
   const response = page.waitForResponse((item) =>

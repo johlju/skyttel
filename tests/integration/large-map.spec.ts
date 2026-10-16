@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import {
   closeTextView,
@@ -12,6 +11,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('STORKARTA-01: dense overview keeps readable labels and every object and relationship reachable', async ({
   page,
@@ -195,7 +195,7 @@ test('STORKARTA-01: dense overview keeps readable labels and every object and re
     await savedChange.getByText('Visa ändringarna', { exact: true }).click();
     await expect(savedChange).toContainText('Oskickad text i den täta kartan');
     await reports.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
-    const anonymous = await browser.newContext();
+    const anonymous = await createPreparedContext(browser);
     try {
       const anonymousPage = await anonymous.newPage();
       await anonymousPage.goto(installation.origin);

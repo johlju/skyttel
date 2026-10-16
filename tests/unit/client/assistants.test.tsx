@@ -46,6 +46,8 @@ function mount(
         });
       if (url === '/api/theme-preference' && (init?.method ?? 'GET') === 'GET')
         return Response.json({ userId: context.user.id, mode: 'system' });
+      if (url === '/api/browser-binding/preference')
+        return Response.json({ userId: context.user.id, remembered: false });
       return responder(url);
     }),
   );

@@ -125,6 +125,7 @@ test('OFF starts ordinary inactivity once while repeated OFF and reads preserve 
     informationVersion: 1,
   });
   await client.request((await started.json()).url);
+  await client.activateRemembered();
   time += 86_400_000;
   expect((await client.json('/api/browser-binding/status', {})).status).toBe(200);
   const offAt = time;

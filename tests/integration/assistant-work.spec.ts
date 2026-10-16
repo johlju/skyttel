@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, test } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import type { SaveReceipt } from '../../src/shared/map.js';
 import { beginAssistant, callAssistant } from '../support/assistant.js';
 import {
@@ -16,6 +16,7 @@ import {
   readDraftProposal,
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function connection(actor: APIRequestContext, origin: string, householdId: string) {
   const flow = await beginAssistant(actor, origin, 'skyttel:read skyttel:write');

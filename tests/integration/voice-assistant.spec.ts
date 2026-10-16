@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import {
   createHousehold,
@@ -31,6 +31,7 @@ import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
 

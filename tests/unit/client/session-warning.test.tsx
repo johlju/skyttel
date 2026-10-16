@@ -13,9 +13,9 @@ test('an explicit binding revision change is not reported as inactivity even aft
   let ended = false;
   const channels: EventTarget[] = [];
   class Channel extends EventTarget {
-    constructor() {
+    constructor(name: string) {
       super();
-      channels.push(this);
+      if (name.startsWith('skyttel-session:')) channels.push(this);
     }
     close() {}
     postMessage() {}

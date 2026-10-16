@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import {
   closeSupportDialog,
@@ -13,6 +12,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('AVTAL-04: dated financial proposals recover and a zero credit correction survives restart', async ({
   page,
@@ -183,7 +183,7 @@ test('AVTAL-08: browser conflict choices combine dated debt with another members
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

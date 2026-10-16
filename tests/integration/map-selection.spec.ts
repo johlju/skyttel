@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import {
   createHousehold,
@@ -10,6 +10,7 @@ import {
 } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { expect, test } from '../support/test.js';
 
 async function arrange(page: Page, origin: string) {
   await signIn(page.request, origin);

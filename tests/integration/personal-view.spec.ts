@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import type { PersonalView } from '../../src/shared/personal-view.js';
@@ -18,6 +18,7 @@ import {
   readPersonalProjection,
   verifyRestoredPersonalMove,
 } from '../support/personal-view-reading.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function arrange(page: Page, origin: string) {
   await signIn(page.request, origin);
@@ -163,7 +164,7 @@ test('PLACERING-01: mouse, height and keyboard movement persist across reload, c
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     const { read, path } = await arrange(page, installation.origin);
     const mapBefore = await (await page.request.get(path)).json();
@@ -292,7 +293,7 @@ test('PLACERING-02: concurrent clients retain independent moves and visibly reje
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     const { read, path } = await arrange(page, installation.origin);
     await signIn(other.request, installation.origin);
@@ -730,8 +731,8 @@ test('PLACERING-05: personal views stay private and revocation denies further re
   browser,
 }) => {
   const installation = await createInstallation();
-  const member = await browser.newContext();
-  const anonymous = await browser.newContext();
+  const member = await createPreparedContext(browser);
+  const anonymous = await createPreparedContext(browser);
   try {
     const { read, path } = await arrange(page, installation.origin);
     await drag(page, 30, 10);

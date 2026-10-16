@@ -1,11 +1,9 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { createInstallation } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function rejectedLogin(page: Page) {
   await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-  const remember = page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true });
-  await expect(remember).not.toBeChecked();
-  await remember.check();
   await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Ingen ny inloggning har bekräftats.');
 }
@@ -14,7 +12,7 @@ test('ACCESS-32: an unknown binding needs a separate explicit reset and a fresh 
   browser,
 }) => {
   const installation = await createInstallation(undefined, { https: true });
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true });
   try {
     await context.addCookies([
       {
@@ -104,8 +102,8 @@ test('ACCESS-32: an unknown binding needs a separate explicit reset and a fresh 
     expect(providerStarts).toBe(0);
     await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
     await expect(
-      page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true }),
-    ).not.toBeChecked();
+      page.getByRole('button', { name: 'Fortsätt till Google', exact: true }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
     await expect(
       page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
@@ -147,7 +145,7 @@ test('ACCESS-33: a cancelled delayed binding reset cannot clear another tabs new
       return response;
     },
   });
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true });
   try {
     await context.addCookies([
       {
@@ -177,8 +175,8 @@ test('ACCESS-33: a cancelled delayed binding reset cannot clear another tabs new
       .click();
     await second.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
     await expect(
-      second.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true }),
-    ).not.toBeChecked();
+      second.getByRole('button', { name: 'Fortsätt till Google', exact: true }),
+    ).toBeVisible();
     await second.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
     await expect(
       second.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),

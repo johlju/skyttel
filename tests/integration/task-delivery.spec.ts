@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { measureContrast } from '../support/accessibility.js';
 import { createHousehold, signIn, utilityButton } from '../support/client.js';
 import {
@@ -13,6 +12,7 @@ import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { advanceActiveLogin } from '../support/session-time.js';
+import { expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text och röst', async ({

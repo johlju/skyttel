@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import {
   closeSupportDialog,
   closeTextView,
@@ -18,6 +18,7 @@ import {
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function chooseRelationshipObject(page: Page, label: string, name: string) {
   const select = page.getByLabel(label, { exact: true });
@@ -357,7 +358,7 @@ test('KARTA-25: a concurrent duplicate refreshes the saved relationship and allo
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     const household = installation.seedDemo();
     await signIn(page.request, installation.origin);

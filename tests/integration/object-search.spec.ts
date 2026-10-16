@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import { closeTextView, openDraftReview } from '../support/client.js';
 import { openTypeDefinitions } from '../support/domain-work.js';
 import { prepareHouseholdTable } from '../support/household-table.js';
 import { createInstallation } from '../support/installation.js';
 import { focusMapSearch, mapFilters, prepareObjectSearch } from '../support/object-search.js';
+import { expect, test } from '../support/test.js';
 
 test('SÖK-01: own detail fields, every word and Swedish normalization find objects', async ({
   page,

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import type { PersonalView } from '../../src/shared/personal-view.js';
 import {
@@ -25,6 +25,7 @@ import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 function saveToast(page: Page) {
@@ -326,7 +327,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     liveFetch: live.provider,
     liveSideband: live.attach,
   });
-  const member = await browser.newContext();
+  const member = await createPreparedContext(browser);
   let release: (() => void) | undefined;
   let releasePoll: (() => void) | undefined;
   try {

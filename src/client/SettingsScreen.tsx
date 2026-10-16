@@ -72,6 +72,12 @@ export function settingsEntries(
     ...(operator
       ? [
           {
+            to: '/policy-contact',
+            title: 'Policykontakt',
+            description: 'Publik e-postadress för frågor om kakor och lagring.',
+            group: 'Drift',
+          },
+          {
             to: '/costs',
             title: 'Månadskostnad',
             description: 'Installationens drift, förbrukning, priser och antaganden.',

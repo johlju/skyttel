@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import {
   closeSupportDialog,
@@ -25,6 +25,7 @@ import { createInstallation } from '../support/installation.js';
 import { includeEndedInMap } from '../support/object-search.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
 import { readRemovalProposals } from '../support/removal-reading.js';
+import { expect, test } from '../support/test.js';
 
 async function arrange(client: APIRequestContext, origin: string) {
   await signIn(client, origin);

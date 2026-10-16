@@ -123,6 +123,23 @@ export async function applicationFixture({
     return {
       request,
       json,
+      async activateRemembered() {
+        const selected = await (await json('/api/browser-binding/preference', {})).json();
+        const response = await json('/api/browser-binding/activate', {
+          id: crypto.randomUUID(),
+          sessionId: selected.sessionId,
+          bindingId: selected.bindingId,
+          preferences: true,
+          rememberMe: true,
+          informationVersion: 1,
+          consentInformationVersion: 1,
+        });
+        if (!response.ok) throw new Error(`Activation failed: ${response.status}`);
+        const binding = await response.clone().json();
+        cookies.set(binding.cookieName, binding.candidate);
+        await json('/api/browser-binding/register', {});
+        return response;
+      },
       async registerBinding(binding: { cookieName: string; candidate: string }) {
         // The browser writes only this explicit candidate before registration.
         cookies.set(binding.cookieName, binding.candidate);

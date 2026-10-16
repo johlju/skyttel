@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import {
@@ -21,6 +21,7 @@ import {
 import { createInstallation, robin } from '../support/installation.js';
 import { focusMapSearch, mapFilters } from '../support/object-search.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function expectContextIcons(page: Page, anchor: Locator) {
   const actions = page.getByRole('toolbar', { name: 'Åtgärder för Molnmusik', exact: true });
@@ -507,7 +508,7 @@ test('RYMD-04: touch menus, viewport changes and graphics recovery retain unsent
   browser,
 }) => {
   const installation = await createInstallation();
-  const context = await browser.newContext({
+  const context = await createPreparedContext(browser, {
     viewport: { width: 390, height: 844 },
     hasTouch: true,
     isMobile: true,
@@ -819,7 +820,7 @@ test('RYMD-06: losing household access in fullscreen restores login navigation',
   try {
     const { read, household } = await arrange(page, installation.origin);
     const state = await read();
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     installation.setIdentity(robin);
     await signIn(other.request, installation.origin, 'microsoft');
     const { user } = await (await other.request.get(`${installation.origin}/api/bootstrap`)).json();

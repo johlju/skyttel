@@ -41,7 +41,7 @@ test('household archives exclude personal conversation choices and import preser
     await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
   );
   const parts = unzipSync(bytes);
-  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(32);
+  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(33);
   const encoded = new TextDecoder().decode(parts['content.json']);
   for (const field of [
     'showDraftOnStart',

@@ -1,5 +1,5 @@
 import { access } from 'node:fs/promises';
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { createHousehold, openProfile, openSettings, signIn } from '../support/client.js';
 import {
   openConversationText,
@@ -9,6 +9,7 @@ import {
   voiceBox,
 } from '../support/conversation-page.js';
 import { launchManualCosts } from '../support/manual-costs.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 const assistant = (page: Page) => page.getByRole('region', { name: 'Arbetsyta', exact: true });
 const category = (page: Page, name: string) => page.getByRole('region', { name, exact: true });
@@ -189,7 +190,7 @@ test('KOST-03: endast driftansvarig har åtkomst oberoende av hushållets roller
   browser,
 }) => {
   const app = await launchManualCosts();
-  const robin = await browser.newContext();
+  const robin = await createPreparedContext(browser);
   try {
     await signIn(page.request, app.origin);
     await page.goto(app.origin);

@@ -939,7 +939,11 @@
     "scenariespecifika",
     "ljudhashar",
     "modellåterspelning",
-    "skärmläsarbedömning"
+    "skärmläsarbedömning",
+    "bannerlägen",
+    "bannerlägena",
+    "tolvmånadersgräns",
+    "sjudygnsgränsen"
   ],
   "overrides": [
     {

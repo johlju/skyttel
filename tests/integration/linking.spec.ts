@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openProfile, signIn } from '../support/client.js';
 import { alex, createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function linkStep(
   client: import('@playwright/test').APIRequestContext,

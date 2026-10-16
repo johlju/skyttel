@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import {
@@ -11,6 +11,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function expectSpatialPortrait(page: Page, imageId: string | null | undefined) {
   expect(imageId).toBeTruthy();
@@ -254,8 +255,8 @@ test('BILD-03: private, historical and known image addresses enforce current hou
   browser,
 }) => {
   const installation = await createInstallation();
-  const second = await browser.newContext();
-  const anonymous = await browser.newContext();
+  const second = await createPreparedContext(browser);
+  const anonymous = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { closeTextView, createHousehold, openMap, signIn } from '../support/client.js';
 import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 for (const viewport of [

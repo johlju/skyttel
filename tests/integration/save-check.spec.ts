@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import {
   closeTextView,
   createHousehold,
@@ -17,6 +17,7 @@ import { editTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const checking = 'Det är oklart om utkastet sparades. Skyttel kontrollerar det.';

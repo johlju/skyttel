@@ -5,7 +5,7 @@ export const rememberedLoginInformation = {
   purpose: 'browser-login',
   label: 'Kom ihåg mig',
   text: 'Behåll inloggningen i den här webbläsaren i högst sju dygn. Välj bara detta på en egen enhet. Inloggningen förlängs inte automatiskt. Logga ut på en delad dator.',
-  flow: 'Valet börjar avmarkerat vid varje ny inloggning och görs innan du fortsätter till Google eller Microsoft.',
+  flow: 'Tillåt först Preferenskakor. Välj sedan Kom ihåg mig i Skyttel efter bekräftad inloggning eller under Kakor och lagring. Tillståndet till lagring aktiverar inte funktionen.',
 } as const;
 
 export const loginConfirmationFailure =

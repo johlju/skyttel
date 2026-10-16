@@ -9,6 +9,15 @@ const user = { id: 'alex', name: 'Alex Exempel' };
 type Reply = { data?: unknown; status?: number; response?: Promise<Response> };
 function mount(replies: Reply[], path = '/login-methods', status = 'forbidden') {
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (path === '/api/browser-binding/preference')
+      return Response.json({
+        userId: user.id,
+        remembered: false,
+        sessionId: 'ordinary-login',
+        bindingId: 'ordinary-binding',
+        expiresAt: Date.now() + 28_800_000,
+        inactiveAfterMs: 1_800_000,
+      });
     if (path === '/api/bootstrap')
       return Response.json({ status, providers: ['google', 'microsoft'], user });
     if (path === '/api/theme-preference' && (init?.method ?? 'GET') === 'GET')

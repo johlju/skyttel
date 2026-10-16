@@ -1,13 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  type APIRequestContext,
-  type APIResponse,
-  expect,
-  type Page,
-  test,
-} from '@playwright/test';
+import type { APIRequestContext, APIResponse, Page } from '@playwright/test';
 import { conversationConsentTextVersion } from '../../src/shared/conversation-consent.js';
 import { bounds, contrast } from '../support/accessibility.js';
 import { closeSupportDialog, createHousehold, openSettings, signIn } from '../support/client.js';
@@ -29,6 +23,7 @@ import { readDraftProposal, readTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const householdName = 'Familjen Berg';
@@ -158,7 +153,7 @@ test('MEDGIVANDE-05: sidan Samtal med Skyttel visar medgivandet för alla medlem
   const app = await installation();
   try {
     const { path } = await signInWithHousehold(page.request, app.origin);
-    const member = await browser.newContext();
+    const member = await createPreparedContext(browser);
     await joinAsRobin(app, page.request, path, member.request);
     const memberPage = await member.newPage();
 
@@ -253,7 +248,7 @@ test('MEDGIVANDE-06: Spara medgivandet sparar direkt utan att starta ett samtal'
     expect(sent[0]).toBe('start');
 
     // The saved consent follows the user to another device.
-    const otherDevice = await browser.newContext();
+    const otherDevice = await createPreparedContext(browser);
     await signIn(otherDevice.request, app.origin);
     const otherPage = await otherDevice.newPage();
     await openHousehold(otherPage, app.origin);
@@ -496,7 +491,7 @@ test('MEDGIVANDE-11: sidan sköts med tangentbord och pekskärm i båda teman', 
     await page.emulateMedia({ colorScheme: 'light' });
 
     // A narrow touch screen: the part fits without scrolling sideways, and the buttons are large enough to hit.
-    const touch = await browser.newContext({ hasTouch: true });
+    const touch = await createPreparedContext(browser, { hasTouch: true });
     await joinAsRobin(app, page.request, path, touch.request);
     const touchPage = await touch.newPage();
     const touched = consentPart(touchPage);
@@ -539,7 +534,7 @@ test('MEDGIVANDE-12: en medlem som bjuds in igen har inget sparat medgivande', a
   const app = await installation();
   try {
     const { path, consentPath } = await signInWithHousehold(page.request, app.origin);
-    const member = await browser.newContext();
+    const member = await createPreparedContext(browser);
     const { userId, joinAgain } = await joinAsRobin(app, page.request, path, member.request);
     const memberPage = await member.newPage();
     const consent = consentPart(memberPage);
@@ -632,7 +627,7 @@ test('MEDGIVANDE-13: ett återkallande på en annan enhet avslutar samtalet', as
     await expect.poll(() => liveMicrophones(page)).toBe(1);
 
     // The same user revokes on another device.
-    const otherDevice = await browser.newContext();
+    const otherDevice = await createPreparedContext(browser);
     await signIn(otherDevice.request, app.origin);
     const otherPage = await otherDevice.newPage();
     await openHousehold(otherPage, app.origin);
@@ -882,8 +877,8 @@ test('MEDGIVANDE-16: registrerat sparande slutförs vid återkallandet', async (
 
 test('MEDGIVANDE-17: återkallanderutan med tangentbord och pekskärm', async ({ browser }) => {
   const app = await installation();
-  const desktop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  const device = await browser.newContext({
+  const desktop = await createPreparedContext(browser, { viewport: { width: 1280, height: 900 } });
+  const device = await createPreparedContext(browser, {
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,
@@ -970,7 +965,7 @@ test('MEDGIVANDE-18: nästa textförsök visar återkallandet på en annan enhet
 }) => {
   const model = textModel(() => [modelMessage('Ett provsvar.')]);
   const app = await installation({ modelFetch: model.provider });
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     const { path, consentPath } = await signInWithHousehold(page.request, app.origin);
     await arrangeDraft(page, path, app.origin);

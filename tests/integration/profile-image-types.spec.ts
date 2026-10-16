@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import {
@@ -12,6 +11,7 @@ import {
 import { openSavedHistory, readCommittedHistoryCard } from '../support/conversation-page.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 const typeName = 'Egen bildtyp';
 test(`BILD-06: ${typeName} shares text, icon and image in one proposal and removes the latest image`, async ({

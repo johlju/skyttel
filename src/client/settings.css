@@ -199,7 +199,7 @@
   color: var(--space-text);
   scroll-margin-block: 24px;
 }
-.settings-screen :is(button, input, select, textarea) {
+.settings-screen :is(button, input, select, textarea):where(:not(.cookie-storage *)) {
   background: var(--space-surface);
   border-color: var(--space-control);
 }
@@ -215,7 +215,7 @@
 .settings-screen :is(.muted, .eyebrow) {
   color: var(--space-muted);
 }
-.settings-screen :focus-visible {
+.settings-screen :focus-visible:where(:not(.cookie-storage *)) {
   outline: 3px solid var(--space-accent);
   outline-offset: 3px;
 }
@@ -223,7 +223,7 @@
   background: var(--space-accent);
   color: var(--space-surface);
 }
-.settings-screen button:hover:enabled {
+.settings-screen button:hover:enabled:where(:not(.cookie-storage *)) {
   background: var(--space-surface);
   border-color: var(--space-accent);
   color: var(--space-text);

@@ -109,15 +109,13 @@ async function rejectUnknownBinding() {
   await screen.findByRole('button', { name: 'Börja om i den här webbläsaren' });
 }
 
-test('a confirmed binding reset restores provider focus and requires a fresh unchecked choice', async () => {
+test('a confirmed binding reset restores provider focus before a fresh provider choice', async () => {
   await rejectUnknownBinding();
   await userEvent.click(screen.getByRole('button', { name: 'Börja om i den här webbläsaren' }));
   await screen.findByText('Klart för en ny inloggning. Välj Google eller Microsoft igen.');
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Fortsätt med Google' }));
   await userEvent.click(screen.getByRole('button', { name: 'Fortsätt med Microsoft' }));
-  expect((screen.getByRole('checkbox', { name: 'Kom ihåg mig' }) as HTMLInputElement).checked).toBe(
-    false,
-  );
+  expect(screen.queryByRole('checkbox', { name: 'Kom ihåg mig' })).toBeNull();
   expect(document.activeElement).toBe(
     screen.getByRole('button', { name: 'Fortsätt till Microsoft' }),
   );

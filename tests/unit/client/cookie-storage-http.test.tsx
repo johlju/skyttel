@@ -1,12 +1,12 @@
 import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { CookieStorage } from '../../../src/client/CookieStorage.js';
 import { authenticatedHttpFetch } from '../../support/authenticated-http-fetch.js';
-import { signIn } from '../../support/client.js';
+import { activateRememberedLogin, signIn } from '../../support/client.js';
 import { createInstallation, robin } from '../../support/installation.js';
 
 let installation: Awaited<ReturnType<typeof createInstallation>>;
@@ -22,10 +22,20 @@ beforeEach(async () => {
     data: { provider: 'google', callbackURL: '/', rememberMe: true, informationVersion: 1 },
   });
   await client.get((await start.json()).url, { maxRedirects: 0 });
+  await activateRememberedLogin(client, installation.origin);
   ownerId = (await (await client.get(`${installation.origin}/api/bootstrap`)).json()).user.id;
   (
     globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
   ).jsdom.reconfigure({ url: installation.origin });
+  localStorage.setItem(
+    'skyttel-storage-consent',
+    JSON.stringify({
+      schemaVersion: 1,
+      informationVersion: 1,
+      preferences: true,
+      decidedAt: Date.now(),
+    }),
+  );
   vi.stubGlobal('fetch', authenticatedHttpFetch(client, installation.origin));
 });
 
@@ -109,7 +119,11 @@ test('a proven restore reads the fresh ordinary preference rather than a cached 
       'Skyttel har återställts från en säkerhetskopia.',
     ),
   );
-  await waitFor(() => expect((screen.getByRole('switch') as HTMLInputElement).checked).toBe(false));
+  await waitFor(() =>
+    expect(
+      (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
+    ).toBe(false),
+  );
   expect(screen.getByRole('status').textContent).not.toContain('Ihågkommen inloggning är avstängd');
   expect(writes).toBe(1);
 });
@@ -165,7 +179,7 @@ test('a different owner in the separate authentication read cannot replace a con
       await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
       await currentRead;
     });
-    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Ihågkommen inloggning' })).toBeNull();
     expect(screen.getByRole('status').textContent).toContain('Logga in igen för att fortsätta.');
     expect(screen.getByRole('status').textContent).not.toContain('Du har loggat in på nytt.');
   } finally {
@@ -191,7 +205,7 @@ async function turnOff() {
   const choice = await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
   await waitFor(() => expect((choice as HTMLInputElement).checked).toBe(true));
   await userEvent.click(choice);
-  return screen.getByRole('button', { name: 'Spara inställningar' });
+  return screen.getByRole('button', { name: 'Spara Preferenser' });
 }
 
 test.each([
@@ -233,9 +247,7 @@ test.each([
         ),
       );
       expect(confirmation).toBe(true);
-      expect(
-        screen.getByRole('link', { name: 'Logga in på nytt och välj Kom ihåg mig.' }),
-      ).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Kom ihåg mig i Skyttel' })).toBeTruthy();
     } else {
       await waitFor(() =>
         expect(screen.getByRole('alert').textContent).toBe(
@@ -246,7 +258,9 @@ test.each([
       );
       if (outcome !== 'rejected') await userEvent.click(save);
       expect(saves).toBe(1);
-      expect((screen.getByRole('switch') as HTMLInputElement).checked).toBe(false);
+      expect(
+        (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
+      ).toBe(false);
     }
   },
   20_000,
@@ -285,13 +299,15 @@ test('a late saved OFF reply from the previous user cannot replace the new user 
       .id;
     vi.stubGlobal('fetch', authenticatedHttpFetch(other, installation.origin));
     view.rerender(page(otherId));
-    await screen.findByRole('link', { name: 'Logga in på nytt och välj Kom ihåg mig.' });
+    await screen.findByRole('button', { name: 'Kom ihåg mig i Skyttel' });
     await act(async () => {
       release();
       await held;
     });
     await waitFor(() => expect(screen.getByRole('status').textContent).toBe(''));
-    expect((screen.getByRole('switch') as HTMLInputElement).checked).toBe(false);
+    expect(
+      (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
+    ).toBe(false);
     expect(
       screen.queryByText('Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.'),
     ).toBeNull();
@@ -313,7 +329,10 @@ test('an unsaved choice from an older session cannot rotate a newer login for th
   expect(await (await client.get(`${installation.origin}/api/auth/get-session`)).json()).toEqual(
     current,
   );
-  expect(screen.getByText('Osparad ändring.')).toBeTruthy();
+  expect(
+    (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
+  ).toBe(false);
+  expect(screen.queryByText('Osparad ändring.')).toBeNull();
 });
 
 test('a previous user preference reply cannot replace the newer user server choice', async () => {
@@ -344,13 +363,17 @@ test('a previous user preference reply cannot replace the newer user server choi
       .id;
     vi.stubGlobal('fetch', authenticatedHttpFetch(other, installation.origin));
     view.rerender(page(otherId));
-    await screen.findByRole('link', { name: 'Logga in på nytt och välj Kom ihåg mig.' });
+    await screen.findByRole('button', { name: 'Kom ihåg mig i Skyttel' });
     await act(async () => {
       release();
       await held;
     });
-    expect((screen.getByRole('switch') as HTMLInputElement).checked).toBe(false);
-    expect(screen.getByRole('switch').hasAttribute('disabled')).toBe(true);
+    expect(
+      (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
+    ).toBe(false);
+    expect(
+      screen.getByRole('switch', { name: 'Ihågkommen inloggning' }).hasAttribute('disabled'),
+    ).toBe(false);
   } finally {
     release();
     await other.dispose();
@@ -377,12 +400,14 @@ test.each(['unreadable', 'missing session', 'invalid id'])(
       return transport(input, init);
     });
     render(page());
-    await screen.findByRole('switch');
+    await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
     await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
     expect(screen.getByRole('alert').textContent).toContain(
       'Åtgärdens referens saknas eller är skadad. Utfallet är fortfarande okänt.',
     );
-    expect((screen.getByRole('switch') as HTMLInputElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).disabled,
+    ).toBe(true);
     expect(mutations).toEqual([]);
     expect(results).toEqual([]);
     expect(sessionStorage.getItem(`skyttel-storage-operation:${ownerId}`)).toBe(value);
@@ -409,11 +434,21 @@ test.each(['read', 'write', 'silently discarded'])(
           'Flikens återhämtningsuppgifter kunde inte läsas. Ingen ny ändring skickas.',
         ),
       );
-      expect(screen.queryByRole('switch')).toBeNull();
+      expect(screen.queryByRole('switch', { name: 'Ihågkommen inloggning' })).toBeNull();
     } else {
       const save = await turnOff();
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        if (failure === 'write') throw new DOMException('Browser storage denied', 'SecurityError');
+      const write = Storage.prototype.setItem;
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+        this: Storage,
+        key,
+        value,
+      ) {
+        if (key.startsWith('skyttel-storage-operation:')) {
+          if (failure === 'write')
+            throw new DOMException('Browser storage denied', 'SecurityError');
+          return;
+        }
+        write.call(this, key, value);
       });
       await userEvent.click(save);
       await waitFor(() =>
@@ -421,7 +456,9 @@ test.each(['read', 'write', 'silently discarded'])(
           'Flikens återhämtningsuppgifter kunde inte sparas. Ingen ändring har skickats.',
         ),
       );
-      expect((screen.getByRole('switch') as HTMLInputElement).checked).toBe(false);
+      expect(
+        (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).checked,
+      ).toBe(false);
       expect(screen.getByText('Osparad ändring.')).toBeTruthy();
     }
     expect(writes).toEqual([]);
@@ -450,7 +487,7 @@ test('an unavailable earlier result remains unknown after reload without resendi
     return transport(input, init);
   });
   render(page());
-  await screen.findByRole('switch');
+  await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
   await userEvent.click(screen.getByRole('button', { name: 'Kontrollera igen' }));
   await waitFor(() =>
     expect(screen.getByRole('alert').textContent).toContain(
@@ -459,7 +496,9 @@ test('an unavailable earlier result remains unknown after reload without resendi
   );
   expect(results).toEqual([`/api/browser-binding/results/${id}`]);
   expect(writes).toEqual([]);
-  expect((screen.getByRole('switch') as HTMLInputElement).disabled).toBe(true);
+  expect(
+    (screen.getByRole('switch', { name: 'Ihågkommen inloggning' }) as HTMLInputElement).disabled,
+  ).toBe(true);
 });
 
 test('failed deletion of the local reference cannot undo a confirmed server change', async () => {
@@ -475,6 +514,33 @@ test('failed deletion of the local reference cannot undo a confirmed server chan
     ),
   );
   expect(screen.getByRole('status').textContent).toContain('Ihågkommen inloggning är avstängd.');
+  expect(
+    await (
+      await client.get(`${installation.origin}/api/browser-binding/preference`, {
+        headers: { origin: installation.origin },
+      })
+    ).json(),
+  ).toMatchObject({ remembered: false });
+});
+
+test('failed consent cleanup keeps confirmed OFF separate from an incomplete browser reset', async () => {
+  render(page());
+  await screen.findByRole('switch', { name: 'Ihågkommen inloggning' });
+  await userEvent.click(screen.getByRole('button', { name: 'Återställ valfri lagring' }));
+  const remove = Storage.prototype.removeItem;
+  vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key) {
+    if (key === 'skyttel-storage-consent')
+      throw new DOMException('Synthetic denied cleanup', 'SecurityError');
+    remove.call(this, key);
+  });
+  const dialog = screen.getByRole('dialog', { name: 'Återställ valfri lagring?' });
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Återställ' }));
+  await waitFor(() =>
+    expect(dialog.textContent).toContain(
+      'Avstängningen är bekräftad men lagringssamtycket kunde inte återställas.',
+    ),
+  );
+  expect(dialog.textContent).not.toContain('Sparstatus okänd');
   expect(
     await (
       await client.get(`${installation.origin}/api/browser-binding/preference`, {

@@ -1,6 +1,7 @@
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { signInRemembered } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 const restoredMessage =
   'Skyttel har återställts från en säkerhetskopia. Gamla inloggningar kan inte längre användas. Logga in igen för att fortsätta.';
@@ -9,23 +10,20 @@ test('KAK-30: a proven older restore permits a fresh explicit choice without rep
   browser,
 }) => {
   const installation = await createInstallation(undefined, { https: true });
-  const context = await browser.newContext({
-    ignoreHTTPSErrors: true,
-    viewport: { width: 390, height: 844 },
-  });
+  const context = await createPreparedContext(
+    browser,
+    {
+      ignoreHTTPSErrors: true,
+      viewport: { width: 390, height: 844 },
+    },
+    true,
+  );
   try {
     const { origin } = installation;
     const page = await context.newPage();
     page.on('dialog', (dialog) => dialog.accept());
     const login = async () => {
-      await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-      const remember = page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true });
-      await expect(remember).not.toBeChecked();
-      await remember.check();
-      await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
-      await expect(
-        page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
-      ).toBeVisible();
+      await signInRemembered(page, origin);
     };
     await page.goto(origin);
     await login();
@@ -43,7 +41,7 @@ test('KAK-30: a proven older restore permits a fresh explicit choice without rep
     await page.goto(`${origin}/cookies`);
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await choice.uncheck();
-    await page.getByRole('button', { name: 'Spara inställningar', exact: true }).click();
+    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Sparstatus okänd');
     await installation.restoreDatabase(backup, {
       generation: '22222222-2222-4222-8222-222222222222',
@@ -59,8 +57,8 @@ test('KAK-30: a proven older restore permits a fresh explicit choice without rep
     // action; it does not retry OAuth or preserve the earlier remembered choice.
     await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
     await expect(
-      page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true }),
-    ).not.toBeChecked();
+      page.getByRole('button', { name: 'Fortsätt till Google', exact: true }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
     await page.getByRole('button', { name: 'Börja om i den här webbläsaren', exact: true }).click();
     await expect(
@@ -87,7 +85,7 @@ test('KAK-30: a proven older restore permits a fresh explicit choice without rep
     );
     await page.unroute('**/api/browser-binding/revoke');
     await choice.uncheck();
-    await page.getByRole('button', { name: 'Spara inställningar', exact: true }).click();
+    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('article').getByRole('status')).toContainText(
       'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.',
     );
@@ -104,20 +102,13 @@ test('KAK-31: a trustworthy retained result survives restore and restart with it
   browser,
 }) => {
   const installation = await createInstallation(undefined, { https: true });
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true }, true);
   try {
     const { origin } = installation;
     const page = await context.newPage();
     page.on('dialog', (dialog) => dialog.accept());
     const login = async () => {
-      await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-      const remember = page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true });
-      await expect(remember).not.toBeChecked();
-      await remember.check();
-      await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
-      await expect(
-        page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
-      ).toBeVisible();
+      await signInRemembered(page, origin);
     };
     await page.goto(origin);
     await login();
@@ -136,7 +127,7 @@ test('KAK-31: a trustworthy retained result survives restore and restart with it
     await page.goto(`${origin}/cookies`);
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await choice.uncheck();
-    await page.getByRole('button', { name: 'Spara inställningar', exact: true }).click();
+    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Sparstatus okänd');
     const backup = join(installation.directory, 'retained-result.sqlite');
     await installation.saveDatabase(backup);

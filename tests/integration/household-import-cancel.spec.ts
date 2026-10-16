@@ -1,6 +1,6 @@
 import { chmodSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { createHousehold, openNewObject, openSettings, signIn } from '../support/client.js';
 import {
   expectRecoveryContent,
@@ -8,6 +8,7 @@ import {
   seedRecoveryContent,
 } from '../support/household-recovery-reading.js';
 import { createInstallation } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function prepareReview(page: Page, path: string, archive: Buffer) {
   await page.getByLabel('Skyttel-export (ZIP)').setInputFiles({
@@ -186,7 +187,7 @@ test('IMPORT-18: a fresh administrator client can find cancelled files even when
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   let directory = '';
   try {
     await signIn(page.request, installation.origin);
@@ -418,7 +419,7 @@ test('IMPORT-17: failed cancellation cleanup and a lost success remain bound to 
 }) => {
   const installation = await createInstallation();
   let directory = '';
-  const freshContext = await browser.newContext();
+  const freshContext = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

@@ -391,7 +391,11 @@ test.each(['setup', 'forbidden', 'ready'])(
       await screen.findByRole('heading', { name: /Endast installationens driftansvarige/ }),
     ).toBeDefined();
     expect(screen.queryByRole('link', { name: 'Månadskostnad' })).toBeNull();
-    expect(paths).toEqual(['/api/bootstrap', '/api/theme-preference']);
+    expect(paths).toEqual([
+      '/api/bootstrap',
+      '/api/browser-binding/preference',
+      '/api/theme-preference',
+    ]);
   },
 );
 

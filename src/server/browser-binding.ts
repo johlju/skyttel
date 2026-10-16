@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { serializeSigned } from 'hono/utils/cookie';
 import { rememberedLoginInformation } from '../shared/remembered-login.js';
 import type { SessionStatus } from '../shared/session-activity.js';
+import { storageConsentInformationVersion } from '../shared/storage-consent.js';
 import type { Auth } from './auth.js';
 import { stageAuthCallback } from './auth-callback-transaction.js';
 import { installationAuthority } from './installation-authority.js';
@@ -32,6 +33,7 @@ type Attempt = Choice & {
   provider: string | null;
 };
 type SessionPolicy = Choice & {
+  activatedAt?: number | null;
   id: string;
   token: string;
   createdAt: string;
@@ -60,7 +62,9 @@ function rememberedSession(policy: SessionPolicy) {
   return (
     remembered(policy) &&
     policy.decidedAt !== null &&
-    policy.decidedAt <= created &&
+    (policy.decidedAt <= created ||
+      (policy.activatedAt === policy.decidedAt &&
+        policy.decidedAt < created + rememberedLifetime)) &&
     typeof policy.absoluteExpiresAt === 'number' &&
     Number.isSafeInteger(policy.absoluteExpiresAt) &&
     policy.absoluteExpiresAt > created &&
@@ -421,6 +425,7 @@ export function browserBindings(
       return context.json({ error: 'unconfirmed' }, 401);
     return context.json({
       status: 'confirmed',
+      userId: current.user.id,
       sessionId: current.session.id,
       revision: binding.revision,
       remembered: rememberedSession(selected),
@@ -450,10 +455,14 @@ export function browserBindings(
     if (!current) return context.json({ error: 'unauthenticated' }, 401);
     const result = database
       .prepare(
-        'SELECT id, userId, status, completedAt, checkUntil, sessionExpiresAt AS expiresAt FROM storage_action_result WHERE id = ? AND userId = ? AND checkUntil > ?',
+        "SELECT id, userId, status, kind = 'activate' AS remembered, completedAt, checkUntil, sessionExpiresAt AS expiresAt FROM storage_action_result WHERE id = ? AND userId = ? AND checkUntil > ?",
       )
       .get(context.req.param('id'), current.user.id, now());
-    if (result) return context.json(result);
+    if (result)
+      return context.json({
+        ...result,
+        remembered: Boolean((result as { remembered: number }).remembered),
+      });
     const restoredFrom = installationAuthority(database)?.restoredFrom;
     if (
       restoredFrom &&
@@ -467,15 +476,30 @@ export function browserBindings(
       });
     return context.json({ error: 'result_unavailable' }, 404);
   });
-  routes.post('/revoke', async (context) => {
+  routes.on('POST', ['/revoke', '/activate'], async (context) => {
+    const activating = context.req.path.endsWith('/activate');
     const body = (await context.req.json().catch(() => null)) as {
       id?: unknown;
       sessionId?: unknown;
       bindingId?: unknown;
+      informationVersion?: unknown;
+      consentInformationVersion?: unknown;
+      preferences?: unknown;
+      rememberMe?: unknown;
     } | null;
     if (
       typeof body?.id !== 'string' ||
       !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.id)
+    )
+      return context.json({ error: 'invalid_request' }, 400);
+    if (
+      activating &&
+      (typeof body.sessionId !== 'string' ||
+        typeof body.bindingId !== 'string' ||
+        body.preferences !== true ||
+        body.rememberMe !== true ||
+        body.consentInformationVersion !== storageConsentInformationVersion ||
+        body.informationVersion !== rememberedLoginInformation.version)
     )
       return context.json({ error: 'invalid_request' }, 400);
     const authContext = await auth.$context;
@@ -493,6 +517,11 @@ export function browserBindings(
         httpOnly: true,
         sameSite: 'Lax',
         secure: origin.startsWith('https:'),
+        ...(activating && current
+          ? {
+              expires: new Date(new Date(current.session.createdAt).getTime() + rememberedLifetime),
+            }
+          : {}),
       },
     );
     if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
@@ -509,7 +538,8 @@ export function browserBindings(
           (body.bindingId !== undefined && body.bindingId !== fresh.id) ||
           !selected ||
           selected.token !== current.session.token ||
-          deadline(selected) <= now()
+          deadline(selected) <= now() ||
+          (activating && new Date(selected.createdAt).getTime() + rememberedLifetime <= now())
         )
           return null;
         // Reusing a correlation reference never repeats a mutation or supplies a
@@ -517,28 +547,30 @@ export function browserBindings(
         if (database.prepare('SELECT 1 FROM storage_action_result WHERE id = ?').get(body.id))
           return null;
         const completedAt = now();
-        const expiresAt = Math.min(
-          absoluteSessionDeadline(selected),
-          completedAt + ordinaryLifetime,
-        );
+        const expiresAt = activating
+          ? new Date(selected.createdAt).getTime() + rememberedLifetime
+          : Math.min(absoluteSessionDeadline(selected), completedAt + ordinaryLifetime);
         const ordinaryStartedAt = rememberedSession(selected)
           ? completedAt
           : (selected.ordinaryStartedAt ?? new Date(selected.createdAt).getTime());
         database.prepare('DELETE FROM login_link WHERE sessionId = ?').run(selected.id);
         database.prepare('DELETE FROM browser_binding WHERE id = ?').run(binding.id);
         database
-          .prepare(`UPDATE session SET token = ?, rememberMe = 0, absoluteExpiresAt = ?,
-        expiresAt = ?, ordinaryStartedAt = ?, lastActivityAt = ?, loginConfirmation = NULL,
-        choiceSchemaVersion = 1, informationVersion = ?, choicePurpose = ?, decidedAt = ? WHERE id = ?`)
+          .prepare(`UPDATE session SET token = ?, rememberMe = ?, absoluteExpiresAt = ?,
+        expiresAt = ?, ordinaryStartedAt = ?, lastActivityAt = ?, loginConfirmation = CASE WHEN ? THEN loginConfirmation ELSE NULL END,
+        choiceSchemaVersion = 1, informationVersion = ?, choicePurpose = ?, decidedAt = ?, activatedAt = ? WHERE id = ?`)
           .run(
             token,
+            activating ? 1 : 0,
             expiresAt,
             new Date(expiresAt).toISOString(),
             ordinaryStartedAt,
             rememberedSession(selected) ? completedAt : (selected.lastActivityAt ?? completedAt),
+            activating ? 1 : 0,
             rememberedLoginInformation.version,
             rememberedLoginInformation.purpose,
             completedAt,
+            activating ? completedAt : null,
             selected.id,
           );
         database
@@ -552,13 +584,20 @@ export function browserBindings(
         database
           .prepare(`INSERT INTO storage_action_result
         (id, userId, kind, status, completedAt, checkUntil, sessionExpiresAt)
-        VALUES (?, ?, 'revoke', 'completed', ?, ?, ?)`)
-          .run(body.id, current.user.id, completedAt, completedAt + 86_400_000, expiresAt);
+        VALUES (?, ?, ?, 'completed', ?, ?, ?)`)
+          .run(
+            body.id,
+            current.user.id,
+            activating ? 'activate' : 'revoke',
+            completedAt,
+            completedAt + 86_400_000,
+            expiresAt,
+          );
         return {
           id: body.id,
           userId: current.user.id,
           status: 'completed',
-          remembered: false,
+          remembered: activating,
           completedAt,
           checkUntil: completedAt + 86_400_000,
           expiresAt,
@@ -674,10 +713,6 @@ export function browserBindings(
           !['google', 'microsoft'].includes(String(body.provider)))
       )
         return Response.json({ error: 'invalid_request' }, { status: 400 });
-      const active =
-        signingIn &&
-        body?.rememberMe === true &&
-        body.informationVersion === rememberedLoginInformation.version;
       const decidedAt = now();
       let providerRequest = request;
       if (signingIn && body) {
@@ -712,12 +747,8 @@ export function browserBindings(
           binding.sessionId,
           now() + attemptLifetime,
           1,
-          active ? 1 : 0,
-          signingIn &&
-            typeof body?.rememberMe === 'boolean' &&
-            body.informationVersion === rememberedLoginInformation.version
-            ? rememberedLoginInformation.version
-            : null,
+          0,
+          rememberedLoginInformation.version,
           rememberedLoginInformation.purpose,
           decidedAt,
           String(body?.provider ?? ''),

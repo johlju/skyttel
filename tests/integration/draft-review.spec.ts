@@ -1,4 +1,4 @@
-import { expect, type Locator, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { closeTextView } from '../support/client.js';
 import { consentBox, giveConversationConsent } from '../support/conversation-page.js';
 import { openTypeDefinitions } from '../support/domain-work.js';
@@ -9,6 +9,7 @@ import {
   prepareDraftReviewWrapping,
 } from '../support/draft-review.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 test('UTKAST-31: long unbroken field labels wrap in full draft reading at 320 CSS pixels', async ({

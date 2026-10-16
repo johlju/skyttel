@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { createHousehold, openNewObject, signIn, utilityButton } from '../support/client.js';
 import { expectContentOwnerReview } from '../support/content-owners.js';
 import {
@@ -7,14 +6,15 @@ import {
   expectRecoveryDraft,
 } from '../support/household-recovery-reading.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('FLYTT-02: an uncertain explicit identity assignment is read back while both private states and historical receipts remain intact', async ({
   browser,
 }) => {
   const source = await createInstallation();
   const destination = await createInstallation({ provider: 'microsoft', subject: robin.subject });
-  const sourceContext = await browser.newContext();
-  const targetContext = await browser.newContext();
+  const sourceContext = await createPreparedContext(browser);
+  const targetContext = await createPreparedContext(browser);
   const sourceClient = sourceContext.request;
   const targetClient = targetContext.request;
   const page = await targetContext.newPage();

@@ -14,6 +14,8 @@ let releaseInitialization: (() => void) | undefined;
 let dropLoginCookie = false;
 let clockOffset = 0;
 let loseStorageReply = false;
+let holdStorageReply = false;
+let releaseStorageReply: (() => void) | undefined;
 let copyGeneration = '11111111-1111-4111-8111-111111111111';
 let generation = copyGeneration;
 let hasCopy = false;
@@ -25,11 +27,19 @@ const installation = await createInstallation(
     https: values.https,
     now: () => Date.now() + clockOffset,
     async deliverResponse(request, response) {
-      if (
-        loseStorageReply &&
-        new URL(request.url).pathname === '/api/browser-binding/revoke' &&
-        response.ok
-      )
+      const storageAction = [
+        '/api/browser-binding/revoke',
+        '/api/browser-binding/activate',
+      ].includes(new URL(request.url).pathname);
+      if (holdStorageReply && storageAction && response.ok) {
+        holdStorageReply = false;
+        await new Promise<void>((resolve) => {
+          releaseStorageReply = resolve;
+          console.log(JSON.stringify({ event: 'storage_reply_held' }));
+        });
+        releaseStorageReply = undefined;
+      }
+      if (loseStorageReply && storageAction && response.ok)
         return new Response(null, { status: 502 });
       if (
         holdSessionStatus &&
@@ -90,7 +100,7 @@ try {
     }),
   );
   console.log(
-    'provider-down | provider-up | deny-consent | allow-consent | drop-login-cookie | allow-login-cookie | hold-initialization | hold-registration | hold-reset-check | release-initialization | save-copy | restore-copy | lose-storage-reply | allow-storage-reply | hold-session-status | release-session-status | advance-minutes N (1–480) | advance-day | restart | quit',
+    'provider-down | provider-up | deny-consent | allow-consent | drop-login-cookie | allow-login-cookie | hold-initialization | hold-registration | hold-reset-check | release-initialization | save-copy | restore-copy | hold-next-storage-reply | release-storage-reply | lose-storage-reply | allow-storage-reply | hold-session-status | release-session-status | advance-minutes N (1–480) | advance-day | restart | quit',
   );
   for await (const line of input) {
     const command = line.trim();
@@ -102,6 +112,8 @@ try {
     else if (command === 'allow-consent') installation.denyConsent(false);
     else if (command === 'drop-login-cookie') dropLoginCookie = true;
     else if (command === 'allow-login-cookie') dropLoginCookie = false;
+    else if (command === 'hold-next-storage-reply') holdStorageReply = true;
+    else if (command === 'release-storage-reply') releaseStorageReply?.();
     else if (command === 'lose-storage-reply') loseStorageReply = true;
     else if (command === 'allow-storage-reply') loseStorageReply = false;
     else if (command === 'save-copy') {
@@ -133,6 +145,8 @@ try {
       releaseInitialization?.();
       holdInitialization = null;
     } else if (command === 'restart') {
+      releaseStorageReply?.();
+      holdStorageReply = false;
       releaseSessionStatus?.();
       holdSessionStatus = false;
       releaseInitialization?.();
@@ -145,6 +159,7 @@ try {
     console.log(JSON.stringify({ event: 'configured', command }));
   }
 } finally {
+  releaseStorageReply?.();
   releaseSessionStatus?.();
   releaseInitialization?.();
   input.close();

@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, request, test } from '@playwright/test';
+import { request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import {
   createHousehold,
@@ -12,6 +12,7 @@ import {
   utilityButton,
 } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function setupDatabase(
   installation: Awaited<ReturnType<typeof createInstallation>>,

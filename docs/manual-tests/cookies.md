@@ -1,6 +1,6 @@
 # Manuella testfall för kakor och lagring
 
-Fallen omfattar den publika informationssidan, första informationen,
+Fallen omfattar den publika kakpolicyn, båda bannerlägena,
 profilvägen tillbaka till kartan och formulärets lagringsval.
 Anteckna commit, webbläsare, bredd och
 godkänt eller underkänt resultat vid körning. Automatiska prov använder
@@ -27,7 +27,8 @@ De bevisar inte skärmläsarens uppläsning eller fullständig WCAG-efterlevnad.
 
 ### KAK-01: Besökare läser information utan att registrera ett val på dator
 
-**Syfte:** Verifiera publik åtkomst, stängning och direkt återbesök.
+**Syfte:** Verifiera publik åtkomst utan kakval, direkt återbesök och bannern
+vid återgång.
 
 **Användare:** Besökare.
 
@@ -49,7 +50,7 @@ KAK-01.
   },
   "reference": "1280 pixlar, ren webbläsare. Faktiska kakor, Web Storage och skrivande nätverksanrop kontrolleras av integrationstestet.",
   "outcomes": [
-    "Informationen kan stängas utan lagringsval",
+    "Policyn kan läsas utan lagringsval och utan täckande banner",
     "Publik länk och direkt återbesök fungerar",
     "Sidans rubrik och inloggningsknapp får fokus vid rätt övergång"
   ]
@@ -60,32 +61,28 @@ KAK-01.
 
 **Steg:**
 
-1. Öppna startsidan. Kontrollera att informationen **Om kakor och lagring**
-   och inloggningsknapparna går att nå.
-2. Välj **Stäng informationen**. Kontrollera att fokus går till
-   **Fortsätt med Google**.
-3. Välj sidfotens **Kakor och lagring**. Kontrollera sidrubrikens fokus.
-4. Öppna **Visa nödvändig lagring** och läs namn, plats, innehåll och tider.
-5. Öppna **Visa serverns lagringsposter**. Läs posterna för inloggning,
+1. Öppna `/cookies` direkt utan inloggning. Kontrollera sidrubrikens fokus
+   och att ingen banner täcker policyn.
+2. Öppna **Visa nödvändig lagring** och läs namn, plats, innehåll och tider.
+3. Öppna **Visa serverns lagringsposter**. Läs posterna för inloggning,
    resultatkontroll och installationens säkerhetsgeneration samt informationen
    om samtalets arbetsminne och transportkvittens.
-6. Ladda om sidan. Välj **Till startsidan**.
+4. Ladda om sidan. Välj **Till startsidan**. Kontrollera **Vi använder
+   kakor**, tryck Escape och kontrollera fokus på **Endast nödvändiga**.
 
 **Förväntat resultat:**
 
-- Ingen inloggning behövs. Sidan kan öppnas direkt på `/cookies`.
-- Informationen anger att stängning och fortsatt användning inte ger ett val.
-- Nödvändig lagring saknar avstängningsreglage. Ihågkommen inloggning
-  förklaras som valfri och knuten till webbläsarbindningen.
+- Ingen inloggning eller lagringsbeslut behövs för att läsa policyn.
+- Nödvändig lagring är alltid aktiv. Preferenskakor är ett separat
+  tillstånd till lagring; ihågkommen inloggning kräver eget funktionsval.
+- Registret skiljer kakor, lokal lagring och serverposter. Det visar
+  faktiska namn, innehåll, ändamål, leverantör och tider.
 - Serverinformationen skiljer automatisk gallring vid start och varje
-  minut från verifierad drift och säkerhetskopior. Frister räknas från
-  avslut, ändring, återkallelse eller kopiering enligt respektive ändamål;
-  sju dygn för minimala spärrar är ett tak, inte standardlagring.
-- Serverposterna anger namn, innehåll och ändamål. Resultatkontrollens
-  24 timmar räknas från ändringen. Kvittens av hela texten har högst fem
-  sekunder från fryst svar och bevisar inte läsning eller hörande.
-- Tillbaka på startsidan fokuseras välkomstrubriken. Efter omladdningen
-  visas första informationen igen. Innehållet ryms utan sidledsrullning.
+  minut från verifierad drift och säkerhetskopior. Resultatkontrollens
+  24 timmar räknas från ändringen. Transportkvittens bevisar inte att
+  någon har läst, hört eller förstått svaret.
+- Vid återgång visas bannern utan att ett val fabriceras. Innehållet ryms
+  utan sidledsrullning. Licensen för förebilden går att läsa.
 
 ### KAK-02: Besökaren når samma information vid 390 pixlar
 
@@ -112,7 +109,7 @@ KAK-02.
   },
   "reference": "390 pixlar; samma publika handlingar och faktiska lagringskontroller som KAK-01.",
   "outcomes": [
-    "Första informationen kan stängas utan val",
+    "Policyn kan läsas utan val och bannern visas vid återgång",
     "Publikt återbesök och fokus fungerar utan sidledsrullning"
   ]
 }
@@ -145,7 +142,7 @@ KAK-03.
   },
   "reference": "320 pixlar; samma publika handlingar och faktiska lagringskontroller som KAK-01.",
   "outcomes": [
-    "Första informationen kan stängas utan val",
+    "Policyn kan läsas utan val och bannern visas vid återgång",
     "Publikt återbesök och fokus fungerar utan sidledsrullning"
   ]
 }
@@ -446,7 +443,7 @@ sparbesked. Den här mänskliga kontrollen är ännu inte utförd.
 **Användare:** Hushållets administratör.
 
 **Förutsättningar:** Bredd 1280 pixlar. Logga in med ett aktivt
-**Kom ihåg mig**-val och öppna **Kakor och lagring**.
+**Kom ihåg mig i Skyttel**-val efter inloggning och öppna **Kakor och lagring**.
 
 **Automatiskt motsvarande test:**
 [cookie-storage-form.spec.ts](../../tests/integration/cookie-storage-form.spec.ts),
@@ -479,14 +476,15 @@ KAK-10. Testet använder verklig HTTP och syntetisk inloggningsleverantör.
 1. Fokusera **Stäng av ihågkommen inloggning** och tryck Enter.
 2. Kontrollera att reglaget är av och att **Osparad ändring.** visas.
 3. Välj **Ångra ändring** och kontrollera att reglaget återgår till på.
-4. Stäng av igen och välj **Spara inställningar** längst ned.
+4. Stäng av igen och välj **Spara Preferenser** längst ned.
 
 **Förväntat resultat:**
 
 - Snabbvalet och ångra skickar inget sparande.
 - Efter sparande visas **Ihågkommen inloggning är avstängd.** och,
   efter separat kontroll, **Du är fortfarande inloggad.**
-- Sparknappen behåller fokus. Ny aktivering hänvisar till ny inloggning.
+- Sparknappen behåller fokus. Ny uttrycklig aktivering är tillgänglig med
+  samtycke till Preferenskakor.
 
 ### KAK-11: Navigation och bekräftad återställning bevarar annat arbete
 
@@ -546,7 +544,7 @@ KAK-11. Verklig HTTP används för lagringsval och bevarade serveruppgifter.
 4. Välj **Återställ valfri lagring**. Läs omfattning och bevarade uppgifter.
    Flytta fokus med Tab och Skift+Tab och avbryt med Escape.
 5. Öppna återställningen igen och välj **Återställ**. Kontrollera beskedet
-   vid snabbåtgärderna. Fokusera den spärrade **Spara inställningar** och
+   vid snabbåtgärderna. Fokusera den spärrade **Spara Preferenser** och
    tryck Enter; beskedet ska stanna vid återställningen.
 6. Kontrollera kontotema, personlig vy, hushållets information,
    samtalsmedgivande och den andra webbläsarens inloggning.
@@ -636,8 +634,8 @@ KAK-14. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 1. Öppna **Kakor och lagring**, välj **Återställ valfri lagring** och
    bekräfta med **Återställ**.
-2. Kontrollera besked och fokus. Följ den erbjudna åtgärden enligt
-   förväntat resultat.
+2. Vänta på utfallet. Välj **Avbryt** i dialogen.
+   Läs beskedet vid snabbåtgärderna och kontrollera fokus.
 3. Kontrollera att flikens återhämtningsuppgifter finns kvar.
 
 **Förväntat resultat:**
@@ -689,8 +687,8 @@ KAK-15. Felstyrningen ersätter eller stoppar endast det angivna anropet.
 
 1. Öppna **Kakor och lagring**, välj **Återställ valfri lagring** och
    bekräfta med **Återställ**.
-2. Kontrollera besked och fokus. Följ den erbjudna åtgärden enligt
-   förväntat resultat.
+2. Vänta på utfallet. Välj **Lämna med okänt utfall** i dialogen.
+   Läs beskedet vid snabbåtgärderna och kontrollera fokus.
 3. Kontrollera att flikens återhämtningsuppgifter finns kvar.
 
 **Förväntat resultat:**
@@ -847,7 +845,9 @@ inloggningsleverantör. Svaret förloras efter faktisk commit.
    Kontrollera uppmaningen att logga in igen.
 2. Starta om den isolerade servern med samma databas. Behåll fliken och
    dess lagring. Öppna `/login`; bekräfta att lämna sidan om webbläsaren
-   frågar. Logga in som Alex och välj uttryckligen **Kom ihåg mig** igen.
+   frågar. Öppna en andra flik i samma webbläsare, logga in som Alex
+   och välj uttryckligen **Kom ihåg mig i Skyttel** där. Behåll den
+   ursprungliga fliken med åtgärdsreferensen.
 3. Återgå till `/cookies`. Kontrollera att det tidigare utfallet
    fortfarande visas som okänt och välj **Kontrollera igen**.
 4. Läs beskedet, det aktuella reglaget och tangentbordsfokus.
@@ -916,7 +916,7 @@ skickas och redan befintliga import- och raderingsreferenser bevaras.
 
 **Steg:**
 
-1. Stäng av reglaget och välj **Spara inställningar**.
+1. Stäng av reglaget och välj **Spara Preferenser**.
 2. Läs hindret, kontrollera begärt val och tangentbordsfokus.
 
 **Förväntat resultat:** **Flikens återhämtningsuppgifter kunde inte sparas.
@@ -977,7 +977,7 @@ kontrollerat skadad flikreferens och en ny vanlig inloggning.
 
 **Förväntat resultat:** **Åtgärdens referens saknas eller är skadad.
 Utfallet är fortfarande okänt.** ligger kvar. Sidan påstår inget om
-det gamla utfallet, och **Spara inställningar** skickar inget nytt anrop.
+det gamla utfallet, och **Spara Preferenser** skickar inget nytt anrop.
 
 ### KAK-23: Förlorad referens ger ingen påhittad tidigare bekräftelse
 
@@ -1084,7 +1084,7 @@ säkerhetskopior eller produktionens faktiska drift.
 
 1. Logga in som Alex igen utan **Kom ihåg mig** och öppna `/cookies`.
 2. Välj **Kontrollera igen**. Läs beskedet och kontrollera fokus.
-3. Fokusera **Spara inställningar** med tangentbordet och tryck Retur.
+3. Fokusera **Spara Preferenser** med tangentbordet och tryck Retur.
 
 **Förväntat resultat:** **Resultatet kan inte hämtas. Det kan saknas eller
 ha passerat kontrollfönstret på 24 timmar. Utfallet är fortfarande
@@ -1176,7 +1176,7 @@ nytt val utan att ett tidigare sparande påstås vara genomfört.
 
 **Förutsättningar:** Ta `save-copy` före avstängningen. Aktivera
 `lose-storage-reply`. Stäng av ihågkommen inloggning på `/cookies` och
-välj **Spara inställningar**. Vänta på **Sparstatus okänd**. Kör sedan
+välj **Spara Preferenser**. Vänta på **Sparstatus okänd**. Kör sedan
 `restore-copy` och `allow-storage-reply`. Behåll flikens återhämtningsreferens.
 
 <!-- markdownlint-disable MD013 -->
@@ -1192,7 +1192,7 @@ välj **Spara inställningar**. Vänta på **Sparstatus okänd**. Kör sedan
   "reference": "390 pixlar och isolerad HTTPS-installation med faktisk äldre SQLite-kopia, syntetisk provider och tappat svar efter verkligt genomförd avstängning. Extern kopiehantering och skärmläsaruppläsning återstår.",
   "outcomes": [
     "Det exakta återställningsbeskedet visas utan historisk sparbekräftelse.",
-    "Ny inloggning börjar med Kom ihåg mig avmarkerat och kräver nytt uttryckligt val.",
+    "Ny inloggning kräver ett separat uttryckligt val av ihågkommen inloggning.",
     "Kontrollera igen använder återställningsundantaget utan automatiskt nytt sparande.",
     "Ett nytt uttryckligt sparande fungerar och fokus bevaras efter kontroll."
   ]
@@ -1204,14 +1204,15 @@ välj **Spara inställningar**. Vänta på **Sparstatus okänd**. Kör sedan
 **Steg:**
 
 1. Öppna `/login` och läs återställningsbeskedet.
-2. Välj **Fortsätt med Google**. Kontrollera att **Kom ihåg mig** börjar
-   avmarkerat. Försök fortsätta. Om den gamla webbläsarkopplingen hindrar
+2. Välj **Fortsätt med Google** och fortsätt till Google. Om den gamla
+   webbläsarkopplingen hindrar
    starten väljer du uttryckligen **Börja om i den här webbläsaren**.
-   Välj därefter Google på nytt och kontrollera det avmarkerade valet igen.
-3. Markera **Kom ihåg mig** som ett nytt val och logga in.
+   Välj därefter Google på nytt.
+3. Slutför en ny inloggning i en andra flik i samma webbläsare. Välj
+   **Kom ihåg mig i Skyttel** uttryckligen i erbjudandet efter inloggningen.
 4. Öppna `/cookies` och välj **Kontrollera igen**. Läs beskedet och
    kontrollera att fokus ligger kvar på knappen.
-5. Stäng av det nya valet och välj **Spara inställningar** uttryckligen.
+5. Stäng av det nya valet och välj **Spara Preferenser** uttryckligen.
 
 **Förväntat resultat:** **Skyttel har återställts från en säkerhetskopia.
 Gamla inloggningar kan inte längre användas. Logga in igen för att
@@ -1227,9 +1228,10 @@ befintligt resultat med ett undantag eller en ny kontrollfrist.
 
 **Användare:** Alex med tangentbord, bredd 1280 pixlar.
 
-**Förutsättningar:** Starta samma isolerade HTTPS-installation. Logga in
-med **Kom ihåg mig**, kör `lose-storage-reply` och stäng av valet genom
-**Spara inställningar**. Efter **Sparstatus okänd** kör du `save-copy`.
+**Förutsättningar:** Starta samma isolerade HTTPS-installation. Tillåt
+Preferenskakor och logga in. Välj sedan
+**Kom ihåg mig i Skyttel**, kör `lose-storage-reply` och stäng av valet genom
+**Spara Preferenser**. Efter **Sparstatus okänd** kör du `save-copy`.
 Kopian innehåller därmed det verkliga resultatet. Kör `restore-copy` och
 `allow-storage-reply`. Behåll samma flik.
 
@@ -1258,8 +1260,8 @@ Kopian innehåller därmed det verkliga resultatet. Kör `restore-copy` och
 
 1. Öppna `/login`. Försök logga in och välj vid behov uttryckligen
    **Börja om i den här webbläsaren** när den gamla kopplingen avvisas.
-2. Välj Google på nytt. Kontrollera att **Kom ihåg mig** börjar avmarkerat,
-   markera det och slutför den nya inloggningen.
+2. Öppna en andra flik i samma webbläsare. Logga in på nytt med Google
+   och välj **Kom ihåg mig i Skyttel** efter den bekräftade inloggningen.
 3. Öppna `/cookies` och välj **Kontrollera igen**. Läs beskedet utan att
    starta något nytt sparande.
 4. Kontrollera att det nya ihågkomna valet fortfarande är på och att
@@ -1271,3 +1273,557 @@ kontrollen. Det gäller den gamla begäran och ändrar inte det nya aktiva
 valet. Återställningen används inte som ersättning för ett tillförlitligt
 resultat. Omstart upprepar inte sparandet. Resultatets ursprungliga
 24-timmarsfrist består.
+
+## Banner, separat samtycke och aktivering
+
+Automationen använder riktiga HTTP-anrop och SQLite med syntetiska
+leverantörer. Skärmläsaruppläsning och fysisk webbläsaromstart ingår inte;
+redovisa dem separat enligt KAK-07 och KAK-25.
+
+### KAK-32: Två bannerlägen på dator i ljust tema
+
+**Syfte:** Bannern visas även på den inloggade kartan. Nödvändig lagring är
+alltid aktiv och kan inte väljas bort.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Logga in i en isolerad
+installation med syntetisk leverantör. Skapa hushållet. Ta bort endast
+lagringssamtycket i provwebbläsaren före besöket.
+
+**Automatiskt motsvarande test:**
+[storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
+KAK-32.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent.spec.ts",
+    "caseId": "KAK-32"
+  },
+  "reference": "1280 pixlar, ljust tema",
+  "outcomes": [
+    "Bannern visas även på den inloggade kartan. Nödvändig lagring är alltid aktiv och kan inte väljas bort.",
+    "Escape sparar inte och påbörjade val bevaras mellan bannerlägen.",
+    "Ett sparat lagringssamtycke stänger bannern, men aktiverar inte ihågkommen inloggning eller ett förslag under pågående inloggning."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna startsidan med kartan. Kontrollera Vi använder kakor. Tryck Escape och
+   kontrollera fokus på Endast nödvändiga.
+2. Välj Läs mer. Slå på Preferenskakor och tryck Escape. Öppna Anpassa
+   Inställningar igen.
+3. Kontrollera att påbörjat val finns kvar. Välj Spara Preferenser och ladda om.
+
+**Förväntat resultat:**
+
+- Bannern visas även på den inloggade kartan. Nödvändig lagring är alltid aktiv
+  och kan inte väljas bort.
+- Escape sparar inte och påbörjade val bevaras mellan bannerlägen.
+- Ett sparat lagringssamtycke stänger bannern, men aktiverar inte ihågkommen
+  inloggning eller ett förslag under pågående inloggning.
+
+### KAK-36: Två bannerlägen på mobil i ljust tema
+
+**Syfte:** Samma val, fokus och sparande som på dator fungerar på mobil.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Samma förberedelse, steg och
+resultat som KAK-32.
+
+**Automatiskt motsvarande test:**
+[storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
+KAK-36.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent.spec.ts",
+    "caseId": "KAK-36"
+  },
+  "reference": "390 pixlar, ljust tema",
+  "outcomes": [
+    "Samma val, fokus och sparande som på dator fungerar på mobil."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Följ KAK-32 vid 390 pixlar. Kontrollera att kategorier och knappar går att nå
+   utan sidledsrullning.
+
+**Förväntat resultat:**
+
+- Samma val, fokus och sparande som på dator fungerar på mobil.
+
+### KAK-37: Två bannerlägen på dator i mörkt tema
+
+**Syfte:** Samma val, fokus och sparande fungerar i mörkt tema.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Samma förberedelse, steg och
+resultat som KAK-32. Välj mörkt systemtema.
+
+**Automatiskt motsvarande test:**
+[storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
+KAK-37.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent.spec.ts",
+    "caseId": "KAK-37"
+  },
+  "reference": "1280 pixlar, mörkt systemtema",
+  "outcomes": [
+    "Samma val, fokus och sparande fungerar i mörkt tema."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Följ KAK-32 i mörkt tema vid 1280 pixlar.
+
+**Förväntat resultat:**
+
+- Samma val, fokus och sparande fungerar i mörkt tema.
+
+### KAK-38: Två bannerlägen på mobil i mörkt tema
+
+**Syfte:** Samma val, fokus och sparande fungerar på mobil i mörkt tema.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Samma förberedelse, steg och
+resultat som KAK-32. Välj mörkt systemtema.
+
+**Automatiskt motsvarande test:**
+[storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
+KAK-38.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent.spec.ts",
+    "caseId": "KAK-38"
+  },
+  "reference": "390 pixlar, mörkt systemtema",
+  "outcomes": [
+    "Samma val, fokus och sparande fungerar på mobil i mörkt tema."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Följ KAK-32 i mörkt tema vid 390 pixlar.
+
+**Förväntat resultat:**
+
+- Samma val, fokus och sparande fungerar på mobil i mörkt tema.
+
+### KAK-33: Separat erbjudande och varaktigt avstå-val
+
+**Syfte:** Inte nu upprepas inte vid omladdning för samma inloggning.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Använd en isolerad installation
+utan tidigare lagrings- eller förslagsval.
+
+**Automatiskt motsvarande test:**
+[storage-login-offer.spec.ts](../../tests/integration/storage-login-offer.spec.ts),
+KAK-33.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-login-offer.spec.ts",
+    "caseId": "KAK-33"
+  },
+  "reference": "Ren webbläsare, Google och syntetisk leverantör",
+  "outcomes": [
+    "Inte nu upprepas inte vid omladdning för samma inloggning.",
+    "Fråga inte igen består över senare inloggningar för samma användare och webbläsare.",
+    "Manuell aktivering finns kvar och kräver separat serverbekräftelse."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna startsidan, välj Acceptera Alla och logga in med Google.
+2. Välj Inte nu i Kom ihåg mig i Skyttel. Ladda om.
+3. Öppna /login och logga in igen. Välj Fråga inte igen i erbjudandet.
+4. Logga in en tredje gång. Öppna /cookies och aktivera Kom ihåg mig i Skyttel
+   manuellt.
+
+**Förväntat resultat:**
+
+- Inte nu upprepas inte vid omladdning för samma inloggning.
+- Fråga inte igen består över senare inloggningar för samma användare och
+  webbläsare.
+- Manuell aktivering finns kvar och kräver separat serverbekräftelse.
+
+### KAK-34: Snabbval kräver sparande och återställning bevarar avstå-val
+
+**Syfte:** Snabbval ändrar formuläret och behöver separat Spara Preferenser.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Logga in i den isolerade
+provinstallationen utan befintligt lagringssamtycke.
+
+**Automatiskt motsvarande test:**
+[storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
+KAK-34.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent.spec.ts",
+    "caseId": "KAK-34"
+  },
+  "reference": "Inloggad användare, direkt publik policyingång",
+  "outcomes": [
+    "Snabbval ändrar formuläret och behöver separat Spara Preferenser.",
+    "Återställning kräver bekräftelse, rensar samtycket och bevarar avstå-valet.",
+    "Bannern visas igen när policysidan lämnas."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna /cookies direkt. Läs Kakpolicy utan täckande banner.
+2. Välj Acceptera Alla. Kontrollera Preferenskakor och välj Spara Preferenser.
+3. Avmarkera Fråga om ihågkommen inloggning efter framtida inloggningar.
+4. Välj Återställ valfri lagring och bekräfta Återställ. Kontrollera
+   förslagsvalet och välj Till startsidan.
+
+**Förväntat resultat:**
+
+- Snabbval ändrar formuläret och behöver separat Spara Preferenser.
+- Återställning kräver bekräftelse, rensar samtycket och bevarar avstå-valet.
+- Bannern visas igen när policysidan lämnas.
+
+### KAK-35: Installationsansvarig publicerar policykontakt
+
+**Syfte:** Installationsansvarig kan spara adressen under Drift.
+
+**Användare:** Installationsansvarig.
+
+**Förutsättningar och separat förberedelse:** Starta en isolerad installation
+utan policykontakt. Logga in som installationsansvarig.
+
+**Automatiskt motsvarande test:**
+[policy-contact.spec.ts](../../tests/integration/policy-contact.spec.ts),
+KAK-35.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/policy-contact.spec.ts",
+    "caseId": "KAK-35"
+  },
+  "reference": "Installationsansvarig, tom kontaktadress",
+  "outcomes": [
+    "Installationsansvarig kan spara adressen under Drift.",
+    "Den publika policyn visar den sparade adressen som e-postlänk. Hushållsadministration ger ingen automatisk ändringsbehörighet; detta kontrolleras separat via HTTP."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna Månadskostnad och välj Policykontakt under Drift. Läs varningen om
+   saknad kontakt.
+2. Skriv `privacy@example.test` och välj Spara policykontakt.
+3. Öppna /cookies och läs e-postlänken i Kakpolicy.
+
+**Förväntat resultat:**
+
+- Installationsansvarig kan spara adressen under Drift.
+- Den publika policyn visar den sparade adressen som e-postlänk.
+  Hushållsadministration ger ingen automatisk ändringsbehörighet; detta
+  kontrolleras separat via HTTP.
+
+### KAK-39: Nekad lagring ger vanlig åtkomst utan påhittat samtycke
+
+**Syfte:** Lagringsfel förklaras och ett sparförsök ger ingen falsk bekräftelse.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Öppna den isolerade startsidan.
+Använd förberedelsen nedan för att neka just samtyckesposten innan du sparar.
+Ladda om efter fallet.
+
+**Automatiskt motsvarande test:**
+[storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
+KAK-39.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent.spec.ts",
+    "caseId": "KAK-39"
+  },
+  "reference": "Ren webbläsare, kontrollerat nekat skrivande av samtyckesposten",
+  "outcomes": [
+    "Lagringsfel förklaras och ett sparförsök ger ingen falsk bekräftelse.",
+    "Vanlig inloggning fungerar och kan följas av ett nytt kakval."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Välj Acceptera Alla i bannern och läs felet.
+2. Välj Fortsätt med endast nödvändig lagring. Logga in med Google.
+3. Kontrollera att bannern återkommer och att ihågkommen inloggning inte påstås
+   vara aktiverad.
+
+**Förväntat resultat:**
+
+- Lagringsfel förklaras och ett sparförsök ger ingen falsk bekräftelse.
+- Vanlig inloggning fungerar och kan följas av ett nytt kakval.
+
+### KAK-40: Saknat eller äldre samtycke stänger av ihågkommen inloggning
+
+**Syfte:** Saknat samtycke fabriceras inte från en äldre ihågkommen inloggning.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Tillåt Preferenskakor, logga in
+och aktivera ihågkommen inloggning. Ta bort bara skyttel-storage-consent i
+provwebbläsarens lagringsverktyg.
+
+**Automatiskt motsvarande test:**
+[storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
+KAK-40.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent.spec.ts",
+    "caseId": "KAK-40"
+  },
+  "reference": "Befintlig ihågkommen inloggning, saknat samtycke och äldre informationsversion",
+  "outcomes": [
+    "Saknat samtycke fabriceras inte från en äldre ihågkommen inloggning.",
+    "Vanlig åtkomst kan fortsätta efter bekräftad avstängning. Senare aktivering kräver eget val.",
+    "En oförenlig informationsversion ger inget tillstånd till nya ändamål. Ett nytt kakval krävs."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Ladda om startsidan. Läs bannern och invänta säker avstängning.
+2. Välj Acceptera Alla. Öppna /cookies och aktivera funktionen uttryckligen
+   igen.
+3. Ladda om /cookies efter den andra förberedelsen för KAK-40 nedan.
+4. Kontrollera att Preferenskakor är av och återgå till startsidan.
+
+**Förväntat resultat:**
+
+- Saknat samtycke fabriceras inte från en äldre ihågkommen inloggning.
+- Vanlig åtkomst kan fortsätta efter bekräftad avstängning. Senare aktivering
+  kräver eget val.
+- En oförenlig informationsversion ger inget tillstånd till nya ändamål. Ett
+  nytt kakval krävs.
+
+### KAK-41: Flikar läser om samtycke och aktuellt serverläge
+
+**Syfte:** Flikar delar aktuellt webbläsarsamtycke.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Logga in, öppna /cookies, tillåt
+Preferenskakor med Spara Preferenser och aktivera Kom ihåg mig i Skyttel.
+
+**Automatiskt motsvarande test:**
+[storage-consent.spec.ts](../../tests/integration/storage-consent.spec.ts),
+KAK-41.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-consent.spec.ts",
+    "caseId": "KAK-41"
+  },
+  "reference": "Två flikar i samma webbläsare med samma användare",
+  "outcomes": [
+    "Flikar delar aktuellt webbläsarsamtycke.",
+    "Ändringsnotiser leder till omläsning. Båda reglagen visar av efter den säkra serverändringen, utan förlängd inloggning."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna /cookies i en andra flik. Kontrollera att ihågkommen inloggning är på.
+2. Välj Endast nödvändiga och Spara Preferenser i den första fliken.
+3. Läs Preferenskakor och Ihågkommen inloggning i den andra fliken efter
+   bekräftelsen.
+
+**Förväntat resultat:**
+
+- Flikar delar aktuellt webbläsarsamtycke.
+- Ändringsnotiser leder till omläsning. Båda reglagen visar av efter den säkra
+  serverändringen, utan förlängd inloggning.
+
+### KAK-42: Pågående och okänd aktivering följer samma åtgärd
+
+**Syfte:** Dialogen kan inte stängas medan aktiveringen pågår.
+
+**Användare:** Alex i den isolerade provinstallationen.
+
+**Förutsättningar och separat förberedelse:** Starta den kontrollerade
+identitetsinstallationen. Tillåt Preferenskakor och logga in. Före
+funktionsvalet kör du hold-next-storage-reply och lose-storage-reply i dess
+terminal.
+
+**Automatiskt motsvarande test:**
+[storage-login-offer.spec.ts](../../tests/integration/storage-login-offer.spec.ts),
+KAK-42.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/storage-login-offer.spec.ts",
+    "caseId": "KAK-42"
+  },
+  "reference": "Syntetisk leverantör, verklig aktivering med kontrollerat förlorat svar",
+  "outcomes": [
+    "Dialogen kan inte stängas medan aktiveringen pågår.",
+    "Okänt utfall får lämnas efter varning, med åtgärdsreferensen bevarad. Ingen ändring upprepas automatiskt.",
+    "Resultatkontroll bekräftar den tidigare aktiveringen separat från den nya vanliga inloggningen. Det aktuella reglaget är av."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Välj Kom ihåg mig i Skyttel. Tryck Escape medan Sparar visas.
+2. Läs Sparstatus okänd efter förberedelsen nedan och välj Lämna med okänt
+   utfall.
+3. Öppna /login i samma flik och gör en ny vanlig Google-inloggning. Öppna
+   /cookies.
+4. Välj Kontrollera igen och läs resultatet av den tidigare aktiveringen samt
+   den nya inloggningens reglage.
+
+**Förväntat resultat:**
+
+- Dialogen kan inte stängas medan aktiveringen pågår.
+- Okänt utfall får lämnas efter varning, med åtgärdsreferensen bevarad. Ingen
+  ändring upprepas automatiskt.
+- Resultatkontroll bekräftar den tidigare aktiveringen separat från den nya
+  vanliga inloggningen. Det aktuella reglaget är av.
+
+### Förberedelse för KAK-39
+
+Kör enbart i provwebbläsarens konsol i den isolerade installationen:
+
+```js
+const write = Storage.prototype.setItem;
+Storage.prototype.setItem = function (key, value) {
+  if (key === 'skyttel-storage-consent') {
+    throw new DOMException('Synthetic denied storage', 'SecurityError');
+  }
+  write.call(this, key, value);
+};
+```
+
+Ladda om efter fallet för att återställa funktionen. Förberedelsen
+kontrollerar appens felhantering och bevisar inte en faktisk
+webbläsarinställnings beteende.
+
+### Andra förberedelsen för KAK-40
+
+Mellan steg 2 och 3, ändra provwebbläsarens samtyckespost i konsolen:
+
+```js
+const key = 'skyttel-storage-consent';
+const consent = JSON.parse(localStorage.getItem(key));
+localStorage.setItem(key, JSON.stringify({ ...consent, informationVersion: 999 }));
+```
+
+### Andra förberedelsen för KAK-42
+
+Mellan steg 1 och 2, kör `release-storage-reply` i den isolerade
+installationens terminal. Förberedelsen släpper det fördröjda svaret som
+den befintliga felinställningen sedan tappar bort.

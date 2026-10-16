@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createHousehold, openProfile, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { prepareStorageChoice } from '../support/test.js';
 
 for (const [width, caseId] of [
   [1280, 'KAK-01'],
@@ -18,14 +19,9 @@ for (const [width, caseId] of [
     });
     try {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto(installation.origin);
-      const notice = page.getByRole('region', { name: 'Om kakor och lagring' });
-      await expect(notice).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Fortsätt med Google' })).toBeVisible();
-      await notice.getByRole('button', { name: 'Stäng informationen' }).click();
-      await expect(notice).toHaveCount(0);
-      await expect(page.getByRole('button', { name: 'Fortsätt med Google' })).toBeFocused();
-      await page.getByRole('link', { name: 'Kakor och lagring', exact: true }).click();
+      await page.goto(`${installation.origin}/cookies`);
+      const notice = page.getByRole('dialog', { name: 'Vi använder kakor', exact: true });
+      await expect(notice).not.toBeVisible();
       await expect(page).toHaveURL(`${installation.origin}/cookies`);
       await expect(
         page.getByRole('heading', { level: 1, name: 'Kakor och lagring' }),
@@ -61,7 +57,12 @@ for (const [width, caseId] of [
       const license = await page.request.get(`${installation.origin}${licensePath}`);
       expect(license.status()).toBe(200);
       expect(await license.text()).toContain('Copyright (c) 2025 Viscalyx');
-      await expect(page.getByRole('checkbox')).toHaveCount(0);
+      await expect(
+        page.getByRole('switch', { name: 'Nödvändig lagring, alltid aktiv' }),
+      ).toBeDisabled();
+      await expect(
+        page.getByRole('switch', { name: 'Preferenskakor', exact: true }),
+      ).not.toBeChecked();
       expect(await page.context().cookies()).toEqual([]);
       expect(
         await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } })),
@@ -80,8 +81,11 @@ for (const [width, caseId] of [
         page.getByRole('heading', { level: 1, name: 'Kakor och lagring' }),
       ).toBeFocused();
       await page.getByRole('link', { name: 'Till startsidan', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeFocused();
       await expect(notice).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(
+        notice.getByRole('button', { name: 'Endast nödvändiga', exact: true }),
+      ).toBeFocused();
       expect(writes).toEqual([]);
     } finally {
       await installation.close();
@@ -94,6 +98,7 @@ test('KAK-08: a profile without household access can read storage information an
 }) => {
   const installation = await createInstallation();
   try {
+    await prepareStorageChoice(page.context());
     await signIn(page.request, installation.origin);
     await page.goto(`${installation.origin}/profile`);
     await expect(page.getByRole('heading', { name: 'Din profil', exact: true })).toBeFocused();
@@ -129,6 +134,7 @@ test('KAK-09: a member can open storage information through the profile', async 
   try {
     await page.setViewportSize({ width: 390, height: 900 });
     installation.setIdentity(robin);
+    await prepareStorageChoice(page.context());
     await signIn(page.request, installation.origin, 'microsoft');
     const { user } = await (await page.request.get(`${installation.origin}/api/bootstrap`)).json();
     installation.seedMembership(user.id, 'storage-member', 'Provhushållet');
@@ -161,6 +167,7 @@ for (const [width, caseId] of [
     const installation = await createInstallation();
     try {
       await page.setViewportSize({ width, height: 900 });
+      await prepareStorageChoice(page.context());
       await signIn(page.request, installation.origin);
       await createHousehold(page.request, installation.origin);
       await page.goto(installation.origin);

@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openNewObject, signIn } from '../support/client.js';
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 for (const [width, height, lightId, darkId] of [
   [1440, 1000, 'BILD-04', 'BILD-07'],

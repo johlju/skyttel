@@ -1,4 +1,7 @@
+import { rememberedLoginInformation } from '../shared/remembered-login.js';
+import { recordLoginOffer } from './login-offer.js';
 import { MapRequestError, request } from './map-request.js';
+import { readStorageConsent, storagePurposeVersion } from './storage-consent.js';
 
 export const browserBindingLock = 'skyttel-browser-binding';
 
@@ -106,6 +109,7 @@ export async function confirmBrowserLogin(proof: string, signal: AbortSignal) {
   return withBindingLock(async () => {
     type Confirmation = {
       status: string;
+      userId: string;
       sessionId: string;
       revision: number;
       remembered: boolean;
@@ -143,6 +147,12 @@ export async function confirmBrowserLogin(proof: string, signal: AbortSignal) {
         current.expiresAt !== result.expiresAt
       )
         throw new Error('login_unconfirmed');
+      try {
+        recordLoginOffer(result.userId, result.sessionId);
+      } catch {
+        // Ordinary login remains usable when a nonessential prompt cannot be
+        // recorded. Do not display a prompt that could repeat on reload.
+      }
     } catch (error) {
       // A callback can replace the session while this lock holds a delayed
       // read. Demote only the same cookie that this operation just wrote,
@@ -165,12 +175,31 @@ export type StoragePreference = {
   generation?: string;
 };
 
-export async function revokeRememberedLogin(id: string, expected: StoragePreference) {
+export async function revokeRememberedLogin(
+  id: string,
+  expected: StoragePreference,
+  remembered = false,
+) {
   // Failure to acquire the lock happens before the save request. Once saving
   // starts, a transport error has an unknown outcome and must never be retried.
   let started = false;
   try {
     return await withBindingLock(async () => {
+      if (remembered && !readStorageConsent()?.preferences)
+        throw new MapRequestError(409, 'consent_required');
+      const current = await request<StoragePreference>(
+        '/api/browser-binding/preference',
+        {},
+        AbortSignal.timeout(10_000),
+      );
+      if (
+        current.userId !== expected.userId ||
+        current.sessionId !== expected.sessionId ||
+        current.bindingId !== expected.bindingId
+      )
+        throw new MapRequestError(409, 'binding_changed');
+      if (remembered && !readStorageConsent()?.preferences)
+        throw new MapRequestError(409, 'consent_required');
       started = true;
       const result = await request<
         StoragePreference & {
@@ -180,16 +209,31 @@ export async function revokeRememberedLogin(id: string, expected: StoragePrefere
           cookieName: string;
           origin: string;
         }
-      >('/api/browser-binding/revoke', {
-        id,
-        sessionId: expected.sessionId,
-        bindingId: expected.bindingId,
-      });
+      >(
+        `/api/browser-binding/${remembered ? 'activate' : 'revoke'}`,
+        {
+          id,
+          sessionId: expected.sessionId,
+          bindingId: expected.bindingId,
+          ...(remembered
+            ? {
+                preferences: true,
+                rememberMe: true,
+                informationVersion: rememberedLoginInformation.version,
+                consentInformationVersion: storagePurposeVersion,
+              }
+            : {}),
+        },
+        AbortSignal.timeout(10_000),
+      );
       if (
         result.status !== 'completed' ||
-        result.remembered !== false ||
+        result.remembered !== remembered ||
         result.id !== id ||
-        result.userId !== expected.userId
+        result.userId !== expected.userId ||
+        result.sessionId !== expected.sessionId ||
+        typeof result.expiresAt !== 'number' ||
+        !Number.isFinite(result.expiresAt)
       )
         throw new Error('revocation_unconfirmed');
       // The server change is confirmed independently of replacement-cookie
@@ -204,7 +248,7 @@ export async function revokeRememberedLogin(id: string, expected: StoragePrefere
         )
           throw new Error('binding_unconfirmed');
         const pair = `${name}=${result.candidate}`;
-        writeBindingCookie(pair);
+        writeBindingCookie(pair, remembered ? result.expiresAt : undefined);
         if (!document.cookie.split(';').some((part) => part.trim() === pair))
           throw new Error('binding_unconfirmed');
         const signal = AbortSignal.timeout(10_000);
@@ -214,13 +258,20 @@ export async function revokeRememberedLogin(id: string, expected: StoragePrefere
           {},
           signal,
         );
+        try {
+          const channel = new BroadcastChannel('skyttel-storage-state');
+          channel.postMessage('changed');
+          channel.close();
+        } catch {
+          /* Other tabs also re-read on focus and storage changes. */
+        }
         return {
           result,
           continued:
             current.userId === result.userId &&
             current.sessionId === result.sessionId &&
             current.bindingId === result.bindingId &&
-            !current.remembered &&
+            current.remembered === remembered &&
             current.expiresAt === result.expiresAt,
         };
       } catch {
@@ -228,7 +279,8 @@ export async function revokeRememberedLogin(id: string, expected: StoragePrefere
       }
     });
   } catch (error) {
-    if (!started) throw new MapRequestError(409, 'binding_unavailable');
+    if (!started && !(error instanceof MapRequestError))
+      throw new MapRequestError(409, 'binding_unavailable');
     throw error;
   }
 }

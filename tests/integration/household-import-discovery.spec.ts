@@ -1,6 +1,5 @@
 import { chmodSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import {
   expectEmptyRecoveryDraft,
@@ -10,13 +9,14 @@ import {
   seedRecoveryContent,
 } from '../support/household-recovery-reading.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('IMPORT-09: another administrator discovers the same committed import after a lost response and restart', async ({
   page,
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -149,7 +149,7 @@ test('IMPORT-11: another administrator finishes the same gated cleanup after the
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   let directory = '';
   try {
     await signIn(page.request, installation.origin);
@@ -338,8 +338,8 @@ test('IMPORT-10: the current administrator recovers a lost preparation before an
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
-  const administrator = await browser.newContext();
+  const other = await createPreparedContext(browser);
+  const administrator = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -449,7 +449,7 @@ test('IMPORT-14: a locally known uncertain import keeps its exact identity after
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

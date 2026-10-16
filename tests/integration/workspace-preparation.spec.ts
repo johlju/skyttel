@@ -1,10 +1,10 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { expect, test } from '@playwright/test';
 import { createManualTransport } from '../../scripts/manual-transport-control.js';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 for (const seeded of [false, true]) {
   test(`workspace preparation holds completed personal reads and moves on ${seeded ? 'seeded' : 'empty'} content`, {

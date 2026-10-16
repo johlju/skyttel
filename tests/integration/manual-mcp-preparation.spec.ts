@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { expect, test } from '@playwright/test';
 import type { MapDraft, MapState } from '../../src/shared/map.js';
 import { createHousehold, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('manual MCP read-only preparation preserves empty then populated household work', {
   tag: '@technical',

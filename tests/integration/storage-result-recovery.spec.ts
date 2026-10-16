@@ -1,15 +1,18 @@
-import { expect, type Page, test } from '@playwright/test';
-import { restartWithSession, signIn } from '../support/client.js';
+import type { Page } from '@playwright/test';
+import {
+  acceptRememberedOffer,
+  restartWithSession,
+  signIn,
+  signInRemembered,
+} from '../support/client.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
+
+test.use({ storagePreferences: true });
+
 import { alex, createInstallation, robin } from '../support/installation.js';
 
 async function rememberedLogin(page: Page, origin: string) {
-  await page.goto(`${origin}/login`);
-  await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-  await page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true }).check();
-  await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
-  ).toBeVisible();
+  await signInRemembered(page, origin);
 }
 
 test('KAK-20: a lost committed OFF reply is checked after restart and a new remembered login without replay', async ({
@@ -28,14 +31,14 @@ test('KAK-20: a lost committed OFF reply is checked after restart and a new reme
     },
   });
   const { origin } = installation;
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true }, true);
   try {
     const page = await context.newPage();
     page.on('dialog', (dialog) => dialog.accept());
     await page.goto(origin);
     await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-    await page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true }).check();
     await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
+    await acceptRememberedOffer(page);
     await expect(
       page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
     ).toBeVisible();
@@ -59,7 +62,7 @@ test('KAK-20: a lost committed OFF reply is checked after restart and a new reme
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await expect(choice).toBeChecked();
     await choice.uncheck();
-    await page.getByRole('button', { name: 'Spara inställningar', exact: true }).click();
+    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText(
       'Sparstatus okänd. Vi kunde inte bekräfta om ändringen genomfördes.',
     );
@@ -71,16 +74,7 @@ test('KAK-20: a lost committed OFF reply is checked after restart and a new reme
     expect(committed).toBe(1);
     expect(writes).toBe(1);
     await installation.restart();
-    await page.goto(`${origin}/login`);
-    await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-    await expect(
-      page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true }),
-    ).not.toBeChecked();
-    await page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true }).check();
-    await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
-    await expect(
-      page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
-    ).toBeVisible();
+    await rememberedLogin(page, origin);
     const before = await (
       await context.request.get(`${origin}/api/browser-binding/preference`, { headers: { origin } })
     ).json();
@@ -188,7 +182,7 @@ test('KAK-21: denied recovery storage stops the OFF request and preserves existi
 }) => {
   const installation = await createInstallation(undefined, { https: true });
   const { origin } = installation;
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true }, true);
   try {
     const page = await context.newPage();
     await rememberedLogin(page, origin);
@@ -210,7 +204,7 @@ test('KAK-21: denied recovery storage stops the OFF request and preserves existi
     const choice = page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true });
     await expect(choice).toBeChecked();
     await choice.uncheck();
-    const save = page.getByRole('button', { name: 'Spara inställningar', exact: true });
+    const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
     await save.click();
     await expect(page.getByRole('alert')).toContainText(
       'Flikens återhämtningsuppgifter kunde inte sparas. Ingen ändring har skickats.',
@@ -244,7 +238,7 @@ for (const [caseId, lost] of [
   }) => {
     const installation = await createInstallation(undefined, { https: true });
     const { origin } = installation;
-    const context = await browser.newContext({ ignoreHTTPSErrors: true });
+    const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true }, true);
     try {
       const page = await context.newPage();
       page.on('dialog', (dialog) => dialog.accept());
@@ -261,7 +255,7 @@ for (const [caseId, lost] of [
       });
       await page.goto(`${origin}/cookies`);
       await page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }).uncheck();
-      await page.getByRole('button', { name: 'Spara inställningar', exact: true }).click();
+      await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
       await expect(page.getByRole('alert')).toContainText('Sparstatus okänd');
       await page.evaluate((remove) => {
         const key = Object.keys(sessionStorage).find((name) =>
@@ -274,6 +268,11 @@ for (const [caseId, lost] of [
       await page.goto(`${origin}/login`);
       await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
       await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
+      if (lost)
+        await page
+          .getByRole('dialog', { name: 'Kom ihåg mig i Skyttel', exact: true })
+          .getByRole('button', { name: 'Inte nu', exact: true })
+          .click();
       await expect(
         page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
       ).toBeVisible();
@@ -289,7 +288,7 @@ for (const [caseId, lost] of [
         );
         await page.getByRole('button', { name: 'Kontrollera igen', exact: true }).click();
         await expect(
-          page.getByRole('button', { name: 'Spara inställningar', exact: true }),
+          page.getByRole('button', { name: 'Spara Preferenser', exact: true }),
         ).toHaveAttribute('aria-disabled', 'true');
       }
       await expect(page.getByRole('status')).not.toContainText(
@@ -310,7 +309,7 @@ test('KAK-24: an expired result remains unknown and checking never grants a new 
   let time = Date.now();
   const installation = await createInstallation(undefined, { https: true, now: () => time });
   const { origin } = installation;
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true }, true);
   try {
     const page = await context.newPage();
     page.on('dialog', (dialog) => dialog.accept());
@@ -323,7 +322,7 @@ test('KAK-24: an expired result remains unknown and checking never grants a new 
     });
     await page.goto(`${origin}/cookies`);
     await page.getByRole('switch', { name: 'Ihågkommen inloggning', exact: true }).uncheck();
-    await page.getByRole('button', { name: 'Spara inställningar', exact: true }).click();
+    await page.getByRole('button', { name: 'Spara Preferenser', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Sparstatus okänd');
     await signIn(context.request, origin);
     time += 86_400_000;
@@ -335,7 +334,7 @@ test('KAK-24: an expired result remains unknown and checking never grants a new 
       'Resultatet kan inte hämtas. Det kan saknas eller ha passerat kontrollfönstret på 24 timmar. Utfallet är fortfarande okänt.',
     );
     await expect(check).toBeFocused();
-    const save = page.getByRole('button', { name: 'Spara inställningar', exact: true });
+    const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
     await expect(save).toHaveAttribute('aria-disabled', 'true');
     await save.focus();
     await page.keyboard.press('Enter');

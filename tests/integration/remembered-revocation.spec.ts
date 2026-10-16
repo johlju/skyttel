@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { type APIRequestContext, expect, test } from '@playwright/test';
-import { signIn } from '../support/client.js';
+import type { APIRequestContext } from '@playwright/test';
+import { activateRememberedLogin, signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function revoke(client: APIRequestContext, origin: string) {
   const response = await client.post(`${origin}/api/browser-binding/revoke`, {
@@ -149,16 +150,17 @@ for (const [caseId, outcome] of [
   }) => {
     const installation = await createInstallation(undefined, { https: true });
     const { origin } = installation;
-    const context = await browser.newContext({ ignoreHTTPSErrors: true });
+    const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true }, true);
     try {
       await signIn(context.request, origin);
       const started = await context.request.post(`${origin}/api/auth/sign-in/social`, {
         headers: { origin },
         data: { provider: 'google', callbackURL: '/', rememberMe: true, informationVersion: 1 },
       });
-      const callback = await context.request.get((await started.json()).url, { maxRedirects: 0 });
+      await context.request.get((await started.json()).url, { maxRedirects: 0 });
+      await activateRememberedLogin(context.request, origin);
       const page = await context.newPage();
-      await page.goto(callback.headers().location);
+      await page.goto(origin);
       await expect(
         page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
       ).toBeVisible();
@@ -183,14 +185,14 @@ for (const [caseId, outcome] of [
       await expect(choice).toBeChecked();
       await choice.uncheck();
       await expect(page.getByText('Osparad ändring.', { exact: true })).toBeVisible();
-      const save = page.getByRole('button', { name: 'Spara inställningar', exact: true });
+      const save = page.getByRole('button', { name: 'Spara Preferenser', exact: true });
       await save.click();
       if (outcome === 'confirmed') {
         await expect(page.getByRole('status')).toHaveText(
           'Ihågkommen inloggning är avstängd. Du är fortfarande inloggad.',
         );
         await expect(
-          page.getByText('Logga in på nytt och välj Kom ihåg mig.', { exact: true }),
+          page.getByRole('button', { name: 'Kom ihåg mig i Skyttel', exact: true }),
         ).toBeVisible();
         expect(
           (await context.cookies())
@@ -236,6 +238,7 @@ test('revocation rotates the current key and binding while preserving the sessio
       data: { provider: 'google', callbackURL: '/', rememberMe: true, informationVersion: 1 },
     });
     const completed = await client.get((await start.json()).url, { maxRedirects: 0 });
+    await activateRememberedLogin(client, origin);
     const proof = new URL(completed.headers().location).searchParams.get('loginConfirmation');
     const before = await (await client.get(`${origin}/api/auth/get-session`)).json();
     const saved = await client.storageState();
@@ -330,40 +333,61 @@ for (const phase of ['early', 'late', 'repeated'] as const) {
     let time = Date.now();
     let hold = false;
     let release = () => {};
-    let capture: (cookies: string[]) => void = () => {};
+    let capture: (value: {
+      cookies: string[];
+      binding: { cookieName: string; candidate: string };
+    }) => void = () => {};
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const captured = new Promise<string[]>((resolve) => {
+    const captured = new Promise<{
+      cookies: string[];
+      binding: { cookieName: string; candidate: string };
+    }>((resolve) => {
       capture = resolve;
     });
     const installation = await createInstallation(undefined, {
       https: true,
       now: () => time,
       async deliverResponse(request, response) {
-        if (hold && new URL(request.url).pathname.startsWith('/api/auth/callback/')) {
+        if (hold && new URL(request.url).pathname === '/api/browser-binding/activate') {
           hold = false;
-          capture(response.headers.getSetCookie());
+          capture({
+            cookies: response.headers.getSetCookie(),
+            binding: await response.clone().json(),
+          });
           await held;
         }
         return response;
       },
     });
     const { origin } = installation;
-    const context = await browser.newContext({ ignoreHTTPSErrors: true });
+    const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true }, true);
     const independent = await playwright.request.newContext({ ignoreHTTPSErrors: true });
     let current: typeof independent | undefined;
     let continued: typeof independent | undefined;
     let resume = () => {};
     try {
       await signIn(context.request, origin);
-      const started = await context.request.post(`${origin}/api/auth/sign-in/social`, {
-        headers: { origin },
-        data: { provider: 'google', callbackURL: '/', rememberMe: true, informationVersion: 1 },
-      });
+      const preference = await (
+        await context.request.get(`${origin}/api/browser-binding/preference`, {
+          headers: { origin },
+        })
+      ).json();
       hold = true;
-      const delayed = context.request.get((await started.json()).url, { maxRedirects: 0 });
-      const issued = await captured;
+      const delayed = context.request.post(`${origin}/api/browser-binding/activate`, {
+        headers: { origin },
+        data: {
+          id: randomUUID(),
+          sessionId: preference.sessionId,
+          bindingId: preference.bindingId,
+          preferences: true,
+          rememberMe: true,
+          informationVersion: 1,
+          consentInformationVersion: 1,
+        },
+      });
+      const { cookies: issued, binding: activatedBinding } = await captured;
       const oldAuth = issued.find((item) => item.startsWith('__Secure-better-auth.session_token='));
       if (!oldAuth) throw new Error('Missing persistent auth cookie');
       const [name, ...parts] = oldAuth.split(';', 1)[0].split('=');
@@ -381,6 +405,23 @@ for (const phase of ['early', 'late', 'repeated'] as const) {
           sameSite: 'Lax',
         },
       ]);
+      await current.addCookies([
+        {
+          name: activatedBinding.cookieName,
+          value: activatedBinding.candidate,
+          url: origin,
+          secure: true,
+          sameSite: 'Lax',
+        },
+      ]);
+      expect(
+        (
+          await current.post(`${origin}/api/browser-binding/register`, {
+            headers: { origin },
+            data: {},
+          })
+        ).status(),
+      ).toBe(200);
       const oldState = await current.storageState();
       const before = await (await current.get(`${origin}/api/auth/get-session`)).json();
       const originalDeadline = time + 604_800_000;
@@ -443,7 +484,7 @@ for (const phase of ['early', 'late', 'repeated'] as const) {
       await context.addCookies(state.cookies);
       const newKey = (await context.cookies()).find((cookie) => cookie.name === name)?.value;
       release();
-      expect((await delayed).status()).toBe(302);
+      expect((await delayed).status()).toBe(200);
       const actualCookie = (await context.cookies()).find((cookie) => cookie.name === name);
       expect(actualCookie?.value).toBe(parts.join('='));
       expect(actualCookie?.value).not.toBe(newKey);

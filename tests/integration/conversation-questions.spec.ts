@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import type { TextAssistantView } from '../../src/shared/text-assistant.js';
 import type { VoiceAssistantView } from '../../src/shared/voice-assistant.js';
@@ -18,6 +18,7 @@ import { readTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const field = (page: Page) => page.getByLabel('Meddelande till Skyttel');
@@ -196,7 +197,7 @@ test('FRAGA-02: Skyttel frågar om en verklig konflikt i samtalet utan en genere
     'Lo hette Lo Exempel. Vill du behålla ditt förslag Lo Lind eller det sparade namnet Lo Berg?';
   const model = textModel(() => [modelTool('ask_questions', { questions: [conflictQuestion] })]);
   const { app, path, value } = await fixture(page, model);
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const post = (client: typeof page.request, action: string, data: unknown) =>
     client.post(`${path}/${action}`, { headers: { origin: app.origin }, data });
   try {

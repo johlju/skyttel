@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import {
@@ -14,6 +13,7 @@ import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { readDraftProposal } from '../support/domain-work.js';
 import { downloadHouseholdExport } from '../support/household-export-download.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('IMPORT-06: replacement preserves image history and private work, rejects old save attempts and permits ordinary corrections after restart', async ({
   page,

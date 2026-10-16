@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import { signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
 import { advanceActiveLogin } from '../support/session-time.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('explicit login replaces a known expired binding without reviving its old access', {
   tag: '@technical',
@@ -210,7 +210,7 @@ test('a genuinely delayed callback header overwrites the browser cookie without 
     },
   });
   const { origin } = installation;
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true });
   let current: Awaited<ReturnType<typeof playwright.request.newContext>> | undefined;
   try {
     await signIn(context.request, origin);
@@ -666,7 +666,7 @@ test('ACCESS-24: simultaneous first HTTPS tabs confirm one browser binding befor
   browser,
 }) => {
   const installation = await createInstallation(undefined, { https: true });
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true });
   try {
     const first = await context.newPage();
     const second = await context.newPage();
@@ -713,7 +713,7 @@ test('ACCESS-24: simultaneous first HTTPS tabs confirm one browser binding befor
         expires: -1,
       }),
     ]);
-    const independent = await browser.newContext({ ignoreHTTPSErrors: true });
+    const independent = await createPreparedContext(browser, { ignoreHTTPSErrors: true });
     try {
       const page = await independent.newPage();
       await page.goto(installation.origin);
@@ -800,7 +800,7 @@ test('ACCESS-26: cancelling delayed initialization cannot replace another tabs c
       return response;
     },
   });
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true });
   try {
     const first = await context.newPage();
     const second = await context.newPage();
@@ -837,7 +837,7 @@ test('ACCESS-25: unavailable browser locks and blocked cookies stop login access
   const installation = await createInstallation(undefined, { https: true });
   try {
     for (const failure of ['locks', 'cookies', 'registration'] as const) {
-      const context = await browser.newContext({ ignoreHTTPSErrors: true });
+      const context = await createPreparedContext(browser, { ignoreHTTPSErrors: true });
       try {
         const page = await context.newPage();
         if (failure === 'locks')

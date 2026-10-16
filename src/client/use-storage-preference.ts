@@ -2,8 +2,16 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { installationRestoredMessage } from '../shared/installation-restore.js';
 import { revokeRememberedLogin, type StoragePreference } from './browser-binding.js';
 import { MapRequestError, request } from './map-request.js';
+import { resetStorageConsent } from './storage-consent.js';
 
-type Operation = { id: string; sessionId: string; generation?: string };
+type Operation = {
+  id: string;
+  sessionId: string;
+  generation?: string;
+  remembered?: boolean;
+  resetConsent?: boolean;
+  resetConsentAt?: number;
+};
 type State =
   | 'idle'
   | 'saving'
@@ -13,7 +21,13 @@ type State =
   | 'checking'
   | 'unavailable'
   | 'restored';
-type Result = { id: string; userId: string; status: string; expiresAt?: number };
+type Result = {
+  id: string;
+  userId: string;
+  status: string;
+  expiresAt?: number;
+  remembered?: boolean;
+};
 
 /** The tab retains only the requested operation, never a preference or authority. */
 export function useStoragePreference(userId?: string) {
@@ -25,10 +39,15 @@ export function useStoragePreference(userId?: string) {
   const [requested, updateRequested] = useState(false);
   const [state, setState] = useState<State>('idle');
   const [continued, setContinued] = useState(false);
+  const [confirmedRemembered, setConfirmedRemembered] = useState(false);
   const [reauthenticated, setReauthenticated] = useState(false);
   const [requiresLogin, setRequiresLogin] = useState(false);
   const [resultChecked, setResultChecked] = useState(false);
   const [recoveryMessage, setRecoveryMessage] = useState('');
+  const savedReference = useRef(saved);
+  savedReference.current = saved;
+  const passiveReadBlocked = useRef(false);
+  passiveReadBlocked.current = busy.current || ['saving', 'checking', 'unknown'].includes(state);
   const storageKey = `skyttel-storage-operation:${userId}`;
 
   useLayoutEffect(() => {
@@ -74,6 +93,12 @@ export function useStoragePreference(userId?: string) {
           operation.current = {
             id: value.id,
             sessionId: value.sessionId,
+            remembered: value.remembered === true,
+            resetConsent: value.resetConsent === true,
+            ...(typeof value.resetConsentAt === 'number' &&
+            Number.isSafeInteger(value.resetConsentAt)
+              ? { resetConsentAt: value.resetConsentAt }
+              : {}),
             ...(typeof value.generation === 'string' && /^[a-f0-9-]{36}$/.test(value.generation)
               ? { generation: value.generation }
               : {}),
@@ -106,6 +131,52 @@ export function useStoragePreference(userId?: string) {
     return () => controller.abort();
   }, [storageKey, userId]);
 
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    const refresh = () => {
+      if (passiveReadBlocked.current) return;
+      const ticket = generation.current;
+      void request<StoragePreference>(
+        '/api/browser-binding/preference',
+        undefined,
+        controller.signal,
+      )
+        .then((current) => {
+          if (
+            controller.signal.aborted ||
+            passiveReadBlocked.current ||
+            generation.current !== ticket ||
+            current.userId !== userId
+          )
+            return;
+          if (
+            current.bindingId === savedReference.current?.bindingId &&
+            current.remembered === savedReference.current.remembered
+          )
+            return;
+          // An external rotation invalidates the old unsent function choice.
+          // Never silently apply it to a replacement session or binding.
+          setSaved(current);
+          updateRequested(current.remembered);
+        })
+        .catch(() => {});
+    };
+    window.addEventListener('storage', refresh);
+    window.addEventListener('focus', refresh);
+    const channel =
+      typeof BroadcastChannel === 'function'
+        ? new BroadcastChannel('skyttel-storage-state')
+        : undefined;
+    if (channel) channel.onmessage = refresh;
+    return () => {
+      controller.abort();
+      channel?.close();
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [userId]);
+
   function forget() {
     operation.current = null;
     try {
@@ -119,7 +190,7 @@ export function useStoragePreference(userId?: string) {
 
   const blocked = state === 'saving' || state === 'unknown' || state === 'checking';
   function setRequested(value: boolean) {
-    if (busy.current || blocked || !saved || (value && !saved.remembered)) return;
+    if (busy.current || blocked || !saved) return;
     updateRequested(value);
     setState('idle');
     setRecoveryMessage('');
@@ -130,19 +201,22 @@ export function useStoragePreference(userId?: string) {
     setState('idle');
     setRecoveryMessage('');
   }
-  async function writeOff(reset: boolean) {
+  async function change(remembered: boolean, reset = false, resetConsentAt?: number) {
     if (
       !userId ||
       owner.current !== userId ||
       !saved ||
       busy.current ||
       blocked ||
-      (!reset && (requested || !saved.remembered))
+      (!reset && remembered === saved.remembered)
     )
       return;
     const selected = {
       id: crypto.randomUUID(),
       sessionId: saved.sessionId,
+      remembered,
+      resetConsent: reset,
+      ...(resetConsentAt !== undefined ? { resetConsentAt } : {}),
       ...(saved.generation ? { generation: saved.generation } : {}),
     };
     try {
@@ -158,7 +232,7 @@ export function useStoragePreference(userId?: string) {
     }
     operation.current = selected;
     busy.current = true;
-    updateRequested(false);
+    updateRequested(remembered);
     setState('saving');
     setRecoveryMessage('');
     setRequiresLogin(false);
@@ -166,18 +240,41 @@ export function useStoragePreference(userId?: string) {
     setResultChecked(false);
     const ticket = ++generation.current;
     try {
-      const result = await revokeRememberedLogin(selected.id, saved);
+      const result = await revokeRememberedLogin(selected.id, saved, remembered);
       if (generation.current !== ticket) return;
       setSaved(result.result);
+      setConfirmedRemembered(remembered);
       setContinued(result.continued);
       setRequiresLogin(!result.continued);
       setState('saved');
+      if (reset && resetConsentAt !== undefined) {
+        try {
+          resetStorageConsent(resetConsentAt);
+        } catch {
+          setRecoveryMessage(
+            'Avstängningen är bekräftad men lagringssamtycket kunde inte återställas. Försök återställa samtycket igen.',
+          );
+        }
+      }
       forget();
+      return true;
     } catch (error) {
       if (generation.current !== ticket) return;
       if (error instanceof MapRequestError && [400, 401, 403, 409].includes(error.status)) {
+        setRequiresLogin([401, 403].includes(error.status));
         setState('rejected');
         forget();
+        if (error.code === 'binding_changed') {
+          try {
+            const current = await request<StoragePreference>('/api/browser-binding/preference');
+            if (generation.current === ticket && current.userId === userId) {
+              setSaved(current);
+              updateRequested(current.remembered);
+            }
+          } catch {
+            /* A rejected precondition does not confirm new authority. */
+          }
+        }
       } else setState('unknown');
     } finally {
       if (generation.current === ticket) busy.current = false;
@@ -234,9 +331,19 @@ export function useStoragePreference(userId?: string) {
         throw new Error('result_unconfirmed');
       // The result is known even when the separate authentication read fails.
       setState('saved');
+      setConfirmedRemembered(result.remembered ?? false);
       setSaved(undefined);
       setContinued(false);
       setRequiresLogin(true);
+      if (selected.resetConsent && selected.resetConsentAt !== undefined) {
+        try {
+          resetStorageConsent(selected.resetConsentAt);
+        } catch {
+          setRecoveryMessage(
+            'Avstängningen är bekräftad men lagringssamtycket kunde inte återställas. Försök återställa samtycket igen.',
+          );
+        }
+      }
       forget();
       try {
         const current = await request<StoragePreference>('/api/browser-binding/preference');
@@ -246,7 +353,9 @@ export function useStoragePreference(userId?: string) {
         updateRequested(current.remembered);
         const sameLogin = current.sessionId === selected.sessionId;
         const confirmed =
-          sameLogin && !current.remembered && current.expiresAt === result.expiresAt;
+          sameLogin &&
+          current.remembered === (result.remembered ?? false) &&
+          current.expiresAt === result.expiresAt;
         setContinued(confirmed);
         setReauthenticated(!sameLogin);
         setRequiresLogin(sameLogin && !confirmed);
@@ -273,6 +382,7 @@ export function useStoragePreference(userId?: string) {
     requested,
     state,
     continued,
+    confirmedRemembered,
     reauthenticated,
     requiresLogin,
     resultChecked,
@@ -280,8 +390,9 @@ export function useStoragePreference(userId?: string) {
     dirty: Boolean(saved && saved.remembered !== requested),
     setRequested,
     undo,
-    save: () => writeOff(false),
-    reset: () => writeOff(true),
+    save: () => change(requested),
+    reset: () => change(false, true),
+    change,
     checkAgain,
   };
 }

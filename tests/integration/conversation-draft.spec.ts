@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { bounds } from '../support/accessibility.js';
 import { closeSupportDialog, createHousehold, openSettings, signIn } from '../support/client.js';
@@ -9,6 +9,7 @@ import {
 } from '../support/conversation-page.js';
 import { prepareConversationReview } from '../support/conversation-review-preparation.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const view = (page: Page) => page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
@@ -190,8 +191,8 @@ test('SAMTALSUTKAST-02: valet följer användaren mellan hushåll och enheter', 
   browser,
 }) => {
   const { app, path, household, read } = await installation(page);
-  const device = await browser.newContext();
-  const member = await browser.newContext();
+  const device = await createPreparedContext(browser);
+  const member = await createPreparedContext(browser);
   try {
     await settings(page);
     await expect(preference(page)).not.toBeChecked();

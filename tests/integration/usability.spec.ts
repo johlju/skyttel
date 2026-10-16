@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import { createHousehold, openProfile, signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('ACCESS-04: setup works by keyboard within a narrow phone viewport', async ({ page }) => {
   const installation = await createInstallation();

@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import {
@@ -18,6 +17,7 @@ import {
   turnMicrophoneOn,
 } from '../support/conversation-page.js';
 import { editTableObject } from '../support/domain-work.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 // Retain the populated workflow; its independently empty starting state is retired.
 test('literal household preparation completes the family tools on seeded public installation', {
@@ -59,7 +59,7 @@ test('literal household preparation completes the family tools on seeded public 
   child.stderr.on('data', (chunk) => {
     diagnostics += String(chunk);
   });
-  const memberContext = await browser.newContext();
+  const memberContext = await createPreparedContext(browser);
   const member = await memberContext.newPage();
   const command = (line: string) => child.stdin.write(`${line}\n`);
   async function held(after: number) {

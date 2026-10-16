@@ -1,7 +1,8 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
-import { signIn } from '../support/client.js';
+import { acceptRememberedOffer, activateRememberedLogin, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { advanceActiveLogin } from '../support/session-time.js';
+import { prepareStorageChoice } from '../support/test.js';
 
 test('ordinary login uses a session cookie and never emits a remembered-choice mirror', {
   tag: '@technical',
@@ -102,6 +103,7 @@ test('a delayed remembered confirmation cannot leave persistent binding after a 
     expect(started.status()).toBe(200);
     const pending = (await started.json()).url;
     hold = true;
+    await prepareStorageChoice(context, true);
     const page = await context.newPage();
     await page.goto(
       `${origin}/?loginConfirmation=${new URL(confirmation).searchParams.get('proof')}`,
@@ -169,6 +171,8 @@ async function login(client: APIRequestContext, origin: string, choice: Record<s
   expect(start.status()).toBe(200);
   const response = await client.get((await start.json()).url, { maxRedirects: 0 });
   expect(response.status()).toBe(302);
+  if (choice.rememberMe === true && choice.informationVersion === 1)
+    await activateRememberedLogin(client, origin);
   const proof = new URL(response.headers().location, origin).searchParams.get('loginConfirmation');
   expect(proof).toMatch(/^[a-f0-9]{64}$/);
   return `${origin}/api/browser-binding/confirmation?proof=${proof}`;
@@ -193,8 +197,8 @@ test('ACCESS-28: a callback without an accepted auth cookie shows the precise un
   try {
     const page = await context.newPage();
     await page.goto(installation.origin);
+    await page.getByRole('button', { name: 'Endast nödvändiga', exact: true }).click();
     await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-    await page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true }).check();
     await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
     await expect(page.getByRole('alert')).toHaveText(
       'Inloggningen kunde inte bekräftas. Försök logga in igen. Kontrollera att webbläsaren tillåter kakor för Skyttel om problemet kvarstår.',
@@ -287,7 +291,7 @@ test('untrusted choice fields and direct authentication routes cannot create rem
   }
 });
 
-test('ACCESS-27: remembered login is active only for its session and every new login starts unchecked', async ({
+test('ACCESS-27: remembered login is selected separately after each successful login and a failed provider visit preserves the existing session', async ({
   browser,
 }) => {
   const installation = await createInstallation(undefined, { https: true });
@@ -295,11 +299,14 @@ test('ACCESS-27: remembered login is active only for its session and every new l
   try {
     const page = await context.newPage();
     await page.goto(installation.origin);
-    await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-    const choice = page.getByRole('checkbox', { name: 'Kom ihåg mig', exact: true });
-    await expect(choice).not.toBeChecked();
-    await choice.check();
-    await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
+    await page.getByRole('button', { name: 'Acceptera Alla', exact: true }).click();
+    const chooseProvider = () =>
+      page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
+    const continueLogin = () =>
+      page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
+    await chooseProvider();
+    await continueLogin();
+    await acceptRememberedOffer(page);
     await expect(page.getByRole('heading', { name: 'Skapa ditt hushåll' })).toBeVisible();
     const cookies = (await context.cookies()).filter(
       (item) => item.name.includes('binding') || item.name.endsWith('session_token'),
@@ -307,33 +314,23 @@ test('ACCESS-27: remembered login is active only for its session and every new l
     expect(cookies).toHaveLength(2);
     expect(cookies.every((item) => item.expires > Date.now() / 1000 && item.secure)).toBe(true);
     expect(cookies.find((item) => item.name.endsWith('session_token'))?.httpOnly).toBe(true);
-    await page.getByRole('link', { name: 'Din profil', exact: true }).click();
-    await page.getByRole('link', { name: 'Logga in på nytt', exact: true }).click();
-    await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-    await expect(choice).not.toBeChecked();
-    await choice.check();
+    await page.goto(`${installation.origin}/login`);
+    await chooseProvider();
     await page.getByRole('button', { name: 'Avbryt', exact: true }).click();
-    await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-    await expect(choice).not.toBeChecked();
+    await chooseProvider();
     installation.failProvider(true);
-    await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
+    await continueLogin();
     await expect(page.getByRole('alert')).toContainText('Inloggningen kunde inte slutföras');
-    expect(
-      await (await context.request.get(`${installation.origin}/api/bootstrap`)).json(),
-    ).toMatchObject({ status: 'setup' });
     expect(
       (await context.cookies()).filter(
         (item) => item.name.includes('binding') || item.name.endsWith('session_token'),
       ),
     ).toEqual(cookies);
     installation.failProvider(false);
-    await page.getByRole('link', { name: 'Tillbaka till din inloggning', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Skapa ditt hushåll' })).toBeVisible();
-    await page.getByRole('link', { name: 'Din profil', exact: true }).click();
-    await page.getByRole('link', { name: 'Logga in på nytt', exact: true }).click();
-    await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
-    await expect(choice).not.toBeChecked();
-    await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
+    await chooseProvider();
+    await continueLogin();
+    const offer = page.getByRole('dialog', { name: 'Kom ihåg mig i Skyttel', exact: true });
+    await offer.getByRole('button', { name: 'Inte nu', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Skapa ditt hushåll' })).toBeVisible();
     expect(
       (await context.cookies())
@@ -341,11 +338,12 @@ test('ACCESS-27: remembered login is active only for its session and every new l
         .every((item) => item.expires === -1),
     ).toBe(true);
     expect(
-      await page.evaluate(() => ({
-        local: Object.keys(localStorage),
-        session: Object.keys(sessionStorage),
-      })),
-    ).toEqual({ local: [], session: [] });
+      await (
+        await context.request.get(`${installation.origin}/api/browser-binding/preference`, {
+          headers: { origin: installation.origin },
+        })
+      ).json(),
+    ).toMatchObject({ remembered: false });
   } finally {
     await context.close();
     await installation.close();

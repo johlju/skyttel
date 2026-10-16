@@ -2,10 +2,10 @@ import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import { seedRecoveryContent } from '../support/household-recovery-reading.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 const preparation = readFileSync('docs/manual-tests/household-recovery-faults.md', 'utf8').match(
   /```javascript\n([\s\S]*?)\n```/,

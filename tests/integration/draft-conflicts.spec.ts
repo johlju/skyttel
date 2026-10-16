@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 import type {
   MapState,
   ObjectValue,
@@ -40,12 +40,13 @@ import {
 import { collaborators } from '../support/draft-conflict-http.js';
 import { focusMapSearch } from '../support/object-search.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('UTKAST-17: canceled form loss and staged independent work survive concurrent conflict review', async ({
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   const member = await other.newPage();
   try {
@@ -154,7 +155,7 @@ for (const { width, height } of [
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await collaborators(page.request, other.request);
     try {
       await page.setViewportSize({ width, height });
@@ -415,7 +416,7 @@ test('UTKAST-19: an own object correction preserves staged independent work and 
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   let cleanup: PromiseSettledResult<void>[] = [];
   const member = await other.newPage();
@@ -522,7 +523,7 @@ for (const width of [1440, 390]) {
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await collaborators(page.request, other.request, [
       ['lo', 'Lo Exempel'],
       ['service', 'Molnmusik'],
@@ -635,7 +636,7 @@ for (const kind of ['object-type', 'relationship-type'] as const) {
       page,
       browser,
     }) => {
-      const other = await browser.newContext();
+      const other = await createPreparedContext(browser);
       const app = await collaborators(page.request, other.request);
       const member = await other.newPage();
       try {
@@ -786,7 +787,7 @@ for (const choice of ['saved', 'proposed'] as const) {
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await collaborators(page.request, other.request);
     const member = await other.newPage();
     try {
@@ -853,7 +854,7 @@ test('UTKAST-23: delayed conflict resolution protects pending focus and allows e
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   let release = () => {};
   const held = new Promise<void>((resolve) => {
@@ -932,7 +933,7 @@ for (const width of [1440, 390]) {
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await collaborators(page.request, other.request);
     const member = await other.newPage();
     try {
@@ -1092,7 +1093,7 @@ test('UTKAST-05: a conflict choice preserves independent proposals and requires 
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const { installation, path, read, propose, save } = await collaborators(
     page.request,
     other.request,
@@ -1167,7 +1168,7 @@ test('UTKAST-06: deleting an object requires reviewing newly saved relationships
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   const member = await other.newPage();
   try {
@@ -1248,7 +1249,7 @@ test('UTKAST-07: overlapping relationship proposals show meanings and can accept
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   try {
     const state = await app.read();
@@ -1300,7 +1301,7 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   const member = await other.newPage();
   try {
@@ -1436,7 +1437,7 @@ for (const side of ['proposed', 'saved'] as const) {
       ? 'UTKAST-11: deletion after concurrent type changes retains the matching historical definitions'
       : 'UTKAST-117: keeping a changed relationship preserves it and reopens the object removal dependency';
   test(title, async ({ page, browser }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await collaborators(page.request, other.request);
     const member = await other.newPage();
     try {
@@ -1604,7 +1605,7 @@ test('UTKAST-08: a saved duplicate can be selected without losing another propos
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   try {
     const state = await app.read();
@@ -1657,7 +1658,7 @@ test('UTKAST-09: a deleted relationship endpoint has an explicit recovery choice
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   try {
     const state = await app.read();
@@ -1705,7 +1706,7 @@ test('UTKAST-118: resolving an object preserves fields changed only by the other
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   try {
     const state = await app.read();
@@ -1738,7 +1739,7 @@ test('UTKAST-137: independent browser edits save unrelated objects without a con
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   const member = await other.newPage();
   try {
@@ -1817,7 +1818,7 @@ test('UTKAST-02: a stale discard preserves newer object and relationship proposa
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   const newer = await page.context().newPage();
   try {
@@ -1884,7 +1885,7 @@ test('UTKAST-03: a stale conflict choice requires refreshed review before saving
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   const member = await other.newPage();
   try {
@@ -1950,7 +1951,7 @@ test('UTKAST-04: accepting a deleted object preserves an independent proposal', 
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await collaborators(page.request, other.request);
   const member = await other.newPage();
   try {

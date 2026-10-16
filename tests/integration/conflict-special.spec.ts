@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { contrast } from '../support/accessibility.js';
 import { prepareConflictContinuity } from '../support/conflict-continuity.js';
 import {
@@ -7,12 +6,13 @@ import {
   prepareRemovedObjectConflict,
   saveReviewedConflictDraft,
 } from '../support/conflict-special.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('UTKAST-57: accepting a removed object discards only its proposal and preserves the saved removal', async ({
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareRemovedObjectConflict(page.request, other.request);
   try {
     const before = await app.read();
@@ -115,7 +115,7 @@ for (const [id, kind, title, reason, warning, action] of [
   ],
 ] as const) {
   test(`UTKAST-${id}: ${title}`, async ({ page, browser }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await prepareRelationshipSpecialConflict(page.request, other.request, kind);
     try {
       const before = await app.read();
@@ -197,7 +197,7 @@ test('UTKAST-61: an own removal is explicitly rebased against changed saved fact
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareOwnRemovalConflict(page.request, other.request);
   try {
     const before = await app.read();
@@ -244,7 +244,7 @@ test('UTKAST-62: object and new connection removal choices remain independent an
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareOwnRemovalConflict(page.request, other.request, 'connections');
   try {
     const before = await app.read();
@@ -304,7 +304,7 @@ test('UTKAST-73: removing one new connection leaves changed saved facts subject 
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareOwnRemovalConflict(page.request, other.request, 'facts-and-connections');
   try {
     const before = await app.read();
@@ -374,7 +374,7 @@ for (const surface of ['Karta', 'Tabell'] as const)
       page,
       browser,
     }) => {
-      const other = await browser.newContext();
+      const other = await createPreparedContext(browser);
       const app = await prepareRelationshipSpecialConflict(
         page.request,
         other.request,
@@ -448,7 +448,7 @@ for (const surface of ['Karta', 'Tabell'] as const) {
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await prepareOwnRemovalConflict(page.request, other.request, 'connections');
     try {
       await page.setViewportSize({ width: 320, height: 900 });
@@ -520,7 +520,7 @@ test('UTKAST-78: next conflict preserves retained choices and focuses the next r
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictContinuity(page.request, other.request);
   try {
     const service = { ...app.value, name: 'Min musiktjänst', description: 'Min tjänst' };

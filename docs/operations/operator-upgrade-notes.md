@@ -6,6 +6,30 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Browser storage consent and policy contact
+
+Before rollout, select the installation's public policy email address.
+After upgrade, the installation operator must save it under Policykontakt
+in the Drift settings group. The development demo address is not a
+production default. A missing address leaves normal use available and
+shows a request to contact the person responsible for the installation.
+
+Existing remembered logins have no browser storage consent. On the next
+visit, verify that Skyttel disables remembered login safely and offers a
+new storage choice. Ordinary access can continue only after confirmation
+and within its existing limits. Permission alone must not activate
+remembered login. Explicit activation after login must keep the original
+authentication time and seven-day limit.
+
+Verify activation, withdrawal and reset through the production HTTPS
+ingress, including lost replies and result checks after a new login.
+Keep unresolved action references. Reset must preserve household data,
+account settings and suppressed login offers. The database upgrade adds
+activation results to the existing 24-hour recovery window; it does not
+create a general consent history.
+New household exports require an upgraded importer. Existing supported
+exports remain readable.
+
 ### Development configuration examples
 
 The environment examples include a shared development installation

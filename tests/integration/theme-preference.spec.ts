@@ -1,13 +1,13 @@
-import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('TEMA-01: account theme survives another device and restart without browser copies', async ({
   page,
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await page.emulateMedia({ colorScheme: 'light' });
     await page.addInitScript(() => {

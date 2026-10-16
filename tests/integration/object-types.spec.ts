@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import {
   closeSupportDialog,
   closeTextView,
@@ -13,6 +12,7 @@ import { applyProposedConflictChanges } from '../support/conflict-properties.js'
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('TYP-01: native type and field forms share a durable object save and readable history', async ({
   page,
@@ -286,7 +286,7 @@ test('TYP-03: members share editable definitions while private proposals and use
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -506,7 +506,7 @@ test('TYP-04: concurrent definition changes reject the whole draft until an expl
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -618,7 +618,7 @@ test('TYP-05: invalid values and newly used field kinds preserve the entire draf
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

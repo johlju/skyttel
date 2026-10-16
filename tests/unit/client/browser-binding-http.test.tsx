@@ -8,6 +8,7 @@ import {
 } from '../../../src/client/browser-binding.js';
 import { request as browserRequest } from '../../../src/client/map-request.js';
 import { authenticatedHttpFetch } from '../../support/authenticated-http-fetch.js';
+import { activateRememberedLogin } from '../../support/client.js';
 import { createInstallation } from '../../support/installation.js';
 
 let installation: Awaited<ReturnType<typeof createInstallation>>;
@@ -46,6 +47,7 @@ async function login(rememberMe: boolean) {
   );
   const completed = await client.get(start.url, { maxRedirects: 0 });
   expect(completed.status()).toBe(302);
+  if (rememberMe) await activateRememberedLogin(client, installation.origin);
   const proof = new URL(completed.headers().location, installation.origin).searchParams.get(
     'loginConfirmation',
   );

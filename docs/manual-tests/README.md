@@ -38,6 +38,11 @@ ger en separat lokal provdatabas. Förbered utvecklingsmiljön med
 till utvecklingsguidernas gemensamma miljöer. Särskilda provdata och
 kontroller beskrivs tillsammans med respektive områdesfall.
 
+Om fallet inte gäller kakval, välj **Endast nödvändiga** i kakbannern
+innan du börjar. Automatiska prov utanför kakområdet använder samma
+förberedda webbläsarval. Fall som behöver ihågkommen inloggning anger
+separat samtycke till **Preferenskakor** och aktivering efter inloggning.
+
 [Objektlistornas enhetsförberedelse](object-list-device-preparation.md)
 ger LISTA-09 och SÖK-16 vanlig HTTPS, verklig leverantörsinloggning och
 separata påhittade läs-, storkarts- och sökuppgifter. Fullständiga provarkiv
@@ -113,7 +118,13 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   som ersätter förvarningen vid 1280, 390 och 320 CSS-pixlar.
   Faktisk skärmläsare och uppläsning med fysisk mikrofon på mobil och dator
   har separata kvarstående fall.
-- [Kakor och lagring](cookies.md): publik information och konkret register
+- [Kakor och lagring](cookies.md): publik kakpolicy, referensens två
+  bannerlägen i ljust och mörkt tema, separat lagringssamtycke och
+  ihågkommen inloggning efter inloggning, bestående avstå-val,
+  installationsansvarigs policykontakt och samordning mellan flikar.
+  [Visuell jämförelse](cookie-consent-visual-verification.md) visar båda
+  bannerlägena samt policy och inställningar mot den frysta referensen.
+  Konkret register
   över kakor, fliklagring, serverposter och tillfälligt samtalsminne, första besök,
   profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före
   hushållsstart och efter återkallad tillgång, snabbval, ångra,

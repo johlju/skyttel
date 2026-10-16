@@ -18,6 +18,7 @@ test.each(['session policy', 'binding'] as const)(
       informationVersion: 1,
     });
     const completed = await client.request((await start.json()).url);
+    await client.activateRemembered();
     const proof = new URL(
       completed.headers.get('location') ?? '',
       fixture.config.origin,
@@ -92,6 +93,7 @@ test.each([
       informationVersion: 1,
     });
     const callback = await client.request((await start.json()).url);
+    const activation = await client.activateRemembered();
     const proof = new URL(
       callback.headers.get('location') ?? '',
       fixture.config.origin,
@@ -103,7 +105,7 @@ test.each([
     const confirmed = await (await confirmation()).json();
     expect(confirmed).toMatchObject({ remembered: true, expiresAt: time + 604_800_000 });
     expect(
-      callback.headers
+      activation.headers
         .getSetCookie()
         .find((cookie) => cookie.startsWith('better-auth.session_token=')),
     ).toContain(`Expires=${new Date(time + 604_800_000).toUTCString()}`);

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
-import { chromium, expect, test } from '@playwright/test';
+import { chromium } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import {
   closeConversationText,
@@ -9,6 +9,7 @@ import {
   startConversationWithText,
   voiceBox,
 } from '../support/conversation-page.js';
+import { expect, test } from '../support/test.js';
 import {
   voiceControlsPreparationSource,
   voiceTonePreparationSource,

@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import {
   closeSupportDialog,
   closeTextView,
@@ -15,6 +14,7 @@ import {
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { expect, test } from '../support/test.js';
 
 for (const [caseId, width] of [
   ['STY-06', 1440],

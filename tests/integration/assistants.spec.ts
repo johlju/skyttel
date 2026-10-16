@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { beginAssistant, callAssistant } from '../support/assistant.js';
 import {
@@ -13,6 +12,7 @@ import {
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('browser replacement and logout deny old cookies while an independently consented MCP connection remains valid', {
   tag: '@technical',
@@ -627,7 +627,7 @@ test('AI-05: eget utkast förblir privat och återkallad åtkomst stoppar klient
   page,
 }) => {
   const app = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(request, app.origin);
     const { household } = await (await createHousehold(request, app.origin)).json();

@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { MapState, SaveOperation, SaveReceipt } from '../../src/shared/map.js';
 import {
   createHousehold,
@@ -12,13 +11,14 @@ import {
 import { openSavedHistory } from '../support/conversation-page.js';
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('SPAR-01: find a committed save after losing its response and reopening on another client', async ({
   page,
   browser,
 }) => {
   const installation = await createInstallation();
-  const recovered = await browser.newContext();
+  const recovered = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -86,7 +86,7 @@ test('SPAR-02: automatically recover the same pending save on another client aft
   browser,
 }) => {
   const installation = await createInstallation();
-  const recovered = await browser.newContext();
+  const recovered = await createPreparedContext(browser);
   let releaseCheck = () => {};
   try {
     await signIn(page.request, installation.origin);
@@ -195,7 +195,7 @@ test('SPAR-03: a rejected stale save survives restart without consuming newer pr
   browser,
 }) => {
   const installation = await createInstallation();
-  const second = await browser.newContext();
+  const second = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -282,7 +282,7 @@ test('SPAR-04: private pending saves stay hidden from administrators and revoked
   browser,
 }) => {
   const installation = await createInstallation();
-  const member = await browser.newContext();
+  const member = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

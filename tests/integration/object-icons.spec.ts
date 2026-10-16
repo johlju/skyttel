@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import {
@@ -11,6 +10,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('IKON-01: icon choice survives type and image changes, save and restart before explicit reset', async ({
   page,

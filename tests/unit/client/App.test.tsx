@@ -18,6 +18,17 @@ type Reply = { data?: unknown; status?: number; error?: Error; response?: Promis
 const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
+  routes['/api/policy-contact'] ??= [{ data: { email: null } }];
+  routes['/api/browser-binding/preference'] ??= Array.from({ length: 8 }, () => ({
+    data: {
+      userId: 'alex',
+      sessionId: 'ordinary-login',
+      bindingId: 'ordinary-binding',
+      remembered: false,
+      expiresAt: Date.now() + 28_800_000,
+      inactiveAfterMs: 1_800_000,
+    },
+  }));
   routes['/api/browser-binding/candidate'] ??= Array.from({ length: 8 }, () => ({
     data: {
       candidate: 'a'.repeat(64),

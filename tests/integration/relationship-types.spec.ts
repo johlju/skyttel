@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import {
   closeSupportDialog,
   closeTextView,
@@ -17,6 +16,7 @@ import {
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('STY-01: native type and field forms share a durable directed relationship save', async ({
   page,
@@ -203,8 +203,8 @@ test('STY-03: members share editable prefills while private definitions and hous
   browser,
 }) => {
   const installation = await createInstallation();
-  const member = await browser.newContext();
-  const stranger = await browser.newContext();
+  const member = await createPreparedContext(browser);
+  const stranger = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -411,7 +411,7 @@ test('STY-04: stale definitions stop the whole save and explicit resolution pres
   browser,
 }) => {
   const installation = await createInstallation();
-  const member = await browser.newContext();
+  const member = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -684,7 +684,7 @@ test('STY-05: duplicate adds, edits and concurrent saves preserve identity and r
   browser,
 }) => {
   const installation = await createInstallation();
-  const member = await browser.newContext();
+  const member = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

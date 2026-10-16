@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import {
   expectRecoveryContent,
@@ -6,6 +5,7 @@ import {
   seedRecoveryContent,
 } from '../support/household-recovery-reading.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('IMPORT-08: an unavailable prepared archive allows fresh review after restart without changing content', async ({
   page,

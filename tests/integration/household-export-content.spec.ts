@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { unzipSync } from 'fflate';
 import sharp from 'sharp';
@@ -9,6 +8,7 @@ import type { ExportManifest } from '../../src/shared/household-export.js';
 import type { MapDraft, MapState, SaveReceipt } from '../../src/shared/map.js';
 import { createHousehold, signIn } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('technical: revocation or demotion interrupts an active download and removes its private copy', {
   tag: '@technical',

@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import { openDraftReview, openTable } from '../support/client.js';
 import { prepareHouseholdReading } from '../support/household-reading.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('LISTA-07: text object actions preserve cancellation and stage only the chosen removal without map graphics', async ({
   page,

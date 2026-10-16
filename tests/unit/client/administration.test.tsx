@@ -40,6 +40,16 @@ type Reply = { data?: unknown; status?: number; error?: Error; response?: Promis
 const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
+  routes['/api/browser-binding/preference'] ??= Array.from({ length: 8 }, () => ({
+    data: {
+      userId: 'alex',
+      sessionId: 'ordinary-login',
+      bindingId: 'ordinary-binding',
+      remembered: false,
+      expiresAt: Date.now() + 28_800_000,
+      inactiveAfterMs: 1_800_000,
+    },
+  }));
   routes['/api/households/linden/text-assistant'] ??= Array.from({ length: 8 }, () => ({
     data: { available: false },
   }));

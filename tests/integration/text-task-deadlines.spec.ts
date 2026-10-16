@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import { approvedForVisit } from '../support/conversation.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 import { modelTool, textModel } from '../support/text-model.js';
 
 test('an accepted text tool waiting at MCP cannot write at its original deadline', {

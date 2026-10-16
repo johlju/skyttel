@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import {
   closeSupportDialog,
@@ -14,6 +13,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { closeTableObject, editTableObject, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 for (const { width, height } of [
   { width: 1280, height: 900 },

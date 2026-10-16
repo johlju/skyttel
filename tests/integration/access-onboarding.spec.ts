@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { createHousehold, openNewObject, openProfile, signIn } from '../support/client.js';
 import {
@@ -11,6 +10,7 @@ import {
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 test('ACCESS-14: external sign-in explains the return and can be cancelled before leaving', async ({

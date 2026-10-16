@@ -29,6 +29,7 @@ import type { LiveModelProfile, LiveSidebandFactory, LiveUsage } from './live-pr
 import { createLoginMethods } from './login-methods.js';
 import { MapError } from './map.js';
 import { mapRoutes } from './map-routes.js';
+import { policyContactRoutes } from './policy-contact-routes.js';
 import { profileImageRoutes } from './profile-image-routes.js';
 import { imageUploadLimit } from './profile-images.js';
 import { textAssistantRoutes } from './text-assistant.js';
@@ -183,6 +184,7 @@ export function createApp({
     context.json({ ...identity, database: databaseReadiness() }),
   );
   if (bindings) app.route('/api/browser-binding', bindings.routes);
+  app.route('/api', policyContactRoutes(database, auth, config));
   const authRoutes = new Set([
     '/api/auth/sign-in/social',
     '/api/auth/callback/google',

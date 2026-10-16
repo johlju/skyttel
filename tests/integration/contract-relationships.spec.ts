@@ -1,7 +1,7 @@
 import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import Database from 'better-sqlite3';
 import type {
   Knowledge,
@@ -29,6 +29,7 @@ import {
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { expect, test } from '../support/test.js';
 
 async function addRelationship(
   page: Page,

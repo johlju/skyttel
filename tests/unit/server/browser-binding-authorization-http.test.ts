@@ -205,7 +205,8 @@ test.each([false, true])(
     });
     expect(started.status).toBe(200);
     const completed = await client.request((await started.json()).url);
-    const issued = completed.headers.getSetCookie();
+    const activation = rememberMe ? await client.activateRemembered() : completed;
+    const issued = activation.headers.getSetCookie();
     const session = issued.find((value) => value.startsWith('__Secure-better-auth.session_token='));
     expect(session).toContain('; Path=/; HttpOnly; SameSite=Lax; Secure');
     expect(session).not.toMatch(/Domain=|Max-Age=/i);

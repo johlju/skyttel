@@ -1,10 +1,11 @@
 import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, request, test } from '@playwright/test';
+import { request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { createHousehold, restartWithSession, signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('upgrading an existing household preserves its membership and enables invitations', {
   tag: '@technical',

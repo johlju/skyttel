@@ -54,30 +54,15 @@
   color: var(--access-muted);
 }
 
-.access-shell :is(button, input) {
+.access-shell :is(button, input):where(:not(.cookie-storage *)) {
   min-height: 44px;
   background: var(--access-surface);
   color: var(--access-text);
   border-color: var(--access-control);
 }
 
-.access-shell button:hover:enabled {
+.access-shell button:hover:enabled:where(:not(.cookie-storage *)) {
   background: color-mix(in srgb, var(--access-accent) 10%, var(--access-surface));
-}
-
-.remember-login {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  cursor: pointer;
-}
-
-.access-shell .remember-login input {
-  width: 24px;
-  min-height: 24px;
-  margin: 0;
-  accent-color: var(--access-accent);
 }
 
 .access-shell .primary {
@@ -90,7 +75,7 @@
   background: var(--access-accent);
 }
 
-.access-shell :focus-visible {
+.access-shell :focus-visible:where(:not(.cookie-storage *)) {
   outline: 3px solid var(--access-accent);
   outline-offset: 3px;
 }

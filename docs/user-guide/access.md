@@ -16,11 +16,16 @@ kvarstår; du behöver inte skapa ett nytt konto eller hushåll.
 
 ## Välj inloggningens längd
 
-När du väljer Google eller Microsoft kan du aktivt markera **Kom ihåg mig**
-innan du fortsätter. Valet börjar avmarkerat vid varje ny inloggning.
+Tillåt först **Preferenskakor** i kakinställningarna om du vill kunna
+bli ihågkommen. Efter lyckad Google- eller Microsoft-inloggning väljer
+du **Kom ihåg mig i Skyttel** separat. **Inte nu** avstår för den här
+inloggningen och **Fråga inte igen** stänger av framtida förslag för dig
+i webbläsaren. Manuell aktivering och möjlighet att slå på frågan igen
+finns under [Kakor och lagring](cookies.md).
 Vanlig inloggning använder sessionskakor och gäller högst åtta timmar från
 inloggningen och avslutas efter 30 minuters inaktivitet. Ihågkommen
 inloggning har ingen separat inaktivitetsgräns och gäller högst sju dygn
+från den ursprungliga inloggningen, även när funktionen aktiveras senare,
 i just den här webbläsaren. Läsning och återbesök förlänger inte tiden.
 
 Att skriva, tala, navigera, söka, redigera eller spara i Skyttel räknas som

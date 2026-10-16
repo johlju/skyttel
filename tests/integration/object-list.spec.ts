@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import {
   closeSupportDialog,
@@ -12,6 +12,7 @@ import {
 import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { closeTableObject, editTableObject, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function arrangeNeighbors(page: Page, origin: string) {
   await signIn(page.request, origin);

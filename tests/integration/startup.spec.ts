@@ -4,8 +4,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { expect, test } from '@playwright/test';
 import { openDatabase } from '../../src/server/database.js';
+import { expect, test } from '../support/test.js';
 
 const entryPoint = resolve('dist/server/index.js');
 

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { bounds, contrast } from '../support/accessibility.js';
 import { createHousehold, signIn, utilityButton } from '../support/client.js';
 import {
@@ -12,6 +12,7 @@ import {
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 async function toolbarLayout(page: Page) {
