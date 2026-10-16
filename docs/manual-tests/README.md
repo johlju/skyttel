@@ -521,7 +521,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   tangentbord, avbryta extern inloggning, återhämta utgångna försök, börja
   med kartans verktyg utan startdialoger, hantera förlorad tillgång och länka
   inloggningssätt. Inloggningsstartens nätverksavbrott och leverantörsfel
-  har separata fall. Nekat Google- och Microsoft-samtycke provas var för sig.
+  har separata fall. Startfel förklarar möjligt underhåll eller uppgradering,
+  hänvisar till administratören och behåller fungerande återförsök.
+  Nekat Google- och Microsoft-samtycke provas var för sig.
   Länkningens två steg visar aktuell verifiering, båda tjänsternas status
   och övergången till respektive tjänst. Microsoft-inloggning efter
   omstart behåller profil och hushåll; requestdrivet identitetsbevis redovisas

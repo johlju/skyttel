@@ -7,6 +7,13 @@ Microsoft-konto. En administratör bestämmer vilka Skyttel-användare som
 får tillgång till hushållet. Ett namn eller en e-postadress ger ingen
 tillgång i sig. Se [Kom igång](getting-started.md) för första inloggningen.
 
+## När Skyttel inte kan öppnas
+
+Om **Skyttel kunde inte öppnas** visas kan tjänsten vara tillfälligt
+otillgänglig på grund av anslutningsfel, underhåll eller uppgradering.
+Välj **Försök igen** efter en stund. Kontakta administratören om problemet
+kvarstår; du behöver inte skapa ett nytt konto eller hushåll.
+
 ## Välj inloggningens längd
 
 När du väljer Google eller Microsoft kan du aktivt markera **Kom ihåg mig**

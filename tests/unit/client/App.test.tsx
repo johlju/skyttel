@@ -141,6 +141,11 @@ describe('Skyttel application interface', () => {
     async (failure) => {
       serve({ '/api/bootstrap': [failure, { data: anonymous }] });
       mount();
+      expect(
+        await screen.findByText(
+          'Det kan bero på ett anslutningsfel eller på att Skyttel behöver underhåll eller en uppgradering. Försök igen om en stund. Kontakta administratören om problemet kvarstår.',
+        ),
+      ).toBeDefined();
       await userEvent.click(await screen.findByRole('button', { name: 'Försök igen' }));
       expect(await screen.findByRole('heading', { name: 'Välkommen till Skyttel' })).toBeDefined();
     },

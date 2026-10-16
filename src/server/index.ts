@@ -50,7 +50,14 @@ main().catch((error: unknown) => {
       : error instanceof DatabaseInitializationError
         ? { event: 'database_initialization_failed', reason: error.reason }
         : error instanceof InstallationAuthorityError
-          ? { event: 'installation_authority_failed', reason: error.reason }
+          ? {
+              event: 'installation_authority_failed',
+              reason: error.reason,
+              action:
+                error.reason === 'authority_initialization_required'
+                  ? 'An administrator must stop the application and complete the one-time login upgrade. See docs/operations/login-upgrade.md.'
+                  : 'Keep the installation closed and complete the controlled restore procedure. See docs/operations/database-restore.md.',
+            }
           : { event: 'startup_failed' };
   console.error(JSON.stringify(status));
   process.exitCode = 1;

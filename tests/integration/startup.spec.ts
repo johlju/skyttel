@@ -5,6 +5,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { openDatabase } from '../../src/server/database.js';
 
 const entryPoint = resolve('dist/server/index.js');
 
@@ -81,6 +82,32 @@ test('invalid configuration exits with only a redacted diagnostic', {
   }
 });
 
+test('an existing legacy database reports the required administrator upgrade before readiness', {
+  tag: '@technical',
+}, async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'skyttel-startup-upgrade-'));
+  const databasePath = join(directory, 'skyttel.sqlite');
+  const database = openDatabase(databasePath);
+  database
+    .prepare('INSERT INTO household (id, name, createdAt) VALUES (?, ?, ?)')
+    .run('synthetic-household', 'Synthetic private household', new Date().toISOString());
+  database.close();
+  const server = start(databasePath, 3000);
+  try {
+    expect(await server.closed).toEqual([1, null]);
+    expect(JSON.parse(server.output().trim())).toEqual({
+      event: 'installation_authority_failed',
+      reason: 'authority_initialization_required',
+      action:
+        'An administrator must stop the application and complete the one-time login upgrade. See docs/operations/login-upgrade.md.',
+    });
+    expect(server.output()).not.toContain('server_ready');
+  } finally {
+    await server.dispose();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('an occupied listener exits without readiness or private diagnostics', {
   tag: '@technical',
 }, async () => {
@@ -93,6 +120,32 @@ test('an occupied listener exits without readiness or private diagnostics', {
   } finally {
     await server.dispose();
     await reservation.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('a mismatched installation generation directs the administrator to controlled restore', {
+  tag: '@technical',
+}, async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'skyttel-startup-restore-'));
+  const databasePath = join(directory, 'skyttel.sqlite');
+  const database = openDatabase(databasePath);
+  database
+    .prepare('INSERT INTO installation_authority (id, generation) VALUES (1, ?)')
+    .run('22222222-2222-4222-8222-222222222222');
+  database.close();
+  const server = start(databasePath, 3000);
+  try {
+    expect(await server.closed).toEqual([1, null]);
+    expect(JSON.parse(server.output().trim())).toEqual({
+      event: 'installation_authority_failed',
+      reason: 'restore_declaration_required',
+      action:
+        'Keep the installation closed and complete the controlled restore procedure. See docs/operations/database-restore.md.',
+    });
+    expect(server.output()).not.toContain('server_ready');
+  } finally {
+    await server.dispose();
     await rm(directory, { recursive: true, force: true });
   }
 });

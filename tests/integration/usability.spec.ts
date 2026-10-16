@@ -40,6 +40,9 @@ test('ACCESS-05: failed startup read offers a working retry', async ({ page }) =
     await page.route('**/api/bootstrap', (route) => route.abort());
     await page.goto(installation.origin);
     await expect(page.getByRole('heading', { name: 'Skyttel kunde inte öppnas' })).toBeVisible();
+    await expect(
+      page.getByText('Kontakta administratören om problemet kvarstår.', { exact: false }),
+    ).toBeVisible();
     await page.unroute('**/api/bootstrap');
     await page.getByRole('button', { name: 'Försök igen' }).click();
     await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();

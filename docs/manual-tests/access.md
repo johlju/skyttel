@@ -723,6 +723,7 @@ testfallet “ACCESS-05: failed startup read offers a working retry”.
   },
   "reference": "Blockerad bootstrap; fungerande återförsök efter återställd anslutning",
   "outcomes": [
+    "Startfelet förklarar att tjänsten kan behöva underhåll eller uppgradering och hänvisar till administratören",
     "Anslutningsfelet visar fungerande Försök igen utan omladdning"
   ]
 }
@@ -739,6 +740,9 @@ testfallet “ACCESS-05: failed startup read offers a working retry”.
 **Förväntat resultat:**
 
 - **Skyttel kunde inte öppnas** visas vid anslutningsfelet.
+- Sidan förklarar att anslutningsfel, underhåll eller uppgradering kan vara
+  orsaken och hänvisar till administratören om problemet kvarstår. Den
+  påstår inte att ett faktiskt uppgraderingsbehov är bekräftat.
 - Försöket öppnar **Välkommen till Skyttel** utan att sidan behöver laddas om.
 
 ### ACCESS-06: En inloggad person utan tillgång får en förklaring

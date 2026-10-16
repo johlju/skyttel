@@ -161,9 +161,12 @@ function Loading() {
 function Failure({ onRetry }: { onRetry: () => void }) {
   return (
     <section className="panel">
-      <p className="eyebrow">Anslutningen avbröts</p>
+      <p className="eyebrow">Tjänsten är inte tillgänglig</p>
       <Heading>Skyttel kunde inte öppnas</Heading>
-      <p>Kontrollera din internetanslutning och försök igen.</p>
+      <p>
+        Det kan bero på ett anslutningsfel eller på att Skyttel behöver underhåll eller en
+        uppgradering. Försök igen om en stund. Kontakta administratören om problemet kvarstår.
+      </p>
       <button type="button" className="primary" onClick={onRetry}>
         Försök igen
       </button>
