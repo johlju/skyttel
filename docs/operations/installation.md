@@ -69,6 +69,11 @@ installation's unique generation stable across ordinary restarts.
 Both providers must be configured. Invalid or incomplete configuration stops
 startup before the application accepts traffic.
 
+An existing installation with legacy logins needs the
+[one-time login upgrade](login-upgrade.md). For the running Render service,
+follow the [Render appendix](render.md#appendix-one-time-login-upgrade-on-render)
+before allowing the first deployment with the new login model.
+
 For whole database or disk recovery, follow the
 [controlled restore procedure](database-restore.md). Its independent restore
 declaration and trusted permanent-erasure review are required before

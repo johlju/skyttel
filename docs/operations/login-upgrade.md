@@ -31,6 +31,11 @@ receipts remain. Unsaved conversation work does not resume.
 
 ## Stop, adopt and start one instance
 
+For the existing Render service, use the
+[step-by-step Render appendix](render.md#appendix-one-time-login-upgrade-on-render).
+It covers the public maintenance gate, a temporary maintenance process on
+the attached disk, and restoration of the normal deployment settings.
+
 Close public ingress, disable automatic deployments and stop every old
 application process. Verify at the host that no old process can access the
 disk or provider connections. Stopping the process ends active text work,
