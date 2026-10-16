@@ -20,8 +20,11 @@ Object.defineProperty(window, 'isSecureContext', { configurable: true, value: tr
 Object.defineProperty(navigator, 'locks', {
   configurable: true,
   value: {
-    request: async (_name: string, _options: unknown, operation: () => Promise<unknown>) =>
-      operation(),
+    request: async (
+      _name: string,
+      optionsOrOperation: unknown,
+      operation?: () => Promise<unknown>,
+    ) => (operation ?? (optionsOrOperation as () => Promise<unknown>))(),
   },
 });
 
