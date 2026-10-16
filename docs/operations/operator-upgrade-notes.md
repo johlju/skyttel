@@ -6,6 +6,15 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Development configuration examples
+
+The environment examples include a shared development installation
+generation. Before using an example for QA, staging, production or another
+non-development installation, replace it with a unique privately managed
+generation. Operators must enforce this restriction; the service does not
+reject the development value. Preserve an existing installation's generation
+across ordinary restarts.
+
 ### Controlled login transition and roll forward
 
 Stop every old application process and close public access before the

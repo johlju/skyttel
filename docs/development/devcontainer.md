@@ -23,9 +23,15 @@ openssl rand -base64 48
 ```
 
 Save the generated value in `BETTER_AUTH_SECRET` in `.devcontainer/.env`.
-Generate a UUID with `node -p 'crypto.randomUUID()'` and save it in
-`SKYTTEL_AUTHORITY_GENERATION` in the same private file. Keep it stable
-across ordinary restarts and keep the file outside the database volume.
+The examples supply the shared development authority generation
+`00000000-0000-4000-8000-000000000000` for `SKYTTEL_AUTHORITY_GENERATION`.
+Use it for both `dev:all` and `dev:prodlike`; the latter is still development
+even though it uses production runtime mode. Add this setting to an older
+development env file if it is missing. Preserve an already configured
+generation across ordinary restarts and keep the file outside the database
+volume. Operators must use a unique private UUID in QA, staging, production
+and other non-development installations. This restriction is operational;
+the application does not enforce it.
 Keep an existing secret when rebuilding. The file is ignored by Git;
 keep its credentials and personal identity values private.
 

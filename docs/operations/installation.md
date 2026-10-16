@@ -27,7 +27,7 @@ controls. The [authentication guide](authentication.md) explains where each
 identity setting comes from. It uses production sign-in and the production
 database to identify the first administrator.
 
-For a local container installation, copy the blank example and edit only
+For a local container installation, copy the example and edit only
 the local file. Keep an existing `.env.local` if one is already present:
 
 ```sh
@@ -41,6 +41,14 @@ restarts. Use a different value for every installation. The example contains
 no usable secret or personal identity. Do not commit the local file or put
 secrets, provider identifiers, household information, or tokens in issues or
 technical logs.
+
+The examples include a shared development authority generation. It is only
+for development, including the compiled development mode. Before using an
+env file in QA, staging, production or any other non-development
+installation, replace that generation with a unique UUID from
+`node -p 'crypto.randomUUID()'`. Operators are responsible for this step;
+the application does not reject the shared development value. Keep the
+installation's unique generation stable across ordinary restarts.
 
 <!-- markdownlint-disable MD013 -->
 | Variable | Required value |
