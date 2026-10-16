@@ -44,6 +44,7 @@ export function useStoragePreference(userId?: string) {
   const [requiresLogin, setRequiresLogin] = useState(false);
   const [resultChecked, setResultChecked] = useState(false);
   const [recoveryMessage, setRecoveryMessage] = useState('');
+  const [attemptId, setAttemptId] = useState<string>();
   const savedReference = useRef(saved);
   savedReference.current = saved;
   const passiveReadBlocked = useRef(false);
@@ -63,6 +64,7 @@ export function useStoragePreference(userId?: string) {
     setRequiresLogin(false);
     setResultChecked(false);
     setRecoveryMessage('');
+    setAttemptId(undefined);
     return () => {
       generation.current++;
     };
@@ -207,6 +209,7 @@ export function useStoragePreference(userId?: string) {
       ...(resetConsentAt !== undefined ? { resetConsentAt } : {}),
       ...(saved.generation ? { generation: saved.generation } : {}),
     };
+    setAttemptId(selected.id);
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(selected));
       if (sessionStorage.getItem(storageKey) !== JSON.stringify(selected))
@@ -376,6 +379,7 @@ export function useStoragePreference(userId?: string) {
     requiresLogin,
     resultChecked,
     recoveryMessage,
+    attemptId,
     change,
     checkAgain,
   };

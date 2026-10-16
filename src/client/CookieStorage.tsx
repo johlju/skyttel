@@ -200,14 +200,17 @@ function CookieStorageContents({ userId }: { userId?: string }) {
     'preference',
   );
   const resetUser = useRef(userId);
-  const { saved, requested, state } = manager.preference;
+  const { saved, requested, state, attemptId } = manager.preference;
   const blocked = manager.blocked;
+  const previousAttempt = useRef(attemptId);
   useLayoutEffect(() => {
-    if (feedbackSource === 'consent' && ['saving', 'checking', 'unknown'].includes(state)) {
+    if (previousAttempt.current === attemptId) return;
+    previousAttempt.current = attemptId;
+    if (feedbackSource === 'consent') {
       setResultPlace('remembered');
       setFeedbackSource('preference');
     }
-  }, [feedbackSource, state]);
+  }, [feedbackSource, attemptId]);
   const actionOrigin = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     if (blocked) return;
