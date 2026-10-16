@@ -819,6 +819,8 @@ kontrollerade svar för kontots temaval och samtalstext för 390 px mörkt
 systemtema respektive 1280 px ljust systemtema.
 TEXTBRICKA-04/08 behåller hela serverflödet vid 390 px ljust respektive
 1280 px mörkt; medgivande och HTTP-flöde körs inte separat i de andra två
-kombinationerna.
+kombinationerna. TEXTBRICKA-01/04/08 kontrollerar också att hela svaret har
+eget utrymme ovanför kartan, med fasta knappmått och oförändrad inbördes
+verktygsplacering inom den återstående arbetsytan.
 HJALP-11/12, TEXTBRICKA-09/10 och YTA-14/15 beskriver faktiskt hjälpmedel,
 fysisk inmatning eller zoom; syntetisk Chromium etablerar dem inte.

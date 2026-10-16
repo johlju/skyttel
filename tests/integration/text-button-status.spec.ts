@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { bounds, contrast } from '../support/accessibility.js';
 import { createHousehold, signIn, utilityButton } from '../support/client.js';
 import {
@@ -14,7 +14,60 @@ import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
-test('TEXTBRICKA-01: stängd textvy visar arbete och ett oläst svar utan att flytta verktygen', async ({
+async function toolbarLayout(page: Page) {
+  const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
+  return {
+    tools: await bounds(tools),
+    workspace: await bounds(page.getByRole('region', { name: 'Rymdkarta', exact: true })),
+    controls: await tools.evaluate((element) => {
+      const toolbar = element.getBoundingClientRect();
+      return [...element.querySelectorAll('button')]
+        .filter((button) => button.getClientRects().length)
+        .map((button) => {
+          const box = button.getBoundingClientRect();
+          return {
+            // Scrolling exposes controls without changing their arrangement.
+            x: box.x - toolbar.x + element.scrollLeft,
+            y: box.y - toolbar.y + element.scrollTop,
+            width: box.width,
+            height: box.height,
+          };
+        });
+    }),
+  };
+}
+
+async function expectReservedReplySpace(
+  page: Page,
+  reply: string,
+  before: Awaited<ReturnType<typeof toolbarLayout>>,
+) {
+  const panel = page.getByRole('region', { name: 'Hela svaret som text', exact: true });
+  await expect(panel).toBeVisible();
+  await expect(panel).toBeInViewport({ ratio: 1 });
+  await expect(panel).toContainText(reply);
+  const delivered = await bounds(panel);
+  expect(delivered.height).toBeGreaterThan(0);
+  const workspace = page.getByRole('region', { name: 'Rymdkarta', exact: true });
+  await expect.poll(async () => (await bounds(workspace)).y).toBeCloseTo(delivered.bottom, 3);
+  const after = await toolbarLayout(page);
+  expect(after.workspace.x).toBe(before.workspace.x);
+  expect(after.workspace.width).toBe(before.workspace.width);
+  expect(after.workspace.bottom).toBe(before.workspace.bottom);
+  expect(after.workspace.y - before.workspace.y).toBeCloseTo(delivered.height, 3);
+  const inset = before.tools.y - before.workspace.y;
+  expect(after.tools.y - after.workspace.y).toBeCloseTo(inset, 3);
+  expect(after.tools.x).toBe(before.tools.x);
+  expect(after.tools.width).toBe(before.tools.width);
+  expect(after.tools.height).toBeCloseTo(
+    Math.min(before.tools.height, after.workspace.height - 2 * inset),
+    3,
+  );
+  expect(after.tools.bottom).toBeLessThanOrEqual(after.workspace.bottom - inset);
+  expect(after.controls).toEqual(before.controls);
+}
+
+test('TEXTBRICKA-01: stängd textvy visar arbete och ett oläst svar med fasta verktygsmått', async ({
   page,
 }) => {
   let release!: () => void;
@@ -36,8 +89,7 @@ test('TEXTBRICKA-01: stängd textvy visar arbete och ett oläst svar utan att fl
     await expect.poll(() => typeof release).toBe('function');
     await closeConversationText(page);
     const button = await utilityButton(page, 'Skriv till Skyttel');
-    const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
-    const before = await bounds(tools);
+    const before = await toolbarLayout(page);
     await expect(button).toHaveAccessibleName('Skriv till Skyttel. Skyttel arbetar.');
     await expect(button.locator('.text-button-marker')).toHaveAttribute('data-status', 'working');
     const dot = await bounds(button.locator('.text-button-marker'));
@@ -54,7 +106,7 @@ test('TEXTBRICKA-01: stängd textvy visar arbete och ett oläst svar utan att fl
     await expect(button.locator('.text-button-marker')).toHaveCSS('font-size', '12px');
     await expect(page.locator('.text-button-announcement')).toHaveText('Skyttel har svarat');
     await expect(page.locator('.text-button-announcement')).toHaveAttribute('aria-live', 'polite');
-    expect(await bounds(tools)).toEqual(before);
+    await expectReservedReplySpace(page, reply, before);
     await expect(button).toBeFocused();
     await (await utilityButton(page, 'Din profil')).click();
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
@@ -245,7 +297,7 @@ for (const { caseId, width, theme } of [
       const button = await utilityButton(page, 'Skriv till Skyttel');
       await expect(button.locator('span').first()).toHaveText('Skriv till Skyttel');
       await expect(button.locator('span').first()).toBeVisible();
-      const before = await bounds(tools);
+      const before = await toolbarLayout(page);
       const target = await bounds(button);
       expect(target.width).toBeGreaterThanOrEqual(44);
       expect(target.height).toBeGreaterThanOrEqual(44);
@@ -263,11 +315,13 @@ for (const { caseId, width, theme } of [
       const badge = button.locator('.text-button-marker');
       await expect(badge).toHaveText('•••');
       expect(await contrast(badge)).toBeGreaterThanOrEqual(4.5);
+      await expectReservedReplySpace(page, 'Ett nytt svar.', before);
+      const currentTarget = await bounds(button);
       const overlay = await bounds(badge);
-      expect(overlay.right).toBeGreaterThan(target.right - 3);
-      expect(overlay.y).toBeLessThan(target.y + 3);
-      expect(await bounds(button)).toEqual(target);
-      expect(await bounds(tools)).toEqual(before);
+      expect(overlay.right).toBeGreaterThan(currentTarget.right - 3);
+      expect(overlay.y).toBeLessThan(currentTarget.y + 3);
+      expect(currentTarget.width).toBe(target.width);
+      expect(currentTarget.height).toBe(target.height);
     } finally {
       release?.();
       await app.close();

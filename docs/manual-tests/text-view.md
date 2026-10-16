@@ -1541,7 +1541,8 @@ mediespåren bevisar ingen uppläsning.
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller statusförekomst bedöms separat.",
   "outcomes": [
-    "Följa ett skrivet uppdrag utan att öppna textvyn."
+    "Följa ett skrivet uppdrag utan att öppna textvyn.",
+    "Hela svaret visas ovanför kartan med eget utrymme; knappmått och verktygens inbördes placering består."
   ]
 }
 ```
@@ -1558,8 +1559,9 @@ resurser separat. Utför arbetsflödet en gång.
 1. Skicka **Beskriv mitt utkast.** och stäng textvyn. Läs arbetsmarkeringen och
    knappens namn.
 2. När det förberedda svaret **Det privata utkastet är fortfarande osparat.**
-   kommer, läs tre punkter och knappens nya namn. Granska separat DOM-status
-   enligt förberedelsen.
+   kommer, läs tre punkter och knappens nya namn. Läs också svaret i
+   **Hela svaret som text** ovanför kartan. Granska separat DOM-status enligt
+   förberedelsen.
 3. Öppna **Din profil** och välj **Tillbaka till arbetet**. Kontrollera fokus
    på samma textknapp.
 4. Öppna textvyn, läs hela svaret och stäng den. Knappens vanliga namn
@@ -1567,7 +1569,9 @@ resurser separat. Utför arbetsflödet en gång.
 
 **Förväntat resultat:**
 
-- Verktygsraden och knappens mått flyttas inte. Fokus stannar på knappen.
+- Hela svaret har eget utrymme ovanför kartan. Verktygsraden följer kartans
+  övre kant och kan bli kortare; dess innehåll går att rulla fram.
+- Knappmått och verktygens inbördes placering består. Fokus stannar på knappen.
 - Markeringen finns bara med stängd textvy. Ett redan läst svar ger ingen ny
   bricka när textvyn stängs igen.
 
@@ -1693,7 +1697,8 @@ resurser separat. Utför arbetsflödet en gång.
   },
   "reference": "Chromium 390 × 844, ljust tema; emulerad minskad rörelse och återställd normal rörelse.",
   "outcomes": [
-    "Kunna urskilja markeringarna utan färg eller rörelse."
+    "Kunna urskilja markeringarna utan färg eller rörelse.",
+    "Hela svaret har eget utrymme ovanför kartan utan att ändra knappmått eller verktygens inbördes placering."
   ]
 }
 ```
@@ -1713,8 +1718,9 @@ resurser separat. Utför arbetsflödet en gång.
    **Visa verktygens namn**. Läs namnet och den stilla arbetsmarkeringen.
 3. Avaktivera minskad rörelse: arbetsmarkeringen roterar. Aktivera igen: den
    står stilla utan övergång.
-4. Låt **Ett nytt svar.** komma. Tre punkter ersätter arbetsformen utan att
-   flytta verktygen.
+4. Låt **Ett nytt svar.** komma. Tre punkter ersätter arbetsformen och sitter
+   uppe till höger på knappen. I TEXTBRICKA-04/08 visas också
+   **Hela svaret som text** med eget utrymme ovanför kartan.
 5. Granska kontrast och synlig fokusram. Fysisk zoom, rörelsebedömning och
    formigenkänning hör till TEXTBRICKA-10.
 
@@ -1722,7 +1728,9 @@ resurser separat. Utför arbetsflödet en gång.
 
 - Former och namn skiljer tillstånden åt utan färg. Minskad rörelse följer
   operativsystemet; ingen särskild inställning i Skyttel behövs.
-- Markeringarna ändrar inte knappens tryckyta eller verktygsradens geometri.
+- Markeringarna ändrar inte knappens tryckyta eller verktygens inbördes
+  placering. När hela svaret visas följer verktygsraden kartans nya övre kant;
+  den kan bli kortare och innehållet går att rulla fram.
 
 ### TEXTBRICKA-05: köat arbete och avbrott
 
@@ -1964,7 +1972,8 @@ första UI-handlingen.
   },
   "reference": "Chromium 1280 × 844, mörkt tema; emulerad minskad rörelse och normal rörelse.",
   "outcomes": [
-    "Arbets- och svarsformer ändrar varken knappmått eller verktygsplacering.",
+    "Arbets- och svarsformer ändrar varken knappmått eller verktygens inbördes placering.",
+    "Hela svaret har eget utrymme ovanför kartan och verktygsraden följer kartans nya övre kant.",
     "Markeringen är läsbar och respekterar den emulerade rörelseinställningen."
   ]
 }
@@ -1982,7 +1991,10 @@ första UI-handlingen.
 
 **Förväntat resultat:**
 
-- Arbets- och svarsformer ändrar varken knappmått eller verktygsplacering.
+- Arbets- och svarsformer ändrar varken knappmått eller verktygens inbördes
+  placering.
+- Hela svaret har eget utrymme ovanför kartan. Verktygsraden följer kartans
+  nya övre kant och kan bli kortare; innehållet går att rulla fram.
 - Markeringen är läsbar och respekterar den emulerade rörelseinställningen.
 
 ### TEXTBRICKA-09: faktiskt hörda olästa svar och frågor

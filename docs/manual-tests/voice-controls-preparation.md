@@ -893,7 +893,9 @@ efter fallet och avsluta med `quit`.
    Kontrollera att markeringen inte får en egen skärmläsaruppläsning.
 3. Släpp svaret med `reply REQUEST Det privata utkastet är fortfarande osparat.`
    . Kräv tre punkter uppe till höger och namnet
-   **Skriv till Skyttel. Skyttel har svarat.**.
+   **Skriv till Skyttel. Skyttel har svarat.**. Hela svaret ska synas ovanför
+   kartan med eget utrymme. Kontrollera att knappmått och verktygens inbördes
+   placering består när kartans övre kant flyttas ned.
 4. Lyssna efter en enda uppläsning **Skyttel har svarat**, som väntar på sin
    tur. Själva svaret ska inte läsas upp medan textvyn är stängd.
 5. Öppna **Din profil** och välj **Tillbaka till arbetet**. Fokus ska gå
@@ -939,7 +941,9 @@ efter fallet och avsluta med `quit`.
 3. Avaktivera minskad rörelse. Arbetsmarkeringen roterar. Aktivera igen; den
    står stilla utan övergång.
 4. Släpp `reply REQUEST Ett nytt svar.`. Tre punkter ersätter arbetsformen.
-   Verktygens placering, bredd och höjd förblir desamma.
+   Knappmått och verktygens inbördes placering består. I TEXTBRICKA-04/08
+   visas också hela svaret med eget utrymme ovanför kartan. Verktygsraden
+   följer kartans nya övre kant och kan bli kortare; rulla fram innehållet.
 5. Kontrollera synlig kontrast och fokus i den valda konfigurationen. Avsluta
    detta fall; frågeflödet har sin egen identitet TEXTBRICKA-02. Faktisk zoom
    och symboligenkänning bedöms i TEXTBRICKA-09/10.
