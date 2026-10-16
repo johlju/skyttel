@@ -28,14 +28,19 @@ export async function applicationFixture({
   identity,
   databaseSnapshot,
   now,
+  origin,
 }: {
   migrationsDirectory?: string;
   identity?: { version: string; commit: string };
   databaseSnapshot?: string;
   now?: () => number;
+  origin?: string;
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-unit-'));
-  const config = readConfig(configurationEnvironment(join(directory, 'skyttel.sqlite')));
+  const config = readConfig({
+    ...configurationEnvironment(join(directory, 'skyttel.sqlite')),
+    ...(origin ? { SKYTTEL_ORIGIN: origin } : {}),
+  });
   if (databaseSnapshot) copyFileSync(databaseSnapshot, config.databasePath);
   const database = openDatabase(config.databasePath, { migrationsDirectory });
   const hasAuthority = database

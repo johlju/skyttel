@@ -58,6 +58,9 @@ async function rejectedConnection(path: string, cookies?: string, origin = app.o
   socket.on('error', () => {
     rejected = true;
   });
+  socket.on('close', () => {
+    rejected = true;
+  });
   socket.on('message', () => {
     connected = true;
   });
@@ -264,6 +267,126 @@ test('partial text cannot acknowledge a full frozen answer and disconnect ends d
     .poll(async () => (await (await browser.get(fixture.endpoint)).json()).tasks[0].delivery.state)
     .toBe('failed');
   expect(fixture.channel.messages.some((item) => item.state === 'received')).toBe(false);
+});
+
+test.each(['malformed JSON', 'oversized frame', 'missing task', 'wrong frame type'] as const)(
+  'an invalid receipt (%s) retires its actual channel without accepting known answer text',
+  async (receipt) => {
+    const fixture = await arrange(textModel(() => [modelMessage('Hela svaret.')]));
+    expect((await fixture.post()).status()).toBe(202);
+    await expect
+      .poll(() => fixture.channel.messages.find((item) => item.state === 'awaiting-receipt'))
+      .toBeTruthy();
+    const whole = fixture.channel.messages.find((item) => item.state === 'awaiting-receipt');
+    let closed = false;
+    fixture.channel.socket.on('close', () => {
+      closed = true;
+    });
+    fixture.channel.socket.send(
+      receipt === 'malformed JSON'
+        ? '{'
+        : receipt === 'oversized frame'
+          ? 'x'.repeat(1_048_577)
+          : JSON.stringify({
+              type: receipt === 'wrong frame type' ? 'read' : 'received',
+              taskId: receipt === 'missing task' ? undefined : whole?.taskId,
+              text: whole?.text,
+            }),
+    );
+    await expect.poll(() => closed).toBe(true);
+    const current = await (await browser.get(fixture.endpoint)).json();
+    expect(current.tasks).toMatchObject([{ status: 'completed', delivery: { state: 'failed' } }]);
+    expect(fixture.channel.messages.some((item) => item.state === 'received')).toBe(false);
+    const rejected = await fixture.post('another', { revision: current.revision });
+    expect(rejected.status()).toBe(409);
+    expect(await rejected.json()).toEqual({ error: 'assistant_delivery_unavailable' });
+  },
+);
+
+test('an exact whole receipt at the five-second delivery boundary fails before any later HTTP observation', async () => {
+  const fixture = await arrange(textModel(() => [modelMessage('Hela svaret.')]));
+  expect((await fixture.post()).status()).toBe(202);
+  await expect
+    .poll(() => fixture.channel.messages.find((item) => item.state === 'awaiting-receipt'))
+    .toBeTruthy();
+  const whole = fixture.channel.messages.find((item) => item.state === 'awaiting-receipt');
+  fixture.advance(5000);
+  fixture.channel.socket.send(
+    JSON.stringify({ type: 'received', taskId: whole?.taskId, text: whole?.text }),
+  );
+  await expect
+    .poll(() => fixture.channel.messages.some((item) => item.state === 'failed'))
+    .toBe(true);
+  expect(fixture.channel.messages.some((item) => item.state === 'received')).toBe(false);
+});
+
+test('an answer exceeding the bounded whole-text transport fails without publishing a truncated prefix', async () => {
+  const fixture = await arrange(textModel(() => [modelMessage('Hela svaret. '.repeat(90_000))]));
+  expect((await fixture.post()).status()).toBe(202);
+  await expect
+    .poll(() => fixture.channel.messages.some((item) => item.state === 'failed'))
+    .toBe(true);
+  expect(
+    fixture.channel.messages.some(
+      (item) => item.state === 'awaiting-receipt' || item.state === 'received',
+    ),
+  ).toBe(false);
+  const current = await (await browser.get(fixture.endpoint)).json();
+  expect(current.tasks).toMatchObject([{ status: 'completed', delivery: { state: 'failed' } }]);
+  expect(current.tasks[0].delivery.text).toBeUndefined();
+});
+
+test('delivery channel capacity is bounded and explicit conversation reset retires every existing channel', async () => {
+  const fixture = await arrange(textModel(() => [modelMessage('Hela svaret.')]));
+  const channels = [fixture.channel];
+  for (let index = 1; index < 8; index++)
+    channels.push(await connect(`${fixture.endpoint}/delivery`));
+  await rejectedConnection(`${fixture.endpoint}/delivery`);
+  expect((await fixture.post()).status()).toBe(202);
+  await expect
+    .poll(() => fixture.channel.messages.find((item) => item.state === 'awaiting-receipt'))
+    .toBeTruthy();
+  const reset = await browser.post(`${fixture.endpoint}/new`, {
+    headers: { origin: app.origin },
+    data: { discard: false },
+  });
+  expect(reset.status()).toBe(200);
+  const current = await reset.json();
+  for (const channel of channels)
+    await expect.poll(() => channel.messages.some((item) => item.type === 'retired')).toBe(true);
+  const rejected = await fixture.post('after-reset', { revision: current.revision });
+  expect(rejected.status()).toBe(409);
+  expect(await rejected.json()).toEqual({ error: 'assistant_delivery_unavailable' });
+  expect((await connect(`${fixture.endpoint}/delivery`)).id).not.toBe(fixture.channel.id);
+});
+
+test('the original task timer ends accepted work without a model reply or browser traffic and late model output cannot revive it', async () => {
+  let release: (output: unknown[]) => void = () => {};
+  const model = textModel(
+    () =>
+      new Promise<unknown[]>((resolve) => {
+        release = resolve;
+      }),
+  );
+  const fixture = await arrange(model);
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  expect((await fixture.post()).status()).toBe(202);
+  await vi.waitFor(() => expect(model.requests).toHaveLength(1));
+  fixture.advance(30 * 60_000);
+  await vi.advanceTimersByTimeAsync(30 * 60_000);
+  await vi.waitFor(() =>
+    expect(fixture.channel.messages.some((item) => item.state === 'failed')).toBe(true),
+  );
+  vi.useRealTimers();
+  await signIn(browser, app.origin);
+  release([modelMessage('Ett svar efter uppgiftens slut.')]);
+  expect((await browser.get(fixture.endpoint)).status()).toBe(404);
+  expect(model.requests).toHaveLength(1);
+  expect(
+    fixture.channel.messages.some(
+      (item) => item.state === 'awaiting-receipt' || item.state === 'received',
+    ),
+  ).toBe(false);
 });
 
 test('explicit cancellation ends an already completed task’s outstanding delivery', async () => {
