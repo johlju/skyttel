@@ -172,11 +172,12 @@ authentication values and personal data out of shared records. Snapshot
 listings or disappearance alone do not establish physical deletion.
 Automated DOM checks do not establish screen-reader or audio behavior.
 
-Keep the affected delivery tickets open and treat release acceptance as
-blocked while mandatory evidence is missing. Continue to distinguish
-completed code and synthetic checks from unperformed human or operational
-checks in [Spec 444](https://github.com/viscalyx/skyttel/issues/444) and
-[the final delivery ticket](https://github.com/viscalyx/skyttel/issues/464).
+Track the outstanding human and operational checks in
+[the standalone verification ticket](https://github.com/viscalyx/skyttel/issues/465),
+labeled `ready-for-human`. Keep that ticket open and treat release
+acceptance as blocked while mandatory evidence is missing. The automated
+implementation batch and its implementation tickets can close separately;
+their closure does not establish completion of these observations.
 
 ## Upstream references
 
