@@ -28,10 +28,14 @@ for (const [caseId, width, theme] of [
       await banner.getByRole('button', { name: 'Läs mer', exact: true }).click();
       const settings = page.getByRole('dialog', { name: 'Kakinställningar', exact: true });
       await page.keyboard.press('Tab');
-      await expect(
-        settings.getByText('Visa nödvändiga lagringsuppgifter', { exact: true }),
-      ).toBeFocused();
+      await expect(settings.getByText(/^Visa nödvändiga lagringsuppgifter \(/)).toBeFocused();
       await page.keyboard.press('Enter');
+      await expect(settings.getByRole('listitem')).toHaveCount(8);
+      const consentEntry = settings
+        .getByRole('listitem')
+        .filter({ hasText: 'skyttel-storage-consent' });
+      await expect(consentEntry).toContainText('Varaktighet:');
+      await expect(consentEntry).toContainText('Leverantör: Skyttel');
       await page.keyboard.press('Tab');
       await expect(
         settings.getByRole('switch', { name: 'Preferenskakor', exact: true }),

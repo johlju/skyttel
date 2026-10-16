@@ -13,11 +13,21 @@ test('KAK-33: permission allows a separate post-login offer and declining future
       await page.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
       await page.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
     };
+    const confirmation = page.waitForRequest((request) =>
+      request.url().includes('/api/browser-binding/confirmation?proof='),
+    );
     await login();
+    const proof = new URL((await confirmation).url()).searchParams.get('proof');
+    expect(proof).toBeTruthy();
     const offer = page.getByRole('dialog', { name: 'Kom ihåg mig i Skyttel', exact: true });
     await expect(offer).toBeVisible();
     await offer.getByRole('button', { name: 'Inte nu', exact: true }).click();
     await page.reload();
+    await expect(
+      page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
+    ).toBeVisible();
+    await expect(offer).not.toBeVisible();
+    await page.goto(`${origin}/?loginConfirmation=${encodeURIComponent(proof ?? '')}`);
     await expect(
       page.getByRole('heading', { name: 'Skapa ditt hushåll', exact: true }),
     ).toBeVisible();

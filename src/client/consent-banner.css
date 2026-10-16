@@ -209,12 +209,6 @@
   margin-top: 12px;
   font-size: 12px;
 }
-.consent-banner details p {
-  padding: 8px 12px;
-  margin-top: 8px;
-  border-left: 2px solid var(--space-line);
-  font-size: 12px;
-}
 .consent-banner .cookie-storage-feedback p:empty {
   display: none;
 }

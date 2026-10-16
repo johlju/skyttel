@@ -1321,7 +1321,8 @@ KAK-32.
 1. Öppna startsidan med kartan. Kontrollera Vi använder kakor. Tryck Escape och
    kontrollera fokus på Endast nödvändiga.
 2. Välj Läs mer. Tryck Tab, Enter och Tab. Kontrollera att nödvändiga
-   lagringsuppgifter öppnas och att fokus sedan når Preferenskakor.
+   lagringsuppgifter öppnas som separata poster med namn, ändamål,
+   varaktighet och leverantör och att fokus sedan når Preferenskakor.
    Slå på Preferenskakor och tryck Escape. Öppna Anpassa Inställningar igen.
 3. Kontrollera att påbörjat val finns kvar. Välj Spara Preferenser och ladda om.
 
@@ -1460,12 +1461,19 @@ KAK-38.
 
 ### KAK-33: Separat erbjudande och varaktigt avstå-val
 
-**Syfte:** Inte nu upprepas inte vid omladdning för samma inloggning.
+**Syfte:** Inte nu upprepas inte vid omladdning eller återbesök i samma
+inloggnings återkomstlänk.
 
 **Användare:** Alex i den isolerade provinstallationen.
 
 **Förutsättningar och separat förberedelse:** Använd en isolerad installation
 utan tidigare lagrings- eller förslagsval.
+
+Inför återbesöket i steg 2: öppna provwebbläsarens nätverksverktyg före
+inloggningen. Bevara begäran till `/api/browser-binding/confirmation` och
+dess `proof`-värde. Förbered en länk till installationens startsida med
+`?loginConfirmation=` följt av samma URL-kodade värde. Använd bara den
+isolerade provinstallationen. Länken skapar ingen ny inloggning.
 
 **Automatiskt motsvarande test:**
 [storage-login-offer.spec.ts](../../tests/integration/storage-login-offer.spec.ts),
@@ -1483,7 +1491,7 @@ KAK-33.
   },
   "reference": "Ren webbläsare, Google och syntetisk leverantör",
   "outcomes": [
-    "Inte nu upprepas inte vid omladdning för samma inloggning.",
+    "Inte nu upprepas inte vid omladdning eller återbesökt återkomstlänk för samma inloggning.",
     "Fråga inte igen består över senare inloggningar för samma användare och webbläsare.",
     "Manuell aktivering finns kvar och kräver separat serverbekräftelse."
   ]
@@ -1495,14 +1503,16 @@ KAK-33.
 **Steg:**
 
 1. Öppna startsidan, välj Acceptera Alla och logga in med Google.
-2. Välj Inte nu i Kom ihåg mig i Skyttel. Ladda om.
+2. Välj Inte nu i Kom ihåg mig i Skyttel. Ladda om. Öppna sedan den
+   förberedda återkomstlänken och kontrollera att erbjudandet inte upprepas.
 3. Öppna /login och logga in igen. Välj Fråga inte igen i erbjudandet.
 4. Logga in en tredje gång. Öppna /cookies och aktivera Kom ihåg mig i Skyttel
    manuellt.
 
 **Förväntat resultat:**
 
-- Inte nu upprepas inte vid omladdning för samma inloggning.
+- Inte nu upprepas inte vid omladdning eller återbesökt återkomstlänk för
+  samma inloggning.
 - Fråga inte igen består över senare inloggningar för samma användare och
   webbläsare.
 - Manuell aktivering finns kvar och kräver separat serverbekräftelse.

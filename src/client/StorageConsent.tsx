@@ -297,16 +297,101 @@ export function ConsentIcon({
   );
 }
 
+type StorageEntry = { name: string; purpose: string; duration: string };
+const necessaryStorageEntries: StorageEntry[] = [
+  {
+    name: 'better-auth.session_token',
+    purpose: 'Sessionsnyckel för säker inloggning. Vid HTTPS: __Secure-better-auth.session_token.',
+    duration:
+      'Sessionskaka. Vanlig serveråtkomst har högst åtta timmar och 30 minuters inaktivitet.',
+  },
+  {
+    name: 'skyttel_binding',
+    purpose:
+      'Binder begärd inloggning till den här webbläsaren. Vid HTTPS: __Host-skyttel_binding.',
+    duration: 'Sessionskaka. Serverns åtkomstgränser gäller separat.',
+  },
+  {
+    name: 'better-auth.state',
+    purpose: 'Kontrollerar begärd leverantörsinloggning. Vid HTTPS: __Secure-better-auth.state.',
+    duration: 'Fem minuter från starten. Tas bort när svaret kontrolleras.',
+  },
+  {
+    name: 'skyttel-storage-consent',
+    purpose: 'Sparar versionsbundet lagringssamtycke och beslutstid i localStorage.',
+    duration:
+      'Tills valet ändras, återställs, lagringen rensas eller ändrat ändamål kräver förnyelse.',
+  },
+  {
+    name: 'skyttel-login-offer:<användar-ID>',
+    purpose:
+      'Sparar förslagsvalet och senaste bekräftade inloggningens referens i localStorage. Hindrar upprepade förslag och ger ingen behörighet.',
+    duration:
+      'Bevaras över utloggning och återställning av samtycke. Rensad webbläsarlagring kan ta bort valet.',
+  },
+  {
+    name: 'skyttel-storage-operation:<användar-ID>',
+    purpose:
+      'Referens och avsikt för begärd aktivering, avstängning eller återställning i sessionStorage. Ger ingen behörighet.',
+    duration:
+      'Till bekräftat eller avvisat resultat, eller tills fliklagringen försvinner. Serverns resultatkontroll: 24 timmar från ändringen.',
+  },
+  {
+    name: 'skyttel-import:<hushålls-ID>',
+    purpose: 'Referens för återhämtning av samma begärda import i sessionStorage.',
+    duration: 'Till avslutad återhämtning eller tills fliklagringen försvinner.',
+  },
+  {
+    name: 'skyttel-erasure:<hushålls-ID>',
+    purpose: 'Referens för återhämtning av samma begärda permanenta radering i sessionStorage.',
+    duration: 'Till avslutad återhämtning eller tills fliklagringen försvinner.',
+  },
+];
+const preferenceStorageEntries: StorageEntry[] = [
+  {
+    name: 'better-auth.session_token',
+    purpose: 'Behåller din inloggning i Skyttel. Vid HTTPS: __Secure-better-auth.session_token.',
+    duration: 'Högst sju dygn från ursprunglig inloggning; åtkomsten kan avslutas tidigare.',
+  },
+  {
+    name: 'skyttel_binding',
+    purpose: 'Binder ihågkommen inloggning till webbläsaren. Vid HTTPS: __Host-skyttel_binding.',
+    duration: 'Högst sju dygn från ursprunglig inloggning; åtkomsten kan avslutas tidigare.',
+  },
+];
+
+function StorageDetails({ title, entries }: { title: string; entries: StorageEntry[] }) {
+  return (
+    <details className="consent-storage-details">
+      <summary>
+        {title} ({entries.length})
+      </summary>
+      {/* biome-ignore lint/a11y/noRedundantRoles: Safari needs an explicit role when list markers are hidden. */}
+      <ul role="list">
+        {entries.map((entry) => (
+          <li key={entry.name}>
+            <div className="consent-storage-name">
+              <code>{entry.name}</code>
+            </div>
+            <div>{entry.purpose}</div>
+            <div className="consent-storage-duration">
+              Varaktighet: {entry.duration} • Leverantör: Skyttel
+            </div>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export function ConsentCategories({
   preferences,
   onChange,
   disabled = false,
-  necessaryDetails,
 }: {
   preferences: boolean;
   onChange: (value: boolean) => void;
   disabled?: boolean;
-  necessaryDetails?: ReactNode;
 }) {
   return (
     <div className="consent-categories">
@@ -332,39 +417,10 @@ export function ConsentCategories({
           Säker inloggning och återhämtning av funktioner du begär. Den här lagringen kan inte
           väljas bort.
         </p>
-        {necessaryDetails ?? (
-          <details>
-            <summary>Visa nödvändiga lagringsuppgifter</summary>
-            <p>
-              <code>better-auth.session_token</code> (HTTPS:{' '}
-              <code>__Secure-better-auth.session_token</code>) och <code>skyttel_binding</code>{' '}
-              (HTTPS: <code>__Host-skyttel_binding</code>): säkerhets- och sessionskakor från
-              Skyttel. Vanlig åtkomst har högst åtta timmar och 30 minuters inaktivitet.
-            </p>
-            <p>
-              <code>better-auth.state</code> (HTTPS: <code>__Secure-better-auth.state</code>):
-              kontroll av begärd leverantörsinloggning, fem minuter. Leverantör: Skyttel.
-            </p>
-            <p>
-              <code>skyttel-storage-consent</code>: versionsbundet lagringssamtycke och beslutstid i
-              localStorage. Gäller tills du ändrar eller återställer valet, rensar lagringen eller
-              ett nytt ändamål kräver förnyelse. Leverantör: Skyttel.
-            </p>
-            <p>
-              <code>skyttel-login-offer:&lt;användar-ID&gt;</code>: ditt förslagsval och senaste
-              inloggningens erbjudande i localStorage. Bevaras över utloggning och återställning av
-              samtycke; rensad webbläsarlagring kan ta bort valet. Leverantör: Skyttel.
-            </p>
-            <p>
-              <code>skyttel-storage-operation:&lt;användar-ID&gt;</code>,{' '}
-              <code>skyttel-import:&lt;hushålls-ID&gt;</code> och{' '}
-              <code>skyttel-erasure:&lt;hushålls-ID&gt;</code>: nödvändiga åtgärdsreferenser i
-              sessionStorage för begärda ändringar med okänt utfall. Tas bort när återhämtningen
-              avslutas eller fliklagringen försvinner. Resultat för lagringsändringar finns i 24
-              timmar från ändringen. Leverantör: Skyttel.
-            </p>
-          </details>
-        )}
+        <StorageDetails
+          title="Visa nödvändiga lagringsuppgifter"
+          entries={necessaryStorageEntries}
+        />
       </section>
       <section className="cookie-storage-card" aria-labelledby="consent-preferences-title">
         <div className="cookie-storage-card-header">
@@ -390,16 +446,10 @@ export function ConsentCategories({
           ihåg mig; funktionen väljer du separat efter inloggningen. Det gäller Skyttel, inte ditt
           Google- eller Microsoft-konto.
         </p>
-        <details>
-          <summary>Visa preferenskakornas lagringsuppgifter</summary>
-          <p>
-            <code>better-auth.session_token</code> (HTTPS:{' '}
-            <code>__Secure-better-auth.session_token</code>) och <code>skyttel_binding</code>{' '}
-            (HTTPS: <code>__Host-skyttel_binding</code>) blir beständiga endast efter ett separat,
-            bekräftat funktionsval. Högst sju dygn från den ursprungliga inloggningen. Avstängning
-            eller utloggning kan avsluta åtkomsten tidigare. Leverantör: Skyttel.
-          </p>
-        </details>
+        <StorageDetails
+          title="Visa preferenskakornas lagringsuppgifter"
+          entries={preferenceStorageEntries}
+        />
       </section>
     </div>
   );

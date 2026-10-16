@@ -45,6 +45,13 @@ also identified by text. Skyttel-specific reset, recovery and function
 controls use the same visual language. No analytics, marketing or export
 controls are presented as Skyttel features.
 
+Expanded storage details use separate indented entries with a left border,
+a monospace name, purpose and a duration/provider line. Counts reflect
+Skyttel's actual entries. The paired detail frames below show this layout
+with both reference preference cookies and Skyttel's own two preference
+cookies. Dark metadata is slightly brighter than the reference to preserve
+readable contrast.
+
 ## Paired screenshots
 
 Each link opens a viewport capture. Settings frames scroll to the quick
@@ -61,6 +68,10 @@ actions; policy frames show the page introduction without a banner.
 | Expanded banner | Desktop, dark | [Reference](cookie-consent-evidence/ref-expanded-dark-desktop.png) | [Skyttel](cookie-consent-evidence/skyttel-expanded-dark-desktop.png) |
 | Expanded banner | Mobile, light | [Reference](cookie-consent-evidence/ref-expanded-light-mobile.png) | [Skyttel](cookie-consent-evidence/skyttel-expanded-light-mobile.png) |
 | Expanded banner | Mobile, dark | [Reference](cookie-consent-evidence/ref-expanded-dark-mobile.png) | [Skyttel](cookie-consent-evidence/skyttel-expanded-dark-mobile.png) |
+| Expanded details | Desktop, light | [Reference](cookie-consent-evidence/ref-details-light-desktop.png) | [Skyttel](cookie-consent-evidence/skyttel-details-light-desktop.png) |
+| Expanded details | Desktop, dark | [Reference](cookie-consent-evidence/ref-details-dark-desktop.png) | [Skyttel](cookie-consent-evidence/skyttel-details-dark-desktop.png) |
+| Expanded details | Mobile, light | [Reference](cookie-consent-evidence/ref-details-light-mobile.png) | [Skyttel](cookie-consent-evidence/skyttel-details-light-mobile.png) |
+| Expanded details | Mobile, dark | [Reference](cookie-consent-evidence/ref-details-dark-mobile.png) | [Skyttel](cookie-consent-evidence/skyttel-details-dark-mobile.png) |
 | Policy | Desktop, light | [Reference](cookie-consent-evidence/ref-policy-light-desktop.png) | [Skyttel](cookie-consent-evidence/skyttel-policy-light-desktop.png) |
 | Policy | Desktop, dark | [Reference](cookie-consent-evidence/ref-policy-dark-desktop.png) | [Skyttel](cookie-consent-evidence/skyttel-policy-dark-desktop.png) |
 | Policy | Mobile, light | [Reference](cookie-consent-evidence/ref-policy-light-mobile.png) | [Skyttel](cookie-consent-evidence/skyttel-policy-light-mobile.png) |

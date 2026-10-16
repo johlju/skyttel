@@ -278,6 +278,46 @@ article.cookie-storage a {
 .cookie-storage-entry h4 {
   margin: 0 0 12px;
 }
+.cookie-storage .consent-storage-details {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #4b5563;
+}
+.cookie-storage .consent-storage-details summary {
+  min-height: 44px;
+  padding: 12px 0;
+  font-weight: 400;
+}
+.consent-storage-details ul {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding-left: 16px;
+  list-style: none;
+}
+.consent-storage-details li {
+  padding-left: 12px;
+  border-left: 2px solid #e5e7eb;
+}
+.consent-storage-name {
+  font-family: ui-monospace, monospace;
+  font-weight: 500;
+}
+.consent-storage-duration {
+  color: #6b7280;
+}
+[data-theme="dark"] .cookie-storage .consent-storage-details {
+  color: #9ca3af;
+}
+[data-theme="dark"] .consent-storage-details li {
+  border-color: #374151;
+}
+[data-theme="dark"] .consent-storage-duration {
+  color: #8792a2;
+}
+.cookie-storage.consent-banner .consent-storage-details {
+  font-size: 12px;
+}
 .cookie-storage dt {
   font-weight: 600;
 }
