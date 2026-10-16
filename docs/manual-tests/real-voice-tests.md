@@ -31,6 +31,8 @@ npm run build
 npm run test:real-voice
 ```
 
+The browser starts with a saved necessary-only storage choice. Remembered
+login stays off, and conversation consent still requires its own choice.
 The test uses temporary application storage and synthetic sign-in. It
 checks the changed price, resolved family draft, preserved unsent form
 text, the native departure guard and its explicit discard of only that unsent

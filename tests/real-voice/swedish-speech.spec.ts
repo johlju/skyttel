@@ -15,6 +15,7 @@ import {
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { createPreparedContext } from '../support/test.js';
 
 declare global {
   interface Window {
@@ -50,7 +51,7 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
         '--autoplay-policy=no-user-gesture-required',
       ],
     });
-    const context = await browser.newContext({ permissions: ['microphone'] });
+    const context = await createPreparedContext(browser, { permissions: ['microphone'] });
     const page = await context.newPage();
     // Observe actual media and peers without substituting audio, SDP, events or providers.
     await page.addInitScript(() => {
