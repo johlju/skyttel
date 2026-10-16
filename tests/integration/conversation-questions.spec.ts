@@ -364,8 +364,10 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
     const announcement = page.getByRole('status', { name: 'Sparbekräftelse' });
     await expect(announcement).toHaveText('Utkastet är sparat');
     await expect(announcement).toHaveAttribute('aria-live', 'polite');
-    const spokenReply = commentary(live).at(-1)?.event.content;
-    if (typeof spokenReply !== 'string') throw new Error('Missing verified spoken save reply');
+    const spokenEvent = commentary(live).at(-1)?.event;
+    if (spokenEvent?.type !== 'session.commentary.append')
+      throw new Error('Missing verified spoken save reply');
+    const spokenReply = spokenEvent.content;
     // Recovery can verify the same committed save before voice work completes.
     // Replay the complete actual reply, including that explanation when present.
     expect([

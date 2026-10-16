@@ -660,17 +660,25 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await closeConversationText(page);
     await editTableObject(page, 'Kim Exempel');
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
-    speak(live, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
-    await expect
-      .poll(
-        async () =>
-          (
-            await (
-              await page.request.get(`${app.origin}/api/households/${household.id}/map`)
-            ).json()
-          ).draft.changes,
+    const saved = page.waitForResponse(async (response) => {
+      if (
+        !response.ok() ||
+        !response
+          .url()
+          .startsWith(`${app.origin}/api/households/${household.id}/text-assistant/`) ||
+        !response.url().includes('/voice/') ||
+        !response.url().endsWith('/poll')
       )
-      .toEqual([]);
+        return false;
+      const result = await response.json().catch(() => null);
+      return Boolean(result?.assistant?.receipt);
+    });
+    speak(live, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
+    await saved;
+    expect(
+      (await (await page.request.get(`${app.origin}/api/households/${household.id}/map`)).json())
+        .draft.changes,
+    ).toEqual([]);
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Osänd text som ska finnas kvar',
     );
