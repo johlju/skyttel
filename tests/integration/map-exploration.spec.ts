@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { draftConflicts } from '../../src/shared/draft-conflicts.js';
 import {
   closeSupportDialog,
@@ -13,6 +13,7 @@ import { createInstallation } from '../support/installation.js';
 import { prepareMapExploration } from '../support/map-exploration.js';
 import { focusMapSearch, mapFilters } from '../support/object-search.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { expect, test } from '../support/test.js';
 
 async function prepare(page: Page, origin: string, variant: 'base' | 'ended' | 'removed' = 'base') {
   const data = await prepareMapExploration(page.request, origin, variant);

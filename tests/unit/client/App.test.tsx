@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -18,6 +18,27 @@ type Reply = { data?: unknown; status?: number; error?: Error; response?: Promis
 const unexpectedRequests: string[] = [];
 
 function serve(routes: Record<string, Reply[]>) {
+  routes['/api/policy-contact'] ??= [{ data: { email: null } }];
+  routes['/api/browser-binding/preference'] ??= Array.from({ length: 8 }, () => ({
+    data: {
+      userId: 'alex',
+      sessionId: 'ordinary-login',
+      bindingId: 'ordinary-binding',
+      remembered: false,
+      expiresAt: Date.now() + 28_800_000,
+      inactiveAfterMs: 1_800_000,
+    },
+  }));
+  routes['/api/browser-binding/candidate'] ??= Array.from({ length: 8 }, () => ({
+    data: {
+      candidate: 'a'.repeat(64),
+      cookieName: 'skyttel_binding',
+      origin: window.location.origin,
+    },
+  }));
+  routes['/api/browser-binding/register'] ??= Array.from({ length: 8 }, () => ({
+    data: { status: 'confirmed', revision: 0 },
+  }));
   routes['/api/households/linden/text-assistant'] ??= Array.from({ length: 8 }, () => ({
     data: { available: false },
   }));
@@ -52,15 +73,17 @@ function serve(routes: Record<string, Reply[]>) {
           : new URL(input.url).pathname;
     const reply =
       routes[path]?.shift() ??
-      (path === '/api/households/linden/map/view'
-        ? {
-            data: {
-              contentVersion: 1,
-              positions: [],
-              settings: { ...defaultViewSettings, version: 0 },
-            },
-          }
-        : undefined);
+      (path === '/api/theme-preference'
+        ? { data: { userId: 'alex', mode: 'system' } }
+        : path === '/api/households/linden/map/view'
+          ? {
+              data: {
+                contentVersion: 1,
+                positions: [],
+                settings: { ...defaultViewSettings, version: 0 },
+              },
+            }
+          : undefined);
     if (!reply) {
       unexpectedRequests.push(path);
       throw new Error(`Unexpected synthetic HTTP request: ${path}`);
@@ -129,6 +152,11 @@ describe('Skyttel application interface', () => {
     async (failure) => {
       serve({ '/api/bootstrap': [failure, { data: anonymous }] });
       mount();
+      expect(
+        await screen.findByText(
+          'Det kan bero på ett anslutningsfel eller på att Skyttel behöver underhåll eller en uppgradering. Försök igen om en stund. Kontakta administratören om problemet kvarstår.',
+        ),
+      ).toBeDefined();
       await userEvent.click(await screen.findByRole('button', { name: 'Försök igen' }));
       expect(await screen.findByRole('heading', { name: 'Välkommen till Skyttel' })).toBeDefined();
     },
@@ -443,7 +471,9 @@ describe('Skyttel application interface', () => {
       fetch.mock.calls.find(([url]) => url === '/api/households/linden/map/view') ?? [];
     expect(init?.signal?.aborted).toBe(true);
     await act(async () => delayed.reject(Error('An obsolete private-view network failure')));
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(document.querySelector('[aria-live="assertive"]')?.textContent).toBe(
+      'Din inloggning har gått ut. Logga in igen.',
+    );
     expect(screen.queryByRole('button', { name: 'Försök igen' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Arbetsyta' })).toBeNull();
     expect(document.activeElement).toBe(chosen);
@@ -570,4 +600,90 @@ describe('Skyttel application interface', () => {
     expect(screen.queryByRole('button', { name: 'Försök igen' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Hushållet Linden' })).toBeDefined();
   });
+});
+
+test('account theme replaces obsolete copies, persists only after confirmation and follows focus and device preferences', async () => {
+  const device = Object.assign(new EventTarget(), { matches: false });
+  vi.stubGlobal('matchMedia', () => device);
+  localStorage.setItem('skyttel-theme', 'dark');
+  sessionStorage.setItem('skyttel-theme', 'dark');
+  serve({
+    '/api/bootstrap': Array.from({ length: 5 }, () => ({ data: setup })),
+    '/api/theme-preference': [
+      { data: { userId: 'alex', mode: 'dark' } },
+      { data: { userId: 'alex', mode: 'light' } },
+      { data: { userId: 'alex', mode: 'system' } },
+      { status: 403 },
+    ],
+  });
+  const view = mount('/profile');
+  const shell = () => view.container.querySelector('.app-shell');
+  const button = () => screen.getByRole('button', { name: /^Tema:/ });
+  await waitFor(() => expect(shell()?.getAttribute('data-theme')).toBe('dark'));
+  expect(localStorage.getItem('skyttel-theme')).toBeNull();
+  expect(sessionStorage.getItem('skyttel-theme')).toBeNull();
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'Ljust' }));
+  await waitFor(() => expect(shell()?.getAttribute('data-theme')).toBe('light'));
+  expect(screen.getByRole('status').textContent).toContain('har sparats på ditt konto');
+  expect(document.activeElement).toBe(button());
+  await act(async () => window.dispatchEvent(new Event('focus')));
+  await waitFor(() => expect(button().getAttribute('aria-label')).toContain('System'));
+  device.matches = true;
+  await act(async () => device.dispatchEvent(new Event('change')));
+  expect(shell()?.getAttribute('data-theme')).toBe('dark');
+  await userEvent.click(button());
+  await userEvent.click(screen.getByRole('radio', { name: 'Ljust' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('kunde inte bekräftas');
+  expect(screen.queryByRole('status')).toBeNull();
+  expect(shell()?.getAttribute('data-theme')).toBe('dark');
+  await userEvent.click(screen.getByRole('button', { name: 'Stäng temabeskedet' }));
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(document.activeElement).toBe(button());
+});
+
+test.each(['GET', 'POST'])(
+  'a late account theme %s reply cannot restore a signed-out theme',
+  async (method) => {
+    const delayed = heldResponse();
+    serve({
+      '/api/bootstrap': [{ data: setup }, { data: anonymous }],
+      '/api/auth/sign-out': [{ data: { success: true } }],
+      '/api/theme-preference': [
+        ...(method === 'POST' ? [{ data: { userId: 'alex', mode: 'system' } }] : []),
+        { response: delayed.response },
+      ],
+    });
+    const view = mount('/profile');
+    const button = await screen.findByRole('button', { name: /^Tema:/ });
+    if (method === 'POST') {
+      await userEvent.click(button);
+      await userEvent.click(screen.getByRole('radio', { name: 'Mörkt' }));
+      expect(screen.getByRole('status').textContent).toContain('Sparar temavalet');
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Logga ut' }));
+    await screen.findByRole('heading', { name: 'Välkommen till Skyttel' });
+    await act(async () => delayed.resolve(Response.json({ userId: 'alex', mode: 'dark' })));
+    expect(view.container.querySelector('.app-shell')?.getAttribute('data-theme')).toBe('light');
+    expect(screen.queryByRole('status')).toBeNull();
+  },
+);
+
+test('a failed account read permits an explicit theme choice even when browser storage is denied', async () => {
+  vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    throw new Error('Storage denied');
+  });
+  serve({
+    '/api/bootstrap': [{ data: setup }],
+    '/api/theme-preference': [{ status: 503 }, { data: { userId: 'alex', mode: 'dark' } }],
+  });
+  const view = mount('/profile');
+  expect((await screen.findByRole('alert')).textContent).toContain('Temavalet kunde inte hämtas');
+  await userEvent.click(screen.getByRole('button', { name: /^Tema:/ }));
+  await userEvent.click(screen.getByRole('radio', { name: 'Mörkt' }));
+  await waitFor(() =>
+    expect(view.container.querySelector('.app-shell')?.getAttribute('data-theme')).toBe('dark'),
+  );
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(screen.getByRole('status').textContent).toContain('har sparats på ditt konto');
 });

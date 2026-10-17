@@ -421,6 +421,7 @@ and update the GitHub `production` environment's `SKYTTEL_ORIGIN` as well.
    | `SKYTTEL_FIRST_ADMIN_PROVIDER` | `google` or `microsoft`, matching the intended administrator's login. |
    | `SKYTTEL_FIRST_ADMIN_SUBJECT` | For a new installation, `not-configured` until the production lookup in step 6. After lookup, replace it with the verified identifier. Retain the existing value for an established household. |
    | `BETTER_AUTH_SECRET` | The random secret generated in step 4. Keep it stable. |
+   | `SKYTTEL_AUTHORITY_GENERATION` | A new UUID generated with `node -p 'crypto.randomUUID()'`, held in these private host settings outside the persistent disk. Keep it stable for ordinary restart. Before each database or disk restore, follow the [controlled restore procedure](database-restore.md). |
    | `GOOGLE_CLIENT_ID` | The Google web application's client ID. |
    | `GOOGLE_CLIENT_SECRET` | The Google web application's client secret. |
    | `MICROSOFT_CLIENT_ID` | The Microsoft application's client ID. |
@@ -674,6 +675,11 @@ that unsent text or an interrupted save was stored.
 
 Keep the existing service, persistent disk, and authentication secret.
 
+For the first transition from legacy logins, use the
+[one-time login upgrade appendix](#appendix-one-time-login-upgrade-on-render)
+instead of the ordinary update sequence below. It must hold automatic
+deployment before the merge that publishes the new login model.
+
 1. Read the [operator upgrade notes](operator-upgrade-notes.md) and complete
    any required preparation before approving a merge to `main`.
 1. After the merge, open **Actions → Container release** for that commit.
@@ -760,6 +766,8 @@ older job uses its original script.
 | :-- | :-- |
 | Render cannot download the image | Check the complete digest reference and, for private images, the registry credential's package access. |
 | `configuration_invalid` | Find the variable name in the startup event, correct it in Render **Environment**, then use **Save and deploy**. |
+| `installation_authority_failed` with `authority_initialization_required` | An administrator must complete the [one-time login upgrade](#appendix-one-time-login-upgrade-on-render); preserve the existing database. |
+| `installation_authority_failed` with `restore_declaration_required` | Keep maintenance mode enabled and follow the [controlled restore procedure](database-restore.md); do not use legacy adoption for a restored or already initialized database. |
 | Sign-in fails | Compare the actual public origin and both registered callback URLs. Check credentials and follow [production sign-in troubleshooting](authentication.md#troubleshoot-sign-in). |
 | `unsafe_service_configuration` | Check one image web service, one instance, no autoscaling, disk at `/data`, `/healthz`, and empty command overrides. Ask a maintainer to inspect the Render API if a setting is not visible in the dashboard. |
 | `database_not_on_persistent_disk` | Explicitly set `SKYTTEL_DATABASE_PATH` to `/data/skyttel.sqlite` and confirm the `/data` disk is attached. |
@@ -782,29 +790,23 @@ Inspect migration state on the existing disk with a maintainer when needed.
 Share sanitized reason codes and version identity, not databases, household
 screenshots, cookies, credentials, raw provider responses, or full logs.
 
-### Recover with older code only when compatible
+### Repair forward after the login transition
 
-1. Have a maintainer establish that the older image supports the current
-   database schema and migration checksums. Read the release guidance and
-   test compatibility on synthetic data. If compatibility is unknown,
-   keep access closed and repair forward.
-1. Verify the older image's release evidence. Wait for any active
-   deployment to finish, then update the saved image reference under the
-   service's **Settings** to the verified digest.
-1. Choose **Manual Deploy → Deploy latest reference** so the saved
-   reference and requested deployment agree.
-1. Verify the live digest, database readiness, application page, anonymous
-   bootstrap, and real household access using the checks above.
-1. Retry the GitHub release job only after the service and database state
-   are reconciled and the intended next release is safe to deploy.
+Follow the [controlled login upgrade](login-upgrade.md) before opening an
+existing installation with the new login model. Keep public access closed
+and stop the old service before the maintenance process uses its disk.
+If the host cannot provide that maintenance boundary, block the release
+until a maintainer arranges it. Do not run an upgrade command beside a
+live old service.
 
-Deploying older code does not restore the database. Do not use a rollback
-button as a substitute for establishing schema compatibility. An image
-override on a deploy hook does not update the saved service reference and
-can select an older image on a later deployment. For maintainer-assisted
-recovery, see Render's
-[update service API](https://api-docs.render.com/reference/update-service)
-and [deploy API](https://api-docs.render.com/reference/create-deploy).
+Use a corrected newer image for failures after this transition. Verify
+its release evidence, wait for active deployments to finish, and set the
+saved image reference to that digest. Deploy the saved reference and
+verify its live digest, database readiness, anonymous page and household
+access before reopening. Retry the release job only after the service
+and database are reconciled. Older application versions and image
+rollback are unsupported. Restoring data is a separate controlled
+operation and must never restore old authentication authority.
 
 ## What automated checks cover
 
@@ -813,6 +815,10 @@ the first accepted deployment. It checks the running digest and retained
 rollback image, maintains one current status issue, and requires verified
 delivery to the selected operator. Check fresh monitoring evidence before
 approving a production update.
+
+The monitor's retained-image role named `rollback` is an inventory label.
+Scanning that image does not permit running it against the upgraded
+installation or restoring its authentication records.
 
 Release checks use disposable containers with synthetic household content.
 They verify restart and replacement on the same disk, including private
@@ -838,3 +844,209 @@ Keep your own private exports outside the running disk. Data since the last
 usable export can be lost in a major failure, and recovery can require
 several days. Server secrets, memberships and new login associations remain
 separate from household export. An app-code rollback does not restore data.
+
+## Appendix: one-time login upgrade on Render
+
+Use this appendix for the existing production service when it has household
+data but no installation authority record. It implements the
+[controlled login transition](login-upgrade.md). Users sign in again;
+users, linked identities, household content, stored drafts and save results
+remain. This is a planned maintenance window, not a normal unattended update.
+
+This procedure uses documented Render features and repository commands.
+Rehearse it on an authorized disposable Render installation first and record
+the actual observations. Local tests do not establish a completed production
+cutover; outstanding human evidence remains in
+[the verification ticket](https://github.com/viscalyx/skyttel/issues/465).
+
+### A. Hold GitHub deployment before merging
+
+1. Tell users about the interruption and ask them to preserve unsent text.
+   Freeze further production merges for the window. Wait for every active
+   Render deployment and GitHub production job to finish; do not cancel a
+   running migration.
+1. In GitHub, open **viscalyx/skyttel → Settings → Environments → production**.
+   Record the current environment variable `RENDER_SERVICE_ID` privately.
+   Edit its value to `maintenance-hold` and save. Keep the original Render
+   service ID available for restoration in section F.
+1. This deliberately fails the repository deployment controller's
+   `invalid_service` check before it calls Render. Release checks and image
+   publication can still finish. Do not restore the variable during the
+   window. The Render **Auto-Deploy** setting alone does not stop GitHub's
+   explicit deployment requests.
+
+The hold does not stop a job that already receives the old variable value.
+The first step's wait and release freeze are required. See
+[GitHub environment configuration](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
+
+### B. Block public traffic and stop the application
+
+1. Open the existing paid web service in Render. Keep the same service,
+   attached disk at `/data`, authentication secret and provider settings.
+   Do not suspend or delete the service and do not detach its disk.
+1. Under **Settings → Maintenance Mode**, enable maintenance mode and confirm.
+   Check that both the public custom domain and `onrender.com` address return
+   the maintenance page with HTTP 503. Render keeps shell access available.
+   Maintenance mode alone does not stop application work.
+1. In the service's **Settings**, edit **Docker Command** to the following
+   single line, then save and deploy the current image. Keep the health-check
+   path `/healthz` unchanged.
+
+   <!-- markdownlint-disable MD013 -->
+   ```sh
+   node -e 'require("node:http").createServer((q,s)=>{s.writeHead(q.url==="/healthz"?200:503,{"content-type":"text/plain","cache-control":"no-store"});s.end("Maintenance\n")}).listen(Number(process.env.PORT||3000),"0.0.0.0")'
+   ```
+   <!-- markdownlint-enable MD013 -->
+
+1. Wait for that deployment to become **Live**. With an attached disk,
+   Render stops the old instance before starting its replacement. The new
+   command is only a maintenance HTTP process; it runs no Skyttel server,
+   login callbacks, voice work or background cleanup. Keep maintenance mode
+   enabled. If this deployment does not become live, stop and diagnose it.
+
+The maintenance process answers `/healthz` with 200 so Render can keep the
+instance running. That status means only that this temporary process is up;
+it does not mean that Skyttel or its database is ready. All its other paths
+return 503. Private-network callers must also stop application work.
+
+Render documents [maintenance mode](https://render.com/docs/maintenance-mode),
+[Docker Command overrides](https://render.com/docs/docker#docker-deployment-methods),
+and [disk deployment constraints](https://render.com/docs/disks#disk-limitations-and-considerations).
+Do not use a pre-deploy command or one-off job for the SQLite upgrade: neither
+can access this disk. Use **Shell** on the real disk-backed service, not an
+ephemeral shell instance.
+
+### C. Preserve the original database
+
+1. Confirm the old application deployment is stopped and the maintenance
+   deployment is live. Open **Shell** on this service, or use its ordinary
+   **Connect → SSH** command. This session belongs to the maintenance
+   instance that has the existing disk.
+1. Create a consistent restricted SQLite backup. Run this in that shell:
+
+   ```sh
+   cd /app
+   umask 077
+   node --input-type=module <<'JS'
+   import Database from 'better-sqlite3';
+   import { existsSync, chmodSync } from 'node:fs';
+   const source = process.env.SKYTTEL_DATABASE_PATH;
+   if (source !== '/data/skyttel.sqlite') throw new Error('Check database path');
+   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+   const target = `/data/skyttel-before-login-${stamp}.sqlite`;
+   if (existsSync(target)) throw new Error('Backup already exists');
+   const database = new Database(source, { readonly: true, fileMustExist: true });
+   try {
+     await database.backup(target);
+     chmodSync(target, 0o600);
+     console.log('Backup created:', target);
+   } finally {
+     database.close();
+   }
+   JS
+   ```
+
+1. Record the original copy time and verify a usable restricted copy outside
+   the persistent disk before proceeding. Follow Render's
+   [disk file-transfer guidance](https://render.com/docs/disks#transferring-files)
+   and the existing backup access, retention and deletion requirements.
+   This on-disk copy alone does not protect against disk loss. A snapshot
+   listing is not proof of physical deletion. Never upload the copy or its
+   contents to a public issue or workflow artifact.
+
+### D. Load the new image without starting Skyttel
+
+1. Publish the login-model release with the deployment hold in place.
+   Wait for successful checks and publication, then follow
+   [release verification](container-releases.md#review-a-published-release).
+   Record the exact verified `ghcr.io/viscalyx/skyttel@sha256:...` reference,
+   version and source commit. An `invalid_service` deployment failure is
+   expected while the hold is active; a failed publication is not acceptable.
+1. In Render **Settings**, set the saved **Image URL** to that exact digest.
+   Keep the temporary **Docker Command** from section B. Choose
+   **Manual Deploy → Deploy latest reference** if saving does not deploy.
+   Wait for the new image's maintenance deployment to become **Live**.
+1. Generate a new UUID with `node -p 'crypto.randomUUID()'` in a trusted
+   terminal. Under Render **Environment**, set `SKYTTEL_AUTHORITY_GENERATION`
+   to it and save and deploy. Use a unique production value, never the shared
+   development UUID. Keep it outside the persistent disk and stable across
+   future ordinary restarts. Leave all three `SKYTTEL_RESTORE_*` settings
+   absent; this is an original installation upgrade, not a backup restore.
+1. Wait for the maintenance deployment to be live again. Reopen **Shell**;
+   redeployment closes older shell sessions. Check `cd /app` and
+   `test -f dist/server/upgrade-legacy-login.js`. Check the deployed image
+   identity against the verified release. Do not print the environment or
+   authentication values. Stop if the maintenance entry point is missing.
+
+### E. Run the one-time transition and start the application
+
+1. In the new maintenance instance's shell, confirm that the maintenance
+   command is the only application process and that the original database
+   and expected configuration are present. Run:
+
+   ```sh
+   cd /app
+   node dist/server/upgrade-legacy-login.js \
+     --confirm-legacy-upgrade --confirm-service-stopped
+   ```
+
+1. Require exit status zero and `legacy_login_upgrade_completed`. Record
+   sanitized evidence. On failure, keep the maintenance process and public
+   gate in place and investigate. Do not reset the database, delete its
+   authority record or try an older application. A restored database needs
+   the [controlled restore procedure](database-restore.md) instead.
+1. In Render **Settings**, clear **Docker Command** completely. Keep the new
+   image digest, the new generation and an empty **Pre-Deploy Command**.
+   Save and deploy the same image. Its normal command now starts Skyttel;
+   it must not run the one-time upgrade on each restart.
+1. Keep maintenance mode enabled while checking this deployment. In its
+   ordinary shell, use Node to check the real application locally:
+
+   ```sh
+   node --input-type=module <<'JS'
+   const base = `http://127.0.0.1:${process.env.PORT || 3000}`;
+   for (const path of ['/healthz', '/api/version', '/api/bootstrap']) {
+     const response = await fetch(base + path);
+     if (!response.ok) throw new Error(`Check failed: ${path}`);
+     const value = await response.json();
+     if (path === '/healthz' && value.status !== 'ok') throw new Error('Not ready');
+     if (path === '/api/bootstrap' && value.status !== 'anonymous') {
+       throw new Error('Unexpected anonymous access');
+     }
+     console.log(path, JSON.stringify(value));
+   }
+   JS
+   ```
+
+1. Match `/api/version` to the verified version and commit and require ready
+   database status. Check startup logs for `server_ready`, with no authority
+   failure. A plain service restart must preserve readiness without another
+   upgrade command. Keep or re-enable the public gate if anything fails.
+
+### F. Reopen and restore normal deployment
+
+1. Confirm maintenance checks pass, the override is empty and the original
+   service/disk are retained. Disable Render **Maintenance Mode** for the
+   attended public acceptance checks. Follow
+   [Verify before reopening](login-upgrade.md#verify-before-reopening): old
+   credentials are denied; real Google/Microsoft sign-in, linked identities,
+   household content, drafts and original save results work. New remembered
+   login starts unchecked. Re-enable maintenance mode immediately on failure.
+1. Close production shells and remove temporary operator access using
+   [terminal cleanup](#use-and-close-the-production-terminal). Record the
+   release, checks, restart result and outstanding human observations.
+1. Restore the original `RENDER_SERVICE_ID` value in GitHub's `production`
+   environment. Rerun only the failed `deploy` job for this latest eligible
+   main release. It checks the normal empty-command configuration, saved
+   image digest, public readiness and smoke responses. When they already
+   match, it records verification without replacing the running image.
+1. Require a successful deployment report as in step 9, then end the release
+   freeze. Keep the new generation unchanged for ordinary deployments.
+   Handle the backup and any downloaded derivatives under the original
+   retention/deletion deadline; record actual deletion evidence separately.
+
+The one-time command is not needed after every production deployment or
+development-container rebuild. It applies once to a legacy original
+database. Normal restarts keep its authority record; development `db:setup`
+initializes that record when it reseeds a database. A backup restore has
+different requirements and must not reuse legacy adoption.

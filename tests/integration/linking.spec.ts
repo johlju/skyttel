@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openProfile, signIn } from '../support/client.js';
 import { alex, createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function linkStep(
   client: import('@playwright/test').APIRequestContext,
@@ -32,6 +32,7 @@ test('both proven providers return to the same user and household', { tag: '@tec
     });
     expect(prove.status()).toBe(200);
     await request.get((await prove.json()).url);
+    expect(await (await request.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
     installation.setIdentity({ ...alex, subject: 'alex-private-microsoft' });
     const add = await request.post(`${origin}/api/login-methods/add`, {
       headers: { origin },
@@ -43,10 +44,17 @@ test('both proven providers return to the same user and household', { tag: '@tec
       providers: ['google', 'microsoft'],
       stage: 'complete',
     });
+    expect(await (await request.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
     await installation.restart();
+    expect(await (await request.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
     await request.post(`${origin}/api/auth/sign-out`, { headers: { origin }, data: {} });
     await signIn(request, origin, 'microsoft');
-    expect(await (await request.get(`${origin}/api/bootstrap`)).json()).toEqual(before);
+    const { loginId: originalLoginId, ...originalIdentity } = before;
+    const { loginId, ...identity } = await (await request.get(`${origin}/api/bootstrap`)).json();
+    expect(originalLoginId).toEqual(expect.any(String));
+    expect(loginId).toEqual(expect.any(String));
+    expect(loginId).not.toBe(originalLoginId);
+    expect(identity).toEqual(originalIdentity);
   } finally {
     await installation.close();
   }
@@ -218,6 +226,9 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     ).toBeVisible();
     await page.getByRole('button', { name: 'Verifiera Google' }).click();
     await expect(page.getByRole('button', { name: 'Koppla Microsoft' })).toBeVisible();
+    expect(await (await page.request.get(`${installation.origin}/api/bootstrap`)).json()).toEqual(
+      before,
+    );
     await expect(
       steps.getByRole('listitem').filter({ hasText: 'Koppla det andra inloggningssättet' }),
     ).toHaveAttribute('aria-current', 'step');
@@ -237,6 +248,9 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     await expect(page.getByText('Google – kopplat', { exact: true })).toBeVisible();
     await expect(page.getByText('Microsoft – inte kopplat', { exact: true })).toHaveCount(0);
     await expect(steps).toHaveCount(0);
+    expect(await (await page.request.get(`${installation.origin}/api/bootstrap`)).json()).toEqual(
+      before,
+    );
     await page.getByRole('link', { name: 'Till startsidan' }).click();
     await expect(
       page.getByRole('heading', { name: before.household.name, exact: true }),
@@ -245,6 +259,9 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     await installation.restart();
     await page.reload();
     await openProfile(page);
+    expect(await (await page.request.get(`${installation.origin}/api/bootstrap`)).json()).toEqual(
+      before,
+    );
     await page.getByRole('button', { name: 'Logga ut', exact: true }).click();
     await page.getByRole('button', { name: 'Fortsätt med Microsoft' }).click();
     await page.getByRole('button', { name: 'Fortsätt till Microsoft' }).click();
@@ -254,9 +271,14 @@ test('ACCESS-09: the interface verifies the result and lists both login methods'
     await expect(page).toHaveURL(address);
     await openProfile(page);
     await expect(page.getByLabel('Ditt Skyttel-användar-ID')).toHaveValue(userId);
-    expect(await (await page.request.get(`${installation.origin}/api/bootstrap`)).json()).toEqual(
-      before,
-    );
+    const { loginId: originalLoginId, ...originalIdentity } = before;
+    const { loginId, ...identity } = await (
+      await page.request.get(`${installation.origin}/api/bootstrap`)
+    ).json();
+    expect(originalLoginId).toEqual(expect.any(String));
+    expect(loginId).toEqual(expect.any(String));
+    expect(loginId).not.toBe(originalLoginId);
+    expect(identity).toEqual(originalIdentity);
   } finally {
     await installation.close();
   }

@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import {
   closeTextView,
   createHousehold,
@@ -9,6 +8,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('TYP-08: sections move and hide fields in the shared draft without losing values after restart', async ({
   page,
@@ -117,7 +117,7 @@ for (const width of [1280, 390, 320]) {
     browser,
   }) => {
     const installation = await createInstallation();
-    const context = await browser.newContext({ viewport: { width, height: 900 } });
+    const context = await createPreparedContext(browser, { viewport: { width, height: 900 } });
     try {
       await signIn(page.request, installation.origin);
       const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -236,9 +236,9 @@ for (const width of [1280, 390, 320]) {
         }
       }
       await member.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }).click();
-      await expect(member.getByRole('status')).toContainText(
-        'Förslaget finns i ditt privata utkast',
-      );
+      await expect(
+        member.getByRole('status', { name: 'Hushållsarbetets status', exact: true }),
+      ).toContainText('Förslaget finns i ditt privata utkast');
       const own = await (await context.request.get(path)).json();
       expect(own.draft.objectTypes[0].after).toMatchObject({
         sections: [{ name: 'Kontakt' }],

@@ -1,4 +1,4 @@
-import { expect, request, test } from '@playwright/test';
+import { request } from '@playwright/test';
 import { draftChangeCount } from '../../src/shared/map.js';
 import {
   prepareDraftRemovalFocus,
@@ -9,6 +9,7 @@ import {
 import { prepareDraftReview } from '../support/draft-review.js';
 import { createInstallation } from '../support/installation.js';
 import { readRemovalHistory, readRemovalProposals } from '../support/removal-reading.js';
+import { expect, test } from '../support/test.js';
 
 test('UTKAST-150: absent independent removal retains complete proposals until actual checking permits one fresh removal', async ({
   page,

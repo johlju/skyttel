@@ -10,6 +10,7 @@ import {
   assistantConsent,
   assistantScope,
   assistantTaskAccess,
+  assistantTaskConnection,
   assistantWriteScope,
 } from './assistant-auth.js';
 import {
@@ -162,24 +163,41 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
     let connection: Connection;
     let canWrite = false;
     try {
-      const token = await verifier.verifyAccessTokenRequest(context.req.raw, {
-        verifyOptions: { audience: `${origin}/mcp`, issuer: `${origin}/api/auth` },
-        requiredScopes: [assistantScope],
-      });
-      if (
-        typeof token.skyttel_grant !== 'string' ||
-        typeof token.sub !== 'string' ||
-        typeof token.client_id !== 'string'
-      )
-        throw new Error('invalid_token');
-      const found = database
-        .prepare('SELECT * FROM assistant_connection WHERE id = ? AND userId = ? AND clientId = ?')
-        .get(token.skyttel_grant, token.sub, token.client_id) as Connection | undefined;
-      if (!found || !householdAccess(database, found.userId, found.householdId))
-        throw new Error('invalid_token');
-      connection = found;
-      canWrite =
-        typeof token.scope === 'string' && token.scope.split(' ').includes(assistantWriteScope);
+      const privateClient = assistantTaskConnection.getStore();
+      if (privateClient) {
+        const taskGuard = assistantTaskAccess.getStore();
+        if (!taskGuard) throw new Error('invalid_task');
+        taskGuard();
+        const found = database
+          .prepare(`SELECT * FROM assistant_connection
+          WHERE clientId = ? AND browserSessionId IS NOT NULL`)
+          .get(privateClient) as Connection | undefined;
+        if (!found || !householdAccess(database, found.userId, found.householdId))
+          throw new Error('invalid_task');
+        connection = found;
+        canWrite = true;
+      } else {
+        const token = await verifier.verifyAccessTokenRequest(context.req.raw, {
+          verifyOptions: { audience: `${origin}/mcp`, issuer: `${origin}/api/auth` },
+          requiredScopes: [assistantScope],
+        });
+        if (
+          typeof token.skyttel_grant !== 'string' ||
+          typeof token.sub !== 'string' ||
+          typeof token.client_id !== 'string'
+        )
+          throw new Error('invalid_token');
+        const found = database
+          .prepare(
+            'SELECT * FROM assistant_connection WHERE id = ? AND userId = ? AND clientId = ?',
+          )
+          .get(token.skyttel_grant, token.sub, token.client_id) as Connection | undefined;
+        if (!found || !householdAccess(database, found.userId, found.householdId))
+          throw new Error('invalid_token');
+        connection = found;
+        canWrite =
+          typeof token.scope === 'string' && token.scope.split(' ').includes(assistantWriteScope);
+      }
     } catch {
       context.header(
         'WWW-Authenticate',

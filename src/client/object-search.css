@@ -398,15 +398,20 @@
   }
 }
 
-@media (max-width: 700px) and (max-height: 450px) {
-  .household-map.workspace-shell:is(.map-details-open, :has(.object-property-window:not([hidden])))
+@media (max-width: 700px) {
+  .household-map.workspace-shell:not(.text-view-open):is(
+      [data-work-layout="compact"],
+      [data-work-layout="minimal"]
+    ):is(.map-details-open, :has(.object-property-window:not([hidden])))
     .workspace-tools:not(.expanded) {
     width: 100px;
   }
-  .household-map.workspace-shell:is(
-      .map-details-open,
-      :has(.object-property-window:not([hidden]))
-    ):not(:has(.workspace-tools.expanded))
+  .household-map.workspace-shell:not(.text-view-open):is(
+      [data-work-layout="compact"],
+      [data-work-layout="minimal"]
+    ):is(.map-details-open, :has(.object-property-window:not([hidden]))):not(
+      :has(.workspace-tools.expanded)
+    )
     .map-object-search {
     top: calc(var(--work-offset, 0px) + 12px);
     left: auto;

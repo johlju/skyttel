@@ -1,3 +1,5 @@
+import { voiceSessionExpiredMessage } from '../shared/voice-assistant.js';
+
 /** The order and wording of every conversation notice in #194, highest first. */
 export const conversationNoticeDefinitions = [
   {
@@ -78,6 +80,13 @@ export const conversationNoticeDefinitions = [
   {
     id: 'voiceStartFailed',
     text: 'Rösten kunde inte starta just nu. Försök igen om en stund.',
+    kind: 'event',
+    icon: 'warning',
+    live: 'assertive',
+  },
+  {
+    id: 'voiceSessionExpired',
+    text: voiceSessionExpiredMessage,
     kind: 'event',
     icon: 'warning',
     live: 'assertive',

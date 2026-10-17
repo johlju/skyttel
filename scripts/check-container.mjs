@@ -31,6 +31,7 @@ const environment = {
   SKYTTEL_FIRST_ADMIN_PROVIDER: 'google',
   SKYTTEL_FIRST_ADMIN_SUBJECT: 'alex-google',
   BETTER_AUTH_SECRET: authSecret,
+  SKYTTEL_AUTHORITY_GENERATION: '11111111-1111-4111-8111-111111111111',
   GOOGLE_CLIENT_ID: 'synthetic-google-client',
   GOOGLE_CLIENT_SECRET: 'synthetic-google-secret',
   MICROSOFT_CLIENT_ID: 'synthetic-microsoft-client',
@@ -168,6 +169,19 @@ try {
     '-ec',
     'for manager in apk npm npx yarn yarnpkg corepack; do if command -v "$manager"; then exit 1; fi; done; ' +
       'test ! -e /usr/local/lib/node_modules/corepack',
+  ]);
+  await command([
+    'exec',
+    fresh,
+    'node',
+    '--input-type=module',
+    '-e',
+    `import assert from 'node:assert/strict';
+     import { spawnSync } from 'node:child_process';
+     const result = spawnSync(process.execPath, ['dist/server/upgrade-legacy-login.js'], { encoding: 'utf8' });
+     assert.equal(result.status, 1);
+     assert.equal(result.stdout, '');
+     assert.deepEqual(JSON.parse(result.stderr), { event: 'legacy_login_upgrade_failed' });`,
   ]);
   const loginPage = await request(fresh, '/');
   assert.equal(loginPage.status, 200);

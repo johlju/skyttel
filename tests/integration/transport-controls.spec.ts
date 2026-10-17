@@ -1,4 +1,4 @@
-import { expect, type Route, test } from '@playwright/test';
+import type { Route } from '@playwright/test';
 import { createManualTransport } from '../../scripts/manual-transport-control.js';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import {
@@ -13,14 +13,15 @@ import {
 import { openSavedHistory } from '../support/conversation-page.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('SPAR-05: scoped transport holds real staging, rejects stale saves and recovers a lost committed receipt', async ({
   page,
   browser,
 }) => {
   const app = await createInstallation();
-  const other = await browser.newContext();
-  const reopened = await browser.newContext();
+  const other = await createPreparedContext(browser);
+  const reopened = await createPreparedContext(browser);
   let transport: Awaited<ReturnType<typeof createManualTransport>> | undefined;
   try {
     await signIn(page.request, app.origin);

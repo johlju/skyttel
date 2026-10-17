@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { unzipSync, zipSync } from 'fflate';
 import { afterEach, beforeEach, expect, test } from 'vitest';
-import { openDatabase } from '../../../src/server/database.js';
 import { draftConflicts } from '../../../src/shared/draft-conflicts.js';
 import type { MapState, SaveReceipt } from '../../../src/shared/map.js';
 import { applicationFixture } from './fixture.js';
@@ -166,7 +165,11 @@ test('upgrading a schema 16 object and older private proposal keeps the canonica
           },
         ]),
       );
-    openDatabase(fixture.config.databasePath).close();
+    await fixture.upgradeLegacyLogin();
+    expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    await client.signIn();
     expect((await read()).objects).toEqual([object]);
     expect(draftConflicts(await read())).toEqual([]);
     const receipt = await save('legacy-proposal');

@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { beginAssistant, callAssistant } from '../support/assistant.js';
 import {
@@ -13,6 +12,63 @@ import {
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
+
+test('browser replacement and logout deny old cookies while an independently consented MCP connection remains valid', {
+  tag: '@technical',
+}, async ({ playwright }) => {
+  const app = await createInstallation();
+  const browser = await playwright.request.newContext();
+  let lost: Awaited<ReturnType<typeof playwright.request.newContext>> | undefined;
+  try {
+    await signIn(browser, app.origin);
+    const { household } = await (await createHousehold(browser, app.origin)).json();
+    const flow = await beginAssistant(browser, app.origin);
+    const accepted = await flow.consent(household.id);
+    expect(accepted.status()).toBe(200);
+    const tokens = await flow.exchange((await accepted.json()).url);
+    expect(tokens.status).toBe(200);
+    const { access_token } = await tokens.json();
+    const before = await browser.storageState();
+    lost = await playwright.request.newContext({
+      storageState: {
+        cookies: before.cookies.filter((cookie) => !cookie.name.includes('binding')),
+        origins: [],
+      },
+    });
+    expect(await (await lost.get(`${app.origin}/api/auth/get-session`)).json()).toBeNull();
+    const unbound = await beginAssistant(lost, app.origin);
+    expect(new URL(unbound.consentUrl).searchParams.get('code')).toBeNull();
+    expect((await unbound.consent(household.id)).status()).toBe(401);
+    expect(
+      (
+        await lost.post(`${app.origin}/api/auth/sign-out`, {
+          headers: { origin: app.origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(401);
+    app.setIdentity(robin);
+    await signIn(browser, app.origin, 'microsoft');
+    expect((await callAssistant(app.origin, access_token, 'read_map')).status).toBe(200);
+    expect(
+      (
+        await browser.post(`${app.origin}/api/auth/sign-out`, {
+          headers: { origin: app.origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(200);
+    expect((await callAssistant(app.origin, access_token, 'read_map')).status).toBe(200);
+    await lost.addCookies(before.cookies);
+    expect(await (await lost.get(`${app.origin}/api/auth/get-session`)).json()).toBeNull();
+    expect((await unbound.consent(household.id)).status()).toBe(401);
+  } finally {
+    await browser.dispose();
+    await lost?.dispose();
+    await app.close();
+  }
+});
 
 test('AI-03: medgivandet kräver val av hushåll och AI-behandling', async ({ page }) => {
   const app = await createInstallation();
@@ -571,7 +627,7 @@ test('AI-05: eget utkast förblir privat och återkallad åtkomst stoppar klient
   page,
 }) => {
   const app = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(request, app.origin);
     const { household } = await (await createHousehold(request, app.origin)).json();

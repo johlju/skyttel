@@ -1,4 +1,7 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { copyFile, mkdtemp, rm } from 'node:fs/promises';
+import { createServer as createHttpsServer } from 'node:https';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type ServerType, serve } from '@hono/node-server';
@@ -7,7 +10,9 @@ import { createApp } from '../../src/server/app.js';
 import { createAuth, verifyAuthSchema } from '../../src/server/auth.js';
 import type { Config } from '../../src/server/config.js';
 import { openDatabase } from '../../src/server/database.js';
+import { adoptLegacyInstallationAuthority } from '../../src/server/legacy-login-upgrade.js';
 import type { LiveSidebandFactory, LiveUsage } from '../../src/server/live-provider.js';
+import { attachTaskDelivery } from '../../src/server/task-delivery-transport.js';
 import type { TextModelUsage } from '../../src/server/text-assistant-model.js';
 import { seedLargeMap } from './large-map.js';
 import { legacyAuth } from './legacy-auth.js';
@@ -47,14 +52,48 @@ export async function createInstallation(
     modelProfile?: Parameters<typeof createApp>[0]['modelProfile'];
     liveProfile?: Parameters<typeof createApp>[0]['liveProfile'];
     observe?: Parameters<typeof createApp>[0]['observe'];
+    https?: boolean;
+    now?: () => number;
+    deliverResponse?: (request: Request, response: Response) => Response | Promise<Response>;
+    authorityFence?: Config['authorityFence'];
   } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
+  let tls: { key: Buffer; cert: Buffer } | undefined;
+  if (databaseOptions.https) {
+    const key = join(directory, 'tls.key');
+    const certificate = join(directory, 'tls.crt');
+    execFileSync(
+      'openssl',
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'rsa:2048',
+        '-nodes',
+        '-keyout',
+        key,
+        '-out',
+        certificate,
+        '-days',
+        '1',
+        '-subj',
+        '/CN=localhost',
+        '-addext',
+        'subjectAltName=IP:127.0.0.1,DNS:localhost',
+      ],
+      { stdio: 'ignore' },
+    );
+    tls = { key: readFileSync(key), cert: readFileSync(certificate) };
+  }
   const config: Config = {
     origin: 'http://127.0.0.1',
     databasePath: databaseOptions.databasePath ?? join(directory, 'skyttel.db'),
     firstAdmin,
     authSecret: 'synthetic-test-secret-with-at-least-32-characters',
+    authorityFence: databaseOptions.authorityFence ?? {
+      generation: '11111111-1111-4111-8111-111111111111',
+    },
     google: { clientId: 'fake-google', clientSecret: 'fake-secret' },
     microsoft: { clientId: 'fake-microsoft', clientSecret: 'fake-secret' },
     port: 0,
@@ -68,6 +107,7 @@ export async function createInstallation(
   let identity = alex;
   let providerFails = false;
   let consentDenied = false;
+  let providerPause: { entered: () => void; wait: Promise<void> } | undefined;
   let database: ReturnType<typeof openDatabase>;
   let server: ServerType;
   let closeApp: () => Promise<void>;
@@ -79,6 +119,7 @@ export async function createInstallation(
       fetch: (request) => handle(request),
       hostname: config.host,
       port: config.port,
+      ...(tls ? { createServer: createHttpsServer, serverOptions: tls } : {}),
     });
     await new Promise<void>((resolve, reject) => {
       server.once('listening', resolve);
@@ -87,12 +128,19 @@ export async function createInstallation(
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('No test address');
     config.port = address.port;
-    config.origin = `http://127.0.0.1:${address.port}`;
+    config.origin = `${tls ? 'https' : 'http'}://127.0.0.1:${address.port}`;
     database = openDatabase(config.databasePath, databaseOptions);
-    const hasOAuth = database
-      .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'oauthClient'")
+    const hasAuthority = database
+      .prepare(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'installation_authority'",
+      )
       .get();
-    const auth = hasOAuth ? createAuth(config, database) : legacyAuth(config, database);
+    // Historical migration exercises explicitly use their historical factory.
+    // The production factory always requires the current authority barrier.
+    const auth =
+      hasAuthority && !databaseOptions.legacyAuthCallbacks
+        ? createAuth(config, database)
+        : legacyAuth(config, database);
     await verifyAuthSchema(auth);
     const context = await auth.$context;
     for (const provider of context.socialProviders) {
@@ -110,11 +158,18 @@ export async function createInstallation(
         return { accessToken: 'synthetic-provider-token', tokenType: 'bearer' };
       };
       provider.getUserInfo = async () => {
+        const selected = identity;
+        const pause = providerPause;
+        providerPause = undefined;
+        if (pause) {
+          pause.entered();
+          await pause.wait;
+        }
         const profile = {
-          sub: identity.subject,
-          oid: identity.subject,
-          name: identity.name,
-          email: identity.email,
+          sub: selected.subject,
+          oid: selected.subject,
+          name: selected.name,
+          email: selected.email,
           email_verified: true,
         };
         // Preserve the application's profile mapping while substituting only
@@ -140,8 +195,10 @@ export async function createInstallation(
       liveProfile: databaseOptions.liveProfile,
       observe: databaseOptions.observe,
       consentTextVersion: databaseOptions.consentTextVersion,
+      now: databaseOptions.now,
     });
     closeApp = app.close;
+    attachTaskDelivery(server, config.origin, app.prepareTaskDelivery);
     summarizeForEvaluation = app.summarizeForEvaluation;
     handle = async (request) => {
       // Model the original login-only callback while arranging a legacy
@@ -179,10 +236,13 @@ export async function createInstallation(
           },
         );
       }
-      return response;
+      return databaseOptions.deliverResponse
+        ? databaseOptions.deliverResponse(request, response)
+        : response;
     };
   }
   async function stop() {
+    await closeApp();
     await new Promise<void>((resolve, reject) => {
       // Requests already in flight can become idle after close() performs
       // its initial idle-connection sweep. Drain those too, so an open
@@ -196,7 +256,6 @@ export async function createInstallation(
         else resolve();
       });
     });
-    await closeApp();
     database.close();
   }
   await start();
@@ -214,6 +273,18 @@ export async function createInstallation(
     directory,
     setIdentity(value: Identity) {
       identity = value;
+    },
+    pauseNextProvider() {
+      let entered: () => void = () => {};
+      let resume: () => void = () => {};
+      const reached = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const wait = new Promise<void>((resolve) => {
+        resume = resolve;
+      });
+      providerPause = { entered, wait };
+      return { reached, resume };
     },
     failProvider(value: boolean) {
       providerFails = value;
@@ -243,6 +314,26 @@ export async function createInstallation(
     },
     async restart() {
       await stop();
+      await start();
+    },
+    // A controlled operator action: stop every old connection, restore a real
+    // SQLite backup, and supply host configuration that is outside that copy.
+    async restoreDatabase(source: string, authorityFence: Config['authorityFence']) {
+      await stop();
+      await copyFile(source, config.databasePath);
+      config.authorityFence = authorityFence;
+      await start();
+    },
+    async upgradeLegacyLogin() {
+      // Explicit operator maintenance, never an automatic fixture startup step.
+      await stop();
+      const upgraded = openDatabase(config.databasePath, databaseOptions);
+      try {
+        adoptLegacyInstallationAuthority(upgraded, config.authorityFence.generation);
+      } finally {
+        upgraded.close();
+      }
+      databaseOptions.legacyAuthCallbacks = false;
       await start();
     },
     async close() {

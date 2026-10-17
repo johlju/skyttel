@@ -1,4 +1,4 @@
-import { expect, type Locator, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import {
   closeSupportDialog,
   createHousehold,
@@ -9,6 +9,7 @@ import {
 } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { expect, test } from '../support/test.js';
 
 test('LISTA-05: short-screen table returns preserve the visible result and keyboard focus', async ({
   page,

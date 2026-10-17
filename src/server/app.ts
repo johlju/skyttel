@@ -12,6 +12,8 @@ import { administrationRoutes } from './administration-routes.js';
 import type { ObserveAssistant } from './assistant-observation.js';
 import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
+import { authenticationCleanup } from './authentication-cleanup.js';
+import { browserBindings } from './browser-binding.js';
 import type { Config } from './config.js';
 import { contentOwnerRoutes } from './content-owner-routes.js';
 import { conversationConsents } from './conversation-consent.js';
@@ -22,21 +24,24 @@ import { householdErasureRoutes } from './household-erasure-routes.js';
 import { householdExportRoutes } from './household-export-routes.js';
 import { householdImportRoutes } from './household-import-routes.js';
 import { createHousehold, householdAccess, isFirstAdmin, isInitialized } from './households.js';
+import { installationAuthority } from './installation-authority.js';
 import type { LiveModelProfile, LiveSidebandFactory, LiveUsage } from './live-provider.js';
 import { createLoginMethods } from './login-methods.js';
 import { MapError } from './map.js';
 import { mapRoutes } from './map-routes.js';
+import { policyContactRoutes } from './policy-contact-routes.js';
 import { profileImageRoutes } from './profile-image-routes.js';
 import { imageUploadLimit } from './profile-images.js';
 import { textAssistantRoutes } from './text-assistant.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
 import type { TextModelProfile, TextModelUsage } from './text-assistant-model.js';
+import { themePreferenceRoutes } from './theme-preference-routes.js';
 import { voiceAssistantRoutes } from './voice-assistant.js';
 
 export function createApp({
   config,
   database,
-  auth,
+  auth: originalAuth,
   identity = buildIdentity,
   consentTextVersion,
   modelFetch,
@@ -48,6 +53,7 @@ export function createApp({
   modelProfile,
   liveProfile,
   observe,
+  now = () => Date.now(),
 }: {
   config: Config;
   database: Database.Database;
@@ -64,11 +70,48 @@ export function createApp({
   modelProfile?: TextModelProfile;
   liveProfile?: LiveModelProfile;
   observe?: ObserveAssistant;
+  /** Installation time in milliseconds since the Unix epoch. */
+  now?: () => number;
 }) {
   const app = new Hono();
+  // Historical test installations can intentionally stop before this migration.
+  const hasBindings = !!database
+    .prepare("SELECT 1 FROM sqlite_master WHERE name = 'browser_binding' AND type = 'table'")
+    .get();
+  const bindings = hasBindings
+    ? browserBindings(database, originalAuth, config.origin, now)
+    : undefined;
+  const auth = bindings
+    ? ({
+        ...originalAuth,
+        api: {
+          ...originalAuth.api,
+          getSession: ((options: { headers: Headers }) =>
+            bindings.session(options.headers)) as Auth['api']['getSession'],
+        },
+      } as Auth)
+    : originalAuth;
   const costs = installationCosts(database);
-  const linking = createLoginMethods(database, auth, config.origin);
+  const linking = createLoginMethods(database, auth, config.origin, bindings);
   const consents = conversationConsents(database, consentTextVersion);
+  let revalidateWork: (() => void) | undefined;
+  let revalidateVoice: (() => void) | undefined;
+  app.use('*', async (context, next) => {
+    try {
+      await next();
+    } finally {
+      revalidateWork?.();
+      revalidateVoice?.();
+    }
+    if (bindings) {
+      const controlled = await bindings.output(context.req.raw, context.res);
+      // Hono's response setter restores the previous Set-Cookie headers.
+      // Replace the actual outgoing headers after the handler has completed.
+      context.res.headers.delete('set-cookie');
+      for (const cookie of controlled.headers.getSetCookie())
+        context.res.headers.append('set-cookie', cookie);
+    }
+  });
   app.use(
     '*',
     secureHeaders({
@@ -140,6 +183,8 @@ export function createApp({
   app.get('/api/version', (context) =>
     context.json({ ...identity, database: databaseReadiness() }),
   );
+  if (bindings) app.route('/api/browser-binding', bindings.routes);
+  app.route('/api', policyContactRoutes(database, auth, config));
   const authRoutes = new Set([
     '/api/auth/sign-in/social',
     '/api/auth/callback/google',
@@ -155,28 +200,67 @@ export function createApp({
   ]);
   app.on(['GET', 'POST'], '/api/auth/*', async (context) => {
     if (!authRoutes.has(context.req.path)) return context.json({ error: 'not_found' }, 404);
-    if (context.req.path === '/api/auth/oauth2/authorize') {
+    if (
+      context.req.path === '/api/auth/oauth2/authorize' ||
+      context.req.path === '/api/auth/oauth2/register'
+    ) {
       const url = new URL(context.req.url);
-      url.searchParams.set('prompt', 'consent');
-      return auth.handler(new Request(url, context.req.raw));
+      if (context.req.path === '/api/auth/oauth2/authorize')
+        url.searchParams.set('prompt', 'consent');
+      const request = new Request(url, {
+        method: context.req.method,
+        headers: new Headers(context.req.raw.headers),
+        ...(context.req.method === 'POST' ? { body: await context.req.raw.arrayBuffer() } : {}),
+        signal: context.req.raw.signal,
+      });
+      // Better Auth's internal session lookup must not accept an auth cookie
+      // which Skyttel's browser-binding boundary rejects. Keep its ordinary
+      // anonymous OAuth/login response and validation behavior.
+      if (bindings && !(await bindings.session(request.headers))) request.headers.delete('cookie');
+      return auth.handler(request);
     }
-    return context.req.path.startsWith('/api/auth/callback/')
-      ? linking.handleCallback(context.req.raw)
-      : auth.handler(context.req.raw);
+    if (context.req.path === '/api/auth/get-session' && bindings)
+      return context.json(await bindings.session(context.req.raw.headers));
+    if (context.req.path === '/api/auth/sign-in/social' && bindings)
+      return bindings.start(context.req.raw, (request) => auth.handler(request));
+    if (context.req.path === '/api/auth/sign-out' && bindings)
+      return bindings.logout(context.req.raw, () => auth.handler(context.req.raw));
+    if (context.req.path.startsWith('/api/auth/callback/'))
+      return bindings
+        ? linking.handleCallback(context.req.raw, (operation) =>
+            bindings.callback(context.req.raw, operation),
+          )
+        : linking.handleCallback(context.req.raw);
+    return auth.handler(context.req.raw);
   });
 
   app.get('/api/bootstrap', async (context) => {
     const providers = ['google', 'microsoft'] as const;
-    const session = await auth.api.getSession({ headers: context.req.raw.headers });
-    if (!session) return context.json({ status: 'anonymous', providers, operator: false });
+    let session = await auth.api.getSession({ headers: context.req.raw.headers });
+    const sessionStatus = !session ? await bindings?.status(context.req.raw.headers) : undefined;
+    if (!session && sessionStatus?.state === 'active')
+      session = await auth.api.getSession({ headers: context.req.raw.headers });
+    if (!session)
+      return context.json({
+        status: 'anonymous',
+        providers,
+        operator: false,
+        ...(installationAuthority(database)?.restoredFrom ? { restored: true } : {}),
+        sessionStatus:
+          sessionStatus && (sessionStatus.state === 'expired' || sessionStatus.bindingId)
+            ? sessionStatus
+            : undefined,
+      });
     const user = { id: session.user.id, name: session.user.name };
+    const loginId = session.session.id;
     const operator = isFirstAdmin(database, user.id, config);
     const household = householdAccess(database, user.id);
-    if (household) return context.json({ status: 'ready', providers, user, household, operator });
+    if (household)
+      return context.json({ status: 'ready', providers, user, household, operator, loginId });
     if (!isInitialized(database) && isFirstAdmin(database, user.id, config)) {
-      return context.json({ status: 'setup', providers, user, operator });
+      return context.json({ status: 'setup', providers, user, operator, loginId });
     }
-    return context.json({ status: 'forbidden', providers, user, operator });
+    return context.json({ status: 'forbidden', providers, user, operator, loginId });
   });
 
   app.post('/api/households', async (context) => {
@@ -226,6 +310,7 @@ export function createApp({
   app.route('/api', linking.routes);
   app.route('/api', mapRoutes(database, auth, config.origin));
   app.route('/api', profileImageRoutes(database, auth, config.origin));
+  app.route('/api', themePreferenceRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
   let stopVoice: ((sessionId: string) => void) | undefined;
   let retireVoiceWork: ((sessionId: string) => void) | undefined;
@@ -240,7 +325,14 @@ export function createApp({
     auth,
     config,
     consents,
+    now,
     dispatch: dispatchAssistant,
+    onWork: (id, until) => {
+      if (bindings?.work(id, until)) revalidateVoice?.();
+    },
+    onActivity: (id) => {
+      if (bindings?.activity(id)) revalidateVoice?.();
+    },
     modelFetch,
     modelProfile,
     voiceTokens: liveProfile?.tokens,
@@ -255,6 +347,7 @@ export function createApp({
     onNewConversation: (view, deferVoiceClose) => newVoiceConversation?.(view, deferVoiceClose),
   });
   app.route('/api', textAssistant.routes);
+  revalidateWork = textAssistant.stopUnauthorizedWork;
   app.route(
     '/api',
     conversationConsentRoutes(
@@ -266,6 +359,9 @@ export function createApp({
     ),
   );
   const voiceAssistant = voiceAssistantRoutes({
+    now,
+    voiceAccess: textAssistant.voiceAccess,
+    expireVoiceWork: textAssistant.expireVoiceWork,
     config,
     liveProfile,
     dispatch: dispatchAssistant,
@@ -281,11 +377,22 @@ export function createApp({
     contextUsage: textAssistant.contextUsage,
     prepareVoiceContext: textAssistant.prepareVoiceContext,
   });
+  revalidateVoice = voiceAssistant.revalidate;
   stopVoice = voiceAssistant.stopSession;
   retireVoiceWork = voiceAssistant.retireSessionWork;
   summarizeVoice = voiceAssistant.summarizeSession;
   newVoiceConversation = voiceAssistant.newConversation;
   app.route('/api', voiceAssistant.routes);
+  const stopCleanup = hasBindings
+    ? authenticationCleanup({
+        database,
+        now,
+        revalidate: () => {
+          revalidateWork?.();
+          revalidateVoice?.();
+        },
+      })
+    : undefined;
   app.all('/api/*', (context) => context.json({ error: 'not_found' }, 404));
   app.use('/assets/*', serveStatic({ root: './dist/client' }));
   app.get(
@@ -297,8 +404,10 @@ export function createApp({
     serveStatic({ path: './dist/client/index.html' }),
   );
   return Object.assign(app, {
+    prepareTaskDelivery: textAssistant.prepareDelivery,
     summarizeForEvaluation: textAssistant.summarizeForEvaluation,
     close: async () => {
+      stopCleanup?.();
       await voiceAssistant.close();
       await textAssistant.close();
     },

@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { createHousehold, openSettings, signIn } from '../support/client.js';
 import {
   expectRecoveryContent,
@@ -6,6 +5,7 @@ import {
 } from '../support/household-recovery-reading.js';
 import { createInstallation } from '../support/installation.js';
 import { denyRecoveryStorage, restoreRecoveryStorage } from '../support/recovery-storage.js';
+import { expect, test } from '../support/test.js';
 
 test('IMPORT-01: an administrator reviews and explicitly replaces household content with the keyboard', async ({
   page,

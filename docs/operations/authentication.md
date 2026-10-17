@@ -458,6 +458,105 @@ If verification fails while you still control the old address, restore the
 old origin and redeploy with its callbacks still registered. Do not leave a
 callback pointing to an address that you no longer control.
 
+## Verify authentication cleanup
+
+The running application starts cleanup at startup and once each minute.
+It processes short database batches between other work. No browser request
+is required. Keep the service running and investigate the sanitized
+`authentication_cleanup_failed` event. A stopped service cannot delete
+records; startup resumes cleanup against the original stored deadlines.
+Restart and repeated cleanup do not start new retention periods.
+
+Expired sessions are removed after their effective server deadline.
+Logout and login replacement remove the ended session immediately.
+Consumed login attempts are removed by their completion transaction;
+expired browser attempts, verification records and account-link attempts
+are removed by cleanup. This is within the required 24 hours from session
+end or attempt consumption or expiry, while the service can operate.
+
+Remembered-login action results stay readable by their authenticated owner
+for 24 hours from the actual change. Cleanup removes them after that
+window. They do not form a choice history. Cookies and result references
+cannot authorize access after the server authority ends.
+
+An expired browser binding can retain the minimal link needed to stop an
+already accepted text task. That link and its private assistant grant last
+only through the task's original finite deadline, at most thirty minutes
+from receipt including delivery. An open socket alone does not extend it.
+Cleanup removes the obsolete private grant and its private client, tokens
+and consent. At startup, private grants left by the previous process are
+revoked immediately: model work cannot resume after process death. A
+still-valid browser login can start a new conversation. Separately
+approved external assistant grants and clients
+keep their own authority. Expired or revoked tokens and assertion replay
+records are removed; a refresh record needed by a still valid dependent
+access token remains until that token ends. A rotated external refresh
+record can retain the minimum replay barrier from rotation until its
+original expiry or the end of the active token family, whichever comes
+first. Its cached reply is cleared at the reply's own expiry. Restart does
+not renew these periods, and no historical result archive is created.
+Browser revocation uses absence from the positive grant register, so no
+separate seven-day stop archive is needed. Logout's short-lived binding
+expires without renewing a barrier.
+The product permits only necessary barriers, at most seven days from stop
+plus at most 24 hours for deletion; this is an upper limit, not a default.
+
+User accounts, linked provider identities and their encrypted credentials,
+current signing keys, registered external clients and their active grants
+support continuing authentication. They are separate from expired login
+attempts and choice records. Cleanup does not remove household content,
+drafts, registered save attempts, receipts or saved preferences.
+
+Verify a disposable installation before rollout. Use synthetic identities
+and the shared installation clock for just before, exactly at and after
+each deadline. Record aggregate row counts from restricted, read-only
+database inspection before and after idle cleanup and a service restart.
+Confirm the physical disappearance of obsolete session, attempt, result,
+private grant and token rows; confirm that eligible text retains its stop
+link through its deadline. Then send the original cookie and callback
+again and confirm rejection. Never print tokens, cookie values, provider
+credentials or personal rows into shared logs. Restrict this inspection
+to operators who need database access.
+
+From the application's working directory in the private service terminal,
+this read-only check prints aggregate counts only. In the disposable test,
+record the baseline, create the known synthetic records, leave the
+installation idle and repeat after each deadline and restart. Compare the
+known additions and removals; a total count alone does not prove that the
+correct records are removed. Save the release and environment with the
+results, without copying personal records.
+
+```sh
+node --input-type=module <<'NODE'
+import Database from 'better-sqlite3';
+const database = new Database(process.env.SKYTTEL_DATABASE_PATH, {
+  readonly: true,
+});
+const tables = [
+  'session', 'browser_binding', 'browser_binding_attempt',
+  'verification', 'login_link', 'storage_action_result',
+  'assistant_connection', 'oauthClient', 'oauthConsent',
+  'oauthAccessToken', 'oauthRefreshToken', 'oauthClientAssertion',
+];
+const counts = Object.fromEntries(tables.map((table) => [
+  table,
+  database.prepare(`SELECT count(*) AS count FROM "${table}"`).get().count,
+]));
+console.log(JSON.stringify({ observedAt: new Date().toISOString(), counts }));
+database.close();
+NODE
+```
+
+These checks verify removal from the live SQLite database. They do not
+prove erasure of disk blocks, snapshots or backups. Keep any copies with
+authentication data restricted and only for recovery, for at most thirty
+days from their original copying time. Recopying does not reset that
+deadline. Verify the actual host's copies, access and physical deletion
+separately; a missing snapshot listing alone is insufficient evidence.
+The local synthetic checks do not establish production cleanup or backup
+deletion. Follow the [recovery guide](recovery.md) before reopening any
+restored installation.
+
 ## Troubleshoot sign-in
 
 <!-- markdownlint-disable MD013 -->

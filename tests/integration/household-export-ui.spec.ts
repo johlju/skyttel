@@ -1,13 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-  type BrowserContext,
-  type Download,
-  expect,
-  type Page,
-  request,
-  test,
-} from '@playwright/test';
+import { type BrowserContext, type Download, type Page, request } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
@@ -26,6 +19,7 @@ import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { holdBrowserExport, seedLargeExport } from '../support/export-browser-stream.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function arrange(page: Page) {
   const installation = await createInstallation();
@@ -116,7 +110,7 @@ test('EXPORT-01: an administrator downloads the complete household archive by ke
   browser,
 }) => {
   const fixture = await arrange(page);
-  const member = await browser.newContext();
+  const member = await createPreparedContext(browser);
   try {
     const { path, headers, installation } = fixture;
     const memberUser = await inviteMember(fixture, page, member);
@@ -370,7 +364,7 @@ test('EXPORT-04: a changed administrator role blocks export and clears the ready
   browser,
 }) => {
   const fixture = await arrange(page);
-  const secondAdministrator = await browser.newContext();
+  const secondAdministrator = await createPreparedContext(browser);
   try {
     const member = await inviteMember(fixture, page, secondAdministrator);
     expect(
@@ -600,7 +594,7 @@ test('EXPORT-07: browser download interrupted by demotion and revocation offers 
   browser,
 }) => {
   const fixture = await arrange(page);
-  const recipient = await browser.newContext();
+  const recipient = await createPreparedContext(browser);
   let transfer: Awaited<ReturnType<typeof holdBrowserExport>> | undefined;
   try {
     const user = await inviteMember(fixture, page, recipient);
@@ -1015,7 +1009,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
     await section.getByRole('button', { name: 'Hämta ZIP-fil' }).click();
     const result = await archive(await downloaded);
     const manifest = JSON.parse(Buffer.from(result.parts['manifest.json']).toString());
-    expect(manifest.schemaVersion).toBe(25);
+    expect(manifest.schemaVersion).toBe(33);
     const encoded = Buffer.from(result.parts['content.json']).toString();
     for (const excluded of [
       'synthetic-provider-token',

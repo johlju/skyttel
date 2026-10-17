@@ -21,7 +21,11 @@ export function voiceWork({
   delivered,
   input,
   observe,
+  allowed = () => true,
+  now = () => Date.now(),
 }: {
+  allowed?: () => boolean;
+  now?: () => number;
   channel: LiveSideband;
   initial: TextAssistantView;
   request: (action?: string, body?: unknown, signal?: AbortSignal) => Promise<TextAssistantView>;
@@ -79,6 +83,7 @@ export function voiceWork({
   function collectReply() {
     if (
       !stopped &&
+      allowed() &&
       questionPending &&
       inputVersion > questionInputVersion &&
       pending.length &&
@@ -113,6 +118,7 @@ export function voiceWork({
       .catch(() => undefined);
   }
   function append(delegationId: string | null, answer: VoiceAnswer, view?: TextAssistantView) {
+    if (!allowed()) return;
     const content = voiceAnswerText(answer);
     observe?.('voice_commentary', { delegationId, content, revision: view?.revision });
     // The acknowledgement of this command is transport receipt, never proof
@@ -124,6 +130,7 @@ export function voiceWork({
       answer,
       () =>
         !stopped &&
+        allowed() &&
         generation === task &&
         (Boolean(view?.receipt) || inputVersion === acceptedInput),
       view && !view.receipt && view.phase === 'ready' && !view.saveCheck
@@ -191,7 +198,7 @@ export function voiceWork({
     task: number,
   ) {
     const acceptedInput = inputVersion;
-    const current = () => !stopped && generation === task;
+    const current = () => !stopped && allowed() && generation === task;
     inFlight.set(task, (inFlight.get(task) ?? 0) + 1);
     try {
       const canceled = await canceling;
@@ -269,7 +276,7 @@ export function voiceWork({
       while (
         current() &&
         inputVersion === acceptedInput &&
-        (microphoneActive || Date.now() - lastInputAt < 2000)
+        (microphoneActive || now() - lastInputAt < 2000)
       )
         await new Promise((resolve) => setTimeout(resolve, 50));
       if (!current()) return;
@@ -306,7 +313,7 @@ export function voiceWork({
             : 'Underlaget har ändrats eller uppdraget kunde inte slutföras. Inget nytt sparande är bekräftat. Ge ett nytt tydligt uppdrag utifrån det aktuella utkastet.',
         );
       } catch {
-        if (!stopped && generation === recoveryGeneration) failed();
+        if (!stopped && allowed() && generation === recoveryGeneration) failed();
       }
     } finally {
       const remaining = (inFlight.get(task) ?? 1) - 1;
@@ -319,7 +326,7 @@ export function voiceWork({
     role: Fragment['role'],
     event: { event_id: string; delta: string; start_ms: number; end_ms: number },
   ) {
-    if (stopped) return;
+    if (stopped || !allowed()) return;
     if (!event || typeof event.event_id !== 'string' || !/^[\w-]{1,200}$/.test(event.event_id)) {
       failed();
       return;
@@ -341,7 +348,7 @@ export function voiceWork({
     transcript?.(role, event.delta);
     if (role === 'user') {
       inputVersion++;
-      lastInputAt = Date.now();
+      lastInputAt = now();
       input?.(true, event.delta);
       anchor ??= { ...rendered };
       pending.push({
@@ -365,11 +372,11 @@ export function voiceWork({
     const collection = Symbol();
     collecting = collection;
     const task = generation;
-    const current = () => !stopped && generation === task && collecting === collection;
+    const current = () => !stopped && allowed() && generation === task && collecting === collection;
     // A delegation offset is not a completed utterance. Accumulate late deltas
     // before sending a task, including corrections made while still speaking.
     // Further delegations during collection share this input, consumed once.
-    while (current() && (microphoneActive || Date.now() - lastInputAt < 2000))
+    while (current() && (microphoneActive || now() - lastInputAt < 2000))
       await new Promise((resolve) => setTimeout(resolve, 50));
     if (!current()) return;
     collecting = undefined;
@@ -394,7 +401,7 @@ export function voiceWork({
   channel.on('session.input_transcript.delta', (event) => fragment('user', event));
   channel.on('session.output_transcript.delta', (event) => fragment('assistant', event));
   channel.on('session.delegation.created', (event) => {
-    if (stopped) return;
+    if (stopped || !allowed()) return;
     if (
       !event?.delegation ||
       typeof event.delegation.id !== 'string' ||
@@ -444,7 +451,7 @@ export function voiceWork({
     activity(active: boolean) {
       if (stopped || (!active && !microphoneActive)) return;
       microphoneActive = active;
-      lastInputAt = Date.now();
+      lastInputAt = now();
       input?.(active || pending.length > 0);
     },
     // Starting over owns cancellation of the conversation. Retiring its old
@@ -458,7 +465,7 @@ export function voiceWork({
       !commentary.pending(),
     /** Consume each typed FIFO completion once, including while the next task works. */
     answer(view: TextAssistantView, microphoneOn = true) {
-      if (stopped) return;
+      if (stopped || !allowed()) return;
       rememberQuestion(view);
       collectReply();
       for (const reply of view.completedReplies ?? []) {

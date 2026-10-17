@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import {
   closeTextView,
   createHousehold,
@@ -18,6 +17,7 @@ import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 test('YTA-05: save results remain readable beside tablet work', async ({ page }) => {

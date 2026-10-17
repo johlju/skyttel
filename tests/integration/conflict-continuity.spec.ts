@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { openDraftReview } from '../support/client.js';
 import {
   prepareConflictContinuity,
@@ -9,12 +8,13 @@ import {
   saveNewerConflictType,
 } from '../support/conflict-continuity.js';
 import { expectConflictDraftValues } from '../support/current-conflict-reading.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('UTKAST-55: reopening discovers new saved data before stale choices can be confirmed', async ({
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictContinuity(page.request, other.request);
   try {
     await page.goto(app.installation.origin);
@@ -64,7 +64,7 @@ test('UTKAST-56: pending and unknown conflict outcomes have one accessible statu
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictContinuity(page.request, other.request);
   let release: (() => void) | undefined;
   try {
@@ -128,7 +128,7 @@ test('UTKAST-49: switching conflicts and reopening preserves choices and never c
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictContinuity(page.request, other.request);
   try {
     const service = { ...app.value, name: 'Min musiktjänst', description: 'Min tjänst' };
@@ -199,7 +199,7 @@ test('UTKAST-50: refreshed conflict data clears only choices for properties that
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictContinuity(page.request, other.request);
   try {
     const { value } = app;
@@ -258,7 +258,7 @@ for (const width of [1280, 320])
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await prepareConflictContinuity(page.request, other.request);
     try {
       await page.setViewportSize({ width, height: 900 });
@@ -317,7 +317,7 @@ for (const surface of ['Karta', 'Tabell'] as const)
         page,
         browser,
       }) => {
-        const other = await browser.newContext();
+        const other = await createPreparedContext(browser);
         const app = await prepareConflictContinuity(page.request, other.request);
         try {
           await page.setViewportSize({ width, height: 900 });
@@ -411,7 +411,7 @@ test('UTKAST-51: a changed object type revalidates mixed values while unaffected
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictTypeContinuity(page.request, other.request);
   try {
     await page.goto(app.installation.origin);
@@ -467,7 +467,7 @@ test('UTKAST-52: a known version rejection retains choices and retries only afte
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictContinuity(page.request, other.request);
   try {
     await page.goto(app.installation.origin);
@@ -519,7 +519,7 @@ test('UTKAST-127: a changed relationship reference refreshes its meaning without
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictReferenceContinuity(page.request, other.request);
   try {
     await page.goto(app.installation.origin);
@@ -569,7 +569,7 @@ test('UTKAST-128: a conflict resolved by another client becomes read-only after 
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictContinuity(page.request, other.request);
   try {
     await page.goto(app.installation.origin);
@@ -606,7 +606,7 @@ for (const side of ['saved', 'proposed'] as const)
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await prepareConflictContinuity(page.request, other.request);
     try {
       await app.propose(page.request, 'draft', 'independent', {
@@ -673,7 +673,7 @@ test('UTKAST-131: a later save after a lost applied reply retains unchanged choi
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await prepareConflictContinuity(page.request, other.request);
   try {
     await page.route('**/map/resolve', async (route) => {

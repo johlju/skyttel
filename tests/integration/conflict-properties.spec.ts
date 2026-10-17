@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { conflictBasis } from '../../src/shared/conflict-properties.js';
 import { draftConflicts } from '../../src/shared/draft-conflicts.js';
 import { closeTextView, signIn } from '../support/client.js';
@@ -11,13 +10,14 @@ import {
 } from '../support/current-conflict-reading.js';
 import { readTableObject } from '../support/domain-work.js';
 import { alex, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 for (const width of [1440, 390])
   test(`UTKAST-${width === 1440 ? '28' : '106'}: mix explicit property choices without saving the shared map at ${width}px`, async ({
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const app = await conflictCollaborators(page.request, other.request);
     try {
       await page.setViewportSize({ width, height: 900 });
@@ -159,8 +159,8 @@ for (const width of [1440, 390])
       await closeTextView(page);
 
       // Repeat the documented keyboard path from Karta with a fresh conflict.
-      const mapOwner = await browser.newContext();
-      const mapMember = await browser.newContext();
+      const mapOwner = await createPreparedContext(browser);
+      const mapMember = await createPreparedContext(browser);
       const mapApp = await conflictCollaborators(mapOwner.request, mapMember.request);
       try {
         const mapPage = await mapOwner.newPage();
@@ -257,7 +257,7 @@ test('UTKAST-29: invalid relationship property combinations keep every choice un
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await conflictCollaborators(page.request, other.request);
   const member = await other.newPage();
   try {
@@ -345,7 +345,7 @@ for (const kind of ['object', 'relationship'] as const)
     page,
     browser,
   }) => {
-    const other = await browser.newContext();
+    const other = await createPreparedContext(browser);
     const longName = 'Föremålsnamn'.repeat(14);
     const app = await conflictCollaborators(page.request, other.request, [
       ['lo', longName],
@@ -412,7 +412,7 @@ test('UTKAST-34: configured builtin labels remain unchanged on both conflict sid
   page,
   browser,
 }) => {
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const app = await conflictCollaborators(page.request, other.request);
   try {
     let state = await app.read();
@@ -488,12 +488,12 @@ test('UTKAST-35: saved property attribution identifies each actual saver after i
   page,
   browser,
 }) => {
-  const lo = await browser.newContext();
+  const lo = await createPreparedContext(browser);
   const app = await conflictCollaborators(page.request, lo.request, undefined, {
     ...robin,
     name: 'Lo Exempel',
   });
-  const proposer = await browser.newContext();
+  const proposer = await createPreparedContext(browser);
   try {
     app.installation.setIdentity({
       subject: 'third-person',

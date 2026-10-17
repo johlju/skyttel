@@ -6,6 +6,183 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Browser storage consent and policy contact
+
+Before rollout, select the installation's public policy email address.
+After upgrade, the installation operator must save it under Policykontakt
+in the Drift settings group. The development demo address is not a
+production default. A missing address leaves normal use available and
+shows a request to contact the person responsible for the installation.
+
+Existing remembered logins have no browser storage consent. On the next
+visit, verify that Skyttel disables remembered login safely and offers a
+new storage choice. Ordinary access can continue only after confirmation
+and within its existing limits. Permission alone must not activate
+remembered login. Explicit activation after login must keep the original
+authentication time and seven-day limit.
+
+Verify activation, withdrawal and reset through the production HTTPS
+ingress, including lost replies and result checks after a new login.
+Keep unresolved action references. Reset must preserve household data,
+account settings and suppressed login offers. The database upgrade adds
+activation results to the existing 24-hour recovery window; it does not
+create a general consent history.
+New household exports require an upgraded importer. Existing supported
+exports remain readable.
+
+### Development configuration examples
+
+The environment examples include a shared development installation
+generation. Before using an example for QA, staging, production or another
+non-development installation, replace it with a unique privately managed
+generation. Operators must enforce this restriction; the service does not
+reject the development value. Preserve an existing installation's generation
+across ordinary restarts.
+
+### Controlled login transition and roll forward
+
+Stop every old application process and close public access before the
+one-time login transition. Use the controlled maintenance procedure and
+an independently stored installation generation. Normal startup refuses
+an existing installation until its old authority is invalidated. All
+affected devices must sign in again and make a new remembered-login choice.
+Stored household work and save results remain; AI work does not resume.
+
+Use a corrected newer version if verification fails. Do not return to an
+older application or restore old login authority. A data restoration is a
+separate controlled operation with its own erasure review. Keep delivery
+blocked until required provider, HTTPS, accessibility and backup evidence
+is available.
+
+### Ordinary login inactivity
+
+Verify that ordinary logins end after thirty minutes without meaningful
+user actions, including after remembered login is turned off. Background
+requests and a silent microphone must not keep a login active. Check the
+warning before expiry and the exact access boundary with text and voice.
+Remembered logins retain their seven-day absolute limit without a separate
+inactivity limit. Activity never extends an absolute login limit.
+
+Accepted work and finite delivery pause inactivity within the original
+task deadline. A service restart ends that work without replay. Verify
+that restart or a delayed completion cannot renew the inactivity period
+beyond its original bounded work deadline. Stored drafts and save
+receipts must remain available after a new login.
+
+### Authentication data cleanup
+
+Keep the upgraded service running so that startup and background cleanup
+can remove ended login records and expired attempts without browser
+traffic. Verify removal from the live database across restart, the
+24-hour action-result window and rejection of old cookies and callbacks.
+Investigate cleanup failures. Accepted text work must keep its original
+bounded stop link until its deadline. Household content and save receipts
+must remain available.
+
+Database cleanup does not prove deletion from backups or snapshots.
+Restrict recovery copies and verify their actual deletion separately;
+the maximum is thirty days from original copying. Record missing host
+evidence before claiming these periods as actual production behavior.
+
+### Installation restore barrier
+
+Before upgrade, configure a unique authority generation in private host
+settings outside the database and restored volume. Missing configuration
+stops startup. Keep it stable for normal restart. Before every complete
+database or disk restore, keep the service closed, change this generation
+and record a fixed restore declaration with trusted permanent-erasure
+clearance. Follow the controlled restore procedure before reopening.
+
+Old browser and assistant access must be invalid before readiness. Preserve
+the independent declaration across restart and recopy. Verify old cookies,
+pending callbacks, authorization codes, refresh tokens and JWTs through
+the production ingress. Actual copy inventories, restricted access and
+physical deletion within thirty days still require operator evidence.
+
+### Accepted text work at login expiry
+
+Verify that an accepted text instruction can finish after normal login
+expiry, within thirty minutes of receipt including queue time. New
+instructions and save requests must require a valid login. Logout, consent
+revocation and access removal must stop further work. After a restart,
+check the existing draft and save results; model work does not resume.
+Do not report a completed server response as confirmed browser delivery.
+
+### Browser login after upgrade
+
+Sessions from before the upgrade no longer grant application access. Tell
+users to sign in again. Before rollout, confirm that supported browsers
+allow necessary cookies and provide Web Locks. Users must open Skyttel
+directly at its configured HTTPS address.
+
+After upgrade, verify Google and Microsoft sign-in through the production
+HTTPS ingress in the supported browsers. Check that the ingress preserves
+the configured public host and that users regain household access.
+
+Verify overlapping sign-in, account linking and logout through the ingress.
+One successful sign-in must replace the previous login in the same browser
+binding. Logout must stop pending sign-in and linking callbacks in that
+binding. Other browser bindings and separately approved assistant
+connections must keep their access. A delayed cookie response can require
+another sign-in; it must not restore an ended login.
+
+Verify both ordinary and remembered sign-in through the HTTPS ingress.
+Ordinary sign-in must use session cookies and end within eight hours.
+Remembered sign-in needs a new active choice and must end within seven days.
+Reads and restart must not extend either deadline. Check that the auth
+cookie has HttpOnly, Secure and SameSite=Lax, and that both persistent
+cookies expire by the original deadline. Verify the confirmation failure
+message when the browser does not accept the login cookie. Browser session
+restore and real provider compatibility still need production verification.
+
+Verify turning off remembered sign-in through the production ingress.
+The old key and pending sign-in and linking attempts must lose authority
+immediately. The replacement login must use session cookies and keep the
+earlier deadline or eight hours from the change, whichever comes first.
+A delayed old cookie can require a new sign-in; it must not restore access.
+Check the separate messages for a saved change, confirmed continued
+sign-in and a lost response. Action results remain available only to
+their owner for 24 hours. Include these records in restricted database
+backup handling; they stay outside household files.
+
+Session choice records are part of the installation database and its
+restricted backups. They stay outside full household files. Use the
+upgraded reader for new household files; supported older files remain
+readable. Do not return to an older application after this upgrade.
+
+### Account theme and household files
+
+Use the upgraded application to read new full household files. Supported
+older files remain readable. Account theme choices stay outside household
+files and remain unchanged when household content is imported. Use the
+database backup to recover account choices with the installation.
+
+### Voice session expiry
+
+After upgrade, verify that an active voice connection stops at the server
+login deadline through the production HTTPS ingress, including when the
+browser sends no status requests. Verify logout, consent withdrawal and
+removed household access with a live connection. An interrupted voice
+instruction needs a new login and the complete instruction again; it must
+not restart automatically. Confirm that stored drafts and save receipts
+remain available after login and restart.
+
+### Complete conversation text delivery
+
+Before rollout, verify WebSocket upgrades through the HTTPS ingress and
+the supported browsers. A connection opened during a valid login can
+deliver an already accepted text task after normal login expiry, within
+its original thirty-minute limit. It must not allow household reads,
+new instructions or a new connection after expiry. Verify that logout,
+consent withdrawal and access removal end outstanding deliveries.
+
+Check the complete text fallback and its audio notice with keyboard and
+screen reader users. Receipt confirms that the complete text reaches
+the browser; it does not confirm audio playback, reading or understanding.
+A lost connection, missing receipt or restart ends delivery without
+automatic replay. Check existing drafts and save results after login;
+temporary conversation text does not become stored conversation history.
+
 ### Conversation model
 
 The application uses GPT-6.1 Sol with high reasoning effort for text,
@@ -21,7 +198,8 @@ price table. Existing credentials and database content remain usable.
 
 Full household files can contain private proposals to restore removed type
 definitions. Use the upgraded application to read these files. Supported older
-files remain readable. Keep the database backup and matching image for rollback.
+files remain readable. Keep restricted database recovery copies; recovery
+requires the current or a corrected newer application.
 
 Import retains these proposals but requires a new explicit review against
 current content before saving. Import does not transfer earlier restoration
@@ -33,7 +211,8 @@ review these retained proposals before they save their drafts.
 
 The upgraded database retains private evidence of complete relationship form
 attempts so a lost response can be checked before retrying. Keep the database
-and matching application image together for rollback. This evidence is scoped
+under the installation's recovery controls. Repair application failures
+with a corrected newer version. This evidence is scoped
 to its household and owner; recovery reads current content alongside the earlier
 outcome and does not restore an earlier draft over later work.
 
@@ -53,18 +232,19 @@ continue to use durable save receipts.
 
 Older private object merge proposals are not supported by this release.
 Resolve or discard those proposals before upgrade. Keep a database backup
-and its matching image for rollback. Saved history remains readable; removal
+for controlled data recovery. Use a corrected newer application for repair.
+Saved history remains readable; removal
 of the actions does not permanently erase historical content.
 
 ### Database compatibility and rollout
 
 This release adds database storage and changes saved content formats. Before
-upgrade, back up the persistent database and retain its matching application
-image. Keep the same persistent disk and authentication secret during rollout.
-Use the upgraded image with the upgraded database. To return to an older image,
-stop the application and restore its matching database backup. Changing the
-image alone does not reverse database changes. Changes after the backup will
-not be present after restoration.
+upgrade, back up the persistent database and record its application identity.
+Keep the same persistent disk and authentication secret during rollout.
+Use the upgraded image with the upgraded database. Repair failures with a
+corrected newer application. A separate controlled data restoration must
+invalidate old authority and review permanent erasure before reopening.
+Changes after the backup will not be present after restoration.
 
 Ask users to preserve unsent text and reload open browser sessions after
 rollout. Outdated sessions cannot submit changes. After an interrupted save,
@@ -93,8 +273,9 @@ This release stores each object's selected icon with its other content.
 Objects without a selection use their type's default icon. Full household
 archives from this release need an upgraded reader. The upgraded application
 also accepts supported older archives and uses default icons where no
-selection exists. Use the database backup and matching image procedure above
-for rollback; changing the image alone does not remove icon storage.
+selection exists. Use the controlled database recovery procedure above
+for controlled recovery with the current or a corrected newer application;
+changing the image alone does not remove icon storage.
 
 Refresh connected assistants' tool catalogs after rollout. Older clients
 that omit the icon field retain the current selection. An explicit reset
@@ -120,8 +301,8 @@ assistants' tool catalogs after rollout so they can change sections and
 field placement. Older clients that omit section or built-in property
 information retain the existing placement. Custom answers and built-in
 property references remain separate contracts. Use the database backup
-and matching image procedure
-above for rollback.
+and controlled data recovery procedure above. Repair forward with a newer
+application.
 
 ### Relationship fields and archive compatibility
 
@@ -134,7 +315,8 @@ household content, including private drafts and recovery copies.
 Refresh connected assistants' tool catalogs after rollout. Clients that omit
 custom fields or answers retain existing data when the relationship type is
 unchanged. Clearing answers requires an explicit empty value set. Use the
-database backup and matching image procedure above for rollback.
+controlled database recovery procedure above. Repair forward with a newer
+application.
 
 ### Installation cost measurements
 
@@ -157,16 +339,17 @@ cost and duration of an individual request. After rollout, monitor actual
 token use, incomplete responses and response times before you set a lower
 limit. Output use includes internal reasoning as well as visible text.
 
-Assistant model calls and accepted tasks have no fixed processing deadline.
-Slow work stays active until it completes, fails or the user stops it. After
+Accepted text work has a thirty-minute bound from receipt, including queue
+time and delivery. Active voice work ends at the login deadline. After
 rollout, monitor response times and active work. Use the stop control when
-work must end; a long response time alone no longer stops it automatically.
+work must end.
 
 Personal conversation choices remain in the installation database and apply
 to the user's households. Household export and import do not transfer or
 restore these choices. Include them in installation backups if they must
-survive disk replacement. Follow the matching database backup and image
-procedure above for rollback.
+survive disk replacement. Follow the controlled database recovery
+procedure above for controlled data recovery with the current or a newer
+application. Older application versions are unsupported.
 
 New household archives need an upgraded reader. The upgraded application
 continues to read supported older archives.
@@ -196,7 +379,7 @@ check action. Retain the original operation and its durable result.
 
 This release stores a saved conversation consent for each Skyttel user and
 household, with its date and the version of the consent text. Use the database
-backup and matching image procedure above for rollback; changing the image
+backup procedure above for controlled data recovery; changing the image
 alone does not remove this storage. Backups and recovery copies retain these
 consent records. Apply household access and retention restrictions to them.
 
@@ -217,9 +400,10 @@ Release stops new recording immediately.
 
 A user can revoke the consent in Settings. The revocation removes the saved
 consent and ends that user's conversations in the household. A restored
-database backup contains the consents that were saved when the backup was
-made. After a restoration, tell users that a consent which they revoked
-after the backup applies again until they revoke it again.
+database backup can contain earlier consent records. A controlled restore
+must invalidate old authentication and assistant authority before reopening.
+Retained household conversation choices do not reactivate old connections
+or permit automatic model work.
 
 ### Household export, replacement and recovery
 
@@ -340,7 +524,8 @@ GitHub. Review the latest successful scan of the running and retained recovery
 images before each production update and at least monthly. Missing or stale
 evidence means that current status is unknown. Check security updates and
 exception expiry each week. An older image with an unresolved finding remains
-unsafe for recovery after a fixed image enters production.
+unsafe after a fixed image enters production. Retained-image monitoring does
+not authorize running an older application after the login transition.
 
 Before using a published image, verify its source and signed evidence. Read
 the guidance attached to that release and select the image by its digest.

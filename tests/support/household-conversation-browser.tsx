@@ -8,6 +8,7 @@ import { defaultConversationPreferences } from '../../src/shared/conversation-pr
 import type { MapState } from '../../src/shared/map.js';
 import { defaultViewSettings } from '../../src/shared/personal-view.js';
 import type { TextAssistantView } from '../../src/shared/text-assistant.js';
+import { createAccountThemeFixture } from './account-theme-browser.js';
 
 /** Real household composition with controlled replies at its public fetch boundary.
  * This does not establish HTTP admission, provider execution or durable storage. */
@@ -43,7 +44,9 @@ export async function openHouseholdConversation(
   let available = true;
   let failNextReply = false;
   const messages: unknown[] = [];
+  const theme = createAccountThemeFixture(state.userId);
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (url === '/api/theme-preference') return theme.respond(init);
     if (url.endsWith('/conversation-preferences'))
       return Response.json(defaultConversationPreferences);
     if (url.endsWith('/conversation-consent')) return Response.json({ saved: null });
@@ -103,13 +106,15 @@ export async function openHouseholdConversation(
     throw new Error(`Unexpected request: ${url}`);
   });
   render(
-    <FormLeaveProvider>
-      <main>
-        <section className="panel household-panel">
-          <HouseholdMap householdId="home" />
-        </section>
-      </main>
-    </FormLeaveProvider>,
+    <theme.Boundary>
+      <FormLeaveProvider>
+        <main>
+          <section className="panel household-panel">
+            <HouseholdMap householdId="home" />
+          </section>
+        </main>
+      </FormLeaveProvider>
+    </theme.Boundary>,
   );
   await expect.element(page.getByRole('region', { name: 'Rymdkarta', exact: true })).toBeVisible();
   return {

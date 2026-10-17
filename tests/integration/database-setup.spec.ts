@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, request, test } from '@playwright/test';
+import { request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import {
   createHousehold,
@@ -12,6 +12,7 @@ import {
   utilityButton,
 } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function setupDatabase(
   installation: Awaited<ReturnType<typeof createInstallation>>,
@@ -27,6 +28,7 @@ async function setupDatabase(
       SKYTTEL_FIRST_ADMIN_PROVIDER: firstAdmin.provider,
       SKYTTEL_FIRST_ADMIN_SUBJECT: firstAdmin.subject,
       BETTER_AUTH_SECRET: 'synthetic-test-secret-with-at-least-32-characters',
+      SKYTTEL_AUTHORITY_GENERATION: '11111111-1111-4111-8111-111111111111',
       GOOGLE_CLIENT_ID: 'fake-google',
       GOOGLE_CLIENT_SECRET: 'fake-secret',
       MICROSOFT_CLIENT_ID: 'fake-microsoft',
@@ -305,6 +307,25 @@ test('repeated setup clears households, members, invitations, sessions and futur
         expect(await (await client.get(`${origin}/api/bootstrap`)).json()).toMatchObject({
           status: 'anonymous',
         });
+        // The reset removes each server binding. Each actor explicitly confirms
+        // its own local reset before a new provider action; no silent retry.
+        expect(
+          (
+            await client.post(`${origin}/api/browser-binding/candidate`, {
+              headers,
+              data: {},
+            })
+          ).status(),
+        ).toBe(409);
+        expect(
+          (
+            await client.post(`${origin}/api/browser-binding/reset-check`, {
+              headers,
+              data: {},
+            })
+          ).status(),
+        ).toBe(200);
+        await client.clearCookies({ name: 'skyttel_binding' });
       }
       installation.setIdentity(alex);
       await signIn(administrator, origin);

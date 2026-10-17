@@ -1,6 +1,7 @@
 import { chmod, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { request } from '@playwright/test';
+import { signIn } from './client.js';
 import { createInstallation } from './installation.js';
 
 const directory = process.argv[2];
@@ -9,13 +10,7 @@ await mkdir(directory, { recursive: true });
 const installation = await createInstallation();
 const client = await request.newContext({ baseURL: installation.origin });
 try {
-  const signIn = await client.post('/api/auth/sign-in/social', {
-    headers: { origin: installation.origin },
-    data: { provider: 'google', callbackURL: '/' },
-  });
-  if (!signIn.ok()) throw new Error('Synthetic sign-in failed');
-  const { url } = await signIn.json();
-  await client.get(url);
+  await signIn(client, installation.origin);
   const create = await client.post('/api/households', {
     headers: { origin: installation.origin },
     data: { name: 'Testhushållet Linden' },

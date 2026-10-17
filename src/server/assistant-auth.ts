@@ -10,6 +10,9 @@ export const assistantConsent = new AsyncLocalStorage<string>();
 // have no context here and retain the same authorization rules.
 export type AssistantTaskGuard = (contentVersion?: number) => void;
 export const assistantTaskAccess = new AsyncLocalStorage<AssistantTaskGuard>();
+/** Only the server executor can select its original private grant. No HTTP
+ * header, token claim or external client can install this context. */
+export const assistantTaskConnection = new AsyncLocalStorage<string>();
 export const assistantScope = 'skyttel:read';
 export const assistantWriteScope = 'skyttel:write';
 

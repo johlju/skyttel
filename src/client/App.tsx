@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -20,9 +21,25 @@ import {
 import logo from '../../docs/images/shuttle-logo-transparent-small.png';
 import type { Administration, HouseholdInvitation } from '../shared/administration.js';
 import { householdNameMaxLength, normalizeHouseholdName } from '../shared/household-name.js';
+import { installationRestoredMessage } from '../shared/installation-restore.js';
 import type { PersonalView } from '../shared/personal-view.js';
+import { loginConfirmationFailure } from '../shared/remembered-login.js';
+import {
+  expiredSessionMessage,
+  inactiveSessionMessage,
+  type SessionStatus,
+  sessionWarningMessage,
+} from '../shared/session-activity.js';
+import { voiceSessionExpiredMessage } from '../shared/voice-assistant.js';
 import { Assistants } from './Assistants.js';
+import {
+  BrowserBindingResetRequired,
+  confirmBrowserLogin,
+  resetBrowserBinding,
+  withBrowserBinding,
+} from './browser-binding.js';
 import { ContentOwners } from './ContentOwners.js';
+import { CookieStorage } from './CookieStorage.js';
 import { Costs } from './Costs.js';
 import { FormLeaveProvider, useFormLeave } from './FormLeave.js';
 import { HouseholdErasure } from './HouseholdErasure.js';
@@ -30,17 +47,29 @@ import { HouseholdExport } from './HouseholdExport.js';
 import { HouseholdImport } from './HouseholdImport.js';
 import { HouseholdMap } from './HouseholdMap.js';
 import { MapRequestError as RequestError, request } from './map-request.js';
+import { PolicyContact } from './PolicyContact.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
-import { useWorkspaceTheme } from './WorkspaceTheme.js';
+import { StorageConsentProvider } from './StorageConsent.js';
+import { useSessionActivity } from './session-activity.js';
+import { TaskDeliveryContext, TaskDeliveryResults, useTaskDelivery } from './task-delivery.js';
+import { useAppShellReservedHeight } from './use-app-shell-reserved-height.js';
+import { VoiceSessionContext } from './voice-session-context.js';
+import { useAccountTheme, WorkspaceThemeContext } from './WorkspaceTheme.js';
 import './access.css';
 
 type Provider = 'google' | 'microsoft';
 type Household = { id: string; name: string; role: 'administrator' | 'member' };
 type Bootstrap = { providers: Provider[]; operator: boolean } & (
-  | { status: 'anonymous'; user?: never }
-  | { status: 'setup'; user: { id: string; name: string } }
-  | { status: 'forbidden'; user: { id: string; name: string } }
-  | { status: 'ready'; user: { id: string; name: string }; household: Household }
+  | {
+      status: 'anonymous';
+      user?: never;
+      loginId?: never;
+      restored?: true;
+      sessionStatus?: SessionStatus;
+    }
+  | { status: 'setup'; user: { id: string; name: string }; loginId: string }
+  | { status: 'forbidden'; user: { id: string; name: string }; loginId: string }
+  | { status: 'ready'; user: { id: string; name: string }; household: Household; loginId: string }
 );
 type LoadState<T> =
   | { status: 'loading' }
@@ -131,9 +160,12 @@ function Loading() {
 function Failure({ onRetry }: { onRetry: () => void }) {
   return (
     <section className="panel">
-      <p className="eyebrow">Anslutningen avbröts</p>
+      <p className="eyebrow">Tjänsten är inte tillgänglig</p>
       <Heading>Skyttel kunde inte öppnas</Heading>
-      <p>Kontrollera din internetanslutning och försök igen.</p>
+      <p>
+        Det kan bero på ett anslutningsfel eller på att Skyttel behöver underhåll eller en
+        uppgradering. Försök igen om en stund. Kontakta administratören om problemet kvarstår.
+      </p>
       <button type="button" className="primary" onClick={onRetry}>
         Försök igen
       </button>
@@ -146,6 +178,8 @@ function Login({ providers }: { providers: Provider[] }) {
   const [selected, setSelected] = useState<Provider | null>(null);
   const [pending, setPending] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+  const [resetPair, setResetPair] = useState<string>();
+  const [resetDone, setResetDone] = useState(false);
   const [error, setError] = useState(() => {
     const query = new URLSearchParams(location.search);
     return query.get('error') ?? (query.has('authError') ? 'failed' : null);
@@ -153,6 +187,7 @@ function Login({ providers }: { providers: Provider[] }) {
   const options = useRef<HTMLFieldSetElement>(null);
   const continueButton = useRef<HTMLButtonElement>(null);
   const attempt = useRef<AbortController | null>(null);
+  const failedResetFocus = useRef<AbortController | null>(null);
   const lastProvider = useRef<Provider | null>(null);
   const label = selected === 'google' ? 'Google' : 'Microsoft';
   useEffect(() => {
@@ -162,6 +197,18 @@ function Login({ providers }: { providers: Provider[] }) {
         ?.querySelector<HTMLButtonElement>(`[data-provider="${lastProvider.current}"]`)
         ?.focus();
   }, [selected]);
+  useEffect(() => {
+    const controller = failedResetFocus.current;
+    failedResetFocus.current = null;
+    if (
+      !resetPair &&
+      !selected &&
+      controller &&
+      !controller.signal.aborted &&
+      attempt.current === controller
+    )
+      options.current?.querySelector<HTMLButtonElement>('button')?.focus();
+  }, [resetPair, selected]);
   useEffect(() => {
     const returned = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
@@ -187,17 +234,23 @@ function Login({ providers }: { providers: Provider[] }) {
     attempt.current = controller;
     setPending(true);
     setError(null);
+    setResetPair(undefined);
+    setResetDone(false);
     try {
-      const result = await request<{ url: string }>(
-        '/api/auth/sign-in/social',
-        {
-          provider,
-          callbackURL: location.pathname === '/costs' ? '/costs' : '/',
-          ...(location.pathname === '/assistant-consent'
-            ? { oauth_query: location.search.slice(1) }
-            : {}),
-          errorCallbackURL: '/?authError=1',
-        },
+      const result = await withBrowserBinding(
+        () =>
+          request<{ url: string }>(
+            '/api/auth/sign-in/social',
+            {
+              provider,
+              callbackURL: location.pathname === '/costs' ? '/costs' : '/',
+              ...(location.pathname === '/assistant-consent'
+                ? { oauth_query: location.search.slice(1) }
+                : {}),
+              errorCallbackURL: '/login?authError=1',
+            },
+            controller.signal,
+          ),
         controller.signal,
       );
       if (controller.signal.aborted) return;
@@ -205,11 +258,40 @@ function Login({ providers }: { providers: Provider[] }) {
       const url = new URL(result.url, window.location.origin);
       if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid_redirect');
       window.location.assign(url.href);
-    } catch {
+    } catch (cause) {
       if (controller.signal.aborted) return;
       setPending(false);
       setSelected(null);
-      setError('failed');
+      if (cause instanceof BrowserBindingResetRequired) setResetPair(cause.observed);
+      setError(
+        (cause instanceof Error && cause.message.startsWith('binding_')) ||
+          (cause instanceof RequestError && cause.code.startsWith('binding_'))
+          ? 'binding_invalid'
+          : 'failed',
+      );
+    }
+  }
+  async function reset() {
+    if (!resetPair || pending) return;
+    const controller = new AbortController();
+    attempt.current = controller;
+    setPending(true);
+    try {
+      await resetBrowserBinding(resetPair, controller.signal);
+      if (controller.signal.aborted) return;
+      setError(null);
+      setResetPair(undefined);
+      setSelected(null);
+      setResetDone(true);
+      options.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    } catch {
+      if (!controller.signal.aborted) {
+        failedResetFocus.current = controller;
+        setResetPair(undefined);
+        setError('binding_invalid');
+      }
+    } finally {
+      if (!controller.signal.aborted) setPending(false);
     }
   }
   return (
@@ -252,6 +334,7 @@ function Login({ providers }: { providers: Provider[] }) {
               onClick={() => {
                 lastProvider.current = provider;
                 setCancelled(false);
+                setResetDone(false);
                 setError(null);
                 setSelected(provider);
               }}
@@ -263,20 +346,40 @@ function Login({ providers }: { providers: Provider[] }) {
       )}
       {pending && (
         <p className="muted" role="status">
-          Öppnar {label} för att verifiera din inloggning…
+          {resetPair
+            ? 'Rensar den gamla inloggningskopplingen…'
+            : `Öppnar ${label} för att verifiera din inloggning…`}
         </p>
       )}
       {cancelled && (
         <p role="status">Inloggningen avbröts. Välj ett inloggningssätt när du vill fortsätta.</p>
       )}
+      {resetDone && (
+        <p role="status">Klart för en ny inloggning. Välj Google eller Microsoft igen.</p>
+      )}
       {error && (
         <p className="error access-note" role="alert">
-          {error === 'access_denied'
-            ? 'Inloggningen kunde inte slutföras eftersom den avbröts hos leverantören. Du är tillbaka i Skyttel och kan försöka igen.'
-            : ['state_mismatch', 'state_not_found', 'state_invalid'].includes(error)
-              ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
-              : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
+          {error === 'unconfirmed'
+            ? loginConfirmationFailure
+            : error.startsWith('binding_')
+              ? 'Säker inloggning kan inte bekräftas i webbläsaren. Tillåt nödvändiga kakor och öppna Skyttel direkt i en webbläsare med stöd för säkra webbläsarlås. Om kakor saknas kan du behöva rensa Skyttels kakor och börja om. Ingen ny inloggning har bekräftats.'
+              : error === 'access_denied'
+                ? 'Inloggningen kunde inte slutföras eftersom den avbröts hos leverantören. Du är tillbaka i Skyttel och kan försöka igen.'
+                : ['state_mismatch', 'state_not_found', 'state_invalid'].includes(error)
+                  ? 'Inloggningsförsöket har gått ut eller kan inte verifieras. Börja om med Google eller Microsoft.'
+                  : 'Inloggningen kunde inte slutföras. Försök igen med Google eller Microsoft.'}
         </p>
+      )}
+      {resetPair && (
+        <div className="access-note">
+          <p>
+            Rensa den gamla inloggningskopplingen i den här webbläsaren innan du väljer inloggning
+            på nytt. Hushållets uppgifter och andra webbläsare påverkas inte.
+          </p>
+          <button type="button" disabled={pending} onClick={() => void reset()}>
+            Börja om i den här webbläsaren
+          </button>
+        </div>
       )}
       <p className="muted">
         Använd det inloggningssätt som är kopplat till din tillgång till hushållet.
@@ -1262,10 +1365,36 @@ function HouseholdPage({
 }
 
 export function App() {
+  const location = useLocation();
+  const proof = new URLSearchParams(location.search).get('loginConfirmation');
   return (
     <FormLeaveProvider>
-      <Application />
+      {proof ? <LoginConfirmation key={proof} proof={proof} /> : <Application />}
     </FormLeaveProvider>
+  );
+}
+
+function LoginConfirmation({ proof }: { proof: string }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    const controller = new AbortController();
+    void confirmBrowserLogin(proof, controller.signal)
+      .then(() => {
+        if (controller.signal.aborted) return;
+        const query = new URLSearchParams(location.search);
+        query.delete('loginConfirmation');
+        navigate({ pathname: location.pathname, search: query.toString() }, { replace: true });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) navigate('/login?error=unconfirmed', { replace: true });
+      });
+    return () => controller.abort();
+  }, [proof, navigate, location.pathname, location.search]);
+  return (
+    <main id="main" tabIndex={-1}>
+      <p role="status">Kontrollerar inloggningen…</p>
+    </main>
   );
 }
 
@@ -1273,25 +1402,79 @@ function Application() {
   const { requestLeave } = useFormLeave();
   const navigate = useNavigate();
   const location = useLocation();
-  const theme = useWorkspaceTheme();
   const [mapSettingsTarget, setMapSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [typeSettingsTarget, setTypeSettingsTarget] = useState<HTMLDivElement | null>(null);
   const [conversationSettingsTarget, setConversationSettingsTarget] =
     useState<HTMLDivElement | null>(null);
   const [revision, setRevision] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceExpired, setVoiceExpired] = useState(false);
+  const voiceSession = useMemo(
+    () => ({
+      active: setVoiceActive,
+      expired: () => {
+        setVoiceExpired(true);
+        setRevision((value) => value + 1);
+      },
+    }),
+    [],
+  );
+  const previouslyAuthenticated = useRef(false);
+  const signOutRequested = useRef(false);
   const [signOutError, setSignOutError] = useState(false);
   const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
   const data = bootstrap.status === 'loaded' ? bootstrap.data : undefined;
+  const activity = useSessionActivity(
+    signOutRequested.current ? undefined : data?.loginId,
+    revision,
+    reload,
+    data?.status === 'anonymous' ? data.sessionStatus : undefined,
+    data?.status === 'anonymous',
+  );
+  const warningElement = useRef<HTMLParagraphElement>(null);
+  useAppShellReservedHeight(warningElement, activity.warning, '--session-warning-height');
+  const taskDelivery = useTaskDelivery(data?.user?.id, data?.loginId);
+  const theme = useAccountTheme(data?.user?.id);
+  useEffect(() => {
+    if (data?.user?.id) {
+      previouslyAuthenticated.current = true;
+      signOutRequested.current = false;
+    }
+  }, [data?.user?.id]);
+  useEffect(() => {
+    // A fresh successful bootstrap confirms current access, including a new
+    // login for the same user without an intermediate anonymous render.
+    if (data?.user?.id) setVoiceExpired(false);
+  }, [data]);
+  const expired =
+    data?.status === 'anonymous' && previouslyAuthenticated.current && !signOutRequested.current;
+  useEffect(() => {
+    if (expired && voiceActive) setVoiceExpired(true);
+  }, [expired, voiceActive]);
+  const expiryNotice =
+    expired && (voiceExpired || voiceActive)
+      ? activity.reason === 'inactivity'
+        ? voiceSessionExpiredMessage.replace(expiredSessionMessage, inactiveSessionMessage)
+        : voiceSessionExpiredMessage
+      : expired
+        ? activity.reason === 'inactivity'
+          ? inactiveSessionMessage
+          : expiredSessionMessage
+        : '';
   async function signOut() {
+    signOutRequested.current = true;
     setSigningOut(true);
     setSignOutError(false);
     try {
       await request('/api/auth/sign-out', {});
+      taskDelivery.clear();
+      activity.clear();
       navigate('/', { replace: true });
       reload();
     } catch {
+      signOutRequested.current = false;
       setSignOutError(true);
     } finally {
       setSigningOut(false);
@@ -1304,21 +1487,30 @@ function Application() {
   const mapActive =
     data?.status === 'ready' && Boolean(matchPath('/households/:id', location.pathname));
   const authenticated = data && data.status !== 'anonymous';
-  const personal = ['/profile', '/login-methods', '/assistants', '/assistant-consent'].includes(
-    location.pathname,
-  );
+  const storagePage = location.pathname === '/cookies';
+  const loginPage = location.pathname === '/login';
+  const personal = [
+    '/profile',
+    '/login-methods',
+    '/assistants',
+    '/assistant-consent',
+    '/cookies',
+  ].includes(location.pathname);
   const settingsPage =
-    authenticated &&
+    (authenticated || storagePage) &&
     !mapActive &&
     (personal ||
-      location.pathname === '/costs' ||
-      (data.status === 'ready' &&
+      ['/costs', '/policy-contact'].includes(location.pathname) ||
+      (data?.status === 'ready' &&
         Boolean(matchPath('/households/:id/settings/*', location.pathname))) ||
-      (data.status === 'ready' &&
+      (data?.status === 'ready' &&
         Boolean(matchPath('/households/:id/administration', location.pathname))));
   const household = data?.status === 'ready' ? data.household : undefined;
   const accessGate =
-    data?.status === 'anonymous' || (authenticated && data.status !== 'ready' && !settingsPage);
+    !storagePage &&
+    (loginPage ||
+      data?.status === 'anonymous' ||
+      (authenticated && data.status !== 'ready' && !settingsPage));
   const logout = (
     <>
       <button
@@ -1357,6 +1549,8 @@ function Application() {
       <div className="settings-profile-links">
         <Link to="/login-methods">Inloggningssätt</Link>
         <Link to="/assistants">Assistentanslutningar</Link>
+        <Link to="/cookies">Kakor och lagring</Link>
+        <Link to="/login">Logga in på nytt</Link>
       </div>
       {logout}
     </>
@@ -1400,7 +1594,11 @@ function Application() {
             <Link to="/">Till startsidan</Link>
           </section>
         ))}
-      {!['/login-methods', '/profile', '/costs'].includes(location.pathname) &&
+      {location.pathname === '/policy-contact' &&
+        (data.operator ? <PolicyContact /> : <Forbidden />)}
+      {!['/login-methods', '/profile', '/costs', '/cookies', '/login', '/policy-contact'].includes(
+        location.pathname,
+      ) &&
         (data.status === 'ready' || data.status === 'setup') && (
           <Routes>
             <Route path="/assistant-consent" element={<Assistants consent />} />
@@ -1492,70 +1690,121 @@ function Application() {
     </>
   );
   return (
-    <div
-      className={`app-shell${mapActive ? ' has-workspace' : ''}${settingsPage ? ' has-settings' : ''}${accessGate ? ' access-shell' : ''}`}
-      data-theme={theme.theme}
-    >
-      <a className="skip-link" href="#main">
-        Hoppa till innehållet
-      </a>
-      <header className="site-header" hidden={mapActive || Boolean(settingsPage)}>
-        <Link className="brand" to="/" aria-label="Skyttel, startsida">
-          <img className="brand-logo" src={logo} alt="" />
-          Skyttel
-        </Link>
-        {authenticated ? (
-          <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
-            <Link to="/profile">Din profil</Link>
-            <Link to="/login-methods">Inloggningssätt</Link>
-            {data.operator && <Link to="/costs">Månadskostnad</Link>}
-            <span className="session-name">{data.user.name}</span>
-            {logout}
-          </div>
-        ) : (
-          <span className="header-note">Ett hushåll. En gemensam bild.</span>
-        )}
-      </header>
-      <main id="main" tabIndex={-1}>
-        {bootstrap.status === 'loading' && <Loading />}
-        {bootstrap.status === 'error' && <Failure onRetry={reload} />}
-        {data?.status === 'anonymous' && <Login providers={data.providers} />}
-        {settingsPage ? (
-          <SettingsScreen
-            household={household}
-            userName={data.user.name}
-            operator={data.operator}
-            personal={personal}
-            signOut={location.pathname === '/profile' ? null : logout}
+    <WorkspaceThemeContext value={theme}>
+      <div
+        className={`app-shell${mapActive ? ' has-workspace' : ''}${settingsPage ? ' has-settings' : ''}${accessGate ? ' access-shell' : ''}`}
+        data-theme={theme.theme}
+      >
+        <StorageConsentProvider
+          userId={data?.user?.id}
+          loginId={data?.loginId}
+          suppressBanner={storagePage}
+        >
+          <a className="skip-link" href="#main">
+            Hoppa till innehållet
+          </a>
+          <header className="site-header" hidden={mapActive || Boolean(settingsPage)}>
+            <Link className="brand" to="/" aria-label="Skyttel, startsida">
+              <img className="brand-logo" src={logo} alt="" />
+              Skyttel
+            </Link>
+            {authenticated ? (
+              <div className={`session-controls${data.operator ? ' operator-controls' : ''}`}>
+                <Link to="/profile">Din profil</Link>
+                <Link to="/login-methods">Inloggningssätt</Link>
+                {data.operator && <Link to="/costs">Månadskostnad</Link>}
+                <span className="session-name">{data.user.name}</span>
+                {logout}
+              </div>
+            ) : (
+              <span className="header-note">Ett hushåll. En gemensam bild.</span>
+            )}
+          </header>
+          <p
+            ref={warningElement}
+            className="session-warning"
+            role={activity.warning ? 'status' : undefined}
+            aria-live="polite"
+            aria-atomic="true"
           >
-            {pages}
-          </SettingsScreen>
-        ) : (
-          pages
-        )}
-        {data?.status === 'ready' && (
-          <HouseholdWork
-            key={data.user.id}
-            account={account}
-            onSessionExpired={reload}
-            typeSettingsTarget={typeSettingsTarget}
-            mapSettingsTarget={mapSettingsTarget}
-            conversationSettingsTarget={conversationSettingsTarget}
-          />
-        )}
-        {data?.status === 'forbidden' && !settingsPage && (
-          <>
-            <Forbidden />
-            <InvitationEntry
-              userId={data.user.id}
-              showInvitation
-              onAccepted={created}
-              onReload={reload}
-            />
-          </>
-        )}
-      </main>
-      <footer hidden={mapActive || Boolean(settingsPage)}>Det som hör ihop, samlat.</footer>
-    </div>
+            {activity.warning && sessionWarningMessage}
+          </p>
+          <main id="main" tabIndex={-1}>
+            <p className="session-expiry-announcement" aria-live="assertive" aria-atomic="true">
+              {expiryNotice}
+            </p>
+            {expired && <p>{expiryNotice}</p>}
+            <TaskDeliveryContext value={taskDelivery.client}>
+              <TaskDeliveryResults results={taskDelivery.results} workspace={mapActive} />
+            </TaskDeliveryContext>
+            {bootstrap.status === 'loading' && <Loading />}
+            {bootstrap.status === 'error' && <Failure onRetry={reload} />}
+            {(data?.status === 'anonymous' || loginPage) && data && !storagePage && (
+              <>
+                {data.status === 'anonymous' && data.restored && (
+                  <p className="error access-note" role="alert">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      width="20"
+                      height="20"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path d="m12 3 10 18H2Z M12 9v5m0 3v1" strokeWidth="2" />
+                    </svg>
+                    {installationRestoredMessage}
+                  </p>
+                )}
+                <Login providers={data.providers} />
+                {authenticated && <Link to="/">Tillbaka till din inloggning</Link>}
+              </>
+            )}
+            {settingsPage ? (
+              <SettingsScreen
+                household={household}
+                userName={data?.user?.name ?? 'Besökare'}
+                operator={data?.operator ?? false}
+                personal={personal}
+                anonymous={!authenticated}
+                signOut={!authenticated || location.pathname === '/profile' ? null : logout}
+              >
+                {storagePage ? <CookieStorage userId={data?.user?.id} /> : pages}
+              </SettingsScreen>
+            ) : (
+              pages
+            )}
+            {data?.status === 'ready' && (
+              <VoiceSessionContext value={voiceSession}>
+                <TaskDeliveryContext value={taskDelivery.client}>
+                  <HouseholdWork
+                    key={data.user.id}
+                    account={account}
+                    onSessionExpired={reload}
+                    typeSettingsTarget={typeSettingsTarget}
+                    mapSettingsTarget={mapSettingsTarget}
+                    conversationSettingsTarget={conversationSettingsTarget}
+                  />
+                </TaskDeliveryContext>
+              </VoiceSessionContext>
+            )}
+            {data?.status === 'forbidden' && !settingsPage && (
+              <>
+                <Forbidden />
+                <InvitationEntry
+                  userId={data.user.id}
+                  showInvitation
+                  onAccepted={created}
+                  onReload={reload}
+                />
+              </>
+            )}
+          </main>
+          <footer hidden={mapActive || Boolean(settingsPage)}>
+            Det som hör ihop, samlat. <Link to="/cookies">Kakor och lagring</Link>
+          </footer>
+        </StorageConsentProvider>
+      </div>
+    </WorkspaceThemeContext>
   );
 }

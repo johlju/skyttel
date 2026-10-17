@@ -136,7 +136,7 @@ YTA-02.
   systemstyrt tema.
 - Fokus återgår till temaknappen efter val och Escape.
 - System följer enheten utan omladdning; ett uttryckligt val består efter
-  omladdning när webbläsaren tillåter lagring.
+  omladdning genom att sparas på kontot.
 
 ### YTA-03: hjälp och formulär på telefon
 

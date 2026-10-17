@@ -11,6 +11,9 @@ med ett [familjeabonnemang](family-subscription.md).
 
 ## Innehåll
 
+- [Kakor och lagring](cookies.md): läsa om webbläsarens lagring före och
+  efter inloggning och återgå till kartan.
+
 ### Kom igång och arbeta i kartan
 
 - [Kom igång](getting-started.md): logga in, öppna eller skapa hushållet

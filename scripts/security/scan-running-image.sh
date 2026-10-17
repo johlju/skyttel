@@ -13,6 +13,7 @@ docker run -d --name "$container" -p 127.0.0.1:3000:3000 \
   -e SKYTTEL_FIRST_ADMIN_PROVIDER=google \
   -e SKYTTEL_FIRST_ADMIN_SUBJECT=synthetic-admin \
   -e BETTER_AUTH_SECRET=synthetic-ci-secret-at-least-32-characters \
+  -e SKYTTEL_AUTHORITY_GENERATION=11111111-1111-4111-8111-111111111111 \
   -e GOOGLE_CLIENT_ID=synthetic -e GOOGLE_CLIENT_SECRET=synthetic \
   -e MICROSOFT_CLIENT_ID=synthetic -e MICROSOFT_CLIENT_SECRET=synthetic \
   "$image"

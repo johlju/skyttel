@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import {
   createHousehold,
@@ -10,6 +10,7 @@ import {
 } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { expect, test } from '../support/test.js';
 
 async function arrange(page: Page, origin: string) {
   await signIn(page.request, origin);
@@ -226,6 +227,13 @@ for (const width of [1440, 390, 320]) {
       await expect(
         page.getByRole('region', { name: 'Hushållskarta', exact: true }),
       ).toHaveAttribute('data-theme', 'dark');
+      const themeFeedback = tools
+        .getByRole('status')
+        .filter({ hasText: 'Temavalet har sparats på ditt konto.' });
+      await expect(themeFeedback).toBeVisible();
+      await themeFeedback.getByRole('button', { name: 'Stäng temabeskedet' }).click();
+      await expect(themeFeedback).toHaveCount(0);
+      await tools.getByRole('button', { name: 'Dölj verktygens namn', exact: true }).click();
       const mark = table.getByRole('button', { name: 'Redigera Kim Exempel', exact: true });
       await mark.hover();
       expect(

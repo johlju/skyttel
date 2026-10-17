@@ -38,9 +38,15 @@ test.each(['google', 'microsoft'])(
       providers: ['google', 'microsoft'],
       stage: 'complete',
     });
+    expect(await (await client.request('/api/bootstrap')).json()).toEqual(before);
     await client.json('/api/auth/sign-out', {});
     await client.signIn(target);
-    expect(await (await client.request('/api/bootstrap')).json()).toEqual(before);
+    const { loginId: originalLoginId, ...originalIdentity } = before;
+    const { loginId, ...identity } = await (await client.request('/api/bootstrap')).json();
+    expect(originalLoginId).toEqual(expect.any(String));
+    expect(loginId).toEqual(expect.any(String));
+    expect(loginId).not.toBe(originalLoginId);
+    expect(identity).toEqual(originalIdentity);
   },
 );
 
@@ -63,6 +69,25 @@ test('public linking endpoints reject unauthenticated, cross-origin and malforme
   expect((await client.json('/api/login-methods/add', { provider: 'microsoft' })).status).toBe(409);
   await client.request(await begin(client));
   expect((await client.json('/api/login-methods/add', { provider: 'google' })).status).toBe(409);
+});
+
+test('an account-link failure after provider verification rolls back its identity change', async () => {
+  const client = fixture.client();
+  await client.signIn();
+  const before = await (await client.request('/api/bootstrap')).json();
+  await client.request(await begin(client));
+  const callback = await begin(client, 'add', 'microsoft');
+  fixture.setSubject('rejected-microsoft-link');
+  fixture.failNextCallbackAfterAuthentication('response');
+  await client.request(callback);
+  expect(await (await client.request('/api/bootstrap')).json()).toEqual(before);
+  expect(await (await client.request('/api/login-methods')).json()).toEqual({
+    providers: ['google'],
+    stage: 'failed',
+  });
+  await client.signIn('microsoft');
+  const after = await (await client.request('/api/bootstrap')).json();
+  expect(after.user.id).not.toBe(before.user.id);
 });
 
 test('expired existing proof cannot authorize linking', async () => {
@@ -145,3 +170,57 @@ test('cancellation reports completion when a verified callback is already commit
     stage: 'complete',
   });
 });
+
+test('cancellation cannot report success inside an unrelated transaction that can roll back', async () => {
+  const client = fixture.client();
+  await client.signIn();
+  await client.request(await begin(client));
+  const callback = await begin(client, 'add', 'microsoft');
+  fixture.database.exec('BEGIN IMMEDIATE');
+  try {
+    const rejected = await client.json('/api/login-methods/cancel', {});
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toEqual({ error: 'binding_busy' });
+  } finally {
+    fixture.database.exec('ROLLBACK');
+  }
+  expect(await (await client.json('/api/login-methods/cancel', {})).json()).toEqual({
+    status: 'cancelled',
+  });
+  fixture.setSubject('cancelled-microsoft');
+  await client.request(callback);
+  expect(await (await client.request('/api/login-methods')).json()).toEqual({
+    providers: ['google'],
+    stage: null,
+  });
+});
+
+test.each([
+  { step: 'prove', provider: 'google' },
+  { step: 'add', provider: 'microsoft' },
+])(
+  '$step rejects a busy database without consuming the current proof',
+  async ({ step, provider }) => {
+    const client = fixture.client();
+    await client.signIn();
+    await client.request(await begin(client));
+    fixture.database.exec('BEGIN IMMEDIATE');
+    try {
+      const rejected = await client.json(`/api/login-methods/${step}`, { provider });
+      expect(rejected.status).toBe(409);
+      expect(await rejected.json()).toEqual({ error: 'binding_busy' });
+      expect(await (await client.request('/api/login-methods')).json()).toEqual({
+        providers: ['google'],
+        stage: 'verified',
+      });
+    } finally {
+      fixture.database.exec('ROLLBACK');
+    }
+    fixture.setSubject('new-microsoft');
+    await client.request(await begin(client, 'add', 'microsoft'));
+    expect(await (await client.request('/api/login-methods')).json()).toEqual({
+      providers: ['google', 'microsoft'],
+      stage: 'complete',
+    });
+  },
+);

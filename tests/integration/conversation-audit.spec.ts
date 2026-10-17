@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { closeSupportDialog, createHousehold, openDraftReview, signIn } from '../support/client.js';
 import {
   microphoneButton,
@@ -13,6 +13,7 @@ import { readDraftProposal, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 const notice = (page: Page) => page.getByRole('region', { name: 'Samtalsnotis', exact: true });

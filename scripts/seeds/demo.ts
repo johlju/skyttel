@@ -9,6 +9,11 @@ import { householdMap } from '../../src/server/map.js';
 // Add new demo data here, or call additional fixture modules from this function.
 // The setup command wraps all fixtures in the same transaction as the reset.
 export function seedDemo(database: Database.Database, config: Config) {
+  database
+    .prepare(
+      "INSERT INTO policy_contact (id, email) VALUES (1, 'privacy@viscalyx.se') ON CONFLICT(id) DO UPDATE SET email = excluded.email",
+    )
+    .run();
   const administratorId = randomUUID();
   const now = Date.now();
   const { provider, subject } = config.firstAdmin;

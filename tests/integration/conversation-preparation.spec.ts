@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
-import { expect, type Response, test } from '@playwright/test';
+import type { Response } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { closeSupportDialog, createHousehold, openSettings, signIn } from '../support/client.js';
 import { applyConflictPropertyChoices } from '../support/conflict-properties.js';
@@ -14,6 +14,7 @@ import {
   voiceBox,
 } from '../support/conversation-page.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 for (const seeded of [false, true]) {
   test(`literal context preparation completes batch, questions, save, rejection and admitted revoke on ${seeded ? 'seeded' : 'empty'} public installation`, {
@@ -38,7 +39,7 @@ for (const seeded of [false, true]) {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, FORCE_COLOR: undefined },
     });
-    const member = await browser.newContext();
+    const member = await createPreparedContext(browser);
     type Event = {
       event: string;
       id?: string;

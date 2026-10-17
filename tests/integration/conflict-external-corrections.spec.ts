@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { closeTextView, openSettings } from '../support/client.js';
 import { prepareArchiveConflict } from '../support/conflict-archive.js';
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
@@ -13,6 +13,7 @@ import {
   expectHistoricalProposalAbsent,
   readIndependentHistoricalProposal,
 } from '../support/historical-conflict-reading.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function readCorrectedProposal(
   page: Page,
@@ -96,7 +97,7 @@ test('UTKAST-75: a missing endpoint and missing relationship type remain visible
   page,
   browser,
 }) => {
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   const app = await prepareArchiveConflict(
     administrator.request,
     page.request,
@@ -157,7 +158,7 @@ for (const kind of ['object', 'relationship'] as const)
     page,
     browser,
   }) => {
-    const administrator = await browser.newContext();
+    const administrator = await createPreparedContext(browser);
     const app = await prepareArchiveConflict(
       administrator.request,
       page.request,
@@ -261,7 +262,7 @@ test('UTKAST-66: a missing relationship type needs an actual new definition and 
   page,
   browser,
 }) => {
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   const app = await prepareArchiveConflict(
     administrator.request,
     page.request,
@@ -374,7 +375,7 @@ test('UTKAST-64: a missing object type keeps its proposal readable and discards 
   page,
   browser,
 }) => {
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   const app = await prepareArchiveConflict(
     administrator.request,
     page.request,
@@ -446,7 +447,7 @@ test('UTKAST-72: ordinary correction of a missing object type preserves historic
   page,
   browser,
 }) => {
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   const app = await prepareArchiveConflict(
     administrator.request,
     page.request,
@@ -537,7 +538,7 @@ test('UTKAST-65: an incompatible historical field is corrected in the ordinary o
   page,
   browser,
 }) => {
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   const app = await prepareArchiveConflict(administrator.request, page.request, 'invalid-datatype');
   try {
     const before = await app.read();

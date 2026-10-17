@@ -167,9 +167,10 @@ Keep provider billing evidence separately when historical reconciliation is
 required. A whole-disk recovery can retain only the measurements present in
 that recovered copy; usage after its snapshot remains outside that copy.
 
-An older application image does not reverse the database changes. Use a
-compatible image with the upgraded database, or recover a matching database
-and application pair during an attended outage. Keep any later copy before
-recovery to avoid losing its measurements. Follow the
-[deployment recovery guidance](render.md#recover-with-older-code-only-when-compatible)
+An older application image does not reverse database changes and is
+unsupported after the login transition. Repair with a corrected newer
+application. A separate controlled data recovery must invalidate old
+authentication authority before reopening. Keep any later copy under the
+same restrictions to avoid losing its measurements. Follow the
+[deployment recovery guidance](render.md#repair-forward-after-the-login-transition)
 if the upgrade does not become ready.

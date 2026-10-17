@@ -1133,7 +1133,7 @@ enhet”.
     "spec": "tests/integration/conversation-settings.spec.ts",
     "caseId": "MEDGIVANDE-18"
   },
-  "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Dator och angivna emulerade pekbredder/teman skyddar fokus, medgivandets räckvidd och omflöde.",
+  "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Efter nekad leveranskanal läser klienten det aktuella samtalet och får serverns 403 med conversation_consent_revoked. Ingen instruktion skickas eller når modellen. Dator och angivna emulerade pekbredder/teman skyddar fokus, medgivandets räckvidd och omflöde.",
   "outcomes": [
     "Första profilen visar **Medgivandet är återkallat. Samtalet är avslutat. Utkastet ligger kvar.** senast vid nästa försök att skicka. Notisen säger inte att hushållets åtkomst har upphört; faktisk uppläsning provas i MEDGIVANDE-21.",
     "Textvyn och samtalet avslutas; kartan och utkastet finns kvar.",

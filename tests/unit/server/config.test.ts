@@ -5,12 +5,45 @@ import { configurationEnvironment } from './fixture.js';
 afterEach(() => vi.unstubAllEnvs());
 
 describe('installation configuration', () => {
+  test('requires a separately managed authority generation and rejects incomplete restore declarations', () => {
+    expect(() =>
+      readConfig({ ...configurationEnvironment(), SKYTTEL_AUTHORITY_GENERATION: undefined }),
+    ).toThrow(new ConfigurationError('SKYTTEL_AUTHORITY_GENERATION'));
+    expect(() =>
+      readConfig({
+        ...configurationEnvironment(),
+        SKYTTEL_RESTORE_FROM_GENERATION: '22222222-2222-4222-8222-222222222222',
+      }),
+    ).toThrow(new ConfigurationError('SKYTTEL_RESTORE_CONFIRMED_AT'));
+  });
+
+  test('validates the complete external legacy restore declaration', () => {
+    const environment = {
+      ...configurationEnvironment(),
+      SKYTTEL_RESTORE_FROM_GENERATION: 'legacy',
+      SKYTTEL_RESTORE_CONFIRMED_AT: '2026-01-01T00:00:00.000Z',
+      SKYTTEL_RESTORE_ERASURE_REVIEWED: 'true',
+    };
+    expect(readConfig(environment).authorityFence.restore).toEqual({
+      fromGeneration: 'legacy',
+      confirmedAt: 1767225600000,
+      erasureReviewed: true,
+    });
+    for (const value of [undefined, 'false'])
+      expect(() => readConfig({ ...environment, SKYTTEL_RESTORE_ERASURE_REVIEWED: value })).toThrow(
+        new ConfigurationError('SKYTTEL_RESTORE_ERASURE_REVIEWED'),
+      );
+    expect(() =>
+      readConfig({ ...environment, SKYTTEL_RESTORE_CONFIRMED_AT: 'not-a-date' }),
+    ).toThrow(new ConfigurationError('SKYTTEL_RESTORE_CONFIRMED_AT'));
+  });
   test('reads a complete configuration with the default listener', () => {
     expect(readConfig(configurationEnvironment())).toEqual({
       origin: 'http://localhost:3000',
       databasePath: '/synthetic/skyttel.sqlite',
       firstAdmin: { provider: 'google', subject: 'synthetic-admin' },
       authSecret: 'synthetic-unit-test-secret-at-least-32-characters',
+      authorityFence: { generation: '11111111-1111-4111-8111-111111111111' },
       google: { clientId: 'synthetic-google', clientSecret: 'synthetic-secret' },
       microsoft: { clientId: 'synthetic-microsoft', clientSecret: 'synthetic-secret' },
       host: '0.0.0.0',

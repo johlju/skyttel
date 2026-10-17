@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import { createInstallation } from '../support/installation.js';
 import { createRelationshipFixture } from '../support/relationship-fixture.js';
+import { expect, test } from '../support/test.js';
 
 test('SAMBAND-12: long relationship names and field labels reflow without horizontal overflow at 320 CSS pixels', async ({
   page,

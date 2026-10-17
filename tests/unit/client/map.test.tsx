@@ -315,39 +315,6 @@ test('discarding an unsent form preserves staged proposals and new forms start e
   expect((screen.getByLabelText('Namn') as HTMLInputElement).value).toBe('');
 });
 
-test('workspace theme persists and System follows device preference changes', async () => {
-  // jsdom has no device preference; keep its external browser event boundary.
-  // YTA-02 also exercises this flow with Chromium's actual media preference.
-  const device = Object.assign(new EventTarget(), { matches: false });
-  vi.stubGlobal('matchMedia', () => device);
-  await open();
-  const workspace = () => screen.getByRole('region', { name: 'Hushållskarta' });
-  const button = () => screen.getByRole('button', { name: /^Tema:/ });
-  expect(workspace().getAttribute('data-theme')).toBe('light');
-  await userEvent.click(button());
-  await userEvent.click(screen.getByRole('radio', { name: 'Mörkt' }));
-  expect(document.activeElement).toBe(button());
-  expect(workspace().getAttribute('data-theme')).toBe('dark');
-  cleanup();
-  await open();
-  expect(button().getAttribute('aria-label')).toBe('Tema: Mörkt. Byt tema');
-  expect(workspace().getAttribute('data-theme')).toBe('dark');
-  await userEvent.click(button());
-  await userEvent.click(screen.getByRole('radio', { name: 'Ljust' }));
-  expect(workspace().getAttribute('data-theme')).toBe('light');
-  cleanup();
-  await open();
-  expect(button().getAttribute('aria-label')).toBe('Tema: Ljust. Byt tema');
-  await userEvent.click(button());
-  await userEvent.click(screen.getByRole('radio', { name: 'System' }));
-  device.matches = true;
-  device.dispatchEvent(new Event('change'));
-  await waitFor(() => expect(workspace().getAttribute('data-theme')).toBe('dark'));
-  device.matches = false;
-  device.dispatchEvent(new Event('change'));
-  await waitFor(() => expect(workspace().getAttribute('data-theme')).toBe('light'));
-});
-
 test('workspace theme restores focus after choice or Escape and permits leaving by Tab or pointer', async () => {
   await open();
   const button = () => screen.getByRole('button', { name: /^Tema:/ });

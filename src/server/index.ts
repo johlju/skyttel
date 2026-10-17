@@ -3,6 +3,8 @@ import { createApp } from './app.js';
 import { createAuth, verifyAuthSchema } from './auth.js';
 import { ConfigurationError, readConfig } from './config.js';
 import { DatabaseInitializationError, openDatabase } from './database.js';
+import { InstallationAuthorityError } from './installation-authority.js';
+import { attachTaskDelivery } from './task-delivery-transport.js';
 
 async function main() {
   const config = readConfig();
@@ -14,6 +16,7 @@ async function main() {
     const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, () => {
       console.info(JSON.stringify({ event: 'server_ready' }));
     });
+    attachTaskDelivery(server, config.origin, app.prepareTaskDelivery);
     server.on('error', async () => {
       console.error(JSON.stringify({ event: 'listener_failed' }));
       await app.close();
@@ -24,8 +27,9 @@ async function main() {
     const shutdown = () => {
       if (closing) return;
       closing = true;
+      const closed = app.close();
       server.close(async () => {
-        await app.close();
+        await closed;
         database.close();
         process.exitCode = 0;
       });
@@ -45,7 +49,16 @@ main().catch((error: unknown) => {
       ? { event: 'configuration_invalid', variable: error.variable }
       : error instanceof DatabaseInitializationError
         ? { event: 'database_initialization_failed', reason: error.reason }
-        : { event: 'startup_failed' };
+        : error instanceof InstallationAuthorityError
+          ? {
+              event: 'installation_authority_failed',
+              reason: error.reason,
+              action:
+                error.reason === 'authority_initialization_required'
+                  ? 'An administrator must stop the application and complete the one-time login upgrade. See docs/operations/login-upgrade.md.'
+                  : 'Keep the installation closed and complete the controlled restore procedure. See docs/operations/database-restore.md.',
+            }
+          : { event: 'startup_failed' };
   console.error(JSON.stringify(status));
   process.exitCode = 1;
 });

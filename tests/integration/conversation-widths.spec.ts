@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { unzipSync, zipSync } from 'fflate';
 import { closeSupportDialog, createHousehold, openSettings, signIn } from '../support/client.js';
 import {
@@ -12,6 +12,7 @@ import { readDraftProposal, readTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 const view = (page: Page) => page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
@@ -209,8 +210,8 @@ test('TEXTBREDD-02: bredderna följer användaren och skärmens begränsning spa
 }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   const { app, household, read } = await arrange(page);
-  const device = await browser.newContext({ viewport: { width: 1600, height: 900 } });
-  const member = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+  const device = await createPreparedContext(browser, { viewport: { width: 1600, height: 900 } });
+  const member = await createPreparedContext(browser, { viewport: { width: 1600, height: 900 } });
   try {
     await startConversationWithText(page);
     await openDraft(page);
@@ -421,7 +422,7 @@ test('TEXTBREDD-05: äldre hushållsarkiv lämnar personliga samtalsval kvar', a
     if (!file) throw new Error('The household archive was not downloaded');
     const parts = unzipSync(new Uint8Array(await readFile(file)));
     const manifest = JSON.parse(Buffer.from(parts['manifest.json']).toString());
-    expect(manifest.schemaVersion).toBe(25);
+    expect(manifest.schemaVersion).toBe(33);
     const encoded = Buffer.from(parts['content.json']).toString();
     for (const field of [
       'showDraftOnStart',

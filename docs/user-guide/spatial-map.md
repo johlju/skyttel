@@ -11,7 +11,12 @@ Välj **Tabell** i verktygen för att läsa och redigera alla uppgifter.
 När Skyttel visar ett objekt eller samband visas kartan och det valda
 innehållets uppgifter samtidigt innan markeringsbeskedet. På en smal skärm
 öppnas objektets uppgifter i ett flyttbart fönster med eget rulläge.
-Sambandets uppgifter visas under kartan.
+Sambandets uppgifter visas under eller bredvid kartan, beroende på hur
+mycket plats som finns kvar. Hela svaret som text behåller sin egen
+rullyta ovanför arbetsytan. När sambandets uppgifter visas på en smal
+skärm finns kartans sammanhang och teckenförklaring längre ned i
+arbetsytan. Rulla dit eller använd Tab för att fokusera
+**Kartans sammanhang**; där kan du rulla med tangentbordet.
 Välj **Redigera** vid objektet eller **Redigera valt samband** för att
 öppna det vanliga formuläret.
 
@@ -90,6 +95,8 @@ titelrad för att flytta just det fönstret; kartan står kvar. Med tangentbord
 fokuserar du titelraden och använder piltangenterna. Skift med piltangent
 flyttar ett större steg. Escape under dragning avbryter flyttningen.
 Titelraden och krysset uppe till höger ligger kvar när uppgifterna rullas.
+När den tillgängliga ytan är mycket kort rullas även åtgärderna längst ned
+tillsammans med uppgifterna, så att texten fortfarande går att läsa.
 Krysset eller Escape utan dragning stänger bara det aktuella fönstret.
 Fönster kan överlappa andra ytor. Flytta eller stäng dem för att nå det
 som ligger bakom. Med tangentbord visas den fokuserade textvyn eller

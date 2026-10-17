@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { availableViewport } from './available-viewport.js';
 
 /** One mode rule for conversation layout, focus and controls. Touch support
  * alone does not make a mouse-led laptop mobile: its primary pointer decides. */
 function viewport() {
   const mobile = window.matchMedia('(pointer: coarse)').matches;
   const narrow = window.matchMedia('(max-width: 700px)').matches;
-  const height = window.visualViewport?.height ?? window.innerHeight;
+  const { height, y } = availableViewport();
   return {
     mobile,
     narrow,
@@ -14,7 +15,7 @@ function viewport() {
     short: (mobile || narrow) && height < 520,
     width: window.innerWidth,
     height,
-    offset: window.visualViewport?.offsetTop ?? 0,
+    offset: y,
   };
 }
 

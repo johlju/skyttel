@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import {
   createHousehold,
   openDraftReview,
@@ -11,6 +10,7 @@ import {
 } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 for (const width of [1280, 390, 320]) {
   const caseId = width === 1280 ? 'INST-01' : width === 390 ? 'INST-09' : 'INST-10';
@@ -115,7 +115,7 @@ for (const role of ['administrator', 'member'] as const) {
     browser,
   }) => {
     const installation = await createInstallation();
-    const administrator = await browser.newContext();
+    const administrator = await createPreparedContext(browser);
     try {
       const owner = role === 'administrator' ? page.request : administrator.request;
       await signIn(owner, installation.origin);

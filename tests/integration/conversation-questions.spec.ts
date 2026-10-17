@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import type { TextAssistantView } from '../../src/shared/text-assistant.js';
 import type { VoiceAssistantView } from '../../src/shared/voice-assistant.js';
@@ -18,6 +18,7 @@ import { readTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const field = (page: Page) => page.getByLabel('Meddelande till Skyttel');
@@ -196,7 +197,7 @@ test('FRAGA-02: Skyttel frågar om en verklig konflikt i samtalet utan en genere
     'Lo hette Lo Exempel. Vill du behålla ditt förslag Lo Lind eller det sparade namnet Lo Berg?';
   const model = textModel(() => [modelTool('ask_questions', { questions: [conflictQuestion] })]);
   const { app, path, value } = await fixture(page, model);
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const post = (client: typeof page.request, action: string, data: unknown) =>
     client.post(`${path}/${action}`, { headers: { origin: app.origin }, data });
   try {
@@ -363,7 +364,17 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
     const announcement = page.getByRole('status', { name: 'Sparbekräftelse' });
     await expect(announcement).toHaveText('Utkastet är sparat');
     await expect(announcement).toHaveAttribute('aria-live', 'polite');
-    expect(commentary(live).at(-1)?.event).toMatchObject({ content: 'Sparat.' });
+    const spokenEvent = commentary(live).at(-1)?.event;
+    if (spokenEvent?.type !== 'session.commentary.append')
+      throw new Error('Missing verified spoken save reply');
+    const spokenReply = spokenEvent.content;
+    // Recovery can verify the same committed save before voice work completes.
+    // Replay the complete actual reply, including that explanation when present.
+    expect([
+      'Sparat.',
+      'Kontrollen visar att hela utkastet sparades. Ändringarna finns i hushållets karta. Sparat.',
+    ]).toContain(spokenReply);
+    await expect.poll(() => responses.at(-1)?.response?.text).toBe(spokenReply);
     const operations = await (await page.request.get(`${path}/operations`)).json();
     expect(operations.operations[0]).toMatchObject({
       status: 'succeeded',
@@ -372,7 +383,7 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
     // An early pause after the first part cannot complete the acknowledgement.
     await sound(page, true);
     await expect(voiceBox(page)).toContainText('Skyttel talar');
-    await output(page, 'Spar');
+    await output(page, spokenReply.slice(0, -3));
     await sound(page, false);
     await expect(voiceBox(page)).toHaveText('Lyssnar');
     // The final transcript arrives before its audio starts. No four-second timeout yet.

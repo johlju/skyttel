@@ -66,7 +66,11 @@ test('schema 18 saved relationships and genuine legacy private snapshots upgrade
           },
         ]),
       );
-    openDatabase(fixture.config.databasePath).close();
+    await fixture.upgradeLegacyLogin();
+    expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    await client.signIn();
     const path = `/api/households/${household.id}/map`;
     const state: MapState = await (await client.request(path)).json();
     expect(state.relationships).toEqual([before]);

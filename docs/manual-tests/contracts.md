@@ -375,10 +375,15 @@ har ID `household-landlord-role`, revision 4 och beskrivningen
 testfallet “AVTAL-06: upgrading preserves household definitions and an older
 private draft”.
 
+**Separat förberedelse:** Operatören genomför den kontrollerade
+uppgraderingen med appen stoppad enligt förberedelsen ovan. Starta sedan
+nuvarande app med `legacy.env` och logga in på nytt med samma konto.
+Integrationstestet arrangerar uppgraderingen och den nya inloggningen
+genom verklig HTTP före webbläsarens läsning och sparande.
+
 **Steg:**
 
-1. Starta nuvarande app med `legacy.env` enligt förberedelsen. Starten
-   uppgraderar databasen. Logga in på nytt med samma konto och öppna kartan.
+1. Öppna kartan efter den nya inloggningen.
 2. Kontrollera att bostaden och namnförslaget finns kvar. Kontrollera
    **Inställningar → Typer och egna fält**. Öppna **Objekttyper och egna
    fält → Ändra typ: Bostad** och läs namn och beskrivning. Stäng med
@@ -572,15 +577,26 @@ node --import tsx scripts/prepare-manual-map.ts \
   legacy-contracts "$SKYTTEL_MANUAL_MAP_DIR" "$SKYTTEL_MANUAL_USER_ID"
 printf 'SKYTTEL_DATABASE_PATH=%s/legacy.sqlite\n' \
   "$SKYTTEL_MANUAL_MAP_DIR" > "$SKYTTEL_MANUAL_MAP_DIR/legacy.env"
-env -u SKYTTEL_DATABASE_PATH \
+printf 'SKYTTEL_AUTHORITY_GENERATION=%s\n' "$(node -p 'crypto.randomUUID()')" \
+  >> "$SKYTTEL_MANUAL_MAP_DIR/legacy.env"
+npm run build
+env -u SKYTTEL_DATABASE_PATH -u SKYTTEL_AUTHORITY_GENERATION \
+  node --env-file="${SKYTTEL_DEV_ENV_FILE:-.devcontainer/.env}" \
+  --env-file="$SKYTTEL_MANUAL_MAP_DIR/legacy.env" \
+  dist/server/upgrade-legacy-login.js \
+  --confirm-legacy-upgrade --confirm-service-stopped
+env -u SKYTTEL_DATABASE_PATH -u SKYTTEL_AUTHORITY_GENERATION \
   node --env-file="$SKYTTEL_MANUAL_MAP_DIR/legacy.env" scripts/develop.mjs
 ```
 
 Hjälpen skapar en separat äldre databas och vägrar skriva över en befintlig
-fil. Starten uppgraderar den. Logga in igen med samma konto. Vid omstart
-upprepar du bara sista serverkommandot, utan att köra hjälpen eller
-`db:setup` igen. När utfallet är kontrollerat, stoppa servern och stäng
-provprofilen före rensning:
+fil. Den kontrollerade uppgraderingen avslutar de äldre inloggningarna
+innan appen startar. Läs
+[operatörens förfarande](../operations/login-upgrade.md) och kräv ett
+lyckat resultat från kommandot. Logga in igen med samma konto. Vid omstart
+upprepar du bara sista serverkommandot, utan att köra uppgraderingen,
+hjälpen eller `db:setup` igen. När utfallet är kontrollerat, stoppa servern
+och stäng provprofilen före rensning:
 
 ```sh
 rm -r -- "${SKYTTEL_MANUAL_MAP_DIR:?}"

@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import type { Auth } from './auth.js';
+import { authDatabase } from './auth-callback-transaction.js';
+import type { browserBindings } from './browser-binding.js';
 
 export function stateKey(state: string) {
   return createHash('sha256').update(state).digest('hex');
@@ -21,7 +23,13 @@ export function linkingAttempt(database: Database.Database, state: string) {
     | undefined;
 }
 
-export function createLoginMethods(database: Database.Database, auth: Auth, origin: string) {
+export function createLoginMethods(
+  database: Database.Database,
+  auth: Auth,
+  origin: string,
+  bindings?: ReturnType<typeof browserBindings>,
+) {
+  database = authDatabase(database);
   // The supported deployment runs one application instance. Serialize each
   // session's linking operations across OAuth's asynchronous verification so
   // cancellation cannot report success while an account is being attached.
@@ -65,6 +73,7 @@ export function createLoginMethods(database: Database.Database, auth: Auth, orig
     return exclusive(session.session.id, async () => {
       const step = context.req.param('step');
       if (step === 'cancel') {
+        if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
         const attempt = database
           .prepare('SELECT stage FROM login_link WHERE sessionId = ?')
           .get(session.session.id) as { stage: string } | undefined;
@@ -88,24 +97,32 @@ export function createLoginMethods(database: Database.Database, auth: Auth, orig
           : existing || attempt?.stage !== 'verified' || attempt.expiresAt <= Date.now()
       )
         return context.json({ error: 'verification_required' }, 409);
+      // These synchronous writes must commit independently of unrelated
+      // asynchronous work using the shared connection.
+      if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
       // Consume the previous proof before issuing another OAuth request.
       database
         .prepare('DELETE FROM login_link WHERE sessionId = ? OR expiresAt <= ?')
         .run(session.session.id, Date.now());
-      const response = await auth.api.linkSocialAccount({
-        headers: context.req.raw.headers,
-        body: {
-          provider,
-          callbackURL: '/login-methods',
-          errorCallbackURL: '/login-methods?failed=1',
-          disableRedirect: true,
-        },
-        asResponse: true,
-      });
+      const createAttempt = () =>
+        auth.api.linkSocialAccount({
+          headers: context.req.raw.headers,
+          body: {
+            provider,
+            callbackURL: '/login-methods',
+            errorCallbackURL: '/login-methods?failed=1',
+            disableRedirect: true,
+          },
+          asResponse: true,
+        });
+      const response = bindings
+        ? await bindings.start(context.req.raw, createAttempt, provider)
+        : await createAttempt();
       if (!response.ok) return response;
       const { url } = (await response.clone().json()) as { url: string };
       const state = new URL(url).searchParams.get('state');
       if (!state) return context.json({ error: 'provider_error' }, 502);
+      if (database.inTransaction) return context.json({ error: 'binding_busy' }, 409);
       database
         .prepare(
           'INSERT INTO login_link (sessionId, userId, state, provider, stage, expiresAt) VALUES (?, ?, ?, ?, ?, ?)',
@@ -123,11 +140,18 @@ export function createLoginMethods(database: Database.Database, auth: Auth, orig
   });
   return {
     routes,
-    async handleCallback(request: Request) {
+    async handleCallback(
+      request: Request,
+      guard?: (operation: () => Promise<Response>) => Promise<Response>,
+    ) {
       const state = new URL(request.url).searchParams.get('state');
       const attempt = state ? linkingAttempt(database, state) : undefined;
-      if (!attempt) return auth.handler(request);
-      return exclusive(attempt.sessionId, () => handleAuthCallback(request, database, auth));
+      const complete = () =>
+        attempt ? handleAuthCallback(request, database, auth) : auth.handler(request);
+      const guarded = () => (guard ? guard(complete) : complete());
+      // Keep cancellation serialized through the final publication, including
+      // the binding guard. Staged account changes are not completion yet.
+      return attempt ? exclusive(attempt.sessionId, guarded) : guarded();
     },
   };
 }
@@ -150,8 +174,10 @@ async function handleAuthCallback(request: Request, database: Database.Database,
     response = Response.redirect(new URL('/login-methods?failed=1', request.url));
   }
   const success =
-    response.headers.get('location') === new URL('/login-methods', request.url).href ||
-    response.headers.get('location') === '/login-methods';
+    response.status >= 300 &&
+    response.status < 400 &&
+    (response.headers.get('location') === new URL('/login-methods', request.url).href ||
+      response.headers.get('location') === '/login-methods');
   database
     .prepare('UPDATE login_link SET stage = ?, state = NULL WHERE sessionId = ? AND state = ?')
     .run(

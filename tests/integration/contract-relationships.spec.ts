@@ -1,7 +1,7 @@
 import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import Database from 'better-sqlite3';
 import type {
   Knowledge,
@@ -29,6 +29,7 @@ import {
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { expect, test } from '../support/test.js';
 
 async function addRelationship(
   page: Page,
@@ -382,7 +383,11 @@ test('AVTAL-06: upgrading preserves household definitions and an older private d
         .filter((name) => name.endsWith('.sql') && name >= '007')
         .map((name) => copyFile(join('migrations', name), join(migrationsDirectory, name))),
     );
-    await installation.restart();
+    await installation.upgradeLegacyLogin();
+    expect(
+      (await request.get(`${installation.origin}/api/households/${household.id}/map`)).status(),
+    ).toBe(401);
+    await signIn(request, installation.origin);
     const path = `${installation.origin}/api/households/${household.id}/map`;
     const response = await request.get(path, { maxRetries: 1 });
     expect(response.status()).toBe(200);

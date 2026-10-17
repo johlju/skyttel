@@ -2,7 +2,6 @@ import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, test } from 'vitest';
-import { openDatabase } from '../../../src/server/database.js';
 import { applicationFixture } from './fixture.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
@@ -233,7 +232,11 @@ test('upgrading preserves discovery and exact retries of earlier durable receipt
         receipt.savedAt,
         JSON.stringify(receipt.changes),
       );
-    openDatabase(fixture.config.databasePath).close();
+    await fixture.upgradeLegacyLogin();
+    expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
+      status: 'anonymous',
+    });
+    await client.signIn();
     const upgradedReceipt = { ...receipt, contentVersion: 1 };
     const listing = await (await client.request(`${path}/operations`)).json();
     expect(listing.operations).toHaveLength(1);

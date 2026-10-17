@@ -1,6 +1,9 @@
 import type { TextAssistantView } from './text-assistant.js';
 import type { VoiceErrorGroup } from './voice-error.js';
 
+export const voiceSessionExpiredMessage =
+  'Din inloggning har gått ut. Logga in igen. Lämna hela instruktionen på nytt. Ditt utkast och redan genomförda sparanden finns kvar.';
+
 export interface VoiceAssistantView {
   id: string;
   phase: 'connecting' | 'listening' | 'working' | 'recovery' | 'closing' | 'closed' | 'error';

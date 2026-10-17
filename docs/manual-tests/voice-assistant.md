@@ -222,7 +222,8 @@ TAL-03.
   },
   "reference": "Chromium och kontrollerade text-/mediesvar enligt angiven separat förberedelse; faktisk röst eller uppläsning bedöms separat.",
   "outcomes": [
-    "Bekräfta verklig markering och återhämta samma beständiga sparförsök."
+    "Bekräfta verklig markering och återhämta samma beständiga sparförsök.",
+    "Beskrivningen går att läsa i korta uppgiftsfönster efter hela svaret."
   ]
 }
 ```
@@ -239,7 +240,8 @@ till TAL-17/23/24.
 1. Låt det kontrollerade markeringsuppdraget visa Lo Exempel. Läs vald Lo och
    dess uppgifter. Vid 640 × 500 och 320 × 250, fokusera Lo med tangentbordet
    och Shift+F10 → Fokusera markering. Panorera genom Navigera och stäng med
-   Stäng navigering. Lo ska förbli synlig och vald.
+   Stäng navigering. Lo ska förbli synlig och vald. Läs även **Påhittad
+   uppgift** i uppgiftsfönstret efter att hela svaret visas ovanför kartan.
 2. Återgå till 390 × 844. Förbered den blockerade kontrollen och det väntande
    sparförsöket enligt tidslinjen. Läs Skyttel kunde inte kontrollera om
    utkastet sparades. Mikrofonen är av.
@@ -260,6 +262,7 @@ till TAL-17/23/24.
 
 - Markering bekräftas först efter den verkliga webbläsarens återkoppling. Ett
   accepterat kommentarspaket är inte bevis för hörbart tal.
+- Beskrivningens text går att läsa även i det kortaste uppgiftsfönstret.
 - Omstart glömmer samtalet men bevarar utkast och sparförsök. Samma försök
   slutförs exakt en gång; korta ja eller nya allmänna uppdrag ersätter det inte.
 - Avbrutet ljud återtar inget genomfört sparande. Saknad slutlig mätning förblir
@@ -1808,3 +1811,84 @@ riktiga mikrofonprompt, återkallad behörighet och användningsindikator.
   anslutning.
 - Avslag och återkallande lämnar text/formulär användbara utan att en dold
   mikrofonstart uppstår.
+
+### TAL-26: verkligt röststopp vid inloggningens tidsgräns
+
+**Syfte:** Bedöm att verklig mikrofon och ljudöverföring stannar när
+inloggningen går ut och att beskedet kan uppfattas med hjälpmedel.
+
+**Användare:** Den konfigurerade testmedlemmen.
+
+**Förutsättningar:** Använd den
+[riktiga enhetsförberedelsen](#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
+med enbart påhittade uppgifter. Verkliga leverantörsanrop kräver separat
+godkännande. Anteckna serverns bekräftade inloggningstid. Gör provet vid
+åttatimmarsgränsen för vanlig inloggning, med aktuell tillgång och
+medgivande. Håll sessionen aktiv med verkliga handlingar före provet.
+Ändra inte enhetens klocka. Bevara ett förslag i utkastet före provet.
+
+**Kräver mänsklig observation:** Kontrollera enhetens faktiska
+mikrofonindikator och ljud, samt hör beskedet med riktig skärmläsare.
+Syntetisk serverkontroll bevisar inte att mikrofonen fysiskt stannar eller
+att skärmläsaren läser beskedet korrekt.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "humanObservation": {
+    "kind": "physical-microphone-audio",
+    "observation": "Kontrollera riktig mikrofonindikator, upphört ljud och skärmläsarens besked vid serverns inloggningsgräns."
+  },
+  "reference": "Fysisk mikrofon och ljudutgång med NVDA/Chrome eller VoiceOver; vanlig inloggning vid åttatimmarsgränsen, vid 1280, 390 och 320 pixlar.",
+  "outcomes": [
+    "Rösten stannar och utgångsbeskedet finns kvar vid ny inloggning utan att fokus flyttas av beskedet.",
+    "Avvisat tal startar inte automatiskt efter ny inloggning och tidigare lagrat utkast finns kvar."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-expiry-http.test.ts",
+      "title": "Live stops at the exact server deadline without a poll and rejects late fragments",
+      "purpose": "Verklig HTTP-installation med syntetisk Live provar exakt servertid, ofullständigt tal och avvisad sen fortsättning utan pollning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/voice-expiry-http.test.ts",
+      "title": "a committed save receipt survives a late negation, fresh login and restart without replay",
+      "purpose": "Ett faktiskt genomfört sparande och dess kvitto finns kvar efter sen negation, ny inloggning och omstart; avbrottet innebär ingen ångring."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Starta **Prata med Skyttel** strax före den bekräftade tidsgränsen.
+   Öppna textvyn i en variant och håll den stängd i en annan.
+2. Börja en ofullständig instruktion nära gränsen, utan att begära ett
+   verkligt sparande. Fortsätt tala när gränsen passeras. Kontrollera
+   mikrofonindikatorn och att inget nytt uppdrag fortsätter efter gränsen.
+3. Läs och hör **Din inloggning har gått ut. Logga in igen.** samt
+   instruktionen att lämna hela instruktionen på nytt. Kontrollera att
+   beskedet finns kvar vid inloggningen, kan läsas vid förstoring och
+   inte flyttar fokus. Anteckna faktiskt hörd uppläsning och eventuella
+   upprepningar.
+4. Logga in igen. Kontrollera ditt tidigare utkast och att det avvisade
+   talet inte skickas igen. Starta ett nytt samtal och lämna hela
+   instruktionen först när du själv vill fortsätta.
+
+**Förväntat resultat:**
+
+- Mikrofon och röst stannar; inga ofullständiga ord blir ett nytt uppdrag.
+- Utgång och behovet av en hel ny instruktion går att uppfatta utan ljud.
+- Tidigare lagrat utkast och genomförda sparanden finns kvar. Avbrottet
+  betyder inte att ett redan genomfört sparande görs ogjort.
+- Anteckna release, miljö, enhet, bredd, hjälpmedel och faktiskt utfall.
+  Detta fall är inte genomfört genom att serverunderlaget passerar.

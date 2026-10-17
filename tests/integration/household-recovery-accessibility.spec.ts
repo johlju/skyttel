@@ -1,4 +1,4 @@
-import { expect, type Locator, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { createHousehold, openSettings, signIn } from '../support/client.js';
 import { expectContentOwnerReview } from '../support/content-owners.js';
 import {
@@ -8,6 +8,7 @@ import {
   seedRecoveryContent,
 } from '../support/household-recovery-reading.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function expectUncoveredFocus(control: Locator) {
   await expect(control).toBeFocused();

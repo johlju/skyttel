@@ -51,8 +51,17 @@ export function conversationConsents(
     /** Removes the user's saved consent for the household, whatever text version it approves. */
     revoke(userId: string, householdId: string) {
       database
-        .prepare('DELETE FROM conversation_consent WHERE householdId = ? AND userId = ?')
-        .run(householdId, userId);
+        .transaction(() => {
+          database
+            .prepare('DELETE FROM conversation_consent WHERE householdId = ? AND userId = ?')
+            .run(householdId, userId);
+          // Also covers visit-only consent and another running server process.
+          database
+            .prepare(`DELETE FROM assistant_connection WHERE householdId = ?
+          AND userId = ? AND browserSessionId IS NOT NULL`)
+            .run(householdId, userId);
+        })
+        .immediate();
     },
     /** `visitConsent` is what a request states that the user approves for the ongoing visit. */
     valid(userId: string, householdId: string, visitConsent: unknown) {

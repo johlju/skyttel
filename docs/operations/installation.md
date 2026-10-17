@@ -27,7 +27,7 @@ controls. The [authentication guide](authentication.md) explains where each
 identity setting comes from. It uses production sign-in and the production
 database to identify the first administrator.
 
-For a local container installation, copy the blank example and edit only
+For a local container installation, copy the example and edit only
 the local file. Keep an existing `.env.local` if one is already present:
 
 ```sh
@@ -42,6 +42,14 @@ no usable secret or personal identity. Do not commit the local file or put
 secrets, provider identifiers, household information, or tokens in issues or
 technical logs.
 
+The examples include a shared development authority generation. It is only
+for development, including the compiled development mode. Before using an
+env file in QA, staging, production or any other non-development
+installation, replace that generation with a unique UUID from
+`node -p 'crypto.randomUUID()'`. Operators are responsible for this step;
+the application does not reject the shared development value. Keep the
+installation's unique generation stable across ordinary restarts.
+
 <!-- markdownlint-disable MD013 -->
 | Variable | Required value |
 | :-- | :-- |
@@ -50,6 +58,7 @@ technical logs.
 | `SKYTTEL_FIRST_ADMIN_PROVIDER` | `google` or `microsoft`. |
 | `SKYTTEL_FIRST_ADMIN_SUBJECT` | The designated person's immutable provider account identifier. Never an email address or display name. |
 | `BETTER_AUTH_SECRET` | A randomly generated secret of at least 32 characters. |
+| `SKYTTEL_AUTHORITY_GENERATION` | A unique UUID held in private host settings outside the database and restored volume. Generate it with `node -p 'crypto.randomUUID()'`. Keep it stable for ordinary restart; change it before each controlled database or disk restore. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Credentials for the installation's Google web application. |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Credentials for the installation's Microsoft web application. |
 | `OPENAI_API_KEY` | Optional server-only project key for Skyttel's text and voice assistants. Without it, manual map work remains available. |
@@ -59,6 +68,16 @@ technical logs.
 
 Both providers must be configured. Invalid or incomplete configuration stops
 startup before the application accepts traffic.
+
+An existing installation with legacy logins needs the
+[one-time login upgrade](login-upgrade.md). For the running Render service,
+follow the [Render appendix](render.md#appendix-one-time-login-upgrade-on-render)
+before allowing the first deployment with the new login model.
+
+For whole database or disk recovery, follow the
+[controlled restore procedure](database-restore.md). Its independent restore
+declaration and trusted permanent-erasure review are required before
+reopening. A copy of the database cannot provide its own restore barrier.
 
 ## Enable the built-in assistants
 
@@ -216,13 +235,14 @@ adding `--volumes` deletes it and its household data.
 
 Before updating, read the [operator upgrade notes](operator-upgrade-notes.md),
 download a [complete household export](../user-guide/household-export.md), and
-retain the matching application image. Build the
-new image, keep the same volume and secret, and run `docker compose up -d`
-again. Do not run old and new application versions against the same SQLite
-volume at the same time. To return to an older image after a schema change,
-establish compatibility first. An export restores household content through
-a compatible application; it does not roll back the database schema or
-restore authentication state. See [recovery and moving](recovery.md).
+retain its identity for investigation. Build the new image and follow the
+[controlled login upgrade](login-upgrade.md) before its first start against
+an existing installation. Keep the same volume and secret. Do not run old
+and new application versions against the same SQLite volume at the same
+time. This transition supports roll forward only. Keep access closed and
+install a corrected newer image if checks fail. An export restores
+household content through a compatible application; it does not restore
+authentication state. See [recovery and moving](recovery.md).
 
 ## Deploy on a container host
 

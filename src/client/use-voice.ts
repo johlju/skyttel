@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { conversationConsentRevoked } from '../shared/conversation-consent.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantResponse, VoiceAssistantView } from '../shared/voice-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
+import { type TaskDeliveryConnection, TaskDeliveryContext } from './task-delivery.js';
 import { type VoiceFailure, voiceErrorNotice, voiceFailureMessage } from './voice-error.js';
 import { createHeldInput, type HeldInput, prepareHeldInput } from './voice-held-input.js';
+import { VoiceSessionContext } from './voice-session-context.js';
 import {
   createVoiceTransport,
   prepareVoicePlayback,
@@ -77,6 +79,7 @@ type Attempt = {
   controller: AbortController;
   transport?: VoiceTransport;
   voiceId?: string;
+  delivery?: TaskDeliveryConnection;
   /** Microphone owned while a conversation reset waits for the server. */
   retained?: MediaStream;
   poll?: ReturnType<typeof setTimeout>;
@@ -126,6 +129,8 @@ export function useVoice(options: {
   saveChecking?: boolean;
   contextFailed?: boolean;
 }): Voice {
+  const voiceSession = useContext(VoiceSessionContext);
+  const delivery = useContext(TaskDeliveryContext);
   const path = options.assistant
     ? `/api/households/${encodeURIComponent(options.householdId)}/text-assistant/${encodeURIComponent(options.assistant.id)}/voice`
     : null;
@@ -152,14 +157,20 @@ export function useVoice(options: {
   const summaryRenewal = useRef(false);
   const [contextPaused, setContextPaused] = useState(false);
   const [state, setState] = useState<Voice['state']>('idle');
+  useEffect(() => {
+    voiceSession?.active(state === 'permission' || state === 'connecting' || state === 'listening');
+    return () => voiceSession?.active(false);
+  }, [voiceSession, state]);
   const [voice, setVoice] = useState<VoiceAssistantView | null>(null);
   const [failure, setFailure] = useState<(VoiceFailure & { occurrence: number }) | null>(null);
   const error = voiceFailureMessage(failure);
   const failedCount = useRef(0);
   const setError = useCallback(
-    (value: VoiceFailure | null) =>
-      setFailure(value ? { ...value, occurrence: ++failedCount.current } : null),
-    [],
+    (value: VoiceFailure | null) => {
+      if (value?.noticeId === 'voiceSessionExpired') voiceSession?.expired();
+      setFailure(value ? { ...value, occurrence: ++failedCount.current } : null);
+    },
+    [voiceSession],
   );
   const [playbackBlocked, setPlaybackBlocked] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
@@ -431,6 +442,14 @@ export function useVoice(options: {
         }
         void stop(voiceErrorNotice(failure, attempt.ready ? 'interrupted' : 'startup'));
       };
+      const observeDelivery = (result: VoiceAssistantResponse) => {
+        const ids = new Set([
+          result.voice.response?.id,
+          result.assistant.taskSource === 'voice' ? result.assistant.taskId : undefined,
+        ]);
+        for (const task of result.assistant.tasks ?? [])
+          if (task.delivery && ids.has(task.id)) attempt.delivery?.observeAccepted(task.delivery);
+      };
       const poll = async () => {
         if (!active() || !attempt.voiceId) return;
         if (!navigator.onLine || latest.current.inputBlocked) {
@@ -444,10 +463,12 @@ export function useVoice(options: {
               ...anchor(),
               microphoneOn: !offRef.current,
               microphoneActive: !offRef.current && activityRef.current.microphone,
+              speakerActive: activityRef.current.speaker,
             },
             attempt.controller.signal,
           );
           if (!active()) return;
+          observeDelivery(result);
           apply(result.assistant, result.voice.replyDelivery);
           if ((result.assistant.contextRevision ?? 0) > (initial.contextRevision ?? 0)) {
             resetVoice.current(result.assistant);
@@ -549,7 +570,22 @@ export function useVoice(options: {
               setState('listening');
             },
             onClosed: () => {
-              if (active()) void stop(voiceErrorNotice(undefined, 'interrupted'));
+              if (!active()) return;
+              // Stop capture immediately. A read-only status check can then
+              // distinguish expired authority from an ordinary provider close.
+              attempt.transport?.suspendInput();
+              void request<VoiceAssistantResponse>(`${path}/${attempt.voiceId}/poll`, {
+                ...anchor(),
+                microphoneOn: false,
+              }).then((result) => {
+                if (active())
+                  void stop(
+                    voiceErrorNotice(
+                      result.voice.error ? new MapRequestError(503, result.voice.error) : undefined,
+                      'interrupted',
+                    ),
+                  );
+              }, fail);
             },
             onFailure: () => fail(),
             onPlaybackBlocked: (blocked) => {
@@ -591,10 +627,14 @@ export function useVoice(options: {
           async (sdp, options) => {
             let result: VoiceAssistantResponse;
             try {
+              attempt.delivery = await delivery?.connect(path.replace(/\/voice$/, ''));
+              if (delivery && !attempt.delivery)
+                throw new Error('The whole-answer delivery connection is unavailable');
               result = await request<VoiceAssistantResponse>(
                 path,
                 {
                   sdp,
+                  deliveryConnectionId: attempt.delivery?.id,
                   ...anchor(),
                   microphoneOn: !(reuse?.paused ?? attempt.held?.released ?? false),
                   // The server supplies the authoritative conversation context.
@@ -639,6 +679,7 @@ export function useVoice(options: {
             }
             attempt.voiceId = result.voice.id;
             attempt.providerGeneration = result.assistant.contextGeneration ?? 0;
+            observeDelivery(result);
             apply(result.assistant, result.voice.replyDelivery);
             setVoice(result.voice);
             attempt.poll = setTimeout(() => void poll(), 500);
@@ -652,7 +693,7 @@ export function useVoice(options: {
         fail(failure);
       }
     },
-    [path, apply, stop, setError, inputAllowed],
+    [path, apply, stop, setError, inputAllowed, delivery],
   );
   useEffect(() => {
     if (options.autoStart) void start();

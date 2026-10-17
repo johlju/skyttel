@@ -409,6 +409,12 @@
   top: calc(var(--work-offset, 0px) + 56px);
   height: calc(var(--work-height, 100dvh) - 56px);
 }
+/* When replies leave too little height for a separate voice row, the voice
+   stands beside this pane so the transcript and message field still fit. */
+.household-map.workspace-shell[data-work-layout="minimal"][data-wide-touch="true"] .text-view {
+  top: calc(var(--work-offset, 0px) + 12px);
+  height: calc(var(--work-height, 100dvh) - 12px);
+}
 /* The same mounted controls form one row: no duplicated accessible controls or
    replacement message field when a real keyboard changes the visible height. */
 .household-map.workspace-shell .text-view[data-short="true"] .text-view-header {

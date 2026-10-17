@@ -1,9 +1,10 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openTable, signIn } from '../support/client.js';
 import { startConversationWithText } from '../support/conversation-page.js';
 import { prepareHouseholdReading } from '../support/household-reading.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 async function removeFromAnotherTab(page: Page, origin: string, names: string[]) {
   const other = await page.context().newPage();

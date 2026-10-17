@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { conflictBasis } from '../../src/shared/conflict-properties.js';
 import { draftConflicts } from '../../src/shared/draft-conflicts.js';
 import type { MapState } from '../../src/shared/map.js';
@@ -21,6 +21,7 @@ import {
   readSavedHistoricalDefinition,
 } from '../support/historical-conflict-reading.js';
 import { launchHistoricalPreparation } from '../support/manual-historical-conflicts.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function stageNativeRestoration(page: Page, expected: Record<string, unknown>) {
   await page.getByRole('button', { name: '1 konflikt i ditt utkast', exact: true }).click();
@@ -116,7 +117,7 @@ for (const kind of ['object', 'relationship'] as const)
     page,
     browser,
   }) => {
-    const administrator = await browser.newContext();
+    const administrator = await createPreparedContext(browser);
     const app = await prepareArchiveConflict(
       administrator.request,
       page.request,
@@ -190,7 +191,7 @@ for (const kind of ['object', 'relationship'] as const)
     page,
     browser,
   }, testInfo) => {
-    const administrator = await browser.newContext();
+    const administrator = await createPreparedContext(browser);
     const app = await prepareArchiveConflict(
       administrator.request,
       page.request,
@@ -328,7 +329,7 @@ test('UTKAST-68: a newer saved definition rejects stale restoration atomically a
   page,
   browser,
 }) => {
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   const app = await prepareArchiveConflict(
     administrator.request,
     page.request,
@@ -512,7 +513,7 @@ test('UTKAST-69: importing a private restoration requires a fresh explicit revie
   page,
   browser,
 }) => {
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   const app = await prepareArchiveConflict(
     administrator.request,
     page.request,
@@ -574,7 +575,7 @@ for (const surface of ['Karta', 'Tabell'])
     page,
     browser,
   }) => {
-    const administrator = await browser.newContext();
+    const administrator = await createPreparedContext(browser);
     const app = await prepareArchiveConflict(
       administrator.request,
       page.request,
@@ -643,7 +644,7 @@ test('UTKAST-71: ordinary definition creation cannot reuse a removed identity or
   page,
   browser,
 }) => {
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   const app = await prepareArchiveConflict(
     administrator.request,
     page.request,

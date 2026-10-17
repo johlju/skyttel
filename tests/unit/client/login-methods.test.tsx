@@ -8,9 +8,20 @@ import { applicationFixture } from '../server/fixture.js';
 const user = { id: 'alex', name: 'Alex Exempel' };
 type Reply = { data?: unknown; status?: number; response?: Promise<Response> };
 function mount(replies: Reply[], path = '/login-methods', status = 'forbidden') {
-  const fetch = vi.fn(async (path: string) => {
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (path === '/api/browser-binding/preference')
+      return Response.json({
+        userId: user.id,
+        remembered: false,
+        sessionId: 'ordinary-login',
+        bindingId: 'ordinary-binding',
+        expiresAt: Date.now() + 28_800_000,
+        inactiveAfterMs: 1_800_000,
+      });
     if (path === '/api/bootstrap')
       return Response.json({ status, providers: ['google', 'microsoft'], user });
+    if (path === '/api/theme-preference' && (init?.method ?? 'GET') === 'GET')
+      return Response.json({ userId: user.id, mode: 'system' });
     const reply = replies.shift();
     if (!reply) throw new Error(`Unexpected request: ${path}`);
     return reply.response ?? Response.json(reply.data ?? {}, { status: reply.status ?? 200 });
@@ -318,7 +329,11 @@ test('a real cancellation before a stale add click refreshes absent state withou
       providers: ['google'],
       stage: null,
     });
-    expect(mutations).toEqual(['/api/login-methods/add']);
+    expect(mutations).toEqual([
+      '/api/browser-binding/status',
+      '/api/browser-binding/activity',
+      '/api/login-methods/add',
+    ]);
     expect(await (await client.request('/api/bootstrap')).json()).toEqual(identity);
     expect(await (await client.request(path)).json()).toEqual(before);
   } finally {

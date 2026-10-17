@@ -1,4 +1,4 @@
-import { expect, type Locator, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import {
   closeSupportDialog,
@@ -17,6 +17,7 @@ import {
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { expect, test } from '../support/test.js';
 
 async function expectSolarObject(details: Locator, name: string, table = false) {
   const description = table

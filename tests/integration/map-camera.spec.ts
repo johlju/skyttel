@@ -1,8 +1,9 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openMap, openTable, setAllLabels, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { mapFilters } from '../support/object-search.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function arrange(page: Page, origin: string) {
   await signIn(page.request, origin);
@@ -278,7 +279,7 @@ test('KAMERA-03: mouse and touch rotation preserve the pivot and narrow focus co
   browser,
 }) => {
   const installation = await createInstallation();
-  const context = await browser.newContext({
+  const context = await createPreparedContext(browser, {
     hasTouch: true,
     viewport: { width: 390, height: 1000 },
   });

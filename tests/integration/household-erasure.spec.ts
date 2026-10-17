@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { unzipSync } from 'fflate';
 import sharp from 'sharp';
@@ -20,6 +20,7 @@ import { downloadHouseholdExport } from '../support/household-export-download.js
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
 import { denyRecoveryStorage, restoreRecoveryStorage } from '../support/recovery-storage.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function arrange(page: Page, formerImageType = false) {
   const installation = await createInstallation();
@@ -624,7 +625,9 @@ test('RADERING-03: a changed scope requires a new review and confirmation before
   browser,
 }) => {
   const fixture = await arrange(page);
-  const other = await browser.newContext({ storageState: await page.context().storageState() });
+  const other = await createPreparedContext(browser, {
+    storageState: await page.context().storageState(),
+  });
   try {
     const section = await reviewInBrowser(page, fixture.administration);
     const state = await fixture.read();
@@ -906,7 +909,7 @@ test('RADERING-07: a known erasure survives Settings navigation and reload despi
   browser,
 }) => {
   const fixture = await arrange(page);
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     const original = await fixture.read();
     fixture.installation.setIdentity(robin);
@@ -1085,7 +1088,7 @@ test('RADERING-08: a current administrator continues the same cleanup after role
   browser,
 }) => {
   const fixture = await arrange(page);
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   const reader = new Database(join(fixture.installation.directory, 'skyttel.db'), {
     readonly: true,
   });
@@ -1307,7 +1310,9 @@ test('RADERING-09: an unavailable exact attempt stays explicitly unknown after n
   browser,
 }) => {
   const fixture = await arrange(page);
-  const other = await browser.newContext({ storageState: await page.context().storageState() });
+  const other = await createPreparedContext(browser, {
+    storageState: await page.context().storageState(),
+  });
   try {
     const before = await fixture.read();
     const viewBefore = await (await page.request.get(`${fixture.path}/map/view`)).json();

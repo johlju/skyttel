@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 import { request } from '@playwright/test';
 import { expect, test } from 'vitest';
 import { createHousehold, signIn } from '../../support/client.js';
-import { createInstallation, robin } from '../../support/installation.js';
+import { alex, createInstallation, robin } from '../../support/installation.js';
 
 const execute = promisify(execFile);
 test('the manual legacy fixture upgrades verified ownership, custom definitions and its private draft through the running app', async () => {
@@ -27,8 +27,37 @@ test('the manual legacy fixture upgrades verified ownership, custom definitions 
       directory,
       user.id,
     ]);
+    const databasePath = join(directory, 'legacy.sqlite');
+    const generation = '22222222-2222-4222-8222-222222222222';
+    // This separate legacy file has never been served. Upgrade it offline
+    // through the operator command before opening any application connection.
+    const result = await execute(
+      process.execPath,
+      [
+        'dist/server/upgrade-legacy-login.js',
+        '--confirm-legacy-upgrade',
+        '--confirm-service-stopped',
+      ],
+      {
+        env: {
+          SKYTTEL_ORIGIN: 'https://skyttel.example',
+          SKYTTEL_DATABASE_PATH: databasePath,
+          SKYTTEL_AUTHORITY_GENERATION: generation,
+          SKYTTEL_FIRST_ADMIN_PROVIDER: 'google',
+          SKYTTEL_FIRST_ADMIN_SUBJECT: alex.subject,
+          BETTER_AUTH_SECRET: 'synthetic-upgrade-secret-at-least-32-characters',
+          GOOGLE_CLIENT_ID: 'synthetic-google',
+          GOOGLE_CLIENT_SECRET: 'synthetic-secret',
+          MICROSOFT_CLIENT_ID: 'synthetic-microsoft',
+          MICROSOFT_CLIENT_SECRET: 'synthetic-secret',
+        },
+      },
+    );
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({ event: 'legacy_login_upgrade_completed' });
     upgraded = await createInstallation(undefined, {
-      databasePath: join(directory, 'legacy.sqlite'),
+      databasePath,
+      authorityFence: { generation },
     });
     expect((await (await browser.get(`${upgraded.origin}/api/bootstrap`)).json()).status).toBe(
       'anonymous',

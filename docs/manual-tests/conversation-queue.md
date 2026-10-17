@@ -74,6 +74,40 @@ avbryter bara i textvyn”.
     "Escape gör inget utan arbete eller med fokus utanför textvyn. Med fokus i textvyn avbryts aktuellt arbete och hela kön.",
     "**Avbrutet. Föreslagna ändringar ligger kvar i utkastet.** står ovanför fältet även när textvyn öppnas igen, men visas inte utanför textvyn. Texten och Lo-förslaget ligger kvar. Sena svar visas inte.",
     "Nästa uppdrag tar bort avbrottstexten. Nytt samtal tömmer också kön; de borttagna uppdragen börjar aldrig. Det nya uppdraget kan besvaras."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant-deadlines.test.ts",
+      "title": "queue time and identical retries consume the original deadline instead of renewing it",
+      "purpose": "Separat HTTP- och databasbevis för köns fasta uppgiftsfrist; verifierar inte manuellt förlopp eller faktisk leverans."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant-deadlines.test.ts",
+      "title": "invalid auth with an occupied live binding cannot stop its session, accepted task or login attempt",
+      "purpose": "HTTP-bevis för att ogiltig autentisering inte kan avbryta behörigt arbete, inloggning eller ett väntande inloggningsförsök genom säkerhetskakan."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/text-assistant-deadlines.test.ts",
+      "title": "OFF preserves accepted text and its original login end, then logout after natural cleanup stops the rotated binding’s task",
+      "purpose": "Installationsbevis för att avstängd ihågkommen inloggning bevarar mottaget textarbete och ursprunglig sluttid, medan uttrycklig utloggning efter naturlig sessionsgallring stoppar sent arbete utan att påverka annan bindning eller extern assistent."
+    },
+    {
+      "kind": "technical",
+      "runner": "playwright",
+      "suite": "integration",
+      "spec": "tests/integration/text-task-deadlines.spec.ts",
+      "title": "an accepted text tool waiting at MCP cannot write at its original deadline",
+      "purpose": "Syntetiskt installationsbevis för sent verktygsresultat vid den ursprungliga fristen."
+    }
   ]
 }
 ```
@@ -81,6 +115,13 @@ avbryter bara i textvyn”.
 <!-- markdownlint-enable MD013 -->
 
 **Steg:**
+
+Den separata tekniska evidensen styr serverklockan och fördröjer modell
+eller verktyg. Den är inte ett utfört manuellt prov och bekräftar inte
+att ett färdigt svar når webbläsaren vid frånkoppling.
+Den prövar också avstängd ihågkommen inloggning följd av naturlig
+sessionsutgång och uttrycklig utloggning samt avvisar utloggning utan
+giltig autentisering medan inloggningen fortfarande gäller.
 
 1. Skicka **Första uppdraget.**, **Andra uppdraget.** och **Tredje
    uppdraget.** utan att släppa något svar. Läs arbetsraden.

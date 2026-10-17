@@ -1,6 +1,7 @@
-import { expect, request, test } from '@playwright/test';
+import { request } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import { alex, createInstallation, robin } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('two installations honor different administrators and deny another identity the bootstrap', {
   tag: '@technical',

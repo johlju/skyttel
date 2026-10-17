@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import {
   closeTextView,
   createHousehold,
@@ -10,13 +9,14 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('KARTA-23: refreshing after a conflict preserves text without authorizing a stale form', async ({
   page,
   browser,
 }) => {
   const installation = await createInstallation();
-  const second = await browser.newContext();
+  const second = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
@@ -62,7 +62,7 @@ test('KARTA-24: an uncertain save recovers its receipt and stale tabs cannot sav
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
@@ -134,7 +134,7 @@ test('KARTA-06: objects move from a persistent private proposal to the shared ma
     await expect(await readDraftProposal(page, 'Lo Exempel')).toContainText('En påhittad person');
     await page.keyboard.press('Escape');
     await installation.restart();
-    const second = await browser.newContext();
+    const second = await createPreparedContext(browser);
     try {
       await signIn(second.request, installation.origin);
       const reopened = await second.newPage();

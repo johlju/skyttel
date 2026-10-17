@@ -1,4 +1,32 @@
-import { vi } from 'vitest';
+import { beforeEach, vi } from 'vitest';
+
+// Unrelated component workflows use the same prepared necessary-only choice
+// as integration tests. Consent workflows exercise a clean browser separately.
+beforeEach(() => {
+  localStorage.setItem(
+    'skyttel-storage-consent',
+    JSON.stringify({
+      schemaVersion: 1,
+      informationVersion: 1,
+      preferences: false,
+      decidedAt: Date.now(),
+    }),
+  );
+});
+
+// jsdom has no origin-wide lock service. Native locking and secure cookie
+// policy are verified against the real HTTPS installation in Chromium.
+Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+Object.defineProperty(navigator, 'locks', {
+  configurable: true,
+  value: {
+    request: async (
+      _name: string,
+      optionsOrOperation: unknown,
+      operation?: () => Promise<unknown>,
+    ) => (operation ?? (optionsOrOperation as () => Promise<unknown>))(),
+  },
+});
 
 // jsdom has no WebGL. Keep the real map and camera; Chromium tests verify rendering.
 vi.mock('three', async (importOriginal) => {

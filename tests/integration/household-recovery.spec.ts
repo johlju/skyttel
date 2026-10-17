@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, test } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import { unzipSync } from 'fflate';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
@@ -7,6 +7,7 @@ import { createHousehold, openDraftReview, signIn } from '../support/client.js';
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { downloadHouseholdExport } from '../support/household-export-download.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('FLYTT-01: a fresh installation restores an archive, explicitly assigns private ownership and remains portable after restart', async ({
   browser,
@@ -15,9 +16,9 @@ test('FLYTT-01: a fresh installation restores an archive, explicitly assigns pri
   const destination = await createInstallation({ provider: 'microsoft', subject: robin.subject });
   const third = await createInstallation({ provider: 'google', subject: 'third-admin' });
   const contexts = await Promise.all([
-    browser.newContext(),
-    browser.newContext(),
-    browser.newContext(),
+    createPreparedContext(browser),
+    createPreparedContext(browser),
+    createPreparedContext(browser),
   ]);
   const [sourceContext, destinationContext, thirdContext] = contexts;
   const sourceClient = sourceContext.request;

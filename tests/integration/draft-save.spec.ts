@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openMap, signIn } from '../support/client.js';
 import { openSavedHistory } from '../support/conversation-page.js';
 import { prepareDraftSave, registerPendingSave } from '../support/draft-save.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('UTKAST-36: draft save opens immediately and confirms one persistent save without AI', async ({
   page,

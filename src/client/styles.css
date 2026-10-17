@@ -60,6 +60,25 @@ main:focus {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 }
+.app-shell:has(.session-warning:not(:empty)) {
+  padding-top: calc(env(safe-area-inset-top) + var(--session-warning-height, 0px));
+}
+.session-warning {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  margin: 0;
+  background: #fff1bd;
+  color: #30280b;
+  overflow-wrap: anywhere;
+}
+.session-warning:not(:empty) {
+  padding: 0.75rem max(1rem, env(safe-area-inset-left));
+  border-bottom: 2px solid #8c6811;
+}
+.app-shell .household-map.workspace-shell {
+  top: calc(var(--session-warning-height, 0px) + var(--task-delivery-height, 0px));
+}
 .site-header {
   width: min(1120px, 100%);
   margin: 0 auto;
@@ -116,6 +135,10 @@ main {
   flex: 1;
   width: 100%;
   padding: 2rem 1rem 3rem;
+}
+.app-shell.has-settings:has(.session-warning:not(:empty)) > main {
+  height: calc(100dvh - var(--session-warning-height, 0px));
+  max-height: calc(100dvh - var(--session-warning-height, 0px));
 }
 .panel {
   background: #fff;

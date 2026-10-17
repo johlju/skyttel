@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import { createHousehold, openNewObject, openSettings, signIn } from '../support/client.js';
 import {
   expectRecoveryContent,
@@ -6,6 +5,7 @@ import {
   seedRecoveryContent,
 } from '../support/household-recovery-reading.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('IMPORT-12: protected Settings recovery pages preserve ordinary work and retire it after replacement', async ({
   page,
@@ -130,7 +130,7 @@ test('IMPORT-13: import and identity Settings destinations enforce current house
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

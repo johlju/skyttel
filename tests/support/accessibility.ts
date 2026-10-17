@@ -13,7 +13,10 @@ export async function bounds(control: Locator) {
 export const contrast = (text: Locator) => text.evaluate(measureContrast);
 
 /** Measure a real DOM element; keep this callback self-contained for Locator.evaluate. */
-export function measureContrast(element: Element) {
+export function measureContrast(
+  element: Element,
+  foregroundProperty: 'color' | 'outlineColor' = 'color',
+) {
   // Let the browser convert CSS Color 4 values to sRGB before measuring them.
   const context = new OffscreenCanvas(1, 1).getContext('2d', { colorSpace: 'srgb' });
   if (!context) throw new Error('The contrast measurement needs a canvas');
@@ -38,7 +41,7 @@ export function measureContrast(element: Element) {
   while (surface && channels(getComputedStyle(surface).backgroundColor)[3] === 0)
     surface = surface.parentElement;
   if (!surface) throw new Error('The text has no surface behind it');
-  const foreground = luminance(getComputedStyle(element).color);
+  const foreground = luminance(getComputedStyle(element)[foregroundProperty]);
   const background = luminance(getComputedStyle(surface).backgroundColor);
   return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
 }

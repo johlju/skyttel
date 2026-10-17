@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { conversationCommand } from '../shared/conversation-command.js';
 import {
   type ConversationConsentView,
@@ -12,7 +12,11 @@ import type { SaveCheck } from '../shared/save-check.js';
 import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
 import { MapRequestError, request } from './map-request.js';
+import { TaskDeliveryContext } from './task-delivery.js';
 import { useVoice, type Voice } from './use-voice.js';
+
+const deliveryUnavailableMessage =
+  'Instruktionen skickades inte. Skyttel kunde inte öppna anslutningen för hela svaret. Texten finns kvar; försök igen när kontakten fungerar.';
 
 /** How a conversation starts: with the microphone, or with the conversation text. */
 export type ConversationMode = 'voice' | 'text';
@@ -146,6 +150,7 @@ export function useConversation({
 }): Conversation {
   const household = `/api/households/${encodeURIComponent(householdId)}`;
   const path = `${household}/text-assistant`;
+  const delivery = useContext(TaskDeliveryContext);
   const consentPath = `${household}/conversation-consent`;
   const [available, setAvailable] = useState<boolean | null>(null);
   const [connected, setConnected] = useState(navigator.onLine);
@@ -164,6 +169,10 @@ export function useConversation({
   const [savingConsent, setSavingConsent] = useState(false);
   const [consentError, setConsentError] = useState('');
   const [session, setSession] = useState<TextAssistantView | null>(null);
+  const deliverySessionId = session?.id;
+  useEffect(() => {
+    if (deliverySessionId) void delivery?.connect(`${path}/${deliverySessionId}`);
+  }, [delivery, path, deliverySessionId]);
   const [text, setText] = useState('');
   const [startWithVoice, setStartWithVoice] = useState(false);
   const [pending, setPending] = useState(false);
@@ -964,25 +973,59 @@ export function useConversation({
     }
     const epoch = ++requestEpoch.current;
     const sent = text;
-    showTranscript({ id: crypto.randomUUID(), role: 'user', text: sent });
+    const messageId = crypto.randomUUID();
     setPending(true);
     setError('');
     setTaskFailed(false);
     try {
+      const deliveryConnection = await delivery?.connect(`${path}/${current.id}`);
+      if (epoch !== requestEpoch.current) return;
+      if (delivery && !deliveryConnection) {
+        setError(deliveryUnavailableMessage);
+        setPending(false);
+        try {
+          // A refused socket cannot expose its authentication failure. Check
+          // existing authority without admitting or retrying this instruction.
+          await request<TextAssistantView>(`${path}/${current.id}`);
+        } catch (failure) {
+          if (
+            mounted.current &&
+            epoch === requestEpoch.current &&
+            active.current?.id === current.id &&
+            failure instanceof MapRequestError &&
+            [401, 403, 404].includes(failure.status)
+          )
+            fail(failure);
+        }
+        return;
+      }
+      showTranscript({ id: messageId, role: 'user', text: sent });
       const result = await request<TextAssistantView>(`${path}/${current.id}/messages`, {
         revision: current.revision,
         draftVersion: current.review.version,
         contentVersion: current.review.contentVersion,
-        requestId: crypto.randomUUID(),
+        requestId: messageId,
         text: sent,
         queue,
+        deliveryConnectionId: deliveryConnection?.id,
+        deliveryAudio: voiceConnected.current,
       });
       if (epoch !== requestEpoch.current) return;
+      const accepted = result.tasks?.find((task) => task.id === messageId)?.delivery;
+      if (accepted) deliveryConnection?.observeAccepted(accepted);
       update(result);
       setText((value) => (value === sent ? '' : value));
       setUnknown(false);
     } catch (failure) {
-      if (epoch === requestEpoch.current) fail(failure);
+      if (epoch === requestEpoch.current) {
+        if (
+          failure instanceof MapRequestError &&
+          failure.code === 'assistant_delivery_unavailable'
+        ) {
+          setError(deliveryUnavailableMessage);
+          setTranscript((rows) => rows.filter((row) => row.id !== messageId));
+        } else fail(failure);
+      }
     } finally {
       if (mounted.current && epoch === requestEpoch.current) setPending(false);
     }

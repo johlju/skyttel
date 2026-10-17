@@ -36,7 +36,7 @@ function mount(
   );
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (url: string) => {
+    vi.fn(async (url: string, init?: RequestInit) => {
       if (url === '/api/bootstrap')
         return Response.json({
           status: 'ready',
@@ -44,6 +44,10 @@ function mount(
           household: context.households[0],
           providers: ['google', 'microsoft'],
         });
+      if (url === '/api/theme-preference' && (init?.method ?? 'GET') === 'GET')
+        return Response.json({ userId: context.user.id, mode: 'system' });
+      if (url === '/api/browser-binding/preference')
+        return Response.json({ userId: context.user.id, remembered: false });
       return responder(url);
     }),
   );

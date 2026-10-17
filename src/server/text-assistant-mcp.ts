@@ -5,6 +5,7 @@ import type Database from 'better-sqlite3';
 import {
   type AssistantTaskGuard,
   assistantTaskAccess,
+  assistantTaskConnection,
   revokeAssistantConnection,
 } from './assistant-auth.js';
 import { MapError } from './map.js';
@@ -20,6 +21,8 @@ export async function connectTextAssistant({
   householdId,
   dispatch,
   authorize,
+  browserSessionId,
+  now = () => Date.now(),
 }: {
   database: Database.Database;
   origin: string;
@@ -27,6 +30,8 @@ export async function connectTextAssistant({
   householdId: string;
   dispatch: LocalDispatch;
   authorize: AssistantTaskGuard;
+  browserSessionId: string;
+  now?: () => number;
 }) {
   let clientId: string | undefined;
   let client: Client | undefined;
@@ -134,6 +139,11 @@ export async function connectTextAssistant({
     const tokens = await tokenResponse.json();
     if (typeof tokens.access_token !== 'string' || !Number.isFinite(tokens.expires_in))
       throw new Error('invalid_token_response');
+    database
+      .prepare(`UPDATE assistant_connection SET browserSessionId = ?,
+      browserBindingId = (SELECT id FROM browser_binding WHERE sessionId = ?),
+      taskExpiresAt = ? WHERE clientId = ?`)
+      .run(browserSessionId, browserSessionId, now() + 30 * 60_000, clientId);
     client = new Client({ name: 'Samtal med Skyttel', version: '1' });
     const transport = new StreamableHTTPClientTransport(new URL(`${origin}/mcp`), {
       requestInit: { headers: { authorization: `Bearer ${tokens.access_token}` } },
@@ -142,10 +152,26 @@ export async function connectTextAssistant({
     await client.connect(transport);
     const catalog = await client.listTools();
     const activeClient = client;
+    const privateClientId = clientId;
     return {
       tools: catalog.tools,
       instructions: client.getInstructions() ?? '',
-      expiresAt: Date.now() + Math.min(tokens.expires_in, 1800) * 1000,
+      expiresAt: now() + Math.min(tokens.expires_in, 1800) * 1000,
+      acceptTask(deadline: number) {
+        authorize();
+        const changed = database
+          .prepare(`UPDATE assistant_connection
+          SET taskExpiresAt = max(taskExpiresAt, ?) WHERE clientId = ? AND browserSessionId = ?`)
+          .run(deadline, clientId, browserSessionId);
+        if (closed || changed.changes !== 1) throw new MapError('forbidden', 403);
+      },
+      checkTaskAccess() {
+        const grant = database
+          .prepare(`SELECT 1 FROM assistant_connection
+          WHERE clientId = ? AND browserSessionId = ? AND taskExpiresAt > ?`)
+          .get(clientId, browserSessionId, now());
+        if (closed || !grant) throw new MapError('forbidden', 403);
+      },
       checkAccess() {
         authorize();
         const grant = database
@@ -156,14 +182,26 @@ export async function connectTextAssistant({
         if (closed || !grant) throw new MapError('forbidden', 403);
         authorize(grant.contentVersion);
       },
-      async call(name: string, args: Record<string, unknown>, guard?: AssistantTaskGuard) {
+      async call(
+        name: string,
+        args: Record<string, unknown>,
+        guard?: AssistantTaskGuard,
+        continuation = false,
+      ) {
         if (closed) throw new MapError('assistant_session_expired', 409);
+        authorize();
+        guard?.();
         return assistantTaskAccess.run(
           (contentVersion) => {
             authorize(contentVersion);
             guard?.(contentVersion);
           },
-          () => activeClient.callTool({ name, arguments: args }),
+          () =>
+            continuation
+              ? assistantTaskConnection.run(privateClientId, () =>
+                  activeClient.callTool({ name, arguments: args }),
+                )
+              : activeClient.callTool({ name, arguments: args }),
         );
       },
       close,

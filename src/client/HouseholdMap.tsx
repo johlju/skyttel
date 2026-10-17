@@ -1283,6 +1283,15 @@ export function HouseholdMap({
       data-mobile={viewport.mobile}
       data-narrow={narrow}
       data-short={viewport.short}
+      data-work-layout={
+        viewport.height <= 180
+          ? 'minimal'
+          : viewport.height <= 450
+            ? 'compact'
+            : viewport.height <= 600
+              ? 'short'
+              : 'tall'
+      }
       data-wide-touch={viewport.wideTouch}
       data-theme={theme.theme}
     >

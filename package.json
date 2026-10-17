@@ -22,6 +22,7 @@
     "dev:prodlike": "node scripts/develop-prodlike.mjs",
     "db:setup": "tsx scripts/setup-database.ts",
     "db:migrate": "tsx scripts/migrate-development-database.ts",
+    "auth:upgrade": "node dist/server/upgrade-legacy-login.js",
     "build": "npm run test:env -- sh -c 'tsc -p tsconfig.server.json && vite build'",
     "start": "node dist/server/index.js",
     "typecheck": "tsc --noEmit",

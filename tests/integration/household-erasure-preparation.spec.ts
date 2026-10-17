@@ -1,9 +1,9 @@
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
 import { createHousehold, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 const guide = readFileSync('docs/manual-tests/household-erasure-preparation.md', 'utf8');
 const snippets = [...guide.matchAll(/```javascript\n([\s\S]*?)\n```/g)].map((match) => match[1]);

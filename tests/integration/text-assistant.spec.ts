@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { access, readFile } from 'node:fs/promises';
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { SaveOperation, SaveReceipt } from '../../src/shared/map.js';
 import type { TextAssistantReview, TextAssistantView } from '../../src/shared/text-assistant.js';
 import {
@@ -28,6 +28,7 @@ import { createInstallation } from '../support/installation.js';
 import { manualTextDeliverySource } from '../support/manual-text-delivery.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
+import { expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 test('manual text launcher public preparation seeded rejects an unaccepted delivery', {

@@ -20,7 +20,11 @@ export function voiceErrorNotice(
 ): VoiceFailure {
   if (failure instanceof MapRequestError)
     return {
-      noticeId: groupNotices[failure.voiceErrorGroup ?? voiceErrorGroup(failure.code, fallback)],
+      noticeId:
+        (failure.code === 'voice_session_expired' && failure.status === 401) ||
+        failure.code === 'unauthenticated'
+          ? 'voiceSessionExpired'
+          : groupNotices[failure.voiceErrorGroup ?? voiceErrorGroup(failure.code, fallback)],
       diagnosticId: failure.diagnosticId,
     };
   return {

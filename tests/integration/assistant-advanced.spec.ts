@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { type APIRequestContext, expect, test } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import { beginAssistant, callAssistant } from '../support/assistant.js';
 import {
   createHousehold,
@@ -17,6 +17,7 @@ import {
 } from '../support/domain-work.js';
 import { downloadHouseholdExport } from '../support/household-export-download.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function connect(actor: APIRequestContext, origin: string, householdId: string) {
   const flow = await beginAssistant(actor, origin, 'skyttel:read skyttel:write');
@@ -274,6 +275,8 @@ test('MCP-06: importerad historik läses och vanliga rättelser använder färsk
       saved,
     ]);
   } finally {
+    // Close the browser's connections before waiting for the servers to stop.
+    await page.close();
     await sdk.close();
     await target.close();
     await source.close();
@@ -432,7 +435,7 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
 
 test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ page, browser }) => {
   const app = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, app.origin);
     const { household } = await (await createHousehold(page.request, app.origin)).json();

@@ -98,6 +98,25 @@ test.each([320, 390, 1280])(
       expect(getComputedStyle(remove.element()).color).toBe(
         theme === 'light' ? 'rgb(200, 51, 70)' : 'rgb(255, 133, 138)',
       );
+      const position = actions.element().getBoundingClientRect().toJSON();
+      const scroll = [scrollX, scrollY];
+      for (const [key, name] of [
+        ['End', 'Ta bort objekt'],
+        ['Home', 'Redigera objekt'],
+        ['ArrowLeft', 'Ta bort objekt'],
+        ['ArrowRight', 'Redigera objekt'],
+      ]) {
+        await userEvent.keyboard(`{${key}}`);
+        const action = actions.getByRole('button', { name, exact: true });
+        await expect.element(action).toHaveFocus();
+        const box = action.element().getBoundingClientRect();
+        expect(box.left).toBeGreaterThanOrEqual(0);
+        expect(box.right).toBeLessThanOrEqual(width);
+        expect(box.top).toBeGreaterThanOrEqual(0);
+        expect(box.bottom).toBeLessThanOrEqual(720);
+        expect(actions.element().getBoundingClientRect().toJSON()).toEqual(position);
+        expect([scrollX, scrollY]).toEqual(scroll);
+      }
       anchor.element().style.cssText = 'position: fixed; left: 8px; top: 8px';
       const anchorBounds = anchor.element().getBoundingClientRect();
       const roomOnRight = anchorBounds.right + 8 + bounds.width <= width - 8;

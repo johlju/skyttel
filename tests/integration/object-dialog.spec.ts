@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import { closeSupportDialog, closeTextView, createHousehold, signIn } from '../support/client.js';
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { readDraftProposal, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('KARTA-19: unchanged edits open relationships without staging and every reading entry uses the same object dialog', async ({
   page,

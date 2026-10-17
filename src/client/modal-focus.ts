@@ -15,7 +15,7 @@ export function trapDialogTab(event: KeyboardEvent<HTMLDialogElement>) {
   if (event.key !== 'Tab') return;
   const controls = [
     ...event.currentTarget.querySelectorAll<HTMLElement>(
-      'button, a[href], input, select, textarea, [tabindex], [contenteditable="true"]',
+      'button, a[href], input, select, textarea, summary, [tabindex], [contenteditable="true"]',
     ),
   ].filter(
     (element) =>

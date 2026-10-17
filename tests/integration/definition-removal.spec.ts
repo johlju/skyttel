@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import {
   closeSupportDialog,
@@ -20,6 +19,7 @@ import {
 } from '../support/current-conflict-reading.js';
 import { openTypeDefinitions, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function readRemovalProposal(
   page: import('@playwright/test').Page,
@@ -206,7 +206,7 @@ test('KATALOG-02: private drafts and ended content block removal with a useful e
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

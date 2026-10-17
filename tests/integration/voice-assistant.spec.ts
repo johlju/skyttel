@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import {
   createHousehold,
@@ -31,6 +31,7 @@ import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
 
@@ -659,17 +660,25 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await closeConversationText(page);
     await editTableObject(page, 'Kim Exempel');
     await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
-    speak(live, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
-    await expect
-      .poll(
-        async () =>
-          (
-            await (
-              await page.request.get(`${app.origin}/api/households/${household.id}/map`)
-            ).json()
-          ).draft.changes,
+    const saved = page.waitForResponse(async (response) => {
+      if (
+        !response.ok() ||
+        !response
+          .url()
+          .startsWith(`${app.origin}/api/households/${household.id}/text-assistant/`) ||
+        !response.url().includes('/voice/') ||
+        !response.url().endsWith('/poll')
       )
-      .toEqual([]);
+        return false;
+      const result = await response.json().catch(() => null);
+      return Boolean(result?.assistant?.receipt);
+    });
+    speak(live, 'Behåll Lo-förslaget, rätta priset till 189 kr och spara.');
+    await saved;
+    expect(
+      (await (await page.request.get(`${app.origin}/api/households/${household.id}/map`)).json())
+        .draft.changes,
+    ).toEqual([]);
     await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
       'Osänd text som ska finnas kvar',
     );
@@ -1062,6 +1071,32 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
           .getByRole('definition')
           .filter({ hasText: 'Lo Exempel' }),
       ).toBeVisible();
+      await expect
+        .poll(() =>
+          page.getByRole('region', { name: 'Lo Exempel', exact: true }).evaluate((element) => {
+            const description = element.querySelector('.household-table-description');
+            const body = element.querySelector('.object-property-body');
+            if (!description || !body) return false;
+            const box = description.getBoundingClientRect();
+            const clip = body.getBoundingClientRect();
+            const panel = element.getBoundingClientRect();
+            const line = Math.min(
+              box.height,
+              Number.parseFloat(getComputedStyle(description).lineHeight),
+            );
+            return (
+              line > 0 &&
+              box.top >= clip.top &&
+              box.top + line <= clip.bottom &&
+              box.top >= panel.top &&
+              box.top + line <= panel.bottom &&
+              description.contains(
+                document.elementFromPoint(box.x + box.width / 2, box.top + line / 2),
+              )
+            );
+          }),
+        )
+        .toBe(true);
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await openConversationText(page);

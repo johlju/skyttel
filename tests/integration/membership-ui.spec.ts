@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
 import Database from 'better-sqlite3';
 import type { Administration } from '../../src/shared/administration.js';
 import type { MapState } from '../../src/shared/map.js';
@@ -13,13 +12,14 @@ import {
 } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('MEDLEM-04: replacing an invitation invalidates the old code and cancellation keeps the new code usable', async ({
   page,
   browser,
 }) => {
   const installation = await createInstallation();
-  const recipient = await browser.newContext();
+  const recipient = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -80,7 +80,7 @@ test('MEDLEM-05: an expired invitation is visibly unusable and a fresh invitatio
   browser,
 }) => {
   const installation = await createInstallation();
-  const recipient = await browser.newContext();
+  const recipient = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -144,7 +144,7 @@ test('MEDLEM-06: revocation preserves shared objects and only a new invitation r
   browser,
 }) => {
   const installation = await createInstallation();
-  const recipient = await browser.newContext();
+  const recipient = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -234,7 +234,7 @@ test('MEDLEM-01: an administrator invites an authenticated user who joins by key
   browser,
 }) => {
   const installation = await createInstallation();
-  const recipient = await browser.newContext({ viewport: { width: 320, height: 568 } });
+  const recipient = await createPreparedContext(browser, { viewport: { width: 320, height: 568 } });
   try {
     await signIn(page.request, installation.origin);
     await createHousehold(page.request, installation.origin);
@@ -284,7 +284,7 @@ test('MEDLEM-07: a recipient can check access when the acceptance response is lo
   browser,
 }) => {
   const installation = await createInstallation();
-  const administrator = await browser.newContext();
+  const administrator = await createPreparedContext(browser);
   try {
     await signIn(administrator.request, installation.origin);
     const { household } = await (
@@ -332,7 +332,7 @@ test('MEDLEM-02: invitation errors are recoverable and a revoked code cannot gra
   browser,
 }) => {
   const installation = await createInstallation();
-  const recipient = await browser.newContext();
+  const recipient = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -378,7 +378,7 @@ test('MEDLEM-03: administrators share responsibility and open clients lose revok
 }) => {
   test.setTimeout(45_000);
   const installation = await createInstallation();
-  const second = await browser.newContext();
+  const second = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -468,7 +468,7 @@ test('MEDLEM-08: staged invitation copies its one-time code and revocation retir
   browser,
 }) => {
   const installation = await createInstallation();
-  const recipient = await browser.newContext();
+  const recipient = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
@@ -636,7 +636,7 @@ test('MEDLEM-09: failed clipboard writing keeps the real code usable by manual c
   browser,
 }) => {
   const installation = await createInstallation();
-  const recipient = await browser.newContext();
+  const recipient = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();

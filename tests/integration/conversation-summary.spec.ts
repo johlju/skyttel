@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { closeSupportDialog, createHousehold, signIn } from '../support/client.js';
 import {
@@ -14,6 +14,7 @@ import { readDraftProposal, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { expect, test } from '../support/test.js';
 import { type ModelRequest, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 const summaryLine = 'Skyttel har sammanfattat samtalet för att få plats i kontexten.';

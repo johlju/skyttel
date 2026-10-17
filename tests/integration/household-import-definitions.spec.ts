@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import {
   closeTextView,
@@ -14,6 +13,7 @@ import { readCommittedHistoryCard } from '../support/conversation-page.js';
 import { editTableObject } from '../support/domain-work.js';
 import { downloadHouseholdExport } from '../support/household-export-download.js';
 import { createInstallation } from '../support/installation.js';
+import { expect, test } from '../support/test.js';
 
 test('historical field kinds and exact receipts survive replacement and request corrections', {
   tag: '@technical',

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import type { PersonalView } from '../../src/shared/personal-view.js';
 import {
@@ -25,6 +25,7 @@ import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
 function saveToast(page: Page) {
@@ -36,7 +37,7 @@ async function closeSaveDialog(page: Page) {
   if (await modal.isVisible()) await page.keyboard.press('Escape');
 }
 
-for (const theme of ['light', 'dark'])
+for (const theme of ['light', 'dark'] as const)
   test(`${theme === 'dark' ? 'UTKAST-94' : 'UTKAST-25'}: filtered legend matches map colours and retains only displayed categories in ${theme}`, async ({
     page,
   }) => {
@@ -92,7 +93,7 @@ for (const theme of ['light', 'dark'])
         baseRevision: edge.revision,
         value: { ...edge, sourceId: 'music', targetId: 'lo' },
       });
-      await page.addInitScript((value) => localStorage.setItem('skyttel-theme', value), theme);
+      await page.emulateMedia({ colorScheme: theme });
       await page.goto(app.origin);
       const legend = page.getByRole('region', { name: 'Teckenförklaring i kartan', exact: true });
       await expect(legend).toContainText('Grönt +');
@@ -326,7 +327,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     liveFetch: live.provider,
     liveSideband: live.attach,
   });
-  const member = await browser.newContext();
+  const member = await createPreparedContext(browser);
   let release: (() => void) | undefined;
   let releasePoll: (() => void) | undefined;
   try {

@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { createHousehold, openSettings, signIn, utilityButton } from '../support/client.js';
 import { specifiedConsentText } from '../support/conversation.js';
 import {
@@ -16,6 +16,7 @@ import {
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 async function installation() {
@@ -229,7 +230,7 @@ test('MEDGIVANDE-03: sparat medgivande följer användaren men inte andra medlem
     await expect(consentBox(page)).toBeHidden();
 
     // Another of the same user's devices starts directly too.
-    const otherDevice = await browser.newContext();
+    const otherDevice = await createPreparedContext(browser);
     await signIn(otherDevice.request, app.origin);
     const otherPage = await otherDevice.newPage();
     await openHousehold(otherPage, app.origin);
@@ -240,7 +241,7 @@ test('MEDGIVANDE-03: sparat medgivande följer användaren men inte andra medlem
 
     // Another member of the same household has not consented.
     app.setIdentity(robin);
-    const member = await browser.newContext();
+    const member = await createPreparedContext(browser);
     await signIn(member.request, app.origin, 'microsoft');
     const { user } = await (await member.request.get(`${app.origin}/api/bootstrap`)).json();
     const invitation = await page.request.post(`${householdPath}/invitations`, {
@@ -400,7 +401,7 @@ test('MEDGIVANDE-04: medgivanderutan fungerar med tangentbord och pekskärm', as
     await expect(messageField(page)).toBeVisible();
 
     // A touch screen: the same box is approved with taps.
-    const touch = await browser.newContext({
+    const touch = await createPreparedContext(browser, {
       hasTouch: true,
       viewport: { width: 390, height: 844 },
     });

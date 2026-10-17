@@ -38,6 +38,11 @@ ger en separat lokal provdatabas. Förbered utvecklingsmiljön med
 till utvecklingsguidernas gemensamma miljöer. Särskilda provdata och
 kontroller beskrivs tillsammans med respektive områdesfall.
 
+Om fallet inte gäller kakval, välj **Endast nödvändiga** i kakbannern
+innan du börjar. Automatiska prov utanför kakområdet använder samma
+förberedda webbläsarval. Fall som behöver ihågkommen inloggning anger
+separat samtycke till **Preferenskakor** och aktivering efter inloggning.
+
 [Objektlistornas enhetsförberedelse](object-list-device-preparation.md)
 ger LISTA-09 och SÖK-16 vanlig HTTPS, verklig leverantörsinloggning och
 separata påhittade läs-, storkarts- och sökuppgifter. Fullständiga provarkiv
@@ -89,7 +94,8 @@ Stäng den med **Stäng uppgifterna** före kartgester om den tar plats.
 Stäng text med **Stäng textvyn** när ett fall behöver själva kartan.
 
 **Din profil** innehåller användar-ID, inbjudningar, **Inloggningssätt**,
-**Assistentanslutningar** och **Logga ut**. **Inställningar** öppnar en egen
+**Assistentanslutningar**, **Kakor och lagring** och **Logga ut**.
+**Inställningar** öppnar en egen
 sida med **Typer och egna fält**, **Administrera tillgång** för
 administratören och **Månadskostnad** för driftansvarig. Mobilnavigationen
 öppnas med **Välj inställning**. **Tillbaka till kartan** återger arbetet.
@@ -101,6 +107,38 @@ utfall följer du formulärets uttryckliga kontroll före nytt försök.
 Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
 
 ## Områden
+
+Åtkomstområdets separata tekniska underlag omfattar också kontrollerad
+övergång från äldre inloggningar: gamla nycklar och påbörjade försök nekas
+efter uppgradering och omstart medan lagrade utkast och sparkvitton bevaras.
+Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
+
+- [Inaktivitet och förvarning](session-inactivity.md): gemensam aktivitet
+  mellan flikar, kvarliggande besked utan fokusflytt och korrekt utgång
+  som ersätter förvarningen vid 1280, 390 och 320 CSS-pixlar.
+  Faktisk skärmläsare och uppläsning med fysisk mikrofon på mobil och dator
+  har separata kvarstående fall.
+- [Kakor och lagring](cookies.md): publik kakpolicy, referensens två
+  bannerlägen i ljust och mörkt tema, separat lagringssamtycke och
+  ihågkommen inloggning efter inloggning, bestående avstå-val,
+  installationsansvarigs policykontakt och samordning mellan flikar.
+  [Visuell jämförelse](cookie-consent-visual-verification.md) visar båda
+  bannerlägena samt policy och inställningar mot den frysta referensen.
+  Konkret register
+  över kakor, fliklagring, serverposter och tillfälligt samtalsminne, första besök,
+  profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före
+  hushållsstart och efter återkallad tillgång, snabbval, samtyckesexport,
+  navigationsskydd, bekräftad återställning, fel och bevarade
+  återhämtningsuppgifter samt separat skärmläsarprov.
+  Kontroll av samma okända avstängning efter serveromstart och ny
+  inloggning bevarar ett nytt aktivt val. Nekat återhämtningsminne,
+  skadad eller förlorad referens och utgånget resultat ger ingen gissad
+  framgång eller automatisk upprepning. Tekniska serverprov kontrollerar
+  verklig gallring utan användartrafik och oförändrade frister vid omstart;
+  produktionens gallring och säkerhetskopiors radering behöver egna bevis.
+  Kontrollerad återställning av en faktisk SQLite-kopia skiljer förlorat
+  resultat från ett kvarvarande ägarbehörigt resultat och bevarar dess
+  ursprungliga kontrollfrist.
 
 - [Samtalets samlade hjälpmedelsflöde](conversation-accessibility.md):
   naturlig läs- och tabbordning över verktyg, röstruta och flyttad notis,
@@ -131,6 +169,8 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   och synliga streckade etikettlinjer i båda teman. SÖK-11/15 och SÖK-12
   körs genom kartans publika kontroller i Chromium med produktens stilar,
   fullständigt kontrollerat kartsvar och profilbilder från tabellförberedelsen.
+  SÖK-12 använder kontrollerade svar för kontots temaval genom produktens
+  temahantering.
   De behåller sina ID och ersätter tre integrationsexekveringar; övriga
   sökfall behåller verklig HTTP och jämförelse av hushållets tillstånd.
   Webbläsarfallen bevisar inte beständigt sparande.
@@ -183,6 +223,9 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   Gamla fria fönsters placeringsfall är pensionerade utan återanvända ID:n.
   PANEL-03 använder två riktiga browserklienter och PANEL-09 anger
   faktiskt mikrofon- och ljudprov.
+- [Kontots temaval](theme-preference.md): kontosparande utan hushåll,
+  flera enheter och flikar, fokus, systemtema, fel och sena temasvar över
+  kontobyte. Faktisk skärmläsning redovisas separat.
 - [Kartans arbetsyta](workspace-shell.md): kompakt och expanderad verktygslåda,
   teman, läsbara hopplänkar och fokus, hjälp i det kompakta verktygsfältet,
   samtalshjälp med
@@ -276,6 +319,16 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   väntan med mikrofonen av, beständigt kvitto och fyra
   sekunders sparbesked efter ljud eller stopp. Talad och skriven ingång
   har skilda vanliga fall; uppläsning och faktiskt ljud har FRAGA-08/09.
+- [Hela svarstexten](conversation-delivery.md): fullständig tillfällig
+  textreserv, ljudnotis, leverans vid utgång och rensning vid ny inloggning.
+  Korta statusbesked bevarar fokus och upprepas inte vid kvittens.
+  Långa svar rullas med tangentbord i en avgränsad ruta som lämnar plats
+  för kartans verktyg, Inställningar och kartans återkoppling.
+  Saknad leveranskanal lämnar texten oskickad och hindrar röststart
+  tills användaren uttryckligen försöker igen.
+  Förlust före första uppgiftsnotisen ger tydligt leveransfel; lagrat
+  utkast finns kvar efter utgång och ny inloggning utan återspelning.
+  Verkligt ljud och skärmläsare bedöms separat.
 - [Skyttels röst](voice-assistant.md): svenska röstuppdrag,
   start efter medgivande, mikrofonen på och av med **Prata med Skyttel**,
   röstrutans statusord, vågform, stoppikon, plats och uppläsning,
@@ -284,12 +337,14 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   avbrott i långa samtal med bevarad kontext och mikrofonval,
   faktisk markering, exakt sparåterhämtning och tydlig skillnad mellan
   samtalstext och verifierade resultat, löpande dialog och
-  raden Skyttel arbetar. Kontrollerat familjeunderlag och
-  verkligt tal redovisas separat. TAL-18/19 skiljer mikrofonlägena;
-  TAL-20–22 skiljer placeringarna och TAL-17/23–25 kräver verkliga
+  raden Skyttel arbetar. TAL-03 skyddar läsbar beskrivning i korta
+  uppgiftsfönster även efter hela svaret som text. Kontrollerat
+  familjeunderlag och verkligt tal redovisas separat. TAL-18/19 skiljer mikrofonlägena;
+  TAL-20–22 skiljer placeringarna och TAL-17/23–26 kräver verkliga
   mikrofon-, ljud-, system- eller skärmläsarobservationer. TAL-24 behåller
   TAL-16:s exakta hörda fokus-/aktivitetssekvens, inklusive statusord som
-  inte ska läsas upp, och skiljer den från verkligt tal.
+  inte ska läsas upp, och skiljer den från verkligt tal. TAL-26 provar
+  fysisk mikrofon, tillgängligt utgångsbesked och hel ny instruktion.
 - [Utkastet i samtalet](conversation-draft.md): tabellen och dess symboler,
   personligt val mellan hushåll och enheter, första förslaget, tomt utkast,
   sparåterkoppling och kvittots plats i Rapporter → Ändringshistorik.
@@ -361,6 +416,8 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   TEXT-07 är pensionerat till SAMTALSUTKAST-01 utan återanvänt ID.
   TEXT-04 återfinner den verkliga sparidentifieraren efter genomfört
   sparande med tappat svar och omstart. Varje TEXT-08-storlek har eget ID.
+  På smal skärm provas även tangentbordsåtkomst till kartans sammanhang
+  efter ett nytt urval medan hela svaret finns kvar ovanför arbetsytan.
   [Operatörsförberedelsen](text-conversation-preparation.md) skiljer
   leveransfel och rått protokoll från vanliga UI-steg. Kontrollerade lokala
   leverantörssvar och verklig modellförståelse redovisas separat.
@@ -463,14 +520,26 @@ Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
   oskickad text och oberoende privata förslag.
 
 - [Inloggning och hushållets start](access.md): skapa hushåll, använda
+  aktivt Kom ihåg mig-val, börja varje ny inloggning avmarkerat och visa
+  bekräftad avstängning, avvisat sparande och okänd sparstatus utan nytt
+  automatiskt sparande; fortsatt inloggning kräver en separat kontroll,
+  hinder när inloggningen efter återkomsten inte kan bekräftas,
+  säkra gemensamma starter i flera flikar, stoppa blockerade kakor eller
+  saknade webbläsarlås och avbryta fördröjd initialisering,
+  uttryckligen rensa en okänd gammal koppling utan automatisk
+  inloggning, bevara tangentbordsfokus vid misslyckad rensning och en annan
+  fliks nya session vid ett sent kontrollsvar,
   tangentbord, avbryta extern inloggning, återhämta utgångna försök, börja
   med kartans verktyg utan startdialoger, hantera förlorad tillgång och länka
   inloggningssätt. Inloggningsstartens nätverksavbrott och leverantörsfel
-  har separata fall. Nekat Google- och Microsoft-samtycke provas var för sig.
+  har separata fall. Startfel förklarar möjligt underhåll eller uppgradering,
+  hänvisar till administratören och behåller fungerande återförsök.
+  Nekat Google- och Microsoft-samtycke provas var för sig.
   Länkningens två steg visar aktuell verifiering, båda tjänsternas status
   och övergången till respektive tjänst. Microsoft-inloggning efter
   omstart behåller profil och hushåll; requestdrivet identitetsbevis redovisas
-  separat som tekniskt underlag.
+  separat som tekniskt underlag. Tekniskt underlag täcker även överlappande
+  inloggningar, utloggning under koppling och sena kakskrivande svar.
   Avbruten länkning bekräftas med bevarad tillgång och krav på ny verifiering.
   Utgången länkning förklarar ny verifiering och bevarar eget utkast och
   identitet.
@@ -759,9 +828,12 @@ svar. Första macOS-genvägens medgivande provas i MIKROFONTRYCK-09; hela
 formulär-, utkast-, samtals- och återkallandekedjan körs i YTA-07 och upprepas
 inte oberoende på macOS.
 TEXTBRICKA-06/07 använder Chromium med hushållskartan, produktionsstilar och
-kontrollerade textsvar för 390 px mörkt respektive 1280 px ljust.
+kontrollerade svar för kontots temaval och samtalstext för 390 px mörkt
+systemtema respektive 1280 px ljust systemtema.
 TEXTBRICKA-04/08 behåller hela serverflödet vid 390 px ljust respektive
 1280 px mörkt; medgivande och HTTP-flöde körs inte separat i de andra två
-kombinationerna.
+kombinationerna. TEXTBRICKA-01/04/08 kontrollerar också att hela svaret har
+eget utrymme ovanför kartan, med fasta knappmått och oförändrad inbördes
+verktygsplacering inom den återstående arbetsytan.
 HJALP-11/12, TEXTBRICKA-09/10 och YTA-14/15 beskriver faktiskt hjälpmedel,
 fysisk inmatning eller zoom; syntetisk Chromium etablerar dem inte.

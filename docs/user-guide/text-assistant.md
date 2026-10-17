@@ -478,9 +478,18 @@ En avstängd mikrofon behåller samtalstexten i det pågående samtalet.
 **Nytt samtal** tömmer samtalstexten och kontexten.
 Samtalet avslutas när du lämnar hushållets karta, laddar om sidan eller
 när åtkomsten upphör.
-Anslutningen upphör senast efter 30 minuter eller när dess medgivande
-återkallas. Utkast, sparade uppgifter och kvitton finns kvar. Återimport
-eller byte av innehållsägare kräver en ny anslutning.
+En skriven instruktion som servern tar emot medan du är inloggad får bli
+klar inom 30 minuter från mottagandet, även om inloggningen går ut under
+tiden. Köväntan ingår i tiden. Nya instruktioner och nya sparbegäranden
+kräver fortsatt giltig inloggning. En ny inloggning skickar inget uppdrag
+och sparar inget automatiskt.
+
+Utloggning, återkallat medgivande eller återkallad åtkomst stoppar fortsatt
+arbete. Återimport eller byte av innehållsägare kräver en ny anslutning.
+Redan lagrade förslag finns i ditt utkast efter ny inloggning. Sparade
+uppgifter och kvitton finns också kvar. Vid serveromstart fortsätter inget
+modellarbete, och samtalstexten sparas inte. Ett svar som servern gör klart
+är ingen bekräftelse på att det har nått din webbläsare.
 
 ## Vilka uppgifter behandlas?
 
@@ -501,3 +510,47 @@ tar inte tillbaka uppgifter som redan har skickats. Läs
 [OpenAI:s datavillkor](https://developers.openai.com/api/docs/guides/your-data).
 Hushållets administratör hanterar användare, export, återimport och
 permanent radering i Skyttels egna administrationsvyer.
+
+## När inloggningen går ut under tal
+
+Fritt röstläge stannar när inloggningen går ut. Att du börjar tala före
+utgången betyder inte att en fullständig instruktion har hunnit tas emot.
+Logga in igen och lämna hela instruktionen på nytt. Skyttel skickar inte
+det avvisade talet igen automatiskt.
+
+Ditt lagrade utkast och redan genomförda sparanden finns kvar. Ett sent
+**inte** gör inte ett redan genomfört sparande ogjort. Kontrollera
+utkastet och eventuella sparförsök eller sparkvitton efter ny inloggning
+innan du ber om ett nytt sparande.
+
+## Hela svaret som text
+
+Om anslutningen för hela svaret inte kan öppnas skickas din skrivna
+instruktion inte. Texten finns kvar i fältet och du får ett felbesked.
+Försök igen när kontakten fungerar. Samma fel hindrar röststart;
+mikrofonen stängs. Skyttel skickar eller startar ingenting automatiskt
+när kontakten kommer tillbaka.
+
+Om instruktionen redan är mottagen men anslutningen sedan bryts får du
+ett leveransfel. Det betyder inte att arbetet misslyckas eller att inget
+sparas. Redan lagrat utkast och sparresultat finns kvar; kontrollera dem
+innan du ber om samma arbete igen.
+
+När ljudleveransen inte kan bekräftas visas hela svaret eller följdfrågan
+under **Hela svaret som text**, tillsammans med en samtalsnotis om ljudet.
+Texten innehåller även beskedet om sparande. Mottagen text betyder att
+webbläsaren får hela texten; den säger inget om uppspelat ljud, läsning
+eller förståelse. Du behöver inte bekräfta eller läsa svaret för att
+uppgiften ska avslutas.
+
+Långa svar rullas inuti svarsrutan. Du kan flytta fokus till rutan med
+tangentbordet och rulla till sista raden. Kartans verktyg och
+Inställningar går fortfarande att använda medan svaret finns kvar.
+
+En redan mottagen skriven instruktion kan få sitt svar där efter att
+inloggningen går ut, om samma anslutning fortfarande är öppen. Uppgiftens
+ursprungliga gräns på 30 minuter gäller även leveransen. Ett avbrott,
+utebliven mottagning eller omstart ger ett leveransfel. Ingen instruktion
+skickas igen automatiskt och samtalstexten sparas inte för återanslutning.
+Redan lagrat utkast och sparresultat finns kvar. Kontrollera dem efter ny
+inloggning innan du ber om ett nytt sparande.

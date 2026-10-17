@@ -4,7 +4,10 @@ import { userEvent } from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { App } from '../../../src/client/App.js';
-import { authenticatedHttpFetch } from '../../support/authenticated-http-fetch.js';
+import {
+  authenticatedHttpFetch,
+  authenticatedHttpWebSocket,
+} from '../../support/authenticated-http-fetch.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { prepareHouseholdReading } from '../../support/household-reading.js';
 import { createInstallation, robin } from '../../support/installation.js';
@@ -13,7 +16,10 @@ import { modelMessage, textModel } from '../../support/text-model.js';
 let installation: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
 let other: APIRequestContext;
+let delivery: Awaited<ReturnType<typeof authenticatedHttpWebSocket>> | undefined;
 beforeEach(async () => {
+  // biome-ignore lint/suspicious/noDocumentCookie: Reset jsdom's cookie boundary between independent installations.
+  document.cookie = 'skyttel_binding=; Max-Age=0; Path=/';
   installation = await createInstallation();
   client = await request.newContext();
   other = await request.newContext();
@@ -22,11 +28,16 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   cleanup();
+  delivery?.close();
+  delivery = undefined;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   await client?.dispose();
   await other?.dispose();
   await installation?.close();
+  (
+    globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
+  ).jsdom.reconfigure({ url: 'http://localhost:3000' });
 });
 
 function mount(path = '/') {
@@ -78,8 +89,104 @@ async function installModel(model: ReturnType<typeof textModel>) {
   vi.stubGlobal('fetch', authenticatedHttpFetch(client, installation.origin));
   await signIn(client, installation.origin);
   const { household } = await (await createHousehold(client, installation.origin)).json();
+  delivery = await authenticatedHttpWebSocket(client, installation.origin);
+  vi.stubGlobal('WebSocket', delivery.WebSocket);
   return `/households/${household.id}`;
 }
+
+async function rejectUnknownBinding() {
+  (
+    globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
+  ).jsdom.reconfigure({ url: installation.origin });
+  // biome-ignore lint/suspicious/noDocumentCookie: Seed the same unknown security cookie in jsdom and its HTTP transport.
+  document.cookie = `skyttel_binding=${'f'.repeat(64)}; Path=/; SameSite=Lax`;
+  await client.addCookies([
+    { name: 'skyttel_binding', value: 'f'.repeat(64), url: installation.origin },
+  ]);
+  mount('/login');
+  await userEvent.click(await screen.findByRole('button', { name: 'Fortsätt med Google' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Fortsätt till Google' }));
+  await screen.findByRole('button', { name: 'Börja om i den här webbläsaren' });
+}
+
+test('a confirmed binding reset restores provider focus before a fresh provider choice', async () => {
+  await rejectUnknownBinding();
+  await userEvent.click(screen.getByRole('button', { name: 'Börja om i den här webbläsaren' }));
+  await screen.findByText('Klart för en ny inloggning. Välj Google eller Microsoft igen.');
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Fortsätt med Google' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Fortsätt med Microsoft' }));
+  expect(screen.queryByRole('checkbox', { name: 'Kom ihåg mig' })).toBeNull();
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Fortsätt till Microsoft' }),
+  );
+});
+
+test.each(['network', 'binding-changed', 'new-provider', 'navigation', 'cancelled'] as const)(
+  'a rejected binding reset preserves the appropriate keyboard focus after %s',
+  async (failure) => {
+    let release = () => {};
+    let reached = () => {};
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const received = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const transport = authenticatedHttpFetch(client, installation.origin);
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const response = await transport(input, init);
+      if (String(input) === '/api/browser-binding/reset-check') {
+        reached();
+        await pending;
+        if (failure === 'network') throw new TypeError('Reset check reply lost');
+      }
+      return response;
+    });
+    try {
+      await rejectUnknownBinding();
+      await userEvent.click(screen.getByRole('button', { name: 'Börja om i den här webbläsaren' }));
+      await received;
+      let target = screen.getByRole('button', { name: 'Fortsätt med Google' });
+      if (failure === 'binding-changed' || failure === 'new-provider') {
+        // biome-ignore lint/suspicious/noDocumentCookie: Change the browser cookie while an actual reset-check response is delayed.
+        document.cookie = `skyttel_binding=${'a'.repeat(64)}; Path=/; SameSite=Lax`;
+      }
+      if (failure === 'new-provider') {
+        await userEvent.click(screen.getByRole('button', { name: 'Fortsätt med Microsoft' }));
+        target = screen.getByRole('button', { name: 'Avbryt' });
+        target.focus();
+      } else if (failure === 'navigation') {
+        await userEvent.click(
+          within(screen.getByRole('contentinfo')).getByRole('link', { name: 'Kakor och lagring' }),
+        );
+        target = await screen.findByRole('heading', { name: 'Kakor och lagring' });
+      } else if (failure === 'cancelled') {
+        await act(async () =>
+          window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })),
+        );
+        await userEvent.click(screen.getByRole('button', { name: 'Fortsätt med Microsoft' }));
+        target = screen.getByRole('button', { name: 'Fortsätt till Microsoft' });
+      }
+      await act(async () => release());
+      if (failure === 'network' || failure === 'binding-changed' || failure === 'new-provider') {
+        await waitFor(() =>
+          expect(
+            screen.queryByRole('button', { name: 'Börja om i den här webbläsaren' }),
+          ).toBeNull(),
+        );
+        expect(screen.getByRole('alert').textContent).toContain(
+          'Ingen ny inloggning har bekräftats.',
+        );
+      }
+      expect(document.activeElement).toBe(target);
+      expect(
+        screen.queryByText('Klart för en ny inloggning. Välj Google eller Microsoft igen.'),
+      ).toBeNull();
+    } finally {
+      release();
+    }
+  },
+);
 
 test('a lost setup reply is recovered through status without creating another household', async () => {
   await signIn(client, installation.origin);
@@ -421,6 +528,9 @@ test('a saved report direct link opens the saved operation and returns to the sa
 }, 30_000);
 
 test('return from a cancelled external sign-in restores provider choice and ignores its late real reply', async () => {
+  (
+    globalThis as unknown as { jsdom: { reconfigure(options: { url: string }): void } }
+  ).jsdom.reconfigure({ url: installation.origin });
   const transport = authenticatedHttpFetch(client, installation.origin);
   let release: (() => void) | undefined;
   const held = new Promise<void>((resolve) => {
@@ -619,6 +729,12 @@ test('cancelling real in-flight model work retires its reply while keeping house
 test('consent revoked through public HTTP retires the conversation while retaining unsent text and household access', async () => {
   const model = textModel(() => [modelMessage('Ett svar innan återkallandet.')]);
   const path = await installModel(model);
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  const sent: string[] = [];
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).endsWith('/messages')) sent.push(String(input));
+    return transport(input, init);
+  });
   mount(path);
   await screen.findByRole('region', { name: 'Arbetsyta' });
   await userEvent.click(screen.getByRole('button', { name: /^Skriv till Skyttel/ }));
@@ -648,6 +764,8 @@ test('consent revoked through public HTTP retires the conversation while retaini
   expect((screen.getByLabelText('Meddelande till Skyttel') as HTMLTextAreaElement).value).toBe(
     'Text efter återkallat medgivande',
   );
+  expect(sent).toEqual([]);
+  expect(model.requests).toHaveLength(0);
   const { household } = await (await client.get(`${installation.origin}/api/bootstrap`)).json();
   expect(household.role).toBe('administrator');
   expect(screen.getByRole('heading', { name: 'Hushållet Linden' })).toBeTruthy();

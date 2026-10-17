@@ -1,6 +1,69 @@
 import { type APIRequestContext, expect, type Page, request } from '@playwright/test';
 import { textViewButtonAccessibleName } from './conversation.js';
 
+const bindingOrigins = new WeakMap<APIRequestContext, string>();
+
+/** Explicit post-login activation through the actual authenticated contract. */
+export async function activateRememberedLogin(client: APIRequestContext, origin: string) {
+  const preference = await (
+    await client.get(`${origin}/api/browser-binding/preference`, { headers: { origin } })
+  ).json();
+  const response = await client.post(`${origin}/api/browser-binding/activate`, {
+    headers: { origin },
+    data: {
+      id: crypto.randomUUID(),
+      sessionId: preference.sessionId,
+      bindingId: preference.bindingId,
+      preferences: true,
+      rememberMe: true,
+      informationVersion: 1,
+      consentInformationVersion: 1,
+    },
+  });
+  expect(response.status()).toBe(200);
+  const result = await response.json();
+  await client.addCookies([
+    {
+      name: result.cookieName,
+      value: result.candidate,
+      url: origin,
+      expires: result.expiresAt / 1000,
+      secure: origin.startsWith('https:'),
+      sameSite: 'Lax',
+    },
+  ]);
+  expect(
+    (
+      await client.post(`${origin}/api/browser-binding/register`, { headers: { origin }, data: {} })
+    ).status(),
+  ).toBe(200);
+  return response;
+}
+
+export async function acceptRememberedOffer(page: Page) {
+  const offer = page.getByRole('dialog', { name: 'Kom ihåg mig i Skyttel', exact: true });
+  await offer.getByRole('button', { name: 'Kom ihåg mig i Skyttel', exact: true }).click();
+  await expect(offer).not.toBeVisible();
+}
+
+/** A new explicit login in another tab leaves the old tab's unresolved action
+ * reference intact, so its result can be checked against the newer login. */
+export async function signInRemembered(page: Page, origin: string) {
+  if (!page.url().startsWith(origin)) await page.goto(`${origin}/login`);
+  const unresolved = await page.evaluate(() =>
+    Object.keys(sessionStorage).some((key) => key.startsWith('skyttel-storage-operation:')),
+  );
+  const target = unresolved ? await page.context().newPage() : page;
+  await target.goto(`${origin}/login`);
+  await target.getByRole('button', { name: 'Fortsätt med Google', exact: true }).click();
+  await target.getByRole('button', { name: 'Fortsätt till Google', exact: true }).click();
+  await acceptRememberedOffer(target);
+  if (target !== page) {
+    await target.close();
+    await page.goto(`${origin}/cookies`);
+  }
+}
+
 // These HTTP-only clients use default context options. Keep their authenticated
 // session across a deliberate server restart, but retire the old socket pool.
 export async function restartWithSession(
@@ -91,6 +154,40 @@ export async function utilityButton(page: Page, name: string) {
 }
 
 export async function signIn(client: APIRequestContext, origin: string, provider = 'google') {
+  // Distinct HTTP test installations can share a host with different ports.
+  // They are separate canonical sites, so explicitly reset the fixture jar
+  // when changing installations instead of reusing the other site's cookies.
+  const previousOrigin = bindingOrigins.get(client);
+  if (previousOrigin && previousOrigin !== origin) await client.clearCookies();
+  bindingOrigins.set(client, origin);
+  // HTTP-only fixtures perform the same explicit candidate/write/register
+  // protocol. Native Web Locks and synchronous document.cookie are exercised
+  // separately by the browser-binding browser scenarios.
+  const candidate = await client.post(`${origin}/api/browser-binding/candidate`, {
+    headers: { origin },
+    data: {},
+  });
+  if (candidate.status() !== 404) {
+    expect(candidate.status()).toBe(200);
+    const binding = await candidate.json();
+    await client.addCookies([
+      {
+        name: binding.cookieName,
+        value: binding.candidate,
+        url: origin,
+        secure: origin.startsWith('https:'),
+        sameSite: 'Lax',
+      },
+    ]);
+    expect(
+      (
+        await client.post(`${origin}/api/browser-binding/register`, {
+          headers: { origin },
+          data: {},
+        })
+      ).status(),
+    ).toBe(200);
+  }
   const response = await client.post(`${origin}/api/auth/sign-in/social`, {
     headers: { origin },
     data: { provider, callbackURL: '/', errorCallbackURL: '/?authError=1' },

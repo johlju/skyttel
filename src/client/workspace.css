@@ -77,10 +77,10 @@
 .workspace-tools {
   position: fixed;
   z-index: 30;
-  top: 24px;
+  top: calc(var(--work-offset, 0px) + 24px);
   left: 24px;
   width: 64px;
-  max-height: calc(100dvh - 48px);
+  max-height: calc(var(--work-height, 100dvh) - 48px);
   overflow-y: auto;
   padding: 9px;
   border: 1px solid var(--space-control);
@@ -210,7 +210,7 @@
 .workspace-context {
   position: fixed;
   z-index: 2;
-  top: 30px;
+  top: calc(var(--work-offset, 0px) + 30px);
   left: 112px;
   font-size: 12px;
 }
@@ -229,11 +229,11 @@
   padding-right: 44px;
 }
 .workspace-utility {
-  top: 24px;
+  top: calc(var(--work-offset, 0px) + 24px);
   left: 108px;
   width: 390px;
   z-index: 35;
-  max-height: calc(100dvh - 48px);
+  max-height: calc(var(--work-height, 100dvh) - 48px);
   overflow-y: auto;
 }
 .workspace-help {
@@ -256,7 +256,7 @@
 }
 .household-map.workspace-shell .workspace-feedback {
   position: fixed;
-  top: 24px;
+  top: calc(var(--work-offset, 0px) + 24px);
   right: 24px;
   z-index: 26;
   max-width: min(360px, calc(100vw - 112px));
@@ -282,7 +282,7 @@
 }
 .household-map.workspace-shell .map-space {
   position: fixed;
-  inset: 0;
+  inset: calc(var(--session-warning-height, 0px) + var(--task-delivery-height, 0px)) 0 0;
   z-index: 0;
 }
 .household-map.workspace-shell .spatial-map {
@@ -360,11 +360,17 @@
   inset: auto;
   right: 12px;
   margin: 0;
-  top: max(56px, calc(var(--conversation-corner-bottom, 0px) + 12px));
+  top: calc(
+    var(--work-offset, 0px) +
+    max(56px, calc(var(--conversation-corner-bottom, 0px) + 12px))
+  );
 }
 @media (max-width: 700px) {
   .household-map.workspace-shell .personal-view-status.personal-view-toast {
-    top: max(calc(var(--tools-bottom, 124px) + 12px), calc(var(--map-search-bottom, 124px) + 12px));
+    top: calc(
+      var(--work-offset, 0px) +
+      max(calc(var(--tools-bottom, 124px) + 12px), calc(var(--map-search-bottom, 124px) + 12px))
+    );
     max-width: calc(100% - 24px);
   }
 }
@@ -389,10 +395,10 @@
   }
   .workspace-tools {
     left: 12px;
-    top: 12px;
+    top: calc(var(--work-offset, 0px) + 12px);
     width: auto;
     max-width: calc(100vw - 24px);
-    max-height: calc(100dvh - 24px);
+    max-height: calc(var(--work-height, 100dvh) - 24px);
     padding: 5px;
     border-radius: 17px;
     flex-direction: row;
@@ -440,7 +446,7 @@
   }
   .workspace-context {
     left: 18px;
-    top: 80px;
+    top: calc(var(--work-offset, 0px) + 80px);
     max-width: calc(100vw - 36px);
   }
   .workspace-context span {
@@ -450,10 +456,10 @@
     display: inline;
   }
   .workspace-utility {
-    top: 108px;
+    top: calc(var(--work-offset, 0px) + 108px);
     left: 12px;
     max-width: calc(100vw - 24px);
-    max-height: calc(100dvh - 120px);
+    max-height: calc(var(--work-height, 100dvh) - 120px);
     padding: 14px;
   }
   /* Long help and the expanded tools must both remain reachable. */

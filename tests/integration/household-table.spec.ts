@@ -1,10 +1,10 @@
-import { expect, test } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, signIn } from '../support/client.js';
 import { startConversationWithText } from '../support/conversation-page.js';
 import { prepareHouseholdTable } from '../support/household-table.js';
 import { createInstallation } from '../support/installation.js';
 import { prepareTableDetailProposals } from '../support/table-detail-proposals.js';
+import { expect, test } from '../support/test.js';
 
 for (const [caseId, action, title] of [
   [

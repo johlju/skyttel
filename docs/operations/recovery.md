@@ -1,5 +1,10 @@
 # Restore or move a household
 
+For a complete database or disk copy, use the
+[controlled installation restore procedure](database-restore.md). Such a
+copy can contain old login credentials and permanently erased content.
+The household ZIP workflow below does not restore that authority.
+
 Use this guide when a disk is lost or when the household must move to a new
 installation. A current administrator restores a complete Skyttel ZIP through
 the application. The new installation needs its own disk, configuration and

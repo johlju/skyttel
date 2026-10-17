@@ -1,4 +1,4 @@
-import { expect, type Locator, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import sharp from 'sharp';
 import type { MapState } from '../../src/shared/map.js';
 import {
@@ -18,6 +18,7 @@ import {
   readTableObject,
 } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { typeChangeHousehold } from '../support/type-change-http.js';
 
 test('TYP-06: type changes review displaced values and preserve identity, edges and historical reading through restart', async ({
@@ -511,7 +512,7 @@ test('TYP-07: a native type change requires fresh definition review and preserve
   browser,
 }) => {
   const installation = await createInstallation();
-  const other = await browser.newContext();
+  const other = await createPreparedContext(browser);
   try {
     const { read, post, object, save, path } = await typeChangeHousehold(
       page.request,

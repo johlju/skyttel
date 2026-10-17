@@ -176,7 +176,9 @@ MARKERING-03.
 6. Nå namnet **Lo Exempel** i tabellen och tryck mellanslag.
    Kontrollera expanderade uppgifter och markerad rad.
 7. Öppna verktygens namn vid behov, välj **Tema** och **Mörkt**.
-   Kontrollera fokus tillbaka till temaknappen och läsbar knapptext
+   Kontrollera fokus tillbaka till temaknappen och läs beskedet att temavalet
+   är sparat på kontot. Välj **Stäng temabeskedet** och **Dölj verktygens namn**
+   så att verktygen inte ligger över tabellen. Kontrollera läsbar knapptext
    när pekaren hålls över **Redigera Kim Exempel**.
 8. Öppna utkastets läsning via **Skriv till Skyttel** och **Visa utkastet**.
    Välj **Tabell** igen. Kontrollera att samma redigeringsknapp kan nås

@@ -7,6 +7,85 @@ Microsoft-konto. En administratör bestämmer vilka Skyttel-användare som
 får tillgång till hushållet. Ett namn eller en e-postadress ger ingen
 tillgång i sig. Se [Kom igång](getting-started.md) för första inloggningen.
 
+## När Skyttel inte kan öppnas
+
+Om **Skyttel kunde inte öppnas** visas kan tjänsten vara tillfälligt
+otillgänglig på grund av anslutningsfel, underhåll eller uppgradering.
+Välj **Försök igen** efter en stund. Kontakta administratören om problemet
+kvarstår; du behöver inte skapa ett nytt konto eller hushåll.
+
+## Välj inloggningens längd
+
+Tillåt först **Preferenskakor** i kakinställningarna om du vill kunna
+bli ihågkommen. Efter lyckad Google- eller Microsoft-inloggning väljer
+du **Kom ihåg mig i Skyttel** separat. **Inte nu** avstår för den här
+inloggningen och **Fråga inte igen** stänger av framtida förslag för dig
+i webbläsaren. Manuell aktivering och möjlighet att slå på frågan igen
+finns under [Kakor och lagring](cookies.md).
+Vanlig inloggning använder sessionskakor och gäller högst åtta timmar från
+inloggningen och avslutas efter 30 minuters inaktivitet. Ihågkommen
+inloggning har ingen separat inaktivitetsgräns och gäller högst sju dygn
+från den ursprungliga inloggningen, även när funktionen aktiveras senare,
+i just den här webbläsaren. Läsning och återbesök förlänger inte tiden.
+
+Att skriva, tala, navigera, söka, redigera eller spara i Skyttel räknas som
+aktivitet i alla flikar med samma inloggning. Fokus, musrörelser,
+bakgrundshämtningar, en öppen flik och en tyst mikrofon räknas inte.
+Mottaget AI-arbete och dess ändliga leverans pausar inaktiviteten.
+När arbetet och leveransen avslutas, eller arbetet får ett tydligt fel,
+börjar en ny period på 30 minuter. Väntan på nästa svar eller på
+återanslutning pausar inte tiden. Åttatimmars- och sjudygnsgränserna flyttas
+aldrig av aktivitet.
+
+Fem minuter före den aktuella gränsen visar Skyttel ett kvarliggande
+besked. I röstläge begär Skyttel uppläsning vid nästa lämpliga paus utan
+att avbryta dig eller ett pågående svar. Beskedet flyttar inte fokus och
+förlänger inte tiden. Fritt röstläge avslutas vid inloggningens gräns.
+Vid inaktivitet visas **Du har varit inaktiv i 30 minuter. Logga in igen.**
+Vid den absoluta gränsen visas **Din inloggning har gått ut. Logga in
+igen.** Redan lagrade utkast och sparkvitton finns kvar.
+
+Välj bara ihågkommen inloggning på en egen enhet. Webbläsaren kan återställa
+sessionskakor när den öppnas igen, så logga ut på en delad dator.
+Efter återkomsten kontrollerar Skyttel den aktuella inloggningen. Ett
+bekräftat resultat lovar inte att webbläsaren behåller kakorna efter omstart.
+Om inloggningen inte kan bekräftas visas ett besked med möjlighet att börja
+om. Tillåt Skyttels kakor om problemet kvarstår.
+
+Du kan välja **Logga in på nytt** under **Ditt konto** i **Din profil** utan
+att först logga ut. En lyckad ny inloggning ersätter den tidigare i samma
+webbläsarbindning. Ett misslyckat försök bevarar den tidigare giltiga
+inloggningen. **Tillbaka till din inloggning** återgår till den.
+
+## Välj tema
+
+Öppna **Tema** i kartans verktyg eller på en kontosida som **Din profil**.
+Välj **Ljust**, **Mörkt** eller **System**. Invänta beskedet att temavalet
+har sparats på ditt konto. Valet gäller samma Skyttel-användare på alla
+enheter och webbläsare, även utan ett aktivt hushåll. Andra öppna flikar
+hämtar valet när de återfår fokus.
+
+**System** följer varje enhets egen inställning. Före inloggning och efter
+utloggning använder Skyttel alltid systemtemat. Skyttel sparar ingen lokal
+kopia av temavalet i webbläsaren.
+
+Om ett fel visas har sparandet inte kunnat bekräftas. Det senast
+bekräftade temat ligger kvar. Ladda om för att hämta kontots aktuella val
+eller välj tema igen när anslutningen fungerar.
+
+## När webbläsaren hindrar inloggning
+
+Skyttel behöver nödvändiga kakor och stöd för säkra webbläsarlås för att
+öppna Google eller Microsoft. Öppna Skyttels egen adress direkt i en
+aktuell webbläsare och tillåt webbplatsens nödvändiga kakor. Ett hinder
+visas på inloggningssidan; Skyttel försöker inte automatiskt igen.
+
+Om bara en del av Skyttels kakor finns kvar kan inloggningen stoppas.
+Rensa då Skyttels kakor och börja om genom att uttryckligen välja
+inloggningssätt. Efter fullständig radering kan en äldre inloggning som
+Skyttel inte längre kan identifiera finnas kvar till sin egen utgång.
+Raderingen avslutar inte inloggningar på andra enheter.
+
 ## Roller och gemensamt innehåll
 
 En **Medlem** kan läsa och redigera hela hushållets gemensamma karta.

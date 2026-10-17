@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { MapState } from '../../src/shared/map.js';
 import type { PersonalView } from '../../src/shared/personal-view.js';
 import {
@@ -12,6 +12,7 @@ import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { openObjectRelationships, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { verifyRestoredPersonalMove } from '../support/personal-view-reading.js';
+import { expect, test } from '../support/test.js';
 
 async function arrange(page: Page, origin: string, selection: 'pointer' | 'keyboard' = 'pointer') {
   await signIn(page.request, origin);

@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import type Database from 'better-sqlite3';
 import { assistantAuthPlugins } from './assistant-auth.js';
+import { authDatabase } from './auth-callback-transaction.js';
 import type { Config } from './config.js';
+import { prepareInstallationAuthority } from './installation-authority.js';
 import { linkingAttempt } from './login-methods.js';
 
 export function internalEmail(provider: 'google' | 'microsoft', subject: unknown) {
@@ -18,6 +20,8 @@ export function internalEmail(provider: 'google' | 'microsoft', subject: unknown
 }
 
 export function createAuth(config: Config, database: Database.Database) {
+  prepareInstallationAuthority(database, config.authorityFence);
+  database = authDatabase(database);
   return betterAuth({
     appName: 'Skyttel',
     baseURL: config.origin,
@@ -29,7 +33,7 @@ export function createAuth(config: Config, database: Database.Database) {
     trustedOrigins: [config.origin],
     logger: { disabled: true },
     telemetry: { enabled: false },
-    session: { cookieCache: { enabled: false } },
+    session: { disableSessionRefresh: true, cookieCache: { enabled: false } },
     account: {
       accountLinking: {
         enabled: true,

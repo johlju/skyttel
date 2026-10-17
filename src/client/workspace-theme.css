@@ -4,6 +4,34 @@
   min-width: 0;
 }
 
+.workspace-theme-feedback {
+  position: fixed;
+  z-index: 40;
+  right: 12px;
+  bottom: 12px;
+  max-width: min(360px, calc(100vw - 24px));
+  margin: 0;
+  padding: 12px 56px 12px 16px;
+  border: 1px solid var(--space-control);
+  border-radius: 12px;
+  color: var(--space-text);
+  background: var(--space-surface);
+  box-shadow: var(--space-shadow);
+  font-size: 14px;
+}
+
+:is(.workspace-shell, .settings-screen) .workspace-theme-control .workspace-theme-feedback button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 :is(.workspace-shell, .settings-screen) .workspace-theme-popup {
   position: fixed;
   z-index: 30;

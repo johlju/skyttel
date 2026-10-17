@@ -10,12 +10,14 @@ export function FormLossGuard({
   householdId,
   onDiscard,
   onBlocked,
+  description = 'Ändringar som inte lagts i utkastet försvinner. Förslag som redan finns i ditt utkast behålls.',
 }: {
   dirty: boolean;
   busy: boolean;
-  householdId: string;
+  householdId?: string;
   onDiscard: () => void;
   onBlocked: () => void;
+  description?: string;
 }) {
   const { register } = useFormLeave();
   const [leave, setLeave] = useState<{ proceed: () => void; cancel: () => void } | null>(null);
@@ -24,8 +26,11 @@ export function FormLossGuard({
   const editingFocus = useRef<HTMLElement | null>(null);
   const guard = useRef<FormLeaveGuard>({ active: () => true, leave: () => {} });
   guard.current.retain = (pathname, search) =>
-    pathname === `/households/${encodeURIComponent(householdId)}` &&
-    new URLSearchParams(search).has('report');
+    Boolean(
+      householdId &&
+        pathname === `/households/${encodeURIComponent(householdId)}` &&
+        new URLSearchParams(search).has('report'),
+    );
   guard.current.leave = (proceed, cancel) => {
     if (busy) {
       onBlocked();
@@ -80,10 +85,7 @@ export function FormLossGuard({
         <h2>Lämna ändrade uppgifter?</h2>
       </header>
       <div className="object-type-loss-body">
-        <p>
-          Ändringar som inte lagts i utkastet försvinner. Förslag som redan finns i ditt utkast
-          behålls.
-        </p>
+        <p>{description}</p>
       </div>
       <footer>
         <button ref={continueButton} type="button" className="primary" onClick={cancel}>

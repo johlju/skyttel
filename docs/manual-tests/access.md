@@ -1,7 +1,8 @@
 # Manuella testfall för inloggning och hushållets start
 
 Testfallen omfattar första hushållet, återhämtning vid anslutningsfel,
-utloggning, kartans verktyg och frivilliga hjälp och länkning av Google och Microsoft.
+utloggning, kartans verktyg och frivilliga hjälp och länkning av Google och
+Microsoft.
 Övergången till vald leverantör visar vad som händer och kan avbrytas.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 
@@ -33,12 +34,424 @@ fallen anger formulär, samtal, profil eller administration.
    testdatabaser för att undvika att en Microsoft-identitet redan är kopplad.
 3. När ett fall anger **Fortsätt med Google** eller **Fortsätt med Microsoft**,
    läs övergången och välj sedan **Fortsätt till Google** respektive
-   **Fortsätt till Microsoft**. **Avbryt** återgår till valet av inloggningssätt.
+   **Fortsätt till Microsoft**. **Avbryt** återgår till valet av
+  inloggningssätt.
 4. Använd en webbläsare med utvecklarverktyg för nätverksfel. Ta bort
    blockeringar och återställ nätverksanslutningen efter varje fall.
    Använd aldrig felinjicering på en installation med riktiga hushåll.
 
 ## Skapa och öppna hushållet
+
+### ACCESS-29: Spara avstängd ihågkommen inloggning
+
+**Syfte:** Skilja sparad avstängning från bekräftad fortsatt inloggning.
+
+**Användare:** Alex i den kontrollerade HTTPS-installationen.
+
+**Förutsättningar:** Starta den
+[kontrollerade identitetsinstallationen](#kontrollerad-identitetsinstallation)
+med `--https`. Tillåt Preferenskakor, logga in med Google och välj sedan
+**Kom ihåg mig i Skyttel** i erbjudandet efter inloggningen. Hushåll behövs
+inte.
+
+**Automatiskt motsvarande test:**
+[remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts),
+ACCESS-29. Verklig HTTPS, SQLite och kakor; syntetisk leverantör.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-revocation.spec.ts",
+    "caseId": "ACCESS-29"
+  },
+  "reference": "Dator, HTTPS och aktiv ihågkommen inloggning.",
+  "outcomes": [
+    "Uttryckligt sparande bekräftar avstängningen.",
+    "Fokus stannar på reglaget utan grön resultatbox.",
+    "Ny aktivering är ett separat uttryckligt val på lagringssidan."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna `/cookies` direkt i samma webbläsare.
+2. Stäng av reglaget **Ihågkommen inloggning**. Ändringen skickas direkt.
+3. Kontrollera beskedet och tangentbordsfokus.
+
+**Förväntat resultat:**
+
+- Reglaget är av och behåller fokus. Ingen grön resultatbox visas.
+- Reglaget kan användas för en ny uttrycklig aktivering.
+- Uppgifterna anger högst tidigare slut eller åtta timmar från
+  avstängningen och 30 minuters inaktivitet.
+
+### ACCESS-30: Avvisad ändring behåller det bekräftade valet
+
+**Syfte:** Ett säkert avvisat anrop får inte visas som sparat.
+
+**Användare och förutsättningar:** Samma som ACCESS-29, i en ny installation.
+
+**Separat förberedelse:** Öppna utvecklarverktygens konsol på Skyttels
+isolerade testadress och kör följande. Det ersätter endast nästa
+avstängningsanrop med ett avvisande före servern. Ladda om sidan efter
+fallet för att ta bort ersättningen.
+
+```js
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  if (String(args[0]) === '/api/browser-binding/revoke') {
+    window.fetch = originalFetch;
+    return Response.json({ error: 'revocation_rejected' }, { status: 409 });
+  }
+  return originalFetch(...args);
+};
+```
+
+**Automatiskt motsvarande test:**
+[remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts),
+ACCESS-30. Automationen ersätter samma anrop före servern med HTTP 409.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-revocation.spec.ts",
+    "caseId": "ACCESS-30"
+  },
+  "reference": "HTTPS och avvisat avstängningsanrop före servern.",
+  "outcomes": [
+    "Avvisningen visas som fel, inte som sparad avstängning.",
+    "Det bekräftade värdet återställs och reglaget behåller fokus."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna `/cookies` och stäng av reglaget. Ändringen skickas direkt.
+2. Kontrollera felet vid reglaget, dess värde och fokus.
+
+**Förväntat resultat:** **Ändringen kunde inte sparas. Försök igen.**
+visas som larm vid reglaget. Det bekräftade värdet är fortfarande på.
+Reglaget kan användas för ett nytt försök och har kvar fokus.
+
+### ACCESS-31: Förlorat svar ger okänd sparstatus
+
+**Syfte:** Ett svar som försvinner efter ändringen får inte ge falskt
+avvisande, framgång eller automatiskt nytt sparande.
+
+**Användare och förutsättningar:** Samma som ACCESS-29, i en ny installation.
+
+**Separat förberedelse:** Kör följande i konsolen på den isolerade
+testadressen. Det låter servern slutföra anropet men kastar bort svaret
+innan formuläret får läsa det. Ladda om sidan efter fallet. Automationen
+håller i stället det faktiska HTTP-svaret och avbryter leveransen efter
+serverns svar; båda varianterna styr svarsförlust efter ändringen.
+
+```js
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+  if (String(args[0]) === '/api/browser-binding/revoke') {
+    window.fetch = originalFetch;
+    throw new TypeError('Synthetic response loss');
+  }
+  return response;
+};
+```
+
+**Automatiskt motsvarande test:**
+[remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts),
+ACCESS-31. Syntetisk leverantör, verklig serverändring och kontrollerad
+svarsförlust; ingen verklig leverantörskontroll.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-revocation.spec.ts",
+    "caseId": "ACCESS-31"
+  },
+  "reference": "Kontrollerad HTTPS-installation med förlorat svar efter serverändring.",
+  "outcomes": [
+    "Sparstatus okänd skiljs från framgång och avvisning.",
+    "Begärt AV behålls och inget nytt sparande erbjuds medan utfallet är okänt."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna `/cookies` och stäng av reglaget. Ändringen skickas direkt.
+2. Kontrollera beskedet vid reglaget och försök ändra det igen.
+
+**Förväntat resultat:** **Sparstatus okänd. Vi kunde inte bekräfta om
+ändringen genomfördes.** visas som larm. Reglaget visar begärt AV och
+reglaget behåller fokus, men skickar inget nytt anrop. Sidan påstår
+inte att tidigare val fortfarande gäller.
+
+### ACCESS-27: Kom ihåg mig gäller bara den nya inloggningen
+
+**Syfte:** Kontrollera aktivt val, avmarkerad ny start och bevarad giltig
+inloggning när ett nytt försök misslyckas.
+
+**Användare:** Alex i en ny webbläsarprofil utan hushåll.
+
+**Separat förberedelse:** Starta den
+[kontrollerade identitetsinstallationen](#kontrollerad-identitetsinstallation)
+med `--https`. Använd `provider-down` för felet i steg 4 och `provider-up`
+innan steg 5. Återställ installationen efter fallet.
+
+**Automatiskt motsvarande test:**
+[remembered-login.spec.ts](../../tests/integration/remembered-login.spec.ts),
+ACCESS-27. Verklig HTTPS, kakor och SQLite; syntetisk leverantör.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-login.spec.ts",
+    "caseId": "ACCESS-27"
+  },
+  "reference": "HTTPS, 1280 × 720; aktivt val, avbruten ny start och leverantörsfel",
+  "outcomes": [
+    "Ihågkommen inloggning kräver ett separat val efter varje lyckad inloggning",
+    "Ett aktivt val kan ge bekräftad ihågkommen inloggning",
+    "Ett misslyckat nytt försök bevarar tidigare giltig inloggning",
+    "Ny inloggning utan valet använder vanlig session"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Välj **Acceptera Alla** i kakbannern. Välj Google och slutför
+   inloggningen. Välj **Kom ihåg mig i Skyttel** i det separata erbjudandet.
+2. Invänta **Skapa ditt hushåll**. Öppna `/login`, välj Google men
+   avbryt före leverantörsbesöket.
+3. Välj Google igen. Slå på leverantörsfelet och fortsätt. Läs felbeskedet
+   och kontrollera att den tidigare inloggningen bevaras.
+4. Återställ leverantören, välj Google igen och slutför inloggningen.
+   Välj **Inte nu** i erbjudandet efter inloggning.
+
+**Förväntat resultat:** Tillstånd till lagring aktiverar inte funktionen.
+Varje lyckad inloggning kräver eget uttryckligt funktionsval. Avbrytande
+eller leverantörsfel tar inte bort tidigare giltig inloggning. Efter sista
+inloggningen används vanlig session. Automationen kontrollerar kakornas
+beständighet och säkerhetsattribut; det bevisar inte webbläsarens beteende
+vid en fysisk omstart.
+
+### ACCESS-28: Saknad autentiseringskaka ger inget bekräftat resultat
+
+**Syfte:** Kontrollera att leverantörens återkomst inte ensam räcker för
+att bekräfta inloggning eller göra säkerhetskakan beständig.
+
+**Användare:** Alex i en ny webbläsarprofil utan tidigare Skyttel-kakor.
+
+**Separat förberedelse:** Starta den kontrollerade identitetsinstallationen
+med `--https` och skriv `drop-login-cookie`. Kommandot tar bort just
+autentiseringskakan från det riktiga callbacksvaret efter serverns commit.
+Detta är en kontrollerad utebliven kaka, inget bevis för en fysisk
+webbläsares alla blockeringslägen. Skriv `allow-login-cookie` efter fallet
+och stäng installationen. Rensa provprofilens kakor innan en ny start.
+
+**Automatiskt motsvarande test:**
+[remembered-login.spec.ts](../../tests/integration/remembered-login.spec.ts),
+ACCESS-28.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/remembered-login.spec.ts",
+    "caseId": "ACCESS-28"
+  },
+  "reference": "HTTPS, 1280 × 720; callbacksvaret saknar autentiseringskaka",
+  "outcomes": [
+    "Exakt besked om obekräftad inloggning visas",
+    "Ingen skyddad åtkomst bekräftas och säkerhetskakan förblir sessionskaka",
+    "Inloggningssätten är fortsatt åtkomliga"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Välj **Endast nödvändiga** i bannern. Välj Google och fortsätt till Google.
+2. Invänta återkomsten. Läs felbeskedet och kontrollera att inloggningssätten
+   går att välja igen, medan hushållets start inte öppnas.
+
+**Förväntat resultat:** **Inloggningen kunde inte bekräftas. Försök logga
+in igen. Kontrollera att webbläsaren tillåter kakor för Skyttel om problemet
+kvarstår.** visas som larm. Automationen kontrollerar nekad serveråtkomst
+och att säkerhetskakan inte blir beständig.
+
+### ACCESS-24: Samtidiga första flikar kan starta säkert
+
+**Syfte:** Kontrollera samtidiga starter och en separat webbläsarprofil.
+
+**Användare:** Alex i en ny webbläsarprofil.
+
+**Förutsättningar:** Starta den
+[kontrollerade identitetsinstallationen](#kontrollerad-identitetsinstallation)
+med `--https`. Profilen ska sakna Skyttel-kakor. Skriv `provider-down`
+i terminalen före de två första flikarnas start. Skriv `provider-up`
+innan den separata profilens inloggning.
+
+**Automatiskt motsvarande test:**
+[browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts),
+ACCESS-24. Automationen kör verklig HTTPS, kakor och SQLite med syntetisk
+identitetsleverantör. Leverantörsstartens svar för de första flikarna
+hålls vid ett kontrollerat fel; deras säkerhetsbindning verifieras tekniskt.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/browser-binding.spec.ts",
+    "caseId": "ACCESS-24"
+  },
+  "reference": "HTTPS, 1280 × 720; två flikar med leverantörsfel, ny profil",
+  "outcomes": [
+    "Båda flikarna återfår inloggningsvalet efter leverantörsfelet",
+    "En separat profil kan logga in oberoende av den första profilens försök"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna Skyttels startsida i två flikar i samma nya profil.
+2. Välj **Fortsätt med Google** i båda. Läs övergångsbeskeden och välj
+   **Fortsätt till Google** i snabb följd i båda flikarna.
+3. Kontrollera felbesked och att båda inloggningssätten går att välja igen.
+4. Öppna en separat ny webbläsarprofil. Återställ leverantören och logga in
+   med Alex Google-identitet där.
+
+**Förväntat resultat:** Båda första flikarna visar ett begripligt
+leverantörsfel och användbara val. Den separata profilen når
+hushållets namngivning utan att den första profilens försök behöver avslutas.
+
+### ACCESS-25: Saknade skydd stoppar inloggningen
+
+**Syfte:** Kontrollera stopp utan automatisk omstart vid saknade
+webbläsarlås, blockerade kakor och utebliven registreringsbekräftelse.
+
+**Användare:** Utloggad besökare i en ny profil för varje variant.
+
+**Separat förberedelse:** Starta den kontrollerade identitetsinstallationen
+med `--https`. Prova
+först en webbläsare utan stöd för Web Locks. Prova sedan en ny profil
+med stöd för Web Locks men med webbplatsens kakor blockerade i
+webbläsarens inställningar. Återställ kakinställningen efter provet.
+För den tredje varianten skriver du `hold-registration` i terminalen
+före inloggningsstarten. Invänta `registration_held`, slå på offline-läge
+i webbläsarens nätverksverktyg och skriv `release-initialization`.
+Servern registrerar bindningen men webbläsaren får ingen bekräftelse.
+Återställ nätverksanslutningen efter felbeskedet.
+
+**Automatiskt motsvarande test:**
+[browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts),
+ACCESS-25. Automationen tar bort lås-API:t för första varianten och
+använder Chromiums inbyggda avstängning av dokumentkakor för den andra.
+Den tredje tappar den verkliga serverns registreringssvar.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/browser-binding.spec.ts",
+    "caseId": "ACCESS-25"
+  },
+  "reference": "HTTPS; saknat lås, blockerade kakor, tappat registreringssvar",
+  "outcomes": [
+    "Ett tydligt hinder visas innan Google öppnas",
+    "Fokus återgår till inloggningssättet utan automatiskt nytt försök"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna startsidan och välj **Fortsätt med Google**.
+2. Välj **Fortsätt till Google** med tangentbordet.
+3. Läs hindret och kontrollera tangentbordsfokus.
+4. Upprepa med de andra förberedda varianterna.
+
+**Förväntat resultat:** Beskedet börjar med **Säker inloggning kan inte
+bekräftas i webbläsaren**. Google öppnas inte. Fokus återgår till
+**Fortsätt med Google**. Ett nytt försök kräver ett uttryckligt val.
+Skärmläsarens faktiska uppläsning behöver verifieras separat.
+
+### ACCESS-26: Avbruten initialisering kan inte ersätta en annan fliks start
+
+**Syfte:** Kontrollera ett sent svar efter avbruten inloggning.
+
+**Användare:** Alex i två nya flikar i samma profil.
+
+**Separat förberedelse:** Starta den kontrollerade identitetsinstallationen
+med `--https`. Skriv `hold-initialization` i terminalen. Nästa
+initialiseringssvar hålls efter serverbehandlingen; invänta terminalens
+`initialization_held` innan du avbryter. Övrig trafik fortsätter.
+Skriv `release-initialization` för att släppa det gamla svaret efter den
+andra flikens inloggning. `quit` släpper också ett kvarvarande svar.
+
+**Automatiskt motsvarande test:**
+[browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts),
+ACCESS-26. Svaret från den verkliga servern hålls i nätverksgränsen och
+släpps först efter att den andra flikens inloggning är bekräftad.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/browser-binding.spec.ts",
+    "caseId": "ACCESS-26"
+  },
+  "reference": "Chromium, HTTPS, 1280 × 720; verkligt fördröjt initialiseringssvar",
+  "outcomes": [
+    "Avbryt återgår till val av inloggningssätt",
+    "Den andra flikens inloggning består när det gamla svaret släpps"
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Välj Google och **Fortsätt till Google** i första fliken. Välj
+   **Avbryt** medan initialiseringen väntar.
+2. Logga in med Google i den andra fliken.
+3. Släpp det fördröjda svaret. Ladda om den andra fliken.
+
+**Förväntat resultat:** Första fliken visar att inloggningen avbryts och
+erbjuder inloggningssätten. Andra fliken når och behåller namngivningen
+av hushållet även när det äldre svaret levereras.
 
 ### ACCESS-23: En tom installation erbjuder båda inloggningssätten
 
@@ -308,6 +721,7 @@ testfallet “ACCESS-05: failed startup read offers a working retry”.
   },
   "reference": "Blockerad bootstrap; fungerande återförsök efter återställd anslutning",
   "outcomes": [
+    "Startfelet förklarar att tjänsten kan behöva underhåll eller uppgradering och hänvisar till administratören",
     "Anslutningsfelet visar fungerande Försök igen utan omladdning"
   ]
 }
@@ -324,6 +738,9 @@ testfallet “ACCESS-05: failed startup read offers a working retry”.
 **Förväntat resultat:**
 
 - **Skyttel kunde inte öppnas** visas vid anslutningsfelet.
+- Sidan förklarar att anslutningsfel, underhåll eller uppgradering kan vara
+  orsaken och hänvisar till administratören om problemet kvarstår. Den
+  påstår inte att ett faktiskt uppgraderingsbehov är bekräftat.
 - Försöket öppnar **Välkommen till Skyttel** utan att sidan behöver laddas om.
 
 ### ACCESS-06: En inloggad person utan tillgång får en förklaring
@@ -1108,18 +1525,18 @@ operator can open costs”.
   medlemskapet.
 - Kostnadsöversikten är tillgänglig för Alex utan hushållsmedlemskap.
 
-### ACCESS-18: Kartans temaval följer med till inloggningen
+### ACCESS-18: Utloggning återställer enhetens tema
 
-**Syfte:** Behålla det valda temat när användaren lämnar kartan.
+**Syfte:** Återgå till systemtemat när användaren loggar ut.
 
 **Användare:** Alex.
 
-**Förutsättningar:** Alex är inloggad och hushållets karta är öppen.
+**Förutsättningar:** Alex är inloggad, hushållets karta är öppen och
+enheten använder ljust systemtema.
 
 **Integrationstest:**
 [access-onboarding.spec.ts](../../tests/integration/access-onboarding.spec.ts),
-testfallet “ACCESS-18: the chosen map theme also applies when returning
-to login”.
+ACCESS-18.
 
 <!--
 ```manual-mapping
@@ -1130,7 +1547,7 @@ to login”.
   },
   "reference": "Mörkt karttema, utloggning, /costs och /login-methods",
   "outcomes": [
-    "Mörkt tema behålls på inloggningen även vid skyddade direktadresser"
+    "Ljust systemtema återställs efter utloggning även vid skyddade direktadresser"
   ]
 }
 ```
@@ -1145,10 +1562,10 @@ to login”.
 
 **Förväntat resultat:**
 
-- Välkomstsidan använder det mörka temat direkt efter utloggningen.
-- Båda de skyddade adresserna visar samma mörka inloggningssida och
+- Välkomstsidan använder enhetens ljusa systemtema efter utloggningen.
+- Båda de skyddade adresserna visar samma ljusa inloggningssida och
   övergång. Fortsättningsknappen får fokus när Google väljs.
-- Inloggningssätt och felbesked förblir läsbara i det valda temat.
+- Inloggningssätt och felbesked förblir läsbara i systemtemat.
 
 ## Real identity provider preparation
 
@@ -1221,13 +1638,75 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
 3. Öppna adressen i terminalens `origin` i en ny webbläsarprofil. Google
    är första administratör, syntetiska Alex. För ACCESS-22 lägger du till
    `--microsoft` i kommandot; då är Microsoft första administratör, Robin.
+   För ACCESS-24 till ACCESS-31 lägger du i stället till `--https`.
+   Installationen skapar ett självsignerat certifikat enbart för provet.
+   Godkänn det endast för den isolerade lokala testadressen. Det verifierar
+   inte produktionsmiljöns certifikat eller proxy.
 4. Skriv `provider-down` eller `deny-consent` för det fel fallet anger.
    `provider-up` respektive `allow-consent` återställer felet.
 5. Skriv `restart` endast när samma databas ska behållas. Skriv `quit`
    för att stänga installationen och ta bort dess tillfälliga databas.
    Starta kommandot igen inför nästa fall för att få en tom installation.
+6. För KAK-24 flyttar `advance-day` den isolerade installationens
+   serverklocka framåt ett dygn. Den ändrar inte datorns eller webbläsarens
+   klocka. Använd bara kommandot när fallet anger det och avsluta med
+   `quit` efteråt. Det simulerar en tidsgräns och bevisar inte faktisk
+   gallring eller naturligt förfluten tid.
 
 ## Separat tekniskt underlag och observationer
+
+[legacy-login-upgrade.test.ts](../../tests/unit/server/legacy-login-upgrade.test.ts)
+provar en verklig SQLite-installation från före den nya valmodellen med
+två inloggade enheter, ett påbörjat återanrop, lagrat utkast och sparkvitto.
+Efter stopp och kontrollerad uppgradering nekas gamla nycklar och försök.
+Ny inloggning och omstart ska behålla samma användare och beständiga arbete
+utan att upprepa sparandet. Separata syntetiska processprov kontrollerar
+att stopp avslutar pågående text, röst och leveranskanal. Det är tekniskt
+underlag; verkliga leverantörer, operatörens värd och skärmläsaruppläsning
+behöver separata bevis. Följ operatörens
+[uppgraderingsförfarande](../operations/login-upgrade.md) på en disponibel
+installation. Använd inte proceduren på återställd kopia som genväg förbi
+återställningskontroller.
+
+[remembered-revocation.spec.ts](../../tests/integration/remembered-revocation.spec.ts)
+släpper faktiskt fördröjda beständiga HTTPS-kakor efter tidig, sen och
+upprepad avstängning. Den gamla kakan kan ligga kvar beständigt, men får
+ingen serveråtkomst eller längre tidsgräns. Separata aktuella kakpar
+behåller sessionsidentiteten. Andra bindningar och redan kopplade konton
+påverkas inte. Pågående callbacks och verifierade kontokopplingsbevis
+annulleras. Ägarens resultat kan läsas efter omstart och ny inloggning,
+men inte av en annan användare eller från exakt 24 timmar efter ändringen.
+Det är syntetiskt tekniskt underlag, inte manuellt utförd driftverifiering.
+
+[cookie-storage-http.test.tsx](../../tests/unit/client/cookie-storage-http.test.tsx)
+visar formulärets sparutfall mot verklig HTTP och SQLite, inklusive
+förlorad fortsatt-inloggningskontroll och sena svar för en tidigare
+användare. En ändring från en äldre inloggning får inte rotera en nyare inloggning.
+Det ersätter inte faktisk skärmläsaruppläsning eller Chromium-kakpolicyn.
+
+[remembered-login.spec.ts](../../tests/integration/remembered-login.spec.ts)
+kontrollerar vanlig och ihågkommen inloggning före, exakt vid och efter
+absolut utgång genom installationens gemensamma klocka. Omstart, fördröjd
+kakutgivning, läsningar, förfalskade val och direkta auth-vägar får inte
+förlänga tiden. Bekräftelse kräver rätt aktuella sessionsnyckel och bindning;
+en korrelationsreferens ensam ger ingen behörighet. Dessa requestdrivna
+prov är tekniskt underlag, ingen fysisk omstarts- eller leverantörskontroll.
+De vanliga inloggningarnas absoluta gräns arrangeras med uttryckliga
+användarhandlingar med mindre än 30 minuters mellanrum. Bakgrundsläsning
+håller inte dessa sessioner aktiva. Separata
+[inaktivitetsfall](session-inactivity.md) provar utgång utan sådan aktivitet.
+Ett separat tekniskt Chromium-prov håller ett riktigt bekräftelsesvar över
+en ny vanlig inloggning. Det gamla svaret får varken ge framgångsbesked
+eller lämna säkerhetskakan beständig efter den nekade efterkontrollen.
+
+[remembered-login.test.ts](../../tests/unit/server/remembered-login.test.ts)
+arrangerar inkompatibla lagrade versioner, ändamål, beslutstider och
+absoluta gränser. Den offentliga HTTP-gränsen får då bara bekräfta vanlig
+inloggning och ska neka åtkomst exakt vid åtta timmar. Det är separat
+serverunderlag med styrd installationstid, inga manuellt utförda prov.
+Separata prov med olika frister för session och bindning visar att en ny
+start följer sessionens serverfrist och inte kan avsluta en levande
+session med enbart bindningskakan.
 
 [access.spec.ts](../../tests/integration/access.spec.ts) behåller sex
 requestdrivna kontroller: båda installationernas administratörsidentiteter,
@@ -1245,8 +1724,167 @@ anrop från rätt ursprung och förfalskad verifiering provas separat.
 Ingen av dessa kontroller ersätter ACCESS-09:s klick, profil och nya
 Microsoft-inloggning i webbläsaren.
 
+[browser-binding.spec.ts](../../tests/integration/browser-binding.spec.ts)
+provar separat överlappande leverantörssvar för samma och olika användare,
+ersatt sessionsnyckel efter omstart och isolering mellan bindningar.
+Vid exakt åtta timmar nekas gammal åtkomst, men uttrycklig ny inloggning
+kan ersätta en känd utgången bindning och få en egen sessionsfrist.
+Gamla kakpar och återanrop förblir nekade; okända kakor och upptagna
+levande bindningar utan auth-kaka får ingen ny bindning.
+Utloggning under pågående kontokoppling får inte lägga till en identitet.
+Ett faktiskt fördröjt HTTPS-svar skriver över webbläsarens auth-kaka efter
+ett senare lyckat byte, men ger ingen gammal serveråtkomst. Provet använder
+installationsfixturens kontrollerade svar och identiteter; det verifierar
+inte verkliga leverantörer eller manuellt skärmläsarbeteende.
+
+[assistants.spec.ts](../../tests/integration/assistants.spec.ts) kontrollerar
+tekniskt att saknad bindning nekar sessionskontroll, utloggning och nytt
+assistentmedgivande. Ersatt inloggning och utloggning påverkar inte en
+separat godkänd MCP-anslutning med fortsatt hushållstillgång.
+
 Tangentbordsfokus, omflöde och läsbara statusbesked är syntetiskt
 webbläsarunderlag. Faktiskt upplästa skärmläsarbesked, fysisk mikrofon,
 ljud och enhetsbehörigheter måste observeras separat; fallen här gör
 ingen sådan verifiering. Verkliga leverantörer dokumenteras i den
 separata förberedelsen ovan och ingår inte i den kontrollerade installationen.
+
+## Uttrycklig ny start efter okänd webbläsarkoppling
+
+Förbered ACCESS-32 och ACCESS-33 i en ren profil mot den isolerade
+HTTPS-installationen:
+
+```sh
+npm run build
+npm run test:env -- node --import tsx scripts/manual-access.ts --https
+```
+
+Öppna den utskrivna adressen. Lägg endast i denna tomma provprofil in
+en syntetisk okänd bindning genom webbläsarens konsol:
+
+```js
+document.cookie = `__Host-skyttel_binding=${'f'.repeat(64)}; Path=/; Secure; SameSite=Lax`;
+```
+
+Ingen riktig inloggning eller hushållsinformation får finnas i profilen.
+Återställ mellan fallen genom att stänga provprofilen och börja med en ny.
+Fördröjningen i ACCESS-33 styrs med `hold-reset-check` och
+`release-initialization` i testinstallationens terminal. Dessa verktyg
+finns endast i provinstallationen och ändrar inte produktionsinställningar.
+
+### ACCESS-32: Okänd koppling kräver en separat uttrycklig omstart
+
+**Syfte:** Ett avvisat inloggningsförsök ger ingen automatisk ny bindning,
+inloggning eller återanvänt ihågkommet val. Misslyckad rensning ger logiskt
+fokus utan att flytta det från ett nyare inloggningsval.
+
+**Användare:** Alex utan inloggning, bredd 1280 pixlar.
+
+**Förutsättningar:** Den syntetiska okända bindningen enligt förberedelsen.
+
+**Separat förberedelse:** Prova först rensning utan nätverksanslutning.
+Återanslut efter felbeskedet och gör ett nytt avvisat inloggningsförsök.
+Prova därefter en ändrad koppling: kör `hold-reset-check` före rensningen,
+vänta på `reset_held` och ändra provkakan i konsolen innan du kör
+`release-initialization`:
+
+```js
+document.cookie = `__Host-skyttel_binding=${'a'.repeat(64)}; Path=/; Secure; SameSite=Lax`;
+```
+
+Gör även ett nytt avvisat försök där du håller rensningen, ändrar provkakan
+till 64 `b` och väljer Microsoft. Flytta fokus med tangentbord till
+**Avbryt** innan svaret släpps. Avbryt sedan och gör ett nytt avvisat
+Google-försök inför den lyckade rensningen i steg 3. Stäng provprofilen
+efter fallet.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/login-binding-reset.spec.ts",
+    "caseId": "ACCESS-32"
+  },
+  "reference": "Ren HTTPS-provprofil med syntetisk okänd bindningskaka, 1280 pixlar och syntetisk Google-provider. Rensning provas med förlorat kontrollsvar och ändrad kaka medan svaret hålls, även med nyare Microsoft-val. Automatiken kontrollerar att ingen providerstart sker före det nya uttryckliga valet.",
+  "outcomes": [
+    "Första försöket stoppas utan bekräftad inloggning eller falskt återställningsbesked.",
+    "Misslyckad rensning återför fokus till Google-knappen; ett nyare inloggningsvals fokus bevaras.",
+    "Separat uttrycklig rensning återför fokus till Google-knappen utan automatisk providerstart.",
+    "En ny vanlig inloggning kan slutföras utan att aktivera ihågkommen inloggning."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna `/login`, välj **Fortsätt med Google**
+   och välj **Fortsätt till Google**.
+2. Läs att säker inloggning inte kan bekräftas. Kontrollera att sidan
+   inte påstår en databasåterställning eller en lyckad inloggning.
+   Genomför felvarianterna enligt förberedelsen. Kontrollera att fokus
+   återgår till **Fortsätt med Google** vid fel och att inget klartbesked
+   visas. Med ett nyare Microsoft-val ska fokus stanna på **Avbryt**.
+3. Läs omfattningen och välj **Börja om i den här webbläsaren**.
+4. Kontrollera att fokus återgår till **Fortsätt med Google** och att
+   inget providerfönster öppnas automatiskt.
+5. Välj Google på nytt och välj **Fortsätt till Google**.
+
+**Förväntat resultat:** Första försöket stoppas. Rensningen sker först
+efter den separata handlingen. Felvarianten ger ett felbesked och logiskt
+fokus utan automatisk providerstart. **Klart för en ny inloggning. Välj Google
+eller Microsoft igen.** visas. Nästa providerhandling skapar en vanlig
+inloggning och visar **Skapa ditt hushåll**. Ingen annan webbläsare eller
+hushållsinformation påverkas.
+
+### ACCESS-33: Avbruten rensning bevarar en annan fliks nya inloggning
+
+**Syfte:** Ett sent kontrollsvar får inte rensa en nyare bindning eller
+dess session.
+
+**Användare:** Alex i två flikar i samma provprofil.
+
+**Förutsättningar:** Samma okända syntetiska bindning som ACCESS-32. Kör
+`hold-reset-check` före den första rensningen. Använd 1280 pixlar.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/login-binding-reset.spec.ts",
+    "caseId": "ACCESS-33"
+  },
+  "reference": "Två verkliga Chromium-flikar delar HTTPS-kakor och Web Locks. Provinstallationen håller det första reset-check-svaret efter serverkontrollen och släpper det först efter en ny bekräftad inloggning i den andra fliken.",
+  "outcomes": [
+    "Navigering avbryter den väntande rensningen och frigör webbläsarlåset.",
+    "Fokus på Kakor och lagring bevaras när det sena kontrollsvaret kommer.",
+    "Den andra fliken kan uttryckligen rensa den gamla kopplingen och skapa en ny vanlig inloggning.",
+    "Det sena gamla svaret varken rensar den nya bindningen eller avslutar den nya sessionen."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Följ ACCESS-32 till det avvisade första försöket. Välj **Börja om i
+   den här webbläsaren** och vänta tills terminalen visar `reset_held`.
+2. Skriv `/cookies` i adressfältet i samma flik för att lämna inloggningen.
+3. Öppna `/login` i den andra fliken. Gör det avvisade försöket och välj
+   uttryckligen **Börja om i den här webbläsaren** där.
+4. Välj Google på nytt och slutför en vanlig inloggning.
+   Vänta på **Skapa ditt hushåll**.
+5. Kör `release-initialization`. Kontrollera att den första fliken
+   behåller fokus på rubriken **Kakor och lagring**. Ladda startsidan där.
+
+**Förväntat resultat:** Den andra fliken behåller sin nya inloggning
+efter det sena svaret. Den första fliken visar samma inloggade tillstånd
+vid återbesök. Ingen automatisk ny providerhandling startas av det gamla
+kontrollsvaret. Faktisk skärmläsaruppläsning ingår inte i detta prov.

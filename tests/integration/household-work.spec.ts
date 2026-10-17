@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import Database from 'better-sqlite3';
 import type { ErasureStatus } from '../../src/shared/household-erasure.js';
 import type { MapState } from '../../src/shared/map.js';
@@ -27,6 +27,7 @@ import { readDraftProposal, readTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 async function nativeFields(root: Locator, values: readonly (readonly [string, string])[]) {
@@ -464,7 +465,7 @@ test('ARBETE-03: revoked household access retires hidden forms and microphone', 
   browser,
 }) => {
   const installation = await conversationInstallation();
-  const member = await browser.newContext();
+  const member = await createPreparedContext(browser);
   try {
     await signIn(page.request, installation.origin);
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
