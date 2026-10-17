@@ -5,7 +5,7 @@ kvittoåterhämtning, begärda samtalsdetaljer och faktisk markering.
 Anteckna commit, webbläsare,
 modell eller kontrollerad ersättare samt godkänt eller underkänt resultat.
 De länkade integrationstesterna verifierar de kontrollerade flödena.
-Stegen här är stöd för felsökning; #97 kräver ingen manuell upprepning.
+Stegen här är stöd för felsökning; automatiken kräver ingen manuell upprepning.
 
 ## Konfigurerade användare
 
@@ -721,8 +721,7 @@ development database or private environment file.
 
 These controls verify application behavior, not a real model's understanding
 of Swedish. Keep real-model results separate. Integration tests cover these
-controlled scenarios; manual repetition is optional troubleshooting and is
-not required by #97.
+controlled scenarios; manual repetition is optional troubleshooting.
 
 ### Start and sign in
 

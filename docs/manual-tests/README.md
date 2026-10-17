@@ -10,11 +10,9 @@ Fall som kräver mänsklig användning av verkliga externa konton anges som
 manuella och körs inte i CI.
 
 Fallen fungerar som körbara beskrivningar och stöd för felsökning.
-Automatiserade fall behöver inte upprepas manuellt för specifikation #31.
-Den separata [restlistan #97](https://github.com/viscalyx/skyttel/issues/97)
-innehåller bara kvarvarande mänskliga bedömningar och bekräftelser.
-Förberedelsen för dessa finns i
-[ärendets kommentar](https://github.com/viscalyx/skyttel/issues/97#issuecomment-5835778540).
+Automatiserade fall behöver inte upprepas manuellt. Personliga kontoval,
+medgivanden, faktiskt hörda talbesked och mottagna aviseringar kräver
+kontoinnehavarens eller mottagarens egen observation.
 Registrera automatiska körningar med version och resultat; skilj dem från
 verkliga leverantörsprov och mänskliga observationer.
 
@@ -22,11 +20,61 @@ Separata automatiska [modellprov](real-model-tests.md) och
 [talprov](real-voice-tests.md) använder verkliga leverantörer.
 De körs uttryckligen med privat konfiguration och redovisas separat från CI.
 
-För det förenklade samtalet finns en separat kvarstående
-[mänsklig verifiering #220](https://github.com/viscalyx/skyttel/issues/220).
-Den omfattar verklig mikrofon, skärmtangentbord och skärmläsare på
-Chrome för Windows, macOS, iPhone och iPad. Automatiska DOM-, medie- och
-fönsterprov ska redovisas separat från de resultaten.
+## Ansvar och delade resultat
+
+Använd områdesfallen för steg och förväntade resultat:
+
+- [Assistentförberedelsen](setup/assistants.md) beskriver verklig
+  klientanslutning. [Utvecklingsmiljön](../development/devcontainer.md)
+  beskriver container, sandbox och sessioner.
+- [Mikrofontryck](microphone-press.md) och [röstfallen](voice-assistant.md)
+  beskriver fysisk mikrofonstyrning, OS-behörighet, tangentkombinationer,
+  rörelse och skärmläsarljud som mikrofonen fångar upp.
+- [Hushållsarbetet](household-work.md),
+  [hjälpmedelsflödet](conversation-accessibility.md) och
+  [textvyn](text-view.md) beskriver hela arbetsflöden, uppläsningar,
+  fysiskt skärmtangentbord, layout och zoom.
+- [Driftens säkerhetskontroller](../operations/security-checks.md)
+  anger nödvändiga observationer av faktisk ingress, leverantörsinloggning,
+  webbläsaromstart, tidsgränser, textreserv vid ljudavbrott och säkerhetskopior.
+  [Kakfallen](cookies.md) beskriver lagringsval och
+  [återställningsfallen](household-recovery.md) beskriver flytt och återimport.
+
+Dokumentera en körning en gång och hänvisa till resultatet från andra
+berörda prov. Ange faktisk release/commit, datum, miljö, kontokategori,
+klient/enhet, OS, webbläsare, hjälpmedel och versioner samt provansvarig,
+utförda steg, förväntat och faktiskt utfall. Använd Godkänt, Underkänt,
+Blockerat eller Ej utfört per observation. Länka sanerat underlag utan
+personuppgifter eller autentiseringsvärden.
+
+Återanvänd resultat när version, miljö och faktiskt utförda steg täcker
+samma observation. Gemensam inloggning eller utrustning räcker inte för
+att godkänna ett annat utfall. Skilj automatiska DOM-, medie- och fönsterprov
+från faktiskt hörda besked och fysisk användning. Använd dokumentationen
+från den release som provas; en äldre körning godkänner inte ändrade flöden.
+
+### Personliga konton, ljud och aviseringar
+
+Förbered [lokal inloggning](../development/local-authentication.md) eller
+[driftens inloggningsprov](../operations/authentication.md#6-verify-production-sign-in).
+Kontoinnehavaren väljer eget Google- eller personligt Microsoft-konto,
+besvarar eventuell MFA eller enhetskod och tar ställning till medgivanden.
+Följ [koppling av egna identiteter](../user-guide/access.md#koppla-google-och-microsoft)
+och [klientförberedelsen](setup/assistants.md) för respektive anslutning.
+Anteckna de personliga stegen separat per klient och leverantör.
+
+För svenska talbeskeds begriplighet och lyssningskomfort, följ
+[Tala med Skyttel](../user-guide/text-assistant.md#tala-med-skyttel).
+Använd påhittade uppgifter och verklig ljudutgång; tysta provfixturer och
+transkript bevisar inte vad du hör. Verkliga leverantörsanrop kräver
+uttryckligt kostnadsmedgivande. Stäng av mikrofonen efter provet.
+
+Mottagaren följer [aviseringsprovet](../operations/security-monitoring.md#configure-the-recipient-and-verify-delivery)
+och bekräftar både det kontrollerade provlarmet och Actions-felaviseringen
+i vald kanal. GitHubs leveranskvitto ersätter inte mottagarens bekräftelse.
+Återkalla provanslutningar och städa påhittade uppgifter enligt respektive
+guide. Saknade resultatmetadata redovisas som saknade; de innebär inte
+automatiskt att en tidigare dokumenterad observation behöver göras om.
 
 ## Köra och förbereda prov
 

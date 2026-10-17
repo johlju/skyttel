@@ -850,4 +850,6 @@ leverantörs- och medieunderlag. Live saknar en säker signal för färdig
 uppspelning: matchad verifierad svarstext och faktiskt observerad
 ljudaktivitet används tillsammans; framtida fördröjt ljud kan inte uteslutas.
 Ett uttryckligt avbrott är en säker slutpunkt. Verklig uppspelning,
-mikrofonintegritet, mobil policy och hörbar skärmläsare återstår enligt #220.
+mikrofonintegritet, mobil policy och hörbar skärmläsare kräver separata
+mänskliga observationer enligt [röstfallen](voice-assistant.md) och
+[hjälpmedelsfallen](conversation-accessibility.md).

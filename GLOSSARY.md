@@ -14,7 +14,7 @@ exempelvis Alex blå cykel.
 
 **Objekttyp**:
 En sorts objekt i hushållets karta, exempelvis fordon eller
-solcellsanläggning, med en gemensam betydelse och uppsättning uppgifter.
+solcellsanläggning, med en gemensam betydelse.
 
 **Samband**:
 En enskild koppling mellan två objekt, exempelvis att Alex använder
@@ -34,10 +34,12 @@ inom sin karta.
 En objekt- eller sambandstyp som finns i hushållets karta från början
 och ingår bland dess redigerbara typdefinitioner.
 
-**Eget fält**:
-En namngiven uppgift som hushållet definierar för en objekt- eller
-sambandstyp, exempelvis installationsdatum för en solcellsanläggning
-eller startdatum för ett ägande.
+**Egenskap**:
+En uppgift med en fritt vald etikett på ett enskilt objekt eller samband,
+oberoende av dess typ, som kan ha ett värde eller vara tom i väntan på
+att fyllas i.
+Flera egenskaper kan ha samma etikett.
+Även en beskrivning är en egenskap.
 
 ## Personer, företag, föreningar och tjänster
 
@@ -263,6 +265,22 @@ använder en tjänst.
 Valet av ljust, mörkt eller systemtema i Skyttel.
 För en inloggad Skyttel-användare gäller samma val på alla enheter och
 webbläsare; systemtema följer respektive enhets och webbläsares inställning.
+
+**Bakgrund**:
+Den dekorativa miljön bakom objekten och sambanden i hushållets rymdkarta.
+Bakgrunden är skild från hushållets information.
+
+**Bakgrundsval**:
+Skyttel-användarens val av bakgrund för ljust respektive mörkt tema.
+
+**Panoreringsstyrka**:
+Hur mycket bakgrunden förflyttas när Skyttel-användaren panorerar kartan.
+
+**Zoomstyrka**:
+Hur mycket bakgrundens skala ändras när Skyttel-användaren zoomar kartan.
+
+**Lageravstånd**:
+Avståndet mellan bakgrundens visuella lager som ger intryck av djup.
 
 **Lagringssamtycke**:
 Besökarens eller Skyttel-användarens uttryckliga tillstånd till valfri

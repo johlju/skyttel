@@ -3,7 +3,7 @@
 Testfallen omfattar uttrycklig ersättning, bevarad åtkomst, bildhistorik,
 privata utkast, personliga placeringar och rättelser med aktuellt underlag.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
-Manuell körning sker efter att hela specifikationen är implementerad.
+Bekräfta förberedelserna nedan före en manuell körning.
 
 ## Konfigurerade användare
 

@@ -5,8 +5,8 @@ tabell och rymdkarta samt djup vid överlappande symboler och linjer,
 storleksskillnader och valbara klickytor.
 Anteckna commit, webbläsare, enhet, fysisk eller
 emulerad inmatning samt godkänt eller underkänt resultat vid körning.
-Fysiska enhetsprov och hjälpmedelsprov följs separat i
-[uppföljningen för manuella prov](https://github.com/viscalyx/skyttel/issues/97).
+Redovisa fysiska enhetsprov och hjälpmedelsprov separat enligt
+[resultatguiden](README.md#ansvar-och-delade-resultat).
 
 ## Konfigurerade användare
 

@@ -27,13 +27,11 @@ Registrera egna utvecklingskonton och konfigurera
 [Testinstruktionerna](docs/development/testing.md) beskriver projektets
 kontroller och hur de körs.
 
-[Grundspecifikationen](https://github.com/viscalyx/skyttel/issues/13#issuecomment-5697070021)
-anger acceptanskriterierna. [Beslutskartan](https://github.com/viscalyx/skyttel/issues/2)
-samlar produktbesluten, och [produktverifieringen](https://github.com/viscalyx/skyttel/issues/31)
-följer genomförandet. Läs [arkitekturbesluten](docs/adr) vid berörda ändringar
-och [avgränsningsbesluten](https://github.com/viscalyx/skyttel/issues/30#issuecomment-5697500300)
-vid triage. Skilj varaktiga avslag från uppskjutet arbete och första
-versionens begränsningar.
+[Ordlistan](GLOSSARY.md) definierar produktens begrepp och
+[arkitekturbesluten](docs/adr) beskriver vägval och deras skäl.
+[Testfallen](docs/manual-tests/README.md) anger förberedelser, steg och
+förväntade resultat per område. Verifieringsrapporterna skiljer automatiska
+resultat från mänskliga observationer och redovisar kvarstående begränsningar.
 
 [Releaseguiden](docs/operations/container-releases.md) beskriver publicering,
 verifiering och bevarande av containerbilder.

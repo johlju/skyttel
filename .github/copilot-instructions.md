@@ -2,6 +2,9 @@
 
 ## Documentation
 
+- Keep documentation standalone. State requirements, decisions, preparation,
+  and expected outcomes in repository docs; link between docs where useful.
+  Do not link to issues or issue comments or rely on their text or status.
 - For affected documentation under `docs/**/*.md`, identify the intended
   readers and what they need to know or do.
   - Keep `docs/development/` focused on environment setup, running tests, and

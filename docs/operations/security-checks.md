@@ -114,12 +114,10 @@ Docker base stages, and devcontainer profiles together. `packageManager` is
 the npm version source. A Node, npm, operating-system, or CPU change requires
 review of native dependencies and a production-container test.
 
-Dependabot PRs [#67](https://github.com/viscalyx/skyttel/pull/67) and
-[#68](https://github.com/viscalyx/skyttel/pull/68) demonstrate updates to pinned
-Action hashes with readable version comments. After the Docker configuration
-reaches main, verify the first genuine Dependabot Docker PR changes both
-matching base references, retains version and digest pins, and passes checks.
-Record its PR link before considering that external acceptance step complete.
+For Dependabot updates, verify pinned Action hashes retain readable version
+comments. Verify Docker updates change both matching base references,
+retain version and digest pins, and pass checks. Record the reviewed change
+and its actual validation results before accepting the update.
 
 ## New features and releases
 
@@ -172,12 +170,10 @@ authentication values and personal data out of shared records. Snapshot
 listings or disappearance alone do not establish physical deletion.
 Automated DOM checks do not establish screen-reader or audio behavior.
 
-Track the outstanding human and operational checks in
-[the standalone verification ticket](https://github.com/viscalyx/skyttel/issues/465),
-labeled `ready-for-human`. Keep that ticket open and treat release
-acceptance as blocked while mandatory evidence is missing. The automated
-implementation batch and its implementation tickets can close separately;
-their closure does not establish completion of these observations.
+Record an outcome for each human and operational check in the table above.
+Treat release acceptance as blocked while mandatory evidence is missing.
+Passing automated implementation checks does not establish completion of
+these observations.
 
 ## Upstream references
 

@@ -1,11 +1,9 @@
 # Verifieringsrapport för hushållets nya arbetsytor
 
-Rapporten hjälper testare och granskare att följa de 25 beslutade
-kravområdena och de åtta fullständiga arbetskedjorna i
-[specifikation #244](https://github.com/viscalyx/skyttel/issues/244) och
-[slutverifiering #259](https://github.com/viscalyx/skyttel/issues/259).
+Rapporten hjälper testare och granskare att följa de 25 kravområdena och
+de åtta fullständiga arbetskedjorna som beskrivs nedan.
 Den länkar faktisk kod, offentliga provgränser och befintliga manuella fall.
-Den ersätter inte de bindande besluten eller områdesfallens körbara steg.
+Områdesfallen anger körbara steg och förväntade resultat.
 
 **Status: slutkontroller och slutgranskningar GODKÄNDA.**
 Den rena produktionskällans visuella jämförelse och mätning redovisas nedan.
@@ -132,7 +130,7 @@ fysiska hjälpmedel och enheter är fortfarande **INTE UTFÖRDA**.
 
 ## Verifierade rättelser
 
-Slutgranskningens rättelser följer samma bindande beslut:
+Slutgranskningens rättelser följer rapportens kravområden och arbetskedjor:
 
 - [`650f5d2`](https://github.com/viscalyx/skyttel/commit/650f5d2):
   säkerhetsrättningen av det indirekta beroendet `source-map-js` till
@@ -270,26 +268,27 @@ De ersätter inte hela kontrollkörningen eller fysisk verifiering.
 
 ## Bindande beslut och låsta referenser
 
-Den [samlade acceptansen #240](https://github.com/viscalyx/skyttel/issues/240#issuecomment-6001123613)
-och senare åtkomst-, toast- och fokusbeslut har företräde vid överlappning.
-Varje länk nedan gäller hela sitt beslut, inte bara tabellens sammanfattning.
+Kravområdena och arbetskedjorna ovan anger rapportens acceptansomfattning.
+Använd följande lokala underlag för konkreta steg och förväntade resultat:
 
-<!-- markdownlint-disable MD013 -->
-| Beslut | Bindande underlag | Omfattning |
-| --- | --- | --- |
-| #233 | [Resolution](https://github.com/viscalyx/skyttel/issues/233#issuecomment-5983625269) | Ansvar, benämningar och fullständig ersättning |
-| #234 | [Resolution](https://github.com/viscalyx/skyttel/issues/234#issuecomment-5992067749) | Tabellens innehåll, ordning och återgång |
-| #235 | [Resolution](https://github.com/viscalyx/skyttel/issues/235#issuecomment-5992675307) | Objektsökning, filter och kartutforskning |
-| #236 | [Resolution](https://github.com/viscalyx/skyttel/issues/236#issuecomment-5993075064) | Fullständiga formulär, förlustskydd och utfall |
-| #237 | [Resolution](https://github.com/viscalyx/skyttel/issues/237#issuecomment-5996549961) | Hela A:s obligatoriska konflikt- och specialfall |
-| #238 | [Resolution](https://github.com/viscalyx/skyttel/issues/238#issuecomment-5997784333) | C:s tabell, sökytor och formulär på dator och mobil |
-| #239 | [Resolution](https://github.com/viscalyx/skyttel/issues/239#issuecomment-6000865493) | Fullständiga tillgängliga kedjor, toast och fokus |
-| #240 | [Resolution](https://github.com/viscalyx/skyttel/issues/240#issuecomment-6001123613) | Samlad acceptans och uppdaterade provdata |
-| #241 | [Resolution](https://github.com/viscalyx/skyttel/issues/241#issuecomment-5983454336) | Beständiga försök, historik och avveckling |
-| #242 | [Resolution](https://github.com/viscalyx/skyttel/issues/242#issuecomment-5999761900) | D:s utkastlayout och ingång |
-| #243 | [Resolution](https://github.com/viscalyx/skyttel/issues/243#issuecomment-6000149599) | Full läsning, sparande och beroende borttagning |
-| #243 | [Resolution](https://github.com/viscalyx/skyttel/issues/243#issuecomment-6000553942) | Aktuellt fullständigt implementationsunderlag för D |
-<!-- markdownlint-enable MD013 -->
+- [Arbetsytan](workspace-shell.md) och [hushållsarbetet](household-work.md)
+  beskriver verktyg, benämningar, bevarat arbete och hela arbetskedjor.
+- [Objektlistorna](object-lists.md) och [objektformulären](map.md)
+  beskriver tabell, sökning, filter, läsning och förlustskydd.
+  [Sambandsfallen](relationships.md) beskriver det fullständiga
+  sambandsformuläret och dess separata förslag.
+- [Utkastfallen](drafts.md) beskriver full läsning, konflikter, beroende
+  borttagning och samlat sparande. [Sparutfallen](save-check.md) och
+  [historiken](history.md) beskriver beständiga försök och kvitton.
+- [Hjälpmedelsfallen](conversation-accessibility.md) beskriver läsordning,
+  status, fokus, fysisk inmatning och förstoring. Mänskliga observationer
+  redovisas separat från DOM- och webbläsarprov.
+
+De låsta visuella referensernas kontrollpunkter och tillåtna skillnader
+beskrivs i [den visuella verifieringen](workspace-visual-verification.md).
+Läsbara värden i borttagna poster ska visas som statisk text. Status och
+sparutfall ska vara åtkomliga utan att detaljvyer öppnas, och stängda
+dialoger ska återföra fokus till en användbar kontroll.
 
 - [Låst A](https://github.com/viscalyx/skyttel/tree/d28a1f94b10d3d5dc98410933667ab320be5d908)
   gäller konfliktformuläret och varje obligatorisk checkpunkt.

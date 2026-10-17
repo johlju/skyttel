@@ -5,7 +5,7 @@ Anteckna commit, klient, modell, webbläsare samt godkänt eller underkänt
 resultat. Automatiska prov ersätter identitetsleverantören och anropar
 verktygen deterministiskt; de bevisar inte modellens svenska tolkning.
 De länkade integrationstesterna verifierar verktygsreglerna. Stegen här
-är stöd för frivillig felsökning och behöver inte upprepas i #97.
+är stöd för frivillig felsökning och behöver inte upprepas manuellt.
 
 ## Konfigurerade användare
 
@@ -451,7 +451,7 @@ after a browser edit, and deliberately suppress a completed save response.
 It is a deterministic test client, without a language model. It does not
 establish how Codex or ChatGPT interprets a human instruction. The matching
 integration tests and the helper's executable test cover these controls;
-manual repetition is optional troubleshooting, not a requirement in #97.
+manual repetition is optional troubleshooting.
 
 The helper uses public OAuth registration, PKCE and explicit Skyttel consent.
 The optional final argument is `read` or `write`; omission requests map work

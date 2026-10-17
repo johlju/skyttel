@@ -268,7 +268,8 @@ WCAG 2.2 AA, inte ett intyg om verifierad överensstämmelse.
 Automatiserade fall använder riktig server och tillfällig SQLite men syntetiska
 media- och leverantörsgränser. Verkliga mikrofonbehörigheter, upptagen fysisk
 mikrofon, mobil uppspelningspolicy och skärmläsarens hörbara uppläsning kräver
-separat mänsklig körning enligt restlistan #220.
+separat mänsklig körning enligt [röstfallen](voice-assistant.md) och
+[hjälpmedelsfallen](conversation-accessibility.md).
 
 ### ROSTFEL-05: saknad mikrofon kan stängas och prövas igen
 

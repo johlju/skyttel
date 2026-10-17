@@ -545,7 +545,9 @@ riktiga samtalet”, i gruppen “valt mobilt samtalsflöde”.
 - Automationen fångar appens riktiga ytor efter produktionsbygge, med riktig
   server och tillfällig SQLite. Den ersätter externa modeller och medier.
   Den ritar inget tangentbord och verifierar inte fysisk mikrofon eller
-  iOS-tangentbord; dessa prov återstår enligt #220.
+  iOS-tangentbord. Prova fysisk mikrofonstyrning enligt
+  [MIKROFONTRYCK-10–12](microphone-press.md) och skärmtangentbord enligt
+  TEXTMOBIL-13. Redovisa observationerna separat från automatiken.
 
 ## Personliga bredder på dator
 
@@ -1460,6 +1462,9 @@ länkade fysiska förberedelsen.
 OS-skärmtangentbordet, rotera enheten och tryck fält, Skicka, Avbryt och Stäng
 notisen.
 
+**Resultat:** Anteckna verkligt skärmtangentbord, rotation och pekning per
+enhet enligt [resultatguiden](README.md#ansvar-och-delade-resultat).
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -1836,8 +1841,11 @@ Textknappens ändrade flöde har följande WCAG 2.2 AA-designmål:
 
 Proven använder riktig server och tillfällig SQLite. Kontrollerade modell- och
 mediesvar, DOM-uppläsningar och emulerade fönstermått visar inte fullständig
-WCAG-överensstämmelse. Fysisk mikrofon, skärmläsare, röststyrning, zoom och
-pekskärm återstår enligt #220.
+WCAG-överensstämmelse. Prova fysisk mikrofonstyrning enligt
+[mikrofonfallen](microphone-press.md) och skärmläsare, röststyrning, zoom,
+pekskärm och rörelse enligt
+[HJALP-11/12](conversation-accessibility.md). Redovisa faktiska mänskliga
+observationer enligt [resultatguiden](README.md#ansvar-och-delade-resultat).
 
 ## Separata brickkonfigurationer och observationer
 

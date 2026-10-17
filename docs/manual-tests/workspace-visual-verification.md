@@ -118,9 +118,8 @@ provar definitionstypernas fullständiga värden och verkliga privata
 bekräftelse före separat gemensamt sparande och läsning efter omstart.
 
 Borttagna posters förslag visas som statiska fullständiga läsvärden,
-inte som nedtonade avaktiverade valknappar. Detta uppfyller det senare
-[åtkomstbeslutet](https://github.com/viscalyx/skyttel/issues/239#issuecomment-6000865493):
-uppgifterna är läsbara men kan inte väljas. Skillnaden innebär inte nya
+inte som nedtonade avaktiverade valknappar. Uppgifterna ska vara läsbara
+men kan inte väljas. Skillnaden innebär inte nya
 redigeringsmöjligheter eller genomförd kontrastverifiering av hela appen.
 
 ### Bevarat bildpar: återställd definition vid 320 CSS-pixlar

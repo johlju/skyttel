@@ -61,8 +61,8 @@ Identify the API provider for each model; specify it when the model name is
 ambiguous. Required credentials must be available to the evaluation process.
 Missing credentials stop paid execution with provider-specific setup guidance.
 
-Find past runs in
-[open and closed evaluation issues](https://github.com/viscalyx/skyttel/issues?q=is%3Aissue%20label%3Amodel-evaluation).
+Find past runs with the repository's issue-tracker search for the
+`model-evaluation` label, including open and closed runs.
 Read the run manifest before comparing results: catalog, application commit,
 scoring configuration, modality and repetition plan must match. Review profile
 settings, limits and prices. Read every correction
@@ -255,7 +255,7 @@ that launcher's printed directory.
 
 The cost integration tests launch `manual-costs.ts` directly. Other suites
 use test helpers directly; starting these interactive processes is optional
-and is not a prerequisite for Playwright or issue #97.
+and is not a prerequisite for Playwright or personal account confirmations.
 
 For the headed delivery-control fixtures, choose an installed Chrome with
 `--chrome`. This selects Playwright's `chrome` channel and prints the browser

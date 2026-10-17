@@ -1,6 +1,6 @@
 # Verifiering av den samlade kartupplevelsen
 
-## Aktuell verifiering av native arbetsflöden i #259
+## Aktuell verifiering av native arbetsflöden
 
 [ARBETE-08 och ARBETE-09](household-work.md) beskriver de aktuella,
 obrutna familjefallen i
@@ -61,9 +61,10 @@ Detta är två automatiska funktionsflöden, ingen ny presentationsmatris,
 fullsvitkörning, fysisk enhetskontroll eller kontroll av verkligt svenskt tal.
 Inga nya vybilder har tagits för denna rapport. De äldre bilderna och
 mätningarna nedan behåller sina faktiska källversioner och ersätter inte
-aktuell verifiering mot de låsta A-, C- och D-referenserna i #244.
+aktuell verifiering mot de låsta A-, C- och D-referenserna i
+[arbetsytornas verifieringsrapport](workspace-verification.md).
 
-## Historiskt underlag för #151
+## Historiskt underlag för den samlade kartupplevelsen
 
 **Allt från denna rubrik till dokumentets slut är den historiska rapporten.**
 Dess resultat, referenser, skärmbilder och miljöer avser de uttryckligen
@@ -72,10 +73,9 @@ eller dåvarande slutprov beskriver inte dagens produkt. Länkar till
 manualområden kan nu visa nyare steg; den dåvarande testversionen är därför
 länkad direkt till sin fasta källversion.
 
-Rapport för [#151](https://github.com/viscalyx/skyttel/issues/151), granskad
-mot [#121](https://github.com/viscalyx/skyttel/issues/121), de bindande
-[återstående proven i #107](https://github.com/viscalyx/skyttel/issues/107#issuecomment-5848370279)
-och [helhetsbeslutet i #109](https://github.com/viscalyx/skyttel/issues/109#issuecomment-5848795499).
+Rapportens omfattning är hela familjeflöden med text och röst, bevarat
+arbete, gemensamt sparande, återhämtning och tillgängliga alternativ.
+Tabellen med konkreta produktprov nedan anger flöden och avgränsningar.
 Nya resultat gäller källversion `15b1424b8624b1dcb62fe70717522d517fdd862b`
 och källträd `733878dcc1588f71ae4978380dd372d483559558`, om inget annat anges.
 Dokumentationsändringar efter provet ändrar inte den provade applikationen.
@@ -161,7 +161,7 @@ Jämförelsen omfattar referensens **D-dark-dator-karta**, **B-fria-paneler-dato
 Kartans mörka hela bakgrund, vänstra verktygsfält på dator, kompakta verktyg
 på telefon, avrundade arbetspaneler och tydliga privata förslag motsvarar
 underlaget. Piktogram och fristående namn följer det senare kartunderlaget
-**A-flerval** från #105, inte de äldre stora objektkorten. De nya
+**A-flerval**, inte de äldre stora objektkorten. De nya
 familjebilderna visar verkliga namn, rättade ekonomiska uppgifter, bevarade
 separata objektpaneler och samtalets beständiga kvitto.
 Överlappande fria skrivbordspaneler är avsiktliga; den aktiva panelen och
@@ -183,11 +183,11 @@ Utvidgade detaljer öppnas med ett uttryckligt val. Den ursprungliga
 avvikelsen med hela samtalsarbetsytan ovanför inställningsrubriken är rättad,
 liksom oläsbara mörka statusfält och text under stängknappen.
 
-Skillnader som följer senare bindande beslut är avsiktliga: kartklick väljer
-objekt enligt #105, medan **Uppgifter** öppnar detaljer; #108 ersätter äldre
-inställningspaneler med helsidan. Produktens riktiga behörigheter, kvitton,
+Skillnaderna från prototyperna är avsiktliga: kartklick väljer objekt,
+medan **Uppgifter** öppnar detaljer. Inställningar visas på en helsida.
+Produktens riktiga behörigheter, kvitton,
 återhämtning och fullständiga prisuppgifter ersätter prototypens simulerade
-exempel enligt #107/#109. Jämförelsen innebär inte pixelidentiska bilder,
+exempel. Jämförelsen innebär inte pixelidentiska bilder,
 fysisk enhetsverifiering eller ett nytt godkännande av designen.
 
 Mätningarna använder verklig Chromium-zoom genom tilläggets
@@ -237,7 +237,7 @@ De frysta bildägarna finns i den godkända versionens
 [samtal](https://github.com/viscalyx/skyttel/tree/87ddb0128e25eb5982e7dd910159f628e8ed0703/src/client/voice-study-assets)
 och [Inställningar](https://github.com/viscalyx/skyttel/tree/87ddb0128e25eb5982e7dd910159f628e8ed0703/src/client/admin-study-assets).
 
-### Konkreta uppföljningar från #107 och #109
+### Konkreta produktprov och avgränsningar
 
 Tabellen anger de verkliga produktfall som ingår i slutkontrollen. De
 kontrollerade externa tjänsterna och felfallen är avgränsade som ovan;
@@ -313,15 +313,15 @@ ursprungliga felspåren finns kvar; inga produktregler eller tidsgränser ändra
 
 ### Tidigare underlag och dess avgränsning
 
-De 29 föregående delärendena är accepterade vid utgångsversionen `c555ab8`.
-Dess källträd motsvarar det tidigare fullprovet på `5081076`: 1 095 publika
+Utgångsversionen `c555ab8` har samma källträd som det tidigare fullprovet
+på `5081076`: 1 095 publika
 fall, 402 webbläsarfall, 138 projektkontroller, 90,07 % grentäckning och
 nio containerfall. Dessa historiska antal ersätter inte ovanstående slutprov.
 
-Presentationsunderlagen behåller sina faktiska versioner: #145 på `f54124c`
-med 48 referensflöden och 32 zoomflöden; #146 på `3406c674` med tolv och åtta;
-samt #149 på `dbb138d` med sex och fyra, plus ett mörkt 400-procentsflöde med
-fullständiga identifierare. #146 förstorar bara administratörens sida.
+Presentationsunderlagen behåller sina faktiska versioner: `f54124c`
+med 48 referensflöden och 32 zoomflöden; `3406c674` med tolv och åtta;
+samt `dbb138d` med sex och fyra, plus ett mörkt 400-procentsflöde med
+fullständiga identifierare. `3406c674` förstorar bara administratörens sida.
 Frysta prototypkörningar är separat underlag. Den ändrade ytan för
 Inställningar gör att tidigare placering och överlappning inte kan ärvas
 generellt; de åtta
@@ -356,7 +356,5 @@ eller driftsättningar har gjorts.
 Bedömningen av ändringarna från `c555ab8` visar ingen ny operatörsåtgärd,
 serverkonfiguration, datamigrering, API- eller exportformatändring.
 **No operator notes needed for Operator Upgrade Impact.**
-Batchens integrationskontroll och oberoende granskning mot den fasta
-startversionen `466f5dfb33fc70114587f36360bd0ed406a3e208` redovisas separat
-i [#121](https://github.com/viscalyx/skyttel/issues/121). Rapporten avgränsas
-till #151 och är inte ett slutligt godkännande av hela #121.
+Rapporten omfattar den samlade kartupplevelsens prov och angivna
+källversioner. Den fastställer inte slutligt godkännande av hela produkten.

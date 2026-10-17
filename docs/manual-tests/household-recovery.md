@@ -3,7 +3,8 @@
 Testfallet omfattar fullständig flytt till tom lagring, uttrycklig koppling
 av historiskt privat innehåll, omstart och fortsatt export till ännu en
 installation. Anteckna commit, webbläsare och godkänt eller underkänt
-resultat vid körning. Mänsklig körning görs först efter hela specifikation #31.
+resultat vid körning. Använd isolerade provinstallationer och bekräfta
+förberedelserna nedan innan en mänsklig körning påbörjas.
 
 ## Konfigurerade användare
 
@@ -402,7 +403,7 @@ Use invented household content only. The setup does not change the ordinary
 development database. It does not need a public address or tunnel.
 `tests/integration/household-recovery.spec.ts` automates this scenario with
 isolated installations. The steps here support optional troubleshooting;
-Issue #97 does not require a manual repeat.
+automated coverage does not require a manual repeat.
 
 ### Prerequisites
 

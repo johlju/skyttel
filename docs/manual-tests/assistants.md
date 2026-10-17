@@ -508,10 +508,10 @@ godkänt först när alla kontroller är genomförda. Ett godkänt AI-07 verifie
 inte ChatGPT på webben, Codex-appen, Microsoft-inloggning eller den
 driftsatta HTTPS-ingången.
 
-Fallet är stöd för felsökning av en verklig klient. Den separata,
-icke blockerande [restlistan #97](https://github.com/viscalyx/skyttel/issues/97)
-behåller personlig inloggning, medgivanden och mänsklig bedömning.
-Automatiskt verifierade verktygsregler behöver inte upprepas där.
+Fallet är stöd för felsökning av en verklig klient. Personlig inloggning,
+medgivanden och mänsklig bedömning följer
+[den gemensamma förberedelsen](README.md#personliga-konton-ljud-och-aviseringar).
+Automatiskt verifierade verktygsregler behöver inte upprepas manuellt.
 
 ## Hela kartärenden
 
@@ -525,7 +525,7 @@ Använd den konfigurerade administratörens egen inloggning och hushållet
 hushållsuppgifter, modellkostnader eller publika
 adresser behövs för dessa fyra kontroller. Klienten skickar verktygsanrop;
 den provar inte en språkmodells tolkning. Integrationstesterna verifierar
-de kontrollerade fallen; #97 kräver ingen manuell upprepning.
+de kontrollerade fallen; manuell upprepning är frivilligt felsökningsstöd.
 
 ### AI-08: kartmedgivande fortsätter webbutkast och sparar hela familjeärendet
 

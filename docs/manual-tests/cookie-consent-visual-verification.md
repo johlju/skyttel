@@ -1,6 +1,6 @@
 # Cookie consent visual verification
 
-Evidence date: 16 October 2026. Scope: issue #467, cookie consent, policy
+Evidence date: 16 October 2026. Scope: cookie consent, policy
 and settings. The frozen reference is
 [Viscalyx at 72d6554](https://github.com/viscalyx/viscalyx.se/tree/72d6554acf3915cf8cc4dc80800dec9e9780c823).
 
@@ -104,6 +104,7 @@ support WCAG 2.2 AA assessment; they do not establish full conformance.
 
 Human screen-reader reading and announcements, actual browser zoom and
 text enlargement, physical browser restarts, and production HTTPS/provider
-observations remain in [issue #465](https://github.com/viscalyx/skyttel/issues/465).
+observations require separate results under
+[operational security checks](../operations/security-checks.md).
 The screenshots do not claim those checks. The corresponding manual
 actions and expected outcomes remain in [Kakor och lagring](cookies.md).

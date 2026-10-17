@@ -307,8 +307,8 @@ before the artifact expires.
 
 The workflow verifies existing results. It does not create stable tags,
 retry release runs, inject live failures, or change release assets. Each
-successful report covers only its selected scenario. Keep issue #38 open
-until the required scenarios have live evidence.
+successful report covers only its selected scenario. Release acceptance
+requires live evidence for every required scenario described in this guide.
 
 For either release channel, select `release` and supply the published version
 or tag. Both `0.0.1-preview.25` and `v0.0.1-preview.25` are accepted. Surrounding

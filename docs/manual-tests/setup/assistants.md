@@ -2,19 +2,17 @@
 
 ## Manual local Codex CLI setup
 
-The agreed first experiment in
-[issue #96](https://github.com/viscalyx/skyttel/issues/96) uses Codex CLI inside
-the devcontainer and Google login in the host browser. It needs no public
+The local experiment uses Codex CLI inside the devcontainer and Google
+login in the host browser. It needs no public
 tunnel, new subscription, or provider secret. This is a manual experiment;
 do not run it in CI or add real credentials to pull request workflows.
 Execution status: **not yet run**. The installed CLI used to prepare these
 instructions is `codex-cli 0.156.1`; its help includes `--no-browser`.
 
-The separate, nonblocking
-[manual verification issue #97](https://github.com/viscalyx/skyttel/issues/97)
-retains personal account actions and human assessment. Automated scenarios
-do not require manual repetition. The full procedure below remains useful
-for investigating a particular real client.
+Personal account choices and consent require the account holder's own
+actions; see [personal preparation](../README.md#personliga-konton-ljud-och-aviseringar).
+Automated scenarios do not require manual repetition. The full procedure
+below remains useful for investigating a particular real client.
 
 The developer prepares the local server and CLI commands below. The tester
 performs login, household selection, consent, reads, revocation, reconnection,
@@ -185,18 +183,16 @@ values, or full conversation logs in public evidence. A successful result
 establishes only the local Codex CLI and Google path. ChatGPT web, Codex desktop,
 Microsoft login, and the deployed HTTPS endpoint need their own evidence.
 The [installation verifier](../../operations/security-monitoring.md#automated-live-verification)
-checks HTTPS and deployment state automatically. Issue #97 tracks personal
-account actions and human assessment without requiring a repeat of the
-automated application scenarios.
+checks HTTPS and deployment state automatically. Record personal account
+actions and human observations separately from automated application results.
 
 ## Real text-client verification
 
 Real ChatGPT web and Codex app connections remain unverified. The existing
-local MCP prototype is not production evidence. The agreed first development
-test in [issue #96](https://github.com/viscalyx/skyttel/issues/96) is the manual
-local Codex CLI setup above, not a ChatGPT website or Codex desktop test.
-The following HTTPS procedure remains separate. No tunnel or public exposure
-is established by the local CLI plan.
+local MCP prototype is not production evidence. The manual local Codex CLI
+setup above verifies only that client's local connection. The following
+HTTPS procedure covers ChatGPT web and Codex app separately. The local CLI
+setup does not establish a tunnel or public exposure.
 
 Use an installation containing only fictional household data. A
 devcontainer is sufficient for an initial real-client experiment if the
@@ -239,8 +235,7 @@ The client configuration instructions follow
 Client registration details and available account controls must be checked
 against the actual installed clients. A successful tunnel experiment is
 recorded separately from verification of the deployed production HTTPS
-endpoint. Use the procedure for client-specific troubleshooting. The
-separate, nonblocking issue #97 retains personal sign-in, consent and
-human assessment only; it does not require a manual rerun of automated
-application scenarios. Closing an implementation issue does not establish
-successful verification of an external client.
+endpoint. Use the procedure for client-specific troubleshooting. Record
+personal sign-in, consent and human assessment separately; they do not
+require a manual rerun of automated application scenarios. Successful
+automated application tests do not establish external-client compatibility.

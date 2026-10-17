@@ -49,8 +49,8 @@ Google-knapp. Inga administrativa rättigheter krävs för samtalet.
 5. För egen hjälpmedelsbedömning: aktivera den skärmläsare som ska provas och
    anteckna dess version. Kontrollera både uppläsning och läsordning med dess
    vanliga läskommandon. Automatiska DOM-prov bevisar inte vad en verklig
-   skärmläsare säger. Enhetsprov enligt
-   [#220](https://github.com/viscalyx/skyttel/issues/220) kräver en människa.
+   skärmläsare säger. Redovisa hjälpmedelsflöden enligt
+   [ansvar och delade resultat](README.md#ansvar-och-delade-resultat).
 6. Avsluta med `quit`. Provdatabasen tas bort. Återställ nätverk och
    operativsystemets rörelseinställning efter respektive fall.
 
@@ -65,7 +65,7 @@ samtal på dator och pekskärm.
 
 **Förutsättningar:** Mikrofonen är på. Kör HJALP-01 med fin pekare vid
 1280 pixels bredd. Den emulerade grova pekaren har eget fall HJALP-07;
-verklig pekskärm hör till #220.
+verklig pekskärm provas separat i HJALP-12.
 
 **Integrationstest:**
 [conversation-accessibility.spec.ts](../../tests/integration/conversation-accessibility.spec.ts)
@@ -401,7 +401,7 @@ och fysisk användbarhet är inte verifierade.
 | 1.3.4, 1.4.10, 1.4.12, 2.4.11 | HJALP-02/05/06 täcker dator och smal skärm; [viewportfallen](text-view.md) täcker orientering, kort synlig höjd och samma fält vid tangentbord. Notisen har begränsad höjd och kan rullas. | Verklig zoom, textavstånd, skärmtangentbord och synligt fokus under långa feltexter i stödda webbläsare. |
 | 1.4.1, 1.4.3, 1.4.11 | Statusord kompletterar vågform/färg; fasta former i HJALP-06. [Grafikfallen](spatial-map.md) och [textbrickorna](text-view.md) provar teman, kontrast och oförändrad geometri. NOT-09 mäter notistext och symbolkontrast i båda teman. | Visuell läsbarhet, symbolernas former enligt NOT-11, egna färglägen och fokuskontrast på verkliga skärmar. |
 | 2.1.1, 2.1.2, 2.4.3, 2.4.6, 2.4.7, 2.5.3 | HJALP-01/02/05 provar Retur, Tab, synligt namnprefix och logisk borttagningsfokus. [Köfallen](conversation-queue.md) provar Escape/Avbryt; [medgivandet](conversation-consent.md) provar modal fokus och oskickad text. | Skärmläsarens tangentlägen, fokusindikatorer, fullständiga flöden utan pekdon och eventuell tangentkonflikt. |
-| 2.2.2, 2.3.1 | HJALP-06 provar OS-styrda fasta former, stilla arbetsmarkering och inga övergångar. Ingen blinkande samtalsåterkoppling finns i designen. | **Skyttel talar** med normal rörelse längre än fem sekunder är uttryckligen inte färdigbedömt. Bedöm det i #220, utöver verklig OS-inställning och upplevd rörelse. |
+| 2.2.2, 2.3.1 | HJALP-06 provar OS-styrda fasta former, stilla arbetsmarkering och inga övergångar. Ingen blinkande samtalsåterkoppling finns i designen. | **Skyttel talar** med normal rörelse längre än fem sekunder är uttryckligen inte färdigbedömt. Bedöm det i HJALP-12, utöver verklig OS-inställning och upplevd rörelse. |
 | 2.5.7, 2.5.8 | [Breddfallen](text-view.md#personliga-bredder-på-dator) har tangentalternativ till dragning; [viewportfallen](text-view.md) provar 44-pixels mål på mobil. Åtgärd/stängning i HJALP-05 nås med tangentbord. | Träffytor, pekprecision och handhavande på fysisk telefon och surfplatta. |
 | 3.2.1, 3.2.2, 3.3.1, 3.3.2, 3.3.3 | Notiser tar inte fokus när de uppstår; NOT-03 provar bibehållet fält. [Röstfel](voice-errors.md), [notiser](conversation-notices.md) och [frågor](conversation-questions.md) har kort orsak och möjlig nästa handling. | Begriplighet, ordningsföljd och felåterhämtning vid lyssning och långsam användning. |
 | 3.3.4 | [Sparandets kontroll](save-check.md), [frågor och Sparat](conversation-questions.md) samt medgivandefallen skiljer privat utkast, uttryckligt sparande och beständigt kvitto. | Hela användarens beslut om ändringar, granskning och återhämtning med hjälpmedel. |
@@ -412,8 +412,9 @@ Kvarstående begränsning: den externa rösttransporten ger ingen säker signal 
 allt framtida ljud efter en tyst paus. Sparat använder känt verifierat svar,
 faktisk ljudaktivitet och definitivt avbrott enligt
 [sparbeskedets prov](conversation-questions.md). Automatiken bevisar inte att
-ett godtyckligt framtida ljudsegment är omöjligt. Lyssningsprov,
-mikrofonbehörighet och full hjälpmedelsbedömning hör till #220. Ingen sådan
+ett godtyckligt framtida ljudsegment är omöjligt. Ansvar för fysiska prov,
+hjälpmedelsflöden och driftens ljudavbrott anges i
+[ansvarsfördelningen](README.md#ansvar-och-delade-resultat). Ingen sådan
 mänsklig körning redovisas här.
 
 ### Mänsklig slutkontroll
@@ -421,12 +422,15 @@ mänsklig körning redovisas här.
 Utför
 [TAL-17](voice-assistant.md#tal-17-röstrutan-med-riktig-mikrofon-pekskärm-och-skärmläsare)
 med NVDA och Chrome på Windows samt VoiceOver och Chrome på macOS, iPhone och
-iPad. Prova först riktigt iPhone-tangentbord, ett fingertryck som hålls och de
-två plattformarnas tangentkombinationer. Kör även MIKROFONTRYCK-03/04,
-TEXTMOBIL-02/03, NOT-07/08 och HJALP-01–03/05–10. Anteckna enhet, system,
-webbläsare, hjälpmedel, byggversion och resultat för varje kombination i
-[#220](https://github.com/viscalyx/skyttel/issues/220). Alla dessa mänskliga
-resultat återstår.
+iPad. Följ HJALP-11 för faktiskt hörda besked och HJALP-12 för fysisk
+inmatning, zoom och rörelse. Använd TEXTMOBIL-13 för riktigt
+skärmtangentbord och MIKROFONTRYCK-10–12 för fysiska tangentkombinationer
+och håll/släpp. De automatiserade fallen behöver inte handköras igen.
+Redovisa läsordning, uppläsningar, skärmtangentbord, zoom och layout
+separat från mikrofonstyrning, tangentkombinationer, OS-behörighet,
+rörelse och upptaget skärmläsarljud. Varje observation behöver eget utfall.
+Anteckna varje kombination enligt
+[ansvar och delade resultat](README.md#ansvar-och-delade-resultat).
 
 Låt **Skyttel talar** pågå längre än fem sekunder med normal rörelse och bedöm
 vågformen enligt
@@ -671,6 +675,9 @@ HTTPS-adress och konfigurerad inloggning.
 **Kräver mänsklig observation:** Hör verklig avbrytande respektive köad
 uppläsning och bedöm läsordning utan dubbla mikrofon- eller arbetsbesked.
 
+**Resultat:** Anteckna faktiskt hörda besked och läsordning per hjälpmedel
+enligt [resultatguiden](README.md#ansvar-och-delade-resultat).
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -718,6 +725,11 @@ HTTPS-adress och konfigurerad inloggning.
 
 **Kräver mänsklig observation:** Bedöm verklig pekning, tangentkommandon,
 200/400 procents zoom, textavstånd och rörelse längre än fem sekunder.
+
+**Resultat:** Redovisa rörelse, mikrofonens tangentkombinationer, zoom,
+textavstånd, pekning och hjälpmedelsflöden som separata observationer enligt
+[resultatguiden](README.md#ansvar-och-delade-resultat). Återanvänd samma
+körning när den faktiskt täcker flera observationer.
 
 <!-- markdownlint-disable MD013 -->
 <!--

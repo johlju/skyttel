@@ -3,8 +3,11 @@
 Fallen provar samtal med röst, samma privata utkast, MCP-regler och kvitton som
 samtal med text. Anteckna commit, webbläsare, operativsystem, mikrofon, modell
 eller kontrollerad ersättare samt resultat. De kontrollerade flödena verifieras
-automatiskt. I [#97](https://github.com/viscalyx/skyttel/issues/97) återstår
-mänsklig bedömning av faktiskt hört ljud och användning med egen utrustning.
+automatiskt. Svenska talbeskeds begriplighet och lyssningskomfort bedöms
+med verklig ljudutgång enligt
+[ljudförberedelsen](README.md#personliga-konton-ljud-och-aviseringar).
+Fysiska observationer redovisas enligt
+[ansvar och delade resultat](README.md#ansvar-och-delade-resultat).
 
 ## Konfigurerade användare
 
@@ -1203,7 +1206,7 @@ resources are also substitutes, with silent synthetic media tracks.
 speech recognition, Swedish pronunciation, actual browser permission prompts,
 device audio or real-provider availability. The application's listening label
 describes the simulated connection. Keep actual speech/device results separate.
-Integration tests cover these controls; #97 does not require a manual repeat.
+Integration tests cover these controls; manual repetition is optional.
 Use the [real speech check](real-voice-tests.md) for automated provider
 evidence. Human listening and equipment assessment remain separate.
 
@@ -1668,11 +1671,11 @@ familjeärende, rättelser, fullständigt sparande och fortsatt formulärarbete.
    återläs roller, pris
    och kunskapsstatus. Välj **Tillbaka till arbetet**, stäng av mikrofonen och
    fortsätt med ett normalt formulär.
-7. Anteckna den faktiskt provade enheten, mikrofonen och ljudutgången. Chrome på
-   Windows, macOS, iPhone och iPad med riktiga mikrofoner och hjälpmedel ingår i
-   den kvarstående mänskliga kontrollen i
-   [#220](https://github.com/viscalyx/skyttel/issues/220). Redovisa varje
-   kombination separat, inklusive mikrofonavslag och ljuduppspelning.
+7. Anteckna den faktiskt provade enheten, mikrofonen och ljudutgången.
+   Redovisa hela hushållsflödet med verklig röst separat från fysisk
+   mikrofonstyrning och upptaget skärmläsarljud. Redovisa varje kombination
+   enligt [resultatguiden](README.md#ansvar-och-delade-resultat) och hänvisa
+   till delade observationer när samma körning faktiskt täcker dem.
 
 ### TAL-24: riktig skärmläsare och tal samtidigt
 
@@ -1777,6 +1780,10 @@ HTTPS-adress och konfigurerad inloggning.
 **Kräver mänsklig observation:** Bedöm operativsystemets och webbläsarens
 riktiga mikrofonprompt, återkallad behörighet och användningsindikator.
 
+**Resultat:** Anteckna verklig mikrofonprompt, återkallad behörighet och
+användningsindikator enligt
+[resultatguiden](README.md#ansvar-och-delade-resultat).
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -1831,6 +1838,10 @@ medgivande. Håll sessionen aktiv med verkliga handlingar före provet.
 mikrofonindikator och ljud, samt hör beskedet med riktig skärmläsare.
 Syntetisk serverkontroll bevisar inte att mikrofonen fysiskt stannar eller
 att skärmläsaren läser beskedet korrekt.
+
+**Resultat:** Redovisa faktisk mikrofonavstängning, ljud och uppläsning
+enligt [driftens säkerhetskontroller](../operations/security-checks.md).
+Den absoluta tidsgränsen bedöms separat från inaktivitetsutgång i INAK-05.
 
 <!-- markdownlint-disable MD013 -->
 <!--

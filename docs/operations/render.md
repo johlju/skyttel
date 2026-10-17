@@ -856,8 +856,10 @@ remain. This is a planned maintenance window, not a normal unattended update.
 This procedure uses documented Render features and repository commands.
 Rehearse it on an authorized disposable Render installation first and record
 the actual observations. Local tests do not establish a completed production
-cutover; outstanding human evidence remains in
-[the verification ticket](https://github.com/viscalyx/skyttel/issues/465).
+cutover. Record release, environment, date, operator and actual outcome
+for each step. Apply the acceptance requirements in
+[security checks](security-checks.md); keep production acceptance blocked
+until the required human and operational observations are available.
 
 ### A. Hold GitHub deployment before merging
 
