@@ -693,6 +693,32 @@ Vanlig tabelläsning och återgång provas i LISTA-02 och LISTA-05.
     "spec": "tests/integration/object-actions.spec.ts",
     "caseId": "LISTA-07"
   },
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "browser",
+      "spec": "tests/browser/household-table-focus.test.tsx",
+      "title": "table removal waits for enabled controls before restoring focus: removed",
+      "purpose": "Fokus inväntar aktiverade radkontroller när ett färdigt svar kommer före renderingen."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "browser",
+      "spec": "tests/browser/household-table-focus.test.tsx",
+      "title": "table removal waits for enabled controls before restoring focus: unchanged",
+      "purpose": "Fokus återgår till ursprungsknappen när borttagningen inte ändrar raden."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "browser",
+      "spec": "tests/browser/household-table-focus.test.tsx",
+      "title": "table removal waits for enabled controls before restoring focus: later-focus",
+      "purpose": "Ett senare uttryckligt fokusval bevaras när borttagningen slutförs."
+    }
+  ],
   "reference": "320×640, kontrollerat WebGL-avbrott; tangentbordsaktivering skyddar textalternativet.",
   "outcomes": [
     "Avbruten redigering behåller oskickat arbete; borttagningen omfattar valt objekt och fyra samband, med oberoende förslag kvar."
@@ -719,6 +745,13 @@ utkastet och stäng**. Spara inte hela utkastet.
 [object-actions.spec.ts](../../tests/integration/object-actions.spec.ts),
 testfallet “LISTA-07: text object actions preserve cancellation and stage
 only the chosen removal without map graphics”.
+
+**Tekniskt fokusstöd:**
+[household-table-focus.test.tsx](../../tests/browser/household-table-focus.test.tsx)
+styr ordningen mellan färdigt svar och aktiverade radkontroller i Chromium.
+Det provar fokus efter borttagning, oförändrad rad och ett senare fokusval.
+Det stödet provar komponenten utan HTTP-lagring; integrationstestet ovan
+kontrollerar utkastet, den sparade kartan och historiken.
 
 **Steg:**
 

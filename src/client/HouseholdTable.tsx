@@ -102,6 +102,10 @@ export function HouseholdTable({
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<string[]>([]);
   const [search, setSearch] = useState(initialObjectSearch);
+  const [removalFocus, setRemovalFocus] = useState<{
+    origin: HTMLElement;
+    restore: () => void;
+  } | null>(null);
   const notice = useDraftFilterReset(hasProposals, search, setSearch);
   const heading = useRef<HTMLHeadingElement>(null);
   const tableRegion = useRef<HTMLElement>(null);
@@ -213,6 +217,15 @@ export function HouseholdTable({
     }
     wasActive.current = active;
   });
+  useLayoutEffect(() => {
+    if (!removalFocus || workDisabled) return;
+    setRemovalFocus(null);
+    if (
+      active &&
+      (document.activeElement === removalFocus.origin || document.activeElement === document.body)
+    )
+      removalFocus.restore();
+  }, [active, workDisabled, removalFocus]);
   useLayoutEffect(() => {
     if (!active && returnFrame.current !== undefined) cancelAnimationFrame(returnFrame.current);
     return () => {
@@ -489,13 +502,8 @@ export function HouseholdTable({
                                 const origin = event.currentTarget;
                                 const restoreFocus = captureReturnFocus(origin);
                                 await onRemove(object);
-                                requestAnimationFrame(() => {
-                                  if (
-                                    document.activeElement === origin ||
-                                    document.activeElement === document.body
-                                  )
-                                    restoreFocus();
-                                });
+                                // Completion can precede React's enabled render.
+                                setRemovalFocus({ origin, restore: restoreFocus });
                               }}
                             >
                               <WorkspaceIcon name="trash" />
