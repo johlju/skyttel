@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { copyFile, mkdtemp, rm } from 'node:fs/promises';
 import { createServer as createHttpsServer } from 'node:https';
+import type { Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type ServerType, serve } from '@hono/node-server';
@@ -110,6 +111,9 @@ export async function createInstallation(
   let providerPause: { entered: () => void; wait: Promise<void> } | undefined;
   let database: ReturnType<typeof openDatabase>;
   let server: ServerType;
+  const sockets = new Set<Socket>();
+  let activeRequests = 0;
+  let drainConnections: (() => void) | undefined;
   let closeApp: () => Promise<void>;
   let summarizeForEvaluation: ReturnType<typeof createApp>['summarizeForEvaluation'];
   let handle: (request: Request) => Response | Promise<Response> = () =>
@@ -120,6 +124,22 @@ export async function createInstallation(
       hostname: config.host,
       port: config.port,
       ...(tls ? { createServer: createHttpsServer, serverOptions: tls } : {}),
+    });
+    server.on('connection', (socket) => {
+      sockets.add(socket);
+      socket.once('close', () => sockets.delete(socket));
+    });
+    server.prependListener('request', (_request, response) => {
+      activeRequests++;
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        activeRequests--;
+        drainConnections?.();
+      };
+      response.once('finish', finish);
+      response.once('close', finish);
     });
     await new Promise<void>((resolve, reject) => {
       server.once('listening', resolve);
@@ -244,17 +264,20 @@ export async function createInstallation(
   async function stop() {
     await closeApp();
     await new Promise<void>((resolve, reject) => {
-      // Requests already in flight can become idle after close() performs
-      // its initial idle-connection sweep. Drain those too, so an open
-      // browser's access polling cannot keep fixture shutdown alive.
-      const drain = setInterval(() => {
-        if ('closeIdleConnections' in server) server.closeIdleConnections();
-      }, 25);
+      drainConnections = () => {
+        // Unused browser preconnections do not participate in HTTP draining.
+        // Let admitted responses finish before releasing the remaining sockets,
+        // including upgraded WebSockets, and closing the fixture's database.
+        for (const socket of sockets)
+          if (activeRequests === 0 || socket.bytesRead === 0) socket.destroy();
+      };
       server.close((error) => {
-        clearInterval(drain);
+        drainConnections = undefined;
         if (error) reject(error);
         else resolve();
       });
+      // Stop accepting first so no new connection can race this cleanup.
+      drainConnections();
     });
     database.close();
   }

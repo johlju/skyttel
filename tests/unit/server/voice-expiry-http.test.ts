@@ -1,6 +1,6 @@
 import { type APIRequestContext, request } from '@playwright/test';
 import { afterEach, expect, test, vi } from 'vitest';
-import { createHousehold, signIn } from '../../support/client.js';
+import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation, robin } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
@@ -319,7 +319,7 @@ test('a committed save receipt survives a late negation, fresh login and restart
   await vi.advanceTimersByTimeAsync(2100);
   vi.useRealTimers();
   await signIn(client, app.origin);
-  await app.restart();
+  client = await restartWithSession(client, () => app.restart());
   expect(await (await client.get(mapPath)).json()).toEqual(before);
   expect(
     await (await client.get(`${mapPath}/operations/committed-before-expiry`)).json(),
