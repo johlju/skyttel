@@ -170,10 +170,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   bannerlägen i ljust och mörkt tema, separat lagringssamtycke och
   ihågkommen inloggning efter inloggning, bestående avstå-val,
   installationsansvarigs policykontakt och samordning mellan flikar.
-  [Visuell jämförelse](cookie-consent-visual-verification.md) visar båda
-  bannerlägena samt policy och inställningar mot den frysta referensen.
-  Konkret register
-  över kakor, fliklagring, serverposter och tillfälligt samtalsminne, första besök,
+  Konkret register över kakor, fliklagring, serverposter och tillfälligt
+  samtalsminne, första besök,
   profilvägen och fokusåtergång vid 1280, 390 och 320 pixlar, åtkomst före
   hushållsstart och efter återkallad tillgång, snabbval, samtyckesexport,
   navigationsskydd, bekräftad återställning, fel och bevarade

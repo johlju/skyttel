@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { MapState, SaveReceipt } from '../../src/shared/map.js';
 import type { PersonalView } from '../../src/shared/personal-view.js';
+import type { VoiceAssistantResponse } from '../../src/shared/voice-assistant.js';
 import {
   closeSupportDialog,
   closeTextView,
@@ -423,6 +424,15 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
       await saving;
       await route.fulfill({ response: await route.fetch() });
     });
+    let voicePollHeld = false;
+    await page.route('**/text-assistant/*/voice/*/poll', async (route) => {
+      voicePollHeld = true;
+      await saving;
+      await route.fulfill({ response: await route.fetch() });
+    });
+    // Voice polls also carry the session review. Hold the next sequential
+    // poll before changing the draft so it cannot refresh the map mid-click.
+    await expect.poll(() => voicePollHeld).toBe(true);
     await page.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await openMap(page);
     await expect(
@@ -440,11 +450,21 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
       await route.continue();
     });
     await openTable(page);
-    await openDraftReview(page);
+    await expect(await openDraftReview(page)).toContainText('Oskickad cykel');
+    await expect(
+      page.getByRole('button', { name: 'Dölj utkastet (4)', exact: true }),
+    ).toBeVisible();
+    const refreshed = page.waitForResponse(
+      (response) => response.url().endsWith('/poll') && response.request().method() === 'POST',
+    );
     await page.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
     await closeSaveDialog(page);
     await openMap(page);
     await expect.poll(() => waiting).toBe(true);
+    const poll = await refreshed;
+    expect(poll.status()).toBe(200);
+    const updated: VoiceAssistantResponse = await poll.json();
+    expect(updated.assistant.review.version).toBe(draft.version);
     await openConversationText(page);
     await expect(await openConversationDraft(page)).toContainText('Oskickad cykel', {
       timeout: 10000,

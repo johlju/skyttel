@@ -533,11 +533,22 @@ test('context preparation preserves buffered PCM through summary on seeded publi
       )
       .toBe('voice');
     await page.evaluate(() => window.skyttelVoiceFixture.setMicrophoneTone(440));
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.microphoneLevel()))
+      .toBeGreaterThan(0.1);
     await page.waitForTimeout(3000);
     expect(await page.evaluate(() => window.skyttelVoiceFixture.sentAudio())).toEqual([]);
     await page.mouse.up();
     const releasedAt = await page.evaluate(() => performance.now());
+    expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneTracks)).toEqual([
+      expect.objectContaining({ enabled: false }),
+    ]);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
+    // UI state and MediaStreamTrack.enabled change on the main thread. Wait
+    // for the audio graph to render silence before introducing the later tone.
+    await expect
+      .poll(() => page.evaluate(() => window.skyttelVoiceFixture.microphoneLevel()))
+      .toBe(0);
     await page.evaluate(() => window.skyttelVoiceFixture.setMicrophoneTone(880));
     const started = page.waitForResponse(
       (response) => response.url().endsWith('/voice') && response.request().method() === 'POST',
@@ -590,9 +601,10 @@ test('context preparation preserves buffered PCM through summary on seeded publi
       await page.evaluate(() =>
         window.skyttelVoiceFixture
           .sentAudio()
-          .some((sample) => sample.frequency > 820 && sample.frequency < 940),
+          .filter((sample) => sample.frequency > 820 && sample.frequency < 940),
       ),
-    ).toBe(false);
+      'The outgoing stream must exclude the tone generated after microphone release',
+    ).toEqual([]);
     expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneRequests)).toBe(
       1,
     );

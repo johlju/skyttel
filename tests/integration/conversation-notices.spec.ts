@@ -483,11 +483,27 @@ for (const viewport of [
         expect(await context.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe(
           'solid',
         );
+        // A positive scrollTop can be the first frame of PageDown's native
+        // animation. Finish that action before starting the End scroll.
+        const pageDownEnd = await context.evaluateHandle((element) => {
+          const scroll = { done: false };
+          element.addEventListener('scrollend', () => (scroll.done = true), { once: true });
+          return scroll;
+        });
         await context.press('PageDown');
+        await expect.poll(() => pageDownEnd.evaluate((scroll) => scroll.done)).toBe(true);
+        await pageDownEnd.dispose();
         await expect
           .poll(() => context.evaluate((element) => element.scrollTop))
           .toBeGreaterThan(0);
         await context.press('End');
+        await expect
+          .poll(() =>
+            context.evaluate((element) =>
+              Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop),
+            ),
+          )
+          .toBeLessThanOrEqual(1);
         const legend = page.getByRole('region', { name: 'Teckenförklaring i kartan', exact: true });
         await uncovered(legend.locator('p').last());
       }

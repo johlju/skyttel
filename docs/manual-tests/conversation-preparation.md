@@ -132,8 +132,14 @@ innan mikrofontrycket. Blocket håller endast nästa POST före vidarebefordran:
 2. Håll mikrofonknappen med pekaren. När `status().held` är `voice`,
    kör `window.skyttelVoiceFixture.setMicrophoneTone(440)` i Console
    medan knappen hålls. Använd en andra operatör för konsolåtgärden.
+   Kontrollera att `window.skyttelVoiceFixture.microphoneLevel()` är över 0,1.
    Vänta minst tre sekunder och släpp knappen. Mikrofonen ska vara av.
-3. Kör `window.skyttelVoiceFixture.setMicrophoneTone(880)` och
+   Kontrollera direkt att
+   `window.skyttelVoiceFixture.stats().microphoneTracks[0].enabled`
+   är `false`.
+3. Vänta tills `window.skyttelVoiceFixture.microphoneLevel()` är 0, så att
+   ljudgrafen visar tystnad innan den senare tonen börjar.
+   Kör `window.skyttelVoiceFixture.setMicrophoneTone(880)` och
    `window.skyttelVoicePreparation.release()`. Vänta på ett framgångsrikt
    POST-svar för `/voice` med status 201 i Network och den aktuella
    anslutningen i terminalens `sessions`. Kör `context 89` omedelbart.

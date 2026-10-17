@@ -15,6 +15,7 @@ export const liveBrowserFixtureSource = `
   const signals = new Map();
   const sentAudio = [];
   const captureChanges = [];
+  const microphoneWave = new Float32Array(2048);
 
   function silentStream(tracks) {
     const context = new AudioContext();
@@ -24,7 +25,7 @@ export const liveBrowserFixtureSource = `
     gain.gain.value = 0;
     oscillator.connect(gain).connect(destination);
     oscillator.start();
-    signals.set(tracks, { context, gain, oscillator });
+    signals.set(tracks, { context, gain, oscillator, stream: destination.stream });
     for (const track of destination.stream.getTracks()) {
       tracks.push(track);
       if (tracks === microphoneTracks) {
@@ -171,6 +172,20 @@ export const liveBrowserFixtureSource = `
     setAutoStart: (value) => { autoStart = value; },
     sentAudio: () => sentAudio,
     captureChanges: () => captureChanges,
+    microphoneLevel: () => {
+      const signal = signals.get(microphoneTracks);
+      if (!signal) return 0;
+      if (!signal.analyser) {
+        // Observe rendered source audio separately from the enabled property.
+        // The media graph can still contain earlier frames after a UI update.
+        const source = signal.context.createMediaStreamSource(signal.stream);
+        signal.analyser = signal.context.createAnalyser();
+        signal.analyser.fftSize = microphoneWave.length;
+        source.connect(signal.analyser);
+      }
+      signal.analyser.getFloatTimeDomainData(microphoneWave);
+      return Math.max(...microphoneWave.map(Math.abs));
+    },
     setMicrophoneTone: (frequency) => {
       const signal = signals.get(microphoneTracks);
       signal.oscillator.frequency.value = frequency;
@@ -213,6 +228,7 @@ declare global {
       setAutoStart(value: boolean): void;
       sentAudio(): { peak: number; frequency: number; at: number }[];
       captureChanges(): { enabled: boolean; at: number }[];
+      microphoneLevel(): number;
       setMicrophoneTone(frequency: number): void;
       /** The level is the sound's strength, from 0 to 1. A quiet voice when it is left out. */
       setSound(source: 'microphone' | 'remote', active: boolean, level?: number): void;

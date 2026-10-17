@@ -847,6 +847,17 @@ separate from household export. An app-code rollback does not restore data.
 
 ## Appendix: one-time login upgrade on Render
 
+**Version scope:** From `v0.1.1-preview.41` or earlier to the new login model,
+starting with `v0.2.0-preview.42`. The same transition is required if an
+existing installation skips that version and upgrades directly to a later
+release with the new login model. Use the target image only after its
+release checks and publication succeed.
+
+Run this transition once for the original database. An installation that
+already has an installation authority record uses normal updates. New
+installations do not need this transition; restored databases use the
+[controlled restore procedure](database-restore.md).
+
 Use this appendix for the existing production service when it has household
 data but no installation authority record. It implements the
 [controlled login transition](login-upgrade.md). Users sign in again;
