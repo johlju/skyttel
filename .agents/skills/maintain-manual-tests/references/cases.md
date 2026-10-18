@@ -22,6 +22,24 @@ Resolve [area template](../templates/area.md) links from the destination under
 
 ## Mapping and identity
 
+### Test placement
+
+Keep integration tests as manual user journeys: concrete actions through the
+public UI, a user goal and outcomes a person can observe. Require a matching
+manual case before adding or expanding an integration scenario. Use bounded
+variants that protect distinct user behavior; test shared behavior once.
+
+Place standalone HTTP, archive, numeric rendering, resource and stress checks
+in unit/server tests, technical browser tests or measurement scripts. Use real
+Chromium for rendering checks and tag technical browser tests
+`{ tags: ['technical'] }`. A technical tag does not make a test suitable for
+the integration suite. Move existing technical-only integration tests to the
+appropriate suite when working on their coverage.
+
+Keep fixture setup and observation helpers separate from the journey. Automated
+assertions may verify its visible outcomes, such as a preserved placement or
+an unchanged image; internal-state assertions do not replace the UI journey.
+
 ### Counterparts
 
 Give each ordinary case one discovered functional counterpart. Compare its UI
@@ -30,16 +48,14 @@ a request-only check cannot establish browser-form behavior. Isolated fixtures
 may differ from manual data when roles, state, and access boundaries are
 equivalent. Exact test-title transcription in manual prose is optional.
 
-Tag request-only or archive-only integration tests with `{ tag: '@technical' }`.
-They require no manual UI case and cannot serve as ordinary counterparts.
-Browser workflows stay functional even when they also assert technical facts.
+Technical evidence cannot serve as an ordinary manual counterpart.
 Use actual Chromium tests in Vitest's `graphics` project for browser
 counterparts. They perform the documented scenario through public controls
 with production styles. Distinguish controlled browser responses from actual
 HTTP persistence and restart evidence in visible prose and `reference`.
 Browser coverage with controlled responses does not prove durable server state.
-Tag browser-only technical checks with `{ tags: ['technical'] }`. Vitest's
-`server` project provides supporting evidence, never an ordinary UI counterpart.
+Vitest's `server` project provides supporting evidence, never an ordinary UI
+counterpart.
 Existing browser component tests without case IDs remain supporting coverage;
 give every ordinary browser counterpart its stable case ID.
 

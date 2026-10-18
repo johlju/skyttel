@@ -6,12 +6,21 @@ import {
 } from '../../../src/client/spatial-navigation.js';
 
 let dispose = () => {};
-afterEach(() => dispose());
+afterEach(() => {
+  dispose();
+  vi.useRealTimers();
+});
 
 function arrange() {
   const canvas = document.createElement('canvas');
   document.body.append(canvas);
-  const camera = { rotate: vi.fn(), pan: vi.fn(), zoom: vi.fn() };
+  const camera = {
+    rotate: vi.fn(),
+    pan: vi.fn(),
+    zoom: vi.fn(),
+    begin: vi.fn(),
+    end: vi.fn(),
+  };
   const gestures = cameraGestures(canvas, camera);
   dispose = () => {
     gestures.dispose();
@@ -24,7 +33,7 @@ function arrange() {
     );
     return camera.zoom.mock.calls[0]?.[0] as number;
   };
-  return { camera, pinch };
+  return { canvas, camera, pinch };
 }
 
 test('trackpad pinch zooms by the pinch rate for each wheel pixel in both directions', () => {
@@ -50,4 +59,26 @@ test('large Ctrl + mouse-wheel steps stop at the per-event limit', () => {
   expect(pinch(-100)).toBeCloseTo(1 / limit);
   expect(pinch(4, 1)).toBeCloseTo(limit);
   expect(pinch(pinchZoomDeltaLimit - 1)).toBeLessThan(limit);
+});
+
+test('capture loss after a completed drag cannot end the following wheel gesture', () => {
+  vi.useFakeTimers();
+  const { canvas, camera, pinch } = arrange();
+  canvas.setPointerCapture = vi.fn();
+  canvas.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, button: 2 }));
+  canvas.dispatchEvent(
+    new PointerEvent('pointermove', { pointerId: 1, button: 2, clientX: 30, clientY: 20 }),
+  );
+  canvas.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, button: 2 }));
+  expect(camera.begin).toHaveBeenCalledTimes(1);
+  expect(camera.end).toHaveBeenCalledTimes(1);
+
+  pinch(3);
+  expect(camera.begin).toHaveBeenCalledTimes(2);
+  canvas.dispatchEvent(new PointerEvent('lostpointercapture', { pointerId: 1 }));
+  expect(camera.end).toHaveBeenCalledTimes(1);
+  pinch(3);
+  expect(camera.begin).toHaveBeenCalledTimes(2);
+  vi.advanceTimersByTime(250);
+  expect(camera.end).toHaveBeenCalledTimes(2);
 });

@@ -514,7 +514,8 @@ KAMERA-08.
 **Förutsättningar:** Omladdad karta på dator, mus och pekskärm tillgängliga.
 Anteckna om pekskärmen är emulerad eller fysisk. Automatiseringen använder
 Chromiums verkliga mus-, tangentbords- och pekinmatning via CDP och väljer
-Ctrl-rullning i steg 3. Fysiska styrplatte- och pekgester provas separat i
+Ctrl-rullning i steg 3. Under Ctrl-rullningen styr automatiseringen tiden
+för när gesten avslutas. Fysiska styrplatte- och pekgester provas separat i
 KAMERA-12.
 
 **Webbläsartest:**
@@ -531,7 +532,7 @@ KAMERA-09.
     "spec": "tests/browser/household-camera-history.test.tsx",
     "caseId": "KAMERA-09"
   },
-  "reference": "Chromium 1440 × 1000, verkliga kartkontroller, produktionsstilar och native CDP-inmatning: sexstegs musdragningar, fem Ctrl-rullningar och tvåfingersgest. Samma kompletta kontrollerade kart- och vysvar som KAMERA-08; lokal kamera, inte beständig HTTP-lagring eller fysisk enhet.",
+  "reference": "Chromium 1440 × 1000, verkliga kartkontroller, produktionsstilar och native CDP-inmatning: sexstegs musdragningar, fem Ctrl-rullningar med styrd tid för avslut och tvåfingersgest. Samma kompletta kontrollerade kart- och vysvar som KAMERA-08; lokal kamera, inte beständig HTTP-lagring eller fysisk enhet.",
   "outcomes": [
     "Varje sammanhängande rotation, panorering, Ctrl-rullning och tvåfingersgest blir ett helt steg i Föregående vy; knappen blir inaktiv i startläget.",
     "Gester och återgång bevarar hushållsuppgifter, utkast och personliga placeringar."
@@ -712,7 +713,7 @@ Föregående vy.
       "suite": "browser",
       "spec": "tests/browser/household-camera-history.test.tsx",
       "caseId": "KAMERA-09",
-      "purpose": "Native CDP-mus, Ctrl-rullning och tvåfingersgest grupperas i kartans lokala vyhistorik med kontrollerade svar; utför inte fysisk mus-, styrplatte- eller pekinmatning."
+      "purpose": "Native CDP-mus, Ctrl-rullning och tvåfingersgest grupperas i kartans lokala vyhistorik med kontrollerade svar och styrd tid för Ctrl-rullning; utför inte fysisk mus-, styrplatte- eller pekinmatning."
     }
   ]
 }

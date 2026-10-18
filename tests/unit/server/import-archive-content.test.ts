@@ -87,7 +87,13 @@ test('schema14 merge image archive retains every historical receipt and unmapped
     new Uint8Array(await (await client.request(`${path}/exports/${exported.id}`)).arrayBuffer()),
   );
   const content = JSON.parse(Buffer.from(parts['content.json']).toString());
-  expect(content.identities).toEqual(golden.content.identities);
+  expect(content.identities.filter((row: { id: string }) => row.id !== current.userId)).toEqual(
+    golden.content.identities,
+  );
+  expect(content.identities).toContainEqual({ id: current.userId, name: 'Alex Exempel' });
+  expect(
+    content.viewSettings.find((row: { userId: string }) => row.userId === current.userId),
+  ).toMatchObject({ version: 0, backgroundVersion: 1, settings: { background: false } });
   expect(content.saves.map((row: { receipt: unknown }) => row.receipt)).toEqual(
     golden.content.saves.map((row) => row.receipt),
   );

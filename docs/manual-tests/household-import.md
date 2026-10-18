@@ -1,7 +1,8 @@
 # Manuella testfall för fullständig återimport
 
 Testfallen omfattar uttrycklig ersättning, bevarad åtkomst, bildhistorik,
-privata utkast, personliga placeringar och rättelser med aktuellt underlag.
+privata utkast, personliga placeringar, bakgrundsval och rättelser med
+aktuellt underlag.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 Bekräfta förberedelserna nedan före en manuell körning.
 
@@ -1544,6 +1545,97 @@ bekräftelsen ska kunna nås och utföras utan klippt text.
 - Anteckna verklig webbläsare, zoom, tangentbord och mänskligt resultat.
   Den överlappande automationen utför inte denna observation och bevisar
   ingen skärmläsaruppläsning.
+
+## Personliga bakgrunder
+
+### IMPORT-26: återställ bakgrundsval och rörelsevärden
+
+**Syfte:** Bevara varje användares bakgrund, rörelsevärden och placeringar
+genom fullständig export, ersättning och omstart.
+
+**Användare:** Alex som administratör och Robin som medlem i en egen profil.
+
+**Förutsättningar:** Börja före den allmänna förberedelsens export. Bjud in
+Robin till Linden. Alex flyttar **Lampa från exporten** i sin personliga vy.
+Robin väljer bakgrunden av, mörkt **Under världshavet**, panoreringsstyrka
+25 procent, zoomstyrka 95 procent och lageravstånd 1,4. Anteckna placeringen.
+
+**Automatiskt motsvarande test:**
+[household-import-backgrounds.spec.ts](../../tests/integration/household-import-backgrounds.spec.ts),
+IMPORT-26. Riktig applikation och isolerad SQLite-installation används.
+Automationen bildjämför kartans bakgrund före export och efter återställning
+i båda temana. Minskad rörelse gör bilderna stilla utan att ändra sparvärden.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/household-import-backgrounds.spec.ts",
+    "caseId": "IMPORT-26"
+  },
+  "reference": "Chromium på dator, två verifierade användare, fem export/import-varianter för alla sju bakgrunder, avläge och rörelsevärdenas ytterlägen. Minskad rörelse används i automationen för stilla bildjämförelser.",
+  "outcomes": [
+    "Bekräftad återimport återställer de båda användarnas egna bakgrundsval och rörelsevärden utan sammanblandning.",
+    "Bakgrundens utseende, avläge och personliga placeringar bevaras, även efter omstart."
+  ],
+  "evidence": [{
+    "kind": "technical",
+    "runner": "vitest",
+    "suite": "server",
+    "spec": "tests/unit/server/household-import.test.ts",
+    "title": "legacy archives without identities preserve implicit off for current access and later choices survive restart",
+    "purpose": "Verklig temporär databas visar att ett äldre arkiv utan identiteter bevarar implicit av för aktuell åtkomst och inte skriver över senare val."
+  }]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Alex öppnar **Navigera → Ordna min vy**, markerar **Vänd panorering i
+   sidled** och **Visa axlar hela tiden** och väljer **Uppe till vänster**
+   för **Axelvisarens hörn**. Stäng navigeringen, aktivera **Alla etiketter**
+   och öppna **Inställningar → Rymdkartan**. Välj följande fem rader i tur
+   och ordning. Använd varje rad som ett
+   eget export- och återimportförsök i steg 2–5.
+
+   <!-- markdownlint-disable MD013 -->
+   | Bakgrund | Ljust tema | Mörkt tema | Panorering | Zoom | Avstånd |
+   | --- | --- | --- | --- | --- | --- |
+   | På | Pärlemor | Atmosfär | 0 procent | 100 % | 0,5 |
+   | På | Gryningsdis | Dis och ljuspunkter | 100 % | 0 % | 2,0 |
+   | På | Under världshavet | Universum | 0 procent | 100 % | 0,5 |
+   | På | Pärlemor | Under världshavet | 100 % | 0 % | 2,0 |
+   | Av | Gryningsdis | Atmosfär | 0 procent | 100 % | 0,5 |
+   <!-- markdownlint-enable MD013 -->
+
+2. Läs kartan i ljust och mörkt tema. Anteckna utseendet och hämta en
+   fullständig export genom **Inställningar → Fullständig export**.
+3. Ändra Alex bakgrund till andra val. Robin slår på sin bakgrund och
+   ändrar sina rörelsevärden. Alex öppnar **Återimportera hushållet**,
+   väljer just denna ZIP-fil och **Kontrollera importfil**.
+4. Kontrollera att ersättningsknappen är avstängd före bekräftelsen.
+   Markera **Jag vill ersätta allt hushållsinnehåll** och välj
+   **Ersätt hushållets innehåll**. Läs in det återställda hushållet.
+5. Alex läser **Rymdkartan** i inställningarna och jämför alla värden med
+   raden. Läs kartan i båda temana och jämför med antecknat utseende och
+   placering. Robin läser in sidan igen och kontrollerar sina egna värden.
+6. Efter sista raden startar du om servern med samma databas. Läs in båda
+   profilerna igen och kontrollera att respektive värden finns kvar.
+
+**Förväntat resultat:**
+
+- Alla sju bakgrundsval, avläget och ytterlägena för rörelse återställs.
+  Avläget behåller sina val och visar den enfärgade kartbakgrunden.
+- Båda användarna får tillbaka sina egna värden. Alex placering, övriga
+  kartinställningar och medlemmarnas aktuella åtkomst bevaras.
+- Omstart ändrar inte det återställda resultatet. Separata serverprov
+  verifierar äldre stjärnval, enbart placeringar, implicit av, uttrycklig
+  innehållskoppling och avvisning av felaktiga värden före ersättning.
 
 ## Identiteter och automatiskt underlag
 

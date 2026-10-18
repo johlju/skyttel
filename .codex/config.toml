@@ -2,13 +2,17 @@
 # Codex automatically layers the settings on top of the user configuration in ~/.codex/config.toml.
 # GitHub CLI command approvals are configured in rules/github.rules.
 
-model = "gpt-6.1-sol"
+model = "gpt-6-astra"
 model_reasoning_effort = "high"
 
 approval_policy = "never"
 default_permissions = "skyttel-development"
 
 personality = "pragmatic"
+
+[agents]
+default_subagent_model = "gpt-6.1-sol"
+default_subagent_reasoning_effort = "high"
 
 [permissions.skyttel-development]
 description = "Workspace access including Git metadata and project skills."

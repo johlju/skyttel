@@ -101,7 +101,7 @@ test('FLYTT-01: a fresh installation restores an archive, explicitly assigns pri
     ).settings;
     await post('view/settings', {
       version: 0,
-      settings: { ...settings, stars: true, axisCorner: 'top-left' },
+      settings: { ...settings, background: true, axisCorner: 'top-left' },
     });
     const sourceState = await read(sourceClient, sourcePath);
     const sourceView = await (await sourceClient.get(`${sourcePath}/map/view`)).json();

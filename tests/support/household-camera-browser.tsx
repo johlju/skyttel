@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { expect, vi } from 'vitest';
 import { type cdp, page } from 'vitest/browser';
 import { FormLeaveProvider } from '../../src/client/FormLeave.js';
@@ -23,16 +23,30 @@ export async function ctrlWheel(
     modifiers: 2,
     windowsVirtualKeyCode: 17,
   });
+  let deliveredDelta = 0;
+  const observeWheel = (event: WheelEvent) => {
+    if (event.ctrlKey) deliveredDelta += event.deltaY;
+  };
+  document.addEventListener('wheel', observeWheel);
   try {
-    for (let index = 0; index < events; index += 1)
-      await session.send('Input.dispatchMouseEvent', {
-        type: 'mouseWheel',
-        ...target,
-        deltaX: 0,
-        deltaY,
-        modifiers: 2,
-      });
+    await act(async () => {
+      // Queue one burst without inserting runner round trips between wheel events.
+      await Promise.all(
+        Array.from({ length: events }, () =>
+          session.send('Input.dispatchMouseEvent', {
+            type: 'mouseWheel',
+            ...target,
+            deltaX: 0,
+            deltaY,
+            modifiers: 2,
+          }),
+        ),
+      );
+      // CDP acknowledgements alone do not prove delivery and React completion.
+      await expect.poll(() => deliveredDelta).toBe(deltaY * events);
+    });
   } finally {
+    document.removeEventListener('wheel', observeWheel);
     await session.send('Input.dispatchKeyEvent', {
       type: 'keyUp',
       key: 'Control',

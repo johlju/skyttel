@@ -77,7 +77,7 @@ assigns private ownership and remains portable after restart”.
    stabila ID och kvittonas författare, ID och tidpunkter från historiken.
 2. Föreslå den tredje bilden på kvarvarande objekt, men spara inte förslaget.
    Flytta objektet till en igenkännlig personlig plats i rymdkartan. Aktivera
-   stjärnor och välj axelindikatorn i övre vänstra hörnet. Anteckna källans
+   bakgrunden och välj axelindikatorn i övre vänstra hörnet. Anteckna källans
    historiska innehålls-ID från **Koppla historiskt innehåll**.
 3. Be driftansvarig registrera det väntande försöket i profil A enligt
    [förberedelsen](household-recovery-console.md#flytt-01-förberedelse-1).

@@ -38,7 +38,7 @@ För PLACERING-11/12: skapa Lampan och Cykeln med typen Person och tom
 beskrivning genom samma vanliga formulär. Spara hela utkastet innan
 fallet börjar. På telefonen: öppna **Karta** och kontrollera båda namnen;
 personliga flyttar utförs på just den enheten. Ställ **Alla etiketter**
-på av och **Inställningar → Rymdkartan → Visa stjärnhimmel** på av
+på av och **Inställningar → Rymdkartan → Visa bakgrund** på av
 före toastprovet. Ladda om med tomt urval före fingerprovet.
 
 För YTA-11/12 och INST-12/13: börja med ett tomt provhushåll och tomt
@@ -121,7 +121,7 @@ kör `arm read-view:after` efter de sparade personliga flyttarna men
 före omladdningen i steg 2. Ladda om och invänta `held-after` i terminalen.
 Den personliga läsningen är då genomförd, medan den första visningen
 väntar på svaret. Kartgrafiken får visas först. Granska tabell, karta
-och inaktivt stjärnval. Kör `release` i steg 3 och granska den första
+och inaktivt bakgrundsval. Kör `release` i steg 3 och granska den första
 inramningen. Låt senare läsningar passera normalt; arma inte igen.
 
 ## Väntande och avvisad kartläsning
@@ -135,7 +135,7 @@ armering; inloggningen och andra hushålls läsningar förblir opåverkade.
 ## Separat åtkomstprov
 
 PLACERING-05:s webbläsarsteg provar faktisk nekad ingång, egna personliga
-flyttar, eget stjärnval och återkallad tillgång. Följande ytterligare
+flyttar, eget bakgrundsval och återkallad tillgång. Följande ytterligare
 HTTP-underlag körs endast i en profil som saknar tillgång till hushållet.
 Ange hushållets ID från den behöriga administratörens nätverkspanel.
 Utloggad profil ska få tre 401-svar; fel hushåll och återkallad medlems

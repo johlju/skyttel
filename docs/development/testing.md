@@ -199,6 +199,32 @@ default reporters; include `./tests/support/diagnostics-reporter.ts` to
 retain this log. Stop the report server with Ctrl+C when finished. Fixture
 inputs must contain only synthetic data.
 
+The reporter also writes `test-results/diagnostics/resources.jsonl` every
+five seconds and at each failure. Each timestamp identifies active tests
+and records host CPU use, memory and pressure, cgroup CPU quotas and
+throttling counters, memory limits and OOM counters, and the runner's
+worker/browser process tree with CPU use and resident memory. The journal
+is written during execution, so samples remain if a worker crashes before
+it can attach its own diagnostics. Missing Linux fields are recorded as
+unavailable. Host memory and CPU totals describe the host; cgroup limits
+and counters describe the recorded cgroup directory.
+
+Browser tests using the shared fixture attach `browser-diagnostics` JSON
+on failure. It contains browser errors and crashes, failed HTTP requests,
+pending request paths, worker heap usage, renderer long tasks, WebGL context
+loss/restoration events, GPU identity and browser process CPU times. The
+page snapshot records map canvas and region geometry, document readiness
+and focus. It omits request headers, bodies and URL queries. Browser
+inspection has a two-second deadline and records an unavailable result
+when the renderer cannot respond.
+
+Correlate the resource journal and browser events with the retained trace.
+OOM counter changes, rising resident memory, CPU saturation and throttling
+provide different evidence from an application error or an incomplete page
+transition. Background scenarios wait up to 30 seconds for the canvas after
+returning from settings; functional test deadlines remain separate from
+the background profiler's response and frame budgets.
+
 CI runs unit coverage and the complete integration suite in separate,
 independent jobs. Workflow gates, lint, type checks, build validation and
 container checks remain in the `application` job. That required check

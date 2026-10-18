@@ -1,0 +1,5889 @@
+{
+  "startedAt": "2026-10-17T19:15:56.725Z",
+  "measuredAt": "2026-10-17T19:20:24.221Z",
+  "commit": "15e1c1fd407979d1c379633b9e86d59c4df3a217",
+  "sourceTree": "b11a0a1643a05b1fb6e72b4089b89d12a2ab4260",
+  "uncommitted": "",
+  "builtClientHtml": "<!doctype html>\n<html lang=\"sv\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\" />\n    <meta name=\"theme-color\" content=\"#f5f7f5\" />\n    <meta name=\"description\" content=\"En privat, gemensam karta \u00f6ver hush\u00e5llets digitala och ekonomiska samband.\" />\n    <title>Skyttel</title>\n    <script type=\"module\" crossorigin src=\"/assets/index-__oH0N27.js\"></script>\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-CHJvxUyX.css\">\n  </head>\n  <body>\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
+  "builtClientHtmlSha256": "f727e16d4ca3974316dabafd5f41bd349c651ccfd8e31d2c05359da79f6822c8",
+  "builtAssets": [
+    {
+      "path": "/assets/index-__oH0N27.js",
+      "sha256": "2ce402c19d0ddbbe748bbd53057a986066079612f6d1acddf065b4854f4d3417"
+    },
+    {
+      "path": "/assets/index-CHJvxUyX.css",
+      "sha256": "5228db03924e6c575ef7a383c90ea33ac2a85c464e9f2595c125954c02b9c9c4"
+    }
+  ],
+  "browser": "156.0.8078.4",
+  "node": "v24.21.0",
+  "npm": "npm/12.0.2 node/v24.21.0 linux arm64 workspaces/false",
+  "gpu": {
+    "gpu": {
+      "devices": [
+        {
+          "vendorId": 65535,
+          "deviceId": 65535,
+          "vendorString": "Google Inc. (Google)",
+          "deviceString": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver-5.0.0)",
+          "driverVendor": "SwANGLE",
+          "driverVersion": "5.0.0"
+        }
+      ],
+      "auxAttributes": {
+        "amdSwitchable": false,
+        "canSupportThreadedTextureMailbox": false,
+        "directRenderingVersion": "",
+        "displayType": "ANGLE_SWIFTSHADER",
+        "glExtensions": "GL_AMD_performance_monitor GL_ANGLE_base_vertex_base_instance_shader_builtin GL_ANGLE_blob_cache GL_ANGLE_client_arrays GL_ANGLE_clip_cull_distance GL_ANGLE_compressed_texture_etc GL_ANGLE_copy_texture_3d GL_ANGLE_depth_texture GL_ANGLE_framebuffer_blit GL_ANGLE_framebuffer_multisample GL_ANGLE_get_image GL_ANGLE_get_serialized_context_string GL_ANGLE_get_tex_level_parameter GL_ANGLE_instanced_arrays GL_ANGLE_memory_object_flags GL_ANGLE_memory_size GL_ANGLE_multi_draw GL_ANGLE_pack_reverse_row_order GL_ANGLE_polygon_mode GL_ANGLE_program_binary_readiness_query GL_ANGLE_program_cache_control GL_ANGLE_read_only_depth_stencil_feedback_loops GL_ANGLE_relaxed_vertex_attribute_type GL_ANGLE_renderability_validation GL_ANGLE_request_extension GL_ANGLE_rgbx_internal_format GL_ANGLE_robust_client_memory GL_ANGLE_robust_fragment_shader_output GL_ANGLE_robust_resource_initialization GL_ANGLE_shader_pixel_local_storage GL_ANGLE_shader_pixel_local_storage_coherent GL_ANGLE_stencil_texturing GL_ANGLE_texture_compression_dxt3 GL_ANGLE_texture_compression_dxt5 GL_ANGLE_texture_multisample GL_ANGLE_texture_usage GL_ANGLE_translated_shader_source GL_ANGLE_vulkan_image GL_ANGLE_yuv_internal_format GL_APPLE_clip_distance GL_ARM_rgba8 GL_ARM_shader_framebuffer_fetch GL_CHROMIUM_bind_generates_resource GL_CHROMIUM_bind_uniform_location GL_CHROMIUM_copy_compressed_texture GL_CHROMIUM_copy_texture GL_CHROMIUM_lose_context GL_EXT_EGL_image_array GL_EXT_EGL_image_external_wrap_modes GL_EXT_EGL_image_storage GL_EXT_base_instance GL_EXT_blend_minmax GL_EXT_buffer_storage GL_EXT_clear_texture GL_EXT_clip_control GL_EXT_clip_cull_distance GL_EXT_color_buffer_float GL_EXT_color_buffer_half_float GL_EXT_compressed_ETC1_RGB8_sub_texture GL_EXT_conservative_depth GL_EXT_copy_image GL_EXT_debug_label GL_EXT_debug_marker GL_EXT_depth_clamp GL_EXT_discard_framebuffer GL_EXT_disjoint_timer_query GL_EXT_draw_buffers GL_EXT_draw_buffers_indexed GL_EXT_draw_elements_base_vertex GL_EXT_float_blend GL_EXT_frag_depth GL_EXT_instanced_arrays GL_EXT_map_buffer_range GL_EXT_memory_object GL_EXT_memory_object_fd GL_EXT_occlusion_query_boolean GL_EXT_polygon_offset_clamp GL_EXT_read_format_bgra GL_EXT_robustness GL_EXT_sRGB GL_EXT_sRGB_write_control GL_EXT_semaphore GL_EXT_semaphore_fd GL_EXT_separate_shader_objects GL_EXT_shader_framebuffer_fetch GL_EXT_shader_framebuffer_fetch_non_coherent GL_EXT_shader_non_constant_global_initializers GL_EXT_shader_texture_lod GL_EXT_shadow_samplers GL_EXT_texture_border_clamp GL_EXT_texture_compression_bptc GL_EXT_texture_compression_dxt1 GL_EXT_texture_compression_rgtc GL_EXT_texture_compression_s3tc_srgb GL_EXT_texture_filter_anisotropic GL_EXT_texture_format_BGRA8888 GL_EXT_texture_lod_bias GL_EXT_texture_mirror_clamp_to_edge GL_EXT_texture_rg GL_EXT_texture_sRGB_R8 GL_EXT_texture_sRGB_RG8 GL_EXT_texture_sRGB_decode GL_EXT_texture_shadow_lod GL_EXT_texture_storage GL_EXT_texture_type_2_10_10_10_REV GL_EXT_unpack_subimage GL_KHR_blend_equation_advanced GL_KHR_debug GL_KHR_robust_buffer_access_behavior GL_KHR_robustness GL_KHR_texture_compression_astc_ldr GL_NV_fence GL_NV_framebuffer_blit GL_NV_pack_subimage GL_NV_pixel_buffer_object GL_NV_polygon_mode GL_NV_read_depth GL_NV_read_depth_stencil GL_NV_read_stencil GL_NV_shader_noperspective_interpolation GL_OES_EGL_image GL_OES_EGL_image_external GL_OES_EGL_image_external_essl3 GL_OES_EGL_sync GL_OES_compressed_ETC1_RGB8_texture GL_OES_compressed_paletted_texture GL_OES_copy_image GL_OES_depth24 GL_OES_depth32 GL_OES_depth_texture GL_OES_depth_texture_cube_map GL_OES_draw_buffers_indexed GL_OES_draw_elements_base_vertex GL_OES_element_index_uint GL_OES_fbo_render_mipmap GL_OES_get_program_binary GL_OES_mapbuffer GL_OES_packed_depth_stencil GL_OES_required_internalformat GL_OES_rgb8_rgba8 GL_OES_sample_shading GL_OES_sample_variables GL_OES_shader_multisample_interpolation GL_OES_standard_derivatives GL_OES_surfaceless_context GL_OES_texture_3D GL_OES_texture_border_clamp GL_OES_texture_float GL_OES_texture_float_linear GL_OES_texture_half_float GL_OES_texture_half_float_linear GL_OES_texture_npot GL_OES_texture_stencil8 GL_OES_texture_storage_multisample_2d_array GL_OES_vertex_array_object GL_OES_vertex_half_float GL_OES_vertex_type_10_10_10_2 GL_OVR_multiview GL_OVR_multiview2 GL_QCOM_texture_lod_bias ",
+        "glImplementationParts": "(gl=egl-angle,angle=swiftshader)",
+        "glRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver-5.0.0)",
+        "glResetNotificationStrategy": 33362,
+        "glVendor": "Google Inc. (Google)",
+        "glVersion": "OpenGL ES 3.0 (ANGLE 2.1.28967 git hash: dfeede58b618)",
+        "glWsExtensions": "EGL_EXT_create_context_robustness EGL_ANGLE_surface_orientation EGL_KHR_create_context EGL_KHR_image EGL_KHR_image_base EGL_EXT_image_gl_colorspace EGL_KHR_gl_colorspace EGL_KHR_gl_texture_2D_image EGL_KHR_gl_texture_cubemap_image EGL_KHR_gl_renderbuffer_image EGL_KHR_get_all_proc_addresses EGL_KHR_fence_sync EGL_KHR_wait_sync EGL_ANGLE_create_context_webgl_compatibility EGL_CHROMIUM_create_context_bind_generates_resource EGL_KHR_swap_buffers_with_damage EGL_EXT_pixel_format_float EGL_KHR_surfaceless_context EGL_ANGLE_display_texture_share_group EGL_ANGLE_display_semaphore_share_group EGL_ANGLE_create_context_client_arrays EGL_ANGLE_program_cache_control EGL_ANGLE_robust_resource_initialization EGL_ANGLE_create_context_extensions_enabled EGL_ANDROID_blob_cache EGL_ANDROID_recordable EGL_ANGLE_create_context_backwards_compatible EGL_KHR_no_config_context EGL_IMG_context_priority EGL_KHR_create_context_no_error EGL_KHR_reusable_sync EGL_EXT_buffer_age EGL_ANGLE_create_surface_swap_interval EGL_ANGLE_vulkan_image EGL_KHR_partial_update EGL_ANGLE_global_fence_sync EGL_ANGLE_memory_usage_report ",
+        "glWsVendor": "Google Inc. (Google)",
+        "glWsVersion": "1.5 (ANGLE 2.1.28967 git hash: dfeede58b618)",
+        "hardwareSupportsVulkan": false,
+        "inProcessGpu": false,
+        "initializationTime": 0.014402,
+        "isAsan": false,
+        "isClangCoverage": false,
+        "jpegDecodeAcceleratorSupported": false,
+        "maxMsaaSamples": "4",
+        "optimus": false,
+        "passthroughCmdDecoder": true,
+        "pixelShaderVersion": "3.00",
+        "processCrashCount": 0,
+        "sandboxed": false,
+        "skiaBackendType": "None",
+        "subpixelFontRendering": true,
+        "targetCpuBits": 64,
+        "vertexShaderVersion": "3.00",
+        "visibilityCallbackCallCount": 0
+      },
+      "featureStatus": {
+        "2d_canvas": "unavailable_software",
+        "direct_rendering_display_compositor": "disabled_off_ok",
+        "gpu_compositing": "disabled_software",
+        "multiple_raster_threads": "enabled_on",
+        "opengl": "disabled_off",
+        "rasterization": "disabled_software",
+        "raw_draw": "disabled_off_ok",
+        "skia_graphite": "disabled_off",
+        "trees_in_viz": "disabled_off",
+        "video_decode": "disabled_software",
+        "video_encode": "disabled_software",
+        "vulkan": "disabled_off",
+        "webgl": "unavailable_software",
+        "webgpu": "unavailable_software",
+        "webgpu_on_vk_via_gl_interop": "disabled_off",
+        "webnn": "unavailable_software"
+      },
+      "driverBugWorkarounds": [],
+      "videoDecoding": [],
+      "videoEncoding": []
+    },
+    "modelName": "",
+    "modelVersion": "",
+    "commandLine": "/home/vscode/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/tmp/playwright_chromiumdev_profile-g8x417 --remote-debugging-pipe --no-startup-window --use-gl=angle --use-angle=swiftshader-webgl --ozone-platform=headless --allow-pre-commit-input"
+  },
+  "environment": {
+    "platform": "linux",
+    "architecture": "arm64",
+    "release": "7.0.14-linuxkit",
+    "cpu": "unknown",
+    "availableParallelism": 10,
+    "totalmem": 25159561216,
+    "loadavg": [
+      1.78,
+      2.01,
+      2.05
+    ],
+    "memoryLimit": "max\n",
+    "cpuLimit": "max 100000\n"
+  },
+  "measurement": "Public keyboard navigation to completed full-page PNG; capture-paced compositor screencast intervals; primary Chromium PipelineReporter spans ending STATE_PRESENTED_ALL. Partial/dropped attempts reported separately. Capture and tracing overhead included. No hardware GPU claim.",
+  "actions": 12,
+  "rounds": 2,
+  "deviceEmulation": {
+    "isMobile": false,
+    "hasTouch": false,
+    "deviceScaleFactor": 1
+  },
+  "fullMatrix": true,
+  "stability": [
+    {
+      "objects": 16,
+      "switches": [
+        {
+          "cycle": 1,
+          "resources": {
+            "Buffer": 24,
+            "Texture": 8,
+            "Program": 6,
+            "Shader": 0,
+            "Framebuffer": 6,
+            "Renderbuffer": 0,
+            "VertexArray": 6
+          },
+          "heap": {
+            "usedSize": 20102968,
+            "totalSize": 22073344,
+            "embedderHeapUsedSize": 5043112,
+            "backingStorageSize": 3100276
+          }
+        },
+        {
+          "cycle": 2,
+          "resources": {
+            "Buffer": 24,
+            "Texture": 8,
+            "Program": 6,
+            "Shader": 0,
+            "Framebuffer": 6,
+            "Renderbuffer": 0,
+            "VertexArray": 6
+          },
+          "heap": {
+            "usedSize": 19334864,
+            "totalSize": 21811200,
+            "embedderHeapUsedSize": 4905304,
+            "backingStorageSize": 3100276
+          }
+        },
+        {
+          "cycle": 3,
+          "resources": {
+            "Buffer": 24,
+            "Texture": 8,
+            "Program": 6,
+            "Shader": 0,
+            "Framebuffer": 6,
+            "Renderbuffer": 0,
+            "VertexArray": 6
+          },
+          "heap": {
+            "usedSize": 19394476,
+            "totalSize": 21811200,
+            "embedderHeapUsedSize": 5015920,
+            "backingStorageSize": 3100260
+          }
+        },
+        {
+          "cycle": 4,
+          "resources": {
+            "Buffer": 24,
+            "Texture": 8,
+            "Program": 6,
+            "Shader": 0,
+            "Framebuffer": 6,
+            "Renderbuffer": 0,
+            "VertexArray": 6
+          },
+          "heap": {
+            "usedSize": 19460644,
+            "totalSize": 20762624,
+            "embedderHeapUsedSize": 5018840,
+            "backingStorageSize": 3100276
+          }
+        }
+      ],
+      "resourcesStableAfterWarmup": true,
+      "idleFullPageImageIdentical": true,
+      "afterSignOut": {
+        "Buffer": 0,
+        "Texture": 8,
+        "Program": 0,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 0
+      }
+    },
+    {
+      "objects": 80,
+      "switches": [
+        {
+          "cycle": 1,
+          "resources": {
+            "Buffer": 24,
+            "Texture": 8,
+            "Program": 6,
+            "Shader": 0,
+            "Framebuffer": 6,
+            "Renderbuffer": 0,
+            "VertexArray": 6
+          },
+          "heap": {
+            "usedSize": 24703020,
+            "totalSize": 26791936,
+            "embedderHeapUsedSize": 11763144,
+            "backingStorageSize": 3106071
+          }
+        },
+        {
+          "cycle": 2,
+          "resources": {
+            "Buffer": 24,
+            "Texture": 8,
+            "Program": 6,
+            "Shader": 0,
+            "Framebuffer": 6,
+            "Renderbuffer": 0,
+            "VertexArray": 6
+          },
+          "heap": {
+            "usedSize": 24739528,
+            "totalSize": 26267648,
+            "embedderHeapUsedSize": 11572304,
+            "backingStorageSize": 3106071
+          }
+        },
+        {
+          "cycle": 3,
+          "resources": {
+            "Buffer": 24,
+            "Texture": 8,
+            "Program": 6,
+            "Shader": 0,
+            "Framebuffer": 6,
+            "Renderbuffer": 0,
+            "VertexArray": 6
+          },
+          "heap": {
+            "usedSize": 24799416,
+            "totalSize": 26005504,
+            "embedderHeapUsedSize": 11548760,
+            "backingStorageSize": 3106071
+          }
+        },
+        {
+          "cycle": 4,
+          "resources": {
+            "Buffer": 24,
+            "Texture": 8,
+            "Program": 6,
+            "Shader": 0,
+            "Framebuffer": 6,
+            "Renderbuffer": 0,
+            "VertexArray": 6
+          },
+          "heap": {
+            "usedSize": 24900244,
+            "totalSize": 26529792,
+            "embedderHeapUsedSize": 11587256,
+            "backingStorageSize": 3106071
+          }
+        }
+      ],
+      "resourcesStableAfterWarmup": true,
+      "idleFullPageImageIdentical": true,
+      "afterSignOut": {
+        "Buffer": 0,
+        "Texture": 8,
+        "Program": 0,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 0
+      }
+    }
+  ],
+  "budget": {
+    "units": "milliseconds",
+    "scope": "Local whole-matrix regression envelope for the documented SwiftShader capture workload; not a physical GPU/mobile acceptance claim or design FPS requirement.",
+    "reference": "background-before-summary.json",
+    "referenceProductionCommit": "cb1ca3326278496d2eaa66daf62175c3327cfece",
+    "method": "Across the eight background-off cells only, take the largest median, largest p95 and largest median absolute deviation (MAD). Median cap = max median + max MAD; p95 cap = max p95 + 2 * max MAD. Round up response caps to 50ms and presented-frame caps to 10ms. Freeze before measuring the optimized client.",
+    "response": {
+      "median": 1000,
+      "p95": 1750
+    },
+    "presentedFrames": {
+      "median": 180,
+      "p95": 800
+    },
+    "primaryFrameState": "STATE_PRESENTED_ALL",
+    "metricCorrection": "Primary frame latency excludes STATE_PRESENTED_PARTIAL. Recomputed from the same unoptimized off-only raw trace before measuring the optimized client; partial/dropped distributions remain visible.",
+    "offReference": {
+      "response": {
+        "maxMedian": 733.596624999991,
+        "maxP95": 1259.0919589999976,
+        "maxMAD": 233.49854200000118,
+        "roundUpQuantum": 50
+      },
+      "presentedFrames": {
+        "maxMedian": 95.869,
+        "maxP95": 641.858,
+        "maxMAD": 75.879,
+        "roundUpQuantum": 10
+      }
+    }
+  },
+  "violations": [],
+  "resourcesStable": true,
+  "interactionsPreserved": true,
+  "targetsMet": true,
+  "rawTraceArtifact": "background-combined-after.json.gz",
+  "summaryContents": "Every measured cell and its nearest-rank median/p95, frame-state counts, saved settings, placements and resource checks. Individual timings, complete trace events, CDP metrics and captures remain in rawTraceArtifact.",
+  "samples": [
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "light",
+      "appearance": "off",
+      "response": {
+        "median": 66.68454100000008,
+        "p95": 199.97029199999997
+      },
+      "captureCadence": {
+        "median": 16.666748046875,
+        "p95": 66.6640625
+      },
+      "presentedFrames": {
+        "count": 62,
+        "median": 25.189,
+        "p95": 65.767
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 10.884,
+        "p95": 23.317
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 23,
+          "median": 16.949,
+          "p95": 20.243
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 62,
+          "median": 25.189,
+          "p95": 65.767
+        },
+        "STATE_DROPPED": {
+          "count": 17,
+          "median": 20.311,
+          "p95": 54.71
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 10.884,
+          "p95": 23.317
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "pearl",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 1
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 4,
+        "Texture": 8,
+        "Program": 1,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 1
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "light",
+      "appearance": "pearl",
+      "response": {
+        "median": 81.57737499999985,
+        "p95": 219.09108300000025
+      },
+      "captureCadence": {
+        "median": 33.330810546875,
+        "p95": 66.6640625
+      },
+      "presentedFrames": {
+        "count": 78,
+        "median": 28.579,
+        "p95": 66.47
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 19.383,
+        "p95": 24.07
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 24,
+          "median": 16.921,
+          "p95": 17.836
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 78,
+          "median": 28.579,
+          "p95": 66.47
+        },
+        "STATE_DROPPED": {
+          "count": 28,
+          "median": 17.219,
+          "p95": 20.955
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 19.383,
+          "p95": 24.07
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "pearl",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 2
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 4,
+        "Texture": 8,
+        "Program": 1,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 1
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "light",
+      "appearance": "dawn",
+      "response": {
+        "median": 122.50537499999973,
+        "p95": 190.52637499999946
+      },
+      "captureCadence": {
+        "median": 33.331298828125,
+        "p95": 99.99609375
+      },
+      "presentedFrames": {
+        "count": 78,
+        "median": 24.66,
+        "p95": 90.86
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 16.6,
+        "p95": 23.737
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 36,
+          "median": 18.465,
+          "p95": 39.796
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 78,
+          "median": 24.66,
+          "p95": 90.86
+        },
+        "STATE_DROPPED": {
+          "count": 49,
+          "median": 16.666,
+          "p95": 19.018
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 16.6,
+          "p95": 23.737
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "dawn",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 3
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 4,
+        "Texture": 8,
+        "Program": 1,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 1
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "light",
+      "appearance": "ocean",
+      "response": {
+        "median": 232.70991700000013,
+        "p95": 306.208458000001
+      },
+      "captureCadence": {
+        "median": 33.331787109375,
+        "p95": 183.326171875
+      },
+      "presentedFrames": {
+        "count": 87,
+        "median": 27.201,
+        "p95": 190.885
+      },
+      "partialFrames": {
+        "count": 10,
+        "median": 20.432,
+        "p95": 21.623
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 37,
+          "median": 21.094,
+          "p95": 40.385
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 87,
+          "median": 27.201,
+          "p95": 190.885
+        },
+        "STATE_DROPPED": {
+          "count": 120,
+          "median": 16.666,
+          "p95": 17.641
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 10,
+          "median": 20.432,
+          "p95": 21.623
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 4
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 8,
+        "Texture": 8,
+        "Program": 2,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 2
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "off",
+      "response": {
+        "median": 62.98450000000048,
+        "p95": 130.3678749999999
+      },
+      "captureCadence": {
+        "median": 16.666259765625,
+        "p95": 49.997802734375
+      },
+      "presentedFrames": {
+        "count": 62,
+        "median": 23.573,
+        "p95": 52.558
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 10.881,
+        "p95": 21.193
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 19,
+          "median": 16.808,
+          "p95": 18.175
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 62,
+          "median": 23.573,
+          "p95": 52.558
+        },
+        "STATE_DROPPED": {
+          "count": 8,
+          "median": 17.691,
+          "p95": 29.213
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 10.881,
+          "p95": 21.193
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 5
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 8,
+        "Texture": 8,
+        "Program": 2,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 2
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "atmosphere",
+      "response": {
+        "median": 75.43870799999968,
+        "p95": 146.3246250000011
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 49.998046875
+      },
+      "presentedFrames": {
+        "count": 75,
+        "median": 27.384,
+        "p95": 57.281
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 13.389,
+        "p95": 21.684
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 22,
+          "median": 16.926,
+          "p95": 18.415
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 75,
+          "median": 27.384,
+          "p95": 57.281
+        },
+        "STATE_DROPPED": {
+          "count": 16,
+          "median": 17.18,
+          "p95": 18.006
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 13.389,
+          "p95": 21.684
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 6
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 8,
+        "Texture": 8,
+        "Program": 2,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 2
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "mist",
+      "response": {
+        "median": 122.6006669999988,
+        "p95": 167.98654199999874
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 133.327880859375
+      },
+      "presentedFrames": {
+        "count": 75,
+        "median": 26.267,
+        "p95": 99.202
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 11.098,
+        "p95": 15.879
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 39,
+          "median": 18.752,
+          "p95": 37.671
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 75,
+          "median": 26.267,
+          "p95": 99.202
+        },
+        "STATE_DROPPED": {
+          "count": 43,
+          "median": 16.854,
+          "p95": 18.929
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 11.098,
+          "p95": 15.879
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "mist",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 7
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 12,
+        "Texture": 8,
+        "Program": 3,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 3
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "universe",
+      "response": {
+        "median": 379.0513760000031,
+        "p95": 443.0877079999991
+      },
+      "captureCadence": {
+        "median": 49.996826171875,
+        "p95": 333.31982421875
+      },
+      "presentedFrames": {
+        "count": 84,
+        "median": 24.816,
+        "p95": 315.312
+      },
+      "partialFrames": {
+        "count": 7,
+        "median": 8.483,
+        "p95": 16.123
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 28,
+          "median": 16.955,
+          "p95": 20.083
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 84,
+          "median": 24.816,
+          "p95": 315.312
+        },
+        "STATE_DROPPED": {
+          "count": 212,
+          "median": 17.157,
+          "p95": 20.794
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 7,
+          "median": 8.483,
+          "p95": 16.123
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "universe",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 8
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 20,
+        "Texture": 8,
+        "Program": 5,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 5
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "ocean",
+      "response": {
+        "median": 226.87954199999876,
+        "p95": 479.0327500000021
+      },
+      "captureCadence": {
+        "median": 33.332275390625,
+        "p95": 233.323974609375
+      },
+      "presentedFrames": {
+        "count": 78,
+        "median": 27.076,
+        "p95": 222.317
+      },
+      "partialFrames": {
+        "count": 6,
+        "median": 10.614,
+        "p95": 30.414
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 23,
+          "median": 17.255,
+          "p95": 21.782
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 78,
+          "median": 27.076,
+          "p95": 222.317
+        },
+        "STATE_DROPPED": {
+          "count": 144,
+          "median": 17.25,
+          "p95": 21.783
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 6,
+          "median": 10.614,
+          "p95": 30.414
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 9
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "light",
+      "appearance": "off",
+      "response": {
+        "median": 50.033707999999024,
+        "p95": 112.54316600000311
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 49.998046875
+      },
+      "presentedFrames": {
+        "count": 57,
+        "median": 23.778,
+        "p95": 53.074
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 13.887,
+        "p95": 21.346
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 19,
+          "median": 16.69,
+          "p95": 18.359
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 57,
+          "median": 23.778,
+          "p95": 53.074
+        },
+        "STATE_DROPPED": {
+          "count": 5,
+          "median": 17.438,
+          "p95": 29.33
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 13.887,
+          "p95": 21.346
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 10
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "light",
+      "appearance": "pearl",
+      "response": {
+        "median": 77.34183300000223,
+        "p95": 177.2360410000001
+      },
+      "captureCadence": {
+        "median": 16.666259765625,
+        "p95": 49.9990234375
+      },
+      "presentedFrames": {
+        "count": 73,
+        "median": 30.915,
+        "p95": 63.604
+      },
+      "partialFrames": {
+        "count": 3,
+        "median": 15.602,
+        "p95": 17.702
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 22,
+          "median": 16.903,
+          "p95": 17.705
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 73,
+          "median": 30.915,
+          "p95": 63.604
+        },
+        "STATE_DROPPED": {
+          "count": 18,
+          "median": 17.036,
+          "p95": 18.04
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 3,
+          "median": 15.602,
+          "p95": 17.702
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "pearl",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 12
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "light",
+      "appearance": "dawn",
+      "response": {
+        "median": 131.85787499999424,
+        "p95": 189.22550000000047
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 116.66064453125
+      },
+      "presentedFrames": {
+        "count": 82,
+        "median": 24.501,
+        "p95": 84.817
+      },
+      "partialFrames": {
+        "count": 6,
+        "median": 7.527,
+        "p95": 14.981
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 38,
+          "median": 20.504,
+          "p95": 38.988
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 82,
+          "median": 24.501,
+          "p95": 84.817
+        },
+        "STATE_DROPPED": {
+          "count": 50,
+          "median": 16.666,
+          "p95": 18.168
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 6,
+          "median": 7.527,
+          "p95": 14.981
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "dawn",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 13
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "light",
+      "appearance": "ocean",
+      "response": {
+        "median": 232.27049999999872,
+        "p95": 289.3942920000045
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 183.326904296875
+      },
+      "presentedFrames": {
+        "count": 80,
+        "median": 24.483,
+        "p95": 174.82
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 9.576,
+        "p95": 10.268
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 41,
+          "median": 19.369,
+          "p95": 39.221
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 80,
+          "median": 24.483,
+          "p95": 174.82
+        },
+        "STATE_DROPPED": {
+          "count": 106,
+          "median": 16.666,
+          "p95": 17.848
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 9.576,
+          "p95": 10.268
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 14
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "off",
+      "response": {
+        "median": 50.55087499999354,
+        "p95": 64.70395799999824
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 49.998046875
+      },
+      "presentedFrames": {
+        "count": 49,
+        "median": 16.547,
+        "p95": 49.958
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 19,
+          "median": 2.294,
+          "p95": 17.319
+        },
+        "STATE_DROPPED": {
+          "count": 4,
+          "median": 16.751,
+          "p95": 28.9
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 49,
+          "median": 16.547,
+          "p95": 49.958
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 15
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "atmosphere",
+      "response": {
+        "median": 77.20804199999839,
+        "p95": 142.11579199999687
+      },
+      "captureCadence": {
+        "median": 16.666259765625,
+        "p95": 49.9990234375
+      },
+      "presentedFrames": {
+        "count": 74,
+        "median": 25.681,
+        "p95": 57.179
+      },
+      "partialFrames": {
+        "count": 2,
+        "median": 9.919,
+        "p95": 10.128
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 21,
+          "median": 16.867,
+          "p95": 18.247
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 74,
+          "median": 25.681,
+          "p95": 57.179
+        },
+        "STATE_DROPPED": {
+          "count": 16,
+          "median": 17.094,
+          "p95": 19.371
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 2,
+          "median": 9.919,
+          "p95": 10.128
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 17
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "mist",
+      "response": {
+        "median": 101.28854099999444,
+        "p95": 153.4183750000011
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 99.9951171875
+      },
+      "presentedFrames": {
+        "count": 69,
+        "median": 19.414,
+        "p95": 83.675
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 33,
+          "median": 19.853,
+          "p95": 38.592
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 69,
+          "median": 19.414,
+          "p95": 83.675
+        },
+        "STATE_DROPPED": {
+          "count": 37,
+          "median": 16.666,
+          "p95": 20.68
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "mist",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 18
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "universe",
+      "response": {
+        "median": 325.7191259999963,
+        "p95": 486.94716699999844
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 299.989013671875
+      },
+      "presentedFrames": {
+        "count": 89,
+        "median": 26.078,
+        "p95": 260.113
+      },
+      "partialFrames": {
+        "count": 10,
+        "median": 8.569,
+        "p95": 16.546
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 28,
+          "median": 17.052,
+          "p95": 19.428
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 89,
+          "median": 26.078,
+          "p95": 260.113
+        },
+        "STATE_DROPPED": {
+          "count": 186,
+          "median": 17.103,
+          "p95": 20.452
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 10,
+          "median": 8.569,
+          "p95": 16.546
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "universe",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 19
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "ocean",
+      "response": {
+        "median": 232.0244590000002,
+        "p95": 309.7737500000003
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 183.325927734375
+      },
+      "presentedFrames": {
+        "count": 81,
+        "median": 26.4,
+        "p95": 187.008
+      },
+      "partialFrames": {
+        "count": 5,
+        "median": 8.633,
+        "p95": 14.05
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 24,
+          "median": 16.828,
+          "p95": 17.982
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 81,
+          "median": 26.4,
+          "p95": 187.008
+        },
+        "STATE_DROPPED": {
+          "count": 130,
+          "median": 17.14,
+          "p95": 20.388
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 5,
+          "median": 8.633,
+          "p95": 14.05
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 20
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "light",
+      "appearance": "off",
+      "response": {
+        "median": 33.55416599999444,
+        "p95": 34.87904200000048
+      },
+      "captureCadence": {
+        "median": 16.666015625,
+        "p95": 16.6669921875
+      },
+      "presentedFrames": {
+        "count": 46,
+        "median": 11.267,
+        "p95": 27.096
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 1,
+          "median": 17.884,
+          "p95": 17.884
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 46,
+          "median": 11.267,
+          "p95": 27.096
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 21
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "light",
+      "appearance": "pearl",
+      "response": {
+        "median": 49.61787500000355,
+        "p95": 99.97383299999638
+      },
+      "captureCadence": {
+        "median": 33.3310546875,
+        "p95": 33.3330078125
+      },
+      "presentedFrames": {
+        "count": 47,
+        "median": 19.246,
+        "p95": 35.891
+      },
+      "partialFrames": {
+        "count": 3,
+        "median": 5.317,
+        "p95": 6.563
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 9,
+          "median": 16.972,
+          "p95": 18.98
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 47,
+          "median": 19.246,
+          "p95": 35.891
+        },
+        "STATE_DROPPED": {
+          "count": 14,
+          "median": 21.325,
+          "p95": 35.551
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 3,
+          "median": 5.317,
+          "p95": 6.563
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "pearl",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 23
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "light",
+      "appearance": "dawn",
+      "response": {
+        "median": 42.95212499999616,
+        "p95": 85.01637499999924
+      },
+      "captureCadence": {
+        "median": 16.666015625,
+        "p95": 49.997802734375
+      },
+      "presentedFrames": {
+        "count": 48,
+        "median": 11.211,
+        "p95": 51.763
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 13,
+          "median": 1.558,
+          "p95": 18.097
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 48,
+          "median": 11.211,
+          "p95": 51.763
+        },
+        "STATE_DROPPED": {
+          "count": 6,
+          "median": 25.269,
+          "p95": 43.119
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "dawn",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 24
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "light",
+      "appearance": "ocean",
+      "response": {
+        "median": 66.82520800000202,
+        "p95": 118.94254199999705
+      },
+      "captureCadence": {
+        "median": 16.666259765625,
+        "p95": 49.998046875
+      },
+      "presentedFrames": {
+        "count": 63,
+        "median": 16.722,
+        "p95": 41.41
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 4.844,
+        "p95": 7.191
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 24,
+          "median": 16.943,
+          "p95": 17.882
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 63,
+          "median": 16.722,
+          "p95": 41.41
+        },
+        "STATE_DROPPED": {
+          "count": 10,
+          "median": 17.727,
+          "p95": 58.359
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 4.844,
+          "p95": 7.191
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 25
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "off",
+      "response": {
+        "median": 33.38791599999968,
+        "p95": 39.63070799999696
+      },
+      "captureCadence": {
+        "median": 16.666015625,
+        "p95": 16.667236328125
+      },
+      "presentedFrames": {
+        "count": 46,
+        "median": 10.571,
+        "p95": 27.155
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 1,
+          "median": 16.907,
+          "p95": 16.907
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 46,
+          "median": 10.571,
+          "p95": 27.155
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 26
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "atmosphere",
+      "response": {
+        "median": 34.75645800000348,
+        "p95": 98.89791699999478
+      },
+      "captureCadence": {
+        "median": 16.667236328125,
+        "p95": 33.3330078125
+      },
+      "presentedFrames": {
+        "count": 45,
+        "median": 16.798,
+        "p95": 37.915
+      },
+      "partialFrames": {
+        "count": 3,
+        "median": 6.039,
+        "p95": 7.438
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 6,
+          "median": 17.09,
+          "p95": 18.792
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 45,
+          "median": 16.798,
+          "p95": 37.915
+        },
+        "STATE_DROPPED": {
+          "count": 13,
+          "median": 20.201,
+          "p95": 35.493
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 3,
+          "median": 6.039,
+          "p95": 7.438
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 28
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "mist",
+      "response": {
+        "median": 44.78220899999724,
+        "p95": 83.77829100000235
+      },
+      "captureCadence": {
+        "median": 16.666259765625,
+        "p95": 49.997802734375
+      },
+      "presentedFrames": {
+        "count": 52,
+        "median": 13.254,
+        "p95": 39.533
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 13,
+          "median": 16.748,
+          "p95": 17.94
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 52,
+          "median": 13.254,
+          "p95": 39.533
+        },
+        "STATE_DROPPED": {
+          "count": 10,
+          "median": 21.199,
+          "p95": 44.436
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "mist",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 29
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "universe",
+      "response": {
+        "median": 100.92304100000183,
+        "p95": 149.8606660000005
+      },
+      "captureCadence": {
+        "median": 16.667236328125,
+        "p95": 99.99609375
+      },
+      "presentedFrames": {
+        "count": 68,
+        "median": 18.343,
+        "p95": 86.155
+      },
+      "partialFrames": {
+        "count": 2,
+        "median": 2.004,
+        "p95": 13.426
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 13,
+          "median": 17.221,
+          "p95": 19.74
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 68,
+          "median": 18.343,
+          "p95": 86.155
+        },
+        "STATE_DROPPED": {
+          "count": 44,
+          "median": 17.072,
+          "p95": 17.908
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 2,
+          "median": 2.004,
+          "p95": 13.426
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "universe",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 30
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "ocean",
+      "response": {
+        "median": 83.93658300000243,
+        "p95": 131.17341599999781
+      },
+      "captureCadence": {
+        "median": 16.666259765625,
+        "p95": 66.664794921875
+      },
+      "presentedFrames": {
+        "count": 66,
+        "median": 15.274,
+        "p95": 67.358
+      },
+      "partialFrames": {
+        "count": 1,
+        "median": 10.336,
+        "p95": 10.336
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 12,
+          "median": 17.286,
+          "p95": 18.97
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 66,
+          "median": 15.274,
+          "p95": 67.358
+        },
+        "STATE_DROPPED": {
+          "count": 31,
+          "median": 17.229,
+          "p95": 18.162
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 1,
+          "median": 10.336,
+          "p95": 10.336
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 31
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "light",
+      "appearance": "off",
+      "response": {
+        "median": 33.64008299999114,
+        "p95": 98.30154199998651
+      },
+      "captureCadence": {
+        "median": 16.666015625,
+        "p95": 33.3330078125
+      },
+      "presentedFrames": {
+        "count": 52,
+        "median": 13.726,
+        "p95": 28.045
+      },
+      "partialFrames": {
+        "count": 1,
+        "median": 2.659,
+        "p95": 2.659
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 3,
+          "median": 17.157,
+          "p95": 17.891
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 52,
+          "median": 13.726,
+          "p95": 28.045
+        },
+        "STATE_DROPPED": {
+          "count": 2,
+          "median": 17.347,
+          "p95": 17.884
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 1,
+          "median": 2.659,
+          "p95": 2.659
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 32
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "light",
+      "appearance": "pearl",
+      "response": {
+        "median": 48.23220900000888,
+        "p95": 98.02337500000431
+      },
+      "captureCadence": {
+        "median": 16.666748046875,
+        "p95": 33.332763671875
+      },
+      "presentedFrames": {
+        "count": 48,
+        "median": 15.02,
+        "p95": 35.828
+      },
+      "partialFrames": {
+        "count": 2,
+        "median": 3.759,
+        "p95": 8.501
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 6,
+          "median": 16.787,
+          "p95": 17.237
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 48,
+          "median": 15.02,
+          "p95": 35.828
+        },
+        "STATE_DROPPED": {
+          "count": 11,
+          "median": 20.298,
+          "p95": 35.321
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 2,
+          "median": 3.759,
+          "p95": 8.501
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "pearl",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 34
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "light",
+      "appearance": "dawn",
+      "response": {
+        "median": 41.51808300000266,
+        "p95": 43.27749999999651
+      },
+      "captureCadence": {
+        "median": 16.666015625,
+        "p95": 33.33203125
+      },
+      "presentedFrames": {
+        "count": 44,
+        "median": 11.228,
+        "p95": 27.774
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 8,
+          "median": 2.62,
+          "p95": 17.824
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 44,
+          "median": 11.228,
+          "p95": 27.774
+        },
+        "STATE_DROPPED": {
+          "count": 5,
+          "median": 26.209,
+          "p95": 42.321
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "dawn",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 35
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "light",
+      "appearance": "ocean",
+      "response": {
+        "median": 67.02550000000338,
+        "p95": 117.0861670000013
+      },
+      "captureCadence": {
+        "median": 16.666748046875,
+        "p95": 49.998046875
+      },
+      "presentedFrames": {
+        "count": 65,
+        "median": 15.825,
+        "p95": 45.615
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 2.911,
+        "p95": 14.101
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 25,
+          "median": 16.834,
+          "p95": 18.392
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 65,
+          "median": 15.825,
+          "p95": 45.615
+        },
+        "STATE_DROPPED": {
+          "count": 3,
+          "median": 17.367,
+          "p95": 18.122
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 2.911,
+          "p95": 14.101
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 36
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "off",
+      "response": {
+        "median": 33.370292000006884,
+        "p95": 132.1761669999978
+      },
+      "captureCadence": {
+        "median": 16.666259765625,
+        "p95": 33.33203125
+      },
+      "presentedFrames": {
+        "count": 48,
+        "median": 17.687,
+        "p95": 37.648
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 5,
+          "median": 17.069,
+          "p95": 18.834
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 48,
+          "median": 17.687,
+          "p95": 37.648
+        },
+        "STATE_DROPPED": {
+          "count": 3,
+          "median": 18.304,
+          "p95": 19.969
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 37
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "atmosphere",
+      "response": {
+        "median": 36.37391700000444,
+        "p95": 50.85866699999315
+      },
+      "captureCadence": {
+        "median": 16.667236328125,
+        "p95": 33.3330078125
+      },
+      "presentedFrames": {
+        "count": 41,
+        "median": 13.134,
+        "p95": 35.803
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 5,
+          "median": 16.91,
+          "p95": 19.979
+        },
+        "STATE_DROPPED": {
+          "count": 13,
+          "median": 20.928,
+          "p95": 22.903
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 41,
+          "median": 13.134,
+          "p95": 35.803
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 39
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "mist",
+      "response": {
+        "median": 51.34779200000048,
+        "p95": 63.80466599999636
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 49.998046875
+      },
+      "presentedFrames": {
+        "count": 44,
+        "median": 13.521,
+        "p95": 38.445
+      },
+      "partialFrames": {
+        "count": 0,
+        "median": null,
+        "p95": null
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 13,
+          "median": 16.696,
+          "p95": 17.183
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 44,
+          "median": 13.521,
+          "p95": 38.445
+        },
+        "STATE_DROPPED": {
+          "count": 14,
+          "median": 18.713,
+          "p95": 46.794
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "mist",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 40
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "universe",
+      "response": {
+        "median": 116.08904199999233,
+        "p95": 152.67070799999055
+      },
+      "captureCadence": {
+        "median": 33.3330078125,
+        "p95": 116.66064453125
+      },
+      "presentedFrames": {
+        "count": 60,
+        "median": 14.697,
+        "p95": 101.738
+      },
+      "partialFrames": {
+        "count": 1,
+        "median": 10.083,
+        "p95": 10.083
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 19,
+          "median": 17.267,
+          "p95": 25.576
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 60,
+          "median": 14.697,
+          "p95": 101.738
+        },
+        "STATE_DROPPED": {
+          "count": 54,
+          "median": 17.089,
+          "p95": 19.383
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 1,
+          "median": 10.083,
+          "p95": 10.083
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "universe",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 41
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 16,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "ocean",
+      "response": {
+        "median": 84.6717079999944,
+        "p95": 160.9181249999965
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 99.99609375
+      },
+      "presentedFrames": {
+        "count": 62,
+        "median": 12.508,
+        "p95": 79.172
+      },
+      "partialFrames": {
+        "count": 2,
+        "median": 3.618,
+        "p95": 4.37
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 16,
+          "median": 17.101,
+          "p95": 21.089
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 62,
+          "median": 12.508,
+          "p95": 79.172
+        },
+        "STATE_DROPPED": {
+          "count": 40,
+          "median": 17.275,
+          "p95": 20.62
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 2,
+          "median": 3.618,
+          "p95": 4.37
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 42
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "light",
+      "appearance": "off",
+      "response": {
+        "median": 130.9695839999913,
+        "p95": 398.8887919999979
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 66.6640625
+      },
+      "presentedFrames": {
+        "count": 93,
+        "median": 24.81,
+        "p95": 57.956
+      },
+      "partialFrames": {
+        "count": 7,
+        "median": 11.377,
+        "p95": 19.196
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 28,
+          "median": 16.91,
+          "p95": 17.501
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 93,
+          "median": 24.81,
+          "p95": 57.956
+        },
+        "STATE_DROPPED": {
+          "count": 41,
+          "median": 17.19,
+          "p95": 29.682
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 7,
+          "median": 11.377,
+          "p95": 19.196
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "pearl",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 1
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 4,
+        "Texture": 8,
+        "Program": 1,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 1
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "light",
+      "appearance": "pearl",
+      "response": {
+        "median": 152.79462500000955,
+        "p95": 444.9020829999936
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 149.993896484375
+      },
+      "presentedFrames": {
+        "count": 103,
+        "median": 25.724,
+        "p95": 59.954
+      },
+      "partialFrames": {
+        "count": 14,
+        "median": 12.099,
+        "p95": 21.102
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 34,
+          "median": 16.87,
+          "p95": 18.52
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 103,
+          "median": 25.724,
+          "p95": 59.954
+        },
+        "STATE_DROPPED": {
+          "count": 59,
+          "median": 17.237,
+          "p95": 20.285
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 14,
+          "median": 12.099,
+          "p95": 21.102
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "pearl",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 2
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 4,
+        "Texture": 8,
+        "Program": 1,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 1
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "light",
+      "appearance": "dawn",
+      "response": {
+        "median": 211.44483300000138,
+        "p95": 449.2210829999967
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 149.993896484375
+      },
+      "presentedFrames": {
+        "count": 104,
+        "median": 25.899,
+        "p95": 92.363
+      },
+      "partialFrames": {
+        "count": 18,
+        "median": 10.364,
+        "p95": 19.534
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 48,
+          "median": 17.515,
+          "p95": 36.668
+        },
+        "STATE_DROPPED": {
+          "count": 94,
+          "median": 17.055,
+          "p95": 20.469
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 104,
+          "median": 25.899,
+          "p95": 92.363
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 18,
+          "median": 10.364,
+          "p95": 19.534
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "dawn",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 3
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 4,
+        "Texture": 8,
+        "Program": 1,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 1
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "light",
+      "appearance": "ocean",
+      "response": {
+        "median": 298.53595800000767,
+        "p95": 554.3397509999922
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 183.325927734375
+      },
+      "presentedFrames": {
+        "count": 110,
+        "median": 27.018,
+        "p95": 176.182
+      },
+      "partialFrames": {
+        "count": 18,
+        "median": 17.205,
+        "p95": 21.15
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 44,
+          "median": 19.696,
+          "p95": 37.01
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 110,
+          "median": 27.018,
+          "p95": 176.182
+        },
+        "STATE_DROPPED": {
+          "count": 166,
+          "median": 16.666,
+          "p95": 19.714
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 18,
+          "median": 17.205,
+          "p95": 21.15
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 4
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 8,
+        "Texture": 8,
+        "Program": 2,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 2
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "off",
+      "response": {
+        "median": 125.515625,
+        "p95": 364.1882500000065
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 66.6630859375
+      },
+      "presentedFrames": {
+        "count": 95,
+        "median": 26.313,
+        "p95": 59.13
+      },
+      "partialFrames": {
+        "count": 13,
+        "median": 10.715,
+        "p95": 20.25
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 28,
+          "median": 16.859,
+          "p95": 18.225
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 95,
+          "median": 26.313,
+          "p95": 59.13
+        },
+        "STATE_DROPPED": {
+          "count": 39,
+          "median": 17.481,
+          "p95": 20.521
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 13,
+          "median": 10.715,
+          "p95": 20.25
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 5
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 8,
+        "Texture": 8,
+        "Program": 2,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 2
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "atmosphere",
+      "response": {
+        "median": 167.916000000012,
+        "p95": 265.03262499999255
+      },
+      "captureCadence": {
+        "median": 33.3330078125,
+        "p95": 68.3828125
+      },
+      "presentedFrames": {
+        "count": 101,
+        "median": 25.07,
+        "p95": 63.21
+      },
+      "partialFrames": {
+        "count": 9,
+        "median": 18.368,
+        "p95": 20.916
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 27,
+          "median": 16.819,
+          "p95": 18.545
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 101,
+          "median": 25.07,
+          "p95": 63.21
+        },
+        "STATE_DROPPED": {
+          "count": 65,
+          "median": 17.049,
+          "p95": 20.784
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 9,
+          "median": 18.368,
+          "p95": 20.916
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 6
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 8,
+        "Texture": 8,
+        "Program": 2,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 2
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "mist",
+      "response": {
+        "median": 186.60674999999173,
+        "p95": 296.471292000002
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 133.327880859375
+      },
+      "presentedFrames": {
+        "count": 96,
+        "median": 27.245,
+        "p95": 156.622
+      },
+      "partialFrames": {
+        "count": 17,
+        "median": 13.429,
+        "p95": 19.437
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 41,
+          "median": 17.279,
+          "p95": 36.307
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 96,
+          "median": 27.245,
+          "p95": 156.622
+        },
+        "STATE_DROPPED": {
+          "count": 87,
+          "median": 17.019,
+          "p95": 25.821
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 17,
+          "median": 13.429,
+          "p95": 19.437
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "mist",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 7
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 12,
+        "Texture": 8,
+        "Program": 3,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 3
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "universe",
+      "response": {
+        "median": 380.416916999995,
+        "p95": 500.062334000002
+      },
+      "captureCadence": {
+        "median": 33.332763671875,
+        "p95": 284.376953125
+      },
+      "presentedFrames": {
+        "count": 97,
+        "median": 26.49,
+        "p95": 278.158
+      },
+      "partialFrames": {
+        "count": 12,
+        "median": 11.656,
+        "p95": 20.843
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 33,
+          "median": 16.865,
+          "p95": 33.524
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 97,
+          "median": 26.49,
+          "p95": 278.158
+        },
+        "STATE_DROPPED": {
+          "count": 222,
+          "median": 17.089,
+          "p95": 20.372
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 12,
+          "median": 11.656,
+          "p95": 20.843
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "universe",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 8
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 20,
+        "Texture": 8,
+        "Program": 5,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 5
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "ocean",
+      "response": {
+        "median": 303.68150000000605,
+        "p95": 453.99279200000456
+      },
+      "captureCadence": {
+        "median": 49.997802734375,
+        "p95": 199.991943359375
+      },
+      "presentedFrames": {
+        "count": 102,
+        "median": 25.308,
+        "p95": 213.018
+      },
+      "partialFrames": {
+        "count": 12,
+        "median": 9.591,
+        "p95": 25.672
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 34,
+          "median": 16.998,
+          "p95": 18.808
+        },
+        "STATE_DROPPED": {
+          "count": 176,
+          "median": 17.25,
+          "p95": 20.755
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 102,
+          "median": 25.308,
+          "p95": 213.018
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 12,
+          "median": 9.591,
+          "p95": 25.672
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 9
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "light",
+      "appearance": "off",
+      "response": {
+        "median": 135.38666599997669,
+        "p95": 276.65004200002295
+      },
+      "captureCadence": {
+        "median": 33.3310546875,
+        "p95": 83.330078125
+      },
+      "presentedFrames": {
+        "count": 105,
+        "median": 27.484,
+        "p95": 62.001
+      },
+      "partialFrames": {
+        "count": 22,
+        "median": 11.53,
+        "p95": 19.814
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 34,
+          "median": 17.083,
+          "p95": 19.34
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 105,
+          "median": 27.484,
+          "p95": 62.001
+        },
+        "STATE_DROPPED": {
+          "count": 38,
+          "median": 17.344,
+          "p95": 28.153
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 22,
+          "median": 11.53,
+          "p95": 19.814
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 10
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "light",
+      "appearance": "pearl",
+      "response": {
+        "median": 173.75095899999724,
+        "p95": 258.7518749999872
+      },
+      "captureCadence": {
+        "median": 33.332275390625,
+        "p95": 83.330810546875
+      },
+      "presentedFrames": {
+        "count": 105,
+        "median": 28.157,
+        "p95": 80.83
+      },
+      "partialFrames": {
+        "count": 19,
+        "median": 18.506,
+        "p95": 22.748
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 32,
+          "median": 16.919,
+          "p95": 33.602
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 105,
+          "median": 28.157,
+          "p95": 80.83
+        },
+        "STATE_DROPPED": {
+          "count": 65,
+          "median": 17.169,
+          "p95": 19.74
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 19,
+          "median": 18.506,
+          "p95": 22.748
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "pearl",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 12
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "light",
+      "appearance": "dawn",
+      "response": {
+        "median": 201.6193750000093,
+        "p95": 316.2857920000097
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 99.996826171875
+      },
+      "presentedFrames": {
+        "count": 101,
+        "median": 26.059,
+        "p95": 91.796
+      },
+      "partialFrames": {
+        "count": 16,
+        "median": 11.008,
+        "p95": 20.044
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 46,
+          "median": 18.026,
+          "p95": 36.673
+        },
+        "STATE_DROPPED": {
+          "count": 79,
+          "median": 16.974,
+          "p95": 19.789
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 101,
+          "median": 26.059,
+          "p95": 91.796
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 16,
+          "median": 11.008,
+          "p95": 20.044
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "dawn",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 13
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "light",
+      "appearance": "ocean",
+      "response": {
+        "median": 317.2123749999737,
+        "p95": 416.95791599998483
+      },
+      "captureCadence": {
+        "median": 33.333251953125,
+        "p95": 183.326904296875
+      },
+      "presentedFrames": {
+        "count": 105,
+        "median": 26.728,
+        "p95": 191.164
+      },
+      "partialFrames": {
+        "count": 15,
+        "median": 16.223,
+        "p95": 23.995
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 43,
+          "median": 18.606,
+          "p95": 36.861
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 105,
+          "median": 26.728,
+          "p95": 191.164
+        },
+        "STATE_DROPPED": {
+          "count": 163,
+          "median": 16.666,
+          "p95": 20.062
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 15,
+          "median": 16.223,
+          "p95": 23.995
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 14
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "off",
+      "response": {
+        "median": 147.31016699998872,
+        "p95": 282.284249999997
+      },
+      "captureCadence": {
+        "median": 33.331298828125,
+        "p95": 66.6640625
+      },
+      "presentedFrames": {
+        "count": 103,
+        "median": 27.852,
+        "p95": 58.792
+      },
+      "partialFrames": {
+        "count": 18,
+        "median": 18.867,
+        "p95": 24.236
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 31,
+          "median": 16.901,
+          "p95": 18.354
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 103,
+          "median": 27.852,
+          "p95": 58.792
+        },
+        "STATE_DROPPED": {
+          "count": 44,
+          "median": 17.192,
+          "p95": 20.55
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 18,
+          "median": 18.867,
+          "p95": 24.236
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 15
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "atmosphere",
+      "response": {
+        "median": 173.55066700000316,
+        "p95": 250.61566599999787
+      },
+      "captureCadence": {
+        "median": 33.332275390625,
+        "p95": 99.9951171875
+      },
+      "presentedFrames": {
+        "count": 104,
+        "median": 26.455,
+        "p95": 72.354
+      },
+      "partialFrames": {
+        "count": 18,
+        "median": 12.932,
+        "p95": 21.071
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 33,
+          "median": 16.898,
+          "p95": 18.889
+        },
+        "STATE_DROPPED": {
+          "count": 62,
+          "median": 17.011,
+          "p95": 20.689
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 104,
+          "median": 26.455,
+          "p95": 72.354
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 18,
+          "median": 12.932,
+          "p95": 21.071
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 17
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "mist",
+      "response": {
+        "median": 171.71375000002445,
+        "p95": 304.50420799999847
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 116.6630859375
+      },
+      "presentedFrames": {
+        "count": 98,
+        "median": 25.22,
+        "p95": 108.873
+      },
+      "partialFrames": {
+        "count": 10,
+        "median": 12.294,
+        "p95": 20.694
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 41,
+          "median": 17.97,
+          "p95": 36.969
+        },
+        "STATE_DROPPED": {
+          "count": 82,
+          "median": 16.966,
+          "p95": 19.977
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 98,
+          "median": 25.22,
+          "p95": 108.873
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 10,
+          "median": 12.294,
+          "p95": 20.694
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "mist",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 18
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "universe",
+      "response": {
+        "median": 419.6525419999962,
+        "p95": 678.857708000025
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 416.650146484375
+      },
+      "presentedFrames": {
+        "count": 99,
+        "median": 26.727,
+        "p95": 350.072
+      },
+      "partialFrames": {
+        "count": 17,
+        "median": 11.095,
+        "p95": 20.601
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 37,
+          "median": 17.542,
+          "p95": 36.973
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 99,
+          "median": 26.727,
+          "p95": 350.072
+        },
+        "STATE_DROPPED": {
+          "count": 250,
+          "median": 17.309,
+          "p95": 20.252
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 17,
+          "median": 11.095,
+          "p95": 20.601
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "universe",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 19
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 1440,
+      "height": 960,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "ocean",
+      "response": {
+        "median": 320.92654200000106,
+        "p95": 462.29945799999405
+      },
+      "captureCadence": {
+        "median": 33.332275390625,
+        "p95": 283.322021484375
+      },
+      "presentedFrames": {
+        "count": 103,
+        "median": 25.52,
+        "p95": 218.183
+      },
+      "partialFrames": {
+        "count": 11,
+        "median": 11.102,
+        "p95": 20.203
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 28,
+          "median": 16.853,
+          "p95": 17.979
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 103,
+          "median": 25.52,
+          "p95": 218.183
+        },
+        "STATE_DROPPED": {
+          "count": 189,
+          "median": 17.115,
+          "p95": 20.69
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 11,
+          "median": 11.102,
+          "p95": 20.203
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 20
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "light",
+      "appearance": "off",
+      "response": {
+        "median": 86.45483299999614,
+        "p95": 201.56233299997984
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 99.994873046875
+      },
+      "presentedFrames": {
+        "count": 81,
+        "median": 19.316,
+        "p95": 59.636
+      },
+      "partialFrames": {
+        "count": 7,
+        "median": 5.545,
+        "p95": 15.774
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 17,
+          "median": 17.534,
+          "p95": 20.085
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 81,
+          "median": 19.316,
+          "p95": 59.636
+        },
+        "STATE_DROPPED": {
+          "count": 26,
+          "median": 17.43,
+          "p95": 20.072
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 7,
+          "median": 5.545,
+          "p95": 15.774
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 21
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "light",
+      "appearance": "pearl",
+      "response": {
+        "median": 105.61437499997555,
+        "p95": 245.3535409999895
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 66.665283203125
+      },
+      "presentedFrames": {
+        "count": 81,
+        "median": 18.838,
+        "p95": 68.616
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 7.408,
+        "p95": 13.592
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 22,
+          "median": 16.984,
+          "p95": 18.618
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 81,
+          "median": 18.838,
+          "p95": 68.616
+        },
+        "STATE_DROPPED": {
+          "count": 32,
+          "median": 17.343,
+          "p95": 20.782
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 7.408,
+          "p95": 13.592
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "pearl",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 23
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "light",
+      "appearance": "dawn",
+      "response": {
+        "median": 115.93283400000655,
+        "p95": 219.9170419999864
+      },
+      "captureCadence": {
+        "median": 33.332275390625,
+        "p95": 99.9970703125
+      },
+      "presentedFrames": {
+        "count": 85,
+        "median": 19.875,
+        "p95": 72.673
+      },
+      "partialFrames": {
+        "count": 10,
+        "median": 5.834,
+        "p95": 15.175
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 26,
+          "median": 17.06,
+          "p95": 19.926
+        },
+        "STATE_DROPPED": {
+          "count": 39,
+          "median": 17.466,
+          "p95": 22.22
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 85,
+          "median": 19.875,
+          "p95": 72.673
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 10,
+          "median": 5.834,
+          "p95": 15.175
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "dawn",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 24
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "light",
+      "appearance": "ocean",
+      "response": {
+        "median": 116.07004099999904,
+        "p95": 214.1700000000128
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 99.99609375
+      },
+      "presentedFrames": {
+        "count": 84,
+        "median": 19.447,
+        "p95": 81.368
+      },
+      "partialFrames": {
+        "count": 8,
+        "median": 5.34,
+        "p95": 15.417
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 27,
+          "median": 16.842,
+          "p95": 19.595
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 84,
+          "median": 19.447,
+          "p95": 81.368
+        },
+        "STATE_DROPPED": {
+          "count": 36,
+          "median": 17.552,
+          "p95": 20.211
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 8,
+          "median": 5.34,
+          "p95": 15.417
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 25
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "off",
+      "response": {
+        "median": 97.85308300002362,
+        "p95": 250.24324999999953
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 66.6650390625
+      },
+      "presentedFrames": {
+        "count": 92,
+        "median": 19.541,
+        "p95": 53.024
+      },
+      "partialFrames": {
+        "count": 12,
+        "median": 4.752,
+        "p95": 14.879
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 18,
+          "median": 17.393,
+          "p95": 20.232
+        },
+        "STATE_DROPPED": {
+          "count": 25,
+          "median": 17.402,
+          "p95": 20.456
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 92,
+          "median": 19.541,
+          "p95": 53.024
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 12,
+          "median": 4.752,
+          "p95": 14.879
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 26
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "atmosphere",
+      "response": {
+        "median": 118.23729200000525,
+        "p95": 183.95300000000861
+      },
+      "captureCadence": {
+        "median": 33.331787109375,
+        "p95": 67.5107421875
+      },
+      "presentedFrames": {
+        "count": 88,
+        "median": 19.697,
+        "p95": 69.091
+      },
+      "partialFrames": {
+        "count": 12,
+        "median": 4.374,
+        "p95": 14.916
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 18,
+          "median": 17.277,
+          "p95": 20.609
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 88,
+          "median": 19.697,
+          "p95": 69.091
+        },
+        "STATE_DROPPED": {
+          "count": 32,
+          "median": 17.3,
+          "p95": 20.678
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 12,
+          "median": 4.374,
+          "p95": 14.916
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 28
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "mist",
+      "response": {
+        "median": 87.81825000001118,
+        "p95": 254.66895900000236
+      },
+      "captureCadence": {
+        "median": 33.331787109375,
+        "p95": 66.6640625
+      },
+      "presentedFrames": {
+        "count": 88,
+        "median": 19.524,
+        "p95": 64.546
+      },
+      "partialFrames": {
+        "count": 12,
+        "median": 5.3,
+        "p95": 15.342
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 27,
+          "median": 16.917,
+          "p95": 18.434
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 12,
+          "median": 5.3,
+          "p95": 15.342
+        },
+        "STATE_DROPPED": {
+          "count": 26,
+          "median": 17.055,
+          "p95": 22.399
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 88,
+          "median": 19.524,
+          "p95": 64.546
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "mist",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 29
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "universe",
+      "response": {
+        "median": 149.68337499999325,
+        "p95": 265.4880830000038
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 116.661865234375
+      },
+      "presentedFrames": {
+        "count": 83,
+        "median": 20.643,
+        "p95": 110.209
+      },
+      "partialFrames": {
+        "count": 12,
+        "median": 4.188,
+        "p95": 15.339
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 19,
+          "median": 17.428,
+          "p95": 19.524
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 83,
+          "median": 20.643,
+          "p95": 110.209
+        },
+        "STATE_DROPPED": {
+          "count": 68,
+          "median": 17.083,
+          "p95": 19.792
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 12,
+          "median": 4.188,
+          "p95": 15.339
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "universe",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 30
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 1,
+      "theme": "dark",
+      "appearance": "ocean",
+      "response": {
+        "median": 133.90499999999884,
+        "p95": 239.59083400000236
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 116.662109375
+      },
+      "presentedFrames": {
+        "count": 79,
+        "median": 19.697,
+        "p95": 107.984
+      },
+      "partialFrames": {
+        "count": 5,
+        "median": 4.193,
+        "p95": 14.057
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 19,
+          "median": 17.142,
+          "p95": 18.848
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 79,
+          "median": 19.697,
+          "p95": 107.984
+        },
+        "STATE_DROPPED": {
+          "count": 58,
+          "median": 17.32,
+          "p95": 20.329
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 5,
+          "median": 4.193,
+          "p95": 14.057
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 31
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "light",
+      "appearance": "off",
+      "response": {
+        "median": 102.93445800000336,
+        "p95": 166.79879200001596
+      },
+      "captureCadence": {
+        "median": 16.666748046875,
+        "p95": 49.9990234375
+      },
+      "presentedFrames": {
+        "count": 86,
+        "median": 20.473,
+        "p95": 54.91
+      },
+      "partialFrames": {
+        "count": 10,
+        "median": 3.435,
+        "p95": 14.897
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 18,
+          "median": 17.503,
+          "p95": 19.833
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 86,
+          "median": 20.473,
+          "p95": 54.91
+        },
+        "STATE_DROPPED": {
+          "count": 30,
+          "median": 17.395,
+          "p95": 20.465
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 10,
+          "median": 3.435,
+          "p95": 14.897
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 32
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "light",
+      "appearance": "pearl",
+      "response": {
+        "median": 87.75104200001806,
+        "p95": 233.27029200000106
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 66.6640625
+      },
+      "presentedFrames": {
+        "count": 76,
+        "median": 17.646,
+        "p95": 68.782
+      },
+      "partialFrames": {
+        "count": 4,
+        "median": 2.7,
+        "p95": 12.784
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 17,
+          "median": 17.003,
+          "p95": 19.868
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 76,
+          "median": 17.646,
+          "p95": 68.782
+        },
+        "STATE_DROPPED": {
+          "count": 33,
+          "median": 17.364,
+          "p95": 20.344
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 4,
+          "median": 2.7,
+          "p95": 12.784
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "pearl",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 34
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "light",
+      "appearance": "dawn",
+      "response": {
+        "median": 112.57345799999894,
+        "p95": 216.45000000001164
+      },
+      "captureCadence": {
+        "median": 33.3310546875,
+        "p95": 83.330078125
+      },
+      "presentedFrames": {
+        "count": 91,
+        "median": 19.197,
+        "p95": 63.578
+      },
+      "partialFrames": {
+        "count": 8,
+        "median": 3.602,
+        "p95": 15.297
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 26,
+          "median": 17.24,
+          "p95": 19.53
+        },
+        "STATE_DROPPED": {
+          "count": 31,
+          "median": 17.827,
+          "p95": 20.129
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 91,
+          "median": 19.197,
+          "p95": 63.578
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 8,
+          "median": 3.602,
+          "p95": 15.297
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "dawn",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 35
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "light",
+      "appearance": "ocean",
+      "response": {
+        "median": 149.46287499999744,
+        "p95": 235.16358399999444
+      },
+      "captureCadence": {
+        "median": 33.3330078125,
+        "p95": 149.994140625
+      },
+      "presentedFrames": {
+        "count": 90,
+        "median": 20.328,
+        "p95": 98.959
+      },
+      "partialFrames": {
+        "count": 13,
+        "median": 6.984,
+        "p95": 14.99
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 31,
+          "median": 16.928,
+          "p95": 19.628
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 90,
+          "median": 20.328,
+          "p95": 98.959
+        },
+        "STATE_DROPPED": {
+          "count": 48,
+          "median": 17.752,
+          "p95": 20.747
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 13,
+          "median": 6.984,
+          "p95": 14.99
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 36
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "off",
+      "response": {
+        "median": 100.18920799999614,
+        "p95": 224.4163750000007
+      },
+      "captureCadence": {
+        "median": 16.6669921875,
+        "p95": 49.9990234375
+      },
+      "presentedFrames": {
+        "count": 84,
+        "median": 19.503,
+        "p95": 55.097
+      },
+      "partialFrames": {
+        "count": 7,
+        "median": 7.887,
+        "p95": 15.296
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 14,
+          "median": 17.02,
+          "p95": 18.018
+        },
+        "STATE_DROPPED": {
+          "count": 36,
+          "median": 17.366,
+          "p95": 20.53
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 84,
+          "median": 19.503,
+          "p95": 55.097
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 7,
+          "median": 7.887,
+          "p95": 15.296
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": false,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 37
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "atmosphere",
+      "response": {
+        "median": 86.77079199999571,
+        "p95": 231.07829099998344
+      },
+      "captureCadence": {
+        "median": 33.3310546875,
+        "p95": 83.3310546875
+      },
+      "presentedFrames": {
+        "count": 78,
+        "median": 19.823,
+        "p95": 64.198
+      },
+      "partialFrames": {
+        "count": 6,
+        "median": 3.299,
+        "p95": 15.082
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 18,
+          "median": 17.391,
+          "p95": 20.713
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 78,
+          "median": 19.823,
+          "p95": 64.198
+        },
+        "STATE_DROPPED": {
+          "count": 32,
+          "median": 17.505,
+          "p95": 22.423
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 6,
+          "median": 3.299,
+          "p95": 15.082
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "atmosphere",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 39
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "mist",
+      "response": {
+        "median": 131.08741700000246,
+        "p95": 217.6952089999977
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 83.3310546875
+      },
+      "presentedFrames": {
+        "count": 90,
+        "median": 19.546,
+        "p95": 78.023
+      },
+      "partialFrames": {
+        "count": 7,
+        "median": 8.029,
+        "p95": 13.602
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 17,
+          "median": 17.364,
+          "p95": 18.189
+        },
+        "STATE_DROPPED": {
+          "count": 38,
+          "median": 17.993,
+          "p95": 20.766
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 90,
+          "median": 19.546,
+          "p95": 78.023
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 7,
+          "median": 8.029,
+          "p95": 13.602
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "mist",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 40
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "universe",
+      "response": {
+        "median": 199.26137500000186,
+        "p95": 360.47704199998407
+      },
+      "captureCadence": {
+        "median": 33.33203125,
+        "p95": 149.994140625
+      },
+      "presentedFrames": {
+        "count": 91,
+        "median": 20.509,
+        "p95": 134.472
+      },
+      "partialFrames": {
+        "count": 14,
+        "median": 3.977,
+        "p95": 15.246
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 23,
+          "median": 17.579,
+          "p95": 19.611
+        },
+        "STATE_DROPPED": {
+          "count": 103,
+          "median": 17.505,
+          "p95": 22.182
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 91,
+          "median": 20.509,
+          "p95": 134.472
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 14,
+          "median": 3.977,
+          "p95": 15.246
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "universe",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 41
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    },
+    {
+      "objects": 80,
+      "width": 390,
+      "height": 844,
+      "run": 2,
+      "theme": "dark",
+      "appearance": "ocean",
+      "response": {
+        "median": 149.15499999999884,
+        "p95": 333.8119589999842
+      },
+      "captureCadence": {
+        "median": 33.3330078125,
+        "p95": 116.662841796875
+      },
+      "presentedFrames": {
+        "count": 85,
+        "median": 20.268,
+        "p95": 101.037
+      },
+      "partialFrames": {
+        "count": 10,
+        "median": 3.31,
+        "p95": 14.654
+      },
+      "frameStates": {
+        "STATE_NO_UPDATE_DESIRED": {
+          "count": 23,
+          "median": 17.722,
+          "p95": 20.699
+        },
+        "STATE_PRESENTED_ALL": {
+          "count": 85,
+          "median": 20.268,
+          "p95": 101.037
+        },
+        "STATE_DROPPED": {
+          "count": 65,
+          "median": 17.262,
+          "p95": 20.342
+        },
+        "STATE_PRESENTED_PARTIAL": {
+          "count": 10,
+          "median": 3.31,
+          "p95": 14.654
+        }
+      },
+      "panels": [
+        "navigation",
+        "object details: Provobjekt 00"
+      ],
+      "savedSettings": {
+        "invertX": false,
+        "invertY": false,
+        "axisCorner": "bottom-right",
+        "axisPinned": false,
+        "allLabels": false,
+        "background": true,
+        "lightBackground": "ocean",
+        "darkBackground": "ocean",
+        "panStrength": 0.7,
+        "zoomStrength": 0.7,
+        "layerDistance": 1,
+        "version": 42
+      },
+      "operation": "Rotera v\u00e4nster, ordinary navigation button activated with Enter",
+      "devicePixelRatio": 1,
+      "liveGraphicsResources": {
+        "Buffer": 24,
+        "Texture": 8,
+        "Program": 6,
+        "Shader": 0,
+        "Framebuffer": 6,
+        "Renderbuffer": 0,
+        "VertexArray": 6
+      },
+      "positionsPreserved": true
+    }
+  ]
+}

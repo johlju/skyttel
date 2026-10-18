@@ -9,6 +9,7 @@ import {
 import { assertContentVersion } from './content-maintenance.js';
 import { householdMap } from './map.js';
 import { MapError } from './map-error.js';
+import { viewSettingsSchema } from './view-settings-schema.js';
 
 const version = z
   .number()
@@ -28,16 +29,7 @@ const preferences = z
   .object({
     version,
     contentVersion: z.number().int().min(1).optional(),
-    settings: z
-      .object({
-        invertX: z.boolean(),
-        invertY: z.boolean(),
-        axisCorner: z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']),
-        axisPinned: z.boolean(),
-        stars: z.boolean(),
-        allLabels: z.boolean(),
-      })
-      .strict(),
+    settings: viewSettingsSchema,
   })
   .strict();
 

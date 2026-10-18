@@ -155,8 +155,10 @@ test('retained definitions, generic merge history, revoked owners, all private d
       .prepare('INSERT INTO personal_position VALUES (?, ?, ?, 3, 9, 8, 7)')
       .run(householdId, userId, 'absorbed');
     fixture.database
-      .prepare('INSERT INTO personal_view_settings VALUES (?, ?, 4, ?)')
-      .run(householdId, userId, JSON.stringify({ ...defaultViewSettings, stars: true }));
+      .prepare(
+        'INSERT INTO personal_view_settings (householdId, userId, version, settings) VALUES (?, ?, 4, ?)',
+      )
+      .run(householdId, userId, JSON.stringify({ ...defaultViewSettings, background: true }));
   })();
   expect((await client.json(`${path}/members/${userId}/revoke`, {})).status).toBe(200);
   const { content, parts } = await archive();
@@ -207,7 +209,8 @@ test('retained definitions, generic merge history, revoked owners, all private d
     householdId,
     userId,
     version: 4,
-    settings: { ...defaultViewSettings, stars: true },
+    backgroundVersion: 1,
+    settings: { ...defaultViewSettings, background: true },
   });
   expect(content.images.map((image: { id: string }) => image.id)).toEqual(['copied', 'original']);
   let offset = 0;
@@ -667,7 +670,7 @@ test('an administrator downloads a versioned complete archive with private state
     (
       await client.json(`${path}/map/view/settings`, {
         version: 0,
-        settings: { ...defaultViewSettings, stars: true },
+        settings: { ...defaultViewSettings, background: true },
       })
     ).status,
   ).toBe(200);
@@ -701,7 +704,7 @@ test('an administrator downloads a versioned complete archive with private state
   expect(content.saves[0].receipt).toEqual(saved.receipt);
   expect(content.drafts[0].changes).toEqual(draft.changes);
   expect(content.positions[0]).toMatchObject({ objectId: 'lamp', x: 3, y: -2, z: 7 });
-  expect(content.viewSettings[0].settings.stars).toBe(true);
+  expect(content.viewSettings[0].settings.background).toBe(true);
   expect(content.identities).toEqual([{ id: state.userId, name: 'Alex Exempel' }]);
   const encoded = Buffer.from(parts['content.json']).toString();
   for (const excluded of [

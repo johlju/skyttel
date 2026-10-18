@@ -189,6 +189,10 @@ kartans placeringar. Valet **Alla etiketter** behålls. Det ändrar inga
 hushållsuppgifter. Återställningen tömmer kamerans vyhistorik. Både
 **Föregående vy** och **Återställ vy** blir dimmade. Återställningsknappen
 aktiveras igen när kameran, sökningen, filtren eller markeringen ändras.
+Om bakgrunden fortsätter från en stilla vy efter minskad rörelse kan
+**Återställ vy** också användas när kartkameran redan är återställd.
+Den återger då bakgrundens vanliga koppling till kartan. Med minskad
+rörelse återställer handlingen endast kartan; bakgrunden ligger kvar.
 Översikten visar de etiketter som får plats utan överlappning. Ett valt
 sambands etikett får plats först, sedan objektnamn och därefter automatiska
 sambandsetiketter. Etiketter för nya, borttagna och ändrade samband i
@@ -331,17 +335,78 @@ flyttknapparna; kameraknapparna finns kvar även vid tomt urval eller flerval.
 Under **Ordna min vy** i navigeringsfönstret kan du vända panoreringen
 separat i sidled och
 höjdled. Axelvisaren visas under rörelse och en kort stund efteråt.
-Välj mellan fyra hörn eller **Visa axlar hela tiden**. **Visa stjärnhimmel**
-finns under **Inställningar → Rymdkartan**. Stjärnhimlen följer panorering,
-rotation och zoom. Objektflyttning ändrar inte bakgrunden. Systemets minskade
-rörelse stänger av stjärnorna och
-inaktiverar reglaget, även om ditt sparade val är på. Om systemvalet
-stängs av igen kan stjärnhimlen användas enligt ditt personliga val.
+Välj mellan fyra hörn eller **Visa axlar hela tiden**.
+
+Under **Inställningar → Rymdkartan → Bakgrund** styr **Visa bakgrund** hela
+den dekorativa miljön. Av ger en enfärgad bakgrund. Dina bakgrundsval finns
+kvar och visas i inaktiva väljare tills du slår på bakgrunden igen.
+Välj separat för ljust och mörkt tema. Pärlemor ger en varm, ljus miljö.
+Gryningsdis har blårosa moln och ljusa öppningar i ljust tema.
+Under världshavet i ljust tema har sand nedanför kameran och vattenyta
+ovanför. Använd kartans vanliga lutning för att se planen och vattnet
+däremellan.
+Atmosfär har mjuka mörka ljusfält; Dis och ljuspunkter har mörkt dis och
+avlägsna ljuspunkter. Universum visar stjärnor, galaxer, nebulosor och
+stoft i mörkt tema. Det aktiva temat, även systemtema, väljer vilken
+bakgrund som visas. Tema- och bakgrundsbyten behåller kamerans utsnitt och
+dina objektplaceringar.
+
+Under världshavet i mörkt tema visar blågröna ljusformer i mörkt vatten:
+kronmanet, sifonofor, lanternfish, vampyrbläckfisk, musselkräftors ljusspår
+och djuphavsmarulk med lysande lockbete. Alla ingår tillsammans. Motivet
+är en fri illustration av djur från olika havsdjup och står still när
+kameran står still.
+
+**Panoreringsstyrka** och **Zoomstyrka** styr responsen oberoende, från
+0 till 100 procent i steg om 5 procent. Noll stoppar respektive respons;
+bakgrunden följer fortfarande rotation. **Lageravstånd** styr intrycket av
+djup, från 0,5 till 2,0 i steg om 0,1. Samma värden gäller alla bakgrunder
+och båda temana. **Återställ rörelse** sparar 70 procent, 70 procent och
+1,0. Bakgrundsval, synlighet, kamera och objektplaceringar behålls.
+När bakgrunden är av eller systemets minskade rörelse gäller visar de
+inaktiva rörelsereglagen dina sparade värden.
+Reglagen kan ändras med piltangenterna, Home och End eller genom att peka
+en gång i reglagets spår. Du behöver inte dra reglaget. Tab följer ordningen
+synlighet, bakgrundsval och rörelse; inaktiva kontroller hoppas över.
+
+Med systemets minskade rörelse är hela den valda bakgrunden synlig och
+stilla. Ändringar i systemet gäller direkt i en öppen karta. Bakgrunden
+behåller den senast visade vyn när minskad rörelse aktiveras, även om du
+sedan panorerar, roterar, zoomar eller återställer kartan. När minskad
+rörelse upphör ligger samma bakgrundsvy kvar och bara nya kamerarörelser
+påverkar den. Pausade rörelser spelas inte upp i efterhand.
+
+**Visa bakgrund** visar ditt sparade önskemål även med minskad rörelse.
+När bakgrunden är på kan du ändra båda bakgrundsvalen. De tre
+rörelsereglagen och **Återställ rörelse** är inaktiva och förklaringen
+**Bakgrunden är stilla eftersom minskad rörelse är aktiverad.** visas.
+Systemvalet ändrar inga sparade inställningar. När bakgrunden är av är
+även bakgrundsväljarna inaktiva med sina sparade värden kvar.
+
+Valen sparas direkt för dig i det aktuella hushållet och återkommer vid
+omladdning, omstart och på andra enheter. Ett tillgängligt besked bekräftar
+sparandet. Om en annan klient hinner ändra vyn avvisas det äldre valet och
+de bekräftade inställningarna visas. Granska dem innan du försöker igen.
+
+En ny personlig vy har bakgrunden på med Pärlemor och Atmosfär. Vid
+uppgradering ger ett avslaget eller osparat stjärnval bakgrunden av med
+**Pärlemor** och **Atmosfär**. Ett påslaget stjärnval ger **Visa bakgrund**
+med **Pärlemor** och **Dis och ljuspunkter**. Systemets minskade rörelse
+ändrar inte det sparade önskemålet eller vilka bakgrundslager som visas.
+
 I täta utsnitt kan du välja ett objekt genom dess namnetikett eller markör.
 Etiketterna får egna träffytor och linjer till objektens verkliga lägen.
 Markerade objekt får etikettutrymme först. Använd **Tabell** och sökningen
 för objekt vars etiketter inte ryms. Tabellen fungerar även när kartgrafiken
 inte kan visas. Tangentbordets Tab och Enter kan också markera objekten.
+Markörer kan överlappa och öppna paneler täcka delar av kartan, särskilt
+på en smal skärm. Även en karta med få objekt kan bli trång när alla
+etiketter visas. Tabellens sökning och fullständiga uppgifter är tillgängliga
+också när ett objekt saknar fri pekyta i kartan.
+Om uppgifter och navigering täcker varandra kan du stänga det främre
+fönstret först. Tab höjer de kontroller du fokuserar; Escape i ett
+uppgiftsfönster stänger det. På en smal skärm kan du stänga uppgifterna
+för att nå verktygen igen.
 
 Hjälpvisare, avstånd och placeringar är presentation;
 de tillför inga uppgifter om hushållet.

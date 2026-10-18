@@ -11,6 +11,8 @@ description: >-
 
 ## Scope
 
+- Apply [test placement](../maintain-manual-tests/references/cases.md#test-placement)
+  when changing coverage or moving technical checks between suites.
 - Run the suite the user requested.
 - If no suite is named, run the default integration suite, then prodlike if
   the project defines it.

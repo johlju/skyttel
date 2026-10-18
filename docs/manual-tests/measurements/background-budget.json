@@ -1,0 +1,25 @@
+{
+  "units": "milliseconds",
+  "scope": "Local whole-matrix regression envelope for the documented SwiftShader capture workload; not a physical GPU/mobile acceptance claim or design FPS requirement.",
+  "reference": "background-before-summary.json",
+  "referenceProductionCommit": "cb1ca3326278496d2eaa66daf62175c3327cfece",
+  "method": "Across the eight background-off cells only, take the largest median, largest p95 and largest median absolute deviation (MAD). Median cap = max median + max MAD; p95 cap = max p95 + 2 * max MAD. Round up response caps to 50ms and presented-frame caps to 10ms. Freeze before measuring the optimized client.",
+  "response": { "median": 1000, "p95": 1750 },
+  "presentedFrames": { "median": 180, "p95": 800 },
+  "primaryFrameState": "STATE_PRESENTED_ALL",
+  "metricCorrection": "Primary frame latency excludes STATE_PRESENTED_PARTIAL. Recomputed from the same unoptimized off-only raw trace before measuring the optimized client; partial/dropped distributions remain visible.",
+  "offReference": {
+    "response": {
+      "maxMedian": 733.596624999991,
+      "maxP95": 1259.0919589999976,
+      "maxMAD": 233.49854200000118,
+      "roundUpQuantum": 50
+    },
+    "presentedFrames": {
+      "maxMedian": 95.869,
+      "maxP95": 641.858,
+      "maxMAD": 75.879,
+      "roundUpQuantum": 10
+    }
+  }
+}

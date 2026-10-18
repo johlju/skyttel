@@ -173,7 +173,7 @@ test('EXPORT-01: an administrator downloads the complete household archive by ke
       (
         await member.request.post(`${path}/map/view/settings`, {
           headers,
-          data: { version: 0, settings: { ...defaultViewSettings, stars: true } },
+          data: { version: 0, settings: { ...defaultViewSettings, background: true } },
         })
       ).status(),
     ).toBe(200);
@@ -254,7 +254,7 @@ test('EXPORT-01: an administrator downloads the complete household archive by ke
     expect(result.content.viewSettings).toContainEqual(
       expect.objectContaining({
         userId: memberUser.id,
-        settings: expect.objectContaining({ stars: true }),
+        settings: expect.objectContaining({ background: true }),
       }),
     );
     expect(result.parts['images.bin'].length).toBeGreaterThan(0);
@@ -995,7 +995,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
       (
         await client.post(`${path}/map/view/settings`, {
           headers,
-          data: { version: 0, settings: { ...defaultViewSettings, stars: true } },
+          data: { version: 0, settings: { ...defaultViewSettings, background: true } },
         })
       ).status(),
     ).toBe(200);
@@ -1009,7 +1009,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
     await section.getByRole('button', { name: 'Hämta ZIP-fil' }).click();
     const result = await archive(await downloaded);
     const manifest = JSON.parse(Buffer.from(result.parts['manifest.json']).toString());
-    expect(manifest.schemaVersion).toBe(33);
+    expect(manifest.schemaVersion).toBe(34);
     const encoded = Buffer.from(result.parts['content.json']).toString();
     for (const excluded of [
       'synthetic-provider-token',
@@ -1069,7 +1069,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
     expect(view.positions).toContainEqual(
       expect.objectContaining({ id: 'shared-object', x: 20, y: -10, z: 3 }),
     );
-    expect(view.settings.stars).toBe(true);
+    expect(view.settings.background).toBe(true);
     for (const [index, id] of imageIds.entries()) {
       const response = await client.get(`${path}/profile-images/${id}`);
       expect(response.status()).toBe(200);

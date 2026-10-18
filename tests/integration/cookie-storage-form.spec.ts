@@ -186,7 +186,7 @@ for (const [width, caseId] of [
         headers,
         data: {
           version: view.settings.version,
-          settings: { ...view.settings, stars: true, version: undefined },
+          settings: { ...view.settings, background: true, version: undefined },
         },
       });
       await page.request.post(`${origin}${consent}`, { headers, data: { textVersion: 2 } });

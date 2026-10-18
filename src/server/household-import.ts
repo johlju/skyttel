@@ -12,7 +12,11 @@ import {
 } from './content-maintenance.js';
 import { invalidateHouseholdExports } from './household-export.js';
 import { householdAccess } from './households.js';
-import { importUploadLimit, validateImportArchive } from './import-archive.js';
+import {
+  importUploadLimit,
+  type ValidatedImportContent,
+  validateImportArchive,
+} from './import-archive.js';
 import {
   assertImportCollisions,
   householdContentFingerprint,
@@ -28,7 +32,7 @@ type ReadyImport = {
   directory: string;
   contentVersion: number;
   fingerprint: string;
-  content: ImportContent;
+  content: ValidatedImportContent;
   expiresAt: string;
   cancelling?: boolean;
   timer?: NodeJS.Timeout;

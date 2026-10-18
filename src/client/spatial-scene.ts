@@ -1,17 +1,7 @@
-import {
-  Box3,
-  BufferGeometry,
-  Color,
-  Float32BufferAttribute,
-  PerspectiveCamera,
-  Points,
-  Scene,
-  ShaderMaterial,
-  Vector3,
-  WebGLRenderer,
-} from 'three';
+import { Box3, Color, Matrix4, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { PersonalPosition, Position, ViewSettings } from '../shared/personal-view.js';
+import { spaceBackground } from './space-background.js';
 import { cameraGestures } from './spatial-navigation.js';
 
 export type ProjectedPoint = {
@@ -72,7 +62,7 @@ export function spatialScene(
     const current = view();
     onHistoryChange({
       canGoBack: history.length > 0 || Boolean(gestureStart && !sameView(gestureStart, current)),
-      changed: Boolean(originalView && !sameView(originalView, current)),
+      changed: Boolean(originalView && !sameView(originalView, current)) || background.needsReset(),
     });
   }
   function remember(before: CameraView) {
@@ -150,70 +140,21 @@ export function spatialScene(
   const nodes = new Set<string>();
   const locations = new Map<string, Vector3>();
   const defaults = new Map<string, Vector3>();
-  const starGeometry = new BufferGeometry();
-  const starVertices = [];
-  const starColours = [];
-  const starSizes = [];
-  const starOpacity = [];
-  let seed = 83127;
-  const random = () => {
-    seed = (1664525 * seed + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-  for (let index = 0; index < 3600; index += 1) {
-    const height = random() * 2 - 1;
-    const angle = random() * Math.PI * 2;
-    const radius = Math.sqrt(1 - height * height);
-    starVertices.push(Math.cos(angle) * radius * 300, height * 300, Math.sin(angle) * radius * 300);
-    starSizes.push(0.25 + random() ** 4 * 1.35);
-    starOpacity.push(0.2 + random() * 0.65);
-    const tint = random();
-    const colour = new Color(tint < 0.15 ? '#b6caff' : tint > 0.85 ? '#ead5b7' : '#e1e9f3');
-    starColours.push(colour.r, colour.g, colour.b);
-  }
-  starGeometry.setAttribute('position', new Float32BufferAttribute(starVertices, 3));
-  starGeometry.setAttribute('color', new Float32BufferAttribute(starColours, 3));
-  starGeometry.setAttribute('radius', new Float32BufferAttribute(starSizes, 1));
-  starGeometry.setAttribute('opacity', new Float32BufferAttribute(starOpacity, 1));
-  const starMaterial = new ShaderMaterial({
-    vertexColors: true,
-    transparent: true,
-    depthWrite: false,
-    uniforms: { pixelRatio: { value: renderer.getPixelRatio() } },
-    vertexShader: `
-      attribute float radius;
-      attribute float opacity;
-      uniform float pixelRatio;
-      varying vec3 tint;
-      varying float brightness;
-      varying float extent;
-      void main() {
-        tint = color;
-        brightness = opacity;
-        extent = radius > 1.15 ? 3.0 : 1.0;
-        gl_PointSize = radius * 2.0 * extent * pixelRatio;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      varying vec3 tint;
-      varying float brightness;
-      varying float extent;
-      void main() {
-        float radius = length(gl_PointCoord - 0.5) * 2.0 * extent;
-        float alpha = 1.0 - smoothstep(0.55, 1.0, radius);
-        if (extent > 1.0) alpha += 0.16 * pow(max(0.0, 1.0 - radius / 3.0), 2.0);
-        gl_FragColor = vec4(tint, alpha * brightness);
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
-      }
-    `,
-  });
-  const stars = new Points(starGeometry, starMaterial);
-  stars.visible = false;
-  sky.add(stars);
+  const background = spaceBackground(renderer.getPixelRatio());
+  sky.add(background.group);
   let lost = false;
   let needsFrame = true;
+  let painted = false;
+  let backgroundKey = '';
+  let paintedKey = '';
+  let backgroundVisible = false;
+  const paintedWorld = new Matrix4();
+  const paintedProjection = new Matrix4();
+  const projectedWorld = new Matrix4();
+  const projectedProjection = new Matrix4();
+  let projectionRevision = 0;
+  let projectedRevision = -1;
+  let projectedOverviewDistance = -1;
   function draw() {
     if (lost || rotating) return;
     camera.updateMatrixWorld();
@@ -225,8 +166,38 @@ export function spatialScene(
     skyCamera.aspect = camera.aspect;
     skyCamera.fov = Math.max(15, Math.min(110, 45 * Math.sqrt(controls.getDistance() / 30)));
     skyCamera.updateProjectionMatrix();
-    renderer.clear();
-    renderer.render(sky, skyCamera);
+    // Controls can publish the same pose more than once per command. Object
+    // placement and frozen-background navigation also change DOM projections
+    // without changing these pixels. Keep the synchronous motion lifecycle,
+    // but submit decorative work only when its actual inputs change.
+    const decorativeCamera = background.update(skyCamera);
+    if (
+      !painted ||
+      paintedKey !== backgroundKey ||
+      (backgroundVisible &&
+        (!paintedWorld.equals(decorativeCamera.matrixWorld) ||
+          !paintedProjection.equals(decorativeCamera.projectionMatrix)))
+    ) {
+      renderer.clear();
+      renderer.render(sky, decorativeCamera);
+      paintedWorld.copy(decorativeCamera.matrixWorld);
+      paintedProjection.copy(decorativeCamera.projectionMatrix);
+      paintedKey = backgroundKey;
+      painted = true;
+    }
+    // DOM labels and SVG lines belong to the same completed map frame. A
+    // duplicate camera notification must not rerun their collision layout.
+    if (
+      projectedRevision === projectionRevision &&
+      projectedOverviewDistance === overviewDistance &&
+      projectedWorld.equals(camera.matrixWorld) &&
+      projectedProjection.equals(camera.projectionMatrix)
+    )
+      return;
+    projectedRevision = projectionRevision;
+    projectedOverviewDistance = overviewDistance;
+    projectedWorld.copy(camera.matrixWorld);
+    projectedProjection.copy(camera.projectionMatrix);
     onOrientation(
       [new Vector3(1, 0, 0), new Vector3(0, 1, 0), new Vector3(0, 0, 1)].map((axis) =>
         axis.applyQuaternion(camera.quaternion.clone().invert()),
@@ -250,6 +221,7 @@ export function spatialScene(
   }
   function reset() {
     gestures.finish();
+    background.reset();
     // Establish the initial view with the real canvas size. A later resize
     // notification must not overwrite the user's first gesture or its history.
     if (canvas.clientWidth && canvas.clientHeight) {
@@ -287,6 +259,8 @@ export function spatialScene(
     const height = canvas.clientHeight;
     if (!width || !height) return;
     renderer.setSize(width, height, false);
+    painted = false;
+    projectionRevision++;
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     if (needsFrame) {
@@ -302,6 +276,7 @@ export function spatialScene(
       saved: PersonalPosition[] = [],
       relationships: { sourceId: string; targetId: string | null }[] = [],
     ) {
+      projectionRevision++;
       const first = locations.size === 0;
       const neighbours = new Map<string, Set<string>>();
       for (const { sourceId, targetId } of relationships) {
@@ -491,11 +466,14 @@ export function spatialScene(
       onMotion();
       return true;
     },
-    configure(value: ViewSettings, theme: 'light' | 'dark' = 'dark') {
+    configure(value: ViewSettings, theme: 'light' | 'dark' = 'dark', reducedMotion = false) {
       settings = value;
-      stars.visible = value.stars;
+      background.configure(value, theme, reducedMotion);
+      backgroundVisible = value.background;
+      backgroundKey = `${theme}:${value.background}:${theme === 'light' ? value.lightBackground : value.darkBackground}`;
       sky.background = new Color(theme === 'light' ? '#eef3f3' : '#101b29');
       draw();
+      publishHistory();
     },
     beginCameraGesture: gestures.beginTouch,
     position(id: string): Position | null {
@@ -503,6 +481,7 @@ export function spatialScene(
       return value ? { x: value.x, y: value.y, z: value.z } : null;
     },
     place(id: string, position: Position) {
+      projectionRevision++;
       const value = new Vector3(position.x, position.y, position.z).clampScalar(-10000, 10000);
       locations.set(id, value);
       draw();
@@ -544,6 +523,7 @@ export function spatialScene(
     },
     contextLost(value: boolean) {
       lost = value;
+      painted = false;
       gestures.enabled(!value);
       controls.enabled = !value;
       if (!value) draw();
@@ -552,8 +532,7 @@ export function spatialScene(
       resize.disconnect();
       controls.dispose();
       gestures.dispose();
-      starGeometry.dispose();
-      starMaterial.dispose();
+      background.dispose();
       renderer.dispose();
     },
   };

@@ -59,7 +59,7 @@ export async function checkContainerRecovery({
     (
       await call('/map/view/settings', {
         version: settingsVersion,
-        settings: { ...settings, stars: true, axisCorner: 'top-left', invertY: true },
+        settings: { ...settings, background: true, axisCorner: 'top-left', invertY: true },
         contentVersion: state.contentVersion,
       })
     ).status,
@@ -129,7 +129,7 @@ export async function checkContainerRecovery({
   assert.deepEqual(state.draft.changes, []);
   const detachedView = JSON.parse((await call('/map/view')).body);
   assert.deepEqual(detachedView.positions, []);
-  assert.equal(detachedView.settings.stars, false);
+  assert.equal(detachedView.settings.background, true);
   assert.equal((await request(name, `${path}/profile-images/${imageId}`, { headers })).status, 404);
   await command(['restart', name]);
   await waitUntilReady(name);

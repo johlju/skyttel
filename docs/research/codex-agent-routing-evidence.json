@@ -1,0 +1,200 @@
+{
+  "script_and_verification_seconds": {
+    "direct": 0.40860045902081765,
+    "sol-high": 0.7121871249983087,
+    "sol-low": 0.469
+  },
+  "script_exit_codes_by_route": {
+    "direct": {
+      "success-skills": 0,
+      "success-instructions": 0,
+      "failure-skills": 1,
+      "failure-instructions": 1
+    },
+    "sol-high": {
+      "success-skills": 0,
+      "success-instructions": 0,
+      "failure-skills": 1,
+      "failure-instructions": 1
+    },
+    "sol-low": {
+      "success-skills": 0,
+      "success-instructions": 0,
+      "failure-skills": 1,
+      "failure-instructions": 1
+    }
+  },
+  "verification": {
+    "direct": {
+      "source_skill_files": 127,
+      "skill_directories": 49,
+      "rules_match_between_routes": true,
+      "extra_files_preserved": 3,
+      "failure_blockers_unchanged": true
+    },
+    "sol-high": {
+      "source_skill_files": 127,
+      "skill_directories": 49,
+      "rules_match_between_routes": true,
+      "extra_files_preserved": 3,
+      "failure_blockers_unchanged": true
+    },
+    "sol-low": {
+      "source_skill_files": 127,
+      "skill_directories": 49,
+      "rules_match_between_routes": true,
+      "extra_files_preserved": 3,
+      "failure_blockers_unchanged": true
+    }
+  },
+  "parent_review_completed_at": "2026-10-18T10:42:15.232892+00:00",
+  "parent_verification_seconds": 0.024866124993423,
+  "runtime": [
+    {
+      "thread_id": "01a14e99-12dd-7241-9de7-a2ddd84790a8",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a14e96-9dad-7413-844a-f85252358bbb",
+            "depth": 1,
+            "agent_path": "/root/benchmark_sol_high",
+            "agent_role": null
+          }
+        }
+      },
+      "cli_version": "0.163.0",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "turn_id": "01a14e99-13bc-7883-a9a0-80184421fff5",
+      "turn_context_timestamp": "2026-10-18T10:40:18.463Z",
+      "started_at": "2026-10-18T10:40:17.389Z",
+      "completed_at": "2026-10-18T10:41:36.559Z",
+      "wall_seconds": 79.17,
+      "usage": {
+        "input_tokens": 249208,
+        "cached_input_tokens": 195968,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3676,
+        "reasoning_output_tokens": 460,
+        "total_tokens": 252884
+      },
+      "elapsed_to_parent_review_seconds": 117.843892
+    },
+    {
+      "thread_id": "01a14e99-3e1c-7d22-b2a7-6930d1bba384",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a14e96-9dad-7413-844a-f85252358bbb",
+            "depth": 1,
+            "agent_path": "/root/default_runtime_probe",
+            "agent_role": null
+          }
+        }
+      },
+      "cli_version": "0.163.0",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "turn_id": "01a14e99-3e8c-7d32-9d25-2d3c75fd0a34",
+      "turn_context_timestamp": "2026-10-18T10:40:29.619Z",
+      "started_at": "2026-10-18T10:40:28.340Z",
+      "completed_at": "2026-10-18T10:40:34.577Z",
+      "wall_seconds": 6.237,
+      "usage": {
+        "input_tokens": 40368,
+        "cached_input_tokens": 30592,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 102,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 40470
+      },
+      "elapsed_to_parent_review_seconds": 106.892892
+    },
+    {
+      "thread_id": "01a14e99-b0ac-7f21-9e13-1874fd5e7272",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a14e96-9dad-7413-844a-f85252358bbb",
+            "depth": 1,
+            "agent_path": "/root/fork_runtime_probe",
+            "agent_role": null
+          }
+        }
+      },
+      "cli_version": "0.163.0",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "turn_id": "01a14e99-b0d8-7a33-bc2a-308d338c2b4a",
+      "turn_context_timestamp": "2026-10-18T10:40:58.944Z",
+      "started_at": "2026-10-18T10:40:57.577Z",
+      "completed_at": "2026-10-18T10:41:03.011Z",
+      "wall_seconds": 5.434,
+      "usage": {
+        "input_tokens": 40605,
+        "cached_input_tokens": 32128,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 65,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 40670
+      },
+      "elapsed_to_parent_review_seconds": 77.655892
+    },
+    {
+      "thread_id": "01a14e99-2a45-7db3-8c35-2a336814cc4d",
+      "source": {
+        "subagent": {
+          "thread_spawn": {
+            "parent_thread_id": "01a14e96-9dad-7413-844a-f85252358bbb",
+            "depth": 1,
+            "agent_path": "/root/benchmark_sol_low",
+            "agent_role": null
+          }
+        }
+      },
+      "cli_version": "0.163.0",
+      "model": "gpt-6.1-sol",
+      "effort": "low",
+      "turn_id": "01a14e99-2acd-77a1-8533-7ad994376afa",
+      "turn_context_timestamp": "2026-10-18T10:40:24.344Z",
+      "started_at": "2026-10-18T10:40:23.301Z",
+      "completed_at": "2026-10-18T10:40:58.295Z",
+      "wall_seconds": 34.994,
+      "usage": {
+        "input_tokens": 135716,
+        "cached_input_tokens": 112256,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1447,
+        "reasoning_output_tokens": 56,
+        "total_tokens": 137163
+      },
+      "elapsed_to_parent_review_seconds": 111.931892
+    },
+    {
+      "thread_id": "01a14e96-9dad-7413-844a-f85252358bbb",
+      "source": "vscode",
+      "cli_version": "0.163.0",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "turn_id": "01a14e97-5826-72b3-9217-8b30aaa58788",
+      "turn_context_timestamp": "2026-10-18T10:38:24.138Z",
+      "started_at": "2026-10-18T10:38:23.824Z",
+      "completed_at": null
+    }
+  ],
+  "evaluation_date": "2026-10-18",
+  "source_commit": "4675aa223602ff0408881374ad36b9163834c270",
+  "script_sha256": {
+    ".agents/skills/sync-ai-skills/scripts/sync_ai_skills.sh": "8595b27d16a4d27422f2a848d177b7c6a9aeab55157df575bb7ec8e72dcb36df",
+    ".agents/skills/sync-ai-instructions/scripts/sync_ai_instructions.sh": "cd36fb60a9d0ea47223a87e7dcaf01bebf9d0e9100048c903a4023c6f2ec9192"
+  },
+  "sample_size": "One success and one controlled failure per skill per available route",
+  "direct_execution_and_verification_seconds": 0.40860045902081765,
+  "limitations": [
+    "Direct main-thread wall time and token usage are not isolated from the surrounding evaluation.",
+    "Dispatch-to-parent-review time includes unrelated parent work and scheduling delay.",
+    "One sample per scenario; delegated trials overlap.",
+    "Cost and attributable parent tokens unavailable.",
+    "Terra absent from spawn tool; standalone CLI startup fails with read-only filesystem."
+  ]
+}

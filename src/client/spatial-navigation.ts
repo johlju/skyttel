@@ -70,7 +70,7 @@ export function cameraGestures(
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, button: before.button });
   }
   function end(event: PointerEvent) {
-    pointers.delete(event.pointerId);
+    if (!pointers.delete(event.pointerId)) return;
     if (!pointers.size) {
       multiple = false;
       dragging = false;

@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom';
 import type { MapObject, MapRelationship, MapState } from '../shared/map.js';
 import { defaultViewSettings, type Position, type ViewSettings } from '../shared/personal-view.js';
 import { relationshipLabel } from '../shared/relationship-label.js';
+import { BackgroundMotionSlider } from './BackgroundMotionSlider.js';
 import { LifecycleStatus } from './Lifecycle.js';
 import { MapNavigation } from './MapNavigation.js';
 import type { MapRevealRequest } from './map-display.js';
@@ -290,9 +291,12 @@ export function SpatialMap({
   const settings = personal?.view?.settings ?? defaultViewSettings;
   const [localSettings, setLocalSettings] = useState(defaultViewSettings);
   const preferences = personal ? settings : localSettings;
+  const [hasUnsavedMotion, setHasUnsavedMotion] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(
     () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
   );
+  const backgroundMotionDisabled =
+    !preferences.background || reducedMotion || Boolean(personal && !personal.view);
   useEffect(() => {
     const preference = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     if (!preference) return;
@@ -424,14 +428,14 @@ export function SpatialMap({
   }, [activated, selectedIds]);
   useEffect(() => {
     if (!activated || !personalReady) return;
-    scene.current?.configure({ ...preferences, stars: preferences.stars && !reducedMotion }, theme);
+    scene.current?.configure(preferences, theme, reducedMotion);
     if (!active) return;
     if (preferences.allLabels && !previousLabels.current) {
       if (scene.current?.openLabelView(labelsInitialized.current)) setCloserLabels(true);
     }
     labelsInitialized.current = true;
     previousLabels.current = preferences.allLabels;
-  }, [preferences, activated, active, personalReady, reducedMotion, theme]);
+  }, [preferences, activated, active, personalReady, theme, reducedMotion]);
   const focusObjects = useCallback((ids: string[], reveal?: MapRevealRequest) => {
     const element = canvas.current;
     if (!element) return false;
@@ -1125,27 +1129,113 @@ export function SpatialMap({
       {settingsMount &&
         createPortal(
           <div className="map-settings">
+            <h3>Bakgrund</h3>
             <label>
               <input
                 type="checkbox"
-                checked={preferences.stars && !reducedMotion}
-                disabled={
-                  reducedMotion || Boolean(personal && (!personal.view || personal.pending))
-                }
-                onChange={(event) => configure({ stars: event.target.checked })}
+                checked={preferences.background}
+                disabled={Boolean(personal && !personal.view)}
+                aria-disabled={personal?.pending || undefined}
+                onChange={(event) => {
+                  if (!personal?.pending) configure({ background: event.target.checked });
+                }}
               />
-              Visa stjärnhimmel
+              Visa bakgrund
             </label>
-            {reducedMotion && <span>Minskad rörelse: stjärnhimlen är avstängd.</span>}
-            <p>Stjärnhimlen följer panorering, rotation och zoom. Ditt val sparas direkt.</p>
+            <fieldset
+              disabled={!preferences.background || Boolean(personal && !personal.view)}
+              aria-busy={personal?.pending || undefined}
+              className="background-choices"
+            >
+              <legend>Bakgrundsval</legend>
+              <label htmlFor={`${labelPrefix}-light-background`}>Bakgrund i ljust tema</label>
+              <select
+                id={`${labelPrefix}-light-background`}
+                value={preferences.lightBackground}
+                aria-disabled={personal?.pending || undefined}
+                onChange={(event) => {
+                  if (!personal?.pending)
+                    configure({
+                      lightBackground: event.target.value as ViewSettings['lightBackground'],
+                    });
+                }}
+              >
+                <option value="pearl">Pärlemor</option>
+                <option value="dawn">Gryningsdis</option>
+                <option value="ocean">Under världshavet</option>
+              </select>
+              <label htmlFor={`${labelPrefix}-dark-background`}>Bakgrund i mörkt tema</label>
+              <select
+                id={`${labelPrefix}-dark-background`}
+                value={preferences.darkBackground}
+                aria-disabled={personal?.pending || undefined}
+                onChange={(event) => {
+                  if (!personal?.pending)
+                    configure({
+                      darkBackground: event.target.value as ViewSettings['darkBackground'],
+                    });
+                }}
+              >
+                <option value="atmosphere">Atmosfär</option>
+                <option value="mist">Dis och ljuspunkter</option>
+                <option value="universe">Universum</option>
+                <option value="ocean">Under världshavet</option>
+              </select>
+            </fieldset>
+            <fieldset
+              disabled={backgroundMotionDisabled}
+              aria-busy={personal?.pending || undefined}
+              className="background-motion"
+            >
+              <legend>Bakgrundens rörelse</legend>
+              {(
+                [
+                  ['panStrength', 'Panoreringsstyrka'],
+                  ['zoomStrength', 'Zoomstyrka'],
+                  ['layerDistance', 'Lageravstånd'],
+                ] as const
+              ).map(([key, label]) => (
+                <BackgroundMotionSlider
+                  key={key}
+                  id={`${labelPrefix}-${key}`}
+                  label={label}
+                  value={preferences[key]}
+                  percent={key !== 'layerDistance'}
+                  busy={personal?.pending ?? false}
+                  disabled={backgroundMotionDisabled}
+                  onCommit={(value) => configure({ [key]: value })}
+                  onUnsavedChange={setHasUnsavedMotion}
+                />
+              ))}
+              <button
+                type="button"
+                aria-disabled={personal?.pending || undefined}
+                onClick={() => {
+                  if (!personal?.pending)
+                    configure({
+                      panStrength: defaultViewSettings.panStrength,
+                      zoomStrength: defaultViewSettings.zoomStrength,
+                      layerDistance: defaultViewSettings.layerDistance,
+                    });
+                }}
+              >
+                Återställ rörelse
+              </button>
+            </fieldset>
+            {reducedMotion && <p>Bakgrunden är stilla eftersom minskad rörelse är aktiverad.</p>}
+            <p>Bakgrunden är dekorativ. Dina val sparas direkt för dig i det här hushållet.</p>
             <div role="status" aria-atomic="true">
-              {personal?.message && (
-                <p
-                  key={personal.messageId}
-                  className={personal.toast ? 'personal-view-toast' : undefined}
-                >
-                  {personal.message}
-                </p>
+              {hasUnsavedMotion && !personal?.pending ? (
+                <p>Ändringen är inte sparad än.</p>
+              ) : (
+                personal?.message && (
+                  <p
+                    key={personal.messageId}
+                    className={personal.toast ? 'personal-view-toast' : undefined}
+                  >
+                    {personal.message}
+                  </p>
+                )
               )}
             </div>
             {personal && (
@@ -1309,9 +1399,11 @@ export function SpatialMap({
                 viewBox="0 0 10 10"
                 refX="10"
                 refY="5"
-                markerWidth="7"
-                markerHeight="7"
+                markerUnits="userSpaceOnUse"
+                markerWidth="12"
+                markerHeight="12"
                 orient="auto-start-reverse"
+                overflow="visible"
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" className={`connection-arrow ${kind}`} />
               </marker>
@@ -1523,9 +1615,37 @@ export function SpatialMap({
               const maskId = `${occlusionPrefix}-${key}`;
               const occluders = connectionOcclusion(start, tip, locations.values(), bend);
               const arrowOccluders = connectionOcclusion(tip, tip, locations.values());
+              const region = (left: number, top: number, right: number, bottom: number) => {
+                // Round outward to retain a whole-pixel margin at every edge.
+                const x = Math.max(0, Math.min(surfaceWidth, Math.floor(left)));
+                const y = Math.max(0, Math.min(surfaceHeight, Math.floor(top)));
+                return {
+                  x,
+                  y,
+                  width: Math.max(0, Math.min(surfaceWidth, Math.ceil(right)) - x),
+                  height: Math.max(0, Math.min(surfaceHeight, Math.ceil(bottom)) - y),
+                };
+              };
+              const controlY = (start.y + tip.y) / 2 + bend;
               const masks = [
-                { id: maskId, points: occluders },
-                { id: `${maskId}-arrow`, points: arrowOccluders },
+                {
+                  id: maskId,
+                  points: occluders,
+                  // The quadratic stays inside its control hull; eight pixels
+                  // also enclose the selected 7.4px surround and antialiasing.
+                  bounds: region(
+                    Math.min(start.x, tip.x) - 8,
+                    Math.min(start.y, tip.y, controlY) - 8,
+                    Math.max(start.x, tip.x) + 8,
+                    Math.max(start.y, tip.y, controlY) + 8,
+                  ),
+                },
+                {
+                  id: `${maskId}-arrow`,
+                  points: arrowOccluders,
+                  // Include the 12px marker, its outline and rotated miters.
+                  bounds: region(tip.x - 16, tip.y - 16, tip.x + 16, tip.y + 16),
+                },
               ];
               // A short shaft establishes the endpoint tangent for the marker.
               // Its separate mask uses endpoint depth across the entire arrowhead.
@@ -1542,15 +1662,8 @@ export function SpatialMap({
                             <circle cx={point.x} cy={point.y} r={point.radius} />
                           </clipPath>
                         ))}
-                        <mask
-                          id={mask.id}
-                          maskUnits="userSpaceOnUse"
-                          x="0"
-                          y="0"
-                          width={surfaceWidth}
-                          height={surfaceHeight}
-                        >
-                          <rect width={surfaceWidth} height={surfaceHeight} fill="white" />
+                        <mask id={mask.id} maskUnits="userSpaceOnUse" {...mask.bounds}>
+                          <rect {...mask.bounds} fill="white" />
                           {mask.points.map((point) => (
                             <path
                               key={point.id}
@@ -1563,6 +1676,12 @@ export function SpatialMap({
                       </g>
                     ))}
                   </defs>
+                  <path
+                    d={geometry}
+                    fill="none"
+                    mask={occluders.length ? `url(#${maskId})` : undefined}
+                    className={`connection-underlay ${kind}${selected ? ' selected' : ''}`}
+                  />
                   {kind === 'removed' ? (
                     <path
                       d={geometry}

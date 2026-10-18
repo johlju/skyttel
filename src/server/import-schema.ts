@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { DraftChange } from '../shared/map.js';
 import { isObjectIconId } from '../shared/object-icons.js';
+import { legacyViewSettingsSchema, viewSettingsSchema } from './view-settings-schema.js';
 
 const id = z.string().regex(/^[\w-]{1,128}$/);
 const text = z.string().max(10000);
@@ -194,16 +195,7 @@ const receipt = z
     relationshipTypes: z.array(relationshipTypeChange).optional(),
   })
   .strict();
-const viewSettings = z
-  .object({
-    invertX: z.boolean(),
-    invertY: z.boolean(),
-    axisCorner: z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']),
-    axisPinned: z.boolean(),
-    stars: z.boolean(),
-    allLabels: z.boolean(),
-  })
-  .strict();
+const viewSettings = z.union([viewSettingsSchema, legacyViewSettingsSchema]);
 
 export const importContentSchema = z
   .object({
@@ -329,7 +321,15 @@ export const importContentSchema = z
         .strict(),
     ),
     viewSettings: z.array(
-      z.object({ ...scope, userId: id, version: positive, settings: viewSettings }).strict(),
+      z
+        .object({
+          ...scope,
+          userId: id,
+          version: natural,
+          settings: viewSettings,
+          backgroundVersion: z.literal(1).default(1),
+        })
+        .strict(),
     ),
     images: z.array(
       z
@@ -376,6 +376,7 @@ export const importManifestSchema = z
       z.literal(31),
       z.literal(32),
       z.literal(33),
+      z.literal(34),
     ]),
     parts: z
       .array(

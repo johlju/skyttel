@@ -163,29 +163,41 @@
 .connection,
 .connection-arrow-shaft {
   stroke: var(--connection-color);
-  stroke-width: 1.4;
+  stroke-width: 2.4;
 }
 .spatial-connection {
-  opacity: 0.25;
+  opacity: 1;
 }
-/* Group opacity composites the shaft and its marker together. */
+/* An opaque surround keeps meaningful lines legible over decorative motifs. */
+.connection-underlay {
+  stroke: var(--space-surface, #132e25);
+  stroke-width: 6.4;
+  pointer-events: none;
+}
+.connection-underlay.selected {
+  stroke-width: 7.4;
+}
 .connection-arrow {
   fill: var(--connection-color);
+  stroke: var(--space-surface, #132e25);
+  stroke-width: 1.5;
+  paint-order: stroke;
 }
 .connection.selected,
 .connection-arrow-shaft.selected {
-  stroke-width: 2;
+  stroke-width: 3.4;
 }
 .spatial-connection.selected {
-  opacity: 0.95;
+  opacity: 1;
 }
 .spatial-connection:is(.added, .changed) {
-  opacity: 0.7;
+  opacity: 1;
 }
 .spatial-connection.removed {
-  opacity: 0.6;
+  opacity: 1;
 }
-.connection.removed {
+.connection.removed,
+.connection-underlay.removed {
   stroke-dasharray: 6 5;
 }
 .spatial-labels .spatial-edge {
@@ -407,9 +419,6 @@
 }
 .spatial-node.removed .spatial-orb {
   border-style: dashed;
-}
-.spatial-node.subdued {
-  opacity: 0.48;
 }
 .type-icon {
   display: inline-grid;

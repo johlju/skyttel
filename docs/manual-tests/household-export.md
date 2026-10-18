@@ -620,7 +620,7 @@ och ja/nej. Ange bland annat noll och nej. Ordna beskrivning och egna fält
 i typavsnitt, dölj ett eget fält och en osäkert uppgiven skuld med datum.
 Spara uppgifterna och två olika profilbilder i separata sparanden.
 Lägg därefter ett nytt objekt i det privata utkastet utan att spara det
-gemensamt. Flytta ett objekt personligen och slå på stjärnor.
+gemensamt. Flytta ett objekt personligen och slå på bakgrunden.
 Anteckna innehåll, bildversioner, historik, utkast och användarnas roller.
 En driftansvarig ska kunna starta om testinstallationen.
 
@@ -673,7 +673,7 @@ private and historical content after restart”.
 - Historiken och båda bildversionerna finns kvar. Det privata förslaget
   återkommer i utkastet och blir inte gemensamt före det nya uttryckliga
   sparandet i steg 6.
-- Personliga placeringar och stjärnval består efter omstart. Nuvarande
+- Personliga placeringar och bakgrundsval består efter omstart. Nuvarande
   användare och roller behåller sin åtkomst.
 - Återställt och nytt arbete går att spara tillsammans och läsa efter
   omladdning. Den tidigare gemensamma kartan finns kvar.

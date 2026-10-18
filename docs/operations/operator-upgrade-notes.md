@@ -6,6 +6,25 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Personal map backgrounds
+
+Back up the installation before upgrade. The database upgrade preserves
+each existing personal view's background visibility, including views with
+only object placements or household access. An old enabled star field
+becomes the dark mist background. An old disabled or unset star field
+stays disabled. New personal views use enabled backgrounds. Later saved
+choices remain unchanged on restart.
+
+Use the upgraded application for new household exports and imports. New
+exports include background choices and require the upgraded importer.
+Keep the pre-upgrade backup for recovery with an older application;
+the upgraded database cannot be opened by an older application.
+Older archives also preserve the disabled default for current household
+members with no personal settings in the archive. Import keeps current
+access. In a new installation, explicitly assign historical personal
+content to verified members before they use it. Later new personal views
+use enabled backgrounds.
+
 ### New image security alerts after closure
 
 When the image security monitor finds a blocked or unknown status with no

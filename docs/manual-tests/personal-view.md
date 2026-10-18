@@ -32,6 +32,289 @@ fallen anger formulär, samtal, profil eller administration.
 
 ## Flyttning och beständighet
 
+### PLACERING-15: stilla bakgrund och återgång utan hopp på dator
+
+**Syfte:** Behålla den synliga bakgrundsvyn vid minskad rörelse och
+återge vanlig kamerakoppling genom Återställ vy.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Ett nytt provhushåll med 16 sparade, påhittade objekt
+med namnen Provobjekt 0–15. Använd automatisk etikettvisning och 1440 × 960
+CSS-pixlar. Bakgrunden är på. Systemets minskade rörelse är aktiverad redan
+när sidan öppnas. Använd inga verkliga modell- eller röstanrop.
+
+**Automatiskt motsvarande test:**
+[background-reduced-motion.spec.ts](../../tests/integration/background-reduced-motion.spec.ts),
+PLACERING-15. Automationen jämför fria bakgrundspixlar och bekräftar sparade
+inställningar genom den befintliga tjänsten. Den använder programstyrda
+knappar i Chromium och ersätter inte fysiska enhetsprov eller faktisk
+uppläsning med skärmläsare.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/background-reduced-motion.spec.ts",
+    "caseId": "PLACERING-15"
+  },
+  "reference": "16 objekt, 1440 × 960, alla sju motiv och minskad rörelse.",
+  "outcomes": [
+    "Hela bakgrunden är synlig och stilla vid sidstart med minskad rörelse.",
+    "Frysning och återgång behåller utsnittet utan uppspelad rörelse.",
+    "Bara nya kamerarörelser påverkar bakgrunden efter återgång.",
+    "Återställ vy lämnar bakgrunden stilla under minskad rörelse.",
+    "Återställ vy återger kopplingen även när kartkameran är återställd.",
+    "Bakgrundsval och synlighet är redigerbara under minskad rörelse.",
+    "Rörelsereglage och Återställ rörelse är inaktiva med värden kvar.",
+    "Systemvalet ändrar inga sparade inställningar."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna rymdkartan med minskad rörelse aktiverad. Öppna Navigera,
+   panorera höger tre gånger, rotera vänster två gånger och zooma in.
+   Kartan rör sig men hela bakgrunden ligger kvar. Välj Återställ vy:
+   endast kartan återställs. Avaktivera minskad rörelse; bakgrunden ligger
+   fortfarande kvar. Välj Återställ vy och stäng navigeringen.
+2. Prova följande en gång vardera med respektive tema: Pärlemor,
+   Gryningsdis och Under världshavet i ljust tema; Atmosfär, Dis och
+   ljuspunkter, Universum och Under världshavet i mörkt tema. Välj
+   bakgrund under Inställningar → Rymdkartan och återgå till kartan.
+   Öppna Navigera och återställ vyn om knappen är aktiv.
+3. Anteckna bakgrundens utsnitt. Rotera vänster två gånger, panorera höger
+   två gånger och zooma in. Bakgrunden svarar. Aktivera minskad rörelse
+   utan omladdning: det senast visade utsnittet ligger kvar utan hopp.
+4. Rotera höger tre gånger, panorera vänster tre gånger och zooma ut två
+   gånger. Kartan rör sig men bakgrunden ligger kvar. Avaktivera minskad
+   rörelse: samma utsnitt ligger kvar. Rotera vänster en gång: endast den
+   nya rörelsen påverkar bakgrunden.
+5. Aktivera minskad rörelse igen och välj Återställ vy. Bakgrunden ligger
+   kvar medan kartan återställs. Avaktivera minskad rörelse och kontrollera
+   att Återställ vy är aktiv trots att kartan redan är återställd. Välj
+   knappen: bakgrunden återgår till utsnittet från steg 3 före navigeringen,
+   och knappen blir dimmad. Sparade inställningar och placeringar behålls.
+6. Öppna Inställningar → Rymdkartan. Ställ in 35 procent panorering,
+   55 procent zoom och lageravstånd 1,4. Aktivera minskad rörelse. Prova
+   väljarnas tangentbordsstyrning och kontrollera att båda bakgrundsvalen
+   kan ändras. Välj Pärlemor med Home i den ljusa väljaren och sedan
+   Gryningsdis med nedåtpil. Välj Atmosfär med Home i den mörka väljaren
+   och sedan Dis och ljuspunkter med nedåtpil. Fokus behålls efter sparande.
+7. Kontrollera förklaringen **Bakgrunden är stilla eftersom minskad rörelse
+   är aktiverad.** och de tre inaktiva rörelsereglagen med kvarvarande
+   sparade värden. **Återställ rörelse** är också inaktiv. Stäng av
+   **Visa bakgrund** med tangentbordet: båda väljarna och rörelsegruppen
+   blir inaktiva. Slå på igen: värden och bakgrundsval finns kvar.
+8. Återgå till kartan och öppna Navigera. Byt till ljust tema, rotera
+   vänster och panorera höger. Prova sedan samma handlingar i mörkt tema.
+   Respektive nya motiv är fullt synligt och förblir stilla.
+
+**Förväntat resultat:**
+
+- Alla sju motiv behåller sitt synliga utsnitt vid frysning och återgång.
+  Alla lager är kvar; bakgrunden spelar inte upp pausade rörelser.
+- De två återställningshandlingarna har skilda betydelser. Systemvalet
+  skriver aldrig över synlighet, bakgrundsval, rörelsevärden eller placeringar.
+- Kontrollerna har begripliga namn, rätt semantiska tillstånd och synligt
+  tangentbordsfokus. Automationen verifierar inte faktisk uppläsning.
+
+### PLACERING-16: stilla bakgrund och återgång i tät, smal karta
+
+**Syfte:** Samma minskade rörelse och återställning som på dator ska fungera
+när en tät karta och öppna paneler lämnar mindre synlig bakgrundsyta.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Ett nytt provhushåll med 80 sparade, påhittade objekt
+med namnen Provobjekt 0–79, automatisk etikettvisning och 390 × 844
+CSS-pixlar. Bakgrunden är på och minskad rörelse gäller vid sidstart.
+
+**Automatiskt motsvarande test:**
+[background-reduced-motion.spec.ts](../../tests/integration/background-reduced-motion.spec.ts),
+PLACERING-16. Chromium använder emulerad skärmstorlek och programstyrd
+navigation; fysisk mobil och fysisk pekinmatning behöver provas separat.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/background-reduced-motion.spec.ts",
+    "caseId": "PLACERING-16"
+  },
+  "reference": "80 objekt, 390 × 844, alla sju motiv och öppna paneler.",
+  "outcomes": [
+    "Minskad rörelse behåller hela bakgrunden stilla även i tät och smal karta.",
+    "Återgång behåller utsnittet och bara nya rörelser påverkar motivet.",
+    "Återställ vy och reglagetillstånden fungerar med sparade värden kvar."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Följ PLACERING-15 steg 1–8 i denna storlek med 80 objekt. Behåll
+   Navigera öppen under kamerahandlingarna och använd panelens rullning
+   när en knapp ligger utanför den synliga delen.
+2. Granska de fria bakgrundsytorna före och efter varje kamerahandling.
+   Anteckna separat om paneler eller befintlig etikettträngsel skymmer
+   kartans objekt; sådana hinder får inte räknas som bevis för stillhet.
+
+**Förväntat resultat:**
+
+- Samma stillhet, omedelbara systemrespons, återgång och återställning som
+  i PLACERING-15 fungerar utan ändrade sparade värden.
+- Panelernas knappar går att nå genom rullning. Etikettträngsel kan kräva
+  Tabell för läsning; provet innebär inte att alla etiketter ryms samtidigt.
+
+### PLACERING-13: oberoende rörelsereglage och avgränsad återställning
+
+**Syfte:** Kontrollera reglagens värden, personligt sparande, fokus och fel.
+
+**Användare:** Alex Exempel i två klienter.
+
+**Förutsättningar:** Lampan och Cykeln är sparade. Börja med bakgrunden på
+och rörelsevärdena 70 procent, 70 procent och 1,0. Sätt inte systemets
+minskade rörelse förrän steget anger det.
+
+**Automatiskt motsvarande test:**
+[personal-view.spec.ts](../../tests/integration/personal-view.spec.ts),
+PLACERING-13. Automationen provar sparfel genom ett kontrollerat felsvar.
+För den manuella felvarianten, använd webbläsarens nätverkspanel för att
+blockera skrivningen till den personliga vyns inställningar; ta bort
+blockeringen efter försöket.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/personal-view.spec.ts",
+    "caseId": "PLACERING-13"
+  },
+  "reference": "Chromium, Lampan och Cykeln, två klienter för Alex; omstart samt kontrollerat skrivfel och versionskonflikt provar återläsning av bekräftade värden.",
+  "outcomes": [
+    "Oberoende värden sparas med bevarat fokus och återkommer efter omstart och i en annan klient.",
+    "Av och minskad rörelse inaktiverar rörelseändringar med sparade värden kvar.",
+    "Återställning ändrar bara de tre rörelsevärdena; fel och konflikt visar bekräftade värden."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Markera Lampan och flytta den uppåt med Navigera. Stäng navigeringen.
+   Lägg märke till urvalet och utsnittet.
+2. Öppna Inställningar → Rymdkartan → Bakgrund. Kontrollera standarderna
+   ovan. Dra Panoreringsstyrka hela vägen till 100 procent i en enda
+   rörelse. Hela slutvärdet ska sparas, även med långsam anslutning.
+   Medan reglaget visar ett ändrat värde före släpp visas att ändringen
+   inte är sparad än; ett tidigare sparbesked bekräftar inte det nya värdet.
+   Håll vänsterpil nere en kort stund och släpp: reglaget fortsätter
+   ändras under tangentupprepningen och slutvärdet sparas vid släpp.
+   Fokusera varje rörelsereglage med Tab och tryck End: panorering
+   och zoom visar 100 procent, lageravstånd 2,0. Vänta på sparbesked efter
+   varje ändring. Fokus ska stanna kvar.
+3. Slå av Visa bakgrund. Alla tre reglage och Återställ rörelse är
+   dimmade och inaktiva med värdena kvar. Slå på igen. Aktivera systemets
+   minskade rörelse och kontrollera samma inaktivering. Avaktivera den.
+4. Fokusera Återställ rörelse och tryck Enter. Kontrollera 70 procent,
+   70 procent och 1,0 samt bevarat fokus, synlighet och bakgrundsval.
+   Återvänd till kartan: samma urval, utsnitt och placering finns kvar.
+5. Sätt Panoreringsstyrka till noll med Home. Starta om installationen
+   och ladda om sidan. Kontrollera noll och oförändrad Zoomstyrka.
+   Logga in som Alex i den andra klienten och kontrollera samma värden.
+6. Sätt Panoreringsstyrka till 100 procent i den andra klienten. I första
+   klienten, försök sätta Zoomstyrka till noll. Konfliktbeskedet visas
+   med aktuella bekräftade värden: 100 procent och 70 procent. Fokus
+   stannar på Zoomstyrka.
+7. Förbered skrivfelet enligt ovan och försök sätta Zoomstyrka till noll.
+   Ett felbesked visas, värdet återgår till 70 procent och fokus bevaras.
+   Ta bort blockeringen.
+
+**Förväntat resultat:** Reglagen sparas oberoende. Återställ rörelse
+påverkar bara rörelsevärdena. Inaktivering, fel och konflikt bevarar
+bekräftade val och tydlig återkoppling.
+
+### PLACERING-14: rörelseinställningar och vanlig navigering
+
+**Syfte:** Granska bakgrundens oberoende respons genom den riktiga kartan.
+
+**Användare:** Alex Exempel.
+
+**Förutsättningar:** Lampan och Cykeln är sparade. Använd ljust tema,
+Pärlemor, påslagen bakgrund och ingen minskad rörelse. Prova vid
+1440 CSS-pixlars bredd. Granska fria bakgrundsytor under kamerahandlingar.
+
+**Automatiskt motsvarande test:**
+[personal-view.spec.ts](../../tests/integration/personal-view.spec.ts),
+PLACERING-14. Automationen jämför skärmbilder av fria bakgrundsytor;
+den verifierar inte fysisk hårdvaruprestanda.
+Det separata tekniska webbläsarprovet
+[spatial-scene.test.tsx](../../tests/browser/spatial-scene.test.tsx)
+kontrollerar kamerans hela varv och zoomens ytterlägen direkt mot scenen.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/personal-view.spec.ts",
+    "caseId": "PLACERING-14"
+  },
+  "reference": "Chromium, Pärlemor i ljust tema, två sparade objekt; noll, 70 och 100 procent, lageravstånd 0,5 och 2,0 samt vanlig rotation, panorering och zoom.",
+  "outcomes": [
+    "Noll stoppar respektive respons medan rotation finns kvar; 70 och 100 procent ger synlig respons.",
+    "Lageravståndets ytterlägen påverkar bakgrundens djuprespons.",
+    "Rotation, panorering, zoom och återställning ger en sammanhängande vy.",
+    "Bakgrunden står stilla utan kamerahandlingar och vid personlig objektflyttning."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Sätt båda styrkorna till noll och lageravstånd till 1,0. Återvänd
+   till kartan och öppna Navigera. Återställ vy. Panorera höger fem
+   gånger och zooma in fem gånger. Bakgrunden står stilla. Rotera
+   vänster fyra gånger; bakgrunden följer rotationen.
+2. Sätt Panoreringsstyrka till 70 procent och Zoomstyrka till noll.
+   Återställ vy, panorera höger fem gånger och granska synlig respons.
+   Återställ igen och zooma in fem gånger: bakgrunden står stilla.
+   Upprepa med Panoreringsstyrka 100 procent.
+3. Sätt Panoreringsstyrka till noll. Prova Zoomstyrka 70 respektive
+   100 procent: återställ, zooma in fem gånger och granska responsen.
+   Återställ och panorera höger fem gånger: bakgrunden står stilla.
+4. Sätt båda styrkorna till 70 procent. Prova lageravstånd 0,5 och 2,0.
+   Återställ före varje variant och panorera höger fem gånger.
+   Djupresponsen skiljer sig mellan varianterna.
+5. Återställ vy. Tryck två gånger på **Rotera vänster** och två gånger på
+   **Rotera höger**; utgångsvyn återkommer. Tryck tre gånger på
+   **Panorera höger**, tre gånger på **Zooma in** och tre gånger på
+   **Zooma ut**. Bakgrunden ska följa kameran. Återställ vy;
+   utgångsvyn återkommer.
+6. Låt kartan stå stilla. Ingen egen rörelse ska synas. Markera Lampan
+   och flytta den uppåt med Navigera: bakgrunden står fortfarande stilla.
+
+**Förväntat resultat:** Oberoende styrkor och lageravstånd ger beskriven
+respons. Kartans rotation är sammanhängande och bakgrunden svarar endast
+på kamerahandlingar.
+
 ### PLACERING-01: mus, höjdled, tangentbord och återläsning
 
 **Syfte:** Kontrollera tre dimensioner och beständig personlig lagring.
@@ -72,11 +355,11 @@ PLACERING-01.
    nedåt från den nya starten. Slå av höjdhjälpen och flytta nedåt igen.
    Valet ska förbli av. Slå på det och kontrollera två steg från samma start.
    Öppna Inställningar → Rymdkartan och aktivera Visa
-   stjärnhimmel.
+   bakgrund.
    Återgå med Tillbaka till kartan.
 3. Ladda om, starta om servern och öppna samma hushåll i en annan klient
    med Alex inloggning.
-4. Läs det sparade stjärnvalet i den andra klientens inställningar och
+4. Läs det sparade bakgrundsvalet i den andra klientens inställningar och
    återgå till kartan. Markera Lampan, öppna **Navigera** och flytta uppåt
    med Enter. Kontrollera att flytten fortsätter från sparad placering
    och att den aktiva flyttknappen behåller fokus.
@@ -86,7 +369,7 @@ PLACERING-01.
 - Vanligt drag flyttar i bildplanet. Shift-drag ändrar bara rummets höjd.
   Shift visar höjdhjälp före drag. Senaste start och höjdskillnad går att
   granska efteråt. Höjdknapparna följer höjdhjälpsvalet.
-- Knappar fungerar med tangentbord. Flyttar och stjärnval återkommer
+- Knappar fungerar med tangentbord. Flyttar och bakgrundsval återkommer
   efter omstart och i den andra klienten.
 - Hushållets sparade uppgifter och utkast ändras inte av flyttningen.
 - Höjdhjälpsvalet är av efter omladdning.
@@ -182,8 +465,8 @@ PLACERING-02.
    nedåt i den andra.
 2. Läs konfliktbeskedet i den andra klienten och flytta nedåt igen.
 3. Flytta Cykeln från den första klienten utan att läsa om Lampan.
-4. Aktivera Visa axlar hela tiden i den första klienten. Försök aktivera
-   Visa stjärnhimmel från den andra klientens äldre inställningar under
+4. Aktivera Visa axlar hela tiden i den första klienten. Försök ändra
+   Visa bakgrund från den andra klientens äldre inställningar under
    Inställningar → Rymdkartan. Återgå till kartan för att kontrollera axlarna.
 
 **Förväntat resultat:**
@@ -289,12 +572,10 @@ PLACERING-04.
 1. Flytta Lampan. Öppna Ordna min vy i Navigera. Aktivera Visa axlar hela
    tiden och välj hörnet uppe
    till vänster. Vänd panorering separat i sidled och höjdled.
-2. Öppna Inställningar → Rymdkartan. Kontrollera att stjärnhimlen är
-   avstängd och reglaget inaktivt. Stäng
-   av systemets minskade rörelse och aktivera stjärnhimlen. Slå på
-   minskad rörelse igen utan omladdning och granska samma reglage och
-   bakgrund genom att växla mellan inställningarna och kartan. Stäng av
-   minskad rörelse igen och välj Tillbaka till kartan.
+2. Öppna Inställningar → Rymdkartan. Slå av Visa bakgrund och granska
+   kartans enfärgade bakgrund. Slå på Visa bakgrund igen. Växla systemets
+   minskade rörelse utan omladdning och kontrollera att det sparade
+   synlighetsvalet och bakgrunden finns kvar. Välj Tillbaka till kartan.
 3. Välj **Nytt objekt** i verktygen, ange Ny sak och välj
    **Lägg i utkastet och stäng**. Öppna **Karta** igen.
 4. Välj **Tabell** och **Redigera Lampan**. Skriv Oskickad text som nytt namn.
@@ -309,10 +590,9 @@ PLACERING-04.
 
 **Förväntat resultat:**
 
-- Visningsval sparas personligt. Minskad rörelse stänger av stjärnorna
-  och inaktiverar reglaget, även när det personliga valet är på. När
-  minskad rörelse stängs av återkommer det personliga valet. Axelvisaren
-  stannar inom kartans synliga yta. Ingen automatisk animation krävs.
+- Visningsval sparas personligt. Minskad rörelse ändrar inte bakgrundens
+  synlighet eller det sparade valet. Axelvisaren stannar inom kartans
+  synliga yta. Ingen automatisk animation krävs.
 - Nya förslag flyttar inte befintliga placeringar eller kameran.
 - Lampans oskickade namn består genom storleksbyten och avbruten förlust.
   Efter uttryckligt kastande finns sparade namn, personliga val och hela
@@ -357,7 +637,7 @@ PLACERING-05.
    Kontrollera att ingen av profilerna får se Lindens karta.
 2. Bjud in Robin till Linden och acceptera inbjudan som Robin. Öppna
    Lindens adress uttryckligen även om startsidan visar Eken. Flytta Lampan
-   och ändra stjärnvalet som Robin. För stjärnvalet, öppna Lindens
+   och ändra bakgrundsvalet som Robin. För bakgrundsvalet, öppna Lindens
    adress följd av `/settings/map` i adressfältet; den vanliga
    inställningsöversikten kan utgå från Eken som först valt hushåll.
    Öppna uttryckligen Lindens kartadress igen efter inställningsprovet.
@@ -422,7 +702,7 @@ Följ
 . Arma efter sparade placeringar men före omladdningen i UI-steg 2. Efter
 omladdningen: invänta det verkliga genomförda personliga svarets hållning och
 meddela **Samma första personliga svar hålls**. Behåll det genom användarens
-inaktiva stjärnval. Vid steg 3: släpp samma personliga svar i
+inaktiva bakgrundsval. Vid steg 3: släpp samma personliga svar i
 förberedelseterminalen och meddela **Samma första personliga svar är släppt**.
 Arma inte senare läsningar; återställ transporten efter fallet enligt den
 befintliga guiden.
@@ -436,11 +716,11 @@ befintliga guiden.
 2. Be operatören förbereda den separata personliga läsningen och invänta
    installationen. Ladda om sidan. Invänta operatörens bekräftelse att samma
    genomförda svar hålls. Kontrollera att **Tabell** och **Karta** kan öppnas.
-   Kontrollera Visa stjärnhimmel under Inställningar → Rymdkartan medan valet är
+   Kontrollera Visa bakgrund under Inställningar → Rymdkartan medan valet är
    inaktivt i väntan på de personliga placeringarna. Använd inte Återställ vy
    eller kameraknapparna.
 3. Be operatören släppa samma personliga svar enligt förberedelsen och invänta
-   bekräftelse. Vänta tills Visa stjärnhimmel går att använda. Välj Tillbaka
+   bekräftelse. Vänta tills Visa bakgrund går att använda. Välj Tillbaka
    till kartan och kontrollera att båda objekten syns. Låt senare läsningar
    passera normalt.
 4. Öppna Navigera och använd Panorera höger så att objekten hamnar tydligt vid
@@ -448,7 +728,7 @@ befintliga guiden.
    utsnittet.
 5. Välj Läs in min aktuella vy under Ordna min vy. Vänta tills läsningen är klar
    och jämför utsnittet med det du valde i föregående steg.
-6. Öppna Inställningar → Rymdkartan och aktivera Visa stjärnhimmel. Återgå med
+6. Öppna Inställningar → Rymdkartan och slå av Visa bakgrund. Återgå med
    Tillbaka till kartan. Vänta på beskedet att vyn är sparad och jämför
    utsnittet igen.
 
@@ -460,10 +740,10 @@ befintliga guiden.
 - Efter den första inramningen kan användaren välja ett eget utsnitt.
   Läs in min aktuella vy bevarar det utsnittet utan att kameran hoppar
   tillbaka eller zoomar om.
-- Stjärnhimlen visas. Även efter att valet sparas ligger objekten kvar
+- Bakgrunden är enfärgad. Även efter att valet sparas ligger objekten kvar
   på samma ställen i utsnittet och kameran bevaras.
 
-### PLACERING-07: stjärnval i Rymdkartans inställningar
+### PLACERING-07: bakgrundsval i Rymdkartans inställningar
 
 **Syfte:** Anpassa bakgrunden utan att förlora urval eller personlig vy.
 
@@ -496,20 +776,33 @@ PLACERING-07.
 
 1. Markera Lampan. Öppna Navigera och flytta den uppåt. Stäng navigeringen
    och lägg märke till urval och utsnitt.
-2. Öppna Inställningar → Rymdkartan. Aktivera Visa stjärnhimmel och vänta
-   på beskedet att din personliga vy är sparad.
-3. Slå på systemets minskade rörelse. Kontrollera att reglaget är avstängt
-   och inaktivt. Stäng av minskad rörelse och kontrollera att valet återkommer.
+2. Öppna Inställningar → Rymdkartan → Bakgrund. Kontrollera att Visa
+   bakgrund är på med Pärlemor i ljust tema och Atmosfär i mörkt tema.
+   Fokusera Bakgrund i mörkt tema och välj Dis och ljuspunkter. Vänta på
+   sparbeskedet och kontrollera att väljaren behåller fokus.
+3. Slå av Visa bakgrund. Kontrollera att båda väljarna blir inaktiva men
+   visar samma val. Slå på bakgrunden igen och kontrollera att väljarna
+   går att använda. Slå på och av systemets minskade rörelse; det sparade
+   synlighetsvalet ska ligga kvar och gå att använda.
 4. Välj Tillbaka till kartan. Kontrollera samma urval och utsnitt.
+   Med systemtema valt: växla systemets tema till mörkt och granska Dis
+   och ljuspunkter. Välj Atmosfär i inställningarna och granska dess mjuka
+   mörka ljusfält i kartan. Växla systemets tema till ljust och granska
+   Pärlemor. Urval, utsnitt och objektplaceringar ska vara kvar. Välj Dis
+   och ljuspunkter för mörkt tema igen.
 5. Starta om testinstallationen och ladda om sidan. Öppna Rymdkartans
-   inställningar och kontrollera att stjärnvalet består.
+   inställningar och kontrollera att bakgrundsvalen består.
 
 **Förväntat resultat:**
 
-- Valet sparas personligt och återkommer efter omstart.
-- Minskad rörelse stänger av stjärnorna utan att radera det sparade valet.
+- Valen sparas personligt och återkommer efter omstart.
+- Av bevarar bakgrundsvalen i inaktiva väljare. Minskad rörelse ändrar
+  inte det sparade synlighetsvalet.
 - Kartans urval, kamera och tidigare placeringar består genom vybytet.
-- Reglaget finns i inställningarna och går att nå med tangentbord.
+- Kontrollerna finns i inställningarna, går att nå med tangentbord och
+  behåller fokus under sparande.
+- Under väntan på ett nytt sparresultat visas att vyn sparas. Ett tidigare
+  sparbesked bekräftar inte det nya valet.
 
 ### PLACERING-09: Sparbekräftelse som toast med bevarat fokus
 

@@ -517,7 +517,7 @@ footer[hidden] {
 .household-map.workspace-shell .spatial-orb {
   background: var(--space-surface);
   color: var(--space-text);
-  border-color: var(--space-line);
+  border-color: var(--space-control);
 }
 .household-map.workspace-shell :is(.spatial-node, .spatial-name, .spatial-edge) {
   background: transparent;
@@ -551,7 +551,7 @@ footer[hidden] {
   --connection-color: var(--space-accent);
 }
 .household-map.workspace-shell .spatial-connection {
-  opacity: 0.7;
+  opacity: 1;
 }
 .household-map.workspace-shell .spatial-connection.selected {
   opacity: 1;
@@ -569,6 +569,9 @@ footer[hidden] {
   border-color: var(--proposal-color);
   color: var(--proposal-color);
 }
+.household-map.workspace-shell .spatial-node.subdued .spatial-orb {
+  color: var(--proposal-color, var(--space-muted));
+}
 .household-map.workspace-shell :is(.spatial-edge, .spatial-type-name, .proposal-symbol) {
   color: var(--proposal-color, inherit);
 }
@@ -585,7 +588,11 @@ footer[hidden] {
 .household-map.workspace-shell .spatial-node[aria-pressed="true"] .spatial-orb {
   outline: 2px solid var(--space-accent);
   outline-offset: 5px;
-  box-shadow: none;
+  box-shadow: 0 0 0 8px var(--space-surface);
+}
+.household-map.workspace-shell :is(.spatial-node, .spatial-name, .spatial-edge):focus-visible,
+.household-map.workspace-shell .spatial-name[aria-pressed="true"] {
+  box-shadow: 0 0 0 7px var(--space-surface);
 }
 
 /* Indicators overlay the fixed toolbar target; their shapes do not alter layout. */

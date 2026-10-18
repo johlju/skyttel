@@ -63,6 +63,7 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
     }
   }
   async function update(kind: 'position' | 'settings', body: unknown) {
+    setMessage('Din personliga vy sparas…');
     setPending(true);
     try {
       if (kind === 'position') {

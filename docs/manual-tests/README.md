@@ -99,6 +99,8 @@ uttryckligen till det verifierade kontot före de mänskliga observationerna.
 
 För [stora kartor](large-map-performance.md) finns en separat mätplan och
 [uppmätta resultat](large-map-results.md).
+För [kartans bakgrunder](background-performance.md) finns en separat
+respons- och stabilitetsmatris med [mätresultat](background-performance-results.md).
 Den samlade kartupplevelsens
 [verifieringsrapport](connected-experience-verification.md) redovisar hela
 familjeflöden, verklig webbläsarzoom, granskade bilder och miljöbegränsningar.
@@ -499,6 +501,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 - [Fullständig återimport](household-import.md): egna inställningssidor,
   bevarat oskickat arbete före innehållsbyte, uttrycklig ersättning,
   bevarad åtkomst, privata uppgifter, bildhistorik, äldre fältbetydelser,
+  personliga bakgrundsval och rörelsevärden genom export och återimport,
   lokalt prov med tappat sparbesked, avvisade gamla sparbegäranden,
   ny förberedelse efter omstart, samma importförsök i en annan
   administratörs webbläsare, tappat förberedelsesvar, väntande rensning
@@ -647,16 +650,30 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 - [Stora kartor](large-map.md): åtkomst till 500 objekt och 1 500 samband
   genom sidvisning, sökning och fokus, med bevarad text och placering.
   Sparat resultat och historik läses genom webbläsaren efter omstart.
-- [Personliga placeringar](personal-view.md): stjärnval i Rymdkartans
-  inställningar, sparbekräftelse som toast i tre sekunder med bevarat fokus,
-  minskad rörelse, flyttning med mus, pekgester
-  och tangentbord, stabila fingerpar och kameraväxling, systemets minskade
-  rörelse, visningsval, samtidighetskonflikter, bevarad text,
+- [Personliga placeringar](personal-view.md): bakgrundsval per tema i Rymdkartans
+  inställningar, oberoende panorering, zoom och lageravstånd med återställning,
+  sparbekräftelse som toast i tre sekunder med bevarat fokus,
+  stilla bakgrund vid minskad rörelse, återgång utan hopp och separat
+  återställning av kamerakopplingen för alla sju bakgrunder, flyttning med mus,
+  pekgester och tangentbord, stabila fingerpar och kameraväxling,
+  visningsval, samtidighetskonflikter, bevarad text,
   beständighet och avskildhet mellan användare samt inramning vid sen
   första inläsning med bevarad kamera vid senare uppdateringar. Separata
   provhushåll på samma installation förbereds med ett lokalt kommando.
   Höjdhjälpen har stabil förhandsvisning och ett bevarat val i båda
   navigeringsstorlekarna.
+- [Kartans bakgrunder](background.md): Gryningsdis, Universum samt ljust
+  och mörkt Under världshavet som personliga temaval, återläsning utan
+  ändrad karta, sandbotten, vattenyta och sex ljusformer genom vanlig
+  kameranavigering. [Respons och stabilitet](background-performance.md)
+  prövar alla sju utföranden med kort navigering, objektflyttning och
+  bakgrundsbyten. Hela varv och zoomens ytterlägen har separat tekniskt
+  underlag i webbläsarsviten.
+- [Bakgrundens tillgänglighet](background-accessibility.md): läsa objekt
+  och använda tabellen i ljust och mörkt tema, tangentbord, pekemulering,
+  omflöde och sparstatus. Separat tekniskt underlag mäter kontrast för
+  sju motiv i gles och tät karta. Fysisk pekskärm,
+  verklig förstoring och längre bruk har en separat mänsklig observation.
 - [Avtal och ekonomiska uppgifter](contracts.md): registrera, hitta och
   rätta hyra, skuld och kredit, separata roller kring bostad och fordon,
   validering, konflikter, historik och bevarade äldre utkast. Ett lokalt

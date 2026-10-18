@@ -47,7 +47,7 @@ test('independent moves merge while stale overlapping moves and settings are rej
   expect((await move('bike', 0, 4)).status).toBe(200);
   expect((await move('lamp', 0, 9)).status).toBe(409);
   expect((await move('lamp', 1, 3)).status).toBe(200);
-  const settings = { ...defaultViewSettings, stars: true, invertY: true };
+  const settings = { ...defaultViewSettings, background: true, invertY: true };
   expect((await client.json(`${path}/view/settings`, { version: 0, settings })).status).toBe(200);
   expect(
     (await client.json(`${path}/view/settings`, { version: 0, settings: defaultViewSettings }))
@@ -69,7 +69,7 @@ test('positions and settings require current membership and never expose another
     200,
   );
   const ownerMove = { id: 'lamp', version: 0, position: { x: 1, y: 2, z: 3 } };
-  const ownerSettings = { version: 0, settings: { ...defaultViewSettings, stars: true } };
+  const ownerSettings = { version: 0, settings: { ...defaultViewSettings, background: true } };
   expect((await client.json(`${path}/view/position`, ownerMove)).status).toBe(200);
   expect((await client.json(`${path}/view/settings`, ownerSettings)).status).toBe(200);
   const ownerBefore = await (await client.request(`${path}/view`)).json();
@@ -136,8 +136,14 @@ test('invalid coordinates, unknown objects, forged owners and malformed settings
   ])
     expect((await client.json(`${path}/view/position`, body)).status).toBe(400);
   for (const settings of [
-    { ...defaultViewSettings, stars: 'yes' },
+    { ...defaultViewSettings, background: 'yes' },
     { ...defaultViewSettings, axisCorner: 'outside' },
+    { ...defaultViewSettings, lightBackground: 'mist' },
+    { ...defaultViewSettings, darkBackground: 'pearl' },
+    { ...defaultViewSettings, panStrength: 1.05 },
+    { ...defaultViewSettings, zoomStrength: 0.71 },
+    { ...defaultViewSettings, layerDistance: 0.4 },
+    { ...defaultViewSettings, stars: true },
     {},
   ]) {
     expect((await client.json(`${path}/view/settings`, { version: 0, settings })).status).toBe(400);

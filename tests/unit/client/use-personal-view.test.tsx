@@ -41,7 +41,7 @@ async function openView() {
   };
 }
 
-test('personal save feedback starts after confirmation and expires after exactly three seconds', async () => {
+test('personal success feedback starts after confirmation and expires after exactly three seconds', async () => {
   const hook = await openView();
   let release!: (response: Response) => void;
   hook.write(
@@ -55,7 +55,9 @@ test('personal save feedback starts after confirmation and expires after exactly
     saving = hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
   });
   act(() => vi.advanceTimersByTime(5000));
-  expect(hook.result.current.message).toBe('');
+  expect(hook.result.current.message).toBe('Din personliga vy sparas…');
+  expect(hook.result.current.pending).toBe(true);
+  expect(hook.result.current.toast).toBeUndefined();
   await act(async () => {
     release(Response.json({ id: 'lamp', x: 1, y: 2, z: 3, version: 1 }));
     await saving;

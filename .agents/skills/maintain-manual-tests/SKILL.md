@@ -2,7 +2,7 @@
 name: maintain-manual-tests
 description: >-
   Synchronize manual cases, integration/browser counterparts and mapped
-  technical evidence. Use when changing their scenarios or identities,
+  technical evidence. Use when planning or changing their scenarios or identities,
   maintaining the manual-test index, or editing the testing guide.
 ---
 
@@ -16,7 +16,8 @@ applicable branches.
 
 1. Scope the change. Identify every requested scenario, its accepted
    requirements, affected specs, and existing cases under `docs/manual-tests/`.
-   Derive expected behavior from those requirements. Finish when every
+   Apply [test placement](references/cases.md#test-placement) before choosing
+   a suite. Derive expected behavior from those requirements. Finish when every
    in-scope scenario has an expected outcome and affected files identified;
    backfill unrelated scenarios only when requested.
 2. Classify and implement each change:

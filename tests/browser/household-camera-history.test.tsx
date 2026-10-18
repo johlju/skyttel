@@ -1,4 +1,4 @@
-import { cleanup } from '@testing-library/react';
+import { act, cleanup } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { cdp, type Locator, page } from 'vitest/browser';
 import type { MapState } from '../../src/shared/map.js';
@@ -260,14 +260,23 @@ test('KAMERA-09: mouse drags, wheel bursts and touch pinch create complete previ
       clickCount: 1,
     });
   };
-  await drag('left');
+  await act(() => drag('left'));
   await expect.poll(() => projection(map)).not.toEqual(initial);
   const rotated = projection(map);
-  await drag('right');
+  await act(() => drag('right'));
   await expect.poll(() => projection(map)).not.toEqual(rotated);
   const panned = projection(map);
   const point = emptyPoint(map);
-  await ctrlWheel(session, point, 3, 5);
+  // Keep the intended burst inside one gesture despite slow native input delivery.
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  try {
+    await ctrlWheel(session, point, 3, 5);
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
+    });
+  } finally {
+    vi.useRealTimers();
+  }
   await expect.poll(() => projection(map)).not.toEqual(panned);
   await previous.click();
   await expectProjection(map, panned);

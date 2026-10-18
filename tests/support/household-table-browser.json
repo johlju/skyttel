@@ -987,7 +987,12 @@
       "invertY": false,
       "axisCorner": "bottom-right",
       "axisPinned": false,
-      "stars": false,
+      "background": false,
+      "lightBackground": "pearl",
+      "darkBackground": "atmosphere",
+      "panStrength": 0.7,
+      "zoomStrength": 0.7,
+      "layerDistance": 1,
       "allLabels": false,
       "version": 0
     }

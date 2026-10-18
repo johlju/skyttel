@@ -127,7 +127,7 @@ function MapView({
   const [view, setView] = useState<PersonalView>({
     contentVersion: 1,
     positions,
-    settings: { ...defaultViewSettings, version: 0 },
+    settings: { ...defaultViewSettings, background: false, version: 0 },
   });
   const [selection, setSelection] = useState<{
     kind: 'object' | 'relationship';
@@ -144,7 +144,6 @@ function MapView({
         {message}
       </p>
       <pre data-placement>{JSON.stringify(view.positions)}</pre>
-      <div ref={setSettingsMount} />
       <SpatialMap
         theme={theme}
         settingsMount={settingsMount}
@@ -207,6 +206,7 @@ function MapView({
           setMessage('Borttagning föreslagen');
         }}
       />
+      <div ref={setSettingsMount} />
     </>
   );
 }
@@ -982,8 +982,8 @@ test('personal display controls retain corner choices, independent pan inversion
     await expect.element(page.getByLabelText(label, { exact: true })).toBeChecked();
   }
   await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
-  await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
-  await expect.element(page.getByLabelText('Visa stjärnhimmel', { exact: true })).toBeChecked();
+  await page.getByLabelText('Visa bakgrund', { exact: true }).click();
+  await expect.element(page.getByLabelText('Visa bakgrund', { exact: true })).toBeChecked();
   await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   for (const label of ['vänster', 'höger', 'uppåt', 'nedåt', 'bakåt', 'framåt'])
     await page.getByRole('button', { name: `Flytta Lo Exempel: ${label}`, exact: true }).click();
@@ -1148,7 +1148,8 @@ test('native empty-space mouse, wheel and touch navigation changes the camera wi
 test('painted stars respond to panning, rotation and zoom while object movement leaves the distant sky fixed', async () => {
   render(<MapView relationships={[]} />);
   await page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true }).click();
-  await page.getByLabelText('Visa stjärnhimmel', { exact: true }).click();
+  await page.getByLabelText('Visa bakgrund', { exact: true }).click();
+  await page.getByLabelText('Bakgrund i mörkt tema', { exact: true }).selectOptions('mist');
   await page.getByRole('button', { name: 'Navigera', exact: true }).click();
   const starPixels = async () => {
     await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
@@ -1184,7 +1185,7 @@ test('painted stars respond to panning, rotation and zoom while object movement 
     };
     const pixels = new Set<number>();
     for (let index = 0; index < data.length; index += 4) {
-      if (data[index + 2] > 55 && data[index + 2] > data[index] * 1.04 && visible(index / 4))
+      if (data[index + 2] > 130 && data[index + 2] > data[index] * 1.04 && visible(index / 4))
         pixels.add(index / 4);
     }
     await page.getByRole('button', { name: 'Navigera', exact: true }).click();
@@ -1835,20 +1836,20 @@ test('long press does not activate a menu action on release and movement cancels
   await expect.element(selectionStatus()).toHaveTextContent('Lo Exempel');
 });
 
-test('reduced motion overrides a saved star choice and follows system changes', async () => {
+test('reduced motion retains saved background visibility and usable choices through system changes', async () => {
   const session = cdp();
   await session.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }],
   });
   render(<MapView relationships={[]} />);
-  const stars = page.getByLabelText('Visa stjärnhimmel', { exact: true });
+  const stars = page.getByLabelText('Visa bakgrund', { exact: true });
   await stars.click();
   await expect.element(stars).toBeChecked();
   await session.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
   });
-  await expect.element(stars).not.toBeChecked();
-  await expect.element(stars).toBeDisabled();
+  await expect.element(stars).toBeChecked();
+  await expect.element(stars).toBeEnabled();
   const screenshot = await page.screenshot({
     element: document.querySelector('canvas') as HTMLCanvasElement,
     base64: true,
@@ -1862,8 +1863,8 @@ test('reduced motion overrides a saved star choice and follows system changes', 
   const context = sample.getContext('2d');
   if (!context) throw new Error('Pixel sampling unavailable');
   context.drawImage(picture, 0, 0);
-  // Reduced motion keeps the flat background of the selected dark theme.
-  expect([...context.getImageData(30, 30, 1, 1).data]).toEqual([16, 27, 41, 255]);
+  // Reduced motion preserves the decorative environment instead of hiding it.
+  expect([...context.getImageData(30, 30, 1, 1).data]).not.toEqual([16, 27, 41, 255]);
   await session.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }],
   });

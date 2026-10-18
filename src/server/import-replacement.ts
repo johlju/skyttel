@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 import { closeSync, openSync, readSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
+import { defaultViewSettings } from '../shared/personal-view.js';
 import { contentOwner } from './content-identities.js';
+import type { ValidatedImportContent } from './import-archive.js';
 import { validateImportReferences } from './import-references.js';
 import type { ImportContent } from './import-schema.js';
 import { MapError } from './map-error.js';
@@ -112,7 +114,7 @@ export function assertImportCollisions(
 export function replaceHouseholdContent(
   database: Database.Database,
   householdId: string,
-  content: ImportContent,
+  content: ValidatedImportContent,
   directory: string,
 ) {
   assertImportCollisions(database, householdId, content);
@@ -207,6 +209,16 @@ export function replaceHouseholdContent(
         .run(...Object.values(row));
     }
   }
+  // Current access can differ from the archive, including an empty legacy
+  // archive. Materialize its implicit off choice once for these existing views.
+  // Later memberships and identities retain the enabled new-view default.
+  if (content.legacyBackgrounds)
+    database
+      .prepare(`INSERT OR IGNORE INTO personal_view_settings
+        (householdId, userId, version, settings, backgroundVersion)
+        SELECT householdId, id, 0, ?, 1 FROM content_identity
+        WHERE householdId = ? AND userId IS NOT NULL`)
+      .run(JSON.stringify({ ...defaultViewSettings, background: false }), householdId);
   database
     .prepare('UPDATE household SET name = ?, createdAt = ? WHERE id = ?')
     .run(content.household.name, content.household.createdAt, householdId);

@@ -321,6 +321,16 @@ contents also changes the host copies. Both profiles also mount the host's
 placeholder only when the file is absent; it preserves existing credentials.
 Keep credentials out of the repository and container image.
 
+The shared `.codex/config.toml` selects `gpt-6-astra` with `high` reasoning
+for the main thread and `gpt-6.1-sol` with `high` reasoning for default
+subagents. Start a new thread after changing these defaults. Explicit spawn
+settings and custom-agent configuration can override them; check the
+runtime model and effort when diagnosing a different selection.
+Run the two AI sync skills directly with their bundled scripts and preserve
+their output verification. The
+[agent routing evaluation](../research/codex-agent-routing.md) records the
+measurements, limitations, and conditions for reconsidering delegation.
+
 Creation and rebuilding also install the latest Claude Code release in
 `~/.local/bin`. If you use it, run `claude` in the container and sign in.
 Its sign-in, settings, and history stay in the container's `~/.claude`,

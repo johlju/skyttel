@@ -35,9 +35,9 @@ async function installation(page: Page, mac = false) {
   return { app, live };
 }
 async function down(page: Page) {
-  const box = await microphone(page).boundingBox();
-  if (!box) throw Error('Missing microphone');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  // Map startup adds toolbar controls and can move the microphone. Hover
+  // waits for a stable, unobscured target before the native held press.
+  await microphone(page).hover();
   await page.mouse.down();
 }
 
