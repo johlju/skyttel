@@ -217,7 +217,8 @@ async function notify(github, report, recipient, runUrl, verifyNotification) {
   // alarm must not masquerade as healthy monitoring.
   await github(`/assignees/${recipient}`);
   const issues = [];
-  for await (const issue of pages(github, '/issues?state=all&creator=github-actions%5Bbot%5D')) {
+  // Closed alerts are historical records. A later failure starts a new issue.
+  for await (const issue of pages(github, '/issues?state=open&creator=github-actions%5Bbot%5D')) {
     if (!issue.pull_request && issue.body?.startsWith(marker)) issues.push(issue);
   }
   requireState(issues.length <= 1);

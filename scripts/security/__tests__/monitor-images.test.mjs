@@ -102,8 +102,12 @@ function fixture() {
     else if (url.pathname.endsWith('/comments')) {
       state.comments.push(body);
       result = { id: state.comments.length };
-    } else if (options.method === 'GET') result = structuredClone(state.issues);
-    else if (options.method === 'POST') {
+    } else if (options.method === 'GET') {
+      const requestedState = url.searchParams.get('state');
+      result = structuredClone(
+        state.issues.filter((issue) => requestedState === 'all' || issue.state === requestedState),
+      );
+    } else if (options.method === 'POST') {
       result = {
         ...body,
         number: state.issues.length + 100,
@@ -112,7 +116,11 @@ function fixture() {
       };
       state.issues.push(result);
     } else if (options.method === 'PATCH') {
-      result = Object.assign(state.issues[0], body, {
+      const issue = state.issues.find(
+        (entry) => entry.number === Number(url.pathname.split('/').at(-1)),
+      );
+      assert.ok(issue, 'Updates must target an existing issue');
+      result = Object.assign(issue, body, {
         assignees: body.assignees.map((login) => ({ login })),
       });
     }
@@ -328,10 +336,12 @@ test('new and repeated findings reconcile one issue; new findings notify and unk
   state.matches = [];
   assert.equal((await run()).status, 'passed');
   assert.equal(state.issues[0].state, 'closed');
+  const closed = structuredClone(state.issues[0]);
   state.matches = [finding];
   await run();
-  assert.equal(state.issues.length, 1);
-  assert.equal(state.issues[0].state, 'open');
+  assert.equal(state.issues.length, 2);
+  assert.deepEqual(state.issues[0], closed);
+  assert.equal(state.issues[1].state, 'open');
   const publicOutput = JSON.stringify([state.issues, state.comments, failed]);
   for (const secret of [
     'private-synthetic-package',
@@ -341,6 +351,52 @@ test('new and repeated findings reconcile one issue; new findings notify and unk
   ]) {
     assert.equal(publicOutput.includes(secret), false);
   }
+});
+
+test('manually closed alerts stay unchanged across new findings and deployment evidence failures', async () => {
+  for (const status of ['blocked', 'unknown']) {
+    const { state, run } = fixture();
+    state.matches = [finding];
+    await run();
+    state.issues[0].state = 'closed';
+    state.issues[0].state_reason = 'not_planned';
+    const closed = structuredClone(state.issues[0]);
+    if (status === 'unknown') state.records = [];
+
+    const result = await run();
+    assert.equal(result.status, status);
+    assert.equal(result.notification, 'accepted-by-github');
+    assert.equal(state.issues.length, 2);
+    assert.equal(state.issues[1].state, 'open');
+    assert.deepEqual(state.issues[0], closed);
+
+    assert.equal((await run()).notification, 'accepted-by-github');
+    assert.equal(state.issues.length, 2, 'Repeated failures update the open alert');
+    assert.equal(state.comments.length, 0, 'Repeated failures do not send duplicate mentions');
+    assert.deepEqual(state.issues[0], closed);
+
+    state.records = [deployment(3, 'b')];
+    state.matches = [];
+    assert.equal((await run()).status, 'passed');
+    assert.equal(state.issues[1].state, 'closed');
+    const history = structuredClone(state.issues);
+    const requestCount = state.requests.length;
+    assert.equal((await run()).notification, 'not-needed');
+    assert.deepEqual(state.issues, history, 'Clean runs preserve all closed history');
+    assert.ok(state.requests.slice(requestCount).every((request) => request.method === 'GET'));
+  }
+});
+
+test('multiple open monitor alerts fail notification without changing either alert', async () => {
+  const { state, run } = fixture();
+  state.matches = [finding];
+  await run();
+  state.issues.push({ ...structuredClone(state.issues[0]), number: 101 });
+  const history = structuredClone(state.issues);
+  const result = await run();
+  assert.equal(result.notification, 'failed');
+  assert.equal(result.status, 'unknown');
+  assert.deepEqual(state.issues, history);
 });
 
 test('same reviewed exact-image policy accepts valid exceptions and blocks expiry or invalid scope', async () => {
@@ -411,7 +467,8 @@ test('each retained image needs its own matched exception, including the same fi
   const unmatchedRollback = await run({ scan });
   assert.equal(unmatchedRollback.status, 'blocked');
   assert.equal(unmatchedRollback.targets[1].reason, 'unused_exception');
-  assert.equal(state.issues[0].state, 'open');
+  assert.equal(state.issues[0].state, 'closed');
+  assert.equal(state.issues[1].state, 'open');
 });
 
 test('missing, different-image, stale-database and malformed scan evidence all remain unknown', async () => {
@@ -482,4 +539,12 @@ test('explicit delivery check records API acceptance separately from human recei
   assert.match(state.comments[0].body, /Confirm receipt through the private operator record/u);
   assert.equal((await run()).notification, 'accepted-by-github');
   assert.equal(state.issues[0].state, 'closed');
+  const closed = structuredClone(state.issues[0]);
+  assert.equal((await run({ verifyNotification: true })).notification, 'accepted-by-github');
+  assert.equal(state.issues.length, 2);
+  assert.deepEqual(state.issues[0], closed);
+  assert.equal(state.issues[1].state, 'open');
+  assert.equal(state.comments.length, 2);
+  const delivery = state.requests.filter((request) => request.address.endsWith('/comments')).at(-1);
+  assert.ok(delivery.address.endsWith(`/issues/${state.issues[1].number}/comments`));
 });

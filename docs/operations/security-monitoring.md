@@ -29,7 +29,7 @@ After this workflow reaches `main`:
 1. Open **Actions → Deployed image security → Run workflow** on `main`.
 1. Select **Send a controlled delivery check to the configured operator**.
 1. Check that the run produces `deployed-image-security/status.json` and
-   the single **Production image security status** issue assigned to
+   one open **Production image security status** issue assigned to
    `johlju`. The controlled comment contains no synthetic vulnerability.
 1. Have the recipient confirm that the message reaches the chosen inbox,
    email, or mobile destination. In a private operator record, save the
@@ -128,12 +128,18 @@ and keep its actual receipt confirmation separately.
 
 ## Respond to findings and failures
 
-New findings or unknown status open or reopen one persistent status issue.
-Repeated findings update that issue's current body without daily duplicate
-issues or mentions. Changed findings or policy status send a new mention.
-The issue stays open while either retained image is blocked or unknown and
-closes only after both pass. A successful scan of a newly built image does
-not resolve a finding in a retained image.
+New findings or unknown status create a new status issue when none is open.
+Repeated findings update the open issue's current body without daily
+duplicate issues or mentions. Changed findings or policy status send a new
+mention. The monitor closes the open issue only after both retained images
+pass. Closed issues remain unchanged. If an operator closes an issue while
+either image is blocked or unknown, the next unsuccessful check creates a
+new issue. Closing an issue does not suppress monitoring.
+
+A controlled delivery check also creates a new issue when none is open.
+Follow assignments and mentions for new issues rather than relying on one
+issue subscription. A successful scan of a newly built image does not
+resolve a finding in a retained image.
 
 Use [private vulnerability reporting](https://github.com/viscalyx/skyttel/security/advisories/new)
 for package findings, exploit details, or installation-specific information.
