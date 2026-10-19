@@ -142,8 +142,10 @@ test.each([
     await tick(250);
     expect(result.current.session).toBeNull();
     expect(result.current.consent.valid).toBe(consentRemains);
+    expect(result.current.consentRevoked).toBe(code === 'conversation_consent_revoked');
     await tick(250);
     expect(result.current.saveChecking).toBe(false);
+    expect(result.current.consentRevoked).toBe(code === 'conversation_consent_revoked');
     expect(result.current.saveCheckFailed).toBe(false);
     expect(result.current.text).toBe('Oskickat efter återkallandet');
     expect(result.current.transcript.map((row) => row.text)).toEqual([

@@ -711,6 +711,10 @@ export function useConversation({
           setVisitConsent(false);
           endVoice.current();
         }
+        if (failure.code === conversationConsentRevoked) {
+          setConsentRevoked(true);
+          setRevokedHere(false);
+        }
         setDiscovered(
           current.operations
             .filter(
