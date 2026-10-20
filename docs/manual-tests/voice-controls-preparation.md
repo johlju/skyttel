@@ -214,9 +214,10 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    det föreslagna Lo Lind, Person, **Använder familjens musik.** Stäng
    konfliktdialogen utan att välja. Välj **Prata med Skyttel** och
    **Godkänn och starta**. Stäng
-   textvyn. Välj **Tabell → Redigera Kim Exempel** och skriv
-   **Osänd text som ska finnas kvar** i beskrivningen utan att lägga den i
-   utkastet. Mikrofonen fortsätter medan formuläret är öppet.
+   textvyn. Välj **Tabell → Redigera Kim Exempel → Fria egenskaper**.
+   Skriv **Osänd text som ska finnas kvar** i värdet
+   för egenskapen **Beskrivning** utan att lägga den i utkastet.
+   Mikrofonen fortsätter medan formuläret är öppet.
 3. Skriv `user Behåll Lo-förslaget, rätta priset till 189 kr och spara.` och
    sedan `delegate`. Från `held.draft` kopieras `version`, `contentVersion`
    och hela första objektet i `conflicts`. Ersätt markörerna nedan; `CONFLICT`
@@ -240,16 +241,12 @@ förberedelse. Läs det verkliga held-anropets värden varje gång. Alla uppgift
    antecknad utkastversion, samma `contentVersion`, kopierat `id` och
    `baseRevision` lika med objektets `revision`. `value` ska innehålla hela det
    kopierade objektet utom `id`, `householdId` och `revision`. Ändra
-   `description` till **Familjeabonnemang 189 kr per månad.** och ersätt
-   `financialFacts` med följande JSON:
-
-   ```json
-   {
-     "price": { "knowledge": "known", "value": "189" },
-     "currency": { "knowledge": "known", "value": "SEK" },
-     "paymentInterval": { "knowledge": "known", "value": "månad" }
-   }
-   ```
+   listan `properties`: behåll alla returnerade egenskaps-ID och deras
+   ordning. Ge **Beskrivning** datatypen `text` och värdet
+   **Familjeabonnemang 189 kr per månad.** Ge **Pris** datatypen `number`
+   och det numeriska värdet `189`. Behåll **Valuta: SEK** och
+   **Betalningsintervall: månad** som text, tillsammans med alla andra
+   egenskaper. Etiketterna ändrar inte status eller andra uppgifter.
 
    Skriv `tool REQUEST propose_object` följt av hela argumentet som JSON på samma
    terminalrad. De tidigare delarna i utkastet ska finnas kvar.

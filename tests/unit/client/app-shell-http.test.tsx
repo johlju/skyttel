@@ -517,8 +517,8 @@ test('a saved report direct link opens the saved operation and returns to the sa
         .parentElement?.hasAttribute('open'),
     ).toBe(true),
   );
-  expect(article.getByText('Pris: 2000 SEK')).toBeTruthy();
-  expect(article.queryByText('Pris: 2500 SEK')).toBeNull();
+  expect(article.getByText('Pris: 2000 SEK (Text)')).toBeTruthy();
+  expect(article.queryByText('Pris: 2500 SEK (Text)')).toBeNull();
   await userEvent.click(reports.getByRole('button', { name: 'Tillbaka till arbetet' }));
   expect(screen.getByRole('region', { name: 'Rymdkarta' })).toBeTruthy();
   expect(window.location.search).toBe(

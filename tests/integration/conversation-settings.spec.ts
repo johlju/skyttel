@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { APIRequestContext, APIResponse, Page } from '@playwright/test';
 import { conversationConsentTextVersion } from '../../src/shared/conversation-consent.js';
 import { bounds, contrast } from '../support/accessibility.js';
-import { closeSupportDialog, createHousehold, openSettings, signIn } from '../support/client.js';
+import { createHousehold, openSettings, signIn } from '../support/client.js';
 import { specifiedConsentText } from '../support/conversation.js';
 import {
   chooseConversationText,
@@ -19,12 +19,13 @@ import {
   turnMicrophoneOn,
   voiceBox,
 } from '../support/conversation-page.js';
-import { readDraftProposal, readTableObject } from '../support/domain-work.js';
+import { readTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
+import { readVoiceProposal } from '../support/voice-work-reading.js';
 
 const householdName = 'Familjen Berg';
 const refusal = { error: 'conversation_consent_revoked' };
@@ -172,13 +173,13 @@ test('MEDGIVANDE-05: sidan Samtal med Skyttel visar medgivandet för alla medlem
       await expect(overview.locator(group('Hushållets karta')).getByRole('link'), role).toHaveText([
         /^Rymdkartan/,
         /^Samtal med Skyttel→?Ditt medgivande, utkastet och textvyns bredd\.$/,
-        /^Typer och egna fält/,
+        /^Typer/,
       ]);
       const menu = visitor.getByRole('navigation', { name: 'Inställningarnas sidor' });
       await expect(menu.locator(group('Hushållets karta')).getByRole('link'), role).toHaveText([
         'Rymdkartan',
         'Samtal med Skyttel',
-        'Typer och egna fält',
+        'Typer',
       ]);
       await expect(menu.locator(group('Administration')), role).toHaveCount(
         role === 'administratör' ? 1 : 0,
@@ -671,40 +672,22 @@ async function arrangeDraft(page: Page, path: string, origin: string) {
       contentVersion: state.contentVersion,
       id: 'lo',
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Påhittad uppgift' },
+      value: {
+        typeId: state.types[0].id,
+        name: 'Lo Exempel',
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Påhittad uppgift',
+          },
+        ],
+      },
     },
   });
   expect(proposed.ok(), await proposed.text()).toBe(true);
   return (await (await page.request.get(`${path}/map`)).json()).draft;
-}
-
-async function readPrivateLo(page: Page, name = 'Lo Exempel') {
-  const proposal = await readDraftProposal(page, name);
-  const proposedValues = proposal
-    .getByRole('heading', { name: 'Föreslagna värden', exact: true })
-    .locator('..');
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Namn(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText(name);
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Typ(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText('Person');
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Beskrivning(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText('Påhittad uppgift');
-  await closeSupportDialog(page, name);
 }
 
 test('MEDGIVANDE-15: återkallandet behåller utkast och oskickad text', async ({ page }) => {
@@ -767,7 +750,7 @@ test('MEDGIVANDE-15: återkallandet behåller utkast och oskickad text', async (
     await expect(page.getByRole('region', { name: 'Samtalsnotis' })).toHaveCount(0);
     await startConversationWithText(page);
     await expect(message(page)).toHaveValue('Min oskickade text.');
-    await readPrivateLo(page);
+    await readVoiceProposal(page);
     await expect(textView(page).getByRole('log')).not.toContainText('Tillfälligt provord');
     await message(page).fill('Börja om.');
     await textView(page).getByRole('button', { name: 'Skicka', exact: true }).click();
@@ -854,7 +837,7 @@ test('MEDGIVANDE-16: registrerat sparande slutförs vid återkallandet', async (
     await expect(
       history
         .locator('.history-changes')
-        .getByText('Beskrivning: Påhittad uppgift', { exact: true }),
+        .getByText('Beskrivning: Påhittad uppgift (Text)', { exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
     const savedLo = await readTableObject(page, 'Lo Exempel');
@@ -868,7 +851,13 @@ test('MEDGIVANDE-16: registrerat sparande slutförs vid återkallandet', async (
     await expect(
       savedLo.locator('dt').filter({ hasText: /^Typ$/ }).locator('..').locator('dd'),
     ).toHaveText('Person');
-    await expect(savedLo.locator('.household-table-description')).toHaveText('Påhittad uppgift');
+    await expect(
+      savedLo
+        .locator('dt')
+        .filter({ hasText: /^Beskrivning$/ })
+        .locator('..')
+        .locator('dd'),
+    ).toContainText('Påhittad uppgift');
   } finally {
     release?.();
     await app.close();
@@ -1006,7 +995,7 @@ test('MEDGIVANDE-18: nästa textförsök visar återkallandet på en annan enhet
     expect((await (await page.request.get(`${path}/map`)).json()).draft.changes).toHaveLength(1);
     await startConversationWithText(page);
     await expect(message(page)).toHaveValue('Text som inte hunnit skickas.');
-    await readPrivateLo(page);
+    await readVoiceProposal(page);
     await expect(textView(page).getByRole('log')).not.toContainText(
       'Text som inte hunnit skickas.',
     );

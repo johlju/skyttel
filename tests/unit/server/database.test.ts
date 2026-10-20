@@ -1,6 +1,15 @@
-import { mkdirSync, mkdtempSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { DatabaseInitializationError, openDatabase } from '../../../src/server/database.js';
 
@@ -30,16 +39,38 @@ afterEach(() => {
 });
 
 describe('persistent database initialization', () => {
+  test('rejects an older database before changing its bytes or schema', () => {
+    mkdirSync(join(directory, 'private'));
+    const old = new Database(path);
+    old.exec("CREATE TABLE household (name TEXT); INSERT INTO household VALUES ('Linden');");
+    old.close();
+    const before = readFileSync(path);
+    migration('001_initial.sql', 'CREATE TABLE new_content (name TEXT);');
+    expect(open).toThrow(expect.objectContaining({ reason: 'unsupported_database_format' }));
+    expect(readFileSync(path)).toEqual(before);
+    const unchanged = new Database(path, { readonly: true });
+    expect(unchanged.prepare('SELECT name FROM household').all()).toEqual([{ name: 'Linden' }]);
+    expect(
+      unchanged.prepare("SELECT name FROM sqlite_schema WHERE name = 'new_content'").all(),
+    ).toEqual([]);
+    unchanged.close();
+  });
+
   test('applies migrations once, preserves data across reopen, and restricts file access', () => {
     migration(
       '001_initial.sql',
       "CREATE TABLE item (name TEXT NOT NULL); INSERT INTO item VALUES ('Linden');",
     );
     const database = open();
+    expect(database.pragma('application_id', { simple: true })).toBe(0x534b5954);
+    expect(database.pragma('user_version', { simple: true })).toBe(2);
     expect(database.prepare('SELECT name FROM item').all()).toEqual([{ name: 'Linden' }]);
     database.prepare('INSERT INTO item VALUES (?)').run('Örnen');
     database.close();
-    expect(open().prepare('SELECT name FROM item ORDER BY name').all()).toEqual([
+    const reopened = open();
+    expect(reopened.pragma('application_id', { simple: true })).toBe(0x534b5954);
+    expect(reopened.pragma('user_version', { simple: true })).toBe(2);
+    expect(reopened.prepare('SELECT name FROM item ORDER BY name').all()).toEqual([
       { name: 'Linden' },
       { name: 'Örnen' },
     ]);

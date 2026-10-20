@@ -27,6 +27,7 @@ import {
 import { createInstallation } from '../support/installation.js';
 import { manualTextDeliverySource } from '../support/manual-text-delivery.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { propertyRow, setProperty } from '../support/property-controls.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
 import { expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
@@ -64,7 +65,14 @@ test('manual text launcher public preparation seeded rejects an unaccepted deliv
         value: {
           typeId: state.types[0].id,
           name: 'Lo Exempel',
-          description: 'Påhittad uppgift',
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Påhittad uppgift',
+            },
+          ],
         },
       },
     });
@@ -74,7 +82,16 @@ test('manual text launcher public preparation seeded rejects an unaccepted deliv
     expect(before.draft.changes[0]).toMatchObject({
       id: 'lo',
       before: null,
-      after: { name: 'Lo Exempel', description: 'Påhittad uppgift' },
+      after: {
+        name: 'Lo Exempel',
+        properties: expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Beskrivning',
+            kind: 'text',
+            value: 'Påhittad uppgift',
+          }),
+        ]),
+      },
     });
     await page.goto(`${app.origin}/households/${household.id}`);
     const result = await page.evaluate(async (url) => {
@@ -147,7 +164,13 @@ async function arrange(page: Page, app: Awaited<ReturnType<typeof createInstalla
   const { household } = await (await createHousehold(page.request, app.origin)).json();
   const path = `${app.origin}/api/households/${household.id}/map`;
   const state = await (await page.request.get(path)).json();
-  const value = { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Påhittad uppgift' };
+  const value = {
+    typeId: state.types[0].id,
+    name: 'Lo Exempel',
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Påhittad uppgift' },
+    ],
+  };
   await page.request.post(`${path}/draft`, {
     headers: { origin: app.origin },
     data: { version: 0, contentVersion: 1, id: 'lo', baseRevision: null, value },
@@ -193,12 +216,22 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
           baseRevision: revision,
           value: {
             ...value,
-            description: 'Familjeabonnemang 189 kr per månad.',
-            financialFacts: {
-              price: { knowledge: 'known', value: '189' },
-              currency: { knowledge: 'known', value: 'SEK' },
-              paymentInterval: { knowledge: 'known', value: 'månad' },
-            },
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Familjeabonnemang 189 kr per månad.',
+              },
+              { id: 'price', label: 'Pris', kind: 'text' as const, value: '189' },
+              { id: 'currency', label: 'Valuta', kind: 'text' as const, value: 'SEK' },
+              {
+                id: 'paymentInterval',
+                label: 'Betalningsintervall',
+                kind: 'text' as const,
+                value: 'månad',
+              },
+            ],
           },
         }),
       ];
@@ -222,13 +255,13 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
     await expect.poll(() => model.requests.length).toBe(1);
     await closeTextView(page);
     await editTableObject(page, 'Kim Exempel');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
+    await setProperty(page, 'Beskrivning', 'Osänd text som ska finnas kvar');
     releaseModel();
     const path = `${app.origin}/api/households/${household.id}/map`;
     await expect
       .poll(async () => (await (await page.request.get(path)).json()).draft.changes)
       .toEqual([]);
-    await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
+    await expect(propertyRow(page, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
       'Osänd text som ska finnas kvar',
     );
     await verifyObjectDepartureAndDiscard(page, { Beskrivning: 'Osänd text som ska finnas kvar' });
@@ -257,14 +290,19 @@ test('TEXT-01: familjeärendet sparas samlat med bevarad oskickad formulärtext'
       await page.request.get(`${app.origin}/api/households/${household.id}/map`)
     ).json();
     expect(
-      map.objects.find((object: { name: string }) => object.name === 'Familjens Molnmusik')
-        .financialFacts.price,
-    ).toEqual({ knowledge: 'known', value: '189' });
+      map.objects
+        .find((object: { name: string }) => object.name === 'Familjens Molnmusik')
+        .properties.find((property: { id: string }) => property.id === 'price'),
+    ).toEqual({ id: 'price', label: 'Pris', kind: 'text', value: '189' });
     expect(map.objects.some((object: { name: string }) => object.name === 'Lo Lind')).toBe(true);
     expect(map.draft.changes).toEqual([]);
-    expect(map.relationships.map((edge: { knowledge: string }) => edge.knowledge)).toEqual(
-      expect.arrayContaining(['unknown', 'none', 'uncertain']),
-    );
+    expect(
+      map.relationships.every(
+        (edge: { sourceId: string; targetId: string }) =>
+          typeof edge.sourceId === 'string' && typeof edge.targetId === 'string',
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(map.relationships)).toContain('Osäkert uppgivet');
     expect(model.requests).toHaveLength(4);
   } finally {
     releaseModel();
@@ -334,10 +372,21 @@ test('TEXT-02: sena svar efter kastat utkast och avbrott ändrar inte nytt arbet
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     const newForm = page.getByRole('dialog', { name: 'Nytt objekt', exact: true });
     await newForm.getByLabel('Namn', { exact: true }).fill('Nytt vanligt arbete');
-    await newForm.getByLabel('Beskrivning', { exact: true }).fill('Efter båda sena svaren');
+    await setProperty(newForm, 'Beskrivning', 'Efter båda sena svaren');
     await newForm.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     expect((await (await page.request.get(path)).json()).draft.changes).toMatchObject([
-      { after: { name: 'Nytt vanligt arbete', description: 'Efter båda sena svaren' } },
+      {
+        after: {
+          name: 'Nytt vanligt arbete',
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Efter båda sena svaren',
+            }),
+          ]),
+        },
+      },
     ]);
     const ordinaryProposal = await readDraftProposal(page, 'Nytt vanligt arbete');
     await expect(ordinaryProposal).toContainText('Efter båda sena svaren');
@@ -563,11 +612,13 @@ test('TEXT-05: markering kräver visning och skyddar oskickad text', async ({ pa
     await expect.poll(() => model.requests.length).toBe(3);
     await closeTextView(page);
     await editTableObject(page, 'Lo Exempel');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd uppgift');
+    await setProperty(page, 'Beskrivning', 'Osänd uppgift');
     releaseDisplay();
     await expect.poll(() => model.requests.length).toBe(4);
     expect(lastToolResult(model.requests[3])).toMatchObject({ displayed: false });
-    await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue('Osänd uppgift');
+    await expect(propertyRow(page, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
+      'Osänd uppgift',
+    );
     await verifyObjectDepartureAndDiscard(page, { Beskrivning: 'Osänd uppgift' });
     await openConversationText(page);
     await expect(transcript(page)).toContainText('Markerat!');
@@ -685,9 +736,8 @@ test('TEXT-09: samtalet beskriver verkliga ändringar i utkast och kvitto', asyn
     const service = {
       typeId: state.types.find((type: { name: string }) => type.name === 'Tjänst').id,
       name: 'Tonrum',
-      description: '',
     };
-    const relationship = { sourceId: 'lo', targetId: 'tonrum', knowledge: 'known' };
+    const relationship = { sourceId: 'lo', targetId: 'tonrum' };
     await post('draft', {
       id: 'tonrum',
       baseRevision: null,

@@ -24,7 +24,7 @@ async function open() {
     version: 0,
     id: 'existing',
     baseRevision: null,
-    value: { typeId: initial.types[0].id, name: 'Tidigare förslag', description: '' },
+    value: { typeId: initial.types[0].id, name: 'Tidigare förslag' },
   });
   let signOuts = 0;
   vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {

@@ -14,6 +14,7 @@ import {
   renderHouseholdWork,
   saveHouseholdDraft,
 } from '../../support/native-household-unit.js';
+import { propertyInput } from './property-controls.js';
 
 let installation: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
@@ -40,48 +41,26 @@ async function prepareFullReading(fillers = false) {
     baseRevision: type.revision,
     value: {
       ...type,
-      sections: [{ id: 'details', name: 'Synliga detaljer' }],
-      fields: [
-        ...(type.fields ?? []),
-        { id: 'zero', name: 'Dolt antal', kind: 'number', description: '', sectionId: '' },
-        { id: 'false', name: 'Dolt svar', kind: 'boolean', description: '', sectionId: '' },
-        {
-          id: 'missing',
-          name: 'Obesvarad uppgift',
-          kind: 'text',
-          description: '',
-          sectionId: 'details',
-        },
-      ],
-      builtins: [
-        { key: 'description', name: 'Hela berättelsen', sectionId: 'details' },
-        { key: 'price', name: 'Cykelns pris', sectionId: 'details' },
-        { key: 'currency', name: 'Angiven valuta', sectionId: 'details' },
-      ],
-      propertyOrder: [
-        'builtin:description',
-        'builtin:price',
-        'builtin:currency',
-        'field:hidden',
-        'field:zero',
-        'field:false',
-        'field:missing',
-      ],
     },
   });
   const value = {
     ...bike,
-    description: 'Hela cykelbeskrivningen med märkning, skick och förvaring. '.repeat(12),
-    customValues: { hidden: 'Sparad dold märkning', zero: 0, false: false },
+
     lifecycle: 'active' as const,
-    financialFacts: {
-      price: { knowledge: 'known' as const, value: '2000 SEK' },
-      debt: { knowledge: 'uncertain' as const, value: '150 SEK', reportedOn: '2026-09-30' },
-      creditLimit: { knowledge: 'none' as const },
-      usedCredit: { knowledge: 'unknown' as const },
-      endDate: { knowledge: 'known' as const, value: '2024-12-31' },
-      terms: { knowledge: 'known' as const, value: 'Inga räntor beräknas för denna exempelcykel.' },
-    },
+
+    properties: [
+      {
+        id: 'description',
+        label: 'Beskrivning',
+        kind: 'text',
+        value: 'Hela cykelbeskrivningen med märkning, skick och förvaring. '.repeat(12),
+      },
+      { id: 'hidden', label: 'Dold egen uppgift', kind: 'text', value: 'Sparad dold märkning' },
+      { id: 'zero', label: 'Dolt antal', kind: 'number', value: 0 },
+      { id: 'false', label: 'Dolt svar', kind: 'boolean', value: false },
+      { id: 'missing', label: 'Obesvarad uppgift', kind: 'text' },
+      { id: 'date', label: 'Slutdatum', kind: 'date', value: '2024-12-31' },
+    ],
   };
   await fixture.post('draft', { id: bike.id, baseRevision: bike.revision, value });
   const imageState = await fixture.read();
@@ -114,23 +93,37 @@ function property(dialog: ReturnType<typeof within>, label: string) {
   return term.parentElement?.querySelector('dd')?.textContent;
 }
 
-test('full object reading preserves hidden zero and false, image and every economic knowledge state', async () => {
+test('full object reading preserves zero, false, typed empty values, dates and images', async () => {
   const fixture = await prepareFullReading();
   await fixture.post('draft', {
     id: fixture.bike.id,
     baseRevision: fixture.bike.revision,
     value: {
       ...fixture.bike,
-      description: 'Föreslagen fullständig beskrivning av cykeln.',
-      customValues: { hidden: 'Föreslagen dold märkning', zero: 0, false: true },
-      financialFacts: {
-        ...fixture.bike.financialFacts,
-        price: { knowledge: 'known', value: '2500 SEK' },
-      },
+
       profileImageId: null,
       iconId: 'car',
       identity: 'unspecified',
       lifecycle: 'ended',
+      properties: [
+        ...(fixture.bike.properties?.filter((property) =>
+          ['missing', 'date'].includes(property.id),
+        ) ?? []),
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Föreslagen fullständig beskrivning av cykeln.',
+        },
+        {
+          id: 'hidden',
+          label: 'Dold egen uppgift',
+          kind: 'text',
+          value: 'Föreslagen dold märkning',
+        },
+        { id: 'zero', label: 'Dolt antal', kind: 'number', value: 0 },
+        { id: 'false', label: 'Dolt svar', kind: 'boolean', value: true },
+      ],
     },
   });
   const before = await fixture.read();
@@ -145,20 +138,21 @@ test('full object reading preserves hidden zero and false, image and every econo
   );
   await userEvent.click(screen.getByRole('button', { name: 'Stäng filter' }));
   const dialog = await readTableObject('Cykel');
-  expect(dialog.getByText(`Sparat: ${fixture.bike.description.trim()}`)).toBeTruthy();
-  expect(dialog.getByText('Föreslagen fullständig beskrivning av cykeln.')).toBeTruthy();
+  expect(
+    dialog.getByText(
+      `Sparat: ${String(fixture.bike.properties?.filter((property) => property.kind === 'text').find((property) => property.id === 'description')?.value).trim()} (Text)`,
+    ),
+  ).toBeTruthy();
+  expect(dialog.getByText('Föreslagen fullständig beskrivning av cykeln. (Text)')).toBeTruthy();
   for (const [label, expected] of [
-    ['Dold egen uppgift', 'Sparat: Sparad dold märkning◇ Ditt förslag: Föreslagen dold märkning'],
-    ['Dolt antal', '0'],
-    ['Dolt svar', 'Sparat: Nej◇ Ditt förslag: Ja'],
-    ['Obesvarad uppgift', 'Ej uppgivet'],
-    ['Cykelns pris', 'Sparat: 2000 SEK◇ Ditt förslag: 2500 SEK'],
-    ['Angiven valuta', 'Ej uppgivet'],
-    ['Senast uppgiven skuld', '150 SEK (Osäkert uppgivet) · datum för uppgiften: 2026-09-30'],
-    ['Beviljat kreditutrymme', 'Uttryckligen inget'],
-    ['Utnyttjad kredit', 'Okänt'],
-    ['Slutdatum', '2024-12-31'],
-    ['Avtalsvillkor', 'Inga räntor beräknas för denna exempelcykel.'],
+    [
+      'Dold egen uppgift',
+      'Sparat: Sparad dold märkning (Text)◇ Ditt förslag: Föreslagen dold märkning (Text)',
+    ],
+    ['Dolt antal', '0 (Tal)'],
+    ['Dolt svar', 'Sparat: Nej (Ja/nej)◇ Ditt förslag: Ja (Ja/nej)'],
+    ['Obesvarad uppgift', 'Tomt (Text)'],
+    ['Slutdatum', '2024-12-31 (Datum)'],
     ['Identitet', 'Sparat: Identifierat objekt◇ Ditt förslag: Ospecificerat objekt'],
     ['Status', 'Sparat: Gäller fortfarande◇ Ditt förslag: Manuellt upphört'],
   ])
@@ -179,26 +173,16 @@ test('full object reading preserves hidden zero and false, image and every econo
   expect(await fixture.read()).toEqual(before);
 }, 30_000);
 
-test('a complete economic edit validates a closed section and stages image removal with the whole object', async () => {
+test('a complete property edit validates a closed section and stages image removal with the whole object', async () => {
   const fixture = await prepareFullReading();
   const before = await fixture.read();
   renderHouseholdWork(fixture.householdId);
   const form = await editTableObjectForm('Cykel');
-  await userEvent.click(form.getByRole('button', { name: 'Synliga detaljer' }));
-  await userEvent.selectOptions(
-    form.getByLabelText('Angiven valuta: uppgiftens säkerhet'),
-    'known',
-  );
-  await userEvent.type(form.getByLabelText('Obesvarad uppgift'), 'Nu finns ett svar.');
-  await userEvent.click(form.getByRole('button', { name: 'Ekonomiska uppgifter' }));
-  await userEvent.selectOptions(
-    form.getByLabelText('Senast uppgiven skuld: uppgiftens säkerhet'),
-    'none',
-  );
-  await userEvent.clear(form.getByLabelText('Senast uppgiven skuld: datum för uppgiften'));
-  await userEvent.selectOptions(form.getByLabelText('Slutdatum: uppgiftens säkerhet'), 'none');
-  await userEvent.selectOptions(form.getByLabelText('Startdatum: uppgiftens säkerhet'), 'known');
-  await userEvent.type(form.getByLabelText('Startdatum'), '2026-10-01');
+  await userEvent.type(await propertyInput(form, 'Obesvarad uppgift'), 'Nu finns ett svar.');
+  const date = await propertyInput(form, 'Slutdatum', 'date');
+  await userEvent.clear(date);
+  await userEvent.type(date, 'inte ett datum');
+  await userEvent.click(form.getByRole('button', { name: 'Fria egenskaper' }));
   await userEvent.click(form.getByRole('button', { name: 'Livscykel och utseende' }));
   await userEvent.click(form.getByRole('button', { name: 'Ta bort profilbilden ur formuläret' }));
   await userEvent.selectOptions(form.getByLabelText('Objektets status'), 'ended');
@@ -207,36 +191,27 @@ test('a complete economic edit validates a closed section and stages image remov
   const errors = await screen.findByRole('alert', { name: 'Formuläret innehåller fel' });
   expect(document.activeElement).toBe(errors);
   expect(await fixture.read()).toEqual(before);
-  await userEvent.click(within(errors).getByRole('link', { name: /^Angiven valuta:/ }));
-  expect(document.activeElement).toBe(form.getByLabelText('Angiven valuta'));
-  await userEvent.type(form.getByLabelText('Angiven valuta'), 'SEK');
+  await userEvent.click(within(errors).getByRole('link', { name: /^Värde:/ }));
+  expect(document.activeElement).toBe(date);
+  await userEvent.clear(date);
+  await userEvent.type(date, '2026-10-01');
   await userEvent.click(form.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   const proposed = await fixture.read();
   expect(proposed.objects).toEqual(before.objects);
   const change = proposed.draft.changes.find((item) => item.id === fixture.bike.id);
   if (!change?.after) throw new Error('Missing confirmed whole-object proposal');
-  expect(change?.after).toEqual({
+  expect(change.after).toEqual({
     typeId: 'read-type',
     name: 'Cykel',
-    description: fixture.bike.description,
     lifecycle: 'ended',
-    customValues: {
-      hidden: 'Sparad dold märkning',
-      zero: 0,
-      false: false,
-      missing: 'Nu finns ett svar.',
-    },
-    financialFacts: {
-      price: { knowledge: 'known', value: '2000 SEK' },
-      currency: { knowledge: 'known', value: 'SEK' },
-      startDate: { knowledge: 'known', value: '2026-10-01' },
-      endDate: { knowledge: 'none' },
-      debt: { knowledge: 'none' },
-      creditLimit: { knowledge: 'none' },
-      usedCredit: { knowledge: 'unknown' },
-      terms: { knowledge: 'known', value: 'Inga räntor beräknas för denna exempelcykel.' },
-    },
+    properties: fixture.bike.properties?.map((property) =>
+      property.id === 'missing'
+        ? { ...property, value: 'Nu finns ett svar.' }
+        : property.id === 'date'
+          ? { ...property, value: '2026-10-01' }
+          : property,
+    ),
   });
   await saveHouseholdDraft();
   const saved = await fixture.read();
@@ -270,15 +245,15 @@ test('reading the real relationship chain and back retains the second page and o
   let dialog = within(await screen.findByRole('dialog', { name: 'Samband för Alex' }));
   await userEvent.click(dialog.getByRole('button', { name: 'Cykel' }));
   dialog = within(await screen.findByRole('dialog', { name: 'Uppgifter för Cykel' }));
-  expect(property(dialog, 'Dolt antal')).toBe('0');
-  expect(property(dialog, 'Dolt svar')).toBe('Nej');
+  expect(property(dialog, 'Dolt antal')).toBe('0 (Tal)');
+  expect(property(dialog, 'Dolt svar')).toBe('Nej (Ja/nej)');
   await userEvent.click(dialog.getByRole('button', { name: 'Samband för Cykel' }));
   dialog = within(await screen.findByRole('dialog', { name: 'Samband för Cykel' }));
-  expect(dialog.getByText('Föreslagen dold sambandsuppgift')).toBeTruthy();
-  expect(dialog.getAllByText('Osäkert uppgivet').length).toBeGreaterThan(0);
-  expect(dialog.getByText('2024-12-31')).toBeTruthy();
-  expect(dialog.getAllByText('Uttryckligen inget').length).toBeGreaterThan(0);
-  expect(dialog.getAllByText('Okänt').length).toBeGreaterThan(0);
+  expect(dialog.getByText('Föreslagen dold sambandsuppgift (Text)')).toBeTruthy();
+  expect(dialog.getAllByText('Osäkert uppgivet (Text)').length).toBeGreaterThan(0);
+  expect(dialog.getByText('2024-12-31 (Datum)')).toBeTruthy();
+  expect(dialog.getAllByText('Uttryckligen inget (Text)').length).toBeGreaterThan(0);
+  expect(dialog.getAllByText('Okänt (Text)').length).toBeGreaterThan(0);
   await userEvent.click(dialog.getByRole('button', { name: 'Garage' }));
   dialog = within(await screen.findByRole('dialog', { name: 'Uppgifter för Garage' }));
   expect(property(dialog, 'Identitet')).toBe('Ospecificerat objekt');
@@ -298,14 +273,24 @@ test('reading the real relationship chain and back retains the second page and o
   expect(await fixture.read()).toEqual(before);
 }, 30_000);
 
-test('type loss and unsent form guards retain saved data and the already staged proposal', async () => {
+test('type changes and unsent form guards retain saved data and the already staged proposal', async () => {
   const fixture = await prepareFullReading();
   const alex = (await fixture.read()).objects.find((object) => object.id === 'alex');
   if (!alex) throw new Error('Missing saved Alex');
   await fixture.post('draft', {
     id: alex.id,
     baseRevision: alex.revision,
-    value: { ...alex, description: 'Redan lagt förslag om Alex.' },
+    value: {
+      ...alex,
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Redan lagt förslag om Alex.',
+        },
+      ],
+    },
   });
   const before = await fixture.read();
   const alternative = before.types.find((type) => type.id !== 'read-type');
@@ -313,21 +298,14 @@ test('type loss and unsent form guards retain saved data and the already staged 
   renderHouseholdWork(fixture.householdId);
   const form = await editTableObjectForm('Cykel');
   await userEvent.selectOptions(form.getByLabelText('Objekttyp'), alternative.id);
-  let guard = within(await screen.findByRole('dialog', { name: 'Ta bort tidigare egna fält?' }));
-  expect(guard.getByText('Dolt antal: 0')).toBeTruthy();
-  expect(guard.getByText('Dolt svar: Nej')).toBeTruthy();
-  expect(document.activeElement).toBe(guard.getByRole('button', { name: 'Fortsätt redigera' }));
-  await userEvent.click(guard.getByRole('button', { name: 'Fortsätt redigera' }));
-  expect((form.getByLabelText('Objekttyp') as HTMLSelectElement).value).toBe('read-type');
-  await userEvent.selectOptions(form.getByLabelText('Objekttyp'), alternative.id);
-  guard = within(await screen.findByRole('dialog', { name: 'Ta bort tidigare egna fält?' }));
-  await userEvent.click(guard.getByRole('button', { name: 'Ta bort fältvärdena och byt typ' }));
-  await userEvent.clear(form.getByLabelText('Beskrivning'));
-  await userEvent.type(form.getByLabelText('Beskrivning'), 'Oskickad ändring efter typbyte.');
+  expect(await propertyInput(form, 'Dolt antal', 'number')).toHaveProperty('value', '0');
+  expect(await propertyInput(form, 'Dolt svar', 'boolean')).toHaveProperty('value', 'false');
+  await userEvent.clear(await propertyInput(form, 'Beskrivning'));
+  await userEvent.type(await propertyInput(form, 'Beskrivning'), 'Oskickad ändring efter typbyte.');
   await userEvent.click(form.getByRole('button', { name: 'Stäng objektdialogen' }));
-  guard = within(await screen.findByRole('dialog', { name: 'Lämna ändrade uppgifter?' }));
+  let guard = within(await screen.findByRole('dialog', { name: 'Lämna ändrade uppgifter?' }));
   await userEvent.click(guard.getByRole('button', { name: 'Fortsätt redigera' }));
-  expect((form.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
+  expect(((await propertyInput(form, 'Beskrivning')) as HTMLTextAreaElement).value).toBe(
     'Oskickad ändring efter typbyte.',
   );
   expect(await fixture.read()).toEqual(before);
@@ -349,10 +327,6 @@ test('reports show historical types and full saved values then return to table a
     value: {
       ...type,
       name: 'Ny lästyp',
-      fields: type.fields?.map((field) => ({
-        ...field,
-        name: `Ny ${field.name.toLocaleLowerCase('sv')}`,
-      })),
     },
   });
   await fixture.post('draft', {
@@ -361,8 +335,13 @@ test('reports show historical types and full saved values then return to table a
     value: {
       ...fixture.bike,
       name: 'Cykel efter ändring',
-      customValues: { hidden: 'Ny dold märkning', zero: 1, false: true },
+
       lifecycle: 'ended',
+      properties: [
+        { id: 'hidden', label: 'Dold egen uppgift', kind: 'text', value: 'Ny dold märkning' },
+        { id: 'zero', label: 'Ny dolt antal', kind: 'number', value: 1 },
+        { id: 'false', label: 'Ny dolt svar', kind: 'boolean', value: true },
+      ],
     },
   });
   await fixture.post('save', { operationId: 'renamed-type-save' });
@@ -372,7 +351,15 @@ test('reports show historical types and full saved values then return to table a
     value: {
       name: 'Bara i mitt utkast',
       typeId: type.id,
-      description: 'Detta är ännu inte gemensamt.',
+
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Detta är ännu inte gemensamt.',
+        },
+      ],
     },
   });
   const before = await fixture.read();
@@ -411,18 +398,16 @@ test('reports show historical types and full saved values then return to table a
     await userEvent.click(article.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(articles[0].getByText('Objekttyp: Läsobjekt.')).toBeTruthy();
   expect(articles[0].getByText('Objekttyp: Ny lästyp.')).toBeTruthy();
-  expect(articles[0].getByText('Dolt antal: 0')).toBeTruthy();
-  expect(articles[0].getByText('Ny dolt antal: 1')).toBeTruthy();
-  expect(articles[0].getByText('Dolt svar: Nej')).toBeTruthy();
-  expect(articles[0].getByText('Ny dolt svar: Ja')).toBeTruthy();
-  expect(
-    articles[1].getByText(`Hela berättelsen: ${fixture.bike.description.trim()}`),
-  ).toBeTruthy();
+  expect(articles[0].getByText('Dolt antal: 0 (Tal)')).toBeTruthy();
+  expect(articles[0].getByText('Ny dolt antal: 1 (Tal)')).toBeTruthy();
+  expect(articles[0].getByText('Dolt svar: Nej (Ja/nej)')).toBeTruthy();
+  expect(articles[0].getByText('Ny dolt svar: Ja (Ja/nej)')).toBeTruthy();
   expect(
     articles[1].getByText(
-      'Senast uppgiven skuld: 150 SEK (Osäkert uppgivet) — datum för uppgiften: 2026-09-30',
+      `Beskrivning: ${String(fixture.bike.properties?.filter((property) => property.kind === 'text').find((property) => property.id === 'description')?.value).trim()} (Text)`,
     ),
   ).toBeTruthy();
+  expect(articles[1].getAllByText('Slutdatum: 2024-12-31 (Datum)').length).toBeGreaterThan(0);
   expect(reports.queryByText('Bara i mitt utkast')).toBeNull();
   expect(reports.queryByRole('button', { name: /Ångra/ })).toBeNull();
   const link = articles[1].getByRole('link', { name: 'Länk till sparandet' });
@@ -451,7 +436,6 @@ test('reports retain full removed objects, relationships and removed historical 
     value: {
       name: 'Historisk objekttyp',
       description: 'Typen används bara i detta syntetiska prov.',
-      fields: [],
     },
   });
   await fixture.post('relationship-type', {
@@ -462,7 +446,6 @@ test('reports retain full removed objects, relationships and removed historical 
       description: 'Den historiska kopplingens definition.',
       forwardLabel: 'hör till',
       reverseLabel: 'har',
-      fields: [],
     },
   });
   await fixture.post('save', { operationId: 'historical-definitions-save' });
@@ -509,12 +492,14 @@ test('reports retain full removed objects, relationships and removed historical 
   expect(latest.getAllByText('Borttaget', { exact: true })).toHaveLength(5);
   expect(latest.getByText('Namn: Cykel.')).toBeTruthy();
   expect(latest.getByText('Objekttyp: Läsobjekt.')).toBeTruthy();
-  expect(latest.getByText('Dolt antal: 0')).toBeTruthy();
-  expect(latest.getByText('Dolt svar: Nej')).toBeTruthy();
-  expect(latest.getByText('Dold egen uppgift: Sparad dold märkning')).toBeTruthy();
+  expect(latest.getByText('Dolt antal: 0 (Tal)')).toBeTruthy();
+  expect(latest.getByText('Dolt svar: Nej (Ja/nej)')).toBeTruthy();
+  expect(latest.getByText('Dold egen uppgift: Sparad dold märkning (Text)')).toBeTruthy();
   expect(latest.getAllByText('Alex → använder → Cykel')).toHaveLength(2);
-  expect(latest.getAllByText('Cykel → förvaras i → Garage (Osäkert uppgivet)')).toHaveLength(2);
-  expect(latest.getByText('Dold sambandsuppgift: Föreslagen dold sambandsuppgift')).toBeTruthy();
+  expect(latest.getAllByText('Cykel → förvaras i → Garage')).toHaveLength(2);
+  expect(
+    latest.getByText('Dold sambandsuppgift: Föreslagen dold sambandsuppgift (Text)'),
+  ).toBeTruthy();
   expect(latest.getByRole('img', { name: 'Profilbild för Cykel' })).toBeTruthy();
   expect(await fixture.read()).toEqual(before);
 }, 30_000);

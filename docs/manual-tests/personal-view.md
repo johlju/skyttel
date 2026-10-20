@@ -585,8 +585,9 @@ PLACERING-04.
    och tryck Escape. Namnet finns kvar. Stäng igen och välj uttryckligen
    **Kasta ändringarna och fortsätt**. Välj **Karta** och kontrollera
    axelvisarens placering utan att ändra egna flyttar eller Ny sak-förslaget.
-6. Öppna **Tabell** och läs **Ny sak**: namn, typen Person och den tomma
-   beskrivningen. Fäll ihop raden och återgå till **Karta**.
+6. Öppna **Tabell** och läs **Ny sak**: namn och typen Person. Ingen egenskap
+   Beskrivning ska finnas, eftersom ingen har lagts till. Fäll ihop raden och
+   återgå till **Karta**.
 
 **Förväntat resultat:**
 

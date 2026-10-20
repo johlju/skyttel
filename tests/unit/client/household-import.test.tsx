@@ -270,7 +270,7 @@ describe('cancellation through the real HTTP application', () => {
           id: 'retained-private',
           version: 0,
           baseRevision: null,
-          value: { name: 'Bevarat privat arbete', description: '', typeId: initial.types[0].id },
+          value: { name: 'Bevarat privat arbete', typeId: initial.types[0].id },
         })
       ).status,
     ).toBe(200);

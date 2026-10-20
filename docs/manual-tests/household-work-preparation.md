@@ -125,7 +125,7 @@ släpps för den aktuella REQUEST, aldrig en tidigare begäran.
 
 <!-- markdownlint-disable MD013 -->
 ```text
-tool REQUEST propose_object {"version":V,"contentVersion":C,"id":"SUB","baseRevision":null,"typeRevision":SR,"value":{"typeId":"SUBTYPE","name":"Familjens Molnmusik","description":"","financialFacts":{"price":{"knowledge":"known","value":"179"},"currency":{"knowledge":"known","value":"SEK"},"paymentInterval":{"knowledge":"known","value":"månad"}}}}
+tool REQUEST propose_object {"version":V,"contentVersion":C,"id":"SUB","baseRevision":null,"typeRevision":SR,"value":{"typeId":"SUBTYPE","name":"Familjens Molnmusik","properties":[{"id":"price","label":"Pris","kind":"text","value":"179"},{"id":"currency","label":"Valuta","kind":"text","value":"SEK"},{"id":"paymentInterval","label":"Betalningsintervall","kind":"text","value":"månad"}]}}
 reply REQUEST Familjeabonnemanget är föreslaget i ditt privata utkast.
 ```
 <!-- markdownlint-enable MD013 -->
@@ -135,8 +135,8 @@ Efter UI-fallets nästa text, eller röstfallets kontrollerade `user` och
 
 <!-- markdownlint-disable MD013 -->
 ```text
-tool REQUEST propose_object {"version":V,"contentVersion":C,"id":"PERSON","baseRevision":null,"typeRevision":PR,"value":{"typeId":"PERSON_TYPE","name":"Kim Exempel","description":""}}
-tool REQUEST propose_relationship {"version":V,"contentVersion":C,"id":"EDGE","baseRevision":null,"typeRevision":RR,"value":{"typeId":"PAYMENT_TYPE","sourceId":"PERSON","targetId":"SUB","knowledge":"known"}}
+tool REQUEST propose_object {"version":V,"contentVersion":C,"id":"PERSON","baseRevision":null,"typeRevision":PR,"value":{"typeId":"PERSON_TYPE","name":"Kim Exempel"}}
+tool REQUEST propose_relationship {"version":V,"contentVersion":C,"id":"EDGE","baseRevision":null,"typeRevision":RR,"value":{"typeId":"PAYMENT_TYPE","sourceId":"PERSON","targetId":"SUB"}}
 reply REQUEST Kim Exempel betalar Familjens Molnmusik. Förslagen är fortfarande privata.
 ```
 <!-- markdownlint-enable MD013 -->

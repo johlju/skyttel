@@ -69,7 +69,7 @@ async function command(command: string) {
     await data.post('object-type', {
       id: 'newer-independent-type',
       baseRevision: null,
-      value: { name: 'Nyare oberoende typ', description: '', fields: [] },
+      value: { name: 'Nyare oberoende typ', description: '' },
     });
   else if (command === 'hold') hold = true;
   else if (command === 'release') {

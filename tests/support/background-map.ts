@@ -43,8 +43,15 @@ export async function createBackgroundMapFixture(
             baseRevision: null,
             value: {
               name: `Provobjekt ${String(index).padStart(2, '0')}`,
-              description,
               typeId: state.types[index % state.types.length].id,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: description,
+                },
+              ],
             },
           },
         })
@@ -64,7 +71,6 @@ export async function createBackgroundMapFixture(
               sourceId: `${prefix}-${index - 1}`,
               targetId: `${prefix}-${index}`,
               typeId: state.relationshipTypes[0].id,
-              knowledge: 'known',
             },
           },
         })

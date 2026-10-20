@@ -88,33 +88,6 @@ creating the container, so recreate it after changing those settings.
 The container database is `/data/skyttel.sqlite`; ordinary startup applies
 pending migrations and preserves application data.
 
-### Upgrade an existing development login database
-
-If backend startup reports `authority_initialization_required`, an existing
-development database needs the one-time login upgrade. Vite can remain
-running while its API proxy reports `ECONNREFUSED` on port 3300; the page
-then reports an interrupted connection.
-
-Stop `dev:all`, `dev:prodlike` and any other application process using that
-database. Run the following from the repository root in your terminal:
-
-```sh
-npm run build
-node --env-file="${SKYTTEL_DEV_ENV_FILE:-.devcontainer/.env}" \
-  dist/server/upgrade-legacy-login.js \
-  --confirm-legacy-upgrade --confirm-service-stopped
-npm run dev:all
-```
-
-Require `legacy_login_upgrade_completed` before restarting. Sign in again:
-the upgrade ends old logins and assistant access but preserves users,
-household information, stored drafts and save results. Keep the configured
-generation stable afterward. The command refuses a second upgrade.
-
-This procedure applies to an existing original development database without
-an authority record. For `restore_declaration_required`, use the
-[controlled restore procedure](../operations/database-restore.md) instead.
-
 ## Set up local sign-in
 
 Both Google and Microsoft client IDs and secrets must be present in the
@@ -199,6 +172,9 @@ Use the [access guide](../user-guide/access.md) when testing another identity.
 
 ## Reset demo data
 
+Use a separate disposable database location for demo data. `db:setup` resets
+and seeds the selected database.
+
 After configuring provider credentials and a verified administrator subject,
 container creation and rebuilding reset the database to the demo household.
 To perform the same reset without rebuilding:
@@ -212,8 +188,11 @@ npm run dev:all
 `SKYTTEL_DATABASE_PATH` and creates `TestHousehold` with your configured
 administrator. Check the selected path and back up anything you want to
 keep before running it or rebuilding the container. Sign in again after the
-reset. `db:migrate`, normal application startup, and container stop/start
-preserve the data.
+reset. The demo uses free properties on objects and relationships, valid
+relationship endpoints, saved history and an administrator draft. Running
+`db:setup` again recreates that demo rather than adding duplicate records.
+`db:migrate`, normal application startup and container stop/start preserve
+the data.
 
 ## Disposable local database
 

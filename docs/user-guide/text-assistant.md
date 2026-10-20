@@ -407,6 +407,18 @@ Fråga om något är oklart. Skyttel
 ska fråga vid tvetydig identitet och skilja okänt, uttryckligen inget,
 osäkert uppgivet och ospecificerat objekt åt.
 
+Skyttel frågar också före ett egenskapstillägg när datatypen är oklar,
+eller före rättelse och borttagning när flera egenskaper har samma etikett
+och det är oklart vilken du menar. Ett entydigt telefonnummer blir text
+så att inledande nollor bevaras. Ange gärna datatypen själv. **Töm värdet**
+behåller egenskapen och dess valda datatyp; **ta bort egenskapen** tar bort
+hela posten. Tomma egenskaper utan vald datatyp är också möjliga.
+
+Ett samband behöver två verkliga objekt. Saknade ändpunkter och lika
+objektnamn behöver preciseras före ett sambandsförslag. Önskemålet finns
+kvar i samtalet utan en påhittad motpart eller ersättningsegenskap.
+Svara med tal eller text i samma samtal; samma utkast gäller för båda.
+
 Du kan ge flera önskemål samtidigt. Skyttel kan lägga tydliga delar
 i utkastet och fråga om den del som är oklar. **Spara inte** låter dig
 göra beställda utkaständringar utan att spara dem i hushållets karta.

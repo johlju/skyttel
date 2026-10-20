@@ -34,7 +34,7 @@ test('explicit reassignment preserves displaced private work and rejects old col
           contentVersion: 1,
           id,
           baseRevision: null,
-          value: { name: id, description: '', typeId: initial.types[0].id },
+          value: { name: id, typeId: initial.types[0].id },
         })
       ).status,
     ).toBe(200);
@@ -163,7 +163,7 @@ test('personal positions and settings retain separate owners and reject old equa
     version: 0,
     id: 'lamp',
     baseRevision: null,
-    value: { name: 'Lampa', description: '', typeId: state.types[0].id },
+    value: { name: 'Lampa', typeId: state.types[0].id },
   });
   await owner.json(`${path}/map/save`, { version: 1, operationId: 'shared-lamp' });
   for (const [actor, x, invertX] of [

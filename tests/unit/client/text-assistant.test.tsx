@@ -637,14 +637,13 @@ test('canceling while the map display is pending aborts it and prevents a late a
   expect(screen.queryByRole('alert')).toBeNull();
 });
 
-test('the draft table exposes every change, object facts, type edits and uncertain relationships', async () => {
+test('the draft table exposes every change, free properties, type edits and relationship endpoints', async () => {
   const type: ObjectType = {
     id: 'vehicle',
     householdId: 'linden',
     revision: 1,
     name: 'Fordon',
     description: 'Hushållets fordon',
-    fields: [{ id: 'colour', name: 'Färg', description: 'Lackens färg', kind: 'text' }],
   };
   const edgeType: RelationshipType = {
     id: 'uses',
@@ -661,15 +660,21 @@ test('the draft table exposes every change, object facts, type edits and uncerta
     revision: 1,
     typeId: type.id,
     name: 'Gammal cykel',
-    description: 'Före rättning',
-    customValues: { colour: 'Blå' },
-    financialFacts: { price: { knowledge: 'known', value: '100' } },
+
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Före rättning' },
+      { id: 'colour', label: 'Färg', kind: 'text', value: 'Blå' },
+      { id: 'price', label: 'Pris', kind: 'number', value: 100 },
+    ],
   };
   const duplicate: MapObject = {
     ...old,
     id: 'duplicate',
     name: 'Dubblett',
-    description: 'Det andra objektet',
+
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Det andra objektet' },
+    ],
   };
   const edge = {
     id: 'edge',
@@ -678,7 +683,6 @@ test('the draft table exposes every change, object facts, type edits and uncerta
     typeId: edgeType.id,
     sourceId: 'alex',
     targetId: 'bike',
-    knowledge: 'known' as const,
   };
   const current = session();
   current.review = {
@@ -693,10 +697,13 @@ test('the draft table exposes every change, object facts, type edits and uncerta
         after: {
           ...old,
           name: 'Rättad cykel',
-          description: 'Efter rättning',
-          customValues: { colour: 'Röd' },
-          financialFacts: { price: { knowledge: 'known', value: '150' } },
+
           lifecycle: 'ended',
+          properties: [
+            { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Efter rättning' },
+            { id: 'colour', label: 'Färg', kind: 'text', value: 'Röd' },
+            { id: 'price', label: 'Pris', kind: 'number', value: 150 },
+          ],
         },
       },
       { id: 'duplicate', type, before: duplicate, after: null },
@@ -718,26 +725,31 @@ test('the draft table exposes every change, object facts, type edits and uncerta
         id: 'edge',
         type: edgeType,
         before: edge,
-        after: { ...edge, knowledge: 'uncertain' },
+        after: {
+          ...edge,
+          properties: [
+            { id: 'uncertainty', label: 'Osäkert uppgivet', kind: 'boolean', value: true },
+          ],
+        },
         objectNames: { alex: 'Alex', bike: 'Rättad cykel' },
       },
       {
         id: 'none',
         type: edgeType,
         before: null,
-        after: { ...edge, targetId: null, knowledge: 'none' },
+        after: { ...edge, targetId: 'none-bike' },
       },
       {
         id: 'unknown',
         type: edgeType,
         before: null,
-        after: { ...edge, targetId: null, knowledge: 'unknown' },
+        after: { ...edge, targetId: 'unknown-bike' },
       },
       {
         id: 'unresolved',
         type: edgeType,
         before: null,
-        after: { ...edge, targetId: null, knowledge: 'unresolved' },
+        after: { ...edge, targetId: 'unresolved-bike' },
       },
       { id: 'removed', type: edgeType, before: { ...edge, sourceId: 'robin' }, after: null },
     ],
@@ -776,15 +788,15 @@ test('the draft table exposes every change, object facts, type edits and uncerta
       {
         kind: 'relationship',
         id: 'edge',
-        current: { ...edge, knowledge: 'uncertain' },
+        current: { ...edge },
         duplicates: [edge],
       },
       { kind: 'relationship', id: 'removed', current: null, missingEndpoints: ['robin'] },
-      { kind: 'relationship', id: 'none', current: { ...edge, targetId: null, knowledge: 'none' } },
+      { kind: 'relationship', id: 'none', current: { ...edge, targetId: 'bike' } },
       {
         kind: 'relationship',
         id: 'unknown',
-        current: { ...edge, typeId: 'removed-type', targetId: null, knowledge: 'unknown' },
+        current: { ...edge, typeId: 'removed-type', targetId: 'bike' },
       },
     ],
     unresolvedIdentities: [{ kind: 'object', id: 'unknown-bike' }],
@@ -800,20 +812,22 @@ test('the draft table exposes every change, object facts, type edits and uncerta
   const review = within(await screen.findByRole('region', { name: 'Utkastet' }));
   const compact = review.getByRole('table', { name: 'Osparade ändringar' });
   expect(compact.textContent).toContain('Namn: Gammal cykel → Rättad cykel');
-  expect(compact.textContent).toContain('Färg: Blå → Röd');
-  expect(compact.textContent).toContain('Pris: 100 → 150');
-  expect(compact.textContent).toContain('Alex → använder → Rättad cykel (osäkert uppgivet)');
+  expect(compact.textContent).toContain('Färg: Blå (Text) → Färg: Röd (Text)');
+  expect(compact.textContent).toContain('Pris: 100 (Tal) → Pris: 150 (Tal)');
+  expect(compact.textContent).toContain('Alex → använder → Rättad cykel');
   expect(compact.textContent).toContain('Objekttyp: Tidigare fordonstyp → Fordon');
   expect(compact.textContent).toContain('Namn: Fordon → Cykeltyp');
   expect(compact.textContent).toContain('Namn: Använder → Delad användning');
   expect(review.getAllByRole('row')).toHaveLength(14);
   const removed = within(review.getByRole('row', { name: /Dubblett/ }));
   expect(removed.getByText('Ta bort')).toBeDefined();
-  const added = within(review.getByRole('row', { name: /Oklar cykel/ }));
+  const added = within(
+    review.getByRole('rowheader', { name: 'Oklar cykel' }).closest('tr') as HTMLElement,
+  );
   expect(added.getByText('Lägg till')).toBeDefined();
-  expect(compact.textContent).toContain('alex → använder → Uttryckligen inget');
-  expect(compact.textContent).toContain('alex → använder → Okänt');
-  expect(compact.textContent).toContain('alex → använder → Olöst identitet');
+  expect(compact.textContent).toContain('alex → använder → none-bike');
+  expect(compact.textContent).toContain('alex → använder → Oklar cykel');
+  expect(compact.textContent).toContain('alex → använder → unresolved-bike');
   expect(review.queryByRole('link')).toBeNull();
 });
 

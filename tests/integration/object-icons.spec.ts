@@ -10,6 +10,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { propertyRow, setProperty } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 test('IKON-01: icon choice survives type and image changes, save and restart before explicit reset', async ({
@@ -32,7 +33,7 @@ test('IKON-01: icon choice survives type and image changes, save and restart bef
       await editTableObject(page, 'Min cykel');
     };
     await form.getByLabel('Namn', { exact: true }).fill('Min cykel');
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Bevara texten');
+    await setProperty(form, 'Beskrivning', 'Bevara texten');
     await appearance();
     const picker = form.getByRole('region', { name: 'Ikon', exact: true });
     await picker.getByRole('searchbox', { name: 'Sök ikon' }).fill('cykel');
@@ -70,7 +71,7 @@ test('IKON-01: icon choice survives type and image changes, save and restart bef
     await openMap(page);
     await expect(node.locator('[data-icon-id="bike"]')).toBeVisible();
     await edit();
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Bevara mer text');
+    await setProperty(form, 'Beskrivning', 'Bevara mer text');
     await stage();
     await saveReviewedConflictDraft(page);
     await closeTextView(page);
@@ -78,7 +79,9 @@ test('IKON-01: icon choice survives type and image changes, save and restart bef
     await page.reload();
     expect((await read()).objects[0]).toMatchObject({
       iconId: 'bike',
-      description: 'Bevara mer text',
+      properties: expect.arrayContaining([
+        expect.objectContaining({ label: 'Beskrivning', kind: 'text', value: 'Bevara mer text' }),
+      ]),
     });
     await edit();
     await appearance();
@@ -108,7 +111,7 @@ test('IKON-02: full catalog search, empty results and keyboard pagination work i
         id: 'object',
         version: 0,
         baseRevision: null,
-        value: { typeId: state.types[0].id, name: 'Lo', description: '' },
+        value: { typeId: state.types[0].id, name: 'Lo' },
       },
     });
     await page.goto(installation.origin);
@@ -165,7 +168,7 @@ test('IKON-03: a short viewport keeps icon controls, unsent text and shared save
     const details = page.getByRole('dialog', { name: 'Nytt objekt', exact: true });
     const picker = details.getByRole('region', { name: 'Ikon', exact: true });
     await details.getByLabel('Namn', { exact: true }).fill('Lilla cykeln');
-    await details.getByLabel('Beskrivning', { exact: true }).fill('Min oskickade text');
+    await setProperty(details, 'Beskrivning', 'Min oskickade text');
     // The layout size of a 1280 × 1000 browser at 400% browser zoom.
     await page.setViewportSize({ width: 320, height: 250 });
     await details.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
@@ -182,16 +185,22 @@ test('IKON-03: a short viewport keeps icon controls, unsent text and shared save
     await expect(
       picker.getByRole('button', { name: 'Typens standardikon', exact: true }),
     ).toHaveAttribute('aria-pressed', 'true');
-    await expect(details.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-      'Min oskickade text',
-    );
+    await expect(
+      propertyRow(details, 'Beskrivning').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Min oskickade text');
     await details.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await saveReviewedConflictDraft(page);
     await closeTextView(page);
     const saved: MapState = await (await page.request.get(path)).json();
     expect(saved.objects[0]).toMatchObject({
       name: 'Lilla cykeln',
-      description: 'Min oskickade text',
+      properties: expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Min oskickade text',
+        }),
+      ]),
     });
     expect(saved.objects[0]).not.toHaveProperty('iconId');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -255,7 +264,7 @@ test('IKON-05: rejected and lost complete icon staging preserve the local choice
       .click();
     const form = page.getByRole('dialog', { name: 'Nytt objekt', exact: true });
     await form.getByLabel('Namn', { exact: true }).fill('Lo');
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Bevarad ikontext');
+    await setProperty(form, 'Beskrivning', 'Bevarad ikontext');
     await form.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
     const picker = form.getByRole('region', { name: 'Ikon', exact: true });
     await picker.getByRole('searchbox').fill('cykel');
@@ -298,7 +307,9 @@ test('IKON-05: rejected and lost complete icon staging preserve the local choice
     expect(state.draft.changes).toHaveLength(1);
     expect(state.draft.changes[0].after).toMatchObject({
       name: 'Lo',
-      description: 'Bevarad ikontext',
+      properties: expect.arrayContaining([
+        expect.objectContaining({ label: 'Beskrivning', kind: 'text', value: 'Bevarad ikontext' }),
+      ]),
       iconId: 'bike',
     });
     expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([]);

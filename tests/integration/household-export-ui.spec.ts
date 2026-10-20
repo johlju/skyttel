@@ -19,6 +19,12 @@ import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { holdBrowserExport, seedLargeExport } from '../support/export-browser-stream.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import {
+  openProperties,
+  propertyRow,
+  propertyValue,
+  setProperty,
+} from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function arrange(page: Page) {
@@ -40,7 +46,14 @@ async function arrange(page: Page) {
           value: {
             typeId: state.types[0].id,
             name: 'Gemensam lampa',
-            description: 'Gemensam uppgift',
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Gemensam uppgift',
+              },
+            ],
           },
         },
       })
@@ -101,7 +114,7 @@ async function archive(download: Download) {
   const parts = unzipSync(new Uint8Array(bytes));
   expect(Object.keys(parts).sort()).toEqual(['content.json', 'images.bin', 'manifest.json']);
   const manifest = JSON.parse(Buffer.from(parts['manifest.json']).toString());
-  expect(manifest).toMatchObject({ format: 'skyttel-household', version: 1 });
+  expect(manifest).toMatchObject({ format: 'skyttel-household', version: 2 });
   return { bytes, parts, content: JSON.parse(Buffer.from(parts['content.json']).toString()) };
 }
 
@@ -155,7 +168,14 @@ test('EXPORT-01: an administrator downloads the complete household archive by ke
             value: {
               typeId: state.types[0].id,
               name: 'Robins privata förslag',
-              description: 'Privat uppgift',
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat uppgift',
+                },
+              ],
             },
           },
         })
@@ -283,7 +303,14 @@ test('EXPORT-02: an administrator cancels an export and prepares another', async
             value: {
               typeId: state.types[0].id,
               name: 'Privat förslag',
-              description: 'Bevara texten',
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Bevara texten',
+                },
+              ],
             },
           },
         })
@@ -484,7 +511,7 @@ test('EXPORT-06: browser image proposals, history and restart lead to a download
     for (const description of ['Första objektet', 'Andra objektet']) {
       const dialog = await openNewObject(page);
       await dialog.getByLabel('Namn', { exact: true }).fill('Lo Exempel');
-      await dialog.getByLabel('Beskrivning', { exact: true }).fill(description);
+      await setProperty(dialog, 'Beskrivning', description);
       if (description === 'Andra objektet') {
         await dialog.getByRole('button', { name: 'Livscykel och utseende' }).click();
         await dialog
@@ -495,23 +522,25 @@ test('EXPORT-06: browser image proposals, history and restart lead to a download
     }
     await saveReviewedConflictDraft(page);
     const first = (await read()).objects.find(
-      ({ description }) => description === 'Första objektet',
+      (object) => propertyValue(object, 'Beskrivning') === 'Första objektet',
     );
     expect(first).toBeDefined();
     const editFirst = async (buffer: Buffer) => {
       await openTable(page);
       // Equal display names remain distinct: select the row by its description.
-      const row = page
-        .getByRole('region', { name: 'Hushållets tabell', exact: true })
+      const table = page.getByRole('region', { name: 'Hushållets tabell', exact: true });
+      await table.getByRole('searchbox', { name: 'Sök objekt i tabellen' }).fill('Första objektet');
+      const row = table
         .getByRole('row')
-        .filter({ has: page.getByRole('cell', { name: 'Första objektet', exact: true }) });
+        .filter({ has: page.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }) });
       await expect(row).toHaveCount(1);
       await expect(row).toBeVisible();
       await row.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }).click();
       const dialog = page.getByRole('dialog', { name: 'Redigera Lo Exempel', exact: true });
-      await expect(dialog.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-        'Första objektet',
-      );
+      await openProperties(dialog);
+      await expect(
+        propertyRow(dialog, 'Beskrivning').getByLabel('Värde', { exact: true }),
+      ).toHaveValue('Första objektet');
       await dialog.getByRole('button', { name: 'Livscykel och utseende' }).click();
       await dialog
         .getByLabel('Profilbild', { exact: true })
@@ -673,7 +702,7 @@ test('EXPORT-08: canceling preparation with an unseen ready response explains cl
     await openTable(page);
     const proposal = await openNewObject(page);
     await proposal.getByLabel('Namn', { exact: true }).fill('Privat förslag');
-    await proposal.getByLabel('Beskrivning', { exact: true }).fill('Förslaget ska finnas kvar');
+    await setProperty(proposal, 'Beskrivning', 'Förslaget ska finnas kvar');
     await proposal.getByRole('button', { name: 'Lägg i utkastet och stäng' }).click();
     const before = await fixture.read();
     const downloads: Download[] = [];
@@ -757,7 +786,7 @@ for (const { caseId, width, height } of [
       await openTable(page);
       await openNewObject(page);
       await page.getByLabel('Namn', { exact: true }).fill('Oskickad exportcykel');
-      await page.getByLabel('Beskrivning', { exact: true }).fill('Texten finns kvar');
+      await setProperty(page, 'Beskrivning', 'Texten finns kvar');
       await verifyObjectDepartureAndDiscard(page, {
         Namn: 'Oskickad exportcykel',
         Beskrivning: 'Texten finns kvar',
@@ -840,7 +869,7 @@ for (const { caseId, width, height } of [
       await expect(page.getByLabel('Namn', { exact: true })).toHaveCount(0);
       await openNewObject(page);
       await expect(page.getByLabel('Namn', { exact: true })).toHaveValue('');
-      await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+      await expect(propertyRow(page, 'Beskrivning')).toHaveCount(0);
       expect(await fixture.read()).toEqual(before);
     } finally {
       release();
@@ -870,20 +899,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
     await post('object-type', {
       id: originalType.id,
       baseRevision: originalType.revision,
-      value: {
-        name: originalType.name,
-        description: 'Uppgifter som följer med exporten',
-        sections: [{ id: 'facts', name: 'Uppgifter' }],
-        fields: [
-          { id: 'count', name: 'Antal', description: '', kind: 'number', sectionId: 'facts' },
-          { id: 'confirmed', name: 'Bekräftad', description: '', kind: 'boolean', sectionId: '' },
-        ],
-        builtins: [
-          { key: 'description', name: 'Kommentar', sectionId: 'facts' },
-          { key: 'debt', name: 'Skuld', sectionId: '' },
-        ],
-        propertyOrder: ['field:count', 'builtin:description', 'field:confirmed', 'builtin:debt'],
-      },
+      value: { name: originalType.name, description: 'Uppgifter som följer med exporten' },
     });
     await post('draft', {
       id: 'shared-object',
@@ -891,18 +907,36 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
       value: {
         typeId: originalType.id,
         name: 'Gemensam lampa',
-        description: 'Kommentar i det ordnade avsnittet',
         iconId: 'bike',
-        customValues: { count: 0, confirmed: false },
-        financialFacts: {
-          debt: { knowledge: 'uncertain', value: '12 300', reportedOn: '2026-09-01' },
-        },
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Kommentar i det ordnade avsnittet',
+          },
+          { id: 'count', label: 'Antal', kind: 'number' as const, value: 0 },
+          { id: 'confirmed', label: 'Bekräftad', kind: 'boolean' as const, value: false },
+          { id: 'debt', label: 'Senast uppgiven skuld', kind: 'text' as const, value: '12 300' },
+          {
+            id: 'debt-certainty',
+            label: 'Senast uppgiven skuld: uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: 'Osäkert uppgivet',
+          },
+          {
+            id: 'debt-reportedOn',
+            label: 'Senast uppgiven skuld: datum för uppgiften',
+            kind: 'date' as const,
+            value: '2026-09-01',
+          },
+        ],
       },
     });
     await post('draft', {
       id: 'garage',
       baseRevision: null,
-      value: { typeId: originalType.id, name: 'Garaget', description: '' },
+      value: { typeId: originalType.id, name: 'Garaget' },
     });
     await post('relationship-type', {
       id: 'storage',
@@ -912,31 +946,6 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
         description: 'Var saken finns',
         forwardLabel: 'förvaras i',
         reverseLabel: 'innehåller',
-        sections: [{ id: 'storage-facts', name: 'Förvaringen' }],
-        fields: [
-          {
-            id: 'amount',
-            name: 'Belopp',
-            description: '',
-            kind: 'number',
-            sectionId: 'storage-facts',
-          },
-          {
-            id: 'locked',
-            name: 'Låst',
-            description: '',
-            kind: 'boolean',
-            sectionId: 'storage-facts',
-          },
-          {
-            id: 'note',
-            name: 'Anteckning',
-            description: '',
-            kind: 'text',
-            sectionId: 'storage-facts',
-          },
-          { id: 'date', name: 'Startdatum', description: '', kind: 'date', sectionId: '' },
-        ],
       },
     });
     await post('relationship', {
@@ -946,8 +955,12 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
         typeId: 'storage',
         sourceId: 'shared-object',
         targetId: 'garage',
-        knowledge: 'known',
-        customValues: { amount: 0, locked: false, note: 'Övre hyllan', date: '2026-09-01' },
+        properties: [
+          { id: 'amount', label: 'Belopp', kind: 'number' as const, value: 0 },
+          { id: 'locked', label: 'Låst', kind: 'boolean' as const, value: false },
+          { id: 'note', label: 'Anteckning', kind: 'text' as const, value: 'Övre hyllan' },
+          { id: 'date', label: 'Startdatum', kind: 'date' as const, value: '2026-09-01' },
+        ],
       },
     });
     await post('save', { operationId: 'export-properties' });
@@ -981,7 +994,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
     await post('draft', {
       id: 'private-object',
       baseRevision: null,
-      value: { typeId: originalType.id, name: 'Privat förslag från exporten', description: '' },
+      value: { typeId: originalType.id, name: 'Privat förslag från exporten' },
     });
     expect(
       (
@@ -1009,7 +1022,7 @@ test('EXPORT-10: the downloaded current-format archive restores shared, private 
     await section.getByRole('button', { name: 'Hämta ZIP-fil' }).click();
     const result = await archive(await downloaded);
     const manifest = JSON.parse(Buffer.from(result.parts['manifest.json']).toString());
-    expect(manifest.schemaVersion).toBe(34);
+    expect(manifest.schemaVersion).toBe(37);
     const encoded = Buffer.from(result.parts['content.json']).toString();
     for (const excluded of [
       'synthetic-provider-token',
@@ -1140,7 +1153,7 @@ for (const { caseId, phase } of [
       await openTable(page);
       await openNewObject(page);
       await page.getByLabel('Namn', { exact: true }).fill('Oskickat vid avbruten export');
-      await page.getByLabel('Beskrivning', { exact: true }).fill('Bevara min redigering');
+      await setProperty(page, 'Beskrivning', 'Bevara min redigering');
       await verifyObjectDepartureAndDiscard(page, {
         Namn: 'Oskickat vid avbruten export',
         Beskrivning: 'Bevara min redigering',

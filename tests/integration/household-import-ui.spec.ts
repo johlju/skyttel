@@ -24,7 +24,7 @@ test('IMPORT-01: an administrator reviews and explicitly replaces household cont
           id: 'lamp',
           version,
           baseRevision: revision,
-          value: { typeId: state.types[0].id, name, description: '' },
+          value: { typeId: state.types[0].id, name },
         },
       });
     expect((await propose('Lampa från exporten', 0, null)).status()).toBe(200);
@@ -123,7 +123,7 @@ test('IMPORT-21: unavailable recovery storage preserves the file, exact review a
             id: 'lamp',
             version: state.draft.version,
             baseRevision: state.objects[0]?.revision ?? null,
-            value: { typeId: state.types[0].id, name, description: '' },
+            value: { typeId: state.types[0].id, name },
           })
         ).status(),
       ).toBe(200);

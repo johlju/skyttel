@@ -14,6 +14,7 @@ import type {
   SaveOperation,
 } from '../shared/map.js';
 import {
+  effectiveRelationships,
   proposedObjectTypes,
   proposedRelationships,
   proposedRelationshipTypes,
@@ -687,12 +688,10 @@ export function HouseholdMap({
         failure instanceof MapRequestError &&
         [
           'duplicate_relationship',
-          'invalid_custom_value',
+          'invalid_properties',
           'invalid_type_definition',
           'invalid_relationship_type',
-          'field_kind_in_use',
           'definition_in_use',
-          'field_in_use',
         ].includes(failure.code)
       ) {
         setError(rejectionMessage(failure.code));
@@ -765,8 +764,7 @@ export function HouseholdMap({
       version: state.draft.version,
       contentVersion: state.contentVersion,
       baseRevision: proposal ? (proposal.before?.revision ?? null) : (object?.revision ?? null),
-      value: proposal?.after ??
-        object ?? { typeId: effectiveTypes[0]?.id ?? '', name: '', description: '' },
+      value: proposal?.after ?? object ?? { typeId: effectiveTypes[0]?.id ?? '', name: '' },
     };
   }
   function edit(object?: MapObject, editing = true, restoreFocus?: () => void) {
@@ -843,10 +841,9 @@ export function HouseholdMap({
           revision: change.before?.revision ?? 0,
         });
     }
-    const displayedEdges = proposedRelationships(
-      state?.relationships ?? [],
-      state?.draft.relationships,
-    );
+    const displayedEdges = state
+      ? effectiveRelationships(state)
+      : new Map<string, MapRelationship>();
     const spatialEdges = new Map(displayedEdges);
     for (const change of state?.draft.relationships ?? []) {
       if (!change.after && change.before) spatialEdges.set(change.id, change.before);
@@ -1006,9 +1003,7 @@ export function HouseholdMap({
   useEffect(() => {
     if (saveProgress?.status === 'succeeded') setSaveDialogOpen(false);
   }, [saveProgress]);
-  const unresolved =
-    state?.draft.changes.some((change) => change.after?.identity === 'unresolved') ||
-    state?.draft.relationships?.some((change) => change.after?.knowledge === 'unresolved');
+  const unresolved = state?.draft.changes.some((change) => change.after?.identity === 'unresolved');
   function editRelationship(edge?: MapRelationship, previous = false) {
     if (!state) return;
     if (previous) return;
@@ -1896,6 +1891,15 @@ export function HouseholdMap({
           initialKey={conflictDialogKey}
           disabled={pending || blocked || dirty}
           onClose={() => setConflictDialogOpen(false)}
+          onCorrectRelationship={(id) => {
+            setConflictDialogOpen(false);
+            setReadEntry({
+              kind: 'relationships',
+              id: `blocked-${id}`,
+              retainedRelationshipId: id,
+              restoreFocus: () => setConflictDialogOpen(true),
+            });
+          }}
           onStatus={setConflictResolutionStatus}
           onUnknownChange={setConflictRecovery}
           onRefresh={async () => {
@@ -2143,7 +2147,7 @@ export function HouseholdMap({
         createPortal(
           <div className="shared-type-settings">
             <details>
-              <summary>Objekttyper och egna fält</summary>
+              <summary>Objekttyper</summary>
               <p>
                 Alla medlemmar kan föreslå ändringar, även i förifyllda typer. Egna fält är inte
                 till för hemliga uppgifter.

@@ -26,6 +26,9 @@ innehåll kopplas avsiktligt till Robin efter uttrycklig granskning.
 3. Förbered ytterligare en tom Chrome-profil C. Samma temporära katalog
    används för omstarter; återskapa inte databaserna mitt i fallet.
 
+Återimport återskapar innehåll och historik, medan verifierad aktuell
+inloggning och nuvarande åtkomst styr vem som får använda målinstallationen.
+
 ## Flytt utan gammal inloggningsbehörighet
 
 ### FLYTT-01: återställ, koppla ägare och flytta vidare
@@ -70,8 +73,9 @@ assigns private ownership and remains portable after restart”.
 
 **Steg:**
 
-1. På källan: lägg till ett eget textfält **Notering** på en objekttyp.
-   Skapa och spara **Kvarvarande lampa** och **Borttagen lampa** med fältvärden.
+1. På källan: skapa **Kvarvarande lampa** och **Borttagen lampa**, vardera med
+   den fria textegenskapen **Notering** och ett påhittat värde. Lägg
+   egenskaperna på de enskilda objekten och spara dem.
    Spara den första bilden på det kvarvarande objektet, byt till den andra
    och spara igen. Ta bort det andra objektet och spara. Anteckna objektens
    stabila ID och kvittonas författare, ID och tidpunkter från historiken.
@@ -187,7 +191,8 @@ eller ägarbyte. Koden hämtar aktuellt bygg-ID och utkast, förbereder en
 operation och laddar ned endast dess tre begäransfält. Inga inloggningsdata
 följer med filen. Ange hushållets ID från sidans adress.
 
-Kör [den separata förberedelsen 1](household-recovery-console.md#flytt-01-förberedelse-1)
+Kör [den separata förberedelsen
+1](household-recovery-console.md#flytt-01-förberedelse-1)
 för FLYTT-01 i det angivna läget.
 
 **Tredje installationen utan rå databaskopia:**
@@ -226,7 +231,8 @@ och historik ska vara oförändrade. Anteckna detta separat från UI-resultatet.
 Välj de två lokala JSON-filerna. Koden jämför aktuell karta och historik
 före och efter varje försök; inget gammalt lyckat kvitto får returneras.
 
-Kör [den separata förberedelsen 2](household-recovery-console.md#flytt-01-förberedelse-2)
+Kör [den separata förberedelsen
+2](household-recovery-console.md#flytt-01-förberedelse-2)
 för FLYTT-01 i det angivna läget.
 
 **Separat teknisk kontroll:**
@@ -244,7 +250,8 @@ och Robins undanträngda privata förslag. Inga gamla databaser används.
 - ZIP-filen räcker för innehållet på tom lagring. Inga gamla användarkonton,
   sessioner eller assistentmedgivanden får ny behörighet. Normal verifierad
   inloggning och uttrycklig koppling krävs på varje ny installation.
-- Objekt, borttaget innehåll, fält, bilder och historiska författare behåller
+- Objekt, borttaget innehåll, fria egenskaper, bilder och historiska
+  författare behåller
   sina identiteter. Privata utkast, placeringar och inställningar återkommer
   efter koppling och omstart. Ingen privat vy blandas med den undanträngda.
 - Båda gamla försöken avvisas även med den aktuella generationen. Karta och
@@ -299,7 +306,8 @@ back while both private states and historical receipts remain intact”.
    Skapa ett annat privat objektförslag och en annan personlig placering.
    Anteckna Robins innehålls-ID. Öppna ett nytt oskickat objektformulär
    i en extra kartflik. Be därefter driftansvarig registrera målets
-   väntande försök enligt [förberedelsen](household-recovery-console.md#flytt-01-förberedelse-1).
+   väntande försök enligt
+   [förberedelsen](household-recovery-console.md#flytt-01-förberedelse-1).
    Invänta **Väntande försök förberett, begäransfilen sparad**.
 2. Öppna **Inställningar → Koppla historiskt innehåll** och hämta aktuell
    metadata. Välj källans historiska identitet och Robins verifierade
@@ -311,7 +319,8 @@ back while both private states and historical receipts remain intact”.
    ska visa detta och bekräftelsen nollställas. Markera igen och byt historisk
    identitet; bekräftelsen ska nollställas igen. Välj sedan källans identitet
    och Robin på nytt och kontrollera båda fullständiga ID:na före nästa steg.
-3. Be driftansvarig installera [den separata svarsförberedelsen](household-recovery-console.md#flytt-02-förberedelse-1).
+3. Be driftansvarig installera [den separata
+   svarsförberedelsen](household-recovery-console.md#flytt-02-förberedelse-1).
    Invänta installationsbesked, markera sedan identitetsbekräftelsen och
    genomför kopplingen med tangentbordet. Invänta därefter bekräftelse att
    servern har sparat kopplingen och att just dess svar har tappats.
@@ -371,13 +380,15 @@ gamla försök på den tredje installationen.
    **Återhämtningsblockeringen är aktiv**. Lossa utvecklarverktygen till ett
    separat fönster för att bevara 390×900, men håll dem och regeln aktiva.
 2. Vid UI-steg 3 och 4: följ
-   [de separata installera-och-invänta-tidpunkterna](household-recovery-console.md#flytt-02-förberedelse-1).
+   [de separata
+   installera-och-invänta-tidpunkterna](household-recovery-console.md#flytt-02-förberedelse-1).
    Installera alltid före respektive klick; invänta alltid servermarkören
    först efter klicket. Utan lyckad servermarkör är felgränsen inte prövad.
 3. Efter källans privata läsning i UI-steg 6: avvisningen av exakt det
    gamla registrerade försöket och oförändrade utkast, placeringar och
    historik har sitt tekniska underlag i
-   [FLYTT-02:s motsvarighet](../../tests/integration/household-owners-ui.spec.ts).
+   [FLYTT-02:s
+   motsvarighet](../../tests/integration/household-owners-ui.spec.ts).
    Anteckna automationens faktiska resultat separat; en ny eller gissad
    begäran ersätter inte den kontrollen. Om detta underlag saknas redovisas
    gränsen som ej verifierad, även om UI-arbetet kan fortsätta.
@@ -407,7 +418,8 @@ automated coverage does not require a manual repeat.
 
 ### Prerequisites
 
-- Complete [local authentication](../development/devcontainer.md#set-up-local-sign-in)
+- Complete [local
+  authentication](../development/devcontainer.md#set-up-local-sign-in)
   and have a working private development configuration. Its path is
   `SKYTTEL_DEV_ENV_FILE`, or `.devcontainer/.env` by default.
 - Keep the source's existing configured first-administrator account.
@@ -415,7 +427,8 @@ automated coverage does not require a manual repeat.
   selects Microsoft when the source uses Google, and Google otherwise.
   The person must control the selected account and be able to sign in.
 - The selected destination provider needs its callback at port 3301.
-  Google uses the [existing two-callback setup](../development/devcontainer.md#set-up-local-sign-in).
+  Google uses the [existing two-callback
+  setup](../development/devcontainer.md#set-up-local-sign-in).
   Microsoft localhost callbacks follow that guide's port handling. Keep
   the normal source callback at port 5173.
 - Install the repository dependencies. Stop normal development servers and
@@ -572,7 +585,8 @@ run `db:setup`. Reload the corresponding browser profile after startup.
 
 For the final move, stop source editing before export and stop terminal A
 after its download, as described in the
-[move runbook](../operations/recovery.md#pause-changes-and-take-the-final-export).
+[move
+runbook](../operations/recovery.md#pause-changes-and-take-the-final-export).
 The destination uses only that downloaded archive. Do not copy a source
 SQLite file or read it to complete destination recovery.
 

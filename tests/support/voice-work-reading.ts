@@ -6,7 +6,7 @@ import { readDraftProposal } from './domain-work.js';
 export async function readVoiceProposal(
   page: Page,
   name = 'Lo Exempel',
-  description = 'Påhittad uppgift',
+  description: string | null = 'Påhittad uppgift',
 ) {
   const proposal = await readDraftProposal(page, name);
   const proposed = proposal
@@ -27,12 +27,13 @@ export async function readVoiceProposal(
       .locator('..')
       .getByRole('definition'),
   ).toHaveText(name);
-  await expect(
-    proposed
-      .locator('dt')
-      .filter({ hasText: /^Beskrivning(?: · ändrat)?$/ })
-      .locator('..')
-      .getByRole('definition'),
-  ).toHaveText(description);
+  const descriptionField = proposed
+    .locator('dt')
+    .filter({ hasText: /^Beskrivning(?: · ändrat)?$/ });
+  if (description === null) await expect(descriptionField).toHaveCount(0);
+  else
+    await expect(descriptionField.locator('..').getByRole('definition')).toHaveText(
+      `${description} (Text)`,
+    );
   await closeSupportDialog(page, name);
 }

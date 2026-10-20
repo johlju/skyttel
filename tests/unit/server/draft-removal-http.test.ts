@@ -19,7 +19,7 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
         value: {
           name: 'Tillfällig typ',
           description: '',
-          fields: [],
+
           ...(kind === 'relationshipType'
             ? { forwardLabel: 'granskar', reverseLabel: 'granskas av' }
             : {}),
@@ -30,12 +30,11 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
         baseRevision: null,
         value:
           kind === 'objectType'
-            ? { name: 'Tillfälligt föremål', description: '', typeId: 'discard-type' }
+            ? { name: 'Tillfälligt föremål', typeId: 'discard-type' }
             : {
                 sourceId: 'draft-bike',
-                targetId: null,
+                targetId: 'draft-bike',
                 typeId: 'discard-type',
-                knowledge: 'unknown',
               },
       });
       const after = await data.read();
@@ -52,16 +51,14 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
           ? { forwardLabel: 'granskar', reverseLabel: 'granskas av' }
           : {}),
       });
-      expect(type?.after?.fields ?? []).toEqual([]);
       const changes = kind === 'objectType' ? after.draft.changes : after.draft.relationships;
       expect(changes?.find(({ id }) => id === 'typed-proposal')?.after).toEqual(
         kind === 'objectType'
-          ? { name: 'Tillfälligt föremål', description: '', typeId: 'discard-type' }
+          ? { name: 'Tillfälligt föremål', typeId: 'discard-type' }
           : {
               sourceId: 'draft-bike',
-              targetId: null,
+              targetId: 'draft-bike',
               typeId: 'discard-type',
-              knowledge: 'unknown',
             },
       );
       expect(after.draft.changes.filter(({ id }) => id !== 'typed-proposal')).toEqual(

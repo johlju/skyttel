@@ -44,7 +44,18 @@ async function setup(
           contentVersion: state.contentVersion,
           id: 'lo',
           baseRevision: null,
-          value: { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Påhittad uppgift' },
+          value: {
+            typeId: state.types[0].id,
+            name: 'Lo Exempel',
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Påhittad uppgift',
+              },
+            ],
+          },
         },
       })
     ).status(),

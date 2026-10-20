@@ -1,7 +1,10 @@
 # Controlled upgrade of the login model
 
-Use this procedure for an existing installation that has no installation
-authority generation. This is an offline, one-time transition. It ends all
+Use this procedure only for an installation that has no installation
+authority generation. An installation with existing login authority needs
+no login upgrade.
+
+This is an offline, one-time login transition. It ends all
 old login sessions, pending login and linking attempts, OAuth credentials,
 assistant grants and signing keys. Users and linked identity associations,
 household information, stored drafts, registered save attempts and save
@@ -30,11 +33,6 @@ receipts remain. Unsaved conversation work does not resume.
    using their existing results after login, without submitting new saves.
 
 ## Stop, adopt and start one instance
-
-For the existing Render service, use the
-[step-by-step Render appendix](render.md#appendix-one-time-login-upgrade-on-render).
-It covers the public maintenance gate, a temporary maintenance process on
-the attached disk, and restoration of the normal deployment settings.
 
 Close public ingress, disable automatic deployments and stop every old
 application process. Verify at the host that no old process can access the

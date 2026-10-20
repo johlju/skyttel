@@ -27,7 +27,7 @@ Robin kopierar sitt användar-ID från startsidan i sin separata profil;
 Alex bjuder in detta ID genom hushållets administration och Robin
 accepterar koden. Robin skapar dessutom **Hushållet Eken** i sin profil.
 Skapa Alex privata förslag **Alex privata förslag** och Robins
-**Robins privata förslag**, båda typ Person och tom beskrivning, genom
+**Robins privata förslag**, båda typ Person utan fria egenskaper, genom
 **Nytt objekt → Lägg i utkastet och stäng** i respektive profil.
 Spara dem inte. När ett fall återkallar Robins medlemskap, bjud in Robin
 igen med en ny kod före nästa fall. Anslut läsklienten i rätt persons
@@ -122,8 +122,9 @@ Skapa de fem objekten och fyra sambanden enligt AI-06 i webbläsaren och
 spara hela utkastet. Ge Blå bilen beskrivningen **Bilens sparade uppgifter**,
 Kim **Kims övriga detaljer**, Lo **Los övriga detaljer**, Cykeln två steg
 bort **Cykelns uppgifter** och Samlingen **Orelaterat objekt**. Privat samling
-har typbeskrivningen **Orelaterad typbeskrivning** och textfältet Anteckning
-med beskrivningen **Hemligt fält**. Kör `map Blå bilen` och kopiera bara
+har typbeskrivningen **Orelaterad typbeskrivning**. På objektet Samlingen
+kan en fri textegenskap Anteckning ha värdet **Hemligt fält**. Kör
+`map Blå bilen` och kopiera bara
 bilens faktiska `id` ur svaret till `objectId` i följande läsningar:
 
 ```text
@@ -151,7 +152,8 @@ För AI-08, AI-10 och MCP-06 öppnar du terminal C före första sparandet.
 Kör hela kommandot nedan. Det behöver ingen token, fil eller databasåtkomst;
 det jämför endast fullständiga syntetiska JSON-svar som du klistrar in
 från terminal B. Behåll terminal C öppen under omstart och mellan MCP-06:s
-två installationer. Ett `MATCH` kräver samma fulla värde, även före-/eftervärden,
+två installationer. Ett `MATCH` kräver samma fulla värde, även
+före-/eftervärden,
 datum, typer och listordning; objektens egenskapsordning saknar betydelse.
 
 ```sh
@@ -212,130 +214,125 @@ versioner automatiskt; skriv inte in dem i JSON.
 
 ### Fångster för MCP-01
 
-Vid steg 1–2, kör dessa rader. Fältens fyra värdeslag och de utelämnade
-värdena är avsiktliga.
+Skapa en typ med namn och beskrivning och lägg de individuella
+uppgifterna i varje objekts ordnade `properties`. Tomma egenskaper
+utelämnar `value`, medan Nej uttryckligen är `false`.
 
 <!-- markdownlint-disable MD013 -->
 ```text
-capture-tool solar-type propose_object_type {"id":"solar","baseRevision":null,"value":{"name":"Solcellsanläggning","description":"Hushållets elproduktion","fields":[{"id":"supplier","name":"Leverantör","description":"","kind":"text"},{"id":"power","name":"Effekt","description":"kW","kind":"number"},{"id":"installed","name":"Installationsdatum","description":"","kind":"date"},{"id":"battery","name":"Batteri","description":"","kind":"boolean"}]}}
+capture-tool solar-type propose_object_type {"id":"solar","baseRevision":null,"value":{"name":"Solcellsanläggning","description":"Hushållets elproduktion"}}
 send solar-type
-capture-tool roof propose_object {"id":"roof","baseRevision":null,"value":{"typeId":"solar","name":"Paneler på taket","description":"","customValues":{"supplier":"Exempelsol","power":12.5,"installed":"2026-09-01"}}}
+capture-tool roof propose_object {"id":"roof","baseRevision":null,"value":{"typeId":"solar","name":"Paneler på taket","properties":[{"id":"supplier","label":"Leverantör","kind":"text","value":"Exempelsol"},{"id":"power","label":"Effekt","kind":"number","value":12.5},{"id":"battery","label":"Batteri","kind":"boolean"},{"id":"installed","label":"Installationsdatum","kind":"date","value":"2026-09-01"}]}}
 send roof
-capture-tool garage propose_object {"id":"garage","baseRevision":null,"value":{"typeId":"solar","name":"Paneler på garaget","description":"","customValues":{"battery":false}}}
+capture-tool garage propose_object {"id":"garage","baseRevision":null,"value":{"typeId":"solar","name":"Paneler på garaget","properties":[{"id":"supplier","label":"Leverantör","kind":"text"},{"id":"power","label":"Effekt","kind":"number"},{"id":"installed","label":"Installationsdatum","kind":"date"},{"id":"battery","label":"Batteri","kind":"boolean","value":false}]}}
 send garage
 read
 ```
 <!-- markdownlint-enable MD013 -->
 
-Efter webbläsarens fulla läsning i steg 3: `capture-save solar-save` och
-`send solar-save`. Kör `read-tool read_type_catalog {}` och kopiera
-typens aktuella `revision` som `baseRevision` i nästa fångst.
-Använd samma definition som ovan men byt bara fältet `power` till
-`kind: "text"`. Skicka med en ny etikett: förvänta `field_kind_in_use`
-och beskedet att ett nytt fält behövs. Vid nästa fångst behåller du
-`power` som `number` och lägger sist till följande fält:
+Efter webbläsarens fulla läsning: kör `capture-save solar-save` och
+`send solar-save`. Läs `read_type_catalog` och använd typens aktuella
+revision som `baseRevision` i en ny `propose_object_type`-fångst för
+`solar`, med samma namn och beskrivningen Redigerad gemensam betydelse.
+Skicka den. Typens beskrivning är skild från individernas egenskaper.
+
+Slå upp Person och Fordon i samma katalog. Använd `propose_object_type`
+med respektive `id` och aktuell `revision`. Persons nya värde är:
 
 ```json
-{"id":"power-note","name":"Effektanteckning","description":"","kind":"text"}
+{"name":"Person i hushållet","description":"Personer ger ingen inloggning"}
 ```
 
-I steg 5, slå upp Person och Fordon i samma katalog. Använd
-`capture-tool` med `propose_object_type`, deras egna `id` och `revision`.
-Persons nya `value` är följande; Fordons `value` är `null`.
-
-```json
-{"name":"Person i hushållet","description":"Personer ger ingen inloggning","fields":[]}
-```
-
-Skicka varje fångst, granska `read`, använd `capture-save catalog-save`
-och `send catalog-save`. Starta om med samma databas inför steg 6.
+Fordons nya värde är `null`. Skicka båda fångsterna, granska `read`, kör
+`capture-save catalog-save` och `send catalog-save`. Behåll databasen vid
+omstart och läs sedan objekten och katalogen enligt MCP-01.
 
 ### Fångster för MCP-02
 
-Slå upp varje angiven förifylld objekttyp med `read_type_catalog`.
-För varje rad i tabellen använder du `capture-tool` med
-`propose_object`, nytt syntetiskt `id`, `baseRevision: null` och hela
-`value` med angivet namn, typens aktuella `typeId`, tom `description`
-och precis följande `financialFacts`. Andra ekonomiska fält utelämnas.
+Slå upp varje förifylld typ med `read_type_catalog`. Använd
+`propose_object`, angivet `id`, `baseRevision: null` och fullständigt
+`value` med namnet, katalogens `typeId` och följande `properties`.
+Etiketterna är vanliga uppgifter utan automatisk ekonomisk betydelse.
 
 <!-- markdownlint-disable MD013 -->
-| ID | Objekttyp | Namn | financialFacts |
+| ID | Objekttyp | Namn | properties |
 | --- | --- | --- | --- |
-| rent | Hyresavtal | Hyra för lägenheten | `{"price":{"knowledge":"known","value":"9 500"},"terms":{"knowledge":"unknown"}}` |
-| garage-rent | Hyresavtal | Hyra för garaget | `{"price":{"knowledge":"uncertain","value":"650"}}` |
-| loan | Låneavtal | Exempellån | `{"debt":{"knowledge":"uncertain","value":"125 000,50","reportedOn":"2026-09-01"}}` |
-| credit | Kreditavtal | Exempelkredit | `{"creditLimit":{"knowledge":"known","value":"80 000","reportedOn":"2026-08-01"},"usedCredit":{"knowledge":"known","value":"12 500","reportedOn":"2026-09-02"},"terms":{"knowledge":"none"}}` |
-| installment | Avbetalningsavtal | Bilens avbetalning | `{"debt":{"knowledge":"unknown","reportedOn":"2026-09-03"}}` |
+| rent | Hyresavtal | Hyra för lägenheten | `[{"id":"price","label":"Pris","kind":"text","value":"9 500"},{"id":"terms","label":"Avtalsvillkor","kind":"text"}]` |
+| garage-rent | Hyresavtal | Hyra för garaget | `[{"id":"price","label":"Pris","kind":"number","value":650},{"id":"certainty","label":"Osäkert uppgivet","kind":"boolean","value":true}]` |
+| loan | Låneavtal | Exempellån | `[{"id":"debt","label":"Senast uppgiven skuld","kind":"text","value":"125 000,50"},{"id":"certainty","label":"Osäkert uppgivet","kind":"boolean","value":true},{"id":"date","label":"Datum för uppgiften","kind":"date","value":"2026-09-01"}]` |
+| credit | Kreditavtal | Exempelkredit | `[{"id":"limit","label":"Beviljat kreditutrymme","kind":"number","value":80000},{"id":"limit-date","label":"Kreditutrymmets datum","kind":"date","value":"2026-08-01"},{"id":"used","label":"Utnyttjad kredit","kind":"number","value":12500},{"id":"used-date","label":"Utnyttjad kredits datum","kind":"date","value":"2026-09-02"},{"id":"terms","label":"Avtalsvillkor","kind":"text","value":"Uttryckligen inget"}]` |
+| installment | Avbetalningsavtal | Bilens avbetalning | `[{"id":"debt","label":"Senast uppgiven skuld","kind":"number"},{"id":"date","label":"Datum för uppgiften","kind":"date","value":"2026-09-03"}]` |
 <!-- markdownlint-enable MD013 -->
 
-Skicka varje fångst. Föreslå på samma sätt `home`, **Lägenheten**, typ
-Bostad, och `garage`, **Garaget**, typ Garage, utan ekonomiska fakta.
-Föreslå `car`, **Familjens bil**, typ Fordon, med tom beskrivning och
-`identity: "unspecified"`. Slå upp sambandstyperna Gäller och Finansierar.
-Använd `propose_relationship`, nytt ID, `baseRevision: null` och hela
-`value`: aktuellt sambandstyp-ID, `sourceId`, `targetId` och
-`knowledge: "known"` för dessa tre samband:
+Skicka varje fångst. Föreslå också `home`, Lägenheten av typen Bostad;
+`garage`, Garaget av typen Garage; och `car`, Familjens bil av typen
+Fordon med `identity: "unspecified"`. De behöver inga egenskaper.
+Slå upp Gäller och Finansierar. Använd `propose_relationship`, nytt ID,
+`baseRevision: null` och `value` med aktuellt `typeId`, `sourceId` och
+`targetId` för följande verkliga ändpunkter:
 
 - `home-rent-link`: rent → Gäller → home.
 - `garage-rent-link`: garage-rent → Gäller → garage.
 - `finance-car`: installment → Finansierar → car.
 
-Efter full granskning i steg 2, använd `capture-save agreements-save`
-och `send agreements-save`. I steg 3 läser du kreditobjektet med
-`read-tool read_map {"objectId":"credit"}`. Föreslå samma hela värde
-med aktuell revision som `baseRevision` och ändra endast
-`usedCredit` till `{"knowledge":"known","value":"0","reportedOn":"2026-09-20"}`.
-Granska och spara med en ny etikett. Välj detta kvitto genom
-`read_history` med kvittots faktiska `operationId` och `userId` och jämför
-hela tidigare beloppet **12 500** och datumet **2026-09-02**.
+Granska och spara genom `capture-save agreements-save` och
+`send agreements-save`. Läs sedan `read_map {"objectId":"credit"}`.
+Använd aktuell objektversion som `baseRevision` och behåll hela dess
+värde med samma egenskapsidentiteter och ordning. Ändra enbart `used`
+till värdet `0` och `used-date` till `2026-09-20`. Fånga, skicka, granska
+och spara med nya etiketter. Läs rättelsens hela kvitto med dess faktiska
+`operationId` och `userId`; tidigare 12500 och 2026-09-02 ska finnas kvar.
 
 ### Fångster för MCP-03
 
 Skapa typerna `cycle` och `vehicle` med `propose_object_type`,
-`baseRevision: null` och dessa fulla definitioner:
+`baseRevision: null` och värdena:
 
-<!-- markdownlint-disable MD013 -->
 ```json
-{"name":"Cykel","description":"","fields":[{"id":"serial","name":"Nummer","description":"","kind":"text"}]}
+{"name":"Cykel","description":""}
 ```
 
 ```json
-{"name":"Motorfordon","description":"","fields":[{"id":"serial","name":"Nummer","description":"","kind":"number"}]}
+{"name":"Motorfordon","description":""}
 ```
-<!-- markdownlint-enable MD013 -->
 
-Föreslå `bike` med typ `cycle`, namn **Alex blå cykel**, tom beskrivning
-och `customValues: {"serial":"SYNTH-42"}`. Föreslå `garage` med namnet
-**Garaget**, tom beskrivning och en annan aktuell typ från katalogen.
-Skapa sambandstypen `stored` med följande värde:
+Föreslå `bike`, Alex blå cykel av typen `cycle`, med egenskapen:
 
-<!-- markdownlint-disable MD013 -->
+```json
+[{"id":"serial","label":"Ramnummer","kind":"text","value":"SYNTH-42"}]
+```
+
+Föreslå `garage`, Garaget, med en annan aktuell typ från katalogen och
+utan egenskaper. Skapa sambandstypen `stored` med följande värde:
+
 ```json
 {"name":"Förvaring","description":"Sakens plats","forwardLabel":"förvaras i","reverseLabel":"innehåller"}
 ```
-<!-- markdownlint-enable MD013 -->
 
-Föreslå sambandet `parking` med typ `stored`, från `bike` till `garage`
-och `knowledge: "known"`. Skicka samma fulla värde igen under det nya
-ID:t `duplicate`. Det befintliga sambandet ska återanvändas. Föreslå
-`second-kind` mellan samma objekt med en annan aktuell sambandstyp.
-Spara hela utkastet efter granskning.
+Föreslå `parking` med typ `stored`, `sourceId: "bike"` och
+`targetId: "garage"`. Föreslå samma fulla värde med nytt ID `duplicate`;
+befintligt samband ska återanvändas. Föreslå också `second-kind` mellan
+samma objekt med en annan aktuell sambandstyp. Granska och spara.
 
-Läs och behåll cykelns och båda riktade sambandens identiteter före
-typbytet. Läs cykelns aktuella revision och använd den vid typbytet i steg 3.
-Behåll namn och tom beskrivning, välj `typeId: "vehicle"` och
-`customValues: {"serial":42}`. Efter webbläsarens fulla före-/efterläsning
-sparar du. Läs kartan igen och jämför samma objekt- och sambandsidentiteter.
-Slå sedan upp den gamla typens aktuella revision, föreslå dess
-borttagning med `value: null` och spara. Välj typbytets hela kvitto med
-dess faktiska operation och historiska författare; kontrollera också
-webbläsarens **Visa ändringarna**.
+Behåll objektets och båda sambandens identiteter. Läs cykelns aktuella
+revision och föreslå samma objekt med `typeId: "vehicle"` och egenskapen:
+
+```json
+[{"id":"serial","label":"Ramnummer","kind":"number","value":42}]
+```
+
+Detta är ett uttryckligt byte av både objektets typ och egenskapens
+datatyp; ett typbyte i sig omvandlar aldrig värdet. Granska båda sidorna
+i webbläsaren, spara och jämför oförändrade objekt- och sambandsidentiteter.
+Föreslå därefter borttagning av den oanvända `cycle`-typen med aktuell
+revision och `value: null`, och spara. Läs typbytets hela sparkvitto och
+webbläsarens historik med Text/SYNTH-42 respektive Tal/42.
 
 ### Fångster för MCP-04
 
 Skapa `ended-type`, **Upphörd typ**, `private-type`, **Privat använd typ**,
-och `race-type`, **Samtidig typ**, med tom beskrivning och `fields: []`.
-Skapa `ended`, **Upphört testobjekt**, typ `ended-type`, tom beskrivning
+och `race-type`, **Samtidig typ**, med tom typbeskrivning.
+Skapa `ended`, **Upphört testobjekt**, typ `ended-type`, utan fria egenskaper
 och `lifecycle: "ended"`. Granska och spara hela utkastet.
 
 Slå upp aktuell typrevision inför varje borttagningsförslag. Föreslå
@@ -367,24 +364,28 @@ MCP-guidens server. Provhushållet är **TestHousehold**. Starta en
 kontrollerad `write`-klient på samma adress, välj detta hushåll och ge
 båda medgivandena. Återkalla även denna anslutning vid demoguidens städning.
 
-I steg 3, kör `read`. Kopiera det fulla Lo-konfliktobjektet från
-`conflicts` till `conflict` i en `capture-tool` för `resolve_conflict`;
+I steg 3, kör `read`. Kopiera det fulla Lo-konfliktobjektet och dess `basis`
+från
+`resolutions` till `conflict` respektive `basis` i en `capture-tool` för
+`resolve_conflict`;
 ange också `choice: "proposed"`. Skicka fångsten, läs `read` och kontrollera
 Lo Lind med **Spelar piano i musikföreningen.**. Hela övriga utkastet
 ska finnas kvar. Läs sedan `map Familjens Molnmusik`.
 
 Kopiera det aktuella Molnmusik-objektets `id` och `revision` till `id`
 respektive `baseRevision` i `propose_object`. Kopiera hela objektvärdet
-till `value`, utom dess `id`, `revision` och `householdId`. Ändra enbart
-beskrivningen till **Familjeabonnemang, 189 kr per månad.** och ersätt
-`financialFacts` med följande fulla värde. Behåll övriga egenskaper.
+till `value`, utom dess `id`, `revision` och `householdId`. Behåll alla
+egenskapsidentiteter och andra värden. Rätta den fria
+Beskrivning till **Familjeabonnemang, 189 kr per månad.**. Lägg till eller
+rätta följande vanliga egenskaper, med stabila ID:n och bibehållen ordning
+för befintliga rader:
 
 ```json
-{
-  "price": {"knowledge":"known","value":"189"},
-  "currency": {"knowledge":"known","value":"SEK"},
-  "paymentInterval": {"knowledge":"known","value":"månad"}
-}
+[
+  {"id":"price","label":"Pris","kind":"text","value":"189"},
+  {"id":"currency","label":"Valuta","kind":"text","value":"SEK"},
+  {"id":"paymentInterval","label":"Betalningsintervall","kind":"text","value":"månad"}
+]
 ```
 
 Skicka rättelsen, kör `read` och granska de två objekten och adressambandet.
@@ -440,7 +441,7 @@ Fånga sedan följande gamla förslag i terminal B utan att skicka det:
 
 <!-- markdownlint-disable MD013 -->
 ```text
-capture-tool old-type propose_object_type {"id":"manual-old-type","baseRevision":null,"value":{"name":"Gammalt underlag","description":"","fields":[]}}
+capture-tool old-type propose_object_type {"id":"manual-old-type","baseRevision":null,"value":{"name":"Gammalt underlag","description":""}}
 ```
 <!-- markdownlint-enable MD013 -->
 
@@ -452,7 +453,8 @@ Ingen ny fångst ska ersätta det gamla underlaget. Vid fel utgångsläge,
 fallet upprepas. Fångsten städas med klientens `quit` efter fallet.
 
 Före läsningen i steg 6 lägger du ett nytt objektförslag
-**Oberoende utkast**, tom beskrivning ersatt av **Privat lampanteckning**,
+**Oberoende utkast**, med den fria textegenskapen Beskrivning: **Privat
+lampanteckning**,
 med samma typ som lampan. Använd `propose_object`, ID `private-lamp`,
 `baseRevision: null` och hela värdet. Ladda om kartan innan du läser
 förslaget i webbläsaren. Kör `read` och behåll det fulla

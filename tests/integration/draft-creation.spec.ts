@@ -16,24 +16,17 @@ import {
   readTableObject,
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { setProperty } from '../support/property-controls.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
 import { expect, test } from '../support/test.js';
 
-async function expectSolarObject(details: Locator, name: string, table = false) {
-  const description = table
-    ? details.locator('.household-table-description')
-    : details
-        .locator('dt')
-        .filter({ hasText: /^Beskrivning$/ })
-        .locator('..');
-  await expect(description).toContainText(
-    name === 'Batteriet' ? 'Ej uppgivet' : 'Beskrivning till den nya typen',
-  );
+async function expectSolarObject(details: Locator, name: string, _table = false) {
+  if (name !== 'Batteriet') await expect(details).toContainText('Beskrivning till den nya typen');
   for (const [label, value] of [
     ['Namn', name],
     ['Typ', 'Solutrustning'],
     ['Identitet', name === 'Batteriet' ? 'Ospecificerat objekt' : 'Identifierat objekt'],
-    ['Placering', name === 'Batteriet' ? 'Ej uppgivet' : 'Södertak'],
+    ...(name === 'Batteriet' ? [] : [['Placering', 'Södertak']]),
   ]) {
     await expect(
       details
@@ -70,7 +63,7 @@ for (const width of [1280, 390, 320]) {
         await openSettings(page);
         const navigation = page.getByRole('navigation', { name: 'Inställningarnas sidor' });
         if (width <= 800) await navigation.getByText('Välj inställning', { exact: true }).click();
-        await navigation.getByRole('link', { name: 'Typer och egna fält', exact: true }).click();
+        await navigation.getByRole('link', { name: 'Typer', exact: true }).click();
         await page.getByRole('button', { name: 'Ny objekttyp', exact: true }).click();
         const definition = page.getByRole('group', {
           name: 'Objekttypens definition',
@@ -78,16 +71,6 @@ for (const width of [1280, 390, 320]) {
         });
         await definition.getByLabel('Typens namn').fill('Solutrustning');
         await definition.getByLabel('Typens beskrivning').fill('Hushållets elproduktion');
-        await definition.getByLabel('Avsnitt 1', { exact: true }).fill('Uppgifter');
-        for (const [name, kind] of [
-          ['Placering', 'text'],
-          ['Reserv', 'boolean'],
-        ]) {
-          await definition.getByRole('button', { name: 'Lägg till fält', exact: true }).click();
-          const field = definition.getByRole('group', { name: /^Eget fält/ }).last();
-          await field.getByLabel('Fältets namn').fill(name);
-          await field.getByLabel('Värdeslag').selectOption(kind);
-        }
         await definition.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }).click();
         await expect(page.getByRole('status')).toContainText(
           'Förslaget finns i ditt privata utkast',
@@ -107,18 +90,12 @@ for (const width of [1280, 390, 320]) {
         expect((await read()).draft.changes).toEqual([]);
         await form.getByLabel('Namn', { exact: true }).fill('Paneler på taket');
         await form
-          .getByLabel('Beskrivning', { exact: true })
-          .fill('Beskrivning till den nya typen');
-        await form
           .getByLabel('Objekttyp', { exact: true })
           .selectOption({ label: 'Solutrustning' });
         await expect(form.getByLabel('Identitet')).toHaveValue('identified');
-        await form.getByRole('button', { name: 'Uppgifter', exact: true }).click();
-        const section = form;
-        await expect(section.getByLabel('Placering', { exact: true })).toHaveValue('');
-        await expect(section.getByLabel('Reserv', { exact: true })).toHaveValue('');
-        await section.getByLabel('Placering', { exact: true }).fill('Södertak');
-        await section.getByLabel('Reserv', { exact: true }).selectOption('false');
+        await setProperty(form, 'Beskrivning', 'Beskrivning till den nya typen');
+        await setProperty(form, 'Placering', 'Södertak');
+        await setProperty(form, 'Reserv', 'false', 'boolean');
         await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
         await openNewObject(page);
         await form.getByLabel('Namn', { exact: true }).fill('Batteriet');
@@ -126,12 +103,10 @@ for (const width of [1280, 390, 320]) {
           .getByLabel('Objekttyp', { exact: true })
           .selectOption({ label: 'Solutrustning' });
         await form.getByLabel('Identitet').selectOption('unspecified');
-        await form.getByRole('button', { name: 'Uppgifter', exact: true }).click();
-        await expect(section.getByLabel('Reserv', { exact: true })).toHaveValue('');
         await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
         await openSettings(page);
         if (width <= 800) await navigation.getByText('Välj inställning', { exact: true }).click();
-        await navigation.getByRole('link', { name: 'Typer och egna fält', exact: true }).click();
+        await navigation.getByRole('link', { name: 'Typer', exact: true }).click();
         await page.getByRole('button', { name: 'Ny sambandstyp', exact: true }).click();
         const relationshipType = page.getByRole('group', {
           name: 'Sambandstypens definition',
@@ -150,18 +125,22 @@ for (const width of [1280, 390, 320]) {
         await openObjectRelationships(page, 'Paneler på taket');
         await page.getByRole('button', { name: 'Nytt samband', exact: true }).click();
         const relationship = page.getByRole('group', { name: 'Sambandets detaljer', exact: true });
-        await relationship.getByLabel('Från objekt').selectOption({
-          label: 'Paneler på taket · Solutrustning · Beskrivning till den nya typen',
-        });
+        await relationship
+          .getByLabel('Från objekt', { exact: true })
+          .selectOption(
+            (await read()).draft.changes.find((change) => change.after?.name === 'Paneler på taket')
+              ?.id ?? '',
+          );
         await relationship
           .getByLabel('Sambandstyp', { exact: true })
           .selectOption({ label: 'Komplettering' });
         await relationship
-          .getByLabel('Uppgiftens säkerhet', { exact: true })
-          .selectOption('uncertain');
-        await relationship
-          .getByLabel('Till objekt')
-          .selectOption({ label: 'Batteriet · Solutrustning · Ingen beskrivning' });
+          .getByLabel('Till objekt', { exact: true })
+          .selectOption(
+            (await read()).draft.changes.find((change) => change.after?.name === 'Batteriet')?.id ??
+              '',
+          );
+        await setProperty(relationship, 'Uppgiftens säkerhet', 'Osäkert uppgivet');
         await stageRelationshipAndClose(page);
         const proposed = await read();
         expect(proposed.objects).toEqual([]);
@@ -179,22 +158,45 @@ for (const width of [1280, 390, 320]) {
         const battery = proposed.draft.changes.find(({ after }) => after?.name === 'Batteriet');
         const edge = proposed.draft.relationships?.[0];
         const customRelationship = proposed.draft.relationshipTypes?.[0];
-        const placement = type?.after?.fields?.find(({ name }) => name === 'Placering')?.id ?? '';
-        const reserve = type?.after?.fields?.find(({ name }) => name === 'Reserv')?.id ?? '';
         expect(panels?.after).toMatchObject({
           typeId: type?.id,
           name: 'Paneler på taket',
-          description: 'Beskrivning till den nya typen',
-          customValues: { [placement]: 'Södertak', [reserve]: false },
+          properties: [
+            expect.objectContaining({
+              id: expect.any(String),
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Beskrivning till den nya typen',
+            }),
+            expect.objectContaining({
+              id: expect.any(String),
+              label: 'Placering',
+              kind: 'text',
+              value: 'Södertak',
+            }),
+            expect.objectContaining({
+              id: expect.any(String),
+              label: 'Reserv',
+              kind: 'boolean',
+              value: false,
+            }),
+          ],
         });
         expect(panels?.after?.identity).toBeUndefined();
         expect(battery?.after).toMatchObject({ typeId: type?.id, identity: 'unspecified' });
-        expect(battery?.after?.customValues ?? {}).toEqual({});
+        expect(battery?.after?.properties ?? []).toEqual([]);
         expect(edge?.after).toMatchObject({
           sourceId: panels?.id,
           targetId: battery?.id,
           typeId: customRelationship?.id,
-          knowledge: 'uncertain',
+          properties: [
+            expect.objectContaining({
+              id: expect.any(String),
+              label: 'Uppgiftens säkerhet',
+              kind: 'text',
+              value: 'Osäkert uppgivet',
+            }),
+          ],
         });
         const beforeRestart = await openDraftReview(page);
         await expect(beforeRestart).toContainText('Solutrustning');
@@ -205,12 +207,12 @@ for (const width of [1280, 390, 320]) {
         ]) {
           const proposal = await readDraftProposal(page, name);
           await expectSolarObject(proposal, name);
-          await expect(
-            proposal
-              .locator('dt')
-              .filter({ hasText: /^Reserv$/ })
-              .locator('..'),
-          ).toContainText(expected);
+          const reserve = proposal
+            .locator('dt')
+            .filter({ hasText: /^Reserv$/ })
+            .locator('..');
+          if (name === 'Batteriet') await expect(reserve).toHaveCount(0);
+          else await expect(reserve).toContainText(expected);
           await closeSupportDialog(page, name);
         }
         await closeTextView(page);
@@ -231,12 +233,7 @@ for (const width of [1280, 390, 320]) {
         await closeSupportDialog(page, 'Paneler på taket');
         const proposedBattery = await readDraftProposal(page, 'Batteriet');
         await expectSolarObject(proposedBattery, 'Batteriet');
-        await expect(
-          proposedBattery
-            .locator('dt')
-            .filter({ hasText: /^Reserv$/ })
-            .locator('..'),
-        ).toContainText('Ej uppgivet');
+        await expect(proposedBattery.locator('dt').filter({ hasText: /^Reserv$/ })).toHaveCount(0);
         await closeSupportDialog(page, 'Batteriet');
         expect((await read()).draft).toEqual(proposed.draft);
         const response = page.waitForResponse(
@@ -277,9 +274,10 @@ for (const width of [1280, 390, 320]) {
           expect.objectContaining({ id: edge?.id, ...edge?.after }),
         ]);
         expect(saved.draft.changes).toEqual([]);
-        await expect(await openObjectRelationships(page, 'Paneler på taket')).toContainText(
-          'Paneler på taket → kompletteras av → Batteriet (Osäkert uppgivet)',
-        );
+        const relationships = await openObjectRelationships(page, 'Paneler på taket');
+        await expect(relationships).toContainText('Paneler på taket → kompletteras av → Batteriet');
+        await expect(relationships).toContainText('Uppgiftens säkerhet');
+        await expect(relationships).toContainText('Osäkert uppgivet (Text)');
         await closeSupportDialog(page, 'Samband för Paneler på taket');
         const completePanels = await readTableObject(page, 'Paneler på taket');
         await expectSolarObject(completePanels, 'Paneler på taket', true);
@@ -303,7 +301,7 @@ for (const width of [1280, 390, 320]) {
             .locator('dt')
             .filter({ hasText: /^Reserv$/ })
             .locator('..'),
-        ).toContainText('Ej uppgivet');
+        ).toHaveCount(0);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         );

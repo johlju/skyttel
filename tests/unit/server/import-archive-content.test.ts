@@ -2,6 +2,9 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { unzipSync, zipSync } from 'fflate';
 import { afterEach, beforeEach, expect, test } from 'vitest';
+import type { ImportContent } from '../../../src/server/import-schema.js';
+import type { ErasureReview, ErasureSelection } from '../../../src/shared/household-erasure.js';
+import type { MapState } from '../../../src/shared/map.js';
 import { applicationFixture } from './fixture.js';
 
 type ArchiveFixture = {
@@ -13,10 +16,10 @@ type ArchiveFixture = {
   content: Record<string, Record<string, unknown>[]> & { household: { id: string } };
   imagesBase64: string;
 };
-// Synthetic v1/schema14 export: two merged identities, three retained image
+// Synthetic v2/schema37 export: two merged identities, three retained image
 // versions, a private proposal, immutable receipts and personal positions.
 const golden = JSON.parse(
-  readFileSync(new URL('../../fixtures/household-import-v1.json', import.meta.url), 'utf8'),
+  readFileSync(new URL('../../fixtures/household-import-v2.json', import.meta.url), 'utf8'),
 ) as ArchiveFixture;
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
 let client: ReturnType<typeof fixture.client>;
@@ -58,7 +61,214 @@ async function upload(bytes: Uint8Array) {
   });
 }
 
-test('schema14 merge image archive retains every historical receipt and unmapped private row through import and re-export', async () => {
+async function importGolden() {
+  const response = await upload(archive());
+  expect(response.status).toBe(201);
+  const ready = await response.json();
+  const confirmation = await client.json(`${path}/imports/${ready.id}/confirm`, {
+    contentVersion: 1,
+    confirmed: true,
+  });
+  expect(confirmation.status).toBe(200);
+  expect(await confirmation.json()).toMatchObject({ status: 'completed' });
+}
+
+async function exportedContent() {
+  const prepared = await client.json(`${path}/exports`, {});
+  expect(prepared.status).toBe(201);
+  const ready = await prepared.json();
+  const download = await client.request(`${path}/exports/${ready.id}`);
+  expect(download.status).toBe(200);
+  const bytes = new Uint8Array(await download.arrayBuffer());
+  const parts = unzipSync(bytes);
+  const content: ImportContent = JSON.parse(Buffer.from(parts['content.json']).toString());
+  return { bytes, parts, content };
+}
+
+async function erase(selection: ErasureSelection) {
+  const response = await client.json(`${path}/erasure/review`, { selection });
+  expect(response.status).toBe(200);
+  const review: ErasureReview = await response.json();
+  const result = await client.json(`${path}/erasure/execute`, {
+    selection,
+    token: review.token,
+    operationId: 'erase-imported-history',
+    confirmation: 'RADERA PERMANENT',
+  });
+  expect(result.status).toBe(200);
+  expect(await result.json()).toMatchObject({ status: { phase: 'completed' } });
+  return review;
+}
+
+async function previewReexport(bytes: Uint8Array, contentVersion: number) {
+  const response = await client.request(`${path}/imports`, {
+    method: 'POST',
+    headers: {
+      origin: fixture.config.origin,
+      'content-type': 'application/zip',
+      'X-Skyttel-Content-Version': String(contentVersion),
+    },
+    body: bytes as BodyInit,
+  });
+  expect(response.status, await response.text()).toBe(201);
+}
+
+test.each(['relationship', 'relationshipType'] as const)(
+  'erasing an imported %s cleans merge history while preserving merged identities, images and private proposals',
+  async (kind) => {
+    await importGolden();
+    const before: MapState = await (await client.request(`${path}/map`)).json();
+    const original = await exportedContent();
+    const edgeTypeId = before.relationships[0].typeId;
+    const id = kind === 'relationship' ? 'unknown-endpoint' : edgeTypeId;
+    const review = await erase([{ kind, id }]);
+    expect(review.objects).toEqual([]);
+    expect(review.relationships.map(({ id }) => id)).toEqual(['unknown-endpoint']);
+    expect(review.images).toBe(0);
+    const after: MapState = await (await client.request(`${path}/map`)).json();
+    expect(after.objects).toEqual(before.objects);
+    expect(after.relationships).toEqual([]);
+    const exported = await exportedContent();
+    expect(exported.content.objects).toEqual(original.content.objects);
+    expect(exported.content.drafts).toEqual(original.content.drafts);
+    expect(exported.content.images).toEqual(original.content.images);
+    expect(exported.parts['images.bin']).toEqual(original.parts['images.bin']);
+    expect(exported.content.positions).toEqual(original.content.positions);
+    const originalMerge = original.content.saves.find(
+      ({ operationId }) => operationId === 'merge-with-image',
+    )?.receipt.changes[0].merge;
+    expect(originalMerge).toBeDefined();
+    const expectedMerge = {
+      ...originalMerge,
+      relationships: [],
+      ...(kind === 'relationshipType' ? { relationshipTypes: [] } : {}),
+    };
+    expect(
+      exported.content.saves.find(({ operationId }) => operationId === 'merge-with-image')?.receipt
+        .changes[0].merge,
+    ).toEqual(expectedMerge);
+    expect(
+      exported.content.history.find(({ operationId }) => operationId === 'merge-with-image')
+        ?.changes[0].merge,
+    ).toEqual(expectedMerge);
+    for (const saved of exported.content.saves)
+      expect(saved.receipt.relationships ?? []).toEqual([]);
+    expect(exported.content.relationshipTypes.some((type) => type.id === edgeTypeId)).toBe(
+      kind === 'relationship',
+    );
+    await previewReexport(exported.bytes, after.contentVersion);
+    expect(await (await client.request(`${path}/map`)).json()).toEqual(after);
+  },
+);
+
+test('erasing an absorbed imported identity erases the complete lineage and images while keeping unrelated free values', async () => {
+  await importGolden();
+  let current: MapState = await (await client.request(`${path}/map`)).json();
+  const properties = [
+    { id: 'text', label: 'Samma', kind: 'text' as const, value: 'first' },
+    { id: 'zero', label: 'Samma', kind: 'number' as const, value: 0 },
+    { id: 'false', label: 'Samma', kind: 'boolean' as const, value: false },
+    { id: 'empty', label: 'Samma' },
+  ];
+  expect(
+    (
+      await client.json(`${path}/map/draft`, {
+        version: current.draft.version,
+        contentVersion: current.contentVersion,
+        id: 'keep',
+        baseRevision: null,
+        value: { name: 'Behåll', typeId: current.objects[0].typeId, properties },
+      })
+    ).status,
+  ).toBe(200);
+  current = await (await client.request(`${path}/map`)).json();
+  expect(
+    (
+      await client.json(`${path}/map/save`, {
+        version: current.draft.version,
+        contentVersion: current.contentVersion,
+        operationId: 'keep-independent',
+      })
+    ).status,
+  ).toBe(200);
+  const before: MapState = await (await client.request(`${path}/map`)).json();
+  const review = await erase([{ kind: 'object', id: 'second' }]);
+  expect(review.objects.map(({ id }) => id)).toEqual(['first', 'second']);
+  expect(review.images).toBe(3);
+  expect(review.privateImages).toBe(1);
+  expect(review.positions).toBe(2);
+  const after: MapState = await (await client.request(`${path}/map`)).json();
+  expect(after.objects).toEqual(before.objects.filter(({ id }) => id === 'keep'));
+  expect(after.objects[0].properties).toEqual(properties);
+  expect(after.relationships).toEqual([]);
+  const exported = await exportedContent();
+  expect(exported.content.objects.map(({ id }) => id)).toEqual(['keep']);
+  expect(exported.content.objects[0].properties).toEqual(properties);
+  expect(exported.content.relationships).toEqual([]);
+  expect(exported.content.images).toEqual([]);
+  expect(exported.parts['images.bin']).toHaveLength(0);
+  expect(exported.content.positions).toEqual([]);
+  for (const draft of exported.content.drafts) expect(draft.changes).toEqual([]);
+  for (const saved of exported.content.saves) {
+    expect(saved.receipt.changes.every(({ after }) => after?.id === 'keep')).toBe(true);
+    expect(saved.receipt.relationships ?? []).toEqual([]);
+  }
+  await previewReexport(exported.bytes, after.contentVersion);
+  expect(await (await client.request(`${path}/map`)).json()).toEqual(after);
+});
+
+test('untrusted archive containers reject oversized manifests, repeated part claims and unrecognized entries before preview', async () => {
+  const before = await (await client.request(`${path}/map`)).json();
+  const oversized = unzipSync(archive());
+  oversized['manifest.json'] = Buffer.from(' '.repeat(16_385));
+  const repeated = unzipSync(archive());
+  const manifest = JSON.parse(Buffer.from(repeated['manifest.json']).toString());
+  manifest.parts = [manifest.parts[0], manifest.parts[0]];
+  repeated['manifest.json'] = Buffer.from(JSON.stringify(manifest));
+  const unexpected = unzipSync(archive());
+  unexpected['unrecognized.json'] = unexpected['content.json'];
+  delete unexpected['content.json'];
+  for (const [parts, error] of [
+    [oversized, 'archive_too_large'],
+    [repeated, 'invalid_archive'],
+    [unexpected, 'invalid_archive'],
+  ] as const) {
+    const response = await upload(zipSync(parts));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error });
+    expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
+  }
+});
+
+test('checksummed archives still reject excessive JSON nesting, mismatched household identity and unowned image bytes', async () => {
+  const before = await (await client.request(`${path}/map`)).json();
+  const invalid = [
+    archive((value) => {
+      let nested: unknown = 'opaque';
+      for (let depth = 0; depth < 45; depth++) nested = { next: nested };
+      value.content.objects[0].properties = [
+        { id: 'nested', label: 'Text', kind: 'text', value: nested },
+      ];
+    }),
+    archive((value) => {
+      value.content.household.id = 'mismatched-household';
+    }),
+    archive((value) => {
+      value.imagesBase64 = Buffer.concat([
+        Buffer.from(value.imagesBase64, 'base64'),
+        Buffer.from('unowned image bytes'),
+      ]).toString('base64');
+    }),
+  ];
+  for (const bytes of invalid) {
+    const response = await upload(bytes);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'invalid_archive' });
+    expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
+  }
+});
+
+test('new-format merge image archive retains every historical receipt and unmapped private row through import and re-export', async () => {
   const response = await upload(archive());
   expect(response.status).toBe(201);
   const ready = await response.json();
@@ -90,10 +300,7 @@ test('schema14 merge image archive retains every historical receipt and unmapped
   expect(content.identities.filter((row: { id: string }) => row.id !== current.userId)).toEqual(
     golden.content.identities,
   );
-  expect(content.identities).toContainEqual({ id: current.userId, name: 'Alex Exempel' });
-  expect(
-    content.viewSettings.find((row: { userId: string }) => row.userId === current.userId),
-  ).toMatchObject({ version: 0, backgroundVersion: 1, settings: { background: false } });
+  expect((await (await client.request(`${path}/map/view`)).json()).settings.background).toBe(true);
   expect(content.saves.map((row: { receipt: unknown }) => row.receipt)).toEqual(
     golden.content.saves.map((row) => row.receipt),
   );
@@ -180,21 +387,7 @@ test('image bytes, image owner references and historical typed references are va
       value.content.objects[0].id = 'uneditable/object';
     },
     (value) => {
-      value.content.objectTypeFields.push({
-        typeId: value.content.objectTypes[0].id,
-        fields: [{ id: '__proto__', name: 'Fält', description: '', kind: 'text' }],
-      });
-    },
-    (value) => {
-      value.content.objectTypeFields.push({
-        typeId: value.content.objectTypes[0].id,
-        fields: Array.from({ length: 101 }, (_, index) => ({
-          id: `field-${index}`,
-          name: 'Fält',
-          description: '',
-          kind: 'text',
-        })),
-      });
+      value.content.objectTypeFields = [{ typeId: value.content.objectTypes[0].id, fields: [] }];
     },
     (value) => {
       const receipt = value.content.saves[0].receipt as {

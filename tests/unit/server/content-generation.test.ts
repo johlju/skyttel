@@ -17,7 +17,7 @@ test('a new content generation rejects every old mutation while retaining histor
     contentVersion: 1,
     id: 'retained',
     baseRevision: null,
-    value: { typeId: initial.types[0].id, name: 'Cykel', description: '' },
+    value: { typeId: initial.types[0].id, name: 'Cykel' },
   };
   expect((await client.json(`${path}/draft`, proposal)).status).toBe(200);
   const { receipt } = await (

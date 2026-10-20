@@ -29,14 +29,15 @@ Objektets namn öppnar den utökade läsraden och startar ingen redigering.
    och att **Skriv till Skyttel → Visa utkastet** visar **Utkastet är tomt**.
    Stäng textvyn innan du börjar formulärarbetet.
 3. Skapa objekt genom **Nytt objekt**, fyll i **Namn** och
-   **Objekttyp**, ange eventuell **Beskrivning** och välj
+   **Objekttyp**, lägg vid behov till en textegenskap **Beskrivning** under
+**Fria egenskaper** och välj
    **Lägg i utkastet och stäng**. Låt **Identitet** vara
    **Identifierat objekt** om testfallet inte anger något annat.
 4. Öppna objektets **Samband för**, välj **Nytt samband** och **Från objekt**,
    **Sambandstyp** och **Till objekt** och välj
    **Lägg i utkastet**. Stäng med **Stäng samband** efter bekräftelsen.
-   Låt **Uppgiftens säkerhet** vara
-   **Känt** om testfallet inte anger något annat.
+   Båda ändpunkterna ska vara verkliga objekt. Uppgifter om säkerhet anges vid
+behov som vanliga fria egenskaper.
 5. Behåll databasen vid omladdning och omstart inom ett testfall. Ett
    sparande görs via **Skriv till Skyttel → Visa utkastet → Spara hela
    utkastet**; invänta **Utkastet är sparat** och stäng sedan textvyn.
@@ -140,12 +141,13 @@ identified without changing its links”.
 2. Stäng textvyn, välj **Redigera Betalkonto** och kontrollera identiteten.
    Ändra den till
    **Ospecificerat objekt** och lägg ändringen i utkastet.
-3. Lägg till abonnemanget **Familjemusik** och sambandet
+3. Lägg till abonnemanget **Familjemusik** utan fria egenskaper och sambandet
    **Familjemusik → Betalas med → Betalkonto**. Spara hela utkastet.
 4. Ladda om sidan och välj **Redigera Betalkonto**. Kontrollera att det
    fortfarande
    är ospecificerat. Välj **Identifierat objekt**, ändra namnet till
-   **Hushållskontot** och beskrivningen till **Gemensamt bankkonto**.
+   **Hushållskontot** och lägg till den fria textegenskapen
+   **Beskrivning: Gemensamt bankkonto**.
    Lägg ändringen i utkastet och spara.
 5. Ladda om sidan, läs **Samband för Familjemusik**, stäng samband och
    välj **Redigera Hushållskontot**.
@@ -188,7 +190,8 @@ Använd 1280 × 900 CSS-pixlar och ljust tema.
 Behåll databasen vid omstart.
 
 **Integrationstest:**
-[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts), KARTA-08.
+[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts),
+KARTA-08.
 
 **Steg:**
 
@@ -213,66 +216,59 @@ Behåll databasen vid omstart.
 - Efter omstart är Betalkonto ospecificerat med Rättad beskrivning.
   Familjemusik behåller Sparad beskrivning och sambandet pekar på samma konto.
 
-### KARTA-05: skilj på obesvarat, osäkert, okänt och uttryckligen inget
+### KARTA-05: Obesvarad objektidentitet och vanliga säkerhetsuppgifter skiljs åt
+
+**Syfte:** Obesvarad objektidentitet blockerar samlat sparande tills
+användaren rättar objektet.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Lägg Familjemusik av typen Abonnemang och Betalkonto av
+typen Bankkonto i utkastet. Bankkontot har Obesvarad identitetsfråga som
+Identitet.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/family.spec.ts",
     "caseId": "KARTA-05"
   },
-  "reference": "Isolerad Chromium-installation med syntetiska hushållsdata; vald konfiguration enligt förutsättningarna.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Kontrollera att sambandsuppgifter bevarar sin betydelse och att en obesvarad fråga blockerar sparande av hela utkastet."
+    "Obesvarad objektidentitet blockerar samlat sparande tills användaren rättar objektet.",
+    "Säkerhetsuppgifter är vanliga egenskapsvärden och behåller sina texter, med samma verkliga Betalkonto som mål och ospecificerad objektidentitet."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Kontrollera att sambandsuppgifter bevarar sin betydelse och att
-en obesvarad fråga blockerar sparande av hela utkastet.
-
-**Användare:** Den konfigurerade administratören.
-
-**Förutsättningar:** Lägg abonnemanget **Familjemusik** och bankkontot
-**Betalkonto** i utkastet. Sätt bankkontots identitet till
-**Ospecificerat objekt**.
-
-**Integrationstest:** [family.spec.ts](../../tests/integration/family.spec.ts),
-testfallet “KARTA-05: manual forms preserve incomplete meanings and block an
-unanswered identity question”.
-
 **Steg:**
 
-1. Välj **Tabell**, **Samband för Familjemusik** och **Nytt samband**.
-   Välj typen **Betalas med** och **Obesvarad identitetsfråga** under
-   **Uppgiftens säkerhet**. Välj **Lägg i utkastet** och **Stäng samband**.
-   Ladda om sidan.
-2. Välj **Skriv till Skyttel** och **Visa utkastet**. Läs **Olöst identitet**
-   och **Målet är oklart**. Kontrollera att **Spara hela utkastet** är inaktivt.
-   Stäng textvyn och öppna samma samband från tabellen. Välj **Redigera
-   samband**,
-   **Osäkert uppgivet** och Betalkonto som **Till objekt**. Lägg hela sambandet
-   i utkastet och stäng samband. Öppna utkastvyn igen och spara uttryckligen.
-   Invänta **Utkastet är sparat**, stäng textvyn och ladda om sidan.
-3. Läs sambandet från **Samband för Familjemusik** och kontrollera säkerheten.
-   Stäng samband. Välj **Redigera Betalkonto**, kontrollera **Identitet** och
-   stäng det oförändrade formuläret med **Stäng objektdialogen**.
-4. Redigera samma samband från Familjemusik och välj **Okänt**. Lägg i utkastet,
-   stäng samband och spara separat via utkastvyn. Ladda om och läs betydelsen.
-5. Upprepa föregående steg med **Uttryckligen inget**.
+1. Öppna Samband för Familjemusik och Nytt samband. Välj Betalas med och
+   Betalkonto som verkligt Till objekt. Lägg till Uppgiftens säkerhet (Text,
+   Obesvarad fråga), lägg i utkastet och stäng sambandet. Ladda om.
+2. Öppna Visa utkastet. Läs **Identiteten är olöst. Rätta objektet i det
+   ordinarie flödet.** för Betalkonto och kontrollera
+   att hela sparandet är spärrat. Stäng textvyn, redigera Betalkonto och välj
+   Ospecificerat objekt som Identitet. Lägg i utkastet.
+3. Redigera sambandet, rätta Uppgiftens säkerhet till Osäkert uppgivet och
+   behåll Betalkonto som mål. Lägg i utkastet, stäng och spara hela utkastet.
+   Ladda om och läs sambandet samt bankkontots identitet.
+4. Rätta samma fria textegenskap till Okänt och därefter Uttryckligen inget.
+   Lägg i utkastet och spara separat efter varje rättelse. Läs värdet efter
+   varje omladdning.
 
 **Förväntat resultat:**
 
-- Den obesvarade frågan återkommer efter omladdning. Sparknappen är
-  inaktiverad tills frågan löses.
-- Det sparade sambandet visar Betalkonto och Osäkert uppgivet.
-  Bankkontot behåller identiteten Ospecificerat objekt.
-- Efter respektive ändring visar sambandet Okänt och sedan Uttryckligen
-  inget i stället för ett målobjekt. Betydelserna blandas inte ihop.
+- Obesvarad objektidentitet blockerar samlat sparande tills användaren rättar
+  objektet.
+- Säkerhetsuppgifter är vanliga egenskapsvärden och behåller sina texter, med
+  samma verkliga Betalkonto som mål och ospecificerad objektidentitet.
 
 ## Välja och ta bort samband
 
@@ -311,17 +307,21 @@ deleting a relationship”.
 
 1. Lägg till tjänstekontot **Musikkonto** och två separata objekt av typen
    **E-postadress**, båda med namnet `familj@example.test`. Ge dem
-   beskrivningarna **Första adressobjektet** och **Andra adressobjektet**.
+   de fria textegenskaperna **Beskrivning: Första adressobjektet** och
+   **Beskrivning: Andra adressobjektet**.
 2. Skapa **Musikkonto → Inloggningsadress** med det första adressobjektet
-   som mål. Använd beskrivningen och identiteten i väljaren för att skilja
+   som mål. Använd identiteten i väljaren för att skilja
    adresserna åt. Skapa **Musikkonto → Kontaktadress** till det andra
    adressobjektet. Spara hela utkastet.
 3. Öppna **Samband för Musikkonto → Nytt samband** och försök lägga samma
    inloggningssamband till det första adressobjektet i utkastet igen.
    Kontrollera statusen och antalet samband. Välj **Avbryt redigeringen**,
    bekräfta **Kasta ändringarna och fortsätt** och stäng samband.
-4. Öppna inloggningssambandet och kontrollera dess mål. Byt till det
-   andra adressobjektet och välj **Avbryt redigeringen** följt av
+4. Öppna inloggningssambandet och kontrollera dess mål. Under
+   **Till objekt: välj eller granska**, öppna **Granska** `familj@example.test`
+   med det andra objektets identitet. Läs **Andra adressobjektet (Text)**
+   under **Beskrivning** och välj **Välj** `familj@example.test` med samma
+   identitet. Välj **Avbryt redigeringen** följt av
    **Kasta ändringarna och fortsätt**. Stäng samband, öppna samma
    redigering igen och kontrollera målet.
 5. Byt åter till det andra adressobjektet, lägg sambandet i utkastet,
@@ -331,8 +331,9 @@ deleting a relationship”.
 
 **Förväntat resultat:**
 
-- Väljarna skiljer adresserna åt med beskrivning och identitet. Båda
-  adressobjekten finns kvar som separata objekt.
+- Väljarna visar separata objektidentiteter. **Granska** visar varje objekts
+  fria beskrivning innan **Välj** byter mål. Båda adressobjekten finns kvar
+  som separata objekt.
 - Dubblettförsöket visar **Sambandet finns redan**. Det finns fortfarande
   två samband och inget nytt sambandsförslag i utkastet.
 - Stängning utan att skicka behåller första adressobjektet som mål.
@@ -402,78 +403,65 @@ and can be discarded”.
 
 ## Skapa och spara kartans innehåll
 
-### KARTA-09: skapa typer, kompletta objekt och samband i samma utkast
+### KARTA-09: Nya typer, objekt och samband sparas tillsammans
+
+**Syfte:** Nya typdefinitioner, två kompletta objekt och ett samband med
+verkliga ändpunkter bevaras i samma utkast och samlade sparande.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Tom karta och tomt utkast. Chromium 1280 × 900 CSS-pixlar
+i ljust tema; behåll samma databas vid omstart.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/draft-creation.spec.ts",
     "caseId": "KARTA-09"
   },
-  "reference": "Isolerad Chromium-installation med syntetiska hushållsdata; vald konfiguration enligt förutsättningarna.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Använd nya typer i kompletta objektformulär och spara definitioner, objekt och samband tillsammans."
+    "Nya typdefinitioner, två kompletta objekt och ett samband med verkliga ändpunkter bevaras i samma utkast och samlade sparande.",
+    "Alla individuella egenskaper, Nej och ospecificerad objektidentitet består efter omstart."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Använd nya typer i kompletta objektformulär och spara
-definitioner, objekt och samband tillsammans.
-
-**Användare:** Den konfigurerade administratören.
-
-**Förutsättningar:** Tom karta och tomt utkast. Använd 1280 × 900 CSS-pixlar
-och ljust tema. Behåll databasen vid omstart.
-
-**Integrationstest:**
-[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts), KARTA-09.
-
 **Steg:**
 
-1. Öppna **Inställningar → Typer och egna fält**. Skapa Solutrustning med
-   beskrivningen Hushållets elproduktion och avsnittet Uppgifter. Lägg till
-   Placering som text och Reserv som ja/nej. Lägg typförslaget i utkastet.
-2. Välj **Tillbaka till kartan** och verktygens **Nytt objekt**. Försök lägga
-   det i utkastet utan namn. Kontrollera felsammanfattningens fokus och välj
-   fellänken Namn.
-3. Ange Paneler på taket och Beskrivning till den nya typen. Välj Solutrustning,
-   öppna Uppgifter och ange Placering Södertak och Reserv Nej. Behåll
-   Identifierat
-   objekt och välj **Lägg i utkastet och stäng**.
-4. Skapa **Batteriet** av samma nya typ. Välj **Ospecificerat objekt**, lämna
-   de egna fälten obesvarade och välj **Lägg i utkastet och stäng**.
-5. Öppna **Inställningar → Typer och egna fält** igen. Skapa sambandstypen
-   **Komplettering**, beskrivningen **Delar som används ihop**, benämningen
-   **kompletteras av** från startobjektet och **kompletterar** från målobjektet.
-   Lägg definitionen i utkastet och välj **Tillbaka till kartan**.
-6. Välj **Tabell**, **Samband för Paneler på taket** och **Nytt samband**.
-   Välj Komplettering, Batteriet i målvalet med namn, typ och beskrivning samt
-   **Osäkert uppgivet**. Lägg i utkastet och stäng samband.
-7. Välj **Skriv till Skyttel** och **Visa utkastet**. Öppna båda objektförslagen
-   med **Visa förslaget** och läs fullständiga uppgifter. Skilj Reserv **Nej**
-   från **Ej uppgivet** och stäng varje läsdialog med krysset. Granska alla fem
-   förslag utan att spara.
-8. Starta om installationen och ladda om. Öppna och granska samma utkast.
-   Välj **Spara hela utkastet** och invänta **Utkastet är sparat**.
-   Stäng textvyn. Starta om och ladda om igen. Läs båda objektens fullständiga
-   uppgifter via tabellen och sambandet från **Samband för Paneler på taket**.
+1. Öppna Inställningar → Typer och skapa Solutrustning med beskrivningen
+   Hushållets elproduktion. Lägg typförslaget i utkastet.
+2. Återgå till kartan och Nytt objekt. Försök lägga i utkastet utan namn, följ
+   fellänken till Namn och ange Paneler på taket. Välj Solutrustning och
+   behåll Identifierat objekt.
+3. Under Fria egenskaper, lägg till Beskrivning (Text, Beskrivning till den
+   nya typen), Placering (Text, Södertak) och Reserv (Ja/nej, Nej). Lägg
+   objektet i utkastet.
+4. Skapa Batteriet av samma typ med Ospecificerat objekt och utan fria
+   egenskaper. Lägg i utkastet.
+5. Öppna Typer igen och skapa Komplettering med beskrivningen Delar som
+   används ihop och benämningarna kompletteras av och kompletterar. Lägg typen
+   i utkastet och återgå till kartan.
+6. Öppna Samband för Paneler på taket och Nytt samband. Välj Komplettering och
+   Batteriet som verkligt mål. Lägg till Uppgiftens säkerhet (Text, Osäkert
+   uppgivet). Lägg i utkastet och stäng sambandet.
+7. Granska de fem förslagen i Visa utkastet. Läs båda objektens hela förslag
+   och sambandet. Panelernas Reserv är Nej; Batteriet saknar egenskapsrader.
+8. Starta om, ladda om och granska samma utkast. Spara hela utkastet. Starta
+   om igen och läs objekt och samband i tabellen.
 
 **Förväntat resultat:**
 
-- Ett tomt namn stoppar hela förslaget. Sammanfattningen får fokus och
-  fellänken öppnar Grunduppgifter med fokus på Namn. Typförslaget bevaras.
-- Typens valfria fält visas i Uppgifter. **Nej** på panelerna är skilt
-  från Batteriets obesvarade Reserv. Identifierat och ospecificerat består.
-- Nya objekt- och sambandstyper samt båda objekten kan användas i sambandet
-  innan något sparas gemensamt. De fem förslagen finns kvar efter omstart.
-- Ett uttryckligt sparande omfattar båda definitionerna, de två objekten
-  och deras riktade, osäkra samband. Efter nästa omstart finns samma
-  identiteter, uppgifter och samband; utkastet är tomt. Integrationstestet
-  kontrollerar dessutom att allt ingår i ett enda verkligt kvitto.
+- Nya typdefinitioner, två kompletta objekt och ett samband med verkliga
+  ändpunkter bevaras i samma utkast och samlade sparande.
+- Alla individuella egenskaper, Nej och ospecificerad objektidentitet består
+  efter omstart.
 
 ### KARTA-06: återuppta, rätta och kasta ett beständigt objektförslag
 
@@ -654,8 +642,8 @@ Kasta hela utkastet** och den uttryckliga bekräftelsen. Bevara sparade fakta.
 
 För KARTA-10–20 används samma administratör och en separat installation.
 Öppna formuläret från **Nytt objekt** eller tabellens **Redigera**.
-Ingen AI-leverantör eller samtalsmedgivande behövs. För egna fält skapar
-du typen genom **Inställningar → Typer och egna fält** före objektet.
+Ingen AI-leverantör eller samtalsmedgivande behövs. Fria egenskaper läggs på
+objektet under **Fria egenskaper**, oberoende av typen.
 Använd enbart påhittade värden och syntetiska bilder. Återställ utkastet
 mellan fallen. KARTA-17–18 använder styrda nätfel; integrationstesterna
 förbereder dessa i en isolerad installation med riktig SQLite.
@@ -704,151 +692,146 @@ without saving”.
 - Dialogen stängs och fokus återgår till Nytt objekt i tabellen. Ett komplett
   förslag finns i utkastet; den gemensamma kartan är fortfarande tom.
 
-### KARTA-11: rätta fel i ett stängt avsnitt
+### KARTA-11: Fel i stängt egenskapsavsnitt leder till rätt kontroll
+
+**Syfte:** Felsammanfattning och fellänk öppnar rätt egenskapsavsnitt utan att
+lägga ett delvis förslag i utkastet.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Tomt utkast, Chromium 1280 × 720 CSS-pixlar.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/object-dialog.spec.ts",
     "caseId": "KARTA-11"
   },
-  "reference": "1280×720; fel i stängt avsnitt och fokuserad fellänk.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Fellänk öppnar dolt prisfält utan delvis förslag."
+    "Felsammanfattning och fellänk öppnar rätt egenskapsavsnitt utan att lägga ett delvis förslag i utkastet.",
+    "Namnet och inmatningen bevaras; rättelsen ger ett objekt med Pris som talet 399."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Kontrollera rätta fel i ett stängt avsnitt.
-
-**Användare:** Den konfigurerade administratören.
-
-**Förutsättningar:** Tomt utkast.
-
-**Integrationstest:**
-[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts),
-testfallet “KARTA-11: closed-section errors preserve all fields and focus the
-linked correction”.
-
 **Steg:**
 
-1. Välj **Nytt objekt** och ange **Hela cykeln**. Öppna **Ekonomiska
-   uppgifter**, välj **Känt** för **Pris** och lämna beloppet tomt.
-2. Öppna Grunduppgifter och skicka. Följ länken till Pris i felsammanfattningen,
-   fyll i **399 SEK** och välj **Lägg i utkastet och stäng** igen.
+1. Öppna Nytt objekt och ange Hela cykeln. Lägg till Pris under Fria
+   egenskaper, välj Tal och ange inte ett tal.
+2. Öppna Grunduppgifter och försök lägga i utkastet. Kontrollera fokus på
+   felsammanfattningen och följ länken **Värde** för felet under Fria egenskaper.
+3. Kontrollera att Fria egenskaper öppnas och att värdefältet får fokus.
+   Rätta värdet till 399 och välj Lägg i utkastet och stäng.
 
 **Förväntat resultat:**
 
-- Fokus går först till felsammanfattningen. Fellänken öppnar ekonomi och
-  fokuserar Pris. Namnet finns kvar och ingen del läggs i utkastet före
-  rättelsen.
+- Felsammanfattning och fellänk öppnar rätt egenskapsavsnitt utan att lägga
+  ett delvis förslag i utkastet.
+- Namnet och inmatningen bevaras; rättelsen ger ett objekt med Pris som talet
+  399.
 
-### KARTA-12: behåll alla uppgifter i skapa och redigera
+### KARTA-12: Identitet, fria egenskaper, status och ikon hålls samman
+
+**Syfte:** Identitet, egenskaper inklusive Nej, uttrycklig status och ikon
+består tillsammans vid återöppning och namnändring.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Spara objekttypen Cykel med namn och tom typbeskrivning.
+Tomt objektutkast, Chromium 1280 × 720 CSS-pixlar.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/object-dialog.spec.ts",
     "caseId": "KARTA-12"
   },
-  "reference": "1280×720; egna fält, falskt ja/nej och upphörd livscykel.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Identitet, falskt ja/nej-värde, egna fält, livscykel och ikon hålls samman."
+    "Identitet, egenskaper inklusive Nej, uttrycklig status och ikon består tillsammans vid återöppning och namnändring.",
+    "Namnrättelsen ändrar endast namnet i det privata förslaget; den gemensamma kartan är ännu tom."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Kontrollera behåll alla uppgifter i skapa och redigera.
-
-**Användare:** Den konfigurerade administratören.
-
-**Förutsättningar:** Öppna **Inställningar → Typer och egna fält → Ny
-objekttyp**. Ange **Cykel** och skapa fälten **Tillverkare** (text),
-**Antal växlar** (tal), **Inköpsdatum** (datum) och **Elcykel** (ja/nej)
-med **Lägg till fält**. Lägg definitionen i utkastet och spara hela utkastet.
-Återgå till Tabell.
-
-**Integrationstest:**
-[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts),
-testfallet “KARTA-12: identity, custom fields, lifecycle and icon stay together
-when staging and editing”.
-
 **Steg:**
 
-1. Välj **Nytt objekt**, ange **Pendlarcykeln**, beskrivningen **Hela
-   cykelns beskrivning.**, typen **Cykel** och **Ospecificerat objekt**.
-   Öppna **Egna fält**. Ange **Exempelcykel**, **8**, **2026-04-03** och
-   **Nej** i de fyra fälten.
-2. Öppna Livscykel och utseende, välj Upphört och ikonen Cykel. Öppna
-   Ekonomiska uppgifter, välj Känt för Slutdatum och ange 2026-04-04. Lägg hela
-   formuläret i utkastet.
-3. Öppna Tabell → Filter, välj Ta med upphörda och stäng filtret
-   med Escape. Välj objektets Redigera och kontrollera uppgifterna igen.
+1. Skapa Pendlarcykeln av typen Cykel med Ospecificerat objekt. Lägg till
+   Beskrivning (Text, Hela cykelns beskrivning.), Tillverkare (Text,
+   Exempelcykel), Antal växlar (Tal, 8), Inköpsdatum (Datum, 2026-04-03) och
+   Elcykel (Ja/nej, Nej).
+2. Under Livscykel och utseende, välj Upphört och ikonen Cykel. Lägg under
+   Fria egenskaper till Slutdatum (Datum, 2026-04-04). Lägg hela objektet i
+   utkastet.
+3. I Tabell → Filter, markera Ta med upphörda och stäng filtret. Redigera
+   Pendlarcykeln och kontrollera identitet, alla egenskaper, uttrycklig status
+   och vald ikon.
+4. Öppna Grunduppgifter, ändra namnet till Pendlarcykeln i garaget och lägg i
+   utkastet. Spara inte hela utkastet.
 
 **Förväntat resultat:**
 
-- Identitet, beskrivning, samtliga egna värden, livscykel och ikon finns kvar.
-  Grunduppgifter är öppet vid återöppning; kartan ändras först vid gemensamt
-  sparande.
+- Identitet, egenskaper inklusive Nej, uttrycklig status och ikon består
+  tillsammans vid återöppning och namnändring.
+- Namnrättelsen ändrar endast namnet i det privata förslaget; den gemensamma
+  kartan är ännu tom.
 
-### KARTA-13: bekräfta egna fält som försvinner vid typbyte
+### KARTA-13: Typbyte bevarar alla individuella egenskaper
+
+**Syfte:** Typbyte bevarar varje individuell egenskaps identitet, ordning,
+datatyp och värde omedelbart.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Lägg typen Cykel med ramnummer i utkastet. Skapa Cykeln
+av den typen med Beskrivning (Text, Behåll beskrivningen), Ramnummer (Text,
+ABC123) och Pris (Text, 1200 SEK). Person finns som annan typ.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/object-dialog.spec.ts",
     "caseId": "KARTA-13"
   },
-  "reference": "1280×720; avbruten och bekräftad fältförlust vid typbyte.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Typbyte kräver uttrycklig bekräftelse av fältförlust."
+    "Typbyte bevarar varje individuell egenskaps identitet, ordning, datatyp och värde omedelbart.",
+    "Beskrivning, Ramnummer ABC123 och Pris 1200 SEK finns kvar med den valda typen."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Kontrollera bekräfta egna fält som försvinner vid typbyte.
-
-**Användare:** Den konfigurerade administratören.
-
-**Förutsättningar:** Skapa **Cykel med ramnummer** via **Inställningar →
-Typer och egna fält → Ny objekttyp**, med textfältet **Ramnummer**.
-Lägg definitionen i utkastet. Skapa **Cykeln** av den typen, med
-beskrivningen **Behåll beskrivningen**, **Ramnummer ABC123** och känt
-**Pris 1200 SEK**. Lägg hela formuläret i utkastet. Typen **Person**
-ska finnas och sakna Ramnummer.
-
-**Integrationstest:**
-[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts),
-testfallet “KARTA-13: changing type requires explicit confirmation before custom
-values are lost”.
-
 **Steg:**
 
-1. Öppna **Tabell → Redigera Cykeln** och välj typen **Person**. Kontrollera
-   berörda
-   fältnamn och värden samt fokus på Fortsätt redigera.
-2. Tryck Escape och kontrollera typ och **Ramnummer ABC123**. Välj
-   **Person** igen och **Ta bort fältvärdena och byt typ**.
-3. Välj **Lägg i utkastet och stäng** och granska förslaget. Namn,
-   beskrivning och känt pris ska bestå, medan Ramnummer tas bort.
+1. Öppna Tabell → Redigera Cykeln, fokusera Objekttyp och välj Person.
+2. Öppna Fria egenskaper och läs Ramnummer ABC123. Lägg i utkastet och stäng.
+   Läs hela förslaget.
 
 **Förväntat resultat:**
 
-- Escape behåller nuvarande typ och Ramnummer. Bekräftelsen tar bort egna värden
-  endast ur formuläret; beskrivning och ekonomi behålls och utkastet ändras
-  först efter hela tillägget.
+- Typbyte bevarar varje individuell egenskaps identitet, ordning, datatyp och
+  värde omedelbart.
+- Beskrivning, Ramnummer ABC123 och Pris 1200 SEK finns kvar med den valda
+  typen.
 
 ### KARTA-14: lägg bild och uppgifter i utkastet tillsammans
 
@@ -1094,7 +1077,8 @@ Detta tappar svaret efter verkligt tillägg; vanligt offlineläge ersätter
 inte felet. Återställ ingången och skriv `quit` när utfallet är kontrollerat.
 
 **Integrationstest:**
-[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts), KARTA-18.
+[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts),
+KARTA-18.
 
 **Steg:**
 
@@ -1137,7 +1121,7 @@ inte felet. Återställ ingången och skriv `quit` när utfallet är kontrollera
 **Användare:** Den konfigurerade administratören.
 
 **Förutsättningar:** Spara Sparad cykel med Hela beskrivningen, Pris 249
-och Valuta SEK (båda Känt).
+och Valuta SEK som fria textegenskaper.
 
 **Integrationstest:**
 [object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts),
@@ -1147,7 +1131,7 @@ every reading entry uses the same object dialog”.
 **Steg:**
 
 1. Välj tabellens Redigera Sparad cykel. Ändra namnet och ändra tillbaka.
-   Rensa och återställ ett redan uppgivet Pris i Ekonomiska uppgifter. Välj Lägg
+   Töm och återställ den fria egenskapen Pris under Fria egenskaper. Välj Lägg
    i utkastet och öppna samband.
 2. Stäng samband. Expandera tabellraden och välj pennikonen
    Redigera Sparad cykel bland radens åtgärder. Avbryt utan ändring.
@@ -1159,57 +1143,58 @@ every reading entry uses the same object dialog”.
   redigeringsknappen. Pennikonen öppnar samma objektformulär och får
   tillbaka fokus när det stängs utan ändring.
 
-### KARTA-20: bevara typens ordning och dolda värden
+### KARTA-20: Fria egenskapers ordning och fulla värden består
+
+**Syfte:** Rättelse bevarar alla individuella egenskaper och deras ordning,
+med nåbara åtgärder och återfokus.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Förbered enligt [ordnade fria
+uppgifter](#ordnade-fria-uppgifter). Chromium 1440 × 900 CSS-pixlar.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/object-dialog.spec.ts",
     "caseId": "KARTA-20"
   },
-  "reference": "1440×900; hela rättelsen, sparande, omstart och fullständig läsning.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Rättelse och dolt värde består i utkast, sparat objekt och efter omstart."
+    "Rättelse bevarar alla individuella egenskaper och deras ordning, med nåbara åtgärder och återfokus.",
+    "Dolt underlag är en vanlig etikett och värdet Bevaras oförändrat finns kvar i hela förslaget.",
+    "Efter sparande och omstart består alla fyra värden."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Bevara konfigurerad ordning och dolda värden genom rättelse,
-sparande, omstart och fullständig läsning.
-
-**Användare:** Den konfigurerade administratören.
-
-**Förutsättningar:** Förbered typen och objektet enligt
-[ordnade och dolda uppgifter](#ordnade-och-dolda-uppgifter). Prova 1440px.
-320px har eget fall KARTA-22.
-
-**Integrationstest:**
-[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts), KARTA-20.
-320px har eget fall [KARTA-22](#karta-22-smalt-objektformulär-bevarar-ordning-dolda-värden-och-återfokus).
-
 **Steg:**
 
-1. Öppna ett sparat objekt av typen. Öppna Avtalets uppgifter och kontrollera
-   fältnamn, ordning och värden.
-2. Ändra **Anteckning** från **Före rättelsen** till **Efter rättelsen**
-   och välj **Lägg i utkastet och stäng**. Kontrollera fokus på
-   **Redigera Hushållets avtal** och granska förslaget med **Visa
-   förslaget: Hushållets avtal**. Läs även det dolda underlaget.
-3. Stäng läsningen, spara hela utkastet och starta om med samma databas.
-   Öppna **Tabell**, expandera **Hushållets avtal** och läs **Efter
-   rättelsen**, **Bevaras oförändrat**, avtalstext och belopp igen.
+1. Öppna Tabell → Redigera Hushållets avtal. Grunduppgifter ska vara öppet.
+   Öppna Fria egenskaper och läs ordningen Beskrivning, Anteckning, Dolt
+   underlag och Pris. Alla fyra rader är vanliga synliga egenskaper.
+2. Ändra Anteckning från Före rättelsen till Efter rättelsen. Kontrollera att
+   sidfotens Lägg i utkastet och stäng och dialogens kryss är nåbara utan
+   vågrät rullning. Lägg i utkastet och kontrollera fokus på Redigera
+   Hushållets avtal.
+3. Öppna Visa utkastet → Visa förslaget: Hushållets avtal och läs Efter
+   rättelsen och Bevaras oförändrat. Stäng läsningen.
+4. Spara hela utkastet och starta om med samma databas. Läs Hushållets avtal i
+   tabellen och kontrollera samtliga fyra värden.
 
 **Förväntat resultat:**
 
-- Endast ett avsnitt är öppet. Typens benämningar och ordning används.
-  Det dolda värdet behålls genom rättelsen. Före gemensamt sparande
-  visar kartan tidigare värden.
-- Efter sparande och omstart visar samma objekt **Efter rättelsen**,
-  **Bevaras oförändrat**, avtalstext och **249**. Utkastet är tomt.
+- Rättelse bevarar alla individuella egenskaper och deras ordning, med nåbara
+  åtgärder och återfokus.
+- Dolt underlag är en vanlig etikett och värdet Bevaras oförändrat finns kvar
+  i hela förslaget.
+- Efter sparande och omstart består alla fyra värden.
 
 ### KARTA-21: kontrollera uteblivet tillägg före säkert återförsök
 
@@ -1232,13 +1217,15 @@ sparande, omstart och fullständig läsning.
 
 **Användare:** Den konfigurerade administratören.
 
-**Förutsättningar:** Tomt utkast och [styrd objektleverans](#styrd-objektleverans).
+**Förutsättningar:** Tomt utkast och [styrd
+objektleverans](#styrd-objektleverans).
 
 **Separat förberedelse:** Skriv `arm stage:drop-before`. Begäran ska tappas
 innan den når servern. Återställ ingången och avsluta med `quit` efter provet.
 
 **Integrationstest:**
-[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts), KARTA-21.
+[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts),
+KARTA-21.
 
 **Steg:**
 
@@ -1256,69 +1243,69 @@ innan den når servern. Återställ ingången och avsluta med `quit` efter prove
   finns i utkastet; kartan är fortfarande inte gemensamt sparad.
 - Sambandsrubriken får fokus, och stängning återför det till **Nytt objekt**.
 
-### KARTA-22: smalt objektformulär bevarar ordning, dolda värden och återfokus
+### KARTA-22: Fria egenskapers ordning och fulla värden består
+
+**Syfte:** Rättelse bevarar alla individuella egenskaper och deras ordning,
+med nåbara åtgärder och återfokus.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Förbered enligt [ordnade fria
+uppgifter](#ordnade-fria-uppgifter). Chromium 320 × 900 CSS-pixlar.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/object-dialog.spec.ts",
     "caseId": "KARTA-22"
   },
-  "reference": "320×900; ordning, bevarat dolt värde och nåbar sidfot vid smal bredd.",
-  "outcomes": ["Hela rättelsen läggs i utkastet och fokus återgår till redigeringen."]
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
+  "outcomes": [
+    "Rättelse bevarar alla individuella egenskaper och deras ordning, med nåbara åtgärder och återfokus.",
+    "Dolt underlag är en vanlig etikett och värdet Bevaras oförändrat finns kvar i hela förslaget.",
+    "Före samlat sparande behåller kartan det tidigare värdet."
+  ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Skydda smal redigering mot överflöde och förlust av dolda värden.
-
-**Användare:** Den konfigurerade administratören.
-
-**Förutsättningar:** En ny installation med
-[ordnade och dolda uppgifter](#ordnade-och-dolda-uppgifter). Ställ
-webbläsarens innehållsyta på 320×900; detta provar omflöde, inte fysisk pekning.
-
-**Integrationstest:**
-[object-dialog.spec.ts](../../tests/integration/object-dialog.spec.ts), KARTA-22.
-
 **Steg:**
 
-1. Välj **Tabell → Redigera Hushållets avtal → Avtalets uppgifter**.
-   Kontrollera ordningen Anteckning, Månadsbelopp och Avtalstext, med
-   **Före rättelsen**, känt **249** och **Fullständig avtalstext**.
-2. Ändra Anteckning till **Efter rättelsen**. Nå **Lägg i utkastet och
-   stäng** utan att behöva rulla hela sidan i sidled och aktivera knappen.
-3. Kontrollera fokus på **Redigera Hushållets avtal**. Öppna
-   **Visa utkastet → Visa förslaget: Hushållets avtal** och läs
-   **Efter rättelsen** och **Dolt underlag: Bevaras oförändrat**.
-   Spara inte hela utkastet i detta smala fall.
+1. Öppna Tabell → Redigera Hushållets avtal. Grunduppgifter ska vara öppet.
+   Öppna Fria egenskaper och läs ordningen Beskrivning, Anteckning, Dolt
+   underlag och Pris. Alla fyra rader är vanliga synliga egenskaper.
+2. Ändra Anteckning från Före rättelsen till Efter rättelsen. Kontrollera att
+   sidfotens Lägg i utkastet och stäng och dialogens kryss är nåbara utan
+   vågrät rullning. Lägg i utkastet och kontrollera fokus på Redigera
+   Hushållets avtal.
+3. Öppna Visa utkastet → Visa förslaget: Hushållets avtal och läs Efter
+   rättelsen och Bevaras oförändrat. Stäng läsningen.
+4. Spara inte hela utkastet. Det sparade objektet ska fortfarande visa Före
+   rättelsen.
 
 **Förväntat resultat:**
 
-- Bara valt avsnitt är öppet. Sidfot och kryss ryms i innehållsytan.
-- Text, belopp och det dolda värdet **Bevaras oförändrat** finns kvar i
-  förslaget. Det sparade objektet visar fortfarande **Före rättelsen**.
+- Rättelse bevarar alla individuella egenskaper och deras ordning, med nåbara
+  åtgärder och återfokus.
+- Dolt underlag är en vanlig etikett och värdet Bevaras oförändrat finns kvar
+  i hela förslaget.
+- Före samlat sparande behåller kartan det tidigare värdet.
 
-## Ordnade och dolda uppgifter
+## Ordnade fria uppgifter
 
-1. Välj **Inställningar → Typer och egna fält → Ny objekttyp**. Ange
-   **Dialogavtal**, avsnittet **Avtalets uppgifter**, och textfälten
-   **Anteckning** och **Dolt underlag**. Placera båda i avsnittet.
-2. Placera Beskrivning och Pris i samma avsnitt, benämnda **Avtalstext**
-   och **Månadsbelopp**. Använd **Flytta upp** och **Flytta ned** så att
-   ordningen blir Anteckning, Månadsbelopp, Avtalstext, Dolt underlag.
-   Lägg definitionen i utkastet och spara hela utkastet.
-3. Skapa **Hushållets avtal** av typen Dialogavtal. Ange Anteckning
-   **Före rättelsen**, Avtalstext **Fullständig avtalstext**, känt
-   Månadsbelopp **249** och Dolt underlag **Bevaras oförändrat**.
-   Lägg hela objektet i utkastet och spara.
-4. Redigera typen i Inställningar. Välj **Dold, behåll värden** i **Visa i
-   avsnitt** för fältet,
-   lägg definitionen i utkastet och spara. Återgå till Tabell.
-   Dolt underlag ska nu inte visas i objektformuläret.
+1. Skapa typen Dialogavtal under Inställningar → Typer med namn och
+   tom beskrivning. Lägg definitionen i utkastet och spara hela utkastet.
+2. Skapa Hushållets avtal av typen Dialogavtal. Under Fria egenskaper,
+   lägg till följande ordnade textegenskaper: Beskrivning med Fullständig
+   avtalstext; Anteckning med Före rättelsen; Dolt underlag med Bevaras
+   oförändrat; och Pris med 249.
+3. Lägg objektet i utkastet och spara hela utkastet. Återgå till Tabell.
+   Etiketten Dolt underlag döljer inte raden och Pris beräknas inte.
 
 ## Styrd objektleverans
 
@@ -1381,7 +1368,8 @@ tema och 1280 CSS-pixlars bredd. Varianten skyddar oskickad
 formulärförlust, identitetsrättelse och synligt fokus vid denna bredd.
 
 **Integrationstest:**
-[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts), KARTA-26.
+[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts),
+KARTA-26.
 
 **Steg:**
 
@@ -1427,7 +1415,8 @@ tema och 390 CSS-pixlars bredd. Varianten skyddar oskickad
 formulärförlust, identitetsrättelse och synligt fokus vid denna bredd.
 
 **Integrationstest:**
-[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts), KARTA-27.
+[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts),
+KARTA-27.
 
 **Steg:**
 
@@ -1473,7 +1462,8 @@ tema och 390 CSS-pixlars bredd. Varianten skyddar oskickad
 formulärförlust, identitetsrättelse och synligt fokus vid denna bredd.
 
 **Integrationstest:**
-[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts), KARTA-28.
+[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts),
+KARTA-28.
 
 **Steg:**
 
@@ -1519,7 +1509,8 @@ tema och 320 CSS-pixlars bredd. Varianten skyddar oskickad
 formulärförlust, identitetsrättelse och synligt fokus vid denna bredd.
 
 **Integrationstest:**
-[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts), KARTA-29.
+[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts),
+KARTA-29.
 
 **Steg:**
 
@@ -1565,7 +1556,8 @@ tema och 320 CSS-pixlars bredd. Varianten skyddar oskickad
 formulärförlust, identitetsrättelse och synligt fokus vid denna bredd.
 
 **Integrationstest:**
-[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts), KARTA-30.
+[map-workflows.spec.ts](../../tests/integration/map-workflows.spec.ts),
+KARTA-30.
 
 **Steg:**
 
@@ -1610,7 +1602,8 @@ bredd. Varianten skyddar mobil inställningsnavigation, felrubrikens fokus
 och hela typ-, objekt- och sambandsarbetet även efter omstart.
 
 **Integrationstest:**
-[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts), KARTA-31.
+[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts),
+KARTA-31.
 
 **Steg:**
 
@@ -1653,7 +1646,8 @@ bredd. Varianten skyddar mobil inställningsnavigation, felrubrikens fokus
 och hela typ-, objekt- och sambandsarbetet även efter omstart.
 
 **Integrationstest:**
-[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts), KARTA-32.
+[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts),
+KARTA-32.
 
 **Steg:**
 
@@ -1696,7 +1690,8 @@ bredd. Varianten skyddar mobil inställningsnavigation, felrubrikens fokus
 och hela typ-, objekt- och sambandsarbetet även efter omstart.
 
 **Integrationstest:**
-[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts), KARTA-33.
+[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts),
+KARTA-33.
 
 **Steg:**
 
@@ -1739,7 +1734,8 @@ bredd. Varianten skyddar mobil inställningsnavigation, felrubrikens fokus
 och hela typ-, objekt- och sambandsarbetet även efter omstart.
 
 **Integrationstest:**
-[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts), KARTA-34.
+[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts),
+KARTA-34.
 
 **Steg:**
 
@@ -1782,7 +1778,8 @@ bredd. Varianten skyddar mobil inställningsnavigation, felrubrikens fokus
 och hela typ-, objekt- och sambandsarbetet även efter omstart.
 
 **Integrationstest:**
-[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts), KARTA-35.
+[draft-creation.spec.ts](../../tests/integration/draft-creation.spec.ts),
+KARTA-35.
 
 **Steg:**
 
@@ -1868,7 +1865,8 @@ och hela typ-, objekt- och sambandsarbetet även efter omstart.
 
 **Förutsättningar:** Tomt hushåll med samma användare i två flikar.
 Förbered transport enligt
-[sparförberedelsens vanliga installation](save-preparation.md#vanlig-installation-och-annan-klient).
+[sparförberedelsens vanliga
+installation](save-preparation.md#vanlig-installation-och-annan-klient).
 
 **Separat förberedelse:** Vid steg 3 skriver operatören
 `arm save:drop-after` i transportens terminal före UI-handlingen.
@@ -1914,3 +1912,11 @@ riktat samband. Dess oförändrade HTTP-underlag jämför även normaliserad
 dubblett, samlat kvitto och historik efter omstart. KARTA-25 har den
 skilda samtidiga dubblettdialogen. Ingen av identiteterna pensioneras.
 KARTA-23–24 ger de tidigare onumrerade flik- och sparscenarierna egna ID:n.
+
+## Ändrad modell i behållna fall
+
+KARTA-09, KARTA-11–13, KARTA-20, KARTA-22 och konfigurationsvarianterna
+KARTA-31–35 behåller sina identiteter med individuella fria egenskaper.
+Typstyrda fält, dolda värden och typbytets förlustdialog har avvecklats.
+Dessa funktioners rena beteende har godkänd täckningsförlust; fortsatt
+ordning, validering, omflöde och värdebevarande finns i de behållna fallen.

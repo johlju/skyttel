@@ -211,7 +211,6 @@ test('only one actual delegation executes raw voice fragments through Terra and 
           value: {
             typeId: lastToolResult(body).types[0].id,
             name: 'Familjens musik',
-            description: '',
           },
         }),
       ];
@@ -288,7 +287,7 @@ async function proposal(path: string) {
       baseRevision: null,
       version: map.draft.version,
       contentVersion: map.contentVersion,
-      value: { typeId: map.types[0].id, name: 'Formulärförslag', description: '' },
+      value: { typeId: map.types[0].id, name: 'Formulärförslag' },
     },
   });
   expect(response.status()).toBe(200);
@@ -360,7 +359,13 @@ test.each([
             arguments: {
               id: 'web-object',
               baseRevision: null,
-              value: { typeId, name: 'Formulärförslag', description },
+              value: {
+                typeId,
+                name: 'Formulärförslag',
+                properties: [
+                  { id: 'description', label: 'Beskrivning', kind: 'text', value: description },
+                ],
+              },
             },
           },
         ],
@@ -386,10 +391,26 @@ test.each([
       expect(assistant).toMatchObject({
         phase: 'ready',
         receipt: {
-          changes: [{ after: { id: 'web-object', description } }],
+          changes: [
+            {
+              after: {
+                id: 'web-object',
+                properties: [
+                  { id: 'description', label: 'Beskrivning', kind: 'text', value: description },
+                ],
+              },
+            },
+          ],
         },
       });
-      expect(map.objects).toMatchObject([{ id: 'web-object', description }]);
+      expect(map.objects).toMatchObject([
+        {
+          id: 'web-object',
+          properties: [
+            { id: 'description', label: 'Beskrivning', kind: 'text', value: description },
+          ],
+        },
+      ]);
       expect(map.draft.changes).toEqual([]);
       expect(history).toEqual([assistant.receipt]);
       expect(JSON.stringify(voice.live.sent.at(-1))).toContain('Sparat');
@@ -398,7 +419,9 @@ test.each([
       expect(assistant.receipt).toBeUndefined();
       expect(assistant.operations).toEqual([]);
       expect(map.objects).toEqual([]);
-      expect(map.draft.changes).toMatchObject([{ id: 'web-object', after: { description: '' } }]);
+      expect(map.draft.changes).toMatchObject([
+        { id: 'web-object', after: { name: 'Formulärförslag' } },
+      ]);
       expect(history).toEqual([]);
     }
   },
@@ -572,7 +595,7 @@ test('large verified draft details are assembled completely within the Live limi
         contentVersion: 1,
         id: `bike-${i}`,
         baseRevision: null,
-        value: { typeId: map.types[0].id, name: `${i} ${'Cykel '.repeat(30)}`, description: '' },
+        value: { typeId: map.types[0].id, name: `${i} ${'Cykel '.repeat(30)}` },
       },
     });
     expect(response.status()).toBe(200);
@@ -680,7 +703,7 @@ test('new speech retains held voice work until an explicit stop invalidates its 
       contentVersion: 1,
       id: 'late',
       baseRevision: null,
-      value: { typeId: map.types[0].id, name: 'För sent', description: '' },
+      value: { typeId: map.types[0].id, name: 'För sent' },
     }),
   ]);
   await expect.poll(async () => (await voice.poll()).assistant.phase).not.toBe('working');

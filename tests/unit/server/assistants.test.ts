@@ -69,7 +69,13 @@ async function proposal(actor: APIRequestContext, name: string, id: string) {
           version: state.draft.version,
           id,
           baseRevision: null,
-          value: { typeId: state.types[0].id, name, description: 'Påhittad uppgift' },
+          value: {
+            typeId: state.types[0].id,
+            name,
+            properties: [
+              { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad uppgift' },
+            ],
+          },
         },
       })
     ).status(),
@@ -144,9 +150,6 @@ test('a scoped read with no matches returns no authored type metadata', async ()
           value: {
             name: 'Privat samling',
             description: 'Hushållets orelaterade typbeskrivning',
-            fields: [
-              { id: 'note', name: 'Anteckning', description: 'Fältets beskrivning', kind: 'text' },
-            ],
           },
         },
       })

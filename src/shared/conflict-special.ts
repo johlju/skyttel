@@ -1,7 +1,6 @@
 import { conflictChange } from './conflict-properties.js';
 import type { DraftConflict } from './draft-conflicts.js';
 import type { MapState } from './map.js';
-import { compatibleCustomFields } from './map.js';
 
 export type SpecialConflict = {
   kind:
@@ -27,7 +26,7 @@ const missingRelationshipType = {
   reason: 'Den föreslagna sambandstypen saknas i det aktuella underlaget.',
   warning: 'Sambandet kan inte läggas till eftersom sambandstypen saknas.',
   instruction:
-    'Stäng konfliktfönstret och lägg till sambandstypen under Inställningar → Typer och egna fält. Justera sedan sambandet i den vanliga sambandsdialogen så att det använder rätt typ och lägg ändringen i ditt utkast. När du kommer tillbaka kontrolleras konflikten på nytt.',
+    'Stäng konfliktfönstret och lägg till sambandstypen under Inställningar → Typer. Justera sedan sambandet i den vanliga sambandsdialogen så att det använder rätt typ och lägg ändringen i ditt utkast. När du kommer tillbaka kontrolleras konflikten på nytt.',
 };
 
 /** A missing saved record differs from a proposal that has never been saved. */
@@ -52,7 +51,8 @@ export function specialConflict(state: MapState, conflict: DraftConflict): Speci
   if (
     (conflict.kind === 'object' || conflict.kind === 'relationship') &&
     change?.before &&
-    !conflict.current
+    !conflict.current &&
+    !(conflict.kind === 'relationship' && conflict.missingEndpoints?.length)
   ) {
     const object = conflict.kind === 'object';
     return {
@@ -106,7 +106,13 @@ export function specialConflict(state: MapState, conflict: DraftConflict): Speci
         ? savedDuplicate
           ? 'Det redan sparade sambandet och dess uppgifter behålls.'
           : 'Det andra förslaget i ditt utkast och dess uppgifter behålls.'
-        : 'Om du vill lägga till ett nytt samband gör du det den vanliga vägen.',
+        : 'Övrigt utkastarbete finns kvar. Du kan också rätta ändpunkterna och behålla förslaget.',
+      ...(!duplicate
+        ? {
+            instruction:
+              'Förslaget är blockerat och visas inte som ett aktuellt samband. Hela utkastet kan sparas först när du har rättat ändpunkterna eller kastat förslaget. Välj Rätta ändpunkter för att behålla förslagets uppgifter.',
+          }
+        : {}),
       ...(conflict.type === null ? { additionalBlockers: [missingRelationshipType] } : {}),
     };
   }
@@ -121,39 +127,10 @@ export function specialConflict(state: MapState, conflict: DraftConflict): Speci
         ? 'Objektet kan inte läggas till eftersom objekttypen saknas.'
         : missingRelationshipType.warning,
       instruction: object
-        ? 'Stäng konfliktfönstret och lägg till objekttypen under Inställningar → Typer och egna fält. Ditt förslag ligger kvar. Alternativt kan du ta bort objektet ur ditt utkast nedan.'
+        ? 'Stäng konfliktfönstret och lägg till objekttypen under Inställningar → Typer. Ditt förslag ligger kvar. Alternativt kan du ta bort objektet ur ditt utkast nedan.'
         : missingRelationshipType.instruction,
       ...(object ? { action: 'Ta bort objektet ur ditt utkast' as const } : {}),
       ...(object ? { afterDiscard: 'Övriga objekt och samband i kartan påverkas inte.' } : {}),
-    };
-  }
-  if (
-    change?.after &&
-    'type' in change &&
-    conflict.type &&
-    !compatibleCustomFields(
-      'customValues' in change.after ? change.after.customValues : undefined,
-      change.type,
-      conflict.type,
-    )
-  ) {
-    const proposed = change.after;
-    const changed = change.type.fields?.find(
-      (field) =>
-        Object.hasOwn('customValues' in proposed ? (proposed.customValues ?? {}) : {}, field.id) &&
-        field.kind !== conflict.type?.fields?.find((current) => current.id === field.id)?.kind,
-    );
-    const now = conflict.type.fields?.find((field) => field.id === changed?.id);
-    const textToNumber = changed?.kind === 'text' && now?.kind === 'number';
-    return {
-      kind: 'outside-correction',
-      reason: textToNumber
-        ? 'Ett eget fält har ändrats från text till tal. Det föreslagna värdet passar inte den ändrade typen.'
-        : 'Det föreslagna värdet passar inte typens aktuella egna fält.',
-      warning: textToNumber
-        ? 'Det föreslagna värdet måste vara ett tal.'
-        : 'Förslaget behöver rättas så att värdena passar de aktuella egna fälten.',
-      instruction: correctionInstruction,
     };
   }
   if (

@@ -28,10 +28,9 @@ lost data or reverse a database migration.
    application version. Do not modify individual archive entries or combine
    files from different exports. For a planned move, use the final-export
    procedure below before importing.
-2. Select a verified release that accepts the export format. Start with the
-   same release as the source when available, or read the destination's
-   [upgrade notes](operator-upgrade-notes.md) for compatibility. If validation
-   rejects the archive, preserve it and resolve compatibility before retrying.
+2. Select a verified release and read its
+   [upgrade notes](operator-upgrade-notes.md). If validation rejects the
+   archive, preserve it and diagnose the failure before retrying.
 3. Create a new, empty persistent disk and one application instance. Keep it
    separate from any retained source disk. On Render, follow the
    [service and disk setup](render.md#3-create-the-render-web-service-and-disk).
@@ -157,7 +156,7 @@ Reconnect assistants through fresh consent at the destination.
 
 ## Verify and open the destination
 
-Check current objects and relationships, custom types and fields, removed
+Check current objects and relationships, types and ordered properties, removed
 content and history, retained image versions, each assigned private draft,
 and personal positions and settings. Confirm that unmapped private content
 is not visible as an ordinary member's draft. Download a fresh complete

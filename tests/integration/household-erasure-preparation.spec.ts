@@ -30,7 +30,7 @@ test('documented erasure preparation preserves actual boundaries with seeded con
           id: 'private',
           version: state.draft.version,
           baseRevision: null,
-          value: { typeId: state.types[0].id, name: 'Privat prov', description: '' },
+          value: { typeId: state.types[0].id, name: 'Privat prov' },
         })
       ).status(),
     ).toBe(200);

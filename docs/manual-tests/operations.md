@@ -73,8 +73,18 @@ DEMO-01, Google som konfigurerad administratör.
   "reference": "Google som första administratör; Microsoft förblir utanför",
   "outcomes": [
     "Endast konfigurerad identitet får administratörstillgång",
-    "Fulla demovärden, samband och konflikt går att läsa utan ändring",
+    "Fria egenskaper och giltiga samband går att läsa utan ändring",
     "Kartdata och privata förslag finns kvar efter omstart"
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/demo.test.ts",
+      "title": "the demo preserves free properties and valid links through restart",
+      "purpose": "SQLite, validerade ändpunkter och bevarande efter omstart."
+    }
   ]
 }
 ```
@@ -90,7 +100,11 @@ DEMO-01, Google som konfigurerad administratör.
    Familjens garage. Expandera cykelns rad.
 2. Läs Ramfärg **Blå**, Extrahjul **0**, Kontrolldatum **2026-04-03**,
    Elcykel **Nej** och Dold rammärkning **Syntetisk ram: DEMO-CYKEL**.
-   Läs hela beskrivningen, priset **4995 SEK**, ikonen och livscykeln.
+   Läs egenskaperna Beskrivning, Pris **4995**, Valuta **SEK** och
+   Startdatum **2026-04-03** samt ikonen och statusen. Öppna
+   **Samband för Lindens musikförening** och kontrollera **Inga samband**.
+   Stäng med Escape. Öppna **Samband för Molnmusik** och läs
+   egenskapen **Osäkert uppgivet: Ja**. Stäng med Escape.
 3. Öppna **Samband för Alex Exempel** och välj **Alex blå cykel**.
    Läs de fulla uppgifterna, öppna cykelns samband och välj
    **Familjens garage**. Stäng med Escape och återgå till tabellen.
@@ -107,10 +121,11 @@ DEMO-01, Google som konfigurerad administratör.
 
 **Förväntat resultat:**
 
-- Hushållet innehåller sexton sparade objekt och tjugotre samband.
+- Hushållet innehåller sexton sparade objekt och tjugoett samband.
   Alex → cykel → garage nås utan visuell kartnavigation.
-- Alla fyra egna fältslag, det dolda fältet, noll och Nej är läsbara
-  tillsammans med de ekonomiska uppgifterna. Inget värde antas saknas.
+- Alla fyra egenskapsslag, noll och Nej är läsbara. Beskrivning och
+  ekonomiska uppgifter är fria egenskaper, oberoende av objekttypen.
+  Musikföreningen är ett giltigt fristående objekt utan samband.
 - Granskning och läsning ändrar inte kartan, de två privata förslagen
   eller historiken. De två sparandena behåller sin verkliga upphovsperson.
 - Endast den konfigurerade inloggningen får administratörstillgång.
@@ -146,8 +161,18 @@ DEMO-02, Microsoft som konfigurerad administratör.
   "reference": "Microsoft som första administratör; Google förblir utanför",
   "outcomes": [
     "Endast konfigurerad identitet får administratörstillgång",
-    "Fulla demovärden, samband och konflikt går att läsa utan ändring",
+    "Fria egenskaper och giltiga samband går att läsa utan ändring",
     "Kartdata och privata förslag finns kvar efter omstart"
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/demo.test.ts",
+      "title": "the demo preserves free properties and valid links through restart",
+      "purpose": "SQLite, validerade ändpunkter och bevarande efter omstart."
+    }
   ]
 }
 ```
@@ -163,7 +188,11 @@ DEMO-02, Microsoft som konfigurerad administratör.
    Familjens garage. Expandera cykelns rad.
 2. Läs Ramfärg **Blå**, Extrahjul **0**, Kontrolldatum **2026-04-03**,
    Elcykel **Nej** och Dold rammärkning **Syntetisk ram: DEMO-CYKEL**.
-   Läs hela beskrivningen, priset **4995 SEK**, ikonen och livscykeln.
+   Läs egenskaperna Beskrivning, Pris **4995**, Valuta **SEK** och
+   Startdatum **2026-04-03** samt ikonen och statusen. Öppna
+   **Samband för Lindens musikförening** och kontrollera **Inga samband**.
+   Stäng med Escape. Öppna **Samband för Molnmusik** och läs
+   egenskapen **Osäkert uppgivet: Ja**. Stäng med Escape.
 3. Öppna **Samband för Alex Exempel** och välj **Alex blå cykel**.
    Läs de fulla uppgifterna, öppna cykelns samband och välj
    **Familjens garage**. Stäng med Escape och återgå till tabellen.
@@ -180,10 +209,11 @@ DEMO-02, Microsoft som konfigurerad administratör.
 
 **Förväntat resultat:**
 
-- Hushållet innehåller sexton sparade objekt och tjugotre samband.
+- Hushållet innehåller sexton sparade objekt och tjugoett samband.
   Alex → cykel → garage nås utan visuell kartnavigation.
-- Alla fyra egna fältslag, det dolda fältet, noll och Nej är läsbara
-  tillsammans med de ekonomiska uppgifterna. Inget värde antas saknas.
+- Alla fyra egenskapsslag, noll och Nej är läsbara. Beskrivning och
+  ekonomiska uppgifter är fria egenskaper, oberoende av objekttypen.
+  Musikföreningen är ett giltigt fristående objekt utan samband.
 - Granskning och läsning ändrar inte kartan, de två privata förslagen
   eller historiken. De två sparandena behåller sin verkliga upphovsperson.
 - Endast den konfigurerade inloggningen får administratörstillgång.

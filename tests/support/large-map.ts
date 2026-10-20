@@ -16,10 +16,10 @@ export function seedLargeMap(database: Database.Database, userId: string, househ
     return type;
   });
   const object = database.prepare(`INSERT INTO map_object
-    (id, householdId, typeId, revision, name, description, identity, financialFacts, lifecycle)
-    VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)`);
+    (id, householdId, typeId, revision, name, identity, properties, lifecycle)
+    VALUES (?, ?, ?, 1, ?, ?, ?, ?)`);
   const edge = database.prepare(`INSERT INTO map_relationship
-    (id, householdId, typeId, revision, sourceId, targetId, knowledge, lifecycle)
+    (id, householdId, typeId, revision, sourceId, targetId, properties, lifecycle)
     VALUES (?, ?, ?, 1, ?, ?, ?, ?)`);
   database.transaction(() => {
     for (let index = 0; index < 500; index += 1) {
@@ -28,30 +28,33 @@ export function seedLargeMap(database: Database.Database, userId: string, househ
         householdId,
         types[index % types.length].id,
         `Provobjekt ${String(index).padStart(3, '0')}`,
-        `Påhittat sammanhang ${Math.floor(index / 25)}. Inga verkliga hushållsuppgifter.`,
         index % 11 === 0 ? 'unspecified' : null,
-        JSON.stringify({
-          price:
-            index % 4 === 0
-              ? { knowledge: 'unknown' }
-              : index % 4 === 1
-                ? { knowledge: 'none' }
-                : { knowledge: index % 4 === 2 ? 'uncertain' : 'known', value: '149' },
-        }),
+        JSON.stringify([
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text',
+            value: `Påhittat sammanhang ${Math.floor(index / 25)}. Inga verkliga hushållsuppgifter.`,
+          },
+          { id: 'price', label: 'Pris', kind: 'number', ...(index % 4 < 2 ? {} : { value: 149 }) },
+        ]),
         index % 17 === 0 ? 'ended' : null,
       );
     }
     for (let index = 0; index < 1500; index += 1) {
       const source = Math.floor(index / 3);
       const offset = (index % 3) + 1;
-      const missing = index % 19 === 0;
       edge.run(
         `large-edge-${index}`,
         householdId,
         edgeTypes[index % 3].id,
         `large-${source}`,
-        missing ? null : `large-${Math.floor(source / 25) * 25 + ((source + offset) % 25)}`,
-        missing ? (index % 2 ? 'none' : 'unknown') : index % 7 === 0 ? 'uncertain' : 'known',
+        `large-${Math.floor(source / 25) * 25 + ((source + offset) % 25)}`,
+        JSON.stringify(
+          index % 7 === 0
+            ? [{ id: 'certainty', label: 'Osäkert uppgivet', kind: 'boolean', value: true }]
+            : [],
+        ),
         index % 29 === 0 ? 'ended' : null,
       );
     }

@@ -1,4 +1,5 @@
 import { createInstallation } from '../support/installation.js';
+import { propertyRow, setProperty } from '../support/property-controls.js';
 import { createRelationshipFixture } from '../support/relationship-fixture.js';
 import { expect, test } from '../support/test.js';
 
@@ -20,7 +21,7 @@ test('SAMBAND-14: an absent old-version attempt unlocks retained input and requi
     await dialog.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await dialog.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Använder' });
     await dialog.getByLabel('Till objekt', { exact: true }).selectOption('bicycle');
-    await dialog.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('uncertain');
+    await setProperty(dialog, 'Uppgiftens säkerhet', 'Osäkert uppgivet');
     let originalSubmission: Record<string, unknown> | undefined;
     await page.route(
       `${path}/relationship-form`,
@@ -50,10 +51,12 @@ test('SAMBAND-14: an absent old-version attempt unlocks retained input and requi
     expect(independent.draft.relationships ?? []).toEqual([]);
 
     await check.click();
-    await expect(dialog.getByLabel('Uppgiftens säkerhet', { exact: true })).toHaveValue(
-      'uncertain',
-    );
-    await expect(dialog.getByLabel('Uppgiftens säkerhet', { exact: true })).toBeEnabled();
+    await expect(
+      propertyRow(dialog, 'Uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Osäkert uppgivet');
+    await expect(
+      propertyRow(dialog, 'Uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+    ).toBeEnabled();
     await expect(dialog).toContainText('öppna det igen');
     await expect(
       dialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }),
@@ -72,9 +75,9 @@ test('SAMBAND-14: an absent old-version attempt unlocks retained input and requi
 
     await dialog.getByRole('button', { name: 'Stäng samband', exact: true }).click();
     await page.getByRole('button', { name: 'Fortsätt redigera', exact: true }).click();
-    await expect(dialog.getByLabel('Uppgiftens säkerhet', { exact: true })).toHaveValue(
-      'uncertain',
-    );
+    await expect(
+      propertyRow(dialog, 'Uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Osäkert uppgivet');
     await dialog.getByRole('button', { name: 'Stäng samband', exact: true }).click();
     await page.getByRole('button', { name: 'Kasta ändringarna och fortsätt', exact: true }).click();
     await expect(opener).toBeFocused();
@@ -82,13 +85,21 @@ test('SAMBAND-14: an absent old-version attempt unlocks retained input and requi
     await dialog.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await dialog.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Använder' });
     await dialog.getByLabel('Till objekt', { exact: true }).selectOption('bicycle');
-    await dialog.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('uncertain');
+    await setProperty(dialog, 'Uppgiftens säkerhet', 'Osäkert uppgivet');
     await dialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }).click();
-    await expect(dialog.getByRole('status')).toContainText('Sambandet lades i ditt utkast');
+    await expect(
+      dialog.getByRole('status').filter({ hasText: 'Sambandet lades i ditt utkast' }),
+    ).toBeVisible();
     const staged = await read();
     expect(staged.draft.changes).toEqual(independent.draft.changes);
     expect(staged.draft.relationships).toHaveLength(1);
-    expect(staged.draft.relationships?.[0].after?.knowledge).toBe('uncertain');
+    expect(staged.draft.relationships?.[0].after?.properties).toEqual([
+      expect.objectContaining({
+        label: 'Uppgiftens säkerhet',
+        kind: 'text',
+        value: 'Osäkert uppgivet',
+      }),
+    ]);
     expect(staged.relationships).toEqual([]);
     expect(staged.objects).toEqual([]);
     await other.close();
@@ -114,7 +125,6 @@ test('SAMBAND-15: absent stale editing cannot overwrite or remove a later same-o
         typeId: initial.relationshipTypes.find((type) => type.name === 'Använder')?.id,
         sourceId: 'alex',
         targetId: 'bicycle',
-        knowledge: 'known',
       },
     });
     const householdUrl = `${installation.origin}/households/${household.id}`;
@@ -124,7 +134,7 @@ test('SAMBAND-15: absent stale editing cannot overwrite or remove a later same-o
     await opener.click();
     const dialog = page.getByRole('dialog', { name: 'Samband för Alex', exact: true });
     await dialog.getByRole('button', { name: 'Redigera samband', exact: true }).click();
-    await dialog.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('uncertain');
+    await setProperty(dialog, 'Uppgiftens säkerhet', 'Osäkert uppgivet');
     let originalSubmission: Record<string, unknown> | undefined;
     await page.route(
       `${path}/relationship-form`,
@@ -147,9 +157,11 @@ test('SAMBAND-15: absent stale editing cannot overwrite or remove a later same-o
     await other.getByRole('button', { name: 'Samband för Alex', exact: true }).click();
     const laterDialog = other.getByRole('dialog', { name: 'Samband för Alex', exact: true });
     await laterDialog.getByRole('button', { name: 'Redigera samband', exact: true }).click();
-    await laterDialog.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('unresolved');
+    await setProperty(laterDialog, 'Uppgiftens säkerhet', 'Obesvarad fråga');
     await laterDialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }).click();
-    await expect(laterDialog.getByRole('status')).toContainText('Sambandet lades i ditt utkast');
+    await expect(
+      laterDialog.getByRole('status').filter({ hasText: 'Sambandet lades i ditt utkast' }),
+    ).toBeVisible();
     await laterDialog.getByRole('button', { name: 'Stäng samband', exact: true }).click();
     await other.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     const object = other.getByRole('dialog', { name: 'Nytt objekt', exact: true });
@@ -158,8 +170,14 @@ test('SAMBAND-15: absent stale editing cannot overwrite or remove a later same-o
     await object.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await expect(object).not.toBeVisible();
     const current = await read();
-    expect(current.draft.relationships?.[0].after?.knowledge).toBe('unresolved');
-    expect(current.draft.relationships?.[0].after?.targetId).toBeNull();
+    expect(current.draft.relationships?.[0].after?.properties).toEqual([
+      expect.objectContaining({
+        label: 'Uppgiftens säkerhet',
+        kind: 'text',
+        value: 'Obesvarad fråga',
+      }),
+    ]);
+    expect(current.draft.relationships?.[0].after?.targetId).toBe('bicycle');
     expect(current.draft.changes.some((change) => change.after?.name === 'Lo')).toBe(true);
     expect(current.draft.version).toBeGreaterThan(originalSubmission?.version as number);
     const checked = await page.request.get(
@@ -170,10 +188,12 @@ test('SAMBAND-15: absent stale editing cannot overwrite or remove a later same-o
     expect(absent.state).toEqual(current);
 
     await check.click();
-    await expect(dialog.getByLabel('Uppgiftens säkerhet', { exact: true })).toBeEnabled();
-    await expect(dialog.getByLabel('Uppgiftens säkerhet', { exact: true })).toHaveValue(
-      'uncertain',
-    );
+    await expect(
+      propertyRow(dialog, 'Uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+    ).toBeEnabled();
+    await expect(
+      propertyRow(dialog, 'Uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Osäkert uppgivet');
     await expect(dialog.getByLabel('Till objekt', { exact: true })).toHaveValue('bicycle');
     await expect(
       dialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }),
@@ -190,17 +210,17 @@ test('SAMBAND-15: absent stale editing cannot overwrite or remove a later same-o
     expect(await read()).toEqual(current);
     await dialog.getByRole('button', { name: 'Stäng samband', exact: true }).click();
     await page.getByRole('button', { name: 'Fortsätt redigera', exact: true }).click();
-    await expect(dialog.getByLabel('Uppgiftens säkerhet', { exact: true })).toHaveValue(
-      'uncertain',
-    );
+    await expect(
+      propertyRow(dialog, 'Uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Osäkert uppgivet');
     await dialog.getByRole('button', { name: 'Stäng samband', exact: true }).click();
     await page.getByRole('button', { name: 'Kasta ändringarna och fortsätt', exact: true }).click();
     await opener.click();
     await dialog.getByRole('button', { name: 'Redigera samband', exact: true }).click();
-    await expect(dialog.getByLabel('Uppgiftens säkerhet', { exact: true })).toHaveValue(
-      'unresolved',
-    );
-    await expect(dialog.getByLabel('Till objekt', { exact: true })).not.toBeVisible();
+    await expect(
+      propertyRow(dialog, 'Uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Obesvarad fråga');
+    await expect(dialog.getByLabel('Till objekt', { exact: true })).toHaveValue('bicycle');
     await expect(
       dialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }),
     ).toBeEnabled();

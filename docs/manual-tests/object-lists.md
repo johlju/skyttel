@@ -28,7 +28,8 @@ inloggningen innehåller enbart påhittade uppgifter.
    `node --import tsx scripts/manual-household-table.ts` från projektroten.
 2. Öppna den utskrivna adressen och logga in med Google. Välj **Tabell**.
    Installationen har fler än 50 objekt, svenska namn med siffror,
-   långa värden, dolda egna fält, ekonomiska uppgifter och alla statusar.
+   långa fria egenskapsvärden, ekonomiska uppgifter som vanliga egenskaper och
+   uttryckliga statusar.
 3. Använd respektive falls CSS-bredd och vanliga kontroller. Faktisk
    förstoring och uppläsning provas i LISTA-09 och mobilinmatning i SÖK-16.
    Skriv `quit` i terminalen och starta om kommandot mellan fallen.
@@ -95,7 +96,8 @@ without graphics or lost table state”.
    Cykel. Rulla tabellen och öppna Samband för Alex med tangentbord.
 2. Kontrollera dialogens rubrik och antal samband. Från rubriken ska
    Skift+Tab nå **Stäng samband** och Tab sedan nå krysset. Välj Cykel, läs hela
-   beskrivningen, egna fält, ekonomi samt Sparat och Ditt förslag.
+   textegenskapen Beskrivning, övriga fria egenskaper samt Sparat och Ditt
+   förslag.
 3. Öppna Samband för Cykel och välj Garage. Läs Ospecificerat objekt.
 4. Använd Tab och Skift+Tab vid dialogens första och sista kontroller.
    Välj Tillbaka tre gånger och stäng med Escape.
@@ -111,57 +113,61 @@ without graphics or lost table state”.
 - Stängning återför fokus till Samband för Alex. Sida, flera öppna rader
   och rullningsläge bevaras.
 
-### LÄS-02: läs samband och olika betydelser på smal skärm
+### LÄS-02: Verkliga ändpunkter och vanliga uppgifter läses på smal skärm
+
+**Syfte:** Alla samband har verkliga valbara ändpunkter; texter om Okänt och
+Uttryckligen inget är vanliga egenskaper.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Starta Förbered läskedjan utan extra objekt vid 390 × 844
+CSS-pixlar. Föreslå borttagning av Alex samband till Cykel utan att spara.
+Kartan har fyra samband vid Cykel, inklusive två självsamband med typerna Har
+ingen och Okänd koppling.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/household-reading.spec.ts",
     "caseId": "LÄS-02"
   },
-  "reference": "Isolerad Chromium-installation med syntetiska hushållsdata; vald konfiguration enligt förutsättningarna.",
+  "reference": "Chromium 390 × 844 CSS-pixlar; riktig HTTP och SQLite. Fysisk förstoring och uppläsning behåller LISTA-09.",
   "outcomes": [
-    "Skilja okända mål, uttryckligen inga mål, osäkerhet och status."
+    "Alla samband har verkliga valbara ändpunkter; texter om Okänt och Uttryckligen inget är vanliga egenskaper.",
+    "Upphört, föreslagen borttagning och sparade/föreslagna värden är läsbara utan att enbart färg används.",
+    "Lång text bryts inom dialogen och stängning återför fokus till öppningsknappen."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Skilja okända mål, uttryckligen inga mål, osäkerhet och status.
-
-**Användare:** Alex Exempel.
-
-**Förutsättningar:** Hushållet från Förbered läskedjan. Prova på telefon
-vid 390 × 844 CSS-pixlar. Förstoring och uppläsning provas i LISTA-09. Föreslå
-borttagning av Alex samband
-till Cykel genom sambandsredigeringen, utan att spara det gemensamt.
-
-**Integrationstest:**
-[household-reading.spec.ts](../../tests/integration/household-reading.spec.ts),
-testfallet “LÄS-02: mobile full relationship reading separates absent
-targets, uncertainty and proposed removal”.
-
 **Steg:**
 
-1. Öppna Tabell och Samband för Cykel.
-2. Läs samtliga fyra samband, inklusive föreslagen borttagning.
-3. Kontrollera Okänd koppling och Har ingen samt sambandet till Garage.
-   Läs säkerhet, riktning, egna fält, livscykel och slutdatum.
-4. Välj **Stäng samband** och kontrollera fokus.
+1. Öppna Tabell och Samband för Cykel. Läs dialogrubriken och samtliga fyra
+   samband, inklusive föreslagen borttagning.
+2. Läs Har ingen och dess fria uppgift Uttryckligen inget samt Okänd koppling
+   med Okänt. Båda har Cykel som verklig från- och tilländpunkt och erbjuder
+   Redigera samband. Följ Cykel-knappen på vartdera sambandet och kontrollera
+   rubrikfokus på Uppgifter för Cykel. Välj Tillbaka till sambandslistan.
+3. Läs Förvaras i-sambandet till Garage: den fria uppgiften Osäkert uppgivet,
+   datumegenskapen 2024-12-31 och uttrycklig status Manuellt upphört. Läs hela
+   den fria sambandsanteckningen.
+4. Läs utan vågrät rullning, välj Stäng samband och kontrollera fokus på
+   Samband för Cykel.
 
 **Förväntat resultat:**
 
-- Okänt och Uttryckligen inget har inga falska objektlänkar. Osäkert
-  uppgivet är skilt från dessa betydelser. **Redigera samband** finns
-  för de två giltiga sambanden utan målobjekt.
-- Upphört, Föreslagen borttagning och sparat/föreslaget värde är läsbara
-  även utan färg. Dolda egna fält finns med.
-- Text bryts inom skärmbredden och innehållet rullar i dialogen.
-  Fokus återgår till Samband för Cykel.
-- Sambandsdialogen har **Stäng samband** och kryss. Escape fungerar också.
+- Alla samband har verkliga valbara ändpunkter; texter om Okänt och
+  Uttryckligen inget är vanliga egenskaper.
+- Upphört, föreslagen borttagning och sparade/föreslagna värden är läsbara
+  utan att enbart färg används.
+- Lång text bryts inom dialogen och stängning återför fokus till
+  öppningsknappen.
 
 ### LÄS-03: stäng läsning när öppningsraden försvinner
 
@@ -794,7 +800,7 @@ För dessa fall startar du provinstallationen med
 `node --import tsx scripts/manual-household-table.ts --search` efter
 `npm run build`. Den använder samma offentliga förberedelse som
 integrationstesterna och innehåller också **Övrigt Élan** med beskrivningen
-**Åker äpple** och det egna fältet **Hemlig anteckning**. A 2 har ett
+**Åker äpple** och den fria textegenskapen **Hemlig anteckning**. A 2 har ett
 samband till objektet med typen **Endast i sambandet**.
 
 ### SÖK-01: alla ord, egna detaljfält och svensk teckensammansättning
@@ -840,12 +846,15 @@ samband till objektet med typen **Endast i sambandet**.
    Sök efter **ake**. Kontrollera noll träffar och att fokus stannar i
    sökfältet.
    Öppna **Filter**, välj **Återställ sökning och filter** och stäng dialogen.
-4. Sök efter **åke beskrivning**. Kontrollera en träff på Åke.
+4. Sök efter **åke beskrivning**. Kontrollera exakt två träffar: Åke och
+   Övrigt Élan. Även Övrigt Élan matchar eftersom egenskapens etikett är
+   Beskrivning och värdet **Åker äpple** innehåller delordet **åke**.
 
 **Förväntat resultat:**
 
 - Alla delord måste finnas; ordning och skiftläge spelar ingen roll.
-- Orden kan finnas i olika egna fält, även dolda fält och ekonomi.
+- Orden kan finnas i olika fria egenskapers etiketter och värden, inklusive
+  ekonomiska uppgifter.
   Både visade sparade värden och förslag kan ge träff.
 - Sammansatta tecken matchar sina färdiga motsvarigheter. Å, ä och ö
   behåller sina betydelser. Träffens detaljfält anges med namn.
@@ -1026,8 +1035,8 @@ type-only proposals expose them”.
 4. Stäng textvyn. Återvänd till Tabell och sedan kartans sökyta. Kontrollera
    bevarad
    söktext och Typ 2, återställt utkastfilter och besked om återställningen.
-5. Välj **Inställningar → Typer och egna fält → Ny objekttyp**. Ange
-   **Enbart typförslag**, lämna beskrivning och fält tomma och välj
+5. Välj **Inställningar → Typer → Ny objekttyp**. Ange
+   **Enbart typförslag**, lämna typbeskrivningen tom och välj
    **Lägg typförslaget i mitt utkast**. Läs beskedet och välj
    **Tillbaka till kartan**. Sök efter finns inte. Öppna Filter och
    kontrollera att utkastfiltret finns trots tom karta.
@@ -1063,8 +1072,10 @@ type-only proposals expose them”.
 
 **Förutsättningar:** En ny provinstallation för sökning i Chromium med
 390 CSS-pixlars bredd. Verklig pekning, skärmtangentbord och förstoring på
-iPhone och iPad provas i [SÖK-16](#sök-16-fysisk-mobilsökning-bevarar-text-filter-och-fokus).
-VoiceOver provas i [LISTA-09](#lista-09-verklig-zoom-och-uppläsning-ger-hela-läsalternativet).
+iPhone och iPad provas i
+[SÖK-16](#sök-16-fysisk-mobilsökning-bevarar-text-filter-och-fokus).
+VoiceOver provas i
+[LISTA-09](#lista-09-verklig-zoom-och-uppläsning-ger-hela-läsalternativet).
 
 **Integrationstest:**
 [object-search.spec.ts](../../tests/integration/object-search.spec.ts),
@@ -1138,7 +1149,8 @@ mobile and desktop”.
 Använd CSS-vyerna 1280 × 900, 800 × 900, 390 × 844, 320 × 640 och
 320 × 250 med tangentbord. Verklig förstoring och pekning provas i
 [SÖK-16](#sök-16-fysisk-mobilsökning-bevarar-text-filter-och-fokus) och
-uppläsning i [LISTA-09](#lista-09-verklig-zoom-och-uppläsning-ger-hela-läsalternativet).
+uppläsning i
+[LISTA-09](#lista-09-verklig-zoom-och-uppläsning-ger-hela-läsalternativet).
 
 **Integrationstest:**
 [object-search.spec.ts](../../tests/integration/object-search.spec.ts),
@@ -1506,6 +1518,8 @@ SÖK-08.
 **Användare:** Alex Exempel.
 
 **Förutsättningar:** Förbered utforskning utan extra flagga.
+Sambandet Alex → Använder → Blå cykel har inga fria egenskaper. Det innebär
+inte ett tomt värde eller en förvald säkerhetsuppgift.
 
 **Integrationstest:**
 [map-exploration.spec.ts](../../tests/integration/map-exploration.spec.ts),
@@ -1519,7 +1533,9 @@ endpoints without expanding their chains”.
 2. Öppna kartan, sök **Alex** och tryck Escape i sökfältet. Läs tidigare och
    föreslagen koppling. Kontrollera att Bostaden inte visas.
 3. Kasta förslaget. Markera det ursprungliga sambandet som upphört
-   och spara. Föreslå sedan målobjekt Garaget och status Aktuellt.
+   och granska dess status före och efter ändringen. Ingen säkerhetsuppgift
+   ska läggas till vid läsningen. Spara. Föreslå sedan målobjekt Garaget och
+   status Aktuellt.
 4. Sök **Alex** i kartan igen. Kontrollera att tidigare upphört samband
    och cykeln döljs. Välj upplysningens **Ta med upphörda**.
 
@@ -1914,7 +1930,8 @@ och upplevt fokus från enbart DOM-namn.
 **Förväntat resultat:**
 
 - Skärmläsaren läser hela namn, värden, riktning och skilda statusar.
-- Rubrik och återfokus är begripliga och kontroller kan nås vid båda zoomnivåerna.
+- Rubrik och återfokus är begripliga och kontroller kan nås vid båda
+  zoomnivåerna.
 
 - NVDA och VoiceOver läser sökning, kryss och filterval begripligt och
   anger rätt fokus vid öppning och återgång.
@@ -1944,7 +1961,8 @@ och upplevt fokus från enbart DOM-namn.
 
 **Användare:** Alex Exempel med tillgång till provhushållet.
 
-**Förutsättningar:** Starta [Förbered hushållets tabell](#förbered-hushållets-tabell).
+**Förutsättningar:** Starta [Förbered hushållets
+tabell](#förbered-hushållets-tabell).
 
 **Integrationstest:**
 [household-table.spec.ts](../../tests/integration/household-table.spec.ts),
@@ -2206,3 +2224,139 @@ faktiskt uppnådda positionen, men inget bestämt rullsteg på 40 pixlar.
 Detta avstår endast från skydd mot ändrad steglängd. Markering, utkast
 och oskickad samtalstext är kvar. LISTA-06 är fortsatt pensionerat och
 återanvänds inte. LÄS-08 skiljer tom tabell från LÄS-04:s föregående rad.
+
+## Fria egenskaper och ändpunktskandidater
+
+### SÖK-17: läs och sök sparade och föreslagna egenskaper
+
+**Syfte:** Hitta objekt på egna egenskaper och läsa alla uppgifter utan
+att välja en grafisk punkt.
+
+**Användare:** En konfigurerad hushållsmedlem med rätt att läsa och redigera.
+
+**Förutsättningar:** Förbered ett eget tomt provhushåll. Skapa Alex och
+två objekt som båda heter Cykel. På första cykeln, lägg egenskaperna i
+denna ordning: Ramnummer utan datatyp eller värde, Ramnummer som text
+Röd, Antal som tal 0, Kontrollerad som ja/nej Nej och Slutdatum som datum
+2000-01-01. På andra cykeln lägger du Ramnummer som text Blå och Antal
+som tomt tal. Skapa ett samband från Alex till den röda cykeln med två
+egenskaper Avtal: en tom utan datatyp och en med ja/nej Nej. Spara allt.
+Ändra sedan Röd till Grön i utkastet. På sambandet flyttar du Nej först
+och väljer Text för den tomma egenskapen. Lägg i utkastet utan att spara.
+
+**Automatiskt motsvarande test:**
+[property-reading.spec.ts](../../tests/integration/property-reading.spec.ts),
+SÖK-17. Förberedelsen använder publika HTTP-anrop mot riktig SQLite.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/property-reading.spec.ts",
+    "caseId": "SÖK-17"
+  },
+  "reference": "320 × 800; syntetiskt hushåll med sparade och föreslagna fria egenskaper, lika etiketter, tomma värden, noll och nej.",
+  "outcomes": [
+    "Tabellen visar Namn, Typ, Status och radåtgärder; detaljerna bevarar ordning och skiljer sparade värden från förslag.",
+    "Sökning på objektets egna etiketter och värden hittar rätt objekt i tabell och karta utan att ändra hushållets innehåll.",
+    "Sambandsdetaljer visar alla egenskaper även när etiketterna är lika eller värden är tomma."
+  ],
+  "evidence": [{
+    "kind": "technical",
+    "runner": "vitest",
+    "suite": "server",
+    "spec": "tests/unit/server/assistant-advanced.test.ts",
+    "title": "map and draft reads expose property identities and search own labels, values and types",
+    "purpose": "MCP-läsning mot riktig server och SQLite bevarar identiteter och ordning samt hittar objekt via etikett, värde och typ."
+  }]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna Tabell på en smal skärm. Läs kolumnerna och sök på
+   **ramnummer grön**. Öppna cykelns namn med tangentbordet.
+2. Läs båda Ramnummer och alla efterföljande egenskaper i ordning.
+   Läs det sparade röda och det föreslagna gröna värdet. Fäll ihop raden
+   och kontrollera att fokus stannar på objektets namn.
+3. Sök på **ramnummer blå**, öppna cykeln och läs det tomma talvärdet.
+   Rensa sökningen. Öppna **Samband för Alex** och läs båda Avtal.
+   Öppna **Sparade egenskaper i sin ordning** för den tidigare ordningen.
+4. Stäng sambanden med Escape. Välj Karta och sök på **ramnummer grön**.
+   Kontrollera att den avsedda cykeln visas som sökträff.
+
+**Förväntat resultat:**
+
+- Alla uppgifter finns i fullständiga detaljer och bryts inom skärmen.
+  Tomt utan datatyp, tomt tal, 0 och Nej är skilda tillstånd.
+- Sparade värden och förslag är tydliga. Slutdatum ändrar inte status.
+- Läsning och sökning skapar eller sparar inga ändringar.
+
+### SÖK-18: granska lika namn före uttryckligt ändpunktsval
+
+**Syfte:** Välja rätt objektidentitet efter att ha granskat kandidaterna.
+
+**Användare och förutsättningar:** Samma medlem och provhushåll som i
+SÖK-17. Behåll sparade uppgifter och utkastet. Använd en smal skärm.
+
+**Automatiskt motsvarande test:**
+[property-reading.spec.ts](../../tests/integration/property-reading.spec.ts),
+SÖK-18. HTTP-läsningen kontrollerar det valda objektets identitet.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/property-reading.spec.ts",
+    "caseId": "SÖK-18"
+  },
+  "reference": "320 × 800; två Cykel med olika Ramnummer; tangentbord och uttryckligt val efter granskning.",
+  "outcomes": [
+    "Samma objektsökning används för ändpunkter och visar kandidatens fullständiga uppgifter före valet.",
+    "Granskning väljer inte en ändpunkt; den uttryckligen valda blå cykeln används i förslaget och fokus återgår till ändpunktskontrollen."
+  ],
+  "evidence": [{
+    "kind": "technical",
+    "runner": "vitest",
+    "suite": "browser",
+    "spec": "tests/browser/property-reading.test.tsx",
+    "title": "endpoint inspection searches property labels and values without choosing a same-name candidate at 320px",
+    "purpose": "Chromium kontrollerar formulärets tangentbord, fokus och omflöde med kontrollerat underlag; beständighet provas separat mot riktig server."
+  }]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna Samband för Alex och välj Nytt samband. Välj en sambandstyp.
+2. Sök på **ramnummer** vid Till objekt. Fokusera **Granska Cykel**
+   för den blå cykeln och tryck Enter. Läs Ramnummer Blå.
+3. Kontrollera att Till objekt fortfarande saknar ett val. Fokusera
+   kandidatens **Välj Cykel** och tryck Enter.
+4. Kontrollera fokus och valet i Till objekt. Lägg sambandet i utkastet
+   och stäng samband. Granska det nya sambandet före gemensamt sparande.
+
+**Förväntat resultat:**
+
+- Lika namn visas som olika kandidater med skilda identiteter.
+- Alla kandidatens uppgifter kan läsas utan att lämna formuläret.
+- Endast det uttryckliga valet ändrar ändpunkten. Fokus återgår till
+  Till objekt och förslaget använder den blå cykeln.
+
+Faktisk uppläsning, fysiskt mobilt tangentbord, förstoring och omflöde
+med hjälpmedel behåller sina separata mänskliga prov i LISTA-09 och SÖK-16.
+
+LÄS-02 behåller sin identitet med verkliga ändpunkter, inklusive
+självsamband. De tidigare mållösa säkerhetslägena är avvecklade och har
+godkänd täckningsförlust. Full läsning, vanlig osäkerhetsinformation,
+uttrycklig status och föreslagen borttagning finns kvar i samma fall.

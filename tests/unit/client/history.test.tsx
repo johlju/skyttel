@@ -21,10 +21,7 @@ async function object(id: string, value: Partial<ObjectValue> | null) {
         version: state.draft.version,
         id,
         baseRevision: before?.revision ?? null,
-        value:
-          value === null
-            ? null
-            : { typeId: state.types[0].id, name: id, description: '', ...before, ...value },
+        value: value === null ? null : { typeId: state.types[0].id, name: id, ...before, ...value },
       })
     ).status,
   ).toBe(200);
@@ -79,7 +76,6 @@ async function prepareRemovedHistory() {
   const defineObject = {
     name: 'Växt',
     description: 'Odling',
-    fields: [{ id: 'color', name: 'Färg', description: '', kind: 'text' }],
   };
   expect(
     (
@@ -109,9 +105,10 @@ async function prepareRemovedHistory() {
   await object('flower', {
     typeId: 'plant',
     name: 'Rosen',
-    customValues: { color: 'röd' },
+
     lifecycle: 'ended',
-    financialFacts: { endDate: { knowledge: 'known', value: '2024-01-01' } },
+
+    properties: [{ id: 'color', label: 'Färg', kind: 'text', value: 'röd' }],
   });
   await object('person', { name: 'Lo', identity: 'unspecified' });
   expect(
@@ -120,7 +117,7 @@ async function prepareRemovedHistory() {
         version: (await read()).draft.version,
         id: 'support',
         baseRevision: null,
-        value: { typeId: 'supports', sourceId: 'person', targetId: 'flower', knowledge: 'known' },
+        value: { typeId: 'supports', sourceId: 'person', targetId: 'flower' },
       })
     ).status,
   ).toBe(200);
@@ -136,13 +133,12 @@ async function prepareRemovedHistory() {
           ...before.relationships[0],
           typeId: state.relationshipTypes[0].id,
           lifecycle: 'ended',
-          endDate: { knowledge: 'unknown' },
         },
       })
     ).status,
   ).toBe(200);
   await save('changed-direction');
-  await object('flower', { typeId: state.types[0].id, customValues: {}, name: 'Rosen II' });
+  await object('flower', { typeId: state.types[0].id, name: 'Rosen II' });
   await save('changed-object-type');
   const renamed = await read();
   expect(
@@ -212,7 +208,7 @@ test('saved history shows definitions, historical direction labels and removed c
   const retyped = await group('changed-object-type');
   await userEvent.click(retyped.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(retyped.getByText(/Objekttyp: Växt/)).toBeDefined();
-  expect(retyped.getByText(/Färg/).textContent).toContain('röd');
+  expect(retyped.getAllByText('Färg: röd (Text)')).toHaveLength(2);
   const removed = await group('removed');
   await userEvent.click(removed.getByText('Visa ändringarna', { selector: 'summary' }));
   expect(removed.getAllByText('Borttagen definition')).toHaveLength(2);

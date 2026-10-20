@@ -4,7 +4,10 @@ import { openSettings } from './client.js';
 
 export async function downloadHouseholdExport(page: Page, path: string) {
   await openSettings(page);
-  await page.getByRole('link', { name: 'Fullständig export', exact: true }).click();
+  await page
+    .locator('.settings-cards')
+    .getByRole('link', { name: /^Fullständig export/ })
+    .click();
   const section = page.getByRole('region', { name: 'Fullständig export' });
   const preparing = page.waitForResponse(
     (response) => response.url() === `${path}/exports` && response.request().method() === 'POST',

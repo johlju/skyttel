@@ -1,4 +1,4 @@
-# Manuella testfall för borttagning av typer och fält
+# Manuella testfall för borttagning av typer
 
 Prova granskad katalogborttagning, användningsspärrar utan privat
 informationsläckage och läsning av historiska definitioner.
@@ -15,7 +15,7 @@ Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning
 Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
 fallen anger formulär, samtal, profil eller administration.
 
-Öppna **Inställningar → Typer och egna fält** för typformulären.
+Öppna **Inställningar → Typer** för typformulären.
 Välj **Tillbaka till kartan** före granskning. Öppna **Skriv till Skyttel →
 Visa utkastet** och välj radens **Visa förslaget: [namn]** för fullständiga
 tidigare och föreslagna definitioner. Stäng läsningen med krysset.
@@ -30,34 +30,31 @@ och stäng textvyn före fortsatt arbete i Inställningar eller Tabell.
 
 ## Borttagning och återställning
 
-### KATALOG-01: granska, kasta och spara oanvända definitioner
+### KATALOG-01: Granska, kasta och spara typbetydelse och oanvända typer
 
-**Syfte:** Egna och förifyllda definitioner kan tas bort uttryckligen;
-oanvända definitioner städas inte bort automatiskt.
+**Syfte:** Typbetydelse och båda typborttagningarna granskas som fullständiga
+privata förslag; kastning behåller katalogen oförändrad.
 
-**Användare:** Alex.
+**Användare:** Alex, och Robin när två profiler anges.
 
-**Förutsättningar:** Lägg till textfältet Serienummer på Person. Skapa
-objekttypen Solcellsanläggning utan fält. Spara definitionerna utan objekt.
-Behåll den förifyllda sambandstypen Använder oanvänd.
-
-**Integrationstest:**
-[definition-removal.spec.ts](../../tests/integration/definition-removal.spec.ts),
-testfallet “KATALOG-01: unused fields and custom and prefilled types are
-reviewed, discarded or saved without automatic cleanup”.
+**Förutsättningar:** Spara Person med typbeskrivningen Gemensam betydelse och
+den egna oanvända typen Solcellsanläggning med beskrivningen En egen oanvänd
+typ. Använder är oanvänd.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/definition-removal.spec.ts",
     "caseId": "KATALOG-01"
   },
-  "reference": "1280 × 720; Chromium och separata testinloggningar; verklig HTTP och SQLite.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Fält och båda typerna granskas i fullständiga privata förslag; kastning behåller definitionerna.",
-    "Separat sparande tar bara bort valda definitioner. Katalog och läsbara historiska betydelser består efter omstart."
+    "Typbetydelse och båda typborttagningarna granskas som fullständiga privata förslag; kastning behåller katalogen oförändrad.",
+    "Separat samlat sparande ändrar bara det valda underlaget och bevarar läsbar historik efter omstart."
   ]
 }
 ```
@@ -66,57 +63,57 @@ reviewed, discarded or saved without automatic cleanup”.
 
 **Steg:**
 
-1. Öppna **Objekttyper och egna fält**, ändra Person och välj **Ta bort
-   fält: Serienummer**. Lägg typförslaget i utkastet.
-2. Ändra Solcellsanläggning och välj **Ta bort objekttypen**.
-3. Öppna **Sambandstyper och riktning**, ändra Använder och välj **Ta bort
-   sambandstypen**. Återgå till kartan och granska alla tidigare
-   definitioner och förslag genom utkastets fullständiga läsning.
-4. Välj **Kasta hela utkastet**, läs **Ta bort hela utkastet?** och
-   bekräfta **Ta bort hela utkastet**. Stäng textvyn och återvänd till
-   Inställningar. Kontrollera att definitionerna finns kvar.
-5. Upprepa borttagningarna och välj **Spara hela utkastet**. Starta om
-   appservern med samma databas, ladda om och läs katalogerna. Välj
-   **Rapporter** i kartans verktyg för historiken.
-   Välj **Visa ändringarna** vid borttagningen för att läsa definitionerna.
+1. Öppna Inställningar → Typer → Objekttyper och ändra Person. Ange Rättad
+   gemensam betydelse och lägg typförslaget i utkastet.
+2. Ändra Solcellsanläggning och välj Ta bort objekttypen. Öppna Sambandstyper
+   och riktning, ändra Använder och välj Ta bort sambandstypen. Återgå till
+   kartan.
+3. Granska Person-förslagets tidigare och nya beskrivning samt båda
+   borttagningsförslagens tidigare definitioner. Välj Kasta hela utkastet och
+   bekräfta Ta bort hela utkastet. Kontrollera att katalogens tidigare
+   definitioner består.
+4. Upprepa samma ändring och typborttagningar. Öppna Objekttyper och
+   Sambandstyper och riktning om respektive lista är stängd.
+   Spara hela utkastet. Starta om,
+   ladda om och läs Rättad gemensam betydelse i Person-definitionen. De två
+   valda typerna ska saknas, övriga finnas kvar.
+5. Öppna Rapporter och Visa ändringarna för det senaste sparandet. Läs de båda
+   borttagna definitionerna och Person-beskrivningens före och efter.
 
 **Förväntat resultat:**
 
-- Granskningen visar fältets tidigare betydelse och båda typborttagningarna.
-  Inget ändras gemensamt innan sparandet. Kastning behåller definitionerna.
-- Sparandet tar bort just det valda fältet och de två valda typerna.
-  Andra oanvända typer finns kvar och historiken visar borttagningarna.
-- Resultatet finns kvar efter omstart.
+- Typbetydelse och båda typborttagningarna granskas som fullständiga privata
+  förslag; kastning behåller katalogen oförändrad.
+- Separat samlat sparande ändrar bara det valda underlaget och bevarar läsbar
+  historik efter omstart.
 
-### KATALOG-02: hindra borttagning vid privat och upphörd användning
+### KATALOG-02: Privat och upphörd användning spärrar typborttagning
 
-**Syfte:** Användning spärrar borttagning utan att andras privata uppgifter
-avslöjas eller något användande innehåll tas bort automatiskt.
+**Syfte:** Privata utkast och sparat upphört innehåll spärrar borttagning av
+använda objekt- och sambandstyper.
 
-**Användare:** Alex och Robin.
+**Användare:** Alex, och Robin när två profiler anges.
 
-**Förutsättningar:** Alex lägger textfältet Serienummer på Person och sparar
-objektet Garaget med en annan typ. Robin lägger personen Privat provnamn,
-med Serienummer PRIVAT-PROVVÄRDE, i sitt privata utkast. Robin föreslår
-också sambandet Använder från personen till garaget. Båda är Upphört.
-
-**Integrationstest:**
-[definition-removal.spec.ts](../../tests/integration/definition-removal.spec.ts),
-testfallet “KATALOG-02: private drafts and ended content block removal
-with a useful explanation and no private disclosure”.
+**Förutsättningar:** Alex sparar Garaget med en annan objekttyp än Person.
+Robin lägger Privat provnamn av typen Person med den fria textegenskapen
+Serienummer: PRIVAT-PROVVÄRDE i sitt utkast. Robin föreslår också ett
+Använder-samband till Garaget. Objekt och samband har uttrycklig status
+Upphört.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/definition-removal.spec.ts",
     "caseId": "KATALOG-02"
   },
-  "reference": "1280 × 720; Chromium och separata testinloggningar; verklig HTTP och SQLite.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Privat och upphört sparat innehåll hindrar borttagning av typ, fält och sambandstyp.",
-    "Felbeskeden avslöjar inga privata namn eller värden. Bådas arbete bevaras; Robin kan läsa hela sitt utkast och spara det separat."
+    "Privata utkast och sparat upphört innehåll spärrar borttagning av använda objekt- och sambandstyper.",
+    "Felbesked ger handlingsväg utan att röja privata namn, egenskaper eller identiteter; avvisningen ändrar inget innehåll."
   ]
 }
 ```
@@ -125,26 +122,23 @@ with a useful explanation and no private disclosure”.
 
 **Steg:**
 
-1. Starta om appservern med samma databas. Som Alex, försök ta bort Person.
-   Läs felbeskedet.
-2. Försök ta bort fältet Serienummer och lägga typförslaget i utkastet.
-   Läs felbeskedet och stäng formuläret utan att skicka.
-3. Försök ta bort sambandstypen Använder. Kontrollera beskedet om samband
-   och deras ändpunkter. Kontrollera att Robins privata uppgifter saknas
-   i Alex karta och i felbeskeden.
-4. Som Robin, läs hela objekt- och sambandsförslaget i utkastet och spara
-   hela utkastet. Välj Tabellens **Filter → Ta med upphörda** och läs de
-   sparade upphörda uppgifterna. Som Alex,
-   ladda om och upprepa alla
-   tre borttagningsförsöken för det nu sparade upphörda innehållet.
+1. Starta om med samma databas. Robin läser sitt hela objekt- och
+   sambandsförslag. Alex öppnar Typer och försöker ta bort Person. Läs
+   felbeskedet.
+2. Alex försöker ta bort sambandstypen Använder. Läs att sambanden och deras
+   ändpunkter behöver hanteras. Kontrollera att Alex inte ser Robins privata
+   namn eller egenskapsvärde i kartan eller beskeden.
+3. Robin läser åter sina hela förslag och sparar hela utkastet separat.
+   Markera Ta med upphörda i tabellens filter och läs objektet och sambandet.
+4. Alex laddar om och upprepar de två typborttagningsförsöken mot det nu
+   sparade upphörda innehållet.
 
 **Förväntat resultat:**
 
-- Borttagningarna stoppas både före och efter Robins sparande.
-- Beskeden anger att objekt eller samband behöver tas bort eller byta typ,
-  att ändpunkterna kan finnas kvar och att fältvärden behöver hanteras.
-- Felbeskeden avslöjar varken Privat provnamn eller PRIVAT-PROVVÄRDE.
-  Kartan och bådas utkast förblir oförändrade av de nekade försöken.
+- Privata utkast och sparat upphört innehåll spärrar borttagning av använda
+  objekt- och sambandstyper.
+- Felbesked ger handlingsväg utan att röja privata namn, egenskaper eller
+  identiteter; avvisningen ändrar inget innehåll.
 
 ### KATALOG-03: läs borttagna definitioner utan att ändra eget arbete
 
@@ -185,8 +179,8 @@ changing independent work”.
 1. Välj **Rapporter** och hitta borttagningen av Lo och sambandet.
 2. Välj **Visa ändringarna** och läs tidigare namn och typbetydelser.
 3. Återgå till arbetet. Läs Garaget och dess typ genom Tabell; Lo och
-   sambandet saknas fortfarande. Öppna **Inställningar → Typer och egna
-   fält** och kontrollera att Person och Använder saknas i respektive katalog
+   sambandet saknas fortfarande. Öppna **Inställningar → Typer** och
+   kontrollera att Person och Använder saknas i respektive katalog
    medan de övriga typerna finns kvar. Återgå till kartan och läs hela det
    oberoende förslaget i utkastet; inga återställningsförslag tillkommer.
 4. Starta om med samma databas och ladda om. Upprepa läsningen av aktuell
@@ -200,3 +194,11 @@ changing independent work”.
   är oförändrat och det oberoende förslaget finns kvar i utkastet.
 - Omstart bevarar dessa värden och den ursprungliga historikgruppen.
   Historikläsningen skapar inga återställningsförslag.
+
+## Avvecklat beteende
+
+KATALOG-01–03 behåller sina identiteter. Borttagning av typstyrda fält
+är avvecklad med fältmodellen; dess separata användningsspärr har godkänd
+täckningsförlust. Typborttagning, betydelserättelse, privat användning och
+historikläsning fortsätter i samma fall. Fria egenskaper hör till objekten
+och sambanden och tas inte bort genom typkatalogen.

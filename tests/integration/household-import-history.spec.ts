@@ -13,6 +13,7 @@ import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { readDraftProposal } from '../support/domain-work.js';
 import { downloadHouseholdExport } from '../support/household-export-download.js';
 import { createInstallation } from '../support/installation.js';
+import { propertyValue, setProperty } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 test('IMPORT-06: replacement preserves image history and private work, rejects old save attempts and permits ordinary corrections after restart', async ({
@@ -46,7 +47,7 @@ test('IMPORT-06: replacement preserves image history and private work, rejects o
             version: state.draft.version,
             id,
             baseRevision: null,
-            value: { typeId: state.types[0].id, name: 'Lo Exempel', description: '' },
+            value: { typeId: state.types[0].id, name: 'Lo Exempel' },
           })
         ).status(),
       ).toBe(200);
@@ -61,8 +62,15 @@ test('IMPORT-06: replacement preserves image history and private work, rejects o
           value: {
             typeId: state.relationshipTypes[0].id,
             sourceId: 'second',
-            targetId: null,
-            knowledge: 'unknown',
+            targetId: 'second',
+            properties: [
+              {
+                id: 'certainty',
+                label: 'Uppgiftens säkerhet',
+                kind: 'text' as const,
+                value: 'Okänt',
+              },
+            ],
           },
         })
       ).status(),
@@ -125,7 +133,7 @@ test('IMPORT-06: replacement preserves image history and private work, rejects o
           version: archivedState.draft.version,
           id: 'not-in-archive',
           baseRevision: null,
-          value: { typeId: archivedState.types[0].id, name: 'Senare objekt', description: '' },
+          value: { typeId: archivedState.types[0].id, name: 'Senare objekt' },
         })
       ).status(),
     ).toBe(200);
@@ -258,7 +266,7 @@ test('IMPORT-06: replacement preserves image history and private work, rejects o
           contentVersion: archivedState.contentVersion,
           id: 'stale-proposal',
           baseRevision: null,
-          value: { typeId: archivedState.types[0].id, name: 'Gammalt underlag', description: '' },
+          value: { typeId: archivedState.types[0].id, name: 'Gammalt underlag' },
         })
       ).status(),
     ).toBe(409);
@@ -303,15 +311,28 @@ test('IMPORT-06: replacement preserves image history and private work, rejects o
     await expect(
       importer.getByRole('dialog', { name: 'Redigera Lo Exempel', exact: true }),
     ).toBeVisible();
-    await importer.getByLabel('Beskrivning', { exact: true }).fill('Ny vanlig rättelse');
+    await setProperty(importer, 'Beskrivning', 'Ny vanlig rättelse');
     const staging = importer.waitForResponse(`${path}/object-form`);
     await importer.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
-    expect((await staging).status()).toBe(200);
+    const stagedResponse = await staging;
+    expect(stagedResponse.status()).toBe(200);
+    const submittedProperties = stagedResponse.request().postDataJSON().value.properties;
+    expect(submittedProperties).toEqual([
+      {
+        id: expect.stringMatching(/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i),
+        label: 'Beskrivning',
+        kind: 'text',
+        value: 'Ny vanlig rättelse',
+      },
+    ]);
     const staged = await read();
     const nativeCorrection = staged.draft.changes.find((change) => change.id === current.id);
     expect(nativeCorrection?.before).toEqual(current);
     const { id: _id, householdId: _householdId, revision: _revision, ...currentValue } = current;
-    expect(nativeCorrection?.after).toEqual({ ...currentValue, description: 'Ny vanlig rättelse' });
+    expect(nativeCorrection?.after).toEqual({
+      ...currentValue,
+      properties: submittedProperties,
+    });
     const nativeReview = await openDraftReview(importer);
     await expect(nativeReview).toContainText('Ny vanlig rättelse');
     const proposal = await readDraftProposal(importer, 'Lo Exempel');
@@ -344,7 +365,10 @@ test('IMPORT-06: replacement preserves image history and private work, rejects o
           contentVersion: staged.contentVersion,
           id: current.id,
           baseRevision: current.revision,
-          value: { ...current, description: 'Ny vanlig rättelse' },
+          value: {
+            ...current,
+            properties: submittedProperties,
+          },
         })
       ).status(),
     ).toBe(200);
@@ -359,12 +383,17 @@ test('IMPORT-06: replacement preserves image history and private work, rejects o
     expect(state.objects.find((object) => object.id === 'second')?.profileImageId).toBe(
       originalImage,
     );
+    expect(state.objects.find((object) => object.id === 'second')?.properties).toEqual(
+      submittedProperties,
+    );
     expect(state.relationships).toEqual([
       expect.objectContaining({
         id: 'unknown-endpoint',
         sourceId: 'second',
-        targetId: null,
-        knowledge: 'unknown',
+        targetId: 'second',
+        properties: [
+          { id: 'certainty', label: 'Uppgiftens säkerhet', kind: 'text' as const, value: 'Okänt' },
+        ],
       }),
     ]);
     expect(await imageBytes(originalImage)).toEqual(originalBytes);
@@ -381,9 +410,12 @@ test('IMPORT-06: replacement preserves image history and private work, rejects o
       historicalSave,
     );
     expect(history).toContainEqual(corrected);
-    expect(state.objects.find((object) => object.id === 'second')?.description).toBe(
-      'Ny vanlig rättelse',
-    );
+    expect(
+      propertyValue(
+        state.objects.find((object) => object.id === 'second'),
+        'Beskrivning',
+      ),
+    ).toBe('Ny vanlig rättelse');
     await importer.reload();
     await openTable(importer);
     const restoredObject = importer.locator(

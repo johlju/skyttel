@@ -39,7 +39,7 @@ async function readRemovalProposal(
   await closeSupportDialog(page, name);
 }
 
-test('KATALOG-01: unused fields and custom and prefilled types are reviewed, discarded or saved without automatic cleanup', async ({
+test('KATALOG-01: unused custom and prefilled types and meaning corrections are reviewed, discarded or saved without automatic cleanup', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -48,140 +48,98 @@ test('KATALOG-01: unused fields and custom and prefilled types are reviewed, dis
     const { household } = await (await createHousehold(page.request, installation.origin)).json();
     const path = `${installation.origin}/api/households/${household.id}/map`;
     const read = async (): Promise<MapState> => (await page.request.get(path)).json();
-    const post = (route: string, data: unknown) =>
-      page.request.post(`${path}/${route}`, { headers: { origin: installation.origin }, data });
-    const initial = await read();
-    const type = initial.types[0];
-    const edgeType = initial.relationshipTypes[0];
-    const field = { id: 'serial', name: 'Serienummer', description: '', kind: 'text' };
-    expect(
-      (
-        await post('object-type', {
-          version: 0,
-          id: type.id,
-          baseRevision: type.revision,
-          value: { ...type, fields: [field] },
-        })
-      ).ok(),
-    ).toBe(true);
-    expect(
-      (
-        await post('object-type', {
-          version: 1,
-          id: 'solar',
-          baseRevision: null,
-          value: { name: 'Solcellsanläggning', description: '', fields: [] },
-        })
-      ).ok(),
-    ).toBe(true);
-    expect((await post('save', { version: 2, operationId: 'definitions' })).ok()).toBe(true);
+    const post = async (route: string, data: object) => {
+      const current = await read();
+      const response = await page.request.post(`${path}/${route}`, {
+        headers: { origin: installation.origin },
+        data: { version: current.draft.version, contentVersion: current.contentVersion, ...data },
+      });
+      expect(response.status(), await response.text()).toBe(200);
+      return response.json();
+    };
+    const initial = await read(),
+      type = initial.types[0],
+      edgeType = initial.relationshipTypes[0];
+    await post('object-type', {
+      id: type.id,
+      baseRevision: type.revision,
+      value: { name: type.name, description: 'Gemensam betydelse' },
+    });
+    await post('object-type', {
+      id: 'solar',
+      baseRevision: null,
+      value: { name: 'Solcellsanläggning', description: 'En egen oanvänd typ' },
+    });
+    await post('save', { operationId: 'definitions' });
+    const baseline = await read();
     await page.goto(installation.origin);
-    await openTypeDefinitions(page);
-    await page.getByText('Objekttyper och egna fält', { exact: true }).click();
-    await page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }).click();
-    await page.getByRole('button', { name: 'Ta bort fält: Serienummer' }).click();
-    await page.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }).click();
-    await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
-    const fieldProposal = await readDraftProposal(page, type.name);
-    await expect(fieldProposal).toContainText('Serienummer');
-    await expect(fieldProposal).toContainText('Text');
-    await closeSupportDialog(page, type.name);
+    const stageMeaningAndRemovals = async () => {
+      await openTypeDefinitions(page);
+      const objects = page.getByText('Objekttyper', { exact: true });
+      if ((await objects.locator('..').getAttribute('open')) === null) await objects.click();
+      await page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }).click();
+      await page
+        .getByLabel('Typens beskrivning', { exact: true })
+        .fill('Rättad gemensam betydelse');
+      await page
+        .getByRole('button', { name: 'Lägg typförslaget i mitt utkast', exact: true })
+        .click();
+      await page
+        .getByRole('button', { name: 'Ändra typ: Solcellsanläggning', exact: true })
+        .click();
+      await page.getByRole('button', { name: 'Ta bort objekttypen', exact: true }).click();
+      const relationships = page.getByText('Sambandstyper och riktning', { exact: true });
+      if ((await relationships.locator('..').getAttribute('open')) === null)
+        await relationships.click();
+      await page
+        .getByRole('button', { name: `Ändra sambandstyp: ${edgeType.name}`, exact: true })
+        .click();
+      await page.getByRole('button', { name: 'Ta bort sambandstypen', exact: true }).click();
+      await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+    };
+    await stageMeaningAndRemovals();
     await expectConflictDraftValues(
       page,
       type.name,
-      {
-        Namn: type.name,
-        Beskrivning: type.description,
-        'Eget fält: Serienummer': 'Text · Egna fält',
-      },
+      { Namn: type.name, Beskrivning: 'Gemensam betydelse' },
       'Sparade värden',
     );
     await expectConflictDraftValues(page, type.name, {
       Namn: type.name,
-      Beskrivning: type.description,
-      'Eget fält: Serienummer': 'Ej uppgivet',
+      Beskrivning: 'Rättad gemensam betydelse',
     });
-    await closeTextView(page);
-    await openTypeDefinitions(page);
-    const draft = page.getByRole('region', { name: 'Utkastet', exact: true });
-    await page.getByRole('button', { name: 'Ändra typ: Solcellsanläggning' }).click();
-    await page.getByRole('button', { name: 'Ta bort objekttypen' }).click();
-    await page.getByText('Sambandstyper och riktning', { exact: true }).click();
-    await page
-      .getByRole('button', { name: `Ändra sambandstyp: ${edgeType.name}`, exact: true })
-      .click();
-    await page.getByRole('button', { name: 'Ta bort sambandstypen' }).click();
-    await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
-    await openDraftReview(page);
-    await expect(draft.getByRole('row').filter({ hasText: 'Solcellsanläggning' })).toContainText(
-      'Ta bort',
-    );
-    await expect(draft.getByRole('row').filter({ hasText: edgeType.name })).toContainText(
-      'Ta bort',
-    );
     await readRemovalProposal(page, 'Solcellsanläggning', {
       Namn: 'Solcellsanläggning',
-      Beskrivning: 'Ej uppgivet',
-      Avsnitt: 'Egna fält',
+      Beskrivning: 'En egen oanvänd typ',
     });
     await readRemovalProposal(page, edgeType.name, {
       Namn: edgeType.name,
       Beskrivning: edgeType.description || 'Ej uppgivet',
-      ...(edgeType.forwardLabel === undefined ? {} : { Framåtriktning: edgeType.forwardLabel }),
-      ...(edgeType.reverseLabel === undefined ? {} : { 'Omvänd riktning': edgeType.reverseLabel }),
     });
-    expect((await read()).types).toHaveLength(initial.types.length + 1);
-    await page.getByRole('button', { name: 'Kasta hela utkastet' }).click();
+    const draft = await openDraftReview(page);
+    await draft.getByRole('button', { name: 'Kasta hela utkastet', exact: true }).click();
     await page
       .getByRole('dialog', { name: 'Ta bort hela utkastet?', exact: true })
       .getByRole('button', { name: 'Ta bort hela utkastet', exact: true })
       .click();
-    await expect(draft).toContainText('Utkastet är tomt.');
+    expect((await read()).types).toEqual(baseline.types);
+    expect((await read()).relationshipTypes).toEqual(baseline.relationshipTypes);
     await closeTextView(page);
-    await openTypeDefinitions(page);
-    await expect(page.getByRole('button', { name: 'Ändra typ: Solcellsanläggning' })).toBeVisible();
-    await page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }).click();
-    await expect(page.getByLabel('Fältets namn', { exact: true })).toHaveValue('Serienummer');
-    await expect(page.getByLabel('Värdeslag', { exact: true })).toHaveValue('text');
-    await page
-      .getByRole('button', { name: 'Stäng typformuläret utan att skicka', exact: true })
-      .click();
-    await page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }).click();
-    await page.getByRole('button', { name: 'Ta bort fält: Serienummer' }).click();
-    await page.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }).click();
-    await page.getByRole('button', { name: 'Ändra typ: Solcellsanläggning' }).click();
-    await page.getByRole('button', { name: 'Ta bort objekttypen' }).click();
-    await page
-      .getByRole('button', { name: `Ändra sambandstyp: ${edgeType.name}`, exact: true })
-      .click();
-    await page.getByRole('button', { name: 'Ta bort sambandstypen' }).click();
-    await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+    await stageMeaningAndRemovals();
     await saveReviewedConflictDraft(page);
     await closeTextView(page);
     await installation.restart();
     await page.reload();
-    await openTable(page);
     const final = await read();
-    expect(final.types.find((item) => item.id === type.id)?.fields).toBeUndefined();
-    expect(final.types.find((item) => item.id === 'solar')).toBeUndefined();
-    expect(final.relationshipTypes.find((item) => item.id === edgeType.id)).toBeUndefined();
+    expect(final.types.find((item) => item.id === type.id)).toMatchObject({
+      name: type.name,
+      description: 'Rättad gemensam betydelse',
+    });
+    expect(final.types.some((item) => item.id === 'solar')).toBe(false);
+    expect(final.relationshipTypes.some((item) => item.id === edgeType.id)).toBe(false);
     expect(final.types).toHaveLength(initial.types.length);
     expect(final.relationshipTypes).toHaveLength(initial.relationshipTypes.length - 1);
-    await expectSavedConflictDefinition(page, true, type.name, type.description);
-    await openTypeDefinitions(page);
-    await expect(
-      page.getByRole('button', { name: 'Ändra typ: Solcellsanläggning', exact: true }),
-    ).toHaveCount(0);
-    await page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }).click();
-    await expect(page.getByLabel('Fältets namn', { exact: true })).toHaveCount(0);
-    await page
-      .getByRole('button', { name: 'Stäng typformuläret utan att skicka', exact: true })
-      .click();
-    await page.getByText('Sambandstyper och riktning', { exact: true }).click();
-    await expect(
-      page.getByRole('button', { name: `Ändra sambandstyp: ${edgeType.name}`, exact: true }),
-    ).toHaveCount(0);
-    await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
+    await expectSavedConflictDefinition(page, true, type.name, 'Rättad gemensam betydelse');
     await openTable(page);
     await page.getByRole('button', { name: 'Rapporter', exact: true }).click();
     const latest = page
@@ -189,13 +147,14 @@ test('KATALOG-01: unused fields and custom and prefilled types are reviewed, dis
       .getByRole('article')
       .first();
     await latest.getByText('Visa ändringarna', { exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Ändringshistorik' })).toContainText(
+    for (const text of [
       'Borttagen definition',
-    );
-    await expect(latest.getByText('Borttagen definition', { exact: true }).first()).toBeVisible();
-    await expect(latest).toContainText('Serienummer: Text');
-    await expect(latest).toContainText('Solcellsanläggning');
-    await expect(latest).toContainText(edgeType.name);
+      'Solcellsanläggning',
+      edgeType.name,
+      'Gemensam betydelse',
+      'Rättad gemensam betydelse',
+    ])
+      await expect(latest).toContainText(text);
   } finally {
     await installation.close();
   }
@@ -224,10 +183,7 @@ test('KATALOG-02: private drafts and ended content block removal with a useful e
           version: 0,
           id: type.id,
           baseRevision: type.revision,
-          value: {
-            ...type,
-            fields: [{ id: 'serial', name: 'Serienummer', description: '', kind: 'text' }],
-          },
+          value: { ...type },
         })
       ).ok(),
     ).toBe(true);
@@ -237,7 +193,7 @@ test('KATALOG-02: private drafts and ended content block removal with a useful e
           version: 1,
           id: 'target',
           baseRevision: null,
-          value: { typeId: initial.types[1].id, name: 'Garaget', description: '' },
+          value: { typeId: initial.types[1].id, name: 'Garaget' },
         })
       ).ok(),
     ).toBe(true);
@@ -270,9 +226,15 @@ test('KATALOG-02: private drafts and ended content block removal with a useful e
             value: {
               typeId: type.id,
               name: 'Privat provnamn',
-              description: '',
               lifecycle: 'ended',
-              customValues: { serial: 'PRIVAT-PROVVÄRDE' },
+              properties: [
+                {
+                  id: 'serial',
+                  label: 'Serienummer',
+                  kind: 'text' as const,
+                  value: 'PRIVAT-PROVVÄRDE',
+                },
+              ],
             },
           },
           other.request,
@@ -291,7 +253,6 @@ test('KATALOG-02: private drafts and ended content block removal with a useful e
               typeId: edgeType.id,
               sourceId: 'private',
               targetId: 'target',
-              knowledge: 'known',
               lifecycle: 'ended',
             },
           },
@@ -343,7 +304,14 @@ test('KATALOG-02: private drafts and ended content block removal with a useful e
               id: 'private',
               name: 'Privat provnamn',
               lifecycle: 'ended',
-              customValues: { serial: 'PRIVAT-PROVVÄRDE' },
+              properties: [
+                {
+                  id: 'serial',
+                  label: 'Serienummer',
+                  kind: 'text' as const,
+                  value: 'PRIVAT-PROVVÄRDE',
+                },
+              ],
             }),
           }),
         );
@@ -386,16 +354,13 @@ test('KATALOG-02: private drafts and ended content block removal with a useful e
       const otherBefore = await read(other.request);
       await page.goto(installation.origin);
       await openTypeDefinitions(page);
-      await page.getByText('Objekttyper och egna fält', { exact: true }).click();
+      await page.getByText('Objekttyper', { exact: true }).click();
       await page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }).click();
       await page.getByRole('button', { name: 'Ta bort objekttypen' }).click();
       await expect(page.getByRole('alert')).toContainText(
         'ta bort eller byt typ på användande objekt',
       );
       await expect(page.getByRole('alert')).not.toContainText('Privat provnamn');
-      await page.getByRole('button', { name: 'Ta bort fält: Serienummer' }).click();
-      await page.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }).click();
-      await expect(page.getByRole('alert')).toContainText('Ta bort fältvärdena');
       await expect(page.getByRole('alert')).not.toContainText('PRIVAT-PROVVÄRDE');
       await page.getByRole('button', { name: 'Stäng typformuläret utan att skicka' }).click();
       await page.getByText('Sambandstyper och riktning', { exact: true }).click();
@@ -438,7 +403,7 @@ test('KATALOG-03: history reads removed definitions and content without changing
             version: (await read()).draft.version,
             id,
             baseRevision: null,
-            value: { typeId, name, description: '' },
+            value: { typeId, name },
           })
         ).ok(),
       ).toBe(true);
@@ -456,12 +421,7 @@ test('KATALOG-03: history reads removed definitions and content without changing
           version: 2,
           id: 'edge',
           baseRevision: null,
-          value: {
-            typeId: edgeType.id,
-            sourceId: 'source',
-            targetId: 'target',
-            knowledge: 'known',
-          },
+          value: { typeId: edgeType.id, sourceId: 'source', targetId: 'target' },
         })
       ).ok(),
     ).toBe(true);
@@ -528,7 +488,7 @@ test('KATALOG-03: history reads removed definitions and content without changing
       ).toHaveCount(0);
       await expectNoSavedConflictRelationships(page, 'Garaget');
       await openTypeDefinitions(page);
-      await page.getByText('Objekttyper och egna fält', { exact: true }).click();
+      await page.getByText('Objekttyper', { exact: true }).click();
       await expect(
         page.getByRole('button', { name: `Ändra typ: ${type.name}`, exact: true }),
       ).toHaveCount(0);
@@ -561,7 +521,7 @@ test('KATALOG-03: history reads removed definitions and content without changing
         Beskrivning: 'Ej uppgivet',
         Typ: initial.types[1].name,
         Gäller: 'Aktuellt',
-        Status: 'Följ slutdatum',
+        Status: 'Gäller fortfarande',
         Ikon: 'Typens ikon',
         Profilbild: 'Ej uppgivet',
         Identitet: 'Identifierat objekt',

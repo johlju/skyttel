@@ -130,21 +130,32 @@ for (const provider of ['google', 'microsoft'] as const) {
           'musik@example.test',
         ].sort(),
       );
-      expect(map.relationships).toHaveLength(23);
+      expect(map.relationships).toHaveLength(21);
       const bicycle = map.objects.find(
         (object: { name: string }) => object.name === 'Alex blå cykel',
       );
       expect(bicycle).toMatchObject({
         iconId: 'bike',
         lifecycle: 'active',
-        customValues: {
-          'demo-frame': 'Blå',
-          'demo-wheels': 0,
-          'demo-check': '2026-04-03',
-          'demo-electric': false,
-          'demo-label': 'Syntetisk ram: DEMO-CYKEL',
-        },
-        financialFacts: { price: { knowledge: 'known', value: '4995' } },
+        properties: [
+          expect.objectContaining({
+            label: 'Beskrivning',
+            kind: 'text',
+            value: 'En påhittad cykel som förvaras i garaget.',
+          }),
+          expect.objectContaining({ label: 'Ramfärg', kind: 'text', value: 'Blå' }),
+          expect.objectContaining({ label: 'Extrahjul', kind: 'number', value: 0 }),
+          expect.objectContaining({ label: 'Kontrolldatum', kind: 'date', value: '2026-04-03' }),
+          expect.objectContaining({ label: 'Elcykel', kind: 'boolean', value: false }),
+          expect.objectContaining({
+            label: 'Dold rammärkning',
+            kind: 'text',
+            value: 'Syntetisk ram: DEMO-CYKEL',
+          }),
+          expect.objectContaining({ label: 'Pris', kind: 'number', value: 4995 }),
+          expect.objectContaining({ label: 'Valuta', kind: 'text', value: 'SEK' }),
+          expect.objectContaining({ label: 'Startdatum', kind: 'date', value: '2026-04-03' }),
+        ],
       });
       expect(map.draft.relationships).toHaveLength(1);
       expect(map.draft.relationships[0].before.id).toBe(map.draft.relationships[0].id);
@@ -162,7 +173,9 @@ for (const provider of ['google', 'microsoft'] as const) {
       ]);
       const savedLo = map.objects.find((object: { name: string }) => object.name === 'Lo Berg');
       expect(savedLo.revision).toBeGreaterThan(map.draft.changes[0].before.revision);
-      expect(savedLo.description).toBe('Spelar piano i musikföreningen.');
+      expect(savedLo.properties).toMatchObject([
+        { label: 'Beskrivning', value: 'Spelar piano i musikföreningen.' },
+      ]);
       expect(map.draft.relationships[0].objectNames).toEqual(
         expect.objectContaining({
           [map.draft.relationships[0].before.targetId]: 'familjen@example.test',
@@ -200,6 +213,21 @@ for (const provider of ['google', 'microsoft'] as const) {
       await expect(details).toContainText('Elcykel');
       await expect(details).toContainText('Nej');
       await expect(details).toContainText('4995');
+      await expect(details).toContainText('SEK');
+      await table
+        .getByRole('button', { name: 'Samband för Lindens musikförening', exact: true })
+        .click();
+      const standalone = page.getByRole('dialog', {
+        name: 'Samband för Lindens musikförening',
+        exact: true,
+      });
+      await expect(standalone).toContainText('Inga samband');
+      await page.keyboard.press('Escape');
+      await table.getByRole('button', { name: 'Samband för Molnmusik', exact: true }).click();
+      const service = page.getByRole('dialog', { name: 'Samband för Molnmusik', exact: true });
+      await expect(service).toContainText('Osäkert uppgivet');
+      await expect(service).toContainText('Ja');
+      await page.keyboard.press('Escape');
       await table.getByRole('button', { name: 'Samband för Alex Exempel', exact: true }).click();
       let dialog = page.getByRole('dialog', { name: 'Samband för Alex Exempel', exact: true });
       await dialog.getByRole('button', { name: 'Alex blå cykel', exact: true }).click();

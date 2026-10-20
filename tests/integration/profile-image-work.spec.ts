@@ -3,6 +3,7 @@ import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openNewObject, signIn } from '../support/client.js';
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { openProperties, propertyRow, setProperty } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 for (const [width, height, lightId, darkId] of [
@@ -42,8 +43,15 @@ for (const [width, height, lightId, darkId] of [
               value: {
                 typeId: state.types[0].id,
                 name,
-                description: `Skickad text om ${name}`,
                 iconId: 'bike',
+                properties: [
+                  {
+                    id: 'description',
+                    label: 'Beskrivning',
+                    kind: 'text' as const,
+                    value: `Skickad text om ${name}`,
+                  },
+                ],
               },
             },
           });
@@ -57,7 +65,7 @@ for (const [width, height, lightId, darkId] of [
         const stage = () =>
           form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
         await edit('Garaget');
-        await form.getByLabel('Beskrivning', { exact: true }).fill('Separat förslag om Garaget');
+        await setProperty(form, 'Beskrivning', 'Separat förslag om Garaget');
         await stage();
         const images: string[] = [];
         for (const background of ['#0088ff', '#33aa44']) {
@@ -80,7 +88,7 @@ for (const [width, height, lightId, darkId] of [
         expect(images[1]).not.toBe(images[0]);
         const before = await read();
         await edit('Cykeln');
-        await form.getByLabel('Beskrivning', { exact: true }).fill('Oskickad bildtext');
+        await setProperty(form, 'Beskrivning', 'Oskickad bildtext');
         await form.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
         const file = form.getByLabel('Profilbild', { exact: true });
         await file.setInputFiles({
@@ -116,10 +124,10 @@ for (const [width, height, lightId, darkId] of [
         releaseResponse();
         await expect(form.getByRole('alert')).toContainText('Profilbilden');
         await expect(file).toBeEnabled();
-        await form.getByRole('button', { name: 'Grunduppgifter', exact: true }).click();
-        await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-          'Oskickad bildtext',
-        );
+        await openProperties(form);
+        await expect(
+          propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true }),
+        ).toHaveValue('Oskickad bildtext');
         expect(await read()).toEqual(before);
         await form.getByRole('button', { name: 'Avbryt', exact: true }).click();
         const loss = page.getByRole('dialog', { name: 'Lämna ändrade uppgifter?', exact: true });
@@ -155,18 +163,19 @@ for (const [width, height, lightId, darkId] of [
         expect(appearance.contrast, JSON.stringify(appearance)).toBeGreaterThanOrEqual(4.5);
         await page.keyboard.press('Escape');
         await expect(form.getByRole('button', { name: 'Avbryt', exact: true })).toBeFocused();
-        await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-          'Oskickad bildtext',
-        );
+        await expect(
+          propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true }),
+        ).toHaveValue('Oskickad bildtext');
         await form.getByRole('button', { name: 'Avbryt', exact: true }).click();
         await loss
           .getByRole('button', { name: 'Kasta ändringarna och fortsätt', exact: true })
           .click();
         await expect(form).not.toBeVisible();
         await edit('Cykeln');
-        await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-          'Skickad text om Cykeln',
-        );
+        await openProperties(form);
+        await expect(
+          propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true }),
+        ).toHaveValue('Skickad text om Cykeln');
         await form.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
         await expect(form.getByAltText('Profilbild för Cykeln')).toHaveAttribute(
           'src',
@@ -174,9 +183,10 @@ for (const [width, height, lightId, darkId] of [
         );
         await form.getByRole('button', { name: 'Avbryt', exact: true }).click();
         await edit('Garaget');
-        await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-          'Separat förslag om Garaget',
-        );
+        await openProperties(form);
+        await expect(
+          propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true }),
+        ).toHaveValue('Separat förslag om Garaget');
         expect(await read()).toEqual(before);
         expect(before.objects).toEqual([]);
         expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([]);
@@ -210,7 +220,7 @@ for (const [width, caseId] of [
       await openNewObject(page);
       const form = page.locator('dialog.object-dialog-C');
       await form.getByLabel('Namn', { exact: true }).fill('Bildarbete');
-      await form.getByLabel('Beskrivning', { exact: true }).fill('Behåll bildens text');
+      await setProperty(form, 'Beskrivning', 'Behåll bildens text');
       await form.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
       const file = form.getByLabel('Profilbild', { exact: true });
       await file.setInputFiles([]);
@@ -263,7 +273,7 @@ for (const [width, caseId] of [
       await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
       await openNewObject(page);
       await form.getByLabel('Namn', { exact: true }).fill('Bildarbete');
-      await form.getByLabel('Beskrivning', { exact: true }).fill('Oskickat efter bildfelet');
+      await setProperty(form, 'Beskrivning', 'Oskickat efter bildfelet');
       await form.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
       await file.setInputFiles({
         name: 'bild.png',
@@ -284,7 +294,7 @@ for (const [width, caseId] of [
               version: current.draft.version,
               contentVersion: current.contentVersion,
               baseRevision: null,
-              value: { typeId: current.types[0].id, name: 'Annat förslag', description: '' },
+              value: { typeId: current.types[0].id, name: 'Annat förslag' },
             },
           })
         ).status(),
@@ -293,10 +303,10 @@ for (const [width, caseId] of [
       await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
       await expect(form.getByRole('alert')).toContainText('Dina uppgifter finns kvar');
       await expect(form.getByRole('alert')).not.toContainText('Profilbilden');
-      await form.getByRole('button', { name: 'Grunduppgifter', exact: true }).click();
-      await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-        'Oskickat efter bildfelet',
-      );
+      await openProperties(form);
+      await expect(
+        propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true }),
+      ).toHaveValue('Oskickat efter bildfelet');
       await form.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
       expect(await file.evaluate((element) => (element as HTMLInputElement).files?.[0]?.name)).toBe(
         'bild.png',

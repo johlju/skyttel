@@ -1,3 +1,4 @@
+import { addFreeProperty, freeProperty } from '../support/free-property-forms.js';
 import { createInstallation } from '../support/installation.js';
 import { createRelationshipFixture } from '../support/relationship-fixture.js';
 import { expect, test } from '../support/test.js';
@@ -26,7 +27,6 @@ test('SAMBAND-12: long relationship names and field labels reflow without horizo
         description: '',
         forwardLabel: label,
         reverseLabel: 'gäller för',
-        fields: [{ id: 'note', name: fieldName, description: '', kind: 'text' }],
       },
     });
     const before = await read();
@@ -38,7 +38,7 @@ test('SAMBAND-12: long relationship names and field labels reflow without horizo
     await dialog.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await dialog.getByLabel('Sambandstyp', { exact: true }).selectOption('long-labels');
     await dialog.getByLabel('Till objekt', { exact: true }).selectOption('bicycle');
-    await dialog.getByLabel(fieldName, { exact: true }).fill('Bevara uppgiften');
+    await addFreeProperty(dialog, fieldName, 'text', 'Bevara uppgiften');
     const sentence = dialog.getByRole('region', { name: 'Sambandet före inskickning' });
     await expect(sentence).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(sentence).toContainText(targetName);
@@ -53,7 +53,9 @@ test('SAMBAND-12: long relationship names and field labels reflow without horizo
           .evaluate((element) => element.scrollWidth <= element.clientWidth),
       )
       .toBe(true);
-    await expect(dialog.getByLabel(fieldName, { exact: true })).toHaveValue('Bevara uppgiften');
+    await expect(freeProperty(dialog, fieldName).getByLabel('Värde', { exact: true })).toHaveValue(
+      'Bevara uppgiften',
+    );
     expect(await read()).toEqual(before);
   } finally {
     await installation.close();
@@ -86,7 +88,9 @@ test('SAMBAND-13: staging cancel and explicit outcome checks retain meaningful f
     await dialog.getByLabel('Till objekt', { exact: true }).selectOption('bicycle');
     await dialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }).focus();
     await page.keyboard.press('Enter');
-    await expect(dialog.getByRole('status')).toContainText('Sambandet lades i ditt utkast');
+    await expect(
+      dialog.getByRole('status').filter({ hasText: /Sambandet lades|Föreslagen borttagning/ }),
+    ).toContainText('Sambandet lades i ditt utkast');
     await expect(heading).toBeFocused();
     let state = await read();
     expect(state.relationships).toEqual([]);
@@ -94,7 +98,6 @@ test('SAMBAND-13: staging cancel and explicit outcome checks retain meaningful f
     expect(state.draft.relationships?.[0].after).toMatchObject({
       sourceId: 'alex',
       targetId: 'bicycle',
-      knowledge: 'known',
     });
     const completed = state.draft;
     await dialog.getByRole('button', { name: 'Nytt samband', exact: true }).click();
@@ -113,7 +116,7 @@ test('SAMBAND-13: staging cancel and explicit outcome checks retain meaningful f
       await route.abort();
     });
     await dialog.getByRole('button', { name: 'Redigera samband', exact: true }).click();
-    await dialog.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('uncertain');
+    await dialog.getByLabel('Sambandets status', { exact: true }).selectOption('ended');
     await dialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }).click();
     const check = dialog.getByRole('button', {
       name: 'Kontrollera om ändringen lades i utkastet',
@@ -124,10 +127,10 @@ test('SAMBAND-13: staging cancel and explicit outcome checks retain meaningful f
     await page.keyboard.press('Enter');
     await expect(dialog.getByLabel('Sambandstyp', { exact: true })).toHaveCount(0);
     await expect(heading).toBeFocused();
-    expect((await read()).draft.relationships?.[0].after?.knowledge).toBe('uncertain');
+    expect((await read()).draft.relationships?.[0].after?.lifecycle).toBe('ended');
 
     await dialog.getByRole('button', { name: 'Redigera samband', exact: true }).click();
-    await dialog.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('known');
+    await dialog.getByLabel('Sambandets status', { exact: true }).selectOption('active');
     await dialog.getByRole('button', { name: 'Lägg i utkastet', exact: true }).click();
     await expect(check).toBeVisible();
     let checkArrived = () => {};
@@ -156,12 +159,14 @@ test('SAMBAND-13: staging cancel and explicit outcome checks retain meaningful f
     });
     await expect(laterHeading).toBeFocused();
     releaseCheck();
-    await expect(later.getByRole('status')).toContainText('Sambandet lades i ditt utkast');
+    await expect(
+      later.getByRole('status').filter({ hasText: /Sambandet lades|Föreslagen borttagning/ }),
+    ).toContainText('Sambandet lades i ditt utkast');
     await expect(laterHeading).toBeFocused();
     state = await read();
     expect(state.relationships).toEqual([]);
     expect(state.draft.relationships).toHaveLength(1);
-    expect(state.draft.relationships?.[0].after?.knowledge).toBe('known');
+    expect(state.draft.relationships?.[0].after?.lifecycle).toBe('active');
     await later.getByRole('button', { name: 'Tillbaka', exact: true }).click();
     await expect(heading).toBeFocused();
     await expect(dialog.getByLabel('Sambandstyp', { exact: true })).toHaveCount(0);

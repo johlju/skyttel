@@ -328,8 +328,8 @@ bild och oberoende arbete.
 **Förutsättningar:** Använd ny provdatabas. Förbered två olika påhittade
 PNG-bilder, en blå och en orange. Ersätt allmän förberedelse steg 2–5 med:
 
-1. Öppna **Inställningar → Typer och egna fält → Ny objekttyp**. Skriv
-   **Tidigare bildtyp** i **Typens namn**, lämna egna fält tomma och välj
+1. Öppna **Inställningar → Typer → Ny objekttyp**. Skriv
+   **Tidigare bildtyp** i **Typens namn**, ange ingen ytterligare uppgift och välj
    **Lägg typförslaget i mitt utkast → Tillbaka till kartan**.
 2. Skapa lampan av **Tidigare bildtyp** och stolen av **Fordon** med **Nytt
    objekt**, **Namn**, **Objekttyp** och **Lägg i utkastet och stäng**.
@@ -339,7 +339,7 @@ PNG-bilder, en blå och en orange. Ersätt allmän förberedelse steg 2–5 med:
    i utkastet och stäng** och spara hela utkastet. Expandera lampans rad
    och kopiera bildens adress för den separata tekniska kontrollen.
 4. Välj **Redigera Lampan att radera**, byt **Objekttyp** till **Fordon**
-   och bekräfta fältförlust om valet visas. Öppna **Livscykel och utseende**,
+   med alla egenskaper kvar. Öppna **Livscykel och utseende**,
    välj orange bild, välj **Lägg i utkastet och stäng** och spara hela
    utkastet. Kopiera den nya bildadressen från lampans expanderade rad.
 5. Flytta båda objekten och lägg stolens **Oberoende privat förslag** i

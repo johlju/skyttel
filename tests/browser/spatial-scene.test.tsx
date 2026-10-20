@@ -221,7 +221,7 @@ test('restarting with reordered household content retains spacious three-dimensi
     { sourceId: 'family', targetId: 'card' },
     { sourceId: 'card', targetId: 'bank' },
     { sourceId: 'account', targetId: 'email' },
-    { sourceId: 'alex', targetId: null },
+    { sourceId: 'alex', targetId: 'alex' },
   ];
   const first = openScene();
   first.scene.update(ids, [], relationships);

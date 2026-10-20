@@ -30,8 +30,15 @@ for (const seeded of [false, true]) {
                 baseRevision: null,
                 value: {
                   name: 'Lampan',
-                  description: 'Sparad provlampa',
                   typeId: empty.types[0].id,
+                  properties: [
+                    {
+                      id: 'description',
+                      label: 'Beskrivning',
+                      kind: 'text' as const,
+                      value: 'Sparad provlampa',
+                    },
+                  ],
                 },
               },
             })

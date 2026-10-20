@@ -16,6 +16,7 @@ import {
   readDraftProposal,
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { openProperties, propertyRow } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 async function connection(actor: APIRequestContext, origin: string, householdId: string) {
@@ -79,7 +80,15 @@ test('AI-08: kartmedgivande fortsätter webbutkast och sparar hela familjeärend
     expect(
       review.changes.find((change: { after: { name: string } }) => change.after.name === 'Lo Lind')
         ?.after,
-    ).toMatchObject({ description: 'Spelar piano i musikföreningen.' });
+    ).toMatchObject({
+      properties: expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Spelar piano i musikföreningen.',
+        }),
+      ]),
+    });
     const savedMap = await tool(app.origin, token, 'read_map', { query: 'Familjens Molnmusik' });
     expect(savedMap.relationshipTypes.map((type: { name: string }) => type.name)).toEqual(
       expect.arrayContaining(['Betalar', 'Står på avtalet', 'Betalas med']),
@@ -91,12 +100,11 @@ test('AI-08: kartmedgivande fortsätter webbutkast och sparar hela familjeärend
     );
     expect(
       savedMap.relationships.map(
-        (edge: { sourceId: string; targetId: string; typeId: string; knowledge: string }) => ({
+        (edge: { sourceId: string; targetId: string; typeId: string }) => ({
           source: names.get(edge.sourceId),
           target: names.get(edge.targetId),
           type: savedMap.relationshipTypes.find((type: { id: string }) => type.id === edge.typeId)
             .name,
-          knowledge: edge.knowledge,
         }),
       ),
     ).toEqual(
@@ -105,19 +113,16 @@ test('AI-08: kartmedgivande fortsätter webbutkast och sparar hela familjeärend
           source: 'Familjens Molnmusik',
           target: 'Alex Exempel',
           type: 'Står på avtalet',
-          knowledge: 'known',
         },
         {
           source: 'Kim Exempel',
           target: 'Familjens Molnmusik',
           type: 'Betalar',
-          knowledge: 'known',
         },
         {
           source: 'Familjens Molnmusik',
           target: 'Familjens musikkort',
           type: 'Betalas med',
-          knowledge: 'known',
         },
       ]),
     );
@@ -129,12 +134,22 @@ test('AI-08: kartmedgivande fortsätter webbutkast och sparar hela familjeärend
       baseRevision: revision,
       value: {
         ...value,
-        description: 'Familjeabonnemang, 189 kr per månad.',
-        financialFacts: {
-          price: { knowledge: 'known', value: '189' },
-          currency: { knowledge: 'known', value: 'SEK' },
-          paymentInterval: { knowledge: 'known', value: 'månad' },
-        },
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Familjeabonnemang, 189 kr per månad.',
+          },
+          { id: 'price', label: 'Pris', kind: 'text' as const, value: '189' },
+          { id: 'currency', label: 'Valuta', kind: 'text' as const, value: 'SEK' },
+          {
+            id: 'paymentInterval',
+            label: 'Betalningsintervall',
+            kind: 'text' as const,
+            value: 'månad',
+          },
+        ],
       },
     });
     const attempt = {
@@ -160,34 +175,43 @@ test('AI-08: kartmedgivande fortsätter webbutkast och sparar hela familjeärend
     await expect(relationships).toContainText('musik@example.test');
     await page.keyboard.press('Escape');
     const subscription = await editTableObject(page, 'Familjens Molnmusik');
-    await subscription.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true }).click();
-    await expect(subscription.getByLabel('Pris', { exact: true })).toHaveValue('189');
-    await expect(subscription.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-      'Familjeabonnemang, 189 kr per månad.',
-    );
+    await openProperties(subscription);
+    await expect(
+      propertyRow(subscription, 'Pris').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('189');
+    await expect(
+      propertyRow(subscription, 'Beskrivning').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Familjeabonnemang, 189 kr per månad.');
     for (const [label, value] of [
       ['Pris', '189'],
       ['Valuta', 'SEK'],
       ['Betalningsintervall', 'månad'],
     ]) {
-      await expect(subscription.getByLabel(label, { exact: true })).toHaveValue(value);
-      await expect(
-        subscription.getByLabel(`${label}: uppgiftens säkerhet`, { exact: true }),
-      ).toHaveValue('known');
+      const row = propertyRow(subscription, label);
+      await expect(row.getByLabel('Värde', { exact: true })).toHaveValue(value);
+      await expect(row.getByLabel('Datatyp', { exact: true })).toHaveValue('text');
     }
+    await expect(subscription.locator('.property-editor-row')).toHaveCount(4);
     await page.keyboard.press('Escape');
     const loForm = await editTableObject(page, 'Lo Lind');
     await expect(loForm.getByLabel('Namn', { exact: true })).toHaveValue('Lo Lind');
-    await expect(loForm.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-      'Spelar piano i musikföreningen.',
-    );
+    await openProperties(loForm);
+    await expect(
+      propertyRow(loForm, 'Beskrivning').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Spelar piano i musikföreningen.');
     await page.keyboard.press('Escape');
     const lo = await tool(app.origin, token, 'read_map', { query: 'Lo Lind' });
     expect(lo.objects).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           name: 'Lo Lind',
-          description: 'Spelar piano i musikföreningen.',
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Spelar piano i musikföreningen.',
+            }),
+          ]),
         }),
       ]),
     );
@@ -254,7 +278,8 @@ test('AI-09: ett nytt webbförslag stoppar gammalt MCP-sparbesked utan delsparan
     for (const name of ['Lo Exempel', 'Kim Exempel']) {
       const person = await editTableObject(page, name);
       await expect(person.getByLabel('Namn', { exact: true })).toHaveValue(name);
-      await expect(person.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+      await openProperties(person);
+      await expect(propertyRow(person, 'Beskrivning')).toHaveCount(0);
       await page.keyboard.press('Escape');
     }
   } finally {
@@ -280,7 +305,6 @@ test('AI-10: förlorat MCP-kvittosvar återfinns efter omstart utan dubbelt spar
     for (const [label, value] of [
       ['Namn', 'Lo Exempel'],
       ['Typ', 'Person'],
-      ['Beskrivning', 'Ej uppgivet'],
     ])
       await expect(
         proposal
@@ -289,6 +313,7 @@ test('AI-10: förlorat MCP-kvittosvar återfinns efter omstart utan dubbelt spar
           .locator('..')
           .locator('dd'),
       ).toHaveText(value);
+    await expect(proposal.locator('dt').filter({ hasText: /^Beskrivning$/ })).toHaveCount(0);
     await page.keyboard.press('Escape');
     const review = await tool(app.origin, token, 'read_my_draft');
     const attempt = {
@@ -338,7 +363,8 @@ test('AI-10: förlorat MCP-kvittosvar återfinns efter omstart utan dubbelt spar
       'Person',
     );
     await expect(committedPerson.getByLabel('Namn', { exact: true })).toHaveValue('Lo Exempel');
-    await expect(committedPerson.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+    await openProperties(committedPerson);
+    await expect(propertyRow(committedPerson, 'Beskrivning')).toHaveCount(0);
     await page.keyboard.press('Escape');
     await app.restart();
     const recoveredToken = await connection(page.request, app.origin, household.id);
@@ -378,7 +404,8 @@ test('AI-10: förlorat MCP-kvittosvar återfinns efter omstart utan dubbelt spar
     const person = await editTableObject(page, 'Lo Exempel');
     await expect(person.getByLabel('Objekttyp').locator('option:checked')).toHaveText('Person');
     await expect(person.getByLabel('Namn', { exact: true })).toHaveValue('Lo Exempel');
-    await expect(person.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+    await openProperties(person);
+    await expect(propertyRow(person, 'Beskrivning')).toHaveCount(0);
     await page.keyboard.press('Escape');
     const savedHistory = await openSavedHistory(page);
     await expect(savedHistory.getByRole('article')).toHaveCount(1);
@@ -411,7 +438,7 @@ test('AI-11: identitetsfrågor blockerar och kastade MCP-förslag förblir kasta
     const token = await connection(page.request, app.origin, household.id);
     const catalog = await tool(app.origin, token, 'read_type_catalog');
     const type = catalog.types.find((type: { name: string }) => type.name === 'Bankkonto');
-    const value = { typeId: type.id, name: 'Betalkonto', description: '', identity: 'unresolved' };
+    const value = { typeId: type.id, name: 'Betalkonto', identity: 'unresolved' };
     let review = await tool(app.origin, token, 'propose_object', {
       version: 0,
       contentVersion: catalog.contentVersion,
@@ -424,7 +451,7 @@ test('AI-11: identitetsfrågor blockerar och kastade MCP-förslag förblir kasta
       contentVersion: review.contentVersion,
       id: 'other',
       baseRevision: null,
-      value: { typeId: type.id, name: 'Hushållskonto', description: '' },
+      value: { typeId: type.id, name: 'Hushållskonto' },
     });
     expect(
       (
@@ -467,7 +494,7 @@ test('AI-11: identitetsfrågor blockerar och kastade MCP-förslag förblir kasta
       contentVersion: review.contentVersion,
       id: 'other',
       baseRevision: null,
-      value: { typeId: type.id, name: 'Hushållskonto', description: '' },
+      value: { typeId: type.id, name: 'Hushållskonto' },
     });
     expect(stale.error).toBe('draft_conflict');
     await tool(app.origin, token, 'save_draft', {
@@ -481,7 +508,8 @@ test('AI-11: identitetsfrågor blockerar och kastade MCP-förslag förblir kasta
     const account = await editTableObject(page, 'Betalkonto');
     await expect(account.getByLabel('Identitet')).toHaveValue('unspecified');
     await expect(account.getByLabel('Namn', { exact: true })).toHaveValue('Betalkonto');
-    await expect(account.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+    await openProperties(account);
+    await expect(propertyRow(account, 'Beskrivning')).toHaveCount(0);
   } finally {
     await app.close();
   }

@@ -1,10 +1,10 @@
 import { conflictRemovalProperties } from './conflict-removal.js';
 import type { DraftConflict } from './draft-conflicts.js';
-import { financialFields } from './financial-facts.js';
 import type { MapState, ObjectType, ObjectValue, RelationshipValue } from './map.js';
-import { proposedObjectTypes, proposedRelationshipTypes } from './map.js';
+import { proposedObjectTypes, proposedRelationships, proposedRelationshipTypes } from './map.js';
 import { objectIconLabel } from './object-icons.js';
-import { objectProperties } from './object-properties.js';
+import { type Property, propertiesSchema, propertyValueText } from './properties.js';
+import { mergedPropertyOrder, propertyMergeSide, propertyOrderSide } from './property-merge.js';
 import { relationshipLabel } from './relationship-label.js';
 
 export type ConflictSide = 'saved' | 'proposed';
@@ -16,6 +16,8 @@ export interface ConflictProperty {
   saved: unknown;
   proposed: unknown;
   before: unknown;
+  automatic?: ConflictSide;
+  orderLabels?: Record<string, string>;
 }
 export function sameConflictValue(left: unknown, right: unknown): boolean {
   if (left === right) return true;
@@ -39,6 +41,13 @@ export function conflictChange(state: MapState, conflict: Pick<DraftConflict, 'k
   return changes?.find((change) => change.id === conflict.id);
 }
 export function conflictPropertyValue(value: unknown, key: ConflictProperty['key']): unknown {
+  if (value && typeof value === 'object' && 'properties' in value) {
+    const properties = (value as { properties?: Property[] }).properties ?? [];
+    if (key === 'propertiesOrder') return properties.map(({ id }) => id);
+    if (key.startsWith('properties.')) return properties.find(({ id }) => id === key.slice(11));
+  }
+  if (key === 'propertiesOrder') return [];
+  if (key.startsWith('properties.')) return undefined;
   return key
     .split('.')
     .reduce<unknown>(
@@ -78,7 +87,6 @@ export function conflictProperties(state: MapState, conflict: DraftConflict): Co
       ? [
           ['name', 'Namn'],
           ['typeId', 'Objekttyp'],
-          ['description', 'Beskrivning'],
           ['identity', 'Identifiering'],
           ['lifecycle', 'Giltighet'],
           ['profileImageId', 'Profilbild'],
@@ -89,98 +97,112 @@ export function conflictProperties(state: MapState, conflict: DraftConflict): Co
             ['typeId', 'Sambandstyp'],
             ['sourceId', 'Från objekt'],
             ['targetId', 'Till objekt'],
-            ['knowledge', 'Vad är känt?'],
             ['lifecycle', 'Giltighet'],
-            ['endDate', 'Slutdatum'],
           ]
         : [
             ['name', 'Namn'],
             ['description', 'Beskrivning'],
             ['forwardLabel', 'Framåtriktad benämning'],
             ['reverseLabel', 'Omvänd benämning'],
-            ['fields', 'Egna fält'],
-            ['sections', 'Avsnitt'],
-            ['builtins', 'Övriga uppgifter'],
-            ['propertyOrder', 'Uppgifternas ordning'],
           ];
   const labels = new Map<string, Record<ConflictSide, string>>();
+  const propertyFields: ConflictProperty[] = [];
   if (conflict.kind === 'object' || conflict.kind === 'relationship') {
-    const currentTypes = conflict.kind === 'object' ? state.types : state.relationshipTypes;
-    const proposedTypes =
-      conflict.kind === 'object'
-        ? proposedObjectTypes(state.types, state.draft.objectTypes)
-        : proposedRelationshipTypes(state.relationshipTypes, state.draft.relationshipTypes);
-    const savedTypeId = 'typeId' in conflict.current ? conflict.current.typeId : undefined;
-    const savedType = currentTypes.find((type) => type.id === savedTypeId);
-    const proposedTypeId = 'typeId' in change.after ? change.after.typeId : undefined;
-    const historicalType =
-      'type' in change && change.type.id === proposedTypeId ? change.type : undefined;
-    const proposedType = proposedTypes.find((type) => type.id === proposedTypeId) ?? historicalType;
-    const builtinLabel = (type: typeof proposedType, key: string, fallback: string) =>
-      (type && 'builtins' in type
-        ? type.builtins?.find((field) => field.key === key)?.name
-        : undefined) ?? fallback;
-    if (conflict.kind === 'object') {
-      for (const [key, fallback] of [
-        ['description', 'Beskrivning'],
-        ...financialFields.map((field) => [field.key, field.label]),
-      ] as [string, string][]) {
-        const propertyKey = key === 'description' ? key : `financialFacts.${key}`;
-        const sideLabels = {
-          saved: builtinLabel(savedType, key, fallback),
-          proposed: builtinLabel(proposedType, key, fallback),
-        };
-        labels.set(propertyKey, sideLabels);
-        if (key !== 'description') entries.push([propertyKey, sideLabels.proposed]);
-      }
-    }
-    const keys = new Set(
-      [change.before, change.after, conflict.current].flatMap((value) =>
-        Object.keys(value && 'customValues' in value ? (value.customValues ?? {}) : {}),
-      ),
+    const before =
+      change.before && 'properties' in change.before ? (change.before.properties ?? []) : [];
+    const saved = 'properties' in conflict.current ? (conflict.current.properties ?? []) : [];
+    const proposed = 'properties' in change.after ? (change.after.properties ?? []) : [];
+    const ids = [...new Set([...before, ...saved, ...proposed].map(({ id }) => id))];
+    const [previousValues, savedValues, proposedValues] = [before, saved, proposed].map(
+      (properties) => new Map(properties.map((property) => [property.id, property])),
     );
-    for (const key of keys) {
-      const historicalLabel =
-        historicalType?.fields?.find((field) => field.id === key)?.name ?? key;
-      const sideLabels = {
-        saved: savedType?.fields?.find((field) => field.id === key)?.name ?? historicalLabel,
-        proposed: proposedType?.fields?.find((field) => field.id === key)?.name ?? historicalLabel,
-      };
-      labels.set(`customValues.${key}`, sideLabels);
-      entries.push([`customValues.${key}`, sideLabels.proposed]);
+    for (const [index, id] of ids.entries()) {
+      const previous = previousValues.get(id);
+      const current = savedValues.get(id);
+      const after = proposedValues.get(id);
+      const label = (after ?? current ?? previous)?.label ?? id;
+      const identify = (label: string) => `${label} · egenskap ${index + 1}`;
+      propertyFields.push({
+        key: `properties.${id}`,
+        label: identify(label),
+        labels: {
+          saved: identify(current?.label ?? label),
+          proposed: identify(after?.label ?? label),
+        },
+        before: previous,
+        saved: current,
+        proposed: after,
+        automatic: propertyMergeSide(previous, current, after),
+      });
+    }
+    if (ids.length) {
+      const orders = [before, saved, proposed].map((properties) => properties.map(({ id }) => id));
+      propertyFields.push({
+        key: 'propertiesOrder',
+        label: 'Egenskapernas ordning',
+        before: orders[0],
+        saved: orders[1],
+        proposed: orders[2],
+        orderLabels: Object.fromEntries(ids.map((id, index) => [id, `Egenskap ${index + 1}`])),
+        automatic: propertyOrderSide(orders[0], orders[1], orders[2]),
+      });
     }
   }
-  return entries
-    .map(([key, label]) => ({
-      key,
-      label: labels.get(key)?.proposed ?? label,
-      ...(labels.has(key) ? { labels: labels.get(key) } : {}),
-      saved: conflictPropertyValue(conflict.current, key),
-      proposed: conflictPropertyValue(change.after, key),
-      before: conflictPropertyValue(change.before, key),
-    }))
-    .filter(
-      (field) =>
-        field.saved !== undefined || field.proposed !== undefined || field.before !== undefined,
-    );
+  return [
+    ...propertyFields,
+    ...entries
+      .map(([key, label]) => ({
+        key,
+        label: labels.get(key)?.proposed ?? label,
+        ...(labels.has(key) ? { labels: labels.get(key) } : {}),
+        saved: conflictPropertyValue(conflict.current, key),
+        proposed: conflictPropertyValue(change.after, key),
+        before: conflictPropertyValue(change.before, key),
+      }))
+      .filter(
+        (field) =>
+          field.saved !== undefined || field.proposed !== undefined || field.before !== undefined,
+      ),
+  ];
 }
 /** Present each property under its actual side's definition without changing its identity. */
 export function conflictPropertyLabel(field: ConflictProperty, side?: ConflictSide): string {
-  return side ? (field.labels?.[side] ?? field.label) : field.label;
+  const selected = side ?? field.automatic;
+  return selected ? (field.labels?.[selected] ?? field.label) : field.label;
 }
 export function combineConflictProperties(fields: ConflictProperty[], choices: ConflictChoices) {
   const result: Record<string, unknown> = {};
+  const propertyValues = new Map<string, Property>();
   for (const field of fields) {
     const same = sameConflictValue(field.saved, field.proposed);
-    if (!same && !choices[field.key]) return null;
-    const value = same || choices[field.key] === 'saved' ? field.saved : field.proposed;
+    if (!same && !field.automatic && !choices[field.key]) return null;
+    const side = field.automatic ?? choices[field.key];
+    const value = same || side === 'saved' ? field.saved : field.proposed;
+    if (field.key === 'propertiesOrder') continue;
     if (value === undefined) continue;
+    if (field.key.startsWith('properties.')) {
+      propertyValues.set(field.key.slice(11), value as Property);
+      continue;
+    }
     const [group, key] = field.key.split('.');
     if (key) {
       const nested = (result[group] ?? {}) as Record<string, unknown>;
       nested[key] = value;
       result[group] = nested;
     } else result[group] = value;
+  }
+  const order = fields.find((field) => field.key === 'propertiesOrder');
+  if (order) {
+    result.properties = mergedPropertyOrder(
+      order.before as string[],
+      order.saved as string[],
+      order.proposed as string[],
+      [...propertyValues.keys()],
+      order.automatic ?? choices.propertiesOrder ?? 'saved',
+    ).flatMap((id) => {
+      const property = propertyValues.get(id);
+      return property ? [property] : [];
+    });
   }
   return result;
 }
@@ -240,33 +262,6 @@ export function conflictCombinationError(
 ): string {
   if (!value) return '';
   if ('definition' in value) return '';
-  if (conflict.kind === 'objectType' || conflict.kind === 'relationshipType') {
-    const sections = value.sections as { id: string }[] | undefined;
-    const sectionIds = new Set(sections?.map((section) => section.id) ?? ['custom-fields']);
-    const fields = (value.fields ?? []) as { id: string; sectionId?: string }[];
-    const builtins = (value.builtins ?? []) as { key: string; sectionId: string }[];
-    if (
-      [...fields, ...builtins].some(
-        (property) => property.sectionId && !sectionIds.has(property.sectionId),
-      )
-    )
-      return 'Ett valt fält hänvisar till ett avsnitt som saknas i kombinationen. Välj fält och avsnitt som fungerar tillsammans.';
-    const properties = new Set(
-      conflict.kind === 'objectType'
-        ? objectProperties(
-            value as Pick<ObjectType, 'fields' | 'sections' | 'builtins' | 'propertyOrder'>,
-          ).map((property) => property.ref)
-        : fields.map((field) => `field:${field.id}`),
-    );
-    const order = value.propertyOrder as string[] | undefined;
-    if (
-      order &&
-      (order.length !== properties.size ||
-        new Set(order).size !== order.length ||
-        order.some((property) => !properties.has(property)))
-    )
-      return 'Den valda ordningen hänvisar till en uppgift som saknas i kombinationen.';
-  }
   if (conflict.kind === 'object' || conflict.kind === 'relationship') {
     const types =
       conflict.kind === 'object'
@@ -274,51 +269,20 @@ export function conflictCombinationError(
         : proposedRelationshipTypes(state.relationshipTypes, state.draft.relationshipTypes);
     const type = types.find((type) => type.id === value.typeId);
     if (!type) return 'Den valda typen finns inte. Välj en giltig kombination.';
-    for (const [id, entry] of Object.entries(
-      (value.customValues ?? {}) as Record<string, unknown>,
-    )) {
-      const field = type.fields?.find((field) => field.id === id);
-      if (
-        !field ||
-        (field.kind === 'number'
-          ? typeof entry !== 'number' || !Number.isFinite(entry)
-          : field.kind === 'boolean'
-            ? typeof entry !== 'boolean'
-            : typeof entry !== 'string')
-      )
-        return 'Ett valt värde passar inte den valda typens egna fält.';
-      if (
-        field.kind === 'date' &&
-        (typeof entry !== 'string' ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(entry) ||
-          Number.isNaN(Date.parse(entry)) ||
-          new Date(entry).toISOString().slice(0, 10) !== entry)
-      )
-        return 'Ett valt datum passar inte den valda typens egna fält.';
-      if (field.kind === 'text' && typeof entry === 'string' && entry.length > 2000)
-        return 'Ett valt värde är för långt för den valda typens egna fält.';
-    }
   }
   if (conflict.kind === 'relationship') {
     const relationship = value as unknown as RelationshipValue;
-    if (
-      ['known', 'uncertain'].includes(relationship.knowledge)
-        ? typeof relationship.targetId !== 'string'
-        : relationship.targetId !== null
-    )
-      return 'Vad som är känt och målobjektet fungerar inte tillsammans. Välj båda uppgifterna så att de stämmer överens.';
+    if (!relationship.sourceId || !relationship.targetId)
+      return 'Välj både frånobjekt och tillobjekt för sambandet.';
     const objects = new Map(state.objects.map((object) => [object.id, object]));
     for (const change of state.draft.changes)
       if (change.after)
         objects.set(change.id, { ...change.after, id: change.id, householdId: '', revision: 0 });
       else objects.delete(change.id);
-    if (
-      !objects.has(relationship.sourceId) ||
-      (relationship.targetId !== null && !objects.has(relationship.targetId))
-    )
+    if (!objects.has(relationship.sourceId) || !objects.has(relationship.targetId))
       return 'Ett valt objekt finns inte i kartan eller ditt utkast.';
     if (
-      state.relationships.some(
+      [...proposedRelationships(state.relationships, state.draft.relationships).values()].some(
         (edge) =>
           edge.id !== conflict.id &&
           edge.typeId === relationship.typeId &&
@@ -337,6 +301,16 @@ export function conflictValueText(
   field: ConflictProperty,
   value: unknown,
 ): string {
+  if (field.key.startsWith('properties.'))
+    return value
+      ? `${(value as Property).label}: ${propertyValueText(value as Property)}`
+      : 'Borttaget';
+  if (field.key === 'propertiesOrder' && Array.isArray(value)) {
+    return (
+      value.map((id, index) => `${index + 1}. ${field.orderLabels?.[id] ?? id}`).join(' → ') ||
+      'Inga egenskaper'
+    );
+  }
   if (field.key === 'relationship' && value && typeof value === 'object')
     return relationshipLabel(
       value as RelationshipValue,
@@ -356,7 +330,7 @@ export function conflictValueText(
         : 'Behöver redas ut';
   if (field.key === 'lifecycle')
     return value === undefined
-      ? 'Följ slutdatum'
+      ? 'Gäller fortfarande'
       : value === 'ended'
         ? 'Manuellt upphört'
         : 'Gäller fortfarande';
@@ -381,66 +355,15 @@ export function conflictValueText(
       ? 'Den sparade profilbilden'
       : 'Din föreslagna profilbild';
   if (Array.isArray(value)) {
-    const types = [
-      ...state.types,
-      ...state.relationshipTypes,
-      ...(state.draft.objectTypes ?? []).flatMap((change) => (change.after ? [change.after] : [])),
-      ...(state.draft.relationshipTypes ?? []).flatMap((change) =>
-        change.after ? [change.after] : [],
-      ),
-    ];
-    const section = (id: string | undefined) =>
-      id === ''
-        ? 'Dold uppgift'
-        : (types.flatMap((type) => type.sections ?? []).find((section) => section.id === id)
-            ?.name ?? 'Egna fält');
-    if (field.key === 'sections')
-      return value.map((entry) => entry.name).join(' → ') || 'Inga avsnitt';
-    if (field.key === 'fields')
-      return (
-        value
-          .map(
-            (entry) =>
-              `${entry.name}: ${({ text: 'Text', number: 'Tal', date: 'Datum', boolean: 'Ja eller nej' } as Record<string, string>)[entry.kind]} · ${section(entry.sectionId)}${entry.description ? ` — ${entry.description}` : ''}`,
-          )
-          .join('; ') || 'Inga egna fält'
-      );
-    if (field.key === 'builtins')
-      return (
-        value.map((entry) => `${entry.name} · ${section(entry.sectionId)}`).join('; ') ||
-        'Inga övriga uppgifter'
-      );
-    if (field.key === 'propertyOrder')
-      return (
-        value
-          .map((ref) => {
-            const [kind, id] = String(ref).split(':');
-            return kind === 'field'
-              ? (types.flatMap((type) => type.fields ?? []).find((field) => field.id === id)
-                  ?.name ?? 'Uppgift som saknas')
-              : (types
-                  .flatMap((type) => ('builtins' in type ? (type.builtins ?? []) : []))
-                  .find((field) => field.key === id)?.name ?? 'Uppgift som saknas');
-          })
-          .join(' → ') || 'Ingen särskild ordning'
-      );
+    if (field.key === 'properties') {
+      const properties = propertiesSchema.safeParse(value);
+      return properties.success
+        ? properties.data
+            .map((property) => `${property.label}: ${propertyValueText(property)}`)
+            .join('; ') || 'Inga egenskaper'
+        : 'Ogiltiga egenskaper';
+    }
   }
-  if (typeof value === 'object' && 'knowledge' in value) {
-    const fact = value as { knowledge: string; value?: string; reportedOn?: string };
-    return `${fact.value ?? { unknown: 'Okänt', none: 'Uttryckligen inget' }[fact.knowledge] ?? ''}${fact.knowledge === 'uncertain' ? ' (Osäkert uppgivet)' : ''}${fact.reportedOn ? ` — datum för uppgiften: ${fact.reportedOn}` : ''}`;
-  }
-  if (field.key === 'knowledge')
-    return (
-      (
-        {
-          known: 'Känt',
-          unknown: 'Okänt',
-          none: 'Uttryckligen inget',
-          uncertain: 'Osäkert uppgivet',
-          unresolved: 'Behöver redas ut',
-        } as Record<string, string>
-      )[String(value)] ?? String(value)
-    );
   if (typeof value === 'object') return JSON.stringify(value);
   if (typeof value === 'boolean') return value ? 'Ja' : 'Nej';
   return String(value);

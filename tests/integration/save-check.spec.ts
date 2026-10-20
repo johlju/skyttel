@@ -60,7 +60,7 @@ test('SPARKONTROLL-01: ett tappat sparbesked kontrolleras automatiskt före nytt
         contentVersion: 1,
         id: 'lo',
         baseRevision: null,
-        value: { typeId: state.types[0].id, name: 'Lo Exempel', description: '' },
+        value: { typeId: state.types[0].id, name: 'Lo Exempel' },
       },
     });
     await page.goto(app.origin);
@@ -147,7 +147,7 @@ for (const failCheck of [false, true])
           contentVersion: 1,
           id: 'lo',
           baseRevision: null,
-          value: { typeId: state.types[0].id, name: 'Lo Exempel', description: '' },
+          value: { typeId: state.types[0].id, name: 'Lo Exempel' },
         },
       });
       const attempt = { operationId: 'original-after-restart', version: 1, contentVersion: 1 };
@@ -258,7 +258,7 @@ for (const microphoneOn of [false, true])
               version: initial.draft.version,
               id: 'lo',
               baseRevision: null,
-              value: { typeId: initial.types[0].id, name: 'Lo Exempel', description: '' },
+              value: { typeId: initial.types[0].id, name: 'Lo Exempel' },
             },
           })
         ).status(),
@@ -353,7 +353,7 @@ test('SPARKONTROLL-04: verifierad sparåterhämtning stoppar fångst under kontr
         contentVersion: 1,
         id: 'lo',
         baseRevision: null,
-        value: { typeId: state.types[0].id, name: 'Lo Exempel', description: '' },
+        value: { typeId: state.types[0].id, name: 'Lo Exempel' },
       },
     });
     await page.addInitScript({ content: liveBrowserFixtureSource });
@@ -439,12 +439,7 @@ test('SPARKONTROLL-05: ett avvisat väntande försök förklaras som osparat och
         contentVersion: 1,
         id: 'lo',
         baseRevision: null,
-        value: {
-          typeId: state.types[0].id,
-          name: 'Oklart Lo',
-          description: '',
-          identity: 'unresolved',
-        },
+        value: { typeId: state.types[0].id, name: 'Oklart Lo', identity: 'unresolved' },
       },
     });
     const draft = (await (await page.request.get(path)).json()).draft;
@@ -542,7 +537,7 @@ for (const lostRevocationReply of [false, true])
           contentVersion: 1,
           id: 'lo',
           baseRevision: null,
-          value: { typeId: state.types[0].id, name: 'Lo Exempel', description: '' },
+          value: { typeId: state.types[0].id, name: 'Lo Exempel' },
         },
       });
       await page.addInitScript({ content: liveBrowserFixtureSource });

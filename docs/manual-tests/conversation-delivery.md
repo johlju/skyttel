@@ -281,7 +281,7 @@ med `tool REQUEST read_type_catalog {}`. Läs nästa försöks
 **contentVersion** i **draft**. Släpp det försöket med
 `tool REQUEST propose_object JSON`, där JSON innehåller de lästa
 versionsvärdena, `id: "lo-delivery"`, `baseRevision: null` och
-`value: {typeId: TYPENS_ID, name: "Lo Exempel", description: ""}`.
+`value: {typeId: TYPENS_ID, name: "Lo Exempel"}`.
 Använd giltig JSON med citattecken kring nycklarna och det lästa typ-id:t.
 Släpp sedan det sista försöket med
 `reply REQUEST Förslaget finns i ditt utkast.`. REQUEST betyder det

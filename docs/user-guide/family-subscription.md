@@ -23,7 +23,7 @@ För det påhittade familjeabonnemanget Molnmusik kan du lägga till:
 - Familjens kort och bankkontot som betalar kortfakturan.
 
 Välj hushållets aktuella objekttyp, skriv ett begripligt namn och lägg
-objektet i utkastet. Beskrivning är frivillig. Ett abonnemang är redan
+objektet i utkastet. Beskrivning kan vara en fri egenskap. Ett abonnemang är
 ett avtal: skapa inget extra avtalsobjekt för samma överenskommelse.
 En förening är också ett separat objekt, skilt från tjänsten.
 Skriv aldrig lösenord, fullständiga kortnummer eller säkerhetskoder.
@@ -55,27 +55,20 @@ sambandstyper mellan samma objekt går bra.
 
 ## Bevara det som är ofullständigt
 
-**Uppgiftens säkerhet** skiljer mellan:
+Ett uteblivet samband betyder inte uttryckligen inget. Du behöver inte
+fylla alla roller, och ett objekt får stå utan samband. Beskriv själv
+osäkerhet eller en saknad uppgift med en fri egenskap om du vill registrera
+den. Ett samband kräver ändå både ett frånobjekt och ett tillobjekt.
 
-- **Känt**: välj det objekt som avses.
-- **Okänt**: uppgiften är ännu inte känd; inget målobjekt väljs.
-- **Uttryckligen inget**: det saknas uttryckligen någon eller något.
-- **Osäkert uppgivet**: välj objektet men behåll osäkerheten.
-- **Obesvarad identitetsfråga**: utkastet kan bevaras men inte sparas.
+Lika namn eller adresser avgör inte identitet. Sök bland kandidaternas
+namn, typer och egenskaper. Öppna **Granska** för att läsa hela underlaget
+och välj sedan rätt objekt uttryckligen. En olöst fråga kan finnas kvar
+i samtalet utan ett ogiltigt kartförslag.
 
-Ett uteblivet samband betyder inte uttryckligen inget. Du behöver inte fylla
-alla roller. Använd exempelvis **Används av** från tjänsten när du vill ange
-att dess användare är okända eller att ingen använder den.
-
-Lika namn eller adresser avgör inte identitet. Välj objektet uttryckligen;
-vid lika namn visar väljaren beskrivning och identitet som hjälp. Om du inte
-vet vilket objekt som avses, lämna en obesvarad identitetsfråga. Hela
-sparandet blockeras tills den är löst.
-
-Du kan i stället uttryckligen skapa ett objekt med **Objektets identitet**
+Du kan uttryckligen skapa ett verkligt objekt med **Objektets identitet**
 satt till **Ospecificerat objekt**, exempelvis ett bankkonto utan känd bank
-eller ägare, och välja det som mål. Senare kan du rätta samma objekt.
-Det är skilt från en obesvarad fråga och från osäkerhet om själva sambandet.
+eller ägare, och välja det som ändpunkt. Senare kan du rätta samma objekt.
+Skapa inget objekt enbart för att fylla en okänd ändpunkt.
 
 ## Granska, hitta och rätta
 

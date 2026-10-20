@@ -24,7 +24,7 @@ async function open() {
     version: 0,
     id: 'alex',
     baseRevision: null,
-    value: { name: 'Alex', description: '', typeId: initial.types[0].id },
+    value: { name: 'Alex', typeId: initial.types[0].id },
   });
   let signOuts = 0;
   let loseResponse = false;

@@ -2,7 +2,6 @@ import { isDeepStrictEqual } from 'node:util';
 import type {
   DraftChange,
   DraftRelationshipChange,
-  MapDraft,
   MapObject,
   MapRelationship,
   ObjectMerge,
@@ -42,14 +41,11 @@ export function erasureProjection(content: Content, scope: ErasureScope) {
   }
   const objectMeaning = (value: MapObject) => ({
     typeId: value.typeId,
-    customValues: value.customValues,
   });
   const edgeMeaning = (value: MapRelationship) => ({
     typeId: value.typeId,
     sourceId: value.sourceId,
     targetId: value.targetId,
-    knowledge: value.knowledge,
-    customValues: value.customValues,
   });
   const facts = (value: object) =>
     Object.fromEntries(
@@ -83,6 +79,10 @@ export function erasureProjection(content: Content, scope: ErasureScope) {
   function cleanDraftEdge(change: DraftRelationshipChange): DraftRelationshipChange[] {
     if (affected.relationships.has(change.id)) return [];
     let next = cleanEdge(change);
+    if (next.suppressed) {
+      if (affected.edgeChange(next.suppressed)) delete next.suppressed;
+      else next.suppressed = cleanEdge(next.suppressed);
+    }
     if (affected.edgeChange(change)) {
       const current = content.relationships.find((edge) => edge.id === change.id);
       if (!current || affected.edgeValue(current) || !change.before || !change.after) return [];
@@ -100,6 +100,7 @@ export function erasureProjection(content: Content, scope: ErasureScope) {
     }
     if (next.removedWithObjects)
       next.removedWithObjects = next.removedWithObjects.filter((id) => !affected.objects.has(id));
+    if (!next.before && !next.after && !next.suppressed) return [];
     return [next];
   }
   const drafts = content.drafts.map((draft) => {
@@ -211,7 +212,7 @@ export function erasurePredicates(scope: ErasureScope) {
   const relationshipTypes = new Set(scope.relationshipTypes);
   const objectValue = (value: { typeId: string; id?: string } | null) =>
     Boolean(value && ((value.id && objects.has(value.id)) || objectTypes.has(value.typeId)));
-  const edgeValue = (value: { typeId: string; sourceId: string; targetId: string | null } | null) =>
+  const edgeValue = (value: { typeId: string; sourceId: string; targetId: string } | null) =>
     Boolean(
       value &&
         (relationshipTypes.has(value.typeId) ||
@@ -243,13 +244,14 @@ export function erasurePredicates(scope: ErasureScope) {
   }
   const namesTouched = (names: Record<string, string> | undefined) =>
     Object.keys(names ?? {}).some((id) => objects.has(id));
-  const edgeTouched = (change: RelationshipChange) =>
+  const edgeTouched = (change: DraftRelationshipChange) =>
     edgeChange(change) ||
     namesTouched(change.objectNames) ||
-    ('removedWithObjects' in change &&
-      (change as NonNullable<MapDraft['relationships']>[number]).removedWithObjects?.some((id) =>
-        objects.has(id),
-      ));
+    Boolean(
+      change.suppressed &&
+        (edgeChange(change.suppressed) || namesTouched(change.suppressed.objectNames)),
+    ) ||
+    change.removedWithObjects?.some((id) => objects.has(id));
   function objectTouched(change: Change): boolean {
     const merge = 'merge' in change ? change.merge : undefined;
     return Boolean(

@@ -26,10 +26,8 @@ export function assistantFailureMessage(code: string): string {
       return 'Posten finns inte i den aktuella kartan eller utkastet och kunde därför inte markeras.';
     case 'definition_in_use':
       return 'Typen används fortfarande av objekt, samband eller utkast. De behöver hanteras innan typen kan tas bort.';
-    case 'field_in_use':
-      return 'Fältet innehåller fortfarande uppgifter i kartan eller utkast. De behöver hanteras innan fältet kan tas bort.';
-    case 'field_kind_in_use':
-      return 'Fältets värdeslag kan inte ändras medan det används. Ett nytt fält behövs för det nya värdeslaget.';
+    case 'invalid_properties':
+      return 'En egenskap innehåller ett ogiltigt värde. Kontrollera etikett och datatyp.';
     case 'invalid_request':
       return 'Begäran innehöll ogiltiga uppgifter och kunde inte genomföras.';
     case 'forbidden':

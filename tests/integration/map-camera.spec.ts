@@ -3,6 +3,7 @@ import type { MapState } from '../../src/shared/map.js';
 import { createHousehold, openMap, openTable, setAllLabels, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { mapFilters } from '../support/object-search.js';
+import { propertyRow, propertyValue, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function arrange(page: Page, origin: string) {
@@ -25,7 +26,7 @@ async function arrange(page: Page, origin: string) {
             version: (await read()).draft.version,
             id,
             baseRevision: null,
-            value: { name, description: '', typeId: state.types[0].id },
+            value: { name, typeId: state.types[0].id },
           },
         })
       ).ok(),
@@ -43,12 +44,7 @@ async function arrange(page: Page, origin: string) {
             version: (await read()).draft.version,
             id,
             baseRevision: null,
-            value: {
-              sourceId,
-              targetId,
-              knowledge: 'known',
-              typeId: state.relationshipTypes[0].id,
-            },
+            value: { sourceId, targetId, typeId: state.relationshipTypes[0].id },
           },
         })
       ).ok(),
@@ -77,7 +73,14 @@ async function arrange(page: Page, origin: string) {
             value: {
               name: object.name,
               typeId: object.typeId,
-              description: 'Privat kameraförslag',
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat kameraförslag',
+                },
+              ],
             },
           },
         })
@@ -97,7 +100,14 @@ async function arrange(page: Page, origin: string) {
               sourceId: edge.sourceId,
               targetId: edge.targetId,
               typeId: edge.typeId,
-              knowledge: 'uncertain',
+              properties: [
+                {
+                  id: 'certainty',
+                  label: 'Uppgiftens säkerhet',
+                  kind: 'text' as const,
+                  value: 'Osäkert uppgivet',
+                },
+              ],
             },
           },
         })
@@ -109,8 +119,11 @@ async function arrange(page: Page, origin: string) {
   expect(privateWork.changes).toHaveLength(4);
   expect(privateRelationships).toHaveLength(2);
   for (const change of privateWork.changes)
-    expect(change.after?.description).toBe('Privat kameraförslag');
-  for (const change of privateRelationships) expect(change.after?.knowledge).toBe('uncertain');
+    expect(propertyValue(change.after, 'Beskrivning')).toBe('Privat kameraförslag');
+  for (const change of privateRelationships)
+    expect(change.after?.properties).toEqual([
+      { id: 'certainty', label: 'Uppgiftens säkerhet', kind: 'text', value: 'Osäkert uppgivet' },
+    ]);
   const view = await (await page.request.get(`${path}/view`)).json();
   for (const [id, x, y, z] of [
     ['lo', 8, 4, 10],
@@ -206,12 +219,20 @@ test('KAMERA-02: focus fits only selection and direct neighbors while camera his
     const panel = page.getByRole('region', { name: 'Lo Exempel', exact: true });
     await expect(panel).toContainText('Lo Exempel');
     await expect(panel).toContainText(content.types[0].name);
-    await expect(panel.locator('.household-table-description')).toContainText(
-      'Sparat: Ej uppgivet',
-    );
-    await expect(panel.locator('.household-table-description')).toContainText(
-      'Ditt förslag: Privat kameraförslag',
-    );
+    await expect(
+      panel
+        .locator('dt')
+        .filter({ hasText: /^Beskrivning$/ })
+        .locator('..')
+        .locator('dd'),
+    ).toContainText('Sparat: Ej uppgivet');
+    await expect(
+      panel
+        .locator('dt')
+        .filter({ hasText: /^Beskrivning$/ })
+        .locator('..')
+        .locator('dd'),
+    ).toContainText('Ditt förslag: Privat kameraförslag');
     const panelPosition = await panel.boundingBox();
     await openSelectionFocus(page, lo);
     await focus.click();
@@ -243,14 +264,14 @@ test('KAMERA-02: focus fits only selection and direct neighbors while camera his
     await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
     await panel.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }).click();
     const form = page.getByRole('dialog', { name: 'Redigera Lo Exempel', exact: true });
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Oskickat under kamerafokus');
+    await setProperty(form, 'Beskrivning', 'Oskickat under kamerafokus');
     await form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
     const loss = page.getByRole('dialog', { name: 'Lämna ändrade uppgifter?', exact: true });
     await expect(
       loss.getByRole('button', { name: 'Fortsätt redigera', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Escape');
-    await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
+    await expect(propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
       'Oskickat under kamerafokus',
     );
     expect(await read()).toEqual(content);

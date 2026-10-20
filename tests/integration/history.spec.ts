@@ -21,7 +21,7 @@ async function setup(client: APIRequestContext, origin: string) {
           version: state.draft.version,
           id,
           baseRevision: before?.revision ?? null,
-          value: { typeId: state.types[0].id, description: '', ...before, name, ...extra },
+          value: { typeId: state.types[0].id, ...before, name, ...extra },
         })
       ).ok(),
     ).toBe(true);
@@ -91,10 +91,27 @@ for (const [width, caseId] of [
       await page.setViewportSize({ width, height: 850 });
       const data = await setup(page.request, installation.origin);
       await data.object('subscription', 'Familjeabonnemang', {
-        description: 'Hushållets musik',
-        financialFacts: {
-          debt: { knowledge: 'uncertain', value: '1 200 SEK', reportedOn: '2026-06-01' },
-        },
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Hushållets musik',
+          },
+          { id: 'debt', label: 'Senast uppgiven skuld', kind: 'text' as const, value: '1 200 SEK' },
+          {
+            id: 'debt-certainty',
+            label: 'Senast uppgiven skuld: uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: 'Osäkert uppgivet',
+          },
+          {
+            id: 'debt-reportedOn',
+            label: 'Senast uppgiven skuld: datum för uppgiften',
+            kind: 'date' as const,
+            value: '2026-06-01',
+          },
+        ],
       });
       await data.save('initial');
       await data.object('subscription', 'Musik för familjen');
@@ -109,9 +126,10 @@ for (const [width, caseId] of [
       await expect(card.getByText('Namn: Musik för familjen.', { exact: true })).toBeVisible();
       for (const side of ['Före sparandet', 'Efter sparandet']) {
         await expect(
-          card.locator(`xpath=.//p[preceding-sibling::h5[1][text()="${side}"]]`).filter({
-            hasText: 'Beskrivning: Hushållets musik',
-          }),
+          card
+            .getByRole('heading', { name: side, exact: true })
+            .locator('xpath=following-sibling::ol[1]')
+            .getByText('Beskrivning: Hushållets musik (Text)', { exact: true }),
         ).toBeVisible();
       }
       await expect(card).toContainText('1 200');
@@ -181,14 +199,7 @@ test('HISTORIK-10: a direct save link reads historical types after their definit
           version: state.draft.version,
           id: type.id,
           baseRevision: type.revision,
-          value: {
-            name: 'Dagens personbenämning',
-            description: type.description,
-            fields: type.fields ?? [],
-            sections: type.sections,
-            builtins: type.builtins,
-            propertyOrder: type.propertyOrder,
-          },
+          value: { name: 'Dagens personbenämning', description: type.description },
         })
       ).ok(),
     ).toBe(true);

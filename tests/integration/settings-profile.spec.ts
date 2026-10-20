@@ -10,6 +10,7 @@ import {
 } from '../support/client.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { openProperties, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 for (const width of [1280, 390, 320]) {
@@ -95,13 +96,7 @@ for (const width of [1280, 390, 320]) {
       const proposal = page.getByRole('dialog', { name: 'Oskickad cykel', exact: true });
       await expect(proposal).toContainText('Oskickad cykel');
       await expect(proposal).toContainText('Person');
-      await expect(
-        proposal
-          .locator('dt')
-          .filter({ hasText: /^Beskrivning$/ })
-          .locator('..')
-          .locator('dd'),
-      ).toHaveText('Ej uppgivet');
+      await expect(proposal.locator('dt').filter({ hasText: /^Beskrivning$/ })).toHaveCount(0);
     } finally {
       await installation.close();
     }
@@ -152,12 +147,12 @@ for (const role of ['administrator', 'member'] as const) {
         .getByRole('button', { name: 'Cykel i samma utkast', exact: true })
         .click();
       await openSettings(page);
-      await page.getByRole('link', { name: 'Typer och egna fält', exact: true }).click();
+      await page.getByRole('link', { name: 'Typer', exact: true }).click();
       await page.getByRole('button', { name: 'Ny objekttyp', exact: true }).click();
       await page.getByLabel('Typens namn', { exact: true }).fill('Oskickad typ');
       await page.getByLabel('Typens beskrivning').fill('Behåll även definitionens text');
       await page.getByRole('link', { name: 'Översikt', exact: true }).click();
-      await page.getByRole('link', { name: 'Typer och egna fält', exact: true }).click();
+      await page.getByRole('link', { name: 'Typer', exact: true }).click();
       await expect(page.getByLabel('Typens namn', { exact: true })).toHaveValue('Oskickad typ');
       await expect(page.getByLabel('Typens beskrivning')).toHaveValue(
         'Behåll även definitionens text',
@@ -180,8 +175,8 @@ for (const role of ['administrator', 'member'] as const) {
       );
       await page.reload();
       await openSettings(page);
-      await page.getByRole('link', { name: 'Typer och egna fält', exact: true }).click();
-      await page.getByText('Objekttyper och egna fält', { exact: true }).click();
+      await page.getByRole('link', { name: 'Typer', exact: true }).click();
+      await page.getByText('Objekttyper', { exact: true }).click();
       await expect(
         page.getByRole('button', { name: 'Ändra typ: Oskickad typ', exact: true }),
       ).toBeVisible();
@@ -209,7 +204,7 @@ test('INST-03: the separate profile protects native form input and groups person
     await openTable(page);
     await openNewObject(page);
     await page.getByLabel('Namn', { exact: true }).fill('Profilens cykel');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Fortsätt här');
+    await setProperty(page, 'Beskrivning', 'Fortsätt här');
     await verifyObjectDepartureAndDiscard(page, {
       Namn: 'Profilens cykel',
       Beskrivning: 'Fortsätt här',
@@ -225,9 +220,10 @@ test('INST-03: the separate profile protects native form input and groups person
     await expect(profile.getByRole('button', { name: 'Logga ut', exact: true })).toBeVisible();
     await expect(profile.getByRole('link', { name: 'Månadskostnad', exact: true })).toHaveCount(0);
     await profile.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
-    await openNewObject(page);
+    const fresh = await openNewObject(page);
     await expect(page.getByLabel('Namn', { exact: true })).toHaveValue('');
-    await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+    await openProperties(fresh);
+    await expect(fresh.locator('.property-editor-row')).toHaveCount(0);
     await page.keyboard.press('Escape');
     await openProfile(page);
     await profile.getByRole('link', { name: 'Inloggningssätt', exact: true }).click();
@@ -247,7 +243,7 @@ test('INST-03: the separate profile protects native form input and groups person
         .getByRole('region', { name: 'Hushållets tabell', exact: true })
         .getByRole('heading', { name: 'Hushållet Linden', exact: true }),
     ).toBeFocused();
-    await expect(page.getByLabel('Beskrivning', { exact: true })).not.toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Nytt objekt', exact: true })).not.toBeVisible();
   } finally {
     await installation.close();
   }

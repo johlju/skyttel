@@ -785,26 +785,23 @@ referensen smal dator. Pekare har egna fall nedan.
 - Visning på dessa skärmar skriver inte över de sparade datorbredderna.
   Automationen provar emulerade pekare; fysisk enhet provas separat.
 
-### TEXTBREDD-05: äldre hushållsarkiv lämnar personliga samtalsval kvar
+### TEXTBREDD-05: hushållsarkiv lämnar personliga samtalsval kvar
 
-**Syfte:** Läsa ett kompatibelt äldre arkiv utan att återställa personliga
+**Syfte:** Läsa ett hushållsarkiv utan att återställa personliga
 bredder, utkastets startval eller medgivande från hushållsfilen.
 
 **Användare:** Alex, administratör i Textprov.
 
 **Förutsättningar:** Samma isolerade röstinstallation och Lo-förslag.
-Inga verkliga privata uppgifter används. Det nya personliga lagret ändrar
-inte hushållsfilens innehåll; en kopia med schemaversion 23 är därför ett
-giltigt kompatibilitetsprov. Ändra aldrig en produktionsfil för detta prov.
+Inga verkliga privata uppgifter används. Använd den fullständiga exporten
+från provinstallationen.
 
 **Integrationstest:**
 [conversation-widths.spec.ts](../../tests/integration/conversation-widths.spec.ts),
-testfallet “TEXTBREDD-05: äldre hushållsarkiv lämnar personliga samtalsval
-kvar”.
-Aktuell export och återimport täcks även av
+TEXTBREDD-05.
+Export och återimport täcks även av
 [household-export-ui.spec.ts](../../tests/integration/household-export-ui.spec.ts),
-testfallet “EXPORT-10: the downloaded current-format archive restores
-shared, private and historical content after restart”.
+EXPORT-10.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -814,16 +811,16 @@ shared, private and historical content after restart”.
     "spec": "tests/integration/conversation-widths.spec.ts",
     "caseId": "TEXTBREDD-05"
   },
-  "reference": "1600 × 900; faktisk browserdownload, kompatibelt schema23 och native läsning av personliga val/private Lo.",
+  "reference": "1600 × 900; faktisk browserdownload och native läsning av personliga val/private Lo.",
   "outcomes": [
-    "Läsa ett kompatibelt äldre arkiv utan att återställa personliga bredder, utkastets startval eller medgivande från hushållsfilen."
+    "Läsa ett hushållsarkiv utan att återställa personliga bredder, utkastets startval eller medgivande från hushållsfilen."
   ],
   "evidence": [
     {
       "kind": "overlap",
       "spec": "tests/integration/household-export-ui.spec.ts",
       "caseId": "EXPORT-10",
-      "purpose": "Aktuellt arkivformat och fullständig återläsning; detta är extra underlag, inte ett andra counterpart."
+      "purpose": "Fullständig återläsning; detta är extra underlag, inte ett andra counterpart."
     }
   ]
 }
@@ -836,25 +833,24 @@ shared, private and historical content after restart”.
 1. Starta samtalet med text, markera **Fråga inte igen för det här
    hushållet** och godkänn. Öppna utkastet och ändra båda bredderna.
 2. Öppna **Inställningar**, **Fullständig export**. Förbered exporten och
-   hämta ZIP-filen. Låt operatören göra kompatibilitetskopian enligt
-   [separat arkivförberedelse](#förbered-äldre-arkiv-vid-den-faktiska-hämtningen).
+   hämta ZIP-filen. Behåll filen oförändrad till importen.
 3. På **Samtal med Skyttel**, återställ bredderna och markera
    **Visa utkastet när ett samtal börjar**.
-4. På **Återimportera hushållet**, välj `/tmp/skyttel-schema-23.zip`.
+4. På **Återimportera hushållet**, välj den nyss hämtade ZIP-filen.
    Välj **Kontrollera importfil**, granska och markera **Jag vill ersätta
    allt hushållsinnehåll**. Välj **Ersätt hushållets innehåll**.
 5. Läs **Samtal med Skyttel** igen och kontrollera grundbredderna,
    utkastets markerade startval och statusen **Sparat den** för Medgivande.
    Återgå till kartan, öppna textvyn och läs grundbredderna. Fäll ut Lo
    i Tabell och läs Person samt **Osparad breddprovuppgift**.
-   Ta bort den tillfälliga provkopian när provet är färdigt.
+   Ta bort den hämtade provfilen när provet är färdigt.
 
 **Förväntat resultat:**
 
-- Exporten använder schemaversion 32. Personliga samtalsval och medgivande
-  ingår inte i hushållsfilen; automationen granskar detta.
-- En giltig schemaversion 23 går att kontrollera och återimportera genom
-  gränssnittet. Lo-förslaget bevaras. Aktuell version provas också.
+- Personliga samtalsval och medgivande ingår inte i hushållsfilen;
+  automationen granskar detta.
+- Ett giltigt hushållsarkiv går att kontrollera och återimportera
+  genom gränssnittet. Lo-förslaget bevaras.
 - Grundbredderna, det markerade startvalet och det sparade medgivandet
   finns kvar efter import. Hushållsimport skriver inte över personliga val.
 
@@ -1292,33 +1288,6 @@ ID för 1180 × 820 →420 och 844 × 390 →190; endast 375 × 667 →407 tas b
 Hinder, CSS- eller fokusfel specifika för de borttagna dimensionerna kan
 undgå referenserna. Detta är inte bevis på alla storlekar eller fysisk
 skärmtangentbordsfunktion. Inga pensionerade ID återanvänds.
-
-## Förbered äldre arkiv vid den faktiska hämtningen
-
-Operatören utför följande **efter TEXTBREDD-05 steg 2** och före steg 4.
-Indata är den nyss hämtade, fiktiva schema 32-filen, tillgänglig på maskinen
-som kör kommandot. Ersätt dess absoluta sökväg. Utdata är en separat
-schema 23-kopia; hushållsinnehåll och kontrollsummor ändras inte.
-
-<!-- markdownlint-disable MD013 -->
-```sh
-TEXTBREDD_ARCHIVE=/absolute/path/skyttel-hushall.zip node --input-type=module <<'JS'
-import { readFileSync, writeFileSync } from 'node:fs';
-import { unzipSync, zipSync } from 'fflate';
-const parts = unzipSync(readFileSync(process.env.TEXTBREDD_ARCHIVE));
-const manifest = JSON.parse(Buffer.from(parts['manifest.json']).toString());
-if (manifest.format !== 'skyttel-household' || manifest.schemaVersion !== 32)
-  throw Error('En provexport med schemaversion 32 krävs');
-manifest.schemaVersion = 23;
-parts['manifest.json'] = Buffer.from(JSON.stringify(manifest));
-writeFileSync('/tmp/skyttel-schema-23.zip', zipSync(parts), { mode: 0o600 });
-JS
-```
-<!-- markdownlint-enable MD013 -->
-
-Efter sista läsningen tas bara provkopian `/tmp/skyttel-schema-23.zip`
-och den nedladdade fiktiva exporten bort. Återställ ingen personinställning
-under importkontrollen. Ny installation används inför nästa fall.
 
 ## Mänskliga observationer
 

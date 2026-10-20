@@ -23,8 +23,9 @@ Välj **Redigera** vid objektet eller **Redigera valt samband** för att
 ## Hitta innehåll
 
 Utgångsläget visar aktuella objekt och samband. Kartans kapselformade
-sökfält är alltid synligt högst upp. Sök i namn, typ, beskrivning, egna
-fält och ekonomi utan att flytta kameran. Klicka i sökfältet för att skriva.
+sökfält är alltid synligt högst upp. Sök i objektets namn, typ,
+egenskapsetiketter och värden utan att flytta kameran. Klicka i sökfältet
+för att skriva.
 När kartbakgrunden har fokus kan du också börja skriva en bokstav eller siffra.
 
 **Filter** bredvid sökfältet öppnar en liten dialog med avsnitt för
@@ -67,9 +68,9 @@ väljer ett objekt visas
 även etiketterna för dess sparade samband. **Alla etiketter** visar även de
 andra sambandsnamnen.
 Klicka på ett sambands etikett för att läsa dess uppgifter. Välj sedan
-**Redigera valt samband** för att ändra riktning, säkerhet och status.
-Pilen går från det första objektet till det andra. Okänt och uttryckligen
-inget är uppgifter om ett samband, inte nya objekt.
+**Redigera valt samband** för att ändra riktning, egenskaper och status.
+Pilen går från det första objektet till det andra. Sambandets fria
+egenskaper läses i detaljerna; etiketten visar sambandstyp och status.
 
 I **Tabell** öppnar objektets namn uppgifter och samband i samma rad.
 **Visa [objektets namn] i kartan** markerar objektet och fokuserar kameran
@@ -273,9 +274,9 @@ Teckenförklaringen följer kartans filter och använder samma färger;
 **Information och hjälp** förklarar alla symbolerna.
 
 **Upphört** har en egen färg och visas vid objektets namn eller i
-sambandets etikett. Statusen följer samma slutdatum och manuella val som
-i tabellen. Den kan visas samtidigt med en ändringssymbol och finns kvar
-efter sparandet. **Gäller fortfarande** åsidosätter ett passerat slutdatum.
+sambandets etikett. Statusen följer samma uttryckliga val som i tabellen.
+Den kan visas samtidigt med en ändringssymbol och finns kvar efter
+sparandet. Egenskaper, även Slutdatum, ändrar inte status.
 
 **Ta bort** lägger omedelbart objektets och dess inkommande och utgående
 sambands borttagning i utkastet. Antalet berörda samband och följden

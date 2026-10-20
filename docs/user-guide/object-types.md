@@ -1,157 +1,80 @@
-# Skapa objekttyper och egna fält
+# Skapa och ändra objekttyper
 
 [Till användarguidens innehåll](README.md)
 
-Alla medlemmar kan anpassa hushållets objekttyper. En typ kan beskriva
-exempelvis en solcellsanläggning och ha samma egna fält för alla objekt
-av den typen. Även förifyllda typer, som Person och Fordon, går att ändra.
-Den som skapar en typ får ingen särskild roll eller ensam rätt till den.
+Alla medlemmar kan anpassa hushållets objekttyper. En typ beskriver vad ett
+objekt är, exempelvis en solcellsanläggning. Även förifyllda typer, som
+Person och Fordon, går att ändra. Den som skapar en typ får ingen särskild
+roll eller ensam rätt till den.
 
-Du når definitionerna genom **Inställningar** → **Typer och egna fält**.
-Oskickad definitionstext följer med mellan inställningarnas sidor.
-Välj **Tillbaka till kartan** för att granska och spara typförslagen
-med resten av ditt privata utkast.
+Du når definitionerna genom **Inställningar → Typer**. Oskickad
+definitionstext följer med mellan inställningarnas sidor. Välj
+**Tillbaka till kartan** för att granska och spara typförslagen med
+resten av ditt utkast.
 
 ## Skapa en typ och ett objekt tillsammans
 
-1. Öppna **Inställningar → Typer och egna fält** och välj **Ny objekttyp**.
-   Ange **Typens namn** och en förklarande
-   **Typens beskrivning**.
-2. Välj **Lägg till fält** för varje egen uppgift. Ange fältets namn,
-   beskrivning och värdeslag: **Text**, **Tal**, **Datum** eller **Ja/nej**.
-   För Solcellsanläggning kan du använda Leverantör, Effekt,
-   Installationsdatum och Batteri. Skriv måttenheten i beskrivningen.
-3. Välj **Lägg typförslaget i mitt utkast**. Skapa sedan ett **Nytt objekt**
-   och välj den nya typen i **Objekttyp**. Fälten visas i objektformuläret.
+1. Öppna **Inställningar → Typer** och välj **Ny objekttyp**.
+   Ange **Typens namn** och en förklarande **Typens beskrivning**.
+2. Välj **Lägg typförslaget i mitt utkast**. Skapa sedan ett **Nytt objekt**
+   och välj den nya typen i **Objekttyp**.
+3. Lägg till objektets egna uppgifter under **Fria egenskaper**. För en
+   solcellsanläggning kan du exempelvis ange Leverantör, Effekt,
+   Installationsdatum och Batteri. Välj etiketter och datatyper för just
+   det objektet; typdefinitionen bestämmer inga egenskaper.
 4. Lägg objektet i utkastet. Granska definitionen och objektets uppgifter
    i **Visa utkastet**. Välj **Spara hela utkastet** när du vill göra
    alla förslagen gemensamma.
 
-Alla fyra fälttyper får lämnas obesvarade. För ja/nej är **Obesvarat**,
-**Ja** och **Nej** tre olika val. Ett tomt tal blir inte noll. Datum måste
-vara giltiga kalenderdatum och tal måste vara tal. Fel stoppar förslaget;
-ingen del av ett oförenligt utkast sparas.
-
+Typens beskrivning förklarar typen. En beskrivning av ett enskilt objekt
+är i stället en vanlig fri egenskap på objektet. Läs hur du
+[redigerar och ordnar egenskaper](map.md#beskriv-objekt-och-samband-med-fria-egenskaper).
 Skriv aldrig lösenord, fullständiga konto- eller kortnummer, pinkoder,
-säkerhetskoder eller återställningskoder. Egna fält är inte ett undantag
-från regeln att hemliga uppgifter inte hör hemma i Skyttel.
-
-## Ordna fälten i avsnitt
-
-Öppna en egen eller förifylld objekttyp i **Inställningar** →
-**Typer och egna fält**. Under **Avsnitt** kan du namnge avsnitten,
-välja **Lägg till avsnitt** och ändra ordningen med **Upp** och **Ned**.
-Äldre typer visar sina egna fält i avsnittet **Egna fält**.
-
-Varje fält har **Visa i avsnitt**. Välj ett avsnitt eller
-**Dold, behåll värden**. Fältets **Upp** och **Ned** ändrar ordningen
-inom det valda avsnittet. Flytt och döljning behåller fältets identitet,
-värdeslag och alla svar, även noll och nej. Välj ett avsnitt igen för
-att återvisa fältet med dess tidigare värden. Ett dolt fält är fortfarande
-en del av definitionen; döljning är inte borttagning eller permanent radering.
-
-Ett avsnitt kan tas bort när alla dess fält har flyttats eller dolts.
-Fältets namn, beskrivning, värdeslag och separata borttagningskontroll
-finns kvar i den öppningsbara fältdefinitionen. Användningsskydden gäller
-även dolda fält. Formulär och detaljer följer din aktuella definition.
-Utkast, konflikter och historik visar även bevarade dolda värden för granskning.
-
-Lägg typförslaget i ditt privata utkast. Granska och spara det tillsammans
-med objektens uppgifter. Andra medlemmar ser ändringen först efter samma
-gemensamma sparande. Oskickade ändringar följer med mellan Inställningar
-och kartan, men måste läggas i utkastet för att klara omladdning och omstart.
-
-## Placera gemensamma uppgifter
-
-Välj **Lägg till gemensam egenskap** i objekttypens definition för att
-placera beskrivning, belopp, avtalsdatum eller villkor i ett avsnitt.
-Varje gemensam egenskap kan placeras en gång. Använd **Visa i avsnitt**,
-**Upp**, **Ned** och **Dölj** på samma sätt som för egna fält. Gemensamma
-egenskaper och egna fält kan blandas i samma ordning. Namnet får anpassas,
-men texten **Gemensam egenskap** visar vilken uppgift som avses.
-
-Placeringen ändrar inte uppgiftens betydelse. Skuld, kreditutrymme och
-utnyttjad kredit är fortfarande separata uppgifter med egen säkerhet och
-frivilligt datum. Okänt, uttryckligen inget och obesvarat förblir olika.
-Namn, objekttyp och objektets identitet ligger utanför dessa avsnitt.
-
-Befintliga gemensamma värden som inte visas i typens avsnitt finns under
-**Uppgifter utanför typens avsnitt**. Där kan du läsa och rätta dem även
-efter ett typbyte. Döljning är ingen åtkomstbegränsning eller radering.
-Äldre typer behåller beskrivningen och formulärets ekonomiska uppgifter
-tills du väljer en egen placering. Historik och återimport behåller
-värden, säkerhet och datum tillsammans med rätt typdefinition.
+säkerhetskoder eller återställningskoder.
 
 ## Rätta definitioner och värden
 
-Öppna **Objekttyper och egna fält** och välj **Ändra typ** för rätt typ.
-Namn och beskrivning kan rättas även när typen eller fältet används.
-Objekten behåller sina identiteter och värden när definitionerna byter namn.
-Snarlika namn kopplas inte ihop automatiskt.
+Öppna **Objekttyper** och välj **Ändra typ** för rätt typ. Namn och
+beskrivning kan rättas även när typen används. Objektens identiteter,
+egenskaper och samband finns kvar. Snarlika typnamn kopplas inte ihop
+automatiskt.
 
-För att rätta ett värde öppnar du **Tabell** och väljer objektets
-**Redigera**. Ändra fältet, lägg rättelsen i utkastet och spara hela
-utkastet. Du kan också rensa ett värde eller välja **Obesvarat**.
-Andra medlemmar ser den sparade definitionen och kan
-skapa egna objekt med samma fält. Din privata nya typ blir tillgänglig
-för dem först efter ditt sparande.
-
-Om ett använt fält behöver ett annat värdeslag, lägg till ett nytt fält.
-Det tidigare fältet och värdena finns kvar. Skyttel konverterar inte värden
-automatiskt. Även användning i ett privat utkast kan hindra byte av
-värdeslag; felbeskedet avslöjar inte utkastets innehåll.
+För att rätta ett objekts egenskap öppnar du **Tabell** och väljer
+objektets **Redigera**. Lägg rättelsen i utkastet och spara hela utkastet.
+Andra medlemmar får tillgång till din nya typ efter sparandet, men varje
+objekt har sina egna egenskaper och sin egen ordning.
 
 ## Byt typ på ett objekt
 
-Öppna **Tabell** och välj objektets **Redigera**. Välj sedan
-en annan **Objekttyp**, exempelvis från Cykel till Fordon.
-Objektets identitet och alla dess samband finns kvar. Namn,
-beskrivning och andra uppgifter som inte hör till typens egna fält påverkas
-inte av själva typvalet.
+Öppna **Tabell** och välj objektets **Redigera**. Välj sedan en annan
+**Objekttyp**, exempelvis från Cykel till Fordon. Objektets identitet,
+namn, egenskaper och deras ordning, status, profilbild, ikonval och
+samband finns kvar vid typbytet.
 
-**Ta bort tidigare egna fält?** visar namnen och värdena som försvinner.
-**Fortsätt redigera** behåller nuvarande typ och värden. Välj
-**Ta bort fältvärdena och byt typ** för att bekräfta borttagningen ur
-formuläret. Redan lagda förslag ändras först när hela formuläret läggs i
-utkastet.
+Välj **Lägg i utkastet och stäng**. I **Visa utkastet** ser du tidigare
+typ och ditt förslag. Typbytet och egenskapsrättelserna sparas tillsammans
+med resten av utkastet. Ett fel stoppar hela sparandet. Tidigare sparade
+värden finns kvar i historiken.
 
-Den nya typens fält börjar obesvarade, även om namn eller fältidentiteter
-sammanfaller. Fyll själv i de nya uppgifterna. Skyttel överför eller
-konverterar dem inte. **Obesvarat** är skilt från **Nej**.
+Försöker du lämna ett ändrat formulär visar Skyttel ett val.
+**Fortsätt redigera** behåller inmatningen.
+**Kasta ändringarna och fortsätt** tar bort oskickade ändringar utan att
+ändra redan lagda förslag.
 
-Om du byter typ flera gånger under redigeringen visas de tidigare svaren
-i skilda grupper med sin ursprungliga typ. Även när du byter tillbaka
-börjar de nya fälten tomma. Bekräfta hanteringen på nytt efter varje byte.
-Gemensamma ekonomiska uppgifter behåller belopp, säkerhet och datum;
-profilbilden och ditt ikonval finns också kvar.
-
-Välj **Lägg i utkastet och stäng**. I **Visa utkastet** ser du tidigare typ och
-värden samt den nya typen och dess värden. Typbytet och fälträttelserna
-sparas tillsammans med resten av utkastet. Ett fel stoppar hela sparandet.
-Tidigare sparade värden finns kvar i historiken. Försöker du lämna ett
-ändrat formulär visar Skyttel ett val. **Fortsätt redigera** behåller
-hela texten. **Kasta ändringarna och fortsätt** tar bort den oskickade texten
-utan att ändra redan lagda förslag.
-
-Ett typbyte gäller ett objekt och behåller dess identitet och samband.
-Ett namnbyte på typdefinitionen ändrar benämningen för alla objekt av
-den typen. Vid konflikt granskar du typen och dess fältvärden som en
-helhet innan du ger ett nytt sparbesked.
+Ett typbyte gäller ett objekt. Ett namnbyte på typdefinitionen ändrar
+benämningen för alla objekt av den typen.
 
 ## Samtidiga ändringar och återupptagning
 
 Typförslag och objektförslag finns kvar efter omladdning och omstart när
 de har lagts i utkastet. Oskickad text i formuläret är ännu inte bevarad.
-Vid en samtidig definitionsändring sparas inget av det berörda försöket.
-Välj **Hämta aktuellt underlag** och granska den sparade definitionen.
-Välj vilken definition eller vilket objektförslag du vill behålla,
-granska hela utkastet och ge ett nytt sparbesked.
-Om du behåller din typdefinition bevaras också andras oberoende ändringar,
-exempelvis ett nytt fält eller en beskrivning som du inte har ändrat.
+Vid konflikt sparas ingen del av försöket. Välj **Hämta aktuellt underlag**,
+granska den sparade definitionen och välj hur konflikten ska lösas.
+Oberoende rättelser bevaras. Granska hela utkastet och ge ett nytt
+sparbesked.
 
 Kvittot omfattar definitioner och objekt i samma sparande. Historiken
-bevarar äldre definitioner och fältens betydelse. Följ
-[utkast och sparande](drafts.md) vid oklart sparande.
-[Ändringshistoriken](history.md) visar sparade definitioner och egna
-fält med sina dåvarande betydelser. Läs om
-[borttagning av typer och fält](definition-removal.md).
+bevarar äldre typnamn och förklaringar tillsammans med objektens
+egenskaper. Följ [utkast och sparande](drafts.md) vid oklart sparande.
+Läs också om [ändringshistoriken](history.md) och
+[borttagning av typer](definition-removal.md).

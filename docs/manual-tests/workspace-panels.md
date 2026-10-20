@@ -69,8 +69,9 @@ PANEL-01.
    Skriv namnet, välj krysset och **Fortsätt redigera**. Kontrollera namnet.
    Välj **Lägg i utkastet och stäng** och spara sedan hela utkastet.
 2. Läs varje objekt via tabellen. Kontrollera rubriken, fäll ihop raden
-   och välj radens **Redigera**. Skriv Lagt i utkastet om följt av namnet i
-   **Beskrivning**. Lägg hela förslaget i utkastet och stäng.
+   och välj radens **Redigera**. Öppna **Fria egenskaper** och lägg till
+   textegenskapen **Beskrivning** med värdet Lagt i utkastet om följt av namnet.
+   Lägg hela förslaget i utkastet och stäng.
 3. Starta textsamtalet och skriv Bevarat meddelande utan att skicka.
    Stäng textvyn. Läs Cykeln två gånger och fäll ihop raden mellan öppningarna.
    Kontrollera beskrivningen, rubriken och en enda detaljvy för objektet.
@@ -166,14 +167,17 @@ PANEL-03.
 
 **Steg:**
 
-1. Öppna **Redigera Cykeln** i första klienten och skriv Min oskickade text.
+1. Öppna **Redigera Cykeln** i första klienten. Öppna **Fria egenskaper**
+   och lägg till textegenskapen **Beskrivning** med värdet Min oskickade text.
 2. Lägg ett nyare förslag för samma objekt i den andra klientens utkast:
-   beskrivningen Nyare förslag från samma användares andra klient.
+   lägg till textegenskapen **Beskrivning** med värdet Nyare förslag från
+   samma användares andra klient under **Fria egenskaper**.
 3. Välj **Lägg i utkastet och stäng** i första klienten.
    Kontrollera avvisningen och att både namnet och Min oskickade text finns
    kvar.
 4. Välj krysset och **Kasta ändringarna och fortsätt**. Ladda om och öppna
-   Cykeln för vanlig redigering igen och läs den andra klientens beskrivning.
+   Cykeln för vanlig redigering igen. Öppna **Fria egenskaper** och läs den
+   andra klientens beskrivning.
    Stäng det oförändrade formuläret. Öppna **Rapporter → Ändringshistorik**,
    fäll ut **Visa ändringarna** och läs det ursprungliga sparandet.
    Den nyare privata beskrivningen ska inte finnas i det sparade innehållet.
@@ -223,7 +227,7 @@ PANEL-04.
    med tangentbord. Den aktiva modalen behåller fokus.
 2. Tryck Escape och välj **Fortsätt redigera**. Kontrollera Garaget.
    Välj **Stäng samband** och bekräfta **Kasta ändringarna och fortsätt**.
-3. Öppna **Inställningar**, **Typer och egna fält** och **Ny objekttyp**.
+3. Öppna **Inställningar**, **Typer** och **Ny objekttyp**.
    Skriv Oskickad typ. Välj **Tillbaka till kartan**, **Karta** och nå det
    sparade sambandet med tangentbord. Öppna typinställningarna igen.
 4. Kontrollera Oskickad typ och välj **Stäng typformuläret utan att skicka**.
@@ -273,7 +277,7 @@ PANEL-05.
 
 1. Sök efter Cykeln i tabellen. Välj **Redigera Cykeln** och skriv
    Skickad beskrivning. Välj **Lägg i utkastet och stäng**.
-2. Håll det verkliga svaret. Kontrollera att beskrivningsfältet och krysset
+2. Håll det verkliga svaret. Kontrollera att egenskapens värdekontroll och krysset
    är inaktiva. Tryck Escape och försök fokusera den bakomliggande sökningen.
 3. Släpp samma svar. Kontrollera att formuläret stängs och
    **Redigera Cykeln** får fokus. Sök efter Bilen och fortsätt skriva i

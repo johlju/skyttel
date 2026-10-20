@@ -16,13 +16,43 @@ Hjälpknappen syns även när telefonens verktyg är hopfällda. Hopplänkarna n
 verktyg,
 formulär och text med tangentbord före kartgrafiken.
 
+## Beskriv objekt och samband med fria egenskaper
+
+Öppna **Fria egenskaper** i objektformuläret eller redigera ett samband och välj
+**Lägg till egenskap**. Ange en egen **Etikett** och välj **Text**, **Tal**,
+**Datum** eller **Ja/nej** som datatyp. Du kan lämna en egenskap tom,
+även utan datatyp. Noll, Nej och **Tom text** är värden och skiljer sig
+från tomt. **Ange tom text** registrerar en avsiktligt tom text.
+
+Flera egenskaper kan ha samma etikett. **Töm värdet** behåller etiketten,
+datatypen och egenskapen. **Ta bort egenskapen** tar bort hela posten.
+Använd **Flytta upp** och **Flytta ned** för att välja ordning utan dragning.
+Ordningen och egenskaperna behålls när du byter objekt- eller sambandstyp.
+På ett samband behålls också frånobjekt och tillobjekt vid typbyte.
+
+Datatypbyte kräver ett giltigt eller tomt värde. Felaktig inmatning finns
+kvar tills du rättar den eller tömmer värdet. Hela formuläret läggs i
+**ditt utkast** och sparas tillsammans med övrigt arbete.
+
+Beskrivning, Pris och Slutdatum kan vara vanliga fria etiketter.
+De styr ingen ekonomi eller livscykel automatiskt. Välj objektets eller
+sambandets status uttryckligen. Typens förklarande beskrivning hör till
+typdefinitionen.
+
+När du väljer sambandets ändpunkter kan du söka i objektets eget namn,
+typ, egenskapsetiketter och värden. Öppna **Granska [namn] [identitet]**
+för att läsa alla uppgifter före valet. Granskning väljer inget objekt.
+Välj rätt kandidat uttryckligen med dess valknapp eller listans alternativ.
+Lika namn har skilda identiteter.
+
 ## Läs hushållets objekt i tabellen
 
 Välj **Tabell** i verktygsfältet för att läsa underlaget utan kartgrafik.
-Tabellen visar Namn, Typ, Beskrivning och Status. Expandera objektets namn
-för hela beskrivningen, egna fält och ekonomi. Flera rader kan vara öppna
-samtidigt. Ändrade uppgifter visar **Sparat** och **Ditt förslag** intill
-varandra; symbolen ◇ märker Nytt, Ändrat och Föreslagen borttagning.
+Tabellen visar Namn, Typ, Status och radåtgärder. Expandera objektets namn
+för alla egenskaper i vald ordning, även lika etiketter och tomma värden.
+Flera rader kan vara öppna samtidigt. Ändrade uppgifter visar **Sparat**
+och **Ditt förslag** intill varandra; symbolen ◇ märker Nytt, Ändrat och
+Föreslagen borttagning.
 
 Namn sorteras från A till Ö från början. Klicka på kolumnrubriken **Namn**
 eller **Typ** för att sortera; klicka igen för att växla riktning. Pilen
@@ -43,17 +73,18 @@ tabellen i sidled; fullständiga detaljtexter bryts inom skärmbredden.
 ### Läs objekt och följ samband
 
 Expandera raden genom att välja objektets namn. Alla uppgifter visas direkt
-i raden, även dolda fält och ekonomiska uppgifter. Pennikonen bland radens
+i raden, med egenskapernas datatyper och tomma värden. Pennikonen bland radens
 åtgärder öppnar objektets redigeringsformulär. **Samband för [objektnamn]**
 är en separat åtgärd med antal
 samband. Samma sambandsdialog kan öppnas från objektets uppgifter.
-Dialogen visar riktning, båda ändpunkterna, säkerhet, egna fält och
-slutdatum, även för upphörda samband och föreslagna borttagningar.
+Dialogen visar riktning, båda ändpunkterna, status och alla egenskaper,
+även för upphörda samband och föreslagna borttagningar.
 
 Välj det andra objektets namn för att läsa det och fortsätt via dess
 samband. **Tillbaka** går ett steg i läskedjan. Du behöver inte visa
-objektet i kartan. Okänt och Uttryckligen inget har inga objektlänkar;
-Osäkert uppgivet och Ospecificerat objekt behåller sina betydelser.
+objektet i kartan. Varje aktuellt samband har två befintliga objekt.
+Ett ospecificerat verkligt objekt kan vara en ändpunkt; en obesvarad
+fråga om vilket objekt som avses är inget samband.
 
 Välj objektets namn igen för att fälla ihop radens uppgifter. I läskedjan
 stänger krysset eller Escape dialogen och återför fokus till
@@ -85,7 +116,7 @@ filtervalen finns kvar. I Tabell finns ett eget synligt sökfält och
 **Filter** till höger om fältet öppnar samma kompakta snabbval som i kartan.
 Vyernas sökning och filter är separata.
 
-Sök i namn, typ, beskrivning, egna fält och ekonomi. Alla sökord måste
+Sök i namn, typ, egenskapsetiketter och egenskapsvärden. Alla sökord måste
 finnas, men ordning och skiftläge spelar ingen roll och delord fungerar.
 Å, ä och ö behåller sina betydelser. Tabellen anger vilket detaljfält
 som matchar. Både visade sparade värden och förslag kan ge träff; samband och
@@ -155,14 +186,14 @@ alla tre kartåtgärderna.
 
 **Nytt objekt** börjar på **Namn**, med **Grunduppgifter** öppet.
 **Redigera [objektnamn]** i tabellen och **Redigera** i objektets läsläge
-öppnar samma formulär. Ett avsnitt är öppet åt gången. Uppgifterna följer
-vald typ; ekonomi samt livscykel, profilbild och ikon har egna avsnitt.
+öppnar samma formulär. Fria egenskaper hör till objektet oberoende av
+vald typ. Status, profilbild och ikon är separata val.
 På mobil fyller dialogen skärmen. Rulla innehållet; knapparna finns nederst.
 
 Välj **Ospecificerat objekt** när du avsiktligt beskriver något som ännu
 inte är närmare identifierat, exempelvis bankkontot som betalar hyran utan
 att veta vilken bank det är. Samma namn betyder inte att två objekt är
-samma sak. Läs beskrivningen och identiteten innan du väljer ett befintligt
+samma sak. Läs egenskaperna och identiteten innan du väljer ett befintligt
 objekt. Objekt med samma namn behåller sina egna identiteter och samband.
 
 Välj **Lägg i utkastet och stäng** för att lägga hela formuläret i ditt
@@ -176,14 +207,12 @@ felsammanfattningen. Följ en fellänk för att öppna avsnittet och fokusera
 fältet. Alla värden finns kvar; inga delar skickas innan hela formuläret
 är giltigt. Ett tillägg till ditt utkast sparar inte hushållets karta.
 
-Vid typbyte visar **Ta bort tidigare egna fält?** värdena som försvinner.
-**Fortsätt redigera** behåller dem. **Ta bort fältvärdena och byt typ**
-bekräftar borttagningen ur formuläret. Typens nya fält börjar obesvarade.
-Namn, identitet, beskrivning, ekonomi, livscykel, bild och ikon finns kvar.
+Typbyte behåller alla egenskaper och deras ordning. Namn, identitet,
+status, bild, ikon och samband finns också kvar.
 
 Skapa en sak separat om den ännu inte finns när du arbetar med samband.
-Skapa också en ny objekttyp före objektet genom **Inställningar → Typer
-och egna fält**. Typförslag kan användas direkt i samma utkast.
+Skapa också en ny objekttyp före objektet genom **Inställningar → Typer**.
+Typförslag kan användas direkt i samma utkast.
 
 ## Avbryt eller följ upp objektformuläret
 
@@ -207,7 +236,7 @@ och varningen kan utebli på mobil. Beständiga utkast överlever omladdning.
 ## Besök andra vyer och fortsätt arbetet
 
 **Din profil** ger kontouppgifter, inloggningssätt och **Logga ut**.
-**Inställningar** ger bland annat **Typer och egna fält** och medgivande
+**Inställningar** ger bland annat **Typer** och medgivande
 på sidan **Samtal med Skyttel**. **Tillbaka till kartan** återgår till
 hushållsarbetet. Sökning, urval och pågående samtal finns kvar; ändrad
 objekttext som skulle lämnas omfattas av förlustvarningen.
@@ -242,20 +271,18 @@ Saknas det andra objektet, skapa det separat och återvänd till sambandsdialoge
 
 1. Välj **Nytt samband**. Ursprungsobjektet är förvalt som **Från objekt**.
    Välj **Sambandstyp** och läs dess betydelse. Sök det andra objektet med
-   namn, typ eller beskrivning och välj **Till objekt**. Objektvalet gäller
+   namn, typ eller egenskaper och välj **Till objekt**. Objektvalet gäller
    hela hushållet, inklusive nya utkastobjekt, oberoende av vyns filter.
 2. Kontrollera båda ändpunkterna och välj vid behov **Byt riktning**.
    Läs hela meningen före inskickning, till exempel Alex använder Blå cykeln.
-3. Välj **Uppgiftens säkerhet**. **Känt** och **Osäkert uppgivet** pekar
-   ut ett objekt. **Okänt** anger att uppgiften inte är känd och
-   **Uttryckligen inget** att något uttryckligen saknas; dessa val behöver
-   inget målobjekt. En **Obesvarad identitetsfråga** kan finnas i utkastet
-   men måste lösas före gemensamt sparande.
-4. Ange egna fält, status och slutdatum vid behov. Välj **Lägg i utkastet**
+3. Lägg till fria egenskaper för de uppgifter du vill beskriva på
+   sambandet. Osäkerhet kan uttryckas som en vanlig egenskap; båda
+   ändpunkterna måste ändå vara valda befintliga objekt.
+4. Välj status vid behov. Välj **Lägg i utkastet**
    och invänta bekräftelsen. Dialogen stannar öppen för nästa samband.
-5. Välj **Redigera samband** för en rättelse. Vid typbyte visar appen
-   tidigare egna fält, även dolda värden, och kräver ett uttryckligt besked
-   innan de tas bort. Avbruten rättelse behåller tidigare färdiga förslag.
+5. Välj **Redigera samband** för en rättelse. Typbyte behåller alla
+   egenskaper, deras ordning och ändpunkterna. Avbruten rättelse behåller
+   tidigare färdiga förslag.
 6. Välj **Stäng samband** för att återgå till platsen där dialogen öppnades.
    Granska **Ditt utkast** och välj **Spara hela utkastet** när alla
    förslag ska bli gemensamma.
@@ -306,7 +333,7 @@ Ett byte av sambandets mål kopplar om sambandet; det skapar inte en ny
 identitet för startobjektet.
 
 Läs [profilbilder](profile-images.md) för bildval och
-[objekttyper och egna fält](object-types.md#byt-typ-på-ett-objekt) för att
+[objekttyper](object-types.md#byt-typ-på-ett-objekt) för att
 byta typ utan att förlora objektets identitet eller samband.
 
 ## Avsluta, ta bort eller rätta
@@ -316,7 +343,7 @@ Markera **Upphört** när något slutar gälla men ska synas i kartan.
 borttagning omfattar också dess inkommande och utgående samband;
 andra objekt finns kvar. Granska följderna före sparandet.
 
-[Livscykelguiden](lifecycle.md) beskriver status, slutdatum och borttagning.
+[Livscykelguiden](lifecycle.md) beskriver status och borttagning.
 [Historiken](history.md) visar tidigare sparanden och deras värden.
 För att avstå från osparade förslag använder du
 [utkastets kontroller](drafts.md#granska-spara-eller-kasta-förslag).

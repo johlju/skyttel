@@ -24,7 +24,8 @@ angivet arbetssteg, tillsammans med UI-proceduren en gång.
 I KONTEXT-01/02/03/08/09/10/11/12/14/15, när ett steg kräver kvarvarande eller
 rättat Lo-förslag: öppna
 **Utkast → Visa förslaget: Lo Exempel** (eller det rättade namnet).
-Läs Person, det aktuella namnet och **Påhittad uppgift** som beskrivning.
+Läs Person, det aktuella namnet och den fria egenskapen **Beskrivning** med
+värdet **Påhittad uppgift (Text)**.
 Stäng dialogen före nästa samtalssteg. När ett steg kräver sparad Lo:
 öppna **Tabell**, fäll ut objektets rad och läs samma fullständiga värden.
 Ett kvitto läses genom **Rapporter → Ändringshistorik → Visa ändringarna**.
@@ -36,8 +37,9 @@ nya förslag i utkastet eller utföra ett extra sparande.
 
 1. Starta [den kontrollerade röstinstallationen](voice-assistant.md#controlled-voice-fixture).
    Kör inte `seed-family`. Skapa Kontextprov efter inloggningen.
-2. Skapa **Lo Exempel**, typ **Person**, beskrivning **Påhittad uppgift**,
-   via **Tabell → Nytt objekt** och välj **Lägg i utkastet och stäng**.
+2. Skapa **Lo Exempel**, typ **Person**, via **Tabell → Nytt objekt**.
+   Öppna **Fria egenskaper** och lägg till **Beskrivning** med datatyp
+   **Text** och värdet **Påhittad uppgift**. Välj **Lägg i utkastet och stäng**.
    Lämna förslaget osparat.
    Välj **Skriv till Skyttel → Nytt samtal → Godkänn och starta**.
 3. Terminalen håller modelluppdragen. Läs anrops-ID, `draft.version`,

@@ -101,7 +101,7 @@ and expose historical replacements”.
 1. Redigera Lo och öppna Livscykel och utseende. Välj en PNG-bild och
    kontrollera förhandsbilden. Välj Lägg i utkastet och stäng. Öppna kartan
    och kontrollera bilden i Lo Exempels runda symbol.
-2. Redigera Lo igen. Skriv Oskickad text som beskrivning i Grunduppgifter.
+2. Redigera Lo igen. Skriv Oskickad text som egenskapen Beskrivning under Fria egenskaper.
    Öppna Livscykel och utseende och kontrollera att bildvalet är nåbart.
    Lägg hela formuläret i utkastet och spara hela utkastet separat.
 3. Starta om servern och ladda om. Kontrollera bilden i redigeringen och
@@ -392,11 +392,13 @@ och meddela **Samma avslag är släppt**. Återställ HTTPS-ingången före
 
 **Steg:**
 
-1. Redigera Garaget, skriv Separat förslag om Garaget och välj **Lägg i utkastet
-   och stäng**.
+1. Redigera Garaget. Öppna **Fria egenskaper**, ändra värdet i egenskapen
+   Beskrivning till Separat förslag om Garaget och välj **Lägg i utkastet och
+   stäng**.
 2. Redigera Cykeln. Öppna **Livscykel och utseende**, välj första bilden och
    lägg hela formuläret i utkastet. Upprepa med andra bilden.
-3. Redigera Cykeln igen. Skriv Oskickad bildtext i Grunduppgifter. Öppna
+3. Redigera Cykeln igen. Öppna **Fria egenskaper** och ändra värdet i
+   egenskapen Beskrivning till Oskickad bildtext. Öppna
    **Livscykel och utseende** och välj `fel.png`. Be operatören förbereda
    hållet svar enligt förberedelsen och invänta installationen. Välj **Lägg i
    utkastet och stäng**. Invänta operatörens bekräftelse att det verkliga
@@ -404,15 +406,18 @@ och meddela **Samma avslag är släppt**. Återställ HTTPS-ingången före
 4. Kontrollera spärrade fält och Avbryt. Tryck Escape och försök fokusera
    bakgrundens sökfält med Tab och Shift+Tab. Be operatören släppa samma avslag
    enligt förberedelsen och invänta bekräftelse.
-5. Läs bildfelet. Öppna Grunduppgifter och kontrollera beskrivningen. Välj
+5. Läs bildfelet. Öppna Fria egenskaper och kontrollera egenskapen
+   Beskrivning. Välj
    **Avbryt**. Kontrollera standardfokus, läsbarhet och synligt fokus på
    **Fortsätt redigera**, även med pekaren över knappen. Tryck Tab och Shift+Tab
    och kontrollera att fokus återgår till samma knapp.
 6. Tryck Escape i varningen. Kontrollera text och fokus på Avbryt. Välj Avbryt
    igen och **Kasta ändringarna och fortsätt**.
-7. Redigera Cykeln igen. Kontrollera ursprunglig utkastbeskrivning och andra
-   giltiga bilden. Avbryt det oförändrade formuläret och öppna Garaget igen.
-   Kontrollera dess lagda förslag.
+7. Redigera Cykeln igen. Öppna **Fria egenskaper** och kontrollera ursprungligt
+   värde i egenskapen Beskrivning. Öppna **Livscykel och utseende** och
+   kontrollera den andra giltiga bilden. Avbryt det oförändrade formuläret och
+   öppna Garaget igen. Öppna **Fria egenskaper** och kontrollera dess lagda
+   förslag.
 
 **Förväntat resultat:**
 
@@ -483,7 +488,8 @@ genom senare redigering; återställ HTTPS-ingången före `quit`.
    efter bildfelet och en giltig bild, utan att lägga det i utkastet.
 5. Lägg ett oberoende objektförslag, Annat förslag, i utkastet från andra
    fliken. Försök lägga första flikens hela formulär i utkastet.
-6. Kontrollera felet, beskrivningen i Grunduppgifter och filvalet i Livscykel
+6. Kontrollera felet, egenskapen Beskrivning under Fria egenskaper och
+   filvalet i Livscykel
    och utseende. Granska det privata utkastet från andra fliken.
 
 **Förväntat resultat:**
@@ -521,9 +527,10 @@ och kvitto samt ta bort senaste bilden utan att få tillbaka en äldre.
 
 **Förutsättningar:** Ett nytt isolerat hushåll med tomt objektutkast.
 
-**Separat förberedelse:** Öppna **Inställningar → Typer och egna fält →
+**Separat förberedelse:** Öppna **Inställningar → Typer →
 Ny objekttyp**. Ange namnet **Egen bildtyp** och beskrivningen **Egen typ
-med profilbild**, utan egna fält. Lägg definitionen i utkastet utan att
+med profilbild**, utan ytterligare uppgifter. Lägg definitionen i utkastet
+utan att
 spara. Återgå till kartan. Definitionen ingår inte i objektförslagen som
 räknas i stegen. Ha två giltiga bilder och `fel.png` från förberedelsen.
 
@@ -533,16 +540,18 @@ BILD-06.
 
 **Steg:**
 
-1. Välj **Nytt objekt**. Fyll **Bild för Egen bildtyp** och
-   **Text i samma förslag** som namn och beskrivning och välj typen
-   **Egen bildtyp**. Öppna **Livscykel och utseende**. Sök cykel under
+1. Välj **Nytt objekt**. Fyll **Bild för Egen bildtyp** som namn och välj typen
+   **Egen bildtyp**. Lägg till egenskapen **Beskrivning** under **Fria
+   egenskaper**, välj datatypen Text och ange **Text i samma förslag** som
+   värde. Öppna **Livscykel och utseende**. Sök cykel under
    **Ikon**, välj
    **Cykel** och välj den första giltiga bilden. Kontrollera förhandsbilden.
    Inget objektförslag ska ännu finnas i utkastet.
 2. Välj **Lägg i utkastet och stäng**. Granska hela objektförslaget med text,
    ikon och bild. Spara hela utkastet och läs kvittot.
-3. Redigera objektet igen. Skriv **Ny text före bildbytet** i Grunduppgifter,
-   öppna Livscykel och utseende och välj den andra giltiga bilden.
+3. Redigera objektet igen. Öppna **Fria egenskaper** och ändra värdet i samma
+   Beskrivning-egenskap till **Ny text före bildbytet**. Öppna Livscykel och
+   utseende och välj den andra giltiga bilden.
    Välj **Lägg i utkastet och stäng** utan att spara gemensamt.
 4. Redigera igen och öppna Livscykel och utseende. Avbryt filväljaren utan
    fil. Välj sedan `fel.png` och **Lägg i utkastet och stäng**. Läs felet:

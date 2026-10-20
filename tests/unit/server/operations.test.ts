@@ -1,6 +1,3 @@
-import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { applicationFixture } from './fixture.js';
 
@@ -27,7 +24,13 @@ async function propose() {
     version: state.draft.version,
     id: 'synthetic-person',
     baseRevision: null,
-    value: { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Påhittad person' },
+    value: {
+      typeId: state.types[0].id,
+      name: 'Lo Exempel',
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad person' },
+      ],
+    },
   });
 }
 
@@ -167,95 +170,6 @@ test('a content generation retires attempts without deleting historical receipts
   ).toThrow('content_version_must_increase');
 });
 
-test('upgrading preserves discovery and exact retries of earlier durable receipts', async () => {
-  fixture.close();
-  const directory = mkdtempSync(join(tmpdir(), 'skyttel-legacy-operations-'));
-  try {
-    for (const name of [
-      '001_initial.sql',
-      '002_invitations.sql',
-      '003_login_link.sql',
-      '004_map.sql',
-      '005_relationships.sql',
-    ])
-      copyFileSync(join('migrations', name), join(directory, name));
-    fixture = await applicationFixture({ migrationsDirectory: directory });
-    client = fixture.client();
-    await client.signIn();
-    const { household } = await (await client.json('/api/households', { name: 'Linden' })).json();
-    const { user } = await (await client.request('/api/bootstrap')).json();
-    path = `/api/households/${household.id}/map`;
-    const type = fixture.database
-      .prepare('SELECT * FROM object_type WHERE householdId = ? LIMIT 1')
-      .get(household.id) as { id: string };
-    const object = {
-      id: 'legacy-person',
-      householdId: household.id,
-      typeId: type.id,
-      revision: 1,
-      name: 'Lo Exempel',
-      description: '',
-    };
-    const receipt = {
-      operationId: 'legacy-save',
-      householdId: household.id,
-      userId: user.id,
-      draftVersion: 1,
-      savedAt: '2026-01-01T00:00:00.000Z',
-      changes: [{ before: null, after: object, type }],
-    };
-    fixture.database
-      .prepare(
-        'INSERT INTO map_object (id, householdId, typeId, revision, name, description) VALUES (?, ?, ?, 1, ?, ?)',
-      )
-      .run(object.id, household.id, type.id, object.name, object.description);
-    fixture.database
-      .prepare('INSERT INTO map_draft (householdId, userId, version, changes) VALUES (?, ?, 2, ?)')
-      .run(household.id, user.id, '[]');
-    fixture.database
-      .prepare('INSERT INTO map_save VALUES (?, ?, ?, ?, ?)')
-      .run(
-        receipt.operationId,
-        household.id,
-        user.id,
-        receipt.draftVersion,
-        JSON.stringify(receipt),
-      );
-    fixture.database
-      .prepare(
-        'INSERT INTO map_history (householdId, userId, operationId, savedAt, changes) VALUES (?, ?, ?, ?, ?)',
-      )
-      .run(
-        household.id,
-        user.id,
-        receipt.operationId,
-        receipt.savedAt,
-        JSON.stringify(receipt.changes),
-      );
-    await fixture.upgradeLegacyLogin();
-    expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
-      status: 'anonymous',
-    });
-    await client.signIn();
-    const upgradedReceipt = { ...receipt, contentVersion: 1 };
-    const listing = await (await client.request(`${path}/operations`)).json();
-    expect(listing.operations).toHaveLength(1);
-    expect(listing.operations[0]).toMatchObject({ status: 'succeeded', receipt: upgradedReceipt });
-    const retry = await client.json(`${path}/save`, {
-      operationId: receipt.operationId,
-      version: 1,
-    });
-    expect(retry.status).toBe(200);
-    expect(await retry.json()).toEqual({ receipt: upgradedReceipt });
-    expect((await read()).objects).toEqual([object]);
-    expect(await (await client.request(`${path}/history`)).json()).toEqual({
-      history: [upgradedReceipt],
-    });
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
 test('operation registration rejects malformed identity and additional request content', async () => {
   await propose();
   const body = { operationId: 'exact-request', version: 1, contentVersion: 1 };
@@ -276,7 +190,45 @@ test('operation registration rejects malformed identity and additional request c
 
 test('a failed durable write leaves a discoverable pending operation and an intact draft', async () => {
   await propose();
-  const body = { operationId: 'write-interrupted', version: 1, contentVersion: 1 };
+  const initial = await read();
+  const properties = [
+    { id: 'empty', label: 'Samma' },
+    { id: 'typed', label: 'Samma', kind: 'date' },
+    { id: 'zero', label: 'Samma', kind: 'number', value: 0 },
+    { id: 'false', label: 'Samma', kind: 'boolean', value: false },
+  ];
+  expect(
+    (
+      await client.json(`${path}/draft`, {
+        version: initial.draft.version,
+        id: 'synthetic-person',
+        baseRevision: null,
+        value: { ...initial.draft.changes[0].after, properties },
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await client.json(`${path}/relationship`, {
+        version: (await read()).draft.version,
+        id: 'self',
+        baseRevision: null,
+        value: {
+          typeId: initial.relationshipTypes[0].id,
+          sourceId: 'synthetic-person',
+          targetId: 'synthetic-person',
+
+          properties,
+        },
+      })
+    ).status,
+  ).toBe(200);
+  const before = await read();
+  const body = {
+    operationId: 'write-interrupted',
+    version: before.draft.version,
+    contentVersion: 1,
+  };
   fixture.database.exec(
     "CREATE TRIGGER interrupt_receipt BEFORE INSERT ON map_save BEGIN SELECT RAISE(ABORT, 'synthetic interruption'); END",
   );
@@ -286,11 +238,24 @@ test('a failed durable write leaves a discoverable pending operation and an inta
   expect((await (await second.request(`${path}/operations`)).json()).operations).toMatchObject([
     { operationId: body.operationId, status: 'pending' },
   ]);
-  expect(await read(second)).toMatchObject({ objects: [], draft: { version: 1 } });
+  expect(await read(second)).toEqual(before);
+  expect(before.objects).toEqual([]);
+  expect(before.relationships).toEqual([]);
   expect(await (await second.request(`${path}/history`)).json()).toEqual({ history: [] });
   fixture.database.exec('DROP TRIGGER interrupt_receipt');
-  expect((await second.json(`${path}/save`, body)).status).toBe(200);
-  expect((await read(second)).objects).toHaveLength(1);
+  await fixture.restart();
+  const saved = await second.json(`${path}/save`, body);
+  expect(saved.status).toBe(200);
+  const { receipt } = await saved.json();
+  const after = await read(second);
+  expect(after.objects).toEqual([receipt.changes[0].after]);
+  expect(after.objects[0].properties).toEqual(properties);
+  expect(after.relationships).toEqual([receipt.relationships[0].after]);
+  expect(after.relationships[0].properties).toEqual(properties);
+  expect(after.draft).toEqual({ version: before.draft.version + 1, changes: [] });
+  expect(await (await second.request(`${path}/history`)).json()).toEqual({ history: [receipt] });
+  expect(await (await second.json(`${path}/save`, body)).json()).toEqual({ receipt });
+  expect(await read(second)).toEqual(after);
 });
 
 test('a changed draft snapshot under the same version is rejected durably without consuming it', async () => {

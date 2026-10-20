@@ -88,7 +88,7 @@ test.each(['missing', 'invalid'])(
               arguments: {
                 id: 'preserved',
                 baseRevision: null,
-                value: { typeId: map.types[0].id, name: 'Behållet arbete', description: '' },
+                value: { typeId: map.types[0].id, name: 'Behållet arbete' },
               },
             },
           ],
@@ -240,7 +240,7 @@ test('OFF preserves accepted text and its original login end, then logout after 
             arguments: {
               id,
               baseRevision: null,
-              value: { typeId: map.types[0].id, name: id, description: '' },
+              value: { typeId: map.types[0].id, name: id },
             },
           },
         ],
@@ -310,7 +310,7 @@ test('a model result at the original thirty minute deadline cannot mutate the dr
             arguments: {
               id: 'too-late',
               baseRevision: null,
-              value: { typeId, name: 'För sent', description: '' },
+              value: { typeId, name: 'För sent' },
             },
           },
         ],
@@ -374,7 +374,7 @@ test('accepted text finishes after natural login expiry and its committed draft 
             arguments: {
               id: 'accepted-text',
               baseRevision: null,
-              value: { typeId, name: 'Mottaget arbete', description: '' },
+              value: { typeId, name: 'Mottaget arbete' },
             },
           },
         ],
@@ -505,7 +505,7 @@ test('queue time and identical retries consume the original deadline instead of 
           arguments: {
             id: 'queue-too-late',
             baseRevision: null,
-            value: { typeId: map.types[0].id, name: 'Köns förslag', description: '' },
+            value: { typeId: map.types[0].id, name: 'Köns förslag' },
           },
         },
       ],
@@ -543,7 +543,7 @@ test.each(['logout after expiry', 'consent revocation', 'membership revocation']
               arguments: {
                 id: 'stopped',
                 baseRevision: null,
-                value: { typeId, name: 'Stoppat arbete', description: '' },
+                value: { typeId, name: 'Stoppat arbete' },
               },
             },
           ],
@@ -567,7 +567,7 @@ test.each(['logout after expiry', 'consent revocation', 'membership revocation']
             contentVersion: 1,
             id: 'earlier',
             baseRevision: null,
-            value: { typeId, name: 'Redan lagrat', description: '' },
+            value: { typeId, name: 'Redan lagrat' },
           },
         })
       ).status(),
@@ -657,7 +657,7 @@ test('a later queued instruction cannot extend an earlier explicit save authorit
       contentVersion: 1,
       id: 'earlier',
       baseRevision: null,
-      value: { typeId: map.types[0].id, name: 'Osparat förslag', description: '' },
+      value: { typeId: map.types[0].id, name: 'Osparat förslag' },
     },
   });
   const path = `${app.origin}/api/households/${household.id}/text-assistant`;
@@ -758,7 +758,7 @@ test('a late voice result before its timer runs preserves already accepted queue
           arguments: {
             id: 'queued-text',
             baseRevision: null,
-            value: { typeId: map.types[0].id, name: 'Mitt textförslag', description: '' },
+            value: { typeId: map.types[0].id, name: 'Mitt textförslag' },
           },
         },
       ],

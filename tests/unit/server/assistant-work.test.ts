@@ -5,7 +5,7 @@ import { type APIRequestContext, request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { beginAssistant, callAssistant } from '../../support/assistant.js';
-import { createHousehold, signIn } from '../../support/client.js';
+import { createHousehold, restartWithSession, signIn } from '../../support/client.js';
 import { createInstallation, robin } from '../../support/installation.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
@@ -48,7 +48,10 @@ async function tool(token: string, name: string, args = {}) {
 async function post(route: string, data: unknown) {
   const response = await browser.post(`${path}/${route}`, {
     headers: { origin: app.origin },
-    data,
+    data:
+      route === 'draft' && (data as { value?: unknown }).value
+        ? { ...(data as object), value: { ...(data as { value: object }).value } }
+        : data,
   });
   expect(response.status(), await response.text()).toBe(200);
   return response.json();
@@ -88,7 +91,7 @@ test('retired historical mutations are absent from HTTP and MCP while ordinary s
       contentVersion: initial.contentVersion,
       id: 'cycle',
       baseRevision: null,
-      value: { typeId: initial.types[0].id, name: 'Blå cykel', description: '' },
+      value: { typeId: initial.types[0].id, name: 'Blå cykel' },
     });
     const draft = await tool(token, 'read_my_draft');
     const saved = await tool(token, 'save_draft', {
@@ -119,7 +122,7 @@ test('assistant icon search and set/reset proposals share the private object and
   const scientific = await tool(token, 'search_object_icons', { query: 'vetenskap telescope' });
   expect(scientific.value.icons).toContainEqual({ id: 'telescope', label: 'telescope' });
   const state = await (await browser.get(path)).json();
-  const value = { typeId: state.types[0].id, name: 'Cykel', description: '', iconId: 'bike' };
+  const value = { typeId: state.types[0].id, name: 'Cykel', iconId: 'bike' };
   const proposal = {
     version: 0,
     contentVersion: state.contentVersion,
@@ -147,10 +150,158 @@ test('assistant icon search and set/reset proposals share the private object and
   expect((await (await browser.get(path)).json()).objects).toEqual([]);
 });
 
+test('MCP allocates property identities and edits, clears, removes and orders the returned identities', async () => {
+  const token = await connect();
+  const state = await (await browser.get(path)).json();
+  const value = {
+    typeId: state.types[0].id,
+    name: 'MCP-egenskaper',
+    properties: [
+      { label: 'Samma', kind: 'text', value: 'Första' },
+      { label: 'Samma', kind: 'number', value: 0 },
+      { label: 'Nej', kind: 'boolean', value: false },
+      { label: 'Datum', kind: 'date', value: '2026-01-01' },
+      { label: 'Tomt' },
+      ...Array.from({ length: 101 }, (_, index) => ({
+        label: 'Extra',
+        kind: 'text',
+        value: String(index).repeat(200),
+      })),
+    ],
+  };
+  const proposed = await tool(token, 'propose_object', {
+    version: 0,
+    contentVersion: 1,
+    id: 'properties',
+    baseRevision: null,
+    value,
+  });
+  expect(proposed.error).toBe(false);
+  const properties = proposed.value.changes[0].after.properties;
+  expect(properties).toHaveLength(106);
+  expect(new Set(properties.map((property: { id: string }) => property.id)).size).toBe(106);
+  expect(properties[1]).toMatchObject({ label: 'Samma', kind: 'number', value: 0 });
+  const changed = [
+    properties[2],
+    { ...properties[1], value: undefined },
+    { ...properties[0], label: 'Rättad', value: 'Bevarad identitet' },
+    ...properties.slice(4),
+  ];
+  const corrected = await tool(token, 'propose_object', {
+    version: 1,
+    contentVersion: 1,
+    id: 'properties',
+    baseRevision: null,
+    value: { ...value, properties: changed },
+  });
+  expect(corrected.error).toBe(false);
+  expect(corrected.value.changes[0].after.properties).toEqual(JSON.parse(JSON.stringify(changed)));
+  const before = await (await browser.get(path)).json();
+  const rejected = await callAssistant(app.origin, token, 'propose_object', {
+    version: 2,
+    contentVersion: 1,
+    id: 'properties',
+    baseRevision: null,
+    value: { ...value, properties: [{ ...properties[0], kind: 'date', value: 'invalid' }] },
+  });
+  const rejectedBody = await rejected.json();
+  expect(rejectedBody.result?.isError || rejectedBody.error).toBeTruthy();
+  expect(await (await browser.get(path)).json()).toEqual(before);
+  const saved = await tool(token, 'save_draft', {
+    version: 2,
+    contentVersion: 1,
+    operationId: 'save-properties',
+  });
+  expect(saved.error).toBe(false);
+  browser = await restartWithSession(browser, () => app.restart());
+  expect((await (await browser.get(path)).json()).objects[0].properties).toEqual(
+    JSON.parse(JSON.stringify(changed)),
+  );
+});
+
+test('MCP allocates relationship property identities and preserves precise edits, empty values and ordering', async () => {
+  const token = await connect();
+  const state = await (await browser.get(path)).json();
+  for (const [version, id] of ['source', 'target'].entries())
+    await post('draft', {
+      version,
+      id,
+      baseRevision: null,
+      value: { typeId: state.types[0].id, name: id },
+    });
+  const value = {
+    typeId: state.relationshipTypes[0].id,
+    sourceId: 'source',
+    targetId: 'target',
+    properties: [
+      { label: 'Samma', kind: 'text', value: 'Första' },
+      { label: 'Samma', kind: 'number', value: 0 },
+      { label: 'Nej', kind: 'boolean', value: false },
+      { label: 'Datum', kind: 'date', value: '2026-01-01' },
+      { label: 'Tomt' },
+      ...Array.from({ length: 101 }, (_, index) => ({
+        label: 'Extra',
+        kind: 'text',
+        value: String(index).repeat(200),
+      })),
+    ],
+  };
+  const proposed = await tool(token, 'propose_relationship', {
+    version: 2,
+    contentVersion: 1,
+    id: 'properties',
+    baseRevision: null,
+    value,
+  });
+  expect(proposed.error).toBe(false);
+  const properties = proposed.value.relationships[0].after.properties;
+  expect(properties).toHaveLength(106);
+  expect(new Set(properties.map((property: { id: string }) => property.id)).size).toBe(106);
+  expect(properties[1]).toMatchObject({ label: 'Samma', kind: 'number', value: 0 });
+  const changed = [
+    properties[2],
+    { ...properties[1], value: undefined },
+    { ...properties[0], label: 'Rättad', value: 'Bevarad identitet' },
+    ...properties.slice(4),
+  ];
+  const corrected = await tool(token, 'propose_relationship', {
+    version: 3,
+    contentVersion: 1,
+    id: 'properties',
+    baseRevision: null,
+    value: { ...value, properties: changed },
+  });
+  expect(corrected.error).toBe(false);
+  expect(corrected.value.relationships[0].after.properties).toEqual(
+    JSON.parse(JSON.stringify(changed)),
+  );
+  const before = await (await browser.get(path)).json();
+  const rejected = await callAssistant(app.origin, token, 'propose_relationship', {
+    version: 4,
+    contentVersion: 1,
+    id: 'properties',
+    baseRevision: null,
+    value: { ...value, properties: [{ ...properties[0], kind: 'date', value: 'invalid' }] },
+  });
+  const rejectedBody = await rejected.json();
+  expect(rejectedBody.result?.isError || rejectedBody.error).toBeTruthy();
+  expect(await (await browser.get(path)).json()).toEqual(before);
+  const saved = await tool(token, 'save_draft', {
+    version: 4,
+    contentVersion: 1,
+    operationId: 'save-properties',
+  });
+  expect(saved.error).toBe(false);
+  browser = await restartWithSession(browser, () => app.restart());
+  expect((await (await browser.get(path)).json()).relationships[0].properties).toEqual(
+    JSON.parse(JSON.stringify(changed)),
+  );
+});
+
 test('explicit write consent permits proposals while an earlier read grant stays read-only', async () => {
   const readToken = await connect(false);
   const state = await (await browser.get(path)).json();
-  const value = { typeId: state.types[0].id, name: 'Lo Exempel', description: '' };
+  const value = { typeId: state.types[0].id, name: 'Lo Exempel' };
   const proposal = {
     version: 0,
     contentVersion: state.contentVersion,
@@ -214,8 +365,10 @@ test('whole-draft reviews keep changed saved facts but project untouched endpoin
         value: {
           typeId: type.id,
           name,
-          description,
-          financialFacts: { price: { knowledge: 'known', value: amount } },
+          properties: [
+            { id: 'description', label: 'Beskrivning', kind: 'text', value: description },
+            { id: 'price', label: 'Pris', kind: 'text', value: amount },
+          ],
         },
       })
     ).value;
@@ -230,7 +383,7 @@ test('whole-draft reviews keep changed saved facts but project untouched endpoin
         contentVersion: review.contentVersion,
         id,
         baseRevision: null,
-        value: { typeId: edgeType.id, sourceId, targetId, knowledge: 'known' },
+        value: { typeId: edgeType.id, sourceId, targetId },
       })
     ).value;
   }
@@ -250,18 +403,24 @@ test('whole-draft reviews keep changed saved facts but project untouched endpoin
       value: {
         typeId: type.id,
         name: 'Rättat konto',
-        description: changed.description,
-        financialFacts: { price: { knowledge: 'known', value: '189' } },
+        properties: changed.properties.map((property: { id: string }) =>
+          property.id === 'price' ? { ...property, value: '189' } : property,
+        ),
       },
     })
   ).value;
-  expect(review.changes[0].before.financialFacts.price.value).toBe('149');
-  expect(review.changes[0].after.financialFacts.price.value).toBe('189');
+  expect(
+    review.changes[0].before.properties.find((property: { id: string }) => property.id === 'price')
+      .value,
+  ).toBe('149');
+  expect(
+    review.changes[0].after.properties.find((property: { id: string }) => property.id === 'price')
+      .value,
+  ).toBe('189');
   expect(
     review.current.objects.find((object: { id: string }) => object.id === 'changed'),
   ).toMatchObject({
-    description: 'Berörd sparad anteckning',
-    financialFacts: changed.financialFacts,
+    properties: changed.properties,
   });
   expect(review.current.objects.find((object: { id: string }) => object.id === 'neighbor')).toEqual(
     { id: 'neighbor', name: 'Grannkonto', typeId: type.id },
@@ -288,7 +447,6 @@ test('whole-draft reviews keep changed saved facts but project untouched endpoin
         typeId: edgeType.id,
         sourceId: 'changed',
         targetId: 'neighbor',
-        knowledge: 'uncertain',
       },
     })
   ).value;
@@ -312,19 +470,29 @@ test('a family case resumes browser proposals, discovers current types, corrects
     contentVersion: catalog.contentVersion,
     id: 'lo',
     baseRevision: null,
-    value: { typeId: person.id, name: 'Lo', description: 'Tidigare förslag från formuläret' },
+    value: {
+      typeId: person.id,
+      name: 'Lo',
+      properties: [
+        {
+          id: 'note',
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Tidigare förslag från formuläret',
+        },
+      ],
+    },
   });
   let review = (await tool(token, 'read_my_draft')).value;
   expect(review.changes[0].after.name).toBe('Lo');
   const value = {
     typeId: subscription.id,
     name: 'Familjemusik',
-    description: '',
-    financialFacts: {
-      price: { knowledge: 'known', value: '149' },
-      currency: { knowledge: 'known', value: 'SEK' },
-      paymentInterval: { knowledge: 'known', value: 'månad' },
-    },
+    properties: [
+      { id: 'price', label: 'Pris', kind: 'text', value: '149' },
+      { id: 'currency', label: 'Valuta', kind: 'text', value: 'SEK' },
+      { id: 'interval', label: 'Intervall', kind: 'text', value: 'månad' },
+    ],
   };
   review = (
     await tool(token, 'propose_object', {
@@ -344,7 +512,7 @@ test('a family case resumes browser proposals, discovers current types, corrects
       id: 'lo-pays',
       baseRevision: null,
       typeRevision: pays.revision,
-      value: { typeId: pays.id, sourceId: 'lo', targetId: 'subscription', knowledge: 'known' },
+      value: { typeId: pays.id, sourceId: 'lo', targetId: 'subscription' },
     })
   ).value;
   expect(review.relationships[0].type.name).toBe('Betalar');
@@ -359,7 +527,9 @@ test('a family case resumes browser proposals, discovers current types, corrects
       typeRevision: subscription.revision,
       value: {
         ...value,
-        financialFacts: { ...value.financialFacts, price: { knowledge: 'known', value: '189' } },
+        properties: value.properties.map((property) =>
+          property.id === 'price' ? { ...property, value: '189' } : property,
+        ),
       },
     })
   ).value;
@@ -373,9 +543,9 @@ test('a family case resumes browser proposals, discovers current types, corrects
   expect(saved.value.receipt.changes).toHaveLength(2);
   expect(saved.value.receipt.relationships).toHaveLength(1);
   expect(
-    saved.value.receipt.changes.find(
-      (change: { after: { id: string } }) => change.after.id === 'subscription',
-    ).after.financialFacts.price.value,
+    saved.value.receipt.changes
+      .find((change: { after: { id: string } }) => change.after.id === 'subscription')
+      .after.properties.find((property: { id: string }) => property.id === 'price').value,
   ).toBe('189');
   await app.restart();
   expect((await tool(token, 'save_draft', attempt)).value).toEqual(saved.value);
@@ -387,7 +557,7 @@ test('a family case resumes browser proposals, discovers current types, corrects
   const state = await (await browser.get(path)).json();
   expect(state.draft.changes).toEqual([]);
   expect(state.objects).toHaveLength(2);
-  expect((await (await browser.get(`${path}/history`)).json()).history).toEqual([
+  expect((await (await browser.get(`${path}/history`)).json()).history).toMatchObject([
     saved.value.receipt,
   ]);
 });
@@ -396,7 +566,7 @@ test('unresolved identity blocks all saving, explicit unspecified identity can r
   const token = await connect();
   const catalog = (await tool(token, 'read_type_catalog')).value;
   const type = catalog.types.find((type: { name: string }) => type.name === 'Bankkonto');
-  const value = { typeId: type.id, name: 'Betalkonto', description: '', identity: 'unresolved' };
+  const value = { typeId: type.id, name: 'Betalkonto', identity: 'unresolved' };
   let review = (
     await tool(token, 'propose_object', {
       version: 0,
@@ -412,7 +582,7 @@ test('unresolved identity blocks all saving, explicit unspecified identity can r
       contentVersion: review.contentVersion,
       id: 'independent',
       baseRevision: null,
-      value: { typeId: type.id, name: 'Hushållskonto', description: '' },
+      value: { typeId: type.id, name: 'Hushållskonto' },
     })
   ).value;
   expect(review.readyToSave).toBe(false);
@@ -462,8 +632,7 @@ test('a conflicting saved price blocks independent proposals and resolving to th
   const value = {
     typeId: type.id,
     name: 'Familjemusik',
-    description: '',
-    financialFacts: { price: { knowledge: 'known', value: '149' } },
+    properties: [{ id: 'price', label: 'Pris', kind: 'text', value: '149' }],
   };
   await post('draft', { version: 0, id: 'music', baseRevision: null, value });
   await post('save', { version: 1, operationId: 'original' });
@@ -474,7 +643,7 @@ test('a conflicting saved price blocks independent proposals and resolving to th
       contentVersion: state.contentVersion,
       id: 'music',
       baseRevision: 1,
-      value: { ...value, financialFacts: { price: { knowledge: 'known', value: '79' } } },
+      value: { ...value, properties: [{ id: 'price', label: 'Pris', kind: 'text', value: '79' }] },
     })
   ).value;
   review = (
@@ -483,7 +652,7 @@ test('a conflicting saved price blocks independent proposals and resolving to th
       contentVersion: review.contentVersion,
       id: 'other',
       baseRevision: null,
-      value: { typeId: type.id, name: 'Oberoende avtal', description: '' },
+      value: { typeId: type.id, name: 'Oberoende avtal' },
     })
   ).value;
   const other = await request.newContext();
@@ -513,7 +682,11 @@ test('a conflicting saved price blocks independent proposals and resolving to th
             version: 0,
             id: 'music',
             baseRevision: 1,
-            value: { ...value, financialFacts: { price: { knowledge: 'known', value: '199' } } },
+            value: {
+              ...value,
+
+              properties: [{ id: 'price', label: 'Pris', kind: 'text', value: '199' }],
+            },
           },
         })
       ).status(),
@@ -535,16 +708,70 @@ test('a conflicting saved price blocks independent proposals and resolving to th
     expect(blocked.value.message).toContain('nytt sparbesked');
     review = blocked.value.review;
     expect(review.readyToSave).toBe(false);
-    expect(review.current.objects[0].financialFacts.price.value).toBe('199');
+    expect(
+      review.current.objects[0].properties.find(
+        (property: { id: string }) => property.id === 'price',
+      ).value,
+    ).toBe('199');
     expect(review.changes).toHaveLength(2);
     state = await (await browser.get(path)).json();
     expect(state.objects.map((object: { id: string }) => object.id)).toEqual(['music']);
+    const staleResolution = review.resolutions[0];
+    expect(staleResolution.properties).toContainEqual(
+      expect.objectContaining({
+        key: 'properties.price',
+        before: expect.objectContaining({ value: '149' }),
+        saved: expect.objectContaining({ value: '199' }),
+        proposed: expect.objectContaining({ value: '79' }),
+      }),
+    );
+    const otherState = await (await other.get(path)).json();
+    const updated = await other.post(`${path}/draft`, {
+      headers: { origin: app.origin },
+      data: {
+        version: otherState.draft.version,
+        contentVersion: otherState.contentVersion,
+        id: 'music',
+        baseRevision: 2,
+        value: {
+          ...value,
+
+          properties: [{ id: 'price', label: 'Pris', kind: 'text', value: '201' }],
+        },
+      },
+    });
+    expect(updated.status()).toBe(200);
+    const otherDraft = await updated.json();
+    expect(
+      (
+        await other.post(`${path}/save`, {
+          headers: { origin: app.origin },
+          data: {
+            version: otherDraft.version,
+            contentVersion: otherState.contentVersion,
+            operationId: 'new-price',
+          },
+        })
+      ).status(),
+    ).toBe(200);
+    const beforeStale = await (await browser.get(path)).json();
+    const stale = await tool(token, 'resolve_conflict', {
+      version: review.version,
+      contentVersion: review.contentVersion,
+      conflict: staleResolution.conflict,
+      basis: staleResolution.basis,
+      choices: { 'properties.price': 'saved' },
+    });
+    expect(stale.value.error).toBe('resolution_conflict');
+    expect(await (await browser.get(path)).json()).toEqual(beforeStale);
+    review = stale.value.review;
     review = (
       await tool(token, 'resolve_conflict', {
         version: review.version,
         contentVersion: review.contentVersion,
-        choice: 'saved',
-        conflict: review.conflicts[0],
+        choices: { 'properties.price': 'saved' },
+        conflict: review.resolutions[0].conflict,
+        basis: review.resolutions[0].basis,
       })
     ).value;
     expect(review.changes.map((change: { id: string }) => change.id)).toEqual(['other']);
@@ -564,7 +791,7 @@ test('a conflicting saved price blocks independent proposals and resolving to th
 test('registered save recovery protects a waiting whole draft and rejects changed requests under the same ID', async () => {
   const token = await connect();
   const state = await (await browser.get(path)).json();
-  const value = { typeId: state.types[0].id, name: 'Lo', description: '' };
+  const value = { typeId: state.types[0].id, name: 'Lo' };
   const review = (
     await tool(token, 'propose_object', {
       version: 0,
@@ -670,7 +897,7 @@ test('a database interruption returns unknown outcome without leaking diagnostic
       contentVersion: state.contentVersion,
       id: 'lo',
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: 'Lo', description: '' },
+      value: { typeId: state.types[0].id, name: 'Lo' },
     })
   ).value;
   const attempt = {
@@ -706,7 +933,7 @@ test('a database interruption returns unknown outcome without leaking diagnostic
 test('a newer browser proposal rejects stale approval and returns both proposals without a partial save', async () => {
   const token = await connect();
   const state = await (await browser.get(path)).json();
-  const value = { typeId: state.types[0].id, name: 'Lo', description: '' };
+  const value = { typeId: state.types[0].id, name: 'Lo' };
   const review = (
     await tool(token, 'propose_object', {
       version: 0,
@@ -805,7 +1032,7 @@ test('MCP uses verified historical ownership and rejects old generations and ret
     const token = await connect();
     const state = await (await browser.get(path)).json();
     expect(state.userId).toBe('historical-owner');
-    const value = { typeId: state.types[0].id, name: 'Historiskt återupptaget', description: '' };
+    const value = { typeId: state.types[0].id, name: 'Historiskt återupptaget' };
     let review = (
       await tool(token, 'propose_object', {
         version: 0,
@@ -869,7 +1096,7 @@ test('MCP uses verified historical ownership and rejects old generations and ret
   }
 });
 
-test('current household definitions and independent custom fields work without a fixed type catalog', async () => {
+test('current household definitions and independent properties work without a fixed type catalog', async () => {
   await post('object-type', {
     version: 0,
     id: 'local-type',
@@ -877,16 +1104,12 @@ test('current household definitions and independent custom fields work without a
     value: {
       name: 'Solcellsanläggning',
       description: 'Hushållets egen typ',
-      fields: [
-        { id: 'inspected', name: 'Besiktigad', description: '', kind: 'boolean' },
-        { id: 'power', name: 'Effekt', description: '', kind: 'number' },
-      ],
     },
   });
   const token = await connect();
   const catalog = (await tool(token, 'read_type_catalog')).value;
   const type = catalog.types.find((type: { id: string }) => type.id === 'local-type');
-  expect(type.fields[0].kind).toBe('boolean');
+  expect(type.description).toBe('Hushållets egen typ');
   let review = (await tool(token, 'read_my_draft')).value;
   review = (
     await tool(token, 'propose_object', {
@@ -898,19 +1121,27 @@ test('current household definitions and independent custom fields work without a
       value: {
         typeId: type.id,
         name: 'Takets solceller',
-        description: '',
-        customValues: { inspected: false, power: 8 },
+        properties: [
+          { id: 'inspected', label: 'Besiktigad', kind: 'boolean', value: false },
+          { id: 'power', label: 'Effekt', kind: 'number', value: 8 },
+        ],
       },
     })
   ).value;
   expect(review.objectTypes).toHaveLength(1);
-  expect(review.changes[0].after.customValues).toEqual({ inspected: false, power: 8 });
+  expect(review.changes[0].after.properties).toEqual([
+    { id: 'inspected', label: 'Besiktigad', kind: 'boolean', value: false },
+    { id: 'power', label: 'Effekt', kind: 'number', value: 8 },
+  ]);
   const saved = await tool(token, 'save_draft', {
     version: review.version,
     contentVersion: review.contentVersion,
     operationId: 'custom-fields',
   });
-  expect(saved.value.receipt.changes[0].after.customValues).toEqual({ inspected: false, power: 8 });
+  expect(saved.value.receipt.changes[0].after.properties).toEqual([
+    { id: 'inspected', label: 'Besiktigad', kind: 'boolean', value: false },
+    { id: 'power', label: 'Effekt', kind: 'number', value: 8 },
+  ]);
   expect(saved.value.receipt.objectTypes[0].after.id).toBe('local-type');
   const state = await (await browser.get(path)).json();
   const staleType = await tool(token, 'propose_object', {
@@ -922,8 +1153,7 @@ test('current household definitions and independent custom fields work without a
     value: {
       typeId: type.id,
       name: 'Takets solceller',
-      description: '',
-      customValues: { power: 8 },
+      properties: [{ id: 'power', label: 'Effekt', kind: 'number', value: 8 }],
     },
   });
   expect(staleType.value.error).toBe('type_conflict');
@@ -937,13 +1167,131 @@ test('current household definitions and independent custom fields work without a
       value: {
         typeId: type.id,
         name: 'Takets solceller',
-        description: '',
-        customValues: { power: 8 },
+        properties: [{ id: 'power', label: 'Effekt', kind: 'number', value: 8 }],
       },
     })
   ).value;
-  expect(review.changes[0].after.customValues).toEqual({ power: 8 });
-  expect(review.current.objects[0].customValues.inspected).toBe(false);
+  expect(review.changes[0].after.properties).toEqual([
+    { id: 'power', label: 'Effekt', kind: 'number', value: 8 },
+  ]);
+  expect(
+    review.current.objects[0].properties.find(
+      (property: { id: string }) => property.id === 'inspected',
+    ).value,
+  ).toBe(false);
+});
+
+test('real HTTP and MCP reject invalid endpoint requests atomically and serialize duplicate edits', async () => {
+  const token = await connect();
+  let state = await (await browser.get(path)).json();
+  for (const id of ['source', 'target', 'standalone']) {
+    await post('draft', {
+      version: state.draft.version,
+      contentVersion: state.contentVersion,
+      id,
+      baseRevision: null,
+      value: { typeId: state.types[0].id, name: id },
+    });
+    state = await (await browser.get(path)).json();
+  }
+  const value = {
+    typeId: state.relationshipTypes[0].id,
+    sourceId: 'source',
+    targetId: 'target',
+  };
+  await tool(token, 'propose_relationship', {
+    version: state.draft.version,
+    contentVersion: state.contentVersion,
+    id: 'edge',
+    baseRevision: null,
+    value,
+  });
+  state = await (await browser.get(path)).json();
+  for (const id of ['invalid', 'edge']) {
+    for (const endpoint of ['sourceId', 'targetId']) {
+      for (const invalid of [null, '', 'invented', undefined]) {
+        const body = {
+          version: state.draft.version,
+          contentVersion: state.contentVersion,
+          id,
+          baseRevision: null,
+          value: { ...value, [endpoint]: invalid },
+        };
+        const response = await browser.post(`${path}/relationship`, {
+          headers: { origin: app.origin },
+          data: body,
+        });
+        expect(response.status()).toBe(400);
+        const mcp = await callAssistant(app.origin, token, 'propose_relationship', body);
+        expect((await mcp.json()).result.isError).toBe(true);
+        expect(await (await browser.get(path)).json()).toEqual(state);
+      }
+    }
+  }
+  expect(
+    (
+      await tool(token, 'save_draft', {
+        version: state.draft.version,
+        contentVersion: state.contentVersion,
+        operationId: 'valid-endpoints',
+      })
+    ).error,
+  ).toBe(false);
+  state = await (await browser.get(path)).json();
+  expect(state.objects).toHaveLength(3);
+  expect(state.relationships).toMatchObject([{ sourceId: 'source', targetId: 'target' }]);
+  const duplicate = await tool(token, 'propose_relationship', {
+    version: state.draft.version,
+    contentVersion: state.contentVersion,
+    id: 'duplicate',
+    baseRevision: null,
+    value: { ...value },
+  });
+  expect(duplicate.value.existingId).toBe('edge');
+  expect(await (await browser.get(path)).json()).toEqual(state);
+  // Two requests at the same draft version cannot create two identities.
+  const responses = await Promise.all(
+    ['self-one', 'self-two'].map((id) =>
+      browser.post(`${path}/relationship`, {
+        headers: { origin: app.origin },
+        data: {
+          version: state.draft.version,
+          contentVersion: state.contentVersion,
+          id,
+          baseRevision: null,
+          value: { ...value, targetId: 'source' },
+        },
+      }),
+    ),
+  );
+  expect(responses.map((response) => response.status()).sort()).toEqual([200, 409]);
+  state = await (await browser.get(path)).json();
+  const selfId = state.draft.relationships[0].id;
+  expect(
+    (
+      await tool(token, 'propose_relationship', {
+        version: state.draft.version,
+        contentVersion: state.contentVersion,
+        id: 'edge',
+        baseRevision: 1,
+        value: { ...value, targetId: 'source' },
+      })
+    ).value.error,
+  ).toBe('duplicate_relationship');
+  expect(await (await browser.get(path)).json()).toEqual(state);
+  expect(
+    (
+      await tool(token, 'save_draft', {
+        version: state.draft.version,
+        contentVersion: state.contentVersion,
+        operationId: 'self-endpoint',
+      })
+    ).error,
+  ).toBe(false);
+  expect((await (await browser.get(path)).json()).relationships).toMatchObject([
+    { id: 'edge', targetId: 'target' },
+    { id: selfId, targetId: 'source' },
+  ]);
 });
 
 test('relationship meanings, duplicate selection and ordinary removal preserve the full review and saved data until approval', async () => {
@@ -965,11 +1313,16 @@ test('relationship meanings, duplicate selection and ordinary removal preserve t
         contentVersion: catalog.contentVersion,
         id,
         baseRevision: null,
-        value: { typeId, name, description: '' },
+        value: { typeId, name },
       })
     ).value;
   }
-  const edge = { typeId: edgeType.id, sourceId: 'lo', targetId: null, knowledge: 'unresolved' };
+  const edge = {
+    typeId: edgeType.id,
+    sourceId: 'lo',
+    targetId: 'service',
+    properties: [{ id: 'certainty', label: 'Säkerhet', kind: 'text', value: 'Osäkert uppgivet' }],
+  };
   review = (
     await tool(token, 'propose_relationship', {
       version: review.version,
@@ -979,26 +1332,14 @@ test('relationship meanings, duplicate selection and ordinary removal preserve t
       value: edge,
     })
   ).value;
-  expect(review.unresolvedIdentities).toEqual([{ kind: 'relationship', id: 'uses' }]);
-  for (const knowledge of ['unknown', 'none', 'uncertain']) {
-    review = (
-      await tool(token, 'propose_relationship', {
-        version: review.version,
-        contentVersion: 1,
-        id: 'uses',
-        baseRevision: null,
-        value: { ...edge, knowledge, targetId: knowledge === 'uncertain' ? 'service' : null },
-      })
-    ).value;
-    expect(review.relationships[0].after.knowledge).toBe(knowledge);
-    expect(review.readyToSave).toBe(true);
-  }
+  expect(review.unresolvedIdentities).toEqual([]);
+  expect(review.readyToSave).toBe(true);
   const duplicate = await tool(token, 'propose_relationship', {
     version: review.version,
     contentVersion: 1,
     id: 'duplicate',
     baseRevision: null,
-    value: { ...edge, knowledge: 'uncertain', targetId: 'service' },
+    value: { ...edge, targetId: 'service' },
   });
   expect(duplicate.value.existingId).toBe('uses');
   expect(duplicate.value.version).toBe(review.version);
@@ -1008,15 +1349,15 @@ test('relationship meanings, duplicate selection and ordinary removal preserve t
     contentVersion: 1,
     id: 'uses',
     baseRevision: null,
-    value: { ...edge, knowledge: 'known' },
+    value: { ...edge, targetId: 'missing' },
   });
-  expect(invalid.value.error).toBe('invalid_request');
+  expect(invalid.value.error).toBe('invalid_endpoint');
   const saved = await tool(token, 'save_draft', {
     version: review.version,
     contentVersion: 1,
     operationId: 'relationship-save',
   });
-  expect(saved.value.receipt.relationships[0].after.knowledge).toBe('uncertain');
+  expect(saved.value.receipt.relationships[0].after.properties).toEqual(edge.properties);
   review = (await tool(token, 'read_my_draft')).value;
   review = (
     await tool(token, 'propose_object', {
@@ -1066,7 +1407,7 @@ test('write clients keep drafts and operations private and membership removal st
       contentVersion: state.contentVersion,
       id: 'alex-private',
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: 'Alex privata förslag', description: '' },
+      value: { typeId: state.types[0].id, name: 'Alex privata förslag' },
     })
   ).value;
   await tool(token, 'prepare_save', {
@@ -1110,7 +1451,7 @@ test('write clients keep drafts and operations private and membership removal st
       contentVersion: state.contentVersion,
       id: 'robin-private',
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: 'Robins privata förslag', description: '' },
+      value: { typeId: state.types[0].id, name: 'Robins privata förslag' },
     };
     const spoof = await (
       await callAssistant(app.origin, otherToken, 'propose_object', {
@@ -1121,6 +1462,20 @@ test('write clients keep drafts and operations private and membership removal st
     ).json();
     expect(spoof.result.isError).toBe(true);
     expect((await tool(otherToken, 'propose_object', proposal)).error).toBe(false);
+    const privateState = await tool(otherToken, 'read_my_draft');
+    const rejectedEndpoint = await tool(otherToken, 'propose_relationship', {
+      version: privateState.value.version,
+      contentVersion: state.contentVersion,
+      id: 'private-endpoint',
+      baseRevision: null,
+      value: {
+        typeId: state.relationshipTypes[0].id,
+        sourceId: 'robin-private',
+        targetId: 'alex-private',
+      },
+    });
+    expect(rejectedEndpoint.value.error).toBe('invalid_endpoint');
+    expect((await tool(otherToken, 'read_my_draft')).value).toEqual(privateState.value);
     expect(JSON.stringify((await tool(token, 'read_my_draft')).value)).not.toContain(
       'Robins privata',
     );

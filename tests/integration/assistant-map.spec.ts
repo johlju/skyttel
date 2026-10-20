@@ -55,7 +55,18 @@ for (const viewport of [
                   contentVersion: 1,
                   id,
                   baseRevision: null,
-                  value: { typeId: initial.types[0].id, name, description: 'Påhittad uppgift' },
+                  value: {
+                    typeId: initial.types[0].id,
+                    name,
+                    properties: [
+                      {
+                        id: 'description',
+                        label: 'Beskrivning',
+                        kind: 'text' as const,
+                        value: 'Påhittad uppgift',
+                      },
+                    ],
+                  },
                 },
               })
             ).ok(),
@@ -74,7 +85,6 @@ for (const viewport of [
                   typeId: initial.relationshipTypes[0].id,
                   sourceId: 'lo',
                   targetId: 'music',
-                  knowledge: 'known',
                 },
               },
             })

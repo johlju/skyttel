@@ -34,7 +34,7 @@ test.each(['connection loss'])(
           contentVersion: 1,
           id: 'obsolete-proposal',
           baseRevision: null,
-          value: { typeId, name: 'Förslaget som avbröts', description: '' },
+          value: { typeId, name: 'Förslaget som avbröts' },
         }),
       ];
     });

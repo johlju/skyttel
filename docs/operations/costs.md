@@ -172,5 +172,5 @@ unsupported after the login transition. Repair with a corrected newer
 application. A separate controlled data recovery must invalidate old
 authentication authority before reopening. Keep any later copy under the
 same restrictions to avoid losing its measurements. Follow the
-[deployment recovery guidance](render.md#repair-forward-after-the-login-transition)
+[deployment recovery guidance](render.md#repair-forward-after-a-failed-update)
 if the upgrade does not become ready.

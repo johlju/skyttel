@@ -1641,7 +1641,7 @@ function Application() {
               path="/households/:id/settings/types"
               element={
                 <section className="panel">
-                  <Heading>Typer och egna fält</Heading>
+                  <Heading>Typer</Heading>
                   <p>
                     Ändringarna blir förslag i ditt privata utkast. Återgå till kartan för att
                     granska och spara hela utkastet tillsammans.

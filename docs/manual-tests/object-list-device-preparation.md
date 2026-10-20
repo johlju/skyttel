@@ -72,8 +72,8 @@ preciseringar. Läskedjan behöver sitt eget kommando; LISTA-05 behöver
 den kompletta kartan med 500 objekt och 1 500 samband.
 
 Fullständig export innehåller gemensamma uppgifter och privata utkast,
-bilder och vyer. Flera egna fält i dessa prov är avsiktligt dolda i
-redigeringsformulären. Bevara därför hela originalförberedelsen i arkivet.
+bilder och vyer. Alla fria egenskaper går att läsa och redigera på sina
+respektive objekt och samband. Bevara hela originalförberedelsen i arkivet.
 Import tilldelar inte automatiskt den verkliga användaren det privata
 arbetet: det krävs en uttrycklig koppling till det verifierade kontot.
 
@@ -105,10 +105,10 @@ arbetet: det krävs en uttrycklig koppling till det verifierade kontot.
    eget privat arbete före kopplingen. Bekräfta kontrollen och välj
    **Bekräfta innehållskopplingen**.
 5. Läs in hushållet igen. Kontrollera hela familjens sparade och privata
-   uppgifter nedan, inklusive dolda värden i fullständig läsning.
+   uppgifter nedan, inklusive alla ordnade egenskaper i fullständig läsning.
    Vid tappat kopplingssvar hämtar du aktuella innehållskopplingar och
-   kontrollerar exakt aktuell ägare före fortsatt prov. Ändra inte typerna
-   för att göra dolda fält synliga. Se
+   kontrollerar exakt aktuell ägare före fortsatt prov. Egenskaperna är
+   oberoende av typernas definitioner. Se
    [innehållskopplingens guide](../user-guide/household-recovery.md).
 6. Gör bara LÄS-02:s eller LÄS-07:s ytterligare tillägg nedan när det behövs.
    Stäng förberedelsedatorns provflik. Rensa HTTPS-adressens webbplatsdata
@@ -126,22 +126,25 @@ aktuella kopplingar; ett nytt arkivs ID kan skilja sig från det förra.
 
 Använd `laskedja.zip`. Kontrollera före export och efter kopplingen:
 
-- Typen **Läsobjekt** har textfältet **Dold egen uppgift**. Alex, Cykel,
+- Cykel har textegenskapen **Dold egen uppgift** och typen **Läsobjekt**.
+Alex, Cykel,
   Garage och A 1–A 53 finns: totalt 56 objekt, över två tabellsidor.
   Varje beskrivning är **Hela beskrivningen för [namnet].** upprepad
   femton gånger med mellanslag mellan meningarna.
 - Cykel har cykelikon, **Ramens märkning är ett påhittat exempel** i det
-  egna fältet, sparat känt pris **2000 SEK**, skuld **Uttryckligen inget**
+  egenskapen, sparat pris **2000 SEK**, skuld **Uttryckligen inget**
   och slutdatum **Okänt**. Garage har identiteten **Ospecificerat objekt**.
 - Alex **använder** Cykel, som **används av** Alex. Cykel **förvaras i**
   Garage, som **förvarar** Cykel. Förvaringen är **Osäkert uppgivet**,
   **Manuellt upphört**, med känt slutdatum **2024-12-31** och eget
   **Dold sambandsuppgift** = **Sparad dold sambandsuppgift**.
-- Cykel har **Har ingen** med **Uttryckligen inget** mål och **Okänd
-  koppling** med **Okänt** mål. Dessa har inget klickbart målobjekt.
+- Cykel har självkopplingen **Har ingen** med den fria uppgiften
+  **Uttryckligen inget** och självkopplingen **Okänd
+  koppling** med den fria uppgiften **Okänt**. Båda har Cykel som
+  verkligt och klickbart start- och målobjekt.
   Alla fyra samband är sparade.
 - Eget utkast har precis två ändringar: Cykels föreslagna pris är
-  **2500 SEK** och förvaringssambandets dolda uppgift är **Föreslagen dold
+  **2500 SEK** och förvaringssambandets fria uppgift är **Föreslagen dold
   sambandsuppgift**. Läs båda priserna och båda sambandsuppgifterna.
   Beskrivning, ikon, identitet, ändpunkter, osäkerhet, status och slutdatum
   är oförändrade.
@@ -199,12 +202,13 @@ Använd `sokning.zip`. Kontrollera före export och efter kopplingen:
   uppgifter är kvar. Läs båda priserna, bilderna och hela beskrivningarna.
 - Eget utkast har fyra objektförslag: ändrat A 2, föreslagen borttagning
   av Tas bort prov samt nya **Nytt prov** och **Övrigt Élan**, båda Typ 2
-  med identifierad identitet. Nytt prov har tom beskrivning. Övrigt Élan
+  med identifierad identitet. Nytt prov har ingen beskrivningsegenskap. Övrigt
+  Élan
   har **Åker äpple** som beskrivning och **Hemlig anteckning** i det
-  dolda egna textfältet.
+  fria textegenskapen.
 - Utkastet har också sambandstypen **Endast i sambandet**, tom beskrivning,
   **går till** från startobjektet, **kommer från** från målobjektet, inga
-  egna fält, samt det privata kända sambandet
+  fria egenskaper, samt det privata sambandet
   **A 2 → går till → Övrigt Élan**. Inga nya gemensamma fakta har sparats.
 
 Alla tre sökfall använder hela förberedelsen. På målenheten kontrollerar

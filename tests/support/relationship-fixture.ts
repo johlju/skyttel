@@ -34,8 +34,10 @@ export async function createRelationshipFixture(
       baseRevision: null,
       value: {
         name,
-        description,
         typeId: initial.types.find((type) => type.name === typeName)?.id,
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: description },
+        ],
       },
     });
   return { path, read, post, household };

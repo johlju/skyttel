@@ -477,7 +477,7 @@ test('MEDLEM-08: staged invitation copies its one-time code and revocation retir
     const post = (suffix: string, data: unknown) =>
       page.request.post(`${path}/${suffix}`, { headers: { origin: installation.origin }, data });
     const initial = await read();
-    const value = { typeId: initial.types[0].id, name: 'Bevarad cykel', description: '' };
+    const value = { typeId: initial.types[0].id, name: 'Bevarad cykel' };
     expect(
       (await post('map/draft', { id: 'cycle', version: 0, baseRevision: null, value })).status(),
     ).toBe(200);
@@ -497,7 +497,17 @@ test('MEDLEM-08: staged invitation copies its one-time code and revocation retir
           version: saved.draft.version,
           contentVersion: saved.contentVersion,
           baseRevision: saved.objects[0].revision,
-          value: { ...value, description: 'Alex privata förslag' },
+          value: {
+            ...value,
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Alex privata förslag',
+              },
+            ],
+          },
         })
       ).status(),
     ).toBe(200);
@@ -655,7 +665,14 @@ test('MEDLEM-09: failed clipboard writing keeps the real code usable by manual c
             value: {
               typeId: initial.types[0].id,
               name: 'Privat under kopiering',
-              description: 'Alex behåller sitt eget förslag',
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Alex behåller sitt eget förslag',
+                },
+              ],
             },
           },
         })

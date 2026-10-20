@@ -6,13 +6,12 @@ import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import sharp from 'sharp';
 import { openPromise } from 'yauzl';
-import { defaultViewSettings } from '../shared/personal-view.js';
 import { validateImportReferences } from './import-references.js';
 import { type ImportContent, importContentSchema, importManifestSchema } from './import-schema.js';
 import { MapError } from './map-error.js';
 
 export const importUploadLimit = 1_100_000_000;
-export type ValidatedImportContent = ImportContent & { legacyBackgrounds: boolean };
+export type ValidatedImportContent = ImportContent;
 const limits = {
   'manifest.json': 16_384,
   'content.json': 32 * 1024 * 1024,
@@ -83,27 +82,11 @@ export async function validateImportArchive(directory: string, signal: AbortSign
     if (actual?.bytes !== part.bytes || actual.sha256 !== part.sha256)
       throw new MapError('invalid_archive', 400);
   }
-  // v1/schema14, schema15 and schema16 have identical content shapes. The explicit
-  // migration is ownership separation on insertion, without restoring access.
   const parsed = importContentSchema.safeParse(
     parseJson(await readFile(join(directory, 'content.json'), 'utf8')),
   );
   if (!parsed.success) throw new MapError('invalid_archive', 400);
   const content = parsed.data;
-  // In old archives, no personal row still means the old implicit off choice.
-  // In new archives an absent row belongs to a new view with enabled defaults.
-  if (manifest.data.schemaVersion < 34) {
-    for (const identity of content.identities) {
-      if (!content.viewSettings.some((row) => row.userId === identity.id))
-        content.viewSettings.push({
-          householdId: content.household.id,
-          userId: identity.id,
-          version: 0,
-          backgroundVersion: 1,
-          settings: { ...defaultViewSettings, background: false },
-        });
-    }
-  }
   if (content.household.id !== manifest.data.householdId)
     throw new MapError('invalid_archive', 400);
   try {
@@ -138,5 +121,5 @@ export async function validateImportArchive(directory: string, signal: AbortSign
     if (signal.aborted) throw error;
     throw new MapError('invalid_archive', 400);
   }
-  return { ...content, legacyBackgrounds: manifest.data.schemaVersion < 34 };
+  return content;
 }

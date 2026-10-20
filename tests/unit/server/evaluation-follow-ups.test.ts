@@ -27,11 +27,17 @@ const scenario: Scenario = {
       expected: {
         objects: {
           'cloud-sub': {
-            financialFacts: {
-              price: { knowledge: 'known', value: '229' },
-              currency: { knowledge: 'known', value: 'SEK' },
-              paymentInterval: { knowledge: 'known', value: 'månad' },
-            },
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text',
+                value: 'Påhittat katalogobjekt.',
+              },
+              { id: 'price', label: 'Pris', kind: 'number', value: 229 },
+              { id: 'currency', label: 'Valuta', kind: 'text', value: 'SEK' },
+              { id: 'paymentInterval', label: 'Betalningsintervall', kind: 'text', value: 'månad' },
+            ],
           },
         },
         requirements: ['Bekräfta ändringen eller ställ en riktad fråga.'],
@@ -76,7 +82,13 @@ test('waiting checks retain the original target and reject unrelated draft damag
       contentVersion: state.contentVersion,
       id: lo.id,
       baseRevision: lo.revision,
-      value: { typeId: lo.typeId, name: lo.name, description: 'Orelaterad ändring.' },
+      value: {
+        typeId: lo.typeId,
+        name: lo.name,
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Orelaterad ändring.' },
+        ],
+      },
     });
     expect(await environment.check(step, view, [], { requirements: [] })).toContain(
       'effective_objects',

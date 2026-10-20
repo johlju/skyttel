@@ -8,6 +8,7 @@ import {
   renderHouseholdWork,
 } from '../../support/native-household-unit.js';
 import { applicationFixture } from '../server/fixture.js';
+import { propertyInput } from './property-controls.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
 let client: ReturnType<typeof fixture.client>;
@@ -27,7 +28,13 @@ beforeEach(async () => {
     id: 'person',
     version: 0,
     baseRevision: null,
-    value: { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Befintlig text' },
+    value: {
+      typeId: state.types[0].id,
+      name: 'Lo Exempel',
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Befintlig text' },
+      ],
+    },
   });
   failure = 0;
   vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
@@ -66,12 +73,14 @@ test('Swedish and canonical icon searches change only the form until the whole p
   await userEvent.type(search, 'telescope');
   await userEvent.click(picker.getByRole('button', { name: 'Välj telescope' }));
   await userEvent.click(form.getByRole('button', { name: 'Grunduppgifter' }));
-  await userEvent.type(form.getByLabelText('Beskrivning'), ' och nytt');
+  await userEvent.type(await propertyInput(form, 'Beskrivning'), ' och nytt');
   await userEvent.click(form.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect((await read()).draft.changes[0].after).toMatchObject({
     iconId: 'telescope',
-    description: 'Befintlig text och nytt',
+    properties: expect.arrayContaining([
+      expect.objectContaining({ label: 'Beskrivning', value: 'Befintlig text och nytt' }),
+    ]),
   });
   expect((await read()).objects).toEqual([]);
 });

@@ -1,5 +1,7 @@
 import { request } from '@playwright/test';
 import { draftChangeCount } from '../../src/shared/map.js';
+import { closeTextView, openDraftReview } from '../support/client.js';
+import { editTableObject, openObjectRelationships } from '../support/domain-work.js';
 import {
   prepareDraftRemovalFocus,
   prepareDraftRemovalMeaning,
@@ -8,6 +10,8 @@ import {
 } from '../support/draft-removal.js';
 import { prepareDraftReview } from '../support/draft-review.js';
 import { createInstallation } from '../support/installation.js';
+import { openProperties, propertyRow } from '../support/property-controls.js';
+import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
 import { readRemovalHistory, readRemovalProposals } from '../support/removal-reading.js';
 import { expect, test } from '../support/test.js';
 
@@ -233,7 +237,7 @@ test('UTKAST-48: authoritative discard rejects forged or unauthorized requests a
 });
 
 for (const kind of ['objectType', 'relationshipType'] as const) {
-  test(`${kind === 'objectType' ? 'UTKAST-47' : 'UTKAST-147'}: discarding an edited ${kind} retains incompatible values and displays the remaining type conflict`, async ({
+  test(`${kind === 'objectType' ? 'UTKAST-47' : 'UTKAST-147'}: discarding an edited ${kind} retains free properties until explicit review against the saved type`, async ({
     page,
   }) => {
     const installation = await createInstallation();
@@ -253,7 +257,13 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
         exact: true,
       });
       const affected = dialog.getByRole('list', { name: 'Förslag som blir kvar men påverkas' });
-      await expect(affected).toContainText('Typens uppgifter skiljer sig');
+      const dependents = (
+        kind === 'objectType' ? before.draft.changes : before.draft.relationships
+      )?.filter(({ after }) => after?.typeId === data.type.id);
+      await expect(affected.getByRole('listitem')).toHaveCount(dependents?.length ?? 0);
+      const reviewWarning =
+        'Typens uppgifter skiljer sig från förslagets underlag. Rätta förslaget i det ordinarie flödet.';
+      await expect(affected).toContainText(reviewWarning);
       await dialog.getByRole('button', { name: 'Ta bort', exact: true }).click();
       await expect(dialog).toHaveCount(0);
       const after = await data.read();
@@ -264,22 +274,94 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
           ({ id }) => id === data.proposalId,
         ),
       );
+      if (!change?.after)
+        throw new Error('Discarding the type must retain the individual proposal');
+      expect(change.after.properties).toEqual(
+        (kind === 'objectType' ? before.draft.changes : before.draft.relationships)?.find(
+          ({ id }) => id === data.proposalId,
+        )?.after?.properties,
+      );
       const row = draft.locator('tr').filter({
         has: page.locator(
           `#draft-read-${kind === 'objectType' ? 'object' : 'relationship'}-${data.proposalId}`,
         ),
       });
-      await expect(row).toContainText('Typens uppgifter skiljer sig');
-      await expect(row.locator('.draft-row-warning')).toBeVisible();
+      await expect(row.locator('.draft-row-warning')).toHaveText(reviewWarning);
       await row.getByRole('button', { name: /^Visa förslaget:/ }).click();
       const details = page.getByRole('dialog');
       await expect(details).toContainText('Ny uppgift');
       await expect(details).toContainText('Behåll hela mitt värde');
       await page.keyboard.press('Escape');
+      expect(await data.read()).toEqual(after);
+      await closeTextView(page);
+      if (kind === 'objectType') {
+        const editor = await editTableObject(page, 'Alex blå cykel');
+        await expect(editor.getByLabel('Objekttyp', { exact: true })).toHaveValue(data.type.id);
+        await openProperties(editor);
+        await expect(
+          propertyRow(editor, 'Ny uppgift').getByLabel('Värde', { exact: true }),
+        ).toHaveValue('Behåll hela mitt värde');
+        expect(await data.read()).toEqual(after);
+        await editor
+          .getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true })
+          .click();
+        await expect(editor).not.toBeVisible();
+      } else {
+        const editor = await openObjectRelationships(page, 'Alex blå cykel');
+        const relationship = editor
+          .getByRole('listitem')
+          .filter({ hasText: 'Behåll hela mitt värde' });
+        await expect(relationship).toHaveCount(1);
+        await relationship.getByRole('button', { name: 'Redigera samband', exact: true }).click();
+        await expect(editor.getByLabel('Sambandstyp', { exact: true })).toHaveValue(data.type.id);
+        await expect(editor.getByLabel('Från objekt', { exact: true })).toHaveValue('draft-bike');
+        await expect(editor.getByLabel('Till objekt', { exact: true })).toHaveValue('draft-bike');
+        await expect(
+          propertyRow(editor, 'Ny uppgift').getByLabel('Värde', { exact: true }),
+        ).toHaveValue('Behåll hela mitt värde');
+        expect(await data.read()).toEqual(after);
+        await stageRelationshipAndClose(page);
+      }
+      const reviewed = await data.read();
+      const reviewedChange = (
+        kind === 'objectType' ? reviewed.draft.changes : reviewed.draft.relationships
+      )?.find(({ id }) => id === data.proposalId);
+      expect(reviewedChange).toEqual({
+        ...change,
+        type: data.type,
+        proposedAt: expect.any(String),
+        ...(kind === 'objectType' ? { stagingId: expect.any(String) } : {}),
+      });
+      expect(reviewedChange?.after?.properties).toEqual(change?.after?.properties);
+      expect(
+        reviewed.draft.changes.filter(({ id }) => kind !== 'objectType' || id !== data.proposalId),
+      ).toEqual(
+        after.draft.changes.filter(({ id }) => kind !== 'objectType' || id !== data.proposalId),
+      );
+      expect(
+        reviewed.draft.relationships?.filter(
+          ({ id }) => kind !== 'relationshipType' || id !== data.proposalId,
+        ),
+      ).toEqual(
+        after.draft.relationships?.filter(
+          ({ id }) => kind !== 'relationshipType' || id !== data.proposalId,
+        ),
+      );
+      expect(reviewed.draft.objectTypes).toEqual(after.draft.objectTypes);
+      expect(reviewed.draft.relationshipTypes).toEqual(after.draft.relationshipTypes);
+      await openDraftReview(page);
+      await expect(row.locator('.draft-row-warning')).toHaveCount(0);
+      await expect(
+        draft.locator('.draft-row-warning').filter({ hasText: reviewWarning }),
+      ).toHaveCount((dependents?.length ?? 0) - 1);
       expect(after.objects).toEqual(before.objects);
       expect(after.relationships).toEqual(before.relationships);
       expect(after.types).toEqual(before.types);
       expect(after.relationshipTypes).toEqual(before.relationshipTypes);
+      expect(reviewed.objects).toEqual(before.objects);
+      expect(reviewed.relationships).toEqual(before.relationships);
+      expect(reviewed.types).toEqual(before.types);
+      expect(reviewed.relationshipTypes).toEqual(before.relationshipTypes);
       expect(await (await page.request.get(`${data.path}/history`)).json()).toEqual(history);
       await readRemovalProposals(page, await data.read());
       await readRemovalHistory(page);
@@ -490,9 +572,14 @@ for (const width of [1280, 320]) {
       ).toBeFocused();
       const after = await data.read();
       expect(after.draft.changes.map(({ id }) => id)).toEqual(['draft-bike', 'draft-unresolved']);
-      expect(after.draft.relationships?.map(({ id }) => id)).toEqual(['draft-edge-unknown']);
+      expect(after.draft.relationships?.map(({ id }) => id)).toEqual([
+        'draft-edge-unknown',
+        'draft-edge-none',
+      ]);
       expect(after.draft.relationships).toEqual(
-        before.draft.relationships?.filter(({ id }) => id === 'draft-edge-unknown'),
+        before.draft.relationships?.filter(({ id }) =>
+          ['draft-edge-unknown', 'draft-edge-none'].includes(id),
+        ),
       );
       expect(after.draft.objectTypes).toEqual(before.draft.objectTypes);
       expect(after.draft.relationshipTypes).toEqual(before.draft.relationshipTypes);
@@ -585,7 +672,7 @@ test('UTKAST-45: a stale discard confirmation preserves newer proposals and refr
     await data.post('object-type', {
       id: 'newer-independent-type',
       baseRevision: null,
-      value: { name: 'Nyare oberoende typ', description: '', fields: [] },
+      value: { name: 'Nyare oberoende typ', description: '' },
     });
     const newer = await data.read();
     await dialog.getByRole('button', { name: 'Ta bort', exact: true }).click();
@@ -645,9 +732,28 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
           ? {
               typeId: type.id,
               name: 'Tillfälligt föremål',
-              description: 'Hela den tillfälliga berättelsen',
+              properties: [
+                {
+                  id: expect.any(String),
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Hela den tillfälliga berättelsen',
+                },
+              ],
             }
-          : { typeId: type.id, sourceId: 'draft-bike', targetId: null, knowledge: 'unknown' },
+          : {
+              typeId: type.id,
+              sourceId: 'draft-bike',
+              targetId: 'draft-bike',
+              properties: [
+                {
+                  id: expect.any(String),
+                  label: 'Uppgiftens säkerhet',
+                  kind: 'text' as const,
+                  value: 'Okänt',
+                },
+              ],
+            },
       );
       const history = await (await page.request.get(`${data.path}/history`)).json();
       await page.goto(`${installation.origin}/households/${data.household.id}`);
@@ -684,6 +790,7 @@ for (const kind of ['objectType', 'relationshipType'] as const) {
       const after = await data.read();
       const changes = kind === 'objectType' ? after.draft.changes : after.draft.relationships;
       expect(changes?.find(({ id }) => id === proposal.id)?.after?.typeId).toBe(type.id);
+      expect(changes?.find(({ id }) => id === proposal.id)).toEqual(proposal);
       expect(after.objects).toEqual(before.objects);
       expect(after.relationships).toEqual(before.relationships);
       await expect(draft).toContainText(

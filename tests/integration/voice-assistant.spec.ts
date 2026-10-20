@@ -31,6 +31,7 @@ import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { exposedTextLines } from '../support/object-property-reading.js';
 import { expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
@@ -229,7 +230,17 @@ test('TAL-08: nödvändiga frågor finns i samtalet och fel visas i en samtalsno
               arguments: {
                 id: 'lo',
                 baseRevision: null,
-                value: { ...value, description: 'Förslag väntar på svar' },
+                value: {
+                  ...value,
+                  properties: [
+                    {
+                      id: 'description',
+                      label: 'Beskrivning',
+                      kind: 'text',
+                      value: 'Förslag väntar på svar',
+                    },
+                  ],
+                },
               },
             },
           ],
@@ -258,7 +269,8 @@ test('TAL-08: nödvändiga frågor finns i samtalet och fel visas i en samtalsno
     await expect
       .poll(
         async () =>
-          (await (await page.request.get(map.path)).json()).draft.changes[0].after.description,
+          (await (await page.request.get(map.path)).json()).draft.changes[0].after.properties[0]
+            .value,
       )
       .toBe('Förslag väntar på svar');
     await expect(panel.getByRole('log')).toHaveCount(0);
@@ -287,7 +299,7 @@ test('TAL-08: nödvändiga frågor finns i samtalet och fel visas i en samtalsno
       /^Skyttel: Nytt samtal\./,
     );
     expect(
-      (await (await page.request.get(map.path)).json()).draft.changes[0].after.description,
+      (await (await page.request.get(map.path)).json()).draft.changes[0].after.properties[0].value,
     ).toBe('Förslag väntar på svar');
     await readVoiceProposal(page, 'Lo Exempel', 'Förslag väntar på svar');
   } finally {
@@ -597,12 +609,12 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
           baseRevision: revision,
           value: {
             ...value,
-            description: 'Familjeabonnemang 189 kr per månad.',
-            financialFacts: {
-              price: { knowledge: 'known', value: '189' },
-              currency: { knowledge: 'known', value: 'SEK' },
-              paymentInterval: { knowledge: 'known', value: 'månad' },
-            },
+            properties: value.properties.map((property: { label: string }) => {
+              if (property.label === 'Beskrivning')
+                return { ...property, kind: 'text', value: 'Familjeabonnemang 189 kr per månad.' };
+              if (property.label === 'Pris') return { ...property, kind: 'number', value: 189 };
+              return property;
+            }),
           },
         }),
       ];
@@ -640,7 +652,7 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       for (const [label, value] of [
         ['Namn', name],
         ['Objekttyp', 'Person'],
-        ['Beskrivning', description],
+        ['Beskrivning · egenskap 1', `Beskrivning: ${description} (Text)`],
       ])
         await expect(
           values
@@ -659,7 +671,11 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
     await startVoice(page);
     await closeConversationText(page);
     await editTableObject(page, 'Kim Exempel');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text som ska finnas kvar');
+    await page.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Egenskap 1', exact: true })
+      .getByLabel('Värde', { exact: true })
+      .fill('Osänd text som ska finnas kvar');
     const saved = page.waitForResponse(async (response) => {
       if (
         !response.ok() ||
@@ -679,10 +695,12 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       (await (await page.request.get(`${app.origin}/api/households/${household.id}/map`)).json())
         .draft.changes,
     ).toEqual([]);
-    await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-      'Osänd text som ska finnas kvar',
-    );
-    await verifyObjectDepartureAndDiscard(page, { Beskrivning: 'Osänd text som ska finnas kvar' });
+    await expect(
+      page
+        .getByRole('group', { name: 'Egenskap 1', exact: true })
+        .getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Osänd text som ska finnas kvar');
+    await verifyObjectDepartureAndDiscard(page, { Värde: 'Osänd text som ska finnas kvar' });
     await openConversationText(page);
     await expect(assistant(page).getByRole('log', { name: 'Samtalstext' })).toContainText(
       'Sparat.',
@@ -701,14 +719,19 @@ test('TAL-01: familjeärendet sparas med röst och bevarad oskickad formulärtex
       await page.request.get(`${app.origin}/api/households/${household.id}/map`)
     ).json();
     expect(
-      map.objects.find((object: { name: string }) => object.name === 'Familjens Molnmusik')
-        .financialFacts.price,
-    ).toEqual({ knowledge: 'known', value: '189' });
+      map.objects
+        .find((object: { name: string }) => object.name === 'Familjens Molnmusik')
+        .properties.find((property: { label: string }) => property.label === 'Pris'),
+    ).toMatchObject({ label: 'Pris', kind: 'number', value: 189 });
     expect(map.objects.some((object: { name: string }) => object.name === 'Lo Lind')).toBe(true);
     expect(map.draft.changes).toEqual([]);
-    expect(map.relationships.map((edge: { knowledge: string }) => edge.knowledge)).toEqual(
-      expect.arrayContaining(['unknown', 'none', 'uncertain']),
-    );
+    const objectIds = new Set(map.objects.map((object: { id: string }) => object.id));
+    expect(
+      map.relationships.every(
+        (edge: { sourceId: string; targetId: string }) =>
+          objectIds.has(edge.sourceId) && objectIds.has(edge.targetId),
+      ),
+    ).toBe(true);
     expect(model.requests).toHaveLength(4);
     await expect
       .poll(() => live.sent.some(({ event }) => event.type === 'session.commentary.append'))
@@ -748,10 +771,22 @@ async function simpleMap(page: Page, app: Awaited<ReturnType<typeof createInstal
   const { household } = await (await createHousehold(page.request, app.origin)).json();
   const path = `${app.origin}/api/households/${household.id}/map`;
   const state = await (await page.request.get(path)).json();
-  const value = { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Påhittad uppgift' };
+  const value = {
+    typeId: state.types[0].id,
+    name: 'Lo Exempel',
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad uppgift' },
+    ],
+  };
   await page.request.post(`${path}/draft`, {
     headers: { origin: app.origin },
-    data: { version: 0, contentVersion: 1, id: 'lo', baseRevision: null, value },
+    data: {
+      version: 0,
+      contentVersion: 1,
+      id: 'lo',
+      baseRevision: null,
+      value: { ...value },
+    },
   });
   await page.addInitScript({ content: liveBrowserFixtureSource });
   await page.goto(app.origin);
@@ -779,7 +814,13 @@ async function readFamily(page: Page) {
     await expect(
       details.getByText('Typ', { exact: true }).locator('..').getByRole('definition'),
     ).toHaveText(type);
-    await expect(details.locator('.household-table-description')).toHaveText(description);
+    await expect(
+      details
+        .locator('dt')
+        .filter({ hasText: /^Beskrivning$/ })
+        .locator('..')
+        .locator('dd'),
+    ).toHaveText(`${description} (Text)`);
     if (name === 'Familjens Molnmusik') {
       for (const value of ['189', 'SEK', 'månad']) await expect(details).toContainText(value);
       for (const [label, value] of [
@@ -793,7 +834,7 @@ async function readFamily(page: Page) {
             .filter({ hasText: new RegExp(`^${label}$`) })
             .locator('..')
             .locator('dd'),
-        ).toHaveText(value);
+        ).toHaveText(`${value} (${label === 'Pris' ? 'Tal' : 'Text'})`);
     }
   }
   for (const [name, values] of [
@@ -813,8 +854,6 @@ async function readFamily(page: Page) {
       ],
     ],
     ['Molnmusik', ['Lo Lind', 'Osäkert uppgivet']],
-    ['Föreningens musikkonto', ['Äger', 'Okänt']],
-    ['Lindens musikförening', ['Används av', 'Uttryckligen inget']],
     [
       'Familjens musikkort',
       [
@@ -824,33 +863,39 @@ async function readFamily(page: Page) {
         'Hushållets betalkonto',
       ],
     ],
+    [
+      'Föreningens musikkonto',
+      ['Tillhör tjänsten', 'Molnmusik', 'Kontaktadress', 'familjen@example.test'],
+    ],
   ] as const) {
     const relationships = await openObjectRelationships(page, name);
     for (const value of values) await expect(relationships).toContainText(value);
+    if (name === 'Föreningens musikkonto')
+      await expect(relationships.locator('.household-read-relationships > li')).toHaveCount(2);
     const expected = {
       'Familjens musikkonto': [
-        ['Inloggningsadress', 'Familjens musikkonto', 'musik@example.test', 'Känt'],
-        ['Kontaktadress', 'Familjens musikkonto', 'familjen@example.test', 'Känt'],
+        ['Inloggningsadress', 'Familjens musikkonto', 'musik@example.test'],
+        ['Kontaktadress', 'Familjens musikkonto', 'familjen@example.test'],
       ],
       'Familjens Molnmusik': [
-        ['Står på avtalet', 'Familjens Molnmusik', 'Alex Exempel', 'Känt'],
-        ['Betalar', 'Kim Exempel', 'Familjens Molnmusik', 'Känt'],
-        ['Betalas med', 'Familjens Molnmusik', 'Familjens musikkort', 'Känt'],
+        ['Står på avtalet', 'Familjens Molnmusik', 'Alex Exempel'],
+        ['Betalar', 'Kim Exempel', 'Familjens Molnmusik'],
+        ['Betalas med', 'Familjens Molnmusik', 'Familjens musikkort'],
       ],
       Molnmusik: [
-        ['Använder', 'Lo Lind', 'Molnmusik', 'Känt'],
-        ['Används av', 'Molnmusik', 'Lo Lind', 'Osäkert uppgivet'],
-      ],
-      'Föreningens musikkonto': [['Äger', 'Föreningens musikkonto', 'Okänt', 'Okänt']],
-      'Lindens musikförening': [
-        ['Används av', 'Lindens musikförening', 'Uttryckligen inget', 'Uttryckligen inget'],
+        ['Använder', 'Lo Lind', 'Molnmusik'],
+        ['Används av', 'Molnmusik', 'Lo Lind'],
       ],
       'Familjens musikkort': [
-        ['Kontokoppling', 'Familjens musikkort', 'Kortets kontokoppling', 'Känt'],
-        ['Kortfakturan betalas från', 'Familjens musikkort', 'Hushållets betalkonto', 'Känt'],
+        ['Kontokoppling', 'Familjens musikkort', 'Kortets kontokoppling'],
+        ['Kortfakturan betalas från', 'Familjens musikkort', 'Hushållets betalkonto'],
+      ],
+      'Föreningens musikkonto': [
+        ['Tillhör tjänsten', 'Föreningens musikkonto', 'Molnmusik'],
+        ['Kontaktadress', 'Föreningens musikkonto', 'familjen@example.test'],
       ],
     }[name];
-    for (const [direction, source, target, knowledge] of expected ?? []) {
+    for (const [direction, source, target] of expected ?? []) {
       const edge = relationships
         .locator('.household-read-relationships > li')
         .filter({
@@ -874,7 +919,6 @@ async function readFamily(page: Page) {
         ['Riktning', direction],
         ['Från objekt', source],
         ['Till objekt', target],
-        ['Uppgiftens säkerhet', knowledge],
       ])
         await expect(
           edge
@@ -886,6 +930,9 @@ async function readFamily(page: Page) {
     }
     await page.keyboard.press('Escape');
   }
+  const standalone = await openObjectRelationships(page, 'Lindens musikförening');
+  await expect(standalone.locator('.household-read-relationships > li')).toHaveCount(0);
+  await page.keyboard.press('Escape');
 }
 
 test('TAL-02: negativa besked och förlorad anslutning stoppar sena röständringar', async ({
@@ -1071,32 +1118,14 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
           .getByRole('definition')
           .filter({ hasText: 'Lo Exempel' }),
       ).toBeVisible();
-      await expect
-        .poll(() =>
-          page.getByRole('region', { name: 'Lo Exempel', exact: true }).evaluate((element) => {
-            const description = element.querySelector('.household-table-description');
-            const body = element.querySelector('.object-property-body');
-            if (!description || !body) return false;
-            const box = description.getBoundingClientRect();
-            const clip = body.getBoundingClientRect();
-            const panel = element.getBoundingClientRect();
-            const line = Math.min(
-              box.height,
-              Number.parseFloat(getComputedStyle(description).lineHeight),
-            );
-            return (
-              line > 0 &&
-              box.top >= clip.top &&
-              box.top + line <= clip.bottom &&
-              box.top >= panel.top &&
-              box.top + line <= panel.bottom &&
-              description.contains(
-                document.elementFromPoint(box.x + box.width / 2, box.top + line / 2),
-              )
-            );
-          }),
-        )
-        .toBe(true);
+      const description = page
+        .getByRole('region', { name: 'Lo Exempel', exact: true })
+        .locator('dt')
+        .filter({ hasText: /^Beskrivning$/ })
+        .locator('..')
+        .locator('dd');
+      await expect(description).toHaveText('◇ Ditt förslag: Påhittad uppgift (Text)');
+      await exposedTextLines(description, 'start');
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await openConversationText(page);

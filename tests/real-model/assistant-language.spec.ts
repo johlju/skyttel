@@ -31,7 +31,13 @@ test('AI-12: verklig modell skiljer nekade och hypotetiska besked från rättels
         contentVersion: initial.contentVersion,
         id: 'lo-language-case',
         baseRevision: null,
-        value: { typeId: person.id, name: 'Lo Exempel', description: 'Spelar piano.' },
+        value: {
+          typeId: person.id,
+          name: 'Lo Exempel',
+          properties: [
+            { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Spelar piano.' },
+          ],
+        },
       },
     });
     expect(proposed.status()).toBe(200);
@@ -74,7 +80,9 @@ test('AI-12: verklig modell skiljer nekade och hypotetiska besked från rättels
       expect.objectContaining({
         id: 'lo-language-case',
         name: 'Lo Lind',
-        description: 'Spelar piano.',
+        properties: expect.arrayContaining([
+          expect.objectContaining({ label: 'Beskrivning', kind: 'text', value: 'Spelar piano.' }),
+        ]),
       }),
     ]);
     expect(after.draft.changes).toEqual([]);
@@ -156,13 +164,23 @@ test('AI-08: verklig modell rättar och sparar hela familjeärendet genom MCP', 
     const music = after.objects.find(
       (object: { name: string }) => object.name === 'Familjens Molnmusik',
     );
-    expect(music.financialFacts).toMatchObject({
-      price: { knowledge: 'known', value: '189' },
-      currency: { knowledge: 'known', value: 'SEK' },
-      paymentInterval: { knowledge: 'known', value: 'månad' },
-    });
+    expect(music.properties).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Pris', kind: 'number', value: 189 }),
+        expect.objectContaining({ label: 'Valuta', kind: 'text', value: 'SEK' }),
+        expect.objectContaining({ label: 'Betalningsintervall', kind: 'text', value: 'månad' }),
+      ]),
+    );
     const lo = after.objects.find((object: { name: string }) => object.name === 'Lo Lind');
-    expect(lo).toMatchObject({ description: 'Spelar piano i musikföreningen.' });
+    expect(lo).toMatchObject({
+      properties: expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Spelar piano i musikföreningen.',
+        }),
+      ]),
+    });
     const account = after.objects.find(
       (object: { name: string }) => object.name === 'Familjens musikkonto',
     );

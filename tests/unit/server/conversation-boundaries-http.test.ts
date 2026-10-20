@@ -59,7 +59,7 @@ async function object(id = 'lamp', value: Record<string, unknown> = {}) {
       version: state.draft.version,
       contentVersion: state.contentVersion,
       baseRevision: before?.revision ?? null,
-      value: { typeId: state.types[0].id, name: 'Lampan', description: '', ...before, ...value },
+      value: { typeId: state.types[0].id, name: 'Lampan', ...before, ...value },
     }),
   );
   session = await read();
@@ -323,19 +323,9 @@ test.each([
     null,
     'Typen används fortfarande av objekt, samband eller utkast. De behöver hanteras innan typen kan tas bort.',
   ],
-  [
-    'field_in_use',
-    [],
-    'Fältet innehåller fortfarande uppgifter i kartan eller utkast. De behöver hanteras innan fältet kan tas bort.',
-  ],
-  [
-    'field_kind_in_use',
-    [{ id: 'serial', name: 'Serienummer', description: '', kind: 'number' }],
-    'Fältets värdeslag kan inte ändras medan det används. Ett nytt fält behövs för det nya värdeslaget.',
-  ],
 ] as const)(
   'a real %s refusal is preserved and reported from server facts without applying the requested type mutation',
-  async (error, fields, reason) => {
+  async (error, _fields, reason) => {
     let reporting = false;
     const model = textModel((request) => {
       if (reporting) return [modelTool('report_result', { source: 'last_failure' })];
@@ -347,7 +337,7 @@ test.each([
           contentVersion: draft.contentVersion,
           id: 'field-type',
           baseRevision: 1,
-          value: fields === null ? null : { name: 'Utrustning', description: '', fields },
+          value: null,
         }),
       ];
     });
@@ -360,12 +350,14 @@ test.each([
         value: {
           name: 'Utrustning',
           description: '',
-          fields: [{ id: 'serial', name: 'Serienummer', description: '', kind: 'text' }],
         },
       }),
     );
     await checked(await post('map/save', { version: 1, operationId: 'field-defined' }));
-    await object('lamp', { typeId: 'field-type', customValues: { serial: 'SYNTH-42' } });
+    await object('lamp', {
+      typeId: 'field-type',
+      properties: [{ id: 'serial', label: 'serial', kind: 'text', value: 'SYNTH-42' }],
+    });
     const before = await map();
     const failed = await message('Ändra typen enligt mitt uppdrag.');
     expect(failed).toMatchObject({ phase: 'error', error });
@@ -403,7 +395,6 @@ test.each(['object', 'relationship'] as const)(
           typeId: state.relationshipTypes[0].id,
           sourceId: 'lamp',
           targetId: 'garage',
-          knowledge: 'known',
         },
       }),
     );
@@ -535,7 +526,6 @@ test.each(['object', 'relationship', 'objectType', 'relationshipType'] as const)
           typeId: state.relationshipTypes[0].id,
           sourceId: 'lamp',
           targetId: 'garage',
-          knowledge: 'known',
         },
       }),
     );
@@ -601,7 +591,7 @@ test('a mutation followed by a historical failure request retains only its verif
         contentVersion: draft.contentVersion,
         id: 'new-object',
         baseRevision: null,
-        value: { typeId, name: 'Nytt förslag', description: '' },
+        value: { typeId, name: 'Nytt förslag' },
       }),
       modelTool('report_result', { source: 'last_failure' }),
     ];
@@ -618,7 +608,7 @@ test('a mutation followed by a historical failure request retains only its verif
   expect(after.draft.changes[0]).toEqual(before.draft.changes[0]);
   expect(after.draft.changes[1]).toMatchObject({
     id: 'new-object',
-    after: { name: 'Nytt förslag', description: '' },
+    after: { name: 'Nytt förslag' },
   });
   expect(after.draft.version).toBe(before.draft.version + 1);
   expect((await (await client.get(`${path}/map/history`)).json()).history).toEqual([]);

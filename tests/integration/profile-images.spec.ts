@@ -11,6 +11,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { propertyValue, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function expectSpatialPortrait(page: Page, imageId: string | null | undefined) {
@@ -57,7 +58,14 @@ test('BILD-01: profile image proposals preserve text, survive restart and expose
         value: {
           typeId: state.types[0].id,
           name: 'Lo Exempel',
-          description: 'Bevara beskrivningen',
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Bevara beskrivningen',
+            },
+          ],
         },
       },
     });
@@ -86,10 +94,12 @@ test('BILD-01: profile image proposals preserve text, survive restart and expose
     await openMap(page);
     await expectSpatialPortrait(page, first);
     await editTableObject(page, 'Lo Exempel');
-    await details.getByLabel('Beskrivning', { exact: true }).fill('Oskickad text');
+    await setProperty(details, 'Beskrivning', 'Oskickad text');
     await details.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
     await expect(details.getByLabel('Profilbild', { exact: true })).toBeEnabled();
-    expect((await read()).draft.changes[0].after?.description).toBe('Bevara beskrivningen');
+    expect(propertyValue((await read()).draft.changes[0].after, 'Beskrivning')).toBe(
+      'Bevara beskrivningen',
+    );
     await details.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await saveReviewedConflictDraft(page);
     await closeTextView(page);
@@ -129,7 +139,7 @@ test('BILD-01: profile image proposals preserve text, survive restart and expose
     await expect(history.getByRole('article').first().getByRole('img').first()).toBeVisible();
     await expect(history.getByRole('article').first().getByRole('img').last()).toBeVisible();
     expect((await read()).objects[0].profileImageId).not.toBe(first);
-    expect((await read()).objects[0].description).toBe('Oskickad text');
+    expect(propertyValue((await read()).objects[0], 'Beskrivning')).toBe('Oskickad text');
     await expect(history.getByRole('button', { name: 'Ångra sparandet' })).toHaveCount(0);
   } finally {
     await installation.close();
@@ -152,7 +162,18 @@ test('BILD-02: invalid images retain proposals and interrupted removal recovers 
         id: 'person',
         version: 0,
         baseRevision: null,
-        value: { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Bevara texten' },
+        value: {
+          typeId: state.types[0].id,
+          name: 'Lo Exempel',
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Bevara texten',
+            },
+          ],
+        },
       },
     });
     await page.goto(installation.origin);
@@ -270,7 +291,7 @@ test('BILD-03: private, historical and known image addresses enforce current hou
         id: 'person',
         version: 0,
         baseRevision: null,
-        value: { typeId: state.types[0].id, name: 'Lo Exempel', description: '' },
+        value: { typeId: state.types[0].id, name: 'Lo Exempel' },
       },
     });
     installation.setIdentity(robin);

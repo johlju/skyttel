@@ -44,8 +44,15 @@ test('SÖK-01: own detail fields, every word and Swedish normalization find obje
     await page.keyboard.press('Escape');
     await expect(search).toHaveValue('');
     await search.fill('åke beskrivning');
-    await expect(table.getByRole('rowheader')).toHaveCount(1);
-    await expect(table.getByRole('button', { name: 'Åke', exact: true })).toBeVisible();
+    const matches = table.getByRole('rowheader').getByRole('button');
+    await expect(matches).toHaveCount(2);
+    await expect(matches.nth(0)).toHaveAccessibleName('Åke');
+    await expect(matches.nth(1)).toHaveAccessibleName('Övrigt Élan');
+    expect(
+      await matches.evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute('data-table-object')),
+      ),
+    ).toEqual(['table-3', 'unicode-object']);
     expect(await read()).toEqual(before);
   } finally {
     await installation.close();
@@ -112,11 +119,15 @@ test('SÖK-04: the last proposal resets only draft filters in both views and typ
     expect(nativeType.objects).toEqual(nativeBefore.objects);
     expect(nativeType.draft.changes).toEqual([]);
     expect(nativeType.draft.objectTypes).toHaveLength(1);
-    expect(nativeType.draft.objectTypes?.[0]?.after).toMatchObject({
+    const nativeTypeChange = nativeType.draft.objectTypes?.[0];
+    expect(nativeTypeChange?.id).toMatch(/\S/);
+    expect(nativeTypeChange?.after).toEqual({
+      id: nativeTypeChange?.id,
+      householdId: nativeBefore.types[0].householdId,
+      revision: 1,
       name: 'Enbart typförslag',
       description: '',
     });
-    expect(nativeType.draft.objectTypes?.[0]?.after?.fields ?? []).toEqual([]);
     expect(nativeType.draft.relationshipTypes ?? []).toEqual([]);
     expect(nativeType.draft.relationships ?? []).toEqual([]);
     await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
@@ -139,7 +150,7 @@ test('SÖK-04: the last proposal resets only draft filters in both views and typ
     await post('object-type', {
       id: 'only-type',
       baseRevision: null,
-      value: { name: 'Enbart typförslag', description: '', fields: [] },
+      value: { name: 'Enbart typförslag', description: '' },
     });
     await page.reload();
     await focusMapSearch(page);

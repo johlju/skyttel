@@ -38,7 +38,7 @@ test('IMPORT-16: an administrator explicitly cancels only an unconfirmed prepara
     const path = `${installation.origin}/api/households/${household.id}`;
     const headers = { origin: installation.origin };
     const initial = await (await page.request.get(`${path}/map`)).json();
-    const value = { name: 'Exportens namn', description: '', typeId: initial.types[0].id };
+    const value = { name: 'Exportens namn', typeId: initial.types[0].id };
     expect(
       (
         await page.request.post(`${path}/map/draft`, {
@@ -93,7 +93,14 @@ test('IMPORT-16: an administrator explicitly cancels only an unconfirmed prepara
             value: {
               ...value,
               name: 'Privat arbete efter exporten',
-              description: 'Privat uppgift för Privat arbete efter exporten',
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat uppgift för Privat arbete efter exporten',
+                },
+              ],
             },
           },
         })
@@ -437,8 +444,15 @@ test('IMPORT-17: failed cancellation cleanup and a lost success remain bound to 
             baseRevision: null,
             value: {
               name: 'Privat under avbrottet',
-              description: 'Privat uppgift för Privat under avbrottet',
               typeId: initial.types[0].id,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat uppgift för Privat under avbrottet',
+                },
+              ],
             },
           },
         })

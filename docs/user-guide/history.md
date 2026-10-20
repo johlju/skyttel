@@ -14,6 +14,19 @@ objekt och samband har kvar sina läsbara tidigare värden i historiken.
 Öppna **Identifiera sparandet och användaren** när du behöver deras ID:n.
 Om ett äldre sparande saknar personens namn finns användarens ID kvar.
 
+Objektens och sambandens egenskaper visas i sin sparade ordning på båda
+sidor av ändringen. Varje rad visar etikett, datatyp, värde och identitet.
+Identiteten skiljer egenskaper med samma etikett åt, även efter namnbyte
+eller flytt. Tomt värde, tom text, noll och Nej går att skilja åt.
+Typens beskrivning och sambandets benämningar i båda riktningarna hör till
+respektive historiskt värde.
+
+Om ett samband tas bort tillsammans med ett objekt och ett bevarat
+förslag senare rättas till andra befintliga ändpunkter, visar det nya
+sparandet att sambandet saknas före sparandet. Den tidigare borttagningen
+finns kvar i sitt eget kort. Historikläsningen återför inga borttagna
+objekt till kartan.
+
 **Länk till sparandet** öppnar det utpekade kortet med dess detaljer.
 Länken kräver inloggning och aktuell tillgång till hushållet. Varken
 historikläsning eller direktlänken kräver ett samtal, medgivande eller AI.

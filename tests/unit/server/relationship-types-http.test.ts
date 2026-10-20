@@ -34,7 +34,7 @@ const edge = async (baseRevision: number | null = null, actor = client, extra = 
       version: (await read(actor)).draft.version,
       id: 'edge',
       baseRevision,
-      value: { typeId: 'storage', sourceId: 'bike', targetId: 'garage', knowledge: 'known' },
+      value: { typeId: 'storage', sourceId: 'bike', targetId: 'garage' },
       ...extra,
     },
     actor,
@@ -60,7 +60,7 @@ beforeEach(async () => {
       id,
       version: state.draft.version,
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: id, description: '' },
+      value: { typeId: state.types[0].id, name: id },
     });
   }
   await save('objects');
@@ -194,7 +194,7 @@ test('type writes roll back with duplicate edges and changed definitions require
   const type = (await read()).relationshipTypes.find((item) => item.id === 'storage');
   await edge(null, client, {
     id: 'reversed',
-    value: { typeId: 'storage', sourceId: 'garage', targetId: 'bike', knowledge: 'known' },
+    value: { typeId: 'storage', sourceId: 'garage', targetId: 'bike' },
   });
   await define({ ...definition, name: 'Aktuell betydelse' }, 1, member);
   await save('member-type', member);

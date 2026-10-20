@@ -2,7 +2,6 @@ import { expect, test } from 'vitest';
 import {
   type ConflictProperty,
   combineConflictProperties,
-  conflictCombinationError,
   conflictProperties,
   conflictPropertyLabel,
   conflictValueText,
@@ -10,6 +9,7 @@ import {
 import { conflictRemovalPlan } from '../../../src/shared/conflict-removal.js';
 import { specialConflict } from '../../../src/shared/conflict-special.js';
 import type { MapState } from '../../../src/shared/map.js';
+import type { Property } from '../../../src/shared/properties.js';
 
 const state: MapState = {
   userId: 'alex',
@@ -32,104 +32,161 @@ test('conflict values distinguish identified objects and lifecycle modes from mi
   expect(conflictValueText(state, property('identity'), 'unspecified')).toBe(
     'Ospecificerat objekt',
   );
-  expect(conflictValueText(state, property('lifecycle'), undefined)).toBe('Följ slutdatum');
+  expect(conflictValueText(state, property('lifecycle'), undefined)).toBe('Gäller fortfarande');
   expect(conflictValueText(state, property('lifecycle'), 'active')).toBe('Gäller fortfarande');
   expect(conflictValueText(state, property('lifecycle'), 'ended')).toBe('Manuellt upphört');
-  expect(conflictValueText(state, property('customValues.note'), undefined)).toBe('Ej uppgivet');
-});
-test('object type choices accept a builtin property order and reject references absent from the chosen combination', () => {
-  const conflict = { kind: 'objectType' as const, id: 'contract', current: null };
-  const value = {
-    name: 'Avtal',
-    description: '',
-    fields: [],
-    sections: [{ id: 'finance', name: 'Ekonomi' }],
-    builtins: [{ key: 'price', name: 'Pris', sectionId: 'finance' }],
-    propertyOrder: ['builtin:price'],
-  };
-  expect(conflictCombinationError(state, conflict, value)).toBe('');
-  expect(conflictCombinationError(state, conflict, { ...value, builtins: [] })).toContain(
-    'uppgift som saknas',
-  );
+  expect(conflictValueText(state, property('properties.note'), undefined)).toBe('Borttaget');
 });
 
-test('concurrent type labels keep saved and proposed meanings on the same property identities', () => {
+test('concurrent free property labels remain attached to their stable identities', () => {
   const type = {
     id: 'person',
     householdId: 'household',
     revision: 1,
     name: 'Person',
     description: '',
-    builtins: [{ key: 'debt' as const, name: 'Sparad skuld', sectionId: '' }],
-    fields: [
-      {
-        id: 'note',
-        name: 'Sparad anteckning',
-        description: '',
-        kind: 'text' as const,
-        sectionId: '',
-      },
-    ],
   };
   const before = {
     id: 'lo',
     householdId: 'household',
     revision: 1,
-    typeId: type.id,
+    typeId: 'person',
     name: 'Lo',
-    description: '',
-    customValues: { note: 'Tidigare' },
-    financialFacts: { debt: { knowledge: 'known' as const, value: '1200' } },
+    properties: [{ id: 'note', label: 'Anteckning', kind: 'text' as const, value: 'Tidigare' }],
   };
   const saved = {
     ...before,
     revision: 2,
-    customValues: { note: 'Sparat' },
-    financialFacts: { debt: { knowledge: 'known' as const, value: '2000' } },
+    properties: [
+      { id: 'note', label: 'Sparad anteckning', kind: 'text' as const, value: 'Sparat' },
+    ],
   };
   const proposed = {
     ...before,
-    customValues: { note: 'Mitt' },
-    financialFacts: { debt: { knowledge: 'known' as const, value: '1700' } },
+    properties: [{ id: 'note', label: 'Min anteckning', kind: 'text' as const, value: 'Mitt' }],
   };
-  const proposedType = {
-    ...type,
-    revision: 2,
-    builtins: [{ ...type.builtins[0], name: 'Min skuld' }],
-    fields: [{ ...type.fields[0], name: 'Min anteckning' }],
-  };
-  const comparison = {
+  const comparison: MapState = {
     ...state,
     types: [type],
     objects: [saved],
-    draft: {
-      version: 2,
-      changes: [{ id: 'lo', before, after: proposed, type: proposedType, beforeType: type }],
-      objectTypes: [{ id: type.id, before: type, after: proposedType }],
-    },
+    draft: { version: 2, changes: [{ id: 'lo', before, after: proposed, type }] },
   };
   const fields = conflictProperties(comparison, { kind: 'object', id: 'lo', current: saved });
-  const debt = fields.find((field) => field.key === 'financialFacts.debt');
-  const note = fields.find((field) => field.key === 'customValues.note');
-  expect(debt && conflictPropertyLabel(debt, 'saved')).toBe('Sparad skuld');
-  expect(debt && conflictPropertyLabel(debt, 'proposed')).toBe('Min skuld');
-  expect(note && conflictPropertyLabel(note, 'saved')).toBe('Sparad anteckning');
-  expect(note && conflictPropertyLabel(note, 'proposed')).toBe('Min anteckning');
-  expect(
-    combineConflictProperties(
-      fields,
-      Object.fromEntries(
-        fields.map((field) => [
-          field.key,
-          field.key === 'financialFacts.debt' ? 'saved' : 'proposed',
-        ]),
-      ),
-    ),
-  ).toMatchObject({
-    customValues: { note: 'Mitt' },
-    financialFacts: { debt: { knowledge: 'known', value: '2000' } },
+  const note = fields.find((field) => field.key === 'properties.note');
+  expect(note && conflictPropertyLabel(note, 'saved')).toBe('Sparad anteckning · egenskap 1');
+  expect(note && conflictPropertyLabel(note, 'proposed')).toBe('Min anteckning · egenskap 1');
+  expect(combineConflictProperties(fields, { 'properties.note': 'proposed' })).toMatchObject({
+    properties: proposed.properties,
   });
 });
+
+test('a concurrent creation distinguishes an explicit typed empty property from no property on the saved object', () => {
+  const type = {
+    id: 'person',
+    householdId: 'household',
+    revision: 1,
+    name: 'Person',
+    description: '',
+  };
+  const current = {
+    id: 'same-id',
+    householdId: 'household',
+    revision: 1,
+    typeId: type.id,
+    name: 'Sparat namn',
+  };
+  const properties: Property[] = [{ id: 'empty', label: 'Datum', kind: 'date' }];
+  const comparison: MapState = {
+    ...state,
+    types: [type],
+    objects: [current],
+    draft: {
+      version: 2,
+      changes: [
+        {
+          id: current.id,
+          before: null,
+          after: { typeId: type.id, name: 'Mitt namn', properties },
+          type,
+        },
+      ],
+    },
+  };
+  const before = structuredClone(comparison);
+  const fields = conflictProperties(comparison, { kind: 'object', id: current.id, current });
+  expect(combineConflictProperties(fields, {})).toBeNull();
+  expect(combineConflictProperties(fields, { name: 'saved' })).toEqual({
+    name: 'Sparat namn',
+    typeId: type.id,
+    properties,
+  });
+  expect(comparison).toEqual(before);
+});
+
+test.each([
+  { proposed: ['a', 'd', 'b', 'c'], expected: ['b', 'c', 'a', 'd'] },
+  { proposed: ['a', 'd', 'c', 'b'], expected: ['c', 'a', 'd', 'b'] },
+])(
+  'restoring an edited property into the selected saved order preserves every complete value: $expected',
+  ({ proposed, expected }) => {
+    const type = {
+      id: 'person',
+      householdId: 'household',
+      revision: 1,
+      name: 'Person',
+      description: '',
+    };
+    const properties: Property[] = [
+      { id: 'a', label: 'Samma', kind: 'boolean', value: false },
+      { id: 'b', label: 'Samma', kind: 'number', value: 10 },
+      { id: 'c', label: 'Samma', kind: 'text', value: '' },
+      { id: 'd', label: 'Samma' },
+    ];
+    const previous = {
+      id: 'lo',
+      householdId: 'household',
+      revision: 1,
+      typeId: type.id,
+      name: 'Lo',
+      properties,
+    };
+    const byId = new Map(properties.map((property) => [property.id, property]));
+    const edited: Property = { id: 'b', label: 'Korrigerad uppgift', kind: 'number', value: 0 };
+    function order(ids: string[], edit = false) {
+      return ids.map((id) => {
+        const value = edit && id === 'b' ? edited : byId.get(id);
+        if (!value) throw new Error(`Missing arranged property ${id}`);
+        return value;
+      });
+    }
+    const current = { ...previous, revision: 2, properties: order(['c', 'a', 'd']) };
+    const comparison: MapState = {
+      ...state,
+      types: [type],
+      objects: [current],
+      draft: {
+        version: 3,
+        changes: [
+          {
+            id: previous.id,
+            before: previous,
+            after: { ...previous, properties: order(proposed, true) },
+            type,
+          },
+        ],
+      },
+    };
+    const snapshot = structuredClone(comparison);
+    const fields = conflictProperties(comparison, { kind: 'object', id: previous.id, current });
+    expect(combineConflictProperties(fields, { propertiesOrder: 'saved' })).toBeNull();
+    const combined = combineConflictProperties(fields, {
+      propertiesOrder: 'saved',
+      'properties.b': 'proposed',
+    });
+    expect(combined).toEqual({ name: 'Lo', typeId: type.id, properties: order(expected, true) });
+    expect(comparison).toEqual(snapshot);
+  },
+);
 
 test('a changed relationship removal requires an explicit choice and retains the actual saved definition', () => {
   const originalType = {
@@ -147,13 +204,13 @@ test('a changed relationship removal requires an explicit choice and retains the
     typeId: originalType.id,
     sourceId: 'lo',
     targetId: 'service',
-    knowledge: 'known' as const,
   };
   const current = {
     ...before,
     revision: 2,
     typeId: actualType.id,
-    customValues: { note: 'Sparat' },
+
+    properties: [{ id: 'note', label: 'note', kind: 'text' as const, value: 'Sparat' }],
   };
   const comparison: MapState = {
     ...state,
@@ -195,5 +252,34 @@ test('a changed relationship removal requires an explicit choice and retains the
     after: null,
     type: originalType,
     removedWithObjects: ['lo'],
+  });
+});
+
+test('type explanation choices retain each complete saved and proposed meaning', () => {
+  const before = {
+    id: 'type',
+    householdId: 'home',
+    revision: 1,
+    name: 'Fordon',
+    description: 'Ursprunglig förklaring',
+  };
+  const saved = { ...before, revision: 2, description: 'Gemensam förklaring' };
+  const proposed = { ...before, description: 'Min förklaring' };
+  const comparison: MapState = {
+    ...state,
+    types: [saved],
+    draft: { version: 1, changes: [], objectTypes: [{ id: 'type', before, after: proposed }] },
+  };
+  const fields = conflictProperties(comparison, { kind: 'objectType', id: 'type', current: saved });
+  expect(fields.find(({ key }) => key === 'description')).toMatchObject({
+    label: 'Beskrivning',
+    saved: 'Gemensam förklaring',
+    proposed: 'Min förklaring',
+  });
+  expect(combineConflictProperties(fields, { description: 'saved' })).toMatchObject({
+    description: 'Gemensam förklaring',
+  });
+  expect(combineConflictProperties(fields, { description: 'proposed' })).toMatchObject({
+    description: 'Min förklaring',
   });
 });

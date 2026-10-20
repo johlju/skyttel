@@ -270,16 +270,7 @@
         "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
         "revision": 1,
         "name": "Typ 2",
-        "description": "",
-        "fields": [
-          {
-            "id": "note",
-            "name": "Egen anteckning",
-            "description": "",
-            "kind": "text",
-            "sectionId": ""
-          }
-        ]
+        "description": ""
       }
     ],
     "objects": [
@@ -289,7 +280,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "A 10",
-        "description": "Beskrivning A 10"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning A 10"
+          }
+        ]
       },
       {
         "id": "table-0",
@@ -297,29 +295,68 @@
         "typeId": "table-type-2",
         "revision": 2,
         "name": "A 2",
-        "description": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. Föreslagen sluttext.",
-        "financialFacts": {
-          "price": {
-            "knowledge": "known",
+        "profileImageId": "f70e1fc7-1b8d-4c25-94ae-6e1b582a7093",
+        "iconId": "bike",
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. Föreslagen sluttext."
+          },
+          {
+            "id": "note",
+            "label": "Egen anteckning",
+            "kind": "text",
+            "value": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
+          },
+          {
+            "id": "price",
+            "label": "Pris",
+            "kind": "text",
             "value": "299 SEK"
           },
-          "currency": {
-            "knowledge": "unknown"
+          {
+            "id": "currency",
+            "label": "Valuta",
+            "kind": "text"
           },
-          "debt": {
-            "knowledge": "none"
+          {
+            "id": "currency-certainty",
+            "label": "Valuta: uppgiftens säkerhet",
+            "kind": "text",
+            "value": "Okänt"
           },
-          "creditLimit": {
-            "knowledge": "uncertain",
-            "value": "100 000 SEK",
-            "reportedOn": "2026-01-01"
+          {
+            "id": "debt",
+            "label": "Senast uppgiven skuld",
+            "kind": "text"
+          },
+          {
+            "id": "debt-certainty",
+            "label": "Senast uppgiven skuld: uppgiftens säkerhet",
+            "kind": "text",
+            "value": "Uttryckligen inget"
+          },
+          {
+            "id": "creditLimit",
+            "label": "Beviljat kreditutrymme",
+            "kind": "text",
+            "value": "100 000 SEK"
+          },
+          {
+            "id": "creditLimit-certainty",
+            "label": "Beviljat kreditutrymme: uppgiftens säkerhet",
+            "kind": "text",
+            "value": "Osäkert uppgivet"
+          },
+          {
+            "id": "creditLimit-reportedOn",
+            "label": "Beviljat kreditutrymme: datum för uppgiften",
+            "kind": "date",
+            "value": "2026-01-01"
           }
-        },
-        "customValues": {
-          "note": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
-        },
-        "profileImageId": "f70e1fc7-1b8d-4c25-94ae-6e1b582a7093",
-        "iconId": "bike"
+        ]
       },
       {
         "id": "table-6",
@@ -327,7 +364,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 1",
-        "description": "Beskrivning B 1"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 1"
+          }
+        ]
       },
       {
         "id": "table-15",
@@ -335,7 +379,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 10",
-        "description": "Beskrivning B 10"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 10"
+          }
+        ]
       },
       {
         "id": "table-16",
@@ -343,7 +394,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 11",
-        "description": "Beskrivning B 11"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 11"
+          }
+        ]
       },
       {
         "id": "table-17",
@@ -351,7 +409,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 12",
-        "description": "Beskrivning B 12"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 12"
+          }
+        ]
       },
       {
         "id": "table-18",
@@ -359,7 +424,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 13",
-        "description": "Beskrivning B 13"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 13"
+          }
+        ]
       },
       {
         "id": "table-19",
@@ -367,7 +439,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 14",
-        "description": "Beskrivning B 14"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 14"
+          }
+        ]
       },
       {
         "id": "table-20",
@@ -375,7 +454,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 15",
-        "description": "Beskrivning B 15"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 15"
+          }
+        ]
       },
       {
         "id": "table-21",
@@ -383,7 +469,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 16",
-        "description": "Beskrivning B 16"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 16"
+          }
+        ]
       },
       {
         "id": "table-22",
@@ -391,7 +484,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 17",
-        "description": "Beskrivning B 17"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 17"
+          }
+        ]
       },
       {
         "id": "table-23",
@@ -399,7 +499,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 18",
-        "description": "Beskrivning B 18"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 18"
+          }
+        ]
       },
       {
         "id": "table-24",
@@ -407,7 +514,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 19",
-        "description": "Beskrivning B 19"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 19"
+          }
+        ]
       },
       {
         "id": "table-7",
@@ -415,7 +529,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 2",
-        "description": "Beskrivning B 2"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 2"
+          }
+        ]
       },
       {
         "id": "table-25",
@@ -423,7 +544,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 20",
-        "description": "Beskrivning B 20"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 20"
+          }
+        ]
       },
       {
         "id": "table-26",
@@ -431,7 +559,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 21",
-        "description": "Beskrivning B 21"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 21"
+          }
+        ]
       },
       {
         "id": "table-27",
@@ -439,7 +574,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 22",
-        "description": "Beskrivning B 22"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 22"
+          }
+        ]
       },
       {
         "id": "table-28",
@@ -447,7 +589,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 23",
-        "description": "Beskrivning B 23"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 23"
+          }
+        ]
       },
       {
         "id": "table-29",
@@ -455,7 +604,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 24",
-        "description": "Beskrivning B 24"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 24"
+          }
+        ]
       },
       {
         "id": "table-30",
@@ -463,7 +619,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 25",
-        "description": "Beskrivning B 25"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 25"
+          }
+        ]
       },
       {
         "id": "table-31",
@@ -471,7 +634,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 26",
-        "description": "Beskrivning B 26"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 26"
+          }
+        ]
       },
       {
         "id": "table-32",
@@ -479,7 +649,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 27",
-        "description": "Beskrivning B 27"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 27"
+          }
+        ]
       },
       {
         "id": "table-33",
@@ -487,7 +664,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 28",
-        "description": "Beskrivning B 28"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 28"
+          }
+        ]
       },
       {
         "id": "table-34",
@@ -495,7 +679,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 29",
-        "description": "Beskrivning B 29"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 29"
+          }
+        ]
       },
       {
         "id": "table-8",
@@ -503,7 +694,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 3",
-        "description": "Beskrivning B 3"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 3"
+          }
+        ]
       },
       {
         "id": "table-35",
@@ -511,7 +709,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 30",
-        "description": "Beskrivning B 30"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 30"
+          }
+        ]
       },
       {
         "id": "table-36",
@@ -519,7 +724,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 31",
-        "description": "Beskrivning B 31"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 31"
+          }
+        ]
       },
       {
         "id": "table-37",
@@ -527,7 +739,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 32",
-        "description": "Beskrivning B 32"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 32"
+          }
+        ]
       },
       {
         "id": "table-38",
@@ -535,7 +754,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 33",
-        "description": "Beskrivning B 33"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 33"
+          }
+        ]
       },
       {
         "id": "table-39",
@@ -543,7 +769,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 34",
-        "description": "Beskrivning B 34"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 34"
+          }
+        ]
       },
       {
         "id": "table-40",
@@ -551,7 +784,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 35",
-        "description": "Beskrivning B 35"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 35"
+          }
+        ]
       },
       {
         "id": "table-41",
@@ -559,7 +799,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 36",
-        "description": "Beskrivning B 36"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 36"
+          }
+        ]
       },
       {
         "id": "table-42",
@@ -567,7 +814,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 37",
-        "description": "Beskrivning B 37"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 37"
+          }
+        ]
       },
       {
         "id": "table-43",
@@ -575,7 +829,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 38",
-        "description": "Beskrivning B 38"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 38"
+          }
+        ]
       },
       {
         "id": "table-44",
@@ -583,7 +844,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 39",
-        "description": "Beskrivning B 39"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 39"
+          }
+        ]
       },
       {
         "id": "table-9",
@@ -591,7 +859,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 4",
-        "description": "Beskrivning B 4"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 4"
+          }
+        ]
       },
       {
         "id": "table-45",
@@ -599,7 +874,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 40",
-        "description": "Beskrivning B 40"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 40"
+          }
+        ]
       },
       {
         "id": "table-46",
@@ -607,7 +889,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 41",
-        "description": "Beskrivning B 41"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 41"
+          }
+        ]
       },
       {
         "id": "table-47",
@@ -615,7 +904,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 42",
-        "description": "Beskrivning B 42"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 42"
+          }
+        ]
       },
       {
         "id": "table-48",
@@ -623,7 +919,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 43",
-        "description": "Beskrivning B 43"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 43"
+          }
+        ]
       },
       {
         "id": "table-49",
@@ -631,7 +934,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 44",
-        "description": "Beskrivning B 44"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 44"
+          }
+        ]
       },
       {
         "id": "table-50",
@@ -639,7 +949,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 45",
-        "description": "Beskrivning B 45"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 45"
+          }
+        ]
       },
       {
         "id": "table-51",
@@ -647,7 +964,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 46",
-        "description": "Beskrivning B 46"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 46"
+          }
+        ]
       },
       {
         "id": "table-52",
@@ -655,7 +979,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 47",
-        "description": "Beskrivning B 47"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 47"
+          }
+        ]
       },
       {
         "id": "table-53",
@@ -663,7 +994,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 48",
-        "description": "Beskrivning B 48"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 48"
+          }
+        ]
       },
       {
         "id": "table-54",
@@ -671,7 +1009,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 49",
-        "description": "Beskrivning B 49"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 49"
+          }
+        ]
       },
       {
         "id": "table-10",
@@ -679,7 +1024,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 5",
-        "description": "Beskrivning B 5"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 5"
+          }
+        ]
       },
       {
         "id": "table-55",
@@ -687,7 +1039,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 50",
-        "description": "Beskrivning B 50"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 50"
+          }
+        ]
       },
       {
         "id": "table-56",
@@ -695,7 +1054,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 51",
-        "description": "Beskrivning B 51"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 51"
+          }
+        ]
       },
       {
         "id": "table-11",
@@ -703,7 +1069,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 6",
-        "description": "Beskrivning B 6"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 6"
+          }
+        ]
       },
       {
         "id": "table-12",
@@ -711,7 +1084,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 7",
-        "description": "Beskrivning B 7"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 7"
+          }
+        ]
       },
       {
         "id": "table-13",
@@ -719,7 +1099,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "B 8",
-        "description": "Beskrivning B 8"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 8"
+          }
+        ]
       },
       {
         "id": "table-14",
@@ -727,7 +1114,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "B 9",
-        "description": "Beskrivning B 9"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning B 9"
+          }
+        ]
       },
       {
         "id": "proposed-removal",
@@ -735,7 +1129,6 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "Tas bort prov",
-        "description": "",
         "lifecycle": "ended"
       },
       {
@@ -744,7 +1137,6 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "Upphört prov",
-        "description": "",
         "lifecycle": "ended"
       },
       {
@@ -753,7 +1145,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "Zebra",
-        "description": "Beskrivning Zebra"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning Zebra"
+          }
+        ]
       },
       {
         "id": "table-4",
@@ -761,7 +1160,14 @@
         "typeId": "table-type-2",
         "revision": 1,
         "name": "Älg",
-        "description": "Beskrivning Älg"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning Älg"
+          }
+        ]
       },
       {
         "id": "table-3",
@@ -769,7 +1175,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "Åke",
-        "description": "Beskrivning Åke"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning Åke"
+          }
+        ]
       },
       {
         "id": "table-5",
@@ -777,7 +1190,14 @@
         "typeId": "table-type-10",
         "revision": 1,
         "name": "Örn",
-        "description": "Beskrivning Örn"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Beskrivning Örn"
+          }
+        ]
       }
     ],
     "draft": {
@@ -792,7 +1212,6 @@
             "typeId": "table-type-2",
             "revision": 1,
             "name": "Tas bort prov",
-            "description": "",
             "lifecycle": "ended"
           },
           "after": null,
@@ -801,32 +1220,14 @@
             "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
             "revision": 1,
             "name": "Typ 2",
-            "description": "",
-            "fields": [
-              {
-                "id": "note",
-                "name": "Egen anteckning",
-                "description": "",
-                "kind": "text",
-                "sectionId": ""
-              }
-            ]
+            "description": ""
           },
           "beforeType": {
             "id": "table-type-2",
             "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
             "revision": 1,
             "name": "Typ 2",
-            "description": "",
-            "fields": [
-              {
-                "id": "note",
-                "name": "Egen anteckning",
-                "description": "",
-                "kind": "text",
-                "sectionId": ""
-              }
-            ]
+            "description": ""
           }
         },
         {
@@ -835,24 +1236,14 @@
           "before": null,
           "after": {
             "typeId": "table-type-2",
-            "name": "Nytt prov",
-            "description": ""
+            "name": "Nytt prov"
           },
           "type": {
             "id": "table-type-2",
             "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
             "revision": 1,
             "name": "Typ 2",
-            "description": "",
-            "fields": [
-              {
-                "id": "note",
-                "name": "Egen anteckning",
-                "description": "",
-                "kind": "text",
-                "sectionId": ""
-              }
-            ]
+            "description": ""
           }
         },
         {
@@ -864,88 +1255,148 @@
             "typeId": "table-type-2",
             "revision": 2,
             "name": "A 2",
-            "description": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. Föreslagen sluttext.",
-            "financialFacts": {
-              "price": {
-                "knowledge": "known",
+            "profileImageId": "f70e1fc7-1b8d-4c25-94ae-6e1b582a7093",
+            "iconId": "bike",
+            "properties": [
+              {
+                "id": "description",
+                "label": "Beskrivning",
+                "kind": "text",
+                "value": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. Föreslagen sluttext."
+              },
+              {
+                "id": "note",
+                "label": "Egen anteckning",
+                "kind": "text",
+                "value": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
+              },
+              {
+                "id": "price",
+                "label": "Pris",
+                "kind": "text",
                 "value": "299 SEK"
               },
-              "currency": {
-                "knowledge": "unknown"
+              {
+                "id": "currency",
+                "label": "Valuta",
+                "kind": "text"
               },
-              "debt": {
-                "knowledge": "none"
+              {
+                "id": "currency-certainty",
+                "label": "Valuta: uppgiftens säkerhet",
+                "kind": "text",
+                "value": "Okänt"
               },
-              "creditLimit": {
-                "knowledge": "uncertain",
-                "value": "100 000 SEK",
-                "reportedOn": "2026-01-01"
+              {
+                "id": "debt",
+                "label": "Senast uppgiven skuld",
+                "kind": "text"
+              },
+              {
+                "id": "debt-certainty",
+                "label": "Senast uppgiven skuld: uppgiftens säkerhet",
+                "kind": "text",
+                "value": "Uttryckligen inget"
+              },
+              {
+                "id": "creditLimit",
+                "label": "Beviljat kreditutrymme",
+                "kind": "text",
+                "value": "100 000 SEK"
+              },
+              {
+                "id": "creditLimit-certainty",
+                "label": "Beviljat kreditutrymme: uppgiftens säkerhet",
+                "kind": "text",
+                "value": "Osäkert uppgivet"
+              },
+              {
+                "id": "creditLimit-reportedOn",
+                "label": "Beviljat kreditutrymme: datum för uppgiften",
+                "kind": "date",
+                "value": "2026-01-01"
               }
-            },
-            "customValues": {
-              "note": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
-            },
-            "profileImageId": "f70e1fc7-1b8d-4c25-94ae-6e1b582a7093",
-            "iconId": "bike"
+            ]
           },
           "after": {
             "typeId": "table-type-2",
             "name": "A 2",
-            "description": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. Nytt föreslaget slut.",
-            "financialFacts": {
-              "price": {
-                "knowledge": "known",
+            "profileImageId": "11f6ce12-a3d6-42b5-81d0-189b19d63339",
+            "iconId": "car",
+            "properties": [
+              {
+                "id": "description",
+                "label": "Beskrivning",
+                "kind": "text",
+                "value": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. Nytt föreslaget slut."
+              },
+              {
+                "id": "note",
+                "label": "Egen anteckning",
+                "kind": "text",
+                "value": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
+              },
+              {
+                "id": "price",
+                "label": "Pris",
+                "kind": "text",
                 "value": "399 SEK"
               },
-              "currency": {
-                "knowledge": "unknown"
+              {
+                "id": "currency",
+                "label": "Valuta",
+                "kind": "text"
               },
-              "debt": {
-                "knowledge": "none"
+              {
+                "id": "currency-certainty",
+                "label": "Valuta: uppgiftens säkerhet",
+                "kind": "text",
+                "value": "Okänt"
               },
-              "creditLimit": {
-                "knowledge": "uncertain",
-                "value": "100 000 SEK",
-                "reportedOn": "2026-01-01"
+              {
+                "id": "debt",
+                "label": "Senast uppgiven skuld",
+                "kind": "text"
+              },
+              {
+                "id": "debt-certainty",
+                "label": "Senast uppgiven skuld: uppgiftens säkerhet",
+                "kind": "text",
+                "value": "Uttryckligen inget"
+              },
+              {
+                "id": "creditLimit",
+                "label": "Beviljat kreditutrymme",
+                "kind": "text",
+                "value": "100 000 SEK"
+              },
+              {
+                "id": "creditLimit-certainty",
+                "label": "Beviljat kreditutrymme: uppgiftens säkerhet",
+                "kind": "text",
+                "value": "Osäkert uppgivet"
+              },
+              {
+                "id": "creditLimit-reportedOn",
+                "label": "Beviljat kreditutrymme: datum för uppgiften",
+                "kind": "date",
+                "value": "2026-01-01"
               }
-            },
-            "customValues": {
-              "note": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
-            },
-            "profileImageId": "11f6ce12-a3d6-42b5-81d0-189b19d63339",
-            "iconId": "car"
+            ]
           },
           "type": {
             "id": "table-type-2",
             "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
             "revision": 1,
             "name": "Typ 2",
-            "description": "",
-            "fields": [
-              {
-                "id": "note",
-                "name": "Egen anteckning",
-                "description": "",
-                "kind": "text",
-                "sectionId": ""
-              }
-            ]
+            "description": ""
           },
           "beforeType": {
             "id": "table-type-2",
             "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
             "revision": 1,
             "name": "Typ 2",
-            "description": "",
-            "fields": [
-              {
-                "id": "note",
-                "name": "Egen anteckning",
-                "description": "",
-                "kind": "text",
-                "sectionId": ""
-              }
-            ]
+            "description": ""
           }
         }
       ]
@@ -957,24 +1408,14 @@
           "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
           "typeId": "table-type-2",
           "revision": 2,
-          "name": "Borttaget prov",
-          "description": ""
+          "name": "Borttaget prov"
         },
         "type": {
           "id": "table-type-2",
           "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
           "revision": 1,
           "name": "Typ 2",
-          "description": "",
-          "fields": [
-            {
-              "id": "note",
-              "name": "Egen anteckning",
-              "description": "",
-              "kind": "text",
-              "sectionId": ""
-            }
-          ]
+          "description": ""
         }
       }
     ]
@@ -1023,28 +1464,73 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "A 2",
-                "description": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. ",
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "unknown"
-                  },
-                  "currency": {
-                    "knowledge": "unknown"
-                  },
-                  "debt": {
-                    "knowledge": "none"
-                  },
-                  "creditLimit": {
-                    "knowledge": "uncertain",
-                    "value": "100 000 SEK",
-                    "reportedOn": "2026-01-01"
-                  }
-                },
-                "customValues": {
-                  "note": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
-                },
                 "profileImageId": "f70e1fc7-1b8d-4c25-94ae-6e1b582a7093",
-                "iconId": "bike"
+                "iconId": "bike",
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. "
+                  },
+                  {
+                    "id": "note",
+                    "label": "Egen anteckning",
+                    "kind": "text",
+                    "value": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
+                  },
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "text"
+                  },
+                  {
+                    "id": "price-certainty",
+                    "label": "Pris: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Okänt"
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text"
+                  },
+                  {
+                    "id": "currency-certainty",
+                    "label": "Valuta: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Okänt"
+                  },
+                  {
+                    "id": "debt",
+                    "label": "Senast uppgiven skuld",
+                    "kind": "text"
+                  },
+                  {
+                    "id": "debt-certainty",
+                    "label": "Senast uppgiven skuld: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Uttryckligen inget"
+                  },
+                  {
+                    "id": "creditLimit",
+                    "label": "Beviljat kreditutrymme",
+                    "kind": "text",
+                    "value": "100 000 SEK"
+                  },
+                  {
+                    "id": "creditLimit-certainty",
+                    "label": "Beviljat kreditutrymme: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Osäkert uppgivet"
+                  },
+                  {
+                    "id": "creditLimit-reportedOn",
+                    "label": "Beviljat kreditutrymme: datum för uppgiften",
+                    "kind": "date",
+                    "value": "2026-01-01"
+                  }
+                ]
               },
               "after": {
                 "id": "table-0",
@@ -1052,45 +1538,75 @@
                 "typeId": "table-type-2",
                 "revision": 2,
                 "name": "A 2",
-                "description": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. Föreslagen sluttext.",
-                "customValues": {
-                  "note": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
-                },
                 "iconId": "bike",
                 "profileImageId": "f70e1fc7-1b8d-4c25-94ae-6e1b582a7093",
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. Föreslagen sluttext."
+                  },
+                  {
+                    "id": "note",
+                    "label": "Egen anteckning",
+                    "kind": "text",
+                    "value": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
+                  },
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "text",
                     "value": "299 SEK"
                   },
-                  "currency": {
-                    "knowledge": "unknown"
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text"
                   },
-                  "debt": {
-                    "knowledge": "none"
+                  {
+                    "id": "currency-certainty",
+                    "label": "Valuta: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Okänt"
                   },
-                  "creditLimit": {
-                    "knowledge": "uncertain",
-                    "value": "100 000 SEK",
-                    "reportedOn": "2026-01-01"
+                  {
+                    "id": "debt",
+                    "label": "Senast uppgiven skuld",
+                    "kind": "text"
+                  },
+                  {
+                    "id": "debt-certainty",
+                    "label": "Senast uppgiven skuld: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Uttryckligen inget"
+                  },
+                  {
+                    "id": "creditLimit",
+                    "label": "Beviljat kreditutrymme",
+                    "kind": "text",
+                    "value": "100 000 SEK"
+                  },
+                  {
+                    "id": "creditLimit-certainty",
+                    "label": "Beviljat kreditutrymme: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Osäkert uppgivet"
+                  },
+                  {
+                    "id": "creditLimit-reportedOn",
+                    "label": "Beviljat kreditutrymme: datum för uppgiften",
+                    "kind": "date",
+                    "value": "2026-01-01"
                   }
-                }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1099,8 +1615,7 @@
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "typeId": "table-type-2",
                 "revision": 1,
-                "name": "Borttaget prov",
-                "description": ""
+                "name": "Borttaget prov"
               },
               "after": null,
               "type": {
@@ -1108,16 +1623,7 @@
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             }
           ]
@@ -1148,7 +1654,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "A 10",
-                "description": "Beskrivning A 10"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning A 10"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1166,23 +1679,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "Zebra",
-                "description": "Beskrivning Zebra"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning Zebra"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1193,7 +1704,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "Åke",
-                "description": "Beskrivning Åke"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning Åke"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1211,23 +1729,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "Älg",
-                "description": "Beskrivning Älg"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning Älg"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1238,7 +1754,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "Örn",
-                "description": "Beskrivning Örn"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning Örn"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1256,23 +1779,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 1",
-                "description": "Beskrivning B 1"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 1"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1283,7 +1804,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 2",
-                "description": "Beskrivning B 2"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 2"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1301,23 +1829,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 3",
-                "description": "Beskrivning B 3"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 3"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1328,7 +1854,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 4",
-                "description": "Beskrivning B 4"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 4"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1346,23 +1879,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 5",
-                "description": "Beskrivning B 5"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 5"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1373,7 +1904,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 6",
-                "description": "Beskrivning B 6"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 6"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1391,23 +1929,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 7",
-                "description": "Beskrivning B 7"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 7"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1418,7 +1954,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 8",
-                "description": "Beskrivning B 8"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 8"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1436,23 +1979,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 9",
-                "description": "Beskrivning B 9"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 9"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1463,7 +2004,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 10",
-                "description": "Beskrivning B 10"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 10"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1481,23 +2029,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 11",
-                "description": "Beskrivning B 11"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 11"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1508,7 +2054,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 12",
-                "description": "Beskrivning B 12"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 12"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1526,23 +2079,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 13",
-                "description": "Beskrivning B 13"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 13"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1553,7 +2104,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 14",
-                "description": "Beskrivning B 14"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 14"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1571,23 +2129,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 15",
-                "description": "Beskrivning B 15"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 15"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1598,7 +2154,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 16",
-                "description": "Beskrivning B 16"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 16"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1616,23 +2179,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 17",
-                "description": "Beskrivning B 17"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 17"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1643,7 +2204,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 18",
-                "description": "Beskrivning B 18"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 18"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1661,23 +2229,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 19",
-                "description": "Beskrivning B 19"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 19"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1688,7 +2254,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 20",
-                "description": "Beskrivning B 20"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 20"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1706,23 +2279,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 21",
-                "description": "Beskrivning B 21"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 21"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1733,7 +2304,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 22",
-                "description": "Beskrivning B 22"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 22"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1751,23 +2329,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 23",
-                "description": "Beskrivning B 23"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 23"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1778,7 +2354,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 24",
-                "description": "Beskrivning B 24"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 24"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1796,23 +2379,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 25",
-                "description": "Beskrivning B 25"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 25"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1823,7 +2404,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 26",
-                "description": "Beskrivning B 26"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 26"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1841,23 +2429,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 27",
-                "description": "Beskrivning B 27"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 27"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1868,7 +2454,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 28",
-                "description": "Beskrivning B 28"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 28"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1886,23 +2479,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 29",
-                "description": "Beskrivning B 29"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 29"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1913,7 +2504,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 30",
-                "description": "Beskrivning B 30"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 30"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1931,23 +2529,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 31",
-                "description": "Beskrivning B 31"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 31"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -1958,7 +2554,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 32",
-                "description": "Beskrivning B 32"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 32"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -1976,23 +2579,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 33",
-                "description": "Beskrivning B 33"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 33"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2003,7 +2604,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 34",
-                "description": "Beskrivning B 34"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 34"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2021,23 +2629,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 35",
-                "description": "Beskrivning B 35"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 35"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2048,7 +2654,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 36",
-                "description": "Beskrivning B 36"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 36"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2066,23 +2679,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 37",
-                "description": "Beskrivning B 37"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 37"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2093,7 +2704,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 38",
-                "description": "Beskrivning B 38"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 38"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2111,23 +2729,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 39",
-                "description": "Beskrivning B 39"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 39"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2138,7 +2754,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 40",
-                "description": "Beskrivning B 40"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 40"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2156,23 +2779,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 41",
-                "description": "Beskrivning B 41"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 41"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2183,7 +2804,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 42",
-                "description": "Beskrivning B 42"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 42"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2201,23 +2829,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 43",
-                "description": "Beskrivning B 43"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 43"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2228,7 +2854,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 44",
-                "description": "Beskrivning B 44"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 44"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2246,23 +2879,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 45",
-                "description": "Beskrivning B 45"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 45"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2273,7 +2904,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 46",
-                "description": "Beskrivning B 46"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 46"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2291,23 +2929,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 47",
-                "description": "Beskrivning B 47"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 47"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2318,7 +2954,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 48",
-                "description": "Beskrivning B 48"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 48"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2336,23 +2979,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 49",
-                "description": "Beskrivning B 49"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 49"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2363,7 +3004,14 @@
                 "typeId": "table-type-10",
                 "revision": 1,
                 "name": "B 50",
-                "description": "Beskrivning B 50"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 50"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-10",
@@ -2381,23 +3029,21 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "B 51",
-                "description": "Beskrivning B 51"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Beskrivning B 51"
+                  }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2408,7 +3054,6 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "Upphört prov",
-                "description": "",
                 "lifecycle": "ended"
               },
               "type": {
@@ -2416,16 +3061,7 @@
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2435,24 +3071,14 @@
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "typeId": "table-type-2",
                 "revision": 1,
-                "name": "Borttaget prov",
-                "description": ""
+                "name": "Borttaget prov"
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2463,7 +3089,6 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "Tas bort prov",
-                "description": "",
                 "lifecycle": "ended"
               },
               "type": {
@@ -2471,16 +3096,7 @@
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {
@@ -2491,44 +3107,80 @@
                 "typeId": "table-type-2",
                 "revision": 1,
                 "name": "A 2",
-                "description": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. ",
-                "customValues": {
-                  "note": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
-                },
                 "iconId": "bike",
                 "profileImageId": "f70e1fc7-1b8d-4c25-94ae-6e1b582a7093",
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "unknown"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. En lång beskrivning med hushållets fullständiga uppgifter. "
                   },
-                  "currency": {
-                    "knowledge": "unknown"
+                  {
+                    "id": "note",
+                    "label": "Egen anteckning",
+                    "kind": "text",
+                    "value": "Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift Lång egen uppgift "
                   },
-                  "debt": {
-                    "knowledge": "none"
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "text"
                   },
-                  "creditLimit": {
-                    "knowledge": "uncertain",
-                    "value": "100 000 SEK",
-                    "reportedOn": "2026-01-01"
+                  {
+                    "id": "price-certainty",
+                    "label": "Pris: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Okänt"
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text"
+                  },
+                  {
+                    "id": "currency-certainty",
+                    "label": "Valuta: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Okänt"
+                  },
+                  {
+                    "id": "debt",
+                    "label": "Senast uppgiven skuld",
+                    "kind": "text"
+                  },
+                  {
+                    "id": "debt-certainty",
+                    "label": "Senast uppgiven skuld: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Uttryckligen inget"
+                  },
+                  {
+                    "id": "creditLimit",
+                    "label": "Beviljat kreditutrymme",
+                    "kind": "text",
+                    "value": "100 000 SEK"
+                  },
+                  {
+                    "id": "creditLimit-certainty",
+                    "label": "Beviljat kreditutrymme: uppgiftens säkerhet",
+                    "kind": "text",
+                    "value": "Osäkert uppgivet"
+                  },
+                  {
+                    "id": "creditLimit-reportedOn",
+                    "label": "Beviljat kreditutrymme: datum för uppgiften",
+                    "kind": "date",
+                    "value": "2026-01-01"
                   }
-                }
+                ]
               },
               "type": {
                 "id": "table-type-2",
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             }
           ],
@@ -2541,16 +3193,7 @@
                 "householdId": "3f5e1ab7-4398-4661-b94b-e0bfe299b710",
                 "revision": 1,
                 "name": "Typ 2",
-                "description": "",
-                "fields": [
-                  {
-                    "id": "note",
-                    "name": "Egen anteckning",
-                    "description": "",
-                    "kind": "text",
-                    "sectionId": ""
-                  }
-                ]
+                "description": ""
               }
             },
             {

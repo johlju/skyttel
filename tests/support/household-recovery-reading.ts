@@ -26,7 +26,18 @@ export async function seedRecoveryContent(
       id: 'recovery-lamp',
       version: state.draft.version,
       baseRevision: null,
-      value: { typeId: state.types[0].id, name, description: 'Sparat provinnehåll' },
+      value: {
+        typeId: state.types[0].id,
+        name,
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Sparat provinnehåll',
+          },
+        ],
+      },
     },
   });
   expect(proposed.status(), await proposed.text()).toBe(200);

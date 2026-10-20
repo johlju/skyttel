@@ -52,7 +52,13 @@ function proposedLo(): MapState {
         {
           id: 'lo',
           before: null,
-          after: { typeId: type.id, name: 'Lo Exempel', description: 'Påhittad uppgift' },
+          after: {
+            typeId: type.id,
+            name: 'Lo Exempel',
+            properties: [
+              { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad uppgift' },
+            ],
+          },
           type,
         },
       ],

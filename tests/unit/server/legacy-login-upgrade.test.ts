@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type APIRequestContext, request } from '@playwright/test';
@@ -27,18 +27,9 @@ test.each([false, true])(
   'controlled upgrade ends both legacy devices and a pending callback while retaining identity, draft and save receipt across restart (obsolete binding: %s)',
   async (obsoleteBinding) => {
     directory = await mkdtemp(join(tmpdir(), 'skyttel-login-upgrade-'));
-    const migrationsDirectory = join(directory, 'old-migrations');
-    const { mkdir } = await import('node:fs/promises');
-    await mkdir(migrationsDirectory);
-    for (const file of (await readdir('migrations')).filter(
-      (name) => name <= '026_theme_preferences.sql',
-    ))
-      await copyFile(join('migrations', file), join(migrationsDirectory, file));
     const databasePath = join(directory, 'skyttel.db');
     old = await createInstallation(undefined, {
       databasePath,
-      migrationsDirectory,
-      legacyAuthCallbacks: true,
     });
     const first = await request.newContext();
     const second = await request.newContext();
@@ -50,7 +41,7 @@ test.each([false, true])(
     const path = `/api/households/${household.id}/map`;
     const map = await (await first.get(`${old.origin}${path}`)).json();
     const headers = { origin: old.origin };
-    const value = { typeId: map.types[0].id, name: 'Bevarat', description: '' };
+    const value = { typeId: map.types[0].id, name: 'Bevarat' };
     expect(
       (
         await first.post(`${old.origin}${path}/draft`, {
@@ -81,15 +72,30 @@ test.each([false, true])(
     const before = await (await first.get(`${old.origin}${path}`)).json();
     const pending = await second.post(`${old.origin}/api/auth/sign-in/social`, {
       headers,
-      data: { provider: 'microsoft', callbackURL: '/' },
+      data: {
+        provider: 'microsoft',
+        callbackURL: '/',
+        rememberMe: false,
+        informationVersion: 1,
+      },
     });
     const callback = new URL((await pending.json()).url);
     const originalOrigin = old.origin;
     await old.close();
     old = undefined;
 
-    const legacy = openDatabase(databasePath, { migrationsDirectory });
+    await first.clearCookies({ name: 'skyttel_binding' });
+    await second.clearCookies({ name: 'skyttel_binding' });
+    const legacy = openDatabase(databasePath);
     try {
+      // Arrange the old login authority in the current household format.
+      // No historical household database is served or accepted for upgrade.
+      legacy.exec(`DELETE FROM installation_authority;
+        DELETE FROM browser_binding_attempt;
+        DELETE FROM browser_binding;
+        UPDATE session SET choiceSchemaVersion = NULL, rememberMe = NULL,
+          informationVersion = NULL, choicePurpose = NULL, decidedAt = NULL,
+          absoluteExpiresAt = NULL, loginConfirmation = NULL`);
       // Existing, previously linked identities are durable fixture content;
       // their provider credentials must not become a reason to delete links.
       legacy
@@ -103,13 +109,9 @@ test.each([false, true])(
       legacy.close();
     }
     if (obsoleteBinding) {
-      // Persist the intermediate pre-choice schema too: existing devices can
+      // Persist the intermediate pre-choice login state too: existing devices can
       // already have a binding cookie while their session lacks choice metadata.
-      await copyFile(
-        'migrations/027_browser_binding.sql',
-        join(migrationsDirectory, '027_browser_binding.sql'),
-      );
-      const intermediate = openDatabase(databasePath, { migrationsDirectory });
+      const intermediate = openDatabase(databasePath);
       const candidate = 'a'.repeat(64);
       try {
         const session = intermediate

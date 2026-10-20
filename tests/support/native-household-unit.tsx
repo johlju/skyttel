@@ -7,7 +7,7 @@ import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 /** Supply the same public type-settings mount used by the application shell. */
 export function renderHouseholdWork(householdId: string) {
   const types = document.createElement('section');
-  types.setAttribute('aria-label', 'Typer och egna fält');
+  types.setAttribute('aria-label', 'Typer');
   const view = render(
     <FormLeaveProvider>
       <HouseholdMap householdId={householdId} typeSettingsTarget={types} />

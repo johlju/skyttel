@@ -13,6 +13,7 @@ import {
 import { openSavedHistory } from '../support/conversation-page.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { propertyValue, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('SPAR-05: scoped transport holds real staging, rejects stale saves and recovers a lost committed receipt', async ({
@@ -206,7 +207,7 @@ test('SPAR-05: scoped transport holds real staging, rejects stale saves and reco
     ).toBe(200);
     await fresh.route('**/map/save', deliver);
     await editTableObject(fresh, 'Lo Exempel');
-    await fresh.getByLabel('Beskrivning', { exact: true }).fill('Alex privata beskrivning');
+    await setProperty(fresh, 'Beskrivning', 'Alex privata beskrivning');
     await fresh.getByRole('button', { name: 'Lägg i utkastet och stäng' }).click();
     const before: MapState = await (await reopened.request.get(path)).json();
     proxy.command('arm save:before');
@@ -220,7 +221,7 @@ test('SPAR-05: scoped transport holds real staging, rejects stale saves and reco
     const memberPage = await other.newPage();
     await memberPage.goto(app.origin);
     const memberForm = await editTableObject(memberPage, 'Lo Exempel');
-    await memberForm.getByLabel('Beskrivning', { exact: true }).fill('Robins sparade beskrivning');
+    await setProperty(memberForm, 'Beskrivning', 'Robins sparade beskrivning');
     const stageResponse = memberPage.waitForResponse(
       (response) =>
         response.url().endsWith('/map/object-form') && response.request().method() === 'POST',
@@ -257,9 +258,12 @@ test('SPAR-05: scoped transport holds real staging, rejects stale saves and reco
       historyBefore,
     );
     expect(historyBefore).toHaveLength(2);
-    expect(rejected.objects.find((object) => object.id === lo.id)?.description).toBe(
-      'Robins sparade beskrivning',
-    );
+    expect(
+      propertyValue(
+        rejected.objects.find((object) => object.id === lo.id),
+        'Beskrivning',
+      ),
+    ).toBe('Robins sparade beskrivning');
     await fresh.keyboard.press('Escape');
     const privateProposal = await readDraftProposal(fresh, 'Lo Exempel');
     await expect(privateProposal).toContainText('Alex privata beskrivning');

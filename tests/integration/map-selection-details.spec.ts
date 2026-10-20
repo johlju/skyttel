@@ -2,6 +2,12 @@ import type { Locator } from '@playwright/test';
 import { openMap, openTable, utilityButton } from '../support/client.js';
 import { prepareHouseholdReading } from '../support/household-reading.js';
 import { createInstallation } from '../support/installation.js';
+import {
+  openProperties,
+  propertyRow,
+  propertyValue,
+  setProperty,
+} from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 for (const viewport of [
@@ -49,20 +55,26 @@ for (const viewport of [
       await expect(editor.getByLabel('Namn', { exact: true })).toHaveValue(current.name);
       await expect(editor.getByLabel('Objekttyp', { exact: true })).toHaveValue(current.typeId);
       await expect(editor.getByLabel('Identitet', { exact: true })).toHaveValue('identified');
-      await expect(editor.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-        current.description,
-      );
-      await editor.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true }).click();
-      await expect(editor.getByLabel('Pris: uppgiftens säkerhet', { exact: true })).toHaveValue(
-        'known',
-      );
-      await expect(editor.getByLabel('Pris', { exact: true })).toHaveValue('2500 SEK');
+      await openProperties(editor);
       await expect(
-        editor.getByLabel('Senast uppgiven skuld: uppgiftens säkerhet', { exact: true }),
-      ).toHaveValue('none');
+        propertyRow(editor, 'Beskrivning').getByLabel('Värde', { exact: true }),
+      ).toHaveValue(String(propertyValue(current, 'Beskrivning') ?? ''));
+      await expect(propertyRow(editor, 'Pris: uppgiftens säkerhet')).toHaveCount(0);
+      await expect(propertyRow(editor, 'Pris').getByLabel('Värde', { exact: true })).toHaveValue(
+        '2500 SEK',
+      );
       await expect(
-        editor.getByLabel('Slutdatum: uppgiftens säkerhet', { exact: true }),
-      ).toHaveValue('unknown');
+        propertyRow(editor, 'Senast uppgiven skuld: uppgiftens säkerhet').getByLabel('Värde', {
+          exact: true,
+        }),
+      ).toHaveValue('Uttryckligen inget');
+      await expect(
+        propertyRow(editor, 'Slutdatum: uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+      ).toHaveValue('Okänt');
+      for (const label of ['Senast uppgiven skuld', 'Slutdatum'])
+        await expect(propertyRow(editor, label).getByLabel('Värde', { exact: true })).toHaveValue(
+          '',
+        );
 
       await editor.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
       await expect(editor).not.toBeVisible();
@@ -79,7 +91,7 @@ for (const viewport of [
       const table = page.getByRole('region', { name: 'Hushållets tabell', exact: true });
       const tableEdit = table.getByRole('button', { name: 'Redigera Cykel', exact: true });
       await tableEdit.click();
-      await editor.getByLabel('Beskrivning', { exact: true }).fill('Mitt privata läsförslag');
+      await setProperty(editor, 'Beskrivning', 'Mitt privata läsförslag');
       await editor.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
       await expect(editor).not.toBeVisible();
       await expect(tableEdit).toBeFocused();
@@ -89,9 +101,14 @@ for (const viewport of [
       const after = await app.read();
       expect(after.objects).toEqual(before.objects);
       expect(after.relationships).toEqual(before.relationships);
+      const prior = before.draft.changes.find((change) => change.id === 'bike')?.after;
       expect(after.draft.changes.find((change) => change.id === 'bike')?.after).toEqual({
-        ...before.draft.changes.find((change) => change.id === 'bike')?.after,
-        description: 'Mitt privata läsförslag',
+        ...prior,
+        properties: prior?.properties?.map((property) =>
+          property.label === 'Beskrivning'
+            ? { ...property, value: 'Mitt privata läsförslag' }
+            : property,
+        ),
       });
       await (await utilityButton(page, 'Karta')).click();
       await expect(status).toHaveCount(1);

@@ -95,9 +95,10 @@ För LIVSCYKEL-05 kör sedan:
 ```js
 await lifecyclePost('draft', {
   id: `relationship-${lifecycleIncoming.id}`, baseRevision: null,
-  value: { name: 'Kim Exempel', description: '',
+  value: { name: 'Kim Exempel',
     typeId: lifecycleLo.typeId, lifecycle: 'active',
-    financialFacts: { endDate: { knowledge: 'known', value: '2000-01-01' } } }
+    properties: [{ id: 'endDate', label: 'Slutdatum',
+      kind: 'date', value: '2000-01-01' }] }
 });
 await lifecyclePost('relationship', {
   id: lifecycleIncoming.id, baseRevision: lifecycleIncoming.revision,
@@ -114,14 +115,16 @@ skapar det separata sambandet från Molnmusik till Lo; skapa det enbart här.
 await lifecyclePost('relationship', {
   id: lifecycleIncoming.id, baseRevision: lifecycleIncoming.revision,
   value: { ...lifecycleIncoming, lifecycle: 'ended',
-    endDate: { knowledge: 'known', value: '2000-01-01' } }
+    properties: [{ id: 'endDate', label: 'Slutdatum',
+      kind: 'date', value: '2000-01-01' }] }
 });
 await lifecyclePost('relationship', {
   id: `previous-${lifecycleIncoming.id}`, baseRevision: null,
   value: { sourceId: lifecycleService.id, targetId: lifecycleLo.id,
     typeId: lifecycleState.relationshipTypes.find(x => x.name === 'Betalar').id,
-    knowledge: 'known', lifecycle: 'active',
-    endDate: { knowledge: 'known', value: '2000-01-01' } }
+    lifecycle: 'active',
+    properties: [{ id: 'endDate', label: 'Slutdatum',
+      kind: 'date', value: '2000-01-01' }] }
 });
 ```
 
@@ -192,44 +195,31 @@ independently correctable”.
 - Det markerade sambandet blir upphört utan att det andra sambandet ändras.
 - Rättelsen gör Familjemusik gällande. Sambandet från Lo är fortsatt upphört.
 
-### LIVSCYKEL-02: kända slutdatum styr status och kan rättas
+### LIVSCYKEL-02: Slutdatum är en egenskap och status väljs uttryckligen
 
-**Syfte:** Kontrollera att endast kända passerade datum ger Upphört och att
-datum och status kan rättas oberoende.
+**Syfte:** Kontrollera att ett passerat datum saknar automatisk verkan.
 
 **Användare:** Den konfigurerade administratören.
 
-**Förutsättningar:** De sparade objekten och sambanden ovan. Automationen
-styr webbläsarklockan över midnatt UTC med påhittade datum. För manuell
-kontroll av övergången behövs en sida som är öppen över midnatt UTC.
+**Förutsättningar:** De sparade objekten och sambanden ovan.
 
-**Integrationstest:**
-[lifecycle.spec.ts](../../tests/integration/lifecycle.spec.ts),
-testfallet “LIVSCYKEL-02: only a known elapsed end date ends content and
-dates or status can correct it”.
+**Automatiskt motsvarande test:**
+[lifecycle.spec.ts](../../tests/integration/lifecycle.spec.ts), LIVSCYKEL-02.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/lifecycle.spec.ts",
     "caseId": "LIVSCYKEL-02"
   },
-  "reference": "1280 × 720; Chromium; verklig datumgräns UTC manuellt, styrd 2031-03-12 i automation",
+  "reference": "Syntetiskt hushåll, verklig SQLite och serveromstart; datum 2000-01-01 är en vanlig fri egenskap.",
   "outcomes": [
-    "Endast känt passerat slutdatum ger Upphört; osäkert och saknat datum ger ingen automatisk upphörandestatus.",
-    "Native framtida datum och uttryckligt statusval sparas och kan läsas efter omstart med datum och tidigare betydelse i historiken."
-  ],
-  "evidence": [
-    {
-      "kind": "technical",
-      "runner": "vitest",
-      "suite": "server",
-      "spec": "tests/unit/server/lifecycle-http.test.ts",
-      "title": "direct lifecycle date and current-versus-previous staging preserves original public request guards",
-      "purpose": "Autentiserade HTTP-anrop med verklig SQLite och faktisk omstart bevarar ursprungliga lyckade förberedelser, exakta värden, privat utkast och historik separat från de ordinarie formulären."
-    }
+    "Slutdatum behåller sitt värde utan att ändra aktiv status eller filtrering.",
+    "Uttryckligt Upphört består efter sparande och omstart; Gäller fortfarande kan föreslås med datumet kvar."
   ]
 }
 ```
@@ -238,40 +228,23 @@ dates or status can correct it”.
 
 **Steg:**
 
-1. Välj **Redigera Familjemusik** i Tabell och
-   **Ekonomiska uppgifter**. Ange dagens UTC-datum som känt **Slutdatum**.
-   Gör samma sak för Lo Exempel med datumet som **Osäkert uppgivet**.
-   Behåll standardvalet **Följ slutdatum** för båda. Välj
-   **Lägg i utkastet och stäng** för varje objekt. Läs alla rader med
-   **Visa förslaget** före **Spara hela utkastet**.
-2. Välj **Ta med upphörda** i Tabellens filter. Kontrollera status före
-   och efter nästa midnatt UTC utan omladdning.
-3. Välj **Redigera Familjemusik** i Tabell och
-   **Ekonomiska uppgifter**. Rätta slutdatumet till en framtida dag. Välj
-   **Lägg i utkastet och stäng**, läs hela förslaget med båda värdesidorna
-   och spara hela utkastet.
-4. Öppna sambandet från Lo och ange ett känt passerat **Sambandets slutdatum**.
-   Lägg sambandet i utkastet med tangentbordet, välj **Stäng samband**,
-   spara och kontrollera statusen.
-5. Ändra sambandets status till **Gäller fortfarande** utan att ändra datumet.
-   Lägg ändringen i utkastet, stäng sambandsdialogen, granska hela
-   utkastet, spara, starta om appen och ladda om. Läs hela Familjemusiks
-   uppgifter i Tabell: det framtida datumet är kvar. Öppna Samband för
-   Lo Exempel och läs Gäller fortfarande och det oförändrade passerade datumet.
-6. Stäng textvyn och välj Rapporter → Ändringshistorik. Öppna det senaste
-   sparandet med Visa ändringarna. Läs Följ slutdatum före sparandet och
-   Gäller fortfarande efter, med samma slutdatum på båda sidor.
+1. Redigera Familjemusik. Lägg till egenskapen Slutdatum med datatyp
+   Datum och värde 2000-01-01. Lägg i utkastet och stäng. Läs datumet
+   och Gäller fortfarande i tabellens fullständiga detaljer.
+2. Läs alla förslag och spara hela utkastet. Redigera Familjemusik igen,
+   öppna Livscykel och utseende och välj Objektets status Upphört.
+   Lägg i utkastet, läs förslagen och spara hela utkastet.
+3. Starta om appen med samma databas och ladda om. Öppna Tabell och
+   kontrollera att Familjemusik döljs av standardfiltret. Ta med upphörda
+   och läs Manuellt upphört i objektets fullständiga detaljer.
+4. Redigera objektet och välj Gäller fortfarande. Lägg i utkastet och
+   läs både statusen och det oförändrade datumvärdet.
 
 **Förväntat resultat:**
 
-- Bara Familjemusik får Upphört efter datumgränsen. Lo med ett osäkert
-  datum och Molnmusik utan datum förblir gällande.
-- Ett rättat framtida datum gör Familjemusik gällande. Sambandets kända
-  passerade datum ger Upphört, men **Gäller fortfarande** åsidosätter det.
-- Utkastet visar både det gamla datumet och det nya statusvalet. Valet och
-  datumet finns kvar efter omstart. Historikunderlaget bevarar båda värdena.
-- Automationen kontrollerar dessutom via HTTP att ett ogiltigt kalenderdatum
-  och ett datumvärde märkt som okänt avvisas utan nya förslag.
+- Datumet ändrar aldrig status. Status Upphört kräver uttryckligt val.
+- Statusen består efter sparande och omstart. Filter använder statusen.
+- Återgång till Gäller fortfarande bevarar Slutdatum och övriga egenskaper.
 
 ### LIVSCYKEL-04: kartans sambandsstatus är åtkomlig med tangentbord
 
@@ -281,8 +254,8 @@ synlig text och kontrollens tillgängliga beskrivning.
 **Användare:** Den konfigurerade administratören.
 
 **Förutsättningar:** De sparade objekten och sambanden ovan. Ange ett känt
-slutdatum **2000-01-01** för båda sambanden. Behåll **Följ slutdatum** för
-sambandet från Lo till Familjemusik, men välj **Gäller fortfarande** för
+slutdatum **2000-01-01** för båda sambanden. Välj **Upphört** för
+sambandet från Lo till Familjemusik och **Gäller fortfarande** för
 sambandet från Familjemusik till Molnmusik. Spara hela utkastet.
 
 Skapa dessutom objektet **Privat livscykelanteckning**, typ Person,
@@ -348,9 +321,9 @@ Detta är tekniskt underlag; faktisk uppläsning provas i LIVSCYKEL-07.
   kontrollens tillgängliga beskrivning. Dess namn behåller båda objekten
   och riktningen **Lo Exempel → Använder → Familjemusik**.
 - Sambandet till Molnmusik saknar markeringen Upphört eftersom det
-  uttryckliga statusvalet åsidosätter det passerade slutdatumet.
+  uttryckliga statusvalet är Gäller fortfarande.
 - Tangentbordets fokus är synligt och kontrollen går att aktivera.
-  Detaljerna visar **Följ slutdatum**, **2000-01-01** och **Upphört**.
+  Detaljerna visar **Manuellt upphört**, **2000-01-01** och **Upphört**.
 - Samma status består efter omstart. Inget nytt förslag eller sparande
   uppstår av visningen. Automationen jämför hela kartunderlaget via HTTP.
 - Automationen kontrollerar webbläsarens tillgängliga beskrivning och
@@ -614,8 +587,8 @@ Konflikter som blockerar hela borttagningen provas även i
 **Förutsättningar:** Förbered LIVSCYKEL-04 i en skrivbordsmiljö med
 Chrome, NVDA och svensk röst. Anteckna samtliga versioner.
 
-**Kräver mänsklig observation:** Hör NVDA läsa sambandets riktning, Följ
-slutdatum och Upphört utan att tilldela
+**Kräver mänsklig observation:** Hör NVDA läsa sambandets riktning, Manuellt upphört
+och Upphört utan att tilldela
 Molnmusik-sambandet upphörandestatus.
 
 <!-- markdownlint-disable MD013 -->
@@ -624,11 +597,11 @@ Molnmusik-sambandet upphörandestatus.
 {
   "humanObservation": {
     "kind": "screen-reader",
-    "observation": "Hör NVDA läsa sambandets riktning, Följ slutdatum och Upphört utan att tilldela Molnmusik-sambandet upphörandestatus."
+    "observation": "Hör NVDA läsa sambandets riktning, Manuellt upphört och Upphört utan att tilldela Molnmusik-sambandet upphörandestatus."
   },
   "reference": "Windows, Chrome och NVDA; svensk röst; namnge versioner i protokollet",
   "outcomes": [
-    "Hör NVDA läsa sambandets riktning, Följ slutdatum och Upphört utan att tilldela Molnmusik-sambandet upphörandestatus."
+    "Hör NVDA läsa sambandets riktning, Manuellt upphört och Upphört utan att tilldela Molnmusik-sambandet upphörandestatus."
   ],
   "evidence": [
     {
@@ -651,7 +624,7 @@ Molnmusik-sambandet upphörandestatus.
 
 **Förväntat resultat:**
 
-- Hör NVDA läsa sambandets riktning, Följ slutdatum och Upphört utan att
+- Hör NVDA läsa sambandets riktning, Manuellt upphört och Upphört utan att
   tilldela Molnmusik-sambandet upphörandestatus.
 - Den faktiska uppläsningen behåller samma betydelser efter omstart.
   Anteckna hörda ord; DOM-automation är separat underlag.

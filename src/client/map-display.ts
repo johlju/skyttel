@@ -34,19 +34,19 @@ function uncovered(element: HTMLElement, box = element.getBoundingClientRect()) 
 
 function readableObjectDetails(inspector: HTMLElement, viewport: DOMRect) {
   const body = inspector.querySelector('.object-property-body');
-  const description = inspector.querySelector('.household-table-description');
-  if (!rendered(body) || !rendered(description)) return false;
-  const box = description.getBoundingClientRect();
+  const value = inspector.querySelector('.household-table-details dl > div:first-child dd');
+  if (!rendered(body) || !rendered(value)) return false;
+  const box = value.getBoundingClientRect();
   const firstLine = new DOMRect(
     box.x,
     box.y,
     box.width,
-    Math.min(box.height, Number.parseFloat(getComputedStyle(description).lineHeight) || box.height),
+    Math.min(box.height, Number.parseFloat(getComputedStyle(value).lineHeight) || box.height),
   );
   return (
     contained(firstLine, body.getBoundingClientRect()) &&
     contained(firstLine, viewport) &&
-    uncovered(description, firstLine)
+    uncovered(value, firstLine)
   );
 }
 
@@ -131,7 +131,7 @@ export function waitForMapDisplay(
             uncovered(node)
           );
         });
-        // Object descriptions scroll inside the property window and may exceed
+        // Object values scroll inside the property window and may exceed
         // the viewport. Its fixed title identifies the displayed object.
         const summary = inspector.querySelector(
           target.kind === 'object' ? 'h2' : '.map-selection-summary',

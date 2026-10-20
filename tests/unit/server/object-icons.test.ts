@@ -1,7 +1,4 @@
 import { createHash } from 'node:crypto';
-import { copyFileSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { unzipSync, zipSync } from 'fflate';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { draftConflicts } from '../../../src/shared/draft-conflicts.js';
@@ -23,7 +20,7 @@ async function propose(value: Record<string, unknown>, actor = client, id = 'obj
     baseRevision: own ? (own.before?.revision ?? null) : (saved?.revision ?? null),
     value: {
       name: 'Min cykel',
-      description: '',
+
       typeId: state.types[0].id,
       ...value,
     },
@@ -64,9 +61,20 @@ test('an icon is one private object fact, survives old-client edits and receipts
   expect((await propose({ iconId: 'bike' })).status).toBe(200);
   expect((await read()).draft.changes[0].after).toMatchObject({ iconId: 'bike' });
   expect((await read()).objects).toEqual([]);
-  expect((await propose({ description: 'Bevara ikonen' })).status).toBe(200);
+  expect(
+    (
+      await propose({
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Bevara ikonen' },
+        ],
+      })
+    ).status,
+  ).toBe(200);
   const first = await save('first');
-  expect(first.changes[0].after).toMatchObject({ iconId: 'bike', description: 'Bevara ikonen' });
+  expect(first.changes[0].after).toMatchObject({
+    iconId: 'bike',
+    properties: [{ id: 'description', label: 'Beskrivning', kind: 'text', value: 'Bevara ikonen' }],
+  });
   expect((await read()).objects[0]).toMatchObject({ iconId: 'bike' });
   const unchanged = await read();
   for (const iconId of ['', 'Bike', 'not-a-lucide-icon', 3, {}]) {
@@ -87,7 +95,9 @@ test('resolving a stale description keeps an independently saved icon and explic
   await propose({ iconId: 'bike' });
   await save('initial');
   const actor = await member();
-  await propose({ description: 'Mitt förslag' });
+  await propose({
+    properties: [{ id: 'description', label: 'Beskrivning', kind: 'text', value: 'Mitt förslag' }],
+  });
   await propose({ iconId: 'music' }, actor);
   await save('other-icon', actor);
   let state = await read();
@@ -102,7 +112,7 @@ test('resolving a stale description keeps an independently saved icon and explic
   ).toBe(200);
   expect((await read()).draft.changes[0].after).toMatchObject({
     iconId: 'music',
-    description: 'Mitt förslag',
+    properties: [{ id: 'description', label: 'Beskrivning', kind: 'text', value: 'Mitt förslag' }],
   });
   await save('resolved');
   await propose({ iconId: null });
@@ -119,68 +129,6 @@ test('resolving a stale description keeps an independently saved icon and explic
     ).status,
   ).toBe(200);
   expect((await read()).draft.changes[0].after).not.toHaveProperty('iconId');
-});
-
-test('upgrading a schema 16 object and older private proposal keeps the canonical default and ordinary save', async () => {
-  fixture.close();
-  const directory = mkdtempSync(join(tmpdir(), 'skyttel-icon-upgrade-'));
-  try {
-    for (const name of readdirSync('migrations').filter(
-      (name) => name.endsWith('.sql') && name < '017',
-    ))
-      copyFileSync(join('migrations', name), join(directory, name));
-    fixture = await applicationFixture({ migrationsDirectory: directory });
-    client = fixture.client();
-    await client.signIn();
-    const { household } = await (await client.json('/api/households', { name: 'Linden' })).json();
-    const { user } = await (await client.request('/api/bootstrap')).json();
-    path = `/api/households/${household.id}/map`;
-    const type = fixture.database
-      .prepare('SELECT * FROM object_type WHERE householdId = ? LIMIT 1')
-      .get(household.id) as MapState['types'][number];
-    const object = {
-      id: 'object',
-      householdId: household.id,
-      typeId: type.id,
-      revision: 1,
-      name: 'Min cykel',
-      description: '',
-    };
-    fixture.database
-      .prepare(
-        'INSERT INTO map_object (id, householdId, typeId, revision, name, description) VALUES (?, ?, ?, 1, ?, ?)',
-      )
-      .run(object.id, household.id, type.id, object.name, object.description);
-    fixture.database
-      .prepare('INSERT INTO map_draft (householdId, userId, version, changes) VALUES (?, ?, 1, ?)')
-      .run(
-        household.id,
-        user.id,
-        JSON.stringify([
-          {
-            id: 'object',
-            before: object,
-            after: { ...object, description: 'Äldre förslag' },
-            type,
-          },
-        ]),
-      );
-    await fixture.upgradeLegacyLogin();
-    expect(await (await client.request('/api/bootstrap')).json()).toMatchObject({
-      status: 'anonymous',
-    });
-    await client.signIn();
-    expect((await read()).objects).toEqual([object]);
-    expect(draftConflicts(await read())).toEqual([]);
-    const receipt = await save('legacy-proposal');
-    expect(receipt.changes[0].after).toMatchObject({ description: 'Äldre förslag' });
-    expect(receipt.changes[0].after).not.toHaveProperty('iconId');
-    expect((await propose({ iconId: 'bike', typeId: type.id })).status).toBe(200);
-    await save('own-icon');
-    expect((await read()).objects[0]).toMatchObject({ iconId: 'bike' });
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
 });
 
 test('archive icon validation protects current, private, receipt and history values before atomic import', async () => {

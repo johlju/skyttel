@@ -69,10 +69,8 @@ installation's unique generation stable across ordinary restarts.
 Both providers must be configured. Invalid or incomplete configuration stops
 startup before the application accepts traffic.
 
-An existing installation with legacy logins needs the
-[one-time login upgrade](login-upgrade.md). For the running Render service,
-follow the [Render appendix](render.md#appendix-one-time-login-upgrade-on-render)
-before allowing the first deployment with the new login model.
+Read the [operator upgrade notes](operator-upgrade-notes.md) before updating
+an existing installation. They describe required preparation and data changes.
 
 For whole database or disk recovery, follow the
 [controlled restore procedure](database-restore.md). Its independent restore
@@ -209,6 +207,11 @@ linked provider then reaches the same user and household. See the
 
 ## Build, start, and restart
 
+For a new installation, use an empty database location. Ordinary startup
+applies schema migrations automatically. Check the
+[operator upgrade notes](operator-upgrade-notes.md) before an update for
+required preparation and data changes.
+
 For the local Compose workflow, after filling every required value:
 
 ```sh
@@ -233,11 +236,13 @@ The named volume retains household records, identities, and sessions across
 container restarts and replacements. `docker compose down` keeps that volume;
 adding `--volumes` deletes it and its household data.
 
-Before updating, read the [operator upgrade notes](operator-upgrade-notes.md),
-download a [complete household export](../user-guide/household-export.md), and
-retain its identity for investigation. Build the new image and follow the
-[controlled login upgrade](login-upgrade.md) before its first start against
-an existing installation. Keep the same volume and secret. Do not run old
+Before updating, read the [operator upgrade notes](operator-upgrade-notes.md)
+and follow any release-specific retention requirements. For ordinary updates
+that retain existing map content, download a
+[complete household export](../user-guide/household-export.md) and retain its
+identity for investigation. Keep the same volume and secret across ordinary
+updates; any required login maintenance follows the
+[controlled login procedure](login-upgrade.md). Do not run old
 and new application versions against the same SQLite volume at the same
 time. This transition supports roll forward only. Keep access closed and
 install a corrected newer image if checks fail. An export restores

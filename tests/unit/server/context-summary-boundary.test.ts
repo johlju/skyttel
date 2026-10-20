@@ -34,7 +34,13 @@ async function setup(modelFetch: typeof fetch, live?: ReturnType<typeof liveProv
       contentVersion: map.contentVersion,
       id: 'lo',
       baseRevision: null,
-      value: { typeId: map.types[0].id, name: 'Lo Exempel', description: 'Påhittad uppgift' },
+      value: {
+        typeId: map.types[0].id,
+        name: 'Lo Exempel',
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad uppgift' },
+        ],
+      },
     },
   });
   return (

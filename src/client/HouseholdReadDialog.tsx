@@ -1,7 +1,8 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { hasEnded } from '../shared/lifecycle.js';
 import type { MapRelationship, MapState, RelationshipType } from '../shared/map.js';
-import { knowledgeLabels, relationshipLabel } from '../shared/relationship-label.js';
+import { effectiveRelationships } from '../shared/map.js';
+import { relationshipLabel } from '../shared/relationship-label.js';
 import { useFormLeave } from './FormLeave.js';
 import type { HouseholdTableRow } from './HouseholdTable.js';
 import { trapDialogTab, usableFocusTarget } from './modal-focus.js';
@@ -22,10 +23,12 @@ export type HouseholdReadEntry = {
   restoreFocus?: () => void;
   relationshipId?: string;
   startNewRelationship?: boolean;
+  retainedRelationshipId?: string;
 };
 
 /** Keep proposed deletions readable until the entire draft is saved. */
 export function householdReadRelationships(state: MapState, types: RelationshipType[]) {
+  const effective = effectiveRelationships(state);
   const rows = new Map(
     state.relationships.map((value) => [
       value.id,
@@ -39,6 +42,15 @@ export function householdReadRelationships(state: MapState, types: RelationshipT
     ]),
   );
   for (const change of state.draft.relationships ?? []) {
+    const shown = effective.get(change.id);
+    if (
+      change.after &&
+      (!shown ||
+        shown.sourceId !== change.after.sourceId ||
+        shown.targetId !== change.after.targetId)
+    ) {
+      continue;
+    }
     const value = change.after ?? change.before;
     if (!value) continue;
     rows.set(change.id, {
@@ -103,6 +115,7 @@ export function HouseholdReadDialog({
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const body = useRef<HTMLDivElement>(null);
+  const openerFocus = useRef(returnFocus());
   const restoreFocus = useRef<(() => void) | null>(null);
   const prefix = useId();
   const { requestLeave } = useFormLeave();
@@ -122,19 +135,28 @@ export function HouseholdReadDialog({
   const relationships = householdReadRelationships(state, relationshipTypes).filter(
     ({ value }) => value.sourceId === current.id || value.targetId === current.id,
   );
-  const title = row
-    ? current.kind === 'relationships'
-      ? `Samband för ${row.object.name}`
-      : `Uppgifter för ${row.object.name}`
-    : 'Objektet finns inte längre';
+  const title = entry.retainedRelationshipId
+    ? 'Rätta blockerat samband'
+    : row
+      ? current.kind === 'relationships'
+        ? `Samband för ${row.object.name}`
+        : `Uppgifter för ${row.object.name}`
+      : 'Objektet finns inte längre';
+  useLayoutEffect(() => {
+    restoreFocus.current = entry.restoreFocus ?? openerFocus.current;
+  }, [entry.restoreFocus]);
   useLayoutEffect(() => {
     const modal = dialog.current;
-    restoreFocus.current = entry.restoreFocus ?? returnFocus();
     return () => {
+      const restore = restoreFocus.current;
       modal?.close();
-      restoreFocus.current?.();
+      // Layout cleanup precedes DOM removal. StrictMode replays it while the
+      // dialog stays mounted; only a genuine removal should navigate back.
+      queueMicrotask(() => {
+        if (modal && !modal.isConnected) restore?.();
+      });
     };
-  }, [entry.restoreFocus]);
+  }, []);
   useLayoutEffect(() => {
     if (active) {
       if (!dialog.current?.open) {
@@ -186,15 +208,25 @@ export function HouseholdReadDialog({
       version: state.draft.version,
       contentVersion: state.contentVersion,
       baseRevision: proposal ? (proposal.before?.revision ?? null) : (value?.revision ?? null),
-      value: proposal?.after ??
-        value ?? { typeId: '', sourceId: current.id, targetId: '', knowledge: 'known' },
+      value: proposal?.after ?? value ?? { typeId: '', sourceId: current.id, targetId: '' },
     });
   }
   // biome-ignore lint/correctness/useExhaustiveDependencies: An ordinary edit entry initializes once; later server state never replaces unsent form values.
   useLayoutEffect(() => {
     if (started.current) return;
     started.current = true;
-    if (entry.startNewRelationship) editRelationship();
+    if (entry.retainedRelationshipId) {
+      const proposal = state.draft.relationships?.find(
+        ({ id }) => id === entry.retainedRelationshipId,
+      );
+      if (proposal?.after)
+        editRelationship({
+          ...proposal.after,
+          id: proposal.id,
+          householdId: proposal.type.householdId,
+          revision: proposal.before?.revision ?? 0,
+        });
+    } else if (entry.startNewRelationship) editRelationship();
     else if (entry.relationshipId) {
       const existing = householdReadRelationships(state, relationshipTypes).find(
         ({ value }) => value.id === entry.relationshipId,
@@ -252,7 +284,12 @@ export function HouseholdReadDialog({
       <div ref={body} className="household-read-body">
         <div className={current.kind === 'relationships' ? 'relationship-work-layout' : undefined}>
           <div>
-            {!row ? (
+            {entry.retainedRelationshipId ? (
+              <p>
+                Förslaget finns kvar. Välj befintliga ändpunkter och lägg rättningen i ditt utkast.
+                Borttagna objekt återställs inte.
+              </p>
+            ) : !row ? (
               <p>Objektet är inte längre tillgängligt. Du kan gå tillbaka eller stänga dialogen.</p>
             ) : current.kind === 'object' ? (
               <>
@@ -315,11 +352,7 @@ export function HouseholdReadDialog({
                             {other.object.name}
                           </button>
                         ) : (
-                          <p>
-                            {otherId
-                              ? 'Objektet finns inte längre'
-                              : knowledgeLabels[value.knowledge]}
-                          </p>
+                          <p>Objektet finns inte längre</p>
                         )}
                         <RelationshipReadDetails
                           value={value}

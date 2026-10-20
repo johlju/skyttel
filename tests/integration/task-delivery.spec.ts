@@ -240,7 +240,7 @@ test('LEV-05: förlorad första leveransram ger tydligt fel och bevarat utkast e
         contentVersion: map.contentVersion,
         id: 'lo-delivery',
         baseRevision: null,
-        value: { typeId: map.types[0].id, name: 'Lo Exempel', description: '' },
+        value: { typeId: map.types[0].id, name: 'Lo Exempel' },
       }),
     ]);
     await expect(textView.getByRole('log', { name: 'Samtalstext' })).toContainText(

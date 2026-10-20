@@ -1,19 +1,17 @@
-# Ta bort typer och fält
+# Ta bort typer
 
 [Till användarguidens innehåll](README.md)
 
 Alla medlemmar kan föreslå borttagning av oanvända objekttyper,
-sambandstyper och egna fält. Egna och förifyllda typer följer samma regler.
+sambandstyper. Egna och förifyllda typer följer samma regler.
 Skyttel städar inte bort oanvända definitioner automatiskt. Du kan behålla
 dem för framtida användning.
 
 ## Föreslå borttagning
 
-1. Öppna **Objekttyper och egna fält** eller **Sambandstyper och riktning**.
+1. Öppna **Objekttyper** eller **Sambandstyper och riktning**.
    Välj **Ändra typ** eller **Ändra sambandstyp** för rätt definition.
-2. Välj **Ta bort objekttypen** eller **Ta bort sambandstypen**. För ett
-   fält väljer du **Ta bort fält** och sedan **Lägg typförslaget i mitt
-   utkast**. Andra fält och typens namn kan vara kvar.
+2. Välj **Ta bort objekttypen** eller **Ta bort sambandstypen**.
 3. Granska tidigare definition och förslag i **Visa utkastet**.
    Definitionen finns kvar i den gemensamma kartan tills du sparar.
 4. Välj **Spara hela utkastet** för att genomföra alla förslagen, eller
@@ -28,8 +26,6 @@ visar inte vem som har ett privat utkast eller vad det innehåller.
 - För en objekttyp behöver användande objekt tas bort eller byta typ.
 - För en sambandstyp behöver användande samband tas bort eller byta typ.
   Deras ändpunkter, exempelvis en person och ett garage, kan finnas kvar.
-- För ett fält behöver dess värden tas bort ur användande objekt och
-  privata utkast. Berörda privata typförslag behöver också hanteras.
 
 Skyttel tar aldrig bort användande innehåll för att möjliggöra
 definitionsborttagningen. Lägg först de avsedda ändringarna i ditt
@@ -44,7 +40,7 @@ eller konflikten och granska hela resultatet före ett nytt sparbesked.
 ## Läs historiska definitioner
 
 Borttaget innehåll och äldre historik hindrar inte katalogborttagning.
-Historiken bevarar definitionerna så att tidigare fältvärden och
+Historiken bevarar definitionerna så att tidigare objekt och
 samband fortfarande går att förstå. De återkommer inte i katalogen
 bara för att du läser historiken.
 

@@ -24,13 +24,7 @@ export async function prepareHouseholdReading(
   await post('object-type', {
     id: 'read-type',
     baseRevision: null,
-    value: {
-      name: 'Läsobjekt',
-      description: '',
-      fields: [
-        { id: 'hidden', name: 'Dold egen uppgift', kind: 'text', description: '', sectionId: '' },
-      ],
-    },
+    value: { name: 'Läsobjekt', description: '' },
   });
   for (const [id, name, extra] of [
     ['alex', 'Alex', {}],
@@ -39,12 +33,29 @@ export async function prepareHouseholdReading(
       'Cykel',
       {
         iconId: 'bike',
-        customValues: { hidden: 'Ramens märkning är ett påhittat exempel' },
-        financialFacts: {
-          price: { knowledge: 'known', value: '2000 SEK' },
-          debt: { knowledge: 'none' },
-          endDate: { knowledge: 'unknown' },
-        },
+        properties: [
+          {
+            id: 'hidden',
+            label: 'Dold egen uppgift',
+            kind: 'text' as const,
+            value: 'Ramens märkning är ett påhittat exempel',
+          },
+          { id: 'price', label: 'Pris', kind: 'text' as const, value: '2000 SEK' },
+          { id: 'debt', label: 'Senast uppgiven skuld', kind: 'text' as const },
+          {
+            id: 'debt-certainty',
+            label: 'Senast uppgiven skuld: uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: 'Uttryckligen inget',
+          },
+          { id: 'endDate', label: 'Slutdatum', kind: 'text' as const },
+          {
+            id: 'endDate-certainty',
+            label: 'Slutdatum: uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: 'Okänt',
+          },
+        ],
       },
     ],
     ['garage', 'Garage', { identity: 'unspecified' }],
@@ -58,8 +69,16 @@ export async function prepareHouseholdReading(
       value: {
         name,
         typeId: 'read-type',
-        description: `Hela beskrivningen för ${name}. `.repeat(15),
         ...extra,
+        properties: [
+          ...('properties' in extra ? extra.properties : []),
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: `Hela beskrivningen för ${name}. `.repeat(15),
+          },
+        ],
       },
     });
   for (const [id, name] of [
@@ -81,38 +100,50 @@ export async function prepareHouseholdReading(
             : id === 'storage'
               ? 'förvarar'
               : name.toLocaleLowerCase('sv'),
-        fields: [
-          {
-            id: 'note',
-            name: 'Dold sambandsuppgift',
-            description: '',
-            kind: 'text',
-            sectionId: '',
-          },
-        ],
       },
     });
-  for (const [id, typeId, sourceId, targetId, knowledge, extra] of [
-    ['alex-bike', 'uses', 'alex', 'bike', 'known', {}],
+  for (const [id, typeId, sourceId, targetId, certainty, extra] of [
+    ['alex-bike', 'uses', 'alex', 'bike', 'Bekräftat', {}],
     [
       'bike-garage',
       'storage',
       'bike',
       'garage',
-      'uncertain',
+      'Osäkert uppgivet',
       {
         lifecycle: 'ended',
-        endDate: { knowledge: 'known', value: '2024-12-31' },
-        customValues: { note: 'Sparad dold sambandsuppgift' },
+        properties: [
+          {
+            id: 'note',
+            label: 'Dold sambandsuppgift',
+            kind: 'text' as const,
+            value: 'Sparad dold sambandsuppgift',
+          },
+          { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2024-12-31' },
+        ],
       },
     ],
-    ['bike-none', 'none', 'bike', null, 'none', {}],
-    ['bike-unknown', 'unknown', 'bike', null, 'unknown', {}],
+    ['bike-none', 'none', 'bike', 'bike', 'Uttryckligen inget', {}],
+    ['bike-unknown', 'unknown', 'bike', 'bike', 'Okänt', {}],
   ] as const)
     await post('relationship', {
       id,
       baseRevision: null,
-      value: { typeId, sourceId, targetId, knowledge, ...extra },
+      value: {
+        typeId,
+        sourceId,
+        targetId,
+        ...extra,
+        properties: [
+          ...('properties' in extra ? extra.properties : []),
+          {
+            id: 'certainty',
+            label: 'Uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: certainty,
+          },
+        ],
+      },
     });
   await post('save', { operationId: 'read-fixture-save' });
   const saved = await read();
@@ -124,13 +155,27 @@ export async function prepareHouseholdReading(
     baseRevision: bike.revision,
     value: {
       ...bike,
-      financialFacts: { ...bike.financialFacts, price: { knowledge: 'known', value: '2500 SEK' } },
+      properties: [
+        ...(bike.properties ?? []).filter((property) => !['price'].includes(property.id)),
+        { id: 'price', label: 'Pris', kind: 'text' as const, value: '2500 SEK' },
+      ],
     },
   });
   await post('relationship', {
     id: edge.id,
     baseRevision: edge.revision,
-    value: { ...edge, customValues: { note: 'Föreslagen dold sambandsuppgift' } },
+    value: {
+      ...edge,
+      properties: [
+        ...(edge.properties ?? []).filter(({ id }) => id !== 'note'),
+        {
+          id: 'note',
+          label: 'Dold sambandsuppgift',
+          kind: 'text' as const,
+          value: 'Föreslagen dold sambandsuppgift',
+        },
+      ],
+    },
   });
   return { path, read, post };
 }

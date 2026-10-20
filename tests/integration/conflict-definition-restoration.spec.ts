@@ -21,6 +21,7 @@ import {
   readSavedHistoricalDefinition,
 } from '../support/historical-conflict-reading.js';
 import { launchHistoricalPreparation } from '../support/manual-historical-conflicts.js';
+import { propertyValues } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function stageNativeRestoration(page: Page, expected: Record<string, unknown>) {
@@ -86,18 +87,12 @@ async function expectSeparateDefinitionProperties(
   const properties = container.locator('.cp-definition-property');
   await expect(properties).toHaveText(
     kind === 'object'
-      ? [
-          'Namn: Min privata typbenämning',
-          'Beskrivning: Min tidigare definition',
-          'Avsnitt: Egna fält',
-          'Eget fält: Installationsår: Text · Egna fält',
-        ]
+      ? ['Namn: Min privata typbenämning', 'Beskrivning: Min tidigare definition']
       : [
           'Namn: Min privata typbenämning',
           'Beskrivning: Min tidigare definition',
           'Framåtriktning: förvaras i',
           'Omvänd riktning: förvarar',
-          'Avsnitt: Egna fält',
         ],
   );
   const bounds = await properties.evaluateAll((elements) =>
@@ -217,8 +212,6 @@ for (const kind of ['object', 'relationship'] as const)
       await expect(proposed).toContainText('Min privata typbenämning');
       await expect(proposed).toContainText('Min tidigare definition');
       if (kind === 'object') {
-        await expect(proposed).toContainText('Eget fält: Installationsår');
-        await expect(proposed).toContainText('Text · Egna fält');
       } else {
         await expect(proposed).toContainText('Framåtriktning: förvaras i');
         await expect(proposed).toContainText('Omvänd riktning: förvarar');
@@ -390,7 +383,7 @@ test('UTKAST-68: a newer saved definition rejects stale restoration atomically a
     if (!active) throw new Error('Missing restored definition');
     await closeTextView(administratorPage);
     await openTypeDefinitions(administratorPage);
-    await administratorPage.getByText('Objekttyper och egna fält', { exact: true }).click();
+    await administratorPage.getByText('Objekttyper', { exact: true }).click();
     await administratorPage
       .getByRole('button', { name: `Ändra typ: ${active.name}`, exact: true })
       .click();
@@ -431,11 +424,7 @@ test('UTKAST-68: a newer saved definition rejects stale restoration atomically a
           contentVersion: original.contentVersion,
           id: active.id,
           baseRevision: active.revision,
-          value: {
-            name: 'Ny gemensam typbenämning',
-            description: active.description,
-            fields: active.fields ?? [],
-          },
+          value: { name: 'Ny gemensam typbenämning', description: active.description },
         })
       ).status(),
     ).toBe(200);
@@ -481,17 +470,10 @@ test('UTKAST-68: a newer saved definition rejects stale restoration atomically a
     await page.getByRole('button', { name: '1 konflikt i ditt utkast', exact: true }).click();
     const refreshed = page.getByRole('dialog', { name: 'Granska konflikter', exact: true });
     const proposedValues = refreshed.getByRole('region', { name: 'Ditt förslag', exact: true });
-    const savedValues = refreshed.getByRole('region', { name: 'Sparat i kartan nu', exact: true });
+    const _savedValues = refreshed.getByRole('region', { name: 'Sparat i kartan nu', exact: true });
     for (const property of ['Namn', 'Beskrivning'])
       await proposedValues
         .getByRole('button', { name: new RegExp(`^${property}: Ditt förslag`) })
-        .click();
-    // The native editor supplies an explicit section. Keep that complete current
-    // field/section pair while restoring the same historical name and description.
-    await expect(savedValues).toContainText('Installationsår: Text · Egna fält');
-    for (const property of ['Egna fält', 'Avsnitt'])
-      await savedValues
-        .getByRole('button', { name: new RegExp(`^${property}: Sparat i kartan nu`) })
         .click();
     await refreshed.getByRole('button', { name: 'Lägg valen i utkastet', exact: true }).click();
     await expect(refreshed.getByRole('status')).toContainText('Valen finns i ditt utkast');
@@ -672,7 +654,7 @@ test('UTKAST-71: ordinary definition creation cannot reuse a removed identity or
       version: before.draft.version,
       contentVersion: before.contentVersion,
       baseRevision: null,
-      value: { name: 'Förfalskat återställningsförslag', description: '', fields: [] },
+      value: { name: 'Förfalskat återställningsförslag', description: '' },
       restoration: { contentVersion: before.contentVersion, definition: app.historicalType },
     });
     expect(rejected.status()).toBe(409);
@@ -729,10 +711,7 @@ test('historical preparation launcher preserves authority guards, applied and ab
   try {
     for (const fixture of [
       'new-missing-object-type',
-      'new-invalid-datatype',
       'new-missing-relationship-type',
-      'new-replaced-object-field',
-      'new-replaced-relationship-field',
       'new-multiple-blockers',
     ]) {
       await preparation.fresh(fixture);
@@ -744,21 +723,16 @@ test('historical preparation launcher preserves authority guards, applied and ab
       const target = (
         relationship ? prepared.map.draft.relationships : prepared.map.draft.changes
       ).find((change: { id: string }) => change.id === 'private-target');
-      expect(target.after.customValues).toEqual(
-        relationship ? { 'storage-year': 'Våren 2021' } : { year: 'Våren 2021' },
+      expect(propertyValues(target.after)).toEqual(
+        relationship
+          ? { 'storage-year': 'Våren 2021' }
+          : { description: 'Tidigare privat förslag', year: 'Våren 2021' },
       );
-      expect(target.type.fields[0].kind).toBe('text');
-      if (fixture === 'new-invalid-datatype')
-        expect(
-          prepared.map.types.find((type: { id: string }) => type.id === 'historical-type')
-            .fields[0],
-        ).toMatchObject({ id: 'year', kind: 'number' });
-      if (fixture.includes('replaced'))
-        expect(
-          (relationship ? prepared.map.relationshipTypes : prepared.map.types).find(
-            (type: { id: string }) => type.id === 'historical-type',
-          ).fields[0],
-        ).toMatchObject({ id: 'replacement-year', kind: 'number' });
+      expect(target.after.properties).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: 'Installationsår', kind: 'text', value: 'Våren 2021' }),
+        ]),
+      );
       if (fixture === 'new-multiple-blockers')
         expect(prepared.map.objects.some((object: { id: string }) => object.id === 'service')).toBe(
           false,
@@ -801,7 +775,7 @@ test('historical preparation launcher preserves authority guards, applied and ab
     await expectSavedConflictObject(paired.page, 'Lo Exempel');
     await expectSavedConflictObject(paired.page, 'Molnmusik');
     await openTypeDefinitions(paired.page);
-    await paired.page.getByText('Objekttyper och egna fält', { exact: true }).click();
+    await paired.page.getByText('Objekttyper', { exact: true }).click();
     await expect(
       paired.page.getByRole('button', { name: 'Ändra typ: Solcellsanläggning', exact: true }),
     ).toHaveCount(0);

@@ -160,7 +160,7 @@ shared save reachable”.
 1. Välj **Nytt objekt**. Skriv Lilla cykeln och Min oskickade text.
 2. Rulla till **Livscykel och utseende**. Sök cykel och välj **Cykel**.
 3. Välj **Typens standardikon**. Kontrollera markeringen och att
-   beskrivningen i Grunduppgifter finns kvar.
+   egenskapen Beskrivning i Fria egenskaper finns kvar.
 4. Rulla till **Lägg i utkastet och stäng** och välj den. Spara hela
    utkastet separat. Kontrollera sparat namn, beskrivning och standardikon.
 

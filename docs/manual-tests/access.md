@@ -1656,8 +1656,9 @@ för privat portvidarebefordran och det exakta loopback-ursprunget.
 ## Separat tekniskt underlag och observationer
 
 [legacy-login-upgrade.test.ts](../../tests/unit/server/legacy-login-upgrade.test.ts)
-provar en verklig SQLite-installation från före den nya valmodellen med
-två inloggade enheter, ett påbörjat återanrop, lagrat utkast och sparkvitto.
+provar en verklig SQLite-installation med aktuellt hushållsformat och
+syntetiskt ordnat äldre inloggningstillstånd för två enheter, ett påbörjat
+återanrop, lagrat utkast och sparkvitto.
 Efter stopp och kontrollerad uppgradering nekas gamla nycklar och försök.
 Ny inloggning och omstart ska behålla samma användare och beständiga arbete
 utan att upprepa sparandet. Separata syntetiska processprov kontrollerar

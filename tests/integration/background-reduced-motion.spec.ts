@@ -7,6 +7,7 @@ import {
 } from '../support/background-pixels.js';
 import { createHousehold, openMap, openSettings, signIn } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
+import { waitForMapScene } from '../support/map-scene.js';
 import { expect, test } from '../support/test.js';
 
 const space = (page: Page) => page.getByRole('region', { name: 'Rymdkarta', exact: true });
@@ -19,7 +20,7 @@ async function settings(page: Page) {
 }
 async function back(page: Page) {
   await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
-  await expect(space(page)).toBeVisible();
+  await waitForMapScene(page);
 }
 async function arrange(page: Page, origin: string, count: number) {
   await signIn(page.request, origin);
@@ -35,7 +36,7 @@ async function arrange(page: Page, origin: string, count: number) {
             version: index,
             id: `still-${index}`,
             baseRevision: null,
-            value: { name: `Provobjekt ${index}`, description: '', typeId: state.types[0].id },
+            value: { name: `Provobjekt ${index}`, typeId: state.types[0].id },
           },
         })
       ).ok(),

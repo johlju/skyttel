@@ -1,5 +1,19 @@
 # Visuell verifiering av arbetsytornas A, C och D
 
+Denna rapport är ett historiskt observationsunderlag för de uttryckligen
+angivna provversionerna. Resultat, bilder och äldre modellbeteenden gäller
+dessa versioner. Rapporten godkänner inte den senare fria egenskapsmodellen,
+ändrade formulär eller borttagna typfält och mållösa samband. Aktuella
+körbara scenarier finns i områdesmanualerna. Mänskliga observationer som
+anges som ej utförda behåller den statusen; inga nya utfall har observerats
+vid denna dokumentationsändring.
+
+Redan bekräftade mänskliga observationer kan återanvändas för oförändrad
+omfattning när provversion, miljö, kontokategori, utrustning, ansvarig och
+observerat utfall passar. En äldre provversion kräver inte ensam ett omprov.
+Ändrade egenskapskontroller följer de befintliga människoprovens ansvar;
+rapporten inför ingen ny mänsklig restlista eller nytt godkännande.
+
 Rapporten är för testare och granskare. Den kompletterar
 [krav- och flödeskartan](workspace-verification.md) med faktisk jämförelse
 mot de låsta referenserna. Den ersätter inte områdesmanualernas steg,
@@ -14,16 +28,19 @@ Källversionen kontrolleras före och efter bilderna. Dokumentationen ändrar
 inte den källan. Bildtagningen använder Playwrights Chromium på Linux,
 verklig offentlig HTTP och SQLite med endast påhittade hushållsuppgifter.
 
-- [A](https://github.com/viscalyx/skyttel/tree/d28a1f94b10d3d5dc98410933667ab320be5d908):
+-
+  [A](https://github.com/viscalyx/skyttel/tree/d28a1f94b10d3d5dc98410933667ab320be5d908):
   14 obligatoriska konfliktfall vid 1280 × 900 och 320 × 640 CSS-pixlar.
   Produktion och faktisk referens har vardera 52 observationer och
   132 bilder: grundläge och bekräftat resultat samt bilder av valda
   förhandsresultat för 12 fall.
-- [C](https://github.com/viscalyx/skyttel/tree/cc0410566b7056bcd6b1fec2d940620a0eab3be7):
+-
+  [C](https://github.com/viscalyx/skyttel/tree/cc0410566b7056bcd6b1fec2d940620a0eab3be7):
   12 produktionskontrollpunkter vid 1280 × 900, 320 × 640 och 844 × 390:
   36 observationer och bilder. Referensen har 11 punkter vid samma storlekar,
   33 observationer och bilder; produktionens ingång är extra inramning.
-- [D](https://github.com/viscalyx/skyttel/tree/19f18f7ecaafbe87b6944284992402d8abdd46b0):
+-
+  [D](https://github.com/viscalyx/skyttel/tree/19f18f7ecaafbe87b6944284992402d8abdd46b0):
   27 produktionskontrollpunkter vid 1280 × 900 och 320 × 640:
   54 observationer och bilder. Referensen har 26 punkter vid samma storlekar,
   52 observationer och bilder; produktionen visar rubrikikoner separat.
@@ -113,7 +130,8 @@ artikeln. Det är en avgränsad observation, inte ett påstående om hela sidan.
 Separata rader för definitionen i valt och bekräftat resultat bevarar namn,
 beskrivning, riktningar, avsnitt och fält på båda vybredderna.
 [UTKAST-67](drafts.md#utkast-67-återställ-en-borttagen-objekttyp-genom-privat-granskning-och-sparande)
-och [UTKAST-140](drafts.md#utkast-140-återställ-en-borttagen-sambandstyp-med-läsbara-riktningar)
+och
+[UTKAST-140](drafts.md#utkast-140-återställ-en-borttagen-sambandstyp-med-läsbara-riktningar)
 provar definitionstypernas fullständiga värden och verkliga privata
 bekräftelse före separat gemensamt sparande och läsning efter omstart.
 

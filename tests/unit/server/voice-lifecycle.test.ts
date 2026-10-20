@@ -92,7 +92,13 @@ async function setup(
 
 async function proposal(householdPath: string, id = 'retained-draft') {
   const map = await (await browser.get(`${householdPath}/map`)).json();
-  const value = { typeId: map.types[0].id, name: id, description: 'Privat syntetiskt utkast' };
+  const value = {
+    typeId: map.types[0].id,
+    name: id,
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Privat syntetiskt utkast' },
+    ],
+  };
   const response = await browser.post(`${householdPath}/map/draft`, {
     headers: { origin: app.origin },
     data: {

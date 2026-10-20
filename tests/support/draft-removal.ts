@@ -4,6 +4,7 @@ import { closeTextView, openDraftReview, openNewObject, signIn } from './client.
 import { openObjectRelationships, openTypeDefinitions } from './domain-work.js';
 import { prepareDraftReview } from './draft-review.js';
 import { alex, type createInstallation, robin } from './installation.js';
+import { setProperty } from './property-controls.js';
 import { stageRelationshipAndClose } from './relationship-dialog.js';
 import { readRemovalProposals } from './removal-reading.js';
 import { createPreparedContext } from './test.js';
@@ -47,16 +48,25 @@ export async function prepareRemovalMember(
     const form = await openNewObject(page);
     await form.getByLabel('Namn', { exact: true }).fill('Robins privata anteckning');
     await form.getByLabel('Objekttyp', { exact: true }).selectOption({ label: 'Person' });
-    await form
-      .getByLabel('Beskrivning', { exact: true })
-      .fill('Hela Robins oberoende arbete före och efter borttagningen');
+    await setProperty(
+      form,
+      'Beskrivning',
+      'Hela Robins oberoende arbete före och efter borttagningen',
+    );
     await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     const before = await read();
     expect(before.draft.changes).toHaveLength(1);
     expect(before.draft.changes[0].after).toEqual({
       name: 'Robins privata anteckning',
-      description: 'Hela Robins oberoende arbete före och efter borttagningen',
       typeId: initial.types.find(({ name }) => name === 'Person')?.id,
+      properties: [
+        {
+          id: expect.any(String),
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: 'Hela Robins oberoende arbete före och efter borttagningen',
+        },
+      ],
     });
     const assertUnchanged = async () => {
       expect(await read()).toEqual(before);
@@ -68,6 +78,7 @@ export async function prepareRemovalMember(
     const assertPrivate = async (alex: Page, state: MapState) => {
       for (const secret of [
         before.draft.changes[0].id,
+        ...(before.draft.changes[0].after?.properties ?? []).map(({ id }) => id),
         'Robins privata anteckning',
         'Hela Robins oberoende arbete före och efter borttagningen',
       ])
@@ -134,13 +145,14 @@ export async function stageNewRemovalType(page: Page, kind: 'objectType' | 'rela
     const form = await openNewObject(page);
     await form.getByLabel('Namn', { exact: true }).fill('Tillfälligt föremål');
     await form.getByLabel('Objekttyp', { exact: true }).selectOption({ label: 'Tillfällig typ' });
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Hela den tillfälliga berättelsen');
+    await setProperty(form, 'Beskrivning', 'Hela den tillfälliga berättelsen');
     await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
   } else {
     const form = await openObjectRelationships(page, 'Alex blå cykel');
     await form.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     await form.getByLabel('Sambandstyp', { exact: true }).selectOption({ label: 'Tillfällig typ' });
-    await form.getByLabel('Uppgiftens säkerhet', { exact: true }).selectOption('unknown');
+    await setProperty(form, 'Uppgiftens säkerhet', 'Okänt');
+    await form.getByLabel('Till objekt', { exact: true }).selectOption('draft-bike');
     await stageRelationshipAndClose(page);
   }
   expect((await proposalReply).status()).toBe(200);
@@ -165,7 +177,7 @@ export async function prepareDraftRemovalFocus(client: APIRequestContext, origin
   return fixture;
 }
 
-/** The new field belongs to the proposed type; discarding it must retain the value. */
+/** Free facts remain intact when discarding a changed type requires fresh review. */
 export async function prepareDraftRemovalMeaning(
   client: APIRequestContext,
   origin: string,
@@ -177,21 +189,10 @@ export async function prepareDraftRemovalMeaning(
     ({ id }) => id === (kind === 'objectType' ? 'draft-vehicle' : 'draft-uses'),
   );
   if (!type) throw new Error('Missing saved removal type');
-  await fixture.post(kind === 'objectType' ? 'object-type' : 'relationship-type', {
-    id: type.id,
-    baseRevision: type.revision,
-    value: {
-      name: type.name,
-      description: type.description,
-      ...(kind === 'relationshipType'
-        ? { forwardLabel: 'granskar', reverseLabel: 'granskas av' }
-        : {}),
-      fields: [
-        ...(type.fields ?? []),
-        { id: 'new-field', name: 'Ny uppgift', description: '', kind: 'text' },
-      ],
-    },
-  });
+  const definition = (
+    kind === 'objectType' ? state.draft.objectTypes : state.draft.relationshipTypes
+  )?.find(({ id }) => id === type.id)?.after;
+  if (!definition) throw new Error('Missing changed type proposal');
   const proposal =
     kind === 'objectType'
       ? state.draft.changes.find(({ id }) => id === 'draft-bike')
@@ -202,7 +203,17 @@ export async function prepareDraftRemovalMeaning(
     baseRevision: proposal.before?.revision ?? null,
     value: {
       ...proposal.after,
-      customValues: { ...proposal.after.customValues, 'new-field': 'Behåll hela mitt värde' },
+      properties: [
+        ...(proposal.after.properties ?? []).filter(
+          (property) => !['new-field'].includes(property.id),
+        ),
+        {
+          id: 'new-field',
+          label: 'Ny uppgift',
+          kind: 'text' as const,
+          value: 'Behåll hela mitt värde',
+        },
+      ],
     },
   });
   return { ...fixture, type, proposalId: proposal.id };

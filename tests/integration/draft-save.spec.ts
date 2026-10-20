@@ -1,7 +1,11 @@
 import type { MapState } from '../../src/shared/map.js';
-import { createHousehold, openMap, signIn } from '../support/client.js';
+import { createHousehold, openMap, signIn, utilityButton } from '../support/client.js';
 import { openSavedHistory } from '../support/conversation-page.js';
-import { prepareDraftSave, registerPendingSave } from '../support/draft-save.js';
+import {
+  prepareDraftSave,
+  preparePropertyDraftSave,
+  registerPendingSave,
+} from '../support/draft-save.js';
 import { createInstallation } from '../support/installation.js';
 import { expect, test } from '../support/test.js';
 
@@ -125,7 +129,10 @@ test('UTKAST-38: a lost save response keeps proposals until the same durable att
   const app = await createInstallation();
   let release: (() => void) | undefined;
   try {
-    const { path, household, read } = await prepareDraftSave(page.request, app.origin);
+    const { path, household, read, properties } = await preparePropertyDraftSave(
+      page.request,
+      app.origin,
+    );
     const submitted: { operationId: string; version: number }[] = [];
     page.on('request', (request) => {
       if (request.url().endsWith('/map/save') && request.method() === 'POST')
@@ -192,6 +199,22 @@ test('UTKAST-38: a lost save response keeps proposals until the same durable att
     expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([
       operations[0].receipt,
     ]);
+    expect(operations[0].receipt.changes[0].after.properties).toEqual(properties);
+    expect(operations[0].receipt.relationships[0].after.properties).toEqual(properties);
+    await (await utilityButton(page, 'Rapporter')).click();
+    const history = page.getByRole('region', { name: 'Ändringshistorik', exact: true });
+    await history.getByText('Visa ändringarna', { exact: true }).click();
+    const lists = history.getByRole('list', { name: 'Egenskaper i sparad ordning', exact: true });
+    await expect(lists).toHaveCount(2);
+    for (const list of await lists.all()) {
+      await expect(list.getByRole('listitem')).toHaveText([
+        'Samma: 0 (Tal)Identitet: zero',
+        'Samma: Nej (Ja/nej)Identitet: false',
+        'Väntar: Tomt (Datum)Identitet: typed-empty',
+        'Väntar: Tomt (ingen datatyp)Identitet: untyped',
+        'Anteckning: Tom text (Text)Identitet: blank',
+      ]);
+    }
     await expect(page.getByRole('dialog', { name: 'Samtalsmedgivande' })).toHaveCount(0);
   } finally {
     release?.();

@@ -26,7 +26,6 @@ async function arrange(context: () => APIRequestContext, origin: string) {
           value: {
             name,
             typeId: state.types.find((item) => item.name === type)?.id,
-            description: '',
           },
         })
       ).ok(),
@@ -46,7 +45,6 @@ async function arrange(context: () => APIRequestContext, origin: string) {
             sourceId,
             targetId,
             typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
-            knowledge: 'known',
           },
         })
       ).ok(),
@@ -67,10 +65,7 @@ test('direct lifecycle date and current-versus-previous staging preserves origin
     const { read, post, save, path } = await arrange(() => client, installation.origin);
     {
       const initial = await read();
-      for (const [id, knowledge] of [
-        ['subscription', 'known'],
-        ['person', 'uncertain'],
-      ]) {
+      for (const id of ['subscription', 'person']) {
         const object = initial.objects.find((item) => item.id === id);
         expect(
           (
@@ -80,7 +75,7 @@ test('direct lifecycle date and current-versus-previous staging preserves origin
               baseRevision: object?.revision,
               value: {
                 ...object,
-                financialFacts: { endDate: { knowledge, value: '2031-03-12' } },
+                properties: [{ id: 'date', label: 'Slutdatum', kind: 'date', value: '2031-03-12' }],
               },
             })
           ).ok(),
@@ -88,13 +83,12 @@ test('direct lifecycle date and current-versus-previous staging preserves origin
       }
       expect((await save()).ok()).toBe(true);
       const dated = await read();
-      expect(
-        dated.objects.find(({ id }) => id === 'subscription')?.financialFacts?.endDate,
-      ).toEqual({ knowledge: 'known', value: '2031-03-12' });
-      expect(dated.objects.find(({ id }) => id === 'person')?.financialFacts?.endDate).toEqual({
-        knowledge: 'uncertain',
-        value: '2031-03-12',
-      });
+      for (const id of ['subscription', 'person']) {
+        expect(dated.objects.find((item) => item.id === id)?.properties).toEqual([
+          { id: 'date', label: 'Slutdatum', kind: 'date', value: '2031-03-12' },
+        ]);
+        expect(dated.objects.find((item) => item.id === id)?.lifecycle).toBeUndefined();
+      }
     }
     const initial = await read();
     const incoming = initial.relationships.find((edge) => edge.id === 'incoming');
@@ -108,7 +102,6 @@ test('direct lifecycle date and current-versus-previous staging preserves origin
           value: {
             ...incoming,
             lifecycle: 'ended',
-            endDate: { knowledge: 'known', value: '2000-01-01' },
           },
         })
       ).ok(),
@@ -123,9 +116,8 @@ test('direct lifecycle date and current-versus-previous staging preserves origin
             sourceId: 'service',
             targetId: 'person',
             typeId: pays?.id,
-            knowledge: 'known',
+
             lifecycle: 'active',
-            endDate: { knowledge: 'known', value: '2000-01-01' },
           },
         })
       ).ok(),
@@ -143,9 +135,8 @@ test('direct lifecycle date and current-versus-previous staging preserves origin
             sourceId: 'service',
             targetId: 'subscription',
             typeId: pays?.id,
-            knowledge: 'known',
+
             lifecycle: 'active',
-            endDate: { knowledge: 'known', value: '2000-01-01' },
           },
         })
       ).ok(),
@@ -157,9 +148,8 @@ test('direct lifecycle date and current-versus-previous staging preserves origin
         sourceId: 'service',
         targetId: 'subscription',
         typeId: pays?.id,
-        knowledge: 'known',
+
         lifecycle: 'active',
-        endDate: { knowledge: 'known', value: '2000-01-01' },
       },
     );
     const history = await (await client.get(`${path}/history`)).json();

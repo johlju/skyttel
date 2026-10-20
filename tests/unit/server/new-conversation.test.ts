@@ -33,7 +33,7 @@ async function propose(id: string, name: string) {
     contentVersion: state.contentVersion,
     id,
     baseRevision: null,
-    value: { typeId: state.types[0].id, name, description: '' },
+    value: { typeId: state.types[0].id, name },
   });
   expect(response.status(), await response.text()).toBe(200);
 }
@@ -126,7 +126,7 @@ test('a new conversation stops held work, leaves the draft and counts its unsave
       contentVersion: state.contentVersion,
       id: 'lo',
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: 'För sent', description: '' },
+      value: { typeId: state.types[0].id, name: 'För sent' },
     }),
   ]);
   // The late answer of the stopped work changes neither the draft nor the conversation.

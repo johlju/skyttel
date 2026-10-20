@@ -30,7 +30,6 @@ import {
 } from '../support/current-conflict-reading.js';
 import {
   closeTableObject,
-  editObjectRelationship,
   editTableObject,
   openObjectRelationships,
   openTypeDefinitions,
@@ -39,6 +38,7 @@ import {
 } from '../support/domain-work.js';
 import { collaborators } from '../support/draft-conflict-http.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { propertyRow, setProperty } from '../support/property-controls.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
@@ -167,18 +167,8 @@ for (const { width, height } of [
         description: edgeType.description,
         forwardLabel: edgeType.forwardLabel ?? edgeType.name,
         reverseLabel: edgeType.reverseLabel ?? edgeType.name,
-        fields: edgeType.fields,
-        sections: edgeType.sections,
       };
-      const definition = {
-        ...objectType,
-        sections: [{ id: 'finance', name: 'Sparad ekonomi' }],
-        fields: [
-          { id: 'note', name: 'Dold anteckning', description: '', kind: 'text', sectionId: '' },
-        ],
-        builtins: [{ key: 'debt', name: 'Sparad skuld', sectionId: 'finance' }],
-        propertyOrder: ['builtin:debt', 'field:note'],
-      };
+      const definition = { ...objectType, description: 'Sparad ekonomi' };
       async function proposeType(
         client: APIRequestContext,
         kind: 'object-type' | 'relationship-type',
@@ -201,24 +191,36 @@ for (const { width, height } of [
       const original: ObjectValue = {
         typeId: objectType.id,
         name: 'Lo Exempel',
-        description: 'Tidigare beskrivning',
-        customValues: { note: 'Tidigare dold uppgift' },
-        financialFacts: { debt: { knowledge: 'known', value: '1 200', reportedOn: '2026-09-01' } },
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Tidigare beskrivning',
+          },
+          {
+            id: 'note',
+            label: 'Dold anteckning',
+            kind: 'text' as const,
+            value: 'Tidigare dold uppgift',
+          },
+          { id: 'debt', label: 'Sparad skuld', kind: 'text' as const, value: '1 200' },
+          {
+            id: 'debt-reportedOn',
+            label: 'Senast uppgiven skuld: datum för uppgiften',
+            kind: 'date' as const,
+            value: '2026-09-01',
+          },
+        ],
       };
       await app.propose(page.request, 'draft', 'lo', original);
-      const edge: RelationshipValue = {
-        typeId: edgeType.id,
-        sourceId: 'lo',
-        targetId: 'service',
-        knowledge: 'known',
-      };
+      const edge: RelationshipValue = { typeId: edgeType.id, sourceId: 'lo', targetId: 'service' };
       await app.propose(page.request, 'relationship', 'edge', edge);
       expect((await app.save(page.request, 'base-values')).status()).toBe(200);
       await proposeType(page.request, 'object-type', {
         ...definition,
         name: 'Min objekttyp',
-        sections: [{ id: 'finance', name: 'Mitt ekonomiska avsnitt' }],
-        builtins: [{ key: 'debt', name: 'Min skuld', sectionId: 'finance' }],
+        description: 'Mitt ekonomiska avsnitt',
       });
       await proposeType(page.request, 'relationship-type', {
         ...edgeDefinition,
@@ -229,10 +231,33 @@ for (const { width, height } of [
       await app.propose(page.request, 'draft', 'lo', {
         ...original,
         name: 'Lo Lind',
-        customValues: { note: 'Min dolda uppgift' },
-        financialFacts: { debt: { knowledge: 'known', value: '1 700', reportedOn: '2026-09-03' } },
+        properties: [
+          {
+            id: 'note',
+            label: 'Dold anteckning',
+            kind: 'text' as const,
+            value: 'Min dolda uppgift',
+          },
+          { id: 'debt', label: 'Min skuld', kind: 'text' as const, value: '1 700' },
+          {
+            id: 'debt-reportedOn',
+            label: 'Senast uppgiven skuld: datum för uppgiften',
+            kind: 'date' as const,
+            value: '2026-09-03',
+          },
+        ],
       });
-      await app.propose(page.request, 'relationship', 'edge', { ...edge, knowledge: 'uncertain' });
+      await app.propose(page.request, 'relationship', 'edge', {
+        ...edge,
+        properties: [
+          {
+            id: 'certainty',
+            label: 'Uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: 'Osäkert uppgivet',
+          },
+        ],
+      });
       await proposeType(other.request, 'object-type', {
         ...definition,
         description: 'Annans typförklaring',
@@ -244,16 +269,40 @@ for (const { width, height } of [
       await app.propose(other.request, 'draft', 'lo', {
         ...original,
         name: 'Lo Berg',
-        description: 'Annans beskrivning',
-        customValues: { note: 'Annans dolda uppgift' },
-        financialFacts: {
-          debt: { knowledge: 'uncertain', value: '2 000', reportedOn: '2026-09-02' },
-        },
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Annans beskrivning',
+          },
+          {
+            id: 'note',
+            label: 'Dold anteckning',
+            kind: 'text' as const,
+            value: 'Annans dolda uppgift',
+          },
+          { id: 'debt', label: 'Sparad skuld', kind: 'text' as const, value: '2 000' },
+          {
+            id: 'debt-certainty',
+            label: 'Senast uppgiven skuld: uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: 'Osäkert uppgivet',
+          },
+          {
+            id: 'debt-reportedOn',
+            label: 'Senast uppgiven skuld: datum för uppgiften',
+            kind: 'date' as const,
+            value: '2026-09-02',
+          },
+        ],
       });
       await app.propose(other.request, 'relationship', 'edge', {
         ...edge,
-        targetId: null,
-        knowledge: 'unknown',
+        targetId: 'service',
+        properties: [
+          { id: 'certainty', label: 'Uppgiftens säkerhet', kind: 'text' as const, value: 'Okänt' },
+        ],
       });
       expect((await app.save(other.request, 'concurrent-values')).status()).toBe(200);
       const unchanged = await app.read();
@@ -289,10 +338,7 @@ for (const { width, height } of [
       for (const [label, title] of [
         ['Objekttyp Min objekttyp', 'Min objekttyp'],
         ['Sambandstyp Min sambandstyp', 'Min sambandstyp'],
-        [
-          'Samband Lo Berg → Använder → Molnmusik (Osäkert uppgivet)',
-          'Lo Berg → Använder → Molnmusik (Osäkert uppgivet)',
-        ],
+        ['Samband Lo Berg → Använder → Molnmusik', 'Lo Berg → Använder → Molnmusik'],
         ['Objekt Lo Lind', 'Lo Lind'],
       ]) {
         await list.getByRole('button', { name: label, exact: true }).focus();
@@ -311,16 +357,22 @@ for (const { width, height } of [
       await expect(proposed).toContainText('1 700');
       await expect(proposed).toContainText('2026-09-03');
       await expect(proposed).toContainText('Min dolda uppgift');
-      await current.getByRole('button', { name: /^Sparad skuld: Sparat i kartan nu/ }).click();
+      await current
+        .getByRole('button', { name: /^Sparad skuld · egenskap \d+: Sparat i kartan nu/ })
+        .click();
       const preview = conflict.getByRole('region', { name: 'Resultat av valen', exact: true });
       await expect(
         preview
           .locator('dl > div')
-          .filter({ has: page.getByText('Sparad skuld', { exact: true }) }),
+          .filter({ has: page.getByText(/^Sparad skuld(?: · egenskap \d+)?$/) }),
       ).toContainText('2 000');
-      await proposed.getByRole('button', { name: /^Min skuld: Ditt förslag/ }).click();
+      await proposed
+        .getByRole('button', { name: /^Min skuld · egenskap \d+: Ditt förslag/ })
+        .click();
       await expect(
-        preview.locator('dl > div').filter({ has: page.getByText('Min skuld', { exact: true }) }),
+        preview
+          .locator('dl > div')
+          .filter({ has: page.getByText(/^Min skuld(?: · egenskap \d+)?$/) }),
       ).toContainText('1 700');
 
       await page.keyboard.press('Escape');
@@ -340,8 +392,6 @@ for (const { width, height } of [
       const definitionRead = await readDraftProposal(page, 'Min objekttyp');
       await expect(definitionRead).toContainText('Sparad ekonomi');
       await expect(definitionRead).toContainText('Mitt ekonomiska avsnitt');
-      await expect(definitionRead).toContainText('Sparad skuld');
-      await expect(definitionRead).toContainText('Min skuld');
       await closeSupportDialog(page, 'Min objekttyp');
       const review = await openDraftReview(page);
       const expectRejectedSave = async () => {
@@ -422,12 +472,14 @@ test('UTKAST-19: an own object correction preserves staged independent work and 
   const member = await other.newPage();
   try {
     const { types } = await app.read();
-    const value = { typeId: types[0].id, name: 'Lo Lind', description: '' };
+    const value = { typeId: types[0].id, name: 'Lo Lind' };
     await app.propose(page.request, 'draft', 'lo', value);
     await app.propose(other.request, 'draft', 'lo', {
       ...value,
       name: 'Lo Berg',
-      description: 'Spelar piano',
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Spelar piano' },
+      ],
     });
     expect((await app.save(other.request, 'independent-description')).status()).toBe(200);
     const saved = await app.read();
@@ -436,13 +488,13 @@ test('UTKAST-19: an own object correction preserves staged independent work and 
     await openNewObject(page);
     const unsent = page.locator('dialog.object-dialog-C');
     await unsent.getByLabel('Namn', { exact: true }).fill('Oskickad cykel');
-    await unsent.getByLabel('Beskrivning', { exact: true }).fill('Behåll den här texten');
+    await setProperty(unsent, 'Beskrivning', 'Behåll den här texten');
     await unsent.getByRole('button', { name: 'Avbryt', exact: true }).click();
     await page.keyboard.press('Escape');
     await expect(unsent.getByLabel('Namn', { exact: true })).toHaveValue('Oskickad cykel');
-    await expect(unsent.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-      'Behåll den här texten',
-    );
+    await expect(
+      propertyRow(unsent, 'Beskrivning').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Behåll den här texten');
     expect((await app.read()).draft.changes).toHaveLength(1);
     await unsent.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await expect(unsent).not.toBeVisible();
@@ -492,7 +544,9 @@ test('UTKAST-19: an own object correction preserves staged independent work and 
     expect((await app.read()).objects).toEqual(saved.objects);
     expect((await app.read()).draft.changes.find(({ id }) => id === 'lo')?.after).toMatchObject({
       name: 'Lo Alm',
-      description: 'Spelar piano',
+      properties: expect.arrayContaining([
+        expect.objectContaining({ label: 'Beskrivning', kind: 'text', value: 'Spelar piano' }),
+      ]),
     });
     expect((await (await page.request.get(`${app.path}/history`)).json()).history).toHaveLength(2);
     await refreshConflictReader(member, app.installation.origin);
@@ -504,7 +558,9 @@ test('UTKAST-19: an own object correction preserves staged independent work and 
     await closeTextView(page);
     expect((await app.read(other.request)).objects.find(({ id }) => id === 'lo')).toMatchObject({
       name: 'Lo Alm',
-      description: 'Spelar piano',
+      properties: expect.arrayContaining([
+        expect.objectContaining({ label: 'Beskrivning', kind: 'text', value: 'Spelar piano' }),
+      ]),
     });
     await refreshConflictReader(member, app.installation.origin);
     await expectSavedConflictObject(member, 'Lo Alm', 'Spelar piano');
@@ -537,13 +593,19 @@ for (const width of [1440, 390]) {
         typeId: state.relationshipTypes[0].id,
         sourceId: 'lo',
         targetId: 'service',
-        knowledge: 'uncertain',
+        properties: [
+          {
+            id: 'certainty',
+            label: 'Uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: 'Osäkert uppgivet',
+          },
+        ],
       };
       await app.propose(page.request, 'relationship', 'pending-edge', edge);
       await app.propose(page.request, 'draft', 'independent', {
         typeId: state.types[0].id,
         name: 'Privat stol',
-        description: '',
       });
       await app.propose(other.request, 'draft', 'service', null);
       expect((await app.save(other.request, 'delete-endpoint')).status()).toBe(200);
@@ -559,30 +621,40 @@ for (const width of [1440, 390]) {
       await expect(
         conflict.getByRole('region', { name: 'Ditt förslag' }).getByRole('button'),
       ).toHaveCount(0);
-      await page.keyboard.press('Escape');
-      const editor = await editObjectRelationship(
-        page,
-        'Lo Exempel',
-        'Lo Exempel → Använder → Molnmusik (Osäkert uppgivet)',
-      );
+      await conflict.getByRole('button', { name: 'Rätta ändpunkter', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      const editor = page.getByRole('dialog', { name: 'Rätta blockerat samband', exact: true });
       await expect(
-        editor.getByRole('heading', { name: 'Redigera samband', exact: true }),
-      ).toBeVisible();
-      await expect(editor.getByLabel('Från objekt')).toHaveValue('lo');
+        editor.getByRole('heading', { name: 'Rätta blockerat samband', exact: true }),
+      ).toBeFocused();
+      await expectFocusedTargetUncovered(page);
+      await expect(editor.getByLabel('Från objekt', { exact: true })).toHaveValue('lo');
       await expect(editor.getByLabel('Sambandstyp', { exact: true })).toHaveValue(edge.typeId);
-      await expect(editor.getByLabel('Uppgiftens säkerhet', { exact: true })).toHaveValue(
-        'uncertain',
-      );
       await expect(
-        editor.getByLabel('Till objekt').getByRole('option', { name: /Molnmusik/ }),
+        propertyRow(editor, 'Uppgiftens säkerhet').getByLabel('Värde', { exact: true }),
+      ).toHaveValue('Osäkert uppgivet');
+      await expect(
+        editor
+          .getByLabel('Till objekt', { exact: true })
+          .getByRole('option', { name: /Molnmusik/ }),
       ).toHaveCount(0);
-      await editor.getByLabel('Till objekt').selectOption('garage');
-      await stageRelationshipAndClose(page);
+      await editor.getByLabel('Till objekt', { exact: true }).selectOption('garage');
+      await editor.getByRole('button', { name: 'Lägg i utkastet', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await expect(
+        editor.getByRole('status').filter({ hasText: 'Sambandet lades i ditt utkast' }),
+      ).toBeVisible();
+      await editor.getByRole('button', { name: 'Stäng dialogen', exact: true }).click();
+      await expect(editor).not.toBeVisible();
+      await expect(conflict).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(conflict).not.toBeVisible();
       const review = await openDraftReview(page);
-      await expect(review).toContainText('Lo Exempel → Använder → Garaget (osäkert uppgivet)');
+      await expect(review).toContainText('Lo Exempel → Använder → Garaget');
       await expect(review).toContainText('Privat stol');
       const corrected = await app.read();
       expect(corrected.objects).toEqual(saved.objects);
+      expect(corrected.draft.changes).toEqual(saved.draft.changes);
       expect(corrected.relationships).toEqual([]);
       expect(corrected.draft.relationships?.[0]).toMatchObject({
         id: 'pending-edge',
@@ -611,7 +683,7 @@ for (const width of [1440, 390]) {
       await expectSavedConflictRelationship(
         member,
         'Lo Exempel',
-        'Lo Exempel → Använder → Garaget (Osäkert uppgivet)',
+        'Lo Exempel → Använder → Garaget',
         {
           Typ: 'Använder',
           'Från objekt': 'Lo Exempel',
@@ -647,13 +719,8 @@ for (const kind of ['object-type', 'relationship-type'] as const) {
         const definition = {
           name: type.name,
           description: type.description,
-          fields: type.fields ?? [],
-          sections: type.sections,
           ...(isObjectType
-            ? {
-                builtins: initial.types[0].builtins,
-                propertyOrder: initial.types[0].propertyOrder,
-              }
+            ? {}
             : {
                 forwardLabel: initial.relationshipTypes[0].forwardLabel ?? type.name,
                 reverseLabel: initial.relationshipTypes[0].reverseLabel ?? type.name,
@@ -694,7 +761,7 @@ for (const kind of ['object-type', 'relationship-type'] as const) {
         await page.keyboard.press('Escape');
         await openTypeDefinitions(page);
         const category = page.getByText(
-          isObjectType ? 'Objekttyper och egna fält' : 'Sambandstyper och riktning',
+          isObjectType ? 'Objekttyper' : 'Sambandstyper och riktning',
           { exact: true },
         );
         await category.click();
@@ -793,7 +860,7 @@ for (const choice of ['saved', 'proposed'] as const) {
     try {
       await page.setViewportSize({ width: 390, height: 844 });
       const initial = await app.read();
-      const value = { typeId: initial.types[0].id, name: 'Lo Lind', description: '' };
+      const value = { typeId: initial.types[0].id, name: 'Lo Lind' };
       await app.propose(page.request, 'draft', 'lo', value);
       await app.propose(other.request, 'draft', 'lo', { ...value, name: 'Lo Berg' });
       expect((await app.save(other.request, 'other-name')).status()).toBe(200);
@@ -863,7 +930,7 @@ test('UTKAST-23: delayed conflict resolution protects pending focus and allows e
   const member = await other.newPage();
   try {
     const initial = await app.read();
-    const value = { typeId: initial.types[0].id, name: 'Lo Lind', description: '' };
+    const value = { typeId: initial.types[0].id, name: 'Lo Lind' };
     await app.propose(page.request, 'draft', 'lo', value);
     await app.propose(other.request, 'draft', 'lo', { ...value, name: 'Lo Berg' });
     expect((await app.save(other.request, 'other-name')).status()).toBe(200);
@@ -939,13 +1006,15 @@ for (const width of [1440, 390]) {
     try {
       await page.setViewportSize({ width, height: 844 });
       const initial = await app.read();
-      const value = { typeId: initial.types[0].id, name: 'Lo Lind', description: '' };
+      const value = { typeId: initial.types[0].id, name: 'Lo Lind' };
       await app.propose(page.request, 'draft', 'lo', value);
       await app.propose(page.request, 'draft', 'chair', { ...value, name: 'Privat stol' });
       await app.propose(other.request, 'draft', 'lo', {
         ...value,
         name: 'Lo Berg',
-        description: 'Spelar piano',
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Spelar piano' },
+        ],
       });
       expect((await app.save(other.request, 'other-name')).status()).toBe(200);
       const saved = await app.read();
@@ -976,7 +1045,16 @@ for (const width of [1440, 390]) {
         expect.arrayContaining([
           expect.objectContaining({
             id: 'lo',
-            after: expect.objectContaining({ name: 'Lo Lind', description: 'Spelar piano' }),
+            after: expect.objectContaining({
+              name: 'Lo Lind',
+              properties: expect.arrayContaining([
+                expect.objectContaining({
+                  label: 'Beskrivning',
+                  kind: 'text',
+                  value: 'Spelar piano',
+                }),
+              ]),
+            }),
           }),
           expect.objectContaining({
             id: 'chair',
@@ -999,7 +1077,7 @@ for (const width of [1440, 390]) {
         member,
         2,
         ['Lo Berg', 'Robin Exempel'],
-        ['Namn: Lo Exempel.', 'Namn: Lo Berg.', 'Beskrivning: Spelar piano'],
+        ['Namn: Lo Exempel.', 'Namn: Lo Berg.', 'Beskrivning: Spelar piano (Text)'],
       );
       await conflict
         .getByRole('button', { name: 'Kontrollera om valet lades i utkastet', exact: true })
@@ -1052,15 +1130,17 @@ for (const width of [1440, 390]) {
         [
           'Namn: Lo Berg.',
           'Namn: Lo Lind.',
-          'Beskrivning: Spelar piano',
-          'Beskrivning: Spelar piano',
+          'Beskrivning: Spelar piano (Text)',
+          'Beskrivning: Spelar piano (Text)',
           'Namn: Privat stol.',
         ],
       );
       const shared = await app.read(other.request);
       expect(shared.objects.find(({ id }) => id === 'lo')).toMatchObject({
         name: 'Lo Lind',
-        description: 'Spelar piano',
+        properties: expect.arrayContaining([
+          expect.objectContaining({ label: 'Beskrivning', kind: 'text', value: 'Spelar piano' }),
+        ]),
       });
       expect(shared.objects.find(({ id }) => id === 'chair')).toMatchObject({
         name: 'Privat stol',
@@ -1104,12 +1184,10 @@ test('UTKAST-05: a conflict choice preserves independent proposals and requires 
     await propose(page.request, 'draft', 'alex', {
       typeId: (await read()).types[0].id,
       name: 'Alex Exempel',
-      description: '',
     });
     await propose(page.request, 'draft', 'lo', {
       typeId: (await read()).types[0].id,
       name: 'Lo Lind',
-      description: '',
     });
     await page.goto(installation.origin);
     await openDraftReview(page);
@@ -1117,7 +1195,6 @@ test('UTKAST-05: a conflict choice preserves independent proposals and requires 
     await propose(other.request, 'draft', 'lo', {
       typeId: (await read()).types[0].id,
       name: 'Lo Berg',
-      description: '',
     });
     expect((await save(other.request, 'other')).status()).toBe(200);
     await page.getByRole('button', { name: 'Spara hela utkastet' }).click();
@@ -1185,7 +1262,14 @@ test('UTKAST-06: deleting an object requires reviewing newly saved relationships
       typeId: state.relationshipTypes[0].id,
       sourceId: 'lo',
       targetId: 'service',
-      knowledge: 'uncertain',
+      properties: [
+        {
+          id: 'certainty',
+          label: 'Uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Osäkert uppgivet',
+        },
+      ],
     });
     expect((await app.save(other.request, 'new-edge')).status()).toBe(200);
     const before = await app.read();
@@ -1223,7 +1307,7 @@ test('UTKAST-06: deleting an object requires reviewing newly saved relationships
     await expectSavedConflictRelationship(
       member,
       'Lo Exempel',
-      'Lo Exempel → Använder → Molnmusik (Osäkert uppgivet)',
+      'Lo Exempel → Använder → Molnmusik',
       {
         Typ: 'Använder',
         'Från objekt': 'Lo Exempel',
@@ -1257,15 +1341,31 @@ test('UTKAST-07: overlapping relationship proposals show meanings and can accept
       typeId: state.relationshipTypes[0].id,
       sourceId: 'lo',
       targetId: 'service',
-      knowledge: 'known',
     };
     await app.propose(page.request, 'relationship', 'edge', value);
     expect((await app.save(page.request, 'edge')).status()).toBe(200);
-    await app.propose(page.request, 'relationship', 'edge', { ...value, knowledge: 'uncertain' });
+    await app.propose(page.request, 'relationship', 'edge', {
+      ...value,
+      properties: [
+        {
+          id: 'certainty',
+          label: 'Uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Osäkert uppgivet',
+        },
+      ],
+    });
     await app.propose(other.request, 'relationship', 'edge', {
       ...value,
-      targetId: null,
-      knowledge: 'none',
+      targetId: 'service',
+      properties: [
+        {
+          id: 'certainty',
+          label: 'Uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Uttryckligen inget',
+        },
+      ],
     });
     expect((await app.save(other.request, 'other-edge')).status()).toBe(200);
     await page.goto(app.installation.origin);
@@ -1278,26 +1378,23 @@ test('UTKAST-07: overlapping relationship proposals show meanings and can accept
     await applyConflictPropertyChoices(page, 'saved');
     const draft = await openDraftReview(page);
     await expect(draft).toContainText('Utkastet är tomt.');
-    expect((await app.read()).relationships[0].knowledge).toBe('none');
+    expect((await app.read()).relationships[0].properties).toEqual([
+      { id: 'certainty', label: 'Uppgiftens säkerhet', kind: 'text', value: 'Uttryckligen inget' },
+    ]);
     await closeTextView(page);
-    await expectSavedConflictRelationship(
-      page,
-      'Lo Exempel',
-      'Lo Exempel → Använder → Uttryckligen inget',
-      {
-        Typ: 'Använder',
-        'Från objekt': 'Lo Exempel',
-        'Till objekt': 'Uttryckligen inget',
-        'Uppgiftens säkerhet': 'Uttryckligen inget',
-      },
-    );
+    await expectSavedConflictRelationship(page, 'Lo Exempel', 'Lo Exempel → Använder → Molnmusik', {
+      Typ: 'Använder',
+      'Från objekt': 'Lo Exempel',
+      'Till objekt': 'Molnmusik',
+      'Uppgiftens säkerhet': 'Uttryckligen inget',
+    });
   } finally {
     await other.close();
     await app.installation.close();
   }
 });
 
-test('UTKAST-10: relationship choices preserve independent status and keep date certainty with its value', async ({
+test('UTKAST-10: relationship choices preserve independent status and preserve ordinary dates alongside independently chosen status', async ({
   page,
   browser,
 }) => {
@@ -1310,13 +1407,14 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
       typeId: state.relationshipTypes[0].id,
       sourceId: 'lo',
       targetId: 'service',
-      knowledge: 'known',
     };
     await app.propose(page.request, 'relationship', 'edge', value);
     expect((await app.save(page.request, 'edge')).status()).toBe(200);
     await app.propose(page.request, 'relationship', 'edge', {
       ...value,
-      endDate: { knowledge: 'known', value: '2031-04-12' },
+      properties: [
+        { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2031-04-12' },
+      ],
     });
     await app.propose(other.request, 'relationship', 'edge', { ...value, lifecycle: 'ended' });
     expect((await app.save(other.request, 'ended')).status()).toBe(200);
@@ -1353,7 +1451,9 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
     const first = (await app.read(other.request)).relationships[0];
     expect(first).toMatchObject({
       lifecycle: 'ended',
-      endDate: { knowledge: 'known', value: '2031-04-12' },
+      properties: [
+        { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2031-04-12' },
+      ],
     });
 
     await refreshConflictReader(member, app.installation.origin);
@@ -1372,26 +1472,28 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
     );
     await app.propose(page.request, 'relationship', 'edge', {
       ...first,
-      endDate: { knowledge: 'uncertain', value: '2031-04-12' },
+      properties: [
+        { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2031-04-20' },
+      ],
     });
     await app.propose(other.request, 'relationship', 'edge', {
       ...first,
       lifecycle: 'active',
-      endDate: { knowledge: 'known', value: '2031-05-15' },
+      properties: [
+        { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2031-05-15' },
+      ],
     });
     expect((await app.save(other.request, 'changed-date')).status()).toBe(200);
     await page.reload();
     await page.getByRole('button', { name: '1 konflikt i ditt utkast', exact: true }).click();
     await expect(conflict).toContainText('2031-04-12');
-    await expect(conflict).toContainText('Osäkert uppgivet');
     await expect(conflict).toContainText('2031-05-15');
     await expect(conflict).toContainText('Gäller fortfarande');
     await page.keyboard.press('Escape');
     await applyProposedConflictChanges(page);
-    expect((await app.read()).relationships[0].endDate).toEqual({
-      knowledge: 'known',
-      value: '2031-05-15',
-    });
+    expect((await app.read()).relationships[0].properties).toEqual([
+      { id: 'endDate', label: 'Slutdatum', kind: 'date', value: '2031-05-15' },
+    ]);
     await refreshConflictReader(member, app.installation.origin);
     await expectSavedConflictObject(member, 'Lo Exempel', 'Ej uppgivet');
     await expectSavedConflictRelationship(
@@ -1409,7 +1511,9 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
     await saveReviewedConflictDraft(page);
     expect((await app.read(other.request)).relationships[0]).toMatchObject({
       lifecycle: 'active',
-      endDate: { knowledge: 'uncertain', value: '2031-04-12' },
+      properties: [
+        { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2031-04-20' },
+      ],
     });
     await refreshConflictReader(member, app.installation.origin);
     await expectSavedConflictObject(member, 'Lo Exempel', 'Ej uppgivet');
@@ -1422,7 +1526,7 @@ test('UTKAST-10: relationship choices preserve independent status and keep date 
         'Från objekt': 'Lo Exempel',
         'Till objekt': 'Molnmusik',
         Status: 'Gäller fortfarande',
-        Slutdatum: '2031-04-12 (Osäkert uppgivet)',
+        Slutdatum: '2031-04-20',
       },
     );
   } finally {
@@ -1446,14 +1550,12 @@ for (const side of ['proposed', 'saved'] as const) {
         typeId: state.relationshipTypes[0].id,
         sourceId: 'lo',
         targetId: 'service',
-        knowledge: 'known',
       };
       await app.propose(page.request, 'relationship', 'edge', value);
       expect((await app.save(page.request, 'edge')).status()).toBe(200);
       await app.propose(page.request, 'draft', 'lo', null);
       await app.propose(other.request, 'draft', 'lo', {
         name: 'Lo Exempel',
-        description: '',
         typeId: state.types[1].id,
       });
       await app.propose(other.request, 'relationship', 'edge', {
@@ -1613,13 +1715,11 @@ test('UTKAST-08: a saved duplicate can be selected without losing another propos
       typeId: state.relationshipTypes[0].id,
       sourceId: 'lo',
       targetId: 'service',
-      knowledge: 'known',
     };
     await app.propose(page.request, 'relationship', 'my-edge', value);
     await app.propose(page.request, 'draft', 'independent', {
       typeId: state.types[0].id,
       name: 'Kim Exempel',
-      description: '',
     });
     await app.propose(other.request, 'relationship', 'other-edge', value);
     expect((await app.save(other.request, 'other-edge')).status()).toBe(200);
@@ -1666,7 +1766,14 @@ test('UTKAST-09: a deleted relationship endpoint has an explicit recovery choice
       typeId: state.relationshipTypes[0].id,
       sourceId: 'lo',
       targetId: 'service',
-      knowledge: 'uncertain',
+      properties: [
+        {
+          id: 'certainty',
+          label: 'Uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Osäkert uppgivet',
+        },
+      ],
     });
     await app.propose(other.request, 'draft', 'service', null);
     expect((await app.save(other.request, 'delete-service')).status()).toBe(200);
@@ -1681,7 +1788,10 @@ test('UTKAST-09: a deleted relationship endpoint has an explicit recovery choice
     await app.installation.restart();
     await page.reload();
     await page.getByRole('button', { name: '1 konflikt i ditt utkast', exact: true }).click();
-    await expect(review).toContainText('Lo Exempel → Använder → Molnmusik (Osäkert uppgivet)');
+    await expect(review).toContainText('Lo Exempel → Använder → Molnmusik');
+    await expect(review.getByRole('region', { name: 'Ditt förslag', exact: true })).toContainText(
+      'Osäkert uppgivet (Text)',
+    );
     await review
       .getByRole('button', { name: 'Ta bort sambandet ur ditt utkast', exact: true })
       .click();
@@ -1710,12 +1820,14 @@ test('UTKAST-118: resolving an object preserves fields changed only by the other
   const app = await collaborators(page.request, other.request);
   try {
     const state = await app.read();
-    const value = { typeId: state.types[0].id, name: 'Lo Lind', description: '' };
+    const value = { typeId: state.types[0].id, name: 'Lo Lind' };
     await app.propose(page.request, 'draft', 'lo', value);
     await app.propose(other.request, 'draft', 'lo', {
       ...value,
       name: 'Lo Exempel',
-      description: 'Spelar piano',
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Spelar piano' },
+      ],
     });
     expect((await app.save(other.request, 'description')).status()).toBe(200);
     await page.goto(app.installation.origin);
@@ -1727,7 +1839,9 @@ test('UTKAST-118: resolving an object preserves fields changed only by the other
     await expectSavedConflictObject(page, 'Lo Lind', 'Spelar piano');
     expect((await app.read()).objects.find((object) => object.id === 'lo')).toMatchObject({
       name: 'Lo Lind',
-      description: 'Spelar piano',
+      properties: expect.arrayContaining([
+        expect.objectContaining({ label: 'Beskrivning', kind: 'text', value: 'Spelar piano' }),
+      ]),
     });
   } finally {
     await other.close();
@@ -1763,12 +1877,12 @@ test('UTKAST-137: independent browser edits save unrelated objects without a con
     expect(mine.draft.changes[0]).toMatchObject({
       id: 'lo',
       before: initial.objects.find((object) => object.id === 'lo'),
-      after: { typeId: initial.types[0].id, name: 'Lo Lind', description: '' },
+      after: { typeId: initial.types[0].id, name: 'Lo Lind' },
     });
     expect(theirs.draft.changes[0]).toMatchObject({
       id: 'service',
       before: initial.objects.find((object) => object.id === 'service'),
-      after: { typeId: initial.types[0].id, name: 'Ny musiktjänst', description: '' },
+      after: { typeId: initial.types[0].id, name: 'Ny musiktjänst' },
     });
     const memberSaved = await saveReviewedConflictDraft(member);
     expect(memberSaved.status()).toBe(200);
@@ -1827,7 +1941,6 @@ test('UTKAST-02: a stale discard preserves newer object and relationship proposa
     await app.propose(page.request, 'draft', 'lo', {
       typeId: initial.types[0].id,
       name: 'Lo Lind',
-      description: '',
     });
     await page.goto(app.installation.origin);
     const review = await openDraftReview(page);
@@ -1840,11 +1953,11 @@ test('UTKAST-02: a stale discard preserves newer object and relationship proposa
     await newer.goto(app.installation.origin);
     const relationship = await openObjectRelationships(newer, 'Lo Lind');
     await relationship.getByRole('button', { name: 'Nytt samband', exact: true }).click();
-    await relationship.getByLabel('Från objekt').selectOption('lo');
+    await relationship.getByLabel('Från objekt', { exact: true }).selectOption('lo');
     await relationship
       .getByLabel('Sambandstyp', { exact: true })
       .selectOption(initial.relationshipTypes[0].id);
-    await relationship.getByLabel('Till objekt').selectOption('service');
+    await relationship.getByLabel('Till objekt', { exact: true }).selectOption('service');
     await stageRelationshipAndClose(newer);
     await expect(await openDraftReview(newer)).toContainText('Lo Lind → Använder → Molnmusik');
     const updated = await app.read();
@@ -1890,7 +2003,7 @@ test('UTKAST-03: a stale conflict choice requires refreshed review before saving
   const member = await other.newPage();
   try {
     const { types } = await app.read();
-    const value = { typeId: types[0].id, name: 'Lo Lind', description: '' };
+    const value = { typeId: types[0].id, name: 'Lo Lind' };
     await app.propose(page.request, 'draft', 'lo', value);
     await app.propose(other.request, 'draft', 'lo', { ...value, name: 'Lo Berg' });
     expect((await app.save(other.request, 'first-change')).status()).toBe(200);
@@ -1956,15 +2069,10 @@ test('UTKAST-04: accepting a deleted object preserves an independent proposal', 
   const member = await other.newPage();
   try {
     const { types } = await app.read();
-    await app.propose(page.request, 'draft', 'lo', {
-      typeId: types[0].id,
-      name: 'Lo Lind',
-      description: '',
-    });
+    await app.propose(page.request, 'draft', 'lo', { typeId: types[0].id, name: 'Lo Lind' });
     await app.propose(page.request, 'draft', 'independent', {
       typeId: types[0].id,
       name: 'Kim Exempel',
-      description: '',
     });
     await app.propose(other.request, 'draft', 'lo', null);
     expect((await app.save(other.request, 'delete-lo')).status()).toBe(200);

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { objectPropertyValues } from '../../../src/client/ObjectReadDetails.js';
 import { relationshipPropertyValues } from '../../../src/client/RelationshipReadDetails.js';
 import type { ObjectType, RelationshipType } from '../../../src/shared/map.js';
+import type { Property } from '../../../src/shared/properties.js';
 
 const type: ObjectType & RelationshipType = {
   id: 'type',
@@ -9,27 +10,26 @@ const type: ObjectType & RelationshipType = {
   revision: 1,
   name: 'Exempel',
   description: '',
-  fields: [
-    { id: 'yes', name: 'Ja-fält', description: '', kind: 'boolean' },
-    { id: 'missing', name: 'Saknad uppgift', description: '', kind: 'text' },
-  ],
 };
 
 describe.each([undefined, 'active', 'ended'] as const)('read lifecycle %s', (lifecycle) => {
-  test('object and relationship readers preserve known, missing and unlisted field answers', () => {
-    const customValues = { yes: true, unlisted: false, amount: 42, note: 'Text' };
+  test('object and relationship readers preserve typed values, empty values, zero and false', () => {
+    const properties: Property[] = [
+      { id: 'yes', label: 'Ja-uppgift', kind: 'boolean', value: true },
+      { id: 'missing', label: 'Saknad uppgift', kind: 'text' },
+      { id: 'unlisted', label: 'Annan uppgift', kind: 'boolean', value: false },
+      { id: 'amount', label: 'Belopp', kind: 'number', value: 0 },
+      { id: 'note', label: 'Anteckning', kind: 'text', value: '' },
+    ];
     const readers = [
-      objectPropertyValues(
-        { name: 'Objekt', typeId: type.id, description: '', customValues, lifecycle },
-        type,
-      ),
+      objectPropertyValues({ name: 'Objekt', typeId: type.id, lifecycle, properties }, type),
       relationshipPropertyValues(
         {
           typeId: type.id,
           sourceId: 'source',
-          targetId: null,
-          knowledge: 'unknown',
-          customValues,
+          targetId: 'target',
+          properties,
+
           lifecycle,
         },
         type,
@@ -37,20 +37,23 @@ describe.each([undefined, 'active', 'ended'] as const)('read lifecycle %s', (lif
       ),
     ];
     for (const fields of readers) {
-      expect(fields.get('field:yes')).toEqual({ label: 'Ja-fält', value: 'Ja' });
-      expect(fields.get('field:missing')).toEqual({
+      expect(fields.get('property:yes')).toEqual({ label: 'Ja-uppgift', value: 'Ja (Ja/nej)' });
+      expect(fields.get('property:missing')).toEqual({
         label: 'Saknad uppgift',
-        value: 'Ej uppgivet',
+        value: 'Tomt (Text)',
       });
-      expect(fields.get('field:unlisted')).toEqual({ label: 'unlisted', value: 'Nej' });
-      expect(fields.get('field:amount')?.value).toBe('42');
-      expect(fields.get('field:note')?.value).toBe('Text');
+      expect(fields.get('property:unlisted')).toEqual({
+        label: 'Annan uppgift',
+        value: 'Nej (Ja/nej)',
+      });
+      expect(fields.get('property:amount')?.value).toBe('0 (Tal)');
+      expect(fields.get('property:note')?.value).toBe('Tom text (Text)');
       expect(fields.get('lifecycle')?.value).toBe(
         lifecycle === 'active'
           ? 'Gäller fortfarande'
           : lifecycle === 'ended'
             ? 'Manuellt upphört'
-            : 'Följ slutdatum',
+            : 'Gäller fortfarande',
       );
     }
   });

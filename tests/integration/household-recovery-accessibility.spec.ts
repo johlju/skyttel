@@ -101,8 +101,15 @@ for (const { caseId, width, height } of [
               baseRevision: null,
               value: {
                 name: 'Bevarat privat arbete',
-                description: 'Privat uppgift för Bevarat privat arbete',
                 typeId: initial.types[0].id,
+                properties: [
+                  {
+                    id: 'description',
+                    label: 'Beskrivning',
+                    kind: 'text' as const,
+                    value: 'Privat uppgift för Bevarat privat arbete',
+                  },
+                ],
               },
             },
           })

@@ -75,71 +75,56 @@ berörda objektet. Ingen avtalspart blir automatiskt betalare, ägare eller
 användare. Lägg till varje roll uttryckligen, med flera personer om det
 behövs. Behåll samma fordonsobjekt när finansiering eller användning ändras.
 
-## Lägg till frivilliga belopp och villkor
+## Lägg till belopp och villkor som fria egenskaper
 
-Öppna **Tabell**, välj objektets **Redigera** och sedan
-**Ekonomiska uppgifter** i formuläret. **Grunduppgifter** öppnas först;
-namn, typ och identitet finns där. Ett avsnitt är öppet i taget. Gemensamma
-egenskaper kan också placeras i
-[objekttypens egna avsnitt](object-types.md#placera-gemensamma-uppgifter).
-Uppgifter utanför dessa avsnitt finns kvar och går att rätta även efter
-typbyte. Du kan
-ange **Pris**, **Valuta**, **Betalningsintervall**, **Startdatum**,
-**Slutdatum** och **Avtalsvillkor** när du känner till dem. Beskriv
-exempelvis priset som `7 500`, valutan som `SEK`, intervallet som
-`Varje månad` och villkoren som `Tre månaders uppsägningstid`.
+Öppna **Tabell**, välj objektets **Redigera** och sedan **Fria egenskaper**.
+Välj **Lägg till egenskap** för varje uppgift. Du bestämmer etikett,
+datatyp och ordning på just det objektet. Exempel:
 
-För lån och krediter finns dessutom separata uppgifter:
+- **Pris**, talet `7500`.
+- **Valuta**, texten `SEK`.
+- **Betalningsintervall**, texten `Varje månad`.
+- **Startdatum** och **Slutdatum**, datum när de är kända.
+- **Avtalsvillkor**, texten `Tre månaders uppsägningstid`.
 
-- **Senast uppgiven skuld**: beloppet som uppges återstå att betala.
-- **Beviljat kreditutrymme**: beloppet som krediten medger.
-- **Utnyttjad kredit**: den del av krediten som uppges vara använd.
+Skuld, beviljat kreditutrymme och utnyttjad kredit är olika uppgifter.
+Lägg till en egen egenskap för varje belopp som du vill registrera.
+En separat datumegenskap kan beskriva när ett belopp uppges. Välj
+begripliga etiketter som visar vilket belopp datumet gäller.
 
-Var och en av dessa tre uppgifter kan ha ett eget frivilligt
-**Datum för uppgiften**. Exempelvis kan ett kreditavtal ha beviljat
-kreditutrymme `30 000` och utnyttjad kredit `4 000`, med datum för
-respektive uppgift. Skulden är en uppgift om belopp, skild från själva
-låneavtalet. Kreditutrymme och utnyttjad kredit är olika belopp.
-
-Belopp och villkor är beskrivande text. Skyttel beräknar inte ränta,
-amorteringsplaner, återstående kreditutrymme eller betalningar. Uppgifterna
-är inte en förteckning över betalningstransaktioner. Skriv aldrig
+Egenskaperna är beskrivande uppgifter. Etiketterna styr inga beräkningar,
+betalningar eller statusändringar. Välj själv **Upphört** när avtalet
+slutar gälla; ett passerat Slutdatum ändrar inte status. Skriv aldrig
 fullständiga konto- eller kortnummer, lösenord eller andra hemliga uppgifter.
 
 ## Bevara det som är ofullständigt
 
-Varje ekonomisk uppgift har en egen säkerhet:
+Lämna en egenskap tom med eller utan datatyp för att fylla i den senare.
+Tomt är skilt från noll, Nej och en avsiktligt tom text. Du kan själv
+lägga till en egenskap som beskriver osäkerhet eller att något saknas.
+Sådana etiketter får ingen särskild betydelse i Skyttel.
 
-- **Ej uppgivet**: lämna uppgiften öppen utan att ange ett värde.
-- **Känt**: skriv det värde du känner till.
-- **Okänt**: markera uttryckligen att uppgiften inte är känd.
-- **Uttryckligen inget**: markera uttryckligen att uppgiften saknas.
-- **Osäkert uppgivet**: skriv värdet och behåll osäkerheten.
+Hela formuläret kontrolleras före tillägget till utkastet. Vid fel får
+felsammanfattningen fokus. Följ fellänken och rätta värdet; inmatningen
+finns kvar. Ingen del läggs i utkastet innan alla fel är rättade.
 
-Ett tomt fält betyder inte noll eller uttryckligen inget. Saknade belopp,
-datum och villkor hindrar inte att resten av utkastet sparas. Säkerheten
-följer med i formuläret, granskningen och den sparade uppgiften. Väljer
-du **Känt** måste du ange ett värde. Hela formuläret kontrolleras även
-när avsnitt är stängda. Vid fel får en sammanfattning fokus. Välj
-fellänken för att öppna rätt avsnitt och fokusera fältet; ingen del
-läggs i utkastet innan alla fel är rättade.
+Ett samband kräver två befintliga objekt. Om du vet att hyran betalas
+från ett verkligt bankkonto men inte vilken bank det gäller, skapa ett
+**Bankkonto** med **Identitet** satt till **Ospecificerat objekt**.
+Välj det uttryckligen som mål för **Betalas med**. Senare kan du
+komplettera samma objekt utan att hitta på en bank eller ägare.
 
-För samband anger **Uppgiftens säkerhet** om kopplingen är känd, okänd,
-uttryckligen saknas eller är osäkert uppgiven. Om du vet att hyran betalas
-från ett bankkonto men inte vilket, skapa ett **Bankkonto** med
-**Identitet** satt till **Ospecificerat objekt**. Välj det
-uttryckligen som mål för **Betalas med**. Senare kan du komplettera samma
-objekt utan att hitta på en bank eller ägare.
-
-En obesvarad identitetsfråga är något annat: den kan bevaras i utkastet
-men måste lösas före sparandet. Varken lika namn eller lika belopp avgör
-att två objekt är samma sak.
+Om du inte vet om en motpart finns, lämna frågan öppen i samtalet och
+komplettera innan sambandet skapas. Skyttel skapar ingen motpart eller
+egen ersättningsegenskap automatiskt. Lika namn eller belopp avgör
+inte att två objekt är samma sak.
 
 ## Hitta, rätta och spara tillsammans
 
 Sök efter avtalet, bostaden, garaget eller bilen i **Sök objekt i tabellen**.
 Välj objektets **Redigera** för att rätta belopp,
-villkor och säkerhet. Öppna objektets samband och välj **Redigera samband** för
+villkor och andra egenskaper. Öppna objektets samband och välj
+**Redigera samband** för
 att rätta exempelvis avtalspart eller betalningsmedel. För objekt väljer
 du **Lägg i utkastet och stäng** när hela formuläret är klart.
 **Lägg i utkastet och öppna samband** lägger samma fullständiga ändring

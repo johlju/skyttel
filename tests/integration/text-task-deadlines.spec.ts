@@ -25,7 +25,7 @@ test('an accepted text tool waiting at MCP cannot write at its original deadline
           arguments: {
             id: 'late-tool',
             baseRevision: null,
-            value: { typeId, name: 'För sent verktyg', description: '' },
+            value: { typeId, name: 'För sent verktyg' },
           },
         },
       ],

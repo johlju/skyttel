@@ -7,297 +7,443 @@
         "id": "alex",
         "type": "Person",
         "name": "Alex Lind",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "lo",
         "type": "Person",
         "name": "Lo Berg",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "mira",
         "type": "Person",
         "name": "Mira Dahl",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "spotify-ab",
         "type": "Företag",
         "name": "Spotify AB",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "microsoft-ab",
         "type": "Företag",
         "name": "Microsoft AB",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "cloud-ab",
         "type": "Företag",
         "name": "Norrsken Molntjänster AB",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "spotify",
         "type": "Tjänst",
         "name": "Spotify",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "m365",
         "type": "Tjänst",
         "name": "Microsoft 365",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "cloud",
         "type": "Tjänst",
         "name": "Norrsken Molnlagring",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "tenant",
         "type": "Tjänst",
         "name": "Tenant Norrsken Bygg",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "spotify-sub",
         "type": "Abonnemang",
         "name": "Spotify Premium Family",
-        "description": "Påhittat katalogobjekt.",
-        "financialFacts": {
-          "price": {
-            "knowledge": "known",
-            "value": "179"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
           },
-          "currency": {
-            "knowledge": "known",
+          {
+            "id": "price",
+            "label": "Pris",
+            "kind": "number",
+            "value": 179.0
+          },
+          {
+            "id": "currency",
+            "label": "Valuta",
+            "kind": "text",
             "value": "SEK"
           },
-          "paymentInterval": {
-            "knowledge": "known",
+          {
+            "id": "paymentInterval",
+            "label": "Betalningsintervall",
+            "kind": "text",
             "value": "månad"
           }
-        }
+        ]
       },
       {
         "id": "cloud-sub",
         "type": "Abonnemang",
         "name": "Molnlagring Plus",
-        "description": "Påhittat katalogobjekt.",
-        "financialFacts": {
-          "price": {
-            "knowledge": "known",
-            "value": "199"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
           },
-          "currency": {
-            "knowledge": "known",
+          {
+            "id": "price",
+            "label": "Pris",
+            "kind": "number",
+            "value": 199.0
+          },
+          {
+            "id": "currency",
+            "label": "Valuta",
+            "kind": "text",
             "value": "SEK"
           },
-          "paymentInterval": {
-            "knowledge": "known",
+          {
+            "id": "paymentInterval",
+            "label": "Betalningsintervall",
+            "kind": "text",
             "value": "månad"
           }
-        }
+        ]
       },
       {
         "id": "netflix-sub",
         "type": "Abonnemang",
         "name": "Netflix Standard",
-        "description": "Påhittat katalogobjekt.",
-        "financialFacts": {
-          "price": {
-            "knowledge": "known",
-            "value": "139"
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
           },
-          "currency": {
-            "knowledge": "known",
+          {
+            "id": "price",
+            "label": "Pris",
+            "kind": "number",
+            "value": 139.0
+          },
+          {
+            "id": "currency",
+            "label": "Valuta",
+            "kind": "text",
             "value": "SEK"
           },
-          "paymentInterval": {
-            "knowledge": "known",
+          {
+            "id": "paymentInterval",
+            "label": "Betalningsintervall",
+            "kind": "text",
             "value": "månad"
           }
-        }
+        ]
       },
       {
         "id": "alex-work",
         "type": "Tjänstekonto",
         "name": "Alex arbete",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "lo-work",
         "type": "Tjänstekonto",
         "name": "Lo arbete",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "shared-email",
         "type": "E-postadress",
         "name": "m365@norrsken.test",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "alex-email",
         "type": "E-postadress",
         "name": "alex@norrsken.test",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "lo-email",
         "type": "E-postadress",
         "name": "lo@norrsken.test",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "house-email",
         "type": "E-postadress",
         "name": "hushall@norrsken.test",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "card",
         "type": "Kort",
         "name": "Hushållskortet",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "bank",
         "type": "Bankkonto",
         "name": "Bankkonto Hushåll",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       },
       {
         "id": "reserve",
         "type": "Bankkonto",
         "name": "Bankkonto Reserv",
-        "description": "Påhittat katalogobjekt."
+        "properties": [
+          {
+            "id": "description",
+            "label": "Beskrivning",
+            "kind": "text",
+            "value": "Påhittat katalogobjekt."
+          }
+        ]
       }
     ],
     "relationships": [
       {
         "source": "spotify-ab",
         "type": "Erbjuder",
-        "target": "spotify",
-        "knowledge": "known"
+        "target": "spotify"
       },
       {
         "source": "microsoft-ab",
         "type": "Erbjuder",
-        "target": "m365",
-        "knowledge": "known"
+        "target": "m365"
       },
       {
         "source": "cloud-ab",
         "type": "Erbjuder",
-        "target": "cloud",
-        "knowledge": "known"
+        "target": "cloud"
       },
       {
         "source": "spotify-sub",
         "type": "Gäller",
-        "target": "spotify",
-        "knowledge": "known"
+        "target": "spotify"
       },
       {
         "source": "cloud-sub",
         "type": "Gäller",
-        "target": "cloud",
-        "knowledge": "known"
+        "target": "cloud"
       },
       {
         "source": "alex-work",
         "type": "Hör till",
-        "target": "m365",
-        "knowledge": "known"
+        "target": "m365"
       },
       {
         "source": "lo-work",
         "type": "Hör till",
-        "target": "m365",
-        "knowledge": "known"
+        "target": "m365"
       },
       {
         "source": "mira",
         "type": "Använder",
-        "target": "spotify",
-        "knowledge": "known"
+        "target": "spotify"
       },
       {
         "source": "lo",
         "type": "Använder",
-        "target": "m365",
-        "knowledge": "known"
+        "target": "m365"
       },
       {
         "source": "spotify-sub",
         "type": "Står på avtalet",
-        "target": "alex",
-        "knowledge": "known"
+        "target": "alex"
       },
       {
         "source": "mira",
         "type": "Betalar",
-        "target": "spotify-sub",
-        "knowledge": "known"
+        "target": "spotify-sub"
       },
       {
         "source": "spotify-sub",
         "type": "Betalas med",
-        "target": "reserve",
-        "knowledge": "known"
+        "target": "reserve"
       },
       {
         "source": "cloud-sub",
         "type": "Står på avtalet",
-        "target": "mira",
-        "knowledge": "known"
+        "target": "mira"
       },
       {
         "source": "alex",
         "type": "Betalar",
-        "target": "cloud-sub",
-        "knowledge": "known"
+        "target": "cloud-sub"
       },
       {
         "source": "cloud-sub",
         "type": "Betalas med",
-        "target": "card",
-        "knowledge": "known"
+        "target": "card"
       },
       {
         "source": "alex-work",
         "type": "Inloggningsadress",
-        "target": "shared-email",
-        "knowledge": "known"
+        "target": "shared-email"
       },
       {
         "source": "alex-work",
         "type": "Kontaktadress",
-        "target": "shared-email",
-        "knowledge": "known"
+        "target": "shared-email"
       },
       {
         "source": "lo-work",
         "type": "Inloggningsadress",
-        "target": "shared-email",
-        "knowledge": "known"
+        "target": "shared-email"
       },
       {
         "source": "lo-work",
         "type": "Kontaktadress",
-        "target": "shared-email",
-        "knowledge": "known"
+        "target": "shared-email"
       },
       {
         "source": "card",
         "type": "Kontokoppling",
-        "target": "bank",
-        "knowledge": "known"
+        "target": "bank"
       }
     ],
     "relationshipTypes": [
@@ -311,23 +457,42 @@
     "draft": {
       "objects": {
         "lo": {
-          "description": "Övar cello på tisdagar."
+          "properties": [
+            {
+              "id": "description",
+              "label": "Beskrivning",
+              "kind": "text",
+              "value": "Övar cello på tisdagar."
+            }
+          ]
         },
         "netflix-sub": {
-          "financialFacts": {
-            "price": {
-              "knowledge": "known",
-              "value": "149"
+          "properties": [
+            {
+              "id": "description",
+              "label": "Beskrivning",
+              "kind": "text",
+              "value": "Påhittat katalogobjekt."
             },
-            "currency": {
-              "knowledge": "known",
+            {
+              "id": "price",
+              "label": "Pris",
+              "kind": "number",
+              "value": 149.0
+            },
+            {
+              "id": "currency",
+              "label": "Valuta",
+              "kind": "text",
               "value": "SEK"
             },
-            "paymentInterval": {
-              "knowledge": "known",
+            {
+              "id": "paymentInterval",
+              "label": "Betalningsintervall",
+              "kind": "text",
               "value": "månad"
             }
-          }
+          ]
         }
       }
     }
@@ -339,35 +504,38 @@
           "id": "alex-berg",
           "type": "Person",
           "name": "Alex Berg",
-          "description": "Påhittat katalogobjekt."
+          "properties": [
+            {
+              "id": "description",
+              "label": "Beskrivning",
+              "kind": "text",
+              "value": "Påhittat katalogobjekt."
+            }
+          ]
         }
       ],
       "addRelationships": [
         {
           "source": "spotify-sub",
           "type": "Står på avtalet",
-          "target": "lo",
-          "knowledge": "known"
+          "target": "lo"
         },
         {
           "source": "spotify-sub",
           "type": "Betalas med",
-          "target": "card",
-          "knowledge": "known"
+          "target": "card"
         }
       ],
       "removeRelationships": [
         {
           "source": "spotify-sub",
           "type": "Står på avtalet",
-          "target": "alex",
-          "knowledge": "known"
+          "target": "alex"
         },
         {
           "source": "spotify-sub",
           "type": "Betalas med",
-          "target": "reserve",
-          "knowledge": "known"
+          "target": "reserve"
         }
       ]
     },
@@ -376,28 +544,39 @@
         {
           "source": "cloud",
           "type": "Används av",
-          "target": "alex",
-          "knowledge": "known"
+          "target": "alex"
         }
       ]
     },
     "price-proposal": {
       "draftObjects": {
         "cloud-sub": {
-          "financialFacts": {
-            "price": {
-              "knowledge": "known",
-              "value": "229"
+          "properties": [
+            {
+              "id": "description",
+              "label": "Beskrivning",
+              "kind": "text",
+              "value": "Påhittat katalogobjekt."
             },
-            "currency": {
-              "knowledge": "known",
+            {
+              "id": "price",
+              "label": "Pris",
+              "kind": "number",
+              "value": 229.0
+            },
+            {
+              "id": "currency",
+              "label": "Valuta",
+              "kind": "text",
               "value": "SEK"
             },
-            "paymentInterval": {
-              "knowledge": "known",
+            {
+              "id": "paymentInterval",
+              "label": "Betalningsintervall",
+              "kind": "text",
               "value": "månad"
             }
-          }
+          ]
         }
       }
     }
@@ -471,36 +650,46 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "229"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 229.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "card",
-                "knowledge": "known"
+                "target": "card"
               }
             ],
             "removeRelationships": [
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "reserve",
-                "knowledge": "known"
+                "target": "reserve"
               }
             ],
             "objectTypes": [],
@@ -521,16 +710,14 @@
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
-                    "target": "card",
-                    "knowledge": "known"
+                    "target": "card"
                   }
                 ],
                 "removeRelationships": [
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
-                    "target": "reserve",
-                    "knowledge": "known"
+                    "target": "reserve"
                   }
                 ],
                 "objectTypes": [],
@@ -559,114 +746,111 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "229"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 229.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [
               {
                 "source": "alex",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "lo",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "alex",
                 "type": "Använder",
-                "target": "m365",
-                "knowledge": "known"
+                "target": "m365"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "card",
-                "knowledge": "known"
+                "target": "card"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "alex-email",
-                "knowledge": "known"
+                "target": "alex-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "house-email",
-                "knowledge": "known"
+                "target": "house-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "bank",
-                "knowledge": "known"
+                "target": "bank"
               },
               {
                 "source": "lo",
                 "type": "Betalar",
-                "target": "cloud-sub",
-                "knowledge": "known"
+                "target": "cloud-sub"
               },
               {
                 "source": "mira",
                 "type": "Använder",
-                "target": "cloud",
-                "knowledge": "known"
+                "target": "cloud"
               }
             ],
             "removeRelationships": [
               {
                 "source": "mira",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "reserve",
-                "knowledge": "known"
+                "target": "reserve"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "shared-email",
-                "knowledge": "known"
+                "target": "shared-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "shared-email",
-                "knowledge": "known"
+                "target": "shared-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "card",
-                "knowledge": "known"
+                "target": "card"
               },
               {
                 "source": "alex",
                 "type": "Betalar",
-                "target": "cloud-sub",
-                "knowledge": "known"
+                "target": "cloud-sub"
               }
             ],
             "objectTypes": [],
@@ -684,78 +868,81 @@
               "waiting": {
                 "objects": {
                   "cloud-sub": {
-                    "financialFacts": {
-                      "price": {
-                        "knowledge": "known",
-                        "value": "229"
+                    "properties": [
+                      {
+                        "id": "description",
+                        "label": "Beskrivning",
+                        "kind": "text",
+                        "value": "Påhittat katalogobjekt."
                       },
-                      "currency": {
-                        "knowledge": "known",
+                      {
+                        "id": "price",
+                        "label": "Pris",
+                        "kind": "number",
+                        "value": 229.0
+                      },
+                      {
+                        "id": "currency",
+                        "label": "Valuta",
+                        "kind": "text",
                         "value": "SEK"
                       },
-                      "paymentInterval": {
-                        "knowledge": "known",
+                      {
+                        "id": "paymentInterval",
+                        "label": "Betalningsintervall",
+                        "kind": "text",
                         "value": "månad"
                       }
-                    }
+                    ]
                   }
                 },
                 "addRelationships": [
                   {
                     "source": "alex",
                     "type": "Använder",
-                    "target": "spotify",
-                    "knowledge": "known"
+                    "target": "spotify"
                   },
                   {
                     "source": "lo",
                     "type": "Använder",
-                    "target": "spotify",
-                    "knowledge": "known"
+                    "target": "spotify"
                   },
                   {
                     "source": "alex",
                     "type": "Använder",
-                    "target": "m365",
-                    "knowledge": "known"
+                    "target": "m365"
                   },
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
-                    "target": "card",
-                    "knowledge": "known"
+                    "target": "card"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
-                    "target": "bank",
-                    "knowledge": "known"
+                    "target": "bank"
                   },
                   {
                     "source": "lo",
                     "type": "Betalar",
-                    "target": "cloud-sub",
-                    "knowledge": "known"
+                    "target": "cloud-sub"
                   }
                 ],
                 "removeRelationships": [
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
-                    "target": "reserve",
-                    "knowledge": "known"
+                    "target": "reserve"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
-                    "target": "card",
-                    "knowledge": "known"
+                    "target": "card"
                   },
                   {
                     "source": "alex",
                     "type": "Betalar",
-                    "target": "cloud-sub",
-                    "knowledge": "known"
+                    "target": "cloud-sub"
                   }
                 ],
                 "objectTypes": [],
@@ -784,114 +971,111 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "229"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 229.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [
               {
                 "source": "alex",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "lo",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "alex",
                 "type": "Använder",
-                "target": "m365",
-                "knowledge": "known"
+                "target": "m365"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "card",
-                "knowledge": "known"
+                "target": "card"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "alex-email",
-                "knowledge": "known"
+                "target": "alex-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "house-email",
-                "knowledge": "known"
+                "target": "house-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "bank",
-                "knowledge": "known"
+                "target": "bank"
               },
               {
                 "source": "lo",
                 "type": "Betalar",
-                "target": "cloud-sub",
-                "knowledge": "known"
+                "target": "cloud-sub"
               },
               {
                 "source": "mira",
                 "type": "Använder",
-                "target": "cloud",
-                "knowledge": "known"
+                "target": "cloud"
               }
             ],
             "removeRelationships": [
               {
                 "source": "mira",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "reserve",
-                "knowledge": "known"
+                "target": "reserve"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "shared-email",
-                "knowledge": "known"
+                "target": "shared-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "shared-email",
-                "knowledge": "known"
+                "target": "shared-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "card",
-                "knowledge": "known"
+                "target": "card"
               },
               {
                 "source": "alex",
                 "type": "Betalar",
-                "target": "cloud-sub",
-                "knowledge": "known"
+                "target": "cloud-sub"
               }
             ],
             "objectTypes": [],
@@ -909,78 +1093,81 @@
               "waiting": {
                 "objects": {
                   "cloud-sub": {
-                    "financialFacts": {
-                      "price": {
-                        "knowledge": "known",
-                        "value": "229"
+                    "properties": [
+                      {
+                        "id": "description",
+                        "label": "Beskrivning",
+                        "kind": "text",
+                        "value": "Påhittat katalogobjekt."
                       },
-                      "currency": {
-                        "knowledge": "known",
+                      {
+                        "id": "price",
+                        "label": "Pris",
+                        "kind": "number",
+                        "value": 229.0
+                      },
+                      {
+                        "id": "currency",
+                        "label": "Valuta",
+                        "kind": "text",
                         "value": "SEK"
                       },
-                      "paymentInterval": {
-                        "knowledge": "known",
+                      {
+                        "id": "paymentInterval",
+                        "label": "Betalningsintervall",
+                        "kind": "text",
                         "value": "månad"
                       }
-                    }
+                    ]
                   }
                 },
                 "addRelationships": [
                   {
                     "source": "alex",
                     "type": "Använder",
-                    "target": "spotify",
-                    "knowledge": "known"
+                    "target": "spotify"
                   },
                   {
                     "source": "lo",
                     "type": "Använder",
-                    "target": "spotify",
-                    "knowledge": "known"
+                    "target": "spotify"
                   },
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
-                    "target": "card",
-                    "knowledge": "known"
+                    "target": "card"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
-                    "target": "bank",
-                    "knowledge": "known"
+                    "target": "bank"
                   },
                   {
                     "source": "lo",
                     "type": "Betalar",
-                    "target": "cloud-sub",
-                    "knowledge": "known"
+                    "target": "cloud-sub"
                   }
                 ],
                 "removeRelationships": [
                   {
                     "source": "mira",
                     "type": "Använder",
-                    "target": "spotify",
-                    "knowledge": "known"
+                    "target": "spotify"
                   },
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
-                    "target": "reserve",
-                    "knowledge": "known"
+                    "target": "reserve"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
-                    "target": "card",
-                    "knowledge": "known"
+                    "target": "card"
                   },
                   {
                     "source": "alex",
                     "type": "Betalar",
-                    "target": "cloud-sub",
-                    "knowledge": "known"
+                    "target": "cloud-sub"
                   }
                 ],
                 "objectTypes": [],
@@ -1018,8 +1205,7 @@
                   {
                     "source": "lo",
                     "type": "Använder",
-                    "target": "spotify",
-                    "knowledge": "known"
+                    "target": "spotify"
                   }
                 ],
                 "saves": 0,
@@ -1035,28 +1221,39 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "229"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 229.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [
               {
                 "source": "lo",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               }
             ],
             "removeRelationships": [],
@@ -1079,22 +1276,19 @@
               {
                 "source": "alex",
                 "type": "Använder",
-                "target": "m365",
-                "knowledge": "known"
+                "target": "m365"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "reserve",
-                "knowledge": "known"
+                "target": "reserve"
               }
             ],
             "removeRelationships": [
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "card",
-                "knowledge": "known"
+                "target": "card"
               }
             ],
             "objectTypes": [],
@@ -1149,8 +1343,7 @@
               {
                 "source": "m365",
                 "type": "Levererar till",
-                "target": "tenant",
-                "knowledge": "known"
+                "target": "tenant"
               }
             ],
             "removeRelationships": [],
@@ -1196,114 +1389,111 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "229"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 229.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [
               {
                 "source": "alex",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "lo",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "alex",
                 "type": "Använder",
-                "target": "m365",
-                "knowledge": "known"
+                "target": "m365"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "card",
-                "knowledge": "known"
+                "target": "card"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "alex-email",
-                "knowledge": "known"
+                "target": "alex-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "house-email",
-                "knowledge": "known"
+                "target": "house-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "bank",
-                "knowledge": "known"
+                "target": "bank"
               },
               {
                 "source": "lo",
                 "type": "Betalar",
-                "target": "cloud-sub",
-                "knowledge": "known"
+                "target": "cloud-sub"
               },
               {
                 "source": "mira",
                 "type": "Använder",
-                "target": "cloud",
-                "knowledge": "known"
+                "target": "cloud"
               }
             ],
             "removeRelationships": [
               {
                 "source": "mira",
                 "type": "Använder",
-                "target": "spotify",
-                "knowledge": "known"
+                "target": "spotify"
               },
               {
                 "source": "spotify-sub",
                 "type": "Betalas med",
-                "target": "reserve",
-                "knowledge": "known"
+                "target": "reserve"
               },
               {
                 "source": "alex-work",
                 "type": "Inloggningsadress",
-                "target": "shared-email",
-                "knowledge": "known"
+                "target": "shared-email"
               },
               {
                 "source": "alex-work",
                 "type": "Kontaktadress",
-                "target": "shared-email",
-                "knowledge": "known"
+                "target": "shared-email"
               },
               {
                 "source": "cloud-sub",
                 "type": "Betalas med",
-                "target": "card",
-                "knowledge": "known"
+                "target": "card"
               },
               {
                 "source": "alex",
                 "type": "Betalar",
-                "target": "cloud-sub",
-                "knowledge": "known"
+                "target": "cloud-sub"
               }
             ],
             "objectTypes": [],
@@ -1325,90 +1515,91 @@
               "waiting": {
                 "objects": {
                   "cloud-sub": {
-                    "financialFacts": {
-                      "price": {
-                        "knowledge": "known",
-                        "value": "229"
+                    "properties": [
+                      {
+                        "id": "description",
+                        "label": "Beskrivning",
+                        "kind": "text",
+                        "value": "Påhittat katalogobjekt."
                       },
-                      "currency": {
-                        "knowledge": "known",
+                      {
+                        "id": "price",
+                        "label": "Pris",
+                        "kind": "number",
+                        "value": 229.0
+                      },
+                      {
+                        "id": "currency",
+                        "label": "Valuta",
+                        "kind": "text",
                         "value": "SEK"
                       },
-                      "paymentInterval": {
-                        "knowledge": "known",
+                      {
+                        "id": "paymentInterval",
+                        "label": "Betalningsintervall",
+                        "kind": "text",
                         "value": "månad"
                       }
-                    }
+                    ]
                   }
                 },
                 "addRelationships": [
                   {
                     "source": "lo",
                     "type": "Använder",
-                    "target": "spotify",
-                    "knowledge": "known"
+                    "target": "spotify"
                   },
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
-                    "target": "card",
-                    "knowledge": "known"
+                    "target": "card"
                   },
                   {
                     "source": "alex-work",
                     "type": "Inloggningsadress",
-                    "target": "alex-email",
-                    "knowledge": "known"
+                    "target": "alex-email"
                   },
                   {
                     "source": "alex-work",
                     "type": "Kontaktadress",
-                    "target": "house-email",
-                    "knowledge": "known"
+                    "target": "house-email"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
-                    "target": "bank",
-                    "knowledge": "known"
+                    "target": "bank"
                   },
                   {
                     "source": "lo",
                     "type": "Betalar",
-                    "target": "cloud-sub",
-                    "knowledge": "known"
+                    "target": "cloud-sub"
                   }
                 ],
                 "removeRelationships": [
                   {
                     "source": "spotify-sub",
                     "type": "Betalas med",
-                    "target": "reserve",
-                    "knowledge": "known"
+                    "target": "reserve"
                   },
                   {
                     "source": "alex-work",
                     "type": "Inloggningsadress",
-                    "target": "shared-email",
-                    "knowledge": "known"
+                    "target": "shared-email"
                   },
                   {
                     "source": "alex-work",
                     "type": "Kontaktadress",
-                    "target": "shared-email",
-                    "knowledge": "known"
+                    "target": "shared-email"
                   },
                   {
                     "source": "cloud-sub",
                     "type": "Betalas med",
-                    "target": "card",
-                    "knowledge": "known"
+                    "target": "card"
                   },
                   {
                     "source": "alex",
                     "type": "Betalar",
-                    "target": "cloud-sub",
-                    "knowledge": "known"
+                    "target": "cloud-sub"
                   }
                 ],
                 "objectTypes": [],
@@ -1444,20 +1635,32 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "229"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 229.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [],
@@ -1495,34 +1698,31 @@
     },
     {
       "id": "custom-type-date",
-      "title": "Skapa objekttyp, datumfält och objekt",
+      "title": "Skapa objekttyp och objekt med fri datumegenskap",
       "voice": false,
       "steps": [
         {
           "id": "custom-type",
-          "text": "Skapa objekttypen Solcellsanläggning med datumfältet Installationsdatum. Lägg till Soltak Norr 7 med installationsdatum 3 juni 2025.",
+          "text": "Skapa objekttypen Solcellsanläggning. Lägg till Soltak Norr 7 med den fria datumegenskapen Installationsdatum, 3 juni 2025.",
           "expected": {
             "objects": {
               "solar": {
                 "type": "Solcellsanläggning",
                 "name": "Soltak Norr 7",
-                "description": "",
-                "customValues": {
-                  "Installationsdatum": "2025-06-03"
-                }
+                "properties": [
+                  {
+                    "label": "Installationsdatum",
+                    "kind": "date",
+                    "value": "2025-06-03"
+                  }
+                ]
               }
             },
             "addRelationships": [],
             "removeRelationships": [],
             "objectTypes": [
               {
-                "name": "Solcellsanläggning",
-                "fields": [
-                  {
-                    "name": "Installationsdatum",
-                    "kind": "date"
-                  }
-                ]
+                "name": "Solcellsanläggning"
               }
             ],
             "saveAttempts": 0,
@@ -1545,28 +1745,13 @@
           "text": "Jag vet inte vem som använder Norrsken Molnlagring.",
           "expected": {
             "objects": {},
-            "addRelationships": [
-              {
-                "source": "cloud",
-                "type": "Används av",
-                "target": null,
-                "knowledge": "unknown"
-              }
-            ],
-            "removeRelationships": [
-              {
-                "source": "cloud",
-                "type": "Används av",
-                "target": "alex",
-                "knowledge": "known"
-              }
-            ],
+            "addRelationships": [],
+            "removeRelationships": [],
             "objectTypes": [],
             "saveAttempts": 0,
             "saves": 0,
             "requirements": [
-              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående.",
-              "Om svaret beskriver användningen ska den vara okänd. Påstå inte att ingen använder tjänsten och peka inte ut en person. En allmän utkastbekräftelse räcker."
+              "Be användaren precisera ändpunkten eller vilken befintlig koppling som ska rättas. Behåll begäran i samtalet utan att skapa ett samband, objekt eller en ersättningsegenskap och utan att ändra kartan."
             ]
           }
         }
@@ -1583,28 +1768,13 @@
           "text": "Ingen använder Norrsken Molnlagring.",
           "expected": {
             "objects": {},
-            "addRelationships": [
-              {
-                "source": "cloud",
-                "type": "Används av",
-                "target": null,
-                "knowledge": "none"
-              }
-            ],
-            "removeRelationships": [
-              {
-                "source": "cloud",
-                "type": "Används av",
-                "target": "alex",
-                "knowledge": "known"
-              }
-            ],
+            "addRelationships": [],
+            "removeRelationships": [],
             "objectTypes": [],
             "saveAttempts": 0,
             "saves": 0,
             "requirements": [
-              "Ge ett kort verifierat ändringsbesked om utkastet, utan obegärd uppräkning, sparfråga eller sparpåstående.",
-              "Om svaret beskriver användningen ska det vara uttryckligen ingen användare. Påstå inte okänd användare och peka inte ut en person. En allmän utkastbekräftelse räcker."
+              "Be användaren precisera ändpunkten eller vilken befintlig koppling som ska rättas. Behåll begäran i samtalet utan att skapa ett samband, objekt eller en ersättningsegenskap och utan att ändra kartan."
             ]
           }
         }
@@ -1626,15 +1796,20 @@
                 "source": "cloud",
                 "type": "Används av",
                 "target": "mira",
-                "knowledge": "uncertain"
+                "properties": [
+                  {
+                    "label": "Osäkert uppgivet",
+                    "kind": "boolean",
+                    "value": true
+                  }
+                ]
               }
             ],
             "removeRelationships": [
               {
                 "source": "cloud",
                 "type": "Används av",
-                "target": "alex",
-                "knowledge": "known"
+                "target": "alex"
               }
             ],
             "objectTypes": [],
@@ -1660,20 +1835,32 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "199"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 199.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [],
@@ -1699,20 +1886,32 @@
           "expected": {
             "objects": {
               "spotify-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "189"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 189.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [],
@@ -1731,20 +1930,32 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "229"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 229.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [],
@@ -1793,20 +2004,32 @@
           "expected": {
             "objects": {
               "cloud-sub": {
-                "financialFacts": {
-                  "price": {
-                    "knowledge": "known",
-                    "value": "239"
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Påhittat katalogobjekt."
                   },
-                  "currency": {
-                    "knowledge": "known",
+                  {
+                    "id": "price",
+                    "label": "Pris",
+                    "kind": "number",
+                    "value": 239.0
+                  },
+                  {
+                    "id": "currency",
+                    "label": "Valuta",
+                    "kind": "text",
                     "value": "SEK"
                   },
-                  "paymentInterval": {
-                    "knowledge": "known",
+                  {
+                    "id": "paymentInterval",
+                    "label": "Betalningsintervall",
+                    "kind": "text",
                     "value": "månad"
                   }
-                }
+                ]
               }
             },
             "addRelationships": [],

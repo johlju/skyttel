@@ -19,7 +19,6 @@ const state = {
       typeId: 'person',
       revision: 1,
       name: 'Lampan',
-      description: '',
     },
   ],
   draft: { version: 0, changes: [] },

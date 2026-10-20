@@ -73,7 +73,7 @@ export async function openTypeDefinitions(page: Page) {
   await openSettings(page);
   const navigation = page.getByRole('navigation', { name: 'Inställningarnas sidor', exact: true });
   const link = navigation.getByRole('link', {
-    name: 'Typer och egna fält',
+    name: 'Typer',
     exact: true,
     includeHidden: true,
   });
@@ -81,7 +81,7 @@ export async function openTypeDefinitions(page: Page) {
   if (!(await link.isVisible()))
     await navigation.getByText('Välj inställning', { exact: true }).click();
   await link.click();
-  const definitions = page.getByRole('heading', { name: 'Typer och egna fält', exact: true });
+  const definitions = page.getByRole('heading', { name: 'Typer', exact: true });
   await expect(definitions).toBeVisible();
   return definitions;
 }

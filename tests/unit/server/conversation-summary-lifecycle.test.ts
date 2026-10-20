@@ -58,7 +58,7 @@ test.each(['new', 'cancel', 'stop', 'revoke'] as const)(
           contentVersion: 1,
           id: 'kept',
           baseRevision: null,
-          value: { typeId: map.types[0].id, name: 'Förslaget som ligger kvar', description: '' },
+          value: { typeId: map.types[0].id, name: 'Förslaget som ligger kvar' },
         })
       ).status(),
     ).toBe(200);

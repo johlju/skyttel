@@ -11,27 +11,23 @@ export async function prepareTableDetailProposals(client: APIRequestContext, ori
   await app.post('object-type', {
     id: type.id,
     baseRevision: type.revision,
-    value: {
-      ...type,
-      fields: [
-        { ...type.fields?.[0], name: 'Föreslagen anteckning' },
-        { id: 'frame', name: 'Ramnummer', description: '', kind: 'text', sectionId: '' },
-        { id: 'count', name: 'Antal', description: '', kind: 'number', sectionId: '' },
-        { id: 'reserve', name: 'Reserv', description: '', kind: 'boolean', sectionId: '' },
-      ],
-    },
+    value: { ...type },
   });
   await app.post('draft', {
     id: proposal.id,
     baseRevision: proposal.before?.revision ?? null,
     value: {
       ...proposal.after,
-      customValues: {
-        ...proposal.after.customValues,
-        frame: 'RAM-2026-42',
-        count: 0,
-        reserve: false,
-      },
+      properties: [
+        ...(proposal.after.properties ?? [])
+          .filter((property) => !['frame', 'count', 'reserve'].includes(property.id))
+          .map((property) =>
+            property.id === 'note' ? { ...property, label: 'Föreslagen anteckning' } : property,
+          ),
+        { id: 'frame', label: 'Ramnummer', kind: 'text' as const, value: 'RAM-2026-42' },
+        { id: 'count', label: 'Antal', kind: 'number' as const, value: 0 },
+        { id: 'reserve', label: 'Reserv', kind: 'boolean' as const, value: false },
+      ],
     },
   });
   return app;

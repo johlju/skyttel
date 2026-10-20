@@ -50,11 +50,7 @@ test('FLYTT-01: a fresh installation restores an archive, explicitly assigns pri
     await post('object-type', {
       id: typeId,
       baseRevision: 1,
-      value: {
-        name: 'Person',
-        description: 'Egen betydelse',
-        fields: [{ id: 'note', name: 'Notering', description: '', kind: 'text' }],
-      },
+      value: { name: 'Person', description: 'Egen betydelse' },
     });
     for (const id of ['shared', 'retired'])
       await post('draft', {
@@ -62,9 +58,16 @@ test('FLYTT-01: a fresh installation restores an archive, explicitly assigns pri
         baseRevision: null,
         value: {
           name: id,
-          description: 'Påhittat innehåll',
           typeId,
-          customValues: { note: 'SYNTHETIC' },
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Påhittat innehåll',
+            },
+            { id: 'note', label: 'Notering', kind: 'text' as const, value: 'SYNTHETIC' },
+          ],
         },
       });
     await post('save', { operationId: 'original-content' });
@@ -175,7 +178,7 @@ test('FLYTT-01: a fresh installation restores an archive, explicitly assigns pri
             contentVersion: restored.contentVersion,
             id: 'destination-private',
             baseRevision: null,
-            value: { name: 'Nytt privat arbete', description: '', typeId },
+            value: { name: 'Nytt privat arbete', typeId },
           },
         })
       ).status(),

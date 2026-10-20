@@ -1,76 +1,63 @@
-# Manuella testfall för sambandstyper
+# Manuella testfall för sambandstyper och fria egenskaper
 
-Testfallen omfattar riktning, gemensamma definitioner, privata utkast,
-dubbletter, samtidiga ändringar samt egna fält och sambandsvärden.
-Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
+Fallen provar delade definitioner, riktning, dubbletter, typbyte och sambandens
+individuella uppgifter.
 
-## Konfigurerade användare
+## Förberedelse och arbetssätt
 
-- Alex är administratör i testhushållet och loggar in med Google.
-- Lo är vanlig medlem i samma hushåll och använder en separat profil.
-  Alex bjuder in Lo enligt [tillgångsguiden](../user-guide/access.md).
-- Kim är inloggad men saknar tillgång till hushållet.
-- Alla uppgifter är påhittade och lagras i en separat testinstallation.
+Använd en separat
+[provinstallation](../development/devcontainer.md#disposable-local-database)
+med påhittade uppgifter. Börja varje fall i ett nytt hushåll. Logga in som
+Alex och bjud vid behov in Robin enligt
+[tillgångsguiden](../user-guide/access.md)
+i en separat webbläsarprofil. Anteckna commit, webbläsare och observerat utfall.
+Starta bara om provinstallationen, och behåll dess databas inom samma fall.
 
-## Allmän förberedelse
+Öppna **Nytt objekt** från kartans verktyg eller **Tabell → Redigera [namn]**.
+Objektets **Fria egenskaper** innehåller **Lägg till egenskap**. Varje rad
+har **Etikett**, **Datatyp** och **Värde**. **Töm värdet** behåller raden;
+**Ta bort egenskapen** tar bort raden. Etiketter får upprepas.
 
-Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
-fallen anger formulär, samtal, profil eller administration.
+Öppna samband genom **Tabell → Samband för [namn]** och **Nytt samband**
+eller **Redigera samband**. Egenskapsraderna finns direkt i sambandsformuläret.
+**Lägg i utkastet** skickar hela sambandet. Välj **Stäng samband** innan
+annat arbete. Typdefinitioner finns under **Inställningar → Typer**;
+**Objekttyper** och **Sambandstyper och riktning** visar respektive lista.
+Välj **Tillbaka till kartan** före objekt- och sambandsarbete.
 
-För att ändra ett samband, öppna **Tabell**, välj **Samband för** objektet
-och **Redigera samband** vid den aktuella kopplingen. Välj **Nytt samband**
-i samma dialog för ett tillägg. Objekt som saknas skapas separat med
-**Nytt objekt**. **Lägg i utkastet** skickar hela sambandsformuläret och
-lämnar dialogen öppen. Välj **Stäng samband** innan du sparar utkastet
-eller fortsätter med annat arbete.
+Granska utkastet genom **Skriv till Skyttel → Visa utkastet → Visa förslaget:
+[namn]**.
+Stäng läsningen med krysset. Spara hela utkastet separat och invänta
+**Utkastet är sparat**. Stäng textvyn före fortsatt tabellarbete.
+Rapporter visar **Ändringshistorik** med **Visa ändringarna**.
 
-Definitioner öppnas genom **Inställningar → Typer och egna fält**.
-Välj **Tillbaka till kartan** före sambandsarbete och granskning.
-Granska hela utkastet genom **Skriv till Skyttel → Visa utkastet** och
-öppna **Visa förslaget: [namn]** för kompletta definitioner och värden.
-Stäng läsningen med krysset. Spara separat med utkastets sparikon och vänta
-på **Utkastet är sparat**. Stäng textvyn före fortsatt arbete i Tabell.
-En läsande sambandsöversikt stängs med krysset; **Stäng samband** hör till
-sambandsarbetet efter tillägg och redigering.
+## Definitioner och riktning
 
-1. Starta appen enligt
-   [provförberedelsen](../development/devcontainer.md#disposable-local-database)
-   med riktig SQLite. Börja varje fall i ett nytt hushåll utan privata förslag.
-2. Använd [sambandstypguiden](../user-guide/relationship-types.md) för att hitta
-   formulären. Starta bara om den separata testinstallationen.
-3. Vid HTTP-kontroll, använd den inloggade profilens nätverkspanel.
-   Kartans adress är `/api/households/<hushållets id>/map` och historiken
-   har tillägget `/history`. Hushållets ID finns i kartans vanliga
-   nätverksbegäran. Publicera inga sessionsuppgifter eller testinnehåll.
+### STY-01: Typ och individuella sambandsegenskaper sparas tillsammans
 
-## Definition och koppling
+**Syfte:** Definition, två verkliga objekt och individuell sambandsegenskap
+bevaras i samma privata
+utkast och samlade sparande.
 
-### STY-01: Typ- och fältformulär sparas med ett riktat samband
+**Användare:** Alex, och Robin i separat profil när stegen anger en annan
+medlem.
 
-**Syfte:** Kontrollera native formulärvalidering, beständigt utkast och samlat
-sparande av definition, objekt och samband.
-
-**Användare:** Alex.
-
-**Förutsättningar:** Ett tomt provhushåll där Förvaring saknas.
-
-**Integrationstest:**
-[relationship-types.spec.ts](../../tests/integration/relationship-types.spec.ts),
-STY-01. Samma formulärflöde verifierar också exakta HTTP-kvitton och
-återspelning; dessa kontroller kräver inga ytterligare manuella UI-steg.
+**Förutsättningar:** Nytt provhushåll utan objekt eller förslag.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/relationship-types.spec.ts",
     "caseId": "STY-01"
   },
-  "reference": "Chromium, datorvy; angivna roller och förberedda hushållsdata",
+  "reference": "Chromium på dator; riktig lokal server och SQLite.",
   "outcomes": [
-    "Definition, objekt och riktat samband består i ett privat utkast efter omstart.",
-    "Samlat sparande bevarar Anteckning och båda riktningarna efter omstart."
+    "Definition, två verkliga objekt och individuell sambandsegenskap bevaras i samma privata utkast och samlade sparande.",
+    "Efter omstart visar sambandet Låst skåp med rätt riktning."
   ]
 }
 ```
@@ -79,651 +66,413 @@ STY-01. Samma formulärflöde verifierar också exakta HTTP-kvitton och
 
 **Steg:**
 
-1. Öppna Inställningar → Typer och egna fält och Ny sambandstyp.
-   Försök lägga i utkastet utan namn. Fyll Förvaring, försök igen utan
-   startbenämning, fyll förvaras i och försök utan målbenämning.
-   Kontrollera att fokus går till varje obligatoriskt fält. Fyll innehåller
-   och beskrivningen Var hushållets saker finns.
-2. Välj Lägg till fält och försök skicka med tomt fältnamn. Kontrollera
-   fokus på Fältets namn. Ange Anteckning som Text och lägg typen i utkastet.
-3. Välj Tillbaka till kartan. Skapa Alex blå cykel som Fordon och Garaget
-   som Bostad i separata objektformulär; lägg båda i utkastet.
-4. Öppna Samband för Alex blå cykel och Nytt samband. Välj Förvaring,
-   Garaget som mål och skriv Låst skåp i Anteckning. Lägg i utkastet och stäng.
-5. Starta om provinstallationen och ladda om. Öppna Utkastet och Visa
-   förslaget: Alex blå cykel → förvaras i → Garaget. Läs Låst skåp.
-   Stäng läsningen, spara hela utkastet och invänta Utkastet är sparat.
-6. Starta om igen och ladda om. Öppna sambanden för cykeln respektive
-   garaget i Tabell och läs riktningen från båda objekten. Stäng läsningen,
-   redigera sambandet från cykeln och kontrollera Anteckning: Låst skåp.
-   Skicka ingen ytterligare rättelse.
+1. Skapa sambandstypen Förvaring i Typer. Försök skicka före varje
+   obligatoriskt värde
+   och kontrollera fokus. Ange namnet, beskrivningen Var hushållets saker
+finns och
+   benämningarna förvaras i och innehåller. Lägg typförslaget i utkastet.
+2. Skapa Alex blå cykel som Fordon och Garaget som Bostad. Lägg båda i
+   utkastet. Öppna
+   Samband för Alex blå cykel, Nytt samband och välj Förvaring till Garaget.
+Lägg till
+   Anteckning (Text, Låst skåp). Lägg i utkastet och stäng sambandet.
+3. Starta om installationen, ladda om och granska sambandsförslaget. Spara hela
+   utkastet. Starta om igen och läs sambandet.
 
 **Förväntat resultat:**
 
-- Ogiltiga definitioner ger ingen del av ett förslag. Fokus visar det
-  obligatoriska typ-, benämnings- eller fältnamnet som behöver fyllas i.
-- Definition, båda olika objekttyperna och sambandet finns kvar tillsammans
-  i utkastet efter omstart. Låst skåp går att läsa före gemensamt sparande.
-- Sparandet gör uppgifterna gemensamma tillsammans. Efter omstart visas
-  cykeln förvaras i garaget och garaget innehåller cykeln.
-- Före sparandet saknas de nya objekten, sambandet och typen i den gemensamma
-  kartan. STY-01 jämför även de fullständiga förslagen, historiska
-  typdefinitionerna och det exakta kvittot samt återspelning utan dubbletter
-  genom publika HTTP-svar.
+- Definition, två verkliga objekt och individuell sambandsegenskap bevaras i
+  samma privata
+  utkast och samlade sparande.
+- Efter omstart visar sambandet Låst skåp med rätt riktning.
 
-### STY-02: Båda benämningarna öppnar samma riktade samband
+### STY-02: Båda riktningarna visar samma samband
 
-**Syfte:** Kontrollera formulär, obligatorisk typ och rättade definitioner.
+**Syfte:** Båda benämningarna avser samma riktade samband med oförändrade
+objekt och identitet.
 
-**Användare:** Alex.
+**Användare:** Alex, och Robin i separat profil när stegen anger en annan
+medlem.
 
-**Förutsättningar:** Alex blå cykel och Garaget finns i utkastet.
+**Förutsättningar:** Tomt provhushåll. Objektens namn ska vara Alex blå cykel
+och Garaget.
 
-**Integrationstest:**
-[relationship-types.spec.ts](../../tests/integration/relationship-types.spec.ts),
-testfallet “STY-02: forms show the same directed relationship from both
-objects and edit the shared definition”.
-
+<!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/relationship-types.spec.ts",
     "caseId": "STY-02"
   },
-  "reference": "Chromium, datorvy; angivna roller och förberedda hushållsdata",
+  "reference": "Chromium på dator; riktig lokal server och SQLite.",
   "outcomes": [
-    "Båda benämningarna öppnar samma riktade samband"
+    "Båda benämningarna avser samma riktade samband med oförändrade objekt och identitet.",
+    "Dubblett ger begripligt besked och typens namnändring visas efter samlat sparande."
   ]
 }
 ```
 -->
-
-**Ytterligare tekniskt underlag:** Efter det första gemensamma sparandet
-läser samma test kartans HTTP-svar och behåller sambandets identitet.
-Efter typens rättelse och omladdning jämför testet det sparade sambandet:
-identiteten är densamma, revisionen är 1, startobjektet är cykeln och
-målobjektet är garaget. Kartans HTTP-svar innehåller bara ett samband.
-Dessa protokollkontroller är separata från den vanliga UI-proceduren.
+<!-- markdownlint-enable MD013 -->
 
 **Steg:**
 
-1. Skapa Förvaring med benämningarna och beskrivningen i STY-01.
-2. Öppna cykelns sambandsdialog, välj Nytt samband och garaget. Prova att lägga
-   kopplingen i utkastet utan typ. Välj sedan Förvaring och lägg till.
-3. Öppna utkastets fullständiga definitionsläsning och läs båda
-   benämningarna. Stäng läsningen och textvyn. Prova ett identiskt
-   tillägg i samma utkast och läs beskedet med cykelns och garagets namn.
-   Välj **Avbryt redigeringen** och bekräfta att bara den oskickade
-   dubblettinmatningen kastas. Stäng sambandsdialogen, spara hela utkastet
-   och ladda om. Öppna **Samband för Alex blå cykel** i Tabell. Läs
-   cykelns benämning, stäng dialogen och öppna **Samband för Garaget**.
-4. Läs garagets benämning och välj **Redigera samband**.
-   Kontrollera att startobjektet fortfarande är cykeln och målobjektet
-   garaget. Välj **Avbryt redigeringen** och stäng översikten med krysset.
+1. Skapa Alex blå cykel och Garaget i utkastet. Skapa Förvaring med
+   beskrivningen Var
+   hushållets saker finns och benämningarna förvaras i och innehåller.
+2. Öppna Nytt samband från cykeln och välj Garaget. Försök skicka utan typ,
+   välj sedan
+   Förvaring och lägg i utkastet. Läs typens omvända benämning i förslaget.
+3. Försök lägga till samma typ och ändpunkter igen. Läs Sambandet finns redan
+   och avbryt
+   formuläret med bekräftad förlust. Spara hela utkastet.
+4. Läs sambandet från cykeln och från Garaget. Öppna redigering från Garaget och
+   kontrollera att cykeln fortfarande är frånobjektet. Stäng utan ändring.
 5. Ändra typens namn till Plats, beskrivningen till Hushållets
-   förvaringsplatser och startbenämningen till finns i. Granska skillnaden,
-   spara och ladda om. Öppna **Samband för Alex blå cykel** i Tabell
-   och läs **Alex blå cykel → finns i → Garaget**.
+   förvaringsplatser och
+   benämningen från startobjektet till finns i. Granska definitionens gamla
+och nya
+   beskrivning, spara och läs sambandet igen.
 
 **Förväntat resultat:**
 
-- Kopplingen kräver en typ. Benämningarna beskriver samma samband:
-  cykeln förvaras i garaget och garaget innehåller cykeln.
-- Även när typen är privat beskriver ett upprepat tillägg det befintliga
-  sambandet med namn och benämning utan att skapa en dubblett.
-- Definitionens rättelse ändrar den lästa benämningen till finns i.
-  Cykeln och garaget är fortfarande kopplade i samma riktning.
+- Båda benämningarna avser samma riktade samband med oförändrade objekt och
+  identitet.
+- Dubblett ger begripligt besked och typens namnändring visas efter samlat
+  sparande.
 
-### STY-03: Medlemmar redigerar typer utan att privata förslag röjs
+### STY-03: Vanlig medlem redigerar delad typ med privat förslag
 
-**Syfte:** Kontrollera medlemsroll, förifyllda typer och hushållsgränser.
+**Syfte:** Vanlig medlem kan föreslå och spara ändring av delad sambandstyp
+medan det osparade
+typförslaget förblir privat.
 
-**Användare:** Alex, Lo och Kim.
+**Användare:** Alex, och Robin i separat profil när stegen anger en annan
+medlem.
 
-**Förutsättningar:** Lo är vanlig medlem och Kim saknar tillgång.
+**Förutsättningar:** Alex och Robin delar samma hushåll i separata profiler.
+Spara först Gemensamt objekt.
 
-**Integrationstest:**
-[relationship-types.spec.ts](../../tests/integration/relationship-types.spec.ts),
-testfallet “STY-03: members share editable prefills while private definitions
-and household boundaries stay protected”.
-
+<!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/relationship-types.spec.ts",
     "caseId": "STY-03"
   },
-  "reference": "Chromium, datorvy; angivna roller och förberedda hushållsdata",
+  "reference": "Chromium på dator; riktig lokal server och SQLite.",
   "outcomes": [
-    "Medlemmar redigerar typer utan att privata förslag röjs"
+    "Vanlig medlem kan föreslå och spara ändring av delad sambandstyp medan det osparade typförslaget förblir privat.",
+    "Efter sparandet läser Alex Medlemmens förklaring."
   ]
 }
 ```
 -->
-
-**Ytterligare tekniskt underlag:** Samma automatisering provar tomt namn,
-tom benämning från vardera håll, ogiltiga fältdefinitioner, oförändrat utkast
-efter HTTP 400 och Kims HTTP 403 för läsning och ändring. Dessa är tekniska
-kontroller; den vanliga UI-proceduren kräver inte att begäranden redigeras.
+<!-- markdownlint-enable MD013 -->
 
 **Steg:**
 
-1. Lo öppnar Inställningar → Typer och egna fält och Ny sambandstyp.
-   Fyll Förvaring, beskrivningen Förvaringsplats samt benämningarna
-   förvaras i och innehåller. Lägg typen i utkastet.
-2. Alex öppnar samma inställning och avsnittet Sambandstyper och riktning.
-   Kontrollera att Los privata Förvaring inte visas. Lo återgår till kartan,
-   öppnar Utkastet och läser det fullständiga definitionsförslaget.
-   Lo stänger läsningen och sparar hela utkastet. Alex laddar om och öppnar
-   avsnittet igen; Förvaring ska nu vara gemensam.
-3. Lo öppnar en förifylld typ för ändring och anger Redigerad förifylld typ,
-   Förvaringsplats, förvaras i och innehåller. Lägg i utkastet, återgå till
-   kartan och spara. Skapa Medlemmens cykel separat i utkastet och öppna
-   dess sambandsdialog och Nytt samband. Kontrollera typens nya namn.
-   Stäng utan att lägga till något samband.
-4. Alex skapar genom Ny sambandstyp en separat definition med samma namn
-   Förvaring och samma benämningar. Lägg i utkastet, spara och återgå till
-   typinställningen. Öppna Sambandstyper och riktning vid behov.
+1. Robin öppnar Typer, Sambandstyper och riktning och ändrar hushållets första
+   sambandstyp, Använder. Ange Medlemmens förklaring som beskrivning och
+   **används av** i det obligatoriska fältet **Benämning från målobjektet**.
+   Behåll namnet och benämningen från startobjektet. Lägg typförslaget i
+   utkastet och kontrollera att förslaget finns i Robins utkast.
+2. Alex kontrollerar att Robins förslag inte finns i Alex utkast och att den
+   sparade
+   typen fortfarande har sin gamla beskrivning.
+3. Robin sparar hela utkastet. Alex laddar om, öppnar samma typ och läser
+   beskrivningen och benämningen **används av** från målobjektet.
 
 **Förväntat resultat:**
 
-- Lo kan skapa och rätta definitioner genom samma formulär som Alex.
-  Alex ser inte Los privata definition före sparandet.
-- Rättad förifylld typ visas i sambandsformuläret med det nya namnet.
-- Två separata Förvaring visas i katalogen; lika namn slår inte ihop typer.
-  Den separata automatiska identitets- och åtkomstkontrollen behålls.
+- Vanlig medlem kan föreslå och spara ändring av delad sambandstyp medan det
+  osparade
+  typförslaget förblir privat.
+- Efter sparandet läser Alex Medlemmens förklaring.
 
-## Samtidighet och dubbletter
+### STY-04: Typkonflikt bevarar oberoende definitionsändring
 
-### STY-04: Konfliktval bevarar oberoende definitionsändringar
+**Syfte:** Konflikten stoppar hela sparandet fram till uttryckligt val.
 
-**Syfte:** Stoppa hela sparandet och bevara oberoende rättelser i historiken.
+**Användare:** Alex, och Robin i separat profil när stegen anger en annan
+medlem.
 
-**Användare:** Alex och Lo.
+**Förutsättningar:** Alex och Robin delar ett tomt hushåll i separata profiler.
 
-**Förutsättningar:** Förvaring är sparad med benämningarna i STY-01.
-
-**Separat förberedelse:**
-
-1. Alex öppnar Förvaring i typinställningen, föreslår Plats och
-   målbenämningen har. Lägg definitionen, Cykeln och Garaget som nya objekt
-   samt ett Förvaring-samband mellan dem i Alex utkast; spara inte.
-2. Lo föreslår Los nya förklaring och målbenämningen rymmer i samma sparade
-   typ och sparar före Alex. Återgå till Alex och ladda om kartan.
-   Automatiseringen förbereder samma två användares underlag genom HTTP.
-
-**Ytterligare tekniskt underlag:** Den gamla sparbegärans HTTP 409,
-oförändrat utkast och inga delsparade objekt, samt definitionsversioner och
-historik efter omstart, kontrolleras i samma test. Konfliktens browserval
-utförs genom den vanliga dialogen enligt stegen nedan.
-
-**Integrationstest:**
-[relationship-types.spec.ts](../../tests/integration/relationship-types.spec.ts),
-testfallet “STY-04: stale definitions stop the whole save and explicit
-resolution preserves independent edits”.
-
+<!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/relationship-types.spec.ts",
     "caseId": "STY-04"
   },
-  "reference": "Chromium, datorvy; angivna roller och förberedda hushållsdata",
+  "reference": "Chromium på dator; riktig lokal server och SQLite.",
   "outcomes": [
-    "Konfliktval bevarar oberoende definitionsändringar"
+    "Konflikten stoppar hela sparandet fram till uttryckligt val.",
+    "Plats och har sparas med Robins oberoende beskrivning Los nya förklaring och sambandet."
   ]
 }
 ```
 -->
+<!-- markdownlint-enable MD013 -->
 
 **Steg:**
 
-1. Öppna Tabell och välj 1 konflikt i ditt utkast. Läs Granska konflikter
-   och den aktuella sparade beskrivningen Los nya förklaring.
-2. Välj det egna typnamnet Plats och målbenämningen har samt den sparade
-   beskrivningen Los nya förklaring. Välj Lägg valen i utkastet och stäng
-   med Escape.
-3. Öppna Utkastet och Visa förslaget: Plats. Läs Los nya förklaring.
-   Stäng läsningen och spara hela utkastet separat.
-4. Starta om provinstallationen med samma databas.
+1. Spara Förvaring med förvaras i och innehåller. Alex föreslår namnet Plats
+   och omvänd
+   benämning har. Lägg också Cykeln, Garaget och ett Förvaring-samband i Alex
+utkast.
+2. Robin ändrar samma sparade typs beskrivning till Los nya förklaring och
+   omvänd
+   benämning till rymmer och sparar.
+3. Alex försöker spara, öppnar Granska konflikter och väljer sina föreslagna
+   motstridiga
+   värden. Lägg valen i utkastet och granska typen Plats.
+4. Spara hela utkastet. Starta om och läs sparandet i historiken.
 
 **Förväntat resultat:**
 
-- Konfliktvalet ändrar bara utkastet; det utför inget gemensamt sparande.
-- Förslaget och det nya sparandet innehåller Plats, Los nya förklaring och
-  har tillsammans med objekten och sambandet.
-- Automatiseringen bevarar den äldre definitionen med rymmer i historiken
-  och kontrollerar sambandets nya definitionsunderlag efter omstart.
+- Konflikten stoppar hela sparandet fram till uttryckligt val.
+- Plats och har sparas med Robins oberoende beskrivning Los nya förklaring och
+  sambandet.
 
-### STY-05: Dubbletter ger ett begripligt resultat utan delsparande
+### STY-05: Dubblett och samtidig sparning ger inget delsparande
 
-**Syfte:** Kontrollera tillägg, ändring och samtidiga försök med egna typer.
+**Syfte:** Dubbletter behåller identitet och skriver inte över befintligt
+samband eller delar av
+utkastet.
 
-**Användare:** Alex och Lo.
+**Användare:** Alex, och Robin i separat profil när stegen anger en annan
+medlem.
 
-**Förutsättningar:** Cykeln, Garaget och Förrådet finns samt typerna
-Förvaring och Annan betydelse, med skilda identiteter.
+**Förutsättningar:** Alex och Robin delar ett tomt hushåll. De fasta
+provnamnen används bara i denna separata
+installation.
 
-**Separat förberedelse:**
-
-1. Skapa och spara Förvaring och Annan betydelse samt Cykeln, Garaget och
-   Förrådet. Skapa ett samband av varje typ från Cykeln till Garaget.
-2. Rätta det andra sambandet till Förvaring i omvänd riktning. Välj Upphört
-   och känt slutdatum 2020-01-01. Lägg rättelsen i utkastet och spara.
-3. Alex föreslår typnamnet Mitt nya namn, objektet Privat följeslagare
-   samt Förvaring från Cykeln till Förrådet. Spara inte. Lo lägger samma
-   riktade samband i sitt utkast och sparar först. Återgå till Alex och
-   ladda om kartan. Automatiseringen förbereder dessa underlag genom HTTP.
-
-**Ytterligare tekniskt underlag:** Upprepat HTTP-tillägg ger befintlig
-identitet; en överlappande ändring avvisas utan mutation. Det gamla hela
-sparandet avvisas utan delsparande. Samma test behåller tidigare typ,
-riktning, ändpunkter och datum i historiken. Detta är automatiska
-protokollkontroller, inte extra steg i det vanliga browserfallet.
-
-**Integrationstest:**
-[relationship-types.spec.ts](../../tests/integration/relationship-types.spec.ts),
-testfallet “STY-05: duplicate adds, edits and concurrent saves preserve
-identity and reject every partial write”.
-
+<!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/relationship-types.spec.ts",
     "caseId": "STY-05"
   },
-  "reference": "Chromium, datorvy; angivna roller och förberedda hushållsdata",
+  "reference": "Chromium på dator; riktig lokal server och SQLite.",
   "outcomes": [
-    "Dubbletter ger ett begripligt resultat utan delsparande"
+    "Dubbletter behåller identitet och skriver inte över befintligt samband eller delar av utkastet.",
+    "Borttagning av det egna dubblettförslaget behåller oberoende objekt och typändring; det omvända sambandet förblir upphört."
   ]
 }
 ```
 -->
+<!-- markdownlint-enable MD013 -->
 
 **Steg:**
 
-1. Välj 1 konflikt i ditt utkast. Läs beskedet att ett sparat samband
-   redan har samma typ, riktning och objekt. Kontrollera att dubbletten
-   inte erbjuder egenskapsval eller Lägg valen i utkastet.
-2. Stäng med Escape. Öppna konflikten igen och välj
-   Ta bort sambandet ur ditt utkast. Invänta bekräftelsen.
-3. Granska det återstående utkastet och spara separat genom
-   Skriv till Skyttel → Visa utkastet.
+1. Förbered tre objekt bike, garage och shed samt två sambandstyper Förvaring
+   och Annan
+   betydelse med förvaras i och innehåller. Spara ett samband av varje typ
+mellan bike
+   och garage.
+2. Försök lägga till Förvaring mellan samma objekt igen och sedan ändra det
+   andra
+   sambandet till samma riktning och typ. Kontrollera dubblettbeskeden. Vänd i
+stället
+   det andra sambandet, välj Upphört och spara.
+3. Alex föreslår Förvaring mellan bike och shed, en namnändring av typen och ett
+   oberoende objekt. Robin lägger samma samband i sitt utkast och sparar först.
+4. Alex försöker spara och öppnar Granska konflikter. Läs
+   dubblettförklaringen, stäng
+   utan åtgärd och öppna igen. Välj Ta bort sambandet ur ditt utkast. Spara
+därefter
+   hela utkastet och läs historiken.
 
 **Förväntat resultat:**
 
-- Stängning utan val behåller förslagen. Borttagningsvalet tar endast bort
-  Alex dubblett; typnamnsförslaget och Privat följeslagare behålls.
-- Los sparade samband och historiken ändras inte av konfliktvalet.
-- Det nya sparandet behåller Los samband, det oberoende objektet och
-  typnamnet. Det tidigare omvända sambandet behåller Upphört och slutdatum.
+- Dubbletter behåller identitet och skriver inte över befintligt samband eller
+  delar av
+  utkastet.
+- Borttagning av det egna dubblettförslaget behåller oberoende objekt och
+  typändring; det
+  omvända sambandet förblir upphört.
 
-## Egna sambandsuppgifter
+## Individuella egenskaper
 
-### STY-06: Fyra valfria fältslag sparas med sambandet
+### STY-06: Sambandets fria egenskaper bevarar ordning och tomma svar
 
-**Syfte:** Kontrollera att definition och egna svar delar utkast och sparande.
+**Syfte:** Fria sambandsegenskaper behåller talet 0, Nej och en separat tom
+Ja/nej-rad genom
+omstart och rättelse.
 
-**Användare:** Alex.
+**Användare:** Alex, och Robin i separat profil när stegen anger en annan
+medlem.
 
-**Förutsättningar:** Cykeln och Garaget finns i utkastet med olika objekttyper.
-Använd webbläsarvy 1440 × 1000 för hela spara- och omstartskedjan.
+**Förutsättningar:** Nytt provhushåll utan objekt eller förslag.
 
-**Integrationstest:**
-[relationship-fields.spec.ts](../../tests/integration/relationship-fields.spec.ts),
-STY-06, komplett referens vid 1440 × 1000.
-
+<!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/relationship-fields.spec.ts",
     "caseId": "STY-06"
   },
-  "reference": "1440 × 1000; komplett spara- och omstartskedja",
+  "reference": "Chromium 1440 CSS-pixlar; riktig lokal server och SQLite. Mobilvarianten skyddar nåbara åtgärder och omflöde.",
   "outcomes": [
-    "Fyra valfria fältslag sparas med sambandet"
+    "Fria sambandsegenskaper behåller talet 0, Nej och en separat tom Ja/nej-rad genom omstart och rättelse.",
+    "Tangentbordets omordning och inskickning fungerar utan vågrät rullning."
   ]
 }
 ```
 -->
+<!-- markdownlint-enable MD013 -->
 
 **Steg:**
 
-1. Öppna Ny sambandstyp. Ange Förvaring, beskrivningen Var saker finns
-   och benämningarna förvaras i och innehåller.
-2. Lägg till Anteckning som Text, Belopp som Tal, Startdatum som Datum
-   samt Bekräftat och Obesvarat som Ja/nej. Kontrollera att fokus hamnar
-   på det nya fältets namn. Lägg definitionen i utkastet.
-3. Skapa ett samband från Cykeln till Garaget med Förvaring. Ange
-   Låst skåp, 0, 2026-09-27 och Nej. Lämna Obesvarat utan svar.
-4. Prova Tab genom de egna fälten till Obesvarat. Rulla fram Lägg i
-   utkastet och skicka med Enter. Välj **Stäng samband**,
-   öppna **Utkastet → Visa förslaget: Cykeln → förvaras i → Garaget**
-   och läs värdena. Stäng läsningen och spara med sparikonen.
-   Starta om testinstallationen och ladda om sidan.
-5. Öppna **Samband för Cykeln** i Tabell och välj **Redigera samband**.
-   Kontrollera samtliga svar. Ändra Anteckning till Övre hyllan, lägg
-   ändringen i utkastet, stäng dialogen och spara utkastet.
+1. Skapa Alex som Person och Blå cykeln som Fordon i utkastet. Öppna Samband
+   för Alex
+   och Nytt samband. Välj Använder till Blå cykeln.
+2. Lägg till Anteckning (Text, Låst skåp), Belopp (Tal, 0), Startdatum (Datum,
+   2026-09-27), Bekräftat (Ja/nej, Nej) och Obesvarat (Ja/nej, Tomt).
+3. Fokusera Flytta upp på Obesvarat och tryck Enter. Kontrollera fokus på dess
+   Etikett.
+   Nå Lägg i utkastet med tangentbordet och skicka. Stäng sambandet och spara
+hela
+   utkastet.
+4. Starta om, ladda om och redigera sambandet. Kontrollera alla värden och
+   ordningen.
+   Ändra Anteckning till Övre hyllan, lägg i utkastet och spara.
 
 **Förväntat resultat:**
 
-- Definition, riktning och svar sparas tillsammans och återläses efter
-  omstart. Noll och Nej består; Obesvarat förblir obesvarat.
-- Ändring av Anteckning behåller övriga svar och samma sambandsidentitet.
-- Fältnamn och kontroller går att läsa och använda på dator.
-  Mobilens native arbete har ett eget fall, STY-09.
+- Fria sambandsegenskaper behåller talet 0, Nej och en separat tom Ja/nej-rad
+  genom
+  omstart och rättelse.
+- Tangentbordets omordning och inskickning fungerar utan vågrät rullning.
 
-### STY-07: Typbyte kräver beslut om tidigare egna svar
+### STY-09: Sambandets fria egenskaper bevarar ordning och tomma svar
 
-**Syfte:** Förhindra att ett typbyte omtolkar eller tappar egna svar.
+**Syfte:** Fria sambandsegenskaper behåller talet 0, Nej och en separat tom
+Ja/nej-rad genom
+omstart och rättelse.
 
-**Användare:** Alex.
+**Användare:** Alex, och Robin i separat profil när stegen anger en annan
+medlem.
 
-**Förutsättningar:** Förvaring och Tillgång har varsitt textfält Anteckning.
-Ett sparat samband av typen Förvaring har svaret Behåll som historik.
+**Förutsättningar:** Nytt provhushåll utan objekt eller förslag.
 
-**Integrationstest:**
-[relationship-fields.spec.ts](../../tests/integration/relationship-fields.spec.ts),
-testfallet “STY-07: relationship type changes require an explicit decision
-about earlier custom answers”.
-
+<!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
-    "spec": "tests/integration/relationship-fields.spec.ts",
-    "caseId": "STY-07"
-  },
-  "reference": "Chromium, datorvy; angivna roller och förberedda hushållsdata",
-  "outcomes": [
-    "Typbyte kräver beslut om tidigare egna svar"
-  ]
-}
-```
--->
-
-**Steg:**
-
-1. Öppna cykelns sambandsdialog och välj **Redigera samband**.
-2. Välj Tillgång. Läs **Ta bort tidigare egna fält?**, med
-   **Anteckning: Behåll som historik**. Typen och det sparade sambandet
-   är oförändrade innan beslutet.
-3. Välj **Ta bort fältvärdena och byt typ**. Kontrollera att den nya
-   typens Anteckning är tom. Skriv Ny betydelse och lägg sambandet i
-   utkastet med tangentbordet. Välj **Stäng samband**.
-4. Öppna Utkastet och Visa förslaget för sambandet. Läs tidigare värde
-   och förslag, stäng läsningen och spara med sparikonen. Läs historiken.
-
-**Förväntat resultat:**
-
-- Förslaget kan inte skickas före det uttryckliga beslutet. Fält med
-  samma namn får inte automatiskt samma svar.
-- Den nya typen har Ny betydelse. Historiken behåller Behåll som historik
-  med den tidigare typens definition och samma sambandsidentitet.
-
-### STY-08: Avsnitt bevarar dolda svar och privata definitioner
-
-**Syfte:** Ordna sambandens formulär utan att ändra fältidentitet eller svar.
-
-**Användare:** Alex.
-
-**Förutsättningar:** Cykeln och Garaget finns i hushållets karta eller utkast.
-Använd webbläsarvy 1440 × 1000 med minskad rörelse.
-STY-10 och STY-11 skyddar separat mobilens native arbete.
-
-**Integrationstest:**
-[relationship-sections.spec.ts](../../tests/integration/relationship-sections.spec.ts),
-STY-08, komplett referens vid 1440 × 1000.
-
-<!--
-```manual-mapping
-{
-  "counterpart": {
-    "spec": "tests/integration/relationship-sections.spec.ts",
-    "caseId": "STY-08"
-  },
-  "reference": "1440 × 1000; komplett kedja, båda teman, minskad rörelse",
-  "outcomes": [
-    "Avsnitt bevarar dolda svar och privata definitioner"
-  ]
-}
-```
--->
-
-**Steg:**
-
-1. Öppna Inställningar → Typer och egna fält och välj Ny sambandstyp.
-   Ange Förvaring och benämningarna förvaras i och innehåller.
-2. Namnge avsnitten Uppgifter och Service. Flytta Service upp med
-   tangentbordet och kontrollera att fokus följer avsnittet.
-3. Lägg till Leverantör som Text, Effekt som Tal, Datum som Datum samt
-   Batteri och Reserv som Ja/nej. Placera dem i Uppgifter. Kontrollera
-   läsbarhet och åtkomliga kontroller i ljust och mörkt tema.
-4. Lägg definitionen i utkastet. Skapa sambandet Cykeln → Förvaring →
-   Garaget med svaren Exempelsol, 0, 2026-09-01 och Nej. Lämna Reserv
-   obesvarat och lägg sambandet i utkastet.
-5. Ändra definitionen i Inställningar. Dölj Effekt och flytta Leverantör
-   till Service. Lägg förslaget i utkastet och spara hela utkastet.
-6. Starta om testinstallationen och ladda om sidan. Öppna sambandet för
-   redigering. Effekt ska vara dolt, Batteri ska vara Nej och Reserv
-   obesvarat. Rulla fram Avbryt redigeringen, kontrollera fokus och att
-   åtgärden ryms i vyn. Välj den och stäng sambandsdialogen med krysset.
-7. Ändra definitionen igen och visa Effekt i Service. Lägg den i utkastet
-   och öppna sambandet. Kontrollera att Effekt är 0 och alla andra svar
-   består redan innan definitionen sparas.
-
-**Förväntat resultat:**
-
-- Avsnittens ordning och fältens placering följer det privata utkastet.
-  Förslagen sparas tillsammans; omstart förlorar inga dolda svar.
-- Återvisning behåller samma fältidentiteter och tidigare värden.
-  Noll, Nej och obesvarat förblir skilda.
-- Fokus går att följa och kontrollerna är nåbara vid den valda bredden.
-  Temabyte och intern rullning bevarar pågående redigering.
-
-## Mobilens native formulär
-
-### STY-09: Mobilens fältformulär behåller svar och återfokus
-
-**Syfte:** Kontrollera mobil navigation, tangentbordsfält, rullning och
-återfokus utan att upprepa hela spara- och omstartskedjan.
-
-**Användare:** Alex.
-
-**Förutsättningar:** Cykeln och Garaget finns i utkastet med olika objekttyper.
-Använd webbläsarvy 390 × 1000 för mobil navigation och formulärets
-rullning och fokus.
-
-**Integrationstest:**
-[relationship-fields.spec.ts](../../tests/integration/relationship-fields.spec.ts),
-STY-09, native mobilreferens vid 390 × 1000.
-
-<!--
-```manual-mapping
-{
-  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/relationship-fields.spec.ts",
     "caseId": "STY-09"
   },
-  "reference": "390 × 1000; mobil navigation, fält, rullning och fokus",
+  "reference": "Chromium 390 CSS-pixlar; riktig lokal server och SQLite. Mobilvarianten skyddar nåbara åtgärder och omflöde.",
   "outcomes": [
-    "Mobilens fältformulär behåller svar och återfokus"
+    "Fria sambandsegenskaper behåller talet 0, Nej och en separat tom Ja/nej-rad genom omstart och rättelse.",
+    "Tangentbordets omordning och inskickning fungerar utan vågrät rullning."
   ]
 }
 ```
 -->
+<!-- markdownlint-enable MD013 -->
 
 **Steg:**
 
-1. Öppna Inställningar och Välj inställning. Välj Typer och egna fält
-   och Ny sambandstyp. Ange Förvaring, beskrivningen Var saker finns
-   och benämningarna förvaras i och innehåller.
-2. Lägg till Anteckning som Text, Belopp som Tal, Startdatum som Datum
-   samt Bekräftat och Obesvarat som Ja/nej. Kontrollera att fokus hamnar
-   på det nya fältets namn. Lägg definitionen i utkastet.
-3. Skapa ett samband från Cykeln till Garaget med Förvaring. Ange
-   Låst skåp, 0, 2026-09-27 och Nej. Lämna Obesvarat utan svar.
-4. Prova Tab genom de egna fälten till Obesvarat. Rulla fram
-   Lägg i utkastet och skicka med Enter. Stäng sambandet och läs
-   det fullständiga förslaget i
-   Utkastet. Kontrollera Låst skåp och Nej. Stäng läsningen och textvyn.
-5. Öppna Samband för Cykeln och Redigera samband. Kontrollera 0, Nej och
-   obesvarat. Ändra Anteckning till Övre hyllan, lägg i utkastet och stäng.
-   Kontrollera återfokus på Samband för Cykeln. Spara inte hela utkastet.
+1. Skapa Alex som Person och Blå cykeln som Fordon i utkastet. Öppna Samband
+   för Alex
+   och Nytt samband. Välj Använder till Blå cykeln.
+2. Lägg till Anteckning (Text, Låst skåp), Belopp (Tal, 0), Startdatum (Datum,
+   2026-09-27), Bekräftat (Ja/nej, Nej) och Obesvarat (Ja/nej, Tomt).
+3. Fokusera Flytta upp på Obesvarat och tryck Enter. Kontrollera fokus på dess
+   Etikett.
+   Nå Lägg i utkastet med tangentbordet och skicka. Stäng sambandet och spara
+hela
+   utkastet.
+4. Starta om, ladda om och redigera sambandet. Kontrollera alla värden och
+   ordningen.
+   Ändra Anteckning till Övre hyllan, lägg i utkastet och spara.
 
 **Förväntat resultat:**
 
-- Mobilens Välj inställning ger åtkomst till Typer och egna fält.
-  Nya fält får fokus och de sista fälten och åtgärderna kan rullas fram.
-- Förslaget och rättelsen behåller 0, Nej och obesvarat som olika svar.
-  Återfokus går till sambandsknappen; uppgifterna är fortfarande i utkastet.
-- Hela sparandet och omstarten provas separat i STY-06.
+- Fria sambandsegenskaper behåller talet 0, Nej och en separat tom Ja/nej-rad
+  genom
+  omstart och rättelse.
+- Tangentbordets omordning och inskickning fungerar utan vågrät rullning.
 
-### STY-10: Avsnitt bevarar dolda svar och privata definitioner
+### STY-07: Sambandets egenskaper bevaras direkt vid typbyte
 
-**Syfte:** Ordna sambandens formulär utan att ändra fältidentitet eller svar.
+**Syfte:** Typbyte bevarar alla individuella egenskaper omedelbart och efter
+sparande och omstart.
 
-**Användare:** Alex.
+**Användare:** Alex, och Robin i separat profil när stegen anger en annan
+medlem.
 
-**Förutsättningar:** Cykeln och Garaget finns i hushållets karta eller utkast.
-Använd webbläsarvy 390 × 1000 med minskad rörelse.
-Syftet är mobil navigation och intern rullning.
+**Förutsättningar:** Alex och Blå cykeln finns i ett separat provhushåll.
 
-**Integrationstest:**
-[relationship-sections.spec.ts](../../tests/integration/relationship-sections.spec.ts),
-STY-10, native referens vid 390 × 1000.
-
+<!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
-    "spec": "tests/integration/relationship-sections.spec.ts",
-    "caseId": "STY-10"
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/relationship-fields.spec.ts",
+    "caseId": "STY-07"
   },
-  "reference": "390 × 1000; avsnitt, dolda svar, båda teman och fokus",
+  "reference": "Chromium på dator; riktig lokal server och SQLite.",
   "outcomes": [
-    "Avsnitt bevarar dolda svar och privata definitioner"
+    "Typbyte bevarar alla individuella egenskaper omedelbart och efter sparande och omstart.",
+    "Behåll uppgiften och Nej visas på samma samband med den valda typen."
   ]
 }
 ```
 -->
+<!-- markdownlint-enable MD013 -->
 
 **Steg:**
 
-1. Öppna Inställningar och Välj inställning → Typer och egna fält.
-   Välj Ny sambandstyp. Ange Förvaring och benämningarna förvaras i och
-   innehåller.
-2. Namnge avsnitten Uppgifter och Service. Flytta Service upp med
-   tangentbordet och kontrollera att fokus följer avsnittet.
-3. Lägg till Leverantör som Text, Effekt som Tal, Datum som Datum samt
-   Batteri och Reserv som Ja/nej. Placera dem i Uppgifter. Kontrollera
-   läsbarhet och åtkomliga kontroller i ljust och mörkt tema.
-4. Lägg definitionen i utkastet. Skapa sambandet Cykeln → Förvaring →
-   Garaget med svaren Exempelsol, 0, 2026-09-01 och Nej. Lämna Reserv
-   obesvarat och lägg sambandet i utkastet.
-5. Ändra definitionen i Inställningar. Dölj Effekt och flytta Leverantör
-   till Service. Lägg förslaget i utkastet; spara inte hela utkastet.
-6. Välj Tillbaka till kartan. Öppna sambandet för redigering. Effekt ska
-   vara dolt, Batteri ska vara Nej och Reserv obesvarat. Rulla fram
-   Avbryt redigeringen, kontrollera fokus och att åtgärden ryms i vyn.
-   Välj den och stäng sambandsdialogen med krysset.
-7. Ändra definitionen igen och visa Effekt i Service. Lägg den i utkastet
-   och öppna sambandet. Kontrollera att Effekt är 0 och alla andra svar
-   består medan hela definitionen fortfarande ligger i utkastet.
+1. Spara ett Använder-samband från Alex till Blå cykeln med Anteckning (Text,
+   Behåll
+   uppgiften) och Kontrollerat (Ja/nej, Nej).
+2. Redigera sambandet och välj typen Äger. Läs samma egenskapsvärden direkt.
+   Lägg i
+   utkastet och spara.
+3. Starta om, ladda om och läs sambandet från Alex.
 
 **Förväntat resultat:**
 
-- Avsnittens ordning och fältens placering följer det privata utkastet.
-  Dolda svar behålls under den privata definitionens ändringar.
-- Återvisning behåller samma fältidentiteter och tidigare värden.
-  Noll, Nej och obesvarat förblir skilda.
-- Fokus går att följa och kontrollerna är nåbara vid den valda bredden.
-  Temabyte och intern rullning bevarar pågående redigering.
+- Typbyte bevarar alla individuella egenskaper omedelbart och efter sparande
+  och omstart.
+- Behåll uppgiften och Nej visas på samma samband med den valda typen.
 
-### STY-11: Avsnitt bevarar dolda svar och privata definitioner
+## Avvecklade identiteter och täckning
 
-**Syfte:** Ordna sambandens formulär utan att ändra fältidentitet eller svar.
+STY-08, STY-10 och STY-11 är avvecklade och får inte återanvändas.
+Typstyrda avsnitt, dolda fält och privata presentationsdefinitioner finns
+inte kvar. Den rena avsnittsfunktionen har godkänd täckningsförlust.
+Individuell egenskapsordning, tomma värden och mobil redigering fortsätter
+i STY-06 och STY-09; värdebevarande typbyte fortsätter i STY-07.
+Skydd för ändring av använda typfälts datatyp försvinner med typfälten.
+Åtkomstgränsernas tekniska bevis ligger i serverns åtkomsttester; dessa
+formulärfall gör inget nytt påstående om åtkomst mellan hushåll.
 
-**Användare:** Alex.
-
-**Förutsättningar:** Cykeln och Garaget finns i hushållets karta eller utkast.
-Använd webbläsarvy 320 × 1000 med minskad rörelse.
-Syftet är smalt omflöde och nåbara sista åtgärder.
-
-**Integrationstest:**
-[relationship-sections.spec.ts](../../tests/integration/relationship-sections.spec.ts),
-STY-11, native referens vid 320 × 1000.
-
-<!--
-```manual-mapping
-{
-  "counterpart": {
-    "spec": "tests/integration/relationship-sections.spec.ts",
-    "caseId": "STY-11"
-  },
-  "reference": "320 × 1000; smalt omflöde, båda teman och fokus",
-  "outcomes": [
-    "Avsnitt bevarar dolda svar och privata definitioner"
-  ]
-}
-```
--->
-
-**Steg:**
-
-1. Öppna Inställningar och Välj inställning → Typer och egna fält.
-   Välj Ny sambandstyp. Ange Förvaring och benämningarna förvaras i och
-   innehåller.
-2. Namnge avsnitten Uppgifter och Service. Flytta Service upp med
-   tangentbordet och kontrollera att fokus följer avsnittet.
-3. Lägg till Leverantör som Text, Effekt som Tal, Datum som Datum samt
-   Batteri och Reserv som Ja/nej. Placera dem i Uppgifter. Kontrollera
-   läsbarhet och åtkomliga kontroller i ljust och mörkt tema.
-4. Lägg definitionen i utkastet. Skapa sambandet Cykeln → Förvaring →
-   Garaget med svaren Exempelsol, 0, 2026-09-01 och Nej. Lämna Reserv
-   obesvarat och lägg sambandet i utkastet.
-5. Ändra definitionen i Inställningar. Dölj Effekt och flytta Leverantör
-   till Service. Lägg förslaget i utkastet; spara inte hela utkastet.
-6. Välj Tillbaka till kartan. Öppna sambandet för redigering. Effekt ska
-   vara dolt, Batteri ska vara Nej och Reserv obesvarat. Rulla fram
-   Avbryt redigeringen, kontrollera fokus och att åtgärden ryms i vyn.
-   Välj den och stäng sambandsdialogen med krysset.
-7. Ändra definitionen igen och visa Effekt i Service. Lägg den i utkastet
-   och öppna sambandet. Kontrollera att Effekt är 0 och alla andra svar
-   består medan hela definitionen fortfarande ligger i utkastet.
-
-**Förväntat resultat:**
-
-- Avsnittens ordning och fältens placering följer det privata utkastet.
-  Dolda svar behålls under den privata definitionens ändringar.
-- Återvisning behåller samma fältidentiteter och tidigare värden.
-  Noll, Nej och obesvarat förblir skilda.
-- Fokus går att följa och kontrollerna är nåbara vid den valda bredden.
-  Temabyte och intern rullning bevarar pågående redigering.
-
-## Täckningens gräns
-
-Den kompletta kedjan definition → samband → rättelse → spara → omstart
-provas vid 1440px i STY-06 och STY-08. Mobilfallen STY-09–11 behåller
-inställningsnavigation, tangentbordsfält, avsnittsordning, dolda värden,
-rullning, teman och fokus vid sina angivna bredder. Ett fel i den kombinerade
-spara- och omstartskedjan som bara inträffar vid 390 eller 320px kan undgå
-referensen; mobilfallen påstår inte likvärdig beständighet vid alla bredder.
-STY-07 behåller typbyte mellan lika fältnamn med olika betydelse.
-Inga befintliga fallidentiteter pensioneras eller återanvänds.
-
-## Avvecklat tekniskt underlag
-
-I [relationship-types.spec.ts](../../tests/integration/relationship-types.spec.ts)
-ersätter STY-01 det fristående tekniska testet “directed definition HTTP
-staging preserves exact receipt and history replay”. Definition, beroende
-objekt och riktat samband följs i samma privata formulärflöde genom omstart,
-sparande, exakta kvitton, historiska typdefinitioner och återspelning.
-Ingen funktionell fallidentitet avvecklas. Den direkta HTTP-kedjan utan eget
-fält körs inte längre separat; referensen omfattar Anteckning och båda
-objekttyperna samt läsning av riktningen från båda ändpunkterna.
+Vanliga browsersteg utför ingen faktisk skärmläsaruppläsning, fysisk
+pekinmatning eller mobil tangentbordsobservation. Anteckna sådana utfall
+under de befintliga ansvariga människoproven.

@@ -82,7 +82,7 @@ test('manual MCP controls authenticate independently, retain stale requests and 
           contentVersion: state.contentVersion,
           id: name,
           baseRevision: null,
-          value: { typeId: state.types[0].id, name, description: '' },
+          value: { typeId: state.types[0].id, name },
         },
       });
       expect(response.status()).toBe(200);

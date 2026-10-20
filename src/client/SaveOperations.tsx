@@ -61,18 +61,13 @@ export function rejectionMessage(code: string) {
     return 'Det borttagna innehållet har ändrats sedan återställningsförslaget skapades. Inget sparades. Hämta aktuellt underlag, kasta det gamla återställningsförslaget och granska aktuellt underlag igen.';
   if (code === 'definition_in_use')
     return 'Typen används fortfarande i kartan eller privata utkast, även om innehållet är upphört. För en objekttyp: ta bort eller byt typ på användande objekt. För en sambandstyp: ta bort eller byt typ på sambanden; objekten kan finnas kvar. Ingen ändring genomfördes.';
-  if (code === 'field_in_use')
-    return 'Fältet används fortfarande i kartan eller privata utkast, även om innehållet är upphört. Ta bort fältvärdena och hantera berörda typförslag först. Ingen ändring genomfördes.';
   if (code === 'invalid_relationship_type')
-    return 'Ange sambandstypens namn, beskrivning, benämningar från båda hållen och giltiga egna fält.';
+    return 'Ange sambandstypens namn, beskrivning, benämningar från båda hållen för sambandet.';
   if (code === 'duplicate_relationship')
     return 'Samma samband finns redan. Inget sparades. Hämta aktuellt underlag och använd det befintliga sambandet eller ändra ditt förslag.';
-  if (code === 'invalid_custom_value')
-    return 'Kontrollera de egna fälten: ange text, ett giltigt tal, datum eller ja/nej enligt fältets värdeslag.';
-  if (code === 'invalid_type_definition')
-    return 'Ange namn, beskrivning och giltiga fält för objekttypen.';
-  if (code === 'field_kind_in_use')
-    return 'Fältets värdeslag används redan. Skapa ett nytt fält med rätt värdeslag; tidigare fält och värden finns kvar.';
+  if (code === 'invalid_properties')
+    return 'Kontrollera egenskapens etikett, datatyp och värde. Inga uppgifter sparades.';
+  if (code === 'invalid_type_definition') return 'Ange namn och beskrivning för objekttypen.';
   if (code === 'client_outdated')
     return 'Skyttel har uppdaterats. Kopiera osänd text och ladda om sidan. Kontrollera tidigare sparförsök efter omladdning.';
   if (code === 'operation_conflict')

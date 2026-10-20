@@ -105,8 +105,10 @@ if (process.env.MAP_BACKGROUNDS === '1') {
         await expect(table.locator('.household-table-row-toggle')).toHaveCount(1);
         const searchMs = performance.now() - searchStarted;
         await editTableObject(page, 'Provobjekt 499');
+        await page.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
         await page
-          .getByLabel('Beskrivning', { exact: true })
+          .getByRole('group', { name: 'Egenskap 1', exact: true })
+          .getByLabel('Värde', { exact: true })
           .fill(`Påhittad rättelse ${run} ${cache}`);
         await page.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
         const draft = await openDraftReview(page);
@@ -128,14 +130,23 @@ if (process.env.MAP_BACKGROUNDS === '1') {
         await expect(page.locator('.draft-save-toast')).toHaveText('Utkastet är sparat');
         const saveMs = performance.now() - saveStarted;
         const state: MapState = await (await client.request.get(path)).json();
-        expect(state.objects.find((object) => object.id === 'large-499')?.description).toBe(
-          `Påhittad rättelse ${run} ${cache}`,
-        );
+        expect(
+          state.objects
+            .find((object) => object.id === 'large-499')
+            ?.properties?.find(
+              (property): property is Extract<typeof property, { kind: 'text' }> =>
+                property.kind === 'text' && property.label === 'Beskrivning',
+            )?.value,
+        ).toBe(`Påhittad rättelse ${run} ${cache}`);
         const { history } = await (await client.request.get(`${path}/history`)).json();
         expect(
           history.find((entry: SaveReceipt) => entry.operationId === receipt.operationId),
         ).toEqual(receipt);
-        expect(receipt.changes[0].after.description).toBe(`Påhittad rättelse ${run} ${cache}`);
+        expect(
+          receipt.changes[0].after.properties?.find(
+            (p: { label: string }) => p.label === 'Beskrivning',
+          )?.value,
+        ).toBe(`Påhittad rättelse ${run} ${cache}`);
         samples.push({ run: run + 1, cache, openMs, searchMs, saveMs, ...overlaps });
         console.log(JSON.stringify(samples.at(-1)));
         if (process.env.MAP_SCREENSHOT && run === 0 && cache === 'cold') {
@@ -157,8 +168,18 @@ if (process.env.MAP_BACKGROUNDS === '1') {
     expect(
       history.find((entry: SaveReceipt) => entry.operationId === finalReceipt.operationId),
     ).toEqual(finalReceipt);
-    expect(latest.objects.find((object) => object.id === 'large-499')?.description).toBe(
-      finalReceipt.changes[0].after?.description,
+    expect(
+      latest.objects
+        .find((object) => object.id === 'large-499')
+        ?.properties?.find(
+          (property): property is Extract<typeof property, { kind: 'text' }> =>
+            property.kind === 'text' && property.label === 'Beskrivning',
+        )?.value,
+    ).toBe(
+      finalReceipt.changes[0].after?.properties?.find(
+        (property): property is Extract<typeof property, { kind: 'text' }> =>
+          property.kind === 'text' && property.label === 'Beskrivning',
+      )?.value,
     );
     expect(latest.draft.changes).toHaveLength(0);
     const { operation } = await (

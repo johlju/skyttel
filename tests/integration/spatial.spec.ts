@@ -20,6 +20,12 @@ import {
 } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { focusMapSearch, mapFilters } from '../support/object-search.js';
+import {
+  openProperties,
+  propertyRow,
+  propertyValue,
+  setProperty,
+} from '../support/property-controls.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
@@ -73,11 +79,7 @@ async function arrange(page: Page, origin: string) {
             version: (await read()).draft.version,
             id,
             baseRevision: null,
-            value: {
-              name,
-              description: '',
-              typeId: state.types.find((item) => item.name === type)?.id,
-            },
+            value: { name, typeId: state.types.find((item) => item.name === type)?.id },
           },
         })
       ).ok(),
@@ -234,7 +236,6 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
           typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
           sourceId: 'lo',
           targetId: 'music',
-          knowledge: 'known',
         },
       },
     });
@@ -365,7 +366,7 @@ test('RYMD-02: focus, filters and camera navigation preserve the shared selectio
       .getByRole('region', { name: 'Valt samband', exact: true })
       .getByRole('button', { name: 'Redigera valt samband', exact: true })
       .click();
-    await expect(page.getByLabel('Till objekt')).toHaveValue('music');
+    await expect(page.getByLabel('Till objekt', { exact: true })).toHaveValue('music');
   } finally {
     await installation.close();
   }
@@ -388,7 +389,6 @@ test('RYMD-03: context actions and draft symbols distinguish proposals from save
           typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
           sourceId: 'lo',
           targetId: 'music',
-          knowledge: 'known',
         },
       },
     });
@@ -434,7 +434,7 @@ test('RYMD-03: context actions and draft symbols distinguish proposals from save
     await expect(actions).toHaveCount(0);
     await music.click({ button: 'right' });
     await page.getByRole('button', { name: 'Redigera objekt', exact: true }).click();
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Syntetiskt musikexempel');
+    await setProperty(page, 'Beskrivning', 'Syntetiskt musikexempel');
     await page.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await openMap(page);
     await expect(music).toContainText('✎');
@@ -543,9 +543,11 @@ test('RYMD-04: touch menus, viewport changes and graphics recovery retain unsent
     await expect(page.locator('dialog.object-dialog-C')).toHaveCount(0);
     await page.getByRole('button', { name: 'Redigera objekt', exact: true }).click();
     const form = page.locator('dialog.object-dialog-C');
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Oskickad mobiltext');
+    await setProperty(form, 'Beskrivning', 'Oskickad mobiltext');
     await page.setViewportSize({ width: 844, height: 390 });
-    await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue('Oskickad mobiltext');
+    await expect(propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
+      'Oskickad mobiltext',
+    );
     await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
       const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
       if (!extension) throw new Error('The test browser must support context loss');
@@ -558,10 +560,15 @@ test('RYMD-04: touch menus, viewport changes and graphics recovery retain unsent
     );
     await expect(interrupted).toBeVisible();
     await expect(interrupted).toHaveCount(0);
-    await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue('Oskickad mobiltext');
+    await expect(propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
+      'Oskickad mobiltext',
+    );
     expect(
-      (await read()).draft.changes.find((change) => change.id === 'music')?.after?.description,
-    ).toBe('');
+      propertyValue(
+        (await read()).draft.changes.find((change) => change.id === 'music')?.after,
+        'Beskrivning',
+      ),
+    ).toBeUndefined();
     await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await openMap(page);
     await expect
@@ -571,9 +578,12 @@ test('RYMD-04: touch menus, viewport changes and graphics recovery retain unsent
     expect((surface?.y ?? 0) + (surface?.height ?? 0)).toBeLessThanOrEqual(390);
     await saveReviewedConflictDraft(page);
     await closeTextView(page);
-    expect((await read()).objects.find((object) => object.id === 'music')?.description).toBe(
-      'Oskickad mobiltext',
-    );
+    expect(
+      propertyValue(
+        (await read()).objects.find((object) => object.id === 'music'),
+        'Beskrivning',
+      ),
+    ).toBe('Oskickad mobiltext');
   } finally {
     await context.close();
     await installation.close();
@@ -597,7 +607,6 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
           typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
           sourceId: 'lo',
           targetId: 'music',
-          knowledge: 'known',
         },
       },
     });
@@ -787,10 +796,8 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
       if (await source.evaluate((element) => element === document.activeElement)) break;
     }
     await expect(source).toBeFocused();
-    await relationshipDialog
-      .getByLabel('Sambandets slutdatum: uppgiftens säkerhet', { exact: true })
-      .selectOption('known');
-    await relationshipDialog.getByLabel('Sambandets slutdatum', { exact: true }).fill('2026-12-31');
+    const beforeRelationshipEdit = (await read()).draft;
+    await setProperty(relationshipDialog, 'Slutdatum', '2026-12-31', 'date');
     await relationshipDialog.getByRole('button', { name: 'Molnmusik', exact: true }).click();
     await page.setViewportSize({ width: 900, height: 600 });
     const endpoint = page.getByRole('dialog', { name: 'Uppgifter för Molnmusik', exact: true });
@@ -800,13 +807,17 @@ test('RYMD-05: labels, keyboard editing and relationship text survive view chang
     await endpoint.getByRole('button', { name: 'Tillbaka', exact: true }).click();
     relationshipDialog = page.getByRole('dialog', { name: 'Samband för Lo Exempel', exact: true });
     await expect(
-      relationshipDialog.getByLabel('Sambandets slutdatum', { exact: true }),
+      propertyRow(relationshipDialog, 'Slutdatum').getByLabel('Värde', { exact: true }),
     ).toHaveValue('2026-12-31');
-    expect((await read()).draft.relationships?.[0].after).not.toHaveProperty('endDate');
+    expect((await read()).draft).toEqual(beforeRelationshipEdit);
     await stageRelationshipAndClose(page);
     await saveReviewedConflictDraft(page);
     await closeTextView(page);
-    expect((await read()).relationships[0].endDate?.value).toBe('2026-12-31');
+    expect((await read()).relationships[0].properties).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Slutdatum', kind: 'date', value: '2026-12-31' }),
+      ]),
+    );
   } finally {
     await installation.close();
   }
@@ -860,7 +871,7 @@ test('RYMD-06: losing household access in fullscreen restores login navigation',
     await openMap(page);
     await page.getByRole('button', { name: 'Välj objekt: Molnmusik', exact: true }).click();
     await editTableObject(page, 'Molnmusik');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Syntetisk text före åtkomstbyte');
+    await setProperty(page, 'Beskrivning', 'Syntetisk text före åtkomstbyte');
     expect(
       (
         await other.request.post(`${householdPath}/members/${state.userId}/revoke`, {
@@ -910,7 +921,6 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
             typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
             sourceId: 'lo',
             targetId: 'music',
-            knowledge: 'known',
           },
         })
       ).ok(),
@@ -919,11 +929,8 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
       if (!change.after) throw new Error('Initial object proposals must contain values');
       await page.goto(installation.origin);
       const editor = await editTableObject(page, change.after.name);
-      await editor.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true }).click();
-      await editor
-        .getByLabel('Slutdatum: uppgiftens säkerhet', { exact: true })
-        .selectOption('known');
-      await editor.getByLabel('Slutdatum', { exact: true }).fill('2000-01-01');
+      await openProperties(editor);
+      await setProperty(editor, 'Slutdatum', '2000-01-01', 'date');
       await editor.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
       await editor
         .getByLabel('Objektets status', { exact: true })
@@ -935,7 +942,9 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
       ).toMatchObject({
         ...change.after,
         lifecycle: change.id === 'music' ? 'ended' : 'active',
-        financialFacts: { endDate: { knowledge: 'known', value: '2000-01-01' } },
+        properties: expect.arrayContaining([
+          expect.objectContaining({ label: 'Slutdatum', kind: 'date', value: '2000-01-01' }),
+        ]),
       });
       expect(
         (
@@ -946,7 +955,9 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
             value: {
               ...change.after,
               lifecycle: change.id === 'music' ? 'ended' : 'active',
-              financialFacts: { endDate: { knowledge: 'known', value: '2000-01-01' } },
+              properties: [
+                { id: 'endDate', label: 'Slutdatum', kind: 'text' as const, value: '2000-01-01' },
+              ],
             },
           })
         ).ok(),
@@ -958,10 +969,8 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
       'Lo Exempel',
       'Lo Exempel → Använder → Molnmusik',
     );
-    await nativeRelationship
-      .getByLabel('Sambandets slutdatum: uppgiftens säkerhet', { exact: true })
-      .selectOption('known');
-    await nativeRelationship.getByLabel('Sambandets slutdatum', { exact: true }).fill('2000-01-01');
+    await setProperty(nativeRelationship, 'Slutdatum', '2000-01-01', 'date');
+    await nativeRelationship.getByLabel('Sambandets status', { exact: true }).selectOption('ended');
     await stageRelationshipAndClose(page);
     expect(
       (await read()).draft.relationships?.find((change) => change.after?.sourceId === 'lo')?.after,
@@ -969,8 +978,10 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
       typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
       sourceId: 'lo',
       targetId: 'music',
-      knowledge: 'known',
-      endDate: { knowledge: 'known', value: '2000-01-01' },
+      lifecycle: 'ended',
+      properties: [
+        expect.objectContaining({ label: 'Slutdatum', kind: 'date', value: '2000-01-01' }),
+      ],
     });
     expect(
       (
@@ -982,8 +993,10 @@ test('RYMD-07: ended objects and relationships retain status beside draft symbol
             typeId: state.relationshipTypes.find((item) => item.name === 'Använder')?.id,
             sourceId: 'lo',
             targetId: 'music',
-            knowledge: 'known',
-            endDate: { knowledge: 'known', value: '2000-01-01' },
+            lifecycle: 'ended',
+            properties: [
+              { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2000-01-01' },
+            ],
           },
         })
       ).ok(),
@@ -1071,7 +1084,6 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
         baseRevision: null,
         value: {
           name: 'Kim Exempel',
-          description: '',
           typeId: state.types.find((type) => type.name === 'Person')?.id,
         },
       },
@@ -1087,7 +1099,6 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
           typeId: state.relationshipTypes.find((type) => type.name === 'Betalar')?.id,
           sourceId: 'lo',
           targetId: 'music',
-          knowledge: 'known',
         },
       },
     });
@@ -1150,7 +1161,7 @@ test('RYMD-08: focus retains old and proposed relationship endpoints and opens t
       .getByRole('region', { name: 'Valt samband', exact: true })
       .getByRole('button', { name: 'Redigera valt samband', exact: true })
       .click();
-    await expect(page.getByLabel('Från objekt')).toHaveValue('kim');
+    await expect(page.getByLabel('Från objekt', { exact: true })).toHaveValue('kim');
     expect((await read()).draft.version).toBe(state.draft.version + 1);
   } finally {
     await installation.close();
@@ -1173,11 +1184,7 @@ test('RYMD-09: dense mobile maps offer separate pointer and keyboard targets wit
               version: (await read()).draft.version,
               id: `dense-${index}`,
               baseRevision: null,
-              value: {
-                name: `Nära objekt ${index + 1}`,
-                description: '',
-                typeId: initial.types[0].id,
-              },
+              value: { name: `Nära objekt ${index + 1}`, typeId: initial.types[0].id },
             },
           })
         ).ok(),
@@ -1195,7 +1202,6 @@ test('RYMD-09: dense mobile maps offer separate pointer and keyboard targets wit
               typeId: initial.relationshipTypes[0].id,
               sourceId: 'dense-6',
               targetId: 'dense-7',
-              knowledge: 'known',
             },
           },
         })
@@ -1373,19 +1379,26 @@ test('RYMD-10: label notices remain stable while a compact map opens its saved a
         '131b9df9-be76-4fc4-af0e-f8bfcf2589e4',
         {
           name: 'Familjens Molnmusik',
-          description: 'Rättad för hand',
           typeId: subscription.id,
-          financialFacts: {
-            price: { knowledge: 'known', value: '189' },
-            currency: { knowledge: 'known', value: 'SEK' },
-            paymentInterval: { knowledge: 'known', value: 'månad' },
-          },
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Rättad för hand',
+            },
+            { id: 'price', label: 'Pris', kind: 'text' as const, value: '189' },
+            { id: 'currency', label: 'Valuta', kind: 'text' as const, value: 'SEK' },
+            {
+              id: 'paymentInterval',
+              label: 'Betalningsintervall',
+              kind: 'text' as const,
+              value: 'månad',
+            },
+          ],
         },
       ],
-      [
-        '882e85e4-be1d-45a8-941a-93faf8ee99dc',
-        { name: 'Kim Exempel', description: '', typeId: person.id },
-      ],
+      ['882e85e4-be1d-45a8-941a-93faf8ee99dc', { name: 'Kim Exempel', typeId: person.id }],
     ]) {
       const response = await page.request.post(`${path}/draft`, {
         headers: { origin: app.origin },
@@ -1403,7 +1416,6 @@ test('RYMD-10: label notices remain stable while a compact map opens its saved a
           typeId: initial.relationshipTypes.find((item) => item.name === 'Betalar')?.id,
           sourceId: '882e85e4-be1d-45a8-941a-93faf8ee99dc',
           targetId: '131b9df9-be76-4fc4-af0e-f8bfcf2589e4',
-          knowledge: 'known',
         },
       },
     });
@@ -1419,7 +1431,7 @@ test('RYMD-10: label notices remain stable while a compact map opens its saved a
         version: (await read()).draft.version,
         id: '4a363b9b-5e73-4c60-9a9c-4624cd687255',
         baseRevision: null,
-        value: { name: 'Robins notering', description: '', typeId: person.id },
+        value: { name: 'Robins notering', typeId: person.id },
       },
     });
     expect(privateProposal.ok(), await privateProposal.text()).toBe(true);

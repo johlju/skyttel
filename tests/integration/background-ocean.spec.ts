@@ -71,7 +71,7 @@ async function arrangeMap(page: Page, origin: string, path: string, count: numbe
             version: version++,
             id: `ocean-${index}`,
             baseRevision: null,
-            value: { name: `Havsobjekt ${index}`, description: '', typeId: state.types[0].id },
+            value: { name: `Havsobjekt ${index}`, typeId: state.types[0].id },
           },
         })
       ).ok(),
@@ -89,7 +89,6 @@ async function arrangeMap(page: Page, origin: string, path: string, count: numbe
               typeId: state.relationshipTypes[0].id,
               sourceId: `ocean-${index}`,
               targetId: `ocean-${index + 1}`,
-              knowledge: 'known',
             },
           },
         })
@@ -245,8 +244,11 @@ async function checkOceanPersistence(
     await page.emulateMedia({ colorScheme: theme });
     expect(await tint(page)).toBeCloseTo(water, 0);
     expect(await markers.getAttribute('style')).toBe(themeProjection);
+    // Detach the live page before the deliberate outage so background requests
+    // cannot race the fixture shutdown. Reopening verifies persisted settings.
+    await page.goto(`${installation.origin}/healthz`);
     await installation.restart();
-    await page.reload();
+    await page.goto(installation.origin);
     await settings(page);
     await expect(choice).toHaveValue('ocean');
     expect(await read()).toEqual(saved);

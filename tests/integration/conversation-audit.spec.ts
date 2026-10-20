@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
-import { closeSupportDialog, createHousehold, openDraftReview, signIn } from '../support/client.js';
+import { createHousehold, openDraftReview, signIn } from '../support/client.js';
 import {
   microphoneButton,
   openConversationText,
@@ -9,12 +9,13 @@ import {
   startConversationWithVoice,
   voiceBox,
 } from '../support/conversation-page.js';
-import { readDraftProposal, readTableObject } from '../support/domain-work.js';
+import { readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
+import { readVoiceProposal } from '../support/voice-work-reading.js';
 
 const notice = (page: Page) => page.getByRole('region', { name: 'Samtalsnotis', exact: true });
 const view = (page: Page) => page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
@@ -39,7 +40,7 @@ async function setup(page: Page, respond: Parameters<typeof textModel>[0] = () =
       contentVersion: current.contentVersion,
       id: 'lo',
       baseRevision: null,
-      value: { typeId: current.types[0].id, name: 'Lo Exempel', description: '' },
+      value: { typeId: current.types[0].id, name: 'Lo Exempel' },
     },
   });
   expect(proposed.ok()).toBe(true);
@@ -212,19 +213,20 @@ test('NOT-10: ett verkligt väntande sparförsök visar frågesymbol och kontrol
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     await capture(page, 'selected-notice-equivalent');
     expect((await (await page.request.get(path)).json()).draft).toEqual(current.draft);
-    const proposal = await readDraftProposal(page, 'Lo Exempel');
-    await expect(proposal).toContainText('Person');
-    await expect(
-      proposal.getByText('Beskrivning', { exact: true }).locator('..').getByRole('definition'),
-    ).toHaveText('Ej uppgivet');
-    await closeSupportDialog(page, 'Lo Exempel');
+    await readVoiceProposal(page, 'Lo Exempel', null);
     await page.unroute('**/text-assistant/recover');
     await action.click();
     await expect(notice(page)).toHaveCount(0);
     await expect(await openDraftReview(page)).toContainText('Utkastet är tomt.');
     const saved = await readTableObject(page, 'Lo Exempel');
     await expect(saved).toContainText('Person');
-    await expect(saved.locator('.household-table-description')).toHaveText('Ej uppgivet');
+    await expect(
+      saved
+        .locator('dt')
+        .filter({ hasText: /^Beskrivning$/ })
+        .locator('..')
+        .locator('dd'),
+    ).toHaveCount(0);
     const operations = (await (await page.request.get(`${path}/operations`)).json()).operations;
     expect(operations).toHaveLength(1);
     expect(operations[0]).toMatchObject({
@@ -232,7 +234,7 @@ test('NOT-10: ett verkligt väntande sparförsök visar frågesymbol och kontrol
       status: 'succeeded',
     });
     expect((await (await page.request.get(path)).json()).objects).toMatchObject([
-      { id: 'lo', name: 'Lo Exempel', description: '', typeId: current.types[0].id },
+      { id: 'lo', name: 'Lo Exempel', typeId: current.types[0].id },
     ]);
   } finally {
     await app.close();

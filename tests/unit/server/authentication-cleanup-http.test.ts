@@ -222,7 +222,7 @@ test.each(['logout', 'deadline', 'restart'] as const)(
             arguments: {
               id: 'late',
               baseRevision: null,
-              value: { typeId: map.types[0].id, name: 'Sent', description: '' },
+              value: { typeId: map.types[0].id, name: 'Sent' },
             },
           },
         ],

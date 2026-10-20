@@ -18,17 +18,10 @@ export async function prepareDraftReview(client: APIRequestContext, origin: stri
     expect(response.status(), await response.text()).toBe(200);
     return response.json();
   };
-  const field = {
-    id: 'serial',
-    name: 'Ramnummer',
-    description: 'Hela ramnumret.',
-    kind: 'text',
-    sectionId: '',
-  };
   await post('object-type', {
     id: 'draft-vehicle',
     baseRevision: null,
-    value: { name: 'Utkastfordon', description: 'Fordon för granskning', fields: [field] },
+    value: { name: 'Utkastfordon', description: 'Fordon för granskning' },
   });
   await post('relationship-type', {
     id: 'draft-uses',
@@ -38,7 +31,6 @@ export async function prepareDraftReview(client: APIRequestContext, origin: stri
       description: 'Samband för granskning',
       forwardLabel: 'granskar',
       reverseLabel: 'granskas av',
-      fields: [{ ...field, id: 'note', name: 'Dold anteckning' }],
     },
   });
   await post('draft', {
@@ -47,9 +39,22 @@ export async function prepareDraftReview(client: APIRequestContext, origin: stri
     value: {
       typeId: 'draft-vehicle',
       name: 'Blå cykel',
-      description: 'Hela den sparade beskrivningen',
-      customValues: { serial: 'SPARAT-17' },
-      financialFacts: { debt: { knowledge: 'none' } },
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: 'Hela den sparade beskrivningen',
+        },
+        { id: 'serial', label: 'Ramnummer', kind: 'text' as const, value: 'SPARAT-17' },
+        { id: 'debt', label: 'Senast uppgiven skuld', kind: 'text' as const },
+        {
+          id: 'debt-certainty',
+          label: 'Senast uppgiven skuld: uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Uttryckligen inget',
+        },
+      ],
     },
   });
   await post('save', { operationId: 'draft-review-setup' });
@@ -64,51 +69,86 @@ export async function prepareDraftReview(client: APIRequestContext, origin: stri
     value: {
       ...bike,
       name: 'Alex blå cykel',
-      description: 'Fullständig föreslagen beskrivning',
-      customValues: { serial: 'FÖRESLAGET-42' },
-      financialFacts: {
-        debt: { knowledge: 'unknown' },
-        creditLimit: { knowledge: 'uncertain', value: '500 SEK', reportedOn: '2026-01-01' },
-      },
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: 'Fullständig föreslagen beskrivning',
+        },
+        { id: 'serial', label: 'Ramnummer', kind: 'text' as const, value: 'FÖRESLAGET-42' },
+        { id: 'debt', label: 'Senast uppgiven skuld', kind: 'text' as const },
+        {
+          id: 'debt-certainty',
+          label: 'Senast uppgiven skuld: uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Okänt',
+        },
+        {
+          id: 'creditLimit',
+          label: 'Beviljat kreditutrymme',
+          kind: 'text' as const,
+          value: '500 SEK',
+        },
+        {
+          id: 'creditLimit-certainty',
+          label: 'Beviljat kreditutrymme: uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Osäkert uppgivet',
+        },
+        {
+          id: 'creditLimit-reportedOn',
+          label: 'Beviljat kreditutrymme: datum för uppgiften',
+          kind: 'date' as const,
+          value: '2026-01-01',
+        },
+      ],
     },
   });
   await post('draft', {
     id: 'draft-unspecified',
     baseRevision: null,
-    value: {
-      typeId: type.id,
-      name: 'Ospecificerat fordon',
-      description: '',
-      identity: 'unspecified',
-    },
+    value: { typeId: type.id, name: 'Ospecificerat fordon', identity: 'unspecified' },
   });
   await post('draft', {
     id: 'draft-unresolved',
     baseRevision: null,
-    value: { typeId: type.id, name: 'Olöst fordon', description: '', identity: 'unresolved' },
+    value: { typeId: type.id, name: 'Olöst fordon', identity: 'unresolved' },
   });
-  for (const knowledge of ['known', 'unknown', 'none', 'uncertain', 'unresolved'])
+  for (const [index, certainty] of [
+    'Bekräftat',
+    'Okänt',
+    'Uttryckligen inget',
+    'Osäkert uppgivet',
+    'Obesvarad fråga',
+  ].entries())
     await post('relationship', {
-      id: `draft-edge-${knowledge}`,
+      id: `draft-edge-${['known', 'unknown', 'none', 'uncertain', 'unresolved'][index]}`,
       baseRevision: null,
       value: {
-        typeId: relationshipType.id,
-        sourceId:
-          knowledge === 'unresolved' || knowledge === 'uncertain' ? 'draft-unspecified' : bike.id,
-        targetId:
-          knowledge === 'known' ? 'draft-unspecified' : knowledge === 'uncertain' ? bike.id : null,
-        knowledge,
-        customValues: { note: `Hela dolda uppgiften ${knowledge}` },
+        typeId: index === 2 ? saved.relationshipTypes[0].id : relationshipType.id,
+        sourceId: index > 2 ? 'draft-unspecified' : bike.id,
+        targetId: index === 0 || index === 4 ? 'draft-unspecified' : bike.id,
+        properties: [
+          {
+            id: 'note',
+            label: 'Anteckning',
+            kind: 'text' as const,
+            value: `Hela uppgiften ${certainty}`,
+          },
+          {
+            id: 'certainty',
+            label: 'Uppgiftens säkerhet',
+            kind: 'text' as const,
+            value: certainty,
+          },
+        ],
       },
     });
   await post('object-type', {
     id: type.id,
     baseRevision: type.revision,
-    value: {
-      ...type,
-      description: 'Föreslagen typbeskrivning',
-      fields: [{ ...field, description: 'Föreslagen fältbeskrivning' }],
-    },
+    value: { ...type, description: 'Föreslagen typbeskrivning' },
   });
   await post('relationship-type', {
     id: relationshipType.id,
@@ -116,7 +156,6 @@ export async function prepareDraftReview(client: APIRequestContext, origin: stri
     value: {
       name: relationshipType.name,
       description: relationshipType.description,
-      fields: relationshipType.fields,
       forwardLabel: relationshipType.forwardLabel,
       reverseLabel: 'kontrolleras av',
     },
@@ -133,35 +172,41 @@ export async function prepareDraftReviewMeanings(client: APIRequestContext, orig
   const bike = saved.objects.find(({ id }) => id === 'draft-bike');
   const type = saved.types.find(({ id }) => id === 'draft-vehicle');
   if (!bike || !type) throw new Error('Missing saved draft-review data');
-  const builtins = [
-    { key: 'description', name: 'Fordonets berättelse', sectionId: '' },
-    { key: 'price', name: 'Avtalat pris', sectionId: '' },
-    { key: 'endDate', name: 'Sista giltighetsdag', sectionId: '' },
-  ];
-  await post('object-type', {
-    id: type.id,
-    baseRevision: type.revision,
-    value: { ...type, builtins },
-  });
   await post('draft', {
     id: bike.id,
     baseRevision: bike.revision,
-    value: { ...bike, financialFacts: { endDate: { knowledge: 'known', value: '2000-01-01' } } },
+    value: {
+      ...bike,
+      lifecycle: 'ended',
+      properties: [
+        {
+          id: 'description',
+          label: 'Fordonets berättelse',
+          kind: 'text',
+          value: 'Hela den sparade beskrivningen',
+        },
+        { id: 'serial', label: 'Ramnummer', kind: 'text', value: 'SPARAT-17' },
+        { id: 'price', label: 'Avtalat pris', kind: 'number' },
+        { id: 'endDate', label: 'Sista giltighetsdag', kind: 'date', value: '2000-01-01' },
+      ],
+    },
   });
   await post('draft', {
     id: 'draft-peer',
     baseRevision: null,
-    value: { typeId: type.id, name: 'Röd cykel', description: '' },
+    value: { typeId: type.id, name: 'Röd cykel' },
   });
   await post('relationship', {
     id: 'draft-expired-edge',
     baseRevision: null,
     value: {
+      lifecycle: 'ended',
       sourceId: bike.id,
       targetId: 'draft-peer',
       typeId: 'draft-uses',
-      knowledge: 'known',
-      endDate: { knowledge: 'known', value: '2000-01-01' },
+      properties: [
+        { id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: '2000-01-01' },
+      ],
     },
   });
   async function image(background: string) {
@@ -191,20 +236,18 @@ export async function prepareDraftReviewMeanings(client: APIRequestContext, orig
   const currentType = current.types.find(({ id }) => id === type.id);
   const edge = current.relationships.find(({ id }) => id === 'draft-expired-edge');
   if (!currentBike || !currentType || !edge) throw new Error('Missing saved meaning data');
-  await post('object-type', {
-    id: type.id,
-    baseRevision: currentType.revision,
-    value: {
-      ...currentType,
-      builtins: builtins.map((field) =>
-        field.key === 'description' ? { ...field, name: 'Cykelns berättelse' } : field,
-      ),
-    },
-  });
   await post('draft', {
     id: bike.id,
     baseRevision: currentBike.revision,
-    value: { ...currentBike, lifecycle: 'active', description: '' },
+    value: {
+      ...currentBike,
+      lifecycle: 'active',
+      properties: currentBike.properties?.map((property) =>
+        property.id === 'description'
+          ? { id: property.id, label: 'Cykelns berättelse', kind: 'text' }
+          : property,
+      ),
+    },
   });
   await image('#bc321a');
   await post('relationship', {
@@ -223,21 +266,23 @@ export async function prepareDraftReviewWrapping(client: APIRequestContext, orig
   if (!type) throw new Error('Missing draft type');
   const customLabel = 'Ramnummer'.repeat(12);
   const builtinLabel = 'Berättelse'.repeat(12);
-  await fixture.post('object-type', {
-    id: type.id,
-    baseRevision: type.revision,
-    value: {
-      ...type,
-      fields: type.fields?.map((field) => ({ ...field, name: customLabel })),
-      builtins: [{ key: 'description', name: builtinLabel, sectionId: '' }],
-    },
-  });
   const bike = (await fixture.read()).draft.changes.find((change) => change.id === 'draft-bike');
   if (!bike?.after || !bike.before) throw new Error('Missing draft bike');
   await fixture.post('draft', {
     id: bike.id,
     baseRevision: bike.before.revision,
-    value: bike.after,
+    value: {
+      ...bike.after,
+      properties: bike.after.properties?.map((property) => ({
+        ...property,
+        label:
+          property.id === 'serial'
+            ? customLabel
+            : property.id === 'description'
+              ? builtinLabel
+              : property.label,
+      })),
+    },
   });
   return { ...fixture, customLabel, builtinLabel };
 }
@@ -256,8 +301,8 @@ export async function prepareDraftReviewLifecycle(client: APIRequestContext, ori
       value: {
         typeId: 'draft-vehicle',
         name,
-        description: '',
-        financialFacts: { endDate: { knowledge: 'known', value: date } },
+        ...(id === 'past' ? { lifecycle: 'ended' } : {}),
+        properties: [{ id: 'endDate', label: 'Slutdatum', kind: 'text' as const, value: date }],
       },
     });
     await fixture.post('relationship', {
@@ -267,8 +312,8 @@ export async function prepareDraftReviewLifecycle(client: APIRequestContext, ori
         typeId: 'draft-uses',
         sourceId: id,
         targetId: 'draft-bike',
-        knowledge: 'known',
-        endDate: { knowledge: 'known', value: date },
+        ...(id === 'past' ? { lifecycle: 'ended' } : {}),
+        properties: [{ id: 'endDate', label: 'Slutdatum', kind: 'date' as const, value: date }],
       },
     });
   }
@@ -278,13 +323,13 @@ export async function prepareDraftReviewLifecycle(client: APIRequestContext, ori
     await fixture.post('draft', {
       id: value.id,
       baseRevision: value.revision,
-      value: { ...value, lifecycle: 'active' },
+      value: { ...value, lifecycle: value.lifecycle === 'ended' ? 'active' : 'ended' },
     });
   for (const value of saved.relationships.filter(({ id }) => id.startsWith('edge-')))
     await fixture.post('relationship', {
       id: value.id,
       baseRevision: value.revision,
-      value: { ...value, lifecycle: 'active' },
+      value: { ...value, lifecycle: value.lifecycle === 'ended' ? 'active' : 'ended' },
     });
   return fixture;
 }

@@ -12,6 +12,7 @@ import {
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { openProperties, propertyRow, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('browser replacement and logout deny old cookies while an independently consented MCP connection remains valid', {
@@ -134,7 +135,18 @@ test('AI-13: profile navigation focuses assistant connections and preserves unse
             version: (await read()).draft.version,
             id,
             baseRevision: null,
-            value: { typeId, name, description: `Sparat om ${name}` },
+            value: {
+              typeId,
+              name,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: `Sparat om ${name}`,
+                },
+              ],
+            },
           })
         ).status(),
       ).toBe(200);
@@ -155,7 +167,17 @@ test('AI-13: profile navigation focuses assistant connections and preserves unse
           version: saved.draft.version,
           id: 'car',
           baseRevision: car?.revision,
-          value: { ...car, description: 'Bilens oberoende privata förslag' },
+          value: {
+            ...car,
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Bilens oberoende privata förslag',
+              },
+            ],
+          },
         })
       ).status(),
     ).toBe(200);
@@ -166,7 +188,7 @@ test('AI-13: profile navigation focuses assistant connections and preserves unse
     await page.goto(app.origin);
     await openTable(page);
     const cycle = await editTableObject(page, 'Cykeln');
-    await cycle.getByLabel('Beskrivning', { exact: true }).fill('Cykelns oskickade profiltext');
+    await setProperty(cycle, 'Beskrivning', 'Cykelns oskickade profiltext');
     const viewBefore = await (await page.request.get(`${path}/view`)).json();
     await verifyObjectDepartureAndDiscard(page, {
       Beskrivning: 'Cykelns oskickade profiltext',
@@ -213,9 +235,10 @@ test('AI-13: profile navigation focuses assistant connections and preserves unse
     await returnToMap.focus();
     await page.keyboard.press('Enter');
     const reopened = await editTableObject(page, 'Cykeln');
-    await expect(reopened.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-      'Sparat om Cykeln',
-    );
+    await openProperties(reopened);
+    await expect(
+      propertyRow(reopened, 'Beskrivning').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Sparat om Cykeln');
     expect(await read()).toEqual(before);
     expect(await (await page.request.get(`${path}/view`)).json()).toEqual(viewBefore);
     expect(await (await page.request.get(`${app.origin}/api/bootstrap`)).json()).toEqual(bootstrap);
@@ -299,7 +322,7 @@ test('AI-02: uttryckligt AI-val ger läsning och återkallelse stoppar gamla tok
     await openTable(page);
     const object = await openNewObject(page);
     await object.getByLabel('Namn', { exact: true }).fill('Läsningens lampa');
-    await object.getByLabel('Beskrivning', { exact: true }).fill('Sparad läsuppgift');
+    await setProperty(object, 'Beskrivning', 'Sparad läsuppgift');
     await object.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     const draft = await openDraftReview(page);
     await draft.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
@@ -323,7 +346,16 @@ test('AI-02: uttryckligt AI-val ger läsning och återkallelse stoppar gamla tok
     const nativeRead = await callAssistant(app.origin, nativeAccess, 'read_map');
     expect(nativeRead.status).toBe(200);
     expect(JSON.parse((await nativeRead.json()).result.content[0].text).objects).toEqual([
-      expect.objectContaining({ name: 'Läsningens lampa', description: 'Sparad läsuppgift' }),
+      expect.objectContaining({
+        name: 'Läsningens lampa',
+        properties: expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Beskrivning',
+            kind: 'text',
+            value: 'Sparad läsuppgift',
+          }),
+        ]),
+      }),
     ]);
     await page.goto(`${app.origin}/assistants`);
     await page
@@ -435,11 +467,7 @@ test('AI-06: avgränsad läsning visar direkta samband utan orelaterade uppgifte
     await post('object-type', {
       id: 'unrelated-type',
       baseRevision: null,
-      value: {
-        name: 'Privat samling',
-        description: 'Orelaterad typbeskrivning',
-        fields: [{ id: 'note', name: 'Anteckning', description: 'Hemligt fält', kind: 'text' }],
-      },
+      value: { name: 'Privat samling', description: 'Orelaterad typbeskrivning' },
     });
     for (const [id, typeId, name, description] of [
       ['car', vehicleType, 'Blå bilen', 'Bilens sparade uppgifter'],
@@ -451,12 +479,18 @@ test('AI-06: avgränsad läsning visar direkta samband utan orelaterade uppgifte
       await post('draft', {
         id,
         baseRevision: null,
-        value: { typeId, name, description },
+        value: {
+          typeId,
+          name,
+          properties: [
+            { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: description },
+          ],
+        },
       });
-    for (const [id, type, sourceId, targetId, knowledge] of [
+    for (const [id, type, sourceId, targetId, certainty] of [
       ['ownership', 'Äger', 'car', 'kim', 'known'],
       ['usage', 'Använder', 'lo', 'car', 'uncertain'],
-      ['unknown-user', 'Används av', 'car', null, 'unknown'],
+      ['unknown-user', 'Används av', 'car', 'lo', 'unknown'],
       ['second-hop', 'Använder', 'kim', 'bike', 'known'],
     ])
       await post('relationship', {
@@ -466,7 +500,18 @@ test('AI-06: avgränsad läsning visar direkta samband utan orelaterade uppgifte
           typeId: state.relationshipTypes.find((item) => item.name === type)?.id,
           sourceId,
           targetId,
-          knowledge,
+          ...(certainty === 'known'
+            ? {}
+            : {
+                properties: [
+                  {
+                    id: 'certainty',
+                    label: 'Uppgiftens säkerhet',
+                    kind: 'text',
+                    value: certainty === 'unknown' ? 'Okänt' : 'Osäkert uppgivet',
+                  },
+                ],
+              }),
         },
       });
     await post('save', { operationId: 'save-scoped-map' });
@@ -486,7 +531,16 @@ test('AI-06: avgränsad läsning visar direkta samband utan orelaterade uppgifte
       const result = await response.json();
       const map = JSON.parse(result.result.content[0].text);
       expect(map.objects).toEqual([
-        expect.objectContaining({ id: 'car', description: 'Bilens sparade uppgifter' }),
+        expect.objectContaining({
+          id: 'car',
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Bilens sparade uppgifter',
+            }),
+          ]),
+        }),
       ]);
       expect(map.contextObjects).toEqual([
         { id: 'kim', typeId: personType, name: 'Kim' },
@@ -498,10 +552,31 @@ test('AI-06: avgränsad läsning visar direkta samband utan orelaterade uppgifte
         'usage',
       ]);
       expect(map.relationships).toContainEqual(
-        expect.objectContaining({ id: 'unknown-user', targetId: null, knowledge: 'unknown' }),
+        expect.objectContaining({
+          id: 'unknown-user',
+          targetId: 'lo',
+          properties: [
+            {
+              id: 'certainty',
+              label: 'Uppgiftens säkerhet',
+              kind: 'text' as const,
+              value: 'Okänt',
+            },
+          ],
+        }),
       );
       expect(map.relationships).toContainEqual(
-        expect.objectContaining({ id: 'usage', knowledge: 'uncertain' }),
+        expect.objectContaining({
+          id: 'usage',
+          properties: [
+            {
+              id: 'certainty',
+              label: 'Uppgiftens säkerhet',
+              kind: 'text',
+              value: 'Osäkert uppgivet',
+            },
+          ],
+        }),
       );
       expect(map.types.map((type: { name: string }) => type.name).sort()).toEqual([
         'Fordon',
@@ -538,7 +613,7 @@ test('AI-06: avgränsad läsning visar direkta samband utan orelaterade uppgifte
     await page.goto(app.origin);
     const carForm = await editTableObject(page, 'Blå bilen');
     await carForm.getByLabel('Namn', { exact: true }).fill('Rättad blå bil');
-    await carForm.getByLabel('Beskrivning', { exact: true }).fill('Bilens rättade uppgifter');
+    await setProperty(carForm, 'Beskrivning', 'Bilens rättade uppgifter');
     await carForm.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     const nativeProposal = await readDraftProposal(page, 'Rättad blå bil');
     await expect(nativeProposal).toContainText('Bilens sparade uppgifter');
@@ -556,7 +631,14 @@ test('AI-06: avgränsad läsning visar direkta samband utan orelaterade uppgifte
         after: expect.objectContaining({
           typeId: vehicleType,
           name: 'Rättad blå bil',
-          description: 'Bilens rättade uppgifter',
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Bilens rättade uppgifter',
+            },
+          ],
         }),
       }),
     ]);
@@ -566,19 +648,51 @@ test('AI-06: avgränsad läsning visar direkta samband utan orelaterade uppgifte
       value: {
         typeId: vehicleType,
         name: 'Rättad blå bil',
-        description: 'Bilens rättade uppgifter',
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Bilens rättade uppgifter',
+          },
+        ],
       },
     });
     const draftResponse = await callAssistant(app.origin, access_token, 'read_my_draft');
     const draft = JSON.parse((await draftResponse.json()).result.content[0].text);
     expect(draft.changes).toMatchObject([
       {
-        before: { description: 'Bilens sparade uppgifter' },
-        after: { description: 'Bilens rättade uppgifter' },
+        before: {
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Bilens sparade uppgifter',
+            }),
+          ]),
+        },
+        after: {
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Bilens rättade uppgifter',
+            }),
+          ]),
+        },
       },
     ]);
     expect(draft.current.objects).toContainEqual(
-      expect.objectContaining({ id: 'car', description: 'Bilens sparade uppgifter' }),
+      expect.objectContaining({
+        id: 'car',
+        properties: expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Beskrivning',
+            kind: 'text',
+            value: 'Bilens sparade uppgifter',
+          }),
+        ]),
+      }),
     );
     expect(draft.current.objects.filter((object: { id: string }) => object.id !== 'car')).toEqual([
       { id: 'kim', typeId: personType, name: 'Kim' },
@@ -653,7 +767,7 @@ test('AI-05: eget utkast förblir privat och återkallad åtkomst stoppar klient
               version: 0,
               id,
               baseRevision: null,
-              value: { typeId: map.types[0].id, name, description: '' },
+              value: { typeId: map.types[0].id, name },
             },
           })
         ).status(),
@@ -668,16 +782,10 @@ test('AI-05: eget utkast förblir privat och återkallad åtkomst stoppar klient
       privateProposal.locator('dt').filter({ hasText: /^Typ$/ }).locator('..').locator('dd'),
     ).toHaveText('Person');
     await expect(privateProposal).not.toContainText('Alex privata förslag');
-    await expect(
-      privateProposal
-        .locator('dt')
-        .filter({ hasText: /^Beskrivning$/ })
-        .locator('..'),
-    ).toContainText('Ej uppgivet');
+    await expect(privateProposal.locator('dt').filter({ hasText: /^Beskrivning$/ })).toHaveCount(0);
     for (const [label, value] of [
       ['Namn', 'Robins privata förslag'],
       ['Typ', 'Person'],
-      ['Beskrivning', 'Ej uppgivet'],
     ])
       await expect(
         privateProposal
@@ -708,7 +816,7 @@ test('AI-05: eget utkast förblir privat och återkallad åtkomst stoppar klient
         expect.objectContaining({
           id: 'robin-private',
           before: null,
-          after: { typeId: map.types[0].id, name: 'Robins privata förslag', description: '' },
+          after: { typeId: map.types[0].id, name: 'Robins privata förslag' },
           type: expect.objectContaining({ id: map.types[0].id, name: 'Person' }),
         }),
       ]);

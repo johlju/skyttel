@@ -18,7 +18,7 @@ const initial: TextAssistantView = {
         id: 'kept',
         type: { id: 'person', householdId: 'linden', revision: 1, name: 'Person', description: '' },
         before: null,
-        after: { typeId: 'person', name: 'Lo Exempel', description: '' },
+        after: { typeId: 'person', name: 'Lo Exempel' },
       },
     ],
     readyToSave: true,

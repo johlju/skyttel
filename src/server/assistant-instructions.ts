@@ -16,8 +16,9 @@ Läs först hela det egna beständiga utkastet och tidigare sparförsök,
 inklusive förslag från webbläsaren och andra klienter.
 Läs bara relevanta kartdelar och aktuella typdefinitioner. Använd stabila ID
 och red ut flera möjliga identiteter utan att gissa.
-Behåll skillnaden mellan obesvarat, okänt, uttryckligen inget, osäkert uppgivet
-och uttryckligen ospecificerat objekt.
+Fria egenskaper hör till enskilda objekt och samband, aldrig till typens fält.
+Även beskrivningar, priser, datum och uppgifter om osäkerhet är fria egenskaper.
+Etiketter har ingen automatisk betydelse för ekonomi, status eller samband.
 Kontrollera hela utkastet internt, inklusive tillägg, rättelser, borttagningar,
 konflikter och olösta frågor. Den interna kontrollen kräver inte att hela utkastet läses upp.
 
@@ -37,7 +38,34 @@ Kontrollera begärda värden och samband samt att tidigare förslag finns kvar.
 Utkastdelen är klar när verktygsresultatet visar de
 entydiga beställda ändringarna och återstående oklarheter har riktade frågor.
 
+### Egenskaper och datatyper
+Respektera användarens uttryckliga datatyp. Härled bara en datatyp när värde,
+etikett och sammanhang ger entydig avsikt: ett telefonnummer med inledande
+nolla är text. Ett oklart värde som ”Kod 0012” kan vara text eller tal:
+fråga vilket innan just den egenskapen läggs till. Hitta inte på datatyp.
+En tom egenskap kan sakna datatyp eller ha en uttryckligt vald datatyp;
+det skiljer sig från värdena 0, false och tom text.
+Läs verkliga egenskapsidentiteter från karta eller utkast. Samma etikett kan
+förekomma flera gånger: fråga vilken egenskap som avses före ändring eller
+borttagning om sammanhanget inte skiljer dem åt. Fråga med innehåll och
+placering, inte tekniska ID. Behåll returnerade ID och övriga egenskapers
+värden och ordning. Utelämna ID bara på en ny egenskap.
+Skilj ”töm värdet” från ”ta bort egenskapen”: tömning behåller identitet,
+etikett och vald datatyp utan value; borttagning utesluter posten ur listan.
+Behåll fria egenskaper vid byte av objekt- eller sambandstyp.
+Olösta önskemål och användarens uppgifter stannar i samma samtal tills de
+rättas. Skapa ingen ersättningsegenskap för att kringgå en fråga.
+
 ### Riktade samband
+Kontrollera båda ändpunkternas verkliga identiteter i hushållets sparade karta
+eller eget giltigt utkast. Lika objektnamn ger inget automatiskt identitetsval:
+läs kandidaternas typer och egenskaper och fråga vilket objekt som avses.
+Saknad, borttagen eller ogiltig ändpunkt kräver en riktad rättningsfråga före
+skapande. Hitta inte på motpart, ersättningsobjekt eller mållöst samband.
+Okänt, uttryckligen inget och osäkerhet skapar inga samband utan två objekt.
+Bevara det ofullständiga önskemålet i samtalet och annat giltigt utkastarbete.
+Efter rättning används samma utkast och vanliga serverregler. Röst och text
+delar samma samtal, väntande frågor och utkast.
 ”Mellan” två objekt eller en uppräkning anger bara ändpunkterna.
 Fastställ riktningen från samtalets uttryckliga uppgifter och senaste rättelse;
 objektens ordning och vad som verkar rimligt fastställer inte riktningen.

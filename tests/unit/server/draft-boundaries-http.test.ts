@@ -81,7 +81,8 @@ async function independent(actor = owner) {
       {
         typeId: (await read(actor)).types[0].id,
         name: 'Oberoende förslag',
-        description: 'Bevaras',
+
+        properties: [{ id: 'description', label: 'Beskrivning', kind: 'text', value: 'Bevaras' }],
       },
       actor,
     ),
@@ -108,7 +109,10 @@ beforeEach(async () => {
       await propose('object', id, {
         typeId: initial.types[0].id,
         name: id,
-        description: 'Grundvärde',
+
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Grundvärde' },
+        ],
       }),
     );
   await checked(
@@ -116,7 +120,6 @@ beforeEach(async () => {
       typeId: initial.relationshipTypes[0].id,
       sourceId: 'source',
       targetId: 'target',
-      knowledge: 'known',
     }),
   );
   await save('initial');
@@ -139,17 +142,23 @@ test.each(['object', 'relationship', 'objectType', 'relationshipType'] as const)
       kind === 'object'
         ? {
             name: privateSide ? 'Mitt namn' : 'Gemensamt namn',
-            description: privateSide ? 'Min text' : 'Gemensam text',
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text',
+                value: privateSide ? 'Min text' : 'Gemensam text',
+              },
+            ],
           }
         : kind === 'relationship'
           ? {
-              knowledge: privateSide ? 'uncertain' : 'known',
               lifecycle: privateSide ? 'active' : 'ended',
             }
           : {
               name: privateSide ? 'Min definition' : 'Gemensam definition',
               description: privateSide ? 'Min text' : 'Gemensam text',
-              ...(kind === 'objectType' ? { fields: [] } : {}),
+              ...(kind === 'objectType' ? {} : {}),
             };
     await checked(await propose(kind, id, update(true)));
     await independent();
@@ -213,7 +222,18 @@ test.each(['object', 'relationship'] as const)(
       await propose(
         kind,
         id,
-        kind === 'object' ? { description: 'Senare beskrivning' } : { knowledge: 'uncertain' },
+        kind === 'object'
+          ? {
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text',
+                  value: 'Senare beskrivning',
+                },
+              ],
+            }
+          : {},
         member,
       ),
     );
@@ -270,7 +290,6 @@ test('an additional saved connection requires every removal choice and an invali
         typeId: state.relationshipTypes[1].id,
         sourceId: 'source',
         targetId: 'other',
-        knowledge: 'known',
       },
       member,
     ),
@@ -326,7 +345,7 @@ test.each(['objectType', 'relationshipType'] as const)(
       await propose(kind, 'private-type', {
         name: 'Egen typ',
         description: '',
-        fields: [],
+
         ...(kind === 'relationshipType'
           ? { forwardLabel: 'binder', reverseLabel: 'hör till' }
           : {}),
@@ -337,12 +356,11 @@ test.each(['objectType', 'relationshipType'] as const)(
         kind === 'objectType' ? 'object' : 'relationship',
         'dependent',
         kind === 'objectType'
-          ? { typeId: 'private-type', name: 'Beroende förslag', description: '' }
+          ? { typeId: 'private-type', name: 'Beroende förslag' }
           : {
               typeId: 'private-type',
               sourceId: 'source',
               targetId: 'target',
-              knowledge: 'known',
             },
       ),
     );
@@ -410,7 +428,6 @@ test('discard validation rejects nonexistent references and malformed kinds whil
     await propose('object', 'later', {
       typeId: before.types[0].id,
       name: 'Senare arbete',
-      description: '',
     }),
   );
   const current = await read();
@@ -438,118 +455,19 @@ test('discard validation rejects nonexistent references and malformed kinds whil
   expect((await read()).objects).toEqual(before.objects);
 });
 
-test.each(['objectType', 'relationshipType'] as const)(
-  '%s field kind changes respect saved usage and can be saved atomically with an explicit removal of its old value',
-  async (kind) => {
-    const field = { id: 'serial', name: 'Serienummer', description: '', kind: 'text' };
-    const defined = {
-      name: 'Egen typ',
-      description: '',
-      fields: [field],
-      ...(kind === 'relationshipType' ? { forwardLabel: 'binder', reverseLabel: 'hör till' } : {}),
-    };
-    await checked(await propose(kind, 'field-type', defined));
-    await save('field-type');
-    const valueKind = kind === 'objectType' ? 'object' : 'relationship';
-    const id = kind === 'objectType' ? 'source' : 'edge';
-    await checked(
-      await propose(valueKind, id, { typeId: 'field-type', customValues: { serial: 'SYNTH-42' } }),
-    );
-    await save('serial-value');
-    const before = await read();
-    const next = { ...defined, fields: [{ ...field, kind: 'number' }] };
-    expect(await (await propose(kind, 'field-type', next)).json()).toEqual({
-      error: 'field_kind_in_use',
-    });
-    expect(await read()).toEqual(before);
-    // An unused saved record of this type must not keep the field in use.
-    await checked(
-      await propose(
-        valueKind,
-        kind === 'objectType' ? 'other' : 'unused-edge',
-        kind === 'objectType'
-          ? { typeId: 'field-type' }
-          : { typeId: 'field-type', sourceId: 'target', targetId: 'other', knowledge: 'known' },
-      ),
-    );
-    await save('unused-record');
-    await checked(await propose(valueKind, id, { customValues: {} }));
-    await checked(await propose(kind, 'field-type', next));
-    const proposed = await read();
-    expect(
-      proposed.draft[kind === 'objectType' ? 'objectTypes' : 'relationshipTypes']?.[0].after
-        ?.fields,
-    ).toEqual([{ ...field, kind: 'number' }]);
-    const receipt = (await save('explicit-field-value-removal')).receipt;
-    const final = await read();
-    const values = kind === 'objectType' ? final.objects : final.relationships;
-    expect(values.find((item) => item.id === id)).not.toHaveProperty('customValues');
-    const changes = kind === 'objectType' ? receipt.changes : receipt.relationships;
-    expect(changes[0].before.customValues).toEqual({ serial: 'SYNTH-42' });
-    expect(changes[0].after).not.toHaveProperty('customValues');
-    expect(changes[0].beforeType.fields).toEqual([field]);
-    expect(changes[0].type.fields).toEqual([{ ...field, kind: 'number' }]);
-  },
-);
-
-test.each(['objectType', 'relationshipType'] as const)(
-  '%s new private fields cannot be silently removed or changed while an owned proposal uses them',
-  async (kind) => {
-    const field = { id: 'serial', name: 'Serienummer', description: '', kind: 'text' };
-    const defined = {
-      name: 'Egen typ',
-      description: '',
-      fields: [],
-      ...(kind === 'relationshipType' ? { forwardLabel: 'binder', reverseLabel: 'hör till' } : {}),
-    };
-    await checked(await propose(kind, 'field-type', defined));
-    await save('empty-definition');
-    await checked(await propose(kind, 'field-type', { ...defined, fields: [field] }));
-    await checked(
-      await propose(
-        kind === 'objectType' ? 'object' : 'relationship',
-        kind === 'objectType' ? 'source' : 'edge',
-        { typeId: 'field-type', customValues: { serial: 'PRIVATE-SERIAL' } },
-      ),
-    );
-    const before = await read();
-    const historyBefore = await history();
-    expect(await (await propose(kind, 'field-type', defined)).json()).toEqual({
-      error: 'field_in_use',
-    });
-    expect(await read()).toEqual(before);
-    expect(
-      await (
-        await propose(kind, 'field-type', { ...defined, fields: [{ ...field, kind: 'number' }] })
-      ).json(),
-    ).toEqual({ error: 'field_kind_in_use' });
-    expect(await read()).toEqual(before);
-    expect(await history()).toEqual(historyBefore);
-    await save('private-field-and-value');
-    const final = await read();
-    expect(
-      (kind === 'objectType' ? final.objects : final.relationships).find(
-        (item) => item.typeId === 'field-type',
-      )?.customValues,
-    ).toEqual({ serial: 'PRIVATE-SERIAL' });
-  },
-);
-
 test.each([
   ['objectType', false],
   ['objectType', true],
   ['relationshipType', false],
   ['relationshipType', true],
 ] as const)(
-  'permanent %s erasure removes old private field meaning while independent changes are retained: %s',
+  'permanent %s erasure retains individual property corrections while replacing removed type references: %s',
   async (kind, independentChange) => {
-    const field = { id: 'serial', name: 'Serienummer', description: '', kind: 'text' };
     for (const id of ['former-type', 'current-type']) {
       await checked(
         await propose(kind, id, {
           name: id === 'former-type' ? 'Tidigare typ' : 'Nuvarande typ',
           description: '',
-          fields: id === 'former-type' ? [field] : [],
           ...(kind === 'relationshipType'
             ? { forwardLabel: 'binder', reverseLabel: 'hör till' }
             : {}),
@@ -562,24 +480,23 @@ test.each([
     await checked(
       await propose(valueKind, id, {
         typeId: 'former-type',
-        customValues: { serial: 'ERASE-OLD-VALUE' },
+
+        properties: [{ id: 'serial', label: 'serial', kind: 'text', value: 'ERASE-OLD-VALUE' }],
       }),
     );
     await save('historical-value');
     await checked(
       await propose(valueKind, id, {
-        customValues: { serial: 'ERASE-PRIVATE-VALUE' },
         ...(independentChange
           ? kind === 'objectType'
-            ? { description: 'Min oberoende beskrivning' }
-            : { lifecycle: 'ended', endDate: { knowledge: 'known', value: '2026-10-01' } }
+            ? { name: 'Mitt oberoende namn' }
+            : { lifecycle: 'ended' }
           : {}),
+        properties: [{ id: 'serial', label: 'serial', kind: 'text', value: 'ERASE-PRIVATE-VALUE' }],
       }),
     );
     await independent();
-    await checked(
-      await propose(valueKind, id, { typeId: 'current-type', customValues: {} }, member),
-    );
+    await checked(await propose(valueKind, id, { typeId: 'current-type' }, member));
     await save('newer-current-meaning', member);
     const before = await read();
     const memberBefore = await read(member);
@@ -614,20 +531,18 @@ test.each([
     const change = (kind === 'objectType' ? after.draft.changes : after.draft.relationships)?.find(
       (change) => change.id === id,
     );
-    if (independentChange) {
-      expect(change).toMatchObject({
-        before: { typeId: 'current-type' },
-        after: { typeId: 'current-type' },
-        type: { id: 'current-type' },
-      });
-      expect(change?.before).not.toHaveProperty('customValues');
-      expect(change?.after).not.toHaveProperty('customValues');
+    expect(change).toMatchObject({
+      before: { typeId: 'current-type' },
+      after: {
+        typeId: 'current-type',
+        properties: [{ id: 'serial', label: 'serial', kind: 'text', value: 'ERASE-PRIVATE-VALUE' }],
+      },
+      type: { id: 'current-type' },
+    });
+    if (independentChange)
       expect(change?.after).toMatchObject(
-        kind === 'objectType'
-          ? { description: 'Min oberoende beskrivning' }
-          : { lifecycle: 'ended', endDate: { knowledge: 'known', value: '2026-10-01' } },
+        kind === 'objectType' ? { name: 'Mitt oberoende namn' } : { lifecycle: 'ended' },
       );
-    } else expect(change).toBeUndefined();
     expect((await read(member)).draft).toEqual(memberBefore.draft);
     const exported = await checked(await owner.json(`${householdPath}/exports`, {}), 201);
     const archive = await owner.request(`${householdPath}/exports/${exported.id}`);
@@ -635,8 +550,8 @@ test.each([
     const files = unzipSync(new Uint8Array(await archive.arrayBuffer()));
     const exportedContent = Buffer.from(files['content.json']).toString();
     expect(exportedContent).not.toContain('former-type');
-    expect(exportedContent).not.toContain('ERASE-OLD-VALUE');
-    expect(exportedContent).not.toContain('ERASE-PRIVATE-VALUE');
+    expect(exportedContent).toContain('ERASE-OLD-VALUE');
+    expect(exportedContent).toContain('ERASE-PRIVATE-VALUE');
     // Read the household history through its normal route as well: erased
     // type definitions and field values cannot remain in readable receipts.
     const retainedHistory = await history();

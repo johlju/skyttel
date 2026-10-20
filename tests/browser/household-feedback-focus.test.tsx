@@ -19,13 +19,16 @@ afterEach(() => {
  * Persistence and authorization of these same forms have real-SQLite unit cases. */
 async function open(withDraft = true) {
   await page.viewport(1440, 900);
-  const lo = {
+  const lo: MapState['objects'][number] = {
     id: 'lo',
     householdId: 'home',
     revision: 1,
     typeId: 'person',
     name: 'Lo Exempel',
-    description: 'Sparad beskrivning',
+
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Sparad beskrivning' },
+    ],
   };
   const person = {
     id: 'person',
@@ -48,7 +51,17 @@ async function open(withDraft = true) {
             {
               id: 'lo',
               before: lo,
-              after: { ...lo, description: 'Privat förslag' },
+              after: {
+                ...lo,
+                properties: [
+                  {
+                    id: 'description',
+                    label: 'Beskrivning',
+                    kind: 'text',
+                    value: 'Privat förslag',
+                  },
+                ],
+              },
               type: person,
               beforeType: person,
             },
@@ -98,7 +111,10 @@ test('leaving an edited object protects unsent text and discards only that text,
   await openTable();
   await page.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }).click();
   const form = page.getByRole('dialog', { name: 'Redigera Lo Exempel', exact: true });
-  const field = form.getByLabelText('Beskrivning', { exact: true });
+  await form.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
+  const field = form
+    .getByRole('group', { name: 'Egenskap 1', exact: true })
+    .getByLabelText('Värde', { exact: true });
   await field.fill('Fortfarande oskickat');
   await form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
   await page.getByRole('button', { name: 'Fortsätt redigera', exact: true }).click();
@@ -108,8 +124,13 @@ test('leaving an edited object protects unsent text and discards only that text,
   await expect.element(form).not.toBeInTheDocument();
   expect(home.writes).toEqual([]);
   await page.getByRole('button', { name: 'Redigera Lo Exempel', exact: true }).click();
+  await form.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
   await expect
-    .element(form.getByLabelText('Beskrivning', { exact: true }))
+    .element(
+      form
+        .getByRole('group', { name: 'Egenskap 1', exact: true })
+        .getByLabelText('Värde', { exact: true }),
+    )
     .toHaveValue('Privat förslag');
   await form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
   await openConversationText();
@@ -117,8 +138,10 @@ test('leaving an edited object protects unsent text and discards only that text,
   if (draftEntry.query()) await draftEntry.click();
   await page.getByRole('button', { name: 'Visa förslaget: Lo Exempel', exact: true }).click();
   const review = page.getByRole('dialog', { name: 'Lo Exempel', exact: true });
-  await expect.element(review.getByText('Privat förslag', { exact: true })).toBeVisible();
-  await expect.element(review.getByText('Sparad beskrivning', { exact: true })).toBeVisible();
+  await expect.element(review.getByText('Privat förslag (Text)', { exact: true })).toBeVisible();
+  await expect
+    .element(review.getByText('Sparad beskrivning (Text)', { exact: true }))
+    .toBeVisible();
 });
 
 test('unknown complete object staging requires checking before retry and retains all form text without another send', async () => {

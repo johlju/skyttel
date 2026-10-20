@@ -215,7 +215,7 @@ test('permanent household erasure and restart retain the global cost ledger and 
           contentVersion: 1,
           id: 'erase-this-content',
           baseRevision: null,
-          value: { typeId: map.types[0].id, name: 'Syntetiskt raderingsprov', description: '' },
+          value: { typeId: map.types[0].id, name: 'Syntetiskt raderingsprov' },
         },
       })
     ).status(),
@@ -708,7 +708,7 @@ test('a failed initial ledger write prevents both billable providers while ordin
             contentVersion: 1,
             id: 'manual-during-outage',
             baseRevision: null,
-            value: { typeId: map.types[0].id, name: 'Manuellt förslag', description: '' },
+            value: { typeId: map.types[0].id, name: 'Manuellt förslag' },
           },
         })
       ).status(),
@@ -744,7 +744,6 @@ test('a failed terminal ledger write preserves the initial unknown attempt and t
             value: {
               typeId: map.types[0].id,
               name: 'Privat karttext utanför mätningen',
-              description: '',
             },
           },
         })

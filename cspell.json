@@ -4,6 +4,21 @@
   "language": "sv,en",
   "import": ["@cspell/dict-sv/cspell-ext.json"],
   "words": [
+    "typfältsdatatyper",
+    "tilländpunkt",
+    "talegenskap",
+    "talegenskapen",
+    "billbara",
+    "talrad",
+    "formulärnåbarhet",
+    "frånobjektet",
+    "fokusobservationen",
+    "Nyformatsarkiv",
+    "läsdialogens",
+    "råtext",
+    "råtexten",
+    "datatypbyte",
+    "objekttypbyte",
     "RGBA",
     "readback",
     "framebuffers",
@@ -970,7 +985,9 @@
     "bannerlägena",
     "bannerläget",
     "tolvmånadersgräns",
-    "sjudygnsgränsen"
+    "sjudygnsgränsen",
+    "skärmläsarobservationerna",
+    "rättningsbatchen"
   ],
   "overrides": [
     {

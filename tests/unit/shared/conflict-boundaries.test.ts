@@ -36,20 +36,6 @@ const objectType: ObjectType = {
   revision: 1,
   name: 'Fordon',
   description: 'Fullständig definition',
-  sections: [{ id: 'details', name: 'Detaljer' }],
-  fields: [
-    {
-      id: 'note',
-      name: 'Anteckning',
-      description: 'Hela texten',
-      kind: 'text',
-      sectionId: 'details',
-    },
-    { id: 'count', name: 'Antal', description: '', kind: 'number', sectionId: '' },
-    { id: 'date', name: 'Datum', description: '', kind: 'date' },
-    { id: 'flag', name: 'Ja eller nej', description: '', kind: 'boolean' },
-  ],
-  builtins: [{ key: 'debt', name: 'Låneskuld', sectionId: 'details' }],
 };
 const edgeType: RelationshipType = {
   id: 'uses',
@@ -59,7 +45,6 @@ const edgeType: RelationshipType = {
   description: '',
   forwardLabel: 'använder',
   reverseLabel: 'används av',
-  fields: objectType.fields,
 };
 const alex: MapObject = {
   id: 'alex',
@@ -67,14 +52,16 @@ const alex: MapObject = {
   revision: 1,
   typeId: 'vehicle',
   name: 'Alex',
-  description: '',
 };
 const bike: MapObject = {
   ...alex,
   id: 'bike',
   name: 'Cykeln',
-  description: 'Hela beskrivningen',
+
   profileImageId: 'saved-image',
+  properties: [
+    { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Hela beskrivningen' },
+  ],
 };
 const edge: MapRelationship = {
   id: 'edge',
@@ -83,7 +70,6 @@ const edge: MapRelationship = {
   typeId: 'uses',
   sourceId: 'alex',
   targetId: 'bike',
-  knowledge: 'known',
 };
 function household(): MapState {
   return {
@@ -104,56 +90,63 @@ const property = (key: string): ConflictProperty => ({
   proposed: undefined,
 });
 
-test('combining explicit choices preserves whole nested facts, false and zero without mutating comparisons', () => {
+test('combining property choices preserves atomic values, false and zero without mutation', () => {
+  const before = { id: 'debt', label: 'Skuld', kind: 'number' as const, value: 0 };
+  const proposed = { ...before, label: 'Skuld idag', value: 1200 };
   const fields: ConflictProperty[] = [
     { ...property('name'), saved: 'Sparat', proposed: 'Föreslaget' },
+    { ...property('properties.debt'), saved: before, proposed },
     {
-      ...property('financialFacts.debt'),
-      saved: { knowledge: 'known', value: '0' },
-      proposed: { knowledge: 'uncertain', value: '1200', reportedOn: '2026-01-01' },
+      ...property('properties.flag'),
+      saved: { id: 'flag', label: 'Ja', kind: 'boolean', value: false },
+      proposed: { id: 'flag', label: 'Ja', kind: 'boolean', value: false },
     },
-    { ...property('customValues.flag'), saved: false, proposed: false },
-    { ...property('customValues.count'), saved: 0, proposed: 0 },
-    { ...property('description'), saved: undefined, proposed: undefined },
+    {
+      ...property('propertiesOrder'),
+      before: ['debt', 'flag'],
+      saved: ['debt', 'flag'],
+      proposed: ['debt', 'flag'],
+      automatic: 'saved',
+    },
   ];
-  const before = structuredClone(fields);
+  const original = structuredClone(fields);
   expect(combineConflictProperties(fields, {})).toBeNull();
-  expect(combineConflictProperties(fields, { name: 'saved' })).toBeNull();
   expect(
-    combineConflictProperties(fields, { name: 'proposed', 'financialFacts.debt': 'saved' }),
+    combineConflictProperties(fields, { name: 'proposed', 'properties.debt': 'saved' }),
   ).toEqual({
     name: 'Föreslaget',
-    financialFacts: { debt: { knowledge: 'known', value: '0' } },
-    customValues: { flag: false, count: 0 },
+    properties: [before, { id: 'flag', label: 'Ja', kind: 'boolean', value: false }],
   });
   expect(
-    combineConflictProperties(fields, { name: 'saved', 'financialFacts.debt': 'proposed' }),
+    combineConflictProperties(fields, { name: 'saved', 'properties.debt': 'proposed' }),
   ).toEqual({
     name: 'Sparat',
-    financialFacts: { debt: { knowledge: 'uncertain', value: '1200', reportedOn: '2026-01-01' } },
-    customValues: { flag: false, count: 0 },
+    properties: [proposed, { id: 'flag', label: 'Ja', kind: 'boolean', value: false }],
   });
-  expect(fields).toEqual(before);
+  expect(fields).toEqual(original);
   expect(sameConflictValue({ a: { b: false }, c: 0 }, { c: 0, a: { b: false } })).toBe(true);
   expect(sameConflictValue({ a: 1 }, { a: 1, b: 2 })).toBe(false);
   expect(sameConflictValue({ a: 1 }, { a: 2 })).toBe(false);
   expect(sameConflictValue(null, {})).toBe(false);
   expect(sameConflictValue('1', 1)).toBe(false);
-  expect(conflictPropertyValue({ customValues: { flag: false } }, 'customValues.flag')).toBe(false);
-  expect(conflictPropertyValue(null, 'customValues.flag')).toBeUndefined();
+  expect(conflictPropertyValue({ properties: [before] }, 'properties.debt')).toEqual(before);
+  expect(conflictPropertyValue(null, 'properties.debt')).toBeUndefined();
   expect(conflictPropertyLabel({ ...property('note'), label: 'Anteckning' })).toBe('Anteckning');
-  expect(conflictPropertyLabel({ ...property('note'), label: 'Anteckning' }, 'saved')).toBe(
-    'Anteckning',
-  );
 });
 
-test('combined object and relationship values validate actual field kinds and calendar dates', () => {
+test('combined object and relationship choices validate actual types and endpoints', () => {
   const state = household();
   const objectConflict: DraftConflict = { kind: 'object', id: 'bike', current: bike };
   const valid = {
     name: 'Cykeln',
     typeId: 'vehicle',
-    customValues: { note: '', count: 0, date: '2024-02-29', flag: false },
+
+    properties: [
+      { id: 'note', label: 'note', kind: 'text', value: '' },
+      { id: 'count', label: 'count', kind: 'number', value: 0 },
+      { id: 'date', label: 'date', kind: 'text', value: '2024-02-29' },
+      { id: 'flag', label: 'flag', kind: 'boolean', value: false },
+    ],
   };
   expect(conflictCombinationError(state, objectConflict, valid)).toBe('');
   expect(conflictCombinationError(state, objectConflict, null)).toBe('');
@@ -164,42 +157,22 @@ test('combined object and relationship values validate actual field kinds and ca
   expect(
     conflictCombinationError(state, objectConflict, { ...valid, typeId: 'missing' }),
   ).toContain('typen finns inte');
-  for (const customValues of [
-    { absent: 'value' },
-    { count: '0' },
-    { count: Number.POSITIVE_INFINITY },
-    { flag: 'false' },
-    { note: false },
-    { note: 'a'.repeat(2001) },
-  ])
-    expect(conflictCombinationError(state, objectConflict, { ...valid, customValues })).toContain(
-      'valt värde',
-    );
-  for (const date of ['2026-02-29', '2026-02-30', '2026-13-01', '02-01-2026'])
-    expect(
-      conflictCombinationError(state, objectConflict, { ...valid, customValues: { date } }),
-    ).toContain('valt datum');
   const relationshipConflict: DraftConflict = { kind: 'relationship', id: 'edge', current: edge };
   expect(
     conflictCombinationError(state, relationshipConflict, {
       ...edge,
-      customValues: valid.customValues,
     }),
   ).toBe('');
   expect(
     conflictCombinationError(state, relationshipConflict, {
       ...edge,
-      knowledge: 'unknown',
-      targetId: null,
+
+      targetId: 'bike',
     }),
   ).toBe('');
-  for (const update of [
-    { knowledge: 'known', targetId: null },
-    { knowledge: 'uncertain', targetId: null },
-    { knowledge: 'none', targetId: 'bike' },
-  ])
+  for (const update of [{ targetId: null }, { targetId: null }, { targetId: null }])
     expect(conflictCombinationError(state, relationshipConflict, { ...edge, ...update })).toContain(
-      'målobjektet',
+      'tillobjekt',
     );
   expect(
     conflictCombinationError(state, relationshipConflict, { ...edge, sourceId: 'absent' }),
@@ -222,50 +195,7 @@ test('combined object and relationship values validate actual field kinds and ca
   ).toBe('');
 });
 
-test('definition combinations reject detached sections and invalid property order while accepting hidden and legacy fields', () => {
-  const state = household();
-  for (const kind of ['objectType', 'relationshipType'] as const) {
-    const conflict: DraftConflict = { kind, id: 'type', current: null };
-    expect(
-      conflictCombinationError(state, conflict, { fields: [{ id: 'note', sectionId: 'missing' }] }),
-    ).toContain('avsnitt som saknas');
-    expect(
-      conflictCombinationError(state, conflict, { fields: [{ id: 'note', sectionId: '' }] }),
-    ).toBe('');
-    expect(
-      conflictCombinationError(state, conflict, {
-        fields: [{ id: 'note', sectionId: 'custom-fields' }],
-      }),
-    ).toBe('');
-    expect(
-      conflictCombinationError(state, conflict, {
-        fields: [{ id: 'note' }],
-        propertyOrder: ['field:absent'],
-      }),
-    ).toContain('uppgift som saknas');
-    expect(
-      conflictCombinationError(state, conflict, {
-        fields: [{ id: 'a' }, { id: 'b' }],
-        propertyOrder: ['field:a', 'field:a'],
-      }),
-    ).toContain('uppgift som saknas');
-    expect(
-      conflictCombinationError(state, conflict, {
-        fields: [{ id: 'a' }, { id: 'b' }],
-        propertyOrder: ['field:a'],
-      }),
-    ).toContain('uppgift som saknas');
-  }
-  expect(
-    conflictCombinationError(
-      state,
-      { kind: 'relationshipType', id: 'uses', current: edgeType },
-      { fields: [{ id: 'note' }], propertyOrder: ['field:note'] },
-    ),
-  ).toBe('');
-});
-
-test('comparison text retains full definitions, missing values, hidden fields, knowledge and actual proposed endpoint names', () => {
+test('comparison text retains type meaning, empty properties and actual proposed endpoint names', () => {
   const state = household();
   state.draft.changes = [
     { id: 'alex', before: alex, after: { ...alex, name: 'Mitt Alex' }, type: objectType },
@@ -291,39 +221,14 @@ test('comparison text retains full definitions, missing values, hidden fields, k
   expect(text('profileImageId', 'saved-image')).toBe('Den sparade profilbilden');
   expect(text('profileImageId', 'new-image')).toBe('Din föreslagna profilbild');
   expect(text('relationship', edge)).toBe('Alex → använder → Cykeln');
-  expect(text('sections', objectType.sections)).toBe('Detaljer');
-  expect(text('sections', [])).toBe('Inga avsnitt');
-  expect(text('fields', objectType.fields)).toBe(
-    'Anteckning: Text · Detaljer — Hela texten; Antal: Tal · Dold uppgift; Datum: Datum · Egna fält; Ja eller nej: Ja eller nej · Egna fält',
+  expect(text('properties.flag', { id: 'flag', label: 'Ja', kind: 'boolean', value: false })).toBe(
+    'Ja: Nej (Ja/nej)',
   );
-  expect(text('fields', [])).toBe('Inga egna fält');
-  expect(text('builtins', objectType.builtins)).toBe('Låneskuld · Detaljer');
-  expect(text('builtins', [])).toBe('Inga övriga uppgifter');
-  expect(
-    text('propertyOrder', ['field:note', 'builtin:debt', 'field:absent', 'builtin:absent']),
-  ).toBe('Anteckning → Låneskuld → Uppgift som saknas → Uppgift som saknas');
-  expect(text('propertyOrder', [])).toBe('Ingen särskild ordning');
-  expect(text('financialFacts.debt', { knowledge: 'none' })).toBe('Uttryckligen inget');
-  expect(text('financialFacts.debt', { knowledge: 'unknown' })).toBe('Okänt');
-  expect(
-    text('financialFacts.debt', {
-      knowledge: 'uncertain',
-      value: '500 SEK',
-      reportedOn: '2026-01-01',
-    }),
-  ).toBe('500 SEK (Osäkert uppgivet) — datum för uppgiften: 2026-01-01');
-  for (const [value, expected] of [
-    ['known', 'Känt'],
-    ['unknown', 'Okänt'],
-    ['none', 'Uttryckligen inget'],
-    ['uncertain', 'Osäkert uppgivet'],
-    ['unresolved', 'Behöver redas ut'],
-    ['new-mode', 'new-mode'],
-  ])
-    expect(text('knowledge', value)).toBe(expected);
-  expect(text('customValues.flag', false)).toBe('Nej');
-  expect(text('customValues.flag', true)).toBe('Ja');
-  expect(text('customValues.count', 0)).toBe('0');
+  expect(text('properties.empty', { id: 'empty', label: 'Tom' })).toBe('Tom: Tomt (ingen datatyp)');
+  expect(text('propertiesOrder', ['one', 'two'])).toBe('1. one → 2. two');
+  expect(text('flag', false)).toBe('Nej');
+  expect(text('flag', true)).toBe('Ja');
+  expect(text('count', 0)).toBe('0');
   expect(text('other', { full: 'value' })).toBe('{"full":"value"}');
 });
 
@@ -400,14 +305,13 @@ test('special conflicts distinguish saved and private duplicates, simultaneous m
   });
   const missingType = specialConflict(state, { ...conflict, type: null });
   expect(missingType?.additionalBlockers).toHaveLength(1);
-  expect(missingType?.additionalBlockers?.[0].instruction).toContain(
-    'Inställningar → Typer och egna fält',
-  );
+  expect(missingType?.additionalBlockers?.[0].instruction).toContain('Inställningar → Typer');
   expect(
     specialConflict(state, { ...conflict, duplicates: [], missingEndpoints: ['bike'] }),
   ).toMatchObject({
     reason: 'Ett objekt som sambandet pekar på saknas.',
-    afterDiscard: 'Om du vill lägga till ett nytt samband gör du det den vanliga vägen.',
+    afterDiscard:
+      'Övrigt utkastarbete finns kvar. Du kan också rätta ändpunkterna och behålla förslaget.',
   });
   expect(specialConflict(state, { ...conflict, duplicates: undefined, type: null })).toMatchObject({
     kind: 'outside-correction',
@@ -435,53 +339,6 @@ test('special conflicts distinguish saved and private duplicates, simultaneous m
     { kind: 'removed', warning: 'Ett ändringsförslag kan inte återställa ett borttaget samband.' },
   );
   expect(specialConflict(state, { kind: 'object', id: 'absent', current: bike })).toBeNull();
-});
-
-test('ordinary correction preserves a proposal when its retained field meaning no longer fits the current type', () => {
-  for (const kind of ['object', 'relationship'] as const) {
-    const state = household();
-    const type = kind === 'object' ? objectType : edgeType;
-    if (kind === 'object')
-      state.draft.changes = [
-        {
-          id: 'bike',
-          before: bike,
-          after: { ...bike, customValues: { note: 'Hela mitt förslag' } },
-          type: objectType,
-        },
-      ];
-    else
-      state.draft.relationships = [
-        {
-          id: 'edge',
-          before: edge,
-          after: { ...edge, customValues: { note: 'Hela mitt förslag' } },
-          type: edgeType,
-        },
-      ];
-    const conflict: DraftConflict =
-      kind === 'object' ? { kind, id: 'bike', current: bike } : { kind, id: 'edge', current: edge };
-    const before = structuredClone(state);
-    for (const fields of [
-      [{ id: 'note', name: 'Taluppgift', description: '', kind: 'number' as const }],
-      [{ id: 'note', name: 'Datumuppgift', description: '', kind: 'date' as const }],
-      [],
-    ]) {
-      const result = specialConflict(state, { ...conflict, type: { ...type, fields } });
-      expect(result).toMatchObject({
-        kind: 'outside-correction',
-        instruction: expect.stringContaining(
-          kind === 'object' ? 'vanliga objektdialogen' : 'vanliga sambandsdialogen',
-        ),
-      });
-      expect(result?.warning).toBe(
-        fields[0]?.kind === 'number'
-          ? 'Det föreslagna värdet måste vara ett tal.'
-          : 'Förslaget behöver rättas så att värdena passar de aktuella egna fälten.',
-      );
-      expect(state).toEqual(before);
-    }
-  }
 });
 
 test('own removal explains actual actor or new incident edges and keeps unnamed endpoints readable', () => {
@@ -520,9 +377,31 @@ test('own removal explains actual actor or new incident edges and keeps unnamed 
     conflictRemovalProperties(state, {
       kind: 'object',
       id: 'bike',
-      current: { ...bike, description: '' },
+      current: { ...bike },
     })[0].saved,
-  ).toBe('Cykeln');
+  ).toBe('Cykeln · Beskrivning: Hela beskrivningen (Text)');
+});
+
+test('object removal review retains ordered free facts including empty, zero and false values', () => {
+  const state = household();
+  state.draft.changes = [{ id: 'bike', before: bike, after: null, type: objectType }];
+  const current: MapObject = {
+    ...bike,
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Nya sparade fakta' },
+      { id: 'empty', label: 'Anteckning', kind: 'text' },
+      { id: 'count', label: 'Antal', kind: 'number', value: 0 },
+      { id: 'insured', label: 'Försäkrad', kind: 'boolean', value: false },
+    ],
+  };
+  expect(
+    conflictRemovalProperties(state, { kind: 'object', id: 'bike', current })[0],
+  ).toMatchObject({
+    before: 'Cykeln · Beskrivning: Hela beskrivningen (Text)',
+    saved:
+      'Cykeln · Beskrivning: Nya sparade fakta (Text) · Anteckning: Tomt (Text) · Antal: 0 (Tal) · Försäkrad: Nej (Ja/nej)',
+    proposed: 'Föreslagen borttagning',
+  });
 });
 
 test('removal choices reject incomplete, invented and stale combinations while retaining independent proposals', () => {
@@ -566,6 +445,7 @@ test('removal choices reject incomplete, invented and stale combinations while r
       beforeType: edgeType,
       proposedAt: expect.any(String),
       objectNames: { alex: 'Alex', bike: 'Cykeln' },
+      removedWithObjects: ['bike'],
     },
   ]);
   expect(remove?.effects).toHaveLength(2);

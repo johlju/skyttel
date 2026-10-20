@@ -326,8 +326,10 @@ EXPORT-06.
   "evidence": [
     {
       "kind": "technical",
-      "spec": "tests/integration/household-export-content.spec.ts",
-      "title": "technical: a full archive preserves object identities and saved, historical and private image versions",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/household-export-property-images-http.test.ts",
+      "title": "a full archive preserves object identities and saved, historical and private image versions",
       "purpose": "Separat arkivinnehåll och kontrollsummor"
     }
   ]
@@ -338,16 +340,20 @@ EXPORT-06.
 
 **Steg:**
 
-1. Öppna Tabell. Skapa två objekt som heter **Lo Exempel**, med
-   beskrivningarna **Första objektet** och **Andra objektet**.
+1. Öppna Tabell. Skapa två objekt som heter **Lo Exempel**. Lägg på vardera
+   objektet till **Beskrivning** under **Fria egenskaper**, med datatyp
+   **Text** och värdena **Första objektet** respektive **Andra objektet**.
    Välj den första provbilden på det andra objektet under
    **Livscykel och utseende → Profilbild**. Lägg båda i utkastet och
    välj **Spara hela utkastet**. Vänta på sparbekräftelsen.
-2. Redigera det första objektet. Kontrollera dess beskrivning så att samma
-   namn inte blandar ihop objekten. Välj samma provbild, lägg i utkastet
+2. Sök på **Första objektet** i tabellen och kontrollera att endast en rad
+   återstår. Redigera objektet. Öppna **Fria egenskaper** och kontrollera
+   Beskrivning så att samma namn inte blandar ihop objekten.
+   Välj samma provbild, lägg i utkastet
    och spara hela utkastet. Öppna **Rapporter**, fäll ut det senaste
    sparandets **Visa ändringarna** och kontrollera objektets namn och bild.
-3. Stäng Rapporter. Redigera det första objektet och välj den andra bilden.
+3. Stäng Rapporter. Sök på **Första objektet** igen, redigera den enda raden
+   och välj den andra bilden.
    Lägg i utkastet och lämna förslaget osparat.
 4. Låt den driftansvariga starta om samma installation och ladda om sidan.
    Öppna **Visa utkastet → Visa förslaget: Lo Exempel**. Kontrollera att
@@ -615,9 +621,13 @@ för fullständig återimport av gemensamma, privata och historiska uppgifter.
 **Användare:** Alex som administratör.
 
 **Förutsättningar:** Använd ett separat testhushåll som får ersättas.
-Förbered två objekt och ett samband med egna fält för text, tal, datum
-och ja/nej. Ange bland annat noll och nej. Ordna beskrivning och egna fält
-i typavsnitt, dölj ett eget fält och en osäkert uppgiven skuld med datum.
+Förbered Gemensam lampa och Garaget samt ett Förvaring-samband mellan dem.
+Lampan har ordnade fria egenskaper: Beskrivning (Text), Antal (Tal, 0),
+Bekräftad (Ja/nej, Nej), Senast uppgiven skuld (Text, 12 300), en separat
+textegenskap om Osäkert uppgivet och en datumegenskap 2026-09-01.
+Sambandet har Belopp (Tal, 0), Låst (Ja/nej, Nej), Anteckning (Text,
+Övre hyllan) och Startdatum (Datum, 2026-09-01). Typdefinitionerna har
+namn, beskrivning och sambandets två benämningar.
 Spara uppgifterna och två olika profilbilder i separata sparanden.
 Lägg därefter ett nytt objekt i det privata utkastet utan att spara det
 gemensamt. Flytta ett objekt personligen och slå på bakgrunden.
@@ -626,8 +636,7 @@ En driftansvarig ska kunna starta om testinstallationen.
 
 **Integrationstest:**
 [household-export-ui.spec.ts](../../tests/integration/household-export-ui.spec.ts),
-testfallet “EXPORT-10: the downloaded current-format archive restores shared,
-private and historical content after restart”.
+EXPORT-10.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -669,7 +678,8 @@ private and historical content after restart”.
 **Förväntat resultat:**
 
 - Den hämtade filen går att återimportera. Ursprungliga namn, samband,
-  typavsnitt, ordning, egna värden, noll, nej och dolda uppgifter består.
+  typdefinitioner, fria egenskapers identiteter och ordning samt noll och Nej
+  består.
 - Historiken och båda bildversionerna finns kvar. Det privata förslaget
   återkommer i utkastet och blir inte gemensamt före det nya uttryckliga
   sparandet i steg 6.
@@ -820,7 +830,8 @@ EXPORT-13.
 **Förväntat resultat:**
 
 - Samma fokus, avbrott, hämtning och oförändrade karta som i EXPORT-09.
-- Omflöde och nåbara exportknappar vid den smalaste bredden fungerar i båda teman.
+- Omflöde och nåbara exportknappar vid den smalaste bredden fungerar i båda
+  teman.
   CSS-storleken är automatiserat underlag; den bevisar inte fysisk touch.
 
 ### EXPORT-14: Tangentbord och export vid 640 × 500 CSS-pixlar
@@ -938,9 +949,11 @@ från EXPORT-11. Inga exportfall eller ursprungliga kontroller tas bort.
 
 Arkivets identiteter, sparkvitto, bildversioner, byteintervall,
 kontrollsummor, privata utkast och personliga placeringar kontrolleras av
-det separat märkta tekniska testet i
-[household-export-content.spec.ts](../../tests/integration/household-export-content.spec.ts).
-Det andra tekniska testet behåller HTTP-strömmens avbrott efter både
+det separat märkta tekniska servertestet i
+[household-export-property-images-http.test.ts](../../tests/unit/server/household-export-property-images-http.test.ts).
+Det andra tekniska testet i
+[household-export-content.spec.ts](../../tests/integration/household-export-content.spec.ts)
+behåller HTTP-strömmens avbrott efter både
 rolländring och återkallelse, nekad ny hämtning och tom serverkatalog.
 Det är ytterligare underlag till EXPORT-06/07, inte deras UI-motsvarigheter.
 EXPORT-10 är dessutom arkivunderlag till TEXTBREDD-05; dess egen vanliga

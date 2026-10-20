@@ -124,7 +124,8 @@ NAVIGATION-02.
 2. På dator: flytta navigationen åt vänster med Skift+pil. Ändra fönstrets
    bredd lite och återställ den. Navigationens möjliga placering och
    uppgiftsytans placering ska bestå. Flytta åt vänster igen.
-3. Välj **Redigera Lo Exempel** och skriv en ny beskrivning. Försök stänga
+3. Välj **Redigera Lo Exempel**. Lägg till egenskapen **Beskrivning** under
+   **Fria egenskaper**, välj datatypen Text och skriv en ny text. Försök stänga
    med krysset. Kontrollera att **Fortsätt redigera** får fokus och tryck
    Escape. Beskrivningen ska finnas kvar. Navigationen i bakgrunden är
    inaktiv medan den fullständiga objektdialogen skyddar formuläret.
@@ -135,7 +136,9 @@ NAVIGATION-02.
    I de korta varianterna ska otillgänglighetsnotisen fortfarande vara öppen.
    Rulla hela navigationen
    vid behov i det kortaste fönstret. Läs den oförändrade föreslagna
-   beskrivningen och uppgiftsytans sista värde. Fokusera först därefter
+   beskrivningen med datatypen Text och uppgiftsytans sista värde. Rulla genom
+   hela värdet om det är högre än läsytan. Varje textrad ska gå att läsa utan
+   att täckas av titelraden, knappar eller andra fönster. Fokusera först därefter
    notisens **Stäng notisen** i de två notisvarianterna och aktivera den
    utan att ändra utkastet.
    Hushållets sparade uppgifter
@@ -145,9 +148,10 @@ NAVIGATION-02.
    **Stäng dialogen** och **Spara hela utkastet**. Vänta på sparbekräftelsen.
 7. Stäng textvyn och starta om provservern med samma databas och ladda om.
    Öppna **Tabell**,
-   välj **Lo Exempel** och läs den sparade typen och beskrivningen.
-   Välj också **Kim Exempel** och läs namnet, samma objekttyp och
-   beskrivningen **Ej uppgivet**. Öppna **Samband för Lo Exempel** respektive
+   välj **Lo Exempel** och läs den sparade typen och egenskapen Beskrivning
+   med datatypen Text. Välj också **Kim Exempel** och läs namnet och samma
+   objekttyp. Ingen egenskap Beskrivning ska finnas för Kim. Öppna
+   **Samband för Lo Exempel** respektive
    **Samband för Kim Exempel** och läs att inga samband finns för objekten;
    stäng varje dialog med **Stäng samband**. Den sparade förberedelsen har
    inga samband, och de förblir oförändrade efter sparande och omstart.
@@ -273,9 +277,11 @@ NAVIGATION-04.
    kontrollera fokus på rubriken **Uppgifter för Kim Exempel**.
 4. Välj **Tillbaka**. Välj **Redigera samband** vid samma samband och
    kontrollera Lo som **Från objekt** och Kim som **Till objekt**.
-5. Välj **Osäkert uppgivet** som uppgiftens säkerhet. Läs meningen
-   **Lo Exempel använder Kim Exempel (Osäkert uppgivet)** och välj
-   **Lägg i utkastet**. Sambandsdialogen ska finnas kvar i läsläge.
+5. Lägg till den fria egenskapen **Uppgiftens säkerhet** med datatyp **Text**
+   och värdet **Osäkert uppgivet**. Läs meningen
+   **Lo Exempel använder Kim Exempel** och välj **Lägg i utkastet**.
+   Sambandsdialogen ska finnas kvar i läsläge. Under samma samband visar
+   egenskapen **Osäkert uppgivet (Text)**.
 
 **Förväntat resultat:**
 

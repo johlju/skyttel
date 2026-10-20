@@ -48,7 +48,7 @@ async function object(
       version: state.draft.version,
       id,
       baseRevision: before?.revision ?? null,
-      value: value === null ? null : { name: id, description: '', typeId, ...before, ...value },
+      value: value === null ? null : { name: id, typeId, ...before, ...value },
     },
     actor,
   );
@@ -75,7 +75,7 @@ async function relationship(
               sourceId: 'source',
               targetId: 'target',
               typeId,
-              knowledge: 'known',
+
               ...before,
               ...value,
             },
@@ -104,22 +104,11 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
-type DefinitionKind = 'object' | 'relationship' | 'field';
+type DefinitionKind = 'object' | 'relationship';
 async function removalScenario(kind: DefinitionKind) {
   const initial = await read();
   const objectType = initial.types[0];
   const edgeType = initial.relationshipTypes[0];
-  if (kind === 'field') {
-    expect(
-      (
-        await definition('object-type', objectType.id, {
-          ...objectType,
-          fields: [{ id: 'serial', name: 'Serienummer', description: '', kind: 'text' }],
-        })
-      ).status,
-    ).toBe(200);
-    await save('define-field');
-  }
   if (kind === 'relationship') {
     await object('source', objectType.id);
     await object('target', objectType.id);
@@ -135,7 +124,6 @@ async function removalScenario(kind: DefinitionKind) {
             {
               name: 'Secret draft name',
               ...(ended ? { lifecycle: 'ended' } : {}),
-              ...(kind === 'field' ? { customValues: { serial: 'SECRET-DRAFT-VALUE' } } : {}),
             },
             actor,
           ),
@@ -143,10 +131,10 @@ async function removalScenario(kind: DefinitionKind) {
       definition(
         kind === 'relationship' ? 'relationship-type' : 'object-type',
         kind === 'relationship' ? edgeType.id : objectType.id,
-        kind === 'field' ? { ...objectType, fields: [] } : null,
+        null,
         actor,
       ),
-    error: kind === 'field' ? 'field_in_use' : 'definition_in_use',
+    error: 'definition_in_use',
     objectType,
     edgeType,
   };
@@ -170,20 +158,19 @@ test('unused prefilled definitions are removed only by whole save and remain rea
   expect((await (await client.request(`${path}/history`)).json()).history[0]).toEqual(receipt);
 });
 
-test('an unused field can be removed while other type facts and historical values survive', async () => {
+test('removed individual properties remain readable in history after a later type explanation edit', async () => {
   const type = (await read()).types[0];
-  const serial = { id: 'serial', name: 'Serienummer', description: '', kind: 'text' };
-  expect((await definition('object-type', type.id, { ...type, fields: [serial] })).status).toBe(
-    200,
-  );
+  expect((await definition('object-type', type.id, { ...type })).status).toBe(200);
   await save('field');
-  await object('historical', type.id, { customValues: { serial: 'SYNTH-1' } });
+  await object('historical', type.id, {
+    properties: [{ id: 'serial', label: 'serial', kind: 'text', value: 'SYNTH-1' }],
+  });
   await save('value');
   await object('historical', type.id, null);
   await save('object-removal');
-  expect(
-    (await definition('object-type', type.id, { ...type, name: 'Bevarad typ', fields: [] })).status,
-  ).toBe(200);
+  expect((await definition('object-type', type.id, { ...type, name: 'Bevarad typ' })).status).toBe(
+    200,
+  );
   await save('field-removal');
   expect((await read()).types.find((item) => item.id === type.id)).toMatchObject({
     name: 'Bevarad typ',
@@ -193,12 +180,12 @@ test('an unused field can be removed while other type facts and historical value
       (entry: SaveReceipt) => entry.operationId === 'value',
     ).changes[0],
   ).toMatchObject({
-    after: { customValues: { serial: 'SYNTH-1' } },
-    type: { fields: [serial] },
+    after: { properties: [{ id: 'serial', label: 'serial', kind: 'text', value: 'SYNTH-1' }] },
+    type: {},
   });
 });
 
-test.each(['object', 'relationship', 'field'] as const)(
+test.each(['object', 'relationship'] as const)(
   '%s removal protects current, ended, own and other private use without exposing private facts',
   async (kind) => {
     const scenario = await removalScenario(kind);
@@ -236,7 +223,7 @@ test.each(['object', 'relationship', 'field'] as const)(
   },
 );
 
-test.each(['object', 'relationship', 'field'] as const)(
+test.each(['object', 'relationship'] as const)(
   '%s removal rechecks new persisted private and saved use and rolls back the whole group',
   async (kind) => {
     const scenario = await removalScenario(kind);
@@ -276,7 +263,7 @@ test.each(['object-type', 'relationship-type'] as const)(
     expect((await definition(kind, type.id, null)).status).toBe(200);
     const value =
       kind === 'object-type'
-        ? { ...type, fields: [], name: 'Senare namn' }
+        ? { ...type, name: 'Senare namn' }
         : {
             name: 'Senare namn',
             description: type.description,
@@ -322,7 +309,7 @@ test.each(['object-type', 'relationship-type'] as const)(
   async (kind) => {
     const value =
       kind === 'object-type'
-        ? { name: 'Egen typ', description: '', fields: [] }
+        ? { name: 'Egen typ', description: '' }
         : { name: 'Egen typ', description: '', forwardLabel: 'binder', reverseLabel: 'hör till' };
     expect((await definition(kind, 'new-type', value)).status).toBe(200);
     await object('independent', (await read()).types[0].id);
@@ -344,13 +331,12 @@ test.each(['object-type', 'relationship-type'] as const)(
 );
 
 test.each(['object-type', 'relationship-type'] as const)(
-  "another member's pending %s edit keeps the definition and its retained field in use",
+  "another member's pending %s edit keeps the definition in use",
   async (kind) => {
     const defined = {
       name: 'Egen typ',
       description: '',
       ...(kind === 'relationship-type' ? { forwardLabel: 'binder', reverseLabel: 'hör till' } : {}),
-      fields: [{ id: 'serial', name: 'Serienummer', description: '', kind: 'text' }],
     };
     expect((await definition(kind, 'shared-type', defined)).status).toBe(200);
     await save('define-type');
@@ -359,9 +345,6 @@ test.each(['object-type', 'relationship-type'] as const)(
       (await definition(kind, 'shared-type', { ...defined, name: 'Nytt namn' }, actor)).status,
     ).toBe(200);
     const before = await read();
-    const field = await definition(kind, 'shared-type', { ...defined, fields: [] });
-    expect(field.status).toBe(409);
-    expect(await field.json()).toEqual({ error: 'field_in_use' });
     const removal = await definition(kind, 'shared-type', null);
     expect(removal.status).toBe(409);
     expect(await removal.json()).toEqual({ error: 'definition_in_use' });
@@ -369,7 +352,7 @@ test.each(['object-type', 'relationship-type'] as const)(
   },
 );
 
-test('definition and field removals require current household membership and denied requests preserve all drafts', async () => {
+test('definition removals require current household membership and denied requests preserve all drafts', async () => {
   const initial = await read();
   const type = initial.types[0];
   const fieldType = initial.types[1];
@@ -378,7 +361,6 @@ test('definition and field removals require current household membership and den
     (
       await definition('object-type', fieldType.id, {
         ...fieldType,
-        fields: [{ id: 'serial', name: 'Serienummer', kind: 'text', description: '' }],
       })
     ).status,
   ).toBe(200);
@@ -409,7 +391,7 @@ test('definition and field removals require current household membership and den
       route: 'object-type',
       id: fieldType.id,
       baseRevision: fieldType.revision + 1,
-      value: { ...fieldType, fields: [] },
+      value: { ...fieldType },
     },
   ];
   const anonymous = fixture.client();
@@ -443,7 +425,7 @@ test('definition and field removals require current household membership and den
   expect(await read()).toEqual(ownerBefore);
 });
 
-test.each(['object', 'relationship', 'field'] as const)(
+test.each(['object', 'relationship'] as const)(
   '%s removal that commits first rejects later use from an older catalog',
   async (kind) => {
     const scenario = await removalScenario(kind);
@@ -458,13 +440,10 @@ test.each(['object', 'relationship', 'field'] as const)(
             typeId: scenario.edgeType.id,
             sourceId: 'source',
             targetId: 'target',
-            knowledge: 'known',
           }
         : {
             typeId: scenario.objectType.id,
             name: 'Senare användning',
-            description: '',
-            ...(kind === 'field' ? { customValues: { serial: 'SYNTH-2' } } : {}),
           };
     const failure = await post(
       kind === 'relationship' ? 'relationship' : 'draft',
@@ -478,7 +457,7 @@ test.each(['object', 'relationship', 'field'] as const)(
     );
     expect(failure.status).toBe(400);
     expect(await failure.json()).toEqual({
-      error: kind === 'field' ? 'invalid_custom_value' : 'invalid_type',
+      error: 'invalid_type',
     });
     expect(await read(other)).toEqual(before);
   },

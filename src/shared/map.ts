@@ -1,5 +1,5 @@
-import type { FinancialFact, FinancialFacts, FinancialField } from './financial-facts.js';
 import type { Lifecycle } from './lifecycle.js';
+import type { Property } from './properties.js';
 
 export interface TypeDefinition {
   id: string;
@@ -8,61 +8,13 @@ export interface TypeDefinition {
   name: string;
   description: string;
 }
-export interface CustomField {
-  id: string;
-  name: string;
-  description: string;
-  kind: 'text' | 'number' | 'date' | 'boolean';
-  /** Empty means hidden. Absence belongs to the legacy default presentation. */
-  sectionId?: string;
-}
-export interface TypeSection {
-  id: string;
-  name: string;
-}
-export interface ObjectType extends TypeDefinition {
-  fields?: CustomField[];
-  sections?: TypeSection[];
-  builtins?: BuiltinProperty[];
-  /** Stable, namespaced references: field:<id> or builtin:<key>. */
-  propertyOrder?: string[];
-}
-export interface BuiltinProperty {
-  key: 'description' | FinancialField;
-  name: string;
-  /** Empty means outside the type's sections; existing values stay accessible. */
-  sectionId: string;
-}
-/** Legacy snapshots remain unchanged; their presentation is deterministic. */
-export function objectTypePresentation(type: Pick<ObjectType, 'sections' | 'fields'>) {
-  const sections = type.sections ?? [{ id: 'custom-fields', name: 'Egna fält' }];
-  return {
-    sections,
-    fields: (type.fields ?? []).map((field) => ({
-      ...field,
-      sectionId: field.sectionId ?? (type.sections === undefined ? 'custom-fields' : ''),
-    })),
-  };
-}
+export interface ObjectType extends TypeDefinition {}
 export interface ObjectTypeChange {
   id: string;
   before: ObjectType | null;
   after: ObjectType | null;
 }
-export type CustomValues = Record<string, string | number | boolean>;
-export function compatibleCustomFields(
-  values: CustomValues | undefined,
-  source: ObjectType,
-  target: ObjectType,
-) {
-  return Object.keys(values ?? {}).every((id) => {
-    const field = source.fields?.find((item) => item.id === id);
-    return field && field.kind === target.fields?.find((item) => item.id === id)?.kind;
-  });
-}
 export interface RelationshipType extends TypeDefinition {
-  fields?: CustomField[];
-  sections?: TypeSection[];
   forwardLabel?: string;
   reverseLabel?: string;
 }
@@ -84,14 +36,12 @@ export interface DraftRelationshipTypeChange extends RelationshipTypeChange {
 }
 
 export interface ObjectValue {
+  properties?: Property[];
   profileImageId?: string;
   iconId?: string;
   typeId: string;
   name: string;
-  description: string;
   identity?: 'unspecified' | 'unresolved';
-  financialFacts?: FinancialFacts;
-  customValues?: CustomValues;
   lifecycle?: Lifecycle;
 }
 export interface MapObject extends ObjectValue {
@@ -187,15 +137,12 @@ export type SaveOperation = SaveOperationIdentity &
     | { status: 'rejected'; error: string }
   );
 
-export type Knowledge = 'known' | 'unknown' | 'none' | 'uncertain' | 'unresolved';
 export interface RelationshipValue {
-  customValues?: CustomValues;
+  properties?: Property[];
   typeId: string;
   sourceId: string;
-  targetId: string | null;
-  knowledge: Knowledge;
+  targetId: string;
   lifecycle?: Lifecycle;
-  endDate?: FinancialFact;
 }
 export interface MapRelationship extends RelationshipValue {
   id: string;
@@ -212,8 +159,14 @@ export interface RelationshipChange {
   objectNames?: Record<string, string>;
 }
 export interface DraftRelationshipChange extends RelationshipChange {
+  /** Server-issued authority to correct this retained proposal after endpoint loss. */
+  endpointRecovery?: { removedRevision: number };
   // Object deletions that require this generated relationship deletion.
   removedWithObjects?: string[];
+  /** Original private proposal retained while object removals suppress it. */
+  suppressed?: RelationshipChange & {
+    endpointRecovery?: { removedRevision: number };
+  };
 }
 export interface SavedRelationshipChange extends RelationshipChange {
   after: MapRelationship | null;
@@ -235,6 +188,20 @@ export function proposedRelationships(
     else result.delete(change.id);
   }
   return result;
+}
+
+/** Endpoint-blocked proposals stay in the draft, outside ordinary map readers. */
+export function effectiveRelationships(state: MapState) {
+  const ids = new Set(state.objects.map(({ id }) => id));
+  for (const change of state.draft.changes) {
+    if (change.after && (!change.before || ids.has(change.id))) ids.add(change.id);
+    else ids.delete(change.id);
+  }
+  const valid = (edge: RelationshipValue) => ids.has(edge.sourceId) && ids.has(edge.targetId);
+  return proposedRelationships(
+    state.relationships.filter(valid),
+    state.draft.relationships?.filter((change) => !change.after || valid(change.after)),
+  );
 }
 
 export function proposedObjectTypes(saved: ObjectType[], changes: ObjectTypeChange[] = []) {

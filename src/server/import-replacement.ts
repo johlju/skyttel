@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { closeSync, openSync, readSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
-import { defaultViewSettings } from '../shared/personal-view.js';
 import { contentOwner } from './content-identities.js';
 import type { ValidatedImportContent } from './import-archive.js';
 import { validateImportReferences } from './import-references.js';
@@ -12,13 +11,11 @@ import { projectDraftScope } from './project-content-scope.js';
 
 const tables = [
   ['objectTypes', 'object_type', []],
-  ['objectTypeFields', 'object_type_fields', ['fields', 'sections', 'builtins', 'propertyOrder']],
   ['relationshipTypes', 'relationship_type', []],
-  ['relationshipTypeFields', 'relationship_type_fields', ['fields', 'sections']],
   ['relationshipTypeLabels', 'relationship_type_labels', []],
   ['removedTypes', 'removed_type', []],
-  ['objects', 'map_object', ['financialFacts', 'customValues']],
-  ['relationships', 'map_relationship', ['endDate', 'customValues']],
+  ['objects', 'map_object', ['properties']],
+  ['relationships', 'map_relationship', ['properties']],
   ['drafts', 'map_draft', ['changes', 'relationships', 'objectTypes', 'relationshipTypes']],
   ['saves', 'map_save', ['receipt']],
   ['history', 'map_history', ['changes']],
@@ -28,12 +25,8 @@ const tables = [
 ] as const;
 
 function scopedRows(database: Database.Database, table: string, householdId: string) {
-  if (
-    table === 'object_type_fields' ||
-    table === 'relationship_type_labels' ||
-    table === 'relationship_type_fields'
-  ) {
-    const parent = table === 'object_type_fields' ? 'object_type' : 'relationship_type';
+  if (table === 'relationship_type_labels') {
+    const parent = 'relationship_type';
     return database
       .prepare(
         `SELECT child.* FROM ${table} child JOIN ${parent} parent ON parent.id = child.typeId WHERE parent.householdId = ? ORDER BY child.typeId`,
@@ -209,16 +202,6 @@ export function replaceHouseholdContent(
         .run(...Object.values(row));
     }
   }
-  // Current access can differ from the archive, including an empty legacy
-  // archive. Materialize its implicit off choice once for these existing views.
-  // Later memberships and identities retain the enabled new-view default.
-  if (content.legacyBackgrounds)
-    database
-      .prepare(`INSERT OR IGNORE INTO personal_view_settings
-        (householdId, userId, version, settings, backgroundVersion)
-        SELECT householdId, id, 0, ?, 1 FROM content_identity
-        WHERE householdId = ? AND userId IS NOT NULL`)
-      .run(JSON.stringify({ ...defaultViewSettings, background: false }), householdId);
   database
     .prepare('UPDATE household SET name = ?, createdAt = ? WHERE id = ?')
     .run(content.household.name, content.household.createdAt, householdId);

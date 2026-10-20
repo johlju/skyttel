@@ -274,7 +274,7 @@ export function spatialScene(
     update(
       ids: string[],
       saved: PersonalPosition[] = [],
-      relationships: { sourceId: string; targetId: string | null }[] = [],
+      relationships: { sourceId: string; targetId: string }[] = [],
     ) {
       projectionRevision++;
       const first = locations.size === 0;

@@ -27,14 +27,14 @@ export async function typeChangeHousehold(client: APIRequestContext, origin: str
         version: state.draft.version,
         id,
         baseRevision: before?.revision ?? null,
-        value: { typeId: 'cycle', name: id, description: '', ...before, ...update },
+        value: { typeId: 'cycle', name: id, ...before, ...update },
       },
       actor,
     );
   };
-  for (const [id, name, kind] of [
-    ['cycle', 'Cykel', 'text'],
-    ['vehicle', 'Motorfordon', 'number'],
+  for (const [id, name] of [
+    ['cycle', 'Cykel'],
+    ['vehicle', 'Motorfordon'],
   ]) {
     expect(
       (
@@ -42,14 +42,7 @@ export async function typeChangeHousehold(client: APIRequestContext, origin: str
           version: (await read()).draft.version,
           id,
           baseRevision: null,
-          value: {
-            name,
-            description: '',
-            fields: [
-              { id: 'serial', name: 'Nummer', description: '', kind },
-              { id: 'insured', name: 'Försäkrad', description: '', kind: 'boolean' },
-            ],
-          },
+          value: { name, description: '' },
         })
       ).status(),
     ).toBe(200);
@@ -58,7 +51,12 @@ export async function typeChangeHousehold(client: APIRequestContext, origin: str
     (
       await object('bike', {
         name: 'Alex blå cykel',
-        customValues: { serial: 'SYNTH-42', insured: false },
+        identity: 'unspecified',
+        iconId: 'bike',
+        properties: [
+          { id: 'serial', label: 'Nummer', kind: 'text', value: 'SYNTH-42' },
+          { id: 'insured', label: 'Försäkrad', kind: 'boolean', value: false },
+        ],
       })
     ).status(),
   ).toBe(200);
@@ -74,7 +72,6 @@ export async function typeChangeHousehold(client: APIRequestContext, origin: str
           typeId: state.relationshipTypes[0].id,
           sourceId: 'bike',
           targetId: 'garage',
-          knowledge: 'known',
         },
       })
     ).status(),

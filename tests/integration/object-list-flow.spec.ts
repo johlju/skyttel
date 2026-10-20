@@ -11,6 +11,18 @@ import { createInstallation } from '../support/installation.js';
 import { focusMapSearch } from '../support/object-search.js';
 import { expect, test } from '../support/test.js';
 
+// The 500-object map repeats tens of megabytes of SVG occlusion markup per DOM
+// snapshot. Omit snapshots and the coupled browser network-tab capture; retain
+// action/API events, screencast screenshots, pending/error diagnostics and geometry
+// attachments without consuming the navigation test's budget on snapshot capture.
+test.use({
+  trace: {
+    mode: 'retain-on-failure',
+    snapshots: false,
+    screenshots: true,
+  },
+});
+
 test('LISTA-05: short-screen table returns preserve the visible result and keyboard focus', async ({
   page,
 }) => {

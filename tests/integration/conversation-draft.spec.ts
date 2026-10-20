@@ -9,6 +9,7 @@ import {
 } from '../support/conversation-page.js';
 import { prepareConversationReview } from '../support/conversation-review-preparation.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { propertyValues } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -24,9 +25,7 @@ async function readLoProposal(page: Page) {
   const proposal = page.getByRole('dialog', { name: 'Lo Exempel', exact: true });
   await expect(proposal).toBeVisible();
   await expect(proposal).toContainText('Person');
-  await expect(
-    proposal.getByText('Beskrivning', { exact: true }).locator('..').getByRole('definition'),
-  ).toHaveText('Ej uppgivet');
+  await expect(proposal.locator('dt').filter({ hasText: /^Beskrivning$/ })).toHaveCount(0);
   await closeSupportDialog(page, 'Lo Exempel');
 }
 async function settings(page: Page) {
@@ -54,11 +53,7 @@ async function installation(page: Page, proposals = true) {
             contentVersion: current.draft.contentVersion,
             id: 'lo',
             baseRevision: null,
-            value: {
-              typeId,
-              name: 'Lo Exempel',
-              description: '',
-            },
+            value: { typeId, name: 'Lo Exempel' },
           }),
         ];
       return [modelMessage(proposals ? 'Ett provsvar.' : 'Lo ligger i utkastet.')];
@@ -84,7 +79,7 @@ async function installation(page: Page, proposals = true) {
     await post('draft', {
       id: 'lo',
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: 'Lo Exempel', description: '' },
+      value: { typeId: state.types[0].id, name: 'Lo Exempel' },
     });
   }
   await page.goto(`${app.origin}/households/${household.id}`);
@@ -101,7 +96,9 @@ test('SAMTALSUTKAST-01: utkasttabellen visar alla slags ändringar med kartans s
     await page.reload();
     const savedBefore = await openSavedHistory(page);
     await savedBefore.getByText('Visa ändringarna', { exact: true }).click();
-    await expect(savedBefore.locator('.history-changes')).toContainText('Sista fyra: 1111');
+    await expect(
+      savedBefore.locator('.history-changes').getByText('Sista fyra: 1111 (Text)', { exact: true }),
+    ).toBeVisible();
     await expect(savedBefore.locator('.history-changes')).not.toContainText('2222');
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
     await startConversationWithText(page);
@@ -124,13 +121,16 @@ test('SAMTALSUTKAST-01: utkasttabellen visar alla slags ändringar med kartans s
     expect(
       await table.locator('tbody td:first-child > span[aria-hidden]').allTextContents(),
     ).toEqual(['✎', '×', '+', '✎', '✎', '+', '+', '+']);
-    for (const line of ['Sista fyra: 1111 → 2222', 'Lo Rättad → Betalar → Kortet'])
+    for (const line of [
+      'Sista fyra: 1111 (Text) → Sista fyra: 2222 (Text)',
+      'Lo Rättad → Betalar → Kortet',
+    ])
       await expect(table.getByText(line, { exact: false })).toBeVisible();
     for (const name of ['Provtyp', 'Förvaras'])
       await expect(
         table.getByRole('button', { name: `Visa förslaget: ${name}`, exact: true }),
       ).toBeVisible();
-    expect((await read()).objects.find((object) => object.id === 'card')?.customValues).toEqual({
+    expect(propertyValues((await read()).objects.find((object) => object.id === 'card'))).toEqual({
       'last-four': '1111',
     });
     expect((await read()).draft.relationships).toHaveLength(2);
@@ -177,8 +177,15 @@ test('SAMTALSUTKAST-01: utkasttabellen visar alla slags ändringar med kartans s
     expect((await read()).draft.changes).toHaveLength(4);
     expect(await read()).toEqual(beforeReview);
     const savedAfter = await openSavedHistory(page);
-    await savedAfter.getByText('Visa ändringarna', { exact: true }).click();
-    await expect(savedAfter.locator('.history-changes')).toContainText('Sista fyra: 1111');
+    if (
+      !(await savedAfter
+        .locator('.history-changes')
+        .evaluate((element) => element.hasAttribute('open')))
+    )
+      await savedAfter.getByText('Visa ändringarna', { exact: true }).click();
+    await expect(
+      savedAfter.locator('.history-changes').getByText('Sista fyra: 1111 (Text)', { exact: true }),
+    ).toBeVisible();
     await expect(savedAfter.locator('.history-changes')).not.toContainText('2222');
     expect(await read()).toEqual(beforeReview);
   } finally {
@@ -230,9 +237,7 @@ test('SAMTALSUTKAST-02: valet följer användaren mellan hushåll och enheter', 
       page.getByRole('dialog', { name: 'Spara utkastet', exact: true }),
     ).not.toBeVisible();
     const saved = await read();
-    expect(saved.objects).toEqual([
-      expect.objectContaining({ id: 'lo', name: 'Lo Exempel', description: '' }),
-    ]);
+    expect(saved.objects).toEqual([expect.objectContaining({ id: 'lo', name: 'Lo Exempel' })]);
     expect(saved.draft).toEqual({ version: beforeSave.draft.version + 1, changes: [] });
     const operations = (await (await page.request.get(`${path}/operations`)).json()).operations;
     expect(operations).toEqual([
@@ -406,11 +411,11 @@ for (const seeded of [false, true])
         ).prepareConversationReview({ read, post });
       }, path);
       const state = await read();
-      expect(state.objects.find((object) => object.id === 'card')?.customValues).toEqual({
+      expect(propertyValues(state.objects.find((object) => object.id === 'card'))).toEqual({
         'last-four': '1111',
       });
       expect(
-        state.draft.changes.find((change) => change.id === 'card')?.after?.customValues,
+        propertyValues(state.draft.changes.find((change) => change.id === 'card')?.after),
       ).toEqual({ 'last-four': '2222' });
       expect(state.draft.changes).toHaveLength(4);
       expect(state.draft.relationships).toHaveLength(2);

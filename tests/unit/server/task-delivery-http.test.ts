@@ -514,7 +514,7 @@ test('delivery failure and restart preserve the actual stored draft without stor
             arguments: {
               id: 'retained-delivery',
               baseRevision: null,
-              value: { typeId, name: 'Bevarat leveransförslag', description: '' },
+              value: { typeId, name: 'Bevarat leveransförslag' },
             },
           },
         ],

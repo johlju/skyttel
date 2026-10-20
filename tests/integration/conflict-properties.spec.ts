@@ -5,10 +5,9 @@ import { conflictCollaborators } from '../support/conflict-properties.js';
 import {
   expectConflictDraftValues,
   expectConflictReadValue,
-  expectSavedConflictRelationship,
   refreshConflictReader,
 } from '../support/current-conflict-reading.js';
-import { readTableObject } from '../support/domain-work.js';
+import { openObjectRelationships, readTableObject } from '../support/domain-work.js';
 import { alex, robin } from '../support/installation.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
@@ -25,14 +24,28 @@ for (const width of [1440, 390])
       await app.propose(page.request, 'draft', 'lo', {
         typeId: initial.types[0].id,
         name: 'Lo Lind',
-        description: 'Min anteckning',
         identity: 'unspecified',
         lifecycle: 'active',
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Min anteckning',
+          },
+        ],
       });
       await app.propose(other.request, 'draft', 'lo', {
         typeId: initial.types[0].id,
         name: 'Lo Berg',
-        description: 'Robins anteckning',
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Robins anteckning',
+          },
+        ],
       });
       expect((await app.save(other.request, 'concurrent')).status()).toBe(200);
       const saved = await app.read();
@@ -79,7 +92,7 @@ for (const width of [1440, 390])
       ).toBeDisabled();
       await dialog
         .getByRole('button', {
-          name: 'Beskrivning: Sparat i kartan nu – Robins anteckning',
+          name: 'Beskrivning · egenskap 1: Sparat i kartan nu – Beskrivning: Robins anteckning (Text)',
           exact: true,
         })
         .click();
@@ -115,7 +128,13 @@ for (const width of [1440, 390])
       expect(after.objects).toEqual(saved.objects);
       expect(after.draft.changes[0].after).toMatchObject({
         name: 'Lo Lind',
-        description: 'Robins anteckning',
+        properties: expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Beskrivning',
+            kind: 'text',
+            value: 'Robins anteckning',
+          }),
+        ]),
       });
       expect((await (await page.request.get(`${app.path}/history`)).json()).history).toHaveLength(
         2,
@@ -141,15 +160,15 @@ for (const width of [1440, 390])
         'Namn',
         /^Sparat: Lo Berg\s*◇ Ditt förslag: Lo Lind$/,
       );
-      await expect(tableDetails.locator('.household-table-description')).toHaveText(
-        'Robins anteckning',
-      );
+      await expect(
+        tableDetails
+          .locator('dt')
+          .filter({ hasText: /^Beskrivning$/ })
+          .locator('..')
+          .locator('dd'),
+      ).toContainText('Robins anteckning');
       await expectConflictReadValue(tableDetails, 'Identitet', 'Identifierat objekt');
-      await expectConflictReadValue(
-        tableDetails,
-        'Status',
-        /^Sparat: Följ slutdatum\s*◇ Ditt förslag: Gäller fortfarande$/,
-      );
+      await expectConflictReadValue(tableDetails, 'Status', 'Gäller fortfarande');
       await expectConflictDraftValues(page, 'Lo Lind', {
         Namn: 'Lo Lind',
         Beskrivning: 'Robins anteckning',
@@ -169,14 +188,28 @@ for (const width of [1440, 390])
         await mapApp.propose(mapOwner.request, 'draft', 'lo', {
           typeId: mapInitial.types[0].id,
           name: 'Lo Lind',
-          description: 'Min anteckning',
           identity: 'unspecified',
           lifecycle: 'active',
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Min anteckning',
+            },
+          ],
         });
         await mapApp.propose(mapMember.request, 'draft', 'lo', {
           typeId: mapInitial.types[0].id,
           name: 'Lo Berg',
-          description: 'Robins anteckning',
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Robins anteckning',
+            },
+          ],
         });
         expect((await mapApp.save(mapMember.request, 'concurrent')).status()).toBe(200);
         const mapSaved = await mapApp.read();
@@ -203,7 +236,7 @@ for (const width of [1440, 390])
         }
         for (const name of [
           'Namn: Ditt förslag – Lo Lind',
-          'Beskrivning: Sparat i kartan nu – Robins anteckning',
+          'Beskrivning · egenskap 1: Sparat i kartan nu – Beskrivning: Robins anteckning (Text)',
           'Identifiering: Sparat i kartan nu – Identifierat objekt',
           'Giltighet: Ditt förslag – Gäller fortfarande',
         ]) {
@@ -225,7 +258,13 @@ for (const width of [1440, 390])
         expect(mapAfter.objects).toEqual(mapSaved.objects);
         expect(mapAfter.draft.changes[0].after).toMatchObject({
           name: 'Lo Lind',
-          description: 'Robins anteckning',
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Robins anteckning',
+            }),
+          ]),
           lifecycle: 'active',
         });
         expect(mapAfter.draft.changes[0].after?.identity ?? 'identified').toBe('identified');
@@ -262,37 +301,50 @@ test('UTKAST-29: invalid relationship property combinations keep every choice un
   const member = await other.newPage();
   try {
     let state = await app.read();
-    const edge = {
-      typeId: state.relationshipTypes[0].id,
-      sourceId: 'lo',
-      targetId: 'service',
-      knowledge: 'known' as const,
-    };
+    const edge = { typeId: state.relationshipTypes[0].id, sourceId: 'lo', targetId: 'service' };
     await app.propose(page.request, 'relationship', 'edge', edge);
+    await app.propose(page.request, 'relationship', 'existing', {
+      ...edge,
+      sourceId: 'service',
+      targetId: 'lo',
+    });
     await app.save(page.request, 'base-edge');
-    await app.propose(page.request, 'relationship', 'edge', { ...edge, knowledge: 'uncertain' });
+    await app.propose(page.request, 'relationship', 'edge', {
+      ...edge,
+      targetId: 'lo',
+      properties: [
+        {
+          id: 'certainty',
+          label: 'Uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Osäkert uppgivet',
+        },
+      ],
+    });
     await app.propose(other.request, 'relationship', 'edge', {
       ...edge,
-      targetId: null,
-      knowledge: 'none',
+      sourceId: 'service',
     });
     await app.save(other.request, 'changed-edge');
     await page.goto(app.installation.origin);
     await page.getByRole('button', { name: '1 konflikt i ditt utkast', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Granska konflikter' });
     await dialog
-      .getByRole('button', { name: 'Till objekt: Ditt förslag – Molnmusik', exact: true })
+      .getByRole('button', { name: 'Från objekt: Sparat i kartan nu – Molnmusik', exact: true })
       .click();
     await dialog
-      .getByRole('button', {
-        name: 'Vad är känt?: Sparat i kartan nu – Uttryckligen inget',
-        exact: true,
-      })
+      .getByRole('button', { name: 'Till objekt: Ditt förslag – Lo Exempel', exact: true })
       .click();
-    await expect(dialog.getByRole('alert')).toContainText('målobjektet fungerar inte tillsammans');
+    await expect(dialog.getByRole('region', { name: 'Ditt förslag', exact: true })).toContainText(
+      'Uppgiftens säkerhet: Osäkert uppgivet (Text)',
+    );
+    await expect(
+      dialog.getByRole('button', { name: /^Uppgiftens säkerhet · egenskap 1:/ }),
+    ).toHaveCount(0);
+    await expect(dialog.getByRole('alert')).toContainText('finns redan i kartan');
     await expect(dialog.getByRole('button', { name: 'Lägg valen i utkastet' })).toBeDisabled();
     await expect(
-      dialog.getByRole('button', { name: 'Till objekt: Ditt förslag – Molnmusik' }),
+      dialog.getByRole('button', { name: 'Till objekt: Ditt förslag – Lo Exempel' }),
     ).toHaveAttribute('aria-pressed', 'true');
     state = await app.read();
     const conflict = draftConflicts(state)[0];
@@ -301,39 +353,51 @@ test('UTKAST-29: invalid relationship property combinations keep every choice un
       contentVersion: state.contentVersion,
       conflict,
       basis: conflictBasis(state, conflict),
-      choices: { targetId: 'proposed', knowledge: 'saved' },
+      choices: {
+        sourceId: 'saved',
+        targetId: 'proposed',
+      },
     });
     expect(invalid.status()).toBe(400);
+    expect(await invalid.json()).toEqual({ error: 'invalid_resolution' });
     expect((await app.read()).draft).toEqual(state.draft);
     await dialog
-      .getByRole('button', { name: 'Vad är känt?: Ditt förslag – Osäkert uppgivet', exact: true })
+      .getByRole('button', { name: 'Från objekt: Ditt förslag – Lo Exempel', exact: true })
       .click();
     await expect(dialog.getByRole('alert')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Lägg valen i utkastet' }).click();
     await expect(dialog.getByRole('status')).toContainText('Valen finns');
     expect((await app.read()).draft.relationships?.[0].after).toMatchObject({
-      targetId: 'service',
-      knowledge: 'uncertain',
+      sourceId: 'lo',
+      targetId: 'lo',
+      properties: [
+        {
+          id: 'certainty',
+          label: 'Uppgiftens säkerhet',
+          kind: 'text' as const,
+          value: 'Osäkert uppgivet',
+        },
+      ],
     });
     await page.keyboard.press('Escape');
-    await expectConflictDraftValues(page, 'Lo Exempel → Använder → Molnmusik (osäkert uppgivet)', {
+    await expectConflictDraftValues(page, 'Lo Exempel → Använder → Lo Exempel', {
       Från: 'Lo Exempel',
       Sambandstyp: 'Använder',
-      Till: 'Molnmusik',
+      Till: 'Lo Exempel',
       'Uppgiftens säkerhet': 'Osäkert uppgivet',
     });
     await closeTextView(page);
     await refreshConflictReader(member, app.installation.origin);
-    await expectSavedConflictRelationship(
-      member,
-      'Lo Exempel',
-      'Lo Exempel → Använder → Uttryckligen inget',
-      {
-        Typ: 'Använder',
-        'Till objekt': 'Uttryckligen inget',
-        'Uppgiftens säkerhet': 'Uttryckligen inget',
-      },
-    );
+    const savedRelationships = await openObjectRelationships(member, 'Molnmusik');
+    const savedRelationship = savedRelationships
+      .getByRole('heading', { name: 'Molnmusik → Använder → Molnmusik', exact: true })
+      .locator('..');
+    await expectConflictReadValue(savedRelationship, 'Typ', 'Använder');
+    await expectConflictReadValue(savedRelationship, 'Till objekt', 'Molnmusik');
+    await expect(
+      savedRelationship.locator('dt').filter({ hasText: /^Uppgiftens säkerhet$/ }),
+    ).toHaveCount(0);
+    await member.keyboard.press('Escape');
   } finally {
     await other.close();
     await app.installation.close();
@@ -355,21 +419,39 @@ for (const kind of ['object', 'relationship'] as const)
       await page.setViewportSize({ width: 320, height: 900 });
       const state = await app.read();
       if (kind === 'object') {
-        const value = { typeId: state.types[0].id, name: longName, description: 'Egen text' };
-        await app.propose(page.request, 'draft', 'lo', value);
-        await app.propose(other.request, 'draft', 'lo', { ...value, description: 'Sparad text' });
-      } else {
-        const edge = {
-          typeId: state.relationshipTypes[0].id,
-          sourceId: 'lo',
-          targetId: 'service',
-          knowledge: 'known' as const,
+        const value = {
+          typeId: state.types[0].id,
+          name: longName,
+          properties: [
+            { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Egen text' },
+          ],
         };
+        await app.propose(page.request, 'draft', 'lo', value);
+        await app.propose(other.request, 'draft', 'lo', {
+          ...value,
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Sparad text',
+            },
+          ],
+        });
+      } else {
+        const edge = { typeId: state.relationshipTypes[0].id, sourceId: 'lo', targetId: 'service' };
         await app.propose(page.request, 'relationship', 'edge', edge);
         await app.save(page.request, 'edge');
         await app.propose(page.request, 'relationship', 'edge', {
           ...edge,
-          knowledge: 'uncertain',
+          properties: [
+            {
+              id: 'certainty',
+              label: 'Uppgiftens säkerhet',
+              kind: 'text' as const,
+              value: 'Osäkert uppgivet',
+            },
+          ],
         });
         await app.propose(other.request, 'relationship', 'edge', { ...edge, lifecycle: 'ended' });
       }
@@ -408,7 +490,7 @@ for (const kind of ['object', 'relationship'] as const)
     }
   });
 
-test('UTKAST-34: configured builtin labels remain unchanged on both conflict sides and the result', async ({
+test('UTKAST-34: individual free property labels remain unchanged on both conflict sides and the result', async ({
   page,
   browser,
 }) => {
@@ -423,16 +505,7 @@ test('UTKAST-34: configured builtin labels remain unchanged on both conflict sid
           version: state.draft.version,
           id: type.id,
           baseRevision: type.revision,
-          value: {
-            ...type,
-            fields: type.fields ?? [],
-            sections: [{ id: 'facts', name: 'Uppgifter' }],
-            builtins: [
-              { key: 'description', name: 'Anteckningar', sectionId: 'facts' },
-              { key: 'price', name: 'Avtalat pris', sectionId: 'facts' },
-            ],
-            propertyOrder: ['builtin:description', 'builtin:price'],
-          },
+          value: { ...type },
         })
       ).status(),
     ).toBe(200);
@@ -441,14 +514,28 @@ test('UTKAST-34: configured builtin labels remain unchanged on both conflict sid
     const value = {
       typeId: type.id,
       name: 'Lo Exempel',
-      description: 'Egen anteckning',
-      financialFacts: { price: { knowledge: 'known' as const, value: '120' } },
+      properties: [
+        {
+          id: 'description',
+          label: 'Anteckningar',
+          kind: 'text' as const,
+          value: 'Egen anteckning',
+        },
+        { id: 'price', label: 'Avtalat pris', kind: 'text' as const, value: '120' },
+      ],
     };
     await app.propose(page.request, 'draft', 'lo', value);
     await app.propose(other.request, 'draft', 'lo', {
       ...value,
-      description: 'Sparad anteckning',
-      financialFacts: { price: { knowledge: 'known', value: '240' } },
+      properties: [
+        {
+          id: 'description',
+          label: 'Anteckningar',
+          kind: 'text' as const,
+          value: 'Sparad anteckning',
+        },
+        { id: 'price', label: 'Avtalat pris', kind: 'text' as const, value: '240' },
+      ],
     });
     await app.save(other.request, 'changed');
     await page.goto(app.installation.origin);
@@ -456,27 +543,48 @@ test('UTKAST-34: configured builtin labels remain unchanged on both conflict sid
     const dialog = page.getByRole('dialog', { name: 'Granska konflikter' });
     for (const side of ['Sparat i kartan nu', 'Ditt förslag']) {
       const panel = dialog.getByRole('region', { name: side, exact: true });
-      await expect(panel.getByRole('button', { name: /^Anteckningar:/ })).toBeVisible();
-      await expect(panel.getByRole('button', { name: /^Avtalat pris:/ })).toBeVisible();
+      await expect(
+        panel.getByRole('button', { name: /^Anteckningar · egenskap \d+:/ }),
+      ).toBeVisible();
+      await expect(
+        panel.getByRole('button', { name: /^Avtalat pris · egenskap \d+:/ }),
+      ).toBeVisible();
       await expect(panel.getByRole('button', { name: /^Beskrivning:|^Pris:/ })).toHaveCount(0);
     }
     await dialog
-      .getByRole('button', { name: 'Anteckningar: Ditt förslag – Egen anteckning', exact: true })
+      .getByRole('button', {
+        name: 'Anteckningar · egenskap 1: Ditt förslag – Anteckningar: Egen anteckning (Text)',
+        exact: true,
+      })
       .click();
     await dialog
-      .getByRole('button', { name: 'Avtalat pris: Sparat i kartan nu – 240', exact: true })
+      .getByRole('button', {
+        name: 'Avtalat pris · egenskap 2: Sparat i kartan nu – Avtalat pris: 240 (Text)',
+        exact: true,
+      })
       .click();
     const preview = dialog.getByRole('region', { name: 'Resultat av valen' });
-    await expect(preview.locator('dt').filter({ hasText: /^Anteckningar$/ })).toBeVisible();
-    await expect(preview.locator('dt').filter({ hasText: /^Avtalat pris$/ })).toBeVisible();
+    await expect(
+      preview.locator('dt').filter({ hasText: /^Anteckningar(?: · egenskap \d+)?$/ }),
+    ).toBeVisible();
+    await expect(
+      preview.locator('dt').filter({ hasText: /^Avtalat pris(?: · egenskap \d+)?$/ }),
+    ).toBeVisible();
     await dialog.getByRole('button', { name: 'Lägg valen i utkastet' }).click();
     await expect(dialog.getByRole('status')).toContainText('Valen finns');
     await expect(dialog.locator('.cp-preview')).toContainText('Anteckningar');
     await expect(dialog.locator('.cp-preview')).toContainText('Avtalat pris');
     await expect(dialog.locator('.cp-preview')).toContainText('240');
     expect((await app.read()).draft.changes[0].after).toMatchObject({
-      description: 'Egen anteckning',
-      financialFacts: { price: { value: '240' } },
+      properties: [
+        {
+          id: 'description',
+          label: 'Anteckningar',
+          kind: 'text' as const,
+          value: 'Egen anteckning',
+        },
+        { id: 'price', label: 'Avtalat pris', kind: 'text' as const, value: '240' },
+      ],
     });
   } finally {
     await other.close();
@@ -519,15 +627,23 @@ test('UTKAST-35: saved property attribution identifies each actual saver after i
       ).status(),
     ).toBe(200);
     const state = await app.read();
-    const value = { typeId: state.types[0].id, name: 'Eget namn', description: 'Egen text' };
+    const value = {
+      typeId: state.types[0].id,
+      name: 'Eget namn',
+      properties: [
+        { id: 'description', label: 'Anteckningar', kind: 'text' as const, value: 'Egen text' },
+      ],
+    };
     await app.propose(proposer.request, 'draft', 'lo', value);
-    await app.propose(lo.request, 'draft', 'lo', { ...value, name: 'Lo Berg', description: '' });
+    await app.propose(lo.request, 'draft', 'lo', { ...value, name: 'Lo Berg' });
     await app.save(lo.request, 'lo-name');
     app.installation.setIdentity(alex);
     await app.propose(page.request, 'draft', 'lo', {
       ...value,
       name: 'Lo Berg',
-      description: 'Alex text',
+      properties: [
+        { id: 'description', label: 'Anteckningar', kind: 'text' as const, value: 'Alex text' },
+      ],
     });
     await app.save(page.request, 'alex-description');
     const proposerPage = await proposer.newPage();
@@ -545,7 +661,7 @@ test('UTKAST-35: saved property attribution identifies each actual saver after i
     await expect(name).toContainText('efter att du började ändra den här uppgiften');
     await expect(
       saved.getByRole('button', {
-        name: 'Beskrivning: Sparat i kartan nu – Alex text',
+        name: 'Anteckningar · egenskap 1: Sparat i kartan nu – Anteckningar: Alex text (Text)',
         exact: true,
       }),
     ).toContainText('Alex sparade ett nytt värde');

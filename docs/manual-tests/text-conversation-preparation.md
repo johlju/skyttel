@@ -34,7 +34,8 @@ TEXT-01 använder röstinstallationen. Kör `seed-family` **före all
 inloggning**, invänta `seeded` och logga in som Alex med Google. Skapa
 inget extra hushåll eller Lo-förslag. Det förberedda hushållet har hela
 familjens Molnmusik, skilda konton/adresser/roller, ospecificerat bankkonto,
-okända, uttryckligen inga och osäkra samband, Lo-förslaget och en verklig
+fristående objekt, en fri osäkerhetsuppgift på ett verkligt samband,
+Lo-förslaget och en verklig
 samtidig rättelse från Robin Demo. Behåll första modellbegäran tills
 användaren har skrivit den oskickade beskrivningen i Kim-formuläret.
 
@@ -45,16 +46,17 @@ Släpp `read_map` med `{"query":"Familjens Molnmusik"}`. Nästa resultat
 innehåller abonnemangets objekt. Kopiera hela dess värde, ta bort
 `id`, `householdId`, `revision`, och behåll dem separat som `id` och
 `baseRevision`. Släpp `propose_object` med den nya utkastversionen och
-`contentVersion:1`. Ändra bara `description` till
-**Familjeabonnemang 189 kr per månad.** och sätt `financialFacts` till:
+`contentVersion:1`. Ange följande ordnade `properties` på abonnemanget.
+Etiketterna har ingen automatisk ekonomisk betydelse.
 
 <!-- markdownlint-disable MD013 -->
 ```json
-{
-  "price": { "knowledge": "known", "value": "189" },
-  "currency": { "knowledge": "known", "value": "SEK" },
-  "paymentInterval": { "knowledge": "known", "value": "månad" }
-}
+[
+  { "id": "description", "label": "Beskrivning", "kind": "text", "value": "Familjeabonnemang 189 kr per månad." },
+  { "id": "price", "label": "Pris", "kind": "text", "value": "189" },
+  { "id": "currency", "label": "Valuta", "kind": "text", "value": "SEK" },
+  { "id": "paymentInterval", "label": "Betalningsintervall", "kind": "text", "value": "månad" }
+]
 ```
 <!-- markdownlint-enable MD013 -->
 
@@ -317,7 +319,7 @@ Vid nästa hållna begäran används dess aktuella versioner:
 
 <!-- markdownlint-disable MD013 -->
 ```text
-tool REQUEST propose_object {"version":VERSION,"contentVersion":CONTENT,"id":"lo","baseRevision":null,"value":{"typeId":"PERSON-ID","name":"Lo Exempel","description":""}}
+tool REQUEST propose_object {"version":VERSION,"contentVersion":CONTENT,"id":"lo","baseRevision":null,"value":{"typeId":"PERSON-ID","name":"Lo Exempel"}}
 reply REQUEST Lo ligger i utkastet.
 ```
 <!-- markdownlint-enable MD013 -->

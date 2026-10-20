@@ -60,7 +60,7 @@ export async function collaborators(
   ).toBe(200);
   const state = await read();
   for (const [id, name] of seeds) {
-    await propose(first, 'draft', id, { typeId: state.types[0].id, name, description: '' });
+    await propose(first, 'draft', id, { typeId: state.types[0].id, name });
   }
   expect((await save(first, 'initial')).status()).toBe(200);
   return { installation, path, post, read, propose, save, userId: user.id };

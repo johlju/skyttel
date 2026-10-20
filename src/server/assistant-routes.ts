@@ -6,6 +6,7 @@ import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
+import { objectMatchesQuery } from '../shared/object-search.js';
 import {
   assistantConsent,
   assistantScope,
@@ -22,6 +23,7 @@ import {
 import type { Auth } from './auth.js';
 import { householdAccess } from './households.js';
 import { householdMap, MapError } from './map.js';
+import { propertyWriteLimit } from './properties.js';
 
 type Connection = { id: string; userId: string; householdId: string; clientId: string };
 
@@ -156,7 +158,7 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
     return context.json({ revoked: true });
   });
 
-  routes.use('/mcp', bodyLimit({ maxSize: 16_384 }));
+  routes.use('/mcp', bodyLimit({ maxSize: propertyWriteLimit }));
   routes.all('/mcp', async (context) => {
     if (context.req.header('Origin') && context.req.header('Origin') !== origin)
       return context.json({ error: 'forbidden' }, 403);
@@ -229,7 +231,7 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
       'read_map',
       {
         description:
-          'Läs hushållets sparade karta. Avgränsa med söktext i namn och beskrivning eller objekt-ID. Om båda anges krävs båda. Svar innehåller valda objekt, deras direkta inkommande och utgående samband samt endast ID, namn och typ för övriga ändpunkter i contextObjects. Läs andra ändpunkters detaljer med en ny avgränsad läsning endast när de behövs för uppdraget. Bara berörda typdefinitioner följer med. Identitet och hushåll kommer från medgivandet.',
+          'Läs hushållets sparade karta med alla egenskapers identiteter, etiketter, datatyper, värden och ordning. Avgränsa med söktext i objektets eget namn, typ, egenskapsetiketter och värden eller objekt-ID. Alla sökord krävs. Om båda anges krävs båda. Svar innehåller valda objekt, deras direkta inkommande och utgående samband med alla egenskaper samt endast ID, namn och typ för övriga ändpunkter i contextObjects. Läs kandidaters detaljer före val; lika namn är olika identiteter. Bara berörda typdefinitioner följer med. Identitet och hushåll kommer från medgivandet.',
         inputSchema: z
           .object({
             query: z.string().max(100).optional(),
@@ -243,41 +245,35 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
         const objects = state.objects.filter(
           (object) =>
             (!objectId || object.id === objectId) &&
-            (!query ||
-              `${object.name} ${object.description}`
-                .toLocaleLowerCase('sv')
-                .includes(query.toLocaleLowerCase('sv'))),
+            objectMatchesQuery(
+              object,
+              state.types.find((type) => type.id === object.typeId),
+              query ?? '',
+            ),
         );
         const ids = new Set(objects.map((object) => object.id));
         const relationships = state.relationships.filter(
-          (edge) => ids.has(edge.sourceId) || (edge.targetId !== null && ids.has(edge.targetId)),
+          (edge) => ids.has(edge.sourceId) || ids.has(edge.targetId),
         );
         const endpointIds = new Set<string>();
         for (const edge of relationships) {
           endpointIds.add(edge.sourceId);
-          if (edge.targetId !== null) endpointIds.add(edge.targetId);
+          endpointIds.add(edge.targetId);
         }
         const contextObjects = state.objects
           .filter((object) => !ids.has(object.id) && endpointIds.has(object.id))
           .map(({ id, typeId, name }) => ({ id, typeId, name }));
         const typeIds = new Set([...objects, ...contextObjects].map((object) => object.typeId));
         const relationshipTypeIds = new Set(relationships.map((edge) => edge.typeId));
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                types: state.types.filter((type) => typeIds.has(type.id)),
-                objects,
-                contextObjects,
-                relationshipTypes: state.relationshipTypes.filter((type) =>
-                  relationshipTypeIds.has(type.id),
-                ),
-                relationships,
-              }),
-            },
-          ],
-        };
+        return assistantResult({
+          types: state.types.filter((type) => typeIds.has(type.id)),
+          objects,
+          contextObjects,
+          relationshipTypes: state.relationshipTypes.filter((type) =>
+            relationshipTypeIds.has(type.id),
+          ),
+          relationships,
+        });
       },
     );
     server.registerTool(

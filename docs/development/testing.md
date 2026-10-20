@@ -404,7 +404,7 @@ they do not verify a hosted certificate, physical devices or screen readers.
 
 ### Offline map fixtures
 
-For interactive upgrade or household-isolation debugging, the helper
+For interactive household-isolation debugging, the helper
 `scripts/prepare-manual-map.ts` prepares synthetic data from verified test
 identities. Complete [local sign-in](devcontainer.md#set-up-local-sign-in)
 first. Stop ordinary development and keep ports 3300 and 5173 free.
@@ -420,8 +420,9 @@ env -u SKYTTEL_DATABASE_PATH \
 ```
 
 In a new browser profile, sign in as the configured administrator and create
-Linden. Choose one preparation below; use a fresh directory for the other.
-Obtain the selected user's ID in that user's browser Console:
+Linden. Before stopping this installation, sign in as a different real test
+identity in a separate browser profile. Do not invite that user to Linden.
+Obtain that user's ID in that user's browser Console:
 
 ```js
 (await (await fetch('/api/bootstrap')).json()).user.id
@@ -431,29 +432,7 @@ Copy only that ID, never cookies or provider tokens. Stop the server before
 running the helper. It refuses an ordinary development database and requires
 an identity established by the actual provider login.
 
-#### Legacy contract upgrade
-
-Use the administrator's ID and run in the same terminal:
-
-```sh
-SKYTTEL_MANUAL_USER_ID='paste-Alex-user-id'
-node --import tsx scripts/prepare-manual-map.ts \
-  legacy-contracts "$SKYTTEL_MANUAL_MAP_DIR" "$SKYTTEL_MANUAL_USER_ID"
-printf 'SKYTTEL_DATABASE_PATH=%s/legacy.sqlite\n' \
-  "$SKYTTEL_MANUAL_MAP_DIR" > "$SKYTTEL_MANUAL_MAP_DIR/legacy.env"
-env -u SKYTTEL_DATABASE_PATH \
-  node --env-file="$SKYTTEL_MANUAL_MAP_DIR/legacy.env" scripts/develop.mjs
-```
-
-The helper creates a separate `legacy.sqlite` and refuses an existing file.
-Startup upgrades it. Sign in again as the same administrator. For a restart,
-repeat only the last server command; do not rerun the helper or `db:setup`.
-
-#### A second household on the same installation
-
-Before stopping the original `verified.sqlite` installation, sign in as a
-different real test identity in a separate browser profile. Do not invite
-that user to Linden. Obtain that user's ID, stop the server and run:
+Stop the server, then prepare the second household in the same terminal:
 
 ```sh
 SKYTTEL_MANUAL_USER_ID='paste-Robin-user-id'

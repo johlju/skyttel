@@ -56,8 +56,15 @@ test('IMPORT-09: another administrator discovers the same committed import after
             baseRevision: null,
             value: {
               name: 'Privat arbete från exporten',
-              description: 'Privat uppgift för Privat arbete från exporten',
               typeId: before.types[0].id,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat uppgift för Privat arbete från exporten',
+                },
+              ],
             },
           },
         })
@@ -196,8 +203,15 @@ test('IMPORT-11: another administrator finishes the same gated cleanup after the
             baseRevision: null,
             value: {
               name: 'Privat arbete genom rensningen',
-              description: 'Privat uppgift för Privat arbete genom rensningen',
               typeId: initial.types[0].id,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat uppgift för Privat arbete genom rensningen',
+                },
+              ],
             },
           },
         })
@@ -467,8 +481,15 @@ test('IMPORT-14: a locally known uncertain import keeps its exact identity after
             baseRevision: null,
             value: {
               name: 'Privat arbete i båda ersättningarna',
-              description: 'Privat uppgift för Privat arbete i båda ersättningarna',
               typeId: initial.types[0].id,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat uppgift för Privat arbete i båda ersättningarna',
+                },
+              ],
             },
           },
         })

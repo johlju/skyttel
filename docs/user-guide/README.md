@@ -32,11 +32,11 @@ med ett [familjeabonnemang](family-subscription.md).
   tjänstekonton, e-postadresser, personer och betalningsmedel.
 - [Hyra, lån, kredit och avbetalning](contracts.md): registrera avtal,
   parter, belopp, datum, villkor och osäkra uppgifter.
-- [Objekttyper och egna fält](object-types.md): skapa och ändra typer,
-  lägga till fält och byta typ på ett objekt.
+- [Objekttyper](object-types.md): skapa och ändra typer samt byta typ
+  på ett objekt med egenskaperna kvar.
 - [Sambandstyper och riktning](relationship-types.md): definiera samband
   och benämningar från båda hållen.
-- [Ta bort typer och fält](definition-removal.md): hantera användning
+- [Ta bort typer](definition-removal.md): hantera användning
   och läsa äldre definitioner i historiken.
 - [Upphört, borttaget och permanent raderat](lifecycle.md): välja rätt
   åtgärd när något slutar gälla eller ska tas bort.

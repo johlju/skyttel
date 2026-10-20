@@ -59,6 +59,12 @@ def database_snapshot(demo=False):
             assert db.execute(
                 "SELECT name FROM map_object WHERE id = 'persistence-object'"
             ).fetchone() == ('Saved synthetic object',)
+            properties = json.loads(db.execute(
+                "SELECT properties FROM map_object WHERE id = 'persistence-object'"
+            ).fetchone()[0])
+            assert properties == [{
+                'id': 'description', 'label': 'Description', 'kind': 'text', 'value': 'Retained'
+            }]
             assert db.execute(
                 "SELECT userId, token FROM session WHERE id = 'persistence-session'"
             ).fetchone() == ('persistence-user', 'synthetic-session-token')
@@ -70,6 +76,10 @@ def database_snapshot(demo=False):
             assert len(changes) == 1
             assert changes[0]['id'] == 'private-sentinel'
             assert changes[0]['after']['name'] == 'Private synthetic draft'
+            assert changes[0]['after']['properties'] == [{
+                'id': 'description', 'label': 'Description', 'kind': 'text',
+                'value': 'Retained privately'
+            }]
         return hashlib.sha256('\n'.join(db.iterdump()).encode()).hexdigest()
 
 

@@ -19,7 +19,7 @@ beforeEach(async () => {
           version,
           id,
           baseRevision: null,
-          value: { name: id, description: '', typeId: state.types[0].id },
+          value: { name: id, typeId: state.types[0].id },
         })
       ).status,
     ).toBe(200);

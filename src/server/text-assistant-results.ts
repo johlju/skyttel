@@ -1,10 +1,4 @@
-import {
-  type FinancialFact,
-  type FinancialFacts,
-  financialFields,
-} from '../shared/financial-facts.js';
 import type {
-  CustomField,
   MapDraft,
   ObjectType,
   ObjectValue,
@@ -12,29 +6,9 @@ import type {
   RelationshipValue,
   SaveReceipt,
 } from '../shared/map.js';
-import { objectTypePresentation } from '../shared/map.js';
 import { objectIconLabel } from '../shared/object-icons.js';
-import { builtinPresentationChanges } from '../shared/object-properties.js';
+import { propertyDifferences } from '../shared/properties.js';
 import type { TextAssistantResult, TextAssistantReview } from '../shared/text-assistant.js';
-
-function fact(value: FinancialFact | undefined) {
-  if (!value) return 'ej angivet';
-  const text =
-    value.knowledge === 'none'
-      ? 'uttryckligen inget'
-      : value.knowledge === 'unknown'
-        ? 'okänt'
-        : `${value.knowledge === 'uncertain' ? 'osäkert uppgivet: ' : ''}${value.value}`;
-  return `${text}${value.reportedOn ? ` (${value.reportedOn})` : ''}`;
-}
-
-function price(facts: FinancialFacts | undefined) {
-  const value = facts?.price;
-  if (!value || !['known', 'uncertain'].includes(value.knowledge)) return fact(value);
-  const currency = facts?.currency;
-  const interval = facts?.paymentInterval;
-  return `${fact({ ...value, reportedOn: undefined })}${currency?.knowledge === 'known' ? ` ${currency.value}` : ''}${interval?.knowledge === 'known' ? ` / ${interval.value}` : ''}${value.reportedOn ? ` (${value.reportedOn})` : ''}`;
-}
 
 function lifecycle(value: RelationshipValue['lifecycle']) {
   return value === 'ended' ? 'upphört' : value === 'active' ? 'aktuellt' : 'ej angivet';
@@ -54,21 +28,8 @@ function description(value: string | undefined) {
   return value === undefined ? 'ej angivet' : value || 'tom';
 }
 
-function customValue(value: string | number | boolean | undefined) {
-  if (value === undefined) return 'ej angivet';
-  if (typeof value === 'boolean') return value ? 'ja' : 'nej';
-  return String(value) || 'tom';
-}
-
 function difference(label: string, before: string, after: string) {
   return before === after ? [] : [`${label}: ${before} → ${after}`];
-}
-
-function fieldDefinition(field: CustomField | undefined) {
-  const kinds = { text: 'text', number: 'tal', date: 'datum', boolean: 'ja/nej' };
-  return field
-    ? `${field.name} (${kinds[field.kind]}): ${field.description || 'ingen beskrivning'}`
-    : 'ej angivet';
 }
 
 function typeDetails(
@@ -76,73 +37,9 @@ function typeDetails(
   after: (ObjectType & RelationshipType) | null,
 ) {
   const fields = [
-    ...builtinPresentationChanges(before, after),
     ...(before && after ? difference('namn', before.name, after.name) : []),
     ...difference('beskrivning', description(before?.description), description(after?.description)),
   ];
-  const previousPresentation = objectTypePresentation(before ?? {});
-  const nextPresentation = objectTypePresentation(after ?? {});
-  const placement = (type: ObjectType | null, id: string) => {
-    const presentation = objectTypePresentation(type ?? {});
-    const field = presentation.fields.find((field) => field.id === id);
-    return field
-      ? (presentation.sections.find(({ id }) => id === field.sectionId)?.name ??
-          'Dold, behåll värden')
-      : 'ej angivet';
-  };
-  if (before?.sections || after?.sections) {
-    for (const id of new Set(
-      [...previousPresentation.sections, ...nextPresentation.sections].map(({ id }) => id),
-    ))
-      fields.push(
-        ...difference(
-          'Avsnitt',
-          previousPresentation.sections.find((section) => section.id === id)?.name ?? 'ej angivet',
-          nextPresentation.sections.find((section) => section.id === id)?.name ?? 'ej angivet',
-        ),
-      );
-    if (
-      JSON.stringify(previousPresentation.sections.map(({ id }) => id)) !==
-      JSON.stringify(nextPresentation.sections.map(({ id }) => id))
-    )
-      fields.push(
-        ...difference(
-          'Avsnittens ordning',
-          previousPresentation.sections.map(({ name }) => name).join(', ') || 'inga',
-          nextPresentation.sections.map(({ name }) => name).join(', ') || 'inga',
-        ),
-      );
-  }
-  for (const id of new Set(
-    [...(before?.fields ?? []), ...(after?.fields ?? [])].map((field) => field.id),
-  )) {
-    fields.push(
-      ...difference(
-        'Eget fält',
-        fieldDefinition(before?.fields?.find((field) => field.id === id)),
-        fieldDefinition(after?.fields?.find((field) => field.id === id)),
-      ),
-    );
-    fields.push(
-      ...difference(
-        `Placering av ${after?.fields?.find((field) => field.id === id)?.name ?? before?.fields?.find((field) => field.id === id)?.name}`,
-        placement(before, id),
-        placement(after, id),
-      ),
-    );
-  }
-  const oldOrder =
-    before?.fields?.filter((field) => after?.fields?.some(({ id }) => id === field.id)) ?? [];
-  const newOrder =
-    after?.fields?.filter((field) => before?.fields?.some(({ id }) => id === field.id)) ?? [];
-  if (JSON.stringify(oldOrder.map(({ id }) => id)) !== JSON.stringify(newOrder.map(({ id }) => id)))
-    fields.push(
-      ...difference(
-        'Fältordning',
-        oldOrder.map(({ name }) => name).join(', '),
-        newOrder.map(({ name }) => name).join(', '),
-      ),
-    );
   for (const [key, label] of [
     ['forwardLabel', 'Framåtriktning'],
     ['reverseLabel', 'Omvänd riktning'],
@@ -178,6 +75,7 @@ function details(
       current?.types.find((type) => type.id === change.before?.typeId) ??
       (change.type.id === change.before?.typeId ? change.type : undefined);
     const fields: string[] = [];
+    fields.push(...propertyDifferences(change.before?.properties, change.after?.properties));
     if (change.before?.typeId !== change.after?.typeId)
       fields.push(
         `objekttyp: ${change.before ? (beforeType?.name ?? 'okänd objekttyp') : 'ej angivet'} → ${change.after ? change.type.name : 'ej angivet'}`,
@@ -185,10 +83,6 @@ function details(
     if (change.before && change.after)
       if (change.before.name !== change.after.name)
         fields.push(`namn: ${change.before.name} → ${change.after.name}`);
-    if (change.before?.description !== change.after?.description)
-      fields.push(
-        `beskrivning: ${description(change.before?.description)} → ${description(change.after?.description)}`,
-      );
     if (change.before?.lifecycle !== change.after?.lifecycle)
       fields.push(
         `Gäller: ${lifecycle(change.before?.lifecycle)} → ${lifecycle(change.after?.lifecycle)}`,
@@ -203,25 +97,6 @@ function details(
       fields.push(
         `Profilbild: ${change.before?.profileImageId ? 'bild finns' : 'ingen bild'} → ${change.after?.profileImageId ? 'ny bild' : 'ingen bild'}`,
       );
-    for (const { key, label } of financialFields) {
-      const before = change.before?.financialFacts?.[key];
-      const after = change.after?.financialFacts?.[key];
-      if (JSON.stringify(before) !== JSON.stringify(after))
-        fields.push(
-          `${label}: ${key === 'price' ? price(change.before?.financialFacts) : fact(before)} → ${key === 'price' ? price(change.after?.financialFacts) : fact(after)}`,
-        );
-    }
-    for (const id of new Set([
-      ...Object.keys(change.before?.customValues ?? {}),
-      ...Object.keys(change.after?.customValues ?? {}),
-    ])) {
-      const before = change.before?.customValues?.[id];
-      const after = change.after?.customValues?.[id];
-      if (before !== after)
-        fields.push(
-          `${change.type.fields?.find((field) => field.id === id)?.name ?? beforeType?.fields?.find((field) => field.id === id)?.name ?? id}: ${customValue(before)} → ${customValue(after)}`,
-        );
-    }
     lines.push(
       `${verb(change.before, change.after)} ${name}${fields.length ? ` (${fields.join('; ')})` : ''}`,
     );
@@ -246,14 +121,8 @@ function details(
         return object?.[side]?.name ?? change.objectNames?.[id] ?? id;
       };
       const source = objectName(relationship.sourceId);
-      const target = relationship.targetId
-        ? objectName(relationship.targetId)
-        : relationship.knowledge === 'none'
-          ? 'uttryckligen ingen'
-          : relationship.knowledge === 'unresolved'
-            ? 'olöst identitet'
-            : 'okänt';
-      return `${source} ${type?.forwardLabel ?? type?.name ?? 'okänd sambandstyp'} ${target}${relationship.knowledge === 'uncertain' ? ' (osäkert uppgivet)' : ''}`;
+      const target = objectName(relationship.targetId);
+      return `${source} ${type?.forwardLabel ?? type?.name ?? 'okänd sambandstyp'} ${target}`;
     };
     const beforeDescription = change.before ? describe(change.before, beforeType, 'before') : '';
     const afterDescription = change.after
@@ -264,27 +133,13 @@ function details(
         ? `${beforeDescription} → ${afterDescription}`
         : afterDescription;
     const fields: string[] = [];
-    for (const field of new Map(
-      [...(beforeType?.fields ?? []), ...(change.type.fields ?? [])].map((field) => [
-        field.id,
-        field,
-      ]),
-    ).values())
-      fields.push(
-        ...difference(
-          field.name,
-          customValue(change.before?.customValues?.[field.id]),
-          customValue(change.after?.customValues?.[field.id]),
-        ),
-      );
+    fields.push(...propertyDifferences(change.before?.properties, change.after?.properties));
     if (change.before && change.after && change.before.typeId !== change.after.typeId)
       fields.push(`sambandstyp: ${beforeType?.name ?? 'okänd sambandstyp'} → ${change.type.name}`);
     if (change.before?.lifecycle !== change.after?.lifecycle)
       fields.push(
         `Gäller: ${lifecycle(change.before?.lifecycle)} → ${lifecycle(change.after?.lifecycle)}`,
       );
-    if (JSON.stringify(change.before?.endDate) !== JSON.stringify(change.after?.endDate))
-      fields.push(`Slutdatum: ${fact(change.before?.endDate)} → ${fact(change.after?.endDate)}`);
     lines.push(
       `${verb(change.before, change.after)} sambandet ${description}${fields.length ? ` (${fields.join('; ')})` : ''}`,
     );

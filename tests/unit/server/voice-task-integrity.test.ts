@@ -46,7 +46,7 @@ test('saving waits two seconds after ongoing microphone activity ends', {
         contentVersion: 1,
         id: 'retained',
         baseRevision: null,
-        value: { typeId: map.types[0].id, name: 'Bevarat förslag', description: '' },
+        value: { typeId: map.types[0].id, name: 'Bevarat förslag' },
       })
     ).status(),
   ).toBe(200);

@@ -40,7 +40,11 @@ async function setup(
     version: state.draft.version,
     id: 'independent',
     baseRevision: null,
-    value: { typeId: state.types[0].id, name: 'Privat lampa', description: 'Bevaras' },
+    value: {
+      typeId: state.types[0].id,
+      name: 'Privat lampa',
+      properties: [{ id: 'description', label: 'Beskrivning', kind: 'text', value: 'Bevaras' }],
+    },
   });
   expect(proposed.status()).toBe(200);
   session = await (await client.get(`${path}/text-assistant/${session.id}`)).json();
@@ -582,7 +586,7 @@ test('a spoken saved relationship selection waits for actual acknowledgement and
         version: state.draft.version,
         id: 'target',
         baseRevision: null,
-        value: { typeId: state.types[0].id, name: 'Garaget', description: '' },
+        value: { typeId: state.types[0].id, name: 'Garaget' },
       })
     ).status(),
   ).toBe(200);
@@ -597,7 +601,6 @@ test('a spoken saved relationship selection waits for actual acknowledgement and
           typeId: state.relationshipTypes[0].id,
           sourceId: 'independent',
           targetId: 'target',
-          knowledge: 'known',
         },
       })
     ).status(),

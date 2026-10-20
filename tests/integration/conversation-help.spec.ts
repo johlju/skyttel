@@ -130,7 +130,7 @@ test.describe('Windows och Linux', () => {
       await page.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
       const draft = await openDraftReview(page);
       await expect(draft).toContainText('Lo Exempel');
-      await readVoiceProposal(page, 'Lo Exempel', 'Ej uppgivet');
+      await readVoiceProposal(page, 'Lo Exempel', null);
       await expect(consentBox(page)).toHaveCount(0);
       expect(model.requests).toHaveLength(0);
       expect(live.requests).toHaveLength(0);
@@ -185,7 +185,7 @@ test.describe('Windows och Linux', () => {
       );
       await expect(field(page)).toHaveValue('Oskickat medan hjälpen läses');
       await expect(await openDraftReview(page)).toContainText('Lo Exempel');
-      await readVoiceProposal(page, 'Lo Exempel', 'Ej uppgivet');
+      await readVoiceProposal(page, 'Lo Exempel', null);
       expect(await page.evaluate(() => window.skyttelVoiceFixture.stats().microphoneRequests)).toBe(
         1,
       );

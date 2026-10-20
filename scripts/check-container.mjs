@@ -261,7 +261,13 @@ try {
     version: 0,
     id: 'synthetic-person',
     baseRevision: null,
-    value: { typeId: initialMap.types[0].id, name: 'Lo Exempel', description: 'Synthetic person' },
+    value: {
+      typeId: initialMap.types[0].id,
+      name: 'Lo Exempel',
+      properties: [
+        { id: 'description', label: 'Description', kind: 'text', value: 'Synthetic person' },
+      ],
+    },
   });
   // Generate synthetic pixels and decode the actual HTTP result with the native
   // production dependency inside Alpine, after development packages are pruned.

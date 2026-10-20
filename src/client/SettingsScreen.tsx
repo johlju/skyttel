@@ -28,7 +28,7 @@ export function settingsEntries(
           },
           {
             to: `${householdPath}/settings/types`,
-            title: 'Typer och egna fält',
+            title: 'Typer',
             description:
               'Hushållets objekt- och sambandstyper. Förslag samlas i ditt privata utkast.',
             group: 'Hushållets karta',

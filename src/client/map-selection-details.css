@@ -213,11 +213,6 @@
   .household-map:not([data-work-layout="tall"]) .object-property-window .object-property-body {
     margin-top: 4px;
   }
-  .household-map:not([data-work-layout="tall"])
-    .object-property-window
-    .household-table-description {
-    margin-top: 0;
-  }
   .household-map.workspace-shell:not([data-work-layout="tall"])
     .object-property-window
     > .object-property-actions {
@@ -254,6 +249,20 @@
     top: 0;
     z-index: 1;
     background: var(--space-surface);
+  }
+  /* Scroll the title with the facts beside persistent voice controls: a
+     pinned title can leave less room than one complete line of text. */
+  .household-map.workspace-shell:is([data-work-layout="compact"], [data-work-layout="minimal"]):has(
+    .voice-box
+  ) .object-property-window {
+    scroll-padding-top: 8px;
+  }
+  .household-map.workspace-shell:is([data-work-layout="compact"], [data-work-layout="minimal"]):has(
+      .voice-box
+    )
+    .object-property-window
+    .object-property-header {
+    position: static;
   }
   .household-map.workspace-shell:is([data-work-layout="compact"], [data-work-layout="minimal"])
     .object-property-window

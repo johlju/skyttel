@@ -36,7 +36,13 @@ test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
           contentVersion: 1,
           id: 'proposal',
           baseRevision: null,
-          value: { typeId, name: 'Slutvärdet', description: 'Bevaras' },
+          value: {
+            typeId,
+            name: 'Slutvärdet',
+            properties: [
+              { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Bevaras' },
+            ],
+          },
         }),
       ];
     });
@@ -56,7 +62,13 @@ test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
           contentVersion: 1,
           id: 'proposal',
           baseRevision: null,
-          value: { typeId, name: 'Första värdet', description: 'Bevaras' },
+          value: {
+            typeId,
+            name: 'Första värdet',
+            properties: [
+              { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Bevaras' },
+            ],
+          },
         })
       ).status(),
     ).toBe(200);

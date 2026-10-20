@@ -151,7 +151,8 @@ token”.
 provar den publicerade terminalklienten, tomma och fyllda resultat i samma
 medgivande, exakt läsande verktygslista, oförändrad karta och utkast samt
 återkallelse och processavslut. Det ersätter inte AI-02:s manuella steg.
-Följ [klientprovet](assistant-client-preparation.md#läsande-terminalklient-tom-och-fylld-karta)
+Följ
+[klientprovet](assistant-client-preparation.md#läsande-terminalklient-tom-och-fylld-karta)
 för motsvarande separat förberedelse utan språkmodell.
 
 ### AI-03: medgivandet kräver val av hushåll och AI-behandling
@@ -331,7 +332,8 @@ Skapa inte Läsningens lampa eller Alex och Robins privata personförslag.
 Klienten har läsåtkomst till Linden. Skapa och spara
 fordonen Blå bilen och Cykeln två steg bort samt personerna Kim och Lo.
 Ge personerna egna beskrivningar. Skapa också objekttypen Privat samling
-med en egen beskrivning och ett textfält med beskrivning, och ett objekt
+med en egen typförklaring och ett objekt med en fri textegenskap, samt ett
+objekt
 Samlingen av den typen. Spara följande samband: Blå bilen → Äger → Kim,
 Lo → Använder → Blå bilen med osäker uppgift, Blå bilen → Används av →
 Okänt, och Kim → Använder → Cykeln två steg bort.
@@ -598,8 +600,8 @@ MCP”, med [separat verklig modellkörning](real-model-tests.md).
    Öppna **Tabell** och kontrollera Lo Lind. Välj **Samband** för
    **Familjens musikkonto** och kontrollera den nya inloggningsadressen.
    Stäng läsningen, välj **Redigera Familjens Molnmusik** och öppna
-   **Ekonomiska uppgifter** för att kontrollera pris **189**, valuta
-   **SEK** och betalningsintervall **månad**, alla som kända uppgifter.
+   **Fria egenskaper** för att kontrollera pris **189**, valuta
+   **SEK** och betalningsintervall **månad**, alla som textegenskaper.
    Kontrollera beskrivningen **Familjeabonnemang, 189 kr per månad.**
    Stäng formuläret och redigera Lo Lind: pianobeskrivningen ska finnas kvar.
 
@@ -791,9 +793,11 @@ förblir kastade”.
 
    <!-- markdownlint-disable MD013 -->
    ```text
-   capture-object bank {"id":"manual-bank","type":"Bankkonto","name":"Betalkonto","identity":"unresolved"}
+   capture-object bank
+   {"id":"manual-bank","type":"Bankkonto","name":"Betalkonto","identity":"unresolved"}
    send bank
-   capture-object other {"id":"manual-other","type":"Bankkonto","name":"Hushållskonto"}
+   capture-object other
+   {"id":"manual-other","type":"Bankkonto","name":"Hushållskonto"}
    send other
    capture-save blocked
    send blocked
@@ -809,9 +813,11 @@ förblir kastade”.
 
    <!-- markdownlint-disable MD013 -->
    ```text
-   capture-object specified {"id":"manual-bank","type":"Bankkonto","name":"Betalkonto","identity":"unspecified"}
+   capture-object specified
+   {"id":"manual-bank","type":"Bankkonto","name":"Betalkonto","identity":"unspecified"}
    send specified
-   capture-object delayed {"id":"manual-other","type":"Bankkonto","name":"Hushållskonto"}
+   capture-object delayed
+   {"id":"manual-other","type":"Bankkonto","name":"Hushållskonto"}
    discard manual-other
    send delayed
    ```

@@ -250,11 +250,16 @@ MARKERING-05.
    Skilj sparade värden från det privata prisförslaget.
 3. Nå **Redigera Cykel** med Tab och tryck Enter. Kontrollera att det vanliga
    fullständiga objektformuläret öppnas med Cykels aktuella uppgifter.
+   Öppna **Fria egenskaper**. Pris är texten **2500 SEK** utan en extra
+   säkerhetsegenskap. Senast uppgiven skuld och Slutdatum saknar värde;
+   deras separata textegenskaper för uppgiftens säkerhet innehåller
+   **Uttryckligen inget** respektive **Okänt**.
 4. Välj **Stäng objektdialogen** utan att ändra något. Kontrollera att fokus
    återgår till **Redigera Cykel** och att samma uppgifter finns kvar.
 5. Rulla uppgiftsfönstrets innehåll och stäng det med krysset.
    Välj **Tabell** och **Redigera Cykel**. Ange
-   **Mitt privata läsförslag** i Beskrivning och välj **Lägg i utkastet och
+   **Mitt privata läsförslag** i textegenskapen Beskrivning under
+   **Fria egenskaper** och välj **Lägg i utkastet och
    stäng**.
    Kontrollera fokus på samma redigeringsknapp och läs **Ändringen finns i ditt
    utkast. Kartan sparas separat.** ovanför tabellen.

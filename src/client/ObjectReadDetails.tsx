@@ -1,31 +1,15 @@
-import { type FinancialFact, financialFields } from '../shared/financial-facts.js';
 import type { ObjectType, ObjectValue } from '../shared/map.js';
 import { objectIconLabel } from '../shared/object-icons.js';
-import { objectProperties } from '../shared/object-properties.js';
+import { propertyValueText } from '../shared/properties.js';
 import type { HouseholdTableRow } from './HouseholdTable.js';
 import { ProfileImage } from './ProfileImage.js';
-import { customReadFields, lifecycleText } from './read-field-values.js';
+import { lifecycleText } from './read-field-values.js';
+import { SavedPropertyOrder } from './SavedPropertyOrder.js';
 
-const knowledge = {
-  known: 'Känt',
-  unknown: 'Okänt',
-  none: 'Uttryckligen inget',
-  uncertain: 'Osäkert uppgivet',
-};
-export function factText(fact?: FinancialFact) {
-  if (!fact) return 'Ej uppgivet';
-  return `${fact.value ?? knowledge[fact.knowledge]}${fact.knowledge === 'uncertain' ? ' (Osäkert uppgivet)' : ''}${fact.reportedOn ? ` · datum för uppgiften: ${fact.reportedOn}` : ''}`;
-}
 export function objectPropertyValues(value: ObjectValue, type?: ObjectType) {
-  const properties = objectProperties(type ?? {});
   const fields = new Map<string, { label: string; value: string }>();
   fields.set('name', { label: 'Namn', value: value.name });
   fields.set('type', { label: 'Typ', value: type?.name ?? 'Borttagen typ' });
-  fields.set('description', {
-    label:
-      properties.find((property) => property.ref === 'builtin:description')?.name ?? 'Beskrivning',
-    value: value.description || 'Ej uppgivet',
-  });
   fields.set('lifecycle', {
     label: 'Status',
     value: lifecycleText(value.lifecycle),
@@ -47,19 +31,11 @@ export function objectPropertyValues(value: ObjectValue, type?: ObjectType) {
           ? 'Identiteten behöver redas ut'
           : 'Identifierat objekt',
   });
-  const orderedFields = properties.flatMap((property) =>
-    property.kind === 'custom' ? [property.field] : [],
-  );
-  for (const [key, field] of customReadFields(orderedFields, value.customValues))
-    fields.set(key, field);
-  for (const field of financialFields) {
-    const property = properties.find((property) => property.ref === `builtin:${field.key}`);
-    if (value.financialFacts?.[field.key] || property)
-      fields.set(`builtin:${field.key}`, {
-        label: property?.name ?? field.label,
-        value: factText(value.financialFacts?.[field.key]),
-      });
-  }
+  for (const property of value.properties ?? [])
+    fields.set(`property:${property.id}`, {
+      label: property.label,
+      value: propertyValueText(property),
+    });
   return fields;
 }
 
@@ -79,31 +55,17 @@ export function ObjectReadDetails({
     ? objectPropertyValues(row.before, row.beforeType)
     : new Map<string, { label: string; value: string }>();
   const keys = [...new Set([...proposed.keys(), ...saved.keys()])];
-  const descriptionChanged =
-    row.proposal === 'Ändrat' && row.object.description !== row.before?.description;
   return (
     <div className="household-table-details">
       {showHeading && <h3>{row.object.name} · alla uppgifter</h3>}
-      <p className="household-table-description">
-        {descriptionChanged && (
-          <span className="household-table-before">
-            Sparat: {row.before?.description || 'Ej uppgivet'}
-          </span>
-        )}
-        {(descriptionChanged || row.proposal === 'Nytt') && (
-          <span className="household-table-proposed">◇ Ditt förslag: </span>
-        )}
-        {row.object.description || 'Ej uppgivet'}
-      </p>
       {status && <p className="map-selection-summary">Objektstatus: {status}</p>}
       <dl>
         {keys
           .filter(
             (key) =>
-              key !== 'description' &&
-              (full ||
-                !(key === 'name' || key === 'type') ||
-                (proposed.get(key)?.value !== saved.get(key)?.value && row.proposal === 'Ändrat')),
+              full ||
+              !(key === 'name' || key === 'type') ||
+              (proposed.get(key)?.value !== saved.get(key)?.value && row.proposal === 'Ändrat'),
           )
           .map((key) => {
             const after = proposed.get(key);
@@ -147,6 +109,7 @@ export function ObjectReadDetails({
             );
           })}
       </dl>
+      <SavedPropertyOrder before={row.before?.properties} after={row.object.properties} />
     </div>
   );
 }

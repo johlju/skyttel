@@ -27,7 +27,7 @@ test('read-only relationship chains keep cross and Escape closure while ordinary
             version,
             id,
             baseRevision: null,
-            value: { typeId: initial.types[0].id, name, description: '' },
+            value: { typeId: initial.types[0].id, name },
           })
         ).status,
       ).toBe(200);
@@ -41,7 +41,6 @@ test('read-only relationship chains keep cross and Escape closure while ordinary
             typeId: initial.relationshipTypes[0].id,
             sourceId: 'alex',
             targetId: 'bike',
-            knowledge: 'known',
           },
         })
       ).status,

@@ -483,7 +483,6 @@ await fetch(`${mapPath}/draft`, {
     value: {
       typeId: map.types[0].id,
       name: 'Oklart Lo',
-      description: '',
       identity: 'unresolved',
     },
   }),

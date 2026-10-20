@@ -84,13 +84,21 @@ test('UTKAST-32: lifecycle-only object and relationship proposals distinguish ef
         .getByRole('cell')
         .last();
       await expect(summary).toHaveText(
-        `${expired ? 'Gäller: Upphört → Aktuellt' : ''}Status: Följ slutdatum → Gäller fortfarande`,
+        `Gäller: ${expired ? 'Upphört → Aktuellt' : 'Aktuellt → Upphört'}Status: ${expired ? 'Manuellt upphört → Gäller fortfarande' : 'Gäller fortfarande → Manuellt upphört'}`,
       );
       await opener.click();
       const modal = page.getByRole('dialog', { name, exact: true });
       for (const [title, applies, mode] of [
-        ['Sparade värden', expired ? 'Upphört' : 'Aktuellt', 'Följ slutdatum'],
-        ['Föreslagna värden', 'Aktuellt', 'Gäller fortfarande'],
+        [
+          'Sparade värden',
+          expired ? 'Upphört' : 'Aktuellt',
+          expired ? 'Manuellt upphört' : 'Gäller fortfarande',
+        ],
+        [
+          'Föreslagna värden',
+          expired ? 'Aktuellt' : 'Upphört',
+          expired ? 'Gäller fortfarande' : 'Manuellt upphört',
+        ],
       ]) {
         const side = modal
           .locator('section')
@@ -161,9 +169,11 @@ for (const mobile of [false, true])
         'Fullständig föreslagen beskrivning',
         'Uttryckligen inget',
         'Okänt',
-        '500 SEK (Osäkert uppgivet) · datum för uppgiften: 2026-01-01',
+        '500 SEK',
+        'Osäkert uppgivet',
+        '2026-01-01',
       ])
-        await expect(modal.getByText(value, { exact: true })).toBeVisible();
+        await expect(modal).toContainText(value);
       await expect(modal.getByRole('button')).toHaveCount(1);
       await page.screenshot({
         path: `/tmp/skyttel-244/252-read-${mobile ? 'mobile' : 'desktop'}.png`,
@@ -177,7 +187,7 @@ for (const mobile of [false, true])
       await page.keyboard.press('Escape');
       await expect(button).toBeFocused();
       for (const [name, detail] of [
-        ['Utkastfordon', 'Föreslagen fältbeskrivning'],
+        ['Utkastfordon', 'Föreslagen typbeskrivning'],
         ['Granskar', 'kontrolleras av'],
       ]) {
         await draft.getByRole('button', { name: `Visa förslaget: ${name}`, exact: true }).click();
@@ -190,7 +200,7 @@ for (const mobile of [false, true])
         .first();
       await edge.click();
       await expect(
-        page.getByRole('dialog').getByText('Hela dolda uppgiften known', { exact: true }),
+        page.getByRole('dialog').getByText('Hela uppgiften Bekräftat (Text)', { exact: true }),
       ).toBeVisible();
       await page.keyboard.press('Escape');
       await expect(draft.getByRole('row', { name: /Olöst fordon/ })).toContainText(
@@ -202,7 +212,7 @@ for (const mobile of [false, true])
           .first()
           .locator('.draft-row-warning'),
       ).toHaveCount(0);
-      await expect(draft.locator('.draft-row-warning')).toHaveCount(2);
+      await expect(draft.locator('.draft-row-warning')).toHaveCount(1);
       expect(starts).toEqual([]);
       expect(await read()).toEqual(before);
       await draft.evaluate((element) => {
@@ -278,7 +288,7 @@ test('UTKAST-91: empty and type-only drafts preserve unsent text and first send 
 });
 
 for (const mobile of [false, true])
-  test(`${mobile ? 'UTKAST-93' : 'UTKAST-27'}: ${mobile ? 'mobile' : 'desktop'} draft reading preserves lifecycle, images and configured field meanings`, async ({
+  test(`${mobile ? 'UTKAST-93' : 'UTKAST-27'}: ${mobile ? 'mobile' : 'desktop'} draft reading preserves lifecycle, images and individual property labels and meanings`, async ({
     page,
   }) => {
     const installation = await createInstallation();
@@ -317,21 +327,23 @@ for (const mobile of [false, true])
       async function lifecycle() {
         await expect(field(saved, 'Gäller').locator('dd')).toHaveText('Upphört');
         await expect(field(proposed, 'Gäller').locator('dd')).toHaveText('Aktuellt');
-        await expect(field(saved, 'Status').locator('dd')).toHaveText('Följ slutdatum');
+        await expect(field(saved, 'Status').locator('dd')).toHaveText('Manuellt upphört');
         await expect(field(proposed, 'Status').locator('dd')).toHaveText('Gäller fortfarande');
         await expect(field(proposed, 'Gäller')).toHaveClass('draft-value-changed');
         await expect(field(proposed, 'Status')).toHaveClass('draft-value-changed');
       }
       await lifecycle();
       await expect(field(saved, 'Fordonets berättelse').locator('dd')).toHaveText(
-        'Hela den sparade beskrivningen',
+        'Hela den sparade beskrivningen (Text)',
       );
-      await expect(field(proposed, 'Cykelns berättelse').locator('dd')).toHaveText('Ej uppgivet');
+      await expect(field(proposed, 'Cykelns berättelse').locator('dd')).toHaveText('Tomt (Text)');
       await expect(field(proposed, 'Cykelns berättelse')).toHaveClass('draft-value-changed');
       for (const side of [saved, proposed]) {
-        await expect(field(side, 'Avtalat pris').locator('dd')).toHaveText('Ej uppgivet');
+        await expect(field(side, 'Avtalat pris').locator('dd')).toHaveText('Tomt (Tal)');
         await expect(field(side, 'Avtalat pris')).not.toHaveClass('draft-value-changed');
-        await expect(field(side, 'Sista giltighetsdag').locator('dd')).toHaveText('2000-01-01');
+        await expect(field(side, 'Sista giltighetsdag').locator('dd')).toHaveText(
+          '2000-01-01 (Datum)',
+        );
         await expect(field(side, 'Profilbild')).toHaveClass('draft-value-changed');
         const image = field(side, 'Profilbild').getByRole('img', {
           name: 'Profilbild för Blå cykel',
@@ -363,7 +375,7 @@ for (const mobile of [false, true])
         .click();
       await lifecycle();
       for (const side of [saved, proposed])
-        await expect(field(side, 'Slutdatum').locator('dd')).toHaveText('2000-01-01');
+        await expect(field(side, 'Slutdatum').locator('dd')).toHaveText('2000-01-01 (Datum)');
       await expect(consentBox(page)).not.toBeVisible();
       expect(starts).toEqual([]);
       expect(await read()).toEqual(before);

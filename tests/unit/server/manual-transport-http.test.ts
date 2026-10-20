@@ -36,7 +36,7 @@ async function propose(id: string, name: string, actor = owner) {
         version: state.draft.version,
         contentVersion: state.contentVersion,
         baseRevision: own ? (own.before?.revision ?? null) : (saved?.revision ?? null),
-        value: { typeId: state.types[0].id, description: '', ...saved, ...own?.after, name },
+        value: { typeId: state.types[0].id, ...saved, ...own?.after, name },
       },
       actor,
     ),

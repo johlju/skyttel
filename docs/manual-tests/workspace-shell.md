@@ -259,7 +259,8 @@ YTA-07.
    namnet. Välj krysset igen och **Kasta ändringarna och fortsätt**. Öppna
    **Nytt objekt** på nytt och kräv tomt Namn. Ange **Lo Exempel** och välj
    **Lägg i utkastet och stäng**. Öppna **Skriv till Skyttel → Visa utkastet**
-   utan att starta ett samtal. Läs Lo-förslaget utan medgivande. Stäng textvyn
+   utan att starta ett samtal. Läs Lo-förslaget utan medgivande: namn
+   **Lo Exempel**, typ **Person** och ingen egenskap Beskrivning. Stäng textvyn
    och öppna **Rapporter → Ändringshistorik**; kräv
    **Inga genomförda sparanden.** Välj **Tillbaka till arbetet** och **Karta**.
 5. Tryck tangentkombinationen kort. I medgivanderutan, markera

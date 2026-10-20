@@ -93,7 +93,7 @@ test('manual text controls hold actual provider work, reject a stale release and
       contentVersion: held.draft.contentVersion,
       id: 'manual-subscription',
       baseRevision: null,
-      value: { typeId: type.id, name: 'Provabonnemang', description: '' },
+      value: { typeId: type.id, name: 'Provabonnemang' },
     };
     await command(`tool ${catalog.id} propose_object ${JSON.stringify(args)}`);
     const proposed = await next('held');

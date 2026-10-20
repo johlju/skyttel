@@ -8,7 +8,9 @@ import { attachTaskDelivery } from './task-delivery-transport.js';
 
 async function main() {
   const config = readConfig();
-  const database = openDatabase(config.databasePath);
+  const database = openDatabase(config.databasePath, {
+    authorityFence: config.authorityFence,
+  });
   try {
     const auth = createAuth(config, database);
     await verifyAuthSchema(auth);

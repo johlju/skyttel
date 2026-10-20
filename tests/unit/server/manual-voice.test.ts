@@ -104,7 +104,7 @@ test('manual voice controls drive real delegation and MCP, preserve provisional 
         contentVersion: held.draft.contentVersion,
         id: 'spoken-subscription',
         baseRevision: null,
-        value: { typeId: type.id, name: 'Talets provabonnemang', description: '' },
+        value: { typeId: type.id, name: 'Talets provabonnemang' },
       })}`,
     );
     const proposed = await next('held');
@@ -211,12 +211,16 @@ test('manual voice family setup refuses reuse and resolves the seeded conflict a
         baseRevision: revision,
         value: {
           ...value,
-          description: 'Familjeabonnemang 189 kr per månad.',
-          financialFacts: {
-            price: { knowledge: 'known', value: '189' },
-            currency: { knowledge: 'known', value: 'SEK' },
-            paymentInterval: { knowledge: 'known', value: 'månad' },
-          },
+
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Familjeabonnemang 189 kr per månad.',
+            },
+            { id: 'price', label: 'Pris', kind: 'number', value: 189 },
+          ],
         },
       })}`,
     );
@@ -232,8 +236,10 @@ test('manual voice family setup refuses reuse and resolves the seeded conflict a
     const saved = await (await browser.get(`${base}/map`)).json();
     expect(saved.draft.changes).toEqual([]);
     expect(
-      saved.objects.find((item: { id: string }) => item.id === id).financialFacts.price,
-    ).toEqual({ knowledge: 'known', value: '189' });
+      saved.objects
+        .find((item: { id: string }) => item.id === id)
+        .properties.find((property: { label: string }) => property.label === 'Pris'),
+    ).toMatchObject({ kind: 'number', value: 189 });
     expect(saved.objects.some((item: { name: string }) => item.name === 'Lo Lind')).toBe(true);
     await command('quit', 'closed');
     await exit;

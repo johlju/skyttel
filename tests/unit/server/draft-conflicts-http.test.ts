@@ -6,7 +6,52 @@ import { collaborators } from '../../support/draft-conflict-http.js';
 import { alex, createInstallation, robin } from '../../support/installation.js';
 import { typeChangeHousehold } from '../../support/type-change-http.js';
 
-test('invalid values and concurrent definitions block whole saves until fresh choices and preserve later private fields', async () => {
+test('relationship conflict resolution preserves independent properties alongside another saved status change', async () => {
+  const first = await request.newContext();
+  const second = await request.newContext();
+  const app = await collaborators(first, second);
+  try {
+    const initial = await app.read();
+    const value = {
+      typeId: initial.relationshipTypes[0].id,
+      sourceId: 'lo',
+      targetId: 'service',
+
+      properties: [{ id: 'memo', label: 'Anteckning', kind: 'text' as const, value: 'Första' }],
+    };
+    await app.propose(first, 'relationship', 'edge', value);
+    expect((await app.save(first, 'first-edge')).status()).toBe(200);
+    await app.propose(first, 'relationship', 'edge', {
+      ...value,
+      properties: [{ ...value.properties[0], value: 'Eget förslag' }],
+    });
+    await app.propose(second, 'relationship', 'edge', { ...value, lifecycle: 'ended' });
+    expect((await app.save(second, 'status')).status()).toBe(200);
+    const stale = await app.read();
+    const conflict = draftConflicts(stale).find((item) => item.kind === 'relationship');
+    expect(conflict).toBeDefined();
+    expect(
+      (
+        await app.post(first, 'resolve', {
+          version: stale.draft.version,
+          conflict,
+          choice: 'proposed',
+        })
+      ).status(),
+    ).toBe(200);
+    expect((await app.save(first, 'resolved-properties')).status()).toBe(200);
+    expect((await app.read()).relationships[0]).toMatchObject({
+      lifecycle: 'ended',
+      properties: [{ id: 'memo', label: 'Anteckning', kind: 'text', value: 'Eget förslag' }],
+    });
+  } finally {
+    await second.dispose();
+    await first.dispose();
+    await app.installation.close();
+  }
+});
+
+test('invalid values and concurrent definitions block whole saves until fresh choices and preserve later private properties', async () => {
   const installation = await createInstallation();
   let client = await request.newContext();
   const other = await request.newContext();
@@ -31,12 +76,23 @@ test('invalid values and concurrent definitions block whole saves until fresh ch
     await object('garage', { name: 'Eget namn' });
     const before = await read();
     expect(
-      (await object('bike', { typeId: 'vehicle', customValues: { serial: 'fel' } })).status(),
+      (
+        await object('bike', {
+          typeId: 'vehicle',
+          properties: [{ id: 'serial', label: 'Serienummer', kind: 'number', value: 'fel' }],
+        })
+      ).status(),
     ).toBe(400);
     expect(await read()).toEqual(before);
     expect(
       (
-        await object('bike', { typeId: 'vehicle', customValues: { serial: 42, insured: false } })
+        await object('bike', {
+          typeId: 'vehicle',
+          properties: [
+            { id: 'serial', label: 'serial', kind: 'number', value: 42 },
+            { id: 'insured', label: 'insured', kind: 'boolean', value: false },
+          ],
+        })
       ).status(),
     ).toBe(200);
     const target = (await read(other)).types.find((type) => type.id === 'vehicle');
@@ -48,7 +104,7 @@ test('invalid values and concurrent definitions block whole saves until fresh ch
             version: 0,
             id: 'vehicle',
             baseRevision: target?.revision,
-            value: { ...target, description: 'Uppdaterad definition' },
+            value: { name: target?.name, description: 'Uppdaterad definition' },
           },
           other,
         )
@@ -71,13 +127,22 @@ test('invalid values and concurrent definitions block whole saves until fresh ch
       (await post('save', { version: stale.draft.version, operationId: 'old-approval' })).status(),
     ).toBe(409);
     const selected = await save('change-type');
-    await object('bike', { customValues: { serial: 43, insured: false } });
+    await object('bike', {
+      properties: [
+        { id: 'serial', label: 'serial', kind: 'number', value: 43 },
+        { id: 'insured', label: 'insured', kind: 'boolean', value: false },
+      ],
+    });
     const own = await read();
     client = await restartWithSession(client, () => installation.restart());
     expect((await read(client)).draft).toEqual(own.draft);
     expect((await read(client)).objects.find((item) => item.id === 'bike')).toMatchObject({
       typeId: 'vehicle',
-      customValues: { serial: 42, insured: false },
+
+      properties: [
+        { id: 'serial', label: 'serial', kind: 'number', value: 42 },
+        { id: 'insured', label: 'insured', kind: 'boolean', value: false },
+      ],
     });
     expect((await (await client.get(`${path}/history`)).json()).history).toContainEqual(selected);
   } finally {
@@ -94,7 +159,7 @@ test('HTTP clients reject stale conflict choices and enforce private drafts and 
   const app = await collaborators(client, other);
   try {
     let state = await app.read();
-    const value = { typeId: state.types[0].id, name: 'Lo Lind', description: '' };
+    const value = { typeId: state.types[0].id, name: 'Lo Lind' };
     await app.propose(client, 'draft', 'lo', value);
     expect((await app.read(other)).draft.changes).toEqual([]);
     app.installation.setIdentity(alex);

@@ -341,7 +341,6 @@ async function main() {
                   baseRevision: null,
                   typeRevision: definitions[0].revision,
                   value: {
-                    description: '',
                     ...prior?.after,
                     typeId: definitions[0].id,
                     name: body.name,

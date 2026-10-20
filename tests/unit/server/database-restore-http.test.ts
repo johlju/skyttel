@@ -130,7 +130,10 @@ test('a real older SQLite restore rejects every old browser and assistant author
           value: {
             typeId: map.types[0].id,
             name: 'Bevarat utkast',
-            description: 'Påhittad uppgift',
+
+            properties: [
+              { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad uppgift' },
+            ],
           },
         },
       })

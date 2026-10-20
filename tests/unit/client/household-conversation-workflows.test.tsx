@@ -188,7 +188,7 @@ async function household({
       version: state.draft.version,
       contentVersion: state.contentVersion,
       baseRevision: null,
-      value: { typeId: state.types[0].id, name, description: '' },
+      value: { typeId: state.types[0].id, name },
     });
     expect(response.ok()).toBe(true);
   }

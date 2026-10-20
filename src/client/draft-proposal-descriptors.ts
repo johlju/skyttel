@@ -37,7 +37,7 @@ export function draftProposalDescriptors(draft: MapDraft): DraftProposalDescript
       change,
     })),
     ...(draft.relationships ?? []).map((change) => {
-      const value = change.after ?? change.before;
+      const value = change.after ?? change.before ?? change.suppressed?.after;
       return {
         key: draftProposalKey('relationship', change.id),
         name: value

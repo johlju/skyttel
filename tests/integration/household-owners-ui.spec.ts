@@ -42,7 +42,18 @@ test('FLYTT-02: an uncertain explicit identity assignment is read back while bot
             id: 'shared',
             version: 0,
             baseRevision: null,
-            value: { name: 'Delad lampa', description: 'Delad sparad uppgift', typeId },
+            value: {
+              name: 'Delad lampa',
+              typeId,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Delad sparad uppgift',
+                },
+              ],
+            },
           },
         })
       ).status(),
@@ -65,8 +76,15 @@ test('FLYTT-02: an uncertain explicit identity assignment is read back while bot
             baseRevision: null,
             value: {
               name: 'Privat från källan',
-              description: 'Visas aldrig i ägargranskningen',
               typeId,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Visas aldrig i ägargranskningen',
+                },
+              ],
             },
           },
         })
@@ -131,8 +149,15 @@ test('FLYTT-02: an uncertain explicit identity assignment is read back while bot
             baseRevision: null,
             value: {
               name: 'Oberoende privat arbete',
-              description: 'Privat uppgift för Oberoende privat arbete',
               typeId,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat uppgift för Oberoende privat arbete',
+                },
+              ],
             },
           },
         })

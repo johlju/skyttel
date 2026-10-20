@@ -8,7 +8,8 @@ Bekräfta förberedelserna nedan före en manuell körning.
 
 ## Konfigurerade användare
 
-Använd [en separat lokal provdatabas](../development/devcontainer.md#disposable-local-database)
+Använd [en separat lokal
+provdatabas](../development/devcontainer.md#disposable-local-database)
 i devcontainern och värddatorns webbläsare. **Alex** är testrollen för den
 konfigurerade första administratörens befintliga Google- eller
 Microsoft-konto; kontot behöver inte heta Alex. Skapa hushållet **Linden**
@@ -195,8 +196,9 @@ kopiera inga inloggningsuppgifter.
    och flik. Invänta bekräftelse att båda är avvisade med bevarade uppgifter,
    före den nya rättelsen. Läs sedan karta och historik igen; inga äldre försök
    får ha återinfört senare innehåll.
-7. I profil B: kasta det återställda privata bildförslaget. Ändra beskrivningen
-   på det andra objektet till **Ny vanlig rättelse**, lägg förslaget i utkastet
+7. I profil B: kasta det återställda privata bildförslaget. Öppna det andra
+   objektet, lägg till **Beskrivning** under **Fria egenskaper** med datatyp
+   **Text** och värdet **Ny vanlig rättelse**, lägg förslaget i utkastet
    och spara. Starta om och kontrollera båda objektens bilder, samband,
    beskrivningar och personliga placeringar.
 8. Be driftansvarig rensa de två lokalt fångade begärandena enligt förberedelsen
@@ -218,7 +220,8 @@ lyckat svar kommer avbryts inte svaret, och fallet ska markeras som ej
 verifierat. Vanligt offlineläge bevisar inte ett avbrott efter transaktionen.
 Ladda om fliken om du avbryter innan nästa sparande.
 
-Kör [den separata förberedelsen 1](household-recovery-console.md#import-06-förberedelse-1)
+Kör [den separata förberedelsen
+1](household-recovery-console.md#import-06-förberedelse-1)
 för IMPORT-06 i det angivna läget.
 
 **Prova båda gamla sparbegärandena:**
@@ -229,12 +232,14 @@ begäransfälten exakt. Den tar en aktuell karta och historik före försöken o
 jämför dem efter varje försök. Endast status och felkod skrivs ut; kopiera
 inte privata webbläsardata till en rapport.
 
-Kör [den separata förberedelsen 2](household-recovery-console.md#import-06-förberedelse-2)
+Kör [den separata förberedelsen
+2](household-recovery-console.md#import-06-förberedelse-2)
 för IMPORT-06 i det angivna läget.
 
 Efter fallet, ta bort de två lokalt sparade begärandena:
 
-Kör [den separata förberedelsen 3](household-recovery-console.md#import-06-förberedelse-3)
+Kör [den separata förberedelsen
+3](household-recovery-console.md#import-06-förberedelse-3)
 för IMPORT-06 i det angivna läget.
 
 **Förväntat resultat:**
@@ -256,39 +261,39 @@ med
   objektets första bild, okända målpunkt och båda personliga placeringarna
   är bevarade även efter omstart. Beskrivningen visar Ny vanlig rättelse.
 
-### IMPORT-07: bevara äldre fältbetydelser och fortsätt med vanlig rättelse
+### IMPORT-07: Historiska egenskaper och typbetydelser består efter import
 
-**Syfte:** Bevara historiska talvärden när dagens fält är text, utan
-omvandling, och tillåta vanligt arbete med aktuellt underlag efter import.
+**Syfte:** Importen bevarar den fria talegenskapen och varje sparandes
+dåvarande typbetydelse, författare och tidpunkt.
 
-**Användare:** Alex som administratör.
+**Användare:** Alex, och Robin när två profiler anges.
 
-**Förutsättningar:** Ett separat provhushåll utan andra ändringar. Välj
-en objekttyp utan använda egna fält. Följ export- och importförberedelserna.
-
-**Integrationstest:**
-[household-import-definitions.spec.ts](../../tests/integration/household-import-definitions.spec.ts),
-IMPORT-07, med formulär, återimport och läsning i Rapporter.
-Det separata tekniska testet behåller exakta fältslag och kvitton.
+**Förutsättningar:** Separat provhushåll utan andra ändringar. Person finns
+som objekttyp. Följ områdets vanliga export- och importförberedelser.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/household-import-definitions.spec.ts",
     "caseId": "IMPORT-07"
   },
-  "reference": "Chromium på dator; separata verifierade profiler enligt förberedelsen.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Bevara historiska talvärden när dagens fält är text, utan omvandling, och tillåta vanligt arbete med aktuellt underlag efter import."
+    "Importen bevarar den fria talegenskapen och varje sparandes dåvarande typbetydelse, författare och tidpunkt.",
+    "Efter vanlig rättelse och nytt sparande består 43; tidigare historik och sparkvitton är oförändrade."
   ],
   "evidence": [
     {
       "kind": "technical",
-      "spec": "tests/integration/household-import-definitions.spec.ts",
-      "title": "historical field kinds and exact receipts survive replacement and request corrections",
-      "purpose": "Exakta historiska fältslag, kvitton och request-rättelser före och efter omstart."
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/household-import-property-history-http.test.ts",
+      "title": "historical property kinds and exact receipts survive replacement and ordinary corrections",
+      "purpose": "Exakta historiska egenskapsdatatyper, sparkvitton och vanliga rättelser genom riktig HTTP, SQLite och omstart."
     }
   ]
 }
@@ -298,38 +303,30 @@ Det separata tekniska testet behåller exakta fältslag och kvitton.
 
 **Steg:**
 
-1. Öppna **Inställningar → Typer och egna fält**. Fäll ut
-   **Objekttyper och egna fält** om avsnittet är stängt. Välj
-   **Ändra typ: Person**, **Lägg till fält** och namnet **Serienummer**.
-   Välj **Text** i **Värdeslag** och **Lägg typförslaget i mitt utkast**.
-   Välj **Tillbaka till kartan**, **Utkast** och **Spara hela utkastet**.
-2. Öppna samma typformulär igen och välj **Tal** för Serienummer. Lägg
-   typförslaget i utkastet och återgå till kartan. Välj **Nytt objekt**,
-   namnet **Mätare** och objekttypen **Person**. Öppna **Egna fält** och
-   skriv **42** i Serienummer. Välj **Lägg i utkastet och stäng** och
-   spara hela utkastet med både definition och objekt.
-3. Välj **Tabell → Ta bort Mätare**. Ändra samma fält till **Text** i
-   typformuläret och lägg typförslaget i utkastet. Återgå till kartan,
-   spara hela utkastet och anteckna det synliga kvittot.
-4. Hämta fullständig export i **Inställningar → Fullständig export**.
-   Öppna **Återimportera hushållet**, välj ZIP-filen och
-   **Kontrollera importfil**. Granska, markera bekräftelsen och välj
-   **Ersätt hushållets innehåll**. Starta om med samma databas.
-5. Återgå till kartan och välj **Rapporter**. Öppna **Visa ändringarna**
-   för de tre sparandena. Läs Mätare, Serienummer och 42 med den äldre
-   taldefinitionen, dagens textdefinition samt författare och tidpunkter.
-6. Ändra samma fält till **Tal** i typformuläret igen. Skapa **Ny mätare**
-   av typen Person och skriv **43** i Serienummer under **Egna fält**.
-   Lägg förslaget i utkastet, spara hela utkastet och starta om. Välj
-   **Tabell → Redigera Ny mätare → Egna fält** och kontrollera 43.
+1. Öppna Inställningar → Typer → Objekttyper → Ändra typ: Person. Ange
+   typbeskrivningen Första betydelsen, lägg i utkastet och spara hela
+   utkastet.
+2. Ändra samma typbeskrivning till Senare betydelsen. Skapa Mätare av typen
+   Person med den fria egenskapen Serienummer (Tal, 42). Lägg i utkastet och
+   spara typen och objektet tillsammans.
+3. Föreslå borttagning av Mätare från Tabell. Ändra typbeskrivningen tillbaka
+   till Första betydelsen, lägg i utkastet och spara hela utkastet.
+4. Ladda ned fullständig export. Öppna Återimport, välj ZIP-filen, Kontrollera
+   importfil och granska. Markera bekräftelsen och välj Ersätt hushållets
+   innehåll. Starta om med samma databas.
+5. Öppna Rapporter och Visa ändringarna för de tre sparandena. Läs Mätare,
+   Serienummer, 42 och datatypen Tal samt båda tidigare typbeskrivningarna,
+   författare och tidpunkter.
+6. Ändra Person-beskrivningen till Senare betydelsen. Skapa Ny mätare av typen
+   Person med Serienummer (Tal, 43). Lägg i utkastet och spara. Starta om och
+   redigera Ny mätare → Fria egenskaper.
 
 **Förväntat resultat:**
 
-- Importen bevarar dagens textdefinition och historiska talvärdet 42
-  med dess dåvarande definition, kvitto, författare och tidpunkt.
-- Det nya vanliga sparandet ger Ny mätare, talfältet och värdet 43.
-  Det består efter omstart och skapar ett nytt kvitto. Tidigare kvitton
-  och historiska värden är oförändrade.
+- Importen bevarar den fria talegenskapen och varje sparandes dåvarande
+  typbetydelse, författare och tidpunkt.
+- Efter vanlig rättelse och nytt sparande består 43; tidigare historik och
+  sparkvitton är oförändrade.
 
 ### IMPORT-08: förbered filen på nytt när en tidigare förberedelse saknas
 
@@ -428,7 +425,8 @@ import after a lost response and restart”.
 
 1. Alex väljer exportfilen och **Kontrollera importfil**. Läs granskningen.
 2. Be driftansvarig förbereda det tappade bekräftelsesvaret enligt
-   [IMPORT-09:s separata förberedelse](household-recovery-console.md#import-09-förberedelse-1).
+   [IMPORT-09:s separata
+förberedelse](household-recovery-console.md#import-09-förberedelse-1).
    Invänta besked att förberedelsen är installerad före bekräftelsen.
 3. Alex markerar bekräftelsen och väljer **Ersätt hushållets innehåll**.
    Kontrollera beskedet **Utfallet är okänt** och att nytt filval är spärrat.
@@ -485,7 +483,8 @@ preparation before an older completed import”.
 **Steg:**
 
 1. Öppna importen i profil A och välj exportfilen på nytt. Be driftansvarig
-   installera [IMPORT-10:s separata svarsförberedelse](household-recovery-console.md#import-10-förberedelse-1).
+   installera [IMPORT-10:s separata
+svarsförberedelse](household-recovery-console.md#import-10-förberedelse-1).
    Invänta installationsbesked före **Kontrollera importfil**.
 2. Välj **Kontrollera importfil**. Invänta driftansvarigs bekräftelse att
    servern har förberett filen och tappat svaret för just den granskningen.
@@ -521,7 +520,8 @@ Driftansvarig behöver kunna ändra rättigheter för provets tillfälliga filer
 Gör aldrig detta i en installation som används för riktigt hushållsarbete.
 
 **Separat förberedelse:** Driftansvarig följer
-[filförberedelsens IMPORT-11-tidpunkter](household-recovery-filesystem.md#tidpunkter-för-import-11).
+[filförberedelsens
+IMPORT-11-tidpunkter](household-recovery-filesystem.md#tidpunkter-för-import-11).
 Den anger exakta indata, rättigheter, kontroll av borttagna filer och
 återställning. UI-stegen fortsätter först efter respektive förberedelsebesked.
 
@@ -762,7 +762,8 @@ identity after a newer replacement and a lost status response”.
 **Steg:**
 
 1. Förbered filen i den första profilen. Be driftansvarig installera
-   [det tappade bekräftelsesvaret](household-recovery-console.md#import-09-förberedelse-1)
+   [det tappade
+bekräftelsesvaret](household-recovery-console.md#import-09-förberedelse-1)
    och invänta installationsbesked före bekräftelsen. Bekräfta ersättningen
    och anteckna försökets ID. Utfallet ska visas som okänt. Invänta därefter
    besked att servern har slutfört just försöket och att dess svar tappats.
@@ -771,7 +772,8 @@ identity after a newer replacement and a lost status response”.
    Anteckna det nya försökets ID; det ska skilja sig från det första.
 3. Starta om servern med samma databas. Ladda om den första profilens
    importsida. Det första ID:t ska finnas kvar och nytt filval vara spärrat.
-4. Be driftansvarig installera [IMPORT-14:s separata läsfel](household-recovery-faults.md#tidpunkter-för-import-14).
+4. Be driftansvarig installera [IMPORT-14:s separata
+   läsfel](household-recovery-faults.md#tidpunkter-för-import-14).
    Invänta installationsbesked, välj sedan **Hämta importens status**.
    Invänta besked att serverns verkliga lyckade lässvar har tappats.
    Ett fel ska visas utan slutfört resultat.
@@ -840,7 +842,8 @@ review, errors and assignment at 1280px”.
    Kontrollera det tydliga felet och att fokus återgår till filvalet.
    Inget hushållsinnehåll ska ändras.
 3. Välj den riktiga exporten. Be driftansvarig installera
-   [IMPORT-15:s separata fördröjning](household-recovery-faults.md#tidpunkter-för-import-15-och-import-2224)
+   [IMPORT-15:s separata
+fördröjning](household-recovery-faults.md#tidpunkter-för-import-15-och-import-2224)
    och invänta installationsbesked före filkontrollen. Kontrollera filen
    och invänta besked att serverns verkliga svar hålls kvar. Flytta fokus
    till **Tillbaka till kartan** medan svaret väntar. Be först därefter
@@ -955,7 +958,8 @@ skilj ett saknat svar från ett bekräftat avbrott.
 privat utkast ska finnas. Använd aldrig en produktionsinstallation.
 
 **Separat förberedelse:** Driftansvarig följer
-[filförberedelsens IMPORT-17-tidpunkter](household-recovery-filesystem.md#tidpunkter-för-import-17)
+[filförberedelsens
+IMPORT-17-tidpunkter](household-recovery-filesystem.md#tidpunkter-för-import-17)
 före avbrott och rensning. Den innehåller exakta indata, filkontroller och
 återställning även vid avbrutet prov.
 
@@ -1014,7 +1018,8 @@ remain bound to the same unconfirmed preparation”.
    Samma ID och **Slutför förberedelsens rensning** ska visas. Filval och
    ersättning ska vara spärrade.
 4. Invänta **Rensning tillåten** enligt den separata förberedelsen.
-   Be driftansvarig installera [IMPORT-17:s svarsförberedelse](household-recovery-console.md#import-17-förberedelse-1)
+   Be driftansvarig installera [IMPORT-17:s
+svarsförberedelse](household-recovery-console.md#import-17-förberedelse-1)
    i den andra profilen. Invänta installationsbesked, aktivera sedan
    **Slutför förberedelsens rensning**. Invänta driftansvarigs bekräftelse
    att avbrottet är utfört och dess svar dolt innan nästa steg.
@@ -1044,7 +1049,8 @@ en ny klient utan att förlora en annan obekräftad granskning.
 Ingen ersättning bekräftas under provet.
 
 **Separat förberedelse:** Driftansvarig följer
-[filförberedelsens IMPORT-18-tidpunkter](household-recovery-filesystem.md#tidpunkter-för-import-18)
+[filförberedelsens
+IMPORT-18-tidpunkter](household-recovery-filesystem.md#tidpunkter-för-import-18)
 med första granskningens ID. Den andra granskningens katalog ändras inte.
 
 **Integrationstest:**
@@ -1140,7 +1146,8 @@ newer preparation after Settings navigation”.
 **Steg:**
 
 1. Kontrollera exportfilen och anteckna ID. Be driftansvarig installera
-   [IMPORT-19:s svarsförberedelse](household-recovery-console.md#import-19-förberedelse-1)
+   [IMPORT-19:s
+svarsförberedelse](household-recovery-console.md#import-19-förberedelse-1)
    och invänta installationsbesked. Välj **Avbryt förberedelsen**.
    Invänta därefter besked att servern har utfört avbrottet och att det
    gamla svaret hålls kvar, innan du navigerar.
@@ -1198,7 +1205,8 @@ a newer preparation after Settings navigation”.
 1. Kontrollera exportfilen i första fliken och anteckna ID. Öppna
    importen i en andra flik med samma inloggning och avbryt just den
    förberedelsen där. Läs att tillfälliga filer är borttagna.
-2. Be driftansvarig installera [IMPORT-20:s svarsförberedelse](household-recovery-console.md#import-20-förberedelse-1)
+2. Be driftansvarig installera [IMPORT-20:s
+   svarsförberedelse](household-recovery-console.md#import-20-förberedelse-1)
    i första fliken och invänta installationsbesked. Välj
    **Hämta importens status**. Invänta därefter besked att servern har
    svarat att det gamla försöket saknas och att svaret hålls kvar.
@@ -1236,7 +1244,8 @@ Stäng utvecklarverktygen. Alt+Skift+S blockerar skrivning,
 Alt+Skift+R blockerar borttagning och Alt+Skift+A tillåter båda igen.
 Ladda om efter fallet för att återställa webbläsarens vanliga funktioner.
 
-Kör [den separata förberedelsen 1](household-recovery-console.md#import-21-förberedelse-1)
+Kör [den separata förberedelsen
+1](household-recovery-console.md#import-21-förberedelse-1)
 för IMPORT-21 i det angivna läget.
 
 **Integrationstest:**
@@ -1263,7 +1272,8 @@ exact review and confirmed server result”.
 
 **Separat operatörsförberedelse:**
 
-Följ [IMPORT-21: förberedelse 1](household-recovery-console.md#import-21-förberedelse-1)
+Följ [IMPORT-21: förberedelse
+1](household-recovery-console.md#import-21-förberedelse-1)
 med samma flik, valda ZIP-fil och hushåll genom hela felkedjan.
 Efter filvalet, före första Kontrollera importfil i UI-steg 1:
 installera det oförändrade utdraget och meddela **Borttagning ur
@@ -1360,7 +1370,8 @@ IMPORT-22.
 
 **Steg:**
 
-1. Kör [IMPORT-15](#import-15-tangentbord-genom-fel-granskning-och-innehållskoppling)
+1. Kör
+[IMPORT-15](#import-15-tangentbord-genom-fel-granskning-och-innehållskoppling)
    en gång i den angivna bredden. I steg 1 öppnar du **Välj inställning**
    före sidvalet. Under steg 2–6 följer du fel, granskning, avbrott och
    ersättning; den fokuserade kontrollen ska vara synlig och nåbar.
@@ -1414,7 +1425,8 @@ IMPORT-23.
 
 **Steg:**
 
-1. Kör [IMPORT-15](#import-15-tangentbord-genom-fel-granskning-och-innehållskoppling)
+1. Kör
+[IMPORT-15](#import-15-tangentbord-genom-fel-granskning-och-innehållskoppling)
    en gång i den angivna bredden. I steg 1 öppnar du **Välj inställning**
    före sidvalet. Under steg 2–6 följer du fel, granskning, avbrott och
    ersättning; den fokuserade kontrollen ska vara synlig och nåbar.
@@ -1467,7 +1479,8 @@ IMPORT-24.
 
 **Steg:**
 
-1. Kör [IMPORT-15](#import-15-tangentbord-genom-fel-granskning-och-innehållskoppling)
+1. Kör
+[IMPORT-15](#import-15-tangentbord-genom-fel-granskning-och-innehållskoppling)
    en gång i den angivna bredden. I steg 1 öppnar du **Välj inställning**
    före sidvalet. Under steg 2–6 följer du fel, granskning, avbrott och
    ersättning; den fokuserade kontrollen ska vara synlig och nåbar.
@@ -1580,15 +1593,7 @@ i båda temana. Minskad rörelse gör bilderna stilla utan att ändra sparvärde
   "outcomes": [
     "Bekräftad återimport återställer de båda användarnas egna bakgrundsval och rörelsevärden utan sammanblandning.",
     "Bakgrundens utseende, avläge och personliga placeringar bevaras, även efter omstart."
-  ],
-  "evidence": [{
-    "kind": "technical",
-    "runner": "vitest",
-    "suite": "server",
-    "spec": "tests/unit/server/household-import.test.ts",
-    "title": "legacy archives without identities preserve implicit off for current access and later choices survive restart",
-    "purpose": "Verklig temporär databas visar att ett äldre arkiv utan identiteter bevarar implicit av för aktuell åtkomst och inte skriver över senare val."
-  }]
+  ]
 }
 ```
 -->
@@ -1633,9 +1638,118 @@ i båda temana. Minskad rörelse gör bilderna stilla utan att ändra sparvärde
   Avläget behåller sina val och visar den enfärgade kartbakgrunden.
 - Båda användarna får tillbaka sina egna värden. Alex placering, övriga
   kartinställningar och medlemmarnas aktuella åtkomst bevaras.
-- Omstart ändrar inte det återställda resultatet. Separata serverprov
-  verifierar äldre stjärnval, enbart placeringar, implicit av, uttrycklig
-  innehållskoppling och avvisning av felaktiga värden före ersättning.
+- Omstart ändrar inte det återställda resultatet.
+
+## Fria egenskaper och bevarade sambandsförslag
+
+### IMPORT-27: återimportera och återställ ett undertryckt sambandsförslag
+
+**Syfte:** Fortsätt samma arbete efter återimport utan att tappa tomma
+egenskaper, upprepade etiketter eller ändrad ordning.
+
+**Användare:** Alex som administratör i ett eget provhushåll.
+
+**Förutsättningar:** Skapa och spara objekten **Lo Exempel** och
+**Molnmusik** och ett samband mellan dem. På sambandet lägger du fyra
+egenskaper med etiketten **Samma**, i denna ordning: utan datatyp och
+värde, tomt datum, talet 0 och Ja/nej-värdet Nej. Spara hela utkastet.
+Ändra sambandsförslaget till omvänd egenskapsordning utan att spara.
+Ta bort Lo Exempel i tabellen så att förslaget följer objektborttagningen.
+Använd 320×900 CSS-pixlar. Ordna tillgång till en omstart av provservern
+med samma databas efter återimporten.
+
+**Automatiskt motsvarande test:**
+[household-import-properties.spec.ts](../../tests/integration/household-import-properties.spec.ts),
+IMPORT-27. Riktig applikation och isolerad SQLite-installation används.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": { "runner": "playwright", "suite": "integration", "spec": "tests/integration/household-import-properties.spec.ts", "caseId": "IMPORT-27" },
+  "reference": "320×900 CSS-pixlar, verifierad administratör, riktig SQLite och serveromstart. Inga verkliga leverantörsanrop.",
+  "outcomes": ["Återimport bevarar undertryckt sambandsarbete och dess orsak.", "Ångrad objektborttagning återställer förslaget som går att spara med alla egenskaper."],
+  "evidence": [{ "kind": "technical", "runner": "vitest", "suite": "server", "spec": "tests/unit/server/household-import-properties-http.test.ts", "title": "full property archive preserves suppressed retained proposals and permits correction after process restart", "purpose": "Offentliga HTTP-gränser och riktig SQLite verifierar exakta identiteter, egenskapsordning, återställningsorsaker, avvisade felaktiga arkiv och aktuell åtkomst." }]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna **Inställningar → Fullständig export**, förbered exporten och
+   hämta ZIP-filen.
+2. Öppna **Återimportera hushållet**, välj filen och **Kontrollera
+   importfil**. Kontrollera att ersättning kräver bekräftelse. Markera
+   **Jag vill ersätta allt hushållsinnehåll med den kontrollerade filen.**
+   och välj **Ersätt hushållets
+   innehåll**. Invänta beskedet att innehållet är ersatt.
+3. Efter den förberedda serveromstarten läser du in hushållet igen.
+   Öppna **Skriv till Skyttel** och visa **Utkastet**. Läs orsaken
+   **Följer objektborttagning:
+   Lo Exempel.** och öppna sambandsförslagets uppgifter.
+4. Kontrollera att **Bevarat sambandsförslag** visar Nej, 0 och det tomma
+   datumet. Stäng uppgifterna med Escape. Fokusera knappen för att ångra
+   Lo Exempels objektborttagning och tryck Enter.
+5. Kontrollera att orsaken försvinner. Spara hela utkastet. Öppna tabellen
+   och **Samband för Lo Exempel**. Läs alla fyra egenskaperna.
+
+**Förväntat resultat:**
+
+- Samma förslag och dess borttagningsorsak finns kvar efter omstart.
+- Ångrad objektborttagning återställer sambandsförslaget. Sparandet
+  lyckas och egenskaperna behåller sina upprepade etiketter, värden,
+  tomma datatyper och den omvända ordningen.
+- Sambandsuppgifterna går att läsa utan rullning i sidled. Automationens
+  CSS-vy ersätter inte mänsklig zoom- eller skärmläsarverifiering.
+
+### IMPORT-28: rätta ett blockerat samband efter återimport
+
+**Syfte:** Ett arkiv bevarar ett inaktuellt sambandsförslag utan att
+återuppliva det borttagna objektet eller spara ett ofullständigt samband.
+
+**Användare:** Alex som administratör och Robin i en egen profil.
+
+**Förutsättningar:** Använd samma sparade objekt och egenskaper som i
+IMPORT-27. Alex föreslår den omvända egenskapsordningen. Robin tar bort
+Molnmusik och sparar hela sitt utkast. Alex förslag ska nu vara blockerat.
+Använd 1280×900 CSS-pixlar. Ordna omstart som i IMPORT-27.
+
+**Automatiskt motsvarande test:**
+[household-import-properties.spec.ts](../../tests/integration/household-import-properties.spec.ts),
+IMPORT-28.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": { "runner": "playwright", "suite": "integration", "spec": "tests/integration/household-import-properties.spec.ts", "caseId": "IMPORT-28" },
+  "reference": "1280×900 CSS-pixlar, två verifierade användare, riktig SQLite och serveromstart. Inga verkliga leverantörsanrop.",
+  "outcomes": ["Blockerat förslag finns kvar efter export, återimport och omstart.", "Rättade ändpunkter går att spara med samma egenskaper utan att återuppliva det borttagna objektet."],
+  "evidence": [{ "kind": "technical", "runner": "vitest", "suite": "server", "spec": "tests/unit/server/household-import-properties-http.test.ts", "title": "full property archive preserves corrected retained proposals and permits correction after process restart", "purpose": "Riktig SQLite verifierar att redan rättade förslag behåller serverns styrkta återställningsorsak och kan sparas efter återimport och omstart." }]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Alex utför export, filkontroll och bekräftad ersättning enligt
+   IMPORT-27 steg 1–2. Efter den förberedda serveromstarten läser Alex in
+   hushållet igen, öppnar **Skriv till Skyttel** och visar **Utkastet**.
+2. Läs **Blockerat samband: ett objekt saknas.** Stäng med Escape och
+   öppna **1 konflikt i ditt utkast**. Välj **Rätta ändpunkter**.
+3. Välj Lo Exempel i **Till objekt** och lägg sambandet i utkastet.
+   Läs statusbeskedet, stäng dialogen och konfliktgranskningen.
+4. Spara hela utkastet. Öppna tabellen och **Samband för Lo Exempel**.
+   Läs de fyra egenskaperna.
+
+**Förväntat resultat:**
+
+- Det blockerade förslaget finns kvar efter återimport och omstart.
+- Rättelsen använder ett befintligt objekt och sparandet lyckas.
+  Egenskapernas ordning, upprepade etiketter, Nej, 0 och tomma värden
+  bevaras. Molnmusik återupplivas inte.
 
 ## Identiteter och automatiskt underlag
 

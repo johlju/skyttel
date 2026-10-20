@@ -549,6 +549,149 @@ Samtalsleverantör saknas. Använd 320 × 640 CSS-bildpunkter.
   sökfältets fokus, utkastet och oskickad text finns kvar.
 - Ingen medgivanderuta öppnas och inget samtalsmeddelande skickas.
 
+## Fria egenskaper och historiska betydelser
+
+### Fria historiska egenskaper
+
+Kör i konsolen på ett nytt provhushålls sida. Koden skapar två sparanden
+med fria egenskaper och ändrade typförklaringar. Därefter tar den bort
+objekten och deras egna typer ur den aktuella kartan. Ladda om sidan
+innan UTKAST-157. Använd ett nytt hushåll för varje körning.
+
+```javascript
+await (async () => {
+  const householdId = location.pathname.match(/households\/([^/]+)/)?.[1];
+  if (!householdId) throw new Error('Öppna provhushållets karta');
+  const path = `/api/households/${householdId}/map`;
+  const read = async () => (await fetch(path)).json();
+  const initial = await read();
+  if (initial.objects.length || initial.relationships.length ||
+      ['changes', 'relationships', 'objectTypes', 'relationshipTypes']
+        .some(key => initial.draft[key]?.length))
+    throw new Error('Använd ett nytt hushåll med tom karta och tomt utkast');
+  const build = await (await fetch('/api/version')).json();
+  const headers = { 'Content-Type': 'application/json',
+    'X-Skyttel-Build': `${build.commit}:${build.version}` };
+  const post = async (route, value) => {
+    const state = await read();
+    const response = await fetch(`${path}/${route}`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ version: state.draft.version, ...value }) });
+    if (!response.ok) throw new Error(`Förberedelsen misslyckades: ${route}`);
+    return response.json();
+  };
+  const properties = [
+    { id: 'zero', label: 'Samma', kind: 'number', value: 0 },
+    { id: 'false', label: 'Samma', kind: 'boolean', value: false },
+    { id: 'typed-empty', label: 'Väntar', kind: 'date' },
+    { id: 'untyped', label: 'Väntar' },
+    { id: 'blank', label: 'Anteckning', kind: 'text', value: '' },
+  ];
+  const objectType = {
+    name: 'Växt', description: 'Odling i hemmet',
+  };
+  const edgeType = { name: 'Stödjer', description: 'Hjälp vid odling',
+    forwardLabel: 'stödjer', reverseLabel: 'stöds av' };
+  await post('object-type', {
+    id: 'plant', baseRevision: null, value: objectType });
+  await post('relationship-type', {
+    id: 'supports', baseRevision: null, value: edgeType });
+  for (const [id, name] of [['lo', 'Lo'], ['rose', 'Rosen']])
+    await post('draft', { id, baseRevision: null,
+      value: { typeId: 'plant', name,
+        ...(id === 'rose' ? { properties } : {}) } });
+  const edge = { typeId: 'supports', sourceId: 'lo', targetId: 'rose',
+    properties };
+  await post('relationship', { id: 'edge', baseRevision: null, value: edge });
+  await post('save', { operationId: 'properties-created' });
+  const after = [properties[1],
+    { id: 'zero', label: 'Antal', kind: 'text', value: 'Noll' },
+    properties[3], properties[2]];
+  await post('draft', { id: 'rose', baseRevision: 1,
+    value: { typeId: 'plant', name: 'Rosen',
+      properties: after } });
+  await post('relationship', { id: 'edge', baseRevision: 1,
+    value: { ...edge, properties: after } });
+  await post('object-type', { id: 'plant', baseRevision: 1,
+    value: { ...objectType, description: 'Prydnadsväxter' } });
+  await post('relationship-type', { id: 'supports', baseRevision: 1,
+    value: { ...edgeType, description: 'Dagens omvårdnad',
+      forwardLabel: 'vårdar', reverseLabel: 'vårdas av' } });
+  await post('save', { operationId: 'properties-changed' });
+  for (const [route, id, baseRevision] of [
+    ['draft', 'lo', 1], ['draft', 'rose', 2],
+    ['object-type', 'plant', 2], ['relationship-type', 'supports', 2],
+  ]) await post(route, { id, baseRevision, value: null });
+  await post('save', { operationId: 'properties-removed' });
+  console.log('Historik för UTKAST-157 är förberedd');
+})();
+```
+
+### UTKAST-157: läs egenskapernas identiteter och dåvarande betydelser
+
+**Syfte:** Skilja egenskaper med upprepade etiketter åt genom ändrad
+ordning, namn och datatyp, även när objekten och typerna är borttagna.
+
+**Användare:** Alex Exempel, med aktuell tillgång till provhushållet.
+
+**Förutsättningar:** Kör
+[Fria historiska egenskaper](#fria-historiska-egenskaper) i ett nytt
+hushåll. Använd 320 × 850 CSS-bildpunkter och ljust tema.
+
+**Automatiskt motsvarande webbläsartest:**
+[property-history.test.tsx](../../tests/browser/property-history.test.tsx),
+UTKAST-157. Chromium-testet använder kontrollerade historiksvar och riktiga
+produktionsstilar. Det bevisar läsning och tangentbordsarbete; separat
+HTTP-underlag provar beständighet, förlorat svar och omstart mot SQLite.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": { "runner": "vitest", "suite": "browser", "spec": "tests/browser/property-history.test.tsx", "caseId": "UTKAST-157" },
+  "reference": "320×850, ljust tema. Kontrollerat historiksvar med båda sidor av ett objekt och ett samband; upprepade etiketter, ändrad ordning, namn och datatyp samt borttagen egenskap. Riktig HTTP/SQLite verifieras separat.",
+  "outcomes": [
+    "Visa ändringarna öppnas med Enter och behåller fokus. Båda sidors egenskapslistor visar ordning, identiteter, noll, Nej, tomt datum, tomt utan datatyp och tom text.",
+    "Antal med textvärdet Noll behåller identiteten zero efter flytt och namnbyte. Anteckning saknas efter sparandet. Typbeskrivningar och båda riktningsbetydelser läses i dåvarande sammanhang utan vågrät sidrullning."
+  ],
+  "evidence": [
+    { "kind": "technical", "runner": "vitest", "suite": "server", "spec": "tests/unit/server/property-save-recovery-http.test.ts", "title": "a lost mixed-property save reply replays the exact atomic history and receipt after restart", "purpose": "Verklig HTTP/SQLite, förlorat svar efter transaktionen, omstart, exakt replay, historiska typförklaringar och borttagning utan återinförande." },
+    { "kind": "technical", "runner": "vitest", "suite": "server", "spec": "tests/unit/server/operations.test.ts", "title": "a failed durable write leaves a discoverable pending operation and an intact draft", "purpose": "Avbruten kvittoskrivning rullar tillbaka både objekt och samband med hela egenskapslistor; samma försök sparar atomiskt efter omstart." }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna **Rapporter** och hitta kortet för egenskapsändringen. Kontrollera
+   **Alex Exempel** och tidpunkten. Använd **Identifiera sparandet och
+   användaren** om kortet behöver skiljas från borttagningen.
+2. Fokusera **Visa ändringarna** med tangentbord och tryck Enter. Kontrollera
+   att fokus ligger kvar på reglaget.
+3. Läs Rosens och sambandets listor före sparandet. Kontrollera ordningen
+   **Samma: 0 (Tal)**, **Samma: Nej (Ja/nej)**, **Väntar: Tomt (Datum)**,
+   **Väntar: Tomt (ingen datatyp)** och **Anteckning: Tom text (Text)**.
+   Läs identiteterna på varje rad.
+4. Läs båda listorna efter sparandet. Kontrollera ordningen **Samma: Nej**,
+   **Antal: Noll (Text)**, tomt utan datatyp och tomt datum. **Antal** har
+   samma identitet `zero` som det tidigare talvärdet. **Anteckning**
+   finns bara före sparandet.
+5. Läs typförklaringarna **Odling i hemmet → Prydnadsväxter** och
+   **Hjälp vid odling → Dagens omvårdnad**. Läs sambandets tidigare
+   **stödjer / stöds av** och senare **vårdar / vårdas av**.
+
+**Förväntat resultat:**
+
+- Ordning, identiteter, etiketter, datatyper och värden går att läsa för
+  både objekt och samband med tangentbord utan vågrät sidrullning.
+- Historiken visar båda sidors dåvarande typförklaringar och riktning.
+  Läsningen återinför inga objekt, samband eller typer i den aktuella kartan.
+- Kontrollerade webbläsarsvar bevisar inte beständigt sparande. Det
+  separata serverunderlaget provar även oförändrade äldre historikposter
+  efter borttagning och identiskt kvitto efter omstart och återförsök.
+
 ## Separat felberedning
 
 ### Fullständiga historiska värden
@@ -585,10 +728,16 @@ await (async () => {
     const before = (state.objects ?? []).find(item => item.id === 'subscription');
     await post('draft', { version: state.draft.version, id: 'subscription',
       baseRevision: before?.revision ?? null,
-      value: { typeId: initial.types[0].id, description: 'Hushållets musik',
-        ...before, name, financialFacts: { debt: {
-          knowledge: 'uncertain', value: '1 200 SEK', reportedOn: '2026-06-01'
-        } } } });
+      value: { typeId: initial.types[0].id, ...before, name, properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text',
+          value: 'Hushållets musik' },
+        { id: 'debt', label: 'Senast uppgiven skuld', kind: 'text',
+          value: '1 200 SEK' },
+        { id: 'certainty', label: 'Osäkert uppgivet', kind: 'boolean',
+          value: true },
+        { id: 'reportedOn', label: 'Datum för uppgiften', kind: 'date',
+          value: '2026-06-01' }
+      ] } });
     await post('save', { version: (await read()).draft.version, operationId });
   }
   console.log('Två historiska sparanden är förberedda');

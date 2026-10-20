@@ -384,7 +384,14 @@ test('ACCESS-19: expired linking explains fresh proof and preserves identity and
             value: {
               typeId: initial.types.find((type) => type.name === 'Fordon')?.id,
               name: 'Cykeln',
-              description: 'Privat förslag före utgången verifiering',
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat förslag före utgången verifiering',
+                },
+              ],
             },
           },
         })
@@ -468,7 +475,14 @@ test('ACCESS-20: an expired link on an open page explains fresh proof after the 
             value: {
               typeId: initial.types.find((type) => type.name === 'Fordon')?.id,
               name: 'Bilen',
-              description: 'Privat förslag medan verifieringen går ut',
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat förslag medan verifieringen går ut',
+                },
+              ],
             },
           },
         })

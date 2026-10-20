@@ -17,7 +17,7 @@ async function object(update: Partial<ObjectValue>, actor = client, id = 'bike')
       version: state.draft.version,
       id,
       baseRevision: before?.revision ?? null,
-      value: { typeId: 'cycle', name: 'Alex blå cykel', description: '', ...before, ...update },
+      value: { typeId: 'cycle', name: 'Alex blå cykel', ...before, ...update },
     },
     actor,
   );
@@ -62,18 +62,24 @@ beforeEach(async () => {
           value: {
             name,
             description: '',
-            fields: [
-              { id: 'number', name: 'Nummer', description: '', kind: 'number' },
-              { id: 'other', name: 'Annat nummer', description: '', kind: 'number' },
-              { id: 'insured', name: 'Försäkrad', description: '', kind: 'boolean' },
-            ],
           },
         })
       ).status,
     ).toBe(200);
   }
-  expect((await object({ customValues: { number: 5, insured: false } })).status).toBe(200);
-  expect((await object({ name: 'Garaget', customValues: {} }, client, 'garage')).status).toBe(200);
+  expect(
+    (
+      await object({
+        properties: [
+          { id: 'number', label: 'number', kind: 'number', value: 5 },
+          { id: 'insured', label: 'insured', kind: 'boolean', value: false },
+          { id: 'memo', label: 'Beskrivning', kind: 'text', value: 'Behåll oberoende av typ' },
+          { id: 'empty', label: 'Tom uppgift' },
+        ],
+      })
+    ).status,
+  ).toBe(200);
+  expect((await object({ name: 'Garaget' }, client, 'garage')).status).toBe(200);
   const state = await read();
   expect(
     (
@@ -85,7 +91,6 @@ beforeEach(async () => {
           typeId: state.relationshipTypes[0].id,
           sourceId: 'bike',
           targetId: 'garage',
-          knowledge: 'known',
         },
       })
     ).status,
@@ -94,47 +99,52 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
-test('resolving a type change keeps target values separate from same-ID source fields and preserves independent edits', async () => {
+test('a type change preserves stable property IDs and independent saved name and value edits', async () => {
   const { actor } = await member();
-  const edges = (await read()).relationships;
-  expect((await object({ typeId: 'vehicle', customValues: { number: 5 } })).status).toBe(200);
-  expect(
-    (await object({ name: 'Rättat namn', customValues: { number: 7, insured: false } }, actor))
-      .status,
-  ).toBe(200);
-  await save('later-name-and-old-field', actor);
-  const before = await read();
-  expect(
-    (await post('save', { version: before.draft.version, operationId: 'blocked' })).status,
-  ).toBe(409);
-  expect(await read()).toEqual(before);
+  const original = await read();
+  const properties = original.objects.find(({ id }) => id === 'bike')?.properties;
+  await object({ typeId: 'vehicle' });
+  await object(
+    {
+      name: 'Rättat namn',
+      properties: properties?.map((p) =>
+        p.id === 'number' && p.kind === 'number' ? { ...p, value: 7 } : p,
+      ),
+    },
+    actor,
+  );
+  await save('other', actor);
+  const state = await read();
+  expect((await post('save', { version: state.draft.version, operationId: 'stale' })).status).toBe(
+    409,
+  );
   expect(
     (
       await post('resolve', {
-        version: before.draft.version,
-        conflict: draftConflicts(before)[0],
+        version: state.draft.version,
         choice: 'proposed',
+        conflict: draftConflicts(state)[0],
       })
     ).status,
   ).toBe(200);
-  const resolved = await read();
-  expect(resolved.draft.changes[0].after).toMatchObject({
-    typeId: 'vehicle',
+  const resolved = (await read()).draft.changes[0].after;
+  expect(resolved).toMatchObject({
     name: 'Rättat namn',
-    customValues: { number: 5 },
+    typeId: 'vehicle',
+    properties: properties?.map((p) =>
+      p.id === 'number' && p.kind === 'number' ? { ...p, value: 7 } : p,
+    ),
   });
-  expect(resolved.draft.changes[0].after?.customValues).not.toHaveProperty('insured');
-  expect(
-    (await post('save', { version: before.draft.version, operationId: 'stale-approval' })).status,
-  ).toBe(409);
-  await save('type-change');
-  expect((await read()).relationships).toEqual(edges);
+  await save('chosen');
+  expect((await read()).relationships).toEqual(original.relationships);
+  expect((await read()).objects.find(({ id }) => id === 'bike')?.properties).toEqual(
+    resolved?.properties,
+  );
 });
-
-test('the durable type-change review retains the source definition when its catalog names change', async () => {
-  await object({ typeId: 'vehicle', customValues: {} });
+test('type-change history retains original and selected definition meanings through catalog renames', async () => {
+  await object({ typeId: 'vehicle' });
   const { actor } = await member();
-  const source = (await read(actor)).types.find((type) => type.id === 'cycle');
+  const source = (await read(actor)).types.find(({ id }) => id === 'cycle');
   expect(
     (
       await post(
@@ -143,136 +153,86 @@ test('the durable type-change review retains the source definition when its cata
           version: 0,
           id: 'cycle',
           baseRevision: source?.revision,
-          value: {
-            ...source,
-            name: 'Ny benämning',
-            fields: source?.fields?.map((field) => ({ ...field, name: `Nytt ${field.name}` })),
-          },
+          value: { name: 'Ny benämning', description: 'Ny förklaring' },
         },
         actor,
       )
     ).status,
   ).toBe(200);
-  await save('rename-source', actor);
-  const state = await read();
-  expect(state.draft.changes[0].beforeType).toMatchObject({
-    name: 'Cykel',
-    fields: expect.arrayContaining([expect.objectContaining({ id: 'number', name: 'Nummer' })]),
-  });
-  expect((await object({ typeId: 'vehicle', customValues: { insured: false } })).status).toBe(200);
-  expect((await read()).draft.changes[0].beforeType).toEqual(state.draft.changes[0].beforeType);
+  await save('rename', actor);
+  expect((await read()).draft.changes[0].beforeType?.name).toBe('Cykel');
+  await save('type-change');
+  const { history } = await (await client.request(`${path}/history`)).json();
+  expect(history[0].changes[0].beforeType.name).toBe('Ny benämning');
+  expect(history[0].changes[0].type.name).toBe('Fordon');
 });
-
-test('a name-only proposal follows the concurrently selected type but a field correction requires its own type', async () => {
-  const { actor } = await member();
-  await object({ name: 'Mitt namn' });
-  await object({ typeId: 'vehicle', customValues: { other: 42 } }, actor);
-  await save('other-type', actor);
-  let state = await read();
-  expect(
-    (
-      await post('resolve', {
-        version: state.draft.version,
-        conflict: draftConflicts(state)[0],
-        choice: 'proposed',
-      })
-    ).status,
-  ).toBe(200);
-  expect((await read()).draft.changes[0].after).toMatchObject({
-    name: 'Mitt namn',
-    typeId: 'vehicle',
-    customValues: { other: 42 },
-  });
-  await save('name-only');
-  await object({ customValues: { other: 51 } });
-  await object({ typeId: 'cycle', customValues: {} }, actor);
-  await save('back-to-cycle', actor);
-  state = await read();
-  expect(
-    (
-      await post('resolve', {
-        version: state.draft.version,
-        conflict: draftConflicts(state)[0],
-        choice: 'proposed',
-      })
-    ).status,
-  ).toBe(200);
-  expect((await read()).draft.changes[0].after).toMatchObject({
-    typeId: 'vehicle',
-    customValues: { other: 51 },
-  });
-});
-
-test('invalid values and stale object, definition and draft versions leave the entire type-change draft intact', async () => {
+test('invalid properties and stale object, definition and draft versions preserve the entire draft', async () => {
   await object({ name: 'Oberoende förslag' }, client, 'garage');
-  let before = await read();
+  const before = await read();
+  const value = { ...before.objects.find(({ id }) => id === 'bike'), typeId: 'vehicle' };
   expect(
-    (await object({ typeId: 'vehicle', customValues: { number: 'inte ett tal' } })).status,
+    (
+      await object({
+        ...value,
+        properties: [{ id: 'bad', label: 'Datum', kind: 'date', value: '2026-02-30' }],
+      })
+    ).status,
   ).toBe(400);
-  expect(await read()).toEqual(before);
-  const value = {
-    ...before.objects.find((item) => item.id === 'bike'),
-    typeId: 'vehicle',
-    customValues: { insured: false },
-  };
-  const proposal = {
-    version: before.draft.version,
-    id: 'bike',
-    baseRevision: 1,
-    typeRevision: 1,
-    value,
-  };
-  for (const change of [{ baseRevision: 0 }, { typeRevision: 0 }, { version: 0 }]) {
-    expect((await post('draft', { ...proposal, ...change })).status).toBe(409);
+  for (const stale of [{ baseRevision: 0 }, { typeRevision: 0 }, { version: 0 }]) {
+    expect(
+      (
+        await post('draft', {
+          version: before.draft.version,
+          id: 'bike',
+          baseRevision: 1,
+          typeRevision: 1,
+          value,
+          ...stale,
+        })
+      ).status,
+    ).toBe(409);
     expect(await read()).toEqual(before);
   }
-  expect((await post('draft', proposal)).status).toBe(200);
+  expect((await object({ typeId: 'vehicle' })).status).toBe(200);
   const { actor } = await member();
-  const type = (await read(actor)).types.find((item) => item.id === 'vehicle');
+  await post(
+    'object-type',
+    {
+      version: 0,
+      id: 'vehicle',
+      baseRevision: 1,
+      value: { name: 'Fordon', description: 'Ny förklaring' },
+    },
+    actor,
+  );
+  await save('changed-type', actor);
+  const current = await read();
   expect(
-    (
-      await post(
-        'object-type',
-        {
-          version: 0,
-          id: 'vehicle',
-          baseRevision: 1,
-          value: { ...type, description: 'Ny beskrivning' },
-        },
-        actor,
-      )
-    ).status,
-  ).toBe(200);
-  await save('changed-definition', actor);
-  before = await read();
-  expect(
-    (await post('save', { version: before.draft.version, operationId: 'stale-type' })).status,
+    (await post('save', { version: current.draft.version, operationId: 'stale-definition' }))
+      .status,
   ).toBe(409);
-  expect(await read()).toEqual(before);
-  expect(before.objects.find((item) => item.id === 'bike')?.typeId).toBe('cycle');
-  expect(before.objects.find((item) => item.id === 'garage')?.name).toBe('Garaget');
+  expect(await read()).toEqual(current);
 });
-
-test('type proposal, conflict resolution reject anonymous, foreign and revoked members without changing content', async () => {
-  await object({ typeId: 'vehicle', customValues: {} });
+test('type proposals and conflict choices reject anonymous, foreign and revoked members', async () => {
+  await object({ typeId: 'vehicle' });
   await save('change-type');
   const { actor, userId } = await member();
-  await object({ typeId: 'cycle', customValues: { insured: false } }, actor);
+  await object({ typeId: 'cycle' }, actor);
   await object({ name: 'Nytt namn' });
   await save('name');
-  const memberState = await read(actor);
-  const conflict = draftConflicts(memberState)[0];
+  const state = await read(actor);
+  const conflict = draftConflicts(state)[0];
   const mutations = [
     [
       'draft',
       {
-        version: memberState.draft.version,
+        version: state.draft.version,
         id: 'bike',
         baseRevision: 2,
-        value: { typeId: 'cycle', name: 'Otillåtet', description: '' },
+        value: { typeId: 'cycle', name: 'Otillåtet' },
       },
     ],
-    ['resolve', { version: memberState.draft.version, conflict, choice: 'proposed' }],
+    ['resolve', { version: state.draft.version, conflict, choice: 'proposed' }],
   ] as const;
   const anonymous = fixture.client();
   fixture.setSubject('outsider');

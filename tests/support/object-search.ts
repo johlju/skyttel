@@ -16,8 +16,10 @@ export async function prepareObjectSearch(client: APIRequestContext, origin: str
     value: {
       name: 'Övrigt Élan',
       typeId: 'table-type-2',
-      description: 'Åker äpple',
-      customValues: { note: 'Hemlig anteckning' },
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Åker äpple' },
+        { id: 'note', label: 'Anteckning', kind: 'text' as const, value: 'Hemlig anteckning' },
+      ],
     },
   });
   await prepared.post('relationship-type', {
@@ -28,18 +30,12 @@ export async function prepareObjectSearch(client: APIRequestContext, origin: str
       description: '',
       forwardLabel: 'går till',
       reverseLabel: 'kommer från',
-      fields: [],
     },
   });
   await prepared.post('relationship', {
     id: 'search-relationship',
     baseRevision: null,
-    value: {
-      sourceId: 'table-0',
-      targetId: 'unicode-object',
-      typeId: 'search-relationship-type',
-      knowledge: 'known',
-    },
+    value: { sourceId: 'table-0', targetId: 'unicode-object', typeId: 'search-relationship-type' },
   });
   return prepared;
 }

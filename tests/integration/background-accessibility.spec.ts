@@ -37,8 +37,15 @@ async function arrange(page: Page, origin: string, path: string, count: number) 
             baseRevision: null,
             value: {
               name: `Läsobjekt ${String(index).padStart(2, '0')}`,
-              description: 'Hela beskrivningen går att läsa i tabellen.',
               typeId: state.types[0].id,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Hela beskrivningen går att läsa i tabellen.',
+                },
+              ],
             },
           },
         })
@@ -57,7 +64,6 @@ async function arrange(page: Page, origin: string, path: string, count: number) 
                 sourceId: `readable-${index - 1}`,
                 targetId: `readable-${index}`,
                 typeId: state.relationshipTypes[0].id,
-                knowledge: 'known',
               },
             },
           })

@@ -28,7 +28,20 @@ export function mapConnections(
   relationships: Map<string, MapRelationship>,
   previousIds?: ReadonlySet<string>,
 ) {
-  const changes = new Map((draft.relationships ?? []).map((change) => [change.id, change]));
+  const changes = new Map(
+    (draft.relationships ?? [])
+      .filter((change) => {
+        const current = relationships.get(change.id);
+        // A blocked endpoint move leaves the saved edge in the effective map.
+        // Its retained proposal must not turn that edge into proposed geometry.
+        return (
+          !change.after ||
+          !current ||
+          (current.sourceId === change.after.sourceId && current.targetId === change.after.targetId)
+        );
+      })
+      .map((change) => [change.id, change]),
+  );
   const current = [...relationships.values()].map((edge) => ({
     edge,
     previous: false,
@@ -36,7 +49,7 @@ export function mapConnections(
       ? ('added' as const)
       : proposalKind(changes.get(edge.id)),
   }));
-  const previous = (draft.relationships ?? []).flatMap((change) =>
+  const previous = [...changes.values()].flatMap((change) =>
     replacesConnection(change) && change.before && (!previousIds || previousIds.has(change.id))
       ? [{ edge: change.before, previous: true, kind: 'removed' as const }]
       : [],

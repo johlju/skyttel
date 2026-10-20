@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { defaultViewSettings } from '../shared/personal-view.js';
 
 const presentation = {
   invertX: z.boolean(),
@@ -20,17 +19,3 @@ export const viewSettingsSchema = z
     layerDistance: z.number().min(0.5).max(2).multipleOf(0.1),
   })
   .strict();
-
-/** Older archives retain their saved preference, independent of browser media. */
-export const legacyViewSettingsSchema = z
-  .object({
-    ...presentation,
-    stars: z.boolean(),
-  })
-  .strict()
-  .transform(({ stars, ...settings }) => ({
-    ...defaultViewSettings,
-    ...settings,
-    background: stars,
-    darkBackground: stars ? ('mist' as const) : ('atmosphere' as const),
-  }));

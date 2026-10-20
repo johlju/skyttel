@@ -118,7 +118,14 @@ export async function checkContainerAssistants({
     value: {
       typeId: catalog.types[0].id,
       name: 'MCP Lo Exempel',
-      description: 'Synthetic container map work',
+      properties: [
+        {
+          id: 'description',
+          label: 'Description',
+          kind: 'text',
+          value: 'Synthetic container map work',
+        },
+      ],
     },
   };
   const denied = await tool(readOnly.token, 'propose_object', proposal);
@@ -160,7 +167,6 @@ export async function checkContainerAssistants({
     value: {
       name: 'Synthetic device',
       description: '',
-      fields: [{ id: 'enabled', name: 'Enabled', description: '', kind: 'boolean' }],
     },
   };
   assert.ok((await tool(readOnly.token, 'propose_object_type', definition)).result.isError);
@@ -174,8 +180,7 @@ export async function checkContainerAssistants({
     value: {
       typeId: advancedTypeId,
       name: 'Synthetic device',
-      description: '',
-      customValues: { enabled: false },
+      properties: [{ id: 'enabled', label: 'Enabled', kind: 'boolean', value: false }],
     },
   });
   const removal = {
@@ -190,9 +195,9 @@ export async function checkContainerAssistants({
   assert.equal(advanced.changes.length, 2);
   assert.equal(advanced.objectTypes.length, 1);
   assert.equal(advanced.changes.find(({ id }) => id === proposal.id).after, null);
-  assert.deepEqual(advanced.changes.find(({ id }) => id === deviceId).after.customValues, {
-    enabled: false,
-  });
+  assert.deepEqual(advanced.changes.find(({ id }) => id === deviceId).after.properties, [
+    { id: 'enabled', label: 'Enabled', kind: 'boolean', value: false },
+  ]);
   assert.equal(
     (await result(writable.token, 'read_map', { objectId: proposal.id })).objects.length,
     1,
@@ -220,12 +225,13 @@ export async function checkContainerAssistants({
     0,
   );
   assert.deepEqual(
-    (await result(writable.token, 'read_map', { objectId: deviceId })).objects[0].customValues,
-    { enabled: false },
+    (await result(writable.token, 'read_map', { objectId: deviceId })).objects[0].properties,
+    [{ id: 'enabled', label: 'Enabled', kind: 'boolean', value: false }],
   );
   assert.equal(
-    (await result(writable.token, 'read_map', { objectId: 'erasure-independent' })).objects[0]
-      .description,
+    (
+      await result(writable.token, 'read_map', { objectId: 'erasure-independent' })
+    ).objects[0].properties.find(({ id }) => id === 'description').value,
     'Retained after erasure',
   );
   const context = JSON.parse(

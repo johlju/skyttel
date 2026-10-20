@@ -17,6 +17,7 @@ import {
   readTableObject,
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { propertyRow, propertyValue, setProperty } from '../support/property-controls.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
 import { expect, test } from '../support/test.js';
 
@@ -31,11 +32,11 @@ async function openMap(page: Page) {
   return { installation, read };
 }
 
-async function addObject(page: Page, name: string, type: string, description = '') {
+async function addObject(page: Page, name: string, type: string, description?: string) {
   await openNewObject(page);
   await page.getByLabel('Namn', { exact: true }).fill(name);
   await page.getByLabel('Objekttyp', { exact: true }).selectOption({ label: type });
-  await page.getByLabel('Beskrivning', { exact: true }).fill(description);
+  if (description !== undefined) await setProperty(page, 'Beskrivning', description);
   await page.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
 }
 
@@ -46,12 +47,12 @@ async function addRelationship(page: Page, source: string, type: string, target:
   const id = target.includes('[')
     ? target.match(/\[([^\]]+)\]$/)?.[1]
     : await page
-        .getByLabel('Till objekt')
+        .getByLabel('Till objekt', { exact: true })
         .getByRole('option')
         .filter({ hasText: `${target.split(' (')[0]} ·` })
         .getAttribute('value');
   expect(id).toEqual(expect.any(String));
-  await page.getByLabel('Till objekt').selectOption(id ?? '');
+  await page.getByLabel('Till objekt', { exact: true }).selectOption(id ?? '');
   await stageRelationshipAndClose(page);
 }
 
@@ -108,7 +109,7 @@ test('KARTA-01: Swedish object search and closing unsent forms preserve the save
     await editTableObject(page, 'Åsas tjänst');
     await expect(page.getByLabel('Namn', { exact: true })).toBeFocused();
     await page.getByLabel('Namn', { exact: true }).fill('Text som inte skickas');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Inte heller denna text skickas');
+    await setProperty(page, 'Beskrivning', 'Inte heller denna text skickas');
     await expect(
       page.getByRole('button', { name: 'Spara hela utkastet', includeHidden: true }),
     ).toBeDisabled();
@@ -119,7 +120,9 @@ test('KARTA-01: Swedish object search and closing unsent forms preserve the save
     ).toBeFocused();
     await editTableObject(page, 'Åsas tjänst');
     await expect(page.getByLabel('Namn', { exact: true })).toHaveValue('Åsas tjänst');
-    await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue('Gemensam musik');
+    await expect(propertyRow(page, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
+      'Gemensam musik',
+    );
     await page.getByRole('dialog').getByRole('button', { name: 'Avbryt', exact: true }).click();
     if (await page.getByRole('button', { name: 'Kasta ändringarna och fortsätt' }).isVisible())
       await page.getByRole('button', { name: 'Kasta ändringarna och fortsätt' }).click();
@@ -183,7 +186,7 @@ test('KARTA-02: an unresolved object can become unspecified and later identified
     await expect(page.getByLabel('Identitet')).toHaveValue('unspecified');
     await page.getByLabel('Identitet').selectOption('identified');
     await page.getByLabel('Namn', { exact: true }).fill('Hushållskontot');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Gemensamt bankkonto');
+    await setProperty(page, 'Beskrivning', 'Gemensamt bankkonto');
     await page.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await save(page);
     await page.reload();
@@ -197,7 +200,13 @@ test('KARTA-02: an unresolved object can become unspecified and later identified
     expect(after.objects).toHaveLength(2);
     expect(after.objects.find((object) => object.id === objectId)).toMatchObject({
       name: 'Hushållskontot',
-      description: 'Gemensamt bankkonto',
+      properties: expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Gemensamt bankkonto',
+        }),
+      ]),
     });
     expect(after.objects.find((object) => object.id === objectId)?.identity).toBeUndefined();
     expect(after.relationships).toEqual([relationship]);
@@ -241,7 +250,7 @@ for (const width of [1280, 390, 320]) {
 
         await editTableObject(page, 'Familjemusik');
         const unrelated = page.getByRole('dialog', { name: 'Redigera Familjemusik', exact: true });
-        await unrelated.getByLabel('Beskrivning', { exact: true }).fill('Oskickat om Familjemusik');
+        await setProperty(unrelated, 'Beskrivning', 'Oskickat om Familjemusik');
         await unrelated.getByRole('button', { name: 'Avbryt', exact: true }).click();
         await page
           .getByRole('button', { name: 'Kasta ändringarna och fortsätt', exact: true })
@@ -253,7 +262,7 @@ for (const width of [1280, 390, 320]) {
         await expectUncoveredFocus(page);
         await expect(editor.getByLabel('Identitet', { exact: true })).toHaveValue('unresolved');
         await editor.getByLabel('Identitet', { exact: true }).selectOption('unspecified');
-        await editor.getByLabel('Beskrivning', { exact: true }).fill('Rättad beskrivning');
+        await setProperty(editor, 'Beskrivning', 'Rättad beskrivning');
         await editor
           .getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true })
           .click();
@@ -266,7 +275,13 @@ for (const width of [1280, 390, 320]) {
             after: expect.objectContaining({
               name: 'Betalkonto',
               identity: 'unspecified',
-              description: 'Rättad beskrivning',
+              properties: expect.arrayContaining([
+                expect.objectContaining({
+                  label: 'Beskrivning',
+                  kind: 'text',
+                  value: 'Rättad beskrivning',
+                }),
+              ]),
             }),
           }),
         ]);
@@ -284,7 +299,13 @@ for (const width of [1280, 390, 320]) {
         expect(saved.objects.find((object) => object.id === accountId)).toMatchObject({
           name: 'Betalkonto',
           identity: 'unspecified',
-          description: 'Rättad beskrivning',
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Rättad beskrivning',
+            }),
+          ]),
         });
         expect(saved.objects.find((object) => object.id === before.objects[0].id)).toEqual(
           before.objects[0],
@@ -319,10 +340,10 @@ test('KARTA-03: equal object names stay distinct when correcting and deleting a 
     await addObject(page, 'familj@example.test', 'E-postadress', 'Andra adressobjektet');
     const draft = await read();
     const first = draft.draft.changes.find(
-      (change) => change.after?.description === 'Första adressobjektet',
+      (change) => propertyValue(change.after, 'Beskrivning') === 'Första adressobjektet',
     )?.id;
     const second = draft.draft.changes.find(
-      (change) => change.after?.description === 'Andra adressobjektet',
+      (change) => propertyValue(change.after, 'Beskrivning') === 'Andra adressobjektet',
     )?.id;
     expect(first).toBeTruthy();
     expect(second).toBeTruthy();
@@ -356,14 +377,26 @@ test('KARTA-03: equal object names stay distinct when correcting and deleting a 
 
     const loginName = 'Musikkonto → Inloggningsadress → familj@example.test';
     let editor = await editObjectRelationship(page, 'Musikkonto', loginName);
-    await expect(editor.getByLabel('Till objekt')).toHaveValue(first ?? '');
+    await expect(editor.getByLabel('Till objekt', { exact: true })).toHaveValue(first ?? '');
     const secondOption = editor
-      .getByLabel('Till objekt')
+      .getByLabel('Till objekt', { exact: true })
       .getByRole('option')
-      .filter({ hasText: 'Andra adressobjektet' });
-    await expect(secondOption).toContainText('Andra adressobjektet');
+      .filter({ hasText: `[${second}]` });
+    await expect(secondOption).toHaveText(`familj@example.test · E-postadress [${second}]`);
     await expect(secondOption).toHaveAttribute('value', second ?? 'missing');
-    await editor.getByLabel('Till objekt').selectOption(second ?? '');
+    const candidates = editor.getByRole('region', {
+      name: 'Till objekt: välj eller granska',
+      exact: true,
+    });
+    const secondCandidate = candidates
+      .getByText(`Granska familj@example.test [${second}]`, { exact: true })
+      .locator('..');
+    await secondCandidate.locator('summary').click();
+    await expect(secondCandidate).toContainText('Beskrivning');
+    await expect(secondCandidate).toContainText('Andra adressobjektet (Text)');
+    await secondCandidate
+      .getByRole('button', { name: `Välj familj@example.test [${second}]`, exact: true })
+      .click();
     await editor.getByRole('button', { name: 'Avbryt redigeringen', exact: true }).click();
     await page
       .getByRole('dialog', { name: 'Lämna ändrade uppgifter?', exact: true })
@@ -372,13 +405,13 @@ test('KARTA-03: equal object names stay distinct when correcting and deleting a 
     expect((await read()).relationships).toEqual(saved.relationships);
     await editor.getByRole('button', { name: 'Stäng samband', exact: true }).click();
     editor = await editObjectRelationship(page, 'Musikkonto', loginName);
-    await expect(editor.getByLabel('Till objekt')).toHaveValue(first ?? '');
-    await editor.getByLabel('Till objekt').selectOption(second ?? '');
+    await expect(editor.getByLabel('Till objekt', { exact: true })).toHaveValue(first ?? '');
+    await editor.getByLabel('Till objekt', { exact: true }).selectOption(second ?? '');
     await stageRelationshipAndClose(page);
     await save(page);
     await page.reload();
     editor = await editObjectRelationship(page, 'Musikkonto', loginName);
-    await expect(editor.getByLabel('Till objekt')).toHaveValue(second ?? '');
+    await expect(editor.getByLabel('Till objekt', { exact: true })).toHaveValue(second ?? '');
     const corrected = await read();
     expect(corrected.objects).toEqual(saved.objects);
     expect(
@@ -452,7 +485,9 @@ test('KARTA-04: object deletion reviews incoming and outgoing links and can be d
     await relationshipForm.getByRole('button', { name: 'Nytt samband', exact: true }).click();
     for (const field of ['Från objekt', 'Till objekt'])
       await expect(
-        relationshipForm.getByLabel(field).getByRole('option', { name: /Musikkonto/ }),
+        relationshipForm
+          .getByLabel(field, { exact: true })
+          .getByRole('option', { name: /Musikkonto/ }),
       ).toHaveCount(0);
     await relationshipForm
       .getByRole('button', { name: 'Avbryt redigeringen', exact: true })

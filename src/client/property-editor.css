@@ -1,0 +1,28 @@
+.property-editor {
+  min-width: 0;
+}
+.property-editor-row {
+  min-width: 0;
+  border: 1px solid var(--space-line);
+  border-radius: 8px;
+  margin: 0 0 16px;
+  padding: 12px;
+}
+.property-editor-fields {
+  display: grid;
+  gap: 8px;
+}
+.property-editor-fields input,
+.property-editor-fields select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.property-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.property-editor button {
+  min-height: 44px;
+}

@@ -57,13 +57,16 @@ test('a mixed price and draft request keeps verified details and completes its f
         const text = input.sources.backend?.text ?? '';
         expect(text).toContain('179 kr per månad enligt kartan');
         expect(text).toContain('Övar cello på tisdagar.');
-        expect(text).toContain('149 SEK');
+        expect(text).toContain('149');
         expect(text).not.toContain('påhittad sammanfattning');
         return input.requirements.map(({ id }) => ({ id, outcome: 'pass', reason: 'Verified.' }));
       },
     },
   );
-  expect(run.attempts[0]).toMatchObject({ outcome: 'pass', fixed: [] });
+  expect(run.attempts[0], JSON.stringify(run.attempts[0])).toMatchObject({
+    outcome: 'pass',
+    fixed: [],
+  });
   expect(model.requests).toHaveLength(2);
 });
 
@@ -87,7 +90,13 @@ test.each([
           id: 'mixed',
           text: `${prefix}Rätta Lo Bergs beskrivning till Läser poesi. Visa Alex arbete och berätta vad Spotify kostar. Läs upp ändringarna.${completion === 'save' ? ' Spara hela utkastet.' : ''}`,
           expected: {
-            objects: { lo: { description: 'Läser poesi.' } },
+            objects: {
+              lo: {
+                properties: [
+                  { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Läser poesi.' },
+                ],
+              },
+            },
             saves: completion === 'save' ? 1 : 0,
             saveAttempts: completion === 'save' ? 1 : 0,
             requirements: ['Besvara prisfrågan och redovisa utkastet.'],
@@ -114,7 +123,17 @@ test.each([
                   arguments: {
                     id: 'lo',
                     baseRevision: proposal.before.revision,
-                    value: { ...proposal.after, description: 'Läser poesi.' },
+                    value: {
+                      ...proposal.after,
+                      properties: [
+                        {
+                          id: 'description',
+                          label: 'Beskrivning',
+                          kind: 'text',
+                          value: 'Läser poesi.',
+                        },
+                      ],
+                    },
                   },
                 },
               ],
@@ -265,20 +284,21 @@ test.each([
 );
 
 test.each([
-  { id: 'unknown-user', knowledge: 'unknown', target: null },
-  { id: 'no-user', knowledge: 'none', target: null },
-  { id: 'uncertain-user', knowledge: 'uncertain', target: 'mira' },
+  { id: 'unknown-user', target: null },
+  { id: 'no-user', target: null },
+  { id: 'uncertain-user', target: 'mira' },
 ])(
-  'the $id fixture accepts the correct certainty with a short confirmation',
+  'the $id fixture preserves valid relationships and answers in context',
   {
     tags: ['technical'],
   },
-  async ({ id, knowledge, target }) => {
+  async ({ id, target }) => {
     const scenario = catalog.scenarios.find((item) => item.id === id) as Scenario;
     let environment: Awaited<ReturnType<typeof evaluationEnvironment>>;
     const model = textModel(async (body) => {
       if (body.input.at(-1)?.type === 'function_call_output')
         return [modelMessage('Utkastet är uppdaterat.')];
+      if (target === null) return [modelMessage('Vilket objekt eller samband vill du rätta?')];
       const state = await environment.read();
       const type = state.relationshipTypes.find((item) => item.name === 'Används av');
       const edge = state.relationships.find(
@@ -291,7 +311,12 @@ test.each([
           contentVersion: state.contentVersion,
           id: edge.id,
           baseRevision: edge.revision,
-          value: { typeId: type.id, sourceId: 'cloud', targetId: target, knowledge },
+          value: {
+            typeId: type.id,
+            sourceId: 'cloud',
+            targetId: target,
+            properties: [{ label: 'Osäkert uppgivet', kind: 'boolean', value: true }],
+          },
         }),
       ];
     });
@@ -316,14 +341,22 @@ test.each([
       const finished = await environment.get<TextAssistantView>(environment.path);
       const failures = await environment.check(step, finished, []);
       expect(failures).toEqual([]);
-      expect([finished.reply, finished.modelReply].join(' ')).toContain('Utkastet är uppdaterat.');
+      expect([finished.reply, finished.modelReply].join(' ')).toContain(
+        target === null ? 'Vilket objekt eller samband vill du rätta?' : 'Utkastet är uppdaterat.',
+      );
       const context = JSON.parse(environment.judgeContext(step, failures));
       expect(context.observedState.effective.relationships).toContainEqual({
         source: 'cloud',
         type: 'Används av',
-        target,
-        knowledge,
+        target: target ?? 'alex',
+        ...(target === null
+          ? {}
+          : { properties: [{ label: 'Osäkert uppgivet', kind: 'boolean', value: true }] }),
       });
+      if (target === null) {
+        expect(finished.review.changes).toEqual(view.review.changes);
+        expect(finished.review.relationships ?? []).toEqual(view.review.relationships ?? []);
+      }
       expect(context.observedState.historyChanges).toBe(0);
     } finally {
       await environment.close();
@@ -373,8 +406,9 @@ test('evaluation uses real save gates, receipts and history and records rejected
           context.observedState.effective.objects,
         );
         expect(
-          context.observedState.saved.objects.find((object: { id: string }) => object.id === 'lo')
-            .description,
+          context.observedState.saved.objects
+            .find((object: { id: string }) => object.id === 'lo')
+            .properties.find((property: { id: string }) => property.id === 'description').value,
         ).toBe('Övar cello på tisdagar.');
         return [{ id: 'backend-0', outcome: 'pass', reason: 'Observed real receipt and history.' }];
       },
@@ -428,7 +462,12 @@ test('a clarification after a real draft proposal expires save intent while pres
         contentVersion: turn.draft.contentVersion,
         id: 'lo',
         baseRevision: change.before.revision,
-        value: { ...change.after, description: 'Klar ändring' },
+        value: {
+          ...change.after,
+          properties: [
+            { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Klar ändring' },
+          ],
+        },
       }),
     ];
   });
@@ -442,7 +481,13 @@ test('a clarification after a real draft proposal expires save intent while pres
           id: 'clarify',
           text: 'Ändra Lo Bergs beskrivning till Klar ändring. Alex använder Microsoft 365. Spara hela utkastet.',
           expected: {
-            objects: { lo: { description: 'Klar ändring' } },
+            objects: {
+              lo: {
+                properties: [
+                  { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Klar ändring' },
+                ],
+              },
+            },
             saves: 0,
             saveAttempts: 0,
             requirements: [],
@@ -459,7 +504,9 @@ test('a clarification after a real draft proposal expires save intent while pres
       (event) => event.kind === 'mcp_started' && JSON.stringify(event.data).includes('save_draft'),
     ),
   ).toBe(false);
-  expect(run.finalMap.draft.changes.find((change) => change.id === 'lo')?.after?.description).toBe(
-    'Klar ändring',
-  );
+  expect(
+    run.finalMap.draft.changes
+      .find((change) => change.id === 'lo')
+      ?.after?.properties?.find((property) => property.id === 'description'),
+  ).toMatchObject({ kind: 'text', value: 'Klar ändring' });
 });

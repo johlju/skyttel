@@ -12,6 +12,7 @@ import {
   renderHouseholdWork,
 } from '../../support/native-household-unit.js';
 import { applicationFixture } from '../server/fixture.js';
+import { propertyInput } from './property-controls.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
 let client: ReturnType<typeof fixture.client>;
@@ -55,8 +56,11 @@ beforeEach(async () => {
     value: {
       typeId: state.types[0].id,
       name: 'Lo Exempel',
-      description: 'Befintlig text',
+
       iconId: 'bike',
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Befintlig text' },
+      ],
     },
   });
   failure = 0;
@@ -157,7 +161,9 @@ test('an image stays local until the whole proposal is staged and removal preser
   await stage(form);
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect((await read()).draft.changes[0].after).toMatchObject({
-    description: 'Befintlig text',
+    properties: expect.arrayContaining([
+      expect.objectContaining({ label: 'Beskrivning', value: 'Befintlig text' }),
+    ]),
     iconId: 'bike',
   });
   expect((await read()).draft.changes[0].after?.profileImageId).toBeUndefined();
@@ -184,7 +190,7 @@ test('invalid and oversized image staging retains every form value and earlier p
     );
     expect(await read()).toEqual(before);
     await userEvent.click(form.getByRole('button', { name: 'Grunduppgifter' }));
-    expect(form.getByLabelText('Beskrivning')).toHaveProperty('value', 'Befintlig text');
+    expect(await propertyInput(form, 'Beskrivning')).toHaveProperty('value', 'Befintlig text');
     await userEvent.click(form.getByRole('button', { name: 'Livscykel och utseende' }));
   }
 }, 15_000);
@@ -221,7 +227,7 @@ test('a stale complete image proposal keeps text and local image without overwri
   const form = await open();
   await userEvent.upload(form.getByLabelText('Profilbild', { exact: true }), await file());
   await userEvent.click(form.getByRole('button', { name: 'Grunduppgifter' }));
-  await userEvent.type(form.getByLabelText('Beskrivning'), ' och oskickat');
+  await userEvent.type(await propertyInput(form, 'Beskrivning'), ' och oskickat');
   const before = await read();
   expect(
     (
@@ -230,13 +236,16 @@ test('a stale complete image proposal keeps text and local image without overwri
         version: before.draft.version,
         contentVersion: before.contentVersion,
         baseRevision: null,
-        value: { typeId: before.types[0].id, name: 'Annat förslag', description: '' },
+        value: { typeId: before.types[0].id, name: 'Annat förslag' },
       })
     ).status,
   ).toBe(200);
   await stage(form);
   await screen.findByText(/Dina uppgifter finns kvar/);
-  expect(form.getByLabelText('Beskrivning')).toHaveProperty('value', 'Befintlig text och oskickat');
+  expect(await propertyInput(form, 'Beskrivning')).toHaveProperty(
+    'value',
+    'Befintlig text och oskickat',
+  );
   await userEvent.click(form.getByRole('button', { name: 'Livscykel och utseende' }));
   expect(form.getByRole('img').getAttribute('src')).toContain('data:image/png');
   const after = await read();
@@ -265,7 +274,7 @@ test('the whole image and description proposal saves once with an exact expanded
   await user.click(details.getByRole('button', { name: 'Livscykel och utseende' }));
   await user.upload(details.getByLabelText('Profilbild', { exact: true }), await file());
   await user.click(details.getByRole('button', { name: 'Grunduppgifter' }));
-  await user.clear(details.getByLabelText('Beskrivning', { exact: true }));
+  await user.clear(await propertyInput(details, 'Beskrivning'));
   await user.paste('Text och bild i samma förslag');
   await user.click(details.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
@@ -277,7 +286,9 @@ test('the whole image and description proposal saves once with an exact expanded
   expect(proposed.draft.changes).toHaveLength(1);
   expect(proposed.draft.changes[0].after).toMatchObject({
     name: 'Lo Exempel',
-    description: 'Text och bild i samma förslag',
+    properties: expect.arrayContaining([
+      expect.objectContaining({ label: 'Beskrivning', value: 'Text och bild i samma förslag' }),
+    ]),
     iconId: 'bike',
     profileImageId: image,
   });

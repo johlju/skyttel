@@ -25,7 +25,15 @@ const state: MapState = {
     revision: 1,
     typeId: 'person',
     name,
-    description: `${name}s påhittade uppgifter`,
+
+    properties: [
+      {
+        id: 'description',
+        label: 'Beskrivning',
+        kind: 'text',
+        value: `${name}s påhittade uppgifter`,
+      },
+    ],
   })),
   relationships: [
     {
@@ -35,7 +43,6 @@ const state: MapState = {
       sourceId: 'lo',
       targetId: 'kim',
       typeId: 'uses',
-      knowledge: 'known',
     },
   ],
   draft: { version: 0, changes: [] },
@@ -242,6 +249,20 @@ test.each([
   },
 );
 
+test('populated object details can be acknowledged without any free properties', {
+  tags: ['technical'],
+}, async () => {
+  const app = await open(1280, 900, {
+    ...state,
+    objects: state.objects.map((object) => ({ ...object, properties: [] })),
+  });
+  await app.show({ kind: 'object', id: 'lo' });
+  await expect.poll(() => app.acknowledgements.length, { timeout: 7_000 }).toBe(1);
+  expect(app.acknowledgements[0]).toMatchObject({ kind: 'object', id: 'lo', displayed: true });
+  const panel = page.getByRole('region', { name: 'Lo', exact: true });
+  await expect.element(panel.getByText('Namn', { exact: true })).toBeVisible();
+});
+
 test('assistant display shows the map and populated inspector before confirming the actual object and relationship', async () => {
   const app = await open();
   await app.show({ kind: 'object', id: 'lo' });
@@ -357,13 +378,15 @@ test.each([
 ] as const)('object details styled with %s report displayed=%s', async (declaration, displayed) => {
   const app = await open();
   const style = document.createElement('style');
-  style.textContent = `.object-property-window .household-table-description { ${declaration}; }`;
+  style.textContent = `.object-property-window .household-table-details dl > div:first-child dd { ${declaration}; }`;
   document.head.append(style);
   try {
     await app.show({ kind: 'object', id: 'lo' });
     const panel = page.getByRole('region', { name: 'Lo', exact: true });
     await expect.element(panel.getByRole('heading', { name: 'Lo', exact: true })).toBeVisible();
-    const description = panel.element().querySelector('.household-table-description');
+    const description = panel
+      .element()
+      .querySelector('.household-table-details dl > div:first-child dd');
     expect(description?.checkVisibility()).toBe(displayed);
     await expect.poll(() => app.acknowledgements.length, { timeout: 7_000 }).toBe(1);
     expect(app.acknowledgements[0].displayed).toBe(displayed);
@@ -383,7 +406,16 @@ test.each([
       ...state,
       objects: state.objects.map((object) => ({
         ...object,
-        description: 'Påhittade uppgifter om hushållets objekt. '.repeat(40),
+
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text',
+            value: 'Påhittade uppgifter om hushållets objekt. '.repeat(40),
+          },
+          { id: 'inventory', label: 'Inventarienummer', kind: 'text', value: 'SYNTH-42' },
+        ],
       })),
     });
     await app.show({ kind: 'object', id: 'lo' });
@@ -437,7 +469,10 @@ test.each([
       );
       expect(box.bottom).toBeLessThanOrEqual(bounds.bottom);
     };
-    const description = body.querySelector('.household-table-description') as HTMLElement;
+    const description = [...body.querySelectorAll('dt')].find(
+      (term) => term.textContent === 'Beskrivning',
+    )?.nextElementSibling as HTMLElement;
+    description.scrollIntoView({ block: 'start' });
     const lines = document.createRange();
     lines.selectNodeContents(description);
     expectReadable(description, lines.getClientRects()[0]);
@@ -448,7 +483,13 @@ test.each([
     expectSelectionAndHeader();
     const lastDetail = body.querySelector('dl > div:last-child dd') as HTMLElement;
     lastDetail.scrollIntoView({ block: 'center' });
-    expectReadable(lastDetail);
+    const detailText = document.createRange();
+    detailText.selectNodeContents(lastDetail);
+    // At maximum scroll, fractional line-box leading can extend past the port.
+    // Measure every actual text fragment, as for the description above.
+    const detailFragments = [...detailText.getClientRects()];
+    expect(detailFragments.length).toBeGreaterThan(0);
+    for (const fragment of detailFragments) expectReadable(lastDetail, fragment);
     expectSelectionAndHeader();
     expect(inspector.querySelector('form')).toBeNull();
     const edit = objectPanel.getByRole('button', { name: 'Redigera Lo', exact: true });

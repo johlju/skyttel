@@ -6,10 +6,8 @@ import type { MapState } from '../../../src/shared/map.js';
 import { authenticatedHttpFetch } from '../../support/authenticated-http-fetch.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { prepareArchiveConflict } from '../../support/conflict-archive.js';
-import {
-  prepareConflictContinuity,
-  prepareConflictReferenceContinuity,
-} from '../../support/conflict-continuity.js';
+import { prepareConflictContinuity } from '../../support/conflict-continuity.js';
+import { conflictCollaborators } from '../../support/conflict-properties.js';
 import {
   prepareOwnRemovalConflict,
   prepareRelationshipSpecialConflict,
@@ -26,6 +24,7 @@ import {
   renderHouseholdWork,
   saveHouseholdDraft,
 } from '../../support/native-household-unit.js';
+import { propertyInput } from './property-controls.js';
 
 // Actual network fixtures need scheduling time in a full suite; individual
 // observation waits and application performance gates remain unchanged.
@@ -63,7 +62,7 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     ]) {
       const form = await openNewObjectForm();
       await userEvent.type(form.getByLabelText('Namn'), name);
-      await userEvent.type(form.getByLabelText('Beskrivning'), description);
+      await userEvent.type(await propertyInput(form, 'Beskrivning'), description);
       await userEvent.click(form.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
       await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nytt objekt' })).toBeNull());
     }
@@ -82,7 +81,7 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     await waitFor(async () => expect((await read()).draft.relationships).toHaveLength(1));
     await userEvent.click(relationships.getByRole('button', { name: 'Stäng samband' }));
     const details = await readDraftProposal('Blå cykeln');
-    expect(details.getByText('Cykeln står i garaget')).toBeTruthy();
+    expect(details.getByText('Cykeln står i garaget (Text)')).toBeTruthy();
     await userEvent.click(details.getByRole('button', { name: 'Stäng dialogen' }));
     expect((await read()).relationships).toEqual(before.relationships);
     await openDraftReview();
@@ -128,7 +127,7 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     await fixture.post('object-type', {
       id: 'newer-independent-type',
       baseRevision: null,
-      value: { name: 'Nyare oberoende typ', description: '', fields: [] },
+      value: { name: 'Nyare oberoende typ', description: '' },
     });
     const newer = await read();
     await userEvent.click(dialog.getByRole('button', { name: 'Ta bort' }));
@@ -145,7 +144,10 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const after = await read();
     expect(after.draft.changes.map(({ id }) => id)).toEqual(['draft-bike', 'draft-unresolved']);
-    expect(after.draft.relationships?.map(({ id }) => id)).toEqual(['draft-edge-unknown']);
+    expect(after.draft.relationships?.map(({ id }) => id).sort()).toEqual([
+      'draft-edge-none',
+      'draft-edge-unknown',
+    ]);
     expect(after.draft.objectTypes).toEqual(newer.draft.objectTypes);
     expect(after.objects).toEqual(before.objects);
     expect(after.relationships).toEqual(before.relationships);
@@ -207,15 +209,18 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     await fixture.post('object-type', {
       id: 'temporary-type',
       baseRevision: null,
-      value: { name: 'Tillfällig typ', description: '', fields: [] },
+      value: { name: 'Tillfällig typ', description: '' },
     });
     await fixture.post('draft', {
       id: 'temporary-object',
       baseRevision: null,
       value: {
         name: 'Tillfälligt föremål',
-        description: 'Behåll hela uppgiften',
+
         typeId: 'temporary-type',
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Behåll hela uppgiften' },
+        ],
       },
     });
     // Refresh through the ordinary workspace owner before reading the new proposals.
@@ -276,8 +281,8 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
       await userEvent.click(
         dialog.getByRole('button', {
           name: discard
-            ? 'Beskrivning: Sparat i kartan nu – Robins anteckning'
-            : 'Beskrivning: Ditt förslag – Min anteckning',
+            ? 'Beskrivning · egenskap 1: Sparat i kartan nu – Beskrivning: Robins anteckning (Text)'
+            : 'Beskrivning · egenskap 1: Ditt förslag – Beskrivning: Min anteckning (Text)',
         }),
       );
       const actualFetch = authenticatedHttpFetch(client, installation.origin);
@@ -304,7 +309,15 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
         await app.propose(other, 'draft', 'lo', {
           ...app.value,
           name: 'Lo Ås',
-          description: 'Senare sparad uppgift',
+
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Senare sparad uppgift',
+            },
+          ],
         });
         expect((await app.save(other, 'changed-after-resolution')).status()).toBe(200);
       }
@@ -346,12 +359,17 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     const { app, other, dialog } = await conflictFixture();
     await userEvent.click(dialog.getByRole('button', { name: 'Namn: Ditt förslag – Lo Lind' }));
     await userEvent.click(
-      dialog.getByRole('button', { name: 'Beskrivning: Ditt förslag – Min anteckning' }),
+      dialog.getByRole('button', {
+        name: 'Beskrivning · egenskap 1: Ditt förslag – Beskrivning: Min anteckning (Text)',
+      }),
     );
     await app.propose(other, 'draft', 'lo', {
       ...app.value,
       name: 'Lo Ås',
-      description: 'Robins anteckning',
+
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Robins anteckning' },
+      ],
     });
     expect((await app.save(other, 'changed-during-review')).status()).toBe(200);
     const before = await read();
@@ -369,7 +387,9 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     );
     expect(
       dialog
-        .getByRole('button', { name: 'Beskrivning: Ditt förslag – Min anteckning' })
+        .getByRole('button', {
+          name: 'Beskrivning · egenskap 1: Ditt förslag – Beskrivning: Min anteckning (Text)',
+        })
         .getAttribute('aria-pressed'),
     ).toBe('true');
     await userEvent.click(dialog.getByRole('button', { name: 'Namn: Ditt förslag – Lo Lind' }));
@@ -380,7 +400,9 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     expect((await read()).objects).toEqual(before.objects);
     expect((await read()).draft.changes.find(({ id }) => id === 'lo')?.after).toMatchObject({
       name: 'Lo Lind',
-      description: 'Min anteckning',
+      properties: expect.arrayContaining([
+        expect.objectContaining({ label: 'Beskrivning', value: 'Min anteckning' }),
+      ]),
     });
   });
 
@@ -600,30 +622,50 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     });
   }
 
-  test('invalid mixed relationship properties retain choices and block submission until knowledge agrees with the target', async () => {
-    const { dialog } = await preparedConflict(prepareConflictReferenceContinuity);
+  test('invalid mixed relationship endpoints retain choices until the duplicate is corrected', async () => {
+    const { dialog } = await preparedConflict(async (first, second) => {
+      const app = await conflictCollaborators(first, second);
+      const state = await app.read();
+      const value = {
+        typeId: state.relationshipTypes[0].id,
+        sourceId: 'lo',
+        targetId: 'service',
+      };
+      await app.propose(first, 'relationship', 'edge', value);
+      await app.save(first, 'base-edge');
+      await app.propose(first, 'relationship', 'existing', {
+        ...value,
+        sourceId: 'service',
+        targetId: 'lo',
+      });
+      await app.propose(first, 'relationship', 'edge', {
+        ...value,
+        targetId: 'lo',
+      });
+      await app.propose(second, 'relationship', 'edge', { ...value, sourceId: 'service' });
+      await app.save(second, 'concurrent');
+      return app;
+    });
     const before = await read();
     await userEvent.click(
-      dialog.getByRole('button', { name: 'Till objekt: Ditt förslag – Molnmusik' }),
+      dialog.getByRole('button', { name: 'Från objekt: Sparat i kartan nu – Molnmusik' }),
     );
     await userEvent.click(
-      dialog.getByRole('button', { name: 'Vad är känt?: Sparat i kartan nu – Uttryckligen inget' }),
+      dialog.getByRole('button', { name: 'Till objekt: Ditt förslag – Lo Exempel' }),
     );
-    expect(dialog.getByRole('alert').textContent).toContain(
-      'målobjektet fungerar inte tillsammans',
-    );
+    expect(dialog.getByRole('alert').textContent).toContain('finns redan i kartan');
     const apply = dialog.getByRole('button', {
       name: 'Lägg valen i utkastet',
     }) as HTMLButtonElement;
     expect(apply.disabled).toBe(true);
     expect(
       dialog
-        .getByRole('button', { name: 'Till objekt: Ditt förslag – Molnmusik' })
+        .getByRole('button', { name: 'Till objekt: Ditt förslag – Lo Exempel' })
         .getAttribute('aria-pressed'),
     ).toBe('true');
     expect(await read()).toEqual(before);
     await userEvent.click(
-      dialog.getByRole('button', { name: 'Vad är känt?: Ditt förslag – Osäkert uppgivet' }),
+      dialog.getByRole('button', { name: 'Från objekt: Ditt förslag – Lo Exempel' }),
     );
     expect(dialog.queryByRole('alert')).toBeNull();
     expect(apply.disabled).toBe(false);
@@ -631,9 +673,11 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
     await waitFor(() =>
       expect(dialog.getByRole('status').textContent).toContain('Valen finns i ditt utkast'),
     );
-    expect((await read()).draft.relationships?.[0].after).toMatchObject({
-      targetId: 'service',
-      knowledge: 'uncertain',
+    expect(
+      (await read()).draft.relationships?.find(({ id }) => id === 'edge')?.after,
+    ).toMatchObject({
+      sourceId: 'lo',
+      targetId: 'lo',
     });
     expect((await read()).relationships).toEqual(before.relationships);
   });
@@ -641,12 +685,21 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
   test('next conflict retains the other object choices and resolved preview without an implicit shared save', async () => {
     const { app, other, dialog } = await conflictFixture();
     await userEvent.click(dialog.getByRole('button', { name: 'Stäng konfliktdialogen' }));
-    const service = { ...app.value, name: 'Min musiktjänst', description: 'Min tjänst' };
+    const service = {
+      ...app.value,
+      name: 'Min musiktjänst',
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Min tjänst' },
+      ],
+    };
     await app.propose(client, 'draft', 'service', service);
     await app.propose(other, 'draft', 'service', {
       ...service,
       name: 'Vår musiktjänst',
-      description: 'Robins tjänst',
+
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Robins tjänst' },
+      ],
     });
     expect((await app.save(other, 'second-conflict')).status()).toBe(200);
     cleanup();
@@ -658,12 +711,16 @@ describe('native household workflows through real HTTP', { timeout: 30_000 }, ()
       review.getByRole('button', { name: 'Namn: Ditt förslag – Min musiktjänst' }),
     );
     await userEvent.click(
-      review.getByRole('button', { name: 'Beskrivning: Ditt förslag – Min tjänst' }),
+      review.getByRole('button', {
+        name: 'Beskrivning · egenskap 1: Ditt förslag – Beskrivning: Min tjänst (Text)',
+      }),
     );
     await userEvent.click(list.getByRole('button', { name: /^Objekt\s*Lo Lind/ }));
     await userEvent.click(review.getByRole('button', { name: 'Namn: Ditt förslag – Lo Lind' }));
     await userEvent.click(
-      review.getByRole('button', { name: 'Beskrivning: Ditt förslag – Min anteckning' }),
+      review.getByRole('button', {
+        name: 'Beskrivning · egenskap 1: Ditt förslag – Beskrivning: Min anteckning (Text)',
+      }),
     );
     const before = await read();
     await userEvent.click(review.getByRole('button', { name: 'Lägg valen i utkastet' }));

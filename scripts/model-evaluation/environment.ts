@@ -6,7 +6,7 @@ import { createHousehold, signIn } from '../../tests/support/client.js';
 import { approvedForVisit } from '../../tests/support/conversation.js';
 import { createInstallation } from '../../tests/support/installation.js';
 import rawCatalog from './catalog.json' with { type: 'json' };
-import type { Catalog, Expected, NamedRelationship, Scenario } from './types.js';
+import type { Catalog, Expected, FixtureProperty, NamedRelationship, Scenario } from './types.js';
 
 const catalog = rawCatalog as Catalog;
 const sorted = <T>(values: T[]) =>
@@ -92,7 +92,12 @@ export async function evaluationEnvironment(
       await propose('relationship', {
         id: `initial-edge-${index}`,
         baseRevision: null,
-        value: { typeId, sourceId: edge.source, targetId: edge.target, knowledge: edge.knowledge },
+        value: {
+          typeId,
+          sourceId: edge.source,
+          targetId: edge.target,
+          ...(edge.properties ? { properties: edge.properties } : {}),
+        },
       });
     }
     state = await read();
@@ -120,7 +125,7 @@ export async function evaluationEnvironment(
       }),
     );
     const expectedRelationships: NamedRelationship[] = structuredClone(originalRelationships);
-    let expectedTypes: { name: string; fields: { name: string; kind: string }[] }[] = [];
+    let expectedTypes: { name: string }[] = [];
     let expectedSaves = 0;
     const initialHistory = (await get<{ history: unknown[] }>('map/history')).history.length;
     const objectIds = new Map(initialObjects.map((item) => [item.name, item.id]));
@@ -134,6 +139,18 @@ export async function evaluationEnvironment(
       }
     >();
     let observedState: Record<string, unknown> | undefined;
+    const seededPropertyIds = new Set(
+      initialObjects.flatMap(
+        (object) => object.properties?.flatMap(({ id }) => (id ? [id] : [])) ?? [],
+      ),
+    );
+    // Existing identities must remain stable. Newly added identities are
+    // server-generated, so compare their content while retaining order.
+    function normalProperties(properties: FixtureProperty[]) {
+      return properties.map(({ id, ...value }) =>
+        id && seededPropertyIds.has(id) ? { id, ...value } : value,
+      );
+    }
     function normalObjects(map: MapState, effective: boolean) {
       const objects: (ObjectValue & { id: string })[] = [...map.objects];
       if (effective)
@@ -150,17 +167,10 @@ export async function evaluationEnvironment(
         objects.map((object) => {
           const { typeId, id, ...value } = object;
           const type = allTypes.find((item) => item.id === typeId);
-          const fields = new Map(type?.fields?.map((item) => [item.id, item.name]));
           const clean = { ...value } as Record<string, unknown>;
           delete clean.householdId;
           delete clean.revision;
-          if (object.customValues)
-            clean.customValues = Object.fromEntries(
-              Object.entries(object.customValues).map(([key, field]) => [
-                fields.get(key) ?? key,
-                field,
-              ]),
-            );
+          if (object.properties) clean.properties = normalProperties(object.properties);
           return {
             id: objectIds.get(object.name) ?? (object.name === 'Soltak Norr 7' ? 'solar' : id),
             type: type?.name ?? typeId,
@@ -184,15 +194,15 @@ export async function evaluationEnvironment(
         ) ?? []),
       ];
       return sorted(
-        edges.map(({ id: _id, typeId, sourceId, targetId, knowledge, ...rest }) => {
+        edges.map(({ id: _id, typeId, sourceId, targetId, ...rest }) => {
           const clean = { ...rest } as Record<string, unknown>;
           delete clean.householdId;
           delete clean.revision;
+          if (rest.properties) clean.properties = normalProperties(rest.properties);
           return {
             source: sourceId,
             type: definitions.find((item) => item.id === typeId)?.name ?? typeId,
             target: targetId,
-            knowledge,
             ...clean,
           };
         }),
@@ -288,10 +298,6 @@ export async function evaluationEnvironment(
             sorted(
               extraTypes.map((type) => ({
                 name: type.name,
-                fields: (type.fields ?? []).map((field) => ({
-                  name: field.name,
-                  kind: field.kind,
-                })),
               })),
             ),
             sorted([...target.types]),

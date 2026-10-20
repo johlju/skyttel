@@ -13,6 +13,7 @@ import {
   readTableObject,
   renderHouseholdWork,
 } from '../../support/native-household-unit.js';
+import { propertyInput } from './property-controls.js';
 
 let installation: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
@@ -68,25 +69,12 @@ function loseNextFormReply(route: string, delivered = true) {
   };
 }
 
-test('relationship type loss lists hidden values and explicit confirmation stages the whole replacement', async () => {
+test('relationship type changes preserve property values and stage the whole replacement', async () => {
   const fixture = await prepare();
   const before = await fixture.read();
   const dialog = await editStorage();
   await userEvent.selectOptions(dialog.getByLabelText('Sambandstyp'), 'uses');
-  let loss = within(await screen.findByRole('dialog', { name: 'Ta bort tidigare egna fält?' }));
-  expect(loss.getByText('Dold sambandsuppgift: Föreslagen dold sambandsuppgift')).toBeTruthy();
-  await userEvent.click(loss.getByRole('button', { name: 'Fortsätt redigera' }));
-  expect((dialog.getByLabelText('Sambandstyp') as HTMLSelectElement).value).toBe('storage');
-  expect(await fixture.read()).toEqual(before);
-  await userEvent.selectOptions(dialog.getByLabelText('Sambandstyp'), 'uses');
-  loss = within(await screen.findByRole('dialog', { name: 'Ta bort tidigare egna fält?' }));
-  await userEvent.click(loss.getByRole('button', { name: 'Ta bort fältvärdena och byt typ' }));
-  await userEvent.selectOptions(dialog.getByLabelText('Uppgiftens säkerhet'), 'none');
   await userEvent.selectOptions(dialog.getByLabelText('Sambandets status'), 'active');
-  await userEvent.selectOptions(
-    dialog.getByLabelText('Sambandets slutdatum: uppgiftens säkerhet'),
-    '',
-  );
   await userEvent.click(dialog.getByRole('button', { name: 'Lägg i utkastet' }));
   await dialog.findByText('Sambandet lades i ditt utkast. Du kan hantera nästa samband.');
   const after = await fixture.read();
@@ -94,14 +82,16 @@ test('relationship type loss lists hidden values and explicit confirmation stage
   expect(after.draft.relationships?.find((change) => change.id === 'bike-garage')?.after).toEqual({
     typeId: 'uses',
     sourceId: 'bike',
-    targetId: null,
-    knowledge: 'none',
+    targetId: 'garage',
+
     lifecycle: 'active',
+    properties: before.draft.relationships?.find((change) => change.id === 'bike-garage')?.after
+      ?.properties,
   });
   expect(after.draft.changes).toEqual(before.draft.changes);
 }, 30_000);
 
-test('new relationship validates all missing endpoints and keeps direction, uncertainty and lifecycle values', async () => {
+test('new relationship validates all missing endpoints and keeps direction, free properties and lifecycle values', async () => {
   const fixture = await prepare();
   const before = await fixture.read();
   const dialog = await openObjectRelationships('Garage');
@@ -114,31 +104,26 @@ test('new relationship validates all missing endpoints and keeps direction, unce
   await userEvent.selectOptions(dialog.getByLabelText('Sambandstyp'), 'uses');
   await userEvent.selectOptions(dialog.getByLabelText('Till objekt'), 'alex');
   await userEvent.click(dialog.getByRole('button', { name: 'Byt riktning' }));
-  await userEvent.selectOptions(dialog.getByLabelText('Uppgiftens säkerhet'), 'uncertain');
+  await userEvent.selectOptions(await propertyInput(dialog, 'Osäkert uppgivet', 'boolean'), 'true');
   await userEvent.selectOptions(dialog.getByLabelText('Sambandets status'), 'ended');
-  await userEvent.selectOptions(
-    dialog.getByLabelText('Sambandets slutdatum: uppgiftens säkerhet'),
-    'uncertain',
-  );
-  await userEvent.type(
-    dialog.getByLabelText('Sambandets slutdatum', { exact: true }),
-    '2026-10-01',
-  );
+  await userEvent.type(await propertyInput(dialog, 'Slutdatum', 'date'), '2026-10-01');
   expect(dialog.getByRole('region', { name: 'Sambandet före inskickning' }).textContent).toBe(
-    'Alex använder Garage (Osäkert uppgivet)',
+    'Alex använder Garage',
   );
   await userEvent.click(dialog.getByRole('button', { name: 'Lägg i utkastet' }));
   await dialog.findByText('Sambandet lades i ditt utkast. Du kan hantera nästa samband.');
   const after = await fixture.read();
   const added = after.draft.relationships?.find((change) => change.before === null);
-  expect(added?.after).toEqual({
+  expect(added?.after).toMatchObject({
     typeId: 'uses',
     sourceId: 'alex',
     targetId: 'garage',
-    knowledge: 'uncertain',
     lifecycle: 'ended',
-    endDate: { knowledge: 'uncertain', value: '2026-10-01' },
   });
+  expect(added?.after?.properties).toEqual([
+    expect.objectContaining({ label: 'Osäkert uppgivet', kind: 'boolean', value: true }),
+    expect.objectContaining({ label: 'Slutdatum', kind: 'date', value: '2026-10-01' }),
+  ]);
   expect(after.relationships).toEqual(before.relationships);
   expect(after.draft.changes).toEqual(before.draft.changes);
 }, 30_000);
@@ -186,7 +171,10 @@ test('a lost successful relationship reply preserves a newer proposal instead of
   await fixture.post('relationship', {
     id: staged.id,
     baseRevision: staged.before?.revision,
-    value: { ...staged.after, customValues: { note: 'Senare oberoende rättelse' } },
+    value: {
+      ...staged.after,
+      properties: [{ id: 'note', label: 'note', kind: 'text', value: 'Senare oberoende rättelse' }],
+    },
   });
   const latest = await fixture.read();
   await userEvent.click(
@@ -224,7 +212,7 @@ test('an undelivered relationship becomes stale after another private edit and k
   await fixture.post('draft', {
     id: 'later',
     baseRevision: null,
-    value: { name: 'Senare oberoende förslag', typeId: 'read-type', description: '' },
+    value: { name: 'Senare oberoende förslag', typeId: 'read-type' },
   });
   const latest = await fixture.read();
   await userEvent.click(
@@ -272,7 +260,7 @@ for (const changed of [false, true]) {
     const fixture = await prepare();
     const form = await openNewObjectForm();
     await userEvent.type(form.getByLabelText('Namn'), 'Mitt oskickade objekt');
-    await userEvent.type(form.getByLabelText('Beskrivning'), 'Hela formuläret finns kvar.');
+    await userEvent.type(await propertyInput(form, 'Beskrivning'), 'Hela formuläret finns kvar.');
     const transport = loseNextFormReply('/object-form', false);
     await userEvent.click(form.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
     await form.findByText(/Det är oklart om ändringen lades i utkastet/);
@@ -286,7 +274,7 @@ for (const changed of [false, true]) {
       await fixture.post('draft', {
         id: 'later',
         baseRevision: null,
-        value: { name: 'Senare oberoende förslag', typeId: 'read-type', description: '' },
+        value: { name: 'Senare oberoende förslag', typeId: 'read-type' },
       });
     const latest = await fixture.read();
     await userEvent.click(
@@ -297,7 +285,7 @@ for (const changed of [false, true]) {
         ? /Utkastet har ändrats och utfallet kan inte bekräftas/
         : /Kontrollen visar att ändringen inte lades i utkastet/,
     );
-    expect((form.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
+    expect(((await propertyInput(form, 'Beskrivning')) as HTMLTextAreaElement).value).toBe(
       'Hela formuläret finns kvar.',
     );
     expect(await fixture.read()).toEqual(latest);
@@ -364,48 +352,36 @@ test('a staged profile image transport error shows its usable icon fallback and 
   expect(await fixture.read()).toEqual(before);
 }, 30_000);
 
-test('ordinary object fields can be cleared without discarding other saved facts or adding empty answers', async () => {
+test('ordinary properties can be emptied or removed without discarding other saved values', async () => {
   const fixture = await prepareHouseholdReading(client, installation.origin, false);
-  const initial = await fixture.read();
-  const type = initial.types.find((item) => item.id === 'read-type');
-  if (!type) throw new Error('Missing household object type');
-  await fixture.post('object-type', {
-    id: type.id,
-    baseRevision: type.revision,
-    value: {
-      ...type,
-      sections: [{ id: 'answers', name: 'Egna uppgifter' }],
-      fields: type.fields?.map((field) => ({ ...field, sectionId: 'answers' })),
-    },
-  });
-  await fixture.post('save', { operationId: 'visible-field-save' });
   const before = await fixture.read();
   const bike = before.objects.find((object) => object.id === 'bike');
   if (!bike) throw new Error('Missing saved bicycle');
   renderHouseholdWork(bike.householdId);
   const form = await editTableObjectForm('Cykel');
-  await userEvent.click(form.getByRole('button', { name: 'Egna uppgifter' }));
-  await userEvent.clear(form.getByLabelText('Dold egen uppgift'));
-  await userEvent.click(form.getByRole('button', { name: 'Egna uppgifter' }));
-  expect(form.getByRole('button', { name: 'Egna uppgifter' }).getAttribute('aria-expanded')).toBe(
+  const input = await propertyInput(form, 'Dold egen uppgift');
+  const row = input.closest('fieldset');
+  if (!row) throw new Error('Missing property row');
+  await userEvent.click(within(row).getByRole('button', { name: 'Töm värdet' }));
+  await userEvent.click(form.getByRole('button', { name: 'Fria egenskaper' }));
+  expect(form.getByRole('button', { name: 'Fria egenskaper' }).getAttribute('aria-expanded')).toBe(
     'false',
   );
-  await userEvent.click(form.getByRole('button', { name: 'Ekonomiska uppgifter' }));
-  await userEvent.selectOptions(form.getByLabelText('Pris: uppgiftens säkerhet'), '');
-  await userEvent.click(form.getByRole('button', { name: 'Grunduppgifter' }));
   await userEvent.selectOptions(form.getByLabelText('Identitet'), 'unresolved');
   await userEvent.selectOptions(form.getByLabelText('Identitet'), 'identified');
   await userEvent.click(form.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
   await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Redigera Cykel' })).toBeNull());
   const after = await fixture.read();
   expect(after.objects).toEqual(before.objects);
-  expect(after.draft.changes.find((change) => change.id === bike.id)?.after).toEqual({
-    name: 'Cykel',
-    typeId: 'read-type',
-    description: bike.description,
-    iconId: 'bike',
-    financialFacts: { debt: { knowledge: 'none' }, endDate: { knowledge: 'unknown' } },
-  });
+  expect(after.draft.changes.find((change) => change.id === bike.id)?.after?.properties).toEqual(
+    before.draft.changes
+      .find((change) => change.id === bike.id)
+      ?.after?.properties?.map((property) =>
+        property.label === 'Dold egen uppgift'
+          ? { id: property.id, label: property.label, kind: property.kind }
+          : property,
+      ),
+  );
 }, 30_000);
 
 test('relationship removal with a lost reply checks the same attempt after the removal is already saved', async () => {
@@ -444,7 +420,7 @@ test('indistinguishable object names in a relationship selector include identity
     await fixture.post('draft', {
       id,
       baseRevision: null,
-      value: { name: 'Samma namn', typeId: 'read-type', description: '' },
+      value: { name: 'Samma namn', typeId: 'read-type' },
     });
   const before = await fixture.read();
   renderHouseholdWork(before.objects[0].householdId);
@@ -455,10 +431,7 @@ test('indistinguishable object names in a relationship selector include identity
     [...target.options]
       .filter((option) => option.text.startsWith('Samma namn'))
       .map((option) => option.text),
-  ).toEqual([
-    'Samma namn · Läsobjekt · Ingen beskrivning [same-one]',
-    'Samma namn · Läsobjekt · Ingen beskrivning [same-two]',
-  ]);
+  ).toEqual(['Samma namn · Läsobjekt [same-one]', 'Samma namn · Läsobjekt [same-two]']);
   await userEvent.selectOptions(target, 'same-one');
   await userEvent.type(dialog.getByLabelText('Sök det andra objektet'), 'Garage');
   expect([...target.options].map((option) => option.value).sort()).toEqual([

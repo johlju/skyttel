@@ -16,6 +16,7 @@ import {
   saveHouseholdDraft,
 } from '../../support/native-household-unit.js';
 import { applicationFixture } from '../server/fixture.js';
+import { propertyInput } from './property-controls.js';
 
 // These full form workflows use the real HTTP app and SQLite; coverage on
 // slow shared CI runners can take about twice as long as on fast ones.
@@ -117,7 +118,7 @@ async function open() {
 async function add(name = 'Lo Exempel', description = 'En påhittad person') {
   const form = await openNewObjectForm();
   await userEvent.type(form.getByLabelText('Namn'), name);
-  await userEvent.type(form.getByLabelText('Beskrivning'), description);
+  await userEvent.type(await propertyInput(form, 'Beskrivning'), description);
   await userEvent.click(form.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
   await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nytt objekt' })).toBeNull());
   await waitFor(() =>
@@ -301,10 +302,10 @@ test('discarding an unsent form preserves staged proposals and new forms start e
   await openNewObjectForm();
   const form = within(screen.getByRole('dialog', { name: 'Nytt objekt' }));
   await userEvent.type(form.getByLabelText('Namn'), 'Bilen');
-  await userEvent.type(form.getByLabelText('Beskrivning'), 'Oskickat om Bilen');
+  await userEvent.type(await propertyInput(form, 'Beskrivning'), 'Oskickat om Bilen');
   await userEvent.click(form.getByRole('button', { name: 'Stäng objektdialogen' }));
   await userEvent.click(screen.getByRole('button', { name: 'Fortsätt redigera' }));
-  expect((form.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
+  expect(((await propertyInput(form, 'Beskrivning')) as HTMLTextAreaElement).value).toBe(
     'Oskickat om Bilen',
   );
   await userEvent.click(form.getByRole('button', { name: 'Stäng objektdialogen' }));
@@ -337,10 +338,10 @@ test('workspace theme restores focus after choice or Escape and permits leaving 
   expect(popup()).toBeNull();
 });
 
-test('changing type shows displaced values and requires handling them without copying matching field IDs', async () => {
-  for (const [version, id, name, kind] of [
-    [0, 'cycle', 'Cykel', 'text'],
-    [1, 'vehicle', 'Fordon', 'number'],
+test('changing type preserves ordered property identities and values through review and save', async () => {
+  for (const [version, id, name] of [
+    [0, 'cycle', 'Cykel'],
+    [1, 'vehicle', 'Fordon'],
   ] as const) {
     expect(
       (
@@ -351,10 +352,6 @@ test('changing type shows displaced values and requires handling them without co
           value: {
             name,
             description: '',
-            fields: [
-              { id: 'serial', name: 'Nummer', description: '', kind },
-              { id: 'insured', name: 'Försäkrad', description: '', kind: 'boolean' },
-            ],
           },
         })
       ).status,
@@ -367,24 +364,21 @@ test('changing type shows displaced values and requires handling them without co
     value: {
       typeId: 'cycle',
       name: 'Alex blå cykel',
-      description: '',
-      customValues: { serial: 'SYNTH-42', insured: false },
+
+      properties: [
+        { id: 'serial', label: 'serial', kind: 'text', value: 'SYNTH-42' },
+        { id: 'insured', label: 'Försäkrad', kind: 'boolean', value: false },
+      ],
     },
   });
   await client.json(`${path}/save`, { version: 3, operationId: 'setup' });
   await open();
   await editTableObjectForm('Alex blå cykel');
   await userEvent.selectOptions(screen.getByLabelText('Objekttyp'), 'vehicle');
-  const confirmation = screen.getByRole('dialog', { name: 'Ta bort tidigare egna fält?' });
-  expect(confirmation.textContent).toContain('Nummer: SYNTH-42');
-  expect(confirmation.textContent).toContain('Försäkrad: Nej');
-  await userEvent.click(
-    within(confirmation).getByRole('button', { name: 'Ta bort fältvärdena och byt typ' }),
-  );
-  await userEvent.click(screen.getByRole('button', { name: 'Egna fält' }));
-  expect((screen.getByLabelText('Nummer') as HTMLInputElement).value).toBe('');
-  expect((screen.getByLabelText('Försäkrad') as HTMLSelectElement).value).toBe('');
-  await userEvent.type(screen.getByLabelText('Nummer'), '42');
+  expect(await propertyInput(screen, 'serial')).toHaveProperty('value', 'SYNTH-42');
+  expect(await propertyInput(screen, 'Försäkrad', 'boolean')).toHaveProperty('value', 'false');
+  await userEvent.clear(await propertyInput(screen, 'serial'));
+  await userEvent.type(await propertyInput(screen, 'serial'), 'SYNTH-43');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
   await waitFor(() =>
     expect(screen.getByRole('status', { name: 'Hushållsarbetets status' }).textContent).toContain(
@@ -392,22 +386,25 @@ test('changing type shows displaced values and requires handling them without co
     ),
   );
   const review = await readDraftProposal('Alex blå cykel');
-  expect(review.getByText('SYNTH-42')).toBeTruthy();
-  expect(review.getByText('42')).toBeTruthy();
-  expect(review.getByText('Nej')).toBeTruthy();
+  expect(review.getByText('SYNTH-42 (Text)')).toBeTruthy();
+  expect(review.getByText('SYNTH-43 (Text)')).toBeTruthy();
+  expect(review.getAllByText('Nej (Ja/nej)')).toHaveLength(2);
   const proposed = review.getByRole('heading', { name: 'Föreslagna värden' }).parentElement;
   if (!proposed) throw new Error('Missing proposed property section');
   const insurance = within(proposed).getByText('Försäkrad').closest('div');
-  expect(insurance?.textContent).toContain('Ej uppgivet');
+  expect(insurance?.textContent).toContain('Nej (Ja/nej)');
   await userEvent.click(review.getByRole('button', { name: 'Stäng dialogen' }));
   await save();
   const state: MapState = await (await client.request(path)).json();
   expect(state.objects[0]).toMatchObject({
     id: 'bike',
     typeId: 'vehicle',
-    customValues: { serial: 42 },
+
+    properties: [
+      { id: 'serial', label: 'serial', kind: 'text', value: 'SYNTH-43' },
+      { id: 'insured', label: 'Försäkrad', kind: 'boolean', value: false },
+    ],
   });
-  expect(state.objects[0].customValues).not.toHaveProperty('insured');
 });
 
 test('relationship type forms review both labels and show one edge from either object', async () => {
@@ -421,7 +418,7 @@ test('relationship type forms review both labels and show one edge from either o
       version,
       id,
       baseRevision: null,
-      value: { typeId: initial.types[0].id, name, description: '' },
+      value: { typeId: initial.types[0].id, name },
     });
   }
   await open();
@@ -967,17 +964,15 @@ test('relationship forms distinguish equal names, preserve meanings, correct and
   const choices = [...source.options].filter((option) => option.value);
   expect(choices).toHaveLength(2);
   expect(choices[0].text).not.toBe(choices[1].text);
-  expect(choices[0].text).toContain('påhittad person');
+  for (const choice of choices) expect(choice.text).toContain(`[${choice.value}]`);
   const targetId = choices.find((choice) => choice.value !== source.value)?.value;
   if (!targetId) throw new Error('Missing independent equal-name target');
   const type = screen.getByLabelText('Sambandstyp') as HTMLSelectElement;
   await userEvent.selectOptions(type, type.options[1].value);
-  await userEvent.selectOptions(screen.getByLabelText('Uppgiftens säkerhet'), 'unresolved');
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg i utkastet' }));
+  expect(screen.getByRole('alert').textContent).toContain('Till objekt');
+  await userEvent.selectOptions(screen.getByLabelText('Till objekt'), targetId);
   await stageRelationship();
-  const draft = await openDraftReview();
-  expect(
-    (draft.getByRole('button', { name: 'Spara hela utkastet' }) as HTMLButtonElement).disabled,
-  ).toBe(true);
   let releaseMapRefresh: (() => void) | undefined;
   async function editCurrent() {
     await userEvent.click(screen.getByRole('button', { name: 'Tabell' }));
@@ -988,7 +983,7 @@ test('relationship forms distinguish equal names, preserve meanings, correct and
     await userEvent.click(screen.getByRole('button', { name: 'Redigera samband' }));
   }
   await editCurrent();
-  await userEvent.selectOptions(screen.getByLabelText('Uppgiftens säkerhet'), 'uncertain');
+  await userEvent.selectOptions(await propertyInput(screen, 'Osäkert uppgivet', 'boolean'), 'true');
   await userEvent.selectOptions(screen.getByLabelText('Till objekt'), targetId);
   await stageRelationship();
   // The receipt confirms a durable save before the follow-up map response.
@@ -1015,14 +1010,16 @@ test('relationship forms distinguish equal names, preserve meanings, correct and
   await mapRequested;
   const saved = await (await client.request(path)).json();
   expect(saved.objects).toHaveLength(2);
-  expect(saved.relationships[0]).toMatchObject({ knowledge: 'uncertain', targetId });
+  expect(saved.relationships[0]).toMatchObject({ targetId });
   expect(table.queryAllByRole('button', { name: 'Samband för Lo', hidden: true })).toHaveLength(0);
-  for (const knowledge of ['unknown', 'none']) {
+  for (const note of ['Uppgiften behöver granskas', 'Granskningen är klar']) {
     await editCurrent();
-    await userEvent.selectOptions(screen.getByLabelText('Uppgiftens säkerhet'), knowledge);
+    const input = await propertyInput(screen, 'Anteckning');
+    await userEvent.clear(input);
+    await userEvent.type(input, note);
     await stageRelationship();
     const staged = await (await client.request(path)).json();
-    expect(staged.draft.relationships[0].after).toMatchObject({ knowledge, targetId: null });
+    expect(staged.draft.relationships[0].after).toMatchObject({ targetId });
     await save();
   }
   await editCurrent();
@@ -1031,7 +1028,7 @@ test('relationship forms distinguish equal names, preserve meanings, correct and
   await userEvent.click(screen.getByRole('button', { name: 'Stäng samband' }));
   const staged = await (await client.request(path)).json();
   expect(staged.draft.relationships[0]).toMatchObject({
-    before: expect.objectContaining({ knowledge: 'none' }),
+    before: expect.objectContaining({}),
     after: null,
   });
   await save();
@@ -1067,22 +1064,25 @@ test('a duplicate displays its existing relationship and stale relationship text
         version: state.draft.version,
         id: 'concurrent',
         baseRevision: null,
-        value: { typeId: state.types[0].id, name: 'Robin', description: '' },
+        value: { typeId: state.types[0].id, name: 'Robin' },
       })
     ).status,
   ).toBe(200);
   const latest = await (await client.request(path)).json();
-  await userEvent.selectOptions(screen.getByLabelText('Uppgiftens säkerhet'), 'unknown');
+  await userEvent.type(await propertyInput(screen, 'Anteckning'), 'Min oskickade rättelse');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i utkastet' }));
   await screen.findByText('Ändringen kunde inte bekräftas. Dina uppgifter finns kvar.');
-  expect(screen.getByLabelText('Uppgiftens säkerhet')).toHaveProperty('value', 'unknown');
+  expect(await propertyInput(screen, 'Anteckning')).toHaveProperty(
+    'value',
+    'Min oskickade rättelse',
+  );
   expect((await (await client.request(path)).json()).draft).toEqual(latest.draft);
   await userEvent.click(screen.getByRole('button', { name: 'Stäng samband' }));
   await userEvent.click(screen.getByRole('button', { name: 'Kasta ändringarna och fortsätt' }));
   view.unmount();
   await open();
   await editRelationship('Alex');
-  expect(screen.getByLabelText('Uppgiftens säkerhet')).toHaveProperty('value', 'known');
+  expect(screen.queryByDisplayValue('Min oskickade rättelse')).toBeNull();
   expect((await (await client.request(path)).json()).draft).toEqual(latest.draft);
 });
 
@@ -1175,32 +1175,34 @@ async function concurrentEditors() {
     ['lo', 'Lo'],
     ['kim', 'Kim'],
   ])
-    await propose(client, 'draft', id, { typeId: state.types[0].id, name, description: '' });
+    await propose(client, 'draft', id, { typeId: state.types[0].id, name });
   await commit();
   return { other, read, propose, commit, state };
 }
 
 test('conflict choices retain independent object fields and cannot reuse stale approval', async () => {
   const { other, read, propose, commit, state } = await concurrentEditors();
-  const value = { typeId: state.types[0].id, name: 'Lo Lind', description: '' };
+  const value = { typeId: state.types[0].id, name: 'Lo Lind' };
   await propose(client, 'draft', 'lo', value);
   await propose(other, 'draft', 'lo', {
     ...value,
     name: 'Lo Berg',
-    description: 'Spelar piano',
+
     identity: 'unspecified',
+    properties: [{ id: 'description', label: 'Beskrivning', kind: 'text', value: 'Spelar piano' }],
   });
   await commit(other);
   const oldVersion = (await read()).draft.version;
   await open();
   await resolveProperties([
     ['Namn', 'Ditt förslag', 'Lo Lind'],
-    ['Beskrivning', 'Sparat i kartan nu', 'Spelar piano'],
     ['Identifiering', 'Sparat i kartan nu', 'Ospecificerat objekt'],
   ]);
   expect((await read()).draft.changes[0].after).toMatchObject({
     name: 'Lo Lind',
-    description: 'Spelar piano',
+    properties: expect.arrayContaining([
+      expect.objectContaining({ label: 'Beskrivning', value: 'Spelar piano' }),
+    ]),
     identity: 'unspecified',
   });
   expect(
@@ -1216,9 +1218,9 @@ test('conflict choices retain independent object fields and cannot reuse stale a
     (await client.json(`${path}/resolve`, { version, choice: 'saved', conflict: {} })).status,
   ).toBe(409);
   await save();
-  expect((await read(other)).objects.find((object) => object.id === 'lo')?.description).toBe(
-    'Spelar piano',
-  );
+  expect(
+    (await read(other)).objects.find((object) => object.id === 'lo')?.properties,
+  ).toContainEqual(expect.objectContaining({ label: 'Beskrivning', value: 'Spelar piano' }));
 });
 
 test.each(['changed', 'duplicate', 'endpoint', 'deletion'] as const)(
@@ -1229,16 +1231,17 @@ test.each(['changed', 'duplicate', 'endpoint', 'deletion'] as const)(
       typeId: state.relationshipTypes[0].id,
       sourceId: 'lo',
       targetId: 'kim',
-      knowledge: 'known',
     };
     if (scenario === 'changed') {
       await propose(client, 'relationship', 'link', value);
       await commit();
-      await propose(client, 'relationship', 'link', { ...value, knowledge: 'uncertain' });
+      await propose(client, 'relationship', 'link', {
+        ...value,
+        properties: [{ id: 'certainty', label: 'Osäkert uppgivet', kind: 'boolean', value: true }],
+      });
       await propose(other, 'relationship', 'link', {
         ...value,
-        targetId: null,
-        knowledge: 'unknown',
+        targetId: 'lo',
       });
     } else if (scenario === 'duplicate') {
       await propose(client, 'relationship', 'mine', value);
@@ -1254,12 +1257,12 @@ test.each(['changed', 'duplicate', 'endpoint', 'deletion'] as const)(
     await open();
     expect(screen.getByRole('button', { name: '1 konflikt i ditt utkast' })).toBeTruthy();
     if (scenario === 'changed') {
-      await resolveProperties([
-        ['Till objekt', 'Ditt förslag', 'Kim'],
-        ['Vad är känt?', 'Ditt förslag', 'Osäkert uppgivet'],
-      ]);
+      await resolveProperties([['Till objekt', 'Ditt förslag', 'Kim']]);
       await save();
       expect((await read()).relationships).toHaveLength(1);
+      expect((await read()).relationships[0].properties).toEqual([
+        { id: 'certainty', label: 'Osäkert uppgivet', kind: 'boolean', value: true },
+      ]);
     } else {
       const before = await read();
       const dialog = await openConflict();
@@ -1325,7 +1328,6 @@ test('accepting a saved object removes only that proposal after another user del
   await propose(client, 'draft', 'lo', {
     typeId: state.types[0].id,
     name: 'Lo Lind',
-    description: '',
   });
   await propose(other, 'draft', 'lo', null);
   await commit(other);
@@ -1366,7 +1368,6 @@ test.each(['lo', 'new'])(
     await propose(client, 'draft', id, {
       typeId: state.types[0].id,
       name: 'Lo Lind',
-      description: '',
     });
     const current = await read(other);
     const type = current.types.find((type) => type.id === state.types[0].id);
@@ -1378,7 +1379,7 @@ test.each(['lo', 'new'])(
           contentVersion: current.contentVersion,
           id: type.id,
           baseRevision: type.revision,
-          value: { ...type, description: 'Ny typbeskrivning', fields: type.fields ?? [] },
+          value: { ...type, description: 'Ny typbeskrivning' },
         })
       ).status,
     ).toBe(200);
@@ -1405,106 +1406,67 @@ test.each(['lo', 'new'])(
   },
 );
 
-test('custom type forms use four optional field kinds and keep errors editable without saving', async () => {
+test('custom types and four free property kinds stay editable and save together', async () => {
   const deadline = performance.now() + 30_000;
   await open();
   await userEvent.click(screen.getByRole('button', { name: 'Ny objekttyp' }));
   await userEvent.type(screen.getByLabelText('Typens namn'), 'Solcellsanläggning');
   await userEvent.type(screen.getByLabelText('Typens beskrivning'), 'Elproduktion');
-  for (const [name, kind] of [
-    ['Leverantör', 'text'],
-    ['Effekt', 'number'],
-    ['Datum', 'date'],
-    ['Batteri', 'boolean'],
-  ]) {
-    await userEvent.click(screen.getByRole('button', { name: 'Lägg till fält' }));
-    const field = within(
-      screen.getAllByRole('group', { name: /^Eget fält/ }).at(-1) as HTMLElement,
-    );
-    await userEvent.type(field.getByLabelText('Fältets namn'), name);
-    await userEvent.type(field.getByLabelText('Fältets beskrivning'), `Uppgift om ${name}`);
-    await userEvent.selectOptions(field.getByLabelText('Värdeslag'), kind);
-  }
   await userEvent.click(screen.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }));
-  await waitFor(() =>
-    expect(screen.getByRole('status', { name: 'Hushållsarbetets status' }).textContent).toContain(
-      'utkast',
-    ),
+  await waitFor(async () =>
+    expect((await (await client.request(path)).json()).draft.objectTypes).toHaveLength(1),
   );
   await openNewObjectForm();
   await userEvent.type(screen.getByLabelText('Namn'), 'Paneler');
   const type = (await (await client.request(path)).json()).draft.objectTypes[0].after;
   await userEvent.selectOptions(screen.getByLabelText('Objekttyp'), type.id);
-  await userEvent.click(screen.getByRole('button', { name: 'Egna fält' }));
-  await userEvent.type(screen.getByLabelText('Leverantör'), 'Exempelsol');
-  await userEvent.type(screen.getByLabelText('Effekt'), '12.5');
-  await userEvent.type(screen.getByLabelText('Datum'), '2026-09-01');
-  await userEvent.selectOptions(screen.getByLabelText('Batteri'), 'false');
+  await userEvent.type(await propertyInput(screen, 'Leverantör'), 'Exempelsol');
+  await userEvent.type(await propertyInput(screen, 'Effekt', 'number'), '12.5');
+  await userEvent.type(await propertyInput(screen, 'Datum', 'date'), '2026-09-01');
+  await userEvent.selectOptions(await propertyInput(screen, 'Batteri', 'boolean'), 'false');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
-  await waitFor(() =>
-    expect(screen.getByRole('status', { name: 'Hushållsarbetets status' }).textContent).toContain(
-      'utkast',
-    ),
-  );
-  let proposal = await readDraftProposal('Paneler');
-  expect(proposal.getByText('Nej', { exact: true })).toBeTruthy();
-  await closeProposal();
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nytt objekt' })).toBeNull());
   await save();
-  await editTableObjectForm('Paneler');
-  await userEvent.click(screen.getByRole('button', { name: 'Egna fält' }));
-  await userEvent.clear(screen.getByLabelText('Leverantör'));
-  await userEvent.clear(screen.getByLabelText('Effekt'));
-  await userEvent.selectOptions(screen.getByLabelText('Batteri'), 'true');
-  await userEvent.click(screen.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
-  await waitFor(() =>
-    expect(screen.getByRole('status', { name: 'Hushållsarbetets status' }).textContent).toContain(
-      'utkast',
-    ),
-  );
-  proposal = await readDraftProposal('Paneler');
-  const after = within(
-    proposal.getByRole('heading', { name: 'Föreslagna värden' }).parentElement as HTMLElement,
-  );
+  const saved: MapState = await (await client.request(path)).json();
   expect(
-    within(after.getByText('Leverantör', { exact: true }).closest('div') as HTMLElement).getByText(
-      'Ej uppgivet',
-    ),
-  ).toBeTruthy();
-  expect(after.getByText('Ja', { exact: true })).toBeTruthy();
-  await closeProposal();
-  await save();
+    saved.objects[0].properties?.map((p) => [p.label, p.kind, 'value' in p ? p.value : undefined]),
+  ).toEqual([
+    ['Leverantör', 'text', 'Exempelsol'],
+    ['Effekt', 'number', 12.5],
+    ['Datum', 'date', '2026-09-01'],
+    ['Batteri', 'boolean', false],
+  ]);
   await editTableObjectForm('Paneler');
-  await userEvent.click(screen.getByRole('button', { name: 'Egna fält' }));
-  await userEvent.selectOptions(screen.getByLabelText('Batteri'), '');
+  const effect = await propertyInput(screen, 'Effekt', 'number');
+  await userEvent.clear(effect);
+  await userEvent.type(effect, 'Gratis');
+  await userEvent.click(screen.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
+  expect(await (await client.request(path)).json()).toEqual(saved);
+  expect(effect).toHaveProperty('value', 'Gratis');
+  await userEvent.clear(effect);
+  await userEvent.type(effect, '0');
+  await userEvent.selectOptions(await propertyInput(screen, 'Batteri', 'boolean'), 'true');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
   await waitFor(() =>
-    expect(screen.getByRole('status', { name: 'Hushållsarbetets status' }).textContent).toContain(
-      'utkast',
-    ),
+    expect(screen.queryByRole('dialog', { name: 'Redigera Paneler' })).toBeNull(),
   );
   await save();
   await openTypeEditor('Ändra typ: Solcellsanläggning', deadline);
-  await userEvent.selectOptions(screen.getAllByLabelText('Värdeslag')[2], 'number');
-  await userEvent.click(screen.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }));
-  await screen.findByText(/Fältets värdeslag används redan/);
-  expect(
-    (screen.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }) as HTMLButtonElement)
-      .disabled,
-  ).toBe(false);
-  await userEvent.selectOptions(screen.getAllByLabelText('Värdeslag')[2], 'date');
   await userEvent.clear(screen.getByLabelText('Typens namn'));
   await userEvent.type(screen.getByLabelText('Typens namn'), 'Solkraft');
   await userEvent.click(screen.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }));
-  await waitFor(() =>
-    expect(screen.getByRole('status', { name: 'Hushållsarbetets status' }).textContent).toContain(
-      'utkast',
-    ),
-  );
   await openTypeEditor('Ändra typ: Solkraft', deadline);
   await userEvent.click(
     screen.getByRole('button', { name: 'Stäng typformuläret utan att skicka' }),
   );
   await save();
+  const final: MapState = await (await client.request(path)).json();
+  expect(final.objects[0].properties?.map((p) => p.id)).toEqual(
+    saved.objects[0].properties?.map((p) => p.id),
+  );
+  expect(final.objects[0].properties).toContainEqual(
+    expect.objectContaining({ label: 'Effekt', value: 0 }),
+  );
 });
 
 test('a conflicting type offers both current choices and never grants an implicit save', async () => {
@@ -1515,7 +1477,7 @@ test('a conflicting type offers both current choices and never grants an implici
     version: 0,
     id: type.id,
     baseRevision: 1,
-    value: { name: 'Mitt namn', description: '', fields: [] },
+    value: { name: 'Mitt namn', description: '' },
   });
   fixture.setSubject('other-types');
   const other = fixture.client();
@@ -1529,7 +1491,7 @@ test('a conflicting type offers both current choices and never grants an implici
     version: 0,
     id: type.id,
     baseRevision: 1,
-    value: { name: 'Annans namn', description: 'Rättad definition', fields: [] },
+    value: { name: 'Annans namn', description: 'Rättad definition' },
   });
   await other.json(`${path}/save`, { version: 1, operationId: 'other-type' });
   await open();
@@ -1555,7 +1517,7 @@ test('a conflicting type offers both current choices and never grants an implici
     version: 2,
     id: type.id,
     baseRevision: 3,
-    value: { name: 'Gemensamt namn', description: '', fields: [] },
+    value: { name: 'Gemensamt namn', description: '' },
   });
   await other.json(`${path}/save`, { version: 3, operationId: 'other-again' });
   cleanup();
@@ -1563,7 +1525,6 @@ test('a conflicting type offers both current choices and never grants an implici
   await resolveProperties([
     ['Namn', 'Sparat i kartan nu', 'Gemensamt namn'],
     ['Beskrivning', 'Sparat i kartan nu', ''],
-    ['Avsnitt', 'Sparat i kartan nu', 'Ej uppgivet'],
   ]);
   expect((await openDraftReview()).getByText('Utkastet är tomt.', { exact: true })).toBeTruthy();
   const current = (await (await client.request(path)).json()) as MapState;
@@ -1574,12 +1535,8 @@ test('a conflicting type offers both current choices and never grants an implici
     id: type.id,
     baseRevision: basis.revision,
     value: {
-      name: 'Eget namn med nya avsnitt',
+      name: 'Eget namn med gemensam betydelse',
       description: '',
-      fields: [],
-      sections: [{ id: 'notes', name: 'Anteckningar' }],
-      builtins: [{ key: 'description', name: 'Beskrivning', sectionId: 'notes' }],
-      propertyOrder: ['builtin:description'],
     },
   });
   const theirs = (await (await other.request(path)).json()) as MapState;
@@ -1587,7 +1544,7 @@ test('a conflicting type offers both current choices and never grants an implici
     version: theirs.draft.version,
     id: type.id,
     baseRevision: basis.revision,
-    value: { name: 'Senare gemensamt namn', description: '', fields: [] },
+    value: { name: 'Senare gemensamt namn', description: '' },
   });
   await other.json(`${path}/save`, {
     version: theirs.draft.version + 1,
@@ -1595,15 +1552,10 @@ test('a conflicting type offers both current choices and never grants an implici
   });
   cleanup();
   await open();
-  await resolveProperties([
-    ['Namn', 'Ditt förslag', 'Eget namn med nya avsnitt'],
-    ['Avsnitt', 'Sparat i kartan nu', 'Ej uppgivet'],
-    ['Övriga uppgifter', 'Sparat i kartan nu', 'Ej uppgivet'],
-    ['Uppgifternas ordning', 'Sparat i kartan nu', 'Ej uppgivet'],
-  ]);
+  await resolveProperties([['Namn', 'Ditt förslag', 'Eget namn med gemensam betydelse']]);
   const combined = ((await (await client.request(path)).json()) as MapState).draft.objectTypes?.[0]
     .after;
-  expect(combined?.name).toBe('Eget namn med nya avsnitt');
+  expect(combined?.name).toBe('Eget namn med gemensam betydelse');
   expect(combined).not.toHaveProperty('sections');
   expect(combined).not.toHaveProperty('builtins');
   expect(combined).not.toHaveProperty('propertyOrder');
@@ -1616,11 +1568,11 @@ test('abandoning an object form confirms text loss and filters clear without cha
   await save();
   const original = await (await client.request(path)).json();
   await editTableObjectForm('Lo Rymdprov');
-  await userEvent.clear(screen.getByLabelText('Beskrivning'));
-  await userEvent.type(screen.getByLabelText('Beskrivning'), 'Oskickad vytext');
+  await userEvent.clear(await propertyInput(screen, 'Beskrivning'));
+  await userEvent.type(await propertyInput(screen, 'Beskrivning'), 'Oskickad vytext');
   await userEvent.click(screen.getByRole('button', { name: 'Tabell' }));
   await userEvent.click(screen.getByRole('button', { name: 'Fortsätt redigera' }));
-  expect((screen.getByLabelText('Beskrivning') as HTMLTextAreaElement).value).toBe(
+  expect(((await propertyInput(screen, 'Beskrivning')) as HTMLTextAreaElement).value).toBe(
     'Oskickad vytext',
   );
   await userEvent.click(screen.getByRole('button', { name: 'Tabell' }));
@@ -1655,11 +1607,14 @@ test('text-only table selection and confirmed form loss preserve household data 
   expect(table.getAllByText('✓ Markerad')).toHaveLength(1);
   await editTableObjectForm('Lo Urval');
   const form = within(screen.getByRole('dialog', { name: 'Redigera Lo Urval' }));
-  await userEvent.clear(form.getByLabelText('Beskrivning'));
-  await userEvent.type(form.getByLabelText('Beskrivning'), 'Behåll utan kartgrafik');
+  await userEvent.clear(await propertyInput(form, 'Beskrivning'));
+  await userEvent.type(await propertyInput(form, 'Beskrivning'), 'Behåll utan kartgrafik');
   await userEvent.click(form.getByRole('button', { name: 'Stäng objektdialogen' }));
   await userEvent.click(screen.getByRole('button', { name: 'Fortsätt redigera' }));
-  expect(form.getByLabelText('Beskrivning')).toHaveProperty('value', 'Behåll utan kartgrafik');
+  expect(await propertyInput(form, 'Beskrivning')).toHaveProperty(
+    'value',
+    'Behåll utan kartgrafik',
+  );
   await userEvent.click(form.getByRole('button', { name: 'Stäng objektdialogen' }));
   await userEvent.click(screen.getByRole('button', { name: 'Kasta ändringarna och fortsätt' }));
   const lo = table.getByRole('button', { name: 'Lo Urval' });
@@ -1669,7 +1624,7 @@ test('text-only table selection and confirmed form loss preserve household data 
   expect(await (await client.request(path)).json()).toEqual(original);
 });
 
-test('relationship lifecycle corrections preserve uncertain dates through private review and explicit saves', async () => {
+test('relationship lifecycle corrections preserve ordinary date properties through private review and explicit saves', async () => {
   const user = userEvent.setup();
   const read = async (): Promise<MapState> => (await client.request(path)).json();
   const initial = await read();
@@ -1686,7 +1641,6 @@ test('relationship lifecycle corrections preserve uncertain dates through privat
           value: {
             typeId: initial.types.find((item) => item.name === type)?.id,
             name,
-            description: '',
           },
         })
       ).status,
@@ -1702,9 +1656,9 @@ test('relationship lifecycle corrections preserve uncertain dates through privat
           sourceId: 'person',
           targetId: 'subscription',
           typeId: initial.relationshipTypes.find((item) => item.name === 'Använder')?.id,
-          knowledge: 'known',
+
           lifecycle: 'ended',
-          endDate: { knowledge: 'known', value: '2000-01-01' },
+          properties: [{ id: 'date', label: 'Slutdatum', kind: 'date', value: '2000-01-01' }],
         },
       })
     ).status,
@@ -1721,24 +1675,19 @@ test('relationship lifecycle corrections preserve uncertain dates through privat
   await open();
   const details = await openObjectRelationships('Lo Exempel');
   expect(details.getByText('Manuellt upphört', { exact: true })).toBeTruthy();
-  expect(details.getByText('2000-01-01', { exact: true })).toBeTruthy();
+  expect(details.getByText('2000-01-01 (Datum)', { exact: true })).toBeTruthy();
   expect(details.getByText('Upphört', { exact: true })).toBeTruthy();
   await user.click(details.getByRole('button', { name: 'Redigera samband' }));
   let editor = within(screen.getByRole('dialog', { name: /^Samband för / }));
   await user.selectOptions(editor.getByLabelText('Sambandets status'), 'active');
-  await user.selectOptions(
-    editor.getByLabelText('Sambandets slutdatum: uppgiftens säkerhet'),
-    'uncertain',
-  );
-  expect(
-    (editor.getByLabelText('Sambandets slutdatum', { exact: true }) as HTMLInputElement).value,
-  ).toBe('2000-01-01');
+  expect(await propertyInput(editor, 'Slutdatum', 'date')).toHaveProperty('value', '2000-01-01');
+  await user.selectOptions(await propertyInput(editor, 'Osäkert uppgivet', 'boolean'), 'true');
   await stageRelationship();
   const review = await readDraftProposal('Lo Exempel → Använder → Familjemusik');
   expect(review.getByText('Gäller fortfarande', { exact: true })).toBeTruthy();
   expect(review.getByText('Manuellt upphört', { exact: true })).toBeTruthy();
-  expect(review.getByText('2000-01-01', { exact: true })).toBeTruthy();
-  expect(review.getByText('2000-01-01 (Osäkert uppgivet)', { exact: true })).toBeTruthy();
+  expect(review.getAllByText('2000-01-01 (Datum)', { exact: true })).toHaveLength(2);
+  expect(review.getByText('Ja (Ja/nej)', { exact: true })).toBeTruthy();
   await closeProposal();
   const staged = await read();
   expect(staged.objects).toEqual(saved.objects);
@@ -1751,7 +1700,6 @@ test('relationship lifecycle corrections preserve uncertain dates through privat
       sourceId: 'person',
       targetId: 'subscription',
       lifecycle: 'active',
-      endDate: { knowledge: 'uncertain', value: '2000-01-01' },
     },
   });
   await save();
@@ -1763,7 +1711,6 @@ test('relationship lifecycle corrections preserve uncertain dates through privat
     sourceId: 'person',
     targetId: 'subscription',
     lifecycle: 'active',
-    endDate: { knowledge: 'uncertain', value: '2000-01-01' },
   });
   expect(active.draft.relationships ?? []).toEqual([]);
   expect(active.draft.changes).toEqual([]);
@@ -1782,25 +1729,23 @@ test('relationship lifecycle corrections preserve uncertain dates through privat
   expect(currentDetails.queryByText('Upphört', { exact: true })).toBeNull();
   await user.click(currentDetails.getByRole('button', { name: 'Redigera samband' }));
   editor = within(screen.getByRole('dialog', { name: /^Samband för / }));
-  await user.selectOptions(editor.getByLabelText('Sambandets status'), '');
-  expect(
-    (editor.getByLabelText('Sambandets slutdatum', { exact: true }) as HTMLInputElement).value,
-  ).toBe('2000-01-01');
-  expect(
-    (editor.getByLabelText('Sambandets slutdatum: uppgiftens säkerhet') as HTMLSelectElement).value,
-  ).toBe('uncertain');
+  await user.selectOptions(editor.getByLabelText('Sambandets status'), 'ended');
+  expect(await propertyInput(editor, 'Slutdatum', 'date')).toHaveProperty('value', '2000-01-01');
+  expect(await propertyInput(editor, 'Osäkert uppgivet', 'boolean')).toHaveProperty(
+    'value',
+    'true',
+  );
   await stageRelationship();
   const followingReview = await readDraftProposal('Lo Exempel → Använder → Familjemusik');
-  expect(followingReview.getByText('Följ slutdatum', { exact: true })).toBeTruthy();
+  expect(followingReview.getByText('Manuellt upphört', { exact: true })).toBeTruthy();
   await closeProposal();
   const following = await read();
   expect(following.relationships).toEqual(active.relationships);
   expect(following.draft.relationships?.[0].before).toEqual(active.relationships[0]);
-  expect(following.draft.relationships?.[0].after).not.toHaveProperty('lifecycle');
-  expect(following.draft.relationships?.[0].after?.endDate).toEqual({
-    knowledge: 'uncertain',
-    value: '2000-01-01',
-  });
+  expect(following.draft.relationships?.[0].after).toHaveProperty('lifecycle', 'ended');
+  expect(following.draft.relationships?.[0].after?.properties).toEqual(
+    active.relationships[0].properties,
+  );
   await save();
   const final = await read();
   expect(final.objects).toEqual(saved.objects);
@@ -1809,13 +1754,12 @@ test('relationship lifecycle corrections preserve uncertain dates through privat
     id: 'incoming',
     sourceId: 'person',
     targetId: 'subscription',
-    endDate: { knowledge: 'uncertain', value: '2000-01-01' },
   });
-  expect(final.relationships[0]).not.toHaveProperty('lifecycle');
+  expect(final.relationships[0]).toHaveProperty('lifecycle', 'ended');
   expect(final.draft.relationships ?? []).toEqual([]);
   expect(final.draft.changes).toEqual([]);
   const finalDetails = await openObjectRelationships('Lo Exempel');
-  expect(finalDetails.getByText('Följ slutdatum', { exact: true })).toBeTruthy();
-  expect(finalDetails.getByText('2000-01-01 (Osäkert uppgivet)', { exact: true })).toBeTruthy();
-  expect(finalDetails.queryByText('Upphört', { exact: true })).toBeNull();
+  expect(finalDetails.getByText('Manuellt upphört', { exact: true })).toBeTruthy();
+  expect(finalDetails.getByText('Ja (Ja/nej)', { exact: true })).toBeTruthy();
+  expect(finalDetails.getByText('Upphört', { exact: true })).toBeTruthy();
 });

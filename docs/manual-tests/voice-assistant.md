@@ -104,7 +104,8 @@ städning.
    musikföreningen.**; ditt förslag Lo Lind, Person, **Använder familjens
    musik.** Stäng konfliktdialogen utan att välja lösning ännu.
 2. Starta Prata med Skyttel med medgivande. Stäng textvyn, välj Tabell och
-   Redigera Kim Exempel. Skriv Osänd text som ska finnas kvar i beskrivningen.
+   Redigera Kim Exempel. Öppna **Fria egenskaper**. Skriv **Osänd text som
+   ska finnas kvar** i värdet för egenskapen **Beskrivning**.
 3. Låt det kontrollerade röstuppdraget behålla Lo-förslaget, rätta abonnemanget
    till 189 kr per månad och spara hela utkastet enligt tidslinjen. Behåll
    formuläret öppet medan det arbetar.
@@ -120,8 +121,12 @@ städning.
    namnvalet behåller Lo Lind och den samtidiga beskrivningsrättelsen bevaras.
    Läs pris, valuta och intervall. Öppna deras samband och läs
    inloggningsadress, kontaktadress, avtalspart, betalare och betalningsmedel.
-   Läs också okänd ägare, uttryckligen ingen användare, osäker användning och
-   kontokopplingens ospecificerade bankkonto.
+   Läs egenskapen **Osäkert uppgivet: Ja** på användningssambandet och
+   kontokopplingens ospecificerade bankkonto. Öppna **Föreningens
+   musikkonto** och läs dess två samband: **Tillhör tjänsten** till Molnmusik
+   och **Kontaktadress** till `familjen@example.test`. Öppna **Lindens
+   musikförening**: föreningen saknar samband och finns kvar som fristående
+   objekt.
 7. Slå av mikrofonen och välj Nytt samtal. Ingen ny medgivanderuta visas. Läs
    familjens kvitto igen; inget extra sparande tillkommer. Logga ut och avsluta
    provmiljön enligt tidslinjen.
@@ -135,7 +140,8 @@ Det verkliga talflödet har en egen mänsklig identitet, TAL-23.
 - Ett tydligt aktuellt besked sparar hela utkastet, även den egna rättelsen,
   utan ett extra obligatoriskt ja. Konflikter behöver däremot redas ut.
 - Sparstatus bygger på ett riktigt kvitto. Osänd text blir inte sparad. Konto,
-  adresser och roller behåller sin betydelse och kunskapsstatus.
+  adresser och roller behåller sin betydelse och sina fria egenskaper.
+  Alla samband har två verkliga objekt; fristående objekt är tillåtna.
 - Mikrofonavslag stoppar ny inspelning direkt. En tyst anslutning kan behålla
   mikrofonspåret för att låta Skyttel tala klart. När provmiljön avslutas
   frigörs resurserna. Inget verkligt plattformsresultat tillskrivs CI eller de
@@ -243,8 +249,13 @@ till TAL-17/23/24.
 1. Låt det kontrollerade markeringsuppdraget visa Lo Exempel. Läs vald Lo och
    dess uppgifter. Vid 640 × 500 och 320 × 250, fokusera Lo med tangentbordet
    och Shift+F10 → Fokusera markering. Panorera genom Navigera och stäng med
-   Stäng navigering. Lo ska förbli synlig och vald. Läs även **Påhittad
-   uppgift** i uppgiftsfönstret efter att hela svaret visas ovanför kartan.
+   Stäng navigering. Lo ska förbli synlig och vald. Rulla i uppgiftsfönstret
+   till egenskapen **Beskrivning** och läs **Påhittad uppgift (Text)** efter
+   att hela svaret visas ovanför kartan. Kontrollera hela värdet rad för rad
+   med röstrutan kvar. Varje textrad, inklusive den första, ska rymmas i
+   fönstrets läsyta och vara fri från överlappande kontroller.
+   I det kortaste fönstret kan titelraden rulla med uppgifterna när röstrutan
+   behöver utrymmet. Stängkrysset finns i början av läsytan.
 2. Återgå till 390 × 844. Förbered den blockerade kontrollen och det väntande
    sparförsöket enligt tidslinjen. Läs Skyttel kunde inte kontrollera om
    utkastet sparades. Mikrofonen är av.

@@ -19,11 +19,11 @@ angivet arbetssteg, tillsammans med UI-proceduren en gång.
 När ett steg kräver kvarvarande eller rättat Lo-förslag: öppna
 **Skriv till Skyttel → Visa utkastet → Visa förslaget: Lo Exempel**
 (eller det rättade namnet).
-Läs Person, det aktuella namnet och tom beskrivning (**Ej uppgivet**).
+Läs Person, det aktuella namnet och kontrollera att ingen egenskap Beskrivning finns.
 Stäng dialogen före nästa samtalssteg. När ett steg kräver sparad Lo:
 öppna **Tabell**, fäll ut objektets rad och läs samma fullständiga värden.
 Ett kvitto läses genom **Rapporter → Ändringshistorik → Visa ändringarna**.
-Läs objektets namn, typ och tom beskrivning (**Ingen beskrivning**) och välj
+Läs objektets namn, typ och **Inga egenskaper.** och välj
 **Tillbaka till arbetet**.
 Gör läsningen vid respektive bevarat/rättat/sparat steg, utan att lägga
 nya förslag i utkastet eller utföra ett extra sparande.
@@ -240,6 +240,114 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
 - **Väntar på ditt svar** består när mikrofonen är av. De sju punkterna
   är då nedtonade. Faktisk uppläsning provas i FRAGA-08.
 - Det skrivna svaret avlägsnar det gamla vänteläget; mikrofonen förblir av.
+
+### FRAGA-11: egenskapsfrågor och lika namn rättas i samma samtal
+
+**Syfte:** Ett tydligt telefonnummer läggs i utkastet medan oklar datatyp,
+upprepad etikett och lika objektnamn kräver rättning före respektive ändring.
+Tal och text använder samma samtal och utkast.
+
+**Användare:** Alex i en ny kontrollerad installation, vid 1280 × 720.
+
+**Förutsättningar:** Lägg fyra Person-objekt i utkastet genom **Nytt
+objekt** och **Lägg i utkastet och stäng**. Spara inte. Objektet **Lo
+Exempel** har två fria textegenskaper med etiketten **Notering**, i ordningen
+**Hem**, **Arbete**. Två objekt heter **Alex**: det ena har textegenskapen
+**Ort: Lund**, det andra **Ort: Umeå**. Det fjärde heter **Molnmusik**.
+Egenskaper läggs till genom **Fria egenskaper → Lägg till egenskap** med
+**Etikett**, **Datatyp** och **Värde**.
+
+**Separat förberedelse:** Använd den kontrollerade startguiden. Vid första
+hållningen släpper operatören `submit_changes` med `completion: draft`:
+ett `propose_object` behåller hela Lo-värdet och dess verkliga egenskaps-ID
+och lägger sist till `{"label":"Telefon","kind":"text","value":"0700123456"}`.
+Fältet `questions` innehåller exakt dessa tre frågor:
+
+1. **Ska Kod 0012 vara text eller tal?**
+1. **Vilken Notering ska tömmas: Hem eller Arbete?**
+1. **Vilken Alex använder Molnmusik: personen i Lund eller personen i Umeå?**
+
+Vid nästa hållning släpps en ny `submit_changes`, `completion: draft`,
+`questions: []`. Behåll samma Lo och alla returnerade egenskaps-ID; töm
+**Hem** genom att utelämna dess `value`, behåll **Arbete** och telefonnumret,
+och lägg till `{"label":"Kod","kind":"text","value":"0012"}`.
+Samma batch innehåller `propose_relationship` för **Använder**, från det
+verkliga Umeå-objektet till **Molnmusik**. Kopiera typ-ID och ändpunkts-ID
+från aktuellt underlag. Vid sista hållningen släpps `save_draft` med den
+returnerade versionen, aktuell `contentVersion` och ett nytt operations-ID.
+Återställ installationen enligt startguiden efter fallet.
+
+**Automatiskt motsvarande test:**
+[conversation-questions.spec.ts](../../tests/integration/conversation-questions.spec.ts),
+FRAGA-11. Kontrollerade leverantörssvar genom riktig server, gemensam
+MCP-ingång och SQLite verifierar arbetsflödet. De verifierar inte en
+verklig modells tolkning, fysisk mikrofon eller uppläsning. De mänskliga
+ljud- och skärmläsarobservationerna i FRAGA-08/09 kvarstår.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-questions.spec.ts",
+    "caseId": "FRAGA-11"
+  },
+  "reference": "Chromium 1280 × 720, kontrollerade text- och rösttransporter, riktig server och SQLite. Inledande talat uppdrag följs av tangentbordsinmatad rättning och nytt sparbesked i samma samtal.",
+  "outcomes": [
+    "Tre riktade frågor och besked om upphörd sparbegäran visas i samtalet. Telefonnumret och de tidigare förslagen finns kvar.",
+    "Skriven rättning tömmer Hem men bevarar Arbete, telefonnumret och övriga objekt; Kod behåller inledande nollor som text.",
+    "Sambandet skapas först efter identitetsrättningen. Ett nytt sparbesked ger Sparat, tomt utkast och läsbara sparade egenskaper."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-clarification.test.ts",
+      "title": "controlled clarification preserves the request, independent work and property identities until correction and fresh whole-save intent",
+      "purpose": "Kontrollerar bevarad leverantörskontext, verkliga egenskaps-ID, saknad betalningsändpunkt, uteblivet ogiltigt förslag och beständigt samlat sparande."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Välj **Prata med Skyttel** och godkänn samtalet. Säg det kontrollerade
+   uppdraget: **Lägg till telefon 0700123456 på Lo. Lägg till Kod 0012.
+   Töm Notering. Alex använder Molnmusik. Spara hela utkastet.** Låt
+   operatören släppa första batchen.
+1. Öppna **Skriv till Skyttel**. Läs alla tre frågor och beskedet att den
+   tidigare sparbegäran inte längre gäller.
+1. Välj **Visa utkastet → Visa förslaget: Lo Exempel**. Läs **Hem**,
+   **Arbete** och **0700123456**. Stäng läsdialogen och dölj utkastet.
+1. Fokusera **Meddelande till Skyttel** med tangentbordet. Skriv **Kod ska
+   vara text. Töm Hem. Det är Alex i Umeå. Spara inte.** Välj **Skicka**
+   och låt operatören släppa rättningsbatchen.
+1. Öppna Lo-förslaget igen. Läs **Notering: Tomt (Text)**, **Arbete**,
+   telefonnumret och **0012**. Stäng dialogen. Läs Alex och Molnmusik i
+   sambandsförslaget. Dölj utkastet.
+1. Skicka **Spara hela utkastet nu.** Släpp sparandet. Läs **Sparat** och
+   **Utkastet är tomt**. Öppna Lo Exempel i **Tabell** och läs samma fyra
+   egenskaper som efter rättningen.
+1. Sök **Ort Umeå** i tabellen och öppna **Samband för Alex**. Läs
+   sambandet till Molnmusik. Stäng dialogen. Sök **Ort Lund** och öppna
+   den andra Alex samband: listan är tom.
+
+**Förväntat resultat:**
+
+- Frågorna och ursprungsuppdraget hör till samma samtal. Det tydliga
+  telefonnumret och annat giltigt utkastarbete finns kvar medan frågor
+  väntar. Ingen oklar kod, tömning eller ändpunkt väljs automatiskt.
+- Rättningen kan skrivas efter det talade uppdraget. Hem töms med samma
+  egenskap och datatyp, Arbete bevaras och koden är text med inledande
+  nollor. Ett samband läggs till efter det preciserade identitetsvalet.
+- Rättningen med **Spara inte** ger inget sparbesked. Först det nya
+  uttryckliga sparbeskedet sparar hela utkastet.
 
 ## Verifierade sparbesked
 
@@ -641,8 +749,8 @@ med isolerad, nåbar HTTPS-installation, verklig inloggning och påhittade
 uppgifter. Loopback-adressen från launchern når inte en fysisk telefon.
 Verkliga leverantörsanrop kräver separat godkännande innan körning.
 Skapa Lo Exempel som Person med Påhittad uppgift när fallet behöver utkast;
-använd tom beskrivning för FRAGA. Återställ utkast och samtal mellan fallen,
-och ta bort provhushållet när granskningen är klar.
+lägg inte till någon egenskap Beskrivning för FRAGA. Återställ utkast och
+samtal mellan fallen, och ta bort provhushållet när granskningen är klar.
 
 **Kräver mänsklig observation:** Frågan hörs, kan besvaras med tal eller text,
 och väntan består med mikrofon av. Hela Sparat och dess ljud måste avslutas

@@ -575,13 +575,13 @@ inte genomfört försök.
    **Skyttel kunde inte kontrollera om utkastet sparades.** Läs symbolen, texten
    och kontrollknappen.
 2. Kontrollera mikrofon av. Öppna **Visa utkastet → Visa förslaget: Lo Exempel**
-   och läs **Person**, namn och **Ej uppgivet** i beskrivningen. Stäng
-   förslaget utan ändring.
+   och läs **Person**, namn och kontrollera att ingen egenskap Beskrivning
+   finns. Stäng förslaget utan ändring.
 3. När operatören tar bort nätverksblockeringen, välj **Kontrollera om
    utkastet sparades**. Läs
    **Utkastet är tomt.**. I **Tabell**, öppna **Lo Exempel** och läs
-   **Person** samt **Ej uppgivet** i beskrivningen. Detta avslutar fallet;
-   upprepa inte hela
+   **Person** och kontrollera att ingen egenskap Beskrivning finns.
+   Detta avslutar fallet; upprepa inte hela
    SPAR-02 efter kontrollen.
 
 **Förväntat resultat:**

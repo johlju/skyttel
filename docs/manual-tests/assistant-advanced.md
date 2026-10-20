@@ -51,213 +51,183 @@ innan nästa handling. Läs eller ändra samband genom **Samband för
 
 ## Typer och avtal
 
-### MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej
+### MCP-01: Egna typer och fria egenskaper skiljer tomt från nej
+
+**Syfte:** MCP och formulär visar samma individuella egenskaper, med tomma
+värden skilda från Nej.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Nytt tomt provhushåll och kontrollerad skrivklient utan
+språkmodell enligt startguiden. Följ
+[fångsterna](assistant-client-preparation.md#typer-och-avtal) vid varje
+klientsteg.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/assistant-advanced.spec.ts",
     "caseId": "MCP-01"
   },
-  "reference": "Kontrollerad OAuth/MCP-klient utan språkmodell, riktiga browserformulär och beständig SQLite; ny isolerad databas per fall.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "MCP skapar typen och hela objektförslag med obesvarat skilt från Nej.",
-    "Sparande och omstart bevarar alla egna fält och katalogändringar i webbläsaren."
+    "MCP och formulär visar samma individuella egenskaper, med tomma värden skilda från Nej.",
+    "Typändringar och samtliga egenskaper består efter sparande och omstart."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Prova typkatalogen, obesvarade fält och ett nytt värdeslag.
-
-**Användare:** Alex och den kontrollerade terminalklienten.
-
-**Förutsättningar:** Tom karta och tomt utkast i ett nytt provhushåll.
-Följ guidens fångster för MCP-01 vid varje klientsteg.
-
-**Integrationstest:**
-[assistant-advanced.spec.ts](../../tests/integration/assistant-advanced.spec.ts),
-testfallet “MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej”.
-
 **Steg:**
 
-1. Använd klientens fångster för att läsa aktuella typer i den tomma kartan.
-   Använd klientens fångster för att skapa
-   **Solcellsanläggning**, beskrivning **Hushållets elproduktion**, med
-   textfältet **Leverantör**, talfältet **Effekt**, datumfältet
-   **Installationsdatum** och ja/nej-fältet **Batteri**.
-2. Använd klientens fångster för att föreslå **Paneler på taket** med Leverantör
-   **Exempelsol**,
-   Effekt **12.5**, Installationsdatum **2026-09-01** och obesvarat Batteri.
-   Föreslå också **Paneler på garaget** med enbart Batteri **Nej**.
-3. Ladda om kartan. I **Visa utkastet** ska båda objekten och typen
-   finnas. Öppna varje objektförslag och läs hela värdena. Batteri ska
-   visa **Ej uppgivet** respektive **Nej**. Stäng läsdialogen.
-   Använd klientens fångster för att spara hela utkastet.
-4. Använd klientens fångster för att ändra det använda fältet Effekt från tal
-   till text. Kontrollera
-   att detta avvisas och att beskedet säger att ett nytt fält behövs.
-   Föreslå i stället ett nytt textfält **Effektanteckning**, med det gamla
-   fältet och alla dess värden kvar. Lämna det nya fältet obesvarat.
-5. Använd klientens fångster för att ändra den förifyllda typen Person till
-   **Person i hushållet**
-   med beskrivningen **Personer ger ingen inloggning**, och ta bort den
-   oanvända förifyllda typen Fordon. Spara hela utkastet.
-6. Starta om servern. Välj **Tabell → Redigera Paneler på taket** och
-   öppna avsnittet **Egna fält**. Kontrollera
-   de tre angivna värdena och att Batteri och Effektanteckning är tomma.
-   Stäng formuläret och redigera **Paneler på garaget**, med **Egna fält**
-   öppet: Batteri ska vara **Nej**.
-   Använd klientens fångster för att läsa katalogen igen och kontrollera
-   typändringarna.
+1. Läs katalogen och föreslå typen Solcellsanläggning med beskrivningen
+   Hushållets elproduktion. Typen har namn och beskrivning.
+2. Föreslå Paneler på taket med egna egenskaper: Leverantör (Text,
+   Exempelsol), Effekt (Tal, 12.5), Batteri (Ja/nej, tomt) och
+   Installationsdatum (Datum, 2026-09-01). Föreslå Paneler på garaget med
+   tomma Leverantör, Effekt och Installationsdatum samt Batteri (Ja/nej, Nej).
+3. Ladda om, öppna Visa utkastet och läs båda fullständiga objektförslagen.
+   Kontrollera värdena och skillnaden mellan Tomt och Nej. Stäng läsningen och
+   spara hela utkastet genom klienten.
+4. Ändra typens beskrivning till Redigerad gemensam betydelse. Ändra den
+   förifyllda Person till Person i hushållet med beskrivningen Personer ger
+   ingen inloggning. Ta bort den oanvända typen Fordon och spara hela
+   utkastet.
+5. Starta om med samma databas. Redigera båda panelobjekten i Tabell och öppna
+   Fria egenskaper. Läs alla angivna värden, de tomma raderna och Nej. Läs
+   katalogen igen genom klienten.
 
 **Förväntat resultat:**
 
-- Samma sparade definitioner och värden används av MCP och formulär.
-- Inga utelämnade värden uppfinns; inget fält konverteras eller kopieras.
-- Namnändring och oanvänd katalogborttagning bevaras efter omstart.
+- MCP och formulär visar samma individuella egenskaper, med tomma värden
+  skilda från Nej.
+- Typändringar och samtliga egenskaper består efter sparande och omstart.
 
-### MCP-02: daterade avtal kan rättas utan påhittade uppgifter
+### MCP-02: Fria avtalsuppgifter och separata datum kan rättas
+
+**Syfte:** Avtalens individuella belopp, datum, tomma rader och uttryckliga
+uppgifter behåller sina separata betydelser.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Nytt tomt provhushåll och kontrollerad skrivklient utan
+språkmodell enligt startguiden. Följ
+[fångsterna](assistant-client-preparation.md#typer-och-avtal) vid varje
+klientsteg.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/assistant-advanced.spec.ts",
     "caseId": "MCP-02"
   },
-  "reference": "Kontrollerad OAuth/MCP-klient utan språkmodell, riktiga browserformulär och beständig SQLite; ny isolerad databas per fall.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Daterade avtal behåller belopp, säkerheter och olika ekonomiska betydelser.",
-    "Rättelsen till noll bevarar äldre kreditfakta och riktade samband efter omstart."
+    "Avtalens individuella belopp, datum, tomma rader och uttryckliga uppgifter behåller sina separata betydelser.",
+    "Nollrättelsen bevarar övriga egenskaper, tidigare historik och verkliga riktade samband efter omstart."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Prova hushållets utökade avtal genom samma MCP-ingång.
-
-**Användare:** Alex och assistenten.
-
-**Förutsättningar:** Nytt provhushåll. Beloppen är påhittade.
-Följ guidens fångster för MCP-02 vid varje klientsteg.
-
-**Integrationstest:**
-[assistant-advanced.spec.ts](../../tests/integration/assistant-advanced.spec.ts),
-testfallet “MCP-02: daterade avtal kan rättas utan påhittade uppgifter”.
-
 **Steg:**
 
-1. Använd klientens fångster för att föreslå följande utan att spara ännu:
-   **Hyra för lägenheten**, hyresavtal med pris **9 500** och okända villkor;
-   **Hyra för garaget**, hyresavtal med osäkert pris **650**;
-   **Exempellån**, låneavtal med osäker skuld **125 000,50** uppgiven
-   **2026-09-01**; **Exempelkredit**, kreditavtal med kreditutrymme
-   **80 000** uppgivet **2026-08-01**, utnyttjad kredit **12 500** uppgiven
-   **2026-09-02** och uttryckligen inga villkor; **Bilens avbetalning**,
-   avbetalningsavtal med okänd skuld uppgiven **2026-09-03**.
-2. Föreslå bostaden **Lägenheten** och garaget **Garaget** som egna objekt.
-   Koppla respektive hyresavtal till rätt objekt med sambandet **Gäller**.
-   Föreslå **Familjens bil** som ett uttryckligen ospecificerat fordon
-   och sambandet **Bilens avbetalning → Finansierar → Familjens bil**.
-   Lämna alla andra ekonomiska uppgifter obesvarade. Granska utkastet i
-   samtalet och webbläsaren. Läs fulla förslag för Exempellån,
-   Exempelkredit, Bilens avbetalning och Familjens bil; kontrollera
-   osäkert, okänt, inget och
-   ospecificerat. Stäng läsdialogen och spara hela utkastet.
-3. Använd klientens fångster för att rätta enbart Exempelkredits utnyttjade
-   kredit till **0**,
-   uppgiven **2026-09-20**, och spara. Begär kvittot och den rättelsens
-   historik: det tidigare beloppet och datumet ska finnas där.
-4. Starta om och ladda om kartan. Sök varje avtal i **Tabell** och välj
-   dess redigeringsknapp. Öppna **Ekonomiska uppgifter**. Kontrollera angivna
-   belopp, datum och säkerheter. Exempelkredits skuld ska fortfarande
-   vara obesvarad, kreditutrymmet **80 000** och utnyttjad kredit **0**.
-   Bilens avbetalning ska visa **Okänt** för skuld och datum **2026-09-03**;
-   inget skuldbelopp ska anges. Stäng formuläret. Öppna
-   **Rapporter → Ändringshistorik → Visa ändringarna** för krediträttelsen.
-   Under **Före sparandet** läser du **12 500** och **2026-09-02**;
-   under **Efter sparandet** läser du **0** och **2026-09-20**.
-   Välj **Tillbaka till arbetet**. Öppna avtalens namngivna **Samband** och kontrollera
-   finansieringssambandet till bilen och båda hyresavtalens
-   riktade samband till rätt bostad respektive garage.
+1. Använd fångsterna för fem avtal. Hyra för lägenheten har Pris (Text, 9 500)
+   och en tom textegenskap Avtalsvillkor. Hyra för garaget har Pris (Tal, 650)
+   och Osäkert uppgivet (Ja/nej, Ja). Exempellån har Senast uppgiven skuld
+   (Text, 125 000,50), Osäkert uppgivet (Ja/nej, Ja) och Datum för uppgiften
+   (Datum, 2026-09-01).
+2. Exempelkredit har Beviljat kreditutrymme (Tal, 80000), Kreditutrymmets
+   datum (Datum, 2026-08-01), Utnyttjad kredit (Tal, 12500), Utnyttjad kredits
+   datum (Datum, 2026-09-02) och Avtalsvillkor (Text, Uttryckligen inget).
+   Bilens avbetalning har tom Senast uppgiven skuld (Tal) och Datum för
+   uppgiften (Datum, 2026-09-03).
+3. Föreslå Lägenheten, Garaget och det ospecificerade fordonet Familjens bil
+   som verkliga objekt. Koppla hyresavtalen till respektive objekt med Gäller
+   och Bilens avbetalning till Familjens bil med Finansierar. Läs varje avtals
+   fulla förslag i webbläsaren och spara hela utkastet.
+4. Rätta endast Exempelkredits egenskaper Utnyttjad kredit till 0 och
+   Utnyttjad kredits datum till 2026-09-20. Behåll samma egenskapsidentiteter
+   och alla andra rader. Granska och spara genom klienten.
+5. Starta om och redigera Exempelkredit i Tabell → Fria egenskaper. Läs 0,
+   2026-09-20 och oförändrat kreditutrymme 80000. Öppna Rapporter och Visa
+   ändringarna för rättelsen. Läs tidigare 12500 och 2026-09-02 samt nya
+   värden. Läs de tre riktade sambanden från respektive avtal.
 
 **Förväntat resultat:**
 
-- Hyra blir inte abonnemang. Lån, kredit och avbetalning behåller sina typer.
-- Belopp, datum och säkerheter skiljs åt; rättelsen behåller tidigare fakta
-  i historiken och fyller inte i obesvarade uppgifter.
+- Avtalens individuella belopp, datum, tomma rader och uttryckliga uppgifter
+  behåller sina separata betydelser.
+- Nollrättelsen bevarar övriga egenskaper, tidigare historik och verkliga
+  riktade samband efter omstart.
 
 ## Livscykel och samtidighet
 
-### MCP-03: typbyte bevarar riktade samband och äldre typers läsbara historik
+### MCP-03: Typbyte och uttrycklig datatypsrättelse bevarar historik
+
+**Syfte:** Typbyte bevarar objektets och sambandens identiteter; datatypen
+ändras bara genom det uttryckliga egenskapsförslaget.
+
+**Användare:** Alex, och Robin när två profiler anges.
+
+**Förutsättningar:** Nytt tomt provhushåll och kontrollerad skrivklient utan
+språkmodell enligt startguiden. Följ
+[fångsterna](assistant-client-preparation.md#typer-och-avtal) vid varje
+klientsteg.
 
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
     "spec": "tests/integration/assistant-advanced.spec.ts",
     "caseId": "MCP-03"
   },
-  "reference": "Kontrollerad OAuth/MCP-klient utan språkmodell, riktiga browserformulär och beständig SQLite; ny isolerad databas per fall.",
+  "reference": "Chromium, riktig lokal server och SQLite; konfiguration enligt förutsättningarna.",
   "outcomes": [
-    "Typbyte behåller objektidentitet och riktade samband utan namnbaserad fältkonvertering.",
-    "Webbläsarens fulla historik behåller äldre typnamn och värden när den gamla typen tas bort."
+    "Typbyte bevarar objektets och sambandens identiteter; datatypen ändras bara genom det uttryckliga egenskapsförslaget.",
+    "Historiken behåller Ramnummer som Text med SYNTH-42 och därefter Tal med 42, även när den äldre typen tas bort."
   ]
 }
 ```
 -->
 <!-- markdownlint-enable MD013 -->
 
-**Syfte:** Prova typbyte, riktning, dubbletter och historiska typnamn.
-
-**Användare:** Alex och assistenten.
-
-**Förutsättningar:** Nytt provhushåll och aktuellt kartmedgivande.
-Följ guidens fångster för MCP-03 vid varje klientsteg.
-
-**Integrationstest:**
-[assistant-advanced.spec.ts](../../tests/integration/assistant-advanced.spec.ts),
-testfallet “MCP-03: typbyte bevarar riktade samband och äldre typers läsbara
-historik”.
-
 **Steg:**
 
-1. Använd klientens fångster för att skapa Cykel med textfältet Nummer och
-   Motorfordon med
-   talfältet Nummer. Skapa **Alex blå cykel**, typ Cykel, Nummer **SYNTH-42**,
-   samt objektet **Garaget** med en annan aktuell typ.
-2. Skapa sambandstypen **Förvaring**, beskrivning **Sakens plats**, med
-   framåtnamnet **förvaras i** och bakåtnamnet **innehåller**. Koppla cykeln
-   till garaget. Be om exakt samma samband igen: befintligt samband ska
-   återanvändas. Lägg även till en annan befintlig sambandstyp mellan
-   samma objekt. Granska riktningarna och spara hela utkastet.
-3. Använd klientens fångster för att byta cykelns typ till Motorfordon. Välj
-   uttryckligen
-   Nummer **42**. Granska gammal typ och **SYNTH-42** samt ny typ och **42**
-   i förslagets fulla läsdialog, under **Sparade värden** och
-   **Föreslagna värden**. Stäng och spara. Kontrollera att cykeln och
-   båda dess riktade samband finns kvar. Den separata klientförberedelsen
-   jämför deras exakta identiteter och kvittot.
-4. Ta bort den nu oanvända typen Cykel och spara. Läs klientens historik
-   för cykeln och välj typbytets hela sparande. Öppna också
-   **Rapporter → Ändringshistorik** i webbläsaren och **Visa ändringarna**
-   för typbytet. Läs de tidigare värdena med
-   typen Cykel och Nummer SYNTH-42 samt de nya värdena med Motorfordon
-   och Nummer 42.
+1. Skapa typerna Cykel och Motorfordon med namn och tom typbeskrivning.
+   Föreslå Alex blå cykel av typen Cykel med Ramnummer (Text, SYNTH-42), och
+   Garaget som separat verkligt objekt.
+2. Skapa Förvaring med benämningarna förvaras i och innehåller. Koppla cykeln
+   till Garaget. Föreslå samma samband igen och kontrollera att befintligt
+   samband återanvänds. Föreslå en annan befintlig sambandstyp mellan samma
+   objekt och spara hela utkastet.
+3. Föreslå cykeln med typen Motorfordon och rätta uttryckligen samma
+   Ramnummer-egenskap till datatyp Tal och värde 42. Granska gammal typ och
+   SYNTH-42 samt ny typ och 42 i förslagets båda sidor. Spara och kontrollera
+   att båda riktade sambanden består.
+4. Ta bort den nu oanvända Cykel-typen och spara. Läs typbytets hela
+   sparkvitto genom klienten. Redigera cykeln och läs Ramnummer 42 under Fria
+   egenskaper. Öppna också Rapporter och läs före och efter för typbytet.
 
 **Förväntat resultat:**
 
-- Typbyte överför inte värden på grund av lika fältnamn. Objektets ID
-  och de riktade sambanden bevaras.
-- Historiken behåller typbytets äldre typnamn och värden även när den
-  aktuella typen tas bort. Läsningen skapar inga nya förslag.
+- Typbyte bevarar objektets och sambandens identiteter; datatypen ändras bara
+  genom det uttryckliga egenskapsförslaget.
+- Historiken behåller Ramnummer som Text med SYNTH-42 och därefter Tal med 42,
+  även när den äldre typen tas bort.
 
 ### MCP-04: upphört innehåll och privata utkast skyddar typer
 
@@ -296,11 +266,13 @@ testfallet “MCP-04: upphört innehåll och privata utkast skyddar typer”.
 
 1. Använd klientens fångster för att skapa **Upphörd typ**, **Privat använd
    typ** och
-   **Samtidig typ**, alla utan fält. Skapa **Upphört testobjekt** med
+   **Samtidig typ**, alla med namn och beskrivning. Skapa **Upphört
+   testobjekt** med
    Upphörd typ och status Upphört. Spara allt. Försök ta bort Upphörd typ:
    felet ska förklara att användande innehåll måste hanteras först.
 2. Robin väljer **Nytt objekt**, typ Privat använd typ, namn
-   **Andras privata namn**, beskrivning **Privat hemlig anteckning**, och
+   **Andras privata namn**, en fri textegenskap **Beskrivning** med **Privat
+   hemlig anteckning**, och
    **Lägg i utkastet och stäng** utan att spara. Alex använder klienten för att
    ta bort
    Privat använd typ. Kontrollera avvisningen och att varken namn eller
@@ -319,7 +291,7 @@ testfallet “MCP-04: upphört innehåll och privata utkast skyddar typer”.
    läsdialoger. **Andras privata namn** ska ha typen **Privat använd typ**
    och beskrivningen **Privat hemlig anteckning**.
    **Senare privat användning** ska ha typen **Samtidig typ** och
-   **Ej uppgivet** som beskrivning. Alex försöker åter ta bort Privat
+   inga fria egenskaper. Alex försöker åter ta bort Privat
    använd typ och spara borttagningen av Samtidig typ enligt förberedelsen.
    Båda försöken ska avvisas utan privata namn eller beskrivningar.
    Utför förberedelsens separata kontroll av privata objektidentiteter
@@ -383,7 +355,8 @@ färskt underlag”.
    ```
 
    Följ den separata
-   [historikförberedelsens fångst](assistant-client-preparation.md#historikläsning-mcp-06)
+   [historikförberedelsens
+   fångst](assistant-client-preparation.md#historikläsning-mcp-06)
    direkt efter sparandet och behåll den under databasbytet.
    Namnet är ett syntetiskt provobjekt; Person ger ingen inloggning.
 2. Öppna **Inställningar → Fullständig export**. Läs informationen om
@@ -394,19 +367,22 @@ färskt underlag”.
    ny tom tillfällig databas med samma guide, logga in i ett nytt privat
    fönster och skapa hushållet **MCP-prov**. Anslut en ny terminalklient.
 4. Följ
-   [historikförberedelsens fångst före import](assistant-client-preparation.md#historikläsning-mcp-06)
+   [historikförberedelsens fångst före
+   import](assistant-client-preparation.md#historikläsning-mcp-06)
    i den nya tomma databasen. Skicka inte det gamla förslaget ännu.
 5. I administrationens **Återimport**, välj ZIP-filen från första
    databasen, granska den och bekräfta hela ersättandet. Följ
-   [IMPORT-01:s importsteg](household-import.md#import-01-ersätt-hushållet-med-tangentbordet)
+   [IMPORT-01:s
+   importsteg](household-import.md#import-01-ersätt-hushållet-med-tangentbordet)
    vid behov. Gör ingen
    ägarkoppling för den historiska författaren. Starta om med den andra
    databasens oförändrade sökväg. Lampan ska finnas i kartan.
-6. Lägg ett oberoende förslag **Oberoende utkast**, beskrivning
-   **Privat lampanteckning**, i utkastet genom klienten enligt den separata
+6. Lägg ett oberoende förslag **Oberoende utkast**, med den fria textegenskapen
+   Beskrivning: **Privat lampanteckning**, i utkastet genom klienten enligt
+   den separata
    förberedelsen. Ladda om kartan efter klientens nya förslag. Läs sedan
    den importerade lampans historik enligt den separata
-   [historikförberedelsen](assistant-client-preparation.md#historikläsning-mcp-06).
+[historikförberedelsen](assistant-client-preparation.md#historikläsning-mcp-06).
    Öppna **Rapporter → Ändringshistorik → Visa ändringarna** och läs
    lampans namn, typ och historiska författare. Öppna
    **Identifiera sparandet och användaren** och kontrollera att den
@@ -417,11 +393,12 @@ färskt underlag”.
    ska ha gjort dess underlag ogiltigt. Kasta bara det oberoende förslaget
    efter läsningen och ladda om kartan igen. Redigera **Historisk lampa**
    i **Tabell**, ändra namnet
-   till **Rättad historisk lampa**, behåll typ och tom beskrivning och
+   till **Rättad historisk lampa**, behåll typ och egenskaper och
    välj **Lägg i utkastet och stäng**. Läs hela förslaget i webbläsaren.
    Använd klientens färska fångst för samma rättelse och spara hela utkastet.
 8. Starta om den andra databasen. Redigera lampan i **Tabell** och
-   kontrollera nytt namn, samma typ och tom beskrivning. Stäng formuläret.
+   kontrollera nytt namn, samma typ och oförändrade egenskaper. Stäng
+   formuläret.
    Läs klientens historik: både importerad skapelse och aktuell rättelse
    ska finnas med respektive författare.
 
@@ -458,7 +435,8 @@ The optional final argument is `read` or `write`; omission requests map work
 with `write`. Read-only access requires the separate AI choice and
 **Godkänn läsåtkomst**. Map work additionally requires its own choice and
 **Godkänn kartarbete**. Use the
-[scope-specific preparation](assistant-client-preparation.md#installation-medgivande-och-städning)
+[scope-specific
+preparation](assistant-client-preparation.md#installation-medgivande-och-städning)
 for the access cases. It receives its own short-lived grant, never reads
 SQLite or browser
 cookies, and never uses saved Codex credentials. Tokens and captured requests
@@ -468,7 +446,8 @@ or use real household information.
 
 ### Start a disposable installation
 
-Complete the existing [local authentication setup](../development/devcontainer.md#set-up-local-sign-in)
+Complete the existing [local authentication
+setup](../development/devcontainer.md#set-up-local-sign-in)
 and [port-3301 Google configuration](../development/local-authentication.md)
 first. Reuse the configured administrator and private development environment
 file. The default is `.devcontainer/.env`; set `SKYTTEL_DEV_ENV_FILE` to your
@@ -476,7 +455,8 @@ existing file if different. Do not print its contents. Stop ordinary
 development servers and keep port 3301 free.
 
 This is the port-3301 counterpart of the
-[disposable browser setup](../development/devcontainer.md#disposable-local-database).
+[disposable browser
+setup](../development/devcontainer.md#disposable-local-database).
 It keeps the database through restarts. Stop and restart only the server
 process during a persistence check; keep the temporary directory.
 
@@ -588,19 +568,22 @@ unknown top-level fields and caller-supplied versions; the server validates
 the complete values when `send` submits the request. Use `capture-save` for
 saving: generic commands reject both `save_draft` and `prepare_save`.
 
-For example, prepare a new synthetic object type with a yes/no field:
+For example, prepare a new synthetic object type and an individual yes/no
+property:
 
 <!-- markdownlint-disable MD013 -->
 ```text
 read-tool read_type_catalog {}
-capture-tool type-example propose_object_type {"id":"manual-device","baseRevision":null,"value":{"name":"Provenhet","description":"Påhittad typ","fields":[{"id":"manual-enabled","name":"Aktiv","description":"","kind":"boolean"}]}}
+capture-tool type-example propose_object_type {"id":"manual-device","baseRevision":null,"value":{"name":"Provenhet","description":"Påhittad typ"}}
 send type-example
+capture-tool object-example propose_object {"id":"manual-device-object","baseRevision":null,"value":{"typeId":"manual-device","name":"Provenheten","properties":[{"id":"manual-enabled","label":"Aktiv","kind":"boolean","value":false}]}}
+send object-example
 read
 ```
 <!-- markdownlint-enable MD013 -->
 
 Check the entire draft before capturing and sending a save. Leaving the
-yes/no field unanswered is distinct from explicitly supplying `false` on
+yes/no property empty is distinct from explicitly supplying `false` on
 an object. The area's manual case provides the complete scenario and
 expected results.
 
@@ -634,3 +617,10 @@ unset SKYTTEL_MCP_CASE_DIR
 
 Start ordinary development again with `npm run dev:all`. Use a fresh database
 and helper process for the next isolated case.
+
+## Modellens avvecklade beteenden
+
+MCP-01–04 och MCP-06 behåller sina identiteter. Typstyrda fält och
+användningsspärren för deras datatyper har avvecklats. Individuella
+egenskapers tomma värden, datatyper och historik provas i de fortsatta
+fallen. Typnamn och typbeskrivningar förblir gemensamma definitioner.

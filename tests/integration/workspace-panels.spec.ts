@@ -25,13 +25,19 @@ import { closeTableObject, editTableObject, readTableObject } from '../support/d
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
+import {
+  openProperties,
+  propertyRow,
+  propertyValue,
+  setProperty,
+} from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, textModel } from '../support/text-model.js';
 
 async function addObject(page: Page, name: string, description = '') {
   const form = await openNewObject(page);
   await form.getByLabel('Namn', { exact: true }).fill(name);
-  if (description) await form.getByLabel('Beskrivning', { exact: true }).fill(description);
+  if (description) await setProperty(form, 'Beskrivning', description);
   await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
   await expect(form).not.toBeVisible();
 }
@@ -127,7 +133,7 @@ test('PANEL-05: pending object staging keeps the modal and returns to reading be
     const edit = page.getByRole('button', { name: 'Redigera Cykeln', exact: true });
     await edit.click();
     const form = page.getByRole('dialog', { name: 'Redigera Cykeln', exact: true });
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Skickad beskrivning');
+    await setProperty(form, 'Beskrivning', 'Skickad beskrivning');
     let responseReady = () => {};
     const ready = new Promise<void>((resolve) => {
       responseReady = resolve;
@@ -143,7 +149,9 @@ test('PANEL-05: pending object staging keeps the modal and returns to reading be
     });
     await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await ready;
-    await expect(form.getByLabel('Beskrivning', { exact: true })).toBeDisabled();
+    await expect(
+      propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true }),
+    ).toBeDisabled();
     await expect(
       form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }),
     ).toBeDisabled();
@@ -170,10 +178,13 @@ test('PANEL-05: pending object staging keeps the modal and returns to reading be
     const draft = await openDraftReview(page);
     await draft.getByRole('button', { name: 'Visa förslaget: Cykeln', exact: true }).click();
     const proposal = page.getByRole('dialog', { name: 'Cykeln', exact: true });
-    await expect(proposal.getByText('Skickad beskrivning', { exact: true })).toBeVisible();
+    await expect(proposal.getByText('Skickad beskrivning (Text)', { exact: true })).toBeVisible();
     await expect(proposal).toContainText('Cykeln');
     expect(
-      state.draft.changes.find((change) => change.after?.name === 'Cykeln')?.after?.description,
+      propertyValue(
+        state.draft.changes.find((change) => change.after?.name === 'Cykeln')?.after,
+        'Beskrivning',
+      ),
     ).toBe('Skickad beskrivning');
   } finally {
     releaseResponse();
@@ -211,7 +222,7 @@ test('PANEL-01: complete object dialogs stage separate proposals and native read
       ).toBeVisible();
       await closeTableObject(page, name);
       const form = await editTableObject(page, name);
-      await form.getByLabel('Beskrivning', { exact: true }).fill(`Lagt i utkastet om ${name}`);
+      await setProperty(form, 'Beskrivning', `Lagt i utkastet om ${name}`);
       await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
       await expect(form).not.toBeVisible();
     }
@@ -237,7 +248,9 @@ test('PANEL-01: complete object dialogs stage separate proposals and native read
     await page.reload();
     for (const name of ['Cykeln', 'Bilen', 'Garaget']) {
       const reader = await readTableObject(page, name);
-      await expect(reader.getByText(`Lagt i utkastet om ${name}`, { exact: true })).toBeVisible();
+      await expect(
+        reader.getByText(`Lagt i utkastet om ${name} (Text)`, { exact: true }),
+      ).toBeVisible();
       await closeTableObject(page, name);
     }
     const state: MapState = await (await page.request.get(path)).json();
@@ -251,7 +264,7 @@ test('PANEL-01: complete object dialogs stage separate proposals and native read
     await newest.getByText('Visa ändringarna', { exact: true }).click();
     for (const name of ['Cykeln', 'Bilen', 'Garaget'])
       await expect(
-        newest.getByText(`Beskrivning: Lagt i utkastet om ${name}`, { exact: true }),
+        newest.getByText(`Beskrivning: Lagt i utkastet om ${name} (Text)`, { exact: true }),
       ).toBeVisible();
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
   } finally {
@@ -320,16 +333,18 @@ test('PANEL-03: an intervening proposal preserves local text and rejects stale c
     const source = state.objects[0];
     await editTableObject(page, 'Cykeln');
     const form = page.getByRole('dialog', { name: 'Redigera Cykeln', exact: true });
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Min oskickade text');
+    await setProperty(form, 'Beskrivning', 'Min oskickade text');
     const other = await createPreparedContext(browser);
     try {
       await signIn(other.request, installation.origin);
       const second = await other.newPage();
       await second.goto(installation.origin);
       const secondForm = await editTableObject(second, 'Cykeln');
-      await secondForm
-        .getByLabel('Beskrivning', { exact: true })
-        .fill('Nyare förslag från samma användares andra klient');
+      await setProperty(
+        secondForm,
+        'Beskrivning',
+        'Nyare förslag från samma användares andra klient',
+      );
       await secondForm
         .getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true })
         .click();
@@ -340,13 +355,24 @@ test('PANEL-03: an intervening proposal preserves local text and rejects stale c
       const native: MapState = await (await page.request.get(path)).json();
       expect(native.draft.changes[0].after).toMatchObject({
         name: 'Cykeln',
-        description: 'Nyare förslag från samma användares andra klient',
         typeId: source.typeId,
+        properties: [
+          {
+            id: expect.any(String),
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Nyare förslag från samma användares andra klient',
+          },
+        ],
       });
     } finally {
       await other.close();
     }
     const native: MapState = await (await page.request.get(path)).json();
+    const nativeProposal = native.draft.changes.find((change) => change.id === source.id);
+    if (!nativeProposal?.after)
+      throw new Error('The second client must stage its complete proposal');
+    const nativeProperties = nativeProposal.after.properties;
     const response = await page.request.post(`${path}/draft`, {
       headers: { origin: installation.origin },
       data: {
@@ -354,23 +380,33 @@ test('PANEL-03: an intervening proposal preserves local text and rejects stale c
         baseRevision: source.revision,
         version: native.draft.version,
         contentVersion: state.contentVersion,
-        value: { ...source, description: 'Nyare förslag från samma användares andra klient' },
+        value: nativeProposal.after,
       },
     });
     expect(response.status()).toBe(200);
     const newer: MapState = await (await page.request.get(path)).json();
+    expect(newer.draft.changes.find((change) => change.id === source.id)?.after).toEqual(
+      nativeProposal.after,
+    );
+    expect(
+      newer.draft.changes.find((change) => change.id === source.id)?.after?.properties,
+    ).toEqual(nativeProperties);
     await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await expect(form.getByRole('alert')).toContainText('Dina uppgifter finns kvar.');
-    await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue('Min oskickade text');
+    await expect(propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
+      'Min oskickade text',
+    );
     await expect(form.getByLabel('Namn', { exact: true })).toHaveValue('Cykeln');
     expect(await (await page.request.get(path)).json()).toEqual(newer);
     await form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
     await page.getByRole('button', { name: 'Kasta ändringarna och fortsätt', exact: true }).click();
     await page.reload();
     await editTableObject(page, 'Cykeln');
-    await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
+    await openProperties(form);
+    await expect(propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
       'Nyare förslag från samma användares andra klient',
     );
+    expect(await (await page.request.get(path)).json()).toEqual(newer);
     expect((await (await page.request.get(`${path}/history`)).json()).history).toHaveLength(1);
     await form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
     await (await utilityButton(page, 'Rapporter')).click();
@@ -407,7 +443,7 @@ test('PANEL-04: map selection preserves unsent relationship and type forms', asy
               contentVersion: initial.contentVersion,
               id,
               baseRevision: null,
-              value: { typeId: initial.types[0].id, name, description: '' },
+              value: { typeId: initial.types[0].id, name },
             },
           })
         ).ok(),
@@ -426,7 +462,6 @@ test('PANEL-04: map selection preserves unsent relationship and type forms', asy
               typeId: initial.relationshipTypes[0].id,
               sourceId: 'bike',
               targetId: 'garage',
-              knowledge: 'known',
             },
           },
         })
@@ -472,7 +507,7 @@ test('PANEL-04: map selection preserves unsent relationship and type forms', asy
       await openSettings(page);
       await page
         .getByRole('navigation', { name: 'Inställningarnas sidor', exact: true })
-        .getByRole('link', { name: 'Typer och egna fält', exact: true })
+        .getByRole('link', { name: 'Typer', exact: true })
         .click();
       await page.getByRole('button', { name: button, exact: true }).click();
       await page.getByLabel(label, { exact: true }).fill(value);
@@ -484,7 +519,7 @@ test('PANEL-04: map selection preserves unsent relationship and type forms', asy
       await openSettings(page);
       await page
         .getByRole('navigation', { name: 'Inställningarnas sidor', exact: true })
-        .getByRole('link', { name: 'Typer och egna fält', exact: true })
+        .getByRole('link', { name: 'Typer', exact: true })
         .click();
       await expect(page.getByLabel(label, { exact: true })).toHaveValue(value);
       await page.getByRole('button', { name: close, exact: true }).click();

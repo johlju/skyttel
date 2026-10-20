@@ -16,10 +16,7 @@ async function object(id: string, update: Partial<ObjectValue> | null, actor = c
       version: state.draft.version,
       id,
       baseRevision: before?.revision ?? null,
-      value:
-        update === null
-          ? null
-          : { name: id, description: '', typeId: state.types[0].id, ...before, ...update },
+      value: update === null ? null : { name: id, typeId: state.types[0].id, ...before, ...update },
     },
     actor,
   );
@@ -48,7 +45,7 @@ async function edge(id: string, sourceId: string, targetId: string) {
           sourceId,
           targetId,
           typeId: state.relationshipTypes[0].id,
-          knowledge: 'known',
+
           lifecycle: 'ended',
         },
       })
@@ -85,12 +82,15 @@ test('the whole save includes definitions and their dependent content with histo
         value: {
           name: 'Växt',
           description: '',
-          fields: [{ id: 'color', name: 'Färg', description: '', kind: 'text' }],
         },
       })
     ).status,
   ).toBe(200);
-  await object('plant', { typeId: 'own-type', name: 'Växten', customValues: { color: 'grön' } });
+  await object('plant', {
+    typeId: 'own-type',
+    name: 'Växten',
+    properties: [{ id: 'color', label: 'color', kind: 'text', value: 'grön' }],
+  });
   expect(
     (
       await post('relationship-type', {
@@ -116,7 +116,6 @@ test('the whole save includes definitions and their dependent content with histo
           sourceId: 'plant',
           targetId: 'plant',
           typeId: 'own-edge-type',
-          knowledge: 'known',
         },
       })
     ).status,
@@ -130,7 +129,11 @@ test('the whole save includes definitions and their dependent content with histo
   expect(state.draft.objectTypes ?? []).toEqual([]);
   expect(state.draft.relationshipTypes ?? []).toEqual([]);
   expect(state.objects).toMatchObject([
-    { id: 'plant', typeId: 'own-type', customValues: { color: 'grön' } },
+    {
+      id: 'plant',
+      typeId: 'own-type',
+      properties: [{ id: 'color', label: 'color', kind: 'text', value: 'grön' }],
+    },
   ]);
   expect(state.relationships).toMatchObject([
     { id: 'self', sourceId: 'plant', targetId: 'plant', typeId: 'own-edge-type' },
@@ -138,7 +141,7 @@ test('the whole save includes definitions and their dependent content with histo
   expect(selected.changes[0]).toMatchObject({
     before: null,
     after: state.objects[0],
-    type: { name: 'Växt', fields: [{ id: 'color', name: 'Färg' }] },
+    type: { name: 'Växt' },
   });
   expect(selected.relationships?.[0]).toMatchObject({
     before: null,
@@ -176,6 +179,26 @@ test('history requires current household access and does not expose private prop
   expect((await actor.request(`${path}/history`)).status).toBe(403);
 });
 
+test('historical endpoint names survive object IDs that match inherited record keys', async () => {
+  await object('__proto__', { name: 'Lo Exempel' });
+  await object('constructor', { name: 'Cykeln' });
+  await edge('named-link', '__proto__', 'constructor');
+  const created = await save('named-endpoints');
+  const names = Object.fromEntries([
+    ['__proto__', 'Lo Exempel'],
+    ['constructor', 'Cykeln'],
+  ]);
+  expect(created.relationships?.[0].objectNames).toEqual(names);
+  await object('__proto__', null);
+  const removed = await save('remove-named-endpoint');
+  expect(removed.relationships?.[0].objectNames).toEqual(names);
+  expect((await read()).relationships).toEqual([]);
+  expect((await (await client.request(`${path}/history`)).json()).history).toEqual([
+    removed,
+    created,
+  ]);
+});
+
 test('per-proposal discard requires current household access and preserves every private draft when denied', async () => {
   await object('person', { name: 'Lo Exempel' });
   await save('initial');
@@ -208,7 +231,7 @@ test('per-proposal discard requires current household access and preserves every
         version: other.draft.version,
         id: 'other-person',
         baseRevision: null,
-        value: { name: 'Robin Exempel', description: '', typeId: other.types[0].id },
+        value: { name: 'Robin Exempel', typeId: other.types[0].id },
       })
     ).status,
   ).toBe(200);
@@ -260,7 +283,7 @@ test('discarding an unsaved object drops only its incident proposals and all pro
         version: (await read()).draft.version,
         id: 'new-type',
         baseRevision: null,
-        value: { name: 'Ny typ', description: '', fields: [] },
+        value: { name: 'Ny typ', description: '' },
       })
     ).status,
   ).toBe(200);

@@ -15,8 +15,7 @@
               {
                 "source": "tenant",
                 "type": "Levererar till",
-                "target": "m365",
-                "knowledge": "known"
+                "target": "m365"
               }
             ],
             "saveAttempts": 0,
@@ -41,8 +40,7 @@
               {
                 "source": "tenant",
                 "type": "Levererar till",
-                "target": "m365",
-                "knowledge": "known"
+                "target": "m365"
               }
             ],
             "saveAttempts": 0,
@@ -79,8 +77,7 @@
               {
                 "source": "tenant",
                 "type": "Levererar till",
-                "target": "m365",
-                "knowledge": "known"
+                "target": "m365"
               }
             ],
             "saveAttempts": 0,
@@ -101,7 +98,18 @@
           "id": "direction-mixed-unresolved",
           "text": "Ändra Lo Bergs beskrivning till Läser poesi. Skapa också ett samband av typen Levererar till mellan Microsoft 365 och Tenant Norrsken Bygg.",
           "expected": {
-            "objects": { "lo": { "description": "Läser poesi." } },
+            "objects": {
+              "lo": {
+                "properties": [
+                  {
+                    "id": "description",
+                    "label": "Beskrivning",
+                    "kind": "text",
+                    "value": "Läser poesi."
+                  }
+                ]
+              }
+            },
             "addRelationships": [],
             "saveAttempts": 0,
             "saves": 0,
@@ -118,8 +126,7 @@
               {
                 "source": "tenant",
                 "type": "Levererar till",
-                "target": "m365",
-                "knowledge": "known"
+                "target": "m365"
               }
             ],
             "saveAttempts": 0,

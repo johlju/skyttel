@@ -10,6 +10,7 @@ import {
 } from '../support/client.js';
 import { createInstallation } from '../support/installation.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { propertyRow, setProperty } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 async function arrange(page: Page, origin: string) {
@@ -31,11 +32,7 @@ async function arrange(page: Page, origin: string) {
             version: (await read()).draft.version,
             id,
             baseRevision: null,
-            value: {
-              typeId: initial.types.find((type) => type.name === 'Person')?.id,
-              name,
-              description: '',
-            },
+            value: { typeId: initial.types.find((type) => type.name === 'Person')?.id, name },
           },
         })
       ).ok(),
@@ -57,7 +54,6 @@ async function arrange(page: Page, origin: string) {
               typeId: initial.relationshipTypes.find((type) => type.name === 'Använder')?.id,
               sourceId,
               targetId,
-              knowledge: 'known',
             },
           },
         })
@@ -181,16 +177,16 @@ for (const width of [1440, 390, 320]) {
       await expect(reader.getByRole('heading', { name: 'Kim Exempel', exact: true })).toBeFocused();
       await reader.getByRole('button', { name: 'Redigera Kim Exempel', exact: true }).click();
       const form = page.getByRole('dialog', { name: 'Redigera Kim Exempel', exact: true });
-      await form.getByLabel('Beskrivning', { exact: true }).fill(`Oskickat ${width}`);
+      await setProperty(form, 'Beskrivning', `Oskickat ${width}`);
       await form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
       const loss = page.getByRole('dialog', { name: 'Lämna ändrade uppgifter?', exact: true });
       await expect(
         loss.getByRole('button', { name: 'Fortsätt redigera', exact: true }),
       ).toBeFocused();
       await page.keyboard.press('Escape');
-      await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-        `Oskickat ${width}`,
-      );
+      await expect(
+        propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true }),
+      ).toHaveValue(`Oskickat ${width}`);
       expect(await app.read()).toEqual(original);
       await form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
       await loss
@@ -205,7 +201,7 @@ for (const width of [1440, 390, 320]) {
       await openTable(page);
       const table = page.getByRole('region', { name: 'Hushållets tabell', exact: true });
       await table.getByRole('button', { name: 'Redigera Kim Exempel', exact: true }).click();
-      await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+      await expect(propertyRow(form, 'Beskrivning')).toHaveCount(0);
       await form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }).click();
       await table.getByRole('button', { name: 'Lo Exempel', exact: true }).focus();
       await page.keyboard.press('Space');

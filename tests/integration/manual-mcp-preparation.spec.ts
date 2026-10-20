@@ -62,7 +62,18 @@ test('manual MCP read-only preparation preserves empty then populated household 
     // retaining this same read-only client and grant.
     const type = before.types.find((entry) => entry.name === 'Person');
     expect(type).toBeTruthy();
-    const value = { typeId: type?.id, name: 'Alex', description: 'Sparade uppgifter om Alex' };
+    const value = {
+      typeId: type?.id,
+      name: 'Alex',
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: 'Sparade uppgifter om Alex',
+        },
+      ],
+    };
     const post = async (route: string, data: object) => {
       const current = await read();
       const response = await page.request.post(`${path}/${route}`, {
@@ -78,7 +89,17 @@ test('manual MCP read-only preparation preserves empty then populated household 
     await post('draft', {
       id: 'manual-alex',
       baseRevision: saved?.revision,
-      value: { ...value, description: 'Alex privata rättelse' },
+      value: {
+        ...value,
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Alex privata rättelse',
+          },
+        ],
+      },
     });
     const populated = await read();
     const map = (await next('map', 'result')).value as { objects: unknown[] };
@@ -89,7 +110,17 @@ test('manual MCP read-only preparation preserves empty then populated household 
     expect(draft.changes[0]).toMatchObject({
       id: 'manual-alex',
       before: saved,
-      after: { ...value, description: 'Alex privata rättelse' },
+      after: {
+        ...value,
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Alex privata rättelse',
+          },
+        ],
+      },
     });
     expect(await read()).toEqual(populated);
     await page.goto(`${app.origin}/assistants`);

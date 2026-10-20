@@ -101,16 +101,22 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
     // The recording's initial silence permits native form work after voice starts.
     await closeConversationText(page);
     await editTableObject(page, 'Kim Exempel');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('Osänd text från talprovet');
+    await page.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
+    await page
+      .getByRole('group', { name: 'Egenskap 1', exact: true })
+      .getByLabel('Värde', { exact: true })
+      .fill('Osänd text från talprovet');
     await expect
       .poll(
         async () => ((await (await page.request.get(mapUrl)).json()) as MapState).draft.changes,
         { timeout: 180_000 },
       )
       .toEqual([]);
-    await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-      'Osänd text från talprovet',
-    );
+    await expect(
+      page
+        .getByRole('group', { name: 'Egenskap 1', exact: true })
+        .getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Osänd text från talprovet');
     await verifyObjectDepartureAndDiscard(page, { Beskrivning: 'Osänd text från talprovet' });
     await openConversationText(page);
     await expect(panel.getByRole('status')).toHaveText(
@@ -120,13 +126,24 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
     await expect(panel.getByRole('log', { name: 'Samtalstext' })).toContainText(/Molnmusik/i);
     const state = (await (await page.request.get(mapUrl)).json()) as MapState;
     expect(
-      state.objects.find((object) => object.name === 'Familjens Molnmusik')?.financialFacts?.price,
-    ).toEqual({ knowledge: 'known', value: '189' });
+      state.objects
+        .find((object) => object.name === 'Familjens Molnmusik')
+        ?.properties?.find(({ label }) => label === 'Pris'),
+    ).toMatchObject({ kind: 'number', value: 189 });
     expect(state.objects.some((object) => object.name === 'Lo Lind')).toBe(true);
     expect(state.draft.changes).toEqual([]);
-    expect(state.relationships.map((edge) => edge.knowledge)).toEqual(
-      expect.arrayContaining(['unknown', 'none', 'uncertain']),
-    );
+    expect(
+      state.relationships.every(
+        ({ sourceId, targetId }) =>
+          state.objects.some(({ id }) => id === sourceId) &&
+          state.objects.some(({ id }) => id === targetId),
+      ),
+    ).toBe(true);
+    expect(
+      state.relationships.some(({ properties }) =>
+        properties?.some(({ label }) => label === 'Osäkert uppgivet'),
+      ),
+    ).toBe(true);
     const history = (await (await page.request.get(`${mapUrl}/history`)).json())
       .history as SaveReceipt[];
     const added = history.filter(
@@ -137,7 +154,9 @@ test('TAL-01: recorded Swedish speech changes the family map through real Live a
       added[0].changes.some(
         (change) =>
           change.after?.name === 'Familjens Molnmusik' &&
-          change.after.financialFacts?.price?.value === '189',
+          change.after.properties?.some(
+            (p) => p.label === 'Pris' && 'value' in p && p.value === 189,
+          ),
       ),
     ).toBe(true);
     await expect

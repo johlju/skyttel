@@ -62,13 +62,11 @@ test('the evaluation summary uses real price turns and atomically installs ordin
         baseRevision: revision,
         value: {
           ...value,
-          financialFacts: {
-            ...value.financialFacts,
-            price: {
-              knowledge: 'known',
-              value: turn.message.includes('239') ? '239' : first ? '189' : '229',
-            },
-          },
+          properties: value.properties?.map((property) =>
+            property.id === 'price'
+              ? { ...property, value: turn.message.includes('239') ? 239 : first ? 189 : 229 }
+              : property,
+          ),
         },
       }),
     ];
@@ -135,10 +133,10 @@ test('the evaluation summary uses real price turns and atomically installs ordin
     expect(context.historicalSummary).toContain('229');
     expect(context.fixedChecks).toEqual({ checked: true, passed: true, failures: [] });
     expect(
-      context.observedState.effective.objects.find(
-        (object: { id: string }) => object.id === 'cloud-sub',
-      ).financialFacts.price.value,
-    ).toBe('239');
+      context.observedState.effective.objects
+        .find((object: { id: string }) => object.id === 'cloud-sub')
+        .properties.find((property: { id: string }) => property.id === 'price').value,
+    ).toBe(239);
     expect(context.observedState.saveReceipt).toBeNull();
     expect(context.observedState.saveOperations).toEqual([]);
     expect(context.observedState.historicalSaveOperations).toEqual([

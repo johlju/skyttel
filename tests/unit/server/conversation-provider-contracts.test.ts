@@ -28,7 +28,13 @@ async function setup(options: Parameters<typeof createInstallation>[1]) {
     contentVersion: map.contentVersion,
     id: 'private-chair',
     baseRevision: null,
-    value: { typeId: map.types[0].id, name: 'Min stol', description: 'Privat förslag' },
+    value: {
+      typeId: map.types[0].id,
+      name: 'Min stol',
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Privat förslag' },
+      ],
+    },
   });
   expect(proposed.status(), await proposed.text()).toBe(200);
   const started = await post(`${base}/text-assistant`, approvedForVisit);
@@ -67,7 +73,7 @@ test.each(['submit_changes', 'ask_questions', 'report_result'])(
     const operation = () => ({
       id: 'provider-chair',
       baseRevision: null,
-      value: { typeId, name: 'En annan stol', description: '' },
+      value: { typeId, name: 'En annan stol' },
     });
     const model = textModel(() => [
       modelTool(

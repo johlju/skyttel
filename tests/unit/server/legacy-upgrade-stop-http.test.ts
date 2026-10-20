@@ -100,7 +100,7 @@ test('the mandatory maintenance stop closes Live and delivery, rejects a late mo
         contentVersion: 1,
         id: 'late',
         baseRevision: null,
-        value: { typeId: before.types[0].id, name: 'Sent', description: '' },
+        value: { typeId: before.types[0].id, name: 'Sent' },
       }),
     ]);
     app = await createInstallation(undefined, options);

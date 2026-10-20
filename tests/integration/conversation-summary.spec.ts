@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
-import { closeSupportDialog, createHousehold, signIn } from '../support/client.js';
+import { createHousehold, signIn } from '../support/client.js';
 import {
   microphoneButton,
   openSavedHistory,
@@ -10,12 +10,13 @@ import {
   turnMicrophoneOff,
   turnMicrophoneOn,
 } from '../support/conversation-page.js';
-import { readDraftProposal, readTableObject } from '../support/domain-work.js';
+import { readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { type ModelRequest, modelMessage, modelTool, textModel } from '../support/text-model.js';
+import { readVoiceProposal } from '../support/voice-work-reading.js';
 
 const summaryLine = 'Skyttel har sammanfattat samtalet för att få plats i kontexten.';
 const failureLine =
@@ -115,7 +116,18 @@ async function arrange(
       contentVersion: state.contentVersion,
       id: 'lo',
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Påhittad uppgift' },
+      value: {
+        typeId: state.types[0].id,
+        name: 'Lo Exempel',
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Påhittad uppgift',
+          },
+        ],
+      },
     },
   });
   await page.addInitScript({ content: liveBrowserFixtureSource });
@@ -137,35 +149,6 @@ function usage(live: ReturnType<typeof liveProvider>) {
   return channel;
 }
 
-async function readPrivateLo(page: Page, name = 'Lo Exempel') {
-  const proposal = await readDraftProposal(page, name);
-  const proposedValues = proposal
-    .getByRole('heading', { name: 'Föreslagna värden', exact: true })
-    .locator('..');
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Namn(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText(name);
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Typ(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText('Person');
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Beskrivning(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText('Påhittad uppgift');
-  await closeSupportDialog(page, name);
-}
-
 test('KONTEXT-08: full textkontext sammanfattas och senaste utkastet kan rättas', async ({
   page,
 }) => {
@@ -176,10 +159,10 @@ test('KONTEXT-08: full textkontext sammanfattas och senaste utkastet kan rättas
     await expect(meter(page)).not.toHaveAttribute('value', '99');
     await expect(log(page)).toContainText('Fyll kontexten.');
     await expect(log(page)).toContainText('kontextprovord');
-    await readPrivateLo(page);
+    await readVoiceProposal(page);
     await send(page, 'Ändra den sista.');
     await expect.poll(async () => (await read()).draft.changes[0].after.name).toBe('Lo Senaste');
-    await readPrivateLo(page, 'Lo Senaste');
+    await readVoiceProposal(page, 'Lo Senaste');
     await send(page, 'Vad gjorde vi?');
     await expect(
       page
@@ -188,7 +171,7 @@ test('KONTEXT-08: full textkontext sammanfattas och senaste utkastet kan rättas
     ).toBeVisible();
     expect((await read()).objects).toEqual([]);
     expect((await read()).draft.changes[0].after.name).toBe('Lo Senaste');
-    await readPrivateLo(page, 'Lo Senaste');
+    await readVoiceProposal(page, 'Lo Senaste');
     expect(model.requests.every((request) => request.store === false)).toBe(true);
     for (const file of readdirSync(app.directory).filter((name) =>
       /^skyttel\.db(?:-wal)?$/.test(name),
@@ -254,10 +237,10 @@ for (const microphoneOn of [true, false]) {
         .poll(async () => Number(await meter(page).getAttribute('value')))
         .toBeLessThan(20);
       if (microphoneOn) await turnMicrophoneOff(page);
-      await readPrivateLo(page);
+      await readVoiceProposal(page);
       await send(page, 'Ändra den sista.');
       await expect.poll(async () => (await read()).draft.changes[0].after.name).toBe('Lo Senaste');
-      await readPrivateLo(page, 'Lo Senaste');
+      await readVoiceProposal(page, 'Lo Senaste');
       await expect(log(page)).toContainText('Behåll vårt sammanhang.');
       await expect(log(page).getByRole('listitem').filter({ hasText: summaryLine })).toHaveCount(1);
     } finally {
@@ -293,7 +276,7 @@ for (const mode of ['text', 'voice'] as const) {
       await page.keyboard.press('Enter');
       expect(model.requests.length).toBe(requests);
       expect((await read()).draft).toEqual(before.draft);
-      await readPrivateLo(page);
+      await readVoiceProposal(page);
       expect((await read()).objects).toEqual(before.objects);
       const notice = page.locator('.conversation-notice').filter({ hasText: failureLine });
       const reset = notice.getByRole('button', { name: 'Nytt samtal', exact: true });
@@ -310,7 +293,7 @@ for (const mode of ['text', 'voice'] as const) {
       await expect(meter(page)).toHaveAttribute('value', '0');
       await expect(log(page)).not.toContainText('Fyll kontexten.');
       expect((await read()).draft).toEqual(before.draft);
-      await readPrivateLo(page);
+      await readVoiceProposal(page);
       await field(page).fill('Kan vi fortsätta?');
       await page.getByRole('button', { name: 'Skicka', exact: true }).click();
       await expect(log(page)).toContainText('Vi fortsätter med utkastet.');
@@ -361,7 +344,7 @@ test('KONTEXT-11: sammanfattning väntar på talat sparande och dess hörda kvit
     expect(live.requests).toHaveLength(1);
     expect(live.sent.some(({ event }) => event.type === 'session.close')).toBe(false);
     expect((await read()).draft.changes).toHaveLength(1);
-    await readPrivateLo(page);
+    await readVoiceProposal(page);
     release();
     await expect.poll(async () => (await read()).objects[0]?.name).toBe('Lo Exempel');
     await expect
@@ -382,9 +365,13 @@ test('KONTEXT-11: sammanfattning väntar på talat sparande och dess hörda kvit
     await expect(
       beforeAudioLo.locator('dt').filter({ hasText: /^Typ$/ }).locator('..').locator('dd'),
     ).toHaveText('Person');
-    await expect(beforeAudioLo.locator('.household-table-description')).toHaveText(
-      'Påhittad uppgift',
-    );
+    await expect(
+      beforeAudioLo
+        .locator('dt')
+        .filter({ hasText: /^Beskrivning$/ })
+        .locator('..')
+        .locator('dd'),
+    ).toContainText('Påhittad uppgift');
     // The matching provider transcript alone cannot prove heard/drained audio.
     await page.evaluate(() =>
       window.skyttelVoiceFixture.emit({
@@ -417,7 +404,13 @@ test('KONTEXT-11: sammanfattning väntar på talat sparande och dess hörda kvit
     await expect(
       savedLo.locator('dt').filter({ hasText: /^Typ$/ }).locator('..').locator('dd'),
     ).toHaveText('Person');
-    await expect(savedLo.locator('.household-table-description')).toHaveText('Påhittad uppgift');
+    await expect(
+      savedLo
+        .locator('dt')
+        .filter({ hasText: /^Beskrivning$/ })
+        .locator('..')
+        .locator('dd'),
+    ).toContainText('Påhittad uppgift');
     const history = await openSavedHistory(page);
     await expect(history.getByRole('article')).toHaveCount(1);
     await history.getByText('Visa ändringarna', { exact: true }).click();
@@ -430,7 +423,7 @@ test('KONTEXT-11: sammanfattning väntar på talat sparande och dess hörda kvit
     await expect(
       history
         .locator('.history-changes')
-        .getByText('Beskrivning: Påhittad uppgift', { exact: true }),
+        .getByText('Beskrivning: Påhittad uppgift (Text)', { exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true');
@@ -514,7 +507,7 @@ test('KONTEXT-12: sammanfattning bevarar tal som spelades in före släpp', asyn
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     expect((await read()).draft).toEqual(before.draft);
     expect((await read()).objects).toEqual(before.objects);
-    await readPrivateLo(page);
+    await readVoiceProposal(page);
   } finally {
     release?.();
     await page.mouse.up();

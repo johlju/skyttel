@@ -27,7 +27,13 @@ async function propose(name = 'Lo Exempel', id = 'synthetic-person', actor = cli
     version: state.draft.version,
     id,
     baseRevision: before?.revision ?? null,
-    value: { typeId: state.types[0].id, name, description: 'Påhittad person' },
+    value: {
+      typeId: state.types[0].id,
+      name,
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad person' },
+      ],
+    },
   });
 }
 
@@ -56,7 +62,13 @@ test('a proposal persists privately until the whole draft is saved with a receip
     version: 0,
     id: 'synthetic-person',
     baseRevision: null,
-    value: { typeId: type.id, name: 'Lo Exempel', description: 'Påhittad person' },
+    value: {
+      typeId: type.id,
+      name: 'Lo Exempel',
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Påhittad person' },
+      ],
+    },
   });
   expect(proposed.status).toBe(200);
   const draft = await proposed.json();
@@ -192,7 +204,7 @@ test('all map operations enforce current household membership and request bounda
         version: 1,
         id: 'another-person',
         baseRevision: null,
-        value: { typeId: initial.types[0].id, name: 'Kim Exempel', description: '' },
+        value: { typeId: initial.types[0].id, name: 'Kim Exempel' },
       },
     },
     { action: 'discard', body: { version: 1 } },
@@ -203,7 +215,7 @@ test('all map operations enforce current household membership and request bounda
         version: 1,
         id: 'solar',
         baseRevision: null,
-        value: { name: 'Solcellsanläggning', description: 'Elproduktion', fields: [] },
+        value: { name: 'Solcellsanläggning', description: 'Elproduktion' },
       },
     },
     {
@@ -302,7 +314,7 @@ test('invalid objects and changed type definitions cannot enter the shared map',
     version: 0,
     id: 'new-object',
     baseRevision: null,
-    value: { typeId: types[0].id, name: 'Lo', description: '' },
+    value: { typeId: types[0].id, name: 'Lo' },
   };
   for (const name of ['', ' ', 42, 'x'.repeat(201)]) {
     expect(
@@ -313,7 +325,12 @@ test('invalid objects and changed type definitions cannot enter the shared map',
     undefined,
     {},
     { ...body.value, typeId: 'missing' },
-    { ...body.value, description: 'x'.repeat(2001) },
+    {
+      ...body.value,
+      properties: [
+        { id: 'description', label: 'Beskrivning', kind: 'text', value: 'x'.repeat(10001) },
+      ],
+    },
     { ...body.value, lifecycle: 'deleted' },
   ]) {
     expect((await client.json(`${path}/draft`, { ...body, value })).status).toBe(400);
@@ -343,9 +360,8 @@ test('manual lifecycle corrections retain their prior values in shared history',
     const value = {
       typeId: types[0].id,
       name: 'Lo Exempel',
-      description: '',
+
       lifecycle,
-      financialFacts: { endDate: { knowledge: 'known', value: '2020-01-01' } },
     };
     const proposed = await client.json(`${path}/draft`, {
       version: state.draft.version,
@@ -368,7 +384,6 @@ test('manual lifecycle corrections retain their prior values in shared history',
     before: { lifecycle: 'ended' },
     after: {
       lifecycle: 'active',
-      financialFacts: { endDate: { knowledge: 'known', value: '2020-01-01' } },
     },
   });
 });
@@ -384,7 +399,6 @@ test('shared history does not expose abandoned private relationship endpoint nam
     typeId: state.relationshipTypes[0].id,
     sourceId: 'lo',
     targetId: 'private',
-    knowledge: 'known',
   };
   expect(
     (

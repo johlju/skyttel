@@ -34,7 +34,6 @@ const state: MapState = {
       householdId: 'home',
       revision: 1,
       name: 'Lo Exempel',
-      description: '',
     },
     {
       id: 'music',
@@ -42,7 +41,6 @@ const state: MapState = {
       householdId: 'home',
       revision: 1,
       name: 'Musikspelaren',
-      description: '',
     },
     {
       id: 'kim',
@@ -50,7 +48,6 @@ const state: MapState = {
       householdId: 'home',
       revision: 1,
       name: 'Kim Exempel',
-      description: '',
     },
   ],
   relationships: [
@@ -61,16 +58,14 @@ const state: MapState = {
       typeId: 'uses',
       sourceId: 'lo',
       targetId: 'music',
-      knowledge: 'known',
     },
     {
-      id: 'unknown',
+      id: 'other',
       householdId: 'home',
       revision: 1,
       typeId: 'uses',
       sourceId: 'kim',
-      targetId: null,
-      knowledge: 'unknown',
+      targetId: 'music',
     },
   ],
   draft: { version: 0, changes: [] },
@@ -177,7 +172,7 @@ function MapView({
         }}
         onSelectRelationship={(edge, previous) => {
           setSelection({ kind: 'relationship', id: edge.id, previous });
-          setMessage(previous ? `Tidigare: ${edge.sourceId}` : `Samband: ${edge.knowledge}`);
+          setMessage(previous ? `Tidigare: ${edge.sourceId}` : `Samband: ${edge.id}`);
         }}
         onFocus={(id) => {
           setSelection({ kind: 'object', id });
@@ -630,12 +625,17 @@ test('changing a relationship retains its prior route while the current route re
       exact: true,
     })
     .click();
-  await expect.element(selectionStatus()).toHaveTextContent('Samband: known');
+  await expect.element(selectionStatus()).toHaveTextContent('Samband: edge');
 });
 
 test.each([
   { name: 'type', update: { typeId: 'other' } },
-  { name: 'knowledge', update: { knowledge: 'uncertain' as const } },
+  {
+    name: 'property',
+    update: {
+      properties: [{ id: 'note', label: 'Anteckning', kind: 'text' as const, value: 'Ny uppgift' }],
+    },
+  },
 ])(
   'a same-endpoint $name edit uses one amber solid connection and a default pen label',
   async ({ update }) => {
@@ -707,7 +707,7 @@ test('reversing directed endpoints shows a red old connection and green new conn
   await old.click();
   await expect.element(selectionStatus()).toHaveTextContent('Tidigare: lo');
   await current.click();
-  await expect.element(selectionStatus()).toHaveTextContent('Samband: known');
+  await expect.element(selectionStatus()).toHaveTextContent('Samband: edge');
 });
 
 test('navigation keeps height help beside movement controls and respects the manual choice', async () => {
@@ -992,7 +992,14 @@ test('personal display controls retain corner choices, independent pan inversion
 });
 
 test('wheel pan follows both system axes over canvas, icons and labels; Ctrl alone zooms', async () => {
-  render(<MapView />);
+  // Put every object at the initial camera target's depth, where a pixel pan
+  // projects to exactly one pixel despite the overview's yaw and pitch.
+  const positions = [
+    { id: 'lo', x: -4, y: 0, z: 4 * Math.tan(0.35), version: 1 },
+    { id: 'music', x: 4, y: 0, z: -4 * Math.tan(0.35), version: 1 },
+    { id: 'kim', x: 0, y: 4, z: (-4 * Math.tan(0.16)) / Math.cos(0.35), version: 1 },
+  ];
+  render(<MapView positions={positions} />);
   const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
   await expect.element(lo).toBeVisible();
   await expect
@@ -1054,7 +1061,9 @@ test('wheel pan follows both system axes over canvas, icons and labels; Ctrl alo
   lo.element().dispatchEvent(pinch);
   await expect.poll(separation).toBeGreaterThan(distance);
   expect(pinch.defaultPrevented).toBe(true);
-  expect(document.querySelector('[data-placement]')?.textContent).toBe('[]');
+  expect(JSON.parse(document.querySelector('[data-placement]')?.textContent ?? 'null')).toEqual(
+    positions,
+  );
 });
 
 test('native empty-space mouse, wheel and touch navigation changes the camera without moving objects', async () => {
@@ -1365,12 +1374,15 @@ test('graphics navigation and label modes expose selectable objects and directed
       exact: true,
     })
     .click();
-  await expect.element(selectionStatus()).toHaveTextContent('Samband: known');
+  await expect.element(selectionStatus()).toHaveTextContent('Samband: edge');
   await page.getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true }).click();
   await page
-    .getByRole('button', { name: 'Välj samband: Kim Exempel → använder → Okänt', exact: true })
+    .getByRole('button', {
+      name: 'Välj samband: Kim Exempel → använder → Musikspelaren',
+      exact: true,
+    })
     .click();
-  await expect.element(selectionStatus()).toHaveTextContent('Samband: unknown');
+  await expect.element(selectionStatus()).toHaveTextContent('Samband: other');
   await page
     .getByRole('img', { name: 'Rymdens bakgrund. Välj innehåll med etiketterna eller tabellen.' })
     .click({ position: { x: 5, y: 5 } });
@@ -1471,7 +1483,20 @@ test.each(['added', 'removed', 'changed'] as const)(
             relationships: edges.map((edge) => ({
               id: edge.id,
               before: kind === 'added' ? null : edge,
-              after: kind === 'removed' ? null : { ...edge, knowledge: 'uncertain' as const },
+              after:
+                kind === 'removed'
+                  ? null
+                  : {
+                      ...edge,
+                      properties: [
+                        {
+                          id: 'note',
+                          label: 'Anteckning',
+                          kind: 'text' as const,
+                          value: 'Ny uppgift',
+                        },
+                      ],
+                    },
               type: state.relationshipTypes[0],
               objectNames: {},
             })),
@@ -1645,7 +1670,7 @@ test('a selected relationship keeps its directed label readable in a dense map',
     exact: true,
   });
   await label.click();
-  await expect.element(selectionStatus()).toHaveTextContent('Samband: known');
+  await expect.element(selectionStatus()).toHaveTextContent('Samband: edge');
   await expect.element(label).toBeVisible();
 });
 
@@ -1670,7 +1695,7 @@ test('all labels only opens a closer view when needed and retains an already clo
   expect(location()).toBe(close);
 });
 
-test('direction rendering retains selectable self references and explicitly absent targets', async ({
+test('direction rendering retains selectable self references and ordinary endpoints', async ({
   onTestFinished,
 }) => {
   const viewport = { width: window.innerWidth, height: window.innerHeight };
@@ -1680,7 +1705,7 @@ test('direction rendering retains selectable self references and explicitly abse
     <MapView
       relationships={[
         { ...state.relationships[0], id: 'self', targetId: 'lo' },
-        { ...state.relationships[1], id: 'none', knowledge: 'none' },
+        { ...state.relationships[1], id: 'none' },
       ]}
     />,
   );
@@ -1694,11 +1719,11 @@ test('direction rendering retains selectable self references and explicitly abse
       exact: true,
     })
     .click();
-  await expect.element(selectionStatus()).toHaveTextContent('Samband: known');
+  await expect.element(selectionStatus()).toHaveTextContent('Samband: self');
   await page.getByRole('button', { name: 'Välj objekt: Kim Exempel', exact: true }).click();
   await page
     .getByRole('button', {
-      name: 'Välj samband: Kim Exempel → använder → Uttryckligen inget',
+      name: 'Välj samband: Kim Exempel → använder → Musikspelaren',
       exact: true,
     })
     .click();

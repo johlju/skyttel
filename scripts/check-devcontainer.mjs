@@ -76,10 +76,12 @@ async function prepareFixture() {
          .get('persistence-household');
        const map = householdMap(db, 'persistence-user', 'persistence-household');
        map.propose({ version: map.read().draft.version, id: 'persistence-object', baseRevision: null,
-         value: { typeId: type.id, name: 'Saved synthetic object', description: 'Retained' } });
+         value: { typeId: type.id, name: 'Saved synthetic object',
+           properties: [{ id: 'description', label: 'Description', kind: 'text', value: 'Retained' }] } });
        map.save({ version: map.read().draft.version, operationId: 'persistence-save' });
        map.propose({ version: map.read().draft.version, id: 'private-sentinel', baseRevision: null,
-         value: { typeId: type.id, name: 'Private synthetic draft', description: 'Retained privately' } });
+         value: { typeId: type.id, name: 'Private synthetic draft',
+           properties: [{ id: 'description', label: 'Description', kind: 'text', value: 'Retained privately' }] } });
        db.close();`,
       join(bundle, 'fixture.sqlite'),
     ],

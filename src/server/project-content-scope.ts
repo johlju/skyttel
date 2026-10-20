@@ -13,6 +13,14 @@ export function projectDraftScope<T extends MapDraft>(value: T, householdId: str
     scope(change.type);
     scope(change.beforeType);
   }
+  for (const { suppressed } of projected.relationships ?? []) {
+    if (!suppressed) continue;
+    scope(suppressed.before);
+    if (suppressed.after && 'householdId' in suppressed.after)
+      scope(suppressed.after as { householdId: string });
+    scope(suppressed.type);
+    scope(suppressed.beforeType);
+  }
   for (const change of [...(projected.objectTypes ?? []), ...(projected.relationshipTypes ?? [])]) {
     if (change.restoration) {
       // An archive carries historical proposals, never authority granted in its old generation.

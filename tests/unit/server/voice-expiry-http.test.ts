@@ -53,7 +53,7 @@ async function setup(
       contentVersion: state.contentVersion,
       id: 'retained',
       baseRevision: null,
-      value: { typeId: state.types[0].id, name: 'Bevarat förslag', description: '' },
+      value: { typeId: state.types[0].id, name: 'Bevarat förslag' },
     },
   });
   expect(proposed.status(), await proposed.text()).toBe(200);
@@ -425,7 +425,7 @@ test('the Live expiry timer retires its voice task while an already accepted tex
         contentVersion: 1,
         id: 'accepted-text',
         baseRevision: null,
-        value: { typeId, name: 'Tillåtet textförslag', description: '' },
+        value: { typeId, name: 'Tillåtet textförslag' },
       }),
     ];
   });

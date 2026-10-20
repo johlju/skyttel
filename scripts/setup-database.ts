@@ -17,7 +17,7 @@ try {
     throw new ConfigurationError('SKYTTEL_FIRST_ADMIN_SUBJECT');
   }
   failure = 'Database setup failed. Check database access and the demo fixtures.';
-  database = openDatabase(config.databasePath);
+  database = openDatabase(config.databasePath, { authorityFence: config.authorityFence });
   const connection = database;
   const household = connection
     .transaction(() => {

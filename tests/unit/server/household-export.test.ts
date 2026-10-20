@@ -50,7 +50,7 @@ test('retained definitions, generic merge history, revoked owners, all private d
     typeId: type.id,
     revision: 1,
     name: 'Tidigare namn',
-    description: '',
+
     profileImageId: 'original',
   };
   const survivor = { ...source, id: 'survivor', name: 'Nyare namn', profileImageId: 'copied' };
@@ -105,40 +105,47 @@ test('retained definitions, generic merge history, revoked owners, all private d
     ])
       fixture.database
         .prepare(
-          'INSERT INTO map_object (id, householdId, typeId, revision, name, description, deleted, profileImageId, customValues) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)',
+          'INSERT INTO map_object (id, householdId, typeId, revision, name, deleted, profileImageId, properties) VALUES (?, ?, ?, 1, ?, ?, ?, ?)',
         )
         .run(
           id,
           householdId,
           type.id,
           'Ett objekt',
-          '',
           deleted,
           image,
-          JSON.stringify({ profileImageId: 'ordinary custom text', enabled: false, count: 0 }),
+          JSON.stringify([
+            {
+              id: 'image-text',
+              label: 'profileImageId',
+              kind: 'text',
+              value: 'ordinary custom text',
+            },
+            { id: 'enabled', label: 'På', kind: 'boolean', value: false },
+            { id: 'count', label: 'Antal', kind: 'number', value: 0 },
+          ]),
         );
-    fixture.database
-      .prepare('INSERT INTO object_type_fields (typeId, fields) VALUES (?, ?)')
-      .run(type.id, JSON.stringify([{ id: 'enabled', name: 'På', kind: 'boolean' }]));
     fixture.database
       .prepare('INSERT INTO removed_type VALUES (?, ?)')
       .run('objectType', state.types[1].id);
     fixture.database
       .prepare('INSERT INTO relationship_type_labels VALUES (?, ?, ?)')
       .run(state.relationshipTypes[0].id, 'använder', 'används av');
-    for (const [index, knowledge] of ['unknown', 'none', 'uncertain'].entries())
+    for (const [index, label] of ['Okänt', 'Uttryckligen inget', 'Osäkert uppgivet'].entries())
       fixture.database
         .prepare(
-          'INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, knowledge, deleted, lifecycle, endDate) VALUES (?, ?, ?, 1, ?, NULL, ?, 0, ?, ?)',
+          "INSERT INTO map_relationship (id, householdId, typeId, revision, sourceId, targetId, deleted, lifecycle, properties) VALUES (?, ?, ?, 1, ?, 'survivor', 0, ?, ?)",
         )
         .run(
           `edge-${index}`,
           householdId,
           state.relationshipTypes[index].id,
           'survivor',
-          knowledge,
           'ended',
-          JSON.stringify({ value: '2026-03-01', approximate: true }),
+          JSON.stringify([
+            { id: 'certainty', label, kind: 'boolean', value: true },
+            { id: 'date', label: 'Slutdatum', kind: 'date', value: '2026-03-01' },
+          ]),
         );
     fixture.database
       .prepare('INSERT INTO map_draft (householdId, userId, version, changes) VALUES (?, ?, 8, ?)')
@@ -168,29 +175,22 @@ test('retained definitions, generic merge history, revoked owners, all private d
   );
   expect(content.saves).toContainEqual(expect.objectContaining({ userId, receipt }));
   expect(content.history[0].changes).toEqual(receipt.changes);
-  expect(content.objectTypeFields).toContainEqual({
-    typeId: type.id,
-    fields: [{ id: 'enabled', name: 'På', kind: 'boolean' }],
-    sections: null,
-    builtins: null,
-    propertyOrder: null,
-  });
   expect(content.removedTypes).toContainEqual({ kind: 'objectType', typeId: state.types[1].id });
   expect(content.objects.find((row: { id: string }) => row.id === 'absorbed').deleted).toBe(1);
-  expect(content.objects[0].customValues).toEqual({
-    profileImageId: 'ordinary custom text',
-    enabled: false,
-    count: 0,
-  });
-  expect(content.relationships.map((row: { knowledge: string }) => row.knowledge)).toEqual([
-    'unknown',
-    'none',
-    'uncertain',
+  expect(content.objects[0].properties).toEqual([
+    { id: 'image-text', label: 'profileImageId', kind: 'text', value: 'ordinary custom text' },
+    { id: 'enabled', label: 'På', kind: 'boolean', value: false },
+    { id: 'count', label: 'Antal', kind: 'number', value: 0 },
   ]);
+  expect(
+    content.relationships.map(
+      (row: { properties: { label: string }[] }) => row.properties[0].label,
+    ),
+  ).toEqual(['Okänt', 'Uttryckligen inget', 'Osäkert uppgivet']);
   expect(content.relationships[0]).toMatchObject({
     lifecycle: 'ended',
-    targetId: null,
-    endDate: { value: '2026-03-01', approximate: true },
+    sourceId: 'survivor',
+    targetId: 'survivor',
   });
   expect(content.relationshipTypeLabels[0]).toMatchObject({
     forwardLabel: 'använder',
@@ -244,9 +244,16 @@ test('one SQLite read snapshot preserves map, private draft, view and image byte
       .run('image', householdId, 'lamp', state.userId, pixels);
     fixture.database
       .prepare(
-        'INSERT INTO map_object (id, householdId, typeId, revision, name, description, profileImageId) VALUES (?, ?, ?, 1, ?, ?, ?)',
+        'INSERT INTO map_object (id, householdId, typeId, revision, name, properties, profileImageId) VALUES (?, ?, ?, 1, ?, ?, ?)',
       )
-      .run('lamp', householdId, state.types[0].id, 'Lampan', 'Före', 'image');
+      .run(
+        'lamp',
+        householdId,
+        state.types[0].id,
+        'Lampan',
+        JSON.stringify([{ id: 'description', label: 'Beskrivning', kind: 'text', value: 'Före' }]),
+        'image',
+      );
     fixture.database
       .prepare('INSERT INTO map_draft (householdId, userId, version, changes) VALUES (?, ?, 1, ?)')
       .run(
@@ -257,7 +264,13 @@ test('one SQLite read snapshot preserves map, private draft, view and image byte
             id: 'private',
             before: null,
             type: state.types[0],
-            after: { typeId: state.types[0].id, name: 'Privat lampa', description: 'Före' },
+            after: {
+              typeId: state.types[0].id,
+              name: 'Privat lampa',
+              properties: [
+                { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Före' },
+              ],
+            },
           },
         ]),
       );
@@ -280,14 +293,27 @@ test('one SQLite read snapshot preserves map, private draft, view and image byte
     changed = true;
     writer.transaction(() => {
       writer.prepare('UPDATE household SET name = ? WHERE id = ?').run('Efter', householdId);
-      writer.prepare('UPDATE map_object SET description = ? WHERE id = ?').run('Efter', 'lamp');
+      writer
+        .prepare('UPDATE map_object SET properties = ? WHERE id = ?')
+        .run(
+          JSON.stringify([
+            { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Efter' },
+          ]),
+          'lamp',
+        );
       writer.prepare('UPDATE map_draft SET changes = ? WHERE householdId = ?').run(
         JSON.stringify([
           {
             id: 'private',
             before: null,
             type: state.types[0],
-            after: { typeId: state.types[0].id, name: 'Privat lampa', description: 'Efter' },
+            after: {
+              typeId: state.types[0].id,
+              name: 'Privat lampa',
+              properties: [
+                { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Efter' },
+              ],
+            },
           },
         ]),
         householdId,
@@ -302,13 +328,13 @@ test('one SQLite read snapshot preserves map, private draft, view and image byte
     const { content, parts } = await archive();
     expect(changed).toBe(true);
     expect(content.household.name).toBe('Linden');
-    expect(content.objects[0].description).toBe('Före');
-    expect(content.drafts[0].changes[0].after.description).toBe('Före');
+    expect(content.objects[0].properties[0].value).toBe('Före');
+    expect(content.drafts[0].changes[0].after.properties[0].value).toBe('Före');
     expect(content.positions[0].x).toBe(1);
     expect(Buffer.from(parts['images.bin'])).toEqual(pixels);
-    expect((await (await client.request(`${path}/map`)).json()).objects[0].description).toBe(
-      'Efter',
-    );
+    expect(
+      (await (await client.request(`${path}/map`)).json()).objects[0].properties[0].value,
+    ).toBe('Efter');
   } finally {
     observer.close();
     writer.close();
@@ -572,7 +598,7 @@ test('normal saved edits leave a completed snapshot available at its original po
     id: 'later',
     version: 0,
     baseRevision: null,
-    value: { typeId: state.types[0].id, name: 'Efter exporten', description: '' },
+    value: { typeId: state.types[0].id, name: 'Efter exporten' },
   });
   expect(
     (await client.json(`${path}/map/save`, { version: 1, operationId: 'after-snapshot' })).status,
@@ -613,7 +639,7 @@ test('an unspecified object retains its identity meaning in the archive', async 
         baseRevision: null,
         value: {
           name: 'Okänt bankkonto',
-          description: '',
+
           typeId: state.types[0].id,
           identity: 'unspecified',
         },
@@ -634,7 +660,11 @@ test('an unspecified object retains its identity meaning in the archive', async 
 
 test('an administrator downloads a versioned complete archive with private state, historical identities and checksums', async () => {
   const state = await (await client.request(`${path}/map`)).json();
-  const value = { name: 'Lampan', description: 'Egen uppgift', typeId: state.types[0].id };
+  const value = {
+    name: 'Lampan',
+    typeId: state.types[0].id,
+    properties: [{ id: 'description', label: 'Beskrivning', kind: 'text', value: 'Egen uppgift' }],
+  };
   expect(
     (
       await client.json(`${path}/map/draft`, {
@@ -654,7 +684,12 @@ test('an administrator downloads a versioned complete archive with private state
       id: 'lamp',
       version: current.draft.version,
       baseRevision: 1,
-      value: { ...value, description: 'Privat utkast' },
+      value: {
+        ...value,
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Privat utkast' },
+        ],
+      },
     })
   ).json();
   expect(
@@ -686,7 +721,7 @@ test('an administrator downloads a versioned complete archive with private state
   expect(bytes.byteLength).toBe(ready.bytes);
   const parts = unzipSync(bytes);
   const manifest = JSON.parse(Buffer.from(parts['manifest.json']).toString());
-  expect(manifest).toMatchObject({ format: 'skyttel-household', version: 1, householdId });
+  expect(manifest).toMatchObject({ format: 'skyttel-household', version: 2, householdId });
   expect(manifest.parts.map((part: { path: string }) => part.path)).toEqual([
     'content.json',
     'images.bin',

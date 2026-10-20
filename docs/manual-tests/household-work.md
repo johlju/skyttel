@@ -15,8 +15,7 @@ Följ [ingångarna till arbetsytorna](README.md#öppna-arbetsytor) när
 fallen anger formulär, samtal, profil eller administration.
 
 1. Förbered en
-   [separat
-   provdatabas](../development/devcontainer.md#disposable-local-database).
+   [separat provdatabas](../development/devcontainer.md#disposable-local-database).
    Skapa hushållet och ge Robin tillgång enligt
    [inbjudningsguiden](../user-guide/access.md#bjud-in-en-skyttel-användare).
 2. För samtalsfallen används den kontrollerade
@@ -72,7 +71,8 @@ ARBETE-01 vid 1280 × 900; de två smala fallen har egna identiteter nedan.
 
 1. Öppna **Tabell** och skriv **cykel** i **Sök objekt i tabellen**. Välj
    **Nytt objekt**,
-   skriv **Oskickad cykel** och beskrivningen **Behåll denna text**.
+   skriv **Oskickad cykel** och lägg till **Beskrivning** under
+   **Fria egenskaper**, med datatyp **Text** och värdet **Behåll denna text**.
 2. Stäng objektdialogen med krysset **Stäng objektdialogen**. Kontrollera att
    **Fortsätt redigera** är förvalt.
    Tryck Escape. Namn och beskrivning ska finnas kvar, fokus ska återgå
@@ -81,7 +81,8 @@ ARBETE-01 vid 1280 × 900; de två smala fallen har egna identiteter nedan.
    tangentbord. Kontrollera rubrikfokus och att kartans kontroller är dolda.
 4. Välj **Till startsidan** och öppna **Tabell**. Kontrollera sökningen
    **cykel**, namn **Oskickad cykel** och typ **Person**,
-   expandera raden **Oskickad cykel** och läs beskrivningen direkt i raden.
+   expandera raden **Oskickad cykel** och läs **Behåll denna text (Text)**
+   för egenskapen Beskrivning direkt i raden.
 
 **Förväntat resultat:**
 
@@ -334,7 +335,8 @@ microphone”.
 <!-- markdownlint-enable MD013 -->
 
 **Syfte:** Kontrollera att oskickat formulär, samtal, mikrofon och ett
-registrerat sparförsök avvecklas när radering spärrar innehållet, utan att omladdning
+registrerat sparförsök avvecklas när radering spärrar innehållet, utan att
+omladdning
 döljer ett fel i avvecklingen.
 
 **Användare:** Alex som aktuell administratör samt provmiljöns operatör.
@@ -373,7 +375,8 @@ an admitted save before reloading”.
    fortsätter. Öppna **Inställningar → Permanent radering**.
    Mikrofonen ska fortfarande vara på. Välj endast lampan och granska.
    Stolen och dess privata beskrivning ska inte visas i omfattningen.
-4. Be operatören öppna [databasläsaren](household-work-preparation.md#väntande-radering)
+4. Be operatören öppna
+   [databasläsaren](household-work-preparation.md#väntande-radering)
    före bekräftelsen. Invänta operatörens bekräftelse att läsaren är öppen.
 5. Bekräfta med exakt **RADERA PERMANENT**. Invänta besked om
    väntande städning. Behåll raderingssidan öppen för samma ärende.
@@ -392,7 +395,7 @@ an admitted save before reloading”.
    starta ett samtal: tidigare dialog och oskickat svar ska saknas.
    Välj uttryckligen **Nytt samtal** och kontrollera ett nytt medgivande.
    Avböj, öppna **Visa utkastet** och läs stolens fullständiga privata förslag:
-   **Stolen att bevara**, **Person**, **Oberoende privat förslag**.
+   **Stolen att bevara**, **Person**, **Oberoende privat förslag (Text)**.
    Det gamla objektformuläret
    och sparförsökets återförsök ska saknas. Stolen, dess privata förslag och
    placering är kvar; lampan är borta och Alex är fortfarande administratör.
@@ -619,38 +622,41 @@ till gemensamt kvitto och privat fortsatt arbete”.
    **Föreslå Familjens Molnmusik, ett familjeabonnemang för 179 SEK
    per månad.** Be operatören släppa katalogläsningen och abonnemangsförslaget
    enligt
-   förberedelsen. Läs **Familjens Molnmusik**, typ **Abonnemang**, tom
-   beskrivning och **179 / SEK / månad**: stäng textvyn, öppna **Tabell**
+   förberedelsen. Läs **Familjens Molnmusik**, typ **Abonnemang**, inga
+   beskrivningsegenskaper och **179 / SEK / månad**: stäng textvyn, öppna
+   **Tabell**
    och välj **Redigera Familjens Molnmusik**. Läs namn, vald **Objekttyp**
-   och beskrivning i **Grunduppgifter**. Öppna **Ekonomiska uppgifter**,
-   läs varje märkt värde och dess **uppgiftens säkerhet: Känt**. Stäng
+   i **Grunduppgifter**. Öppna **Fria egenskaper** och
+   läs de tre raderna **Pris**, **Valuta** och **Betalningsintervall**,
+   var och en med datatyp **Text** och rätt värde. Stäng
    utan ändring med Escape och återgå till textvyn.
    Inget objekt eller kvitto är gemensamt; Robins notering är oförändrad.
 3. Välj **Prata med Skyttel**. Be operatören släppa transkriptionen,
    personförslaget och sambandet
    enligt förberedelsen. Stäng textvyn, öppna **Tabell** och välj
    **Redigera Kim Exempel**. Läs namn **Kim Exempel**, vald **Objekttyp
-   Person** och tom beskrivning. Stäng med Escape utan ändring. Välj
+   Person** och inga fria egenskaper. Stäng med Escape utan ändring. Välj
    **Samband för Kim Exempel** och läs det fullständiga sambandet:
    **Från objekt Kim Exempel**, **Typ Betalar**, **Riktning Betalar**,
-   **Till objekt Familjens Molnmusik**, **Uppgiftens säkerhet Känt**.
+   **Till objekt Familjens Molnmusik**.
    Hela utkastet ska visa två objekt och ett samband. Inget är sparat.
 4. I **Tabell**, välj **Redigera Familjens Molnmusik**.
-   Öppna **Ekonomiska uppgifter** och rätta Pris till **189**. Öppna
-   **Grunduppgifter**, rätta beskrivningen till **Rättad för hand** och
+   Öppna **Fria egenskaper** och rätta **Pris** till **189**. Lägg till
+   en textegenskap **Beskrivning** med värdet **Rättad för hand** och
    välj **Lägg i utkastet och stäng**. Invänta avslutat formulär och
    beskedet **Ändringen finns i ditt utkast. Kartan sparas separat.**
    Fäll ut abonnemangets rad och läs alla uppgifter direkt i raden.
    Kontrollera namn, typ, beskrivning och alla tre märkta ekonomiska
    värden i den expanderade raden; fäll ihop raden. Välj
    **Redigera Familjens Molnmusik**, läs samma grunduppgifter och öppna
-   **Ekonomiska uppgifter**. Kontrollera varje märkt värde och dess
-   **uppgiftens säkerhet: Känt**. Stäng med Escape utan att ändra något.
+   **Fria egenskaper**. Kontrollera varje etikett och dess
+   **datatyp Text**. Stäng med Escape utan att ändra något.
    Läs Kims fullständiga uppgifter
    på samma sätt och kontrollera **Kim Exempel**, **Person** och
-   **Ej uppgivet** för beskrivningen. Fäll ihop raden och välj
+   att ingen egenskap Beskrivning finns. Fäll ihop raden och välj
    **Redigera Kim Exempel**. Skriv
-   **Oskickat om Kim** som beskrivning utan att lägga i utkastet.
+   **Oskickat om Kim** i en ny textegenskap **Beskrivning** under
+   **Fria egenskaper** utan att lägga i utkastet.
    Välj **Avbryt**, kontrollera förvalt **Fortsätt redigera** och tryck
    Escape. Kontrollera kvarvarande text. Välj **Avbryt** igen och
    **Kasta ändringarna och fortsätt**. Läs Kims uppgifter på nytt:
@@ -668,11 +674,12 @@ till gemensamt kvitto och privat fortsatt arbete”.
    Välj **Tillbaka till kartan** och välj
    abonnemanget och Kim genom att expandera deras rader i **Tabell**.
    Fäll ihop varje rad med namnet innan nästa öppnas. Kontrollera
-   båda objektens fullständiga namn, typer och beskrivningar,
-   abonnemangets tre märkta ekonomiska värden i de expanderade raderna.
-   Läs **Känt** för varje ekonomisk uppgift i abonnemangets fullständiga
-   editor enligt steg 4 och stäng utan ändring. Öppna **Samband för
-   Kim Exempel**, läs riktning, ändpunkter och **Känt**, och stäng
+   båda objektens fullständiga namn och typer, abonnemangets Beskrivning
+   och tre märkta ekonomiska värden samt att Kim saknar fria egenskaper.
+   Läs **datatyp Text** för varje ekonomisk uppgift i abonnemangets
+   fullständiga editor enligt steg 4 och stäng utan ändring. Öppna **Samband för
+   Kim Exempel**, läs riktning och ändpunkter. Kontrollera att ingen egenskap
+   **Uppgiftens säkerhet** har lagts till, och stäng
    läsmodalen. Återgå till textvyn och kontrollera samma detaljvy och
    samtalets oskickade text. Kims uttryckligen kastade text återkommer inte.
    Robins notering ska fortfarande vara privat.
@@ -682,7 +689,8 @@ till gemensamt kvitto och privat fortsatt arbete”.
    Ersätt samtalets oskickade text med **Spara hela utkastet nu.** och skicka.
    Be operatören släppa helhetssparandet enligt förberedelsen.
    Öppna **Rapporter → Ändringshistorik → Visa ändringarna**.
-   Läs båda objektens namn, typ och beskrivning, abonnemangets märkta
+   Läs båda objektens namn och typ, abonnemangets egenskap Beskrivning
+   och att Kim saknar fria egenskaper. Läs abonnemangets märkta
    **Pris 189**, **Valuta SEK**, **Betalningsintervall månad**, hela
    **Kim Exempel → Betalar → Familjens Molnmusik**, Alex som sparande
    användare och den visade tidpunkten. Öppna **Identifiera sparandet
@@ -691,7 +699,7 @@ till gemensamt kvitto och privat fortsatt arbete”.
    Kontrollera ett kvitto för båda objekten och sambandet, tomt Alex-utkast
    och välj **Tillbaka till arbetet** i Rapporter. Stäng textvyn och läs
    Kims fullständiga uppgifter genom **Tabell**. Kontrollera att
-   **Oskickat om Kim** saknas både i detaljvyn och sparad beskrivning.
+   **Oskickat om Kim** saknas både i detaljvyn och bland sparade egenskaper.
    Fäll ihop raden och återgå till textvyn. Kvittot
    finns kvar i **Rapporter → Ändringshistorik**, och
    mikrofonknappen finns kvar i verktygsraden. Robins privata notering
@@ -702,9 +710,9 @@ till gemensamt kvitto och privat fortsatt arbete”.
    Ladda om Alex flik och öppna
    **Rapporter → Ändringshistorik → Visa ändringarna** för samma
    kvitto. Upprepa hela den märkta historikläsningen från steg 6,
-   inklusive båda typerna, Kims tomma beskrivning, användare och tidpunkt.
+   inklusive båda typerna, **Inga egenskaper.** för Kim, användare och tidpunkt.
    Läs sedan båda fullständiga objektformulären samt sambandets typ,
-   riktning, ändpunkter och säkerhet i Tabell innan nästa privata rättelse.
+   riktning och ändpunkter i Tabell innan nästa privata rättelse.
    Oskickad lokal text
    behöver inte överleva den uttryckliga omladdningen.
 8. Välj **Tillbaka till arbetet**. Som Alex, öppna **Tabell** och
@@ -714,12 +722,15 @@ till gemensamt kvitto och privat fortsatt arbete”.
    gemensamma abonnemanget med **Rättad för hand**, **189 / SEK / månad**,
    Kim och Betalar-sambandet, samt enbart sin egen privata notering.
    Som Robin: välj **Redigera Familjens Molnmusik**, läs grunduppgifterna
-   och de märkta ekonomiska värdena med **Känt** i **Ekonomiska uppgifter**.
-   Stäng med Escape utan ändring. Läs **Kim Exempel**, **Person** och tom
-   beskrivning genom **Redigera Kim Exempel** och stäng. Välj **Samband
-   för Kim Exempel**, läs hela riktningen och **Känt**, och stäng modalens
+   och de fria textegenskaperna Pris, Valuta och Betalningsintervall
+   under **Fria egenskaper**.
+   Stäng med Escape utan ändring. Läs **Kim Exempel**, **Person** och inga fria
+   egenskaper genom **Redigera Kim Exempel** och stäng. Välj **Samband
+   för Kim Exempel**, läs hela riktningen och båda ändpunkterna, och stäng
+   modalens
    kryss. Kontrollera samma fullständiga historik från steg 6,
-   inklusive typer, beskrivningar, märkta ekonomiska värden, Alex och tidpunkt.
+   inklusive typer, abonnemangets Beskrivning, Kims avsaknad av fria egenskaper,
+   märkta ekonomiska värden, Alex och tidpunkt.
    Alex ska inte se
    Robins notering. Avsluta provmiljön med `quit` enligt röstguiden.
 

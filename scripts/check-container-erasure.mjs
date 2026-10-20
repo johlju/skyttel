@@ -39,7 +39,14 @@ export async function checkContainerErasure({
         value: {
           typeId: state.types[0].id,
           name: 'Independent content',
-          description: 'Retained after erasure',
+          properties: [
+            {
+              id: 'description',
+              label: 'Description',
+              kind: 'text',
+              value: 'Retained after erasure',
+            },
+          ],
         },
       })
     ).status,
@@ -116,7 +123,10 @@ export async function checkContainerErasure({
     state.objects.map(({ id }) => id),
     ['erasure-independent'],
   );
-  assert.equal(state.objects[0].description, 'Retained after erasure');
+  assert.equal(
+    state.objects[0].properties.find(({ id }) => id === 'description').value,
+    'Retained after erasure',
+  );
   assert.equal((await call(`/profile-images/${imageId}`)).status, 404);
   assert.equal((await call(`/exports/${JSON.parse(oldExport.body).id}`)).status, 404);
   assert.equal(

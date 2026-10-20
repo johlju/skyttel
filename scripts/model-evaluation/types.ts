@@ -1,21 +1,28 @@
+import type { PropertyKind } from '../../src/shared/properties.js';
+
+export type FixtureProperty = {
+  id?: string;
+  label: string;
+  kind?: PropertyKind;
+  value?: string | number | boolean;
+};
 export type NamedRelationship = {
   source: string;
   type: string;
-  target: string | null;
-  knowledge: string;
+  target: string;
+  properties?: FixtureProperty[];
 };
 export type FixtureObject = {
   id: string;
   type: string;
   name: string;
-  description: string;
-  financialFacts?: unknown;
+  properties?: FixtureProperty[];
 };
 export type Expected = {
   objects?: Record<string, Record<string, unknown>>;
   addRelationships?: NamedRelationship[];
   removeRelationships?: NamedRelationship[];
-  objectTypes?: { name: string; fields: { name: string; kind: string }[] }[];
+  objectTypes?: { name: string }[];
   saveAttempts?: number;
   saves?: number;
   requirements: string[];

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { closeSupportDialog, createHousehold, signIn } from '../support/client.js';
+import { createHousehold, signIn } from '../support/client.js';
 import {
   closeConversationText,
   microphoneButton,
@@ -9,12 +9,12 @@ import {
   turnMicrophoneOn,
   voiceBox,
 } from '../support/conversation-page.js';
-import { readDraftProposal } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
+import { readVoiceProposal } from '../support/voice-work-reading.js';
 
 const region = (page: Page) =>
   page.getByRole('region', { name: 'Skriv till Skyttel', exact: true });
@@ -45,7 +45,13 @@ async function arrange(page: Page, fixtures: ReturnType<typeof providers>) {
   const { household } = await (await createHousehold(page.request, app.origin, 'Köprov')).json();
   const path = `${app.origin}/api/households/${household.id}/map`;
   const state = await (await page.request.get(path)).json();
-  const value = { typeId: state.types[0].id, name: 'Lo Exempel', description: 'Påhittad uppgift' };
+  const value = {
+    typeId: state.types[0].id,
+    name: 'Lo Exempel',
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Påhittad uppgift' },
+    ],
+  };
   await page.request.post(`${path}/draft`, {
     headers: { origin: app.origin },
     data: {
@@ -83,35 +89,6 @@ function speak(live: ReturnType<typeof liveProvider>, text: string) {
     offset_ms: 100,
     delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
   });
-}
-
-async function readPrivateLo(page: Page, name = 'Lo Exempel') {
-  const proposal = await readDraftProposal(page, name);
-  const proposedValues = proposal
-    .getByRole('heading', { name: 'Föreslagna värden', exact: true })
-    .locator('..');
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Namn(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText(name);
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Typ(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText('Person');
-  await expect(
-    proposedValues
-      .locator('dt')
-      .filter({ hasText: /^Beskrivning(?:\s+· ändrat)?$/ })
-      .locator('..')
-      .locator('dd'),
-  ).toHaveText('Påhittad uppgift');
-  await closeSupportDialog(page, name);
 }
 
 test('KÖ-01: datorn besvarar serverns kö i ordning och Escape avbryter bara i textvyn', async ({
@@ -188,7 +165,7 @@ test('KÖ-01: datorn besvarar serverns kö i ordning och Escape avbryter bara i 
       }),
     ]);
     await expect.poll(async () => (await read()).draft).toEqual(before);
-    await readPrivateLo(page);
+    await readVoiceProposal(page);
     await closeConversationText(page);
     await expect(page.getByText(canceled, { exact: true })).toHaveCount(0);
     await openConversationText(page);
@@ -252,7 +229,7 @@ test('KÖ-02: smal dator visar stopp, behåller oskickad text och tillåter Esca
       )
       .toBe('ended');
     await expect.poll(async () => (await read()).draft).toEqual(before);
-    await readPrivateLo(page);
+    await readVoiceProposal(page);
     fixtures.held[0].release([modelMessage('Ett sent svar.')]);
     await expect(log(page)).not.toContainText('Ett sent svar.');
     await send(page, 'Avbryt med tangentbord.');
@@ -324,7 +301,7 @@ test('KÖ-03: röstrutans stopp avbryter talat arbete och textkön utan att änd
     fixtures.held[1].release([modelMessage('Textsvaret.')]);
     await expect(log(page)).toContainText('Textsvaret.');
     await expect.poll(async () => (await read()).draft).toEqual(before);
-    await readPrivateLo(page);
+    await readVoiceProposal(page);
     expect(
       fixtures.live.sent.filter(({ event }) => event.type === 'session.commentary.append'),
     ).toHaveLength(0);
@@ -358,7 +335,7 @@ test.describe('Pekskärm', () => {
       fixtures.held[0].release([modelMessage('För sent på mobilen.')]);
       await expect(log(page)).not.toContainText('För sent på mobilen.');
       await expect.poll(async () => (await read()).draft).toEqual(before);
-      await readPrivateLo(page);
+      await readVoiceProposal(page);
       expect(fixtures.held).toHaveLength(1);
     } finally {
       for (const item of fixtures.held) item.release([]);

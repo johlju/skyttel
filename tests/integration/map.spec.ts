@@ -9,6 +9,7 @@ import {
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { propertyRow, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 test('KARTA-23: refreshing after a conflict preserves text without authorizing a stale form', async ({
@@ -117,7 +118,7 @@ test('KARTA-06: objects move from a persistent private proposal to the shared ma
     await openTable(page);
     await openNewObject(page);
     await page.getByLabel('Namn', { exact: true }).fill('Lo Exempel');
-    await page.getByLabel('Beskrivning', { exact: true }).fill('En påhittad person');
+    await setProperty(page, 'Beskrivning', 'En påhittad person');
     const loType = await page
       .getByLabel('Objekttyp', { exact: true })
       .locator('option:checked')
@@ -125,7 +126,9 @@ test('KARTA-06: objects move from a persistent private proposal to the shared ma
     await page.setViewportSize({ width: 320, height: 568 });
     await expect(page.getByLabel('Namn', { exact: true })).toHaveValue('Lo Exempel');
     await page.setViewportSize({ width: 1024, height: 768 });
-    await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue('En påhittad person');
+    await expect(propertyRow(page, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
+      'En påhittad person',
+    );
     await page.getByRole('button', { name: 'Lägg i utkastet och stäng' }).focus();
     await page.keyboard.press('Enter');
     await openDraftReview(page);

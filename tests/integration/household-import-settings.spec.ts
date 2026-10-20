@@ -27,8 +27,15 @@ test('IMPORT-12: protected Settings recovery pages preserve ordinary work and re
             baseRevision: null,
             value: {
               name: 'Redan privat arbete',
-              description: 'Privat uppgift för Redan privat arbete',
               typeId: initial.types[0].id,
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Privat uppgift för Redan privat arbete',
+                },
+              ],
             },
           },
         })

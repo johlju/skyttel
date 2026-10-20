@@ -146,7 +146,7 @@ Stäng text med **Stäng textvyn** när ett fall behöver själva kartan.
 **Din profil** innehåller användar-ID, inbjudningar, **Inloggningssätt**,
 **Assistentanslutningar**, **Kakor och lagring** och **Logga ut**.
 **Inställningar** öppnar en egen
-sida med **Typer och egna fält**, **Administrera tillgång** för
+sida med **Typer**, **Administrera tillgång** för
 administratören och **Månadskostnad** för driftansvarig. Mobilnavigationen
 öppnas med **Välj inställning**. **Tillbaka till kartan** återger arbetet.
 
@@ -155,6 +155,23 @@ lämnas. **Fortsätt redigera** eller Escape avbryter förlusten; endast
 **Kasta ändringarna och fortsätt** kastar texten. Vid väntande eller oklart
 utfall följer du formulärets uttryckliga kontroll före nytt försök.
 Rent läsande dialoger stängs med kryss eller Escape och återför fokus.
+
+## Fria egenskaper i formulären
+
+En beskrivning, ett pris och en notering på ett enskilt objekt eller samband
+är fria egenskaper. För objekt: öppna **Fria egenskaper**. För samband finns
+egenskaperna direkt i sambandsformuläret. Välj **Lägg till egenskap**, ange
+**Etikett**, välj **Datatyp** och ange **Värde**. Rätta en befintlig rad
+genom dess etikett och position. Använd **Flytta upp** och **Flytta ned**
+för ordningen. **Töm värdet** behåller raden; **Ta bort egenskapen** tar bort
+hela raden. Samma etikett kan finnas på flera skilda rader.
+
+När fallen nedan anger en individuell beskrivning används etiketten
+**Beskrivning** och datatypen **Text**. Egenskaperna följer med vid typbyte.
+Ett datum eller en fritt vald etikett ändrar aldrig status automatiskt;
+status väljs uttryckligen under **Livscykel och utseende** respektive
+**Sambandets status**. Typens egen beskrivning förklarar däremot typen
+i **Inställningar → Typer**.
 
 ## Områden
 
@@ -241,6 +258,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   SÖK-variant. LISTA-09 skiljer faktisk uppläsning och förstoring från
   Chromium-proven, även för sökning med NVDA och VoiceOver. SÖK-16 har
   fysisk pekning, skärmtangentbord och förstoring på iPhone och iPad.
+  SÖK-17 och SÖK-18 skyddar fria egenskaper i sparade och föreslagna
+  detaljer, sökning på etiketter och värden samt granskning före ett
+  uttryckligt ändpunktsval mellan objekt med lika namn.
   Grafikavbrott har separat
   [körbar förberedelse](map-graphics-preparation.md).
 
@@ -363,7 +383,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   NOT-24 kräver hört besked. NOT-11 har
   en separat körbar mänsklig granskning av alla symbolformer och typfärger.
 - [Frågor och talade sparbesked](conversation-questions.md): identiteter,
-  konflikter, oberoende svar under väntande frågor, förnyad sparbegäran,
+  konflikter, datatyper, upprepade egenskapsetiketter och lika objektnamn,
+  oberoende svar under väntande frågor, förnyad sparbegäran,
   väntan med mikrofonen av, beständigt kvitto och fyra
   sekunders sparbesked efter ljud eller stopp. Talad och skriven ingång
   har skilda vanliga fall; uppläsning och faktiskt ljud har FRAGA-08/09.
@@ -422,8 +443,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   med mus och piltangenter, personliga bredder mellan hushåll och enheter,
   visningsbegränsning utan ändrat sparat val samt återställning även utan
   tillgängligt samtal. Mobil enhet och smal skärm behåller sina bredder.
-  Aktuella och kompatibla äldre hushållsarkiv bevarar personliga samtalsval
-  och håller dem och medgivandet utanför hushållsfilen. TEXTBREDD-05 har
+  Återimport av hushållsarkiv lämnar personliga samtalsval och medgivande
+  kvar; de ingår inte i hushållsfilen. TEXTBREDD-05 har
   en egen vanlig importmotsvarighet; EXPORT-10 är överlappande underlag.
   Faktisk skärmläsning, mikrofonljud och fysisk inmatning har separata
   observationsfall. De tre godkända mobilkonfigurationerna är borttagna.
@@ -500,8 +521,10 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 
 - [Fullständig återimport](household-import.md): egna inställningssidor,
   bevarat oskickat arbete före innehållsbyte, uttrycklig ersättning,
-  bevarad åtkomst, privata uppgifter, bildhistorik, äldre fältbetydelser,
+  bevarad åtkomst, privata uppgifter, bildhistorik,
   personliga bakgrundsval och rörelsevärden genom export och återimport,
+  fria egenskaper samt fortsatt rättelse av blockerade och undertryckta
+  sambandsförslag efter återimport och omstart,
   lokalt prov med tappat sparbesked, avvisade gamla sparbegäranden,
   ny förberedelse efter omstart, samma importförsök i en annan
   administratörs webbläsare, tappat förberedelsesvar, väntande rensning
@@ -614,6 +637,10 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   KARTA-07 använder verkliga familjeformulär med separat HTTP-underlag;
   KARTA-25 skyddar den samtidiga dubblettdialogen. KARTA-08 har en komplett
   1280px/ljus referens och fem egna native konfigurationsfall.
+- [Fria egenskaper](free-properties.md): upprepade etiketter, datatypbyte,
+  bevarad felaktig inmatning, separat tömning och borttagning samt
+  tangentbordsstyrd ordning genom utkast, sparande och omstart på dator
+  och mobil för objekt och samband.
 - [Markering och detaljer](map-selection.md): flerval, tomrumsgester,
   textkontroller, aktiv detaljikon, flera flyttbara uppgiftsfönster och
   högerklickets sju ikoner och uppgiftsfönstrens fem åtgärdsikoner.
@@ -676,8 +703,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   verklig förstoring och längre bruk har en separat mänsklig observation.
 - [Avtal och ekonomiska uppgifter](contracts.md): registrera, hitta och
   rätta hyra, skuld och kredit, separata roller kring bostad och fordon,
-  validering, konflikter, historik och bevarade äldre utkast. Ett lokalt
-  kommando förbereder äldre provdata för uppgraderingen. AVTAL-07 provar
+  validering, konflikter, historik och bevarade utkast. AVTAL-07 provar
   saknat känt skuldbelopp i formuläret och AVTAL-08 riktiga konfliktval;
   HTTP-validering, kvitton och historik körs som separat tekniskt underlag
   i Vitests serverprojekt med oberoende autentiserade klienter, verklig
@@ -685,6 +711,12 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   behåller alla påståenden; tre integrationsexekveringar blir tre
   serverexekveringar.
 - [Ditt utkast](drafts.md): fullständig läsning av objekt, samband och typer
+  samt samtidiga fria egenskapsändringar med separata egenskaps- och
+  ordningsval, objektborttagning med bevarade sambandsförslag, flera orsaker och
+  återtagning som behåller separata sambandsborttagningar, ny granskning och
+  nytt sparbesked när ytterligare borttagningsföljder tillkommer,
+  samt rättning eller kastande av bevarade sambandsförslag efter någon
+  annans ändpunktsborttagning, med blockering av hela sparandet,
   utan AI eller medgivande, giltighet, profilbilder och egna egenskapsnamn,
   separata bredd-, tema- och återfokusfall med
   [styrd sparleverans](save-preparation.md),
@@ -709,7 +741,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   med separat HTTP-underlag i Vitests serverprojekt för privata utkast,
   gamla konfliktval och återkallat medlemskap genom oberoende sessioner,
   separata Karta- och Tabellvägar för genomförda och uteblivna konfliktval,
-  historisk fältförlust, skilda objekt- och sambandstypsåterställningar och
+  bevarade historiska egenskaper, skilda typåterställningar och
   avvisad gammal behörighet med
   [separat historisk förberedelse](historical-definition-preparation.md),
   nyare jämförelser, andra klienters sparande och oberoende formulärarbete;
@@ -726,8 +758,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   att kasta endast den berörda postens förslag; hantera dubbletter och
   saknade ändpunkter, välja objektets och nya sambands borttagning oberoende,
   kontrollera flera privata borttagningar efter tappat svar och rätta
-  inkompatibla egna fält i den vanliga objektdialogen, rätta saknade typer
-  genom faktiska definitioner och läsa historiska fältnamn före typbytesförlust;
+  enskilda egenskapers datatyper i den vanliga objektdialogen, rätta saknade
+  typer genom faktiska definitioner och bevara historiska egenskaper vid typbyte;
   bevara oberoende
   utkast och sparad historik; behålla ett ändrat samband och öppna
   objektborttagningens verkliga beroende igen; granska borttagna
@@ -737,7 +769,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   återställning efter import och kontrollera dess fullständiga privata
   utfall utan dubblerad mutation; behålla ändrade fakta när nya samband
   försvinner, visa samtidiga typ- och ändpunktshinder, läsa historiska
-  fältnamn även när en aktuell definition saknar fältet, kasta ägda
+  egenskapsnamn även när den historiska typen saknas, kasta ägda
   definitionsförslag utan faktisk borttagningsrevision och kontrollera
   oklara fasta kastval från både Karta och Tabell samt gå till nästa verkliga
   konflikt från resultatet med bevarade val och rubrikfokus
@@ -755,7 +787,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   utkastet och öppna en namngiven konflikt från status med tangentbord.
   Följ alla fyra konfliktslag till rätt ändring och läs tidigare, föreslagna
   och aktuella
-  avsnitt, dolda värden och hela ekonomiska uppgifter. Rätta ett
+  ordnade egenskaper med hela värden och egna etiketter. Rätta ett
   konfliktobjekt med det oberoende förslaget och sparade uppgifter kvar
   före ett nytt uttryckligt sparande. Rätta ett sambands
   borttagna mål utan att återuppliva objektet eller spara i förtid.
@@ -773,33 +805,19 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   UTKAST-43 och UTKAST-143 har separat
   [tekniskt HTTP-underlag i server-sviten](../../tests/unit/server/draft-removal-http.test.ts)
   för publika typförslag, beroende värden och oförändrad karta och historik.
-- [Objekttyper och egna fält](object-types.md): skapa och rätta gemensamma
-  definitioner, fyra frivilliga värdeslag, privata förslag, samtidiga
-  ändringar i namngivna avsnitt, flytt och döljning utan värdeförlust,
-  gemensamma egenskaper med bevarad säkerhet och datum, tangentbord
-  och bevarat arbete på mobil, dator och korta fönster med synlig status.
-  Konfigurerad läsordning följer formuläret genom utkast och tabell,
-  med uttryckliga nollvärden och **Nej** bevarade.
-  Samtidiga
-  ändringar med bevarade oberoende uppgifter och samma atomiska kvitto
-  som objektens innehåll. Upprepade typbyten granskar skilda gamla svar,
-  kräver ny bekräftelse och bevarar identitet, ekonomiska uppgifter,
-  bild, ikon och samband samt läser historiska värden.
-  TYP-09, TYP-10 och TYP-11 är kompletta referenser vid datorbredd;
-  TYP-13–22 skyddar angivna smala, korta och mörka browserflöden. Hela
-  sparande- och omstartskedjan upprepas inte i varje konfiguration.
-  TYP-23 kräver fysisk tangentbordsanvändning vid verklig förstoring.
-  TYP-07:s HTTP-underlag i Vitests serverprojekt bevarar felaktiga värden,
-  ändrade definitioner, gamla sparbesked och senare privata fält efter
-  faktisk omstart.
-  TYP-01 jämför hela privata förslag, beständigt kvitto, historik och
-  återspelning i formulärflödet;
-  typens och fältets formulärvalidering utförs genom riktiga kontroller.
-  Konfigurerad fältordning följer med till formulär, utkast och tabellens
-  fullständiga läsning, inklusive uttrycklig noll och Nej.
+- [Objekttyper](object-types.md): skapa och rätta gemensamma namn och
+  typförklaringar, bevara privata förslag och granska samtidiga ändringar.
+  Individens fria egenskaper har text, tal, datum eller ja/nej samt egna
+  stabila identiteter och läsordning, även vid noll, Nej och tomma värden.
+  Upprepade typbyten bevarar alla egenskaper, identitet, profilbild, ikon
+  och samband genom utkast, sparande, historik och omstart. TYP-10/11/15–22
+  har egna konfigurationer för breda, smala, korta och mörka fönster.
+  TYP-23 behåller fysisk tangentbordsobservation vid verklig förstoring.
+  TYP-08/09/13/14 är avvecklade typavsnittsfall och får inte återanvändas.
 - [Sambandsarbete](relationships.md): skapa objekt separat, koppla dem i den
   gemensamma dialogen och rätta objekt och samband oberoende. Fullständiga
-  egna värden, typbyte, riktning och säkerhet behåller sin betydelse.
+  egna värden, typbyte och riktning behåller sin betydelse. Osäkerhet kan
+  anges som en vanlig egenskap utan särskild sparverkan.
   Validering, dubbletter, borttagning, oklara utfall och förlustvarning
   bevarar tidigare förslag. Ett gammalt obekräftat försök efter en senare
   ändring kräver granskning av aktuellt underlag före nytt förslag.
@@ -807,16 +825,13 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   fallidentiteter. Faktisk skärmläsning och fysiskt skärmtangentbord har
   separata mänskliga observationsfall. Exakta dekorativa värden i
   SAMBAND-12 ingår inte i skyddet.
-- [Sambandstyper och riktning](relationship-types.md): benämningar från
-  båda objekten, redigerbara definitioner, fyra egna fältslag, obesvarat,
-  noll och Nej, uttrycklig hantering vid typbyte, privata förslag,
-  ordnade avsnitt och återvisade dolda svar efter omstart, dubbletter
-  och samtidiga sparanden utan delsparande. Typ- och fältformulär provas
-  genom native kontroller. Hela spara- och omstartskedjan har referensen
-  1440px; 390/320px behåller eget formulärarbete, teman och fokus.
-  STY-01 jämför hela privata förslag, historiska typdefinitioner, exakt
-  kvitto, historik och återspelning i samma formulärflöde.
-- [Borttagning av typer och fält](definition-removal.md): granskad
+- [Sambandstyper och riktning](relationship-types.md): redigerbara
+  namn, förklaringar och benämningar från båda verkliga ändpunkterna.
+  Sambandens fria egenskaper behåller etiketter, identiteter, datatyper
+  och ordning genom typbyte, omstart och samtidig granskning.
+  Dubbletter och samtidiga sparanden ger inget delsparande.
+  STY-08/10/11 är avvecklade typavsnittsfall och får inte återanvändas.
+- [Borttagning av typer](definition-removal.md): granskad
   katalogborttagning, användningsspärrar för upphört innehåll och privata
   utkast utan privat läckage, fullständig förslagsläsning och läsning av
   historiska definitioner som saknas i katalogen även efter omstart.
@@ -829,13 +844,16 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   en annan klient; protokollreplay redovisas separat.
   DEMO-01 och DEMO-02 provar färdigt TestHousehold med Google respektive
   Microsoft som konfigurerad administratör. Båda behåller den andra
-  leverantörens åtkomstgräns, fulla värden och privata förslag efter omstart.
+  leverantörens åtkomstgräns, fria egenskaper, giltiga samband och privata
+  förslag efter omstart. Den fristående musikföreningen behålls.
   Teknisk start, säker sådd och återställning redovisas separat.
 - [Ändringshistorik](history.md): Rapporter visar genomförda sparanden
   senaste först, fullständiga historiska värden, direktlänkar och återgång
   till bevarat arbete. Omfattar tangentbord, smala skärmar, återförsök
   och fokus under fördröjd hämtning, sparlänkar med bevarad oskickad text
   samt HISTORIK-14–17:s smala varianter och separat verklig zoom.
+  UTKAST-157 läser fria egenskapers identiteter, ordning och datatyper på
+  båda sidor tillsammans med dåvarande typförklaringar och riktning.
   HISTORIK-13 är avvecklat: ikontext före/efter bredvid oförändrad
   profilbild saknar sin specifika integrationskontroll.
 - [Upphört och borttaget](lifecycle.md): markera och rätta status, följa

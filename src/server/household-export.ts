@@ -94,17 +94,7 @@ export async function invalidateHouseholdExports(
 
 const collections = [
   ['objectTypes', 'SELECT * FROM object_type WHERE householdId = ? ORDER BY id', []],
-  [
-    'objectTypeFields',
-    'SELECT f.* FROM object_type_fields f JOIN object_type t ON t.id = f.typeId WHERE t.householdId = ? ORDER BY f.typeId',
-    ['fields', 'sections', 'builtins', 'propertyOrder'],
-  ],
   ['relationshipTypes', 'SELECT * FROM relationship_type WHERE householdId = ? ORDER BY id', []],
-  [
-    'relationshipTypeFields',
-    'SELECT f.* FROM relationship_type_fields f JOIN relationship_type t ON t.id = f.typeId WHERE t.householdId = ? ORDER BY f.typeId',
-    ['fields', 'sections'],
-  ],
   [
     'relationshipTypeLabels',
     'SELECT l.* FROM relationship_type_labels l JOIN relationship_type t ON t.id = l.typeId WHERE t.householdId = ? ORDER BY l.typeId',
@@ -117,15 +107,11 @@ const collections = [
     (r.kind = 'relationshipType' AND r.typeId IN (SELECT id FROM relationship_type WHERE householdId = ?)) ORDER BY kind, typeId`,
     [],
   ],
-  [
-    'objects',
-    'SELECT * FROM map_object WHERE householdId = ? ORDER BY id',
-    ['financialFacts', 'customValues'],
-  ],
+  ['objects', 'SELECT * FROM map_object WHERE householdId = ? ORDER BY id', ['properties']],
   [
     'relationships',
     'SELECT * FROM map_relationship WHERE householdId = ? ORDER BY id',
-    ['endDate', 'customValues'],
+    ['properties'],
   ],
   [
     'drafts',
@@ -244,7 +230,7 @@ async function snapshot(database: Database.Database, job: Job): Promise<ExportMa
     ];
     return {
       format: 'skyttel-household',
-      version: 1,
+      version: 2,
       createdAt: new Date().toISOString(),
       householdId: job.householdId,
       schemaVersion,

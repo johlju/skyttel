@@ -9,10 +9,10 @@ import type {
 import { objectIconLabel } from '../shared/object-icons.js';
 import { relationshipLabel } from '../shared/relationship-label.js';
 import { HistoricalMergeDetails } from './HistoricalMergeDetails.js';
+import { HistoricalProperties } from './HistoricalProperties.js';
 import { LifecycleDetails } from './Lifecycle.js';
 import { MapRequestError, request } from './map-request.js';
-import { ObjectPropertiesDetails } from './ObjectProperties.js';
-import { CustomFieldsDetails, ObjectTypeDetails } from './ObjectTypes.js';
+import { ObjectTypeDetails } from './ObjectTypes.js';
 import { ProfileImage } from './ProfileImage.js';
 import { RelationshipTypeDetails } from './RelationshipTypes.js';
 import './map-history.css';
@@ -124,12 +124,13 @@ function ObjectDetails({
         <p>{value.id}</p>
       </details>
       <p>Objekttyp: {type.name}.</p>
+      <p>Typens beskrivning: {type.description || 'Ingen beskrivning'}</p>
       {value.identity && (
         <p>
           {value.identity === 'unspecified' ? 'Ospecificerat objekt' : 'Obesvarad identitetsfråga'}
         </p>
       )}
-      <ObjectPropertiesDetails type={type} value={value} showHidden />
+      <HistoricalProperties properties={value.properties} />
       <LifecycleDetails value={value} />
     </>
   ) : (
@@ -149,30 +150,24 @@ function EdgeDetails({
   before?: boolean;
 }) {
   if (!value) return <p>{absent}</p>;
+  const type = before ? (change.beforeType ?? change.type) : change.type;
   const names = new Map(
     Object.entries(change.objectNames ?? {}).map(([id, name]) => [id, { name }]),
   );
   return (
     <>
-      <p>
-        {relationshipLabel(
-          value,
-          { relationshipTypes: [before ? (change.beforeType ?? change.type) : change.type] },
-          names,
-        )}
-      </p>
+      <p>{relationshipLabel(value, { relationshipTypes: [type] }, names)}</p>
+      <p>Sambandstyp: {type.name}.</p>
+      <p>Typens beskrivning: {type.description || 'Ingen beskrivning'}</p>
+      <p>Benämning från startobjektet: {type.forwardLabel ?? type.name}</p>
+      <p>Benämning från målobjektet: {type.reverseLabel || 'Visar den ursprungliga riktningen'}</p>
       <details>
         <summary>Sambandets objektidentiteter</summary>
         <p>
-          Från objekt {value.sourceId}
-          {value.targetId !== null && ` till objekt ${value.targetId}`}.
+          Från objekt {value.sourceId} till objekt {value.targetId}.
         </p>
       </details>
-      <CustomFieldsDetails
-        type={before ? (change.beforeType ?? change.type) : change.type}
-        values={value.customValues}
-        showHidden
-      />
+      <HistoricalProperties properties={value.properties} />
       <LifecycleDetails value={value} />
     </>
   );

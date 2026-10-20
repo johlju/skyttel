@@ -19,6 +19,7 @@ import { editTableObject, readTableObject } from '../support/domain-work.js';
 import { downloadHouseholdExport } from '../support/household-export-download.js';
 import { createInstallation, robin } from '../support/installation.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
+import { propertyValue, setProperty } from '../support/property-controls.js';
 import { denyRecoveryStorage, restoreRecoveryStorage } from '../support/recovery-storage.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
@@ -38,7 +39,7 @@ async function arrange(page: Page, formerImageType = false) {
           id: 'former-image-type',
           version: 0,
           baseRevision: null,
-          value: { name: 'Tidigare bildtyp', description: '', fields: [] },
+          value: { name: 'Tidigare bildtyp', description: '' },
         })
       ).status(),
     ).toBe(200);
@@ -56,7 +57,6 @@ async function arrange(page: Page, formerImageType = false) {
           value: {
             typeId: formerImageType && id === 'lamp' ? 'former-image-type' : state.types[0].id,
             name,
-            description: '',
           },
         })
       ).status(),
@@ -112,7 +112,17 @@ async function arrange(page: Page, formerImageType = false) {
           id: 'chair',
           version: latest.draft.version,
           baseRevision: chair?.revision,
-          value: { ...chair, description: 'Oberoende privat förslag' },
+          value: {
+            ...chair,
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Oberoende privat förslag',
+              },
+            ],
+          },
         })
       ).status(),
     ).toBe(200);
@@ -540,7 +550,15 @@ test('RADERING-01: keyboard review erases selected content and preserves unrelat
     expect(state.draft.changes).toEqual([
       expect.objectContaining({
         id: 'chair',
-        after: expect.objectContaining({ description: 'Oberoende privat förslag' }),
+        after: expect.objectContaining({
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Oberoende privat förslag',
+            }),
+          ]),
+        }),
       }),
     ]);
     expect(
@@ -636,7 +654,7 @@ test('RADERING-03: a changed scope requires a new review and confirmation before
     const otherPage = await other.newPage();
     await otherPage.goto(fixture.administration.replace(/\/administration$/, ''));
     const form = await editTableObject(otherPage, 'Stolen att bevara');
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Senare privat förslag');
+    await setProperty(form, 'Beskrivning', 'Senare privat förslag');
     const staged = otherPage.waitForResponse((response) =>
       response.url().endsWith('/map/object-form'),
     );
@@ -666,7 +684,7 @@ test('RADERING-03: a changed scope requires a new review and confirmation before
     await expect(
       section.getByText('Den permanenta raderingen är slutförd.', { exact: true }),
     ).toBeVisible();
-    expect((await fixture.read()).draft.changes[0].after?.description).toBe(
+    expect(propertyValue((await fixture.read()).draft.changes[0].after, 'Beskrivning')).toBe(
       'Senare privat förslag',
     );
     await readRemainingWork(page, fixture.administration, 'Senare privat förslag');
@@ -722,7 +740,7 @@ test('RADERING-04: pending cleanup survives application restart and completes on
       section.getByText('Den permanenta raderingen är slutförd.', { exact: true }),
     ).toBeVisible();
     expect((await fixture.read()).objects.map((object) => object.id)).toEqual(['chair']);
-    expect((await fixture.read()).draft.changes[0].after?.description).toBe(
+    expect(propertyValue((await fixture.read()).draft.changes[0].after, 'Beskrivning')).toBe(
       'Oberoende privat förslag',
     );
     expect(
@@ -795,7 +813,17 @@ test('RADERING-05: erasing a former type removes its historical image from a fre
           id: 'chair',
           version: state.draft.version,
           baseRevision: chair?.revision,
-          value: { ...chair, description: 'Oberoende privat förslag' },
+          value: {
+            ...chair,
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Oberoende privat förslag',
+              },
+            ],
+          },
         })
       ).status(),
     ).toBe(200);
@@ -830,7 +858,18 @@ test('RADERING-05: erasing a former type removes its historical image from a fre
     expect(state.objects).toHaveLength(2);
     expect(state.objects.find((object) => object.id === 'lamp')?.profileImageId).toBe(currentImage);
     expect(state.draft.changes).toMatchObject([
-      { id: 'chair', after: { description: 'Oberoende privat förslag' } },
+      {
+        id: 'chair',
+        after: {
+          properties: expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Oberoende privat förslag',
+            }),
+          ]),
+        },
+      },
     ]);
     expect(state.types.some((type) => type.id === 'former-image-type')).toBe(false);
     expect(
@@ -949,7 +988,6 @@ test('RADERING-07: a known erasure survives Settings navigation and reload despi
             description: '',
             forwardLabel: 'använder',
             reverseLabel: 'används av',
-            fields: [],
           },
         })
       ).status(),
@@ -1131,7 +1169,17 @@ test('RADERING-08: a current administrator continues the same cleanup after role
           version: initialOther.draft.version,
           contentVersion: initialOther.contentVersion,
           baseRevision: chair?.revision,
-          value: { ...chair, description: 'Robins eget privata förslag' },
+          value: {
+            ...chair,
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Robins eget privata förslag',
+              },
+            ],
+          },
         })
       ).status(),
     ).toBe(200);

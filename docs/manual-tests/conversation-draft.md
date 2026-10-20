@@ -67,19 +67,21 @@ kartans symboler”.
 **Steg:**
 
 1. Öppna **Rapporter → Ändringshistorik → Visa ändringarna** före samtalet.
-   Läs Kortets sparade **Sista fyra: 1111**. Välj **Tillbaka till arbetet**.
+   Läs Kortets sparade **Sista fyra: 1111 (Text)**. Välj **Tillbaka till arbetet**.
 2. Välj **Skriv till Skyttel → Nytt samtal**, godkänn och läs
    **Visa utkastet (8)**. Öppna utkastet och läs samtliga åtta rader.
    Kontrollera **Namn: Lo Exempel → Lo Rättad**, Kim **Tas bort**, nytt
-   objekt, **Sista fyra: 1111 → 2222**, gammal/ny inloggningsadress,
+   objekt, **Sista fyra: 1111 (Text) → Sista fyra: 2222 (Text)**,
+   gammal/ny inloggningsadress,
    **Lo Rättad → Betalar → Kortet**, Provtyp och Förvaras.
 3. Läs kolumnerna Symbol, Namn, Typ och Vad som ändras. Penna, kryss och
    plus har textalternativen Ändra, Ta bort och Lägg till. Namn och typer
    går att läsa utan bokstavskolumner. Inget sparas genom läsningen.
 4. Dölj utkastet, stäng och öppna textvyn och kontrollera att det fortfarande
    är hopfällt. Öppna det och välj **Nytt samtal**. Läs det hopfällda läget.
-5. Öppna samma baslinjesparande i Rapporter igen. Läs fortfarande
-   **Sista fyra: 1111**. Det föreslagna 2222 hör till utkastet, inte kvittot.
+5. Öppna samma baslinjesparande i Rapporter igen. Välj **Visa ändringarna**
+   om uppgifterna är hopfällda. Läs fortfarande
+   **Sista fyra: 1111 (Text)**. Det föreslagna 2222 hör till utkastet, inte kvittot.
 
 **Förväntat resultat:**
 
@@ -135,9 +137,9 @@ enheter”.
    Markera **Visa utkastet när ett samtal börjar**. Läs återkopplingen.
 2. Återgå till kartan och starta med text. Dölj utkastet och välj
    **Nytt samtal**. Öppna **Visa förslaget: Lo Exempel**, läs Person och
-   **Beskrivning: Ej uppgivet** och stäng dialogen. Välj **Spara hela
-   utkastet** i utkastet. Vänta tills sparandet är klart, återgå till
-   textvyn och välj **Nytt samtal**. Öppna det tomma utkastet.
+   kontrollera att ingen egenskap Beskrivning finns. Stäng dialogen.
+   Välj **Spara hela utkastet** i utkastet. Vänta tills sparandet är klart,
+   återgå till textvyn och välj **Nytt samtal**. Öppna det tomma utkastet.
 3. Logga in som Alex i den andra webbläsarprofilen. Öppna den utskrivna
    adressen följd av `/households/draft-other-household`. Öppna samma
    inställning. Avmarkera den där, ladda om Alex första sida och läs valet.
@@ -195,8 +197,8 @@ testfallet “SAMTALSUTKAST-03: första förslaget öppnar utkastet på mobil en
 2. Skriv **Lägg till Lo.** Operatören levererar det första förslaget enligt
    [förberedelsen](text-conversation-preparation.md#första-förslaget).
 3. Läs **Lo Exempel** i utkastet och svaret **Lo ligger i utkastet.** i
-   samtalet. Öppna **Visa förslaget: Lo Exempel**, läs **Person** och den
-   tomma beskrivningen som **Beskrivning: Ej uppgivet**. Stäng dialogen.
+   samtalet. Öppna **Visa förslaget: Lo Exempel**, läs **Person** och
+   kontrollera att ingen egenskap Beskrivning finns. Stäng dialogen.
 4. Läs placeringen och fortsätt med samma samtal. Bred emulerad pekare
    har sitt eget fall nedan.
 

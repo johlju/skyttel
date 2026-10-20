@@ -54,7 +54,18 @@ async function object(id: string, actor = member) {
         version: state.draft.version,
         contentVersion: state.contentVersion,
         baseRevision: null,
-        value: { name: id, description: 'Oberoende privat arbete', typeId: state.types[0].id },
+        value: {
+          name: id,
+          typeId: state.types[0].id,
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text',
+              value: 'Oberoende privat arbete',
+            },
+          ],
+        },
       },
       actor,
     ),
@@ -108,16 +119,7 @@ function value(kind: Kind, name: string) {
   return {
     name,
     description: 'Definition med historiska fält',
-    fields: [
-      {
-        id: 'serial',
-        name: 'Serienummer',
-        description: 'Behåll texten',
-        kind: 'text',
-        sectionId: 'details',
-      },
-    ],
-    sections: [{ id: 'details', name: 'Detaljer' }],
+
     ...(kind === 'relationshipType'
       ? { forwardLabel: 'förvaras i', reverseLabel: 'förvarar' }
       : {}),

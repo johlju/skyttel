@@ -41,18 +41,12 @@ export async function prepareHouseholdTable(client: APIRequestContext, origin: s
   await post('object-type', {
     id: 'table-type-2',
     baseRevision: null,
-    value: {
-      name: 'Typ 2',
-      description: '',
-      fields: [
-        { id: 'note', name: 'Egen anteckning', description: '', kind: 'text', sectionId: '' },
-      ],
-    },
+    value: { name: 'Typ 2', description: '' },
   });
   await post('object-type', {
     id: 'table-type-10',
     baseRevision: null,
-    value: { name: 'Typ 10', description: '', fields: [] },
+    value: { name: 'Typ 10', description: '' },
   });
   const longText = 'En lång beskrivning med hushållets fullständiga uppgifter. '.repeat(12);
   const names = [
@@ -71,23 +65,50 @@ export async function prepareHouseholdTable(client: APIRequestContext, origin: s
       value: {
         name,
         typeId: index % 2 ? 'table-type-10' : 'table-type-2',
-        description: index === 0 ? longText : `Beskrivning ${name}`,
-        ...(index === 0
-          ? {
-              iconId: 'bike',
-              customValues: { note: 'Lång egen uppgift '.repeat(30) },
-              financialFacts: {
-                price: { knowledge: 'unknown' },
-                currency: { knowledge: 'unknown' },
-                debt: { knowledge: 'none' },
-                creditLimit: {
-                  knowledge: 'uncertain',
-                  value: '100 000 SEK',
-                  reportedOn: '2026-01-01',
+        ...(index === 0 ? { iconId: 'bike' } : {}),
+        properties: [
+          ...(index === 0
+            ? [
+                {
+                  id: 'note',
+                  label: 'Egen anteckning',
+                  kind: 'text' as const,
+                  value: 'Lång egen uppgift '.repeat(30),
                 },
-              },
-            }
-          : {}),
+                { id: 'price', label: 'Pris', kind: 'text' as const },
+                {
+                  id: 'debt',
+                  label: 'Senast uppgiven skuld',
+                  kind: 'text' as const,
+                  value: 'Uttryckligen inget',
+                },
+                {
+                  id: 'creditLimit',
+                  label: 'Beviljat kreditutrymme',
+                  kind: 'text' as const,
+                  value: '100 000 SEK',
+                },
+                {
+                  id: 'creditLimit-certainty',
+                  label: 'Beviljat kreditutrymme: uppgiftens säkerhet',
+                  kind: 'text' as const,
+                  value: 'Osäkert uppgivet',
+                },
+                {
+                  id: 'creditLimit-reportedOn',
+                  label: 'Beviljat kreditutrymme: datum för uppgiften',
+                  kind: 'date' as const,
+                  value: '2026-01-01',
+                },
+              ]
+            : []),
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: index === 0 ? longText : `Beskrivning ${name}`,
+          },
+        ],
       },
     });
   for (const [id, name, lifecycle] of [
@@ -98,7 +119,7 @@ export async function prepareHouseholdTable(client: APIRequestContext, origin: s
     await post('draft', {
       id,
       baseRevision: null,
-      value: { name, typeId: 'table-type-2', description: '', ...(lifecycle ? { lifecycle } : {}) },
+      value: { name, typeId: 'table-type-2', ...(lifecycle ? { lifecycle } : {}) },
     });
   await image('#3355aa');
   await post('save', { operationId: 'table-initial' });
@@ -110,11 +131,18 @@ export async function prepareHouseholdTable(client: APIRequestContext, origin: s
     baseRevision: original.revision,
     value: {
       ...original,
-      description: `${longText}Föreslagen sluttext.`,
-      financialFacts: {
-        ...original.financialFacts,
-        price: { knowledge: 'known', value: '299 SEK' },
-      },
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: `${longText}Föreslagen sluttext.`,
+        },
+        ...(original.properties ?? []).filter(
+          (property) => !['price', 'description'].includes(property.id),
+        ),
+        { id: 'price', label: 'Pris', kind: 'text' as const, value: '299 SEK' },
+      ],
     },
   });
   for (const id of ['removed', 'proposed-removal']) {
@@ -129,8 +157,18 @@ export async function prepareHouseholdTable(client: APIRequestContext, origin: s
       const value: ObjectValue = {
         ...next,
         iconId: 'car',
-        financialFacts: { ...next.financialFacts, price: { knowledge: 'known', value: '399 SEK' } },
-        description: `${longText}Nytt föreslaget slut.`,
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: `${longText}Nytt föreslaget slut.`,
+          },
+          ...(next.properties ?? []).filter(
+            (property) => !['price', 'description'].includes(property.id),
+          ),
+          { id: 'price', label: 'Pris', kind: 'text' as const, value: '399 SEK' },
+        ],
       };
       await post('draft', { id: next.id, baseRevision: next.revision, value });
     }
@@ -138,7 +176,7 @@ export async function prepareHouseholdTable(client: APIRequestContext, origin: s
   await post('draft', {
     id: 'new-object',
     baseRevision: null,
-    value: { name: 'Nytt prov', typeId: 'table-type-2', description: '' },
+    value: { name: 'Nytt prov', typeId: 'table-type-2' },
   });
   await image('#33aa55');
   return { path, read, post, longText };

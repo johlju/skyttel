@@ -9,12 +9,25 @@ export async function prepareConflictContinuity(
 ) {
   const app = await conflictCollaborators(first, second);
   const initial = await app.read();
-  const value = { typeId: initial.types[0].id, name: 'Lo Lind', description: 'Min anteckning' };
+  const value = {
+    typeId: initial.types[0].id,
+    name: 'Lo Lind',
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Min anteckning' },
+    ],
+  };
   await app.propose(first, 'draft', 'lo', value);
   await app.propose(second, 'draft', 'lo', {
     ...value,
     name: 'Lo Berg',
-    description: 'Robins anteckning',
+    properties: [
+      {
+        id: 'description',
+        label: 'Beskrivning',
+        kind: 'text' as const,
+        value: 'Robins anteckning',
+      },
+    ],
   });
   expect((await app.save(second, 'first-conflict')).status()).toBe(200);
   return { ...app, value };
@@ -25,9 +38,9 @@ export async function prepareConflictTypeContinuity(
   second: APIRequestContext,
 ) {
   const app = await conflictCollaborators(first, second);
-  for (const [id, name, kind] of [
-    ['notes', 'Anteckningsobjekt', 'text'],
-    ['numbers', 'Mätobjekt', 'number'],
+  for (const [id, name] of [
+    ['notes', 'Anteckningsobjekt'],
+    ['numbers', 'Mätobjekt'],
   ]) {
     expect(
       (
@@ -35,11 +48,7 @@ export async function prepareConflictTypeContinuity(
           version: (await app.read()).draft.version,
           id,
           baseRevision: null,
-          value: {
-            name,
-            description: '',
-            fields: [{ id: 'note', name: 'Anteckning', description: '', kind }],
-          },
+          value: { name, description: '' },
         })
       ).status(),
     ).toBe(200);
@@ -48,22 +57,32 @@ export async function prepareConflictTypeContinuity(
   await app.propose(first, 'draft', 'lo', {
     typeId: 'notes',
     name: 'Lo Exempel',
-    description: '',
-    customValues: { note: 'Första texten' },
+    properties: [
+      { id: 'note', label: 'Anteckning', kind: 'text' as const, value: 'Första texten' },
+    ],
   });
   expect((await app.save(first, 'typed-object')).status()).toBe(200);
   const value = {
     typeId: 'notes',
     name: 'Lo Lind',
-    description: 'Min anteckning',
-    customValues: { note: 'Min text' },
+    properties: [
+      { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Min anteckning' },
+      { id: 'note', label: 'Anteckning', kind: 'text' as const, value: 'Min text' },
+    ],
   };
   await app.propose(first, 'draft', 'lo', value);
   await app.propose(second, 'draft', 'lo', {
     ...value,
     name: 'Lo Berg',
-    description: 'Robins anteckning',
-    customValues: { note: 'Robins text' },
+    properties: [
+      {
+        id: 'description',
+        label: 'Beskrivning',
+        kind: 'text' as const,
+        value: 'Robins anteckning',
+      },
+      { id: 'note', label: 'Anteckning', kind: 'text' as const, value: 'Robins text' },
+    ],
   });
   expect((await app.save(second, 'typed-conflict')).status()).toBe(200);
   return { ...app, value };
@@ -79,15 +98,29 @@ export async function prepareConflictReferenceContinuity(
     typeId: initial.relationshipTypes[0].id,
     sourceId: 'lo',
     targetId: 'service',
-    knowledge: 'uncertain' as const,
+    properties: [
+      {
+        id: 'certainty',
+        label: 'Uppgiftens säkerhet',
+        kind: 'text' as const,
+        value: 'Osäkert uppgivet',
+      },
+    ],
   };
-  await app.propose(first, 'relationship', 'edge', { ...value, knowledge: 'known' });
+  await app.propose(first, 'relationship', 'edge', { ...value, properties: [] });
   expect((await app.save(first, 'initial-edge')).status()).toBe(200);
   await app.propose(first, 'relationship', 'edge', value);
   await app.propose(second, 'relationship', 'edge', {
     ...value,
-    targetId: null,
-    knowledge: 'none',
+    targetId: 'lo',
+    properties: [
+      {
+        id: 'certainty',
+        label: 'Uppgiftens säkerhet',
+        kind: 'text' as const,
+        value: 'Uttryckligen inget',
+      },
+    ],
   });
   expect((await app.save(second, 'edge-conflict')).status()).toBe(200);
   return { ...app, value };
@@ -100,8 +133,15 @@ export async function saveNewerConflictType(
   await app.propose(client, 'draft', 'lo', {
     typeId: 'numbers',
     name: 'Lo Berg',
-    description: 'Robins anteckning',
-    customValues: { note: 42 },
+    properties: [
+      {
+        id: 'description',
+        label: 'Beskrivning',
+        kind: 'text' as const,
+        value: 'Robins anteckning',
+      },
+      { id: 'note', label: 'Anteckning', kind: 'number' as const, value: 42 },
+    ],
   });
   const state = await app.read(client);
   const type = state.types.find(({ id }) => id === 'notes');
@@ -134,7 +174,7 @@ export async function resolveConflictElsewhere(
         contentVersion: state.contentVersion,
         conflict,
         basis: conflictBasis(state, conflict),
-        choices: { name: side, description: side },
+        choices: { name: side, 'properties.description': side },
       })
     ).status(),
   ).toBe(200);

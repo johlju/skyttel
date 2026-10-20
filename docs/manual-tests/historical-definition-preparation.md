@@ -1,4 +1,4 @@
-# Förbered historiska definitioner och fält
+# Förbered historiska definitioner och fria egenskaper
 
 Använd en isolerad provinstallation med påhittade uppgifter. Förberedaren
 skapar ett hushåll och två inloggade sessioner. Robin arbetar i det synliga
@@ -31,9 +31,7 @@ Kör därför aldrig ett nytt sådant kommando mitt i ett återhämtningsförlop
 | Fall | Förberedelse | Faktiskt underlag |
 | --- | --- | --- |
 | UTKAST-64, 72 | `new-missing-object-type` | Borttagen Solcellsanläggning; ägt objekt med textsvaret Våren 2021. |
-| UTKAST-65 | `new-invalid-datatype` | Samma fält ändrat från Text till Tal; det äldre privata textsvaret finns kvar. |
 | UTKAST-66 | `new-missing-relationship-type` | Borttagen Förvaras i; äldre samband Lo Exempel till Molnmusik med textsvaret. |
-| UTKAST-74, 138 | `new-replaced-object-field`, `new-replaced-relationship-field` | Typen finns kvar men textfältet ersätts av ett nytt talfält med samma namn. |
 | UTKAST-75 | `new-multiple-blockers` | Både sambandets målobjekt och dess typ saknas. |
 | UTKAST-67, 70, 71 | `new-object-restoration` | Faktiskt borttagen objekttyp och ägd definitionsändring. |
 | UTKAST-140, 69 | `new-relationship-restoration` | Faktiskt borttagen sambandstyp och ägd definitionsändring. |
@@ -43,8 +41,9 @@ Kör därför aldrig ett nytt sådant kommando mitt i ett återhämtningsförlop
 <!-- markdownlint-enable MD013 -->
 
 Det oberoende objektet **Oberoende förslag** finns i Robins utkast i samtliga
-förberedelser. **Installationsår** är fältets synliga namn. Gamla
-fältidentiteter, typidentiteter, revisioner och arkivkontrollsummor är
+förberedelser. **Installationsår** är en fri textegenskap på objektet eller
+sambandet. Gamla
+egenskapsidentiteter, typidentiteter, revisioner och arkivkontrollsummor är
 tekniskt underlag, inte uppgifter som användaren ska läsa i UI-fallet.
 
 ## Tidsordning för operatörens kontroller
@@ -60,11 +59,11 @@ Escape och nekade begäranden ändrar inte den gemensamma kartan eller historike
 - UTKAST-64 och 75: kör `result` före öppningen, efter Escape och efter
   det riktade kastandet. Det oberoende förslaget består; bara målobjektets
   eller målsambandets privata förslag försvinner.
-- UTKAST-65, 66, 72, 74 och 138: kör `result` före rättningen, efter en
-  avbruten fältförlustbekräftelse och efter att den vanliga dialogen lägger
-  rättningen i utkastet. Jämför gamla respektive nya fältidentiteter och
-  värdeslag. Det gamla svaret får inte kopieras till en ny fältidentitet.
-  Kontrollera kartan och historiken innan det separata sparandet.
+- UTKAST-66 och 72: kör `result` före rättningen och efter att den vanliga
+  dialogen lägger rättningen i utkastet. Den nya typdefinitionen har en egen
+  identitet. Valet av den typen ska bevara de individuella fria egenskapernas
+  identiteter, ordning, datatyper och värden. Kontrollera karta och historik
+  innan det separata sparandet.
 - UTKAST-67 och 140: kör `result` före granskningen och efter bekräftelsen.
   Den historiska typidentiteten och nästa revision finns i det privata
   förslaget. Typen är fortfarande borttagen gemensamt. Efter separat
@@ -104,7 +103,7 @@ och båda inloggade sessioner. Det ändrar inte förberedelse, privat utkast,
 historik eller transportinställning. Invänta avslutade begäranden; om du
 använder `hold`, kör `release` och invänta resultatet först.
 
-I UTKAST-65, 66, 67, 68, 69, 71, 72, 74 samt varianterna 138 och 140:
+I UTKAST-66, 67, 68, 69, 71, 72 och 140:
 
 1. Slutför det separata sparandet och läs det bekräftade sparbeskedet.
    Kör `network-ok` om ett transportfel är aktivt. Kör `result` och behåll
@@ -161,3 +160,11 @@ npm run test:integration -- tests/integration/conflict-external-corrections.spec
 Återställ provinstallationerna mellan fall med nästa `new-…`; avsluta med
 `quit` efter färdig läsning. Dokumentera manuell körning och automatiserad
 körning var för sig.
+
+## Avvecklade förberedelser
+
+UTKAST-65, UTKAST-74 och UTKAST-138 är avvecklade och får inte
+återanvändas. Kommandona för oförenliga typfältsdatatyper och ersatta
+typfält finns inte längre. Typens ändring styr inga individuella
+egenskaper. UTKAST-66 och UTKAST-72 fortsätter vanlig typrättning med
+bevarade fria egenskaper; identitetsbesluten står i [utkastfallen](drafts.md).

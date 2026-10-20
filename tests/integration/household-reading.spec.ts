@@ -49,12 +49,7 @@ test('LÄS-05: identity reading distinguishes identified, unresolved and a propo
     await post('draft', {
       id: 'unresolved',
       baseRevision: null,
-      value: {
-        name: 'Oklart objekt',
-        typeId: garage.typeId,
-        description: '',
-        identity: 'unresolved',
-      },
+      value: { name: 'Oklart objekt', typeId: garage.typeId, identity: 'unresolved' },
     });
     await page.goto(installation.origin);
     await page.getByRole('button', { name: 'Tabell', exact: true }).click();
@@ -107,7 +102,7 @@ test('LÄS-06: a vanished sole second-page row restores the preceding control af
           contentVersion: state.contentVersion,
           id,
           baseRevision: null,
-          value: name ? { name, typeId: state.types[0]?.id, description: '' } : null,
+          value: name ? { name, typeId: state.types[0]?.id } : null,
         },
       });
       expect(response.status(), await response.text()).toBe(200);
@@ -152,7 +147,7 @@ test('LÄS-07: a long unbroken object name wraps in full reading at 320 CSS pixe
     await post('draft', {
       id: 'long-name',
       baseRevision: null,
-      value: { name, typeId: 'read-type', description: '' },
+      value: { name, typeId: 'read-type' },
     });
     await page.setViewportSize({ width: 320, height: 740 });
     await page.goto(installation.origin);
@@ -194,7 +189,7 @@ for (const fallback of ['previous', 'heading'] as const) {
             contentVersion: state.contentVersion,
             id,
             baseRevision: null,
-            value: name ? { name, typeId: state.types[0]?.id, description: '' } : null,
+            value: name ? { name, typeId: state.types[0]?.id } : null,
           },
         });
         expect(result.status(), await result.text()).toBe(200);
@@ -294,7 +289,7 @@ test('LÄS-01: keyboard follows Alex to bicycle to garage and back without graph
     await expect(
       dialog.getByRole('heading', { name: 'Uppgifter för Cykel', exact: true }),
     ).toBeFocused();
-    await expect(dialog.getByText('Sparat: 2000 SEK', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('Sparat: 2000 SEK (Text)', { exact: true })).toBeVisible();
     await expect(
       dialog
         .locator('dt')
@@ -302,13 +297,13 @@ test('LÄS-01: keyboard follows Alex to bicycle to garage and back without graph
         .locator('..'),
     ).toContainText('◇ Ditt förslag: 2500 SEK');
     await expect(
-      dialog.getByText('Ramens märkning är ett påhittat exempel', { exact: true }),
+      dialog.getByText('Ramens märkning är ett påhittat exempel (Text)', { exact: true }),
     ).toBeVisible();
     await dialog.getByRole('button', { name: 'Samband för Cykel', exact: true }).focus();
     await page.keyboard.press('Enter');
     dialog = page.getByRole('dialog', { name: 'Samband för Cykel', exact: true });
     await expect(
-      dialog.getByText('Sparat: Sparad dold sambandsuppgift', { exact: true }),
+      dialog.getByText('Sparat: Sparad dold sambandsuppgift (Text)', { exact: true }),
     ).toBeVisible();
     await dialog.getByRole('button', { name: 'Garage', exact: true }).focus();
     await page.keyboard.press('Enter');
@@ -353,7 +348,7 @@ test('LÄS-01: keyboard follows Alex to bicycle to garage and back without graph
   }
 });
 
-test('LÄS-02: mobile full relationship reading separates absent targets, uncertainty and proposed removal', async ({
+test('LÄS-02: mobile full relationship reading separates explicit endpoints, ordinary uncertainty properties and proposed removal', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -377,15 +372,31 @@ test('LÄS-02: mobile full relationship reading separates absent targets, uncert
     const links = dialog.locator('.household-read-relationships > li');
     await expect(links).toHaveCount(4);
     const none = links.filter({ has: page.getByRole('heading', { name: /Har ingen|har ingen/ }) });
-    await expect(none.locator('.household-read-link')).toHaveCount(0);
     await expect(none.getByRole('button', { name: 'Redigera samband', exact: true })).toBeVisible();
     await expect(none).toContainText('Uttryckligen inget');
     const unknown = links.filter({ has: page.getByRole('heading', { name: /okänd koppling/ }) });
-    await expect(unknown.locator('.household-read-link')).toHaveCount(0);
     await expect(
       unknown.getByRole('button', { name: 'Redigera samband', exact: true }),
     ).toBeVisible();
     await expect(unknown).toContainText('Okänt');
+    for (const selfLink of [none, unknown]) {
+      await expect(selfLink.locator('.household-read-link')).toHaveText('Cykel');
+      for (const label of ['Från objekt', 'Till objekt'])
+        await expect(
+          selfLink
+            .locator('dt')
+            .filter({ hasText: new RegExp(`^${label}$`) })
+            .locator('..')
+            .locator('dd'),
+        ).toHaveText('Cykel');
+      await selfLink.getByRole('button', { name: 'Cykel', exact: true }).click();
+      const object = page.getByRole('dialog', { name: 'Uppgifter för Cykel', exact: true });
+      await expect(
+        object.getByRole('heading', { name: 'Uppgifter för Cykel', exact: true }),
+      ).toBeFocused();
+      await object.getByRole('button', { name: 'Tillbaka', exact: true }).click();
+      await expect(dialog).toBeVisible();
+    }
     const storage = links.filter({
       has: page.getByRole('button', { name: 'Garage', exact: true }),
     });
@@ -421,7 +432,7 @@ test('LÄS-03: a vanished table opener returns to the next equivalent control af
     await post('draft', {
       id: 'temporary',
       baseRevision: null,
-      value: { name: 'B Tillfälligt objekt', typeId: 'read-type', description: '' },
+      value: { name: 'B Tillfälligt objekt', typeId: 'read-type' },
     });
     await page.goto(installation.origin);
     await startConversationWithText(page);
@@ -445,7 +456,7 @@ test('LÄS-03: a vanished table opener returns to the next equivalent control af
     await post('draft', {
       id: 'temporary',
       baseRevision: null,
-      value: { name: 'B Tillfälligt objekt', typeId: 'read-type', description: '' },
+      value: { name: 'B Tillfälligt objekt', typeId: 'read-type' },
     });
     await post('draft', { id: 'temporary', baseRevision: null, value: null });
     expectOnlyRemoved(beforeRemoval, await read(), ['temporary']);

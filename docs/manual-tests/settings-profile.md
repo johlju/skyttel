@@ -75,7 +75,7 @@ INST-01.
    får inte täcka texten. Välj **Tillbaka till kartan** och sedan
    **Visa utkastet**. Välj **Visa förslaget: Oskickad cykel**. Läs namnet,
    objekttypen
-   och den tomma beskrivningen. Spara inte.
+   och att ingen egenskap Beskrivning är tillagd. Spara inte.
 
 **Förväntat resultat:**
 
@@ -119,14 +119,14 @@ INST-02.
 
 1. Öppna Nytt objekt, ange Cykel i samma utkast i Namn och välj
    Lägg i utkastet och stäng. Spara inte.
-2. Öppna **Inställningar** → **Typer och egna fält** → **Ny objekttyp**.
+2. Öppna **Inställningar** → **Typer** → **Ny objekttyp**.
 3. Skriv Oskickad typ och beskrivningen Behåll även definitionens text. Besök
    **Översikt** och gå tillbaka.
 4. Kontrollera båda texterna. Välj **Lägg typförslaget i mitt utkast**.
 5. Välj **Tillbaka till kartan** och **Visa utkastet**. Granska båda
    förslagen och välj **Spara hela utkastet**.
 6. Läs sparbeskedet och ladda om. Öppna definitionerna igen och fäll ut
-   **Objekttyper och egna fält**. Kontrollera den nya typen och objektet.
+   **Objekttyper**. Kontrollera den nya typen och objektet.
 
 **Förväntat resultat:**
 
@@ -168,14 +168,14 @@ INST-08.
 
 1. Öppna Nytt objekt, ange Cykel i samma utkast i Namn och välj
    Lägg i utkastet och stäng. Spara inte.
-2. Öppna **Inställningar** → **Typer och egna fält** → **Ny objekttyp**.
+2. Öppna **Inställningar** → **Typer** → **Ny objekttyp**.
 3. Skriv Oskickad typ och beskrivningen Behåll även definitionens text. Besök
    **Översikt** och gå tillbaka.
 4. Kontrollera båda texterna. Välj **Lägg typförslaget i mitt utkast**.
 5. Välj **Tillbaka till kartan** och **Visa utkastet**. Granska båda
    förslagen och välj **Spara hela utkastet**.
 6. Läs sparbeskedet och ladda om. Öppna definitionerna igen och fäll ut
-   **Objekttyper och egna fält**. Kontrollera den nya typen och objektet.
+   **Objekttyper**. Kontrollera den nya typen och objektet.
 
 **Förväntat resultat:**
 
@@ -217,13 +217,16 @@ INST-03.
 
 **Steg:**
 
-1. Öppna ett nytt objekt. Skriv ett namn och en oskickad beskrivning.
+1. Öppna ett nytt objekt. Skriv ett namn. Lägg till egenskapen Beskrivning
+   under **Fria egenskaper**, välj datatypen Text och skriv en oskickad text.
 2. Tryck Escape och välj **Fortsätt redigera**. Kontrollera båda texterna
    och fokus. Tryck Escape igen och välj **Kasta ändringarna och fortsätt**.
    Öppna **Din profil** i kartans verktyg. Kontrollera rubrikfokus,
    användar-ID, **Inloggningssätt**, **Assistentanslutningar** och **Logga ut**.
 3. Välj **Tillbaka till arbetet** och **Nytt objekt**. Kontrollera att
-   namn och beskrivning är tomma. Stäng det oförändrade formuläret med Escape.
+   namnet är tomt. Öppna **Fria egenskaper** och kontrollera att inga egenskaper
+   är tillagda. Stäng det
+   oförändrade formuläret med Escape.
 4. Öppna profilen igen och välj **Inloggningssätt**. Gå tillbaka via
    **Din profil** i kontosidornas navigation, på mobil via **Välj inställning**.
 5. Välj **Tillbaka till arbetet** och kontrollera att tabellens rubrik

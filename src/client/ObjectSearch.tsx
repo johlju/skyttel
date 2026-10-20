@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { hasEnded } from '../shared/lifecycle.js';
 import type { MapObject, ObjectType } from '../shared/map.js';
+import { searchFieldMatches, searchWords } from '../shared/object-search.js';
 import { objectPropertyValues } from './ObjectReadDetails.js';
 import './object-search.css';
 
@@ -30,7 +31,6 @@ export type SearchableObject = {
   before?: MapObject | null;
   beforeType?: ObjectType;
 };
-const normalize = (value: string) => value.normalize('NFC').toLocaleLowerCase('sv');
 
 /** Only this object's own readable fields participate; relationships never do. */
 export function objectSearchMatch(
@@ -40,7 +40,7 @@ export function objectSearchMatch(
   before?: MapObject | null,
   beforeType?: ObjectType,
 ) {
-  const words = normalize(query).trim().split(/\s+/).filter(Boolean);
+  const words = searchWords(query);
   if (!words.length) return { match: true, reasons: [] };
   const ownValues = objectPropertyValues(object, type);
   if (before)
@@ -48,22 +48,18 @@ export function objectSearchMatch(
       const current = ownValues.get(key);
       ownValues.set(key, {
         label: current?.label ?? saved.label,
-        value: `${current?.value ?? ''} ${saved.value}`,
+        value: `${current?.value ?? ''} ${saved.label} ${saved.value}`,
       });
     }
   const fields = [...ownValues].map(([key, field]) => ({
     ...field,
     detail: !['name', 'type', 'description'].includes(key),
   }));
-  const match = words.every((word) =>
-    fields.some((field) => normalize(field.value).includes(word)),
-  );
+  const match = words.every((word) => fields.some((field) => searchFieldMatches(field, word)));
   const reasons =
     match && words.length
       ? fields
-          .filter(
-            (field) => field.detail && words.some((word) => normalize(field.value).includes(word)),
-          )
+          .filter((field) => field.detail && words.some((word) => searchFieldMatches(field, word)))
           .map((field) => field.label)
       : [];
   return { match, reasons };

@@ -31,55 +31,6 @@ export function seedDemo(database: Database.Database, config: Config) {
   if ('error' in result) throw new Error('demo_household_setup_failed');
   const map = householdMap(database, administratorId, result.household.id);
   const initial = map.read();
-  const vehicleType = initial.types.find((type) => type.name === 'Fordon');
-  if (!vehicleType) throw new Error('demo_vehicle_type_missing');
-  map.proposeObjectType({
-    version: initial.draft.version,
-    id: vehicleType.id,
-    baseRevision: vehicleType.revision,
-    value: {
-      ...vehicleType,
-      sections: [...(vehicleType.sections ?? []), { id: 'demo-cycle', name: 'Cykeluppgifter' }],
-      fields: [
-        ...(vehicleType.fields ?? []),
-        {
-          id: 'demo-frame',
-          name: 'Ramfärg',
-          description: '',
-          kind: 'text',
-          sectionId: 'demo-cycle',
-        },
-        {
-          id: 'demo-wheels',
-          name: 'Extrahjul',
-          description: '',
-          kind: 'number',
-          sectionId: 'demo-cycle',
-        },
-        {
-          id: 'demo-check',
-          name: 'Kontrolldatum',
-          description: '',
-          kind: 'date',
-          sectionId: 'demo-cycle',
-        },
-        {
-          id: 'demo-electric',
-          name: 'Elcykel',
-          description: '',
-          kind: 'boolean',
-          sectionId: 'demo-cycle',
-        },
-        {
-          id: 'demo-label',
-          name: 'Dold rammärkning',
-          description: '',
-          kind: 'text',
-          sectionId: '',
-        },
-      ],
-    },
-  });
   const ids = new Map<string, string>();
   const objects = [
     ['lo', 'Person', 'Lo Exempel', 'Använder familjens musik.'],
@@ -100,12 +51,7 @@ export function seedDemo(database: Database.Database, config: Config) {
       'Föreningens musikkonto',
       'Delar kontaktadress med familjekontot.',
     ],
-    [
-      'subscription',
-      'Abonnemang',
-      'Familjens Molnmusik',
-      'Ett enda avtalsobjekt. Påhittat pris: 149 kr per månad.',
-    ],
+    ['subscription', 'Abonnemang', 'Familjens Molnmusik', 'Ett enda avtalsobjekt.'],
     ['email', 'E-postadress', 'familjen@example.test', 'Delas av Alex och Kim.'],
     ['new-email', 'E-postadress', 'musik@example.test', 'Föreslagen ny inloggningsadress.'],
     ['card', 'Kort', 'Familjens musikkort', 'Påhittat kort utan kortnummer.'],
@@ -129,26 +75,36 @@ export function seedDemo(database: Database.Database, config: Config) {
       value: {
         typeId: initial.types.find((value) => value.name === type)?.id,
         name,
-        description,
+        lifecycle: 'active',
+        properties: [
+          { id: randomUUID(), label: 'Beskrivning', kind: 'text', value: description },
+          ...(key === 'subscription'
+            ? [
+                { id: randomUUID(), label: 'Pris', kind: 'number', value: 149 },
+                { id: randomUUID(), label: 'Valuta', kind: 'text', value: 'SEK' },
+                { id: randomUUID(), label: 'Betalningsintervall', kind: 'text', value: 'månad' },
+              ]
+            : []),
+          ...(key === 'bike'
+            ? [
+                { id: randomUUID(), label: 'Ramfärg', kind: 'text', value: 'Blå' },
+                { id: randomUUID(), label: 'Extrahjul', kind: 'number', value: 0 },
+                { id: randomUUID(), label: 'Kontrolldatum', kind: 'date', value: '2026-04-03' },
+                { id: randomUUID(), label: 'Elcykel', kind: 'boolean', value: false },
+                {
+                  id: randomUUID(),
+                  label: 'Dold rammärkning',
+                  kind: 'text',
+                  value: 'Syntetisk ram: DEMO-CYKEL',
+                },
+                { id: randomUUID(), label: 'Pris', kind: 'number', value: 4995 },
+                { id: randomUUID(), label: 'Valuta', kind: 'text', value: 'SEK' },
+                { id: randomUUID(), label: 'Startdatum', kind: 'date', value: '2026-04-03' },
+              ]
+            : []),
+        ],
         ...(key === 'linked-bank' ? { identity: 'unspecified' } : {}),
-        ...(key === 'bike'
-          ? {
-              iconId: 'bike',
-              lifecycle: 'active',
-              customValues: {
-                'demo-frame': 'Blå',
-                'demo-wheels': 0,
-                'demo-check': '2026-04-03',
-                'demo-electric': false,
-                'demo-label': 'Syntetisk ram: DEMO-CYKEL',
-              },
-              financialFacts: {
-                price: { knowledge: 'known', value: '4995' },
-                currency: { knowledge: 'known', value: 'SEK' },
-                startDate: { knowledge: 'known', value: '2026-04-03' },
-              },
-            }
-          : {}),
+        ...(key === 'bike' ? { iconId: 'bike' } : {}),
       },
     });
   }
@@ -162,7 +118,6 @@ export function seedDemo(database: Database.Database, config: Config) {
       description: 'Var objektet förvaras.',
       forwardLabel: 'förvaras i',
       reverseLabel: 'förvarar',
-      fields: [],
     },
   });
   const links = [
@@ -184,13 +139,11 @@ export function seedDemo(database: Database.Database, config: Config) {
     ['subscription', 'Betalas med', 'card'],
     ['card', 'Kontokoppling', 'linked-bank'],
     ['card', 'Kortfakturan betalas från', 'bank'],
-    ['service', 'Används av', 'lo', 'uncertain'],
-    ['second-account', 'Äger', '', 'unknown'],
-    ['association', 'Används av', '', 'none'],
+    ['service', 'Används av', 'lo', 'Osäkert uppgivet'],
     ['alex', 'Använder', 'bike'],
     ['bike', 'Förvaras i', 'garage'],
   ];
-  for (const [source, type, target, knowledge] of links) {
+  for (const [source, type, target, propertyLabel] of links) {
     map.proposeRelationship({
       version: map.read().draft.version,
       id: randomUUID(),
@@ -201,8 +154,15 @@ export function seedDemo(database: Database.Database, config: Config) {
             ? storageTypeId
             : initial.relationshipTypes.find((value) => value.name === type)?.id,
         sourceId: ids.get(source),
-        targetId: target ? ids.get(target) : null,
-        knowledge: knowledge ?? 'known',
+        targetId: ids.get(target),
+        lifecycle: 'active',
+        ...(propertyLabel
+          ? {
+              properties: [
+                { id: randomUUID(), label: propertyLabel, kind: 'boolean', value: true },
+              ],
+            }
+          : {}),
       },
     });
   }
@@ -243,7 +203,15 @@ export function seedDemo(database: Database.Database, config: Config) {
     version: contributorMap.read().draft.version,
     id: lo.id,
     baseRevision: lo.revision,
-    value: { ...lo, name: 'Lo Berg', description: 'Spelar piano i musikföreningen.' },
+    value: {
+      ...lo,
+      name: 'Lo Berg',
+      properties: lo.properties?.map((property) =>
+        property.label === 'Beskrivning'
+          ? { ...property, kind: 'text', value: 'Spelar piano i musikföreningen.' }
+          : property,
+      ),
+    },
   });
   contributorMap.save({
     version: contributorMap.read().draft.version,

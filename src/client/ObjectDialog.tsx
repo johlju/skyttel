@@ -1,27 +1,14 @@
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { sameConflictValue } from '../shared/conflict-properties.js';
-import {
-  type FinancialFact,
-  type FinancialField,
-  financialFields,
-} from '../shared/financial-facts.js';
-import {
-  type MapDraft,
-  type MapState,
-  type ObjectType,
-  type ObjectValue,
-  objectTypePresentation,
-} from '../shared/map.js';
-import { type ObjectProperty, objectProperties } from '../shared/object-properties.js';
-import { FinancialFactEditor } from './FinancialFacts.js';
+import type { MapDraft, MapState, ObjectType, ObjectValue } from '../shared/map.js';
 import { type FormLeaveGuard, useFormLeave } from './FormLeave.js';
 import { validateFormControls } from './form-validation.js';
 import { LifecycleEditor } from './Lifecycle.js';
 import { MapRequestError } from './map-request.js';
 import { trapDialogTab } from './modal-focus.js';
 import { ObjectIconPicker } from './ObjectIconPicker.js';
-import { CustomFieldValueEditor } from './ObjectTypes.js';
 import type { ObjectEditor } from './object-editor.js';
+import { PropertyEditor } from './PropertyEditor.js';
 import './object-dialog.css';
 
 /** One complete object proposal; shared saving belongs to the household owner. */
@@ -81,22 +68,20 @@ export function ObjectDialog({
   } | null>(null);
   const busy = pending || unknown;
   const [image, setImage] = useState<File | null | undefined>();
+  const [invalidProperties, setInvalidProperties] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>();
   const imageRead = useRef(0);
   const comparable = (value: ObjectValue) => ({
     typeId: value.typeId,
     name: value.name,
-    description: value.description,
     identity: value.identity,
     lifecycle: value.lifecycle,
     profileImageId: value.profileImageId,
     iconId: value.iconId,
-    customValues: Object.keys(value.customValues ?? {}).length ? value.customValues : undefined,
-    financialFacts: Object.keys(value.financialFacts ?? {}).length
-      ? value.financialFacts
-      : undefined,
+    properties: value.properties,
   });
   const dirty =
+    invalidProperties ||
     !sameConflictValue(comparable(editor.value), comparable(initial.value)) ||
     image instanceof File;
   const needsDefinitionReview = Boolean(
@@ -143,61 +128,6 @@ export function ObjectDialog({
   }
   const [error, setError] = useState('');
   const [section, setSection] = useState('Grunduppgifter');
-  const type = types.find((type) => type.id === editor.value.typeId);
-  const presentation = objectTypePresentation(type ?? {});
-  const properties = objectProperties(type ?? {});
-  const placedBuiltins = new Set(
-    properties
-      .filter((property) => property.kind === 'builtin' && property.sectionId)
-      .map((property) => property.ref),
-  );
-  function description(label: string) {
-    return (
-      <div className="object-wide">
-        <label htmlFor={`${prefix}-description`}>{label}</label>
-        <textarea
-          id={`${prefix}-description`}
-          rows={4}
-          maxLength={2000}
-          value={editor.value.description}
-          onChange={(event) => change({ ...editor.value, description: event.target.value })}
-        />
-      </div>
-    );
-  }
-  function changeFinancialFact(key: FinancialField, fact: FinancialFact | undefined) {
-    const financialFacts = { ...editor.value.financialFacts };
-    if (fact) financialFacts[key] = fact;
-    else delete financialFacts[key];
-    change({ ...editor.value, financialFacts });
-  }
-  function propertyEditor(property: ObjectProperty) {
-    if (property.kind === 'custom')
-      return (
-        <CustomFieldValueEditor
-          field={property.field}
-          value={editor.value.customValues?.[property.field.id]}
-          onChange={(answer) => {
-            const customValues = { ...editor.value.customValues };
-            if (answer === undefined) delete customValues[property.field.id];
-            else customValues[property.field.id] = answer;
-            change({ ...editor.value, customValues });
-          }}
-        />
-      );
-    const key = property.field.key;
-    if (key === 'description') return description(property.name);
-    const field = financialFields.find((field) => field.key === key);
-    return field ? (
-      <FinancialFactEditor
-        field={field}
-        label={property.name}
-        fact={editor.value.financialFacts?.[field.key]}
-        onChange={(fact) => changeFinancialFact(field.key, fact)}
-      />
-    ) : null;
-  }
-  const [typeChange, setTypeChange] = useState<{ type: ObjectType; lost: string[] } | null>(null);
   const [errors, setErrors] = useState<
     { id: string; label: string; message: string; section: string }[]
   >([]);
@@ -215,20 +145,11 @@ export function ObjectDialog({
     setEditor({ ...editor, value });
   }
   function changeType(next: ObjectType) {
-    // Own-field identity belongs to its type, even if another type reuses an ID.
-    const lost = Object.keys(editor.value.customValues ?? {});
-    if (lost.length) setTypeChange({ type: next, lost });
-    else applyType(next, []);
-  }
-  function applyType(next: ObjectType, lost: string[]) {
-    const customValues = { ...editor.value.customValues };
-    for (const id of lost) delete customValues[id];
     setEditor({
       ...editor,
       typeRevision: next.revision,
-      value: { ...editor.value, typeId: next.id, customValues },
+      value: { ...editor.value, typeId: next.id },
     });
-    setTypeChange(null);
   }
   function accordion(title: string, key: string, body: ReactNode, regionKey = key) {
     return (
@@ -504,43 +425,17 @@ export function ObjectDialog({
                     <option value="unresolved">Obesvarad identitetsfråga</option>
                   </select>
                 </label>
-                {!placedBuiltins.has('builtin:description') && description('Beskrivning')}
               </>,
               'basic',
             )}
-            {presentation.sections.flatMap((customSection) => {
-              const entries = properties.filter(
-                (property) => property.sectionId === customSection.id,
-              );
-              return entries.length
-                ? [
-                    accordion(
-                      customSection.name,
-                      `custom-${customSection.id}`,
-                      entries.map((property) => (
-                        <div key={property.ref}>{propertyEditor(property)}</div>
-                      )),
-                    ),
-                  ]
-                : [];
-            })}
             {accordion(
-              'Ekonomiska uppgifter',
-              'Ekonomiska uppgifter',
-              financialFields
-                .filter((field) => !placedBuiltins.has(`builtin:${field.key}`))
-                .map((field) => (
-                  <FinancialFactEditor
-                    key={field.key}
-                    field={field}
-                    label={
-                      properties.find((property) => property.ref === `builtin:${field.key}`)?.name
-                    }
-                    fact={editor.value.financialFacts?.[field.key]}
-                    onChange={(fact) => changeFinancialFact(field.key, fact)}
-                  />
-                )),
-              'economy',
+              'Fria egenskaper',
+              'properties',
+              <PropertyEditor
+                value={editor.value.properties ?? []}
+                onChange={(properties) => change({ ...editor.value, properties })}
+                onInvalidChange={setInvalidProperties}
+              />,
             )}
             {accordion(
               'Livscykel och utseende',
@@ -643,22 +538,6 @@ export function ObjectDialog({
           </button>
         </footer>
       </form>
-      {typeChange && (
-        <ObjectTypeLossDialog
-          fields={typeChange.lost.map((id) => ({
-            name:
-              type?.fields?.find((field) => field.id === id)?.name ??
-              (historicalType?.id === editor.value.typeId
-                ? historicalType
-                : undefined
-              )?.fields?.find((field) => field.id === id)?.name ??
-              id,
-            value: editor.value.customValues?.[id],
-          }))}
-          onCancel={() => setTypeChange(null)}
-          onConfirm={() => applyType(typeChange.type, typeChange.lost)}
-        />
-      )}
       {leave && (
         <FormLossDialog
           onCancel={() => {
@@ -688,43 +567,6 @@ function FormLossDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfi
       <p>
         Ändringar som ännu inte lagts i ditt utkast går förlorade. Redan lagda förslag finns kvar.
       </p>
-    </ObjectFormGuard>
-  );
-}
-
-export function ObjectTypeLossDialog({
-  fields,
-  onCancel,
-  onConfirm,
-}: {
-  fields: { name: string; value: unknown }[];
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <ObjectFormGuard
-      title="Ta bort tidigare egna fält?"
-      confirmLabel="Ta bort fältvärdena och byt typ"
-      onCancel={onCancel}
-      onConfirm={onConfirm}
-    >
-      <p>
-        Vid typbytet försvinner följande egna fält från formuläret. Bekräfta för att ta bort
-        värdena.
-      </p>
-      <h3>Berörda egna fält</h3>
-      <ul>
-        {fields.map((field) => (
-          <li key={field.name}>
-            {field.name}:{' '}
-            {typeof field.value === 'boolean'
-              ? field.value
-                ? 'Ja'
-                : 'Nej'
-              : String(field.value ?? '')}
-          </li>
-        ))}
-      </ul>
     </ObjectFormGuard>
   );
 }

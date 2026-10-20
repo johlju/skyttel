@@ -9,7 +9,8 @@ test('migration 024 retains an existing actor draft choice while adding default 
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-width-upgrade-'));
   const previous = join(directory, 'migrations');
   mkdirSync(previous);
-  for (const name of readdirSync(resolve('migrations')).filter((name) => name < '024'))
+  const migrations = readdirSync(resolve('migrations')).filter((name) => name.endsWith('.sql'));
+  for (const name of migrations.filter((name) => name < '024'))
     copyFileSync(resolve('migrations', name), join(previous, name));
   const old = await applicationFixture({ migrationsDirectory: previous });
   try {
@@ -33,7 +34,7 @@ test('migration 024 retains an existing actor draft choice while adding default 
       });
       expect(
         upgraded.prepare('SELECT MAX(version) AS version FROM schema_migration').get(),
-      ).toEqual({ version: 34 });
+      ).toEqual({ version: migrations.length });
     } finally {
       upgraded.close();
     }

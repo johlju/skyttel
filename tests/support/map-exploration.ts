@@ -31,11 +31,7 @@ export async function prepareMapExploration(
     await post('draft', {
       id,
       baseRevision: null,
-      value: {
-        typeId: initial.types[0].id,
-        name,
-        description: '',
-      },
+      value: { typeId: initial.types[0].id, name },
     });
   }
   for (const [id, sourceId, targetId] of [
@@ -46,12 +42,7 @@ export async function prepareMapExploration(
     await post('relationship', {
       id,
       baseRevision: null,
-      value: {
-        typeId: initial.relationshipTypes[0].id,
-        sourceId,
-        targetId,
-        knowledge: 'known',
-      },
+      value: { typeId: initial.relationshipTypes[0].id, sourceId, targetId },
     });
   }
   await post('save', { operationId: 'initial' });
@@ -75,12 +66,7 @@ export async function prepareMapExploration(
     await post('draft', {
       id: 'ended',
       baseRevision: null,
-      value: {
-        name: 'Upphörd granne',
-        description: '',
-        typeId: state.types[1].id,
-        lifecycle: 'ended',
-      },
+      value: { name: 'Upphörd granne', typeId: state.types[1].id, lifecycle: 'ended' },
     });
     for (const [id, targetId, lifecycle] of [
       ['ended-object', 'ended', 'active'],
@@ -89,13 +75,7 @@ export async function prepareMapExploration(
       await post('relationship', {
         id,
         baseRevision: null,
-        value: {
-          sourceId: 'alex',
-          targetId,
-          typeId: state.relationshipTypes[0].id,
-          knowledge: 'known',
-          lifecycle,
-        },
+        value: { sourceId: 'alex', targetId, typeId: state.relationshipTypes[0].id, lifecycle },
       });
     }
     await post('save', { operationId: 'lifecycle' });
@@ -104,7 +84,12 @@ export async function prepareMapExploration(
     await post('draft', {
       id: 'alex',
       baseRevision: alex.revision,
-      value: { ...alex, description: 'Nytt förslag' },
+      value: {
+        ...alex,
+        properties: [
+          { id: 'description', label: 'Beskrivning', kind: 'text' as const, value: 'Nytt förslag' },
+        ],
+      },
     });
   }
   return { read, post, household, initial };

@@ -1,7 +1,8 @@
 import type { PrivateConflictEffect } from './conflict-effects.js';
 import type { ConflictChoices, ConflictProperty } from './conflict-properties.js';
 import type { DraftConflict } from './draft-conflicts.js';
-import type { MapDraft, MapState } from './map.js';
+import type { MapDraft, MapState, ObjectValue } from './map.js';
+import { propertyValueText } from './properties.js';
 
 export const removalCombinationMessage =
   'Objektet kan inte tas bort medan sambandet till det finns kvar. Välj att ta bort sambandet eller behåll objektet.';
@@ -24,9 +25,15 @@ export function conflictRemovalProperties(
   }
   if (conflict.kind !== 'object' || !conflict.current) return [];
   const change = state.draft.changes.find((change) => change.id === conflict.id);
-  const record = (
-    value: Pick<NonNullable<typeof conflict.current>, 'name' | 'description'> | null,
-  ) => (value ? `${value.name}${value.description ? ` · ${value.description}` : ''}` : 'Borttaget');
+  const record = (value: Pick<ObjectValue, 'name' | 'properties'> | null) =>
+    value
+      ? [
+          value.name,
+          ...(value.properties ?? []).map(
+            (property) => `${property.label}: ${propertyValueText(property)}`,
+          ),
+        ].join(' · ')
+      : 'Borttaget';
   return [
     {
       key: 'object',
@@ -126,6 +133,11 @@ export function conflictRemovalPlan(
     if (choices[`relationship:${edge.id}`] !== 'proposed') continue;
     const type = state.relationshipTypes.find((type) => type.id === edge.typeId);
     if (!type) return null;
+    const removedWithObjects = draft.changes
+      .filter(
+        (change) => !change.after && (edge.sourceId === change.id || edge.targetId === change.id),
+      )
+      .map(({ id }) => id);
     draft.relationships = [
       ...(draft.relationships ?? []).filter((change) => change.id !== edge.id),
       {
@@ -136,6 +148,7 @@ export function conflictRemovalPlan(
         beforeType: type,
         proposedAt: new Date().toISOString(),
         objectNames: Object.fromEntries(state.objects.map((object) => [object.id, object.name])),
+        ...(removedWithObjects.length ? { removedWithObjects } : {}),
       },
     ];
     effects.push({

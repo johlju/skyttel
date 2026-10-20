@@ -72,6 +72,7 @@ export function SpecialConflictDetails({
   pending,
   onApply,
   onClose,
+  onCorrect,
 }: {
   state: MapState;
   conflict: DraftConflict;
@@ -80,6 +81,7 @@ export function SpecialConflictDetails({
   pending: boolean;
   onApply: () => void;
   onClose: () => void;
+  onCorrect?: () => void;
 }) {
   const change = conflictChange(state, conflict);
   const proposal = change?.after ?? change?.before;
@@ -222,6 +224,11 @@ export function SpecialConflictDetails({
         </>
       )}
       <footer className="cp-actions">
+        {onCorrect && (
+          <button type="button" disabled={disabled} onClick={onCorrect}>
+            Rätta ändpunkter
+          </button>
+        )}
         {special.action ? (
           <button className="cp-primary" type="button" disabled={disabled} onClick={onApply}>
             {special.action}

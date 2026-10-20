@@ -30,7 +30,8 @@ angivet arbetssteg, tillsammans med UI-proceduren en gång.
 I MEDGIVANDE-15/16/18, när ett steg kräver kvarvarande eller rättat Lo-förslag:
 öppna
 **Utkast → Visa förslaget: Lo Exempel** (eller det rättade namnet).
-Läs Person, det aktuella namnet och **Påhittad uppgift** som beskrivning.
+Läs Person, det aktuella namnet och den fria egenskapen **Beskrivning** med
+värdet **Påhittad uppgift (Text)**.
 Stäng dialogen före nästa samtalssteg. När ett steg kräver sparad Lo:
 öppna **Tabell**, fäll ut objektets rad och läs samma fullständiga värden.
 Ett kvitto läses genom **Rapporter → Ändringshistorik → Visa ändringarna**.
@@ -67,8 +68,9 @@ npm run test:env -- node --import tsx scripts/manual-voice.ts
 
 Öppna den utskrivna adressen privat och logga in som Alex med Google.
 Skapa hushållet Medgivandeprov. Lägg till **Lo Exempel**, typ **Person**,
-beskrivning **Påhittad uppgift**, genom
-**Nytt objekt → Lägg i utkastet och stäng**. Spara inte;
+genom **Nytt objekt**. Öppna **Fria egenskaper** och lägg till **Beskrivning**
+med datatyp **Text** och värdet **Påhittad uppgift**. Välj
+**Lägg i utkastet och stäng**. Spara inte;
 utkastet ska innehålla exakt en ändring. Den kontrollerade mikrofonen
 använder tyst ljud och spelar inte in din riktiga mikrofon.
 
@@ -353,7 +355,7 @@ alla medlemmar”.
   },
   "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Dator och angivna emulerade pekbredder/teman skyddar fokus, medgivandets räckvidd och omflöde.",
   "outcomes": [
-    "**Samtal med Skyttel** står efter **Rymdkartan** och före **Typer och egna fält**, både på översikten och i menyn. Översikten beskriver sidan med **Ditt medgivande, utkastet och textvyns bredd.**",
+    "**Samtal med Skyttel** står efter **Rymdkartan** och före **Typer**, både på översikten och i menyn. Översikten beskriver sidan med **Ditt medgivande, utkastet och textvyns bredd.**",
     "Sidan öppnas med fokus på rubriken **Samtal med Skyttel**, och menyn markerar sidan.",
     "Under **Medgivande** står raden **Gäller dig i hushållet Medgivandeprov.**, medgivandetexten i tre stycken med samma ordalydelse som i medgivanderutan, meningen **Ett sparat medgivande gäller alla dina samtal i hushållet Medgivandeprov tills du återkallar det.**, statusraden **Inget medgivande är sparat.** och knappen **Spara medgivandet**.",
     "Robin ser samma samtalsinställningar som Alex, utan gruppen **Administration**."
@@ -373,7 +375,7 @@ alla medlemmar”.
 **Förväntat resultat:**
 
 - **Samtal med Skyttel** står efter **Rymdkartan** och före
-  **Typer och egna fält**, både på översikten och i menyn. Översikten
+  **Typer**, både på översikten och i menyn. Översikten
   beskriver sidan med **Ditt medgivande, utkastet och textvyns bredd.**
 - Sidan öppnas med fokus på rubriken **Samtal med Skyttel**, och menyn
   markerar sidan.

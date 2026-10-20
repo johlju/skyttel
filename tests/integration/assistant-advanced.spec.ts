@@ -17,6 +17,7 @@ import {
 } from '../support/domain-work.js';
 import { downloadHouseholdExport } from '../support/household-export-download.js';
 import { createInstallation, robin } from '../support/installation.js';
+import { openProperties, propertyRow, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
 async function connect(actor: APIRequestContext, origin: string, householdId: string) {
@@ -79,7 +80,7 @@ test('MCP-06: importerad historik läses och vanliga rättelser använder färsk
       .household;
     const sourceMcp = await connect(page.request, source.origin, sourceHousehold.id);
     const typeId = (await sourceMcp.tool('read_type_catalog')).types[0].id;
-    await sourceMcp.object('lamp', { typeId, name: 'Historisk lampa', description: '' });
+    await sourceMcp.object('lamp', { typeId, name: 'Historisk lampa' });
     const saved = await sourceMcp.save('source-lamp');
     const sourcePath = `${source.origin}/api/households/${sourceHousehold.id}`;
     const prepared = await page.request.post(`${sourcePath}/exports`, {
@@ -167,11 +168,23 @@ test('MCP-06: importerad historik läses och vanliga rättelser använder färsk
     expect(ordinary.objects[0].name).toBe('Historisk lampa');
     const lamp = await editTableObject(page, 'Historisk lampa');
     await expect(lamp.getByLabel('Namn', { exact: true })).toHaveValue('Historisk lampa');
-    await expect(lamp.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+    await openProperties(lamp);
+    await expect(propertyRow(lamp, 'Beskrivning')).toHaveCount(0);
     await expect(lamp.getByLabel('Objekttyp')).toHaveValue(typeId);
     await page.keyboard.press('Escape');
     // A meaningful independent proposal must survive every historical reading.
-    const privateValue = { typeId, name: 'Oberoende utkast', description: 'Privat lampanteckning' };
+    const privateValue = {
+      typeId,
+      name: 'Oberoende utkast',
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: 'Privat lampanteckning',
+        },
+      ],
+    };
     await targetMcp.object('private-lamp', privateValue);
     const draft = await targetMcp.tool('read_my_draft');
     await page.reload();
@@ -217,7 +230,7 @@ test('MCP-06: importerad historik läses och vanliga rättelser använder färsk
         contentVersion: old.contentVersion,
         id: 'manual-old-type',
         baseRevision: null,
-        value: { name: 'Gammalt underlag', description: '', fields: [] },
+        value: { name: 'Gammalt underlag', description: '' },
       },
       'content_conflict',
     );
@@ -234,27 +247,20 @@ test('MCP-06: importerad historik läses och vanliga rättelser använder färsk
     await expect(correctionProposal).toContainText('Rättad historisk lampa');
     for (const sectionName of ['Sparade värden', 'Föreslagna värden']) {
       const values = correctionProposal.getByRole('heading', { name: sectionName }).locator('..');
-      for (const [label, value] of [
-        ['Typ', before.types[0].name],
-        ['Beskrivning', 'Ej uppgivet'],
-      ]) {
-        await expect(
-          values
-            .locator('dt')
-            .filter({ hasText: new RegExp(`^${label}$`) })
-            .locator('..'),
-        ).toContainText(value);
-      }
+      await expect(values.locator('dt').filter({ hasText: /^Typ$/ }).locator('..')).toContainText(
+        before.types[0].name,
+      );
+      await expect(values.locator('dt').filter({ hasText: /^Beskrivning$/ })).toHaveCount(0);
     }
     await page.keyboard.press('Escape');
     expect((await targetMcp.tool('read_my_draft')).changes).toEqual([
       expect.objectContaining({
         id: 'lamp',
-        before: expect.objectContaining({ typeId, name: 'Historisk lampa', description: '' }),
-        after: expect.objectContaining({ typeId, name: 'Rättad historisk lampa', description: '' }),
+        before: expect.objectContaining({ typeId, name: 'Historisk lampa' }),
+        after: expect.objectContaining({ typeId, name: 'Rättad historisk lampa' }),
       }),
     ]);
-    await targetMcp.object('lamp', { typeId, name: 'Rättad historisk lampa', description: '' });
+    await targetMcp.object('lamp', { typeId, name: 'Rättad historisk lampa' });
     const receipt = await targetMcp.save('fresh-import-correction');
     expect(receipt.contentVersion).toBe(2);
     expect(receipt.userId).not.toBe(saved.userId);
@@ -267,7 +273,8 @@ test('MCP-06: importerad historik läses och vanliga rättelser använder färsk
     await expect(corrected.getByLabel('Namn', { exact: true })).toHaveValue(
       'Rättad historisk lampa',
     );
-    await expect(corrected.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
+    await openProperties(corrected);
+    await expect(propertyRow(corrected, 'Beskrivning')).toHaveCount(0);
     await expect(corrected.getByLabel('Objekttyp')).toHaveValue(typeId);
     await page.keyboard.press('Escape');
     expect((await (await page.request.get(`${path}/history`)).json()).history).toEqual([
@@ -291,23 +298,18 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
     await signIn(page.request, app.origin);
     const { household } = await (await createHousehold(page.request, app.origin)).json();
     const mcp = await connect(page.request, app.origin, household.id);
-    for (const [id, name, kind] of [
-      ['cycle', 'Cykel', 'text'],
-      ['vehicle', 'Motorfordon', 'number'],
+    for (const [id, name] of [
+      ['cycle', 'Cykel'],
+      ['vehicle', 'Motorfordon'],
     ])
-      await mcp.type(id, {
-        name,
-        description: '',
-        fields: [{ id: 'serial', name: 'Nummer', description: '', kind }],
-      });
+      await mcp.type(id, { name, description: '' });
     const catalog = await mcp.tool('read_type_catalog');
     await mcp.object('bike', {
       typeId: 'cycle',
       name: 'Alex blå cykel',
-      description: '',
-      customValues: { serial: 'SYNTH-42' },
+      properties: [{ id: 'serial', label: 'Ramnummer', kind: 'text' as const, value: 'SYNTH-42' }],
     });
-    await mcp.object('garage', { typeId: catalog.types[0].id, name: 'Garaget', description: '' });
+    await mcp.object('garage', { typeId: catalog.types[0].id, name: 'Garaget' });
     await mcp.propose('propose_relationship_type', {
       id: 'stored',
       baseRevision: null,
@@ -318,7 +320,7 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
         reverseLabel: 'innehåller',
       },
     });
-    const edge = { typeId: 'stored', sourceId: 'bike', targetId: 'garage', knowledge: 'known' };
+    const edge = { typeId: 'stored', sourceId: 'bike', targetId: 'garage' };
     await mcp.propose('propose_relationship', { id: 'parking', baseRevision: null, value: edge });
     const repeated = await mcp.propose('propose_relationship', {
       id: 'duplicate',
@@ -337,8 +339,7 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
     await mcp.object('bike', {
       typeId: 'vehicle',
       name: 'Alex blå cykel',
-      description: '',
-      customValues: { serial: 42 },
+      properties: [{ id: 'serial', label: 'Ramnummer', kind: 'number' as const, value: 42 }],
     });
     await page.goto(app.origin);
     await openTable(page);
@@ -354,13 +355,13 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
     await expect(
       savedValues
         .locator('dt')
-        .filter({ hasText: /^Nummer · ändrat$/ })
+        .filter({ hasText: /^Ramnummer · ändrat$/ })
         .locator('..'),
     ).toContainText('SYNTH-42');
     await expect(
       proposedValues
         .locator('dt')
-        .filter({ hasText: /^Nummer · ändrat$/ })
+        .filter({ hasText: /^Ramnummer · ändrat$/ })
         .locator('..'),
     ).toContainText('42');
     for (const [values, kind, number] of [
@@ -377,10 +378,10 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
       await expect(
         values
           .locator('dt')
-          .filter({ hasText: /^Nummer · ändrat$/ })
+          .filter({ hasText: /^Ramnummer · ändrat$/ })
           .locator('..')
           .locator('dd'),
-      ).toHaveText(number);
+      ).toHaveText(`${number} (${kind === 'Cykel' ? 'Text' : 'Tal'})`);
     }
     await page.keyboard.press('Escape');
     const changed = await mcp.save('type-change');
@@ -395,17 +396,25 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
     });
     expect(selected.receipt.changes[0]).toMatchObject({
       beforeType: { name: 'Cykel' },
-      before: { customValues: { serial: 'SYNTH-42' } },
+      before: {
+        properties: [
+          { id: 'serial', label: 'Ramnummer', kind: 'text' as const, value: 'SYNTH-42' },
+        ],
+      },
       type: { name: 'Motorfordon' },
-      after: { customValues: { serial: 42 } },
+      after: {
+        properties: [{ id: 'serial', label: 'Ramnummer', kind: 'number' as const, value: 42 }],
+      },
     });
     expect((await mcp.tool('read_my_draft')).changes).toEqual([]);
     await page.reload();
     const changedForm = await editTableObject(page, 'Alex blå cykel');
     await expect(changedForm.getByLabel('Objekttyp')).toHaveValue('vehicle');
-    await expect(changedForm.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
-    await changedForm.getByRole('button', { name: 'Egna fält', exact: true }).click();
-    await expect(changedForm.getByLabel('Nummer', { exact: true })).toHaveValue('42');
+    await openProperties(changedForm);
+    await expect(propertyRow(changedForm, 'Beskrivning')).toHaveCount(0);
+    await expect(
+      propertyRow(changedForm, 'Ramnummer').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('42');
     await page.keyboard.press('Escape');
     const history = await openSavedHistory(page);
     const typeChange = history.getByRole('article').filter({ hasText: 'Ändrat objekt' });
@@ -426,7 +435,11 @@ test('MCP-03: typbyte bevarar riktade samband och äldre typers läsbara histori
       await expect(values.filter({ hasText: new RegExp(`^Objekttyp: ${kind}\\.$`) })).toHaveText(
         `Objekttyp: ${kind}.`,
       );
-      await expect(values.getByText(`Nummer: ${number}`, { exact: true })).toBeVisible();
+      await expect(
+        values.getByText(`Ramnummer: ${number} (${phase === 'Före sparandet' ? 'Text' : 'Tal'})`, {
+          exact: true,
+        }),
+      ).toBeVisible();
     }
   } finally {
     await app.close();
@@ -445,11 +458,10 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
       ['private-type', 'Privat använd typ'],
       ['race-type', 'Samtidig typ'],
     ])
-      await mcp.type(id, { name, description: '', fields: [] });
+      await mcp.type(id, { name, description: '' });
     await mcp.object('ended', {
       typeId: 'ended-type',
       name: 'Upphört testobjekt',
-      description: '',
       lifecycle: 'ended',
     });
     await mcp.save('protected-types');
@@ -480,7 +492,7 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
     let privateForm = await openNewObject(otherPage);
     await privateForm.getByLabel('Objekttyp').selectOption('private-type');
     await privateForm.getByLabel('Namn', { exact: true }).fill('Andras privata namn');
-    await privateForm.getByLabel('Beskrivning', { exact: true }).fill('Privat hemlig anteckning');
+    await setProperty(privateForm, 'Beskrivning', 'Privat hemlig anteckning');
     await privateForm
       .getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true })
       .click();
@@ -494,7 +506,14 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
         after: expect.objectContaining({
           typeId: 'private-type',
           name: 'Andras privata namn',
-          description: 'Privat hemlig anteckning',
+          properties: [
+            {
+              id: expect.any(String),
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Privat hemlig anteckning',
+            },
+          ],
         }),
       }),
     ]);
@@ -504,7 +523,14 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
     await otherMcp.object('secret', {
       typeId: 'private-type',
       name: 'Andras privata namn',
-      description: 'Privat hemlig anteckning',
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: 'Privat hemlig anteckning',
+        },
+      ],
     });
     const privateBlock = await mcp.type('private-type', null, 'definition_in_use');
     expect(JSON.stringify(privateBlock)).not.toMatch(
@@ -520,12 +546,7 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
       .click();
     privateProposal = await readDraftProposal(otherPage, 'Senare privat användning');
     await expect(privateProposal).toContainText('Samtidig typ');
-    await expect(
-      privateProposal
-        .locator('dt')
-        .filter({ hasText: /^Beskrivning$/ })
-        .locator('..'),
-    ).toContainText('Ej uppgivet');
+    await expect(privateProposal.locator('dt').filter({ hasText: /^Beskrivning$/ })).toHaveCount(0);
     await otherPage.keyboard.press('Escape');
     const nativeRace = (await otherMcp.tool('read_my_draft')).changes.find(
       (change: { after: { name: string } }) => change.after.name === 'Senare privat användning',
@@ -533,14 +554,9 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
     expect(nativeRace.after).toMatchObject({
       typeId: 'race-type',
       name: 'Senare privat användning',
-      description: '',
     });
     await otherMcp.propose('discard_proposal', { kind: 'object', id: nativeRace.id });
-    await otherMcp.object('race', {
-      typeId: 'race-type',
-      name: 'Senare privat användning',
-      description: '',
-    });
+    await otherMcp.object('race', { typeId: 'race-type', name: 'Senare privat användning' });
     await mcp.propose('save_draft', { operationId: 'blocked-removal' }, 'definition_in_use');
     await page.goto(app.origin);
     await openTable(page);
@@ -572,13 +588,7 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
     await otherPage.keyboard.press('Escape');
     const restoredRace = await readDraftProposal(otherPage, 'Senare privat användning');
     await expect(restoredRace).toContainText('Samtidig typ');
-    await expect(
-      restoredRace
-        .locator('dt')
-        .filter({ hasText: /^Beskrivning$/ })
-        .locator('..')
-        .locator('dd'),
-    ).toHaveText('Ej uppgivet');
+    await expect(restoredRace.locator('dt').filter({ hasText: /^Beskrivning$/ })).toHaveCount(0);
     await otherPage.keyboard.press('Escape');
     const persistedPrivate = await otherMcp.tool('read_my_draft');
     expect(persistedPrivate.changes).toEqual([
@@ -588,13 +598,20 @@ test('MCP-04: upphört innehåll och privata utkast skyddar typer', async ({ pag
         after: {
           typeId: 'private-type',
           name: 'Andras privata namn',
-          description: 'Privat hemlig anteckning',
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Privat hemlig anteckning',
+            },
+          ],
         },
       }),
       expect.objectContaining({
         id: 'race',
         before: null,
-        after: { typeId: 'race-type', name: 'Senare privat användning', description: '' },
+        after: { typeId: 'race-type', name: 'Senare privat användning' },
       }),
     ]);
     const persistedHistory = await mcp.tool('read_history');
@@ -629,29 +646,32 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
     await signIn(page.request, app.origin);
     const { household } = await (await createHousehold(page.request, app.origin)).json();
     const mcp = await connect(page.request, app.origin, household.id);
-    const fields = [
-      { id: 'supplier', name: 'Leverantör', description: '', kind: 'text' },
-      { id: 'power', name: 'Effekt', description: 'kW', kind: 'number' },
-      { id: 'installed', name: 'Installationsdatum', description: '', kind: 'date' },
-      { id: 'battery', name: 'Batteri', description: '', kind: 'boolean' },
-    ];
-    const definition = {
-      name: 'Solcellsanläggning',
-      description: 'Hushållets elproduktion',
-      fields,
-    };
+    const definition = { name: 'Solcellsanläggning', description: 'Hushållets elproduktion' };
     await mcp.type('solar', definition);
     await mcp.object('roof', {
       typeId: 'solar',
       name: 'Paneler på taket',
-      description: '',
-      customValues: { supplier: 'Exempelsol', power: 12.5, installed: '2026-09-01' },
+      properties: [
+        { id: 'supplier', label: 'Leverantör', kind: 'text' as const, value: 'Exempelsol' },
+        { id: 'power', label: 'Effekt', kind: 'number' as const, value: 12.5 },
+        { id: 'battery', label: 'Batteri', kind: 'boolean' as const },
+        {
+          id: 'installed',
+          label: 'Installationsdatum',
+          kind: 'date' as const,
+          value: '2026-09-01',
+        },
+      ],
     });
     await mcp.object('garage', {
       typeId: 'solar',
       name: 'Paneler på garaget',
-      description: '',
-      customValues: { battery: false },
+      properties: [
+        { id: 'supplier', label: 'Leverantör', kind: 'text' as const },
+        { id: 'power', label: 'Effekt', kind: 'number' as const },
+        { id: 'installed', label: 'Installationsdatum', kind: 'date' as const },
+        { id: 'battery', label: 'Batteri', kind: 'boolean' as const, value: false },
+      ],
     });
     await page.goto(app.origin);
     await openTable(page);
@@ -673,7 +693,7 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
         .locator('dt')
         .filter({ hasText: /^Batteri$/ })
         .locator('..'),
-    ).toContainText('Ej uppgivet');
+    ).toContainText('Tomt');
     await page.keyboard.press('Escape');
     proposal = await readDraftProposal(page, 'Paneler på garaget');
     for (const label of ['Leverantör', 'Effekt', 'Installationsdatum'])
@@ -682,7 +702,7 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
           .locator('dt')
           .filter({ hasText: new RegExp(`^${label}$`) })
           .locator('..'),
-      ).toContainText('Ej uppgivet');
+      ).toContainText('Tomt');
     await expect(
       proposal
         .locator('dt')
@@ -692,29 +712,13 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
     await page.keyboard.press('Escape');
     expect((await mcp.tool('read_map')).objects).toEqual([]);
     await mcp.save('solar');
-    const blocked = await mcp.type(
-      'solar',
-      {
-        ...definition,
-        fields: fields.map((field) => (field.id === 'power' ? { ...field, kind: 'text' } : field)),
-      },
-      'field_kind_in_use',
-    );
-    expect(blocked.message).toContain('nytt fält');
-    await mcp.type('solar', {
-      ...definition,
-      fields: [
-        ...fields,
-        { id: 'power-note', name: 'Effektanteckning', description: '', kind: 'text' },
-      ],
-    });
+    await mcp.type('solar', { ...definition, description: 'Redigerad gemensam betydelse' });
     const catalog = await mcp.tool('read_type_catalog');
     const unused = catalog.types.find((type: { name: string }) => type.name === 'Fordon');
     const person = catalog.types.find((type: { name: string }) => type.name === 'Person');
     await mcp.type(person.id, {
       name: 'Person i hushållet',
       description: 'Personer ger ingen inloggning',
-      fields: [],
     });
     await mcp.type(unused.id, null);
     await mcp.save('catalog-changes');
@@ -722,21 +726,28 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
     await page.reload();
     const roof = await editTableObject(page, 'Paneler på taket');
     await expect(roof.getByLabel('Objekttyp')).toHaveValue('solar');
-    await expect(roof.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
-    await roof.getByRole('button', { name: 'Egna fält', exact: true }).click();
-    await expect(page.getByLabel('Leverantör', { exact: true })).toHaveValue('Exempelsol');
-    await expect(page.getByLabel('Effekt', { exact: true })).toHaveValue('12.5');
-    await expect(page.getByLabel('Installationsdatum', { exact: true })).toHaveValue('2026-09-01');
-    await expect(page.getByLabel('Batteri', { exact: true })).toHaveValue('');
-    await expect(page.getByLabel('Effektanteckning', { exact: true })).toHaveValue('');
+    await openProperties(roof);
+    await expect(propertyRow(roof, 'Beskrivning')).toHaveCount(0);
+    await expect(propertyRow(page, 'Leverantör').getByLabel('Värde', { exact: true })).toHaveValue(
+      'Exempelsol',
+    );
+    await expect(propertyRow(page, 'Effekt').getByLabel('Värde', { exact: true })).toHaveValue(
+      '12.5',
+    );
+    await expect(
+      propertyRow(page, 'Installationsdatum').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('2026-09-01');
+    await expect(propertyRow(page, 'Batteri').getByLabel('Värde', { exact: true })).toHaveValue('');
     await page.keyboard.press('Escape');
     const garage = await editTableObject(page, 'Paneler på garaget');
     await expect(garage.getByLabel('Objekttyp')).toHaveValue('solar');
-    await expect(garage.getByLabel('Beskrivning', { exact: true })).toHaveValue('');
-    await garage.getByRole('button', { name: 'Egna fält', exact: true }).click();
-    await expect(page.getByLabel('Batteri', { exact: true })).toHaveValue('false');
-    for (const label of ['Leverantör', 'Effekt', 'Installationsdatum', 'Effektanteckning'])
-      await expect(garage.getByLabel(label, { exact: true })).toHaveValue('');
+    await openProperties(garage);
+    await expect(propertyRow(garage, 'Beskrivning')).toHaveCount(0);
+    await expect(propertyRow(page, 'Batteri').getByLabel('Värde', { exact: true })).toHaveValue(
+      'false',
+    );
+    for (const label of ['Leverantör', 'Effekt', 'Installationsdatum'])
+      await expect(propertyRow(garage, label).getByLabel('Värde', { exact: true })).toHaveValue('');
     expect(
       (await mcp.tool('read_type_catalog')).types.map((type: { name: string }) => type.name),
     ).toContain('Person i hushållet');
@@ -750,7 +761,9 @@ test('MCP-01: egna typer och frivilliga fält bevarar obesvarat och nej', async 
   }
 });
 
-test('MCP-02: daterade avtal kan rättas utan påhittade uppgifter', async ({ page }) => {
+test('MCP-02: daterade fria avtalsuppgifter kan rättas utan påhittade uppgifter', async ({
+  page,
+}) => {
   const app = await createInstallation();
   try {
     await signIn(page.request, app.origin);
@@ -759,238 +772,152 @@ test('MCP-02: daterade avtal kan rättas utan påhittade uppgifter', async ({ pa
     const catalog = await mcp.tool('read_type_catalog');
     const type = (name: string) =>
       catalog.types.find((entry: { name: string }) => entry.name === name).id;
-    for (const [id, kind, name, facts] of [
-      [
-        'rent',
-        'Hyresavtal',
-        'Hyra för lägenheten',
-        { price: { knowledge: 'known', value: '9 500' }, terms: { knowledge: 'unknown' } },
-      ],
-      [
-        'garage-rent',
-        'Hyresavtal',
-        'Hyra för garaget',
-        { price: { knowledge: 'uncertain', value: '650' } },
-      ],
-      [
-        'loan',
-        'Låneavtal',
-        'Exempellån',
-        { debt: { knowledge: 'uncertain', value: '125 000,50', reportedOn: '2026-09-01' } },
-      ],
-      [
-        'credit',
-        'Kreditavtal',
-        'Exempelkredit',
-        {
-          creditLimit: { knowledge: 'known', value: '80 000', reportedOn: '2026-08-01' },
-          usedCredit: { knowledge: 'known', value: '12 500', reportedOn: '2026-09-02' },
-          terms: { knowledge: 'none' },
-        },
-      ],
-      [
-        'installment',
-        'Avbetalningsavtal',
-        'Bilens avbetalning',
-        { debt: { knowledge: 'unknown', reportedOn: '2026-09-03' } },
-      ],
-    ] as const)
-      await mcp.object(id, { typeId: type(kind), name, description: '', financialFacts: facts });
-    await mcp.object('car', {
-      typeId: type('Fordon'),
-      name: 'Familjens bil',
-      description: '',
-      identity: 'unspecified',
-    });
+    const agreements = [
+      {
+        id: 'rent',
+        kind: 'Hyresavtal',
+        name: 'Hyra för lägenheten',
+        properties: [
+          { id: 'price', label: 'Pris', kind: 'text', value: '9 500' },
+          { id: 'terms', label: 'Avtalsvillkor', kind: 'text' },
+        ],
+      },
+      {
+        id: 'garage-rent',
+        kind: 'Hyresavtal',
+        name: 'Hyra för garaget',
+        properties: [
+          { id: 'price', label: 'Pris', kind: 'number', value: 650 },
+          { id: 'certainty', label: 'Osäkert uppgivet', kind: 'boolean', value: true },
+        ],
+      },
+      {
+        id: 'loan',
+        kind: 'Låneavtal',
+        name: 'Exempellån',
+        properties: [
+          { id: 'debt', label: 'Senast uppgiven skuld', kind: 'text', value: '125 000,50' },
+          { id: 'certainty', label: 'Osäkert uppgivet', kind: 'boolean', value: true },
+          { id: 'date', label: 'Datum för uppgiften', kind: 'date', value: '2026-09-01' },
+        ],
+      },
+      {
+        id: 'credit',
+        kind: 'Kreditavtal',
+        name: 'Exempelkredit',
+        properties: [
+          { id: 'limit', label: 'Beviljat kreditutrymme', kind: 'number', value: 80000 },
+          { id: 'limit-date', label: 'Kreditutrymmets datum', kind: 'date', value: '2026-08-01' },
+          { id: 'used', label: 'Utnyttjad kredit', kind: 'number', value: 12500 },
+          { id: 'used-date', label: 'Utnyttjad kredits datum', kind: 'date', value: '2026-09-02' },
+          { id: 'terms', label: 'Avtalsvillkor', kind: 'text', value: 'Uttryckligen inget' },
+        ],
+      },
+      {
+        id: 'installment',
+        kind: 'Avbetalningsavtal',
+        name: 'Bilens avbetalning',
+        properties: [
+          { id: 'debt', label: 'Senast uppgiven skuld', kind: 'number' },
+          { id: 'date', label: 'Datum för uppgiften', kind: 'date', value: '2026-09-03' },
+        ],
+      },
+    ];
+    for (const agreement of agreements)
+      await mcp.object(agreement.id, {
+        typeId: type(agreement.kind),
+        name: agreement.name,
+        properties: agreement.properties,
+      });
     for (const [id, name, kind] of [
       ['home', 'Lägenheten', 'Bostad'],
       ['garage', 'Garaget', 'Garage'],
-    ]) {
-      await mcp.object(id, { typeId: type(kind), name, description: '' });
-    }
-    for (const [id, sourceId, targetId] of [
-      ['home-rent-link', 'rent', 'home'],
-      ['garage-rent-link', 'garage-rent', 'garage'],
-    ]) {
+      ['car', 'Familjens bil', 'Fordon'],
+    ])
+      await mcp.object(id, {
+        typeId: type(kind),
+        name,
+        ...(id === 'car' ? { identity: 'unspecified' } : {}),
+      });
+    for (const [id, sourceId, targetId, kind] of [
+      ['home-rent-link', 'rent', 'home', 'Gäller'],
+      ['garage-rent-link', 'garage-rent', 'garage', 'Gäller'],
+      ['finance-car', 'installment', 'car', 'Finansierar'],
+    ])
       await mcp.propose('propose_relationship', {
         id,
         baseRevision: null,
         value: {
-          typeId: catalog.relationshipTypes.find(
-            (entry: { name: string }) => entry.name === 'Gäller',
-          ).id,
+          typeId: catalog.relationshipTypes.find((entry: { name: string }) => entry.name === kind)
+            .id,
           sourceId,
           targetId,
-          knowledge: 'known',
         },
       });
-    }
-    await mcp.propose('propose_relationship', {
-      id: 'finance-car',
-      baseRevision: null,
-      value: {
-        typeId: catalog.relationshipTypes.find(
-          (entry: { name: string }) => entry.name === 'Finansierar',
-        ).id,
-        sourceId: 'installment',
-        targetId: 'car',
-        knowledge: 'known',
-      },
-    });
     await page.goto(app.origin);
     await openTable(page);
-    let proposal = await readDraftProposal(page, 'Exempellån');
-    await expect(proposal).toContainText('125 000,50 (Osäkert uppgivet)');
-    await expect(proposal).toContainText('2026-09-01');
-    await expect(proposal).toContainText('Låneavtal');
-    await page.keyboard.press('Escape');
-    proposal = await readDraftProposal(page, 'Exempelkredit');
-    for (const text of ['Kreditavtal', '80 000', '2026-08-01', '12 500', '2026-09-02'])
-      await expect(proposal).toContainText(text);
-    await expect(
-      proposal
-        .locator('dt')
-        .filter({ hasText: /^Avtalsvillkor$/ })
-        .locator('..'),
-    ).toContainText('Uttryckligen inget');
-    await page.keyboard.press('Escape');
-    proposal = await readDraftProposal(page, 'Familjens bil');
-    await expect(proposal).toContainText('Ospecificerat objekt');
-    await expect(proposal).toContainText('Fordon');
-    await page.keyboard.press('Escape');
-    proposal = await readDraftProposal(page, 'Bilens avbetalning');
-    await expect(
-      proposal
-        .locator('dt')
-        .filter({ hasText: /^Senast uppgiven skuld$/ })
-        .locator('..')
-        .locator('dd'),
-    ).toHaveText('Okänt · datum för uppgiften: 2026-09-03');
-    await page.keyboard.press('Escape');
+    for (const agreement of agreements) {
+      const proposal = await readDraftProposal(page, agreement.name);
+      await expect(proposal).toContainText(agreement.kind);
+      for (const property of agreement.properties) {
+        await expect(proposal).toContainText(property.label);
+        if ('value' in property)
+          await expect(proposal).toContainText(
+            property.value === true ? 'Ja' : String(property.value),
+          );
+        else await expect(proposal).toContainText('Tomt');
+      }
+      await page.keyboard.press('Escape');
+    }
     await mcp.save('agreements');
-    const credit = (await mcp.tool('read_map', { objectId: 'credit' })).objects[0];
-    await mcp.object('credit', {
-      typeId: credit.typeId,
-      name: credit.name,
-      description: '',
-      financialFacts: {
-        ...credit.financialFacts,
-        usedCredit: { knowledge: 'known', value: '0', reportedOn: '2026-09-20' },
-      },
-    });
+    const before = (await mcp.tool('read_map', { objectId: 'credit' })).objects[0];
+    const corrected = before.properties.map((property: { id: string }) =>
+      property.id === 'used'
+        ? { ...property, value: 0 }
+        : property.id === 'used-date'
+          ? { ...property, value: '2026-09-20' }
+          : property,
+    );
+    await mcp.object('credit', { typeId: before.typeId, name: before.name, properties: corrected });
     const receipt = await mcp.save('correct-used-credit');
     await app.restart();
     await page.reload();
-    const creditForm = await editTableObject(page, 'Exempelkredit');
-    await expect(creditForm.getByLabel('Objekttyp')).toHaveValue(type('Kreditavtal'));
-    await creditForm.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true }).click();
-    await expect(page.getByLabel('Beviljat kreditutrymme', { exact: true })).toHaveValue('80 000');
-    await expect(creditForm.getByLabel('Beviljat kreditutrymme: datum för uppgiften')).toHaveValue(
-      '2026-08-01',
-    );
-    await expect(creditForm.getByLabel('Beviljat kreditutrymme: uppgiftens säkerhet')).toHaveValue(
-      'known',
-    );
-    await expect(page.getByLabel('Utnyttjad kredit', { exact: true })).toHaveValue('0');
-    await expect(page.getByLabel('Utnyttjad kredit: datum för uppgiften')).toHaveValue(
-      '2026-09-20',
-    );
-    await expect(page.getByLabel('Senast uppgiven skuld: uppgiftens säkerhet')).toHaveValue('');
-    await expect(creditForm.getByLabel('Utnyttjad kredit: uppgiftens säkerhet')).toHaveValue(
-      'known',
-    );
-    await expect(creditForm.getByLabel('Avtalsvillkor: uppgiftens säkerhet')).toHaveValue('none');
+    const form = await editTableObject(page, 'Exempelkredit');
+    await form.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
+    await expect(
+      propertyRow(form, 'Utnyttjad kredit').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('0');
+    await expect(
+      propertyRow(form, 'Utnyttjad kredits datum').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('2026-09-20');
+    await expect(
+      propertyRow(form, 'Beviljat kreditutrymme').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('80000');
     const selected = await mcp.tool('read_history', {
       operationId: receipt.operationId,
       userId: receipt.userId,
     });
-    expect(selected.receipt.changes[0].before.financialFacts.usedCredit.value).toBe('12 500');
-    expect(selected.receipt.changes[0].before.financialFacts.usedCredit.reportedOn).toBe(
-      '2026-09-02',
-    );
+    expect(selected.receipt.changes[0].before.properties).toEqual(before.properties);
+    expect(selected.receipt.changes[0].after.properties).toEqual(corrected);
     await page.keyboard.press('Escape');
-    const creditHistory = await openSavedHistory(page);
-    const creditChange = creditHistory.getByRole('article').filter({ hasText: 'Ändrat objekt' });
-    await creditChange.getByText('Visa ändringarna', { exact: true }).click();
-    await expect(
-      creditChange.getByText('Utnyttjad kredit: 12 500 — datum för uppgiften: 2026-09-02', {
-        exact: true,
-      }),
-    ).toBeVisible();
-    for (const [phase, amount, date] of [
-      ['Före sparandet', '12 500', '2026-09-02'],
-      ['Efter sparandet', '0', '2026-09-20'],
-    ]) {
-      const values = creditChange
-        .getByRole('heading', { name: phase, exact: true })
-        .locator(
-          `xpath=following-sibling::*[preceding-sibling::h5[1][normalize-space()="${phase}"]]`,
-        );
-      await expect(
-        values.getByText(`Utnyttjad kredit: ${amount} — datum för uppgiften: ${date}`, {
-          exact: true,
-        }),
-      ).toBeVisible();
-    }
+    const history = await openSavedHistory(page);
+    const changed = history.getByRole('article').filter({ hasText: 'Ändrat objekt' });
+    await changed.getByText('Visa ändringarna', { exact: true }).click();
+    for (const text of ['12500', '2026-09-02', '2026-09-20', 'Utnyttjad kredit', '0 (Tal)'])
+      await expect(changed).toContainText(text);
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
-    for (const [name, kind, label, knowledge, amount, date] of [
-      ['Hyra för lägenheten', 'Hyresavtal', 'Pris', 'known', '9 500', undefined],
-      ['Hyra för garaget', 'Hyresavtal', 'Pris', 'uncertain', '650', undefined],
-      ['Exempellån', 'Låneavtal', 'Senast uppgiven skuld', 'uncertain', '125 000,50', '2026-09-01'],
-      [
-        'Bilens avbetalning',
-        'Avbetalningsavtal',
-        'Senast uppgiven skuld',
-        'unknown',
-        undefined,
-        '2026-09-03',
-      ],
-    ] as const) {
-      const form = await editTableObject(page, name);
-      await expect(form.getByLabel('Objekttyp')).toHaveValue(type(kind));
-      await form.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true }).click();
-      await expect(form.getByLabel(`${label}: uppgiftens säkerhet`, { exact: true })).toHaveValue(
-        knowledge,
-      );
-      if (amount !== undefined)
-        await expect(form.getByLabel(label, { exact: true })).toHaveValue(amount);
-      else await expect(form.getByLabel(label, { exact: true })).toHaveCount(0);
-      if (date !== undefined)
-        await expect(form.getByLabel(`${label}: datum för uppgiften`, { exact: true })).toHaveValue(
-          date,
-        );
-      if (name === 'Hyra för lägenheten')
-        await expect(form.getByLabel('Avtalsvillkor: uppgiftens säkerhet')).toHaveValue('unknown');
-      await page.keyboard.press('Escape');
-    }
-    for (const name of [
-      'Hyra för lägenheten',
-      'Hyra för garaget',
-      'Exempellån',
-      'Bilens avbetalning',
-    ])
-      await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
     for (const [source, target, kind] of [
       ['Bilens avbetalning', 'Familjens bil', 'Finansierar'],
       ['Hyra för lägenheten', 'Lägenheten', 'Gäller'],
       ['Hyra för garaget', 'Garaget', 'Gäller'],
     ]) {
       const relationships = await openObjectRelationships(page, source);
-      await expect(relationships).toContainText(target);
-      for (const [label, value] of [
-        ['Typ', kind],
-        ['Från objekt', source],
-        ['Till objekt', target],
-      ])
-        await expect(
-          relationships
-            .locator('dt')
-            .filter({ hasText: new RegExp(`^${label}$`) })
-            .locator('..')
-            .locator('dd'),
-        ).toHaveText(value);
+      for (const text of [source, target, kind]) await expect(relationships).toContainText(text);
       await page.keyboard.press('Escape');
     }
+    expect((await mcp.tool('read_map', { objectId: 'credit' })).objects[0].properties).toEqual(
+      corrected,
+    );
   } finally {
     await app.close();
   }

@@ -32,6 +32,7 @@ import { mapRoutes } from './map-routes.js';
 import { policyContactRoutes } from './policy-contact-routes.js';
 import { profileImageRoutes } from './profile-image-routes.js';
 import { imageUploadLimit } from './profile-images.js';
+import { propertyWriteLimit } from './properties.js';
 import { textAssistantRoutes } from './text-assistant.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
 import type { TextModelProfile, TextModelUsage } from './text-assistant-model.js';
@@ -149,8 +150,13 @@ export function createApp({
               ? imageUploadLimit
               : context.req.method === 'POST' &&
                   /^\/api\/households\/[^/]+\/map\/object-form$/.test(context.req.path)
-                ? imageUploadLimit + 32_768
-                : 16_384,
+                ? imageUploadLimit + propertyWriteLimit + 32_768
+                : context.req.method === 'POST' &&
+                    /^\/api\/households\/[^/]+\/map\/(draft|relationship|relationship-form|resolve|discard-review)$/.test(
+                      context.req.path,
+                    )
+                  ? propertyWriteLimit
+                  : 16_384,
           onError: (failed) => failed.json({ error: 'invalid_request' }, 413),
         })(context, next),
   );

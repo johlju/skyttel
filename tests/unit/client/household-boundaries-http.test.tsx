@@ -16,6 +16,7 @@ import {
   saveHouseholdDraft,
 } from '../../support/native-household-unit.js';
 import { prepareObjectSearch } from '../../support/object-search.js';
+import { propertyInput } from './property-controls.js';
 
 let installation: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
@@ -56,7 +57,7 @@ test('table and map searches normalize Swedish own fields independently and neve
   expect(fixture.table.queryByRole('button', { name: 'A 2' })).toBeNull();
   await userEvent.clear(query);
   await userEvent.type(query, 'hemlig anteckning');
-  expect(fixture.table.getByText('Träff i Egen anteckning')).toBeTruthy();
+  expect(fixture.table.getByText('Träff i Anteckning')).toBeTruthy();
   await userEvent.click(fixture.tools.getByRole('button', { name: 'Karta' }));
   await userEvent.click(screen.getByRole('searchbox', { name: 'Sök objekt i kartan' }));
   const map = within(await screen.findByRole('region', { name: 'Kartans sökning och filter' }));
@@ -284,14 +285,14 @@ async function emptyHousehold() {
 }
 
 async function typeSettings() {
-  const settings = within(await screen.findByRole('region', { name: 'Typer och egna fält' }));
+  const settings = within(await screen.findByRole('region', { name: 'Typer' }));
   await settings.findByRole('button', { name: 'Ny objekttyp' });
-  const summary = settings.getByText('Objekttyper och egna fält');
+  const summary = settings.getByText('Objekttyper');
   if (!summary.closest('details')?.open) await userEvent.click(summary);
   return settings;
 }
 
-test('configured type fields preserve explicit order, visibility and four answer kinds through actual UI staging, then unused type removal stays private', async () => {
+test('type explanation edits and unused type removal stay private until explicitly saved', async () => {
   const fixture = await emptyHousehold();
   await fixture.post('object-type', {
     id: 'configured',
@@ -299,10 +300,6 @@ test('configured type fields preserve explicit order, visibility and four answer
     value: {
       name: 'Provfält',
       description: '',
-      fields: [],
-      sections: [],
-      builtins: [],
-      propertyOrder: [],
     },
   });
   await fixture.post('save', { operationId: 'configured-type' });
@@ -311,32 +308,10 @@ test('configured type fields preserve explicit order, visibility and four answer
   const settings = await typeSettings();
   await userEvent.click(settings.getByRole('button', { name: 'Ändra typ: Provfält' }));
   const form = within(settings.getByRole('group', { name: 'Objekttypens definition' }));
-  await userEvent.click(form.getByRole('button', { name: 'Lägg till avsnitt' }));
-  await userEvent.type(form.getByLabelText('Avsnitt 1'), 'Egna fält');
-  await userEvent.click(form.getByRole('button', { name: 'Lägg till avsnitt' }));
-  await userEvent.type(form.getByLabelText('Avsnitt 2'), 'Extra');
-  await userEvent.click(form.getByRole('button', { name: 'Flytta avsnittet Extra upp' }));
-  await userEvent.click(form.getByRole('button', { name: 'Flytta avsnittet Extra ned' }));
-  for (const [index, name, kind] of [
-    [1, 'Märkning', 'text'],
-    [2, 'Antal', 'number'],
-    [3, 'Kontrollerad', 'boolean'],
-    [4, 'Provdatum', 'date'],
-  ] as const) {
-    await userEvent.click(form.getByRole('button', { name: 'Lägg till fält' }));
-    const field = within(form.getByRole('group', { name: `Eget fält ${index}` }));
-    await userEvent.type(field.getByLabelText('Fältets namn'), name);
-    await userEvent.type(field.getByLabelText('Fältets beskrivning'), `Hela uppgiften ${name}`);
-    await userEvent.selectOptions(field.getByLabelText('Värdeslag'), kind);
-  }
-  await userEvent.click(form.getByRole('button', { name: 'Flytta fältet Antal upp' }));
-  await userEvent.click(form.getByRole('button', { name: 'Flytta fältet Antal ned' }));
-  await userEvent.click(form.getByRole('button', { name: 'Dölj Kontrollerad, behåll värden' }));
-  await userEvent.selectOptions(form.getByLabelText('Lägg till gemensam egenskap'), 'description');
-  const description = within(form.getByRole('group', { name: 'Gemensam egenskap: Beskrivning' }));
-  await userEvent.clear(description.getByLabelText('Fältets namn'));
-  await userEvent.type(description.getByLabelText('Fältets namn'), 'Provets berättelse');
-  await userEvent.click(form.getByRole('button', { name: 'Ta bort det tomma avsnittet Extra' }));
+  await userEvent.type(
+    form.getByLabelText('Typens beskrivning'),
+    'En uppgift med gemensam betydelse',
+  );
   await userEvent.click(form.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }));
   await waitFor(() =>
     expect(settings.queryByRole('group', { name: 'Objekttypens definition' })).toBeNull(),
@@ -344,17 +319,10 @@ test('configured type fields preserve explicit order, visibility and four answer
   const after = await fixture.read();
   expect(after.types).toEqual(before.types);
   const proposal = after.draft.objectTypes?.find(({ id }) => id === 'configured');
-  expect(proposal?.after?.fields?.map(({ name, kind }) => [name, kind])).toEqual([
-    ['Märkning', 'text'],
-    ['Antal', 'number'],
-    ['Kontrollerad', 'boolean'],
-    ['Provdatum', 'date'],
-  ]);
-  expect(proposal?.after?.sections?.map(({ name }) => name)).toEqual(['Egna fält']);
-  expect(proposal?.after?.fields?.find(({ name }) => name === 'Kontrollerad')?.sectionId).toBe('');
-  expect(proposal?.after?.builtins).toEqual([
-    expect.objectContaining({ key: 'description', name: 'Provets berättelse' }),
-  ]);
+  expect(proposal?.after).toMatchObject({
+    name: 'Provfält',
+    description: 'En uppgift med gemensam betydelse',
+  });
   await userEvent.click(settings.getByRole('button', { name: 'Ändra typ: Provfält' }));
   await userEvent.click(settings.getByRole('button', { name: 'Ta bort objekttypen' }));
   await waitFor(async () =>
@@ -365,18 +333,13 @@ test('configured type fields preserve explicit order, visibility and four answer
   expect((await fixture.read()).types).toEqual(before.types);
 }, 30_000);
 
-test('an actually used field rejects a datatype change and definition removal without losing the type form or private answers', async () => {
+test('a used type rejects definition removal without losing the type form or private properties', async () => {
   const fixture = await readingFixture();
   const before = await fixture.read();
   const settings = await typeSettings();
   await userEvent.click(settings.getByRole('button', { name: 'Ändra typ: Läsobjekt' }));
   const form = within(settings.getByRole('group', { name: 'Objekttypens definition' }));
-  await userEvent.selectOptions(form.getByLabelText('Värdeslag'), 'number');
-  await userEvent.click(form.getByRole('button', { name: 'Lägg typförslaget i mitt utkast' }));
-  await screen.findByText(/Fältets värdeslag används redan/);
-  expect(await fixture.read()).toEqual(before);
-  expect((form.getByLabelText('Värdeslag') as HTMLSelectElement).value).toBe('number');
-  await userEvent.selectOptions(form.getByLabelText('Värdeslag'), 'text');
+  await userEvent.type(form.getByLabelText('Typens namn'), ' med oskickad text');
   await userEvent.click(form.getByRole('button', { name: 'Ta bort objekttypen' }));
   await screen.findByText(/Typen används fortfarande i kartan eller privata utkast/);
   expect(await fixture.read()).toEqual(before);
@@ -481,7 +444,9 @@ for (const committed of [false, true]) {
       }),
     );
     const form = within(dialog.getByRole('region', { name: 'Redigera samband' }));
-    await userEvent.selectOptions(form.getByLabelText('Uppgiftens säkerhet'), 'uncertain');
+    const certainty = await propertyInput(form, 'Uppgiftens säkerhet');
+    await userEvent.clear(certainty);
+    await userEvent.type(certainty, 'Osäkert uppgivet');
     const actual = authenticatedHttpFetch(client, installation.origin);
     let dropped = false;
     vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -497,7 +462,17 @@ for (const committed of [false, true]) {
     await fixture.post('relationship', {
       id: edge.id,
       baseRevision: edge.revision,
-      value: { ...edge, knowledge: 'unknown', targetId: null },
+      value: {
+        ...edge,
+        properties: [
+          {
+            id: 'later',
+            label: 'Senare uppgift',
+            kind: 'text',
+            value: 'Senare oberoende rättelse',
+          },
+        ],
+      },
     });
     const later = await fixture.read();
     await userEvent.click(
@@ -508,9 +483,7 @@ for (const committed of [false, true]) {
         ? /Ändringen lades i utkastet, men det aktuella underlaget har ändrats/
         : /Kontrollen saknar en bevarad bekräftelse och utkastet har ändrats/,
     );
-    expect((form.getByLabelText('Uppgiftens säkerhet') as HTMLSelectElement).value).toBe(
-      'uncertain',
-    );
+    expect(certainty).toHaveProperty('value', 'Osäkert uppgivet');
     expect(await fixture.read()).toEqual(later);
     if (!committed) {
       expect(form.getByRole('button', { name: 'Lägg i utkastet' }).matches(':disabled')).toBe(true);
@@ -521,9 +494,7 @@ for (const committed of [false, true]) {
     await userEvent.click(form.getByRole('button', { name: 'Avbryt redigeringen' }));
     const loss = within(await screen.findByRole('dialog', { name: 'Lämna ändrade uppgifter?' }));
     await userEvent.click(loss.getByRole('button', { name: 'Fortsätt redigera' }));
-    expect((form.getByLabelText('Uppgiftens säkerhet') as HTMLSelectElement).value).toBe(
-      'uncertain',
-    );
+    expect(certainty).toHaveProperty('value', 'Osäkert uppgivet');
     await userEvent.click(form.getByRole('button', { name: 'Avbryt redigeringen' }));
     await userEvent.click(
       within(await screen.findByRole('dialog', { name: 'Lämna ändrade uppgifter?' })).getByRole(
@@ -587,7 +558,7 @@ function relationshipRow(dialog: ReturnType<typeof within>, name: string | RegEx
   if (!row) throw new Error('The public relationship reader must provide its row');
   return row;
 }
-test('a relationship form confirms field loss explicitly, validates all values and stages the reversed complete relationship only in the private draft', async () => {
+test('a relationship form preserves properties across type changes, validates endpoints and stages the reversed complete relationship privately', async () => {
   const fixture = await readingFixture();
   const before = await fixture.read();
   const dialog = await openObjectRelationships('Cykel');
@@ -598,21 +569,6 @@ test('a relationship form confirms field loss explicitly, validates all values a
   );
   const form = within(dialog.getByRole('region', { name: 'Redigera samband' }));
   await userEvent.selectOptions(form.getByLabelText('Sambandstyp'), 'uses');
-  const typeLoss = within(
-    await screen.findByRole('dialog', { name: 'Ta bort tidigare egna fält?' }),
-  );
-  expect(typeLoss.getByText(/Dold sambandsuppgift:/)).toBeTruthy();
-  await userEvent.click(typeLoss.getByRole('button', { name: 'Fortsätt redigera' }));
-  expect((form.getByLabelText('Sambandstyp') as HTMLSelectElement).value).toBe('storage');
-  await userEvent.selectOptions(form.getByLabelText('Sambandstyp'), 'uses');
-  await userEvent.click(
-    within(await screen.findByRole('dialog', { name: 'Ta bort tidigare egna fält?' })).getByRole(
-      'button',
-      {
-        name: 'Ta bort fältvärdena och byt typ',
-      },
-    ),
-  );
   await userEvent.click(form.getByRole('button', { name: 'Byt riktning' }));
   expect((form.getByLabelText('Från objekt') as HTMLSelectElement).value).toBe('garage');
   expect((form.getByLabelText('Till objekt') as HTMLSelectElement).value).toBe('bike');
@@ -636,12 +592,14 @@ test('a relationship form confirms field loss explicitly, validates all values a
     sourceId: 'garage',
     targetId: 'alex',
     typeId: 'uses',
-    knowledge: 'uncertain',
+
     lifecycle: 'ended',
   });
   expect(
-    current.draft.relationships?.find((value) => value.id === 'bike-garage')?.after?.customValues,
-  ).toBeUndefined();
+    current.draft.relationships?.find((value) => value.id === 'bike-garage')?.after?.properties,
+  ).toEqual(
+    before.draft.relationships?.find((value) => value.id === 'bike-garage')?.after?.properties,
+  );
 }, 30_000);
 
 for (const kind of ['object', 'relationship'] as const) {
@@ -664,8 +622,6 @@ for (const kind of ['object', 'relationship'] as const) {
               description: definition.description,
               forwardLabel: 'forwardLabel' in definition ? definition.forwardLabel : '',
               reverseLabel: 'reverseLabel' in definition ? definition.reverseLabel : '',
-              fields: definition.fields,
-              sections: definition.sections,
             },
     });
     cleanup();
@@ -695,7 +651,17 @@ for (const kind of ['object', 'relationship'] as const) {
     await fixture.post('draft', {
       id: alex.id,
       baseRevision: alex.revision,
-      value: { ...alex, description: 'En senare oberoende uppgift' },
+      value: {
+        ...alex,
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text',
+            value: 'En senare oberoende uppgift',
+          },
+        ],
+      },
     });
     const later = await fixture.read();
     await userEvent.click(
@@ -726,29 +692,25 @@ for (const kind of ['object', 'relationship'] as const) {
   }, 30_000);
 }
 
-test('search retains saved own-field values after an explicitly confirmed object type change', async () => {
+test('search retains free property values across an object type change', async () => {
   const fixture = await readingFixture();
   const before = await fixture.read();
   const replacement = before.types.find((type) => type.id !== 'read-type');
   if (!replacement) throw new Error('Missing ordinary alternative object type');
   const form = await editTableObjectForm('Cykel');
   await userEvent.selectOptions(form.getByLabelText('Objekttyp'), replacement.id);
-  let loss = within(await screen.findByRole('dialog', { name: 'Ta bort tidigare egna fält?' }));
-  expect(loss.getByText(/Dold egen uppgift:/)).toBeTruthy();
-  await userEvent.click(loss.getByRole('button', { name: 'Fortsätt redigera' }));
-  expect((form.getByLabelText('Objekttyp') as HTMLSelectElement).value).toBe('read-type');
-  expect(await fixture.read()).toEqual(before);
-  await userEvent.selectOptions(form.getByLabelText('Objekttyp'), replacement.id);
-  loss = within(await screen.findByRole('dialog', { name: 'Ta bort tidigare egna fält?' }));
-  await userEvent.click(loss.getByRole('button', { name: 'Ta bort fältvärdena och byt typ' }));
   await userEvent.click(form.getByRole('button', { name: 'Lägg i utkastet och stäng' }));
   await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Redigera Cykel' })).toBeNull());
   const current = await fixture.read();
   expect(current.objects).toEqual(before.objects);
   const proposal = current.draft.changes.find((value) => value.id === 'bike');
   expect(proposal?.after?.typeId).toBe(replacement.id);
-  expect(proposal?.after?.customValues).toBeUndefined();
-  expect(proposal?.before?.customValues?.hidden).toBe('Ramens märkning är ett påhittat exempel');
+  expect(proposal?.after?.properties).toEqual(
+    before.draft.changes.find((value) => value.id === 'bike')?.after?.properties,
+  );
+  expect(proposal?.after?.properties).toContainEqual(
+    expect.objectContaining({ value: 'Ramens märkning är ett påhittat exempel' }),
+  );
   const table = within(screen.getByRole('region', { name: 'Hushållets tabell' }));
   const query = table.getByLabelText('Sök objekt i tabellen');
   await userEvent.type(query, 'ramens märkning');
@@ -765,7 +727,7 @@ test('a type-only draft keeps proposal filters active until confirmed discard re
   await fixture.post('object-type', {
     id: 'only-type',
     baseRevision: null,
-    value: { name: 'Tillfällig provtyp', description: '', fields: [] },
+    value: { name: 'Tillfällig provtyp', description: '' },
   });
   const before = await fixture.read();
   renderHouseholdWork(fixture.householdId);

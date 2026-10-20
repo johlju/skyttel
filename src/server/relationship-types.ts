@@ -2,8 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 import type Database from 'better-sqlite3';
 import { resolvedRelationshipType } from '../shared/draft-conflicts.js';
 import type { MapDraft, RelationshipType } from '../shared/map.js';
-import { compatibleCustomFields, proposedRelationshipTypes } from '../shared/map.js';
-import { readCustomValues, readFieldPresentation } from './custom-fields.js';
+import { proposedRelationshipTypes } from '../shared/map.js';
 import { definitionRestorations } from './definition-restoration.js';
 import { definitionUsage } from './definition-usage.js';
 import { MapError } from './map-error.js';
@@ -15,34 +14,34 @@ export function relationshipTypes(database: Database.Database, householdId: stri
   const usage = definitionUsage(database, householdId, userId);
   function read(includeRemoved = false): RelationshipType[] {
     return database
-      .prepare(`SELECT t.*, l.forwardLabel, l.reverseLabel, f.fields, f.sections FROM relationship_type t
-        LEFT JOIN relationship_type_labels l ON l.typeId = t.id
-        LEFT JOIN relationship_type_fields f ON f.typeId = t.id
-        WHERE t.householdId = ? ${includeRemoved ? '' : "AND NOT EXISTS (SELECT 1 FROM removed_type WHERE kind = 'relationshipType' AND typeId = t.id)"} ORDER BY t.name, t.id`)
+      .prepare(`SELECT t.*, l.forwardLabel, l.reverseLabel FROM relationship_type t
+      LEFT JOIN relationship_type_labels l ON l.typeId = t.id
+      WHERE t.householdId = ? ${includeRemoved ? '' : "AND NOT EXISTS (SELECT 1 FROM removed_type WHERE kind = 'relationshipType' AND typeId = t.id)"} ORDER BY t.name, t.id`)
       .all(householdId)
       .map((row) => {
-        const { forwardLabel, reverseLabel, fields, sections, ...type } = row as Omit<
-          RelationshipType,
-          'fields' | 'sections'
-        > & { fields: string | null; sections: string | null };
+        const { forwardLabel, reverseLabel, ...type } = row as RelationshipType;
         return {
           ...type,
-          ...(fields && fields !== '[]' ? { fields: JSON.parse(fields) } : {}),
-          ...(sections !== null ? { sections: JSON.parse(sections) } : {}),
           ...(forwardLabel ? { forwardLabel } : {}),
           ...(reverseLabel ? { reverseLabel } : {}),
         };
       });
   }
-  function validate(value: unknown, previous?: RelationshipType | null) {
+  function validate(value: unknown) {
     const type = value as Partial<RelationshipType> | null;
     if (
       !type ||
       Object.keys(type).some(
         (key) =>
-          !['name', 'description', 'forwardLabel', 'reverseLabel', 'fields', 'sections'].includes(
-            key,
-          ),
+          ![
+            'id',
+            'householdId',
+            'revision',
+            'name',
+            'description',
+            'forwardLabel',
+            'reverseLabel',
+          ].includes(key),
       ) ||
       typeof type.name !== 'string' ||
       !type.name.trim() ||
@@ -57,22 +56,7 @@ export function relationshipTypes(database: Database.Database, householdId: stri
       type.reverseLabel.length > 200
     )
       throw new MapError('invalid_relationship_type', 400);
-    let presentation: ReturnType<typeof readFieldPresentation>;
-    try {
-      presentation = readFieldPresentation(
-        {
-          ...type,
-          fields: Object.hasOwn(type, 'fields') ? type.fields : (previous?.fields ?? []),
-        },
-        previous,
-      );
-    } catch {
-      throw new MapError('invalid_relationship_type', 400);
-    }
-    const { fields, sections } = presentation;
     return {
-      ...(sections !== undefined ? { sections } : {}),
-      ...(fields.length ? { fields } : {}),
       name: type.name.trim(),
       description: type.description,
       forwardLabel: type.forwardLabel.trim(),
@@ -85,17 +69,7 @@ export function relationshipTypes(database: Database.Database, householdId: stri
       description: type.description,
       forwardLabel: type.forwardLabel ?? type.name,
       reverseLabel: type.reverseLabel ?? type.name,
-      fields: type.fields ?? [],
-      ...(type.sections !== undefined ? { sections: type.sections } : {}),
     });
-  }
-  function checkFields(before: RelationshipType | null, after: RelationshipType, draft: MapDraft) {
-    for (const field of before?.fields ?? []) {
-      const next = after.fields?.find((item) => item.id === field.id);
-      if (!next) usage.assertUnused('relationshipType', after.id, draft, field.id);
-      else if (next.kind !== field.kind)
-        usage.assertRelationshipFieldKindUnused(after.id, field.id, next.kind, draft);
-    }
   }
   return {
     read,
@@ -117,7 +91,7 @@ export function relationshipTypes(database: Database.Database, householdId: stri
         revision: removed.revision + 1,
         ...validateDefinition(change.after),
       };
-      checkFields(removed, after, draft);
+
       change.after = after;
       restorations.grant('relationshipType', change, removed, contentVersion);
       return { ...draft, version: draft.version + 1 };
@@ -138,7 +112,6 @@ export function relationshipTypes(database: Database.Database, householdId: stri
       } else {
         if (current) {
           change.after = resolvedRelationshipType(change, current);
-          if (change.after) checkFields(current, change.after, draft);
         } else if (change.after) throw new MapError('type_conflict');
         if (!change.after) usage.assertUnused('relationshipType', id, draft);
         change.before = current;
@@ -151,22 +124,11 @@ export function relationshipTypes(database: Database.Database, householdId: stri
       if (type) validateDefinition(type);
       for (const proposal of draft.relationships ?? [])
         if (proposal.type.id === id && type) {
-          if (
-            choice === 'saved' &&
-            proposal.after &&
-            !compatibleCustomFields(proposal.after.customValues, proposal.type, type)
-          )
-            continue;
-          if (proposal.after) readCustomValues(proposal.after.customValues, type);
           proposal.type = type;
         }
       return { ...draft, version: draft.version + 1 };
     },
-    propose(
-      draft: MapDraft,
-      body: Record<string, unknown>,
-      presentation: 'retain' | 'exact' = 'retain',
-    ) {
+    propose(draft: MapDraft, body: Record<string, unknown>) {
       if (typeof body.id !== 'string' || !/^[\w-]{1,128}$/.test(body.id))
         throw new MapError('invalid_relationship_type', 400);
       const existing = draft.relationshipTypes?.find((item) => item.id === body.id);
@@ -188,20 +150,9 @@ export function relationshipTypes(database: Database.Database, householdId: stri
         id: body.id,
         householdId,
         revision: (existing?.restoration?.definition.revision ?? before?.revision ?? 0) + 1,
-        ...validate(body.value, presentation === 'exact' ? null : (existing?.after ?? before)),
+        ...validate(body.value),
       };
-      checkFields(before, after, draft);
-      if (existing?.after)
-        checkFields(
-          {
-            ...existing.after,
-            fields: existing.after.fields?.filter(
-              (field) => !before?.fields?.some((saved) => saved.id === field.id),
-            ),
-          },
-          after,
-          draft,
-        );
+
       draft.relationshipTypes = [
         ...(draft.relationshipTypes ?? []).filter((item) => item.id !== body.id),
         {
@@ -213,7 +164,6 @@ export function relationshipTypes(database: Database.Database, householdId: stri
       ];
       for (const change of draft.relationships ?? [])
         if (change.type.id === after.id) {
-          if (change.after) readCustomValues(change.after.customValues, after);
           change.type = after;
         }
       return { ...draft, version: draft.version + 1 };
@@ -235,11 +185,6 @@ export function relationshipTypes(database: Database.Database, householdId: stri
           continue;
         }
         validateDefinition(change.after);
-        checkFields(
-          current ?? read(true).find((type) => type.id === change.id) ?? null,
-          change.after,
-          draft,
-        );
         database
           .prepare(`INSERT INTO relationship_type (id, householdId, revision, name, description) VALUES (?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, name = excluded.name, description = excluded.description`)
@@ -258,15 +203,6 @@ export function relationshipTypes(database: Database.Database, householdId: stri
             .run(change.id, change.after.forwardLabel, change.after.reverseLabel);
         else
           database.prepare('DELETE FROM relationship_type_labels WHERE typeId = ?').run(change.id);
-        database
-          .prepare(
-            'INSERT INTO relationship_type_fields (typeId, fields, sections) VALUES (?, ?, ?) ON CONFLICT(typeId) DO UPDATE SET fields = excluded.fields, sections = excluded.sections',
-          )
-          .run(
-            change.id,
-            JSON.stringify(change.after.fields ?? []),
-            change.after.sections === undefined ? null : JSON.stringify(change.after.sections),
-          );
       }
       return (draft.relationshipTypes ?? []).map(({ id, before, after }) => ({
         id,

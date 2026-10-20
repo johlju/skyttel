@@ -6,7 +6,6 @@ import { openTypeDefinitions, readDraftProposal } from './domain-work.js';
 export async function readIndependentHistoricalProposal(page: Page) {
   await expectConflictDraftValues(page, 'Oberoende förslag', {
     Namn: 'Oberoende förslag',
-    Beskrivning: 'Ej uppgivet',
   });
   await closeTextView(page);
 }
@@ -22,11 +21,10 @@ export async function readHistoricalDefinitionProposal(
   const values = proposal.getByRole('heading', { name: side, exact: true }).locator('..');
   await expectConflictReadValue(values, 'Namn', name);
   await expectConflictReadValue(values, 'Beskrivning', description);
-  await expectConflictReadValue(values, 'Avsnitt', 'Egna fält');
   if (relationship) {
     await expectConflictReadValue(values, 'Framåtriktning', 'förvaras i');
     await expectConflictReadValue(values, 'Omvänd riktning', 'förvarar');
-  } else await expectConflictReadValue(values, 'Eget fält: Installationsår', 'Text · Egna fält');
+  }
   await closeSupportDialog(page, name);
   await closeTextView(page);
 }
@@ -36,11 +34,11 @@ export async function readSavedHistoricalDefinition(
   relationship: boolean,
   name: string,
   description: string,
-  fieldKind?: 'text' | 'number',
+  _fieldKind?: 'text' | 'number',
 ) {
   await openTypeDefinitions(page);
   await page
-    .getByText(relationship ? 'Sambandstyper och riktning' : 'Objekttyper och egna fält', {
+    .getByText(relationship ? 'Sambandstyper och riktning' : 'Objekttyper', {
       exact: true,
     })
     .click();
@@ -66,12 +64,7 @@ export async function readSavedHistoricalDefinition(
     await expect(definition.getByLabel('Benämning från startobjektet')).toHaveValue('förvaras i');
     await expect(definition.getByLabel('Benämning från målobjektet')).toHaveValue('förvarar');
   }
-  if (fieldKind) {
-    await expect(definition.getByLabel('Fältets namn', { exact: true })).toHaveValue(
-      'Installationsår',
-    );
-    await expect(definition.getByLabel('Värdeslag', { exact: true })).toHaveValue(fieldKind);
-  } else await expect(definition.getByLabel('Fältets namn', { exact: true })).toHaveCount(0);
+  await expect(definition.getByLabel('Fältets namn', { exact: true })).toHaveCount(0);
   await page
     .getByRole('button', {
       name: relationship

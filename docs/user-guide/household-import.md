@@ -7,6 +7,13 @@ fullständig Skyttel-export. Importen ersätter karta, bilder, historik,
 alla privata utkast och personliga vyer. Den slår inte ihop två kartor.
 Nuvarande medlemmar, administratörer, inbjudningar och inloggningar behålls.
 
+Fria egenskaper behåller sin ordning, datatyp och sina tomma värden, även
+när flera har samma etikett. Blockerade sambandsförslag och förslag som
+följer en objektborttagning finns kvar i utkastet med sina orsaker.
+Efter återimport kan du rätta saknade ändpunkter eller ångra din
+objektborttagning och fortsätta med det bevarade arbetet. Ett blockerat
+förslag behöver fortfarande rättas eller kastas före sparande.
+
 1. Hämta först en [egen export](household-export.md) om du behöver behålla
    det nuvarande innehållet. Be användarna avsluta pågående ändringar.
 2. Öppna **Inställningar → Återimportera hushållet**.
@@ -22,19 +29,14 @@ Nuvarande medlemmar, administratörer, inbjudningar och inloggningar behålls.
    med sparandenas historiska värden och benämningar.
 
 Om någon ändrar innehållet under förberedelsen måste filen förberedas igen.
-En trasig, ofullständig eller okänd export avvisas före ersättning. Stöd
-finns för formatversion 1 från databasversion 14–34. Gränserna är cirka
+En trasig, ofullständig eller okänd export avvisas före ersättning.
+Gränserna är cirka
 1,1 GB för ZIP-filen, 32 MiB för innehållsfilen och 1 GiB för bilddelen.
 Förberedda kopior rensas efter tio minuter eller vid serverns nästa start.
 
-Nya exporter bevarar varje personlig vys bakgrund, val för båda temana och
-rörelsevärden. I äldre exporter blir ett påslaget stjärnval **Visa bakgrund**
-med **Pärlemor** och **Dis och ljuspunkter**. Avslagna eller osparade äldre
-val ger bakgrunden av med **Pärlemor** och **Atmosfär**. Rörelsevärdena blir
-70 procent, 70 procent och 1,0. Det gäller också äldre vyer med enbart
-placeringar och nuvarande medlemmar utan egen vy i arkivet. Helt nya vyer
-som tillkommer senare har bakgrunden på. Systemets minskade rörelse ändrar
-inte de återställda värdena.
+Exporter bevarar varje personlig vys bakgrund, val för båda temana och
+rörelsevärden. Nya personliga vyer har bakgrunden på. Systemets minskade
+rörelse ändrar inte de återställda värdena.
 
 Om filkontrollens svar försvinner kan samma administratör hämta sin
 obekräftade granskning igen, även i en annan webbläsare. Välj

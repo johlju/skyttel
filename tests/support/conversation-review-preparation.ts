@@ -20,7 +20,7 @@ export async function prepareConversationReview({
         change.id !== 'lo' ||
         change.before !== null ||
         change.after?.name !== 'Lo Exempel' ||
-        change.after?.description !== '' ||
+        Boolean(change.after?.properties?.length) ||
         change.after?.typeId !== existing.types[0].id,
     )
   )
@@ -29,28 +29,23 @@ export async function prepareConversationReview({
     await post('draft', {
       id: 'lo',
       baseRevision: null,
-      value: { typeId: existing.types[0].id, name: 'Lo Exempel', description: '' },
+      value: { typeId: existing.types[0].id, name: 'Lo Exempel' },
     });
   await post('draft', {
     id: 'kim',
     baseRevision: null,
-    value: { typeId: (await read()).types[0].id, name: 'Kim', description: '' },
+    value: { typeId: (await read()).types[0].id, name: 'Kim' },
   });
   const initial = await read();
   await post('object-type', {
     id: 'card-type',
     baseRevision: null,
-    value: {
-      name: 'Provkort',
-      description: '',
-      fields: [{ id: 'last-four', name: 'Sista fyra', description: '', kind: 'text' }],
-    },
+    value: { name: 'Provkort', description: '' },
   });
   const card = {
     typeId: 'card-type',
     name: 'Kortet',
-    description: '',
-    customValues: { 'last-four': '1111' },
+    properties: [{ id: 'last-four', label: 'Sista fyra', kind: 'text' as const, value: '1111' }],
   };
   await post('draft', { id: 'card', baseRevision: null, value: card });
   const accountName = 'Familjens gemensamma musikkonto hos Molnmusik';
@@ -62,18 +57,13 @@ export async function prepareConversationReview({
     await post('draft', {
       id,
       baseRevision: null,
-      value: {
-        typeId: initial.types.find((entry) => entry.name === type)?.id,
-        name,
-        description: '',
-      },
+      value: { typeId: initial.types.find((entry) => entry.name === type)?.id, name },
     });
   }
   const login = {
     typeId: initial.relationshipTypes.find((entry) => entry.name === 'Inloggningsadress')?.id,
     sourceId: 'account',
     targetId: 'email',
-    knowledge: 'known',
   };
   await post('relationship', { id: 'login', baseRevision: null, value: login });
   await post('save', { operationId: 'draft-initial' });
@@ -81,7 +71,7 @@ export async function prepareConversationReview({
   await post('draft', {
     id: 'lo',
     baseRevision: 1,
-    value: { typeId: state.types[0].id, name: 'Lo Rättad', description: '' },
+    value: { typeId: state.types[0].id, name: 'Lo Rättad' },
   });
   await post('draft', { id: 'kim', baseRevision: 1, value: null });
   await post('relationship', {
@@ -92,17 +82,20 @@ export async function prepareConversationReview({
   await post('object-type', {
     id: 'custom',
     baseRevision: null,
-    value: { name: 'Provtyp', description: '', fields: [] },
+    value: { name: 'Provtyp', description: '' },
   });
   await post('draft', {
     id: 'new',
     baseRevision: null,
-    value: { typeId: 'custom', name: 'Nytt objekt', description: '' },
+    value: { typeId: 'custom', name: 'Nytt objekt' },
   });
   await post('draft', {
     id: 'card',
     baseRevision: 1,
-    value: { ...card, customValues: { 'last-four': '2222' } },
+    value: {
+      ...card,
+      properties: [{ id: 'last-four', label: 'Sista fyra', kind: 'text' as const, value: '2222' }],
+    },
   });
   await post('relationship', {
     id: 'payment',
@@ -111,7 +104,6 @@ export async function prepareConversationReview({
       typeId: initial.relationshipTypes.find((entry) => entry.name === 'Betalar')?.id,
       sourceId: 'lo',
       targetId: 'card',
-      knowledge: 'known',
     },
   });
   await post('relationship-type', {

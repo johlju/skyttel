@@ -26,6 +26,7 @@ import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider } from '../support/live-provider.js';
 import { focusMapSearch } from '../support/object-search.js';
+import { propertyRow, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 import { modelMessage, modelTool, textModel } from '../support/text-model.js';
 
@@ -65,18 +66,13 @@ for (const theme of ['light', 'dark'] as const)
           version: (await read()).draft.version,
           id,
           baseRevision: null,
-          value: { typeId: initial.types[0].id, name, description: '' },
+          value: { typeId: initial.types[0].id, name },
         });
       await post('relationship', {
         version: (await read()).draft.version,
         id: 'uses',
         baseRevision: null,
-        value: {
-          typeId: initial.relationshipTypes[0].id,
-          sourceId: 'lo',
-          targetId: 'music',
-          knowledge: 'known',
-        },
+        value: { typeId: initial.relationshipTypes[0].id, sourceId: 'lo', targetId: 'music' },
       });
       await post('save', { version: (await read()).draft.version, operationId: 'legend-baseline' });
       const saved = await read();
@@ -86,7 +82,17 @@ for (const theme of ['light', 'dark'] as const)
         version: saved.draft.version,
         id: 'lo',
         baseRevision: lo?.revision,
-        value: { ...lo, description: 'Privat rättelse' },
+        value: {
+          ...lo,
+          properties: [
+            {
+              id: 'description',
+              label: 'Beskrivning',
+              kind: 'text' as const,
+              value: 'Privat rättelse',
+            },
+          ],
+        },
       });
       await post('relationship', {
         version: (await read()).draft.version,
@@ -300,7 +306,18 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
                 arguments: {
                   id: 'music',
                   baseRevision: null,
-                  value: { typeId: serviceType, name: 'Molnmusik', description: 'Från text' },
+                  value: {
+                    typeId: serviceType,
+                    name: 'Molnmusik',
+                    properties: [
+                      {
+                        id: 'description',
+                        label: 'Beskrivning',
+                        kind: 'text' as const,
+                        value: 'Från text',
+                      },
+                    ],
+                  },
                 },
               },
             ]
@@ -310,12 +327,7 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
                 arguments: {
                   id: 'uses',
                   baseRevision: null,
-                  value: {
-                    typeId: usesType,
-                    sourceId: personId,
-                    targetId: 'music',
-                    knowledge: 'known',
-                  },
+                  value: { typeId: usesType, sourceId: personId, targetId: 'music' },
                 },
               },
             ],
@@ -408,11 +420,11 @@ test('UTKAST-14: manual text and voice proposals share one durable private draft
     await openNewObject(page);
     const form = page.locator('dialog.object-dialog-C');
     await form.getByLabel('Namn', { exact: true }).fill('Oskickad cykel');
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Texten ska finnas kvar');
+    await setProperty(form, 'Beskrivning', 'Texten ska finnas kvar');
     await form.getByRole('button', { name: 'Avbryt', exact: true }).click();
     await page.keyboard.press('Escape');
     await expect(page.getByLabel('Namn', { exact: true })).toHaveValue('Oskickad cykel');
-    await expect(page.getByLabel('Beskrivning', { exact: true })).toHaveValue(
+    await expect(propertyRow(page, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
       'Texten ska finnas kvar',
     );
     const saving = new Promise<void>((resolve) => {
@@ -590,7 +602,17 @@ test('UTKAST-15: a necessary answer gates the native draft save until a fresh ex
             arguments: {
               id: change.id,
               baseRevision: null,
-              value: { ...change.after, description: 'Förslag väntar på svar' },
+              value: {
+                ...change.after,
+                properties: [
+                  {
+                    id: 'description',
+                    label: 'Beskrivning',
+                    kind: 'text' as const,
+                    value: 'Förslag väntar på svar',
+                  },
+                ],
+              },
             },
           },
         ],
@@ -646,8 +668,22 @@ test('UTKAST-15: a necessary answer gates the native draft save until a fresh ex
     await closeSaveDialog(page);
     await expect(saveToast(page)).toHaveCount(1);
     const saved = await read();
-    expect(saved.objects.map(({ name, description }) => ({ name, description }))).toEqual([
-      { name: 'Lo Exempel', description: 'Förslag väntar på svar' },
+    expect(
+      saved.objects.map((object) => ({
+        name: object.name,
+        properties: object.properties,
+      })),
+    ).toEqual([
+      {
+        name: 'Lo Exempel',
+        properties: expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Beskrivning',
+            kind: 'text',
+            value: 'Förslag väntar på svar',
+          }),
+        ]),
+      },
     ]);
     expect(saved.draft.changes).toEqual([]);
     const { operations } = await (await page.request.get(`${path}/operations`)).json();
@@ -688,14 +724,14 @@ for (const viewport of [
         version: 0,
         id: 'lo',
         baseRevision: null,
-        value: { typeId: initial.types[0].id, name: 'Lo Exempel', description: '' },
+        value: { typeId: initial.types[0].id, name: 'Lo Exempel' },
       });
       await post('save', { version: 1, operationId: 'navigation-status-baseline' });
       await post('draft', {
         version: (await read()).draft.version,
         id: 'bike',
         baseRevision: null,
-        value: { typeId: initial.types[0].id, name: 'Blå cykeln', description: '' },
+        value: { typeId: initial.types[0].id, name: 'Blå cykeln' },
       });
       await page.goto(installation.origin);
       await openMap(page);

@@ -12,6 +12,7 @@ import {
 import { openConversationText, startConversationWithText } from '../support/conversation-page.js';
 import { closeTableObject, editTableObject, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { propertyRow, setProperty } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 async function arrangeNeighbors(page: Page, origin: string) {
@@ -33,7 +34,7 @@ async function arrangeNeighbors(page: Page, origin: string) {
             id,
             version: (await read()).draft.version,
             baseRevision: null,
-            value: { name, description: '', typeId: initial.types[0].id },
+            value: { name, typeId: initial.types[0].id },
           },
         })
       ).ok(),
@@ -59,12 +60,7 @@ async function arrangeNeighbors(page: Page, origin: string) {
             id,
             version: (await read()).draft.version,
             baseRevision: null,
-            value: {
-              sourceId,
-              targetId,
-              knowledge: 'known',
-              typeId: initial.relationshipTypes[0].id,
-            },
+            value: { sourceId, targetId, typeId: initial.relationshipTypes[0].id },
           },
         })
       ).ok(),
@@ -266,12 +262,12 @@ test('LISTA-02: sorting, pages and scroll survive native details, settings and m
     await expect(details).toBeFocused();
     expect(await body.evaluate((element) => element.scrollTop)).toBe(remembered);
     const editor = await editTableObject(page, 'Provobjekt 496');
-    await editor.getByLabel('Beskrivning', { exact: true }).fill('Oskickat under listbesöket');
+    await setProperty(editor, 'Beskrivning', 'Oskickat under listbesöket');
     await editor.getByRole('button', { name: 'Avbryt', exact: true }).click();
     await page.keyboard.press('Escape');
-    await expect(editor.getByLabel('Beskrivning', { exact: true })).toHaveValue(
-      'Oskickat under listbesöket',
-    );
+    await expect(
+      propertyRow(editor, 'Beskrivning').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Oskickat under listbesöket');
     await editor.getByRole('button', { name: 'Avbryt', exact: true }).click();
     await page.getByRole('button', { name: 'Kasta ändringarna och fortsätt', exact: true }).click();
     await openSettings(page);
@@ -378,10 +374,12 @@ for (const width of [390, 320]) {
       await expect(table.getByRole('button', { name: 'Lo Exempel', exact: true })).toBeFocused();
       const editor = await editTableObject(page, 'Lo Exempel');
       await expect(editor.getByLabel('Namn', { exact: true })).toBeFocused();
-      await editor.getByLabel('Beskrivning', { exact: true }).fill('Utan grafik');
+      await setProperty(editor, 'Beskrivning', 'Utan grafik');
       await editor.getByRole('button', { name: 'Avbryt', exact: true }).click();
       await page.keyboard.press('Escape');
-      await expect(editor.getByLabel('Beskrivning', { exact: true })).toHaveValue('Utan grafik');
+      await expect(
+        propertyRow(editor, 'Beskrivning').getByLabel('Värde', { exact: true }),
+      ).toHaveValue('Utan grafik');
       expect(await read()).toEqual(content);
       await editor.getByRole('button', { name: 'Avbryt', exact: true }).click();
       await page

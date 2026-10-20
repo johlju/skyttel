@@ -4,6 +4,12 @@ import { closeSupportDialog, closeTextView, createHousehold, signIn } from '../s
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
 import { readDraftProposal, readTableObject } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import {
+  openProperties,
+  propertyRow,
+  propertyValues,
+  setProperty,
+} from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 test('KARTA-19: unchanged edits open relationships without staging and every reading entry uses the same object dialog', async ({
@@ -27,11 +33,16 @@ test('KARTA-19: unchanged edits open relationships without staging and every rea
           value: {
             typeId: state.types[0].id,
             name: 'Sparad cykel',
-            description: 'Hela beskrivningen',
-            financialFacts: {
-              price: { knowledge: 'known', value: '249' },
-              currency: { knowledge: 'known', value: 'SEK' },
-            },
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Hela beskrivningen',
+              },
+              { id: 'price', label: 'Pris', kind: 'text' as const, value: '249' },
+              { id: 'currency', label: 'Valuta', kind: 'text' as const, value: 'SEK' },
+            ],
           },
         })
       ).status(),
@@ -45,10 +56,8 @@ test('KARTA-19: unchanged edits open relationships without staging and every rea
     const form = page.getByRole('dialog', { name: 'Redigera Sparad cykel', exact: true });
     await form.getByLabel('Namn', { exact: true }).fill('Tillfällig text');
     await form.getByLabel('Namn', { exact: true }).fill('Sparad cykel');
-    await form.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true }).click();
-    await form.getByLabel('Pris: uppgiftens säkerhet', { exact: true }).selectOption('');
-    await form.getByLabel('Pris: uppgiftens säkerhet', { exact: true }).selectOption('known');
-    await form.getByLabel('Pris', { exact: true }).fill('249');
+    await openProperties(form);
+    await setProperty(form, 'Pris', '249', 'text');
     await form
       .getByRole('button', { name: 'Lägg i utkastet och öppna samband', exact: true })
       .click();
@@ -105,20 +114,22 @@ test('KARTA-17: pending staging blocks duplicate sends and known rejection keeps
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     const form = page.getByRole('dialog', { name: 'Nytt objekt', exact: true });
     await form.getByLabel('Namn', { exact: true }).fill('Väntande cykel');
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Bevarad beskrivning');
+    await setProperty(form, 'Beskrivning', 'Bevarad beskrivning');
     await form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).dblclick();
     await expect(form.getByLabel('Namn', { exact: true })).toBeDisabled();
     await expect(
       form.getByRole('button', { name: 'Stäng objektdialogen', exact: true }),
     ).toBeDisabled();
-    await expect(form.getByRole('status')).toContainText('Lägger');
+    await expect(
+      form.getByRole('status', { name: 'Tillägg till utkastet', exact: true }),
+    ).toContainText('Lägger');
     await page.keyboard.press('Escape');
     await expect(form).toBeVisible();
     expect(sends).toBe(1);
     release();
     await expect(form.getByRole('alert')).toContainText('uppgifter finns kvar');
     await expect(form.getByLabel('Namn', { exact: true })).toHaveValue('Väntande cykel');
-    await expect(form.getByLabel('Beskrivning', { exact: true })).toHaveValue(
+    await expect(propertyRow(form, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
       'Bevarad beskrivning',
     );
     expect((await (await page.request.get(path)).json()).draft.changes).toEqual([]);
@@ -282,9 +293,7 @@ test('KARTA-10: create a complete object in the shared dialog and return without
       dialog.getByRole('button', { name: 'Grunduppgifter', exact: true }),
     ).toHaveAttribute('aria-expanded', 'true');
     await dialog.getByRole('textbox', { name: 'Namn', exact: true }).fill('Alex blå cykel');
-    await dialog
-      .getByRole('textbox', { name: 'Beskrivning', exact: true })
-      .fill('Hela cykelns beskrivning.');
+    await setProperty(dialog, 'Beskrivning', 'Hela cykelns beskrivning.');
     await dialog.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await expect(dialog).not.toBeVisible();
     await expect(opener).toBeFocused();
@@ -293,7 +302,13 @@ test('KARTA-10: create a complete object in the shared dialog and return without
     expect(after.draft.changes).toHaveLength(1);
     expect(after.draft.changes[0].after).toMatchObject({
       name: 'Alex blå cykel',
-      description: 'Hela cykelns beskrivning.',
+      properties: expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Hela cykelns beskrivning.',
+        }),
+      ]),
     });
   } finally {
     await installation.close();
@@ -314,9 +329,7 @@ test('KARTA-14: image and full form stage atomically and invalid image preserves
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Nytt objekt', exact: true });
     await dialog.getByLabel('Namn', { exact: true }).fill('Cykeln med bild');
-    await dialog
-      .getByLabel('Beskrivning', { exact: true })
-      .fill('Text och bild skickas tillsammans.');
+    await setProperty(dialog, 'Beskrivning', 'Text och bild skickas tillsammans.');
     await dialog.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
     const image = dialog.getByLabel('Profilbild', { exact: true });
     await expect(image).toBeVisible({ timeout: 1000 });
@@ -330,9 +343,9 @@ test('KARTA-14: image and full form stage atomically and invalid image preserves
     expect((await read()).draft).toEqual(before.draft);
     await dialog.getByRole('button', { name: 'Grunduppgifter', exact: true }).click();
     await expect(dialog.getByLabel('Namn', { exact: true })).toHaveValue('Cykeln med bild');
-    await expect(dialog.getByRole('textbox', { name: 'Beskrivning', exact: true })).toHaveValue(
-      'Text och bild skickas tillsammans.',
-    );
+    await expect(
+      propertyRow(dialog, 'Beskrivning').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('Text och bild skickas tillsammans.');
     await dialog.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
     const png = await sharp({
       create: { width: 30, height: 20, channels: 3, background: '#0088ff' },
@@ -347,7 +360,13 @@ test('KARTA-14: image and full form stage atomically and invalid image preserves
     expect(after.draft.changes).toHaveLength(1);
     expect(after.draft.changes[0].after).toMatchObject({
       name: 'Cykeln med bild',
-      description: 'Text och bild skickas tillsammans.',
+      properties: expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Beskrivning',
+          kind: 'text',
+          value: 'Text och bild skickas tillsammans.',
+        }),
+      ]),
       profileImageId: expect.any(String),
     });
     expect(after.objects).toEqual(before.objects);
@@ -374,32 +393,31 @@ test('KARTA-11: closed-section errors preserve all fields and focus the linked c
     await page.goto(`${installation.origin}/households/${household.id}`);
     await page.getByRole('button', { name: 'Nytt objekt', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Nytt objekt', exact: true });
-    const economy = dialog.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true });
-    await expect(economy).toBeVisible({ timeout: 1000 });
-    await dialog.getByRole('textbox', { name: 'Namn', exact: true }).fill('Hela cykeln');
-    await economy.click();
-    await dialog.getByLabel('Pris: uppgiftens säkerhet', { exact: true }).selectOption('known');
+    await dialog.getByLabel('Namn', { exact: true }).fill('Hela cykeln');
+    await setProperty(dialog, 'Pris', 'inte ett tal', 'number');
+    const row = propertyRow(dialog, 'Pris');
     await dialog.getByRole('button', { name: 'Grunduppgifter', exact: true }).click();
     await dialog.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     const summary = dialog.getByRole('alert', { name: 'Formuläret innehåller fel' });
     await expect(summary).toBeFocused();
     expect((await read()).draft).toEqual(before.draft);
-    await summary.getByRole('link', { name: /Pris/ }).click();
-    await expect(economy).toHaveAttribute('aria-expanded', 'true');
-    await expect(dialog.getByRole('textbox', { name: 'Pris', exact: true })).toBeFocused();
-    await dialog.getByRole('textbox', { name: 'Pris', exact: true }).fill('399 SEK');
+    await summary.getByRole('link', { name: /Värde/ }).click();
+    await expect(
+      dialog.getByRole('button', { name: 'Fria egenskaper', exact: true }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    await expect(row.getByLabel('Värde', { exact: true })).toBeFocused();
+    await row.getByLabel('Värde', { exact: true }).fill('399');
     await dialog.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
-    await expect(dialog).not.toBeVisible();
     expect((await read()).draft.changes[0].after).toMatchObject({
       name: 'Hela cykeln',
-      financialFacts: { price: { knowledge: 'known', value: '399 SEK' } },
+      properties: [expect.objectContaining({ label: 'Pris', kind: 'number', value: 399 })],
     });
   } finally {
     await installation.close();
   }
 });
 
-test('KARTA-12: identity, custom fields, lifecycle and icon stay together when staging and editing', async ({
+test('KARTA-12: identity, free properties, lifecycle and icon stay together when staging and editing', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -415,16 +433,7 @@ test('KARTA-12: identity, custom fields, lifecycle and icon stay together when s
           version: 0,
           id: 'bicycle',
           baseRevision: null,
-          value: {
-            name: 'Cykel',
-            description: '',
-            fields: [
-              { id: 'brand', name: 'Tillverkare', description: '', kind: 'text' },
-              { id: 'gears', name: 'Antal växlar', description: '', kind: 'number' },
-              { id: 'bought', name: 'Inköpsdatum', description: '', kind: 'date' },
-              { id: 'electric', name: 'Elcykel', description: '', kind: 'boolean' },
-            ],
-          },
+          value: { name: 'Cykel', description: '' },
         })
       ).status(),
     ).toBe(200);
@@ -436,36 +445,51 @@ test('KARTA-12: identity, custom fields, lifecycle and icon stay together when s
     const dialog = page.getByRole('dialog', { name: 'Nytt objekt', exact: true });
     await expect(dialog.getByLabel('Identitet', { exact: true })).toBeVisible({ timeout: 1000 });
     await dialog.getByLabel('Namn', { exact: true }).fill('Pendlarcykeln');
-    await dialog.getByLabel('Beskrivning', { exact: true }).fill('Hela cykelns beskrivning.');
     await dialog.getByLabel('Objekttyp', { exact: true }).selectOption('bicycle');
     await dialog.getByLabel('Identitet', { exact: true }).selectOption('unspecified');
-    await dialog.getByRole('button', { name: 'Egna fält', exact: true }).click();
-    await dialog.getByLabel('Tillverkare', { exact: true }).fill('Exempelcykel');
-    await dialog.getByLabel('Antal växlar', { exact: true }).fill('8');
-    await dialog.getByLabel('Inköpsdatum', { exact: true }).fill('2026-04-03');
-    await dialog.getByLabel('Elcykel', { exact: true }).selectOption('false');
+    await setProperty(dialog, 'Beskrivning', 'Hela cykelns beskrivning.');
+    await setProperty(dialog, 'Tillverkare', 'Exempelcykel');
+    await setProperty(dialog, 'Antal växlar', '8', 'number');
+    await setProperty(dialog, 'Inköpsdatum', '2026-04-03', 'date');
+    await setProperty(dialog, 'Elcykel', 'false', 'boolean');
     await dialog.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
     await dialog.getByLabel('Objektets status', { exact: true }).selectOption('ended');
     await dialog.getByLabel('Sök ikon', { exact: true }).fill('bike');
     await dialog.getByRole('button', { name: 'Välj Cykel', exact: true }).click();
-    await dialog.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true }).click();
-    await dialog
-      .getByLabel('Slutdatum: uppgiftens säkerhet', { exact: true })
-      .selectOption('known');
-    await dialog.getByLabel('Slutdatum', { exact: true }).fill('2026-04-04');
+    await setProperty(dialog, 'Slutdatum', '2026-04-04', 'date');
     await dialog.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
     await expect(dialog).not.toBeVisible();
     const read = async (): Promise<MapState> => (await page.request.get(path)).json();
     const proposal = (await read()).draft.changes[0];
     expect(proposal.after).toMatchObject({
       name: 'Pendlarcykeln',
-      description: 'Hela cykelns beskrivning.',
       typeId: 'bicycle',
       identity: 'unspecified',
       lifecycle: 'ended',
-      financialFacts: { endDate: { knowledge: 'known', value: '2026-04-04' } },
       iconId: 'bike',
-      customValues: { brand: 'Exempelcykel', gears: 8, bought: '2026-04-03', electric: false },
+      properties: [
+        {
+          id: expect.any(String),
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: 'Hela cykelns beskrivning.',
+        },
+        {
+          id: expect.any(String),
+          label: 'Tillverkare',
+          kind: 'text' as const,
+          value: 'Exempelcykel',
+        },
+        { id: expect.any(String), label: 'Antal växlar', kind: 'number' as const, value: 8 },
+        {
+          id: expect.any(String),
+          label: 'Inköpsdatum',
+          kind: 'date' as const,
+          value: '2026-04-03',
+        },
+        { id: expect.any(String), label: 'Elcykel', kind: 'boolean' as const, value: false },
+        { id: expect.any(String), label: 'Slutdatum', kind: 'date' as const, value: '2026-04-04' },
+      ],
     });
     expect((await read()).objects).toHaveLength(0);
     await page.getByRole('button', { name: 'Tabell', exact: true }).click();
@@ -480,14 +504,22 @@ test('KARTA-12: identity, custom fields, lifecycle and icon stay together when s
       'true',
     );
     await expect(edit.getByLabel('Identitet', { exact: true })).toHaveValue('unspecified');
-    await expect(edit.getByLabel('Beskrivning', { exact: true })).toHaveValue(
+    await expect(propertyRow(edit, 'Beskrivning').getByLabel('Värde', { exact: true })).toHaveValue(
       'Hela cykelns beskrivning.',
     );
-    await edit.getByRole('button', { name: 'Egna fält', exact: true }).click();
-    await expect(edit.getByLabel('Tillverkare', { exact: true })).toHaveValue('Exempelcykel');
-    await expect(edit.getByLabel('Antal växlar', { exact: true })).toHaveValue('8');
-    await expect(edit.getByLabel('Inköpsdatum', { exact: true })).toHaveValue('2026-04-03');
-    await expect(edit.getByLabel('Elcykel', { exact: true })).toHaveValue('false');
+    await edit.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
+    await expect(propertyRow(edit, 'Tillverkare').getByLabel('Värde', { exact: true })).toHaveValue(
+      'Exempelcykel',
+    );
+    await expect(
+      propertyRow(edit, 'Antal växlar').getByLabel('Värde', { exact: true }),
+    ).toHaveValue('8');
+    await expect(propertyRow(edit, 'Inköpsdatum').getByLabel('Värde', { exact: true })).toHaveValue(
+      '2026-04-03',
+    );
+    await expect(propertyRow(edit, 'Elcykel').getByLabel('Värde', { exact: true })).toHaveValue(
+      'false',
+    );
     await edit.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
     await expect(edit.getByLabel('Objektets status', { exact: true })).toHaveValue('ended');
     await edit.getByLabel('Sök ikon', { exact: true }).fill('bike');
@@ -495,11 +527,10 @@ test('KARTA-12: identity, custom fields, lifecycle and icon stay together when s
       'aria-pressed',
       'true',
     );
-    await edit.getByRole('button', { name: 'Ekonomiska uppgifter', exact: true }).click();
-    await expect(edit.getByLabel('Slutdatum: uppgiftens säkerhet', { exact: true })).toHaveValue(
-      'known',
+    await edit.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
+    await expect(propertyRow(edit, 'Slutdatum').getByLabel('Värde', { exact: true })).toHaveValue(
+      '2026-04-04',
     );
-    await expect(edit.getByLabel('Slutdatum', { exact: true })).toHaveValue('2026-04-04');
     await edit.getByRole('button', { name: 'Grunduppgifter', exact: true }).click();
     await edit.getByLabel('Namn', { exact: true }).fill('Pendlarcykeln i garaget');
     await edit.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
@@ -514,7 +545,7 @@ test('KARTA-12: identity, custom fields, lifecycle and icon stay together when s
   }
 });
 
-test('KARTA-13: changing type requires explicit confirmation before custom values are lost', async ({
+test('KARTA-13: changing type preserves all individual property identities and values', async ({
   page,
 }) => {
   const installation = await createInstallation();
@@ -532,21 +563,24 @@ test('KARTA-13: changing type requires explicit confirmation before custom value
           version: current.draft.version,
           id: 'cycle-fields',
           baseRevision: null,
-          value: {
-            name: 'Cykel med ramnummer',
-            description: '',
-            fields: [{ id: 'frame', name: 'Ramnummer', description: '', kind: 'text' }],
-          },
+          value: { name: 'Cykel med ramnummer', description: '' },
         })
       ).status(),
     ).toBe(200);
     current = await (await page.request.get(path)).json();
     const proposed = {
       name: 'Cykeln',
-      description: 'Behåll beskrivningen',
       typeId: 'cycle-fields',
-      customValues: { frame: 'ABC123' },
-      financialFacts: { price: { knowledge: 'known', value: '1200 SEK' } },
+      properties: [
+        {
+          id: 'description',
+          label: 'Beskrivning',
+          kind: 'text' as const,
+          value: 'Behåll beskrivningen',
+        },
+        { id: 'frame', label: 'Ramnummer', kind: 'text' as const, value: 'ABC123' },
+        { id: 'price', label: 'Pris', kind: 'text' as const, value: '1200 SEK' },
+      ],
     };
     expect(
       (
@@ -565,37 +599,15 @@ test('KARTA-13: changing type requires explicit confirmation before custom value
     const dialog = page.getByRole('dialog', { name: 'Redigera Cykeln', exact: true });
     await dialog.getByLabel('Objekttyp', { exact: true }).focus();
     await dialog.getByLabel('Objekttyp', { exact: true }).selectOption(nextType.id);
-    const confirmation = page.getByRole('dialog', {
-      name: 'Ta bort tidigare egna fält?',
-      exact: true,
-    });
-    await expect(
-      confirmation.getByRole('button', { name: 'Fortsätt redigera', exact: true }),
-    ).toBeFocused({ timeout: 1000 });
-    await expect(confirmation).toContainText('Ramnummer: ABC123');
-    await page.keyboard.press('Escape');
-    await expect(confirmation).not.toBeVisible();
-    await expect(dialog.getByLabel('Objekttyp', { exact: true })).toHaveValue('cycle-fields');
-    await expect(dialog.getByLabel('Objekttyp', { exact: true })).toBeFocused();
-    await dialog.getByRole('button', { name: 'Egna fält', exact: true }).click();
-    await expect(dialog.getByLabel('Ramnummer', { exact: true })).toHaveValue('ABC123');
-    await dialog.getByRole('button', { name: 'Grunduppgifter', exact: true }).click();
-    await dialog.getByLabel('Objekttyp', { exact: true }).selectOption(nextType.id);
-    await confirmation
-      .getByRole('button', { name: 'Ta bort fältvärdena och byt typ', exact: true })
-      .click();
     await expect(dialog.getByLabel('Objekttyp', { exact: true })).toHaveValue(nextType.id);
+    await dialog.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
+    await expect(propertyRow(dialog, 'Ramnummer').getByLabel('Värde', { exact: true })).toHaveValue(
+      'ABC123',
+    );
     expect((await (await page.request.get(path)).json()).draft).toEqual(current.draft);
     await dialog.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true }).click();
-    await expect(dialog).not.toBeVisible();
     const after: MapState = await (await page.request.get(path)).json();
-    expect(after.draft.changes[0].after).toMatchObject({
-      name: proposed.name,
-      description: proposed.description,
-      typeId: nextType.id,
-      financialFacts: proposed.financialFacts,
-    });
-    expect(after.draft.changes[0].after?.customValues ?? {}).toEqual({});
+    expect(after.draft.changes[0].after).toEqual({ ...proposed, typeId: nextType.id });
   } finally {
     await installation.close();
   }
@@ -648,7 +660,7 @@ test('KARTA-15: close and Escape protect only unsent form changes and restore th
 });
 
 for (const width of [1440, 320]) {
-  test(`${width === 1440 ? 'KARTA-20' : 'KARTA-22'}: configured properties keep their order and hidden values in the single-section dialog at ${width}px`, async ({
+  test(`${width === 1440 ? 'KARTA-20' : 'KARTA-22'}: individual properties keep their order and complete values in the single-section dialog at ${width}px`, async ({
     page,
   }) => {
     const installation = await createInstallation();
@@ -666,32 +678,7 @@ for (const width of [1440, 320]) {
             version: 0,
             id: 'configured',
             baseRevision: null,
-            value: {
-              name: 'Dialogavtal',
-              description: '',
-              sections: [{ id: 'terms', name: 'Avtalets uppgifter' }],
-              fields: [
-                {
-                  id: 'memo',
-                  name: 'Anteckning',
-                  description: '',
-                  kind: 'text',
-                  sectionId: 'terms',
-                },
-                {
-                  id: 'hidden',
-                  name: 'Dolt underlag',
-                  description: '',
-                  kind: 'text',
-                  sectionId: '',
-                },
-              ],
-              builtins: [
-                { key: 'description', name: 'Avtalstext', sectionId: 'terms' },
-                { key: 'price', name: 'Månadsbelopp', sectionId: 'terms' },
-              ],
-              propertyOrder: ['field:memo', 'builtin:price', 'builtin:description', 'field:hidden'],
-            },
+            value: { name: 'Dialogavtal', description: '' },
           })
         ).status(),
       ).toBe(200);
@@ -704,9 +691,22 @@ for (const width of [1440, 320]) {
             value: {
               typeId: 'configured',
               name: 'Hushållets avtal',
-              description: 'Fullständig avtalstext',
-              customValues: { memo: 'Före rättelsen', hidden: 'Bevaras oförändrat' },
-              financialFacts: { price: { knowledge: 'known', value: '249' } },
+              properties: [
+                {
+                  id: 'description',
+                  label: 'Beskrivning',
+                  kind: 'text' as const,
+                  value: 'Fullständig avtalstext',
+                },
+                { id: 'memo', label: 'Anteckning', kind: 'text' as const, value: 'Före rättelsen' },
+                {
+                  id: 'hidden',
+                  label: 'Dolt underlag',
+                  kind: 'text' as const,
+                  value: 'Bevaras oförändrat',
+                },
+                { id: 'price', label: 'Pris', kind: 'text' as const, value: '249' },
+              ],
             },
           })
         ).status(),
@@ -722,21 +722,21 @@ for (const width of [1440, 320]) {
       await expect(
         form.getByRole('button', { name: 'Grunduppgifter', exact: true }),
       ).toHaveAttribute('aria-expanded', 'true');
-      await form.getByRole('button', { name: 'Avtalets uppgifter', exact: true }).click();
+      await form.getByRole('button', { name: 'Fria egenskaper', exact: true }).click();
       expect(await form.locator('button[aria-expanded="true"]').count()).toBe(1);
-      await expect(form.getByLabel('Anteckning', { exact: true })).toHaveValue('Före rättelsen');
-      await expect(form.getByLabel('Månadsbelopp', { exact: true })).toHaveValue('249');
-      await expect(form.getByLabel('Avtalstext', { exact: true })).toHaveValue(
-        'Fullständig avtalstext',
-      );
-      expect(await form.locator('[data-section="custom-terms"] label').allTextContents()).toEqual([
-        'Anteckning',
-        'Månadsbelopp: uppgiftens säkerhet',
-        'Månadsbelopp',
-        'Avtalstext',
-      ]);
-      await expect(form.getByLabel('Dolt underlag')).toHaveCount(0);
-      await form.getByLabel('Anteckning', { exact: true }).fill('Efter rättelsen');
+      expect(
+        await form
+          .locator('.property-editor-row')
+          .getByLabel('Etikett', { exact: true })
+          .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value)),
+      ).toEqual(['Beskrivning', 'Anteckning', 'Dolt underlag', 'Pris']);
+      await expect(
+        propertyRow(form, 'Anteckning').getByLabel('Värde', { exact: true }),
+      ).toHaveValue('Före rättelsen');
+      await expect(
+        propertyRow(form, 'Dolt underlag').getByLabel('Värde', { exact: true }),
+      ).toHaveValue('Bevaras oförändrat');
+      await setProperty(form, 'Anteckning', 'Efter rättelsen');
       const footer = form.getByRole('button', { name: 'Lägg i utkastet och stäng', exact: true });
       await expect(footer).toBeVisible();
       const bounds = await footer.boundingBox();
@@ -757,11 +757,24 @@ for (const width of [1440, 320]) {
       await footer.click();
       await expect(opener).toBeFocused();
       const after = await read();
-      expect(after.objects[0].customValues?.memo).toBe('Före rättelsen');
+      expect(propertyValues(after.objects[0])?.memo).toBe('Före rättelsen');
       expect(after.draft.changes[0].after).toMatchObject({
-        description: 'Fullständig avtalstext',
-        customValues: { memo: 'Efter rättelsen', hidden: 'Bevaras oförändrat' },
-        financialFacts: { price: { knowledge: 'known', value: '249' } },
+        properties: [
+          {
+            id: 'description',
+            label: 'Beskrivning',
+            kind: 'text' as const,
+            value: 'Fullständig avtalstext',
+          },
+          { id: 'memo', label: 'Anteckning', kind: 'text' as const, value: 'Efter rättelsen' },
+          {
+            id: 'hidden',
+            label: 'Dolt underlag',
+            kind: 'text' as const,
+            value: 'Bevaras oförändrat',
+          },
+          { id: 'price', label: 'Pris', kind: 'text' as const, value: '249' },
+        ],
       });
       const proposal = await readDraftProposal(page, 'Hushållets avtal');
       await expect(proposal).toContainText('Efter rättelsen');

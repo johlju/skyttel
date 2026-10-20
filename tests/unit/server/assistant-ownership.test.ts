@@ -44,7 +44,6 @@ async function restored(options: Parameters<typeof createInstallation>[1]) {
     value: {
       typeId: original.types[0].id,
       name: 'Cykel från gamla installationen',
-      description: '',
     },
   });
   expect(proposal.status(), await proposal.text()).toBe(200);
@@ -193,7 +192,7 @@ test.each(['text', 'voice'] as const)(
           version: map.draft.version,
           contentVersion: map.contentVersion,
           baseRevision: null,
-          value: { typeId: map.types[0].id, name: 'Hjälmen', description: '' },
+          value: { typeId: map.types[0].id, name: 'Hjälmen' },
         })
       ).status(),
     ).toBe(200);

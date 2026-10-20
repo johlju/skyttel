@@ -31,23 +31,24 @@ export function erasureContent(database: Database.Database, householdId: string,
   const objects: MapObject[] = (
     database
       .prepare('SELECT * FROM map_object WHERE householdId = ? ORDER BY id')
-      .all(householdId) as (MapObject & { financialFacts: string; customValues: string })[]
+      .all(householdId) as (Omit<MapObject, 'properties'> & {
+      properties: string | null;
+    })[]
   ).map((row) => ({
     ...row,
-    financialFacts: row.financialFacts ? JSON.parse(row.financialFacts) : undefined,
-    customValues: row.customValues ? JSON.parse(row.customValues) : undefined,
+
+    properties: row.properties ? JSON.parse(row.properties) : undefined,
   }));
   const relationships: MapRelationship[] = (
     database
       .prepare('SELECT * FROM map_relationship WHERE householdId = ? ORDER BY id')
-      .all(householdId) as (Omit<MapRelationship, 'endDate' | 'customValues'> & {
-      endDate: string;
-      customValues: string | null;
+      .all(householdId) as (Omit<MapRelationship, 'properties'> & {
+      properties: string | null;
     })[]
   ).map((row) => ({
     ...row,
-    endDate: row.endDate ? JSON.parse(row.endDate) : undefined,
-    customValues: row.customValues ? JSON.parse(row.customValues) : undefined,
+
+    properties: row.properties ? JSON.parse(row.properties) : undefined,
   }));
   const objectTypes = database
     .prepare('SELECT * FROM object_type WHERE householdId = ? ORDER BY id')
@@ -55,32 +56,7 @@ export function erasureContent(database: Database.Database, householdId: string,
   const relationshipTypes = database
     .prepare('SELECT * FROM relationship_type WHERE householdId = ? ORDER BY id')
     .all(householdId) as RelationshipType[];
-  for (const type of objectTypes) {
-    const row = database
-      .prepare(
-        'SELECT fields, sections, builtins, propertyOrder FROM object_type_fields WHERE typeId = ?',
-      )
-      .get(type.id) as
-      | {
-          fields: string;
-          sections: string | null;
-          builtins: string | null;
-          propertyOrder: string | null;
-        }
-      | undefined;
-    if (row) type.fields = JSON.parse(row.fields);
-    if (row?.sections !== null && row?.sections !== undefined)
-      type.sections = JSON.parse(row.sections);
-    if (row?.builtins != null) type.builtins = JSON.parse(row.builtins);
-    if (row?.propertyOrder != null) type.propertyOrder = JSON.parse(row.propertyOrder);
-  }
   for (const type of relationshipTypes) {
-    const fields = database
-      .prepare('SELECT fields, sections FROM relationship_type_fields WHERE typeId = ?')
-      .get(type.id) as { fields: string; sections: string | null } | undefined;
-    if (fields) type.fields = JSON.parse(fields.fields);
-    if (fields?.sections !== null && fields?.sections !== undefined)
-      type.sections = JSON.parse(fields.sections);
     const row = database
       .prepare('SELECT forwardLabel, reverseLabel FROM relationship_type_labels WHERE typeId = ?')
       .get(type.id) as { forwardLabel: string; reverseLabel: string } | undefined;
@@ -175,7 +151,10 @@ export function erasureContent(database: Database.Database, householdId: string,
   for (const draft of drafts) {
     const own = draft.userId === ownerId;
     for (const change of draft.changes) objectChange(change, own);
-    for (const change of draft.relationships) edgeChange(change, own);
+    for (const change of draft.relationships) {
+      edgeChange(change, own);
+      if (change.suppressed) edgeChange(change.suppressed, own);
+    }
     for (const change of draft.objectTypes)
       for (const type of [change.before, change.after])
         if (type) {
@@ -299,15 +278,17 @@ export function planErasure(
     )
       relationships.add(edge.id);
   for (const draft of content.drafts)
-    for (const change of draft.relationships)
+    for (const change of draft.relationships) {
+      const after = change.after ?? change.suppressed?.after;
       if (
-        change.after &&
+        after &&
         !content.relationships.some((edge) => edge.id === change.id) &&
-        (objects.has(change.after.sourceId) ||
-          (change.after.targetId && objects.has(change.after.targetId)) ||
-          relationshipTypes.has(change.after.typeId))
+        (objects.has(after.sourceId) ||
+          (after.targetId && objects.has(after.targetId)) ||
+          relationshipTypes.has(after.typeId))
       )
         relationships.add(change.id);
+    }
   const scope = {
     objects: [...objects],
     relationships: [...relationships],

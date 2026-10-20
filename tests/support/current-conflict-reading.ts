@@ -26,7 +26,20 @@ export async function expectConflictReadValue(
     .filter({ hasText: new RegExp(`^${escaped}(?:\\s+· ändrat)?$`) })
     .locator('..')
     .locator('dd');
-  await expect(field).toHaveText(value);
+  if (typeof value === 'string') {
+    if (
+      (value === 'Ej uppgivet' ||
+        (label === 'Uppgiftens säkerhet' && ['Känt', 'Bekräftat'].includes(value))) &&
+      !(await field.count())
+    ) {
+      await expect(field).toHaveCount(0);
+      return;
+    }
+    const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await expect(field).toHaveText(
+      new RegExp(`^${escapedValue}(?: \\((?:Text|Tal|Datum|Ja/nej)\\))?$`),
+    );
+  } else await expect(field).toHaveText(value);
 }
 
 export async function expectSavedConflictObject(
@@ -36,7 +49,9 @@ export async function expectSavedConflictObject(
 ) {
   const details = await readTableObject(page, name);
   await expectConflictReadValue(details, 'Namn', name);
-  await expect(details.locator('.household-table-description')).toHaveText(description);
+  if (description !== 'Ej uppgivet')
+    await expectConflictReadValue(details, 'Beskrivning', description);
+  else await expect(details.locator('dt').filter({ hasText: /^Beskrivning$/ })).toHaveCount(0);
   return details;
 }
 
@@ -104,7 +119,7 @@ export async function expectSavedConflictDefinition(
 ) {
   await openTypeDefinitions(page);
   await page
-    .getByText(objectType ? 'Objekttyper och egna fält' : 'Sambandstyper och riktning', {
+    .getByText(objectType ? 'Objekttyper' : 'Sambandstyper och riktning', {
       exact: true,
     })
     .click();

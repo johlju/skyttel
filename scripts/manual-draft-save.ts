@@ -1,7 +1,11 @@
 import { createInterface } from 'node:readline';
 import { chromium } from '@playwright/test';
 import { createHousehold, signIn } from '../tests/support/client.js';
-import { prepareDraftSave, registerPendingSave } from '../tests/support/draft-save.js';
+import {
+  prepareDraftSave,
+  preparePropertyDraftSave,
+  registerPendingSave,
+} from '../tests/support/draft-save.js';
 import { createInstallation } from '../tests/support/installation.js';
 
 // Disposable real HTTP/SQLite installation; only delivery of network responses
@@ -33,7 +37,7 @@ let release: (() => void) | undefined;
 let holdCheck = false;
 let releaseCheck: (() => void) | undefined;
 let prepared = false;
-async function fresh(empty: boolean) {
+async function fresh(empty: boolean, properties = false) {
   release?.();
   releaseCheck?.();
   hold = holdAfter = lostResponse = refreshFailure = recoveryFailure = false;
@@ -49,7 +53,10 @@ async function fresh(empty: boolean) {
     path = `${app.origin}/api/households/${household.id}/map`;
     await page.goto(`${app.origin}/households/${household.id}`);
   } else {
-    const data = await prepareDraftSave(page.request, app.origin);
+    const data = await (properties ? preparePropertyDraftSave : prepareDraftSave)(
+      page.request,
+      app.origin,
+    );
     path = data.path;
     await page.goto(`${app.origin}/households/${data.household.id}`);
   }
@@ -97,12 +104,13 @@ try {
   });
   await fresh(false);
   console.log(
-    'Commands: new-draft, new-empty, hold, hold-after, release, drop, hold-check, release-check, lost-response, refresh-failure, network-ok, pending-attempt, result, quit',
+    'Commands: new-draft, new-property-draft, new-empty, hold, hold-after, release, drop, hold-check, release-check, lost-response, refresh-failure, network-ok, pending-attempt, result, quit',
   );
   input = createInterface({ input: process.stdin, crlfDelay: Infinity });
   for await (const command of input) {
     if (command === 'quit') break;
-    if (command === 'new-draft' || command === 'new-empty') await fresh(command === 'new-empty');
+    if (['new-draft', 'new-property-draft', 'new-empty'].includes(command))
+      await fresh(command === 'new-empty', command === 'new-property-draft');
     else if (command === 'hold') hold = true;
     else if (command === 'hold-after') holdAfter = true;
     else if (command === 'hold-check') holdCheck = true;

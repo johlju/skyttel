@@ -7,6 +7,7 @@ import { householdAccess } from './households.js';
 import { householdMap, MapError } from './map.js';
 import { personalView } from './personal-view.js';
 import { type EncodedImage, encodeProfileImage } from './profile-images.js';
+import { propertyWriteLimit } from './properties.js';
 
 export function mapRoutes(database: Database.Database, auth: Auth, origin: string) {
   type Environment = { Variables: { userId: string; body: Record<string, unknown> } };
@@ -128,7 +129,7 @@ export function mapRoutes(database: Database.Database, auth: Auth, origin: strin
       const file = values.get('image');
       if (
         typeof metadata !== 'string' ||
-        Buffer.byteLength(metadata, 'utf8') > 16_384 ||
+        Buffer.byteLength(metadata, 'utf8') > propertyWriteLimit ||
         !(file instanceof File) ||
         values.getAll('metadata').length !== 1 ||
         values.getAll('image').length !== 1 ||

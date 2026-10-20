@@ -64,7 +64,9 @@ export async function checkContainerTextAssistant({
     value: {
       typeId: initial.types[0].id,
       name: 'Textprov i container',
-      description: 'Synthetic private work',
+      properties: [
+        { id: 'description', label: 'Description', kind: 'text', value: 'Synthetic private work' },
+      ],
     },
   });
   const draft = await call('/map');

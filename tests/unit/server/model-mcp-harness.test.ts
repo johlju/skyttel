@@ -33,7 +33,7 @@ test('the model harness exposes an unwanted real MCP save instead of masking it 
         contentVersion: initial.contentVersion,
         id: 'lo',
         baseRevision: null,
-        value: { typeId: initial.types[0].id, name: 'Lo Exempel', description: '' },
+        value: { typeId: initial.types[0].id, name: 'Lo Exempel' },
       },
     });
     expect(proposed.status()).toBe(200);

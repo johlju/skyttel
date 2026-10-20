@@ -1487,7 +1487,7 @@ export function SpatialMap({
                 {
                   left: x,
                   top: y,
-                  '--label-scale': textScale(edge.sourceId, edge.targetId ?? undefined),
+                  '--label-scale': textScale(edge.sourceId, edge.targetId),
                 } as CSSProperties
               }
               onClick={() => onSelectRelationship(edge, previous)}
@@ -1551,13 +1551,14 @@ export function SpatialMap({
                     </span>
                   )}
                   <span className="spatial-type-name">
+                    {state.types.find((type) => type.id === object.typeId)?.name}
                     {kind === 'added'
-                      ? '+ Nytt förslag'
+                      ? ' · + Nytt förslag'
                       : kind === 'changed'
-                        ? '✎ Ändrat förslag'
+                        ? ' · ✎ Ändrat förslag'
                         : kind === 'removed'
-                          ? '× Föreslås tas bort'
-                          : state.types.find((type) => type.id === object.typeId)?.name}
+                          ? ' · × Föreslås tas bort'
+                          : ''}
                   </span>
                   <LifecycleStatus value={object} />
                 </span>

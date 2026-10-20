@@ -11,6 +11,7 @@ import {
 import { openSavedHistory, readCommittedHistoryCard } from '../support/conversation-page.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { propertyValue, setProperty } from '../support/property-controls.js';
 import { expect, test } from '../support/test.js';
 
 const typeName = 'Egen bildtyp';
@@ -31,7 +32,7 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
             id: 'own-image-type',
             version: 0,
             baseRevision: null,
-            value: { name: typeName, description: 'Egen typ med profilbild', fields: [] },
+            value: { name: typeName, description: 'Egen typ med profilbild' },
           },
         })
       ).status(),
@@ -62,7 +63,7 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
       form.getByRole('button', { name: 'Livscykel och utseende', exact: true }).click();
     await newForm.getByLabel('Namn', { exact: true }).fill(name);
     await newForm.getByLabel('Objekttyp', { exact: true }).selectOption({ label: typeName });
-    await newForm.getByLabel('Beskrivning', { exact: true }).fill('Text i samma förslag');
+    await setProperty(newForm, 'Beskrivning', 'Text i samma förslag');
     await appearance();
     const picker = form.getByRole('region', { name: 'Ikon', exact: true });
     await picker.getByRole('searchbox', { name: 'Sök ikon' }).fill('cykel');
@@ -81,9 +82,22 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
     expect(proposed.objects).toEqual([]);
     expect(proposed.draft.changes).toHaveLength(1);
     const first = proposed.draft.changes[0];
+    const initialProperties = first.after?.properties;
+    expect(initialProperties).toEqual([
+      {
+        id: expect.any(String),
+        label: 'Beskrivning',
+        kind: 'text',
+        value: 'Text i samma förslag',
+      },
+    ]);
+    const correctedProperties = initialProperties?.map((property) => ({
+      ...property,
+      value: 'Ny text före bildbytet',
+    }));
     expect(first.after).toMatchObject({
       name,
-      description: 'Text i samma förslag',
+      properties: initialProperties,
       iconId: 'bike',
       profileImageId: expect.any(String),
     });
@@ -124,10 +138,10 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
         for (const [label, value] of [
           ['Namn', name],
           ['Typ', typeName],
-          ['Beskrivning', description],
+          ['Beskrivning', `${description} (Text)`],
           ['Ikon', 'Cykel'],
           ['Gäller', 'Aktuellt'],
-          ['Status', 'Följ slutdatum'],
+          ['Status', 'Gäller fortfarande'],
           ['Profilbild', image ? 'Profilbild finns' : 'Ej uppgivet'],
         ])
           await expect(
@@ -176,7 +190,11 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
           }
           await expect(side.filter({ hasText: `Namn: ${name}.` })).toBeVisible();
           await expect(side.filter({ hasText: `Objekttyp: ${typeName}.` })).toBeVisible();
-          await expect(side.filter({ hasText: value.description })).toBeVisible();
+          await expect(
+            side.filter({
+              hasText: String(propertyValue(value, 'Beskrivning') ?? ''),
+            }),
+          ).toBeVisible();
           const identity = side.filter({
             has: page.getByText('Objektets identitet', { exact: true }),
           });
@@ -214,7 +232,7 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
     expect(shared.draft.changes).toEqual([]);
     await readHistory([initialReceipt]);
     await edit();
-    await form.getByLabel('Beskrivning', { exact: true }).fill('Ny text före bildbytet');
+    await setProperty(form, 'Beskrivning', 'Ny text före bildbytet');
     await appearance();
     await imageInput.setInputFiles({
       name: 'ny.webp',
@@ -232,8 +250,8 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
     expect(replacement.draft.changes[0].after).toMatchObject({
       name,
       typeId: first.after?.typeId,
-      description: 'Ny text före bildbytet',
       iconId: 'bike',
+      properties: correctedProperties,
     });
     await edit();
     await appearance();
@@ -267,8 +285,8 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
     expect(removed.draft.changes[0].after).toMatchObject({
       name,
       typeId: first.after?.typeId,
-      description: 'Ny text före bildbytet',
       iconId: 'bike',
+      properties: correctedProperties,
     });
     expect(removed.draft.changes[0].after).not.toHaveProperty('profileImageId');
     await readProposal(true);
@@ -278,14 +296,14 @@ test(`BILD-06: ${typeName} shares text, icon and image in one proposal and remov
     expect(removedReceipt.changes[0].before).toMatchObject({
       profileImageId: first.after?.profileImageId,
       iconId: 'bike',
-      description: 'Text i samma förslag',
+      properties: initialProperties,
     });
     expect(removedReceipt.changes[0].after).toMatchObject({
       id: first.id,
       name,
       typeId: first.after?.typeId,
       iconId: 'bike',
-      description: 'Ny text före bildbytet',
+      properties: correctedProperties,
     });
     expect(removedReceipt.changes[0].after).not.toHaveProperty('profileImageId');
     const final = await read();

@@ -22,7 +22,7 @@ beforeEach(async () => {
     version: 0,
     id: 'lamp',
     baseRevision: null,
-    value: { name: 'Lampa', description: '', typeId: map.types[0].id },
+    value: { name: 'Lampa', typeId: map.types[0].id },
   });
   await client.json(`${path}/map/save`, { version: 1, operationId: 'lamp-save' });
   const prepared = await (await client.json(`${path}/exports`, {})).json();
@@ -41,7 +41,7 @@ test('household archives exclude personal conversation choices and import preser
     await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
   );
   const parts = unzipSync(bytes);
-  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(34);
+  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(37);
   const encoded = new TextDecoder().decode(parts['content.json']);
   for (const field of [
     'showDraftOnStart',
@@ -96,179 +96,47 @@ function changedContent(change: (content: Record<string, unknown>) => void) {
   });
 }
 
-function legacyArchive(change: (content: Record<string, unknown>) => void) {
-  const parts = unzipSync(changedContent(change));
-  const manifest = JSON.parse(new TextDecoder().decode(parts['manifest.json']));
-  manifest.schemaVersion = 33;
-  const content = JSON.parse(new TextDecoder().decode(parts['content.json']));
-  manifest.householdId = content.household.id;
-  parts['manifest.json'] = new TextEncoder().encode(JSON.stringify(manifest));
-  return zipSync(parts);
-}
-
-test('legacy archives without identities preserve implicit off for current access and later choices survive restart', async () => {
-  const bytes = legacyArchive((content) => {
-    for (const [name, value] of Object.entries(content))
-      if (Array.isArray(value)) content[name] = [];
-  });
-  const prepared = await upload(bytes);
-  expect(prepared.status).toBe(201);
-  const ready = await prepared.json();
-  expect(
-    await (
-      await client.json(`${path}/imports/${ready.id}/confirm`, {
-        contentVersion: 1,
-        confirmed: true,
-      })
-    ).json(),
-  ).toMatchObject({ status: 'completed' });
-  const restored = await (await client.request(`${path}/map/view`)).json();
-  expect(restored.settings).toMatchObject({
-    background: false,
-    lightBackground: 'pearl',
-    darkBackground: 'atmosphere',
-    panStrength: 0.7,
-    zoomStrength: 0.7,
-    layerDistance: 1,
-    version: 0,
-  });
-  const { version, ...settings } = restored.settings;
+test('older archives are rejected before preview without changing map, private work, access or personal views', async () => {
+  const state = await (await client.request(`${path}/map`)).json();
   expect(
     (
-      await client.json(`${path}/map/view/settings`, {
-        version,
-        contentVersion: 2,
-        settings: { ...settings, background: true, darkBackground: 'ocean' },
+      await client.json(`${path}/map/draft`, {
+        version: state.draft.version,
+        id: 'private-work',
+        baseRevision: null,
+        value: {
+          name: 'Privat lampa',
+          typeId: state.types[0].id,
+          properties: [
+            { id: 'description', label: 'Beskrivning', kind: 'text', value: 'Bevara förslaget' },
+          ],
+        },
       })
     ).status,
   ).toBe(200);
-  await fixture.restart();
-  expect((await (await client.request(`${path}/map/view`)).json()).settings).toMatchObject({
-    background: true,
-    darkBackground: 'ocean',
-    version: 1,
-  });
-});
-
-test.each([
-  { mode: 'on', foreign: false },
-  { mode: 'off', foreign: false },
-  { mode: 'positions', foreign: false },
-  { mode: 'implicit', foreign: false },
-  { mode: 'on', foreign: true },
-  { mode: 'positions', foreign: true },
-  { mode: 'implicit', foreign: true },
-])(
-  'legacy $mode archive (foreign: $foreign) restores personal views without restoring access',
-  async ({ mode, foreign }) => {
-    const ownerId = (await (await client.request(`${path}/map`)).json()).userId;
-    const bytes = legacyArchive((content) => {
-      content.viewSettings =
-        mode === 'on' || mode === 'off'
-          ? [
-              {
-                householdId,
-                userId: ownerId,
-                version: 7,
-                settings: {
-                  invertX: true,
-                  invertY: false,
-                  axisCorner: 'bottom-left',
-                  axisPinned: true,
-                  allLabels: true,
-                  stars: mode === 'on',
-                },
-              },
-            ]
-          : [];
-      content.positions =
-        mode === 'positions'
-          ? [
-              {
-                householdId,
-                userId: ownerId,
-                objectId: 'lamp',
-                version: 3,
-                x: 6,
-                y: -2,
-                z: 4,
-              },
-            ]
-          : [];
-      if (foreign) {
-        (content.household as { id: string }).id = 'source-household';
-        for (const rows of Object.values(content))
-          if (Array.isArray(rows))
-            for (const row of rows) if ('householdId' in row) row.householdId = 'source-household';
-      }
+  const routes = [`${path}/map`, `${path}/map/history`, `${path}/map/view`, '/api/bootstrap'];
+  const before = await Promise.all(
+    routes.map(async (route) => (await client.request(route)).json()),
+  );
+  for (const schemaVersion of [14, 23, 33, 34, 35]) {
+    const bytes = altered((parts) => {
+      const manifest = JSON.parse(new TextDecoder().decode(parts['manifest.json']));
+      manifest.version = 1;
+      manifest.schemaVersion = schemaVersion;
+      parts['manifest.json'] = new TextEncoder().encode(JSON.stringify(manifest));
     });
-    const ready = await (await upload(bytes)).json();
+    const response = await upload(bytes);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'unsupported_archive' });
     expect(
-      await (
-        await client.json(`${path}/imports/${ready.id}/confirm`, {
-          contentVersion: 1,
-          confirmed: true,
-        })
-      ).json(),
-    ).toMatchObject({ status: 'completed' });
-    if (foreign) {
-      expect((await (await client.request(`${path}/map/view`)).json()).settings.background).toBe(
-        false,
-      );
-      const { user } = await (await client.request('/api/bootstrap')).json();
-      expect(
-        (
-          await client.json(`${path}/content-owners/assign`, {
-            identityId: ownerId,
-            userId: user.id,
-            contentVersion: 2,
-            confirmed: true,
-          })
-        ).status,
-      ).toBe(200);
-    }
-    const restored = await (await client.request(`${path}/map/view`)).json();
-    expect(restored.settings).toMatchObject({
-      background: mode === 'on',
-      lightBackground: 'pearl',
-      darkBackground: mode === 'on' ? 'mist' : 'atmosphere',
-      panStrength: 0.7,
-      zoomStrength: 0.7,
-      layerDistance: 1,
-      version: mode === 'on' || mode === 'off' ? 7 : 0,
+      await Promise.all(routes.map(async (route) => (await client.request(route)).json())),
+    ).toEqual(before);
+    expect(await (await client.request(`${path}/imports`)).json()).toEqual({
+      attempt: null,
+      ready: null,
     });
-    if (mode === 'on' || mode === 'off')
-      expect(restored.settings).toMatchObject({
-        invertX: true,
-        axisCorner: 'bottom-left',
-        axisPinned: true,
-        allLabels: true,
-      });
-    expect(restored.positions).toEqual(
-      mode === 'positions'
-        ? [
-            {
-              id: 'lamp',
-              version: 3,
-              x: 6,
-              y: -2,
-              z: 4,
-            },
-          ]
-        : [],
-    );
-    await fixture.restart();
-    expect(await (await client.request(`${path}/map/view`)).json()).toEqual(restored);
-
-    fixture.setSubject('later-member');
-    const later = fixture.client();
-    await later.signIn();
-    const { user } = await (await later.request('/api/bootstrap')).json();
-    const { code } = await (await client.json(`${path}/invitations`, { userId: user.id })).json();
-    expect((await later.json('/api/invitations/accept', { code })).status).toBe(200);
-    expect((await (await later.request(`${path}/map/view`)).json()).settings.background).toBe(true);
-  },
-);
+  }
+});
 
 test.each([
   { lightBackground: 'universe' },
@@ -299,37 +167,6 @@ test.each([
   expect(await (await client.request(`${path}/map`)).json()).toEqual(before);
   expect(await (await client.request(`${path}/map/view`)).json()).toEqual(view);
 });
-
-test.each([14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25])(
-  'schema %i household archives remain importable with their saved content and history',
-  async (schemaVersion) => {
-    const bytes = altered((parts) => {
-      const manifest = JSON.parse(new TextDecoder().decode(parts['manifest.json']));
-      manifest.schemaVersion = schemaVersion;
-      if (schemaVersion < 17) {
-        const content = JSON.parse(new TextDecoder().decode(parts['content.json']));
-        for (const object of content.objects) delete object.iconId;
-        parts['content.json'] = new TextEncoder().encode(JSON.stringify(content));
-        manifest.parts[0].bytes = parts['content.json'].length;
-        manifest.parts[0].sha256 = createHash('sha256').update(parts['content.json']).digest('hex');
-      }
-      parts['manifest.json'] = new TextEncoder().encode(JSON.stringify(manifest));
-    });
-    const prepared = await upload(bytes);
-    expect(prepared.status).toBe(201);
-    const ready = await prepared.json();
-    const confirmed = await client.json(`${path}/imports/${ready.id}/confirm`, {
-      contentVersion: 1,
-      confirmed: true,
-    });
-    expect(await confirmed.json()).toMatchObject({ status: 'completed', contentVersion: 2 });
-    const map = await (await client.request(`${path}/map`)).json();
-    expect(map.objects).toEqual([expect.objectContaining({ id: 'lamp', name: 'Lampa' })]);
-    expect(map.objects[0]).not.toHaveProperty('iconId');
-    const { history } = await (await client.request(`${path}/map/history`)).json();
-    expect(history).toEqual([expect.objectContaining({ operationId: 'lamp-save' })]);
-  },
-);
 
 test('invalid archives leave all live content and access unchanged before confirmation', async () => {
   const before = await (await client.request(`${path}/map`)).json();
@@ -997,16 +834,10 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
     });
     expect(response.status, await response.text()).toBe(200);
   };
-  const fields = [
-    { id: 'serial', name: 'Serienummer', description: '', kind: 'text' },
-    { id: 'count', name: 'Antal', description: '', kind: 'number' },
-    { id: 'date', name: 'Datum', description: '', kind: 'date' },
-    { id: 'enabled', name: 'Aktiv', description: '', kind: 'boolean' },
-  ];
   await post('object-type', {
     id: 'equipment',
     baseRevision: null,
-    value: { name: 'Utrustning', description: 'Egna fält', fields },
+    value: { name: 'Utrustning', description: 'Hushållets utrustning' },
   });
   await post('relationship-type', {
     id: 'installed',
@@ -1023,15 +854,17 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
     baseRevision: null,
     value: {
       name: 'Maskin',
-      description: '',
+
       typeId: 'equipment',
       identity: 'unspecified',
       lifecycle: 'ended',
-      customValues: { serial: 'SYNTH-1', count: 2, date: '2026-01-01', enabled: false },
-      financialFacts: {
-        price: { knowledge: 'known', value: '19' },
-        endDate: { knowledge: 'uncertain', value: '2026-01-01' },
-      },
+
+      properties: [
+        { id: 'serial', label: 'serial', kind: 'text', value: 'SYNTH-1' },
+        { id: 'count', label: 'count', kind: 'number', value: 2 },
+        { id: 'date', label: 'Kontrolldatum', kind: 'date', value: '2026-01-01' },
+        { id: 'enabled', label: 'enabled', kind: 'boolean', value: false },
+      ],
     },
   });
   await post('relationship', {
@@ -1041,16 +874,15 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
       typeId: 'installed',
       sourceId: 'machine',
       targetId: 'lamp',
-      knowledge: 'uncertain',
+
       lifecycle: 'ended',
-      endDate: { knowledge: 'known', value: '2026-01-01' },
     },
   });
   await post('save', { operationId: 'definitions-and-facts' });
   await post('object-type', {
     id: 'unused',
     baseRevision: null,
-    value: { name: 'Tillfällig', description: '', fields: [] },
+    value: { name: 'Tillfällig', description: '' },
   });
   await post('relationship-type', {
     id: 'unused-edge',
@@ -1064,7 +896,7 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
   await post('object-type', {
     id: 'equipment',
     baseRevision: 1,
-    value: { name: 'Privat utrustning', description: 'Privat förslag', fields },
+    value: { name: 'Privat utrustning', description: 'Privat förslag' },
   });
   await post('relationship-type', {
     id: 'installed',
@@ -1090,10 +922,9 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
     value: {
       typeId: 'installed',
       sourceId: 'machine',
-      targetId: null,
-      knowledge: 'unknown',
+      targetId: 'machine',
+
       lifecycle: 'ended',
-      endDate: { knowledge: 'known', value: '2026-01-01' },
     },
   });
   const before = await read();
@@ -1121,7 +952,13 @@ test('custom definitions, ended facts, removed catalog entries and unsaved priva
     expect.objectContaining({
       id: 'machine',
       name: 'Privat maskin',
-      customValues: { serial: 'SYNTH-1', count: 2, date: '2026-01-01', enabled: false },
+
+      properties: [
+        { id: 'serial', label: 'serial', kind: 'text', value: 'SYNTH-1' },
+        { id: 'count', label: 'count', kind: 'number', value: 2 },
+        { id: 'date', label: 'Kontrolldatum', kind: 'date', value: '2026-01-01' },
+        { id: 'enabled', label: 'enabled', kind: 'boolean', value: false },
+      ],
     }),
   );
 });

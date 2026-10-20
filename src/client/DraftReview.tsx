@@ -31,13 +31,15 @@ export function draftWarnings(state: MapState) {
       warnings[`object-${change.id}`] = 'Objekttypen saknas. Rätta objektet eller typen.';
   }
   for (const change of state.draft.relationships ?? []) {
-    if (change.after?.knowledge === 'unresolved')
-      warnings[`relationship-${change.id}`] =
-        'Målet är oklart. Rätta sambandet i det ordinarie flödet.';
     if (change.after && !relationshipTypes.some((type) => type.id === change.after?.typeId))
       warnings[`relationship-${change.id}`] = 'Sambandstypen saknas. Rätta sambandet eller typen.';
   }
   for (const conflict of draftConflicts(state)) {
+    if (conflict.kind === 'relationship' && conflict.missingEndpoints?.length) {
+      warnings[draftProposalKey(conflict.kind, conflict.id)] =
+        'Blockerat samband: ett objekt saknas. Rätta ändpunkterna eller kasta förslaget i konfliktlistan. Hela utkastet väntar.';
+      continue;
+    }
     if ((conflict.kind === 'object' || conflict.kind === 'relationship') && conflict.type) {
       warnings[draftProposalKey(conflict.kind, conflict.id)] =
         'Typens uppgifter skiljer sig från förslagets underlag. Rätta förslaget i det ordinarie flödet.';

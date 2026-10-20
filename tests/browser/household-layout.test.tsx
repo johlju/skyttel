@@ -33,7 +33,6 @@ const state: MapState = {
       typeId: 'person',
       revision: 1,
       name: 'Alex',
-      description: '',
     },
     {
       id: 'music',
@@ -41,7 +40,6 @@ const state: MapState = {
       typeId: 'service',
       revision: 1,
       name: 'Tonmoln',
-      description: '',
     },
   ],
   draft: { version: 0, changes: [] },
@@ -98,7 +96,7 @@ async function open(width: number, mapState = state, positions: PersonalView['po
               onSettings={() => setSettings(true)}
               typeSettingsTarget={settings ? target : null}
             />
-            <section hidden={!settings} aria-label="Typer och egna fält">
+            <section hidden={!settings} aria-label="Typer">
               <div ref={setTarget} />
               <button type="button" onClick={() => setSettings(false)}>
                 Tillbaka till kartan
@@ -165,7 +163,6 @@ test('relationship details open saved and proposed routes with pointer and keybo
     typeId: type.id,
     sourceId: 'alex',
     targetId: 'music',
-    knowledge: 'known' as const,
   };
   const after = { ...before, sourceId: 'kim' };
   await open(1440, {
@@ -214,7 +211,6 @@ test('camera focus includes previous direct neighbors and preserves work through
     typeId: type.id,
     sourceId: 'alex',
     targetId: 'music',
-    knowledge: 'known' as const,
   };
   mapState.relationshipTypes = [type];
   mapState.objects.push({ ...state.objects[1], id: 'far', name: 'Långt borta' });
@@ -226,7 +222,7 @@ test('camera focus includes previous direct neighbors and preserves work through
     {
       id: edge.id,
       before: edge,
-      after: { ...edge, targetId: null, knowledge: 'unknown' },
+      after: { ...edge, targetId: 'alex' },
       type,
     },
   ];
@@ -500,24 +496,24 @@ test('opening an editor does not redirect typing after the user chooses another 
   await open(1440);
   await openTable();
   const panel = document.body;
-  // Choose the description as soon as it appears, before the next paint.
-  // Initial name focus must finish with the form commit, not steal this choice later.
+  // Choose identity as soon as the form appears, before the next paint.
+  // Initial name focus must not steal this newer focus choice.
   const observer = new MutationObserver(() => {
-    const description = panel.querySelector('textarea');
-    if (!description) return;
+    const identity = panel.querySelector<HTMLSelectElement>('select[aria-label="Identitet"]');
+    if (!identity) return;
     observer.disconnect();
-    description.focus();
+    identity.focus();
   });
   observer.observe(panel, { childList: true, subtree: true });
   onTestFinished(() => observer.disconnect());
   await page.getByRole('button', { name: 'Redigera Alex', exact: true }).click();
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  await userEvent.keyboard('Min oskickade text');
+  await expect.element(page.getByLabelText('Identitet', { exact: true })).toHaveFocus();
+  await userEvent.keyboard('{ArrowDown}');
   await expect
-    .element(page.getByLabelText('Beskrivning', { exact: true }))
-    .toHaveValue('Min oskickade text');
+    .element(page.getByLabelText('Identitet', { exact: true }))
+    .toHaveValue('unspecified');
   await expect.element(page.getByLabelText('Namn', { exact: true })).toHaveValue('Alex');
-  await expect.element(page.getByLabelText('Beskrivning', { exact: true })).toHaveFocus();
 });
 
 test.each(['details-collapse', 'form-close'] as const)(
@@ -680,7 +676,6 @@ test('native relationship loss is guarded and map relationship selection preserv
         sourceId: 'alex',
         targetId: 'music',
         typeId: 'uses',
-        knowledge: 'known',
       },
     ],
   });

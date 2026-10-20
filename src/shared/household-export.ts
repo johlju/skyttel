@@ -6,7 +6,7 @@ export type ExportPart = {
 
 export type ExportManifest = {
   format: 'skyttel-household';
-  version: 1;
+  version: 2;
   createdAt: string;
   householdId: string;
   schemaVersion: number;

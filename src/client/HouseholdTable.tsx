@@ -363,7 +363,6 @@ export function HouseholdTable({
                     <SortIcon active={sort.startsWith('type')} descending={descending} />
                   </button>
                 </th>
-                <th scope="col">Beskrivning</th>
                 <th scope="col">Status</th>
                 <th scope="col">Åtgärder</th>
               </tr>
@@ -408,11 +407,6 @@ export function HouseholdTable({
                         )}
                       </th>
                       <td>{row.type?.name ?? 'Borttagen typ'}</td>
-                      <td>
-                        <span className="household-table-truncate">
-                          {object.description || 'Ej uppgivet'}
-                        </span>
-                      </td>
                       <td>
                         <span>
                           {row.removed ? 'Borttaget' : hasEnded(object) ? 'Upphört' : 'Aktuellt'}
@@ -522,7 +516,7 @@ export function HouseholdTable({
                       className="household-table-detail-row"
                       hidden={!opened}
                     >
-                      <td colSpan={5}>
+                      <td colSpan={4}>
                         {opened && (
                           <section
                             className="household-table-inline-details"

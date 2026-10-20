@@ -100,6 +100,29 @@
 .relationship-form-wide {
   grid-column: 1 / -1;
 }
+
+.endpoint-picker {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.endpoint-picker > :is(label, input, select) {
+  display: block;
+  width: 100%;
+  margin-block: 8px;
+}
+.endpoint-picker summary {
+  cursor: pointer;
+  padding: 12px 0;
+  min-height: 44px;
+}
+.endpoint-picker details {
+  margin-block: 8px;
+}
+.saved-property-order summary {
+  padding-block: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
 .relationship-form-fields > legend {
   position: absolute;
   width: 1px;

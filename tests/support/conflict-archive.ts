@@ -8,9 +8,6 @@ import { conflictCollaborators } from './conflict-properties.js';
 export type ArchiveConflictKind =
   | 'missing-object-type'
   | 'missing-relationship-type'
-  | 'invalid-datatype'
-  | 'replaced-object-field'
-  | 'replaced-relationship-field'
   | 'missing-object-definition'
   | 'missing-relationship-definition'
   | 'removed-object-definition'
@@ -84,8 +81,7 @@ export async function prepareArchiveConflict(
   const relationship =
     kind === 'missing-relationship-type' ||
     kind === 'removed-relationship-definition' ||
-    kind === 'missing-relationship-definition' ||
-    kind === 'replaced-relationship-field';
+    kind === 'missing-relationship-definition';
   const noRemovedDefinition =
     kind === 'missing-object-definition' || kind === 'missing-relationship-definition';
   let baseline: Awaited<ReturnType<typeof downloadConflictArchive>> | undefined;
@@ -93,7 +89,6 @@ export async function prepareArchiveConflict(
     await app.propose(member, 'draft', 'independent', {
       typeId: (await app.read(member)).types[0].id,
       name: 'Oberoende förslag',
-      description: '',
     });
     baseline = await downloadConflictArchive(app, administrator);
   }
@@ -105,16 +100,8 @@ export async function prepareArchiveConflict(
         description: 'Förvaring',
         forwardLabel: 'förvaras i',
         reverseLabel: 'förvarar',
-        fields:
-          kind === 'missing-relationship-type' || kind === 'replaced-relationship-field'
-            ? [{ id: 'storage-year', name: 'Installationsår', description: '', kind: 'text' }]
-            : [],
       }
-    : {
-        name: 'Solcellsanläggning',
-        description: 'Anläggning',
-        fields: [{ id: 'year', name: 'Installationsår', description: '', kind: 'text' }],
-      };
+    : { name: 'Solcellsanläggning', description: 'Anläggning' };
   expect(
     (
       await app.post(administrator, definitionRoute, {
@@ -156,21 +143,38 @@ export async function prepareArchiveConflict(
             typeId,
             sourceId: 'lo',
             targetId: 'service',
-            knowledge: 'known',
-            customValues: { 'storage-year': 'Våren 2021' },
+            properties: [
+              {
+                id: 'storage-year',
+                label: 'Installationsår',
+                kind: 'text' as const,
+                value: 'Våren 2021',
+              },
+            ],
           }
         : {
             typeId,
             name: 'Solcellsanläggningen',
-            description: 'Tidigare privat förslag',
-            customValues: { year: 'Våren 2021' },
+            properties: [
+              {
+                id: 'description',
+                label: 'Beskrivning',
+                kind: 'text' as const,
+                value: 'Tidigare privat förslag',
+              },
+              {
+                id: 'year',
+                label: 'Installationsår',
+                kind: 'text' as const,
+                value: 'Våren 2021',
+              },
+            ],
           },
     );
   if (!baseline)
     await app.propose(member, 'draft', 'independent', {
       typeId: current.types[0].id,
       name: 'Oberoende förslag',
-      description: '',
     });
   if (options.administratorDefinitionProposal)
     expect(
@@ -194,32 +198,13 @@ export async function prepareArchiveConflict(
         await app.post(member, 'discard', { version: (await app.read(member)).draft.version })
       ).status(),
     ).toBe(200);
-    const newer =
-      kind === 'invalid-datatype'
-        ? {
-            ...definition,
-            fields: [{ id: 'year', name: 'Installationsår', description: '', kind: 'number' }],
-          }
-        : kind.startsWith('replaced-')
-          ? {
-              ...definition,
-              fields: [
-                {
-                  id: 'replacement-year',
-                  name: 'Installationsår',
-                  description: '',
-                  kind: 'number',
-                },
-              ],
-            }
-          : null;
     expect(
       (
         await app.post(administrator, definitionRoute, {
           version: (await app.read()).draft.version,
           id: typeId,
           baseRevision: type.revision,
-          value: newer,
+          value: null,
         })
       ).status(),
     ).toBe(200);

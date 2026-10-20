@@ -19,58 +19,18 @@ export function definitionUsage(database: Database.Database, householdId: string
     }));
   }
   return {
-    assertRelationshipFieldKindUnused(id: string, fieldId: string, kind: string, draft: MapDraft) {
-      const uses = (value: Pick<RelationshipValue, 'typeId' | 'customValues'> | null) =>
-        value?.typeId === id && Object.hasOwn(value.customValues ?? {}, fieldId);
-      const saved = database
-        .prepare(
-          'SELECT id, typeId, customValues FROM map_relationship WHERE householdId = ? AND typeId = ? AND deleted = 0',
-        )
-        .all(householdId, id) as { id: string; typeId: string; customValues: string | null }[];
-      if (
-        saved.some((edge) => {
-          if (!edge.customValues || !Object.hasOwn(JSON.parse(edge.customValues), fieldId))
-            return false;
-          const own = draft.relationships?.find((change) => change.id === edge.id);
-          return own ? uses(own.after) : true;
-        }) ||
-        otherDrafts().some(
-          (other) =>
-            other.relationships?.some((change) => uses(change.after)) ||
-            other.relationshipTypes?.some(
-              (change) =>
-                change.id === id &&
-                change.after?.fields?.some((field) => field.id === fieldId && field.kind !== kind),
-            ),
-        ) ||
-        draft.relationships?.some(
-          (change) =>
-            uses(change.after) &&
-            change.type.fields?.find((field) => field.id === fieldId)?.kind !== kind,
-        )
-      )
-        throw new MapError('field_kind_in_use');
-    },
-    assertUnused(
-      kind: 'objectType' | 'relationshipType',
-      id: string,
-      draft: MapDraft,
-      fieldId?: string,
-    ) {
+    assertUnused(kind: 'objectType' | 'relationshipType', id: string, draft: MapDraft) {
       const others = otherDrafts();
       if (kind === 'objectType') {
         const objects = new Map(
           (
             database
-              .prepare(
-                'SELECT id, typeId, customValues FROM map_object WHERE householdId = ? AND deleted = 0',
-              )
-              .all(householdId) as { id: string; typeId: string; customValues: string | null }[]
+              .prepare('SELECT id, typeId FROM map_object WHERE householdId = ? AND deleted = 0')
+              .all(householdId) as { id: string; typeId: string }[]
           ).map((row) => [
             row.id,
             {
               typeId: row.typeId,
-              customValues: row.customValues ? JSON.parse(row.customValues) : {},
             },
           ]),
         );
@@ -78,64 +38,47 @@ export function definitionUsage(database: Database.Database, householdId: string
           if (change.after)
             objects.set(change.id, {
               typeId: change.after.typeId,
-              customValues: change.after.customValues ?? {},
             });
           else objects.delete(change.id);
         }
-        const uses = (value: Pick<ObjectValue, 'typeId' | 'customValues'> | null) =>
-          value?.typeId === id && (!fieldId || Object.hasOwn(value.customValues ?? {}, fieldId));
+        const uses = (value: Pick<ObjectValue, 'typeId'> | null) => value?.typeId === id;
         if (
           [...objects.values()].some(uses) ||
           others.some(
             (other) =>
               other.changes.some((change) => uses(change.after)) ||
-              other.objectTypes?.some(
-                (change) =>
-                  change.id === id &&
-                  change.after &&
-                  (!fieldId || change.after.fields?.some((field) => field.id === fieldId)),
-              ),
+              other.objectTypes?.some((change) => change.id === id && change.after),
           )
         )
-          throw new MapError(fieldId ? 'field_in_use' : 'definition_in_use');
+          throw new MapError('definition_in_use');
       } else {
         const edges = new Map(
           (
             database
               .prepare(
-                'SELECT id, typeId, customValues FROM map_relationship WHERE householdId = ? AND deleted = 0',
+                'SELECT id, typeId FROM map_relationship WHERE householdId = ? AND deleted = 0',
               )
-              .all(householdId) as { id: string; typeId: string; customValues: string | null }[]
-          ).map((edge) => [
-            edge.id,
-            { ...edge, customValues: edge.customValues ? JSON.parse(edge.customValues) : {} },
-          ]),
+              .all(householdId) as { id: string; typeId: string }[]
+          ).map((edge) => [edge.id, edge]),
         );
         for (const change of draft.relationships ?? []) {
           if (change.after)
             edges.set(change.id, {
               id: change.id,
               typeId: change.after.typeId,
-              customValues: change.after.customValues ?? {},
             });
           else edges.delete(change.id);
         }
-        const uses = (value: Pick<RelationshipValue, 'typeId' | 'customValues'> | null) =>
-          value?.typeId === id && (!fieldId || Object.hasOwn(value.customValues ?? {}, fieldId));
+        const uses = (value: Pick<RelationshipValue, 'typeId'> | null) => value?.typeId === id;
         if (
           [...edges.values()].some(uses) ||
           others.some(
             (other) =>
               other.relationships?.some((change) => uses(change.after)) ||
-              other.relationshipTypes?.some(
-                (change) =>
-                  change.id === id &&
-                  change.after &&
-                  (!fieldId || change.after.fields?.some((field) => field.id === fieldId)),
-              ),
+              other.relationshipTypes?.some((change) => change.id === id && change.after),
           )
         )
-          throw new MapError(fieldId ? 'field_in_use' : 'definition_in_use');
+          throw new MapError('definition_in_use');
       }
     },
   };

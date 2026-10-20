@@ -24,7 +24,7 @@ function feedback(): ComponentProps<typeof DraftStatus> {
         {
           id: 'lo',
           before: null,
-          after: { typeId: 'person', name: 'Lo Exempel', description: '' },
+          after: { typeId: 'person', name: 'Lo Exempel' },
           type: {
             id: 'person',
             householdId: 'linden',
