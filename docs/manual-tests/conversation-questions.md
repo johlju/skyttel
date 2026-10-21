@@ -46,8 +46,17 @@ nya förslag i utkastet eller utföra ett extra sparande.
    ```
    <!-- markdownlint-enable MD013 -->
 
-   Ett vanligt svar släpps med `reply REQUEST Tack, nu vet jag vilken Lo
-   du menar.`. För sparande används `save_draft` med `version` och
+   När användarens svar löser frågan släpps först:
+
+   <!-- markdownlint-disable MD013 -->
+   ```text
+   tool REQUEST ask_questions {"questions":[],"answeredQuestions":["Vilken person avses med Lo, och vilket namn ska objektet ha?"],"continueResponse":true}
+   ```
+   <!-- markdownlint-enable MD013 -->
+
+   Invänta nästa `held` och släpp det beställda utkastarbetet eller ett
+   vanligt svar med `reply REQUEST Tack, nu vet jag vilken Lo du menar.`.
+   För sparande används `save_draft` med `version` och
    `contentVersion` från det aktuella `held.draft`, enligt röstguiden.
 4. De kontrollerade mediespåren är tysta. För gränssnittets prov av ett
    mottaget ljudstycke använder du webbläsarkonsolen. Slå först på
@@ -268,12 +277,15 @@ Fältet `questions` innehåller exakt dessa tre frågor:
 1. **Vilken Alex använder Molnmusik: personen i Lund eller personen i Umeå?**
 
 Vid nästa hållning släpps en ny `submit_changes`, `completion: draft`,
-`questions: []`. Behåll samma Lo och alla returnerade egenskaps-ID; töm
+`questions: []` och `continueResponse: true`.
+Behåll samma Lo och alla returnerade egenskaps-ID; töm
 **Hem** genom att utelämna dess `value`, behåll **Arbete** och telefonnumret,
 och lägg till `{"label":"Kod","kind":"text","value":"0012"}`.
 Samma batch innehåller `propose_relationship` för **Använder**, från det
 verkliga Umeå-objektet till **Molnmusik**. Kopiera typ-ID och ändpunkts-ID
-från aktuellt underlag. Vid sista hållningen släpps `save_draft` med den
+från aktuellt underlag. Vid nästa `held` släpps `ask_questions` med
+`questions: []` och `answeredQuestions` med exakt de tre frågorna ovan.
+Efter användarens nya sparbesked släpps `save_draft` med den
 returnerade versionen, aktuell `contentVersion` och ett nytt operations-ID.
 Återställ installationen enligt startguiden efter fallet.
 

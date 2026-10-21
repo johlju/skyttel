@@ -1,4 +1,12 @@
-import { act, cleanup, render, renderHook, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import {
   TaskDeliveryContext,
@@ -29,6 +37,50 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+test('the conversation owns normal replies and the fallback can be expanded and dismissed after expiry', () => {
+  const received = vi.fn();
+  const first = {
+    taskId: 'first',
+    deadline: Date.now() + 30_000,
+    state: 'awaiting-receipt' as const,
+    text: 'Ett helt svar.',
+  };
+  function Application({ active, second = false }: { active: boolean; second?: boolean }) {
+    return (
+      <TaskDeliveryContext value={{ connect: async () => undefined, received }}>
+        <TaskDeliveryResults
+          conversationAvailable={active}
+          unavailableReason="Din inloggning har gått ut."
+          results={
+            second ? [first, { ...first, taskId: 'second', text: 'Ett nytt svar.' }] : [first]
+          }
+        />
+      </TaskDeliveryContext>
+    );
+  }
+  const view = render(<Application active />);
+  expect(screen.queryByRole('region')).toBeNull();
+  expect(screen.queryByRole('status')).toBeNull();
+  expect(received).toHaveBeenCalledWith('first', first.text);
+  view.rerender(<Application active={false} />);
+  expect(screen.getByRole('region', { name: 'Svar från ditt samtal' }).textContent).toContain(
+    'Din inloggning har gått ut.',
+  );
+  expect(screen.queryByText(first.text)).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Läs mer' }));
+  expect(screen.getByText(first.text)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Visa mindre' }));
+  expect(screen.queryByText(first.text)).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Stäng svarsnotisen' }));
+  view.rerender(<Application active={false} />);
+  expect(screen.queryByRole('region')).toBeNull();
+  expect(screen.queryByRole('status')).toBeNull();
+  view.rerender(<Application active={false} second />);
+  fireEvent.click(screen.getByRole('button', { name: 'Läs mer' }));
+  expect(screen.getByText('Ett nytt svar.')).toBeTruthy();
+  expect(screen.queryByText(first.text)).toBeNull();
+});
+
 test('a browser policy rejecting the delivery socket reports an unavailable connection', async () => {
   vi.stubGlobal(
     'WebSocket',
@@ -42,6 +94,25 @@ test('a browser policy rejecting the delivery socket reports an unavailable conn
   await expect(
     result.current.client.connect('/api/households/home/text-assistant/chat'),
   ).resolves.toBeUndefined();
+});
+
+test('a dismissed answer stays closed after receipt, but a later delivery failure is shown', () => {
+  const answer = {
+    taskId: 'one',
+    deadline: Date.now() + 30_000,
+    state: 'awaiting-receipt' as const,
+    text: 'Svaret.',
+  };
+  const view = render(<TaskDeliveryResults results={[answer]} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Stäng svarsnotisen' }));
+  view.rerender(<TaskDeliveryResults results={[{ ...answer, state: 'received' }]} />);
+  expect(screen.queryByRole('region')).toBeNull();
+  view.rerender(<TaskDeliveryResults results={[{ ...answer, state: 'failed' }]} />);
+  expect(screen.getByRole('alert').textContent).toContain(
+    'Ett svar kunde inte levereras fullständigt.',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Läs mer' }));
+  expect(screen.getByRole('alert').textContent).toContain('Hela svaret kunde inte levereras.');
 });
 
 test('accepted HTTP snapshots cannot replace complete socket text or downgrade its receipt', async () => {
@@ -122,7 +193,7 @@ test.each(['owner', 'login', 'retired', 'clear'] as const)(
   },
 );
 
-test('complete text is acknowledged only after the accessible whole fallback is mounted', async () => {
+test('complete text is acknowledged when retained without waiting for the reader to expand it', async () => {
   vi.stubGlobal('WebSocket', BrowserSocket);
   let manager: ReturnType<typeof useTaskDelivery>;
   function Application({ visible }: { visible: boolean }) {
@@ -154,6 +225,7 @@ test('complete text is acknowledged only after the accessible whole fallback is 
   );
   expect(socket.sent).toEqual([]);
   view.rerender(<Application visible />);
+  fireEvent.click(screen.getByRole('button', { name: 'Läs mer' }));
   const panel = screen.getByRole('region', { name: 'Hela svaret som text' });
   expect(panel.textContent).toContain(full);
   expect(screen.getByRole('status').textContent).toContain('Ljudleveransen kan inte bekräftas');
@@ -189,6 +261,7 @@ test('natural anonymous expiry preserves bounded text but a new owner rejects la
   };
   view.rerender(<Application />);
   act(() => socket.receive(packet));
+  fireEvent.click(screen.getByRole('button', { name: 'Läs mer' }));
   expect(screen.getByRole('region', { name: 'Hela svaret som text' }).textContent).toContain(
     'Alex hela svar.',
   );
@@ -227,6 +300,7 @@ test('a fresh login of the same owner clears old completed content and rejects l
     audio: true,
   };
   act(() => socket.receive(packet));
+  fireEvent.click(screen.getByRole('button', { name: 'Läs mer' }));
   expect(screen.getByText('Det första svaret.')).toBeTruthy();
   act(() => socket.close());
   view.rerender(<Application loginId="second" />);
@@ -326,6 +400,8 @@ test('a text answer after workspace expiry announces its checked save result onc
   );
   expect(screen.getByRole('status')).toBe(status);
   expect(document.activeElement).toBe(login);
+  if (screen.queryByRole('button', { name: 'Läs mer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Läs mer' }));
   expect(screen.getByRole('region', { name: 'Hela svaret som text' }).textContent).toContain(
     packet.text,
   );
@@ -380,6 +456,7 @@ test('audio text announces uncertain saving without treating model words or a fa
   );
   expect(screen.getByRole('status')).toBe(status);
   expect(screen.getAllByRole('status')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Läs mer' }));
   expect(screen.getByText(/Mottagen text betyder inte att ljudet har spelats upp/)).toBeTruthy();
   const availability = status?.textContent;
   act(() => socket.receive({ ...packet, state: 'failed', text: undefined }));

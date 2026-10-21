@@ -108,7 +108,15 @@ test('necessary questions await the answer without granting authority or touchin
   const model = textModel(() =>
     model.requests.length === 1
       ? [modelTool('ask_questions', { questions: [`  ${question}  `] })]
-      : [modelMessage('Tack för förtydligandet.')],
+      : model.requests.length === 2
+        ? [
+            modelTool('ask_questions', {
+              questions: [],
+              answeredQuestions: [question],
+              continueResponse: true,
+            }),
+          ]
+        : [modelMessage('Tack för förtydligandet.')],
   );
   const session = await setup({ modelFetch: model.provider });
   const before = await readMap();
@@ -127,6 +135,63 @@ test('necessary questions await the answer without granting authority or touchin
   expect(answered.questions).toBeUndefined();
   expect(JSON.stringify(model.requests[1].input)).toContain('questionPending');
   expect(JSON.stringify(model.requests[1].input)).toContain(question);
+  expect(await readMap()).toEqual(before);
+});
+
+test.each(['partial', 'unknown', 'empty'])(
+  'question resolution keeps other pending questions for a %s answer',
+  async (answer) => {
+    const questions = ['Vilken stol menar du?', 'Vem använder cykeln?'];
+    const model = textModel(() => [
+      modelTool(
+        'ask_questions',
+        model.requests.length === 1
+          ? { questions }
+          : {
+              questions: [],
+              answeredQuestions:
+                answer === 'partial'
+                  ? [questions[0]]
+                  : answer === 'unknown'
+                    ? [questions[0], 'Vilken båt?']
+                    : [],
+            },
+      ),
+    ]);
+    const session = await setup({ modelFetch: model.provider });
+    const asked = await settled(await send(session, 'Beskriv stolen och cykelns användare.'));
+    const before = await readMap();
+    const answered = await settled(await send(asked, 'Stolen heter Min stol.'));
+    expect(answered).toMatchObject({
+      phase: answer === 'partial' ? 'ready' : 'error',
+      questionPending: true,
+      questions: answer === 'partial' ? [questions[1]] : questions,
+    });
+    expect(answered.receipt).toBeUndefined();
+    expect(await readMap()).toEqual(before);
+  },
+);
+
+test('a provider cannot resolve a question it just asked before the user has another turn', async () => {
+  const question = 'Vilken stol menar du?';
+  const model = textModel(() => [
+    modelTool(
+      'ask_questions',
+      model.requests.length === 1
+        ? { questions: [question], continueResponse: true }
+        : { questions: [], answeredQuestions: [question] },
+    ),
+  ]);
+  const session = await setup({ modelFetch: model.provider });
+  const before = await readMap();
+  const result = await settled(await send(session, 'Rätta stolen och spara.'));
+  expect(result).toMatchObject({
+    phase: 'error',
+    questions: [question],
+    questionPending: true,
+  });
+  expect(result.receipt).toBeUndefined();
+  expect(result.operations).toEqual([]);
   expect(await readMap()).toEqual(before);
 });
 

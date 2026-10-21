@@ -44,7 +44,7 @@ test('the evaluation summary uses real price turns and atomically installs ordin
         ),
       ];
     }
-    if (body.input.at(-1)?.type !== 'function_call_output')
+    if (body.input.findLast((item) => item.role !== 'developer')?.type !== 'function_call_output')
       return [modelTool('read_my_save_operations', {})];
     if (!lastToolResult(body)?.operations) return [modelMessage('Utkastet är uppdaterat.')];
     const turn = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content));

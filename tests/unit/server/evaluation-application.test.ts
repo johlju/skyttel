@@ -4,7 +4,7 @@ import { evaluationEnvironment } from '../../../scripts/model-evaluation/environ
 import { runTextScenario } from '../../../scripts/model-evaluation/runner.js';
 import type { Scenario } from '../../../scripts/model-evaluation/types.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
-import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import { lastToolResult, modelMessage, modelTool, textModel } from '../../support/text-model.js';
 
 test('text evaluation waits for a slow accepted task and records its full response time', {
   tags: ['technical'],
@@ -141,7 +141,7 @@ test.each([
           ];
         case 1:
           if (completion === 'save') {
-            const result = JSON.parse(String(body.input.at(-1)?.output));
+            const result = lastToolResult(body);
             expect(result.receipt.changes).toHaveLength(2);
             expect(result.reply).toBe('Sparat. Hela utkastet finns i hushållets karta.');
             expect(result.review.changes).toEqual([]);
@@ -296,7 +296,7 @@ test.each([
     const scenario = catalog.scenarios.find((item) => item.id === id) as Scenario;
     let environment: Awaited<ReturnType<typeof evaluationEnvironment>>;
     const model = textModel(async (body) => {
-      if (body.input.at(-1)?.type === 'function_call_output')
+      if (body.input.findLast((item) => item.role !== 'developer')?.type === 'function_call_output')
         return [modelMessage('Utkastet är uppdaterat.')];
       if (target === null) return [modelMessage('Vilket objekt eller samband vill du rätta?')];
       const state = await environment.read();
@@ -452,7 +452,7 @@ test('a clarification after a real draft proposal expires save intent while pres
   tags: ['technical'],
 }, async () => {
   const model = textModel((body) => {
-    if (body.input.at(-1)?.type === 'function_call_output')
+    if (body.input.findLast((item) => item.role !== 'developer')?.type === 'function_call_output')
       return [modelMessage('Vilken Alex menar du?')];
     const turn = JSON.parse(String(body.input.findLast((item) => item.role === 'user')?.content));
     const change = turn.draft.changes.find((item: { id: string }) => item.id === 'lo');

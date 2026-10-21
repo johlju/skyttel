@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { draftUpdateDetails } from '../../../src/server/draft-completion.js';
 import { draftResult, historyResult } from '../../../src/server/text-assistant-results.js';
 import type {
   MapObject,
@@ -7,6 +8,7 @@ import type {
   RelationshipType,
   SaveReceipt,
 } from '../../../src/shared/map.js';
+import type { TextAssistantReview } from '../../../src/shared/text-assistant.js';
 
 const cardType: ObjectType = {
   id: 'card',
@@ -23,6 +25,142 @@ const usageType: RelationshipType = {
   description: '',
   forwardLabel: 'används av',
 };
+
+test('completion details cover touched and withdrawn proposals while preserving unrelated draft work', () => {
+  const old: TextAssistantReview = {
+    version: 1,
+    contentVersion: 1,
+    readyToSave: true,
+    conflicts: [],
+    pendingOperations: [],
+    unresolvedIdentities: [],
+    changes: [
+      { id: 'keep', before: null, after: card({ name: 'Tidigare förslag' }), type: cardType },
+      { id: 'edit', before: null, after: card({ name: 'Ändrat kort' }), type: cardType },
+      { id: 'drop', before: null, after: card({ name: 'Borttaget förslag' }), type: cardType },
+    ],
+  };
+  const next: TextAssistantReview = {
+    ...old,
+    version: 2,
+    changes: [
+      old.changes[0],
+      { ...old.changes[1], after: card({ name: 'Rättat kort' }) },
+      { id: 'new', before: null, after: card({ name: 'Nytt kort' }), type: cardType },
+    ],
+  };
+  const text = draftUpdateDetails(old, next)
+    .map(({ subject, action }) => `${subject} ${action}`)
+    .join('\n');
+  expect(text).toContain('Ändrat kort bytte namn till Rättat kort');
+  expect(text).toContain('Nytt kort lades till');
+  expect(text).toContain('Förslaget om Borttaget förslag togs bort ur utkastet');
+  expect(text).not.toContain('Tidigare förslag');
+  expect(draftUpdateDetails(next, next)).toEqual([]);
+});
+
+test('completion describes verified service users with their names and the actual direction', () => {
+  const before: TextAssistantReview = {
+    version: 1,
+    contentVersion: 1,
+    readyToSave: true,
+    conflicts: [],
+    pendingOperations: [],
+    unresolvedIdentities: [],
+    changes: [],
+  };
+  const after: TextAssistantReview = {
+    ...before,
+    version: 2,
+    relationships: [
+      {
+        id: 'lina-spotify',
+        before: null,
+        after: { typeId: 'usage', sourceId: 'lina', targetId: 'spotify' },
+        type: { ...usageType, forwardLabel: 'använder' },
+        objectNames: { lina: 'Lina', spotify: 'Spotify' },
+      },
+    ],
+  };
+  expect(draftUpdateDetails(before, after)).toEqual([
+    { subject: 'Lina', action: 'använder Spotify' },
+  ]);
+  expect(draftUpdateDetails(after, after)).toEqual([]);
+});
+
+test.each([
+  { type: 'Enhet', relation: 'Förbindelse', forwardLabel: 'Ansluter till' },
+  { type: 'Projekt', relation: 'Ansvar', forwardLabel: 'Förvaltas av' },
+])(
+  'completion filters default status for $type and $relation, and retains real status changes',
+  ({ type, relation, forwardLabel }) => {
+    const before: TextAssistantReview = {
+      version: 1,
+      contentVersion: 1,
+      readyToSave: true,
+      conflicts: [],
+      pendingOperations: [],
+      unresolvedIdentities: [],
+      changes: [],
+    };
+    const after: TextAssistantReview = {
+      ...before,
+      version: 2,
+      changes: [
+        {
+          id: 'new',
+          before: null,
+          after: card({ name: 'Exempel', lifecycle: 'active' }),
+          type: { ...cardType, name: type },
+        },
+      ],
+      relationships: [
+        {
+          id: 'link',
+          before: null,
+          after: { typeId: 'usage', sourceId: 'new', targetId: 'target', lifecycle: 'active' },
+          type: { ...usageType, name: relation, forwardLabel },
+          objectNames: { target: 'Motpart' },
+        },
+      ],
+    };
+    expect(draftUpdateDetails(before, after)).toEqual([
+      { subject: 'Exempel', action: 'lades till' },
+      {
+        subject: 'Exempel',
+        action: `${forwardLabel[0].toLocaleLowerCase('sv')}${forwardLabel.slice(1)} Motpart`,
+      },
+    ]);
+    const object = after.changes[0];
+    const relationship = after.relationships?.[0];
+    if (!object.after || !relationship?.after) throw new Error('Missing active proposals');
+    const ended: TextAssistantReview = {
+      ...after,
+      version: 3,
+      changes: [{ ...object, after: { ...object.after, lifecycle: 'ended' } }],
+      relationships: [
+        {
+          ...relationship,
+          after: { ...relationship.after, lifecycle: 'ended' },
+        },
+      ],
+    };
+    expect(draftUpdateDetails(after, ended)).toEqual([
+      { subject: 'Status för Exempel', action: 'ändrades till upphört' },
+      {
+        subject: `Status för sambandet ”Exempel ${forwardLabel} Motpart”`,
+        action: 'ändrades till upphört',
+      },
+    ]);
+    expect(draftUpdateDetails(ended, after)).toEqual([
+      { subject: 'Status för Exempel', action: 'ändrades till aktuellt' },
+      {
+        subject: `Status för sambandet ”Exempel ${forwardLabel} Motpart”`,
+        action: 'ändrades till aktuellt',
+      },
+    ]);
+  },
+);
 
 function card(value: Partial<MapObject> = {}): MapObject {
   return {

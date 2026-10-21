@@ -28,7 +28,7 @@ test.each(['Rätta namnet till Slutvärdet.', 'Spara inte.'])(
       if (message === 'Spara hela utkastet.') return held;
       if (message === 'Spara inte.')
         return [modelMessage('Ändringarna ligger kvar i ditt utkast.')];
-      if (body.input.at(-1)?.type === 'function_call_output')
+      if (body.input.findLast((item) => item.role !== 'developer')?.type === 'function_call_output')
         return [modelMessage('Utkastet är uppdaterat.')];
       return [
         modelTool('propose_object', {

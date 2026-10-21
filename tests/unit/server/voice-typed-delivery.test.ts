@@ -148,7 +148,15 @@ test('a spoken clarification reaches a typed pending question without a Live del
   const model = textModel(() =>
     model.requests.length === 1
       ? [modelTool('ask_questions', { questions: ['Vilken cykel menar du?'] })]
-      : [modelMessage('Jag menar nu den gröna cykeln.')],
+      : model.requests.length === 2
+        ? [
+            modelTool('ask_questions', {
+              questions: [],
+              answeredQuestions: ['Vilken cykel menar du?'],
+              continueResponse: true,
+            }),
+          ]
+        : [modelMessage('Jag menar nu den gröna cykeln.')],
   );
   const { live, path, householdPath, send, poll } = await arrange(model.provider);
   const before = await (await browser.get(`${householdPath}/map`)).json();
@@ -162,7 +170,7 @@ test('a spoken clarification reaches a typed pending question without a Live del
     start_ms: 1000,
     end_ms: 2000,
   });
-  await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(2);
+  await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(3);
   await expect.poll(async () => (await (await browser.get(path)).json()).phase).toBe('ready');
   expect(JSON.stringify(model.requests[1])).toContain('Den gröna cykeln.');
   const completed: TextAssistantView = await (await browser.get(path)).json();
@@ -175,7 +183,7 @@ test('a spoken clarification reaches a typed pending question without a Live del
     delegation: { id: 'late-task', type: 'delegation', target: 'client' },
   });
   await poll(true);
-  expect(model.requests).toHaveLength(2);
+  expect(model.requests).toHaveLength(3);
   expect(await (await browser.get(`${householdPath}/map`)).json()).toEqual(before);
   expect((await (await browser.get(`${householdPath}/map/history`)).json()).history).toEqual([]);
 });
@@ -210,7 +218,11 @@ test('a typed partial change delivers its verified result and full follow-up to 
     ]).provider,
   );
   const current = await send('Lägg till sambandstypen Delar och rätta cykeln. Spara.', 'partial');
-  expect(current.result).toEqual({ kind: 'draft', message: 'Utkastet är uppdaterat.' });
+  expect(current.result).toEqual({
+    kind: 'draft',
+    message: 'Utkastet är uppdaterat.',
+    changes: [{ subject: 'Sambandstypen Delar', action: 'lades till' }],
+  });
   expect(current.questionPending).toBe(true);
   expect(current.modelReply).toContain(question);
   expect(current.modelReply).toBe(question);

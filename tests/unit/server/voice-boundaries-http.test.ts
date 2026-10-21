@@ -384,9 +384,9 @@ test('an explicit new conversation aborts a context handoff waiting on an unfini
       const current = await (await client.get(`${path}/text-assistant/${session.id}`)).json();
       expect(current.contextSummaryState).toBe('summarizing');
     });
-    // The reset first authenticates/read-checks its public request, then reads
-    // the authoritative draft. Hold that second real MCP delivery unchanged.
-    refreshReadsUntilHold = 2;
+    // Reset clears the read cache before refreshing the authoritative draft.
+    // Hold that real MCP delivery while the canceled handoff observes its abort.
+    refreshReadsUntilHold = 1;
     const resetting = post(`text-assistant/${session.id}/new`, { discard: false });
     await held;
     const observedDuringReset = client.get(`${path}/text-assistant/${session.id}`);

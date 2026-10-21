@@ -335,6 +335,14 @@ test('a renewed save after clarification completes the original target exactly o
   const model = textModel(async () => {
     if (turn++ === 0)
       return [modelTool('ask_questions', { questions: ['Vilket utkast menar du?'] })];
+    if (turn === 2)
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          answeredQuestions: ['Vilket utkast menar du?'],
+          continueResponse: true,
+        }),
+      ];
     const state = await environment.read();
     return [
       modelTool('save_draft', {

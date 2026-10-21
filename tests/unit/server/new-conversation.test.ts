@@ -345,6 +345,12 @@ test('a delayed cancellation refresh does not cancel work accepted in a new conv
     const before = await (await browser.get(map)).json();
     const working = await send(await start(), 'Ett gammalt uppdrag.');
     await expect.poll(() => model.requests.length).toBe(1);
+    // A changed operation requires an actual refresh even with conversation read reuse.
+    await post(`${map}/operations`, {
+      operationId: 'rejected-refresh',
+      version: 999,
+      contentVersion: 1,
+    });
     canceling = true;
     cancel = post(`${path}/${working.id}/cancel`, { revision: working.revision, all: true });
     await expect.poll(() => held).toBe(true);
@@ -377,7 +383,9 @@ test('a late failed-task refresh does not close a new conversation', async () =>
   const releaseRefresh = deferred();
   let failed = false;
   let held = false;
-  const model = textModel(() => {
+  const model = textModel(async () => {
+    // Another client edits the draft while this provider request is outstanding.
+    await propose('lo', 'Lo Rättat');
     failed = true;
     throw new Error('Controlled provider failure');
   });
@@ -399,9 +407,9 @@ test('a late failed-task refresh does not close a new conversation', async () =>
   });
   try {
     await propose('lo', 'Lo Exempel');
-    const before = await (await browser.get(map)).json();
     const working = await send(await start(), 'Ett gammalt uppdrag.');
     await expect.poll(() => held).toBe(true);
+    const before = await (await browser.get(map)).json();
     const renewed = await newConversation(working);
     releaseRefresh.resolve();
     const response = await browser.get(`${path}/${renewed.id}`);

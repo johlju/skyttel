@@ -209,7 +209,7 @@ test('RÖSTTEXT-03: köns skrivna svar överlämnas till rösten en gång och sa
     await turnMicrophoneOn(page);
     await send(page, 'Första frågan.');
     await send(page, 'Andra frågan.');
-    await expect(log(page)).toContainText('1 meddelande väntar.');
+    await expect(log(page)).toContainText('Skyttel arbetar…');
     const first = 'Första svaret med åäö. '.repeat(30).trim();
     held[0]([modelMessage(first)]);
     await expect.poll(() => held.length).toBe(2);

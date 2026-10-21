@@ -12,14 +12,19 @@ export type TextAssistantReview = MapDraft & {
   current?: { types: ObjectType[]; relationshipTypes: RelationshipType[] };
 };
 export type MapSelection = { kind: 'object' | 'relationship'; id: string };
+export type TextAssistantChange = { subject: string; action: string };
 export type TextAssistantResult = {
   kind: 'draft' | 'restored' | 'history' | 'failure';
   /** Server-produced text grounded in checked MCP results or recorded failures. */
   message: string;
+  /** Checked proposal changes made by this task, for the text conversation's final summary. */
+  changes?: TextAssistantChange[];
 };
 /** Ephemeral FIFO completion, including its delivery origin and checked outcome. */
 export type ConversationReply = {
   id: string;
+  /** The instruction whose checked outcome this completion describes. */
+  request?: string;
   text: string;
   revision?: number;
   source?: 'voice' | 'text';
@@ -28,8 +33,11 @@ export type ConversationReply = {
   reply?: string;
   requiredNotice?: string;
   questionPending?: boolean;
+  questions?: string[];
   receipt?: SaveReceipt;
   result?: TextAssistantResult;
+  /** A checked task failure, even when some draft changes succeeded first. */
+  failed?: boolean;
   saveCheck?: SaveCheck;
 };
 export interface TextAssistantView {
@@ -69,6 +77,9 @@ export interface TextAssistantView {
   /** An explicitly authorized immutable save is durably registered and unfinished. */
   saving?: boolean;
   phase: 'ready' | 'working' | 'error' | 'recovery';
+  /** Current public executor stage and recent actual MCP steps in this task. */
+  activity?: string;
+  activitySteps?: { id: string; text: string }[];
   review: TextAssistantReview;
   reply?: string;
   /** Provider conversation is never evidence of a saved or displayed result. */

@@ -9,14 +9,26 @@ import {
 } from '../shared/conversation-consent.js';
 import type { SaveOperation, SaveReceipt } from '../shared/map.js';
 import type { SaveCheck } from '../shared/save-check.js';
+import { deliveryFailureNotice } from '../shared/task-delivery.js';
 import type { MapSelection, TextAssistantView } from '../shared/text-assistant.js';
 import type { TranscriptRow } from './ConversationTranscript.js';
+import { conversationCompletion, draftUpdated } from './conversation-completion.js';
 import { MapRequestError, request } from './map-request.js';
-import { TaskDeliveryContext } from './task-delivery.js';
+import { TaskDeliveryContext, TaskDeliveryResultsContext } from './task-delivery.js';
 import { useVoice, type Voice } from './use-voice.js';
 
 const deliveryUnavailableMessage =
   'Instruktionen skickades inte. Skyttel kunde inte öppna anslutningen för hela svaret. Texten finns kvar; försök igen när kontakten fungerar.';
+
+function conversationResultReply(
+  view: Pick<TextAssistantView, 'reply' | 'result' | 'requiredNotice' | 'error'> & {
+    failed?: boolean;
+  },
+) {
+  return draftUpdated(view) || view.result?.changes?.length || view.error || view.failed
+    ? view.requiredNotice
+    : view.reply;
+}
 
 /** How a conversation starts: with the microphone, or with the conversation text. */
 export type ConversationMode = 'voice' | 'text';
@@ -63,6 +75,7 @@ export type Conversation = {
   /** A command is waiting for the server's answer. */
   pending: boolean;
   error: string;
+  deliveryError?: string;
   /** The outcome of a save is unknown and must be checked before new work. */
   unknown: boolean;
   saveChecking?: boolean;
@@ -151,6 +164,7 @@ export function useConversation({
   const household = `/api/households/${encodeURIComponent(householdId)}`;
   const path = `${household}/text-assistant`;
   const delivery = useContext(TaskDeliveryContext);
+  const deliveryResults = useContext(TaskDeliveryResultsContext);
   const consentPath = `${household}/conversation-consent`;
   const [available, setAvailable] = useState<boolean | null>(null);
   const [connected, setConnected] = useState(navigator.onLine);
@@ -190,6 +204,7 @@ export function useConversation({
   const [transcript, setTranscript] = useState<TranscriptRow[]>([]);
   const voiceConnected = useRef(false);
   const active = useRef<TextAssistantView | null>(null);
+  const completion = useRef(conversationCompletion());
   const showTranscript = useCallback((row: TranscriptRow) => {
     if (!active.current) return;
     setTranscript((rows) =>
@@ -307,6 +322,7 @@ export function useConversation({
       for (const reply of next.completedReplies ?? []) {
         const voiced = reply.source === 'voice' ? true : reply.voiced;
         const voicePending = voiced === undefined && voiceConnected.current;
+        const resultReply = conversationResultReply(reply);
         if (reply.saveCheck)
           showTranscript({
             id: `check-${reply.saveCheck.id}`,
@@ -315,7 +331,7 @@ export function useConversation({
             voiced,
             voicePending,
           });
-        if (reply.text)
+        if (reply.text && !reply.questionPending && reply.text !== reply.result?.message)
           showTranscript({
             id:
               reply.revision === undefined
@@ -334,11 +350,11 @@ export function useConversation({
             voiced,
             voicePending,
           });
-        else if ((reply.result || reply.requiredNotice) && reply.reply)
+        else if ((reply.result || reply.requiredNotice) && resultReply)
           showTranscript({
             id: `result-${next.id}-${reply.revision}`,
             role: 'assistant',
-            text: reply.reply,
+            text: resultReply,
             voiced,
             voicePending,
           });
@@ -375,9 +391,10 @@ export function useConversation({
           voiced,
           voicePending: voiced === undefined && voiceConnected.current,
         });
+      const resultReply = conversationResultReply(next);
       if (
         (next.result || next.requiredNotice) &&
-        next.reply &&
+        resultReply &&
         !next.receipt &&
         !(next.completedReplies ?? []).some(
           (reply) => reply.revision === next.revision && reply.reply === next.reply,
@@ -387,12 +404,14 @@ export function useConversation({
         showTranscript({
           id: `result-${next.id}-${next.revision}`,
           role: 'assistant',
-          text: next.reply,
+          text: resultReply,
           voiced,
           voicePending: voiced === undefined && voiceConnected.current,
         });
       if (
         next.modelReply &&
+        !next.questionPending &&
+        next.modelReply !== next.result?.message &&
         !(next.completedReplies ?? []).some((reply) => reply.text === next.modelReply) &&
         (next.modelReply !== previous?.modelReply || next.revision !== previous?.revision)
       )
@@ -410,6 +429,8 @@ export function useConversation({
           text: summary.text,
           voiced: false,
         });
+      const completed = completion.current(next);
+      if (completed) showTranscript(completed);
       if (
         !previous ||
         next.review.version !== previous.review.version ||
@@ -428,6 +449,7 @@ export function useConversation({
   );
   const clear = useCallback(() => {
     active.current = null;
+    completion.current = conversationCompletion();
     setSession(null);
     setText('');
     setTranscript([]);
@@ -1102,6 +1124,9 @@ export function useConversation({
     return () => abort.abort();
   }, [selectionKey, pending, command]);
   const working = session?.phase === 'working';
+  const deliveryFailed = deliveryResults.some(
+    (item) => item.state === 'failed' && session?.tasks?.some((task) => task.id === item.taskId),
+  );
   return {
     available,
     disconnected,
@@ -1126,6 +1151,7 @@ export function useConversation({
     text,
     pending,
     error,
+    deliveryError: deliveryFailed ? deliveryFailureNotice : undefined,
     unknown,
     saveChecking: Boolean(saveChecking && !saveCheckFailed),
     saveCheckFailed,

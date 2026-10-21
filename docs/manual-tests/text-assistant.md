@@ -473,8 +473,7 @@ finns nedan.
 - Kamera och vy anpassas till urvalet utan att personliga placeringar
   eller hushållets innehåll ändras.
 - Kartans sammanhang och teckenförklaring går att fokusera och läsa med
-  tangentbord på smal skärm. Detaljpanelen och hela svaret som text täcker
-  inte den fokuserade ytan.
+  tangentbord på smal skärm. Den fokuserade ytan är helt synlig.
 - Oskickad formulärtext förhindrar ett nytt urval. Ingen ny bekräftad
   markering påstås, och formulärets uppgifter finns kvar.
 

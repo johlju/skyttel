@@ -285,8 +285,15 @@ tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"complet
 ```
 <!-- markdownlint-enable MD013 -->
 
-Avsluta nästa hållna anrop med `reply REQUEST Vilket kort avses?`.
-Efter användarens svar används
+Efter användarens svar markeras frågan som besvarad:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST ask_questions {"questions":[],"answeredQuestions":["Vilket kort avses?"],"continueResponse":true}
+```
+<!-- markdownlint-enable MD013 -->
+
+Invänta nästa hållna anrop och släpp svarstexten med
 `reply REQUEST Frågan är besvarad. Förslaget väntar på sparbesked.`.
 Det resultatet innehåller inget sparverktyg. UI-steget behöver sedan
 ett nytt uttryckligt sparande. Syntetiskt tal är inget prov av faktisk

@@ -63,7 +63,7 @@ test('the working row stands last in the conversation text, and no working time 
       .map((row) => row.textContent);
   expect(rows()).toEqual([
     'Skyttel: Ett svar.',
-    'Skyttel arbetar… 0 meddelanden väntar. Tryck på Escape för att avbryta.',
+    'Skyttel arbetar… Tryck på Escape för att avbryta.',
   ]);
   expect(screen.queryByRole('timer')).toBeNull();
   await userEvent.type(screen.getByLabelText('Meddelande till Skyttel'), '{Escape}');

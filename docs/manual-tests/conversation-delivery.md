@@ -71,9 +71,11 @@ leverantörer. Det bevisar inte mänsklig läsning eller verklig uppläsning.
    Skriv **Beskriv hela svaret.** och välj **Skicka** före tidsgränsen.
 2. Vänta tills **Välkommen till Skyttel** visas. Flytta fokus till
    **Fortsätt med Google** utan att aktivera knappen. Släpp modellsvaret
-   enligt förberedelsen. Läs **Hela svaret som text**, från första till
-   sista del och frågan. Kontrollera beskedet om sparande och att fokus
-   ligger kvar. Flytta sedan fokus till svarsrutan med tangentbordet och
+   enligt förberedelsen. Läs den korta notisen med gul streckad ram och
+   förklaringen att inloggningen går ut. Kontrollera att fokus ligger
+   kvar. Välj **Läs mer** och läs **Hela svaret som text**, från första
+   till sista del och frågan. Kontrollera beskedet om sparande.
+   Flytta sedan fokus till svarsrutan med tangentbordet och
    rulla till slutfrågan. Upprepa läsningen vid 1280, 390 och 320 pixlars
    bredd. Hela svarsrutan ska rymmas och texten rullas inuti den utan
    rullning i sidled.
@@ -82,6 +84,8 @@ leverantörer. Det bevisar inte mänsklig läsning eller verklig uppläsning.
 
 **Förväntat resultat:**
 
+- Notisen är kort och förklarar varför svaret visas utanför textvyn.
+  **Läs mer** visar svaret.
 - Hela svaret och frågan visas med **Inget nytt sparande är bekräftat.**
   Ingen ljudnotis visas för textarbete utan begärt ljud.
 - Ett kort statusbesked om hela texten och korrekt sparstatus finns för
@@ -118,7 +122,7 @@ Det gäller en skriven instruktion med röst på; tal får inget undantag.
   "reference": "390 × 800; syntetiska medier och hållen skriven instruktion med aktiv röst. Samma tidsgräns och nya inloggning som LEV-01. Lång text rullas med tangentbord vid 1280, 390 och 320 pixlar.",
   "outcomes": [
     "Hela svaret med slutfråga och korrekt sparstatus visas efter utgång med beskedet att ljudleveransen inte kan bekräftas. Ett kort tillgängligt statusbesked uppdateras en gång utan att fokus flyttas.",
-    "Text och notis ryms utan rullning i sidled. Ny inloggning rensar svaret utan modellåterspelning."
+    "Text och notis ryms inom skärmens bredd. Visa mindre fäller ihop svaret och krysset stänger notisen. Notisen förblir stängd för samma svar. Uppdraget utförs en gång även vid ny inloggning."
   ]
 }
 ```
@@ -132,11 +136,14 @@ Det gäller en skriven instruktion med röst på; tal får inget undantag.
    välj **Skicka** före tidsgränsen.
 2. Vänta på inloggningssidan. Flytta fokus till **Fortsätt med Google**
    utan att aktivera knappen och släpp modellsvaret enligt förberedelsen.
-   Läs hela texten, frågan, sparstatus och ljudnotisen. Kontrollera att
-   fokus ligger kvar. Flytta sedan fokus till svarsrutan med tangentbordet
+   Läs förklaringen i den korta gula notisen med streckad ram. Kontrollera
+   att fokus ligger kvar. Välj **Läs mer** och läs hela texten, frågan,
+   sparstatus och ljudnotisen. Flytta fokus till svarsrutan med tangentbordet
    och rulla till slutfrågan. Upprepa läsningen vid 1280, 390 och 320
    pixlars bredd utan rullning i sidled.
-3. Logga in igen som Alex och kontrollera att texten rensas.
+3. Välj **Visa mindre** och kontrollera att texten fälls ihop. Välj krysset
+   **Stäng svarsnotisen**. Kontrollera att notisen försvinner och förblir
+   stängd för samma svar. Logga in igen som Alex.
 
 **Förväntat resultat:**
 
@@ -147,6 +154,8 @@ Det gäller en skriven instruktion med röst på; tal får inget undantag.
   Verklig uppläsning bedöms separat i LEV-03.
 - Röststoppet ger ingen ny instruktion. Texten ryms i sidled och ny
   inloggning återspelar inget arbete.
+- **Visa mindre** fäller ihop svaret. Krysset stänger notisen, som förblir
+  stängd för samma svar.
 
 ## Saknad leveranskanal
 
@@ -193,12 +202,12 @@ skärmläsare ingår inte.
     "spec": "tests/integration/task-delivery.spec.ts",
     "caseId": "LEV-04"
   },
-  "reference": "Saknat WebSocket-stöd före start; syntetisk mikrofon och faktisk HTTP/WebSocket efter återställning. Text och röst provar samma saknade leveranskanal. Lång svarstext med synligt tangentbordsfokus och rullning i mörkt systemtema, kartans verktyg och Inställningar vid 1280, 390 och 320 pixlar; höjden minskar från 800 till 600 pixlar i den smalaste varianten.",
+  "reference": "Saknat WebSocket-stöd före start; syntetisk mikrofon och faktisk HTTP/WebSocket efter återställning. Text och röst provar samma saknade leveranskanal. Lång svarstext i textvyn och rullning i mörkt systemtema, kartans verktyg och Inställningar vid 1280, 390 och 320 pixlar; höjden minskar från 800 till 600 pixlar i den smalaste varianten.",
   "outcomes": [
     "Skriven instruktion skickas inte, texten finns kvar och ett tydligt fel visas utan att instruktionen hamnar i samtalstexten.",
     "Röststart misslyckas tydligt och mikrofonen stängs. Återställd anslutning skickar eller startar ingenting automatiskt.",
     "Uttryckligt återförsök skickar instruktionen en gång och ger hela svaret; uttrycklig röststart fungerar igen.",
-    "Hela svarstexten går att rulla med tangentbord utan att täcka kartans verktyg eller skjuta undan Inställningar och kartans återkoppling."
+    "Hela svaret går att läsa i textvyn. Kartans storlek och verktygens placering består. Inställningarnas rubrik får fokus och är synlig."
   ]
 }
 ```
@@ -215,18 +224,13 @@ skärmläsare ingår inte.
 3. Återställ anslutningsstödet enligt förberedelsen. Kontrollera att
    texten finns kvar och att rösten inte startar automatiskt.
 4. Välj **Skicka**. Släpp ett långt modellsvar enligt den allmänna
-   förberedelsen och läs det under **Hela svaret som text**. Flytta fokus
-   till svarsrutan med tangentbordet och kontrollera den tydliga
-   fokusmarkeringen. Rulla till sista raden. Kartans verktyg ska finnas
-   nedanför svarsrutan och gå att använda.
+   förberedelsen och läs hela svaret i **Skriv till Skyttel**. Rulla till
+   sista raden. Kartans storlek och verktygens placering ska bestå.
 5. Öppna **Inställningar**. Rubriken ska få fokus och vara synlig.
-   Svarsrutan och kartans återkoppling ska rymmas samtidigt. Välj
-   **Tillbaka till kartan**. Upprepa steg 4:s läsning och steg 5 vid 1280,
-   390 och 320 pixlars bredd utan att skicka instruktionen igen.
+   Välj **Tillbaka till kartan**. Upprepa steg 4:s läsning och steg 5 vid
+   1280, 390 och 320 pixlars bredd utan att skicka instruktionen igen.
 6. Välj **Prata med Skyttel** och invänta **Lyssnar**.
-7. Öppna installationens inloggningssida och logga in igen som Alex.
-   Det gamla svaret ska försvinna och kartans verktyg återgå till platsen
-   högst upp utan tomt utrymme efter svarsrutan.
+7. Stäng textvyn. Kartans verktyg ska behålla sin placering.
 
 **Förväntat resultat:**
 
@@ -237,8 +241,8 @@ skärmläsare ingår inte.
   återställningen.
 - Endast ett uttryckligt nytt försök skickar texten och tömmer fältet.
   Hela svaret kan läsas. Rösten kan startas med ett uttryckligt nytt val.
-- Svarsrutan rullas med tangentbord och täcker inte kartans verktyg.
-  Inställningarnas rubrik, svarsrutan och kartans återkoppling är synliga.
+- Hela svaret läses i textvyn och kartans storlek och verktygens placering
+  består. Inställningarnas rubrik får fokus och är synlig.
 
 ### LEV-05: leveransfel efter mottagen instruktion bevarar lagrat utkast
 
@@ -318,12 +322,12 @@ efter slutfört arbete. Mänsklig körning väntar på verklig utgång.
 
 1. Starta ett samtal med text och godkänn det. Skriv **Lägg till Lo
    Exempel i mitt utkast.** och välj **Skicka**. Kontrollera att fältet
-   töms och att ett tydligt leveransfel visas under **Hela svaret som
-   text**.
+   töms och att ett tydligt leveransfel visas i textvyn.
 2. Släpp modellens verktyg och svar enligt förberedelsen. Öppna
    **Visa utkastet** och kontrollera att **Lo Exempel** finns där.
 3. Låt den vanliga inloggningen gå ut utan nya handlingar. Kontrollera
-   att leveransfelet finns kvar när **Välkommen till Skyttel** visas.
+   att en kort svarsnotis visas när **Välkommen till Skyttel** visas. Välj
+   **Läs mer** och kontrollera att leveransfelet finns kvar.
 4. Logga in som Alex igen. Kontrollera att leveransnotisen rensas.
    Starta ett nytt samtal med text och öppna utkastet. Kontrollera att
    **Lo Exempel** finns kvar utan att skicka instruktionen igen.
@@ -390,9 +394,9 @@ denna bedömning.
 2. Behåll fokus på en inloggningskontroll när textreserven kommer.
    Kontrollera att skärmläsaren ger ett kort besked om hela texten och
    korrekt sparstatus samt ljudnotisen. Beskedet ska komma en gång och
-   inte läsa upp hela svaret automatiskt. Läs sedan hela **Hela svaret
-   som text** med tangentbord och skärmläsare. Kontrollera sista delen,
-   frågan, sparstatus och ljudnotisen.
+   inte läsa upp hela svaret automatiskt. Välj **Läs mer** och läs sedan
+   **Hela svaret som text** med tangentbord och skärmläsare. Kontrollera
+   sista delen, frågan, sparstatus och ljudnotisen.
 3. Förstora till 200 och 400 procent och prova den smala bredden. Följ
    läsordningen till inloggningskontrollerna utan att välja en åtgärd.
 

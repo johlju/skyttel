@@ -38,34 +38,11 @@ async function toolbarLayout(page: Page) {
   };
 }
 
-async function expectReservedReplySpace(
+async function expectUnchangedReplySpace(
   page: Page,
-  reply: string,
   before: Awaited<ReturnType<typeof toolbarLayout>>,
 ) {
-  const panel = page.getByRole('region', { name: 'Hela svaret som text', exact: true });
-  await expect(panel).toBeVisible();
-  await expect(panel).toBeInViewport({ ratio: 1 });
-  await expect(panel).toContainText(reply);
-  const delivered = await bounds(panel);
-  expect(delivered.height).toBeGreaterThan(0);
-  const workspace = page.getByRole('region', { name: 'Rymdkarta', exact: true });
-  await expect.poll(async () => (await bounds(workspace)).y).toBeCloseTo(delivered.bottom, 3);
-  const after = await toolbarLayout(page);
-  expect(after.workspace.x).toBe(before.workspace.x);
-  expect(after.workspace.width).toBe(before.workspace.width);
-  expect(after.workspace.bottom).toBe(before.workspace.bottom);
-  expect(after.workspace.y - before.workspace.y).toBeCloseTo(delivered.height, 3);
-  const inset = before.tools.y - before.workspace.y;
-  expect(after.tools.y - after.workspace.y).toBeCloseTo(inset, 3);
-  expect(after.tools.x).toBe(before.tools.x);
-  expect(after.tools.width).toBe(before.tools.width);
-  expect(after.tools.height).toBeCloseTo(
-    Math.min(before.tools.height, after.workspace.height - 2 * inset),
-    3,
-  );
-  expect(after.tools.bottom).toBeLessThanOrEqual(after.workspace.bottom - inset);
-  expect(after.controls).toEqual(before.controls);
+  await expect.poll(() => toolbarLayout(page)).toEqual(before);
 }
 
 test('TEXTBRICKA-01: stängd textvy visar arbete och ett oläst svar med fasta verktygsmått', async ({
@@ -107,7 +84,7 @@ test('TEXTBRICKA-01: stängd textvy visar arbete och ett oläst svar med fasta v
     await expect(button.locator('.text-button-marker')).toHaveCSS('font-size', '12px');
     await expect(page.locator('.text-button-announcement')).toHaveText('Skyttel har svarat');
     await expect(page.locator('.text-button-announcement')).toHaveAttribute('aria-live', 'polite');
-    await expectReservedReplySpace(page, reply, before);
+    await expectUnchangedReplySpace(page, before);
     await expect(button).toBeFocused();
     await (await utilityButton(page, 'Din profil')).click();
     await page.getByRole('button', { name: 'Tillbaka till arbetet', exact: true }).click();
@@ -316,13 +293,15 @@ for (const { caseId, width, theme } of [
       const badge = button.locator('.text-button-marker');
       await expect(badge).toHaveText('•••');
       expect(await contrast(badge)).toBeGreaterThanOrEqual(4.5);
-      await expectReservedReplySpace(page, 'Ett nytt svar.', before);
+      await expectUnchangedReplySpace(page, before);
       const currentTarget = await bounds(button);
       const overlay = await bounds(badge);
       expect(overlay.right).toBeGreaterThan(currentTarget.right - 3);
       expect(overlay.y).toBeLessThan(currentTarget.y + 3);
       expect(currentTarget.width).toBe(target.width);
       expect(currentTarget.height).toBe(target.height);
+      await openConversationText(page);
+      await expect(page.getByRole('log', { name: 'Samtalstext' })).toContainText('Ett nytt svar.');
     } finally {
       release?.();
       await app.close();

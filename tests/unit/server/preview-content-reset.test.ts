@@ -33,6 +33,11 @@ let database: Database.Database | undefined;
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), 'skyttel-preview-reset-'));
   path = join(directory, 'skyttel.sqlite');
+  seedPreviousPreview();
+});
+
+function seedPreviousPreview(version = 34) {
+  rmSync(path, { force: true });
   const previous = new Database(path);
   previous.exec('BEGIN');
   // Reproduce the deployed preview through its real, checksummed migration history.
@@ -42,7 +47,10 @@ beforeEach(() => {
     checksum TEXT NOT NULL,
     appliedAt TEXT NOT NULL
   )`);
-  for (const [index, name] of readdirSync(resolve('migrations')).sort().slice(0, 34).entries()) {
+  for (const [index, name] of readdirSync(resolve('migrations'))
+    .sort()
+    .slice(0, version)
+    .entries()) {
     const sql = readFileSync(resolve('migrations', name), 'utf8');
     previous.exec(sql);
     previous
@@ -94,12 +102,95 @@ beforeEach(() => {
     COMMIT;
   `);
   previous.close();
-});
+}
 
 afterEach(() => {
   database?.close();
   database = undefined;
   rmSync(directory, { recursive: true, force: true });
+});
+
+test('the deployed preview before backgrounds upgrades directly and preserves access and settings', () => {
+  seedPreviousPreview(33);
+  const previous = new Database(path);
+  previous.exec(`UPDATE personal_view_settings SET settings = '{"allLabels":true,"stars":true}'`);
+  const accessTables = [
+    'user',
+    'membership',
+    'installation',
+    'installation_authority',
+    'account',
+    'session',
+    'browser_binding',
+  ];
+  const access = accessTables.map((table) => previous.prepare(`SELECT * FROM ${table}`).all());
+  previous.close();
+
+  database = openDatabase(path, { authorityFence });
+  expect(accessTables.map((table) => database?.prepare(`SELECT * FROM ${table}`).all())).toEqual(
+    access,
+  );
+  expect(householdMap(database, 'alex', 'home').read()).toMatchObject({
+    contentVersion: 2,
+    objects: [],
+    relationships: [],
+    draft: { changes: [] },
+  });
+  expect(database.prepare('SELECT MAX(version) AS version FROM schema_migration').get()).toEqual({
+    version: 37,
+  });
+  const view = database
+    .prepare('SELECT settings, backgroundVersion FROM personal_view_settings')
+    .get() as { settings: string; backgroundVersion: number };
+  expect(view.backgroundVersion).toBe(1);
+  expect(JSON.parse(view.settings)).toEqual({
+    allLabels: true,
+    background: true,
+    lightBackground: 'pearl',
+    darkBackground: 'mist',
+    panStrength: 0.7,
+    zoomStrength: 0.7,
+    layerDistance: 1,
+  });
+  expect(
+    database.prepare('SELECT operationId FROM retired_operation ORDER BY operationId').all(),
+  ).toEqual([
+    { operationId: 'already-retired' },
+    { operationId: 'historical' },
+    { operationId: 'pending' },
+    { operationId: 'saved' },
+  ]);
+  database.close();
+  database = openDatabase(path, { authorityFence });
+  expect(householdMap(database, 'alex', 'home').read().contentVersion).toBe(2);
+  expect(
+    database.prepare('SELECT settings, backgroundVersion FROM personal_view_settings').get(),
+  ).toEqual(view);
+});
+
+test.each([
+  ['changed schema', 'ALTER TABLE map_object ADD COLUMN unknown TEXT'],
+  ['changed history', "UPDATE schema_migration SET checksum = 'wrong' WHERE version = 33"],
+  ['missing history', 'DELETE FROM schema_migration WHERE version = 33'],
+  ['absent authority', 'DELETE FROM installation_authority'],
+  [
+    'different authority',
+    "UPDATE installation_authority SET generation = '22222222-2222-4222-8222-222222222222'",
+  ],
+  [
+    'restore acknowledgement',
+    "UPDATE installation_authority SET restoredFrom = 'legacy', restoredAt = 1",
+  ],
+  ['invalid references', "UPDATE map_object SET typeId = 'missing'"],
+])('the deployed preview with %s is refused without changing its database', (_name, alteration) => {
+  seedPreviousPreview(33);
+  const previous = new Database(path);
+  previous.pragma('foreign_keys = OFF');
+  previous.exec(alteration);
+  previous.close();
+  const before = readFileSync(path);
+  expect(() => openDatabase(path, { authorityFence })).toThrow();
+  expect(readFileSync(path)).toEqual(before);
 });
 
 test('automatic preview migration keeps the household and its administrator while discarding old content', async () => {
@@ -192,45 +283,49 @@ test('old save requests cannot replay even when they claim the new content versi
   );
 });
 
-test('later restarts and releases preserve new content after the one-time preview migration', () => {
-  database = openDatabase(path, { authorityFence });
-  const map = householdMap(database, 'alex', 'home');
-  const draft = map.propose({
-    version: 0,
-    contentVersion: 2,
-    id: 'new-bike',
-    baseRevision: null,
-    value: {
-      typeId: 'type',
-      name: 'Ny cykel',
-      properties: [{ id: 'colour', label: 'Färg', kind: 'text', value: 'Blå' }],
-    },
-  });
-  map.save({ operationId: 'new-save', version: draft.version, contentVersion: 2 });
-  database.close();
-  database = openDatabase(path, { authorityFence });
-  const retained = householdMap(database, 'alex', 'home');
-  expect(retained.read().objects).toMatchObject([{ id: 'new-bike', name: 'Ny cykel' }]);
-  expect(retained.read().contentVersion).toBe(2);
-  expect(retained.operation('new-save')).toMatchObject({ operation: { status: 'succeeded' } });
-  const retainedMap = retained.read();
-  const retainedHistory = retained.history();
-  const migrationsDirectory = join(directory, 'later-release');
-  cpSync(resolve('migrations'), migrationsDirectory, { recursive: true });
-  writeFileSync(
-    join(migrationsDirectory, '038_next_release.sql'),
-    'CREATE TABLE next_release_setting (name TEXT PRIMARY KEY);',
-  );
-  database.close();
-  database = openDatabase(path, { authorityFence, migrationsDirectory });
-  const upgraded = householdMap(database, 'alex', 'home');
-  expect(database.prepare('SELECT MAX(version) AS version FROM schema_migration').get()).toEqual({
-    version: 38,
-  });
-  expect(upgraded.read()).toEqual(retainedMap);
-  expect(upgraded.history()).toEqual(retainedHistory);
-  expect(upgraded.operation('new-save')).toMatchObject({ operation: { status: 'succeeded' } });
-});
+test.each([33, 34])(
+  'later restarts and releases preserve new content after preview %s migration',
+  (version) => {
+    seedPreviousPreview(version);
+    database = openDatabase(path, { authorityFence });
+    const map = householdMap(database, 'alex', 'home');
+    const draft = map.propose({
+      version: 0,
+      contentVersion: 2,
+      id: 'new-bike',
+      baseRevision: null,
+      value: {
+        typeId: 'type',
+        name: 'Ny cykel',
+        properties: [{ id: 'colour', label: 'Färg', kind: 'text', value: 'Blå' }],
+      },
+    });
+    map.save({ operationId: 'new-save', version: draft.version, contentVersion: 2 });
+    database.close();
+    database = openDatabase(path, { authorityFence });
+    const retained = householdMap(database, 'alex', 'home');
+    expect(retained.read().objects).toMatchObject([{ id: 'new-bike', name: 'Ny cykel' }]);
+    expect(retained.read().contentVersion).toBe(2);
+    expect(retained.operation('new-save')).toMatchObject({ operation: { status: 'succeeded' } });
+    const retainedMap = retained.read();
+    const retainedHistory = retained.history();
+    const migrationsDirectory = join(directory, 'later-release');
+    cpSync(resolve('migrations'), migrationsDirectory, { recursive: true });
+    writeFileSync(
+      join(migrationsDirectory, '038_next_release.sql'),
+      'CREATE TABLE next_release_setting (name TEXT PRIMARY KEY);',
+    );
+    database.close();
+    database = openDatabase(path, { authorityFence, migrationsDirectory });
+    const upgraded = householdMap(database, 'alex', 'home');
+    expect(database.prepare('SELECT MAX(version) AS version FROM schema_migration').get()).toEqual({
+      version: 38,
+    });
+    expect(upgraded.read()).toEqual(retainedMap);
+    expect(upgraded.history()).toEqual(retainedHistory);
+    expect(upgraded.operation('new-save')).toMatchObject({ operation: { status: 'succeeded' } });
+  },
+);
 
 test.each([
   ['unknown table', 'CREATE TABLE unknown_content (payload TEXT)'],
@@ -371,11 +466,14 @@ test('ordinary startup initializes a new installation normally', () => {
 });
 
 test.each([
-  ['execution', 'SELECT no_such_function();'],
-  ['foreign-key', "INSERT INTO membership VALUES ('home', 'missing-user', 'member');"],
+  [33, 'execution', 'SELECT no_such_function();'],
+  [34, 'execution', 'SELECT no_such_function();'],
+  [33, 'foreign-key', "INSERT INTO membership VALUES ('home', 'missing-user', 'member');"],
+  [34, 'foreign-key', "INSERT INTO membership VALUES ('home', 'missing-user', 'member');"],
 ])(
-  'a %s failure after content removal leaves the old schema, records and format markers intact',
-  (_kind, failure) => {
+  'preview %s with a %s failure after content removal retains its old schema, records and format markers',
+  (version, _kind, failure) => {
+    seedPreviousPreview(version);
     const migrationsDirectory = join(directory, 'migrations');
     cpSync(resolve('migrations'), migrationsDirectory, { recursive: true });
     writeFileSync(join(migrationsDirectory, '038_failure.sql'), failure);
@@ -408,92 +506,97 @@ test.each([
   },
 );
 
-test('runtime startup automatically upgrades the preview, retains browser access, and clears old archive files before readiness', async () => {
-  const listener = createServer();
-  listener.listen(0, '127.0.0.1');
-  await once(listener, 'listening');
-  const address = listener.address();
-  if (!address || typeof address === 'string') throw new Error('listener_address_unavailable');
-  const port = address.port;
-  await new Promise<void>((resolve, reject) =>
-    listener.close((error) => (error ? reject(error) : resolve())),
-  );
-  const origin = `http://127.0.0.1:${port}`;
-  const environment = { ...configurationEnvironment(path), SKYTTEL_ORIGIN: origin };
-  const previous = new Database(path);
-  const now = Date.now();
-  const binding = 'a'.repeat(64);
-  previous
-    .prepare(`UPDATE session SET createdAt = ?, updatedAt = ?, expiresAt = ?,
-    ordinaryStartedAt = ?, lastActivityAt = ?, absoluteExpiresAt = ? WHERE id = 'login'`)
-    .run(now, now, now + 3600000, now, now, now + 3600000);
-  previous
-    .prepare('UPDATE browser_binding SET id = ?')
-    .run(createHash('sha256').update(binding).digest('hex'));
-  previous.close();
-  for (const name of ['.skyttel-exports', '.skyttel-imports']) {
-    mkdirSync(join(directory, name));
-    writeFileSync(join(directory, name, 'old-content.zip'), 'obsolete private household content');
-  }
-  const child = spawn(process.execPath, ['--import', 'tsx', 'src/server/index.ts'], {
-    env: {
-      PATH: process.env.PATH,
-      ...environment,
-      PORT: String(port),
-      HOST: '127.0.0.1',
-    },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const stopped = new Promise<void>((resolve) => child.once('close', () => resolve()));
-  let output = '';
-  child.stderr.on('data', (chunk) => {
-    output += chunk.toString();
-  });
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error(`startup_timeout: ${output}`)), 10000);
-      child.once('error', (error) => {
-        clearTimeout(timeout);
-        reject(error);
-      });
-      child.once('exit', () => {
-        clearTimeout(timeout);
-        reject(new Error(`startup_failed: ${output}`));
-      });
-      child.stdout.on('data', (chunk) => {
-        output += chunk.toString();
-        if (output.includes('"event":"server_ready"')) {
-          clearTimeout(timeout);
-          resolve();
-        }
-      });
-    });
-    for (const name of ['.skyttel-exports', '.skyttel-imports'])
-      expect(readdirSync(join(directory, name))).toEqual([]);
-    expect(await (await fetch(`${origin}/healthz`)).json()).toEqual({ status: 'ok' });
-    const signed = await serializeSigned(
-      'better-auth.session_token',
-      'session-token',
-      environment.BETTER_AUTH_SECRET,
+test.each([33, 34])(
+  'runtime startup upgrades preview %s, retains browser access, and clears old archive files before readiness',
+  async (version) => {
+    seedPreviousPreview(version);
+    const listener = createServer();
+    listener.listen(0, '127.0.0.1');
+    await once(listener, 'listening');
+    const address = listener.address();
+    if (!address || typeof address === 'string') throw new Error('listener_address_unavailable');
+    const port = address.port;
+    await new Promise<void>((resolve, reject) =>
+      listener.close((error) => (error ? reject(error) : resolve())),
     );
-    const headers = { cookie: `${signed.split(';', 1)[0]}; skyttel_binding=${binding}` };
-    expect(await (await fetch(`${origin}/api/bootstrap`, { headers })).json()).toMatchObject({
-      status: 'ready',
-      user: { id: 'alex', name: 'Alex' },
-      household: { id: 'home', name: 'Linden', role: 'administrator' },
+    const origin = `http://127.0.0.1:${port}`;
+    const environment = { ...configurationEnvironment(path), SKYTTEL_ORIGIN: origin };
+    const previous = new Database(path);
+    const now = Date.now();
+    const binding = 'a'.repeat(64);
+    previous
+      .prepare(`UPDATE session SET createdAt = ?, updatedAt = ?, expiresAt = ?,
+    ordinaryStartedAt = ?, lastActivityAt = ?, absoluteExpiresAt = ? WHERE id = 'login'`)
+      .run(now, now, now + 3600000, now, now, now + 3600000);
+    previous
+      .prepare('UPDATE browser_binding SET id = ?')
+      .run(createHash('sha256').update(binding).digest('hex'));
+    previous.close();
+    for (const name of ['.skyttel-exports', '.skyttel-imports']) {
+      mkdirSync(join(directory, name));
+      writeFileSync(join(directory, name, 'old-content.zip'), 'obsolete private household content');
+    }
+    const child = spawn(process.execPath, ['--import', 'tsx', 'src/server/index.ts'], {
+      env: {
+        PATH: process.env.PATH,
+        ...environment,
+        PORT: String(port),
+        HOST: '127.0.0.1',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
-    expect(
-      await (await fetch(`${origin}/api/households/home/map`, { headers })).json(),
-    ).toMatchObject({
-      objects: [],
-      relationships: [],
-      contentVersion: 2,
+    const stopped = new Promise<void>((resolve) => child.once('close', () => resolve()));
+    let output = '';
+    child.stderr.on('data', (chunk) => {
+      output += chunk.toString();
     });
-  } finally {
-    child.kill('SIGTERM');
-    await stopped;
-  }
-}, 15000);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error(`startup_timeout: ${output}`)), 10000);
+        child.once('error', (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+        child.once('exit', () => {
+          clearTimeout(timeout);
+          reject(new Error(`startup_failed: ${output}`));
+        });
+        child.stdout.on('data', (chunk) => {
+          output += chunk.toString();
+          if (output.includes('"event":"server_ready"')) {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+      for (const name of ['.skyttel-exports', '.skyttel-imports'])
+        expect(readdirSync(join(directory, name))).toEqual([]);
+      expect(await (await fetch(`${origin}/healthz`)).json()).toEqual({ status: 'ok' });
+      const signed = await serializeSigned(
+        'better-auth.session_token',
+        'session-token',
+        environment.BETTER_AUTH_SECRET,
+      );
+      const headers = { cookie: `${signed.split(';', 1)[0]}; skyttel_binding=${binding}` };
+      expect(await (await fetch(`${origin}/api/bootstrap`, { headers })).json()).toMatchObject({
+        status: 'ready',
+        user: { id: 'alex', name: 'Alex' },
+        household: { id: 'home', name: 'Linden', role: 'administrator' },
+      });
+      expect(
+        await (await fetch(`${origin}/api/households/home/map`, { headers })).json(),
+      ).toMatchObject({
+        objects: [],
+        relationships: [],
+        contentVersion: 2,
+      });
+    } finally {
+      child.kill('SIGTERM');
+      await stopped;
+    }
+  },
+  15000,
+);
 
 test.each([
   ['scripts/migrate-development-database.ts'],

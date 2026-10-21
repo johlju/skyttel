@@ -66,6 +66,7 @@ test('controlled clarification preserves the request, independent work and prope
           contentVersion: input.draft.contentVersion,
           completion: 'draft',
           questions: [],
+          continueResponse: true,
           operations: [
             {
               name: 'propose_object',
@@ -115,6 +116,8 @@ test('controlled clarification preserves the request, independent work and prope
         }),
       ];
     }
+    if (turn === 3)
+      return [modelTool('ask_questions', { questions: [], answeredQuestions: questions })];
     return [
       modelTool('save_draft', {
         version: input.draft.version,

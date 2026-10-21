@@ -12,10 +12,10 @@ När Skyttel visar ett objekt eller samband visas kartan och det valda
 innehållets uppgifter samtidigt innan markeringsbeskedet. På en smal skärm
 öppnas objektets uppgifter i ett flyttbart fönster med eget rulläge.
 Sambandets uppgifter visas under eller bredvid kartan, beroende på hur
-mycket plats som finns kvar. Hela svaret som text behåller sin egen
-rullyta ovanför arbetsytan. När sambandets uppgifter visas på en smal
-skärm finns kartans sammanhang och teckenförklaring längre ned i
-arbetsytan. Rulla dit eller använd Tab för att fokusera
+mycket plats som finns kvar. Skyttels svar visas i samtalets textvy.
+När sambandets uppgifter visas på en smal skärm finns kartans sammanhang
+och teckenförklaring längre ned i arbetsytan. Rulla dit eller använd Tab för
+att fokusera
 **Kartans sammanhang**; där kan du rulla med tangentbordet.
 Välj **Redigera** vid objektet eller **Redigera valt samband** för att
 öppna det vanliga formuläret.

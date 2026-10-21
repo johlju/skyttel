@@ -16,6 +16,13 @@ and settings remain. Inform users before merging and pause map work until
 deployment verification is complete. No special deployment setting, manual
 deletion, new database, backup or login upgrade is required.
 
+The direct upgrade also supports preview 0.2.0-preview.46, before personal
+map backgrounds. No intermediate deployment is required. If the earlier
+upgrade stops with `unsupported_database_format`, deploy the corrected
+release against the same disk and configuration. Do not edit database
+format markers or delete the database to bypass this check. Other validation
+failures still require investigation.
+
 Keep the existing persistent disk, database path, authentication secret and
 installation authority. The transition validates the source and commits the
 content reset and schema upgrade together. After deployment, verify health,

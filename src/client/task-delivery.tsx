@@ -1,11 +1,19 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   audioDeliveryNotice,
   deliveryFailureNotice,
   deliverySaveStatus,
   type TaskDelivery,
 } from '../shared/task-delivery.js';
-import { useAppShellReservedHeight } from './use-app-shell-reserved-height.js';
+import { WorkspaceIcon } from './WorkspaceTools.js';
 
 export type TaskDeliveryConnection = {
   id: string;
@@ -17,6 +25,9 @@ type DeliveryClient = {
   received: (taskId: string, text: string) => void;
 };
 export const TaskDeliveryContext = createContext<DeliveryClient | null>(null);
+export const TaskDeliveryResultsContext = createContext<TaskDelivery[]>([]);
+const noticeKey = (item: TaskDelivery) =>
+  `${item.taskId}:${item.state === 'failed' ? 'failed' : 'answer'}`;
 
 /** Owned by App, so natural login expiry cannot unmount the bounded stream.
  * It retains only individual deliveries, never the assistant or household view. */
@@ -230,24 +241,41 @@ export function useTaskDelivery(actorId: string | undefined, loginId?: string) {
 
 export function TaskDeliveryResults({
   results,
-  workspace = false,
+  conversationAvailable = false,
+  unavailableReason = 'Samtalets textfönster är inte tillgängligt.',
 }: {
   results: TaskDelivery[];
-  workspace?: boolean;
+  conversationAvailable?: boolean;
+  unavailableReason?: string;
 }) {
   const client = useContext(TaskDeliveryContext);
-  const surface = useRef<HTMLElement>(null);
-  const visible = results.filter((item) => item.state !== 'waiting');
-  const hasResults = visible.length > 0;
-  useAppShellReservedHeight(surface, workspace && hasResults, '--task-delivery-height');
+  const detailsId = useId();
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState(false);
+  const visible = results.filter(
+    (item) => item.state !== 'waiting' && !dismissed.has(noticeKey(item)),
+  );
+  useEffect(() => {
+    if (conversationAvailable || !results.length) setExpanded(false);
+  }, [conversationAvailable, results.length]);
   const announced = useRef(new Set<string>());
   const [announcement, setAnnouncement] = useState({ count: 0, text: '' });
   useEffect(() => {
+    if (conversationAvailable) {
+      setAnnouncement((value) => (value.text ? { ...value, text: '' } : value));
+      return;
+    }
     const current = new Set(results.map((item) => item.taskId));
     announced.current = new Set([...announced.current].filter((id) => current.has(id)));
     const notices: string[] = [];
     for (const item of results) {
-      if (!item.text || item.state === 'failed' || announced.current.has(item.taskId)) continue;
+      if (
+        !item.text ||
+        item.state === 'failed' ||
+        dismissed.has(noticeKey(item)) ||
+        announced.current.has(item.taskId)
+      )
+        continue;
       announced.current.add(item.taskId);
       notices.push(
         'Hela svaret finns här som text.',
@@ -259,13 +287,15 @@ export function TaskDeliveryResults({
       setAnnouncement(({ count }) => ({ count: count + 1, text: notices.join(' ') }));
     else if (!results.length)
       setAnnouncement((value) => (value.text ? { ...value, text: '' } : value));
-  }, [results]);
-  // Layout effects run after the entire accessible fallback is committed.
-  // Receipt never waits for a human to read or confirm it.
+  }, [results, conversationAvailable, dismissed]);
+  // Acknowledge the complete text retained by App. During a conversation its
+  // normal transcript presents the answer; after expiry the fallback does.
+  // Receipt never means that the user opened, read or heard the answer.
   useLayoutEffect(() => {
     for (const item of results)
       if (item.state === 'awaiting-receipt' && item.text) client?.received(item.taskId, item.text);
   }, [client, results]);
+  if (conversationAvailable) return null;
   return (
     <>
       <p
@@ -277,21 +307,57 @@ export function TaskDeliveryResults({
         <span key={announcement.count}>{announcement.text}</span>
       </p>
       {!!visible.length && (
-        <section
-          ref={surface}
-          className="task-delivery-results panel"
-          aria-label="Hela svaret som text"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: The named scroll region needs keyboard scrolling without a pointer.
-          tabIndex={0}
-        >
-          <h2>Hela svaret som text</h2>
-          {visible.map((item) => (
-            <article key={item.taskId}>
-              {item.audio && item.text && <p>{audioDeliveryNotice}</p>}
-              {item.text && <div className="task-delivery-text">{item.text}</div>}
-              {item.state === 'failed' && <p role="alert">{deliveryFailureNotice}</p>}
-            </article>
-          ))}
+        <section className="task-delivery-notice" aria-label="Svar från ditt samtal">
+          <div className="task-delivery-notice-bar">
+            <p
+              role={
+                !expanded && visible.some((item) => item.state === 'failed') ? 'alert' : undefined
+              }
+            >
+              {unavailableReason}{' '}
+              {visible.some((item) => item.state === 'failed')
+                ? 'Ett svar kunde inte levereras fullständigt.'
+                : 'Ett svar finns kvar att läsa här.'}
+            </p>
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={expanded ? detailsId : undefined}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? 'Visa mindre' : 'Läs mer'}
+            </button>
+            <button
+              type="button"
+              className="task-delivery-close"
+              aria-label="Stäng svarsnotisen"
+              onClick={() => {
+                setDismissed((previous) => new Set([...previous, ...visible.map(noticeKey)]));
+                setExpanded(false);
+                setAnnouncement((value) => ({ ...value, text: '' }));
+              }}
+            >
+              <WorkspaceIcon name="close" />
+            </button>
+          </div>
+          {expanded && (
+            <section
+              id={detailsId}
+              className="task-delivery-results panel"
+              aria-label="Hela svaret som text"
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: The named scroll region needs keyboard scrolling without a pointer.
+              tabIndex={0}
+            >
+              <h2>Hela svaret som text</h2>
+              {visible.map((item) => (
+                <article key={item.taskId}>
+                  {item.audio && item.text && <p>{audioDeliveryNotice}</p>}
+                  {item.text && <div className="task-delivery-text">{item.text}</div>}
+                  {item.state === 'failed' && <p role="alert">{deliveryFailureNotice}</p>}
+                </article>
+              ))}
+            </section>
+          )}
         </section>
       )}
     </>

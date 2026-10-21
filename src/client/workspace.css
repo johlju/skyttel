@@ -282,7 +282,7 @@
 }
 .household-map.workspace-shell .map-space {
   position: fixed;
-  inset: calc(var(--session-warning-height, 0px) + var(--task-delivery-height, 0px)) 0 0;
+  inset: var(--session-warning-height, 0px) 0 0;
   z-index: 0;
 }
 .household-map.workspace-shell .spatial-map {

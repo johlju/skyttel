@@ -116,7 +116,7 @@ export function TextView({
   // biome-ignore lint/correctness/useExhaustiveDependencies: follow new rows
   useLayoutEffect(() => {
     if (body.current && follow.current) body.current.scrollTop = body.current.scrollHeight;
-  }, [transcript, working]);
+  }, [transcript, working, session?.activity, session?.activitySteps?.length]);
   useLayoutEffect(() => {
     if (!stop && stopFocused.current) {
       stopFocused.current = false;
@@ -269,7 +269,12 @@ export function TextView({
             <ConversationTranscript
               rows={transcript}
               working={working}
-              queued={session?.queuedMessages ?? 0}
+              activity={
+                session?.contextSummaryState === 'summarizing'
+                  ? 'Sammanfattar samtalet'
+                  : session?.activity
+              }
+              activitySteps={session?.activitySteps}
               computer={computer}
               announce={!hidden}
               announceWorking={false}

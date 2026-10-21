@@ -1,3 +1,9 @@
+.task-delivery-notice-bar p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .draft-change-summary > li {
   margin-block: 0.6rem;
 }
@@ -9,7 +15,47 @@
 .workspace-voice-controls .assistant-bar h4 {
   margin-block: 8px 0;
 }
-.task-delivery-results.panel {
+.task-delivery-notice {
+  margin: 12px;
+  border: 2px dashed #8c6811;
+  border-radius: 8px;
+  background: #fff1bd;
+  color: #30280b;
+}
+.task-delivery-notice-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.task-delivery-notice-bar button {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  border: 1px solid currentColor;
+  color: inherit;
+  background: transparent;
+}
+.task-delivery-notice-bar button:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+.task-delivery-close svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+.app-shell[data-theme="dark"] .task-delivery-notice {
+  background: #30280b;
+  color: #fff1bd;
+  border-color: #eac75a;
+}
+.task-delivery-notice .task-delivery-results.panel {
+  margin: 0;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid currentColor;
+  border-radius: 0;
   flex: none;
   max-height: min(240px, 25dvh);
   overflow-y: auto;
@@ -20,17 +66,6 @@
 .task-delivery-results:focus-visible {
   outline: 3px solid currentColor;
   outline-offset: -4px;
-}
-.has-settings .task-delivery-results,
-.has-workspace .task-delivery-results {
-  width: 100%;
-  border-radius: 0;
-}
-.has-workspace .task-delivery-results {
-  position: fixed;
-  z-index: 40;
-  top: var(--session-warning-height, 0px);
-  left: 0;
 }
 .app-shell[data-theme="dark"] .task-delivery-results {
   background: #1a293a;

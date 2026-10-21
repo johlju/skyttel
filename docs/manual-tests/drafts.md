@@ -3123,8 +3123,8 @@ UTKAST-15.
 3. Öppna **Utkast**. Kontrollera att **Spara hela utkastet** är
    inaktiverad. Kartan har ännu inga sparade objekt.
 4. Välj **Skriv till Skyttel**, svara **Kortet Lo Exempel avses** och skicka.
-   Avsluta det hållna anropet med förberedd svarstext. Vänta tills frågan är
-   besvarad. Stäng textvyn med krysset igen.
+   Följ förberedelsen för att markera frågan som besvarad och släppa
+   svarstexten. Stäng textvyn med krysset igen.
 5. Öppna **Utkast**. Kontrollera att sparande erbjuds men inte har genomförts.
    Välj **Spara hela utkastet** uttryckligen och läs det verifierade resultatet.
 

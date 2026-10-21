@@ -460,7 +460,7 @@ test('TAL-05: dialog, avstängd mikrofon och arbetsraden finns kvar under samtal
     await expect(voiceBox(page)).toHaveText('Skyttel arbetar');
     // A spoken task shows the working row last in the conversation text.
     await expect(log.getByRole('listitem').last()).toHaveText(
-      'Skyttel arbetar… 0 meddelanden väntar. Tryck på Escape för att avbryta.',
+      'Skyttel arbetar… Bearbetar uppgiften. Tryck på Escape för att avbryta.',
     );
     release([modelMessage('Vem använder musiken?')]);
     await expect(log).toContainText('Vem använder musiken?');

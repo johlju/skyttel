@@ -22,9 +22,8 @@ tool REQUEST submit_changes {"version":V,"contentVersion":C,"completion":"draft"
 
 `baseRevision:null` gäller det nya, ännu osparade Lo-förslaget. För ett
 sparat objekt används dess verkliga tidigare revision. `submit_changes`
-avslutar uppdraget direkt: vänta på **Utkastet är uppdaterat.**, inte ett
-nytt `held`. Ändringen ska läsas genom **Utkast → Visa förslaget** innan
-nästa uppdrag börjar.
+avslutar uppdraget direkt. Invänta att arbetsraden försvinner och läs
+ändringen genom **Utkast → Visa förslaget** innan nästa uppdrag börjar.
 
 För ett uttryckligen begärt sparande används aktuella V och C:
 

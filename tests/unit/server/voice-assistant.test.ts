@@ -516,7 +516,11 @@ test('combined type proposals speak the directed question and retain the verifie
     )
     .toBe(1);
   const status = await voice.poll();
-  expect(status.assistant.result).toEqual({ kind: 'draft', message: 'Utkastet är uppdaterat.' });
+  expect(status.assistant.result).toEqual({
+    kind: 'draft',
+    message: 'Utkastet är uppdaterat.',
+    changes: [{ subject: 'Sambandstypen Delar', action: 'lades till' }],
+  });
   const content = voiceAnswerParts(voice.live.sent).join('');
   expect(content).toBe(
     `Skyttels resultat (verifierat): Utkastet är uppdaterat.\nNödvändig fråga (samtalsdata): ${JSON.stringify(question)}`,

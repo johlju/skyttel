@@ -189,6 +189,36 @@
   max-width: none;
   color: var(--space-muted);
 }
+.conversation-activity-details {
+  color: var(--space-muted);
+  font-size: 14px;
+}
+.conversation-activity-details summary {
+  cursor: pointer;
+  min-height: 24px;
+  padding-block: 4px;
+}
+.conversation-activity-details ul {
+  margin-block: 4px;
+  padding-inline-start: 20px;
+}
+.conversation-row.working::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-inline-end: 8px;
+  vertical-align: -2px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: assistant-work-turn 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .conversation-row.working::before {
+    animation: none;
+  }
+}
 
 /* Skicka stands level with the middle of the message field. */
 .text-view-message {

@@ -7,6 +7,26 @@ import {
 
 afterEach(cleanup);
 
+test('work descriptions and actual MCP steps are visible without becoming conversation replies', () => {
+  const view = render(
+    <ConversationTranscript
+      rows={[]}
+      working
+      activity="Bearbetar uppgiften"
+      activitySteps={[{ id: 'read', text: 'Läser kartan via MCP' }]}
+    />,
+  );
+  expect(view.getByRole('log').textContent).toContain('Bearbetar uppgiften.');
+  expect(view.getByText('Visa arbetssteg').closest('details')?.hasAttribute('open')).toBe(false);
+  expect(view.getByRole('log').querySelector('[aria-live="polite"]')?.textContent).toBe(
+    ' Bearbetar uppgiften.',
+  );
+  expect(view.getByText('Läser kartan via MCP')).toBeDefined();
+  view.rerender(<ConversationTranscript rows={[]} working={false} />);
+  expect(view.queryByText('Visa arbetssteg')).toBeNull();
+  expect(view.getByRole('log').textContent).toBe('Här visas det du och Skyttel säger och skriver.');
+});
+
 test('only new unvoiced assistant rows are polite announcements, without history replay', () => {
   let rows: TranscriptRow[] = [{ id: 'old', role: 'assistant', text: 'Tidigare svar.' }];
   const view = render(<ConversationTranscript rows={rows} working={false} />);

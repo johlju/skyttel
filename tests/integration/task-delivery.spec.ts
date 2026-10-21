@@ -1,7 +1,8 @@
-import { measureContrast } from '../support/accessibility.js';
+import { contrast } from '../support/accessibility.js';
 import { createHousehold, signIn, utilityButton } from '../support/client.js';
 import {
   chooseConversationVoice,
+  closeConversationText,
   microphoneButton,
   openConversationDraft,
   startConversationWithText,
@@ -86,54 +87,24 @@ test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text oc
     expect(live.requests).toEqual([]);
     await send.click();
     await expect(input).toHaveValue('');
-    await expect(
-      page.getByRole('region', { name: 'Hela svaret som text', exact: true }),
-    ).toContainText('Svaret efter ditt uttryckliga återförsök.');
+    const delivered = textView.getByRole('log', { name: 'Samtalstext' });
+    await expect(delivered).toContainText(full);
     expect(messages).toHaveLength(1);
     expect(model.requests).toHaveLength(1);
-    const delivered = page.getByRole('region', { name: 'Hela svaret som text', exact: true });
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'dark');
     for (const width of [1280, 390, 320]) {
       await page.setViewportSize({ width, height: width === 320 ? 600 : 800 });
-      await expect(delivered).toBeInViewport({ ratio: 1 });
+      await expect(textView).toBeInViewport({ ratio: 1 });
       await expect(delivered).toContainText(full);
-      await page.keyboard.press('Tab');
-      await delivered.focus();
-      await expect(delivered).toBeFocused();
-      expect(await delivered.evaluate((element) => element.matches(':focus-visible'))).toBe(true);
-      expect(await delivered.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe(
-        'solid',
-      );
-      await page.keyboard.press('Control+End');
-      expect(
-        await delivered.evaluate(measureContrast, 'outlineColor' as const),
-      ).toBeGreaterThanOrEqual(3);
-      await expect
-        .poll(() => delivered.evaluate((element) => element.scrollTop))
-        .toBeGreaterThan(0);
-      await expect
-        .poll(() =>
-          delivered.evaluate(
-            (element) => element.scrollHeight - element.clientHeight - element.scrollTop,
-          ),
-        )
-        .toBeLessThanOrEqual(1);
-      const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
-      await expect(tools).toBeInViewport({ ratio: 1 });
-      await expect
-        .poll(async () => {
-          const result = await delivered.boundingBox();
-          const navigation = await tools.boundingBox();
-          return Boolean(result && navigation && navigation.y >= result.y + result.height);
-        })
-        .toBe(true);
+      await delivered.getByText(/Sista raden i hela svaret/).scrollIntoViewIfNeeded();
+      await expect(
+        textView.getByRole('textbox', { name: 'Meddelande till Skyttel' }),
+      ).toBeVisible();
       await (await utilityButton(page, 'Inställningar')).click();
       const heading = page.getByRole('heading', { level: 1, name: 'Inställningar', exact: true });
       await expect(heading).toBeFocused();
       await expect(heading).toBeInViewport({ ratio: 1 });
-      await expect(delivered).toBeInViewport({ ratio: 1 });
-      await expect(page.locator('.household-work-background')).toBeInViewport({ ratio: 1 });
       await page.getByRole('link', { name: 'Tillbaka till kartan', exact: true }).click();
     }
     await turnMicrophoneOn(page);
@@ -166,8 +137,7 @@ test('LEV-04: saknad leveranskanal kräver uttryckliga nya försök för text oc
       'Skapa inget nytt.',
     );
     expect(model.requests).toHaveLength(1);
-    await signIn(page.request, app.origin);
-    await expect(delivered).toHaveCount(0, { timeout: 8000 });
+    await closeConversationText(page);
     const tools = page.getByRole('navigation', { name: 'Kartans verktyg' });
     await expect(tools).toBeInViewport({ ratio: 1 });
     await expect.poll(async () => (await tools.boundingBox())?.y).toBeLessThan(50);
@@ -250,6 +220,7 @@ test('LEV-05: förlorad första leveransram ger tydligt fel och bevarat utkast e
     expect(model.requests).toHaveLength(2);
     clock += 8 * 60 * 60_000;
     await expect(page.getByRole('heading', { name: 'Välkommen till Skyttel' })).toBeVisible();
+    await page.getByRole('button', { name: 'Läs mer', exact: true }).click();
     await expect(failure).toBeVisible();
     await signIn(page.request, app.origin);
     await expect(failure).toHaveCount(0, { timeout: 8000 });
@@ -269,7 +240,7 @@ for (const scenario of [
 ]) {
   test(`${scenario.id}: hela svaret kommer vid utgång och rensas vid ny inloggning${scenario.audio ? ' med ljudnotis' : ' utan ljudnotis'}`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     let clock = Date.now();
     let release: (output: unknown[]) => void = () => {};
     const model = textModel(
@@ -332,9 +303,17 @@ for (const scenario of [
       });
       const full = `${'Alla delar i ett långt svar med åäö och 🚲. '.repeat(60)}Sista frågan: vem använder cykeln?`;
       release([modelMessage(full)]);
+      const notice = page.getByRole('region', { name: 'Svar från ditt samtal', exact: true });
+      await expect(notice).toContainText('Din inloggning har gått ut.');
+      await expect(notice).toHaveCSS('border-top-style', 'dashed');
+      expect(await contrast(notice.locator('.task-delivery-notice-bar p'))).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      await notice.screenshot({ path: testInfo.outputPath('compact-reply-notice.png') });
+      await expect(notice.getByRole('button', { name: 'Läs mer', exact: true })).toBeVisible();
       const panel = page.getByRole('region', { name: 'Hela svaret som text', exact: true });
-      await expect(panel).toContainText(full);
-      await expect(panel).toContainText('Inget nytt sparande är bekräftat.');
+      await expect(panel).toHaveCount(0);
+
       await expect.poll(() => frames.some((frame) => frame.state === 'received')).toBe(true);
       expect(receipts).toHaveLength(1);
       expect(receipts[0].text).toBe(
@@ -353,6 +332,9 @@ for (const scenario of [
           () => (window as Window & { deliveryAnnouncements?: string[] }).deliveryAnnouncements,
         ),
       ).toHaveLength(1);
+      await notice.getByRole('button', { name: 'Läs mer', exact: true }).click();
+      await expect(panel).toContainText(full);
+      await expect(panel).toContainText('Inget nytt sparande är bekräftat.');
       if (scenario.audio) await expect(panel).toContainText('Ljudleveransen kan inte bekräftas.');
       else await expect(panel).not.toContainText('Ljudleveransen kan inte bekräftas.');
       expect(
@@ -376,6 +358,12 @@ for (const scenario of [
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         ).toBe(true);
+      }
+      if (scenario.audio) {
+        await notice.getByRole('button', { name: 'Visa mindre' }).click();
+        await expect(panel).toHaveCount(0);
+        await notice.getByRole('button', { name: 'Stäng svarsnotisen' }).click();
+        await expect(notice).toHaveCount(0);
       }
       expect(model.requests).toHaveLength(1);
       // Same-user replacement must clear even an already closed delivery's

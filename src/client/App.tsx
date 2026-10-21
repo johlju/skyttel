@@ -51,7 +51,12 @@ import { PolicyContact } from './PolicyContact.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
 import { StorageConsentProvider } from './StorageConsent.js';
 import { useSessionActivity } from './session-activity.js';
-import { TaskDeliveryContext, TaskDeliveryResults, useTaskDelivery } from './task-delivery.js';
+import {
+  TaskDeliveryContext,
+  TaskDeliveryResults,
+  TaskDeliveryResultsContext,
+  useTaskDelivery,
+} from './task-delivery.js';
 import { useAppShellReservedHeight } from './use-app-shell-reserved-height.js';
 import { VoiceSessionContext } from './voice-session-context.js';
 import { useAccountTheme, WorkspaceThemeContext } from './WorkspaceTheme.js';
@@ -1735,7 +1740,11 @@ function Application() {
             </p>
             {expired && <p>{expiryNotice}</p>}
             <TaskDeliveryContext value={taskDelivery.client}>
-              <TaskDeliveryResults results={taskDelivery.results} workspace={mapActive} />
+              <TaskDeliveryResults
+                results={taskDelivery.results}
+                conversationAvailable={data?.status === 'ready'}
+                unavailableReason={expired ? 'Din inloggning har gått ut.' : undefined}
+              />
             </TaskDeliveryContext>
             {bootstrap.status === 'loading' && <Loading />}
             {bootstrap.status === 'error' && <Failure onRetry={reload} />}
@@ -1777,14 +1786,16 @@ function Application() {
             {data?.status === 'ready' && (
               <VoiceSessionContext value={voiceSession}>
                 <TaskDeliveryContext value={taskDelivery.client}>
-                  <HouseholdWork
-                    key={data.user.id}
-                    account={account}
-                    onSessionExpired={reload}
-                    typeSettingsTarget={typeSettingsTarget}
-                    mapSettingsTarget={mapSettingsTarget}
-                    conversationSettingsTarget={conversationSettingsTarget}
-                  />
+                  <TaskDeliveryResultsContext value={taskDelivery.results}>
+                    <HouseholdWork
+                      key={data.user.id}
+                      account={account}
+                      onSessionExpired={reload}
+                      typeSettingsTarget={typeSettingsTarget}
+                      mapSettingsTarget={mapSettingsTarget}
+                      conversationSettingsTarget={conversationSettingsTarget}
+                    />
+                  </TaskDeliveryResultsContext>
                 </TaskDeliveryContext>
               </VoiceSessionContext>
             )}

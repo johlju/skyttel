@@ -26,10 +26,11 @@ export class DatabaseInitializationError extends Error {
   }
 }
 
-// Ordinary startup upgrades only the recognized previous preview once.
+// Ordinary startup upgrades only recognized previous previews once.
 const applicationId = 0x534b5954;
 const formatVersion = 2;
-const previousPreviewVersion = 34;
+const previousPreviewVersions = [33, 34];
+const contentResetVersion = 35;
 const migrationTable = `CREATE TABLE IF NOT EXISTS schema_migration (
     version INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
@@ -132,9 +133,9 @@ function verifyPreviousPreview(
       '037_free_property_contract.sql',
     ];
     if (
-      applied.length !== previousPreviewVersion ||
+      !previousPreviewVersions.includes(applied.length) ||
       targetMigrations.some(
-        (name, index) => migrations[previousPreviewVersion + index]?.name !== name,
+        (name, index) => migrations[contentResetVersion - 1 + index]?.name !== name,
       )
     )
       throw unsupported();
@@ -142,8 +143,7 @@ function verifyPreviousPreview(
     const expected = new Database(':memory:');
     try {
       expected.exec(migrationTable);
-      for (const migration of migrations.slice(0, previousPreviewVersion))
-        expected.exec(migration.sql);
+      for (const migration of migrations.slice(0, applied.length)) expected.exec(migration.sql);
       if (JSON.stringify(schema(database)) !== JSON.stringify(schema(expected)))
         throw unsupported();
     } finally {

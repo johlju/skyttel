@@ -126,8 +126,7 @@ test('completed FIFO replies keep their separate checked outcomes while another 
     'Skyttel: Första svaret.',
     'Skyttel: Sparat.',
     'Skyttel: Talat svar.',
-    'Skyttel: Utkastet är uppdaterat.',
-    'Skyttel arbetar… 1 meddelande väntar. Tryck på Escape för att avbryta.',
+    'Skyttel arbetar… Tryck på Escape för att avbryta.',
   ]);
   await send('Ett tredje uppdrag.');
   expect(rows().filter((row) => row === 'Skyttel: Sparat.')).toHaveLength(1);
@@ -137,6 +136,72 @@ test('completed FIFO replies keep their separate checked outcomes while another 
     'Lo Exempel',
   );
 });
+
+for (const completed of [false, true]) {
+  test.each([
+    { kind: 'draft' as const, message: 'Utkastet är uppdaterat.', expected: [] },
+    {
+      kind: 'draft' as const,
+      message: 'Utkastet är uppdaterat.',
+      notice: 'Be om sparande igen när frågorna är lösta.',
+      expected: ['Skyttel: Be om sparande igen när frågorna är lösta.'],
+    },
+    {
+      kind: 'draft' as const,
+      message: 'Utkastet är kastat.',
+      expected: ['Skyttel: Utkastet är kastat.'],
+    },
+    {
+      kind: 'restored' as const,
+      message: 'Återställt i utkastet.',
+      expected: ['Skyttel: Återställt i utkastet.'],
+    },
+    {
+      kind: 'failure' as const,
+      message: 'Sparresultatet är inte bekräftat.',
+      expected: ['Skyttel: Sparresultatet är inte bekräftat.'],
+    },
+  ])(
+    `${completed ? 'completed' : 'current'} replies retain questions and specific outcomes for $message`,
+    async ({ kind, message, notice, expected }) => {
+      await arrange((url) => {
+        if (!url.endsWith('/messages')) return Response.json(initial);
+        const result = { kind, message };
+        const reply = [message, notice].filter(Boolean).join('\n');
+        const question = 'Vem använder cykeln?';
+        return Response.json({
+          ...initial,
+          revision: 1,
+          result,
+          reply,
+          requiredNotice: notice,
+          modelReply: question,
+          ...(completed
+            ? {
+                completedReplies: [
+                  {
+                    id: 'first',
+                    revision: 1,
+                    source: 'text',
+                    text: question,
+                    result,
+                    reply,
+                    requiredNotice: notice,
+                  },
+                ],
+              }
+            : {}),
+        });
+      });
+      await send('Uppdatera cykeln.');
+      expect(rows()).toEqual(
+        completed
+          ? ['Du: Uppdatera cykeln.', 'Skyttel: Vem använder cykeln?', ...expected]
+          : ['Du: Uppdatera cykeln.', ...expected, 'Skyttel: Vem använder cykeln?'],
+      );
+    },
+  );
+}
 
 test.each([
   { text: 'Nytt samtal.', discard: false, reply: 'Nytt samtal. Utkastet ligger kvar.' },

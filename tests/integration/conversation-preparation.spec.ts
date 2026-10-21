@@ -26,6 +26,9 @@ for (const seeded of [false, true]) {
     const batch = document.match(/^tool REQUEST submit_changes .+$/mu)?.[0];
     const save = document.match(/^tool REQUEST save_draft .+$/mu)?.[0];
     const question = questions.match(/^\s*tool REQUEST ask_questions [^\n]+$/mu)?.[0].trim();
+    const answeredQuestion = questions
+      .match(/^\s*tool REQUEST ask_questions [^\n]*"answeredQuestions"[^\n]+$/mu)?.[0]
+      .trim();
     const summaryReply = document.match(/^reply REQUEST Historisk sammanfattning:.+$/mu)?.[0];
     const clientTranscript = [...document.matchAll(/```javascript\n([\s\S]*?)\n```/gu)]
       .map((match) => match[1])
@@ -33,7 +36,15 @@ for (const seeded of [false, true]) {
     const stopVoice = [...document.matchAll(/```javascript\n([\s\S]*?)\n```/gu)]
       .map((match) => match[1])
       .find((source) => source.includes('VOICE_STOP_URL'));
-    if (!batch || !save || !question || !summaryReply || !clientTranscript || !stopVoice)
+    if (
+      !batch ||
+      !save ||
+      !question ||
+      !answeredQuestion ||
+      !summaryReply ||
+      !clientTranscript ||
+      !stopVoice
+    )
       throw new Error('Missing literal public recipe');
     // Extract published commands before the launcher owns any fixture resources.
     const child = spawn(process.execPath, ['--import', 'tsx', 'scripts/manual-voice.ts'], {
@@ -288,12 +299,15 @@ for (const seeded of [false, true]) {
       );
       await noPending();
       item = await send('Rätta Lo till Lo Senaste.');
+      const answeringAt = events.length;
+      command(render(answeredQuestion, item));
+      item = await held(answeringAt);
       const lo = item.draft?.changes.find((change) => change.id === 'public-lo');
       if (!lo?.after) throw new Error('Missing complete public Lo proposal');
       const value = { ...lo.after, name: 'Lo Senaste' } as Record<string, unknown>;
       for (const key of ['id', 'householdId', 'revision']) delete value[key];
       command(render(batch, item, { LO: lo.id, VALUE: JSON.stringify(value) }));
-      await expect(log).toContainText('Utkastet är uppdaterat.');
+      await expect(log.locator('.working')).toHaveCount(0);
       await expect
         .poll(
           async () =>

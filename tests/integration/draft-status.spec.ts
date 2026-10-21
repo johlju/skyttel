@@ -585,7 +585,16 @@ test('UTKAST-15: a necessary answer gates the native draft save until a fresh ex
 }) => {
   let calls = 0;
   const model = textModel((body) => {
-    if (calls++ > 0) return [modelMessage('Frågan är besvarad. Förslaget väntar på sparbesked.')];
+    const call = calls++;
+    if (call === 1)
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          answeredQuestions: ['Vilket kort avses?'],
+          continueResponse: true,
+        }),
+      ];
+    if (call > 1) return [modelMessage('Frågan är besvarad. Förslaget väntar på sparbesked.')];
     const current = JSON.parse(
       String(body.input.findLast((item) => item.role === 'user')?.content),
     ).draft;
@@ -654,14 +663,14 @@ test('UTKAST-15: a necessary answer gates the native draft save until a fresh ex
     await openConversationText(page);
     await page.getByLabel('Meddelande till Skyttel').fill('Kortet Lo Exempel avses.');
     await page.getByRole('button', { name: 'Skicka', exact: true }).click();
-    await expect.poll(() => calls).toBe(2);
+    await expect.poll(() => calls).toBe(3);
     await openMap(page);
     await page.getByRole('button', { name: 'Utkast', exact: true }).click();
     const save = page
       .getByRole('region', { name: 'Utkastet', exact: true })
       .getByRole('button', { name: 'Spara hela utkastet', exact: true });
     await expect(save).toBeEnabled();
-    expect(calls).toBe(2);
+    expect(calls).toBe(3);
     expect((await read()).objects).toEqual([]);
     expect((await (await page.request.get(`${path}/operations`)).json()).operations).toEqual([]);
     await save.click();

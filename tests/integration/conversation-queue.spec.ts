@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../support/client.js';
 import {
   closeConversationText,
@@ -23,14 +24,18 @@ const field = (page: Page) =>
 const log = (page: Page) => region(page).getByRole('log', { name: 'Samtalstext' });
 const canceled = 'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.';
 function providers() {
-  const held: { message: string; release: (output: unknown[]) => void }[] = [];
+  const held: {
+    message: string;
+    draft: TextAssistantReview;
+    release: (output: unknown[]) => void;
+  }[] = [];
   const model = textModel(
     (request) =>
       new Promise<unknown[]>((release) => {
         const current = JSON.parse(
           String(request.input.findLast((item) => item.role === 'user')?.content),
         );
-        held.push({ message: current.message, release });
+        held.push({ message: current.message, draft: current.draft, release });
       }),
   );
   return { held, model, live: liveProvider() };
@@ -102,12 +107,14 @@ test('KÖ-01: datorn besvarar serverns kö i ordning och Escape avbryter bara i 
     await expect.poll(() => fixtures.held.length).toBe(1);
     await send(page, 'Andra uppdraget.');
     await send(page, 'Tredje uppdraget.');
-    await expect(log(page)).toContainText('2 meddelanden väntar. Tryck på Escape för att avbryta.');
+    await expect(log(page)).toContainText(
+      'Skyttel arbetar… Bearbetar uppgiften. Tryck på Escape för att avbryta.',
+    );
     expect(fixtures.held.map((item) => item.message)).toEqual(['Första uppdraget.']);
     fixtures.held[0].release([modelMessage('Första svaret.')]);
     await expect.poll(() => fixtures.held.length).toBe(2);
     await expect(log(page)).toContainText('Första svaret.');
-    await expect(log(page)).toContainText('1 meddelande väntar.');
+    await expect(log(page)).toContainText('Skyttel arbetar…');
     fixtures.held[1].release([modelMessage('Andra svaret.')]);
     await expect.poll(() => fixtures.held.length).toBe(3);
     expect(fixtures.held.map((item) => item.message)).toEqual([
@@ -130,7 +137,7 @@ test('KÖ-01: datorn besvarar serverns kö i ordning och Escape avbryter bara i 
     await turnMicrophoneOff(page);
     await send(page, 'Hållet uppdrag.');
     await send(page, 'Väntande uppdrag.');
-    await expect(log(page)).toContainText('1 meddelande väntar.');
+    await expect(log(page)).toContainText('Skyttel arbetar…');
     await page
       .getByRole('navigation', { name: 'Kartans verktyg' })
       .getByRole('button', { name: 'Skriv till Skyttel', exact: true })
@@ -173,7 +180,7 @@ test('KÖ-01: datorn besvarar serverns kö i ordning och Escape avbryter bara i 
     await send(page, 'Ny uppgift.');
     await expect(region(page).locator('.text-view-canceled')).toBeEmpty();
     await send(page, 'Bort med kön.');
-    await expect(log(page)).toContainText('1 meddelande väntar.');
+    await expect(log(page)).toContainText('Skyttel arbetar…');
     await region(page).getByRole('button', { name: 'Nytt samtal', exact: true }).click();
     await expect(log(page)).not.toContainText('Skyttel arbetar…');
     fixtures.held[4].release([modelMessage('För sent igen.')]);
@@ -183,6 +190,92 @@ test('KÖ-01: datorn besvarar serverns kö i ordning och Escape avbryter bara i 
     expect(fixtures.held.map((item) => item.message)).not.toContain('Bort med kön.');
     fixtures.held[5].release([modelMessage('Efter nytt.')]);
     await expect(log(page)).toContainText('Efter nytt.');
+  } finally {
+    for (const item of fixtures.held) item.release([]);
+    await app.close();
+  }
+});
+
+test('KÖ-06: ett slutbesked samlar ändringarna och visar vad som återstår', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const fixtures = providers();
+  const { app } = await arrange(page, fixtures);
+  const question = 'Vilken Johan ska kopplas till Lo?';
+  const summary = log(page)
+    .locator('.assistant')
+    .filter({ hasText: 'Lo Exempel bytte namn till Lo Lind.' });
+  try {
+    for (const instruction of [
+      'Byt namn på Lo till Lo Lind.',
+      'Lägg till telefon 0700123456 på Lo.',
+      'Markera den saknade personen.',
+      'Koppla Johan till Lo.',
+    ])
+      await send(page, instruction);
+    await expect.poll(() => fixtures.held.length).toBe(1);
+    for (let i = 0; i < 2; i++) {
+      const { draft, release } = fixtures.held[i];
+      const lo = draft.changes.find((change) => change.id === 'lo');
+      if (!lo?.after) throw new Error('Missing Lo proposal');
+      release([
+        modelTool('submit_changes', {
+          version: draft.version,
+          contentVersion: draft.contentVersion,
+          completion: 'draft',
+          questions: [],
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'lo',
+                baseRevision: null,
+                value:
+                  i === 0
+                    ? { ...lo.after, name: 'Lo Lind', lifecycle: 'active' }
+                    : {
+                        ...lo.after,
+                        properties: [
+                          ...(lo.after.properties ?? []),
+                          { label: 'Telefon', kind: 'text', value: '0700123456' },
+                        ],
+                      },
+              },
+            },
+          ],
+        }),
+      ]);
+      await expect.poll(() => fixtures.held.length).toBe(i + 2);
+      await expect(log(page).locator('.working')).toBeVisible();
+      await expect(summary).toHaveCount(0);
+      await expect(log(page)).not.toContainText('Utkastet är uppdaterat.');
+    }
+    fixtures.held[2].release([modelTool('show_map_object', { objectId: 'saknas' })]);
+    await expect.poll(() => fixtures.held.length).toBe(4);
+    await expect(summary).toHaveCount(0);
+    fixtures.held[3].release([modelTool('ask_questions', { questions: [question] })]);
+    await expect(log(page).locator('.working')).toHaveCount(0);
+    await expect(summary).toHaveCount(1);
+    for (const text of [
+      'Lo Exempel bytte namn till Lo Lind.',
+      'Telefon för Lo Lind sattes till 0700123456.',
+      'Markera den saknade personen.',
+      'Posten finns inte i den aktuella kartan eller utkastet och kunde därför inte markeras.',
+      question,
+    ])
+      await expect(summary).toContainText(text);
+    await expect(summary).not.toContainText('Utkastet är uppdaterat.');
+    await expect(summary).not.toContainText('Status för');
+    await expect(summary).not.toContainText('•');
+    await closeConversationText(page);
+    await openConversationText(page);
+    await expect(summary).toHaveCount(1);
+    await region(page)
+      .getByRole('button', { name: /^Visa utkastet/ })
+      .click();
+    await page.getByRole('button', { name: 'Visa förslaget: Lo Lind', exact: true }).click();
+    const details = page.getByRole('dialog', { name: 'Lo Lind', exact: true });
+    await expect(details).toContainText('0700123456');
+    await expect(details).toContainText('Påhittad uppgift');
   } finally {
     for (const item of fixtures.held) item.release([]);
     await app.close();
@@ -205,7 +298,7 @@ test('KÖ-02: smal dator visar stopp, behåller oskickad text och tillåter Esca
     await field(page).fill('Oskickad text');
     await field(page).press('Enter');
     expect(fixtures.held).toHaveLength(1);
-    await expect(log(page)).toContainText('0 meddelanden väntar.');
+    await expect(log(page)).toContainText('Skyttel arbetar…');
     const before = (await read()).draft;
     const stop = region(page).getByRole('button', { name: 'Avbryt', exact: true });
     const box = await stop.boundingBox();
@@ -274,9 +367,9 @@ test('KÖ-03: röstrutans stopp avbryter talat arbete och textkön utan att änd
     await expect.poll(() => fixtures.held.length).toBe(1);
     await expect(log(page)).toContainText('Skyttel arbetar…');
     speak(fixtures.live, 'Väntande talat uppdrag.');
-    await expect(log(page)).toContainText('1 meddelande väntar.');
+    await expect(log(page)).toContainText('Skyttel arbetar…');
     await send(page, 'Väntande text.');
-    await expect(log(page)).toContainText('2 meddelanden väntar.');
+    await expect(log(page)).toContainText('Skyttel arbetar…');
     await turnMicrophoneOff(page);
     await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'false');
     const before = (await read()).draft;
@@ -325,7 +418,7 @@ test.describe('Pekskärm', () => {
       await field(page).fill('Ska ligga kvar');
       await field(page).press('Enter');
       await field(page).press('Escape');
-      await expect(log(page)).toContainText('Skyttel arbetar… 0 meddelanden väntar.');
+      await expect(log(page)).toContainText('Skyttel arbetar…');
       await expect(log(page)).not.toContainText('Tryck på Escape');
       await expect(page.getByRole('button', { name: 'Avbryt', exact: true })).toHaveCount(1);
       const before = (await read()).draft;

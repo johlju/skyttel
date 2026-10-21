@@ -258,14 +258,6 @@ for (const viewport of [
           visible: true,
         });
         if (viewport.width <= 700) {
-          // The route records selection evidence before releasing the request.
-          // Finish the turn before focusing: its reply and status change the
-          // space available for native keyboard scrolling.
-          await expect(
-            page
-              .getByRole('region', { name: 'Hela svaret som text', exact: true })
-              .getByRole('article'),
-          ).toHaveCount(2);
           await expect(page.locator('.conversation-row.working')).toHaveCount(0);
           const context = page.getByRole('region', { name: 'Kartans sammanhang', exact: true });
           await context.focus();
@@ -274,16 +266,7 @@ for (const viewport of [
             .poll(() =>
               context.evaluate((element) => {
                 const box = element.getBoundingClientRect();
-                const reply = document
-                  .querySelector('[aria-label="Hela svaret som text"]')
-                  ?.getBoundingClientRect();
                 return {
-                  top: box.top,
-                  bottom: box.bottom,
-                  replyBottom: reply?.bottom ?? null,
-                  belowReply: Boolean(reply && box.top >= reply.bottom),
-                  // Native focus can round scrolling by a CSS pixel while
-                  // the reply's reserved height is fractional.
                   withinViewport: box.bottom <= innerHeight + 1,
                   unobscured: element.contains(
                     document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
@@ -291,7 +274,7 @@ for (const viewport of [
                 };
               }),
             )
-            .toMatchObject({ belowReply: true, withinViewport: true, unobscured: true });
+            .toMatchObject({ withinViewport: true, unobscured: true });
           await page.keyboard.press('End');
           const lastSymbol = context.getByText('Punkter: etikettens koppling');
           await expect

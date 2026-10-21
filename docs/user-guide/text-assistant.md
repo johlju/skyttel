@@ -126,6 +126,13 @@ samtalstexten och meddelandefältet **Meddelande till Skyttel**.
 - I samtalstexten står det du skriver i en tonad ruta till höger och det
   Skyttel svarar utan ruta. Det du och Skyttel säger med rösten står där
   också. Raden **Skyttel arbetar…** står sist medan Skyttel arbetar.
+  En roterande ring visar arbetet. Ringen är stilla när du har valt
+  minskad rörelse i systemet. Arbetsraden beskriver aktuellt steg, till
+  exempel **Bearbetar uppgiften** eller **Läser kartan via MCP**.
+  **Visa arbetssteg** visar de senaste stegen i uppdraget, även snabba
+  anrop. Stegen finns kvar efter svaret tills nästa uppdrag börjar.
+  MCP är anslutningen som Skyttel använder för att läsa och ändra
+  hushållets uppgifter.
 - **Stäng textvyn** eller **Skriv till Skyttel** stänger textvyn. Samtalet,
   mikrofonen och din oskickade text finns kvar tills du öppnar den igen.
 - **Nytt samtal** börjar ett samtal om inget finns. I ett pågående samtal
@@ -188,6 +195,10 @@ beständiga kvitton, oberoende av om textvyn är öppen. Vid ett oklart
 pågående sparande öppnar **Visa sparandet** dess aktuella status.
 
 ## Samtalets kontext
+
+Skyttel återanvänder hämtade uppgifter mellan meddelanden i samma samtal.
+När underlaget ändras, även från en annan klient, hämtas berörda uppgifter
+på nytt vid behov. **Nytt samtal** börjar med ny samtalskontext.
 
 Under rubriken i textvyn visar **Kontext** hur många procent av samtalets
 kontext som är fylld. Beskrivningen är **Så mycket av samtalets kontext
@@ -361,10 +372,13 @@ du vill behålla vid en konflikt. Slå på mikrofonen för att svara med rösten
 eller välj **Skriv till Skyttel** för att läsa frågan och skriva ett svar.
 Textvyn öppnas inte automatiskt och frågan visas inte i en separat ruta.
 
-Skyttel ger korta resultatbesked, exempelvis **Utkastet är uppdaterat**
-eller **Sparat**, utan att läsa upp ändringarna efter varje steg.
+I röstläge ger Skyttel korta resultatbesked, exempelvis **Utkastet är
+uppdaterat** eller **Sparat**, utan att läsa upp ändringarna efter varje steg.
 Be om detaljer när du vill höra dem. Nödvändiga följdfrågor och felbesked
 ges även när vanliga bekräftelser är korta.
+
+I textvyn läser du svar, följdfrågor och sparbesked. Välj **Visa utkastet**
+för att läsa föreslagna ändringar.
 
 I samtalstexten visas både dina ord och Skyttels svar löpande. Tidigare
 rader finns kvar under samtalet. Korta pauser kan fortsätta samma rad.
@@ -445,7 +459,14 @@ genom att en sådan visningsbegäran kan nekas.
 
 Ett nytt meddelande avbryter inte pågående arbete. På dator kan du fortsätta
 med **Skicka**: meddelandena väntar på servern och besvaras i ordning.
-Raden **Skyttel arbetar…** visar hur många som väntar. Tryck Escape när
+Raden **Skyttel arbetar…** visas under arbetet. När alla väntande
+meddelanden har behandlats kommer ett kort slutsvar i vanlig svenska,
+till exempel **Lina och Kajsa lades till. Lina och Kajsa använder Spotify.**
+Svaret beskriver de bekräftade utkaständringarna. Om någon del återstår
+säger Skyttel vad som hindrade den eller ställer en riktad fråga.
+Öppna **Visa utkastet** för att granska förslagen före sparande.
+
+Tryck Escape när
 fokus är i textvyn för att avbryta arbete och allt som väntar. Escape gör
 ingenting när Skyttel bara talar eller fokus är utanför textvyn.
 
@@ -544,25 +565,29 @@ mikrofonen stängs. Skyttel skickar eller startar ingenting automatiskt
 när kontakten kommer tillbaka.
 
 Om instruktionen redan är mottagen men anslutningen sedan bryts får du
-ett leveransfel. Det betyder inte att arbetet misslyckas eller att inget
-sparas. Redan lagrat utkast och sparresultat finns kvar; kontrollera dem
-innan du ber om samma arbete igen.
+ett leveransfel. Redan lagrat utkast och sparresultat finns kvar; kontrollera
+dem innan du ber om samma arbete igen.
 
-När ljudleveransen inte kan bekräftas visas hela svaret eller följdfrågan
-under **Hela svaret som text**, tillsammans med en samtalsnotis om ljudet.
-Texten innehåller även beskedet om sparande. Mottagen text betyder att
-webbläsaren får hela texten; den säger inget om uppspelat ljud, läsning
-eller förståelse. Du behöver inte bekräfta eller läsa svaret för att
-uppgiften ska avslutas.
+Under samtalet visas svaren i textvyn **Skriv till Skyttel**. Långa svar
+rullas i textvyn.
 
-Långa svar rullas inuti svarsrutan. Du kan flytta fokus till rutan med
-tangentbordet och rulla till sista raden. Kartans verktyg och
-Inställningar går fortfarande att använda medan svaret finns kvar.
+När inloggningen går ut kan ett svar från ett redan mottaget uppdrag visas
+i en kort notis med gul streckad ram. Notisen förklarar varför svaret visas
+där. Välj **Läs mer** för att läsa **Hela svaret som text** och beskedet om
+sparande. Om uppdraget använder ljud visas också information om att
+ljudleveransen inte kan bekräftas. Mottagen text betyder att webbläsaren
+får hela texten.
+
+Välj **Visa mindre** för att fälla ihop texten eller krysset
+**Stäng svarsnotisen** för att ta bort notisen. Den förblir stängd för
+det svaret. Ett nytt svar eller leveransfel kan ge en ny notis.
+Långa svar rullas inuti den utfällda svarsrutan. Du kan flytta fokus till
+rutan med tangentbordet och rulla till sista raden.
 
 En redan mottagen skriven instruktion kan få sitt svar där efter att
 inloggningen går ut, om samma anslutning fortfarande är öppen. Uppgiftens
 ursprungliga gräns på 30 minuter gäller även leveransen. Ett avbrott,
-utebliven mottagning eller omstart ger ett leveransfel. Ingen instruktion
-skickas igen automatiskt och samtalstexten sparas inte för återanslutning.
-Redan lagrat utkast och sparresultat finns kvar. Kontrollera dem efter ny
-inloggning innan du ber om ett nytt sparande.
+utebliven mottagning eller omstart ger ett leveransfel. För ett nytt försök
+lämnar du instruktionen igen. Samtalstexten är tillfällig. Redan lagrat
+utkast och sparresultat finns kvar. Kontrollera dem efter ny inloggning
+innan du ber om ett nytt sparande.

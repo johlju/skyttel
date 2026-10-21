@@ -131,6 +131,7 @@ export function ConversationWorkspace({
           notice={notice}
         >
           {!notice && conversation.error && <p role="alert">{conversation.error}</p>}
+          {conversation.deliveryError && <p role="alert">{conversation.deliveryError}</p>}
         </TextView>
       )}
     </section>

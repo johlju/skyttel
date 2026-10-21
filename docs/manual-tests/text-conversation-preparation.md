@@ -244,7 +244,10 @@ HTTP-jämförelse. Ett senare direkt anrop får inte reparera en trasig form.
 ## Textvy, mikrofon och korta fönster
 
 TEXTVY-02: håll första svaret för den synliga arbetsraden; släpp
-`reply REQUEST Kim betalar musiken.`. Släpp andra med `reply REQUEST Klart.`.
+`tool REQUEST read_map {"query":"musik"}`. Vänta på nästa hållna svar
+och släpp `reply REQUEST Kim betalar musiken.` när användaren har läst
+arbetssteget. Efter nästa användarmeddelande, vänta på det tredje hållna
+svaret och släpp `reply REQUEST Klart.`.
 TEXTVY-03: håll originalet tills **Nytt samtal**, släpp därefter gammalt
 Lo-värde med namnet **För sent** genom `propose_object` med ursprungliga
 versioner. Nästa nya uppdrag får `reply REQUEST Lo Exempel.`. Separat

@@ -72,7 +72,7 @@ avbryter bara i textvyn”.
   },
   "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Angiven bredd och pekare skyddar FIFO, rätt avbrottsgräns och oskickad text.",
   "outcomes": [
-    "Skicka behåller sitt namn. Endast första modelluppdraget har börjat i steg 1. Arbetsraden visar **2 meddelanden väntar. Tryck på Escape för att avbryta.**. Svaren visas i samma ordning; antalet minskar.",
+    "Skicka behåller sitt namn. Endast första modelluppdraget har börjat i steg 1. Arbetsraden visar **Skyttel arbetar… Tryck på Escape för att avbryta.**. Svaren visas i samma ordning.",
     "Escape gör inget utan arbete eller med fokus utanför textvyn. Med fokus i textvyn avbryts aktuellt arbete och hela kön.",
     "**Avbrutet. Föreslagna ändringar ligger kvar i utkastet.** står ovanför fältet även när textvyn öppnas igen, men visas inte utanför textvyn. Texten och Lo-förslaget ligger kvar. Sena svar visas inte.",
     "Nästa uppdrag tar bort avbrottstexten. Nytt samtal tömmer också kön; de borttagna uppdragen börjar aldrig. Det nya uppdraget kan besvaras."
@@ -141,8 +141,8 @@ giltig autentisering medan inloggningen fortfarande gäller.
 **Förväntat resultat:**
 
 - Skicka behåller sitt namn. Endast första modelluppdraget har börjat
-  i steg 1. Arbetsraden visar **2 meddelanden väntar. Tryck på Escape
-  för att avbryta.**. Svaren visas i samma ordning; antalet minskar.
+  i steg 1. Arbetsraden visar **Skyttel arbetar… Tryck på Escape
+  för att avbryta.** Svaren visas i samma ordning.
 - Escape gör inget utan arbete eller med fokus utanför textvyn.
   Med fokus i textvyn avbryts aktuellt arbete och hela kön.
 - **Avbrutet. Föreslagna ändringar ligger kvar i utkastet.** står
@@ -259,7 +259,7 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
    modellsvar hållet. Invänta bekräftelse. Be sedan operatören leverera det
    väntande talade uppdraget och invänta bekräftelse. Skicka **Väntande text.**
    i textvyn.
-2. Läs att två uppdrag väntar. Stäng av mikrofonen med mikrofonknappen och
+2. Läs **Skyttel arbetar…**. Stäng av mikrofonen med mikrofonknappen och
    aktivera röstrutans **Avbryt**.
 3. Släpp det första svaret med **För sent.**. Skicka **Ett nytt textuppdrag.**
    och släpp det med **Textsvaret.**.
@@ -320,6 +320,87 @@ inget meddelande”.
   Arbetsraden ger ingen Escape-instruktion på mobil.
 - En stoppikon syns. Stoppet skickar inte fältets text och det sena
   svaret visas inte. Texten och Lo-förslaget behålls.
+
+### KÖ-06: ett slutbesked samlar ändringarna och visar vad som återstår
+
+**Syfte:** Läsa ett kort slutsvar i vanlig svenska efter flera uppdrag,
+med bekräftade utkaständringar, ett misslyckat uppdrag och en uppgift
+som behöver svar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Följ den allmänna förberedelsen med Lo Exempel,
+datorfönster bredare än 700 px och textvyn öppen.
+
+**Separat förberedelse:**
+
+Använd uppdragens aktuella värden enligt
+[utkastbatch och sparande](conversation-preparation.md#utkastbatch-och-sparande).
+Släpp första uppdraget med namnet Lo Lind. Släpp det andra med samma namn,
+bevarad Beskrivning och följande tillägg sist i `value.properties`:
+
+```json
+{"label":"Telefon","kind":"text","value":"0700123456"}
+```
+
+Varje släpp startar nästa väntande uppdrag. Låt det sista vara hållet tills
+arbetsraden har kontrollerats. För det tredje och fjärde uppdraget används
+deras respektive REQUEST:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST show_map_object {"objectId":"saknas"}
+tool REQUEST ask_questions {"questions":["Vilken Johan ska kopplas till Lo?"]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Den saknade posten ger ett kontrollerat markeringsfel. Avsluta med `quit`.
+
+**Automatiskt motsvarande test (integration):**
+[conversation-queue.spec.ts](../../tests/integration/conversation-queue.spec.ts),
+KÖ-06.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-queue.spec.ts",
+    "caseId": "KÖ-06"
+  },
+  "reference": "Chromium på bred dator, kontrollerad leverantör, riktig server och SQLite. Saknad post ger ett markeringsfel efter två bekräftade utkaständringar.",
+  "outcomes": [
+    "Arbetsraden visas under bearbetningen. Ett gemensamt slutbesked visas efter sista uppdraget.",
+    "Slutsvaret beskriver namnbytet och telefonnumret i vanliga meningar, identifierar det misslyckade markeringsuppdraget med felorsak och visar frågan om Johan.",
+    "Samma slutbesked ligger kvar när textvyn öppnas igen. Lo-förslaget innehåller telefonnumret och bevarad Beskrivning."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Skicka **Byt namn på Lo till Lo Lind.**, **Lägg till telefon
+   0700123456 på Lo.**, **Markera den saknade personen.** och
+   **Koppla Johan till Lo.** medan första uppdraget hålls.
+2. Släpp uppdragen enligt förberedelsen, ett i taget. Läs arbetsraden
+   mellan släppen. Släpp till sist frågan om Johan.
+3. Läs det samlade slutbeskedet. Stäng och öppna textvyn igen.
+4. Välj **Visa utkastet → Visa förslaget: Lo Lind**. Läs telefonnumret
+   och egenskapen Beskrivning.
+
+**Förväntat resultat:**
+
+- Arbetsraden visas under bearbetningen. Ett gemensamt slutbesked visas
+  efter sista uppdraget.
+- Slutsvaret beskriver namnbytet och telefonnumret i vanliga meningar,
+  identifierar det misslyckade markeringsuppdraget med felorsak och visar
+  frågan om Johan.
+- Samma slutbesked ligger kvar när textvyn öppnas igen. Lo-förslaget
+  innehåller telefonnumret och bevarad Beskrivning.
 
 ## Tillgänglighetsbedömning
 
