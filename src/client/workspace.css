@@ -8,6 +8,7 @@
   --space-text: #1d3543;
   --space-muted: #506777;
   --space-line: #95a6ae;
+  --space-connection: #2864b4;
   --space-control: #607c89;
   --space-accent: #1d706b;
   --space-shadow: 0 12px 45px #233b4817, 0 2px 8px #233b4810;
@@ -22,6 +23,7 @@
   --space-text: #edf2f9;
   --space-muted: #adbed2;
   --space-line: #4d647e;
+  --space-connection: #8ab4f8;
   --space-control: #8198b3;
   --space-accent: #8ce4db;
   --space-shadow: 0 12px 45px #0004, 0 2px 8px #0002;
@@ -548,7 +550,7 @@ footer[hidden] {
   color: var(--space-muted);
 }
 .household-map.workspace-shell :is(.connection, .connection-arrow-shaft, .connection-arrow) {
-  --connection-color: var(--space-accent);
+  --connection-color: var(--space-connection);
 }
 .household-map.workspace-shell .spatial-connection {
   opacity: 1;
