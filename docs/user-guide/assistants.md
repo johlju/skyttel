@@ -22,6 +22,11 @@ tillåta förslag och sparande. Äldre läsanslutningar förblir läsande.
    och sparande och välja **Godkänn kartarbete**. Det medgivandet sparar
    inga kartuppgifter och ersätter inte ditt besked för varje sparande.
 
+En klientregistrering utan anslutning rensas när den är minst 24 timmar
+gammal. Om du lämnar anslutningen oavslutad så länge behöver klienten
+registrera sig på nytt. Starta då om anslutningen från den externa klienten.
+Redan godkända anslutningar påverkas inte av den rensningen.
+
 AI-valet är skilt från cookies och annan lagring. Ett nej lämnar
 formulär och manuellt kartarbete tillgängliga. Den externa tjänsten
 behandlar de hämtade uppgifterna enligt ditt avtal och dina inställningar

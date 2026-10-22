@@ -13,19 +13,13 @@ description: >-
 
 - Apply [test placement](../maintain-manual-tests/references/cases.md#test-placement)
   when changing coverage or moving technical checks between suites.
-- Run the suite the user requested.
-- If no suite is named, run the default integration suite, then prodlike if
-  the project defines it.
-- Treat user-provided spec paths as the initial phase list.
-- Keep each failing spec file as one phase.
 - Edit failing specs and the shared helpers they use under `tests/support/`.
-  Keep helper changes limited to test setup, assertions or measurements;
-  run affected helper consumers. Preserve production contracts and assertions.
+  Keep helper changes limited to test setup, assertions or measurements.
+  Preserve production contracts and assertions.
 - Do not run a full suite while fixing a phase.
 - Do not abort or restart a slow test only because it exceeds an arbitrary
-  duration; passing completion matters. Abort only when the test is not
-  responding, the runner is stuck, or memory pressure risks killing the
-  devcontainer.
+  duration. Stop when the user changes the requested scope, the runner is
+  stuck, or memory pressure risks killing the devcontainer.
 
 ## Project Setup
 
@@ -39,21 +33,24 @@ description: >-
 
 ## Workflow
 
-1. Build the phase list:
-   - User supplied paths: use those spec files.
-   - No paths: run the selected suite with its project script and collect
-     failing spec files from Playwright output.
+1. Call the Skill tool with "select-integration-tests"
+   ([SKILL.md](../select-integration-tests/SKILL.md)), supplying user-provided
+   paths, reported failures and the current change. Group its selected
+   scenarios by spec file into phases; execute its required runs to collect
+   failures.
 2. Pick one failing spec file.
-3. Re-run that spec with the selected suite's spec command.
+3. Inspect its existing failure evidence; reproduce only when needed for diagnosis.
 4. Inspect Playwright output, traces, screenshots, console errors, app-server
    logs, and available memory diagnostics.
 5. Fix the smallest test defect that explains the failure. Repair a shared
    helper once instead of copying a corrected implementation into a spec.
-6. Re-run the same spec until it passes.
+6. Call the Skill tool with "select-integration-tests" after the fix;
+   execute its required runs.
 7. Repeat steps 3-6 for each failing spec file.
-8. Run the selected suite after all known phases pass.
-9. If new spec files fail, repeat from step 2.
-10. If dev and prodlike are both in scope, finish dev before starting prodlike.
+8. Supply results to "select-integration-tests" to assess completion and
+   prepare verification reporting. Return to step 2 for remaining failures
+   that can be repaired within this skill's scope.
+9. If dev and prodlike are both in scope, finish dev before starting prodlike.
 
 ## Fix Rules
 
@@ -75,4 +72,3 @@ description: >-
     production files or symbols, required behavior change, and blocked tests.
 - Continue with remaining test-only phases after writing the report.
 - Respect Playwright config differences between dev and prodlike runs.
-- Report final pass/fail status and the exact commands run.

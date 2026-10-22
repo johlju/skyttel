@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { createAuth, verifyAuthSchema } from './auth.js';
+import { clientAddressBoundary } from './client-address.js';
 import { ConfigurationError, readConfig } from './config.js';
 import { DatabaseInitializationError, openDatabase } from './database.js';
 import { InstallationAuthorityError } from './installation-authority.js';
@@ -15,9 +16,16 @@ async function main() {
     const auth = createAuth(config, database);
     await verifyAuthSchema(auth);
     const app = createApp({ config, database, auth });
-    const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, () => {
-      console.info(JSON.stringify({ event: 'server_ready' }));
-    });
+    const server = serve(
+      {
+        fetch: clientAddressBoundary(config.clientAddress, app.fetch),
+        hostname: config.host,
+        port: config.port,
+      },
+      () => {
+        console.info(JSON.stringify({ event: 'server_ready' }));
+      },
+    );
     attachTaskDelivery(server, config.origin, app.prepareTaskDelivery);
     server.on('error', async () => {
       console.error(JSON.stringify({ event: 'listener_failed' }));

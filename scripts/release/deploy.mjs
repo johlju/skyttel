@@ -13,6 +13,14 @@ const active = new Set([
   'pre_deploy_in_progress',
   'update_in_progress',
 ]);
+const finished = new Set([
+  'live',
+  'deactivated',
+  'build_failed',
+  'update_failed',
+  'pre_deploy_failed',
+  'canceled',
+]);
 const digestPattern = /^sha256:[a-f0-9]{64}$/u;
 const imagePattern = /^ghcr\.io\/viscalyx\/skyttel@sha256:[a-f0-9]{64}$/u;
 
@@ -294,17 +302,10 @@ export async function deployRelease({
       deploy.status === 'fulfilled' && deploy.value
         ? {
             id: observedDeployId(deploy.value.id),
-            status: [
-              ...active,
-              'live',
-              'deactivated',
-              'build_failed',
-              'update_failed',
-              'pre_deploy_failed',
-              'canceled',
-            ].includes(deploy.value.status)
-              ? deploy.value.status
-              : 'unknown',
+            status:
+              active.has(deploy.value.status) || finished.has(deploy.value.status)
+                ? deploy.value.status
+                : 'unknown',
             digest: digestPattern.test(deploy.value.image?.sha) ? deploy.value.image.sha : null,
           }
         : null;
@@ -386,25 +387,9 @@ export async function deployRelease({
       report.outcome = 'superseded';
       return report;
     }
-    // Never automatically retry an unresolved failed migration or unknown result.
-    requireState(!previous || previous.status === 'live', 'previous_deployment_requires_diagnosis');
-    if (previous) {
-      phase = 'verify-previous-application';
-      requireState((await application('/healthz')).status === 'ok', 'previous_health_failed');
-      const before = observedIdentity(await application('/api/version'));
-      requireState(before?.database.status === 'ready', 'database_status_unknown');
-      requireState(
-        previous.image?.ref === service.imagePath &&
-          service.imagePath.endsWith(`@${previous.image?.sha}`),
-        'previous_image_not_reconciled',
-      );
-      report.before = before;
-    }
-    // Recheck after waiting: GitHub concurrency does not promise queue order.
-    if (await superseded()) {
-      report.outcome = 'superseded';
-      return report;
-    }
+    // A replacement must be able to repair a failed or unhealthy application.
+    // Unknown states cannot establish that a previous deployment has finished.
+    requireState(!previous || finished.has(previous.status), 'previous_deployment_status_unknown');
     phase = 'create-deployment-record';
     deploymentId = (
       await github('/deployments', 'POST', {
@@ -423,7 +408,12 @@ export async function deployRelease({
     await status('in_progress');
     const imageUrl = `${identity.image}@${identity.digest}`;
     let deploy = previous;
-    if (service.imagePath !== imageUrl || previous?.image?.sha !== identity.digest) {
+    if (
+      previous?.status !== 'live' ||
+      service.imagePath !== imageUrl ||
+      previous.image?.ref !== imageUrl ||
+      previous.image?.sha !== identity.digest
+    ) {
       phase = 'update-service-image';
       await render(servicePath, 'PATCH', {
         image: {

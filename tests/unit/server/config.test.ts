@@ -5,6 +5,50 @@ import { configurationEnvironment } from './fixture.js';
 afterEach(() => vi.unstubAllEnvs());
 
 describe('installation configuration', () => {
+  test('requires an explicit client address policy in production and validates ingress trust', () => {
+    const environment = { ...configurationEnvironment(), NODE_ENV: 'production' };
+    expect(() => readConfig(environment)).toThrow(
+      new ConfigurationError('SKYTTEL_CLIENT_ADDRESS_MODE'),
+    );
+    expect(
+      readConfig({ ...environment, SKYTTEL_CLIENT_ADDRESS_MODE: 'direct' }).clientAddress,
+    ).toEqual({ mode: 'direct' });
+    const ingress = {
+      ...environment,
+      SKYTTEL_CLIENT_ADDRESS_MODE: 'header',
+      SKYTTEL_CLIENT_ADDRESS_HEADER: 'CF-Connecting-IP',
+      SKYTTEL_CLIENT_ADDRESS_TRUST: 'peers',
+      SKYTTEL_CLIENT_ADDRESS_PEERS: '127.0.0.1/32,2001:db8::/48',
+    };
+    expect(readConfig(ingress).clientAddress).toEqual({
+      mode: 'header',
+      header: 'cf-connecting-ip',
+      trust: 'peers',
+      peers: ['127.0.0.1/32', '2001:db8::/48'],
+    });
+    for (const [key, value] of [
+      ['SKYTTEL_CLIENT_ADDRESS_MODE', 'automatic'],
+      ['SKYTTEL_CLIENT_ADDRESS_HEADER', undefined],
+      ['SKYTTEL_CLIENT_ADDRESS_HEADER', 'x-skyttel-client-address'],
+      ['SKYTTEL_CLIENT_ADDRESS_HEADER', 'bad header'],
+      ['SKYTTEL_CLIENT_ADDRESS_TRUST', undefined],
+      ['SKYTTEL_CLIENT_ADDRESS_PEERS', ''],
+      ['SKYTTEL_CLIENT_ADDRESS_PEERS', '127.0.0.1/33'],
+      ['SKYTTEL_CLIENT_ADDRESS_PEERS', '2001:db8::/129'],
+      ['SKYTTEL_CLIENT_ADDRESS_PEERS', '127.0.0.1,'],
+    ] as const)
+      expect(() => readConfig({ ...ingress, [key]: value })).toThrow(new ConfigurationError(key));
+    expect(
+      readConfig({
+        ...ingress,
+        SKYTTEL_CLIENT_ADDRESS_TRUST: 'protected-origin',
+        SKYTTEL_CLIENT_ADDRESS_PEERS: undefined,
+      }).clientAddress,
+    ).toEqual({ mode: 'header', header: 'cf-connecting-ip', trust: 'protected-origin' });
+    expect(() => readConfig({ ...ingress, SKYTTEL_CLIENT_ADDRESS_MODE: 'direct' })).toThrow(
+      new ConfigurationError('SKYTTEL_CLIENT_ADDRESS_HEADER'),
+    );
+  });
   test('requires a separately managed authority generation and rejects incomplete restore declarations', () => {
     expect(() =>
       readConfig({ ...configurationEnvironment(), SKYTTEL_AUTHORITY_GENERATION: undefined }),
@@ -39,6 +83,7 @@ describe('installation configuration', () => {
   });
   test('reads a complete configuration with the default listener', () => {
     expect(readConfig(configurationEnvironment())).toEqual({
+      clientAddress: { mode: 'direct' },
       origin: 'http://localhost:3000',
       databasePath: '/synthetic/skyttel.sqlite',
       firstAdmin: { provider: 'google', subject: 'synthetic-admin' },

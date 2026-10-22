@@ -1,3 +1,9 @@
+import {
+  type ClientAddressPolicy,
+  clientAddressHeader,
+  trustedPeerList,
+} from './client-address.js';
+
 export type Provider = 'google' | 'microsoft';
 
 export type AuthorityFence = {
@@ -24,6 +30,7 @@ export function validAuthorityFence(fence: AuthorityFence | undefined) {
 }
 
 export interface Config {
+  clientAddress: ClientAddressPolicy;
   origin: string;
   databasePath: string;
   firstAdmin: { provider: Provider; subject: string };
@@ -98,6 +105,7 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
   }
 
   return {
+    clientAddress: readClientAddressPolicy(environment),
     origin,
     databasePath,
     firstAdmin: { provider, subject: required('SKYTTEL_FIRST_ADMIN_SUBJECT') },
@@ -115,4 +123,44 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
     host: environment.HOST ?? '0.0.0.0',
     openaiApiKey: environment.OPENAI_API_KEY || undefined,
   };
+}
+
+function readClientAddressPolicy(environment: NodeJS.ProcessEnv): ClientAddressPolicy {
+  const mode =
+    environment.SKYTTEL_CLIENT_ADDRESS_MODE ??
+    (environment.NODE_ENV === 'production' ? undefined : 'direct');
+  const header = environment.SKYTTEL_CLIENT_ADDRESS_HEADER;
+  const trust = environment.SKYTTEL_CLIENT_ADDRESS_TRUST;
+  const declaredPeers = environment.SKYTTEL_CLIENT_ADDRESS_PEERS;
+  if (mode !== 'direct' && mode !== 'header')
+    throw new ConfigurationError('SKYTTEL_CLIENT_ADDRESS_MODE');
+  if (mode === 'direct') {
+    for (const key of [
+      'SKYTTEL_CLIENT_ADDRESS_HEADER',
+      'SKYTTEL_CLIENT_ADDRESS_TRUST',
+      'SKYTTEL_CLIENT_ADDRESS_PEERS',
+    ])
+      if (environment[key] !== undefined) throw new ConfigurationError(key);
+    return { mode };
+  }
+  if (
+    !header ||
+    !/^[!#$%&'*+.^_`|~0-9a-z-]+$/i.test(header) ||
+    header.toLowerCase() === clientAddressHeader
+  )
+    throw new ConfigurationError('SKYTTEL_CLIENT_ADDRESS_HEADER');
+  if (trust !== 'peers' && trust !== 'protected-origin')
+    throw new ConfigurationError('SKYTTEL_CLIENT_ADDRESS_TRUST');
+  if (trust === 'protected-origin') {
+    if (declaredPeers !== undefined) throw new ConfigurationError('SKYTTEL_CLIENT_ADDRESS_PEERS');
+    return { mode, header: header.toLowerCase(), trust };
+  }
+  const peers = declaredPeers?.split(',').map((peer) => peer.trim());
+  if (!peers?.length) throw new ConfigurationError('SKYTTEL_CLIENT_ADDRESS_PEERS');
+  try {
+    trustedPeerList(peers);
+  } catch {
+    throw new ConfigurationError('SKYTTEL_CLIENT_ADDRESS_PEERS');
+  }
+  return { mode, header: header.toLowerCase(), trust, peers };
 }

@@ -9,6 +9,7 @@ import { type ServerType, serve } from '@hono/node-server';
 import { seedDemo } from '../../scripts/seeds/demo.js';
 import { createApp } from '../../src/server/app.js';
 import { createAuth, verifyAuthSchema } from '../../src/server/auth.js';
+import { clientAddressBoundary } from '../../src/server/client-address.js';
 import type { Config } from '../../src/server/config.js';
 import { openDatabase } from '../../src/server/database.js';
 import { adoptLegacyInstallationAuthority } from '../../src/server/legacy-login-upgrade.js';
@@ -57,6 +58,7 @@ export async function createInstallation(
     now?: () => number;
     deliverResponse?: (request: Request, response: Response) => Response | Promise<Response>;
     authorityFence?: Config['authorityFence'];
+    clientAddress?: Config['clientAddress'];
   } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
@@ -88,6 +90,7 @@ export async function createInstallation(
     tls = { key: readFileSync(key), cert: readFileSync(certificate) };
   }
   const config: Config = {
+    clientAddress: databaseOptions.clientAddress ?? { mode: 'direct' },
     origin: 'http://127.0.0.1',
     databasePath: databaseOptions.databasePath ?? join(directory, 'skyttel.db'),
     firstAdmin,
@@ -120,7 +123,7 @@ export async function createInstallation(
     new Response(null, { status: 503 });
   async function start() {
     server = serve({
-      fetch: (request) => handle(request),
+      fetch: clientAddressBoundary(config.clientAddress, (request) => handle(request)),
       hostname: config.host,
       port: config.port,
       ...(tls ? { createServer: createHttpsServer, serverOptions: tls } : {}),

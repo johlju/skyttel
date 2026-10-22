@@ -15,7 +15,7 @@ function step(name) {
   return block.split(/\n {6}(?:- |#)/u)[0];
 }
 
-it('retains available ZAP reports after scanner and policy failures', () => {
+it('configures the scan application and retains available ZAP reports after failures', () => {
   const collection = step('Collect available candidate diagnostics');
   assert.match(collection, /if: always\(\)/u);
   const script = collection.match(/run: \|\n((?: {10}.*\n?)+)/u)[1].replace(/^ {10}/gmu, '');
@@ -26,6 +26,7 @@ it('retains available ZAP reports after scanner and policy failures', () => {
     writeFileSync(
       join(bin, 'docker'),
       `#!/usr/bin/env bash
+if [[ "$1" == run && "$2" == -d ]]; then printf '%s\\0' "$@" > "$APPLICATION_ARGUMENTS"; fi
 if [[ " $* " != *" zap-baseline.py "* ]]; then exit 0; fi
 for argument in "$@"; do
   if [[ "$argument" == *:/zap/wrk:rw ]]; then reports="\${argument%:/zap/wrk:rw}"; fi
@@ -56,12 +57,36 @@ exit "$SCAN_STATUS"
         SCAN_STATUS: String(scannerStatus),
         ZAP_REPORT: report,
         ZAP_HTML: String(html),
+        APPLICATION_ARGUMENTS: join(runner, 'application-arguments'),
       };
       const scan = spawnSync('bash', [scanner, 'synthetic-image', join(runner, 'zap')], {
         encoding: 'utf8',
         env,
       });
       assert.equal(scan.status, expectedStatus, scan.stderr);
+      const args = readFileSync(env.APPLICATION_ARGUMENTS, 'utf8').split('\0');
+      const applicationEnvironment = {
+        NODE_ENV: 'production',
+        SKYTTEL_DATABASE_PATH: '/data/skyttel.sqlite',
+      };
+      for (let index = 0; index < args.length; index++) {
+        if (args[index] !== '-e') continue;
+        const setting = args[++index];
+        const separator = setting.indexOf('=');
+        applicationEnvironment[setting.slice(0, separator)] = setting.slice(separator + 1);
+      }
+      const configured = spawnSync(
+        process.execPath,
+        [
+          '--import',
+          'tsx',
+          '--input-type=module',
+          '-e',
+          'import { readConfig } from "./src/server/config.ts"; readConfig();',
+        ],
+        { env: applicationEnvironment, encoding: 'utf8' },
+      );
+      assert.equal(configured.status, 0, configured.stderr);
       const collected = spawnSync(
         'bash',
         ['--noprofile', '--norc', '-eo', 'pipefail', '-c', script],
