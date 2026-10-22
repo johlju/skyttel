@@ -1,27 +1,31 @@
 import { randomBytes } from 'node:crypto';
-import { readdir } from 'node:fs/promises';
+import { readdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
+import { request } from '@playwright/test';
 import Database from 'better-sqlite3';
 import sharp from 'sharp';
-import { createHousehold, signIn } from '../support/client.js';
-import { createInstallation, robin } from '../support/installation.js';
-import { expect, test } from '../support/test.js';
+import { expect, test, vi } from 'vitest';
+import { createHousehold, signIn } from '../../support/client.js';
+import { createInstallation, robin } from '../../support/installation.js';
 
 test('technical: revocation or demotion interrupts an active download and removes its private copy', {
-  tag: '@technical',
-}, async ({ page, playwright }) => {
+  tags: ['technical'],
+}, async () => {
   const installation = await createInstallation();
-  const other = await playwright.request.newContext();
+  const client = await request.newContext();
+  const other = await request.newContext();
+  const diagnostic = vi.spyOn(console, 'error');
+  const information = vi.spyOn(console, 'info');
   try {
-    await signIn(page.request, installation.origin);
-    const { household } = await (await createHousehold(page.request, installation.origin)).json();
+    await signIn(client, installation.origin);
+    const { household } = await (await createHousehold(client, installation.origin)).json();
     const path = `${installation.origin}/api/households/${household.id}`;
     const headers = { origin: installation.origin };
     installation.setIdentity(robin);
     await signIn(other, installation.origin, 'microsoft');
     const { user } = await (await other.get(`${installation.origin}/api/bootstrap`)).json();
     const { code } = await (
-      await page.request.post(`${path}/invitations`, { headers, data: { userId: user.id } })
+      await client.post(`${path}/invitations`, { headers, data: { userId: user.id } })
     ).json();
     expect(
       (
@@ -50,7 +54,7 @@ test('technical: revocation or demotion interrupts an active download and remove
     for (const action of ['role', 'revoke']) {
       expect(
         (
-          await page.request.post(`${path}/members/${user.id}/role`, {
+          await client.post(`${path}/members/${user.id}/role`, {
             headers,
             data: { role: 'administrator' },
           })
@@ -63,7 +67,11 @@ test('technical: revocation or demotion interrupts an active download and remove
       const cookies = (await other.storageState()).cookies
         .map(({ name, value }) => `${name}=${value}`)
         .join('; ');
-      const response = await fetch(`${path}/exports/${ready.id}`, { headers: { cookie: cookies } });
+      const deadline = AbortSignal.timeout(3000);
+      const response = await fetch(`${path}/exports/${ready.id}`, {
+        headers: { cookie: cookies },
+        signal: deadline,
+      });
       expect(response.status).toBe(200);
       if (!response.body) throw new Error('Archive stream required');
       const reader = response.body.getReader();
@@ -74,7 +82,7 @@ test('technical: revocation or demotion interrupts an active download and remove
       // changes access. Bytes already in network buffers cannot be recalled.
       expect(
         (
-          await page.request.post(`${path}/members/${user.id}/${action}`, {
+          await client.post(`${path}/members/${user.id}/${action}`, {
             headers,
             data: action === 'role' ? { role: 'member' } : {},
           })
@@ -92,11 +100,50 @@ test('technical: revocation or demotion interrupts an active download and remove
         reader.releaseLock();
       }
       expect(received).toBeLessThan(ready.bytes);
+      expect(deadline.aborted).toBe(false);
       expect(await readdir(join(installation.directory, '.skyttel-exports'))).toEqual([]);
       expect((await other.get(`${path}/exports/${ready.id}`)).status()).toBe(403);
+      expect(diagnostic).not.toHaveBeenCalled();
+      expect(information).not.toHaveBeenCalled();
     }
   } finally {
     await other.dispose();
+    await client.dispose();
     await installation.close();
+    diagnostic.mockRestore();
+    information.mockRestore();
+  }
+});
+
+test('an archive read failure still reaches the HTTP server error log and removes its copy', async () => {
+  const installation = await createInstallation();
+  const client = await request.newContext();
+  const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    await signIn(client, installation.origin);
+    const { household } = await (await createHousehold(client, installation.origin)).json();
+    const path = `${installation.origin}/api/households/${household.id}/exports`;
+    const prepared = await client.post(path, {
+      headers: { origin: installation.origin },
+      data: {},
+    });
+    expect(prepared.status()).toBe(201);
+    const ready = await prepared.json();
+    const directory = join(installation.directory, '.skyttel-exports');
+    await unlink(join(directory, ready.id, 'archive.zip'));
+    const cookies = (await client.storageState()).cookies
+      .map(({ name, value }) => `${name}=${value}`)
+      .join('; ');
+    await expect(
+      fetch(`${path}/${ready.id}`, { headers: { cookie: cookies } }).then((response) =>
+        response.arrayBuffer(),
+      ),
+    ).rejects.toThrow();
+    expect(diagnostic.mock.calls).toEqual([[expect.objectContaining({ code: 'ENOENT' })]]);
+    await expect.poll(() => readdir(directory)).toEqual([]);
+  } finally {
+    await client.dispose();
+    await installation.close();
+    diagnostic.mockRestore();
   }
 });

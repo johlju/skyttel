@@ -441,20 +441,34 @@ test('a full image history larger than 64 MiB streams completely and invalidatio
   if (!initial.value) throw new Error('First archive chunk required');
   received = initial.value.length;
   await invalidateHouseholdExports(fixture.database, householdId);
-  let interrupted = false;
-  try {
-    for (;;) {
-      const result = await active.read();
-      if (result.done) break;
-      received += result.value.length;
-    }
-  } catch {
-    interrupted = true;
-  }
-  expect(interrupted || received < ready.bytes).toBe(true);
+  await expect(active.read()).resolves.toEqual({ done: true, value: undefined });
+  expect(received).toBeLessThan(ready.bytes);
   expect((await client.request(`${path}/exports/${ready.id}`)).status).toBe(404);
   expect(readdirSync(join(dirname(fixture.config.databasePath), '.skyttel-exports'))).toEqual([]);
 }, 15000);
+
+test('cancelling before the first read closes the download and removes its copy', async () => {
+  const ready = await (await client.json(`${path}/exports`, {})).json();
+  const response = await client.request(`${path}/exports/${ready.id}`);
+  if (!response.body) throw new Error('Archive stream required');
+  expect((await client.json(`${path}/exports/${ready.id}/cancel`, {})).status).toBe(200);
+  await expect(response.body.getReader().read()).resolves.toEqual({
+    done: true,
+    value: undefined,
+  });
+  expect(readdirSync(join(dirname(fixture.config.databasePath), '.skyttel-exports'))).toEqual([]);
+});
+
+test('a disconnected consumer releases its export copy', async () => {
+  const ready = await (await client.json(`${path}/exports`, {})).json();
+  const response = await client.request(`${path}/exports/${ready.id}`);
+  if (!response.body) throw new Error('Archive stream required');
+  await response.body.cancel();
+  await expect
+    .poll(() => readdirSync(join(dirname(fixture.config.databasePath), '.skyttel-exports')))
+    .toEqual([]);
+  expect((await client.request(`${path}/exports/${ready.id}`)).status).toBe(404);
+});
 
 async function invite(role = 'member') {
   fixture.setSubject('robin');

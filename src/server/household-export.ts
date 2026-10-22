@@ -9,7 +9,7 @@ import {
 } from 'node:fs';
 import { type FileHandle, mkdir, open, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { Readable } from 'node:stream';
+import type { Readable } from 'node:stream';
 import { finished, pipeline } from 'node:stream/promises';
 import Database from 'better-sqlite3';
 import { ZipFile } from 'yazl';
@@ -371,15 +371,46 @@ export async function downloadHouseholdExport(
     throw new AdministrationError('export_unavailable', 404);
   }
   job.state = 'reading';
-  job.stream = createReadStream(join(job.directory, 'archive.zip'));
-  void finished(job.stream)
-    .catch(() => {})
-    .then(() => discard(store, job))
-    .catch(reportCleanupFailure);
+  const stream = createReadStream(join(job.directory, 'archive.zip'));
+  job.stream = stream;
+  let cancelled = false;
+  const body = new ReadableStream<Uint8Array>(
+    {
+      start(controller) {
+        stream.pause();
+        stream.on('data', (chunk) => {
+          stream.pause();
+          controller.enqueue(chunk as Buffer);
+        });
+        void finished(stream)
+          .then(
+            () => {
+              if (!cancelled) controller.close();
+            },
+            (error) => {
+              if (cancelled) return;
+              // Only an intentional discard may end a partial response quietly.
+              // File errors still reach the HTTP server's normal error handler.
+              if (job.controller.signal.aborted && !stream.errored) controller.close();
+              else controller.error(error);
+            },
+          )
+          .then(() => discard(store, job))
+          .catch(reportCleanupFailure);
+      },
+      pull() {
+        stream.resume();
+      },
+      cancel() {
+        cancelled = true;
+        stream.destroy();
+      },
+    },
+    // Do not queue archive bytes beyond the consumer's current read.
+    { highWaterMark: 0 },
+  );
   return {
-    body: Readable.toWeb(job.stream, {
-      strategy: { highWaterMark: 64 * 1024, size: (chunk: Uint8Array) => chunk.byteLength },
-    }) as ReadableStream<Uint8Array>,
+    body,
     bytes: job.bytes,
   };
 }

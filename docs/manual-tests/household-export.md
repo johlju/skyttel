@@ -406,7 +406,9 @@ EXPORT-07.
   "evidence": [
     {
       "kind": "technical",
-      "spec": "tests/integration/household-export-content.spec.ts",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/household-export-stream-http.test.ts",
       "title": "technical: revocation or demotion interrupts an active download and removes its private copy",
       "purpose": "Separat hållen HTTP-ström, ofullständiga byte och rensad privat kopia"
     }
@@ -952,7 +954,7 @@ kontrollsummor, privata utkast och personliga placeringar kontrolleras av
 det separat märkta tekniska servertestet i
 [household-export-property-images-http.test.ts](../../tests/unit/server/household-export-property-images-http.test.ts).
 Det andra tekniska testet i
-[household-export-content.spec.ts](../../tests/integration/household-export-content.spec.ts)
+[household-export-stream-http.test.ts](../../tests/unit/server/household-export-stream-http.test.ts)
 behåller HTTP-strömmens avbrott efter både
 rolländring och återkallelse, nekad ny hämtning och tom serverkatalog.
 Det är ytterligare underlag till EXPORT-06/07, inte deras UI-motsvarigheter.

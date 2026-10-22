@@ -1669,7 +1669,13 @@ test('a selected relationship keeps its directed label readable in a dense map',
     name: 'Välj samband: Tätt objekt 5 → använder → Tätt objekt 6',
     exact: true,
   });
-  await label.click();
+  // Normal filtering may hide an unselected label in this dense cluster.
+  const allLabels = page.getByRole('button', { name: 'Alla etiketter', exact: true });
+  await allLabels.click();
+  await page.getByRole('button', { name: 'Återställ vy', exact: true }).click();
+  (label.element() as HTMLButtonElement).focus();
+  await userEvent.keyboard('{Enter}');
+  await allLabels.click();
   await expect.element(selectionStatus()).toHaveTextContent('Samband: edge');
   await expect.element(label).toBeVisible();
 });

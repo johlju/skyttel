@@ -51,6 +51,9 @@ export function householdExportRoutes(database: Database.Database, auth: Auth, o
       headers: {
         'Content-Type': 'application/zip',
         'Content-Length': String(result.bytes),
+        // A cancelled body ends short of Content-Length. Close the connection
+        // so clients detect the incomplete download without a keep-alive wait.
+        Connection: 'close',
         'Content-Disposition': 'attachment; filename="skyttel-export.zip"',
         'Cache-Control': 'no-store',
       },
