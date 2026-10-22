@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { sessionDeadline } from './browser-binding.js';
 
 const batchSize = 100;
+const unconnectedClientLifetime = 24 * 60 * 60_000;
 
 // Better Auth's SQLite dates and supported historical fixtures use epoch
 // milliseconds or ISO text. Keep exact millisecond boundaries for both.
@@ -161,6 +162,14 @@ export function authenticationCleanup({
         'id',
         `referenceId IS NOT NULL AND NOT EXISTS
       (SELECT 1 FROM assistant_connection WHERE id = oauthConsent.referenceId)`,
+      ),
+    () =>
+      remove(
+        'oauthClient',
+        'id',
+        `${milliseconds('createdAt')} <= ? AND NOT EXISTS
+      (SELECT 1 FROM assistant_connection WHERE clientId = oauthClient.clientId)`,
+        now() - unconnectedClientLifetime,
       ),
   ];
   function drain() {

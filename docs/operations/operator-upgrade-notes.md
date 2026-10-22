@@ -6,6 +6,17 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Abandoned assistant registrations
+
+After deployment, automatic cleanup removes existing and new OAuth client
+registrations that are at least 24 hours old and have no assistant
+connection. An unfinished connection using an expired registration must
+start again from the external client with a new registration. Connected
+clients and active built-in assistants retain their registrations.
+No migration command or configuration change is required. Keep the
+existing database; deleted space is available for SQLite to reuse.
+See [registration retention](installation.md#abandoned-assistant-registrations).
+
 ### Deployment after a failed update
 
 New releases from main deploy after the release checks pass even if the
