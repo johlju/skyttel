@@ -14,6 +14,9 @@ jobs:
   codeql:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Match the existing main-branch baseline for both CI and release callers.
+      CODEQL_ACTION_ANALYSIS_KEY: .github/workflows/release.yml:codeql
     permissions:
       contents: read
       security-events: write
