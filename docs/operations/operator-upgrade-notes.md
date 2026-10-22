@@ -6,6 +6,16 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Image security registry access
+
+After rollout, run **Deployed image security** on the main branch. Verify
+that both scanners complete for the running and retained rollback images
+and that the status artifact contains current scan evidence. The scanners
+now authenticate directly to the registry. Check that the run has no Docker
+credential-storage warning and that logs and retained artifacts contain no
+credentials. Treat image-access failures as unknown security status and
+follow the [monitoring guide](security-monitoring.md#respond-to-findings-and-failures).
+
 ### Deployment after a failed update
 
 New releases from main deploy after the release checks pass even if the
