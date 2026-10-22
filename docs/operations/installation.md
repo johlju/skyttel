@@ -217,6 +217,22 @@ draft preserved; recovery never creates a replacement save. Keep the
 existing database and receipts; do not reset them to clear an uncertain
 result. No schema migration or new runtime configuration is required.
 
+## Abandoned assistant registrations
+
+Skyttel removes OAuth client registrations that are at least 24 hours old
+and have no assistant connection. Cleanup runs automatically at startup
+and every minute, in batches of at most 100 registrations. It does not
+require browser traffic. Connected external clients and active built-in
+assistants retain their registrations. A newly registered client can
+complete consent during the retention window.
+
+Retention uses age rather than count-based eviction, so later registrations
+do not displace a pending consent flow. The existing registration rate
+limit still applies; there is no installation-wide registration count cap.
+If an abandoned registration expires, restart the connection from the
+external client so it registers again. SQLite can reuse deleted storage;
+cleanup does not shrink the database file or remove existing backups.
+
 ## Register identity providers
 
 Follow [production authentication](authentication.md) for provider accounts,
