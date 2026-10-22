@@ -408,6 +408,9 @@ and update the GitHub `production` environment's `SKYTTEL_ORIGIN` as well.
 
 ## 5. Enter the application configuration in Render
 
+Complete the client-address trust review below before enabling header
+trust. Save these settings together with the rest of the configuration.
+
 1. On the Render service page, open **Environment**.
 1. Under **Environment Variables**, choose **Add Environment Variable** for
    each row below. Edit any existing entry instead of creating a duplicate.
@@ -428,6 +431,9 @@ and update the GitHub `production` environment's `SKYTTEL_ORIGIN` as well.
    | `MICROSOFT_CLIENT_SECRET` | The Microsoft application's client secret value. |
    | `HOST` | `0.0.0.0` |
    | `PORT` | `3000` |
+   | `SKYTTEL_CLIENT_ADDRESS_MODE` | `header`, after the origin-protection review below. |
+   | `SKYTTEL_CLIENT_ADDRESS_HEADER` | `CF-Connecting-IP`, verified on every supported ingress route. |
+   | `SKYTTEL_CLIENT_ADDRESS_TRUST` | `protected-origin`, only when every other origin-access path is blocked or explicitly trusted. |
    <!-- markdownlint-enable MD013 -->
 
 1. Choose **Save and deploy** to apply the configuration. If you choose
@@ -452,6 +458,40 @@ step 7; it is not an application environment variable.
 > create its first household. Complete the production administrator lookup
 > in step 6, replace the subject, and use **Save and deploy** again. Do not
 > substitute an email address or select an arbitrary signed-in account.
+
+### Client-address trust on Render
+
+Use the single-address `CF-Connecting-IP` source only after verifying that
+ingress owns it on every supported public route, including custom and
+platform-provided hostnames. Check that caller input is overwritten or
+rejected. Multi-hop forwarding can preserve caller-supplied leading entries
+and vary in length; neither the leftmost address nor a fixed hop count is
+a safe client source. Do not build a peer allowlist from sampled addresses.
+
+Public ingress protection and private-network reachability are separate.
+Render services in the same workspace and region can communicate privately.
+Inventory those callers and their owners in private operator records.
+With `protected-origin`, every caller able to reach the origin privately
+is inside the trusted administrative boundary and can supply the header.
+Block untrusted callers with enforceable controls before enabling this
+mode. A successful public probe does not prove private-network isolation.
+
+Cross-environment network blocking requires an eligible plan and still
+permits traffic within an environment. A protected environment controls
+administrative actions; it does not establish network isolation. An
+unavailable subscription control proves nothing about isolation. Review
+[Render private networking](https://render.com/docs/private-network) and
+[environment network controls](https://render.com/docs/projects#blocking-cross-environment-traffic).
+This procedure does not require or authorize a plan purchase.
+
+Review the boundary again before adding services, changing ownership or
+exposing another origin route. Leave `SKYTTEL_CLIENT_ADDRESS_PEERS` unset
+in this mode. Follow the
+[verification and diagnosis procedure](installation.md#verify-and-diagnose-the-boundary)
+with private records and temporary probes. After deployment, verify login
+through each supported route. A missing or invalid selected address causes
+HTTP 503 and an address-free diagnostic; it never falls back to another
+header. Do not use `direct` behind Render ingress to bypass this failure.
 
 ## 6. Verify the first live application
 
@@ -779,7 +819,9 @@ older job uses its original script.
 | `database_initialization_failed` with `unsupported_database_format` | Diagnose the database validation failure with a maintainer; do not edit format markers. |
 | `database_initialization_failed` | Inspect the safe reason in private logs. Check free disk space and write permission for UID/GID 1000; ask a maintainer to repair permissions if needed. Preserve the existing database. |
 | A migration or deployment is still running | Wait. A GitHub timeout does not cancel Render. Do not cancel the migration or start a competing deployment. |
-| `previous_deployment_requires_diagnosis` or an image mismatch | Reconcile the failed or canceled deployment, saved image, running image, and database state in an attended maintenance window before retrying. |
+| `previous_deployment_status_unknown` | Inspect the latest deployment in Render. The job must recognize that it has finished before starting a replacement. |
+| `previous_deployment_requires_diagnosis` in an older release job | Use a release from main with the current deployment controller. Rerunning the older job uses its original controller and can block on the same failed deployment. |
+| An image mismatch after deployment | Compare the saved image, running image and release evidence. Resolve the mismatch before reopening access. |
 | `superseded` | Use the latest main release run whose push changes production inputs. The older candidate is intentionally skipped. |
 | `main_comparison_incomplete` | A maintainer must inspect the source comparison. Missing or potentially truncated evidence cannot authorize an older release. Use the latest eligible release when production inputs differ. |
 <!-- markdownlint-enable MD013 -->
@@ -798,18 +840,23 @@ screenshots, cookies, credentials, raw provider responses, or full logs.
 
 ### Repair forward after a failed update
 
-Keep user access closed while diagnosing an unsuccessful update. Confirm
-the database format and deployment state before choosing a corrected image.
-Preserve existing household work; resetting its content is not a repair step.
+Merge the correction to main. After the release checks and publication pass,
+the deployment job waits for any active deployment to finish, then deploys
+the new image even if the previous deployment fails or is canceled. The old
+application does not need to respond or report a ready database. A failed
+deployment does not require a manual deployment to unblock the next release.
 
-Use a corrected newer image for application failures. Verify
-its release evidence, wait for active deployments to finish, and set the
-saved image reference to that digest. Deploy the saved reference and
-verify its live digest, database readiness, anonymous page and household
-access before reopening. Retry the release job only after the service
-and database are reconciled. Older application versions and image
-rollback are unsupported. Restoring data is a separate controlled
-operation and must never restore old authentication authority.
+Rerunning an eligible release job also starts a deployment if the previous
+attempt fails, even when the requested image is the same. If that image is
+already live and matches the saved reference, the job verifies it without
+restarting it. Unknown deployment states stop the job for investigation.
+
+The replacement must pass image identity, health, database readiness and
+smoke checks before the job reports success. Keep user access closed during
+recovery and verify household access before reopening. Preserve the existing
+disk and household work. Older application versions and image rollback are
+unsupported. Restoring data is a separate controlled operation and must
+never restore old authentication authority.
 
 ## What automated checks cover
 

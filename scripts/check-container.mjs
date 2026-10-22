@@ -26,6 +26,7 @@ const authSecret = 'synthetic-test-secret-with-at-least-32-characters';
 const configuredOrigin = 'http://localhost:3000';
 let buildHeader;
 const environment = {
+  SKYTTEL_CLIENT_ADDRESS_MODE: 'direct',
   SKYTTEL_ORIGIN: configuredOrigin,
   SKYTTEL_DATABASE_PATH: '/data/skyttel.sqlite',
   SKYTTEL_FIRST_ADMIN_PROVIDER: 'google',

@@ -3,6 +3,7 @@ import { betterAuth } from 'better-auth';
 import type Database from 'better-sqlite3';
 import { assistantAuthPlugins } from './assistant-auth.js';
 import { authDatabase } from './auth-callback-transaction.js';
+import { clientAddressHeader } from './client-address.js';
 import type { Config } from './config.js';
 import { prepareInstallationAuthority } from './installation-authority.js';
 import { linkingAttempt } from './login-methods.js';
@@ -87,7 +88,11 @@ export function createAuth(config: Config, database: Database.Database) {
         mapProfileToUser: (profile) => internalEmail('microsoft', profile.oid),
       },
     },
-    advanced: { disableOriginCheck: false, database: { generateId: 'uuid' } },
+    advanced: {
+      disableOriginCheck: false,
+      database: { generateId: 'uuid' },
+      ipAddress: { ipAddressHeaders: [clientAddressHeader], ipv6Subnet: 64 },
+    },
     onAPIError: { errorURL: `${config.origin}/?authError=1` },
   });
 }

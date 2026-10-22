@@ -243,7 +243,7 @@ test('a superseded candidate never changes Render, including when main advances 
   state.deploy.status = 'update_in_progress';
   state.onWait = () => {
     state.main = 'f'.repeat(40);
-    state.deploy.status = 'live';
+    state.deploy.status = 'update_failed';
   };
   assert.equal((await run()).outcome, 'superseded');
   assert.equal(state.waits, 1);
@@ -262,7 +262,7 @@ test('documentation and devcontainer pushes cannot supersede a pending productio
   ];
   assert.equal((await run()).outcome, 'success');
   assert.equal(state.deploys, 1);
-  assert.equal(state.requests.filter(({ url }) => url.includes('/compare/')).length, 3);
+  assert.equal(state.requests.filter(({ url }) => url.includes('/compare/')).length, 2);
   assert.ok(
     state.requests
       .filter(({ url }) => url.includes('/compare/'))
@@ -324,17 +324,73 @@ test('incomplete comparisons fail rather than treating unobserved changes as saf
   }
 });
 
-test('migration failure records failure and prevents a blind retry or rollback', async () => {
+test('a failed deployment is reported and a later attempt deploys even the same digest again', async () => {
   const { state, run } = platform();
   state.nextStatus = 'update_failed';
   const result = await run();
   assert.equal(result.outcome, 'failure');
   assert.equal(result.observedDeploy.status, 'update_failed');
   assert.equal(state.statuses.at(-1), 'failure');
-  assert.equal((await run()).failure, 'previous_deployment_requires_diagnosis');
   assert.equal(state.deploys, 1);
+  state.nextStatus = 'live';
+  assert.equal((await run()).outcome, 'success');
+  assert.equal(state.deploys, 2);
+  assert.equal(state.statuses.at(-1), 'success');
   assert.ok(state.requests.every((r) => !r.url.includes('/rollback')));
   assert.doesNotMatch(JSON.stringify(result), /synthetic-.*-secret/);
+});
+
+test('a new release replaces each finished deployment state even when the old application is unavailable', async () => {
+  for (const status of [
+    'live',
+    'build_failed',
+    'update_failed',
+    'pre_deploy_failed',
+    'canceled',
+    'deactivated',
+  ]) {
+    const { state, run } = platform();
+    state.deploy.status = status;
+    state.savedImage = `${image}@sha256:${'f'.repeat(64)}`;
+    state.respond = ({ path }) =>
+      !state.deploys && ['/healthz', '/api/version'].includes(path)
+        ? new Response('Unavailable', { status: 503 })
+        : undefined;
+    const report = await run();
+    assert.equal(report.outcome, 'success', status);
+    assert.equal(state.deploys, 1);
+    assert.equal(state.savedImage, `${image}@${digest}`);
+    assert.equal(report.application.commit, commit);
+    assert.deepEqual(report.checks, [
+      'saved-image',
+      'running-digest',
+      'readiness',
+      'version',
+      'database',
+      'smoke',
+    ]);
+  }
+});
+
+test('an active deployment can finish in failure before the replacement starts', async () => {
+  const { state, run } = platform();
+  state.deploy.status = 'update_in_progress';
+  state.onWait = () => {
+    assert.equal(state.deploys, 0);
+    assert.equal(state.patches, 0);
+    state.deploy.status = 'update_failed';
+  };
+  assert.equal((await run()).outcome, 'success');
+  assert.equal(state.waits, 1);
+  assert.equal(state.deploys, 1);
+});
+
+test('an unknown previous deployment state cannot authorize a competing deployment', async () => {
+  const { state, run } = platform();
+  state.deploy.status = 'unexpected';
+  assert.equal((await run()).failure, 'previous_deployment_status_unknown');
+  assert.equal(state.deploys, 0);
+  assert.equal(state.patches, 0);
 });
 
 test('a failed health check never records deployment success', async () => {
@@ -597,12 +653,13 @@ test('timeout leaves a migration running and the next attempt waits without star
   assert.ok(state.requests.every((r) => !r.url.includes('/cancel')));
 });
 
-test('a live but unhealthy previous application prevents retry before any mutation', async () => {
+test('a new release repairs an unhealthy previous application', async () => {
   const { state, run } = platform();
   state.healthy = false;
-  assert.equal((await run()).outcome, 'failure');
-  assert.equal(state.deploys, 0);
-  assert.equal(state.patches, 0);
+  state.running.database = { ...version.database, status: 'unknown' };
+  assert.equal((await run()).outcome, 'success');
+  assert.equal(state.deploys, 1);
+  assert.equal(state.patches, 1);
 });
 
 test('an ephemeral database path blocks rollout even when a persistent disk is attached', async () => {

@@ -22,6 +22,7 @@ origin.port = '3301';
 const serverEnvironment = {
   ...process.env,
   NODE_ENV: 'production',
+  SKYTTEL_CLIENT_ADDRESS_MODE: process.env.SKYTTEL_CLIENT_ADDRESS_MODE ?? 'direct',
   PORT: '3301',
   SKYTTEL_ORIGIN: origin.origin,
 };

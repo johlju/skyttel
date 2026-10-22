@@ -6,6 +6,35 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Deployment after a failed update
+
+New releases from main deploy after the release checks pass even if the
+previous deployment fails or the old application is unavailable. The job
+waits for active deployments to finish. You do not need to deploy an image
+manually to unblock a corrected release. Keep the existing disk and database.
+
+Rerunning a failed release job can deploy the same image again. Review the
+failure before retrying. The replacement must pass health, release identity,
+database readiness and smoke checks before the job reports success. Verify
+household access before reopening the service after recovery.
+
+### Authentication client-address configuration
+
+Before upgrade, choose an explicit client-address source in the host's
+private configuration. Production startup requires this choice. For an
+installation behind ingress, verify that ingress owns the selected
+single-address header and that all other origin-access paths are blocked
+or belong to the trusted administrative boundary. Include private-network
+callers in this review. Use direct connections only without ingress.
+
+After rollout, verify login through every supported public route. Missing
+or invalid trusted address data stops authentication with a service
+unavailable response and a bounded diagnostic without addresses. Health
+checks can still pass while login is unavailable. Correct the trust
+configuration before reopening access. Review the boundary before adding
+services or changing network exposure. Existing authentication limits and
+the database remain unchanged by this configuration requirement.
+
 ### One-time household content reset
 
 On first startup, this release automatically upgrades the production

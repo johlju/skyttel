@@ -77,6 +77,77 @@ For whole database or disk recovery, follow the
 declaration and trusted permanent-erasure review are required before
 reopening. A copy of the database cannot provide its own restore barrier.
 
+## Configure authentication client addresses
+
+Before starting production, explicitly set `SKYTTEL_CLIENT_ADDRESS_MODE`.
+Missing production configuration stops startup with `configuration_invalid`
+and the field name, without its value. Development defaults to `direct`;
+compiled local development also selects `direct` unless configured otherwise.
+
+- `direct`: use the actual socket peer and ignore all forwarded-address
+  headers. Use this only without ingress; a proxy's clients would share
+  its counter. Do not set header, trust or peer variables in this mode.
+- `header`: set `SKYTTEL_CLIENT_ADDRESS_HEADER` to one authoritative
+  single-address header. Multiple addresses, ports, brackets, zone
+  identifiers, empty or malformed values are rejected. There is no
+  fallback to another header or to the socket peer.
+
+For `header` mode, choose one `SKYTTEL_CLIENT_ADDRESS_TRUST` value:
+
+- `peers`: set `SKYTTEL_CLIENT_ADDRESS_PEERS` to a comma-separated list of
+  ingress IP addresses or CIDRs. Skyttel checks the actual socket peer
+  before accepting the header. A fictional example is `192.0.2.10/32`
+  with an authoritative `X-Real-IP` header. Use verified ingress ranges
+  under your control, never sampled addresses or all private networks.
+- `protected-origin`: explicitly declare that deployment controls protect
+  every path to the origin. Public clients must only reach ingress that
+  overwrites the selected header. All other callers must be blocked or
+  belong to your trusted administrative boundary. Skyttel cannot verify
+  this declaration from HTTP headers. Leave
+  `SKYTTEL_CLIENT_ADDRESS_PEERS` unset with this choice.
+
+Incomplete or conflicting settings stop startup. A header name alone does
+not establish trust. `X-Skyttel-Client-Address` is reserved; caller-supplied
+values are discarded. If ingress sends a multi-hop `X-Forwarded-For` chain,
+configure it to also supply an authoritative single-address header derived
+from a verified sender or proxy chain. It must overwrite client input.
+Skyttel ignores the unrelated chain, including forged leading entries.
+Never select the leftmost entry or assume a fixed hop count. See
+[Better Auth's trust guidance](https://better-auth.com/docs/concepts/rate-limit).
+
+### Verify and diagnose the boundary
+
+Keep the origin-access inventory and probe results private. Include every
+public hostname, direct port, private-network caller and administrative
+route. Review ownership and trust before adding services or changing
+exposure. An untrusted caller with origin access requires enforceable
+sender or network protection before enabling header trust. See
+[Render requirements](render.md#client-address-trust-on-render).
+
+On an isolated installation, check public routes, alternate routes and
+direct origin access. Verify that forged selected headers and forwarding
+entries cannot change the counter. Independent IPv4 clients must have
+separate counters even with multi-hop forwarding. Clients sharing a public
+IPv4 address or IPv6 `/64` can share a counter; equivalent IPv6 and
+IPv4-mapped IPv6 forms cannot bypass it. An address controls abuse limits,
+never identity or household access.
+
+Missing or invalid required data returns generic HTTP 503 before
+authentication work, including login initiation. The server emits
+`auth_client_address_unavailable` at most once per minute per process.
+Its reason is `missing_peer`, `untrusted_peer`, `missing_header` or
+`invalid_header`, without addresses, raw headers or request contents.
+Check the selected source and origin protection; do not disable the
+limiter or switch to direct mode to hide an ingress fault. Health checks
+remain available. HTTP 429 means actual rate exhaustion; endpoint-specific
+limits remain unchanged.
+
+Use fictional addresses in disposable tests. For a necessary live probe,
+use temporary private instrumentation, restrict access and duration, and
+remove it immediately afterward. Do not publish addresses, deployment
+identifiers, diagnostic URLs or topology details. Confirm normal health
+and removal of the probe before reopening normal traffic.
+
 ## Enable the built-in assistants
 
 Create a project API key in the

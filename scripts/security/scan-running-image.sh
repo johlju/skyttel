@@ -9,6 +9,7 @@ reports=$(realpath "$reports")
 trap 'docker rm --force "$container" >/dev/null 2>&1 || true' EXIT
 docker run -d --name "$container" -p 127.0.0.1:3000:3000 \
   --tmpfs /data:uid=1000,gid=1000 \
+  -e SKYTTEL_CLIENT_ADDRESS_MODE=direct \
   -e SKYTTEL_ORIGIN=http://localhost:3000 \
   -e SKYTTEL_FIRST_ADMIN_PROVIDER=google \
   -e SKYTTEL_FIRST_ADMIN_SUBJECT=synthetic-admin \
