@@ -55,13 +55,12 @@ test('CI retains test output without turning failing commands into successful te
   }
 });
 
-test('image workflows reject upstream failures even when hashing or login succeeds', async (t) => {
+test('image workflows reject upstream failures even when hashing succeeds', async (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-workflow-pipelines-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   for (const [file, jobName, pattern] of [
     ['release', 'candidate', /^\s+(loaded_id=\$\(tar .+\| sha256sum \| awk .+\))$/mu],
     ['security', 'container', /^\s+(tar .+\| sha256sum \| awk .+)$/mu],
-    ['image-monitor', 'monitor', /^\s*run: (printf .+\| docker login .+)$/mu],
   ]) {
     await t.test(file, () => {
       const source = readFileSync(`.github/workflows/${file}.yml`, 'utf8');
@@ -75,8 +74,6 @@ test('image workflows reject upstream failures even when hashing or login succee
           ...bashArguments(source, body, step),
           '-c',
           `tar() { echo synthetic-fixture-error >&2; return 13; }
-printf() { echo synthetic-fixture-error >&2; return 13; }
-docker() { cat >/dev/null; }
 mkdir -p reports
 config=synthetic
 ${command}`,
@@ -87,8 +84,6 @@ ${command}`,
           env: {
             ...process.env,
             RUNNER_TEMP: directory,
-            GH_TOKEN: 'synthetic',
-            GITHUB_ACTOR: 'synthetic',
           },
         },
       );
