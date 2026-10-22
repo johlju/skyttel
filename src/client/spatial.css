@@ -149,7 +149,7 @@
 .connection,
 .connection-arrow-shaft,
 .connection-arrow {
-  --connection-color: #8dbba5;
+  --connection-color: var(--space-connection, #8ab4f8);
 }
 :is(.connection, .connection-arrow-shaft, .connection-arrow).added {
   --connection-color: var(--proposal-added, #64dfa0);
