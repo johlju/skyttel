@@ -13,10 +13,13 @@ Vid ett angivet släpp i ett vanligt fall: kopiera `id`, `draft.version`,
 Ta bort `id`, `householdId` och `revision` ur `value`;
 behåll typ, beskrivning och övriga värden. Sätt endast det angivna namnet.
 Ersätt REQUEST, V, C, LO och VALUE nedan med dessa verkliga värden:
+Sätt RESOLVES till `[]` för ett nytt uppdrag. För en förtydligad väntande
+del används `[{"id":"PART","revision":REVISION}]` med aktuella värden
+från `held.pendingParts`.
 
 <!-- markdownlint-disable MD013 -->
 ```text
-tool REQUEST submit_changes {"version":V,"contentVersion":C,"completion":"draft","questions":[],"operations":[{"name":"propose_object","arguments":{"id":"LO","baseRevision":null,"value":VALUE}}]}
+tool REQUEST submit_changes {"version":V,"contentVersion":C,"completion":"draft","questions":[],"resolves":RESOLVES,"operations":[{"name":"propose_object","arguments":{"id":"LO","baseRevision":null,"value":VALUE}}]}
 ```
 <!-- markdownlint-enable MD013 -->
 

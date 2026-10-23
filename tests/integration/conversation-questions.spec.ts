@@ -19,7 +19,14 @@ import { createInstallation, robin } from '../support/installation.js';
 import { liveBrowserFixtureSource } from '../support/live-browser.js';
 import { liveProvider, voiceAnswerParts } from '../support/live-provider.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
-import { modelMessage, modelTool, textModel } from '../support/text-model.js';
+import {
+  lastToolResult,
+  modelMessage,
+  modelTool,
+  pendingUpdate,
+  textModel,
+  verifiedAnswers,
+} from '../support/text-model.js';
 import { readVoiceProposal } from '../support/voice-work-reading.js';
 
 const field = (page: Page) => page.getByLabel('Meddelande till Skyttel');
@@ -236,7 +243,9 @@ test('FRAGA-11: egenskapsfrågor och lika namn rättas med text i samma röstsam
         }),
       ];
     if (call === 3)
-      return [modelTool('ask_questions', { questions: [], answeredQuestions: questions })];
+      return [
+        modelTool('ask_questions', { questions: [], updates: verifiedAnswers(body, questions) }),
+      ];
     return [
       modelTool('save_draft', {
         version: turn.draft.version,
@@ -350,6 +359,112 @@ test('FRAGA-11: egenskapsfrågor och lika namn rättas med text i samma röstsam
       if (count) await expect(links).toContainText('Molnmusik');
       await page.keyboard.press('Escape');
     }
+  } finally {
+    await app.close();
+  }
+});
+
+test('FRAGA-12: mellantur, selektivt svar och återtagande bevarar en informationsfråga vid manuellt sparande', async ({
+  page,
+}) => {
+  const nameQuestion = 'Vilket namn ska Lo ha?';
+  const descriptionQuestion = 'Vilken beskrivning ska Lo ha?';
+  const helmetQuestion = 'Vilken hjälm vill du hitta?';
+  let step = 0;
+  const model = textModel((request) => {
+    const input = JSON.parse(
+      String(request.input.findLast((item) => item.role === 'user')?.content),
+    );
+    if (step++ === 0)
+      return [
+        modelTool('ask_questions', {
+          questions: [
+            {
+              kind: 'change',
+              request: 'Ändra Los namn',
+              question: nameQuestion,
+              dependsOnDraft: true,
+            },
+            {
+              kind: 'change',
+              request: 'Ändra Los beskrivning',
+              question: descriptionQuestion,
+              dependsOnDraft: true,
+            },
+            {
+              kind: 'information',
+              request: 'Hitta hjälmen',
+              question: helmetQuestion,
+              dependsOnDraft: false,
+            },
+          ],
+        }),
+      ];
+    if (step === 2) return [modelMessage('Lo är en person i ditt utkast.')];
+    if (step === 3)
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [pendingUpdate(request, nameQuestion)],
+          continueResponse: true,
+        }),
+      ];
+    if (step === 4) {
+      const part = lastToolResult(request).pendingParts[0];
+      return [
+        modelTool('submit_changes', {
+          version: input.draft.version,
+          contentVersion: input.draft.contentVersion,
+          completion: 'draft',
+          resolves: [{ id: part.id, revision: part.revision }],
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'lo',
+                baseRevision: null,
+                value: { ...input.draft.changes[0].after, name: 'Lo Lind' },
+              },
+            },
+          ],
+        }),
+      ];
+    }
+    return [
+      modelTool('ask_questions', {
+        questions: [],
+        updates: [pendingUpdate(request, descriptionQuestion, { action: 'withdraw' })],
+      }),
+    ];
+  });
+  const { app } = await fixture(page, model);
+  try {
+    await startConversationWithText(page);
+    const transcript = page.getByRole('log', { name: 'Samtalstext' });
+    await send(page, 'Ändra Los namn och beskrivning och hitta hjälmen. Spara.');
+    for (const text of [nameQuestion, descriptionQuestion, helmetQuestion])
+      await expect(transcript).toContainText(text);
+    await send(page, 'Vilken objekttyp har Lo?');
+    await expect(transcript).toContainText('Lo är en person i ditt utkast.');
+    expect((await transcript.innerText()).split(nameQuestion)).toHaveLength(2);
+    await send(page, 'Namnet ska vara Lo Lind.');
+    await expect(transcript).toContainText('bytte namn till Lo Lind');
+    await expect(transcript.locator('.working')).toHaveCount(0);
+    const draft = await openConversationDraft(page);
+    await expect(
+      draft.getByRole('button', { name: 'Spara hela utkastet', exact: true }),
+    ).toBeDisabled();
+    await page.getByRole('button', { name: 'Dölj utkastet (1)', exact: true }).click();
+    await send(page, 'Strunta i beskrivningen.');
+    await expect(transcript).toContainText('återtagen');
+    await openConversationDraft(page);
+    await page.getByRole('button', { name: 'Spara hela utkastet', exact: true }).click();
+    await expect(page.getByRole('status', { name: 'Sparbekräftelse', exact: true })).toContainText(
+      'Utkastet är sparat',
+    );
+    await expect(transcript).toContainText(helmetQuestion);
+    const saved = await readTableObject(page, 'Lo Lind');
+    await expect(saved).not.toContainText('Beskrivning');
   } finally {
     await app.close();
   }

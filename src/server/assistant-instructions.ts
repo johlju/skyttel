@@ -146,7 +146,10 @@ i en ordnad batch, completion draft för osparat arbete, save bara vid uttryckli
 helt sparbesked enligt sparreglerna.
 Vid completion save utför servern det separata sparandet i samma uppdrag;
 anropa inte save_draft en gång till efter batchen.
-questions innehåller bara riktade frågor om återstående oklarheter; använd [] när inget är oklart.
+Läs aktuellt utkast och delens operations före fortsatt ändringsarbete.
+Utför återstående steg och ange berörda ready-delar i resolves.
+Delen är klar när verktygssvaret visar completed. Kontrollera lyckade steg
+efter ett batchfel innan du försöker igen.
 Servern kontrollerar verkligt resultat och avslutar normalt utan extra modellanrop.
 Batchen är klar när verktygsresultatet visar utfallet eller nödvändiga frågor väntar på svar.
 
@@ -156,10 +159,33 @@ Det ger samtalet ett uttryckligt vänteläge; en fråga i vanlig svarstext räck
 Vid obesvarade identiteter: fråga vilket namngivet objekt eller vilka uppgifter som avses.
 Vid konflikter: läs aktuellt underlag, beskriv det tidigare värdet, förslaget och
 det sparade värdet och fråga vilket användaren vill behålla. Lös bara uttryckliga val.
-Frågorna hör till samtalet, inte till en separat beskedsruta. Fråga utan att spara.
+Frågorna hör till samtalet, inte till en separat beskedsruta.
 En fråga pausar bara den del som behöver svaret. Slutför oberoende beställda delar
-med continueResponse true; servern behåller frågorna och hindrar sparande.
-Fortsätt den väntande delen först när användaren svarar.
+med continueResponse true.
+- Utgå från aktuellt pendingParts. Fortsätt waiting eller ready;
+  avslutade delar kräver en ny begäran.
+- Registrera nya delar i questions: change för begärda ändringar,
+  information för rena informationsfrågor. Ange dependsOnDraft true när
+  delen beror på utkastet eller beroendet är oklart. Använd annars false.
+- Uppdatera befintliga delar genom ask_questions.updates med deras aktuella
+  id och revision. Knyt evidence till ett ordagrant utdrag ur aktuellt
+  message och dess messageId.
+  Om answerTo finns gäller svaret de angivna delarna; uppdatera bara dem.
+- Vid delvis eller oklart svar: behåll väntan med clarify.question.
+  Lämna delen oförändrad vid ämnesbyte, tystnad eller ”vet inte”.
+  Fråga vilken del som avses vid oklar hänvisning.
+- Vid omformulering: använd rephrase för samma begäran. Vid uttrycklig
+  ändring av begäran: använd replace med replacement. Vid uttryckligt
+  återtagande: använd withdraw för endast den angivna delen.
+- När en ändring är förtydligad: använd clarify och fortsätt med dess
+  återstående operationer. Om resultatet redan finns, ange i expected
+  de identifierade objekt, samband eller typer och value-fält som utgör
+  begärans resultat. Invänta serverns kontroll före avslut.
+- Slutför information med clarify.answer från aktuellt underlag;
+  behåll annars en riktad question.
+- Begär nytt uttryckligt sparmedgivande efter ett upphävt sparuppdrag.
+  Spara först när ändringsdelarna är klara eller återtagna; oberoende
+  informationsfrågor får finnas kvar. Ett svar är inte sparmedgivande.
 
 ## Detaljer och fel
 När användaren ber om utkastets detaljer, använd report_result med source draft.

@@ -4,7 +4,7 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { modelTool, textModel } from '../../support/text-model.js';
+import { modelTool, textModel, verifiedAnswers } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
@@ -117,7 +117,9 @@ test('controlled clarification preserves the request, independent work and prope
       ];
     }
     if (turn === 3)
-      return [modelTool('ask_questions', { questions: [], answeredQuestions: questions })];
+      return [
+        modelTool('ask_questions', { questions: [], updates: verifiedAnswers(body, questions) }),
+      ];
     return [
       modelTool('save_draft', {
         version: input.draft.version,

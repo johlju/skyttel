@@ -931,6 +931,680 @@ test('beginMessage retains unanswered questions through a queued draft update an
   expect(conversationCompletion()(final)?.text).toBe(`Väskan lades till. ${question}`);
 });
 
+test('pending parts keep their identity through independent work, rephrasing and selective withdrawal', async () => {
+  let turn = 0;
+  const model = textModel((request) => {
+    const input = JSON.parse(String(request.input.findLast((row) => row.role === 'user')?.content));
+    if (turn++ === 0)
+      return [
+        modelTool('ask_questions', {
+          questions: [
+            {
+              kind: 'change',
+              request: 'Ange cykelns användare',
+              question: 'Vem använder cykeln?',
+              dependsOnDraft: true,
+            },
+            {
+              kind: 'information',
+              request: 'Hitta hjälmen',
+              question: 'Vilken hjälm?',
+              dependsOnDraft: false,
+            },
+          ],
+        }),
+      ];
+    if (turn === 2) return [modelMessage('Väskan finns i hallen.')];
+    const part = input.pendingParts[0];
+    return [
+      modelTool('ask_questions', {
+        questions: [],
+        updates: [
+          {
+            id: part.id,
+            revision: part.revision,
+            action: turn === 3 ? 'rephrase' : 'withdraw',
+            messageId: input.messageId,
+            evidence: input.message,
+            ...(turn === 3 ? { question: 'Vilken person använder cykeln?' } : {}),
+          },
+        ],
+      }),
+    ];
+  });
+  await setup(model.provider);
+  const initial = await message(await start(), 'Ange cykelns användare och hitta hjälmen.');
+  expect(initial.questions).toEqual(['Vem använder cykeln?', 'Vilken hjälm?']);
+  const independent = await message(initial, 'Var finns väskan?');
+  expect(independent.pendingParts).toEqual(initial.pendingParts);
+  expect(independent.modelReply).toBe('Väskan finns i hallen.');
+  const rephrased = await message(independent, 'Vad menar du med användare?');
+  expect(rephrased.pendingParts?.[0]).toMatchObject({
+    id: initial.pendingParts?.[0].id,
+    revision: 1,
+    question: 'Vilken person använder cykeln?',
+  });
+  const withdrawn = await message(rephrased, 'Strunta i cykelns användare.');
+  expect(withdrawn.questions).toEqual(['Vilken hjälm?']);
+  expect(withdrawn.saveBlocked).toBe(false);
+  expect(withdrawn.pendingParts?.[0].status).toBe('withdrawn');
+});
+
+test('clarifying a change cannot save before its operations finish, then a fresh request can save with an information question pending', async () => {
+  let step = 0;
+  let typeId = '';
+  const model = textModel((request) => {
+    const input = JSON.parse(String(request.input.findLast((row) => row.role === 'user')?.content));
+    const part = input.pendingParts[0];
+    if (step++ === 0)
+      return [
+        modelTool('ask_questions', {
+          questions: [
+            {
+              kind: 'change',
+              request: 'Namnge cykeln',
+              question: 'Vilket namn?',
+              dependsOnDraft: true,
+            },
+            {
+              kind: 'information',
+              request: 'Hitta hjälmen',
+              question: 'Vilken hjälm?',
+              dependsOnDraft: false,
+            },
+          ],
+        }),
+      ];
+    if (step === 2)
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [
+            {
+              id: part.id,
+              revision: part.revision,
+              action: 'clarify',
+              messageId: input.messageId,
+              evidence: input.message,
+            },
+          ],
+        }),
+      ];
+    if (step === 3)
+      return [
+        modelTool('submit_changes', {
+          version: input.draft.version,
+          contentVersion: input.draft.contentVersion,
+          completion: 'save',
+          resolves: [{ id: part.id, revision: part.revision }],
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: { id: 'bike', baseRevision: null, value: { typeId, name: 'Blå cykeln' } },
+            },
+          ],
+        }),
+      ];
+    return [];
+  });
+  await setup(model.provider);
+  typeId = (await webProposal()).typeId;
+  const waiting = await message(await start(), 'Namnge cykeln och hitta hjälmen. Spara.');
+  const ready = await message(waiting, 'Blå cykeln. Spara.');
+  expect(ready.pendingParts?.[0].status).toBe('ready');
+  expect(ready.saveBlocked).toBe(true);
+  expect(ready.receipt).toBeUndefined();
+  const saved = await message(ready, 'Gör färdigt cykeln och spara hela utkastet.');
+  expect(saved.error).toBeUndefined();
+  expect(saved.receipt).toBeDefined();
+  expect(saved.questions).toEqual(['Vilken hjälm?']);
+  expect(saved.pendingParts?.[0].status).toBe('completed');
+});
+
+test('the owning browser cannot save pending changes and a verified external discard preserves independent information', async () => {
+  await setup(
+    textModel(() => [
+      modelTool('ask_questions', {
+        questions: [
+          {
+            kind: 'change',
+            request: 'Ange användare',
+            question: 'Vem använder cykeln?',
+            dependsOnDraft: true,
+          },
+          {
+            kind: 'information',
+            request: 'Hitta hjälmen',
+            question: 'Vilken hjälm?',
+            dependsOnDraft: false,
+          },
+        ],
+      }),
+    ]).provider,
+  );
+  await webProposal();
+  const waiting = await message(await start(), 'Ange cykelns användare och hitta hjälmen.');
+  const mapPath = path.replace('/text-assistant', '/map');
+  for (const action of ['operations', 'save']) {
+    const blocked = await browser.post(`${mapPath}/${action}`, {
+      headers: { origin: app.origin },
+      data: {
+        version: waiting.review.version,
+        contentVersion: 1,
+        operationId: `blocked-${action}`,
+        conversationId: waiting.id,
+      },
+    });
+    expect(blocked.status()).toBe(409);
+    expect(await blocked.json()).toMatchObject({ error: 'assistant_questions_pending' });
+  }
+  const discarded = await browser.post(`${mapPath}/discard`, {
+    headers: { origin: app.origin },
+    data: { version: waiting.review.version, contentVersion: 1 },
+  });
+  expect(discarded.status()).toBe(200);
+  const current = await (await browser.get(`${path}/${waiting.id}`)).json();
+  expect(current.questions).toEqual(['Vilken hjälm?']);
+  expect(current.saveBlocked).toBe(false);
+  expect(current.pendingParts[0].status).toBe('discarded');
+});
+
+test.each([false, true])(
+  'retrying a partial batch skips successful operations, including overlapping effects: %s',
+  async (overlap) => {
+    let step = 0;
+    let typeId = '';
+    const model = textModel((request) => {
+      const input = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      );
+      if (step++ === 0)
+        return [modelTool('ask_questions', { questions: ['Vilka två saker ska läggas till?'] })];
+      const part = (lastToolResult(request)?.pendingParts ?? input.pendingParts)[0];
+      if (step === 2)
+        return [
+          modelTool('ask_questions', {
+            questions: [],
+            continueResponse: true,
+            updates: [
+              {
+                id: part.id,
+                revision: part.revision,
+                action: 'clarify',
+                messageId: input.messageId,
+                evidence: input.message,
+              },
+            ],
+          }),
+        ];
+      return [
+        modelTool('submit_changes', {
+          version: input.draft.version,
+          contentVersion: 1,
+          completion: 'draft',
+          resolves: [{ id: part.id, revision: part.revision }],
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: { id: 'bike', baseRevision: null, value: { typeId, name: 'Cykeln' } },
+            },
+            ...(overlap
+              ? [
+                  {
+                    name: 'propose_object',
+                    arguments: {
+                      id: 'bike',
+                      baseRevision: null,
+                      value: { typeId, name: 'Blå cykeln' },
+                    },
+                  },
+                ]
+              : []),
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'helmet',
+                baseRevision: null,
+                value: { typeId: step === 3 ? 'missing-type' : typeId, name: 'Hjälmen' },
+              },
+            },
+          ],
+        }),
+      ];
+    });
+    await setup(model.provider);
+    typeId = (await webProposal()).typeId;
+    const waiting = await message(await start(), 'Lägg till två saker.');
+    const failed = await message(waiting, 'Cykeln och hjälmen.');
+    expect(failed.phase).toBe('error');
+    expect(failed.pendingParts?.[0].operations).toHaveLength(overlap ? 2 : 1);
+    expect(failed.review.changes.map((item: { id: string }) => item.id)).toContain('bike');
+    const retried = await message(failed, 'Fortsätt med det som återstår.');
+    expect(retried.error).toBeUndefined();
+    expect(retried.review.version).toBe(failed.review.version + 1);
+    expect(retried.pendingParts?.[0].status).toBe('completed');
+    expect(retried.review.changes.map((item: { id: string }) => item.id)).toEqual([
+      'web-object',
+      'bike',
+      'helmet',
+    ]);
+  },
+);
+
+test('stop and save recovery preserve waiting parts while a new conversation ends them', async () => {
+  await setup(
+    textModel(() => [modelTool('ask_questions', { questions: ['Vem använder cykeln?'] })]).provider,
+  );
+  const waiting = await message(await start(), 'Ange vem som använder cykeln.');
+  const canceled = await browser.post(`${path}/${waiting.id}/cancel`, {
+    headers: { origin: app.origin },
+    data: { revision: waiting.revision },
+  });
+  const stopped = await canceled.json();
+  expect(stopped.questions).toEqual(waiting.questions);
+  expect(stopped.pendingParts).toEqual(waiting.pendingParts);
+  const recovery = await browser.post(`${path}/${waiting.id}/recover`, {
+    headers: { origin: app.origin },
+    data: { revision: stopped.revision },
+  });
+  const recovered = await recovery.json();
+  expect(recovered.questions).toEqual(waiting.questions);
+  const reset = await browser.post(`${path}/${waiting.id}/new`, {
+    headers: { origin: app.origin },
+    data: { revision: recovered.revision },
+  });
+  expect(await reset.json()).toMatchObject({
+    pendingParts: [],
+    saveBlocked: false,
+    questionPending: false,
+  });
+});
+
+test.each([
+  { id: 'unknown-part' },
+  { revision: 99 },
+  { messageId: 'previous-turn' },
+  { evidence: 'Det här står inte i användarens svar.' },
+  { action: 'rephrase' },
+  { action: 'replace' },
+  { answer: 'En ändring kan inte slutföras av fri text.' },
+  { expected: [{ kind: 'object', id: 'web-object', value: { name: 'Ett felaktigt resultat' } }] },
+  { expected: [{ kind: 'relationship', id: 'missing', value: { name: 'Ett påstått samband' } }] },
+  { expected: [{ kind: 'objectType', id: 'missing', value: { name: 'En påstådd typ' } }] },
+  { expected: [{ kind: 'relationshipType', id: 'missing', value: { name: 'En påstådd typ' } }] },
+])('invalid pending-part transitions preserve every part: %j', async (invalid) => {
+  let turn = 0;
+  const model = textModel((request) => {
+    const input = JSON.parse(String(request.input.findLast((row) => row.role === 'user')?.content));
+    if (turn++ === 0)
+      return [modelTool('ask_questions', { questions: ['Vilken cykel?', 'Vilken hjälm?'] })];
+    return [
+      modelTool('ask_questions', {
+        questions: [],
+        updates: input.pendingParts.map(
+          (part: { id: string; revision: number }, index: number) => ({
+            id: part.id,
+            revision: part.revision,
+            messageId: input.messageId,
+            evidence: input.message,
+            action: index === 0 ? 'withdraw' : 'clarify',
+            ...(index === 1 ? invalid : {}),
+          }),
+        ),
+      }),
+    ];
+  });
+  await setup(model.provider);
+  await webProposal();
+  const waiting = await message(await start(), 'Uppdatera cykeln och hjälmen.');
+  const rejected = await message(waiting, 'Strunta i cykeln. Hjälmen är blå.');
+  expect(rejected.phase).toBe('error');
+  expect(rejected.pendingParts).toEqual(waiting.pendingParts);
+  expect(rejected.review).toEqual(waiting.review);
+  expect(rejected.receipt).toBeUndefined();
+});
+
+test.each(['duplicate', 'waiting', 'information'])(
+  'an invalid batch resolution (%s) cannot change the draft or close a part',
+  async (invalid) => {
+    let turn = 0;
+    const model = textModel((request) => {
+      const input = JSON.parse(
+        String(request.input.findLast((row) => row.role === 'user')?.content),
+      );
+      if (turn++ === 0)
+        return [
+          modelTool('ask_questions', {
+            questions: [
+              {
+                kind: invalid === 'information' ? 'information' : 'change',
+                request: 'Beskriv cykeln',
+                question: 'Vilken cykel?',
+                dependsOnDraft: true,
+              },
+            ],
+          }),
+        ];
+      const ref = { id: input.pendingParts[0].id, revision: input.pendingParts[0].revision };
+      return [
+        modelTool('submit_changes', {
+          version: input.draft.version,
+          contentVersion: input.draft.contentVersion,
+          resolves: invalid === 'duplicate' ? [ref, ref] : [ref],
+          completion: 'draft',
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'unexpected',
+                baseRevision: null,
+                value: { typeId: input.draft.changes[0].after.typeId, name: 'Oväntat' },
+              },
+            },
+          ],
+        }),
+      ];
+    });
+    await setup(model.provider);
+    await webProposal();
+    const waiting = await message(await start(), 'Beskriv cykeln.');
+    const rejected = await message(waiting, 'Jag vet inte.');
+    expect(rejected.error).toBe('invalid_request');
+    expect(rejected.pendingParts).toEqual(waiting.pendingParts);
+    expect(rejected.review).toEqual(waiting.review);
+  },
+);
+
+test('repeated shorthand questions retain identity and partial answers keep the remaining question visible', async () => {
+  let turn = 0;
+  const model = textModel((request) => {
+    const input = JSON.parse(String(request.input.findLast((row) => row.role === 'user')?.content));
+    if (turn++ < 2) return [modelTool('ask_questions', { questions: ['Vilken cykel?'] })];
+    const part = input.pendingParts[0];
+    return [
+      modelTool('ask_questions', {
+        questions: [],
+        updates: [
+          {
+            id: part.id,
+            revision: part.revision,
+            action: 'clarify',
+            messageId: input.messageId,
+            evidence: input.message,
+            question: 'Vilken av de två gröna cyklarna?',
+          },
+        ],
+      }),
+    ];
+  });
+  await setup(model.provider);
+  const waiting = await message(await start(), 'Ändra cykeln.');
+  const repeated = await message(waiting, 'Vilken fråga väntar?');
+  expect(repeated.pendingParts).toEqual(waiting.pendingParts);
+  const partial = await message(repeated, 'Den gröna cykeln.');
+  expect(partial.pendingParts).toHaveLength(1);
+  expect(partial.pendingParts?.[0]).toMatchObject({
+    id: waiting.pendingParts?.[0].id,
+    status: 'waiting',
+    revision: 1,
+  });
+  expect(partial.questions).toEqual(['Vilken av de två gröna cyklarna?']);
+  expect(partial.saveBlocked).toBe(true);
+});
+
+test.each(['malformed', 'unknown', 'ready'])(
+  'a voice reply with %s question references is refused before model admission',
+  async (invalid) => {
+    let turn = 0;
+    const model = textModel((request) => {
+      const input = JSON.parse(
+        String(request.input.findLast((row) => row.role === 'user')?.content),
+      );
+      if (turn++ === 0) return [modelTool('ask_questions', { questions: ['Vilken cykel?'] })];
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [
+            {
+              id: input.pendingParts[0].id,
+              revision: 0,
+              action: 'clarify',
+              messageId: input.messageId,
+              evidence: input.message,
+            },
+          ],
+        }),
+      ];
+    });
+    await setup(model.provider);
+    const waiting = await message(await start(), 'Ändra cykeln.');
+    const current = invalid === 'ready' ? await message(waiting, 'Den gröna.') : waiting;
+    const before = model.requests.length;
+    const response = await browser.post(`${path}/${current.id}/messages`, {
+      headers: { origin: app.origin },
+      data: {
+        revision: current.revision,
+        ...displayedVersion(current),
+        requestId: 'stale-voice',
+        text: 'Den blå.',
+        voiceContext: '[]',
+        answerTo:
+          invalid === 'malformed'
+            ? []
+            : [
+                {
+                  id: invalid === 'unknown' ? 'missing' : current.pendingParts?.[0].id,
+                  revision: current.pendingParts?.[0].revision,
+                },
+              ],
+      },
+    });
+    expect(response.status()).toBe(invalid === 'malformed' ? 400 : 409);
+    expect(model.requests).toHaveLength(before);
+    expect((await (await browser.get(`${path}/${current.id}`)).json()).pendingParts).toEqual(
+      current.pendingParts,
+    );
+  },
+);
+
+test('replacement creates a fresh part and a late answer cannot close it', async () => {
+  let original: { id: string; revision: number };
+  let turn = 0;
+  const model = textModel((request) => {
+    const input = JSON.parse(String(request.input.findLast((row) => row.role === 'user')?.content));
+    if (turn++ === 0) return [modelTool('ask_questions', { questions: ['Vilket namn?'] })];
+    original ??= input.pendingParts[0];
+    return [
+      modelTool('ask_questions', {
+        questions: [],
+        updates: [
+          {
+            id: original.id,
+            revision: original.revision,
+            messageId: input.messageId,
+            evidence: input.message,
+            ...(turn === 2
+              ? {
+                  action: 'replace',
+                  replacement: {
+                    kind: 'change',
+                    request: 'Namnge hjälmen',
+                    question: 'Vilket namn?',
+                    dependsOnDraft: true,
+                  },
+                }
+              : { action: 'clarify' }),
+          },
+        ],
+      }),
+    ];
+  });
+  await setup(model.provider);
+  const waiting = await message(await start(), 'Namnge cykeln.');
+  const replaced = await message(waiting, 'Namnge hjälmen i stället.');
+  expect(replaced.pendingParts?.map((part: { status: string }) => part.status)).toEqual([
+    'superseded',
+    'waiting',
+  ]);
+  expect(replaced.pendingParts?.[1].id).not.toBe(waiting.pendingParts?.[0].id);
+  const late = await message(replaced, 'Den ska heta Blå.');
+  expect(late.error).toBe('assistant_pending_part_changed');
+  expect(late.pendingParts).toEqual(replaced.pendingParts);
+});
+
+test('a historical finished part cannot authorize saving past a new unregistered clarification', async () => {
+  let turn = 0;
+  const model = textModel((request) => {
+    const input = JSON.parse(String(request.input.findLast((row) => row.role === 'user')?.content));
+    if (turn++ === 0) return [modelTool('ask_questions', { questions: ['Vilken cykel?'] })];
+    if (turn === 2)
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [
+            {
+              id: input.pendingParts[0].id,
+              revision: 0,
+              messageId: input.messageId,
+              evidence: input.message,
+              action: 'withdraw',
+            },
+          ],
+        }),
+      ];
+    return [modelMessage('Vilken hjälm ska jag ändra?')];
+  });
+  await setup(model.provider);
+  await webProposal();
+  const waiting = await message(await start(), 'Ändra cykeln.');
+  const withdrawn = await message(waiting, 'Strunta i cykeln.');
+  const unclear = await message(withdrawn, 'Ändra hjälmens namn och spara hela utkastet.');
+  expect(unclear.modelReply).toContain('Vilken hjälm');
+  expect(unclear.receipt).toBeUndefined();
+  expect(unclear.operations).toEqual([]);
+  expect(unclear.requiredNotice).toContain('Be om sparande igen');
+});
+
+test('information work remains visible until an answer or another question is registered', async () => {
+  let turn = 0;
+  const model = textModel((request) => {
+    const input = JSON.parse(String(request.input.findLast((row) => row.role === 'user')?.content));
+    if (turn++ === 0)
+      return [
+        modelTool('ask_questions', {
+          questions: [
+            {
+              kind: 'information',
+              request: 'Beskriv utkastet',
+              question: 'Vilket förslag?',
+              dependsOnDraft: true,
+            },
+          ],
+        }),
+      ];
+    return [
+      modelTool('ask_questions', {
+        questions: [],
+        updates: [
+          {
+            id: input.pendingParts[0].id,
+            revision: 0,
+            action: 'clarify',
+            messageId: input.messageId,
+            evidence: input.message,
+            ...(turn === 3 ? { answer: 'Förslaget heter Redan från formuläret.' } : {}),
+          },
+        ],
+      }),
+    ];
+  });
+  await setup(model.provider);
+  await webProposal();
+  const waiting = await message(await start(), 'Beskriv ett förslag.');
+  const incomplete = await message(waiting, 'Förslaget från formuläret.');
+  expect(incomplete.phase).toBe('error');
+  expect(incomplete.questions).toEqual(waiting.questions);
+  const answered = await message(incomplete, 'Beskriv förslaget från formuläret.');
+  expect(answered.pendingParts?.[0].status).toBe('completed');
+  expect(answered.modelReply).toContain('Redan från formuläret');
+  expect(answered.questionPending).toBe(false);
+});
+
+test('a queued voice answer cannot resolve a replacement of the question it heard', async () => {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model = textModel(async (request) => {
+    const input = JSON.parse(String(request.input.findLast((row) => row.role === 'user')?.content));
+    if (model.requests.length === 1)
+      return [modelTool('ask_questions', { questions: ['Vilket namn?'] })];
+    await held;
+    return [
+      modelTool('ask_questions', {
+        questions: [],
+        updates: [
+          {
+            id: input.pendingParts[0].id,
+            revision: 0,
+            messageId: input.messageId,
+            evidence: input.message,
+            action: 'replace',
+            replacement: {
+              kind: 'change',
+              request: 'Namnge hjälmen',
+              question: 'Vilket namn ska hjälmen ha?',
+              dependsOnDraft: true,
+            },
+          },
+        ],
+      }),
+    ];
+  });
+  await setup(model.provider);
+  const waiting = await message(await start(), 'Namnge cykeln.');
+  const post = (body: Record<string, unknown>) =>
+    browser.post(`${path}/${waiting.id}/messages`, {
+      headers: { origin: app.origin },
+      data: {
+        revision: waiting.revision,
+        draftVersion: waiting.review.version,
+        contentVersion: 1,
+        ...body,
+      },
+    });
+  try {
+    expect(
+      (await post({ requestId: 'replacement', text: 'Namnge hjälmen i stället.' })).status(),
+    ).toBe(202);
+    await expect.poll(() => model.requests.length).toBe(2);
+    expect(
+      (
+        await post({
+          requestId: 'late-voice',
+          text: 'Den ska heta Blå.',
+          voiceContext: '[]',
+          answerTo: [{ id: waiting.pendingParts[0].id, revision: 0 }],
+        })
+      ).status(),
+    ).toBe(202);
+    release();
+    let current: TextAssistantView | undefined;
+    await expect
+      .poll(async () => {
+        current = await (await browser.get(`${path}/${waiting.id}`)).json();
+        return current?.phase;
+      })
+      .not.toBe('working');
+    expect(current?.pendingParts?.map((part) => part.status)).toEqual(['superseded', 'waiting']);
+    expect(current?.questions).toEqual(['Vilket namn ska hjälmen ha?']);
+    expect(model.requests).toHaveLength(2);
+    expect(current?.receipt).toBeUndefined();
+  } finally {
+    release();
+  }
+});
+
 test.each(['submit_changes', 'ask_questions'])(
   'pending questions from %s preserve independent details and answers without allowing a save',
   { tags: ['technical'] },

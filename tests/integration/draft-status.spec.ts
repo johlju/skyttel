@@ -28,7 +28,7 @@ import { liveProvider } from '../support/live-provider.js';
 import { focusMapSearch } from '../support/object-search.js';
 import { propertyRow, setProperty } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
-import { modelMessage, modelTool, textModel } from '../support/text-model.js';
+import { modelMessage, modelTool, textModel, verifiedAnswers } from '../support/text-model.js';
 
 function saveToast(page: Page) {
   return page.locator('p[aria-hidden="true"]').filter({ hasText: /^Utkastet är sparat$/ });
@@ -590,7 +590,7 @@ test('UTKAST-15: a necessary answer gates the native draft save until a fresh ex
       return [
         modelTool('ask_questions', {
           questions: [],
-          answeredQuestions: ['Vilket kort avses?'],
+          updates: verifiedAnswers(body, ['Vilket kort avses?']),
           continueResponse: true,
         }),
       ];

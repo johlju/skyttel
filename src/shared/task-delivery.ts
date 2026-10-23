@@ -52,7 +52,7 @@ export function completeAssistantText(view: TextAssistantView): string {
       : undefined,
     view.reply,
     view.modelReply ? `Samtal (obekräftat): ${view.modelReply}` : undefined,
-    ...(view.questions ?? []).filter(
+    ...(view.newQuestions ?? view.questions ?? []).filter(
       (question) => !view.modelReply?.includes(question) && !view.reply?.includes(question),
     ),
     deliverySaveStatus[assistantSaveState(view)],

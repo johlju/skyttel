@@ -5,7 +5,7 @@ import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider, voiceAnswerParts } from '../../support/live-provider.js';
-import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import { modelMessage, modelTool, pendingUpdate, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
@@ -13,12 +13,16 @@ afterEach(async () => {
   await browser?.dispose();
   await app?.close();
 });
-async function arrange(modelFetch: typeof fetch) {
+async function arrange(
+  modelFetch: typeof fetch,
+  assistantDispatch?: NonNullable<Parameters<typeof createInstallation>[1]>['assistantDispatch'],
+) {
   const live = liveProvider();
   app = await createInstallation(undefined, {
     modelFetch,
     liveFetch: live.provider,
     liveSideband: live.attach,
+    assistantDispatch,
   });
   browser = await request.newContext();
   await signIn(browser, app.origin);
@@ -54,10 +58,13 @@ async function arrange(modelFetch: typeof fetch) {
       });
       expect(response.status(), await response.text()).toBe(202);
       await expect
-        .poll(async () => {
-          current = await (await browser.get(path)).json();
-          return current.phase;
-        })
+        .poll(
+          async () => {
+            current = await (await browser.get(path)).json();
+            return current.phase;
+          },
+          { timeout: 10000 },
+        )
         .not.toBe('working');
       return current;
     },
@@ -145,14 +152,14 @@ test('necessary typed questions are explicit, unchanged conversation data and do
 test('a spoken clarification reaches a typed pending question without a Live delegation', {
   tags: ['technical'],
 }, async () => {
-  const model = textModel(() =>
+  const model = textModel((request) =>
     model.requests.length === 1
       ? [modelTool('ask_questions', { questions: ['Vilken cykel menar du?'] })]
       : model.requests.length === 2
         ? [
             modelTool('ask_questions', {
               questions: [],
-              answeredQuestions: ['Vilken cykel menar du?'],
+              updates: [pendingUpdate(request, 'Vilken cykel menar du?')],
               continueResponse: true,
             }),
           ]
@@ -186,6 +193,210 @@ test('a spoken clarification reaches a typed pending question without a Live del
   expect(model.requests).toHaveLength(3);
   expect(await (await browser.get(`${householdPath}/map`)).json()).toEqual(before);
   expect((await (await browser.get(`${householdPath}/map/history`)).json()).history).toEqual([]);
+});
+
+test('an automatic voice answer survives an independent typed turn with the same question', {
+  tags: ['technical'],
+  timeout: 10000,
+}, async () => {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model = textModel(async (request) => {
+    if (model.requests.length === 1)
+      return [modelTool('ask_questions', { questions: ['Vilken cykel menar du?'] })];
+    if (model.requests.length === 2) {
+      await held;
+      return [modelMessage('Utkastet är tomt.')];
+    }
+    if (model.requests.length === 3)
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [pendingUpdate(request, 'Vilken cykel menar du?')],
+          continueResponse: true,
+        }),
+      ];
+    return [modelMessage('Jag menar nu den gröna cykeln.')];
+  });
+  const { live, path, send, poll } = await arrange(model.provider);
+  await send('Vilken cykel talar vi om?', 'question');
+  await poll(true);
+  const independent = send('Vad finns i utkastet?', 'independent');
+  try {
+    await expect.poll(() => model.requests.length).toBe(2);
+    live.emit([...live.channels.keys()][0], {
+      type: 'session.input_transcript.delta',
+      event_id: 'overlapping-answer',
+      delta: 'Den gröna cykeln.',
+      start_ms: 1000,
+      end_ms: 2000,
+    });
+    release();
+    await independent;
+    await poll(true);
+    await expect.poll(() => model.requests.length, { timeout: 5000 }).toBe(4);
+    await expect
+      .poll(async () => (await (await browser.get(path)).json()).questionPending)
+      .toBe(false);
+  } finally {
+    release();
+    await independent;
+  }
+});
+
+test('rejecting a stale spoken answer before admission leaves a newer typed task running', {
+  tags: ['technical'],
+  timeout: 10000,
+}, async () => {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model = textModel(async (request) => {
+    if (model.requests.length === 1)
+      return [modelTool('ask_questions', { questions: ['Vilken cykel?'] })];
+    if (model.requests.length === 2)
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [
+            pendingUpdate(request, 'Vilken cykel?', {
+              action: 'rephrase',
+              question: 'Vilken färg har cykeln?',
+            }),
+          ],
+        }),
+      ];
+    await held;
+    return [modelMessage('Det nyare uppdraget är klart.')];
+  });
+  let reads = 0;
+  let watching = false;
+  const { live, path, send, poll } = await arrange(model.provider, async (request, dispatch) => {
+    if (
+      watching &&
+      request.method === 'GET' &&
+      /\/text-assistant\/[^/]+$/.test(new URL(request.url).pathname)
+    )
+      reads++;
+    return dispatch(request);
+  });
+  await send('Ändra cykeln.', 'question');
+  await poll(true);
+  live.emit([...live.channels.keys()][0], {
+    type: 'session.input_transcript.delta',
+    event_id: 'stale-local-answer',
+    delta: 'Den gröna.',
+    start_ms: 1000,
+    end_ms: 2000,
+  });
+  await send('Förtydliga frågan.', 'rephrase');
+  const newer = send('Beskriv också utkastet.', 'newer');
+  try {
+    await expect.poll(() => model.requests.length).toBe(3);
+    watching = true;
+    await expect.poll(() => reads, { timeout: 5000 }).toBeGreaterThanOrEqual(2);
+    const current = await (await browser.get(path)).json();
+    expect(current.phase).toBe('working');
+    expect(current.questions).toEqual(['Vilken färg har cykeln?']);
+    expect(current.tasks.find((task: { id: string }) => task.id === 'newer').status).toBe(
+      'working',
+    );
+    release();
+    expect((await newer).modelReply).toBe('Det nyare uppdraget är klart.');
+    expect(model.requests).toHaveLength(3);
+  } finally {
+    release();
+    await newer;
+  }
+});
+
+test('delegated old-question speech cannot resolve a replacement queued ahead of it', {
+  tags: ['technical'],
+  timeout: 10000,
+}, async () => {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const model = textModel(async (request) => {
+    const input = JSON.parse(
+      String(request.input.findLast((item) => item.role === 'user')?.content),
+    );
+    if (model.requests.length === 1)
+      return [modelTool('ask_questions', { questions: ['Vilken cykel?'] })];
+    if (model.requests.length === 2) {
+      await held;
+      return [
+        modelTool('ask_questions', {
+          questions: [],
+          updates: [
+            pendingUpdate(request, 'Vilken cykel?', {
+              action: 'replace',
+              replacement: {
+                kind: 'change',
+                request: 'Ändra hjälmen',
+                question: 'Vilken hjälm?',
+                dependsOnDraft: true,
+              },
+            }),
+          ],
+        }),
+      ];
+    }
+    const part = input.pendingParts.find((part: { status: string }) => part.status === 'waiting');
+    return [
+      modelTool('ask_questions', {
+        questions: [],
+        updates: [
+          {
+            id: part.id,
+            revision: part.revision,
+            action: 'clarify',
+            messageId: input.messageId,
+            evidence: input.message,
+          },
+        ],
+      }),
+    ];
+  });
+  const { live, path, send, poll } = await arrange(model.provider);
+  await send('Ändra cykeln.', 'question');
+  await poll(true);
+  const replacement = send('Ändra hjälmen i stället.', 'replacement');
+  try {
+    await expect.poll(() => model.requests.length).toBe(2);
+    const providerId = [...live.channels.keys()][0];
+    live.emit(providerId, {
+      type: 'session.input_transcript.delta',
+      event_id: 'old-answer',
+      delta: 'Den gröna.',
+      start_ms: 1000,
+      end_ms: 2000,
+    });
+    live.emit(providerId, {
+      type: 'session.delegation.created',
+      event_id: 'old-answer-delegation',
+      offset_ms: 2000,
+      delegation: { id: 'old-answer-task', type: 'delegation', target: 'client' },
+    });
+    await expect
+      .poll(async () => (await (await browser.get(path)).json()).queuedMessages, { timeout: 5000 })
+      .toBe(1);
+    release();
+    await replacement;
+    await expect
+      .poll(async () => (await (await browser.get(path)).json()).phase)
+      .not.toBe('working');
+    expect(model.requests).toHaveLength(2);
+    const current = await (await browser.get(path)).json();
+    expect(current.questions).toEqual(['Vilken hjälm?']);
+  } finally {
+    release();
+    await replacement;
+  }
 });
 
 test('a typed partial change delivers its verified result and full follow-up to voice once', {

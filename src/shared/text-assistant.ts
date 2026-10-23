@@ -12,6 +12,19 @@ export type TextAssistantReview = MapDraft & {
   current?: { types: ObjectType[]; relationshipTypes: RelationshipType[] };
 };
 export type MapSelection = { kind: 'object' | 'relationship'; id: string };
+export type PendingPart = {
+  id: string;
+  revision: number;
+  messageId: string;
+  kind: 'change' | 'information';
+  request: string;
+  question: string;
+  dependsOnDraft: boolean;
+  status: 'waiting' | 'ready' | 'completed' | 'withdrawn' | 'superseded' | 'discarded';
+  evidence?: { messageId: string; text: string };
+  operations: { name: string; arguments: Record<string, unknown> }[];
+};
+export type PendingPartReference = Pick<PendingPart, 'id' | 'revision'>;
 export type TextAssistantChange = { subject: string; action: string };
 export type TextAssistantResult = {
   kind: 'draft' | 'restored' | 'history' | 'failure';
@@ -34,6 +47,7 @@ export type ConversationReply = {
   requiredNotice?: string;
   questionPending?: boolean;
   questions?: string[];
+  newQuestions?: string[];
   receipt?: SaveReceipt;
   result?: TextAssistantResult;
   /** A checked task failure, even when some draft changes succeeded first. */
@@ -88,6 +102,9 @@ export interface TextAssistantView {
   requiredNotice?: string;
   /** Explicit follow-up questions from a validated assistant action, never a save receipt. */
   questions?: string[];
+  newQuestions?: string[];
+  pendingParts?: PendingPart[];
+  saveBlocked?: boolean;
   /** The server has asked a necessary question in this conversation and awaits an answer. */
   questionPending?: boolean;
   result?: TextAssistantResult;

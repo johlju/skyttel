@@ -260,6 +260,7 @@ export function useHouseholdWork(options: {
         operationId: attempt.operationId,
         version: attempt.version,
         contentVersion: attempt.contentVersion,
+        ...(conversation.session ? { conversationId: conversation.session.id } : {}),
       };
       let operation: SaveOperation | null = null;
       if (recover) {

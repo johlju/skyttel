@@ -38,6 +38,7 @@ import type {
 import { assistantTaskAccess } from './assistant-auth.js';
 import { contentOwner } from './content-identities.js';
 import { assertContentAvailable, assertContentVersion } from './content-maintenance.js';
+import { draftDiscards } from './draft-discards.js';
 import { householdAccess } from './households.js';
 import { readLifecycle } from './lifecycle.js';
 import { MapError } from './map-error.js';
@@ -780,13 +781,15 @@ export function householdMap(database: Database.Database, actorId: string, house
       });
     },
     discard(version: unknown, contentVersion?: unknown) {
-      return transaction(() => {
+      const result = transaction(() => {
         operations.assertEditable();
         return writeDraft({
           version: checkedDraft(version, contentVersion).version + 1,
           changes: [],
         });
       });
+      draftDiscards(database).committed({ householdId, userId, version: result.version });
+      return result;
     },
     discardChange(body: Record<string, unknown>) {
       return transaction(() => {
@@ -797,7 +800,7 @@ export function householdMap(database: Database.Database, actorId: string, house
       });
     },
     discardReview(body: Record<string, unknown>) {
-      return transaction(() => {
+      const result = transaction(() => {
         operations.assertEditable();
         const current = checkedDraft(body.version, body.contentVersion);
         const after =
@@ -815,6 +818,13 @@ export function householdMap(database: Database.Database, actorId: string, house
         writeDraft({ ...after, version: current.version + 1 });
         return { plan, state: readState() };
       });
+      if (body.kind === 'all' && result.state)
+        draftDiscards(database).committed({
+          householdId,
+          userId,
+          version: result.state.draft.version,
+        });
+      return result;
     },
     save(body: Record<string, unknown>) {
       // Registration commits before applying so interruption cannot erase the attempt.

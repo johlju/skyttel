@@ -610,7 +610,7 @@ export function HouseholdMap({
   }
 
   function saveDraft() {
-    if (!state || pending || blocked || dirty || conversation.working || conversation.needsAnswer)
+    if (!state || pending || blocked || dirty || conversation.working || conversation.saveBlocked)
       return;
     setSaveDialogOpen(true);
     void save({
@@ -2039,7 +2039,7 @@ export function HouseholdMap({
       {state && (
         <ConversationWorkspace
           conversation={conversation}
-          draftFeedback={({ working, needsAnswer, compact }) => (
+          draftFeedback={({ working, compact }) => (
             <>
               <DraftStatus
                 compact={compact || (narrow && textViewOpen)}
@@ -2077,7 +2077,7 @@ export function HouseholdMap({
                     : undefined
                 }
                 pending={pending}
-                showSave={!working && !needsAnswer}
+                showSave={!working && !conversation.saveBlocked}
                 disabled={
                   pending ||
                   blocked ||
@@ -2115,7 +2115,7 @@ export function HouseholdMap({
               state={state}
               blocked={pending || blocked || dirty}
               onSave={
-                conversation.working || conversation.needsAnswer || unresolved
+                conversation.working || conversation.saveBlocked || unresolved
                   ? undefined
                   : saveDraft
               }

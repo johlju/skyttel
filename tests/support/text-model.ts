@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { PendingPart, TextAssistantReview } from '../../src/shared/text-assistant.js';
 
 export type ModelRequest = {
   model: string;
@@ -59,4 +60,38 @@ export function textModel(
 export function lastToolResult(request: ModelRequest) {
   const item = request.input.findLast((item) => item.type === 'function_call_output');
   return item ? JSON.parse(String(item.output)) : null;
+}
+
+/** Build a provider reply against the identities actually exposed by this turn. */
+export function pendingUpdate(
+  request: ModelRequest,
+  question: string,
+  extra: Record<string, unknown> = {},
+) {
+  const input = JSON.parse(String(request.input.findLast((item) => item.role === 'user')?.content));
+  const result = lastToolResult(request);
+  const parts: PendingPart[] = result?.pendingParts ?? input.pendingParts ?? [];
+  const part = parts.find((part) => part.question === question);
+  return {
+    id: part?.id ?? 'unknown-part',
+    revision: part?.revision ?? 0,
+    action: 'clarify',
+    messageId: input.messageId,
+    evidence: input.message,
+    ...extra,
+  };
+}
+
+export function verifiedAnswers(request: ModelRequest, questions: string[]) {
+  const input = JSON.parse(String(request.input.findLast((item) => item.role === 'user')?.content));
+  const draft: TextAssistantReview = lastToolResult(request)?.review ?? input.draft;
+  const expected = [
+    ...draft.changes.map((change) => ({ kind: 'object', id: change.id, value: change.after })),
+    ...(draft.relationships ?? []).map((change) => ({
+      kind: 'relationship',
+      id: change.id,
+      value: change.after,
+    })),
+  ].filter((item) => item.value);
+  return questions.map((question) => pendingUpdate(request, question, { expected }));
 }
