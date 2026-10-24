@@ -42,6 +42,8 @@ async function main() {
       id,
       kind: item.request.tools.length ? 'work' : 'context-summary',
       message: current.message,
+      messageId: current.messageId,
+      pendingParts: lastToolResult(item.request)?.pendingParts ?? current.pendingParts,
       input: item.request.input,
       draft: current.draft,
       lastToolResult: lastToolResult(item.request),

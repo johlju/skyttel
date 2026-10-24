@@ -3,6 +3,8 @@ import { draftChangeCount, type MapDraft } from '../shared/map.js';
 /** Only server-owned wording may describe failures to the model or the person. */
 export function assistantFailureMessage(code: string): string {
   switch (code) {
+    case 'assistant_pending_part_changed':
+      return 'Den väntande delen har ändrats. Läs aktuellt samtal och fortsätt bara det arbete som återstår.';
     case 'assistant_task_expired':
       return 'Uppgiftens tid är slut. Kontrollera ditt utkast och tidigare sparresultat innan du lämnar en ny instruktion.';
     case 'assistant_save_not_requested':

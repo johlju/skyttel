@@ -548,7 +548,10 @@ export function voiceAssistantRoutes({
             }),
           );
           check();
-          if (!response.ok) throw new Error('voice_request_failed');
+          if (!response.ok) {
+            const refusal = await response.json().catch(() => null);
+            throw new Error(refusal?.error ?? 'voice_request_failed');
+          }
           const result = await response.json();
           check();
           return result;

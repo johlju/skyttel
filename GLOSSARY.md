@@ -312,6 +312,11 @@ eller skriver.
 
 _Undvik_: Talsamtal och textassistent som namn på två separata samtal.
 
+**Väntande del**:
+En ännu inte slutförd del av en Skyttel-användares begäran i samtalet som
+behöver ett förtydligande för att kunna fortsätta.
+Den väntande delen är skild från formuleringen av frågan om den.
+
 **Röstläge**:
 Det sätt att föra ett samtal där Skyttel-användaren talar till Skyttel.
 

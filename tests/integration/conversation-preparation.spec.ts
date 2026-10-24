@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import type { Response } from '@playwright/test';
-import type { TextAssistantReview } from '../../src/shared/text-assistant.js';
+import type { PendingPart, TextAssistantReview } from '../../src/shared/text-assistant.js';
 import { closeSupportDialog, createHousehold, openSettings, signIn } from '../support/client.js';
 import { applyConflictPropertyChoices } from '../support/conflict-properties.js';
 import {
@@ -27,7 +27,7 @@ for (const seeded of [false, true]) {
     const save = document.match(/^tool REQUEST save_draft .+$/mu)?.[0];
     const question = questions.match(/^\s*tool REQUEST ask_questions [^\n]+$/mu)?.[0].trim();
     const answeredQuestion = questions
-      .match(/^\s*tool REQUEST ask_questions [^\n]*"answeredQuestions"[^\n]+$/mu)?.[0]
+      .match(/^\s*tool REQUEST ask_questions [^\n]*"updates"[^\n]+$/mu)?.[0]
       .trim();
     const summaryReply = document.match(/^reply REQUEST Historisk sammanfattning:.+$/mu)?.[0];
     const clientTranscript = [...document.matchAll(/```javascript\n([\s\S]*?)\n```/gu)]
@@ -62,6 +62,9 @@ for (const seeded of [false, true]) {
       operationId?: string;
       name?: string;
       draft?: TextAssistantReview;
+      message?: string;
+      messageId?: string;
+      pendingParts?: PendingPart[];
       requests?: Event[];
     };
     const events: Event[] = [];
@@ -102,10 +105,19 @@ for (const seeded of [false, true]) {
         REQUEST: item.id,
         V: String(item.draft?.version),
         C: String(item.draft?.contentVersion),
+        PART: item.pendingParts?.[0]?.id ?? '',
+        REVISION: String(item.pendingParts?.[0]?.revision),
+        MESSAGE: item.messageId ?? '',
+        EVIDENCE: JSON.stringify(item.message),
+        RESOLVES: JSON.stringify(
+          (item.pendingParts ?? [])
+            .filter((part) => part.status === 'ready')
+            .map(({ id, revision }) => ({ id, revision })),
+        ),
         ...substitutions,
       };
       return template.replace(
-        /\b(?:REQUEST|VALUE|LO|V|C)\b/gu,
+        /\b(?:REQUEST|VALUE|LO|V|C|PART|REVISION|MESSAGE|EVIDENCE|RESOLVES)\b/gu,
         (key) => values[key as keyof typeof values],
       );
     }

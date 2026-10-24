@@ -5,7 +5,7 @@ import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
 import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
-import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import { modelMessage, modelTool, pendingUpdate, textModel } from '../../support/text-model.js';
 
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let browser: APIRequestContext;
@@ -105,14 +105,14 @@ test.each(['submit_changes', 'ask_questions', 'report_result'])(
 
 test('necessary questions await the answer without granting authority or touching the draft', async () => {
   const question = 'Vilken stol menar du?';
-  const model = textModel(() =>
+  const model = textModel((request) =>
     model.requests.length === 1
       ? [modelTool('ask_questions', { questions: [`  ${question}  `] })]
       : model.requests.length === 2
         ? [
             modelTool('ask_questions', {
               questions: [],
-              answeredQuestions: [question],
+              updates: [pendingUpdate(request, question)],
               continueResponse: true,
             }),
           ]
@@ -142,19 +142,19 @@ test.each(['partial', 'unknown', 'empty'])(
   'question resolution keeps other pending questions for a %s answer',
   async (answer) => {
     const questions = ['Vilken stol menar du?', 'Vem använder cykeln?'];
-    const model = textModel(() => [
+    const model = textModel((request) => [
       modelTool(
         'ask_questions',
         model.requests.length === 1
           ? { questions }
           : {
               questions: [],
-              answeredQuestions:
-                answer === 'partial'
-                  ? [questions[0]]
-                  : answer === 'unknown'
-                    ? [questions[0], 'Vilken båt?']
-                    : [],
+              updates: (answer === 'partial'
+                ? [questions[0]]
+                : answer === 'unknown'
+                  ? [questions[0], 'Vilken båt?']
+                  : []
+              ).map((question) => pendingUpdate(request, question)),
             },
       ),
     ]);
@@ -174,12 +174,12 @@ test.each(['partial', 'unknown', 'empty'])(
 
 test('a provider cannot resolve a question it just asked before the user has another turn', async () => {
   const question = 'Vilken stol menar du?';
-  const model = textModel(() => [
+  const model = textModel((request) => [
     modelTool(
       'ask_questions',
       model.requests.length === 1
         ? { questions: [question], continueResponse: true }
-        : { questions: [], answeredQuestions: [question] },
+        : { questions: [], updates: [pendingUpdate(request, question)] },
     ),
   ]);
   const session = await setup({ modelFetch: model.provider });

@@ -314,7 +314,6 @@ export function createApp({
   app.route('/api', householdErasureRoutes(database, auth, config.origin));
   app.route('/api', householdImportRoutes(database, auth, config.origin));
   app.route('/api', linking.routes);
-  app.route('/api', mapRoutes(database, auth, config.origin));
   app.route('/api', profileImageRoutes(database, auth, config.origin));
   app.route('/api', themePreferenceRoutes(database, auth, config.origin));
   app.route('/', assistantRoutes(database, auth, config.origin));
@@ -353,6 +352,7 @@ export function createApp({
     onNewConversation: (view, deferVoiceClose) => newVoiceConversation?.(view, deferVoiceClose),
   });
   app.route('/api', textAssistant.routes);
+  app.route('/api', mapRoutes(database, auth, config.origin, textAssistant.checkManualSave));
   revalidateWork = textAssistant.stopUnauthorizedWork;
   app.route(
     '/api',

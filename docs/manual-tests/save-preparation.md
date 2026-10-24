@@ -285,11 +285,14 @@ tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"complet
 ```
 <!-- markdownlint-enable MD013 -->
 
-Efter användarens svar markeras frågan som besvarad:
+Efter användarens svar verifieras det avsedda förslaget. Kopiera PART och
+REVISION från `held.pendingParts`, MESSAGE från `held.messageId`, EVIDENCE
+som JSON-sträng från `held.message` samt ID och VALUE från det aktuella
+Lo-förslaget i `held.draft.changes`:
 
 <!-- markdownlint-disable MD013 -->
 ```text
-tool REQUEST ask_questions {"questions":[],"answeredQuestions":["Vilket kort avses?"],"continueResponse":true}
+tool REQUEST ask_questions {"questions":[],"updates":[{"id":"PART","revision":REVISION,"action":"clarify","messageId":"MESSAGE","evidence":EVIDENCE,"expected":[{"kind":"object","id":"ID","value":VALUE}]}],"continueResponse":true}
 ```
 <!-- markdownlint-enable MD013 -->
 

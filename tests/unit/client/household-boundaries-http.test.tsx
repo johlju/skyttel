@@ -160,6 +160,32 @@ async function readingFixture() {
   return { ...fixture, householdId, tools, table };
 }
 
+test.each([
+  [
+    'assistant_session_expired',
+    'Samtalet är inte längre tillgängligt. Inget sparades av detta försök. Ladda om sidan, granska utkastet och försök spara igen.',
+  ],
+  [
+    'assistant_busy',
+    'Skyttel arbetar fortfarande i samtalet. Inget sparades av detta försök. Vänta tills arbetet är klart eller avbryt det, granska utkastet och försök spara igen.',
+  ],
+])('manual save explains %s without presenting a map conflict', async (code, expected) => {
+  const fixture = await prepareHouseholdReading(client, installation.origin, false);
+  const before = await fixture.read();
+  const transport = authenticatedHttpFetch(client, installation.origin);
+  vi.stubGlobal('fetch', async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    if (String(input).endsWith('/map/operations') && init?.method === 'POST')
+      return new Response(JSON.stringify({ error: code }), { status: 409 });
+    return transport(input, init);
+  });
+  renderHouseholdWork(fixture.path.split('/households/')[1].split('/')[0]);
+  const draft = await openDraftReview();
+  await userEvent.click(draft.getByRole('button', { name: 'Spara hela utkastet' }));
+  const dialog = within(await screen.findByRole('dialog', { name: 'Spara utkastet' }));
+  expect(await dialog.findByText(expected)).toBeTruthy();
+  expect(await fixture.read()).toEqual(before);
+});
+
 test('textual object removal works without graphics and stages every incident saved or proposed relationship without changing shared facts', async () => {
   const fixture = await readingFixture();
   const before = await fixture.read();

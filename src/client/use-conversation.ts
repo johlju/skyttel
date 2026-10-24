@@ -82,6 +82,7 @@ export type Conversation = {
   saveCheckFailed?: boolean;
   working: boolean;
   needsAnswer: boolean;
+  saveBlocked?: boolean;
   /** The microphone and the voice connection: `start`, `stop` and `activate`. */
   voice: Voice;
   setText: (text: string) => void;
@@ -1157,6 +1158,7 @@ export function useConversation({
     saveCheckFailed,
     working,
     needsAnswer: Boolean(!working && session?.questionPending),
+    saveBlocked: Boolean(session?.saveBlocked ?? session?.questionPending),
     voice,
     setText,
     begin: (mode) => {

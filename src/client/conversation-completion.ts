@@ -37,6 +37,7 @@ export function conversationCompletion() {
         failed: Boolean(view.error),
         questionPending: view.questionPending,
         questions: view.questions,
+        newQuestions: view.newQuestions,
         receipt: view.receipt,
       });
     for (const reply of replies) {
@@ -44,10 +45,13 @@ export function conversationCompletion() {
       if (seen.has(key)) continue;
       seen.add(key);
       pending.push(reply);
-      if (reply.questions) questions = reply.questions;
+      if (view.newQuestions !== undefined) questions.push(...(reply.newQuestions ?? []));
+      else if (reply.questions) questions = reply.questions;
       else if (reply.questionPending === false) questions = [];
     }
-    if (view.questions) questions = view.questions;
+    if (view.newQuestions !== undefined)
+      questions = [...new Set(questions)].filter((question) => view.questions?.includes(question));
+    else if (view.questions) questions = view.questions;
     else if (view.questionPending === false) questions = [];
     else if (view.questionPending && !questions.length && view.modelReply)
       questions = [view.modelReply];
@@ -86,6 +90,7 @@ export function conversationCompletion() {
       for (const [action, subjects] of changes)
         sections.push(`${new Intl.ListFormat('sv').format([...subjects])} ${action}.`);
     sections.push(...answers, ...failures, ...questions);
+    if (view.newQuestions !== undefined) questions = [];
     return {
       id: `completion-${context}-${++sequence}`,
       role: 'assistant',
