@@ -1530,6 +1530,84 @@ test('information work remains visible until an answer or another question is re
   expect(answered.questionPending).toBe(false);
 });
 
+test.each(['plain', 'report', 'echo'])(
+  'information answers survive multiple updates and a %s continuation exactly once',
+  async (ending) => {
+    let step = 0;
+    const helmet = 'Hjälmen finns i hallen.';
+    const bike = 'Cykeln är grön.';
+    const model = textModel((request) => {
+      const input = JSON.parse(
+        String(request.input.findLast((row) => row.role === 'user')?.content),
+      );
+      step++;
+      if (step === 1)
+        return [
+          modelTool('ask_questions', {
+            questions: [
+              {
+                kind: 'information',
+                request: 'Hitta hjälmen',
+                question: 'Vilken hjälm?',
+                dependsOnDraft: false,
+              },
+              {
+                kind: 'information',
+                request: 'Beskriv cykeln',
+                question: 'Vilken cykel?',
+                dependsOnDraft: false,
+              },
+            ],
+          }),
+        ];
+      if (step === 2 || step === 3) {
+        const part = input.pendingParts[step - 2];
+        return [
+          modelTool('ask_questions', {
+            questions: [],
+            continueResponse: true,
+            updates: [
+              {
+                id: part.id,
+                revision: part.revision,
+                messageId: input.messageId,
+                evidence: input.message,
+                action: 'clarify',
+                answer: step === 2 ? helmet : bike,
+              },
+            ],
+          }),
+        ];
+      }
+      if (step === 4)
+        return ending === 'report'
+          ? [modelTool('report_result', { source: 'draft' })]
+          : [
+              modelMessage(
+                ending === 'echo' ? `${helmet} Utkastet är oförändrat.` : 'Utkastet är oförändrat.',
+              ),
+            ];
+      return [modelMessage('Nästa oberoende svar.')];
+    });
+    await setup(model.provider);
+    await webProposal();
+    const waiting = await message(await start(), 'Hitta hjälmen och beskriv cykeln.');
+    const answered = await message(
+      waiting,
+      'Den blå hjälmen och den gröna cykeln. Beskriv också utkastet.',
+    );
+    expect(answered.error).toBeUndefined();
+    expect(answered.questionPending).toBe(false);
+    expect(answered.modelReply?.split(helmet)).toHaveLength(2);
+    expect(answered.modelReply?.split(bike)).toHaveLength(2);
+    expect(answered.completedReplies.at(-1).text).toBe(answered.modelReply);
+    if (ending === 'report') expect(answered.reply).toContain('Redan från formuläret');
+    else expect(answered.modelReply).toContain('Utkastet är oförändrat.');
+    const independent = await message(answered, 'Fortsätt med något annat.');
+    expect(independent.modelReply).toBe('Nästa oberoende svar.');
+  },
+);
+
 test('a queued voice answer cannot resolve a replacement of the question it heard', async () => {
   let release = () => {};
   const held = new Promise<void>((resolve) => {
@@ -1598,6 +1676,8 @@ test('a queued voice answer cannot resolve a replacement of the question it hear
       .not.toBe('working');
     expect(current?.pendingParts?.map((part) => part.status)).toEqual(['superseded', 'waiting']);
     expect(current?.questions).toEqual(['Vilket namn ska hjälmen ha?']);
+    expect(current?.error).toBe('assistant_pending_part_changed');
+    expect(current?.reply).toContain('Den väntande delen har ändrats.');
     expect(model.requests).toHaveLength(2);
     expect(current?.receipt).toBeUndefined();
   } finally {

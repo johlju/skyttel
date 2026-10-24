@@ -68,6 +68,7 @@ type AcceptedMessage = {
 const savedReply = 'Sparat. Hela utkastet finns i hushållets karta.';
 type Session = TextAssistantView & {
   parts: ReturnType<typeof pendingParts>;
+  answers?: string[];
   id: string;
   actorId: string;
   browserSessionId: string;
@@ -230,6 +231,7 @@ export function textAssistantRoutes({
     session.reply = undefined;
     session.modelReply = undefined;
     session.questions = undefined;
+    session.answers = [];
     session.parts.clear();
     session.requiredNotice = undefined;
     session.previousFailure = undefined;
@@ -749,6 +751,13 @@ export function textAssistantRoutes({
     session.questions = questions.length ? questions : undefined;
     session.newQuestions = session.newQuestions?.filter((question) => questions.includes(question));
   }
+  function turnReply(session: Session, text = '', separator = ' ') {
+    const retained = [...new Set([...(session.answers ?? []), ...(session.newQuestions ?? [])])];
+    return (
+      [text, ...retained.filter((part) => !text.includes(part))].filter(Boolean).join(separator) ||
+      undefined
+    );
+  }
   function updateParts(
     session: Session,
     questions: z.infer<typeof pendingQuestions>,
@@ -765,8 +774,8 @@ export function textAssistantRoutes({
     const result = session.parts.apply(questions, updates, { ...message, callId });
     syncQuestions(session);
     session.newQuestions = [...(session.newQuestions ?? []), ...result.questions];
-    session.modelReply =
-      [...result.answers, ...(session.newQuestions ?? [])].join(' ') || undefined;
+    session.answers = [...(session.answers ?? []), ...result.answers];
+    session.modelReply = turnReply(session);
     return result;
   }
   function saved(session: Session, receipt: TextAssistantView['receipt']) {
@@ -909,6 +918,7 @@ export function textAssistantRoutes({
     session.contextRevision = (session.contextRevision ?? 0) + 1;
     session.parts.clear();
     session.newQuestions = [];
+    session.answers = [];
     session.capacity.reset();
     session.resetSource = deferVoiceClose ? 'voice' : 'text';
     session.previousFailure = undefined;
@@ -1237,14 +1247,7 @@ export function textAssistantRoutes({
             calls.push({ ...original, name: 'save_draft', arguments: '{}' });
         }
         if (!calls.length) {
-          session.modelReply = [
-            response.output_text,
-            ...(session.newQuestions ?? []).filter(
-              (question) => !response.output_text.includes(question),
-            ),
-          ]
-            .filter(Boolean)
-            .join('\n');
+          session.modelReply = turnReply(session, response.output_text, '\n');
           if (response.output_text)
             session.conversation.push({ role: 'assistant', text: response.output_text });
           session.reply =
@@ -1372,7 +1375,7 @@ export function textAssistantRoutes({
             }
             guard();
             session.reply = session.result.message;
-            session.modelReply = session.newQuestions?.join(' ') || undefined;
+            session.modelReply = turnReply(session);
             session.phase = 'ready';
             session.conversation.push({ role: 'assistant', text: session.reply });
             session.input.push({
@@ -1767,6 +1770,7 @@ export function textAssistantRoutes({
     session.reply = undefined;
     session.modelReply = undefined;
     session.newQuestions = [];
+    session.answers = [];
     session.requiredNotice = undefined;
     session.receipt = undefined;
     session.saveCheck = undefined;
@@ -1880,8 +1884,9 @@ export function textAssistantRoutes({
         session.phase = session.pendingSave ? 'recovery' : 'error';
         session.error = session.pendingSave
           ? 'assistant_save_unknown'
-          : error instanceof MapError && error.code === 'assistant_task_expired'
-            ? 'assistant_task_expired'
+          : error instanceof MapError &&
+              ['assistant_task_expired', 'assistant_pending_part_changed'].includes(error.code)
+            ? error.code
             : 'assistant_draft_changed';
         session.reply = assistantFailureMessage(session.error);
         if (session.saveIntent)
@@ -2309,6 +2314,7 @@ export function textAssistantRoutes({
     session.modelReply = undefined;
     syncQuestions(session);
     session.newQuestions = [];
+    session.answers = [];
     session.requiredNotice = undefined;
     session.phase = session.pendingSave ? 'recovery' : 'ready';
     await refresh(session, checkContext);
@@ -2381,6 +2387,7 @@ export function textAssistantRoutes({
     session.modelReply = undefined;
     syncQuestions(session);
     session.newQuestions = [];
+    session.answers = [];
     session.requiredNotice = undefined;
     session.error = undefined;
     session.result = undefined;

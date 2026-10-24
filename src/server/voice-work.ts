@@ -355,6 +355,7 @@ export function voiceWork({
           rememberQuestion(view);
           update(view, false);
         }
+        if (current()) append(id, assistantFailureMessage(error.message));
         return;
       }
       cancel();
@@ -455,8 +456,10 @@ export function voiceWork({
       selected.some(
         (fragment) => JSON.stringify(fragment.answerTo) !== JSON.stringify(selected[0]?.answerTo),
       )
-    )
+    ) {
+      if (text.trim()) append(id, assistantFailureMessage('assistant_pending_part_changed'));
       return;
+    }
     if (text.trim() && expected) {
       automaticReplyConsumed = id === null;
       commentary.working(id);

@@ -68,13 +68,14 @@ async function arrange(
         .not.toBe('working');
       return current;
     },
-    async poll(microphoneOn: boolean) {
+    async poll(microphoneOn: boolean, microphoneActive = false) {
       current = await (await browser.get(path)).json();
       const response = await post(`${path}/voice/${voiceId}/poll`, {
         revision: current.revision,
         draftVersion: current.review.version,
         contentVersion: current.review.contentVersion,
         microphoneOn,
+        microphoneActive,
       });
       expect(response.status(), await response.text()).toBe(200);
       return response.json();
@@ -298,6 +299,9 @@ test('rejecting a stale spoken answer before admission leaves a newer typed task
     await expect.poll(() => model.requests.length).toBe(3);
     watching = true;
     await expect.poll(() => reads, { timeout: 5000 }).toBeGreaterThanOrEqual(2);
+    await expect
+      .poll(() => voiceAnswerParts(live.sent).join(''))
+      .toContain('Den väntande delen har ändrats.');
     const current = await (await browser.get(path)).json();
     expect(current.phase).toBe('working');
     expect(current.questions).toEqual(['Vilken färg har cykeln?']);
@@ -311,6 +315,61 @@ test('rejecting a stale spoken answer before admission leaves a newer typed task
     release();
     await newer;
   }
+});
+
+test('speech spanning different question revisions reports rejection without reaching the model', {
+  tags: ['technical'],
+  timeout: 10000,
+}, async () => {
+  const model = textModel((request) =>
+    model.requests.length === 1
+      ? [modelTool('ask_questions', { questions: ['Vilken cykel?'] })]
+      : [
+          modelTool('ask_questions', {
+            questions: [],
+            updates: [
+              pendingUpdate(request, 'Vilken cykel?', {
+                action: 'rephrase',
+                question: 'Vilken färg har cykeln?',
+              }),
+            ],
+          }),
+        ],
+  );
+  const { live, path, send, poll } = await arrange(model.provider);
+  await send('Ändra cykeln.', 'question');
+  await poll(true, true);
+  const providerId = [...live.channels.keys()][0];
+  live.emit(providerId, {
+    type: 'session.input_transcript.delta',
+    event_id: 'before-rephrase',
+    delta: 'Den gröna',
+    start_ms: 1000,
+    end_ms: 1500,
+  });
+  const rephrased = await send('Förtydliga frågan.', 'rephrase');
+  await poll(true, true);
+  live.emit(providerId, {
+    type: 'session.input_transcript.delta',
+    event_id: 'after-rephrase',
+    delta: ' cykeln.',
+    start_ms: 1500,
+    end_ms: 2000,
+  });
+  live.emit(providerId, {
+    type: 'session.delegation.created',
+    event_id: 'mixed-delegation',
+    offset_ms: 2000,
+    delegation: { id: 'mixed-task', type: 'delegation', target: 'client' },
+  });
+  await poll(true);
+  await expect
+    .poll(() => voiceAnswerParts(live.sent).join(''), { timeout: 5000 })
+    .toContain('Den väntande delen har ändrats.');
+  const current = await (await browser.get(path)).json();
+  expect(current.pendingParts).toEqual(rephrased.pendingParts);
+  expect(current.phase).toBe('ready');
+  expect(model.requests).toHaveLength(2);
 });
 
 test('delegated old-question speech cannot resolve a replacement queued ahead of it', {

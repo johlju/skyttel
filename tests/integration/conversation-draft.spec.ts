@@ -216,7 +216,16 @@ test('SAMTALSUTKAST-02: valet följer användaren mellan hushåll och enheter', 
     await startConversationWithText(page);
     await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
     await toggle(page).click();
+    const restarted = page.waitForResponse(
+      (response) =>
+        response.url().startsWith(`${app.origin}/api/households/${household.id}/text-assistant/`) &&
+        response.url().endsWith('/new') &&
+        response.request().method() === 'POST',
+    );
     await view(page).getByRole('button', { name: 'Nytt samtal' }).click();
+    const restartResponse = await restarted;
+    expect(restartResponse.status()).toBe(200);
+    const conversation = await restartResponse.json();
     await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
     await readLoProposal(page);
     const beforeSave = await read();
@@ -231,6 +240,7 @@ test('SAMTALSUTKAST-02: valet följer användaren mellan hushåll och enheter', 
       version: beforeSave.draft.version,
       contentVersion: beforeSave.contentVersion,
       operationId: receipt.operationId,
+      conversationId: conversation.id,
     });
     expect(receipt.operationId).toMatch(/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i);
     await expect(
