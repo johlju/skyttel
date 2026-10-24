@@ -18,18 +18,18 @@ enable auto-merge, or enter a merge queue.
 - Resolve the **Spec**, repository, and target branch (`main` by default).
 - Check [prerequisites](references/git-and-publication.md#prerequisites) and
   establish [ownership and the journal](references/state-and-recovery.md#journal-and-ownership).
-- Fetch the target. Record the starting commit as the fixed point for the
-  final review and the initial verified tip.
+- Fetch the target. Record the starting commit in the journal as an immutable
+  record and the initial verified tip.
 
 Completion criterion: stack prerequisites are met, ownership is established,
-and the fixed point is an immutable commit.
+and the starting commit is recorded immutably.
 
 ### 2. Claim and map the work
 
 - Assign the **Spec** to the authenticated tracker user before implementation work.
 - Read the **Spec** body, comments, open sub-issues, and blocking relationships.
 - Build a dependency graph containing every open sub-issue. A sub-issue is on
-  the frontier only when all its blockers are closed and it is unclaimed.
+  the frontier only when all its blockers are closed.
   Results accepted during this batch must also be present in the verified tip.
 - If the tracker does not yield an unambiguous graph, ask the user before
   dispatching work.
@@ -99,7 +99,7 @@ verification.
 - Refresh the target; follow [Target movement](references/git-and-publication.md#target-movement)
   if it changed. Verify the combined result through step 4's checks.
 - From the last branch in the stack, call the Skill tool with "code-review"
-  with the recorded starting commit as the fixed point and the **Spec** as
+  with the refreshed target commit as the fixed point and the **Spec** as
   the spec source.
 - For each actionable finding, dispatch a repair agent in a fresh worktree on a
   new base commit. Give it the finding and relevant issue context, require it to
@@ -123,7 +123,7 @@ remains open.
   Integrate and review any required changes through steps 4–5.
 - Follow [publication](references/git-and-publication.md#publish) to create
   and verify one ready PR per nonempty layer in a native GitHub stack.
-- Record the ordered PR links, fixed point, reviewed target and layer commits,
+- Record the ordered PR links, starting commit, reviewed target and layer commits,
   verification, review results, and journal location on the **Spec**. Report
   outstanding human approvals and return the PR stack to the user.
 - Release the local writer claim; retain the journal, worktrees, and recovery

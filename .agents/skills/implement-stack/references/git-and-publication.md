@@ -20,7 +20,7 @@
 
 ## Adopt and integrate
 
-For the first relinquished branch, created at the batch's fixed point:
+For the first relinquished branch, created at the batch's starting commit:
 
 ```bash
 gh stack init --base <target> <first-branch>
@@ -60,8 +60,8 @@ return published PRs to draft before rewriting. Journal two distinct phases:
    Continue conflicts with `gh stack rebase --continue`.
 
 Check ancestry and changed diffs, then return to integrated verification and
-batch review. Keep the original fixed point; also inspect the diff against
-the new target to distinguish target changes from this batch's changes.
+batch review using the new target commit as the fixed point. Preserve the
+starting commit in the journal.
 
 ## Publish
 

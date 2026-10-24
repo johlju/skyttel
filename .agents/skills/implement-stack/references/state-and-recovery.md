@@ -13,9 +13,9 @@
   explicit ownership handoff before changing their branches.
 - Reserve capacity for workers' nested `code-review` agents before dispatch;
   queue excess workers rather than skipping their reviews.
-- Record the fixed point, target, verified tip, dependencies, ordered layers,
-  owners/worktrees, dispatch bases, returned and integrated heads, PR/stack
-  identities, expected remote heads, and verification evidence.
+- Record the immutable starting commit, target, verified tip, dependencies,
+  ordered layers, owners/worktrees, dispatch bases, returned and integrated
+  heads, PR/stack identities, expected remote heads, and verification evidence.
 - Journal each mutation's intent and observed result. Before rewriting,
   preserve affected heads under `refs/implement-stack/<batch>/...` and copy
   the gh-stack catalog. Retain the tool's own recovery journals. Record
