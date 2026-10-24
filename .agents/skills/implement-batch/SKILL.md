@@ -26,7 +26,7 @@ an immutable commit.
 - Assign the **Spec** to the authenticated tracker user before implementation work.
 - Read the **Spec** body, comments, open sub-issues, and blocking relationships.
 - Build a dependency graph containing every open sub-issue. A sub-issue is on
-  the frontier only when all its blockers are closed and it is unclaimed.
+  the frontier only when all its blockers are closed.
 - If the tracker does not yield an unambiguous graph, ask the user before
   dispatching work.
 
