@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import type Database from 'better-sqlite3';
 import { Hono } from 'hono';
 import { toResponseInputItems } from 'openai/lib/responses/ResponseInputItems';
@@ -33,8 +34,10 @@ import {
   summarizeConversation,
 } from './conversation-summary.js';
 import { draftUpdateDetails } from './draft-completion.js';
+import { draftDiscards } from './draft-discards.js';
 import { householdAccess } from './households.js';
 import { householdMap, MapError } from './map.js';
+import { partReference, partUpdates, pendingParts, pendingQuestions } from './pending-parts.js';
 import { checkSaves } from './save-check.js';
 import { type DeliverySocket, taskDeliveries } from './task-delivery.js';
 import { connectTextAssistant, type LocalDispatch } from './text-assistant-mcp.js';
@@ -46,6 +49,7 @@ type Message = {
   id: string;
   text: string;
   voice: boolean;
+  answerTo?: z.infer<typeof partReference>[];
   contentVersion: number;
   owner: string;
   receivedAt: number;
@@ -63,6 +67,8 @@ type AcceptedMessage = {
 };
 const savedReply = 'Sparat. Hela utkastet finns i hushållets karta.';
 type Session = TextAssistantView & {
+  parts: ReturnType<typeof pendingParts>;
+  answers?: string[];
   id: string;
   actorId: string;
   browserSessionId: string;
@@ -140,6 +146,15 @@ export function textAssistantRoutes({
 }) {
   const routes = new Hono<{ Variables: { actorId: string; browserSessionId: string } }>();
   const sessions = new Map<string, Session>();
+  const unsubscribeDiscards = draftDiscards(database).subscribe((event) => {
+    for (const session of sessions.values()) {
+      if (session.householdId !== event.householdId || session.owner !== event.userId) continue;
+      session.parts.discard();
+      syncQuestions(session);
+      session.saveIntent = undefined;
+      if (!session.task) session.workVersion = event.version;
+    }
+  });
   const pausedSessions = new Set<string>();
   function syncWork() {
     const active = new Map<string, number>();
@@ -216,6 +231,8 @@ export function textAssistantRoutes({
     session.reply = undefined;
     session.modelReply = undefined;
     session.questions = undefined;
+    session.answers = [];
+    session.parts.clear();
     session.requiredNotice = undefined;
     session.previousFailure = undefined;
     session.receipt = undefined;
@@ -334,6 +351,9 @@ export function textAssistantRoutes({
       requiredNotice,
       questions,
       questionPending: Boolean(questions?.length),
+      newQuestions: session.newQuestions ?? [],
+      pendingParts: session.parts.read(),
+      saveBlocked: session.parts.blocked(),
       result,
       error,
       receipt,
@@ -655,7 +675,12 @@ export function textAssistantRoutes({
       guard();
       if (session.saveIntentDeadline !== undefined && now() >= session.saveIntentDeadline)
         session.saveIntent = undefined;
-      if (!session.saveIntent || session.inputSerial !== serial || session.queue.length)
+      if (
+        session.parts.blocked() ||
+        !session.saveIntent ||
+        session.inputSerial !== serial ||
+        session.queue.length
+      )
         return false;
       if (!session.voiceInputPending && now() - (session.lastVoiceInputAt ?? 0) >= 2000)
         return true;
@@ -667,6 +692,7 @@ export function textAssistantRoutes({
     return () => {
       guard();
       if (
+        session.parts.blocked() ||
         !session.saveIntent ||
         (session.saveIntentDeadline !== undefined && now() >= session.saveIntentDeadline) ||
         session.inputSerial !== serial ||
@@ -720,10 +746,37 @@ export function textAssistantRoutes({
   function verifiedReply(session: Session) {
     return session.result?.message ?? (session.receipt ? savedReply : undefined);
   }
-  function rememberQuestions(session: Session, questions: string[]) {
-    if (!questions.length) return;
-    session.questions = [...new Set([...(session.questions ?? []), ...questions])];
-    session.modelReply = session.questions.join(' ');
+  function syncQuestions(session: Session) {
+    const questions = session.parts.questions();
+    session.questions = questions.length ? questions : undefined;
+    session.newQuestions = session.newQuestions?.filter((question) => questions.includes(question));
+  }
+  function turnReply(session: Session, text = '', separator = ' ') {
+    const retained = [...new Set([...(session.answers ?? []), ...(session.newQuestions ?? [])])];
+    return (
+      [text, ...retained.filter((part) => !text.includes(part))].filter(Boolean).join(separator) ||
+      undefined
+    );
+  }
+  function updateParts(
+    session: Session,
+    questions: z.infer<typeof pendingQuestions>,
+    updates: z.infer<typeof partUpdates>,
+    callId: string,
+  ) {
+    const message = session.activeMessage;
+    if (!message) throw new MapError('invalid_request', 400);
+    if (
+      message.answerTo &&
+      updates.some((update) => !message.answerTo?.some((part) => part.id === update.id))
+    )
+      throw new MapError('assistant_pending_part_changed');
+    const result = session.parts.apply(questions, updates, { ...message, callId });
+    syncQuestions(session);
+    session.newQuestions = [...(session.newQuestions ?? []), ...result.questions];
+    session.answers = [...(session.answers ?? []), ...result.answers];
+    session.modelReply = turnReply(session);
+    return result;
   }
   function saved(session: Session, receipt: TextAssistantView['receipt']) {
     session.saveIntent = undefined;
@@ -733,7 +786,7 @@ export function textAssistantRoutes({
     session.reply = savedReply;
     session.conversation.push({ role: 'assistant', text: session.reply });
     session.modelReply = undefined;
-    session.questions = undefined;
+    syncQuestions(session);
     session.requiredNotice = undefined;
     session.error = undefined;
     session.phase = 'ready';
@@ -863,6 +916,9 @@ export function textAssistantRoutes({
     session.conversation = [];
     session.contextOffset = 0;
     session.contextRevision = (session.contextRevision ?? 0) + 1;
+    session.parts.clear();
+    session.newQuestions = [];
+    session.answers = [];
     session.capacity.reset();
     session.resetSource = deferVoiceClose ? 'voice' : 'text';
     session.previousFailure = undefined;
@@ -893,7 +949,6 @@ export function textAssistantRoutes({
     expected: { version: number; contentVersion: number },
   ) {
     const serial = session.inputSerial ?? 0;
-    const answerableQuestions = new Set(session.questions ?? []);
     let originalSaveIntent = Boolean(session.saveIntent);
     const guard = () => {
       if (task.signal.aborted || session.revision !== revision || !sessions.has(session.id))
@@ -932,7 +987,10 @@ export function textAssistantRoutes({
         role: 'user',
         content: JSON.stringify({
           message: text,
+          messageId: session.activeMessage?.id,
+          answerTo: session.activeMessage?.answerTo,
           pendingQuestions: session.questions ?? [],
+          pendingParts: session.parts.read(),
           draft: review,
           saveOperations: session.operations.map(
             ({ operationId, status, draftVersion, contentVersion }) => ({
@@ -1008,7 +1066,7 @@ export function textAssistantRoutes({
           type: 'function',
           name: 'submit_changes',
           description:
-            'Utför ändringarna som en ordnad batch med vanliga MCP-verktyg och aktuella versioner. Behåll andra förslag. completion draft lämnar allt osparat; save kräver ett aktuellt uttryckligt besked om hela utkastet. questions är korta riktade följdfrågor, aldrig resultatpåståenden. Sätt continueResponse true om oberoende faktasvar, detaljer eller markering återstår, även när frågor väntar. Servern behåller frågorna och hindrar sparande tills användaren svarar. Annars avslutar servern.',
+            'Utför en ordnad ändringsbatch med aktuella versioner. Behåll andra förslag. completion draft lämnar allt osparat; save kräver ett aktuellt uttryckligt besked om hela utkastet. questions registrerar nya väntande delar med kind, request, question och dependsOnDraft. resolves anger id och revision för förtydligade ändringsdelar som batchens återstående operationer slutför. Ofärdiga ändringsdelar hindrar sparande även efter förtydligande; oberoende informationsfrågor gör det inte. Sätt continueResponse true om faktasvar, detaljer eller markering återstår. Annars avslutar servern.',
           parameters: {
             type: 'object',
             properties: {
@@ -1016,7 +1074,8 @@ export function textAssistantRoutes({
               contentVersion: { type: 'integer', minimum: 1 },
               completion: { type: 'string', enum: ['draft', 'save'] },
               continueResponse: { type: 'boolean' },
-              questions: { type: 'array', maxItems: 3, items: { type: 'string', maxLength: 240 } },
+              questions: z.toJSONSchema(pendingQuestions),
+              resolves: z.toJSONSchema(z.array(partReference)),
               operations: {
                 type: 'array',
                 minItems: 1,
@@ -1053,19 +1112,12 @@ export function textAssistantRoutes({
           type: 'function',
           name: 'ask_questions',
           description:
-            'Ställ nödvändiga riktade frågor i samtalet och invänta svar. Använd även utan ändringsoperationer, till exempel för obesvarade identiteter eller konflikter. Beskriv de berörda namnen och konkreta valen från aktuellt underlag; gissa inga svar. Ange i answeredQuestions endast exakta frågor från pendingQuestions som användarens svar och aktuellt underlag löser. Behåll övriga frågor, även vid en annan uppgift. questions kan vara tom när frågor besvaras. Sätt continueResponse true när beställda delar återstår. Detta ändrar eller sparar ingenting.',
+            'Registrera väntande delar i questions. Uppdatera endast angiven identitet och revision från pendingParts genom updates, med aktuellt messageId och ordagrant evidence ur message. clarify utan ny fråga gör en ändring redo för submit_changes.resolves; answer avslutar en informationsdel med sitt faktasvar. withdraw kräver uttryckligt återtagande; replace ersätter begäran. rephrase ändrar bara frågans formulering. Sätt continueResponse true när arbete återstår. Detta sparar ingenting.',
           parameters: {
             type: 'object',
             properties: {
-              questions: {
-                type: 'array',
-                maxItems: 3,
-                items: { type: 'string', maxLength: 240 },
-              },
-              answeredQuestions: {
-                type: 'array',
-                items: { type: 'string', maxLength: 240 },
-              },
+              questions: z.toJSONSchema(pendingQuestions),
+              updates: z.toJSONSchema(partUpdates),
               continueResponse: { type: 'boolean' },
             },
             required: ['questions'],
@@ -1128,7 +1180,8 @@ export function textAssistantRoutes({
         let combined:
           | {
               completion: 'draft' | 'save';
-              questions: string[];
+              questions: z.infer<typeof pendingQuestions>;
+              resolves: z.infer<typeof partReference>[];
               callId: string;
               continueResponse: boolean;
             }
@@ -1141,7 +1194,8 @@ export function textAssistantRoutes({
               contentVersion: z.number().int().positive(),
               completion: z.enum(['draft', 'save']),
               continueResponse: z.boolean().default(false),
-              questions: z.array(z.string().min(1).max(240)).max(3).default([]),
+              questions: pendingQuestions.default([]),
+              resolves: z.array(partReference).max(12).default([]),
               operations: z
                 .array(
                   z
@@ -1159,7 +1213,12 @@ export function textAssistantRoutes({
             throw new MapError('assistant_draft_changed', 409);
           if (batch.completion === 'save' && !session.saveIntent && !originalSaveIntent)
             throw new MapError('assistant_save_not_requested', 409);
-          if (batch.completion === 'save' && batch.questions.length)
+          if (
+            batch.completion === 'save' &&
+            batch.questions.some(
+              (question) => typeof question === 'string' || question.kind === 'change',
+            )
+          )
             throw new MapError('invalid_request', 400);
           // Validate every ordinary tool's schema before the first mutation.
           // MCP still validates domain state and authority on every operation.
@@ -1176,6 +1235,8 @@ export function textAssistantRoutes({
               throw new MapError('invalid_request', 400);
           }
           const original = calls[0];
+          session.parts.validateCompletion(batch.resolves);
+          updateParts(session, batch.questions, [], original.call_id);
           combined = { ...batch, callId: original.call_id };
           calls = batch.operations.map((operation) => ({
             ...original,
@@ -1186,14 +1247,7 @@ export function textAssistantRoutes({
             calls.push({ ...original, name: 'save_draft', arguments: '{}' });
         }
         if (!calls.length) {
-          session.modelReply = [
-            response.output_text,
-            ...(session.questions ?? []).filter(
-              (question) => !response.output_text.includes(question),
-            ),
-          ]
-            .filter(Boolean)
-            .join('\n');
+          session.modelReply = turnReply(session, response.output_text, '\n');
           if (response.output_text)
             session.conversation.push({ role: 'assistant', text: response.output_text });
           session.reply =
@@ -1210,26 +1264,51 @@ export function textAssistantRoutes({
             if (calls.length !== 1) throw new MapError('invalid_request', 400);
             const value = z
               .object({
-                questions: z.array(z.string().trim().min(1).max(240)).max(3),
-                answeredQuestions: z.array(z.string().min(1).max(240)).default([]),
+                questions: pendingQuestions,
+                updates: partUpdates.default([]),
                 continueResponse: z.boolean().default(false),
               })
               .strict()
               .parse(args);
-            if (
-              (!value.questions.length && !value.answeredQuestions.length) ||
-              value.answeredQuestions.some(
-                (question) =>
-                  !answerableQuestions.has(question) || !session.questions?.includes(question),
-              )
-            )
+            if (!value.questions.length && !value.updates.length)
               throw new MapError('invalid_request', 400);
-            const remaining = session.questions?.filter(
-              (question) => !value.answeredQuestions.includes(question),
-            );
-            session.questions = remaining?.length ? remaining : undefined;
-            rememberQuestions(session, value.questions);
-            session.modelReply = session.questions?.join(' ');
+            // The model interprets the requested result; only current, checked
+            // map/draft values can establish that the result already exists.
+            for (const update of value.updates) {
+              for (const expected of update.expected ?? []) {
+                const collection =
+                  expected.kind === 'object'
+                    ? 'changes'
+                    : expected.kind === 'relationship'
+                      ? 'relationships'
+                      : expected.kind === 'objectType'
+                        ? 'objectTypes'
+                        : 'relationshipTypes';
+                const proposal = afterProvider[collection]?.find((item) => item.id === expected.id);
+                let actual: unknown = proposal?.after;
+                if (!proposal) {
+                  const map = await call(session, 'read_map', {}, guard);
+                  const key =
+                    expected.kind === 'object'
+                      ? 'objects'
+                      : expected.kind === 'relationship'
+                        ? 'relationships'
+                        : expected.kind === 'objectType'
+                          ? 'types'
+                          : 'relationshipTypes';
+                  actual = map[key]?.find((item: { id: string }) => item.id === expected.id);
+                }
+                guard();
+                if (
+                  !actual ||
+                  !Object.entries(expected.value).every(([key, value]) =>
+                    isDeepStrictEqual((actual as Record<string, unknown>)[key], value),
+                  )
+                )
+                  throw new MapError('assistant_draft_changed');
+              }
+            }
+            updateParts(session, value.questions, value.updates, action.call_id);
             session.reply = verifiedReply(session);
             session.phase = 'ready';
             session.input.push({
@@ -1238,10 +1317,11 @@ export function textAssistantRoutes({
               output: JSON.stringify({
                 questionPending: Boolean(session.questions?.length),
                 questions: session.questions ?? [],
+                pendingParts: session.parts.read(),
               }),
             });
-            if (value.questions.length)
-              session.conversation.push({ role: 'assistant', text: value.questions.join(' ') });
+            if (session.modelReply)
+              session.conversation.push({ role: 'assistant', text: session.modelReply });
             if (value.continueResponse) {
               session.phase = 'working';
               break;
@@ -1295,7 +1375,7 @@ export function textAssistantRoutes({
             }
             guard();
             session.reply = session.result.message;
-            session.modelReply = session.questions?.join(' ');
+            session.modelReply = turnReply(session);
             session.phase = 'ready';
             session.conversation.push({ role: 'assistant', text: session.reply });
             session.input.push({
@@ -1369,8 +1449,13 @@ export function textAssistantRoutes({
           const tool = session.mcp.tools.find((tool) => tool.name === action.name);
           if (!tool) throw new MapError('assistant_unknown_tool', 409);
           const isSave = action.name === 'save_draft' || action.name === 'prepare_save';
+          if (isSave && combined) {
+            session.parts.complete(combined.resolves);
+            combined.resolves = [];
+            syncQuestions(session);
+          }
           let previousReview: TextAssistantReview | undefined;
-          if (isSave && session.questions?.length) {
+          if (isSave && session.parts.blocked()) {
             session.phase = 'ready';
             return;
           }
@@ -1410,6 +1495,12 @@ export function textAssistantRoutes({
                 currentSaveGuard(session, serial, guard),
               );
           }
+          if (
+            combined &&
+            !isSave &&
+            !session.parts.shouldRun(combined.resolves, action.name, args, session.review)
+          )
+            continue;
           const value = await call(
             session,
             action.name,
@@ -1446,6 +1537,14 @@ export function textAssistantRoutes({
             const before = previousReview ?? session.review;
             session.review = await call(session, 'read_my_draft', {}, guard);
             version = session.review.version;
+            if (combined && !isSave)
+              session.parts.operation(
+                combined.resolves,
+                action.name,
+                args,
+                previousReview ?? session.review,
+                session.review,
+              );
             if (version !== before.version && !isSave) {
               const restored =
                 action.name === 'discard_proposal' &&
@@ -1473,8 +1572,9 @@ export function textAssistantRoutes({
           }
         }
         if (combined) {
+          session.parts.complete(combined.resolves);
+          syncQuestions(session);
           session.reply = verifiedReply(session);
-          rememberQuestions(session, combined.questions);
           session.phase = 'ready';
           session.input.push({
             type: 'function_call_output',
@@ -1485,6 +1585,7 @@ export function textAssistantRoutes({
               reply: session.reply,
               review: session.review,
               questions: combined.questions,
+              pendingParts: session.parts.read(),
             }),
           });
           if (session.reply) session.conversation.push({ role: 'assistant', text: session.reply });
@@ -1668,6 +1769,8 @@ export function textAssistantRoutes({
     session.error = undefined;
     session.reply = undefined;
     session.modelReply = undefined;
+    session.newQuestions = [];
+    session.answers = [];
     session.requiredNotice = undefined;
     session.receipt = undefined;
     session.saveCheck = undefined;
@@ -1695,6 +1798,7 @@ export function textAssistantRoutes({
     };
     const execute = async () => {
       guard();
+      if (message.answerTo) session.parts.validateReply(message.answerTo);
       if (conversationCommand(message.text)?.discard) {
         session.review = await call(session, 'discard_draft', expected, guard);
         guard();
@@ -1712,8 +1816,13 @@ export function textAssistantRoutes({
       } else {
         await run(session, message.text, revision, task, expected);
         guard();
+        const unregisteredQuestion = session.parts
+          .read()
+          .filter((part) => part.kind === 'information' && part.status === 'waiting')
+          .reduce((reply, part) => reply.replaceAll(part.question, ''), session.modelReply ?? '')
+          .includes('?');
         if (
-          (session.questions?.length || session.modelReply?.includes('?')) &&
+          (session.parts.blocked() || unregisteredQuestion) &&
           // Speech may omit the sentence boundary before a final save request.
           // Explain renewal in that case without granting save authority.
           (session.saveIntent || (message.voice && requestsSave(message.text, 'clarification')))
@@ -1775,8 +1884,9 @@ export function textAssistantRoutes({
         session.phase = session.pendingSave ? 'recovery' : 'error';
         session.error = session.pendingSave
           ? 'assistant_save_unknown'
-          : error instanceof MapError && error.code === 'assistant_task_expired'
-            ? 'assistant_task_expired'
+          : error instanceof MapError &&
+              ['assistant_task_expired', 'assistant_pending_part_changed'].includes(error.code)
+            ? error.code
             : 'assistant_draft_changed';
         session.reply = assistantFailureMessage(session.error);
         if (session.saveIntent)
@@ -1802,6 +1912,7 @@ export function textAssistantRoutes({
             requiredNotice: session.requiredNotice,
             questionPending: view(session).questionPending,
             questions: session.questions,
+            newQuestions: session.newQuestions,
             receipt: session.receipt,
             result: session.result,
             failed: Boolean(session.error),
@@ -1907,6 +2018,7 @@ export function textAssistantRoutes({
       });
       contentVersion = review.contentVersion;
       const session: Session = {
+        parts: pendingParts(),
         id: randomUUID(),
         actorId,
         browserSessionId,
@@ -2036,6 +2148,8 @@ export function textAssistantRoutes({
       !/^[\w-]{1,128}$/.test(body.requestId)
     )
       return context.json({ error: 'invalid_request' }, 400);
+    const answerTo = z.array(partReference).min(1).max(200).optional().safeParse(body.answerTo);
+    if (!answerTo.success) return context.json({ error: 'invalid_request' }, 400);
     const requestHash = createHash('sha256')
       .update(
         JSON.stringify({
@@ -2044,6 +2158,7 @@ export function textAssistantRoutes({
           contentVersion: body.contentVersion,
           text: body.text,
           voiceContext: body.voiceContext,
+          answerTo: answerTo.data,
         }),
       )
       .digest('hex');
@@ -2063,6 +2178,7 @@ export function textAssistantRoutes({
       return context.json({ error: 'operation_pending' }, 409);
     const current = await call(session, 'read_my_draft', {});
     if (!currentTurn()) return context.json({ error: 'assistant_turn_changed' }, 409);
+    if (answerTo.data) session.parts.validateReply(answerTo.data);
     if (
       body.contentVersion !== current.contentVersion ||
       (session.phase !== 'working' && body.draftVersion !== current.version)
@@ -2092,6 +2208,7 @@ export function textAssistantRoutes({
       id: body.requestId,
       text: body.text,
       voice: body.voiceContext !== undefined,
+      answerTo: answerTo.data,
       contentVersion: current.contentVersion,
       owner: contentOwner(database, session.householdId, session.actorId),
       receivedAt,
@@ -2195,7 +2312,9 @@ export function textAssistantRoutes({
     session.reply = 'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.';
     session.conversation.push({ role: 'assistant', text: session.reply });
     session.modelReply = undefined;
-    session.questions = undefined;
+    syncQuestions(session);
+    session.newQuestions = [];
+    session.answers = [];
     session.requiredNotice = undefined;
     session.phase = session.pendingSave ? 'recovery' : 'ready';
     await refresh(session, checkContext);
@@ -2266,7 +2385,9 @@ export function textAssistantRoutes({
     session.saveCheck = checked;
     session.reply = checked.reply;
     session.modelReply = undefined;
-    session.questions = undefined;
+    syncQuestions(session);
+    session.newQuestions = [];
+    session.answers = [];
     session.requiredNotice = undefined;
     session.error = undefined;
     session.result = undefined;
@@ -2371,6 +2492,19 @@ export function textAssistantRoutes({
     return context.json(view(session));
   });
   return {
+    checkManualSave(id: unknown, actorId: string, browserSessionId: string, householdId: string) {
+      const session = typeof id === 'string' ? sessions.get(id) : undefined;
+      if (
+        !session ||
+        session.actorId !== actorId ||
+        session.browserSessionId !== browserSessionId ||
+        session.householdId !== householdId
+      )
+        throw new MapError('assistant_session_expired');
+      checkViewAccess(session);
+      if (session.parts.blocked()) throw new MapError('assistant_questions_pending');
+      if (session.task || session.queue.length) throw new MapError('assistant_busy');
+    },
     routes,
     /** Handshake uses normal browser auth. The returned synchronous binder
      * repeats every check after the async auth wait and immediately before use. */
@@ -2629,6 +2763,7 @@ export function textAssistantRoutes({
       return receipts;
     },
     close: async () => {
+      unsubscribeDiscards();
       await Promise.all([...sessions.values()].map((session) => stop(session, false)));
     },
   };

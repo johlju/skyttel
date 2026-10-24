@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { TextAssistantView } from '../shared/text-assistant.js';
+import type { PendingPartReference, TextAssistantView } from '../shared/text-assistant.js';
 import { assistantFailureMessage } from './assistant-feedback.js';
 import type { LiveSideband } from './live-provider.js';
 import { type VoiceAnswer, voiceAnswerText, voiceCommentary } from './voice-commentary.js';
@@ -51,7 +51,11 @@ export function voiceWork({
   };
   let anchor: Anchor | undefined;
   let fragments: Fragment[] = [];
-  let pending: (Fragment & { inputVersion: number; anchor: Anchor })[] = [];
+  let pending: (Fragment & {
+    inputVersion: number;
+    anchor: Anchor;
+    answerTo?: PendingPartReference[];
+  })[] = [];
   let generation = 0;
   let inputVersion = 0;
   let lastInputAt = 0;
@@ -60,6 +64,15 @@ export function voiceWork({
   let stopped = false;
   let questionRevision = initial.revision;
   let questionPending = initial.phase === 'ready' && Boolean(initial.questionPending);
+  const questionKey = (view: TextAssistantView) =>
+    view.pendingParts
+      ?.filter((part) => part.status === 'waiting')
+      .map((part) => `${part.id}:${part.revision}`)
+      .join('|');
+  let questions = questionKey(initial);
+  let waitingParts = initial.pendingParts
+    ?.filter((part) => part.status === 'waiting')
+    .map(({ id, revision }) => ({ id, revision }));
   let questionInputVersion = 0;
   let automaticReplyConsumed = false;
   let owned: number | undefined;
@@ -75,8 +88,16 @@ export function voiceWork({
 
   function rememberQuestion(view: TextAssistantView) {
     if (view.revision < questionRevision) return;
-    if (view.questionPending && (!questionPending || view.revision > questionRevision))
+    const key = questionKey(view);
+    if (
+      view.questionPending &&
+      (key === undefined ? !questionPending || view.revision > questionRevision : key !== questions)
+    )
       questionInputVersion = inputVersion;
+    questions = key;
+    waitingParts = view.pendingParts
+      ?.filter((part) => part.status === 'waiting')
+      .map(({ id, revision }) => ({ id, revision }));
     questionRevision = view.revision;
     questionPending = view.phase === 'ready' && Boolean(view.questionPending);
   }
@@ -196,6 +217,7 @@ export function voiceWork({
     expected: Anchor,
     context: string,
     task: number,
+    answerTo?: PendingPartReference[],
   ) {
     const acceptedInput = inputVersion;
     const current = () => !stopped && allowed() && generation === task;
@@ -212,6 +234,22 @@ export function voiceWork({
         expected = { ...expected, revision: canceled.view.revision };
       let view = await request();
       if (!current()) return;
+      if (answerTo) {
+        if (
+          (view.contextRevision ?? 0) !== (initial.contextRevision ?? 0) ||
+          view.review.version !== expected.draftVersion ||
+          view.review.contentVersion !== expected.contentVersion ||
+          answerTo.some(
+            (ref) =>
+              !view.pendingParts?.some(
+                (part) =>
+                  part.id === ref.id && part.revision === ref.revision && part.status === 'waiting',
+              ),
+          )
+        )
+          throw new Error('assistant_pending_part_changed');
+        expected = { ...expected, revision: view.revision };
+      }
       if (view.phase === 'recovery') {
         view = await request('recover', {});
         if (!current()) return;
@@ -239,6 +277,7 @@ export function voiceWork({
             requestId,
             text,
             voiceContext: context,
+            answerTo,
           },
           controller.signal,
         );
@@ -298,8 +337,27 @@ export function voiceWork({
       rendered = { ...rendered, revision: Math.max(rendered.revision, view.revision) };
       update(view, false);
       append(id, completion(view), view);
-    } catch {
+    } catch (error) {
       if (!current()) return;
+      if (
+        answerTo &&
+        error instanceof Error &&
+        [
+          'assistant_pending_part_changed',
+          'assistant_turn_changed',
+          'assistant_draft_changed',
+        ].includes(error.message)
+      ) {
+        owned = undefined;
+        dispatching = undefined;
+        const view = await request().catch(() => undefined);
+        if (view && current()) {
+          rememberQuestion(view);
+          update(view, false);
+        }
+        if (current()) append(id, assistantFailureMessage(error.message));
+        return;
+      }
       cancel();
       const recoveryGeneration = generation;
       try {
@@ -358,6 +416,7 @@ export function voiceWork({
         endMs: event.end_ms,
         inputVersion,
         anchor: { ...rendered },
+        answerTo: waitingParts,
       });
       if (pending.map((item) => item.text).join('').length > 4000) {
         failed();
@@ -389,13 +448,22 @@ export function voiceWork({
       id === null ? pending.filter((item) => item.inputVersion > questionInputVersion) : pending;
     const text = selected.map((item) => item.text).join('');
     const expected = id === null ? selected[0]?.anchor : anchor;
+    const answerTo = selected[0]?.answerTo?.length ? selected[0].answerTo : undefined;
     pending = [];
     anchor = undefined;
     input?.(false);
+    if (
+      selected.some(
+        (fragment) => JSON.stringify(fragment.answerTo) !== JSON.stringify(selected[0]?.answerTo),
+      )
+    ) {
+      if (text.trim()) append(id, assistantFailureMessage('assistant_pending_part_changed'));
+      return;
+    }
     if (text.trim() && expected) {
       automaticReplyConsumed = id === null;
       commentary.working(id);
-      void execute(id, text, expected, JSON.stringify(fragments), task);
+      void execute(id, text, expected, JSON.stringify(fragments), task, answerTo);
     }
   }
   channel.on('session.input_transcript.delta', (event) => fragment('user', event));

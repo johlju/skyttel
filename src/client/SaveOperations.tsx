@@ -57,6 +57,12 @@ export function receiptMessage(receipt: SaveReceipt) {
 }
 
 export function rejectionMessage(code: string) {
+  if (code === 'assistant_session_expired')
+    return 'Samtalet är inte längre tillgängligt. Inget sparades av detta försök. Ladda om sidan, granska utkastet och försök spara igen.';
+  if (code === 'assistant_busy')
+    return 'Skyttel arbetar fortfarande i samtalet. Inget sparades av detta försök. Vänta tills arbetet är klart eller avbryt det, granska utkastet och försök spara igen.';
+  if (code === 'assistant_questions_pending')
+    return 'Ändringar väntar på förtydligande i samtalet. Besvara eller återta dem innan du sparar hela utkastet.';
   if (code === 'restoration_conflict')
     return 'Det borttagna innehållet har ändrats sedan återställningsförslaget skapades. Inget sparades. Hämta aktuellt underlag, kasta det gamla återställningsförslaget och granska aktuellt underlag igen.';
   if (code === 'definition_in_use')

@@ -9,13 +9,26 @@ import { personalView } from './personal-view.js';
 import { type EncodedImage, encodeProfileImage } from './profile-images.js';
 import { propertyWriteLimit } from './properties.js';
 
-export function mapRoutes(database: Database.Database, auth: Auth, origin: string) {
-  type Environment = { Variables: { userId: string; body: Record<string, unknown> } };
+export function mapRoutes(
+  database: Database.Database,
+  auth: Auth,
+  origin: string,
+  checkConversation?: (
+    id: unknown,
+    actorId: string,
+    browserSessionId: string,
+    householdId: string,
+  ) => void,
+) {
+  type Environment = {
+    Variables: { userId: string; browserSessionId: string; body: Record<string, unknown> };
+  };
   const routes = new Hono<Environment>();
   const authenticate: MiddlewareHandler<Environment> = async (context, next) => {
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
     if (!session) throw new MapError('unauthenticated', 401);
     context.set('userId', session.user.id);
+    context.set('browserSessionId', session.session.id);
     if (context.req.method === 'POST') {
       if (context.req.header('Origin') !== origin) throw new MapError('forbidden', 403);
       if (
@@ -38,6 +51,27 @@ export function mapRoutes(database: Database.Database, auth: Auth, origin: strin
       }
       if (!body || typeof body !== 'object' || Array.isArray(body))
         throw new MapError('invalid_request', 400);
+      if (/\/map\/(?:operations|save)$/.test(context.req.path)) {
+        const { conversationId, ...saveBody } = body as Record<string, unknown>;
+        if (conversationId !== undefined) {
+          if (!checkConversation) throw new MapError('invalid_request', 400);
+          // Registered attempts are immutable and retain their recovery path.
+          const operation =
+            typeof saveBody.operationId === 'string'
+              ? householdMap(database, session.user.id, context.req.param('id') ?? '').operation(
+                  saveBody.operationId,
+                ).operation
+              : null;
+          if (!operation)
+            checkConversation(
+              conversationId,
+              session.user.id,
+              session.session.id,
+              context.req.param('id') ?? '',
+            );
+        }
+        body = saveBody;
+      }
       context.set('body', body as Record<string, unknown>);
     }
     await next();

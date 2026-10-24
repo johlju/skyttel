@@ -27,6 +27,8 @@ async function main() {
     return {
       id,
       message: current.message,
+      messageId: current.messageId,
+      pendingParts: lastToolResult(item.request)?.pendingParts ?? current.pendingParts,
       draft: current.draft,
       lastToolResult: lastToolResult(item.request),
       tools: item.request.tools.map((tool) => tool.name),

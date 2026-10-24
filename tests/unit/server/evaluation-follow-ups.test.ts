@@ -10,7 +10,7 @@ import * as speech from '../../../scripts/model-evaluation/speech.js';
 import type { Attempt, JudgeInput, Scenario } from '../../../scripts/model-evaluation/types.js';
 import { runVoiceScenario } from '../../../scripts/model-evaluation/voice-runner.js';
 import type { TextAssistantView } from '../../../src/shared/text-assistant.js';
-import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import { modelMessage, modelTool, textModel, verifiedAnswers } from '../../support/text-model.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -332,14 +332,14 @@ test('a renewed save after clarification completes the original target exactly o
   };
   let environment: Awaited<ReturnType<typeof environments.evaluationEnvironment>>;
   let turn = 0;
-  const model = textModel(async () => {
+  const model = textModel(async (request) => {
     if (turn++ === 0)
       return [modelTool('ask_questions', { questions: ['Vilket utkast menar du?'] })];
     if (turn === 2)
       return [
         modelTool('ask_questions', {
           questions: [],
-          answeredQuestions: ['Vilket utkast menar du?'],
+          updates: verifiedAnswers(request, ['Vilket utkast menar du?']),
           continueResponse: true,
         }),
       ];

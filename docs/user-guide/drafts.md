@@ -49,7 +49,10 @@ behåller hela formulärtexten. Lägg texten i utkastet innan du sparar, eller
 välj uttryckligen **Kasta ändringarna och fortsätt** om den ska kastas.
 Valet ändrar inte förslag som redan finns i utkastet.
 Oskickade samtalsmeddelanden finns kvar i textvyn.
-Besvara nödvändiga frågor i samtalet före ett nytt uttryckligt sparbesked.
+Besvara eller återta väntande ändringar i samtalet före ett nytt
+uttryckligt sparbesked. De hindrar också manuellt sparande i webbläsaren
+som har samtalet öppet. En oberoende informationsfråga hindrar inte
+sparande. Att besvara en fråga ger inte i sig tillåtelse att spara.
 Mikrofonläge och samtalsproblem visas i röstrutan och
 [samtalsnotiserna](text-assistant.md#följ-samtalet).
 

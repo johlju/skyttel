@@ -437,6 +437,20 @@ Du kan ge flera önskemål samtidigt. Skyttel kan lägga tydliga delar
 i utkastet och fråga om den del som är oklar. **Spara inte** låter dig
 göra beställda utkaständringar utan att spara dem i hushållets karta.
 
+En obesvarad fråga finns kvar även om du frågar om något annat.
+Svara på en del i taget eller säg tydligt vilken del du vill återta,
+exempelvis **Strunta i cykelns användare**. Redan utförda ändringar
+ligger kvar. **Jag vet inte** eller ett ämnesbyte återtar ingenting.
+Du kan fråga **Vad återstår?** utan att gamla frågor behöver upprepas
+efter varje annat svar.
+
+Väntande ändringar hindrar sparande tills de är klara eller återtagna.
+En oberoende informationsfråga gör inte det. Be om sparande igen när
+en tidigare sparbegäran är upphävd. **Avbryt** och vanliga fel bevarar
+väntande delar; **Nytt samtal** avslutar dem men behåller utkastet.
+**Kasta utkastet** avslutar väntande ändringar och frågor som beror på
+förslagen, medan oberoende informationsfrågor kan finnas kvar.
+
 Skriv exempelvis **Rätta priset till 189 kr och spara**. Ett tydligt
 sparbesked gäller hela det aktuella utkastet, utan ett extra ja bara för
 att rättelsen ändrar utkastversionen. Vid konflikt eller samtidig ändring

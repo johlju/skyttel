@@ -125,7 +125,7 @@
    Translate only the voice box; a transformed ancestor would instead make
    fixed notice coordinates relative to the corner on a narrow screen. */
 .household-map.workspace-shell[data-narrow="true"]
-.conversation-corner:has(.conversation-notice[data-inline="true"]) {
+  .conversation-corner:has(.conversation-notice[data-inline="true"]) {
   transform: none;
 }
 .household-map.workspace-shell[data-narrow="true"]

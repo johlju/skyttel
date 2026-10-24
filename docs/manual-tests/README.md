@@ -382,7 +382,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   medgivandelagring och SQLite skyddas av de kvarvarande integrationsfallen.
   NOT-24 kräver hört besked. NOT-11 har
   en separat körbar mänsklig granskning av alla symbolformer och typfärger.
-- [Frågor och talade sparbesked](conversation-questions.md): identiteter,
+- [Frågor och talade sparbesked](conversation-questions.md): selektiva svar,
+  återtagande, oberoende mellanturer, identiteter,
   konflikter, datatyper, upprepade egenskapsetiketter och lika objektnamn,
   oberoende svar under väntande frågor, förnyad sparbegäran,
   väntan med mikrofonen av, beständigt kvitto och fyra

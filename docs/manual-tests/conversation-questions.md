@@ -46,16 +46,21 @@ nya förslag i utkastet eller utföra ett extra sparande.
    ```
    <!-- markdownlint-enable MD013 -->
 
-   När användarens svar löser frågan släpps först:
+   När användarens svar löser frågan släpps först följande. Kopiera PART
+   och REVISION från rätt post i `held.pendingParts`, MESSAGE från
+   `held.messageId` och EVIDENCE som JSON-sträng från `held.message`:
 
    <!-- markdownlint-disable MD013 -->
    ```text
-   tool REQUEST ask_questions {"questions":[],"answeredQuestions":["Vilken person avses med Lo, och vilket namn ska objektet ha?"],"continueResponse":true}
+   tool REQUEST ask_questions {"questions":[],"updates":[{"id":"PART","revision":REVISION,"action":"clarify","messageId":"MESSAGE","evidence":EVIDENCE}],"continueResponse":true}
    ```
    <!-- markdownlint-enable MD013 -->
 
    Invänta nästa `held` och släpp det beställda utkastarbetet eller ett
    vanligt svar med `reply REQUEST Tack, nu vet jag vilken Lo du menar.`.
+   För ändringsarbetet ska `submit_changes.resolves` innehålla delens ID
+   och den nya revisionen från `held.pendingParts`. Först när ändringen
+   lyckas är delen klar; ett förtydligande ensamt tillåter inte sparande.
    För sparande används `save_draft` med `version` och
    `contentVersion` från det aktuella `held.draft`, enligt röstguiden.
 4. De kontrollerade mediespåren är tysta. För gränssnittets prov av ett
@@ -284,7 +289,12 @@ och lägg till `{"label":"Kod","kind":"text","value":"0012"}`.
 Samma batch innehåller `propose_relationship` för **Använder**, från det
 verkliga Umeå-objektet till **Molnmusik**. Kopiera typ-ID och ändpunkts-ID
 från aktuellt underlag. Vid nästa `held` släpps `ask_questions` med
-`questions: []` och `answeredQuestions` med exakt de tre frågorna ovan.
+`questions: []` och en `updates`-post per väntande del. Använd `clarify`,
+delens ID och revision samt aktuellt meddelande enligt förberedelsen.
+Varje post ska ha `expected` med de kontrollerade resultaten: objektet
+Lo och sambandet Använder, med respektive `kind`, `id` och hela `value`
+från `held.lastToolResult.review`. Servern jämför med aktuellt underlag
+innan delen avslutas.
 Efter användarens nya sparbesked släpps `save_draft` med den
 returnerade versionen, aktuell `contentVersion` och ett nytt operations-ID.
 Återställ installationen enligt startguiden efter fallet.
@@ -360,6 +370,69 @@ ljud- och skärmläsarobservationerna i FRAGA-08/09 kvarstår.
   nollor. Ett samband läggs till efter det preciserade identitetsvalet.
 - Rättningen med **Spara inte** ger inget sparbesked. Först det nya
   uttryckliga sparbeskedet sparar hela utkastet.
+
+### FRAGA-12: svar och återtagande efter en oberoende mellantur
+
+**Syfte:** En väntande del ska avslutas selektivt, och en oberoende
+informationsfråga ska kunna finnas kvar när utkastet sparas.
+
+**Användare:** Alex.
+
+**Förutsättningar:** En identifierad Lo Exempel ligger i utkastet utan
+beskrivning. Starta med textläge och den kontrollerade leverantören enligt
+allmän förberedelse. Återställ installationen efter fallet.
+
+**Separat förberedelse:** Operatören släpper tre strukturerade frågor:
+ändringsdelarna **Ändra Los namn** och **Ändra Los beskrivning** samt
+informationsdelen **Hitta hjälmen**, med `dependsOnDraft: false` för den
+sista. Frågorna är **Vilket namn ska Lo ha?**, **Vilken beskrivning ska
+Lo ha?** och **Vilken hjälm vill du hitta?**.
+Släpp mellanturens svar med `reply REQUEST Lo är en person i ditt utkast.`.
+För namnet används `clarify` och sedan en `submit_changes` med `resolves`
+enligt förberedelsen; behåll Los ID och ändra endast namnet till Lo Lind.
+För återtagandet används `updates` med `action: withdraw` och
+beskrivningsdelens aktuella identitet, revision och användarens meddelande.
+
+**Automatiskt motsvarande test:**
+[conversation-questions.spec.ts](../../tests/integration/conversation-questions.spec.ts),
+FRAGA-12. Kontrollerad modell, riktig server och SQLite; faktisk
+språkförståelse ingår inte.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-questions.spec.ts",
+    "caseId": "FRAGA-12"
+  },
+  "reference": "Chromium, textläge, kontrollerad modell och riktig server.",
+  "outcomes": [
+    "En oberoende fråga besvaras utan att gamla frågor upprepas.",
+    "Namnet ändras medan beskrivningsfrågan hindrar manuellt sparande.",
+    "Återtagandet behåller namnet och tillåter uttryckligt manuellt sparande.",
+    "Informationsfrågan finns kvar i samtalet efter sparandet."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Skicka **Ändra Los namn och beskrivning och hitta hjälmen. Spara.**
+   Kontrollera att alla tre frågor visas och att inget sparas.
+2. Skicka **Vilken objekttyp har Lo?** Kontrollera svaret om Person och
+   att namnfrågan inte upprepas i en ny replik.
+3. Svara **Namnet ska vara Lo Lind.** Öppna utkastet. Namnet ska vara
+   ändrat, och **Spara hela utkastet** ska fortfarande vara inaktiverad.
+4. Dölj utkastet och skicka **Strunta i beskrivningen.** Kontrollera
+   beskedet om återtagande. Öppna utkastet och välj **Spara hela utkastet**.
+5. Kontrollera sparbekräftelsen, att hjälmfrågan finns kvar i samtalstexten
+   och att den sparade Lo Lind saknar beskrivning.
+
+**Förväntat resultat:** Namnändringen bevaras, beskrivningen återtas och
+den oberoende informationsfrågan hindrar inte det manuella sparandet.
 
 ## Verifierade sparbesked
 

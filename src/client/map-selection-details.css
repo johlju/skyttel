@@ -253,8 +253,9 @@
   /* Scroll the title with the facts beside persistent voice controls: a
      pinned title can leave less room than one complete line of text. */
   .household-map.workspace-shell:is([data-work-layout="compact"], [data-work-layout="minimal"]):has(
-    .voice-box
-  ) .object-property-window {
+      .voice-box
+    )
+    .object-property-window {
     scroll-padding-top: 8px;
   }
   .household-map.workspace-shell:is([data-work-layout="compact"], [data-work-layout="minimal"]):has(
