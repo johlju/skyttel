@@ -11,8 +11,6 @@
 - The orchestrator owns stack mutations, publication, and tracker writes.
   gh-stack's mutation lock does not coordinate workers' Git commands; require
   explicit ownership handoff before changing their branches.
-- Reserve capacity for workers' nested `code-review` agents before dispatch;
-  queue excess workers rather than skipping their reviews.
 - Record the immutable starting commit, target, verified tip, dependencies,
   ordered layers, owners/worktrees, dispatch bases, returned and integrated
   heads, PR/stack identities, expected remote heads, and verification evidence.
@@ -20,6 +18,19 @@
   preserve affected heads under `refs/implement-stack/<batch>/...` and copy
   the gh-stack catalog. Retain the tool's own recovery journals. Record
   tracker writes separately from integration so either can resume.
+
+## Queued reviews
+
+- When nested `code-review` agents lack capacity, queue the review phase.
+  As an explicit exception to [implement](../../implement/SKILL.md)'s normal
+  review-before-commit order, have the worker commit a provisional checkpoint,
+  stop background processes, relinquish its clean worktree, and return its
+  pending reviews and checks.
+- Record the checkpoint, ownership handoff, and pending work in the journal.
+  Resume the worker when capacity permits its required parallel reviews;
+  prioritize queued reviews as slots become available.
+- Treat checkpoints as scheduling handoffs. Integrate or close a ticket only
+  after its required reviews and verification pass.
 
 ## Conflicts and failed checks
 

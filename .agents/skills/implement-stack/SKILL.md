@@ -49,17 +49,20 @@ For each frontier sub-issue:
 
 1. Assign it to the authenticated tracker user.
 2. Start one new background agent in its own worktree.
-3. Give the agent both the **Spec** and sub-issue references. Require it to call the
-   Skill tool with "implement", commit its work, and return its branch, commit range,
-   summary, and verification results. Keep tracker comments and issue closure with the
-   orchestrator, along with stack operations and publication.
+3. Give the agent both the **Spec** and sub-issue references. Require it to
+   call the Skill tool with "implement", commit its work, and return its branch,
+   commit range, summary, and verification results. Keep tracker comments and
+   issue closure with the orchestrator, along with stack operations and
+   publication.
 4. Require the agent to stop background processes and explicitly hand back
    its clean worktree. Keep active worker branches outside the stack.
 
 Run independent frontier work in parallel up to the available agent capacity;
-queue the remainder. Answer agent questions from the **Spec**, issue discussion,
-and repository. Bring questions requiring a product or scope decision to the
-user.
+queue the remaining frontier issues. When nested reviews lack slots, use
+[queued reviews](references/state-and-recovery.md#queued-reviews) instead of
+reserving idle reviewer slots during implementation. Answer agent questions
+from the **Spec**, issue discussion, and repository. Bring questions requiring
+a product or scope decision to the user.
 
 Completion criterion: every dispatched sub-issue returns committed work on its
 base commit and verification evidence, or a concrete blocker remains visible
