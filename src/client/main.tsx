@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { App } from './App.js';
+import { ApplicationError } from './ApplicationError.js';
 import { BuildNotice } from './build-guard.js';
 import './styles.css';
 
@@ -13,6 +14,7 @@ createRoot(root).render(
       router={createBrowserRouter([
         {
           path: '*',
+          ErrorBoundary: ApplicationError,
           element: (
             <>
               <BuildNotice />

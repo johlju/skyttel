@@ -42,6 +42,72 @@ fallen anger formulär, samtal, profil eller administration.
 
 ## Skapa och öppna hushållet
 
+### ACCESS-34: Ladda om efter ett oväntat visningsfel
+
+**Syfte:** Ett oväntat fel visar svensk hjälp och en fungerande omladdning
+utan tekniska feldetaljer.
+
+**Användare:** Utloggad besökare i den isolerade testinstallationen.
+
+**Förutsättningar:** Öppna startsidan och välj **Endast nödvändiga** om
+kakbannern visas. Använd 320 × 640 CSS-pixlar i webbläsarens enhetsläge.
+
+**Separat förberedelse:** Kör följande i utvecklarverktygens konsol på
+testadressen. Nästa starthämtning får felaktiga uppgifter som framkallar
+ett visningsfel. Ersättningen tas bort automatiskt före svaret; omladdning
+återställer också webbläsaren. Det simulerade felet återskapar inte något
+känt fel i riktiga hushåll.
+
+```js
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  if (String(args[0]) === '/api/bootstrap') {
+    window.fetch = originalFetch;
+    return Response.json({
+      status: 'anonymous', providers: null, operator: false,
+    });
+  }
+  return originalFetch(...args);
+};
+window.dispatchEvent(new Event('focus'));
+```
+
+**Automatiskt motsvarande test:**
+[application-error.spec.ts](../../tests/integration/application-error.spec.ts),
+ACCESS-34. Verklig applikationsstart med ett kontrollerat felaktigt svar.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/application-error.spec.ts",
+    "caseId": "ACCESS-34"
+  },
+  "reference": "320 × 640 CSS-pixlar, utloggad besökare och ett felaktigt startsvar.",
+  "outcomes": [
+    "Svensk felhjälp visas utan stackspår eller utvecklarinstruktioner.",
+    "Felrubriken får fokus och Tab når Ladda om Skyttel.",
+    "Enter laddar om applikationen och återger inloggningssidan."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Läs **Något gick fel i Skyttel** och hjälpen om omladdning. Kontrollera
+   att rubriken har tangentbordsfokus och att inga tekniska feldetaljer visas.
+2. Tryck Tab. Kontrollera att **Ladda om Skyttel** får synligt fokus.
+3. Tryck Enter och kontrollera att **Välkommen till Skyttel** och
+   **Fortsätt med Google** visas igen.
+
+**Förväntat resultat:** Felet ersätter den trasiga vyn med svensk hjälp.
+Omladdningen går att utföra med tangentbord och återger inloggningssidan
+när den simulerade felorsaken är borta. Faktisk skärmläsaruppläsning ingår
+inte i det automatiserade provet.
+
 ### ACCESS-29: Spara avstängd ihågkommen inloggning
 
 **Syfte:** Skilja sparad avstängning från bekräftad fortsatt inloggning.

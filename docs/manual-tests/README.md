@@ -596,6 +596,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   oskickad text och oberoende privata förslag.
 
 - [Inloggning och hushållets start](access.md): skapa hushåll, använda
+  tangentbord för omladdning efter oväntade visningsfel med svensk felhjälp,
   aktivt Kom ihåg mig-val, börja varje ny inloggning avmarkerat och visa
   bekräftad avstängning, avvisat sparande och okänd sparstatus utan nytt
   automatiskt sparande; fortsatt inloggning kräver en separat kontroll,
