@@ -22,8 +22,10 @@
 ## Queued reviews
 
 - When nested `code-review` agents lack capacity, queue the review phase.
-  Have the worker commit a provisional checkpoint, stop background processes,
-  relinquish its clean worktree, and return its pending reviews and checks.
+  As an explicit exception to [implement](../../implement/SKILL.md)'s normal
+  review-before-commit order, have the worker commit a provisional checkpoint,
+  stop background processes, relinquish its clean worktree, and return its
+  pending reviews and checks.
 - Record the checkpoint, ownership handoff, and pending work in the journal.
   Resume the worker when capacity permits its required parallel reviews;
   prioritize queued reviews as slots become available.
