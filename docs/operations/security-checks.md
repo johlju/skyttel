@@ -131,7 +131,9 @@ skipped-result, absent-report, and exception-expiry cases.
 
 The [container release chain](container-releases.md) calls
 `.github/workflows/ci.yml` and requires its successful completion before
-publication. Main pushes and stable tags start trusted release runs. The
+publication. Devcontainer lifecycle checks run and are required only for
+pull requests; release runs skip them. Main pushes and stable tags start
+trusted release runs. The
 publication job holds its own credentials and publishes the exact candidate
 archive after container tests, scanning, and signature verification. It does
 not rebuild that image after scanning. Release evidence has separate
