@@ -21,6 +21,50 @@ function bashArguments(source, body, step) {
   return shell === 'bash' ? ['--noprofile', '--norc', '-eo', 'pipefail'] : ['-e'];
 }
 
+test('release gates allow skipped devcontainer checks while pull requests require them', () => {
+  const condition = "github.event_name == 'pull_request'";
+  assert.equal(job('devcontainer').match(/^ {4}if: (.+)$/mu)?.[1], condition);
+  const gate = job('security-gate');
+  assert.match(gate, /^ {4}if: always\(\)$/mu);
+  assert.match(gate, /^ {4}needs: \[application, devcontainer, security\]$/mu);
+  const steps = gate.split(/^ {6}- /mu).filter((step) => step.includes('check-results.mjs jobs'));
+  assert.equal(steps.length, 2);
+  assert.equal(steps[0].match(/^ {8}if: (.+)$/mu), null);
+  assert.equal(steps[1].match(/^ {8}if: (.+)$/mu)?.[1], condition);
+  for (const step of steps) {
+    assert.match(step, /REQUIRED_RESULTS: \$\{\{ toJSON\(needs\) \}\}/);
+  }
+  function run(event, results) {
+    return steps
+      .filter((step) => !step.includes(`if: ${condition}`) || event === 'pull_request')
+      .map((step) => {
+        const command = step.match(/run: (node scripts\/security\/check-results.mjs jobs .+)/)?.[1];
+        assert.ok(command);
+        return spawnSync(process.execPath, command.split(' ').slice(1), {
+          encoding: 'utf8',
+          env: { ...process.env, REQUIRED_RESULTS: JSON.stringify(results) },
+        }).status;
+      });
+  }
+  const successes = {
+    application: { result: 'success' },
+    security: { result: 'success' },
+    devcontainer: { result: 'success' },
+  };
+  assert.deepEqual(run('pull_request', successes), [0, 0]);
+  assert.deepEqual(run('push', { ...successes, devcontainer: { result: 'skipped' } }), [0]);
+  for (const event of ['push', 'pull_request']) {
+    const required = event === 'push' ? ['application', 'security'] : Object.keys(successes);
+    for (const name of required) {
+      for (const result of ['failure', 'cancelled', 'skipped', undefined]) {
+        const results = { ...successes, [name]: { result } };
+        if (result === undefined) delete results[name];
+        assert.ok(run(event, results).includes(1), `${event}: ${name}: ${result}`);
+      }
+    }
+  }
+});
+
 test('CI retains test output without turning failing commands into successful tee pipelines', async (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-ci-test-logs-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
