@@ -432,7 +432,8 @@ valet består. Markera även Lampan
 
 ### PLACERING-02: samtidiga flyttar och visningsval
 
-**Syfte:** Kontrollera att äldre klienter inte skriver över nyare val.
+**Syfte:** Bevara den senaste hela personliga flytten och skydda
+samtidiga visningsval.
 
 **Användare:** Alex Exempel i två klienter.
 
@@ -463,7 +464,7 @@ PLACERING-02.
 
 1. Välj Lampan i båda klienterna. Flytta den uppåt i den första och
    nedåt i den andra.
-2. Läs konfliktbeskedet i den andra klienten och flytta nedåt igen.
+2. Läs sparbekräftelsen i den andra klienten. Ingen extra flytt behövs.
 3. Flytta Cykeln från den första klienten utan att läsa om Lampan.
 4. Aktivera Visa axlar hela tiden i den första klienten. Försök ändra
    Visa bakgrund från den andra klientens äldre inställningar under
@@ -471,8 +472,9 @@ PLACERING-02.
 
 **Förväntat resultat:**
 
-- Den äldre flytten av Lampan avvisas synligt och aktuell placering visas.
-  En ny flytt efter granskning fungerar.
+- Den andra klientens hela lokala placering av Lampan sparas automatiskt
+  även när den första klienten hinner spara först. Sparbekräftelsen gäller
+  den senaste flytten.
 - Cykelns oberoende flytt och Lampans senaste placering finns båda kvar.
 - Äldre visningsval avvisas med besked. Den andra klienten visar de
   aktuella inställningarna. Inget nytt kartutkast skapas.

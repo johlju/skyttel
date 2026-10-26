@@ -62,13 +62,12 @@ test('a new connected object starts near its saved neighbour while existing and 
   expect(scene.position('unrelated')).toEqual(unrelated);
 });
 
-test('refreshing after an unsaved first move restores the stable default placement', () => {
+test('scene updates preserve an in-progress move until changed personal coordinates arrive', () => {
   const { scene } = openScene();
   scene.update(['home']);
-  const original = scene.position('home');
   scene.place('home', { x: 200, y: 100, z: -50 });
   scene.update(['home'], []);
-  expect(scene.position('home')).toEqual(original);
+  expect(scene.position('home')).toEqual({ x: 200, y: 100, z: -50 });
 });
 
 test('connections to distant personal placements put the new object near an actual neighbour', () => {

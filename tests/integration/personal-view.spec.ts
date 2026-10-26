@@ -552,7 +552,7 @@ test('PLACERING-08: height help keeps its preview stable and manual choice acros
   }
 });
 
-test('PLACERING-02: concurrent clients retain independent moves and visibly reject stale placement and settings', async ({
+test('PLACERING-02: concurrent clients save latest whole positions and visibly reject stale settings', async ({
   page,
   browser,
 }) => {
@@ -569,9 +569,7 @@ test('PLACERING-02: concurrent clients retain independent moves and visibly reje
     await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
     await expect.poll(async () => (await read()).positions[0]?.version).toBe(1);
     await second.getByRole('button', { name: /^Flytta .+: nedåt$/ }).click();
-    await expect(space(second).getByText(/Din äldre ändring sparades inte/)).toBeVisible();
-    expect((await read()).positions[0].version).toBe(1);
-    await second.getByRole('button', { name: /^Flytta .+: nedåt$/ }).click();
+    await expect(space(second).getByText('Din personliga vy är sparad.')).toBeVisible();
     await expect.poll(async () => (await read()).positions[0].version).toBe(2);
     const sharedPosition = (await read()).positions[0];
     // The first client still holds lamp version1, but moving bike is independent.

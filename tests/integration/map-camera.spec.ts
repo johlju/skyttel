@@ -492,7 +492,7 @@ test('KAMERA-04: short viewports retain a usable focus rectangle and reachable c
         await move.focus();
         await page.keyboard.press('Enter');
         await actualCommit;
-        await expect(move).toBeDisabled();
+        await expect(move).toBeEnabled();
         const close = navigation.getByRole('button', { name: 'Stäng navigering', exact: true });
         await close.focus();
         if (departure === 'closed') await page.keyboard.press('Enter');

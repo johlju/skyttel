@@ -49,6 +49,7 @@ function service() {
         throw new Error('Synthetic transport outage');
       }
       if (failure === 'conflict') {
+        failure = null;
         view = {
           contentVersion: 1,
           positions: [{ id: 'lamp', x: 1, y: 4, z: -2, version: 2 }],
@@ -152,7 +153,7 @@ test('the public household editor saves personal movement and settings and reloa
 });
 
 test.each(['position', 'settings'] as const)(
-  'stale %s from a second client displays current values and an explicit refusal',
+  'concurrent %s automatically saves positions and preserves settings refusal',
   async (kind) => {
     const server = service();
     await open();
@@ -167,7 +168,12 @@ test.each(['position', 'settings'] as const)(
       await expect
         .poll(() => page.getByRole('status').element().textContent)
         .toContain('Din äldre ändring sparades inte');
-    else await expect.element(page.getByText(/Din äldre ändring sparades inte/)).toBeVisible();
+    else {
+      await expect
+        .element(page.getByText('Din personliga vy är sparad.', { exact: true }))
+        .toBeVisible();
+      expect(server.read().positions[0].version).toBe(3);
+    }
     if (kind === 'settings') {
       await expect.element(page.getByLabelText('Visa bakgrund', { exact: true })).not.toBeChecked();
       await page.getByRole('button', { name: 'Tillbaka till kartan', exact: true }).click();
@@ -179,11 +185,12 @@ test.each(['position', 'settings'] as const)(
       .element(page.getByLabelText('Visa axlar hela tiden', { exact: true }))
       .toBeChecked();
     expect(server.read().settings.background).toBe(false);
+    const previous = server.read().positions[0];
     server.fail(null);
     await page.getByRole('button', { name: /^Flytta .+: nedåt$/ }).click();
     await expect
       .poll(() => server.read().positions[0])
-      .toEqual({ id: 'lamp', x: 1, y: 3, z: -2, version: 3 });
+      .toEqual({ ...previous, y: previous.y - 1, version: previous.version + 1 });
   },
 );
 
@@ -203,13 +210,12 @@ test.each(['network', 'uncertain', 'denied'] as const)(
       await expect
         .element(page.getByRole('button', { name: 'Välj objekt: Lampan', exact: true }))
         .not.toBeInTheDocument();
-    } else if (failure === 'network') {
-      await expect.element(page.getByText(/Din vy kunde inte sparas/)).toBeVisible();
-      await expect.element(page.getByRole('button', { name: /^Flytta .+: uppåt$/ })).toBeDisabled();
-      server.fail(null);
-      await page.getByRole('button', { name: 'Läs in min aktuella vy', exact: true }).click();
+    } else {
+      await expect
+        .element(page.getByText('Positionen är inte sparad', { exact: true }))
+        .toBeVisible();
       await expect.element(page.getByRole('button', { name: /^Flytta .+: uppåt$/ })).toBeEnabled();
-    } else await expect.element(page.getByText(/Ändringen kunde inte bekräftas/)).toBeVisible();
+    }
     expect(server.read().positions).toEqual([]);
   },
 );
@@ -244,7 +250,7 @@ test('leaving the editor during an in-flight personal write does not render a la
   );
   await open();
   await page.getByRole('button', { name: /^Flytta .+: uppåt$/ }).click();
-  await expect.element(page.getByRole('button', { name: /^Flytta .+: uppåt$/ })).toBeDisabled();
+  await expect.element(page.getByRole('button', { name: /^Flytta .+: uppåt$/ })).toBeEnabled();
   cleanup();
   finish();
   await expect

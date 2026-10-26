@@ -264,7 +264,7 @@ transporten enligt den befintliga guiden efter båda fokusproven.
    med tangentbord medan verktygsnamnen är öppna.
 7. Be operatören förbereda det kontrollerade svaret och invänta installationen.
    Öppna Navigera. Flytta Lo med tangentbord och kontrollera att flyttknappen
-   blir inaktiv i väntan på svaret. Invänta operatörens bekräftelse av den
+   är fortsatt aktiv i väntan på svaret. Invänta operatörens bekräftelse av den
    verkliga hållningen. Flytta fokus till **Stäng navigering** utan att aktivera
    den. Be operatören släppa samma svar enligt förberedelsen och invänta
    bekräftelse. Kontrollera att fokus ligger kvar. Be operatören förbereda nästa

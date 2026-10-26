@@ -424,13 +424,20 @@ Efter en bekräftad flytt eller ändring av visningsval visas
 sparning startar om tiden. Toasten flyttar inte tangentbordsfokus.
 Fel och besked om samtidiga ändringar ligger kvar så att du kan läsa dem.
 
+Du kan fortsätta flytta objekt medan tidigare flyttar sparas. Kartan och
+flyttknapparna använder alltid din senaste hela lokala placering. En äldre
+sparbekräftelse flyttar inte tillbaka objektet och bekräftar inte en nyare
+flytt som fortfarande väntar på att sparas.
+
 Samtidiga flyttar av olika objekt bevaras. Om en annan klient redan flyttat
-samma objekt avvisas din äldre flytt. Ett tydligt besked visas tillsammans
-med den aktuella placeringen. Äldre visningsval avvisas på samma sätt.
-Granska de aktuella valen och gör sedan din ändring igen vid behov.
-**Läs in min aktuella vy** hämtar dina senaste placeringar och val utan
-att ändra formulärtext eller hushållets karta. Om anslutningen avbryts
-och sparandet inte kan bekräftas behöver du läsa in vyn innan du fortsätter.
+samma objekt hämtar Skyttel den aktuella versionen och sparar automatiskt
+din senaste hela placering. Äldre visningsval avvisas med ett tydligt
+besked; granska de aktuella valen och gör sedan din ändring igen vid behov.
+**Läs in min aktuella vy** hämtar aktuella placeringar och val utan att
+ändra formulärtext, hushållets karta eller dina osparade flyttar.
+Om en flytt inte kan sparas behålls placeringen och texten
+**Positionen är inte sparad** visas. Du kan fortsätta flytta objekt;
+beskedet bekräftar inte att de osparade placeringarna finns på servern.
 
 Återkallad tillgång hindrar fortsatt läsning och sparande. Personliga
 placeringar kan finnas kvar för borttaget innehåll och återkommer om det

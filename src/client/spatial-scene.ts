@@ -140,6 +140,7 @@ export function spatialScene(
   const nodes = new Set<string>();
   const locations = new Map<string, Vector3>();
   const defaults = new Map<string, Vector3>();
+  let personalPositions = new Map<string, PersonalPosition>();
   const background = spaceBackground(renderer.getPixelRatio());
   sky.add(background.group);
   let lost = false;
@@ -275,6 +276,7 @@ export function spatialScene(
       ids: string[],
       saved: PersonalPosition[] = [],
       relationships: { sourceId: string; targetId: string }[] = [],
+      movingObjectId?: string,
     ) {
       projectionRevision++;
       const first = locations.size === 0;
@@ -291,13 +293,35 @@ export function spatialScene(
       }
       // Saved personal placements are anchors, including when a related object
       // is currently filtered out. Existing locations never enter the layout.
-      // Refresh also discards optimistic moves that were never saved.
-      for (const [id, position] of defaults) locations.set(id, position.clone());
+      // A conflict refresh can change other objects' saved coordinates during
+      // a drag. Keep that gesture local until release, and keep its previous
+      // cache entry so a later refresh can still apply after cancellation.
+      const nextPersonal = new Map(saved.map((position) => [position.id, position]));
+      if (movingObjectId) {
+        const previous = personalPositions.get(movingObjectId);
+        if (previous) nextPersonal.set(movingObjectId, previous);
+        else nextPersonal.delete(movingObjectId);
+      }
+      for (const id of personalPositions.keys()) {
+        const fallback = defaults.get(id);
+        if (id !== movingObjectId && !nextPersonal.has(id) && fallback)
+          locations.set(id, fallback.clone());
+      }
       for (const position of saved) {
+        if (position.id === movingObjectId) continue;
+        const previous = personalPositions.get(position.id);
+        if (
+          previous &&
+          previous.x === position.x &&
+          previous.y === position.y &&
+          previous.z === position.z
+        )
+          continue;
         const value = new Vector3(position.x, position.y, position.z);
         locations.set(position.id, value);
         if (!defaults.has(position.id)) defaults.set(position.id, value.clone());
       }
+      personalPositions = nextPersonal;
       const pending = ids
         .filter((id) => !locations.has(id))
         .sort(

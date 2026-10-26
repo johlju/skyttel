@@ -48,6 +48,10 @@ export function useObjectMovement(
     source: 'drag' | 'buttons';
   } | null>(null);
   const [heightActive, setHeightActive] = useState(false);
+  const movingObjectId = useCallback(
+    () => (gesture.current?.moved ? gesture.current.id : undefined),
+    [],
+  );
   const cancel = useCallback(() => {
     const current = gesture.current;
     if (current) {
@@ -82,6 +86,7 @@ export function useObjectMovement(
   return {
     guide,
     heightActive,
+    movingObjectId,
     cancel,
     recordMove(id: string, start: Position, end: Position, height: boolean) {
       setGuide((previous) =>
