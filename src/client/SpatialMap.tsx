@@ -389,6 +389,8 @@ export function SpatialMap({
     enabled: Boolean(personal?.view) && !contextLost,
     active,
     cancelHold,
+    referenceAlwaysVisible: preferences.zeroReferenceAlwaysVisible,
+    referenceOnMovement: preferences.zeroReferenceOnMovement,
     onMove: (id, position) => personal?.move(id, position),
   });
   const announcedMove = movement.announcement;
@@ -408,7 +410,7 @@ export function SpatialMap({
     const lost = (event: Event) => {
       event.preventDefault();
       setContextLost(true);
-      movement.cancel();
+      movement.interrupt();
       scene.current?.contextLost(true);
     };
     const restored = () => {
@@ -440,7 +442,7 @@ export function SpatialMap({
       scene.current?.dispose();
       scene.current = null;
     };
-  }, [activated, motion, movement.cancel]);
+  }, [activated, motion, movement.interrupt]);
   const personalReady = !personal || Boolean(personal.view);
   useEffect(() => {
     // The first scene update frames the layout, including saved personal positions.
@@ -470,7 +472,7 @@ export function SpatialMap({
       referenceVisitActive.current = false;
       return;
     }
-    scene.current?.configure(preferences, theme, reducedMotion);
+    scene.current?.configure(preferences, theme, reducedMotion, movement.referenceVisible);
     if (!active) {
       referenceVisitActive.current = false;
       return;
@@ -482,7 +484,15 @@ export function SpatialMap({
     previousLabels.current = preferences.allLabels;
     if (!referenceVisitActive.current) scene.current?.startReferenceVisit();
     referenceVisitActive.current = true;
-  }, [preferences, activated, active, personalReady, theme, reducedMotion]);
+  }, [
+    preferences,
+    activated,
+    active,
+    personalReady,
+    theme,
+    reducedMotion,
+    movement.referenceVisible,
+  ]);
   const focusObjects = useCallback((ids: string[], reveal?: MapRevealRequest) => {
     const element = canvas.current;
     if (!element) return false;
@@ -700,7 +710,10 @@ export function SpatialMap({
       },
       onPointerUp: cancelHold,
       onPointerCancel: cancelHold,
-      onPointerLeave: cancelHold,
+      onPointerLeave: () => {
+        cancelHold();
+        movement.leave();
+      },
       onClick: (event) => {
         const pairedContextClick = contextClick.current === object.id && event.detail > 0;
         contextClick.current = null;
@@ -1383,6 +1396,26 @@ export function SpatialMap({
                 />
                 Alltid synlig
               </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={preferences.zeroReferenceOnMovement}
+                  disabled={preferences.zeroReferenceAlwaysVisible}
+                  aria-describedby={`${labelPrefix}-reference-movement-help`}
+                  aria-disabled={personal?.pending || undefined}
+                  onChange={(event) => {
+                    if (!personal?.pending)
+                      configure({ zeroReferenceOnMovement: event.target.checked });
+                  }}
+                />
+                Synlig vid dragning
+              </label>
+              <p id={`${labelPrefix}-reference-movement-help`}>
+                Visar referensen vid objektflytt med dragning, flyttknappar eller koordinater och
+                när du håller musens primära knapp stilla över ett objekt i 1,5 sekunder.
+                {preferences.zeroReferenceAlwaysVisible &&
+                  ' Alltid synlig är på. Ditt val för Synlig vid dragning finns kvar.'}
+              </p>
               <ZeroReferenceTint
                 id={`${labelPrefix}-reference-tint`}
                 value={preferences.zeroReferenceTint}
@@ -1494,7 +1527,12 @@ export function SpatialMap({
         }}
         onPointerMoveCapture={movement.move}
         onPointerUpCapture={movement.end}
-        onPointerCancelCapture={movement.cancel}
+        onPointerCancelCapture={movement.interrupt}
+        onLostPointerCapture={(event) => {
+          // An object's implicit touch capture is lost when the surface takes
+          // over its drag. That bubbled event does not end the active gesture.
+          if (!event.currentTarget.hasPointerCapture(event.pointerId)) movement.lostCapture(event);
+        }}
         onClickCapture={(event) => {
           if (movement.suppressClick()) {
             event.preventDefault();

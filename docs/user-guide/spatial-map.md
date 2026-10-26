@@ -511,6 +511,24 @@ Navigera, både i normal- och miniläge. Referensen fungerar även när
 **Visa bakgrund** är av. Den ändrar bara din personliga vy, inte
 hushållets uppgifter, egenskaper, utkast eller ändringshistorik.
 
+**Synlig vid dragning** är av från början. Slå på det för att visa
+referensen när du börjar dra ett objekt med mus, penna eller finger, eller
+när du flyttar med Navigeras knappar eller giltiga koordinater. Den visas
+under draget och en sekund efter att du släpper. Knappar och koordinater
+visar den till en sekund efter den senaste verkliga flytten. Markering,
+vanliga klick, ofärdiga värden och kamerarörelser startar inte visningen.
+Håll musens primära knapp stilla över ett objekt i 1,5 sekunder för att
+visa referensen utan att flytta. Den stannar till en sekund efter att du
+släpper. Ett långtryck med finger öppnar fortfarande objektets åtgärder.
+
+När **Alltid synlig** är på är **Synlig vid dragning** dimmat och ditt val
+finns kvar. Slår du av Alltid synlig gäller ditt automatiska val direkt,
+även under ett drag. Automatisk visning ändrar inga sparade val, flyttar
+inte fokus eller kameran och läses inte upp. Koordinaterna är alltid
+tillgängliga. Avbryt en gest eller lämna kartan för att ta bort den
+tillfälliga visningen. Vid nästa öppning börjar den dold om bara
+Synlig vid dragning är på; Alltid synlig visar den direkt.
+
 X är sidled, Y är höjd och Z är djup i kartans fasta axlar. Referensen är
 inget verkligt mått, golv eller tak. Objekt kan ligga på båda sidor om
 nollan och utanför referensens kanter. Kameran kan lämna nollpunkten

@@ -33,12 +33,16 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     const variant = page.getByRole('combobox', { name: 'Variant', exact: true });
     const weight = page.getByRole('combobox', { name: 'Synlighet', exact: true });
     const always = page.getByRole('checkbox', { name: 'Alltid synlig', exact: true });
+    const automatic = page.getByRole('checkbox', { name: 'Synlig vid dragning', exact: true });
     const keepSize = page.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true });
     const tint = page.getByRole('spinbutton', { name: 'Tonstyrka i procent', exact: true });
     const tintSlider = page.getByRole('slider', { name: 'Tonstyrka', exact: true });
     await expect(variant).toHaveValue('circle');
     await expect(weight).toHaveValue('subtle');
     await expect(always).not.toBeChecked();
+    await expect(automatic).not.toBeChecked();
+    await expect(automatic).toBeEnabled();
+    await expect(automatic).toHaveAccessibleDescription(/flyttknappar.*koordinater.*1,5 sekunder/);
     await expect(keepSize).not.toBeChecked();
     await expect(keepSize).toHaveAccessibleDescription(
       'Nollreferensen behåller ungefär samma storlek på skärmen när du zoomar. Objektens positioner ändras inte.',
@@ -47,6 +51,11 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     await expect(tintSlider).toHaveValue('0');
     await page.getByRole('checkbox', { name: 'Visa bakgrund', exact: true }).uncheck();
     await saved(page);
+    await automatic.focus();
+    await page.keyboard.press('Space');
+    await saved(page);
+    await expect(automatic).toBeChecked();
+    await expect(automatic).toBeFocused();
     await tint.fill('37');
     await expect(tintSlider).toHaveValue('37');
     await tint.press('Tab');
@@ -93,6 +102,9 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     await saved(page);
     await always.check();
     await saved(page);
+    await expect(automatic).toBeDisabled();
+    await expect(automatic).toBeChecked();
+    await expect(automatic).toHaveAccessibleDescription(/Alltid synlig är på.*finns kvar/);
     await map(page);
     await page.getByRole('button', { name: 'Navigera', exact: true }).click();
     const toggle = page.getByRole('checkbox', { name: 'Nollreferens', exact: true });
@@ -114,6 +126,8 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
     await settings(page);
     await expect(always).not.toBeChecked();
+    await expect(automatic).toBeEnabled();
+    await expect(automatic).toBeChecked();
     await expect(keepSize).toBeChecked();
     await expect(variant).toHaveValue('lines');
     await expect(weight).toHaveValue('prominent');
@@ -130,6 +144,7 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     await expect(variant).toHaveValue('lines');
     await expect(weight).toHaveValue('prominent');
     await expect(always).not.toBeChecked();
+    await expect(automatic).toBeChecked();
     await expect(keepSize).toBeChecked();
     await expect(tint).toHaveValue('38');
   } finally {
@@ -161,6 +176,8 @@ test('NOLLREFERENS-02: saved reference choices survive reopening, restart and an
     await saved(page);
     await page.getByRole('combobox', { name: 'Synlighet', exact: true }).selectOption('original');
     await saved(page);
+    await page.getByRole('checkbox', { name: 'Synlig vid dragning', exact: true }).check();
+    await saved(page);
     await page.getByRole('checkbox', { name: 'Alltid synlig', exact: true }).check();
     await saved(page);
     await page.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true }).check();
@@ -180,6 +197,12 @@ test('NOLLREFERENS-02: saved reference choices survive reopening, restart and an
       await expect(
         target.getByRole('checkbox', { name: 'Alltid synlig', exact: true }),
       ).toBeChecked();
+      await expect(
+        target.getByRole('checkbox', { name: 'Synlig vid dragning', exact: true }),
+      ).toBeChecked();
+      await expect(
+        target.getByRole('checkbox', { name: 'Synlig vid dragning', exact: true }),
+      ).toBeDisabled();
       await expect(
         target.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true }),
       ).toBeChecked();
@@ -232,6 +255,9 @@ test('NOLLREFERENS-02: saved reference choices survive reopening, restart and an
       memberPage.getByRole('checkbox', { name: 'Alltid synlig', exact: true }),
     ).not.toBeChecked();
     await expect(
+      memberPage.getByRole('checkbox', { name: 'Synlig vid dragning', exact: true }),
+    ).not.toBeChecked();
+    await expect(
       memberPage.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true }),
     ).not.toBeChecked();
     await expect(
@@ -252,6 +278,9 @@ test('NOLLREFERENS-02: saved reference choices survive reopening, restart and an
     );
     await expect(
       page.getByRole('checkbox', { name: 'Alltid synlig', exact: true }),
+    ).not.toBeChecked();
+    await expect(
+      page.getByRole('checkbox', { name: 'Synlig vid dragning', exact: true }),
     ).not.toBeChecked();
     await expect(
       page.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true }),

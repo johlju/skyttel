@@ -550,7 +550,12 @@ export function spatialScene(
       onMotion();
       return true;
     },
-    configure(value: ViewSettings, theme: 'light' | 'dark' = 'dark', reducedMotion = false) {
+    configure(
+      value: ViewSettings,
+      theme: 'light' | 'dark' = 'dark',
+      reducedMotion = false,
+      visible = value.zeroReferenceAlwaysVisible,
+    ) {
       // A scene retained while Settings is open may not have a visible canvas
       // until this visit. Fit it before recording reference zoom distances.
       if (needsFrame && canvas.clientWidth && canvas.clientHeight) reset();
@@ -591,8 +596,8 @@ export function spatialScene(
         painted = false;
         projectionRevision++;
       }
-      if (referenceVisible !== value.zeroReferenceAlwaysVisible) {
-        referenceVisible = value.zeroReferenceAlwaysVisible;
+      if (referenceVisible !== visible) {
+        referenceVisible = visible;
         painted = false;
         projectionRevision++;
       }

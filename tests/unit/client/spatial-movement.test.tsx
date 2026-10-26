@@ -111,6 +111,38 @@ test('a refreshed position for another client cannot replace an active local dra
   expect(move.mock.calls[0][1].y).toBeGreaterThan(0);
 });
 
+test('touch dragging completes after capture transfers from the object to the map surface', () => {
+  const map = openMap();
+  const bike = screen.getByRole('button', { name: 'Välj objekt: Cykeln' });
+  const pointer = { ...map.pointer, pointerType: 'touch', shiftKey: false };
+  map.surface.hasPointerCapture = (id) => id === pointer.pointerId;
+
+  fireEvent.pointerDown(bike, pointer);
+  fireEvent.pointerMove(bike, { ...pointer, clientY: 260 });
+  // Touch starts with implicit capture on the object. Transferring it to the
+  // surface bubbles the object's lost-capture event through that surface.
+  fireEvent.lostPointerCapture(bike, pointer);
+  fireEvent.pointerUp(map.surface, { ...pointer, buttons: 0, clientY: 260 });
+
+  expect(map.move).toHaveBeenCalledOnce();
+  expect(map.move.mock.calls[0][0]).toBe('bike');
+  expect(map.move.mock.calls[0][1]).not.toEqual({ x: 0, y: 0, z: 0 });
+});
+
+test('losing the map surface capture still cancels a touch drag without saving it', () => {
+  const map = openMap();
+  const bike = screen.getByRole('button', { name: 'Välj objekt: Cykeln' });
+  const pointer = { ...map.pointer, pointerType: 'touch', shiftKey: false };
+  map.surface.hasPointerCapture = () => false;
+
+  fireEvent.pointerDown(bike, pointer);
+  fireEvent.pointerMove(bike, { ...pointer, clientY: 260 });
+  fireEvent.lostPointerCapture(map.surface, pointer);
+  fireEvent.pointerUp(map.surface, { ...pointer, buttons: 0, clientY: 260 });
+
+  expect(map.move).not.toHaveBeenCalled();
+});
+
 test('cancelling an active drag keeps later saved-position refreshes available', () => {
   const map = openMap();
   map.drag();

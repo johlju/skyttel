@@ -59,7 +59,7 @@ export type Voice = {
   /** Drop local audio immediately; consent revocation owns server work cleanup. */
   endConversation?: () => Promise<void>;
   /** Silences what Skyttel is saying. */
-  silence: (cancelWork?: () => Promise<void>) => Promise<void>;
+  silence: (cancelWork?: () => Promise<TextAssistantView | void>) => Promise<void>;
   /** Replace provider context and queued audio while keeping the authorized microphone. */
   newConversation: (reset: () => Promise<TextAssistantView>) => Promise<TextAssistantView>;
   playAudio: () => void;
@@ -851,7 +851,7 @@ export function useVoice(options: {
       });
   };
   const silence = useCallback(
-    (cancelWork?: () => Promise<void>) => {
+    (cancelWork?: () => Promise<TextAssistantView | void>) => {
       const attempt = current.current;
       const response = voice?.response;
       if (
@@ -864,14 +864,19 @@ export function useVoice(options: {
       // Live has no output-cancel event. Retire the entire output stream, retaining
       // the authorized input and conversation as historical text in a fresh session.
       const interrupted = renew(async () => {
-        const [result] = await Promise.all([
+        const [result, canceled] = await Promise.all([
           attempt?.voiceId ? stopRemote(attempt.path, attempt.voiceId) : Promise.resolve(null),
           cancelWork?.(),
         ]);
         if (attempt?.voiceId && !result)
           throw new Error('Voice interruption could not be confirmed');
         const shown = latest.current.assistant;
-        const view = result?.assistant;
+        // Cancellation can advance the conversation before React renders it.
+        // Carry that result into renewal instead of relying on rendered props.
+        const view =
+          canceled && (!result || canceled.revision >= result.assistant.revision)
+            ? canceled
+            : result?.assistant;
         const assistant = shown && (!view || shown.revision >= view.revision) ? shown : view;
         if (!assistant) throw new Error('Conversation ended');
         apply(assistant);

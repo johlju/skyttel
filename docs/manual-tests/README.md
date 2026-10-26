@@ -691,8 +691,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   mininavigering, zoomstorlek skild från bakgrundens zoomstyrka och
   återställning samt egna val mellan användare, hushåll, sessioner och
   enheter. Tonstyrkans synkroniserade reglage behåller värdet när Linjer
-  gör dem inaktiva. Faktisk skärmläsare
-  och fysisk pekning observeras separat.
+  gör dem inaktiva. Synlig vid dragning behålls när Alltid synlig
+  inaktiverar valet. Automatisk visning, faktisk skärmläsare och fysisk
+  pekning observeras separat.
 - [Personliga placeringar](personal-view.md): bakgrundsval per tema i Rymdkartans
   inställningar, oberoende panorering, zoom och lageravstånd med återställning,
   sparbekräftelse som toast i tre sekunder med bevarat fokus,

@@ -121,6 +121,10 @@
   height: 24px;
 }
 
+.zero-reference-settings label:has(input:disabled) {
+  opacity: 0.65;
+}
+
 .presentation-map {
   position: fixed;
   inset: 0;

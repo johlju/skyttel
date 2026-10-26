@@ -61,7 +61,7 @@ Det ersätter inte beständighetsprovet mot riktig server.
   },
   "reference": "Tolv kombinationer, båda teman, dator och 390 × 844.",
   "outcomes": [
-    "Förvalen är Cirkel, Diskret, dold referens, fast storlek och 0 procent.",
+    "Förvalen är Cirkel, Diskret, båda synlighetsval av, fast storlek och 0 procent.",
     "Alla varianter och styrkor kan väljas med dekorativ bakgrund av.",
     "Inställningar och Navigera visar samma sparade synlighetsval.",
     "Nollreferens har synlig etikett i miniläge på liten skärm.",
@@ -69,7 +69,8 @@ Det ersätter inte beständighetsprovet mot riktig server.
     "Tangentbordsfokus behålls efter sparande.",
     "Behåll storlek vid zoom har läsbar hjälp och är oberoende av Zoomstyrka.",
     "Tonstyrkans talfält och reglage visar samma värde i enprocentsteg.",
-    "Linjer inaktiverar båda tonreglagen med förklaring och behåller värdet."
+    "Linjer inaktiverar båda tonreglagen med förklaring och behåller värdet.",
+    "Synlig vid dragning behålls inaktivt med läsbar hjälp vid Alltid synlig."
   ],
   "evidence": [
     {
@@ -87,9 +88,12 @@ Det ersätter inte beständighetsprovet mot riktig server.
 
 **Steg:**
 
-1. Läs förvalen Cirkel, Diskret, Alltid synlig av, Behåll storlek vid
-   zoom av och Tonstyrka 0 procent. Stäng av Visa bakgrund. Kontrollera
-   att Nollreferens fortfarande går att ändra.
+1. Läs förvalen Cirkel, Diskret, Alltid synlig av, Synlig vid dragning av,
+   Behåll storlek vid zoom av och Tonstyrka 0 procent. Stäng av Visa
+   bakgrund. Kontrollera att Nollreferens fortfarande går att ändra.
+   Läs hjälpen om dragning, flyttknappar, koordinater och musens primära
+   knapp i 1,5 sekunder. Aktivera Synlig vid dragning med mellanslag,
+   invänta sparandet och kontrollera att fokus är kvar.
 2. Skriv 37 i **Tonstyrka i procent** och läs samma värde i reglaget.
    Lämna talfältet, invänta sparbekräftelsen och fokusera **Tonstyrka**.
    Tryck högerpil en gång. Läs 38 i båda reglagen och invänta sparandet.
@@ -101,16 +105,20 @@ Det ersätter inte beständighetsprovet mot riktig server.
    Läs hjälpen till Behåll storlek vid zoom, aktivera och avaktivera
    med mellanslag i båda teman. Kontrollera att fokus är kvar.
    Lämna valet aktiverat.
-4. Lämna Linjer och Framträdande valda. Aktivera Alltid synlig, återgå till
+4. Lämna Linjer och Framträdande valda. Aktivera Alltid synlig. Läs att
+   Synlig vid dragning är inaktivt med markerat val och förklaring om att
+   valet finns kvar. Återgå till
    kartan och öppna Navigera. Kontrollera att Nollreferens är markerad.
    Panorera höger och välj Återställ vy. Reglaget är fortfarande markerat.
 5. Välj Visa mininavigering och byt till den smala bredden. Läs den synliga
    etiketten Nollreferens. Fokusera reglaget och avmarkera med mellanslag.
    Kontrollera att fokus är kvar. Återgå till normal navigering och stäng.
-6. Öppna inställningarna igen. Alltid synlig är av, Linjer och Framträdande
+6. Öppna inställningarna igen. Alltid synlig är av och Synlig vid dragning
+   är aktivt och markerat. Linjer och Framträdande
    finns kvar, Behåll storlek vid zoom är aktiverat och Tonstyrka är
    38 procent. Slå på Visa bakgrund, ändra Zoomstyrka och välj Återställ
-   rörelse. Kontrollera att zoomstorleksvalet och Tonstyrka är kvar.
+   rörelse. Kontrollera att zoomstorleksvalet, Synlig vid dragning och
+   Tonstyrka är kvar.
 
 **Förväntat resultat:** Båda ytorna visar samma val. Bakgrundens av/på,
 miniläge, skärmbredd och återställning ändrar inte referensens övriga val.
@@ -141,7 +149,7 @@ serverlagring; de ersätter inte mänsklig observation på fysiska enheter.
   },
   "reference": "Alex i två profiler, Robin i en; två hushåll och omstart.",
   "outcomes": [
-    "Alex återfår de fem egna referensvalen efter omstart.",
+    "Alex återfår de sex egna referensvalen efter omstart.",
     "En annan enhet med Alex visar samma val i Linden.",
     "Robin har egna förval och kan ändra dem utan att ändra Alex val.",
     "Alex val i Eken är separata från Linden."
@@ -152,18 +160,22 @@ serverlagring; de ersätter inte mänsklig observation på fysiska enheter.
 
 **Steg:**
 
-1. Välj Oval, Ursprunglig, Alltid synlig och Behåll storlek vid zoom som
-   Alex i Linden. Vänta på sparbekräftelsen efter varje val. Ange sedan
+1. Välj Oval, Ursprunglig och Synlig vid dragning som Alex i Linden.
+   Aktivera sedan Alltid synlig och Behåll storlek vid zoom. Vänta på
+   sparbekräftelsen efter varje val. Ange sedan
    Tonstyrka 23 procent, lämna talfältet och invänta sparandet. Gå till
    kartan och öppna inställningarna igen.
-2. Starta om provinstallationen och ladda om sidan. Läs samma fem val.
+2. Starta om provinstallationen och ladda om sidan. Läs samma sex val.
+   Synlig vid dragning är markerat men inaktivt med läsbar förklaring.
    Logga in som Alex på den andra enheten och läs valen i Linden.
 3. Öppna Linden som Robin. Kontrollera Cirkel, Diskret, Alltid synlig
-   av, Behåll storlek vid zoom av och Tonstyrka 0 procent. Välj Kvadrat
-   och vänta på sparbekräftelsen. Ladda om Alex vy: de fem egna valen
+   av, Synlig vid dragning av, Behåll storlek vid zoom av och Tonstyrka
+   0 procent. Välj Kvadrat och vänta på sparbekräftelsen. Ladda om Alex vy:
+   de sex egna valen
    är kvar.
 4. Öppna Eken som Alex. Kontrollera Cirkel, Diskret, Alltid synlig av,
-   Behåll storlek vid zoom av och Tonstyrka 0 procent. Återgå till
+   Synlig vid dragning av, Behåll storlek vid zoom av och Tonstyrka
+   0 procent. Återgå till
    Linden och läs de sparade egna valen igen.
 
 **Förväntat resultat:** Valen sparas per Skyttel-användare och hushåll och
@@ -194,7 +206,8 @@ förstoring i ljust och mörkt tema. Anteckna utrustning och resultat.
   "outcomes": [
     "Kontrollernas namn, värden och markerade tillstånd går att förstå.",
     "Fokus, kontrast, omflöde och pekmål medger att valen ändras.",
-    "Reglagens etiketter kräver inte att användaren skiljer färger åt."
+    "Reglagens etiketter kräver inte att användaren skiljer färger åt.",
+    "Automatisk visning är tyst, behåller fokus och bevarar fysisk pekning och koordinatåtkomst."
   ]
 }
 ```
@@ -212,7 +225,21 @@ förstoring i ljust och mörkt tema. Anteckna utrustning och resultat.
    Välj objekt och samband, läs deras text och kontrollera att symboler,
    markering och fokus fortfarande går att använda. Använd de namngivna
    koordinaterna för att förstå positionen utan att urskilja färger.
-4. Anteckna synligt fokus, kontrast, omflöde och eventuella hinder.
+4. Slå av Alltid synlig och på Synlig vid dragning. Dra ett objekt med
+   mus eller penna och sedan med finger på en fysisk telefon. Referensen
+   visas under draget och en sekund efter släpp; nästa drag behåller den
+   synlig. Ett vanligt klick och kamerarörelser startar inte visningen.
+   Håll musens primära knapp stilla över objektet i 1,5 sekunder och
+   släpp: referensen döljs efter en sekund. Samma håll på tom karta visar
+   den inte. Långtryck med finger öppnar fortfarande objektets åtgärder.
+5. Med faktisk skärmläsare: flytta med Navigeras knappar och giltiga
+   koordinater. Hör flyttresultatet, men inget extra besked när referensen
+   visas eller döljs. Fokus är kvar och koordinaterna går att läsa.
+   Ofärdig inmatning förlänger inte visningen. Börja dra och växla till en
+   annan app så att gesten avbryts. Återgå och byt till Tabell och tillbaka:
+   automatisk visning börjar dold. Alltid synlig
+   behåller sitt val också vid avbrott. Prova båda navigeringslägena.
+6. Anteckna synligt fokus, kontrast, omflöde och eventuella hinder.
 
 **Förväntat resultat:** Användaren kan förstå och ändra samma personliga
 val utan att urskilja färger eller använda visuell navigering i kartan.
