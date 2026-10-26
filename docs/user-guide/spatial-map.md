@@ -498,6 +498,19 @@ utanför bild; val eller visning av referensen flyttar inte kameran.
 Kantställda plan kan se ut som linjer. Referenstext döljs om den ligger
 utanför vyn eller kolliderar med hushållets text.
 
+**Tonstyrka** kan ställas från 0 till 85 procent med reglaget eller
+talfältet. De visar samma värde i steg om en procentenhet. Släpp reglaget
+eller lämna talfältet för att spara. Ett ogiltigt tal återställs med ett
+förklarande besked. Vid 0 procent tonas inget innehåll. Högre värden tonar
+de delar av objektsymboler, samband och pilspetsar som ligger bakom
+referensens ändliga ytor. Delar framför eller utanför ytorna tonas inte;
+överlappande toner kombineras. Hushållets text tonas inte.
+
+Tonstyrkan är separat från **Synlighet**. **Linjer** har inga ytor att tona,
+så båda reglagen för Tonstyrka är inaktiva där. Värdet finns kvar när du
+väljer ett plan igen. Färg och ton räcker inte för att avgöra ett objekts
+koordinater; läs Sidled (X), Höjd (Y) och Djup (Z) i Navigera.
+
 **Behåll storlek vid zoom** är av från början. Aktivera valet om
 nollreferensen ska behålla ungefär samma storlek på skärmen när du zoomar.
 Objektens positioner ändras inte. När du öppnar kartan eller aktiverar

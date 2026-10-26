@@ -34,6 +34,8 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     const weight = page.getByRole('combobox', { name: 'Synlighet', exact: true });
     const always = page.getByRole('checkbox', { name: 'Alltid synlig', exact: true });
     const keepSize = page.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true });
+    const tint = page.getByRole('spinbutton', { name: 'Tonstyrka i procent', exact: true });
+    const tintSlider = page.getByRole('slider', { name: 'Tonstyrka', exact: true });
     await expect(variant).toHaveValue('circle');
     await expect(weight).toHaveValue('subtle');
     await expect(always).not.toBeChecked();
@@ -41,8 +43,18 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     await expect(keepSize).toHaveAccessibleDescription(
       'Nollreferensen behåller ungefär samma storlek på skärmen när du zoomar. Objektens positioner ändras inte.',
     );
+    await expect(tint).toHaveValue('0');
+    await expect(tintSlider).toHaveValue('0');
     await page.getByRole('checkbox', { name: 'Visa bakgrund', exact: true }).uncheck();
     await saved(page);
+    await tint.fill('37');
+    await expect(tintSlider).toHaveValue('37');
+    await tint.press('Tab');
+    await saved(page);
+    await tintSlider.focus();
+    await tintSlider.press('ArrowRight');
+    await saved(page);
+    await expect(tint).toHaveValue('38');
     for (const theme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: theme });
       await keepSize.focus();
@@ -56,6 +68,17 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
       for (const shape of ['square', 'oval', 'circle', 'lines']) {
         await variant.selectOption(shape);
         await expect(variant).not.toHaveAttribute('aria-disabled', 'true');
+        await expect(tint).toHaveValue('38');
+        if (shape === 'lines') {
+          await expect(tint).toBeDisabled();
+          await expect(tintSlider).toBeDisabled();
+          await expect(
+            page.getByText('Linjer har inga ytor att tona. Ditt värde finns kvar.'),
+          ).toBeVisible();
+        } else {
+          await expect(tint).toBeEnabled();
+          await expect(tintSlider).toBeEnabled();
+        }
         for (const strength of ['subtle', 'original', 'prominent']) {
           await weight.focus();
           await weight.selectOption(strength);
@@ -94,6 +117,7 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     await expect(keepSize).toBeChecked();
     await expect(variant).toHaveValue('lines');
     await expect(weight).toHaveValue('prominent');
+    await expect(tint).toHaveValue('38');
     await page.getByRole('checkbox', { name: 'Visa bakgrund', exact: true }).check();
     await saved(page);
     const zoomStrength = page.getByRole('slider', { name: 'Zoomstyrka', exact: true });
@@ -107,6 +131,7 @@ test('NOLLREFERENS-01: all retained choices work without a decorative background
     await expect(weight).toHaveValue('prominent');
     await expect(always).not.toBeChecked();
     await expect(keepSize).toBeChecked();
+    await expect(tint).toHaveValue('38');
   } finally {
     await installation.close();
   }
@@ -140,6 +165,9 @@ test('NOLLREFERENS-02: saved reference choices survive reopening, restart and an
     await saved(page);
     await page.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true }).check();
     await saved(page);
+    await page.getByRole('spinbutton', { name: 'Tonstyrka i procent', exact: true }).fill('23');
+    await page.getByRole('spinbutton', { name: 'Tonstyrka i procent', exact: true }).press('Tab');
+    await saved(page);
     await map(page);
     await settings(page);
     const assertOwn = async (target: Page) => {
@@ -155,6 +183,12 @@ test('NOLLREFERENS-02: saved reference choices survive reopening, restart and an
       await expect(
         target.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true }),
       ).toBeChecked();
+      await expect(
+        target.getByRole('spinbutton', { name: 'Tonstyrka i procent', exact: true }),
+      ).toHaveValue('23');
+      await expect(target.getByRole('slider', { name: 'Tonstyrka', exact: true })).toHaveValue(
+        '23',
+      );
     };
     await assertOwn(page);
     await installation.restart();
@@ -200,6 +234,9 @@ test('NOLLREFERENS-02: saved reference choices survive reopening, restart and an
     await expect(
       memberPage.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true }),
     ).not.toBeChecked();
+    await expect(
+      memberPage.getByRole('spinbutton', { name: 'Tonstyrka i procent', exact: true }),
+    ).toHaveValue('0');
     await memberPage.getByRole('combobox', { name: 'Variant', exact: true }).selectOption('square');
     await saved(memberPage);
     await page.reload();
@@ -219,6 +256,9 @@ test('NOLLREFERENS-02: saved reference choices survive reopening, restart and an
     await expect(
       page.getByRole('checkbox', { name: 'Behåll storlek vid zoom', exact: true }),
     ).not.toBeChecked();
+    await expect(
+      page.getByRole('spinbutton', { name: 'Tonstyrka i procent', exact: true }),
+    ).toHaveValue('0');
     await page.goto(ownUrl);
     await settings(page);
     await assertOwn(page);

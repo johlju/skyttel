@@ -33,6 +33,8 @@ import {
 import { useObjectMovement } from './use-object-movement.js';
 import type { usePersonalView } from './use-personal-view.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
+import { ZeroReferenceTint } from './ZeroReferenceTint.js';
+import { depthTintRegions, verticalCurveTints } from './zero-reference-depth.js';
 
 type LabelBox = { x: number; y: number; width: number; height: number };
 
@@ -301,6 +303,7 @@ export function SpatialMap({
   const [localSettings, setLocalSettings] = useState(defaultViewSettings);
   const preferences = personal ? settings : localSettings;
   const [hasUnsavedMotion, setHasUnsavedMotion] = useState(false);
+  const [hasUnsavedTint, setHasUnsavedTint] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(
     () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
   );
@@ -729,6 +732,19 @@ export function SpatialMap({
   }
   const surfaceWidth = canvas.current?.clientWidth ?? 0;
   const surfaceHeight = canvas.current?.clientHeight ?? 0;
+  const depthPatches = scene.current?.referenceDepthPatches() ?? [];
+  const tintOpacity = preferences.zeroReferenceTint / 100;
+  const markerTints = new Map(
+    [...locations.values()].flatMap((point) => {
+      const radius = 17 * point.scale;
+      const regions = depthTintRegions(
+        depthPatches,
+        { x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2 },
+        () => 1 / point.depth,
+      );
+      return regions.length ? [[point.id, regions] as const] : [];
+    }),
+  );
   function labelSize(id: string, fallback: { width: number; height: number }) {
     const size = labelSizes.get(id) ?? fallback;
     // A narrower canvas must permit the label to render before its observer
@@ -1348,6 +1364,14 @@ export function SpatialMap({
                 />
                 Alltid synlig
               </label>
+              <ZeroReferenceTint
+                id={`${labelPrefix}-reference-tint`}
+                value={preferences.zeroReferenceTint}
+                busy={personal?.pending ?? false}
+                lines={preferences.zeroReferenceVariant === 'lines'}
+                onCommit={(zeroReferenceTint) => configure({ zeroReferenceTint })}
+                onUnsavedChange={setHasUnsavedTint}
+              />
               <label>
                 <input
                   type="checkbox"
@@ -1372,7 +1396,7 @@ export function SpatialMap({
             </fieldset>
             <p>Bakgrunden är dekorativ. Dina val sparas direkt för dig i det här hushållet.</p>
             <div role="status" aria-atomic="true">
-              {hasUnsavedMotion && !personal?.pending ? (
+              {(hasUnsavedMotion || hasUnsavedTint) && !personal?.pending ? (
                 <p>Ändringen är inte sparad än.</p>
               ) : (
                 personal?.message && (
@@ -1761,6 +1785,24 @@ export function SpatialMap({
                       iconId={object.iconId}
                     />
                   </span>
+                  {markerTints.has(point.id) && (
+                    <svg
+                      className="zero-reference-marker-tint"
+                      aria-hidden="true"
+                      width={34 * point.scale}
+                      height={34 * point.scale}
+                      viewBox={`${point.x - 17 * point.scale} ${point.y - 17 * point.scale} ${34 * point.scale} ${34 * point.scale}`}
+                    >
+                      {markerTints.get(point.id)?.map((region) => (
+                        <path
+                          key={region.name}
+                          d={region.path}
+                          fill={region.color}
+                          fillOpacity={tintOpacity}
+                        />
+                      ))}
+                    </svg>
+                  )}
                   <ProposalSymbol
                     change={state.draft.changes.find((change) => change.id === object.id)}
                   />
@@ -1812,6 +1854,33 @@ export function SpatialMap({
               const tangentX = tip.x - start.x;
               const tangentY = tip.y - start.y - 2 * bend;
               const tangentLength = Math.hypot(tangentX, tangentY) || 1;
+              const tintBounds = region(
+                Math.min(start.x, tip.x) - 18,
+                Math.min(start.y, tip.y, controlY) - 18,
+                Math.max(start.x, tip.x) + 18,
+                Math.max(start.y, tip.y, controlY) + 18,
+              );
+              const tint =
+                bend && tangentX === 0
+                  ? verticalCurveTints(depthPatches, start, tip, bend).map((region) => ({
+                      ...region,
+                      geometry,
+                    }))
+                  : depthTintRegions(depthPatches, tintBounds, (point) => {
+                      const fraction =
+                        bend && tangentX !== 0
+                          ? (point.x - start.x) / tangentX
+                          : ((point.x - start.x) * tangentX + (point.y - start.y) * tangentY) /
+                            (tangentX ** 2 + tangentY ** 2 || 1);
+                      return (
+                        1 / start.depth +
+                        (1 / tip.depth - 1 / start.depth) * Math.max(0, Math.min(1, fraction))
+                      );
+                    }).map((region) => ({ ...region, geometry, mask: undefined }));
+              const arrowTint = depthTintRegions(depthPatches, tintBounds, () => 1 / tip.depth);
+              const unitX = tangentX / tangentLength;
+              const unitY = tangentY / tangentLength;
+              const arrowShape = `M ${tip.x} ${tip.y} L ${tip.x - 12 * unitX + 6 * unitY} ${tip.y - 12 * unitY - 6 * unitX} L ${tip.x - 12 * unitX - 6 * unitY} ${tip.y - 12 * unitY + 6 * unitX} Z`;
               return (
                 <g key={key} className={`spatial-connection ${kind}${selected ? ' selected' : ''}`}>
                   <defs>
@@ -1872,6 +1941,90 @@ export function SpatialMap({
                     markerEnd={`url(#spatial-arrow-${kind})`}
                     className={`connection-arrow-shaft ${kind}${selected ? ' selected' : ''}`}
                   />
+                  {tint.map((region, index) => (
+                    <g
+                      key={region.name}
+                      className="zero-reference-connection-tint"
+                      clipPath={`url(#${maskId}-tint-${index})`}
+                      mask={region.mask ? `url(#${maskId}-tint-depth-${index})` : undefined}
+                    >
+                      <defs>
+                        <clipPath id={`${maskId}-tint-${index}`}>
+                          <path d={region.path} />
+                        </clipPath>
+                        {region.mask && (
+                          <>
+                            {region.mask.foreground.map((interval, part) => (
+                              <clipPath
+                                key={interval.geometry}
+                                id={`${maskId}-tint-front-${index}-${part}`}
+                              >
+                                <rect
+                                  x={tintBounds.x}
+                                  y={interval.minimum}
+                                  width={tintBounds.width}
+                                  height={interval.maximum - interval.minimum}
+                                />
+                              </clipPath>
+                            ))}
+                            <mask
+                              id={`${maskId}-tint-depth-${index}`}
+                              maskUnits="userSpaceOnUse"
+                              {...tintBounds}
+                            >
+                              {region.mask.behind.map((interval) => (
+                                <rect
+                                  key={`${interval.minimum}:${interval.maximum}`}
+                                  x={tintBounds.x}
+                                  y={interval.minimum}
+                                  width={tintBounds.width}
+                                  height={interval.maximum - interval.minimum}
+                                  fill="white"
+                                />
+                              ))}
+                              {region.mask.foreground.map((interval, part) => (
+                                <path
+                                  key={interval.geometry}
+                                  clipPath={`url(#${maskId}-tint-front-${index}-${part})`}
+                                  d={interval.geometry}
+                                  className={`connection ${kind}${selected ? ' selected' : ''}`}
+                                  style={{ stroke: 'black', strokeDashoffset: interval.dashOffset }}
+                                  fill="none"
+                                />
+                              ))}
+                            </mask>
+                          </>
+                        )}
+                      </defs>
+                      <path
+                        d={region.geometry}
+                        className={`connection ${kind}${previous ? ' previous' : ''}${selected ? ' selected' : ''}`}
+                        style={{ stroke: region.color }}
+                        opacity={tintOpacity}
+                        fill="none"
+                        mask={occluders.length ? `url(#${maskId})` : undefined}
+                      />
+                    </g>
+                  ))}
+                  {arrowTint.map((region, index) => (
+                    <g
+                      key={region.name}
+                      className="zero-reference-connection-tint"
+                      clipPath={`url(#${maskId}-arrow-tint-${index})`}
+                    >
+                      <defs>
+                        <clipPath id={`${maskId}-arrow-tint-${index}`}>
+                          <path d={region.path} />
+                        </clipPath>
+                      </defs>
+                      <path
+                        d={arrowShape}
+                        fill={region.color}
+                        opacity={tintOpacity}
+                        mask={arrowOccluders.length ? `url(#${maskId}-arrow)` : undefined}
+                      />
+                    </g>
+                  ))}
                 </g>
               );
             })}

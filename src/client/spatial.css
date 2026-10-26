@@ -71,6 +71,31 @@
   width: 100%;
   min-height: 44px;
 }
+.zero-reference-marker-tint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  /* Keep symbol luminance and contrast while combining the planes' colors. */
+  mix-blend-mode: color;
+}
+.zero-reference-connection-tint {
+  pointer-events: none;
+  mix-blend-mode: color;
+}
+.zero-reference-tint {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.zero-reference-tint input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
 .zero-reference-settings label:has(input),
 .navigation-zero-reference {
   display: flex;
@@ -202,6 +227,7 @@
 }
 .spatial-connection {
   opacity: 1;
+  isolation: isolate;
 }
 /* An opaque surround keeps meaningful lines legible over decorative motifs. */
 .connection-underlay {
@@ -371,6 +397,7 @@
   touch-action: none;
   cursor: grab;
   overflow: visible;
+  isolation: isolate;
 }
 .spatial-objects .spatial-node:hover:enabled {
   background: transparent;

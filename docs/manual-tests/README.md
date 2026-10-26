@@ -688,8 +688,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 - [Nollreferens](zero-reference.md): alla fyra varianter och tre visuella
   styrkor, samma sparade reglage i inställningar och normal- eller
   mininavigering, zoomstorlek skild från bakgrundens zoomstyrka och
-  återställning samt egna
-  val mellan användare, hushåll, sessioner och enheter. Faktisk skärmläsare
+  återställning samt egna val mellan användare, hushåll, sessioner och
+  enheter. Tonstyrkans synkroniserade reglage behåller värdet när Linjer
+  gör dem inaktiva. Faktisk skärmläsare
   och fysisk pekning observeras separat.
 - [Personliga placeringar](personal-view.md): bakgrundsval per tema i Rymdkartans
   inställningar, oberoende panorering, zoom och lageravstånd med återställning,

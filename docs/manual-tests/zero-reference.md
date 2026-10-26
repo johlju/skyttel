@@ -44,6 +44,12 @@ systemtema. Prova sedan 390 × 844 CSS-pixlar.
 NOLLREFERENS-01. Chromium använder riktig serverlagring. Provet bedömer
 reglage och val utan att hävda verifierad grafisk återgivning.
 
+**Ytterligare underlag:** Det kontrollerade Chromium-provet
+[personal-view.test.tsx](../../tests/browser/personal-view.test.tsx),
+`tint retains values through delayed and failed saves`,
+prövar fördröjt svar, misslyckat sparande och reglagens bevarade värde.
+Det ersätter inte beständighetsprovet mot riktig server.
+
 <!--
 ```manual-mapping
 {
@@ -55,13 +61,25 @@ reglage och val utan att hävda verifierad grafisk återgivning.
   },
   "reference": "Tolv kombinationer, båda teman, dator och 390 × 844.",
   "outcomes": [
-    "Cirkel och Diskret är förval med Alltid synlig och zoomstorlek av.",
+    "Förvalen är Cirkel, Diskret, dold referens, fast storlek och 0 procent.",
     "Alla varianter och styrkor kan väljas med dekorativ bakgrund av.",
     "Inställningar och Navigera visar samma sparade synlighetsval.",
     "Nollreferens har synlig etikett i miniläge på liten skärm.",
     "Kamera- och rörelseåterställning behåller nollreferensens val.",
     "Tangentbordsfokus behålls efter sparande.",
-    "Behåll storlek vid zoom har läsbar hjälp och är oberoende av Zoomstyrka."
+    "Behåll storlek vid zoom har läsbar hjälp och är oberoende av Zoomstyrka.",
+    "Tonstyrkans talfält och reglage visar samma värde i enprocentsteg.",
+    "Linjer inaktiverar båda tonreglagen med förklaring och behåller värdet."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "browser",
+      "spec": "tests/browser/personal-view.test.tsx",
+      "title": "tint retains values through delayed and failed saves",
+      "purpose": "Kontrollerat fördröjt svar och sparfel utan grafiska påståenden."
+    }
   ]
 }
 ```
@@ -69,24 +87,30 @@ reglage och val utan att hävda verifierad grafisk återgivning.
 
 **Steg:**
 
-1. Läs förvalen Cirkel, Diskret, Alltid synlig av och Behåll storlek vid
-   zoom av. Stäng av Visa bakgrund. Kontrollera att Nollreferens
-   fortfarande går att ändra.
-2. Prova Kvadrat, Oval, Cirkel och Linjer med Diskret, Ursprunglig och
+1. Läs förvalen Cirkel, Diskret, Alltid synlig av, Behåll storlek vid
+   zoom av och Tonstyrka 0 procent. Stäng av Visa bakgrund. Kontrollera
+   att Nollreferens fortfarande går att ändra.
+2. Skriv 37 i **Tonstyrka i procent** och läs samma värde i reglaget.
+   Lämna talfältet, invänta sparbekräftelsen och fokusera **Tonstyrka**.
+   Tryck högerpil en gång. Läs 38 i båda reglagen och invänta sparandet.
+3. Prova Kvadrat, Oval, Cirkel och Linjer med Diskret, Ursprunglig och
    Framträdande. Upprepa med ljust och mörkt systemtema. Läs det sparade
-   valet och kontrollera att fokus stannar på väljaren. Läs hjälpen till
-   Behåll storlek vid zoom, aktivera och avaktivera med mellanslag.
-   Kontrollera att fokus är kvar. Lämna valet aktiverat.
-3. Lämna Linjer och Framträdande valda. Aktivera Alltid synlig, återgå till
+   valet och kontrollera att fokus stannar på väljaren. Tonstyrka är 38
+   procent hela tiden. Linjer gör båda tonreglagen inaktiva och visar
+   förklaringen att värdet finns kvar. Planvarianterna aktiverar dem igen.
+   Läs hjälpen till Behåll storlek vid zoom, aktivera och avaktivera
+   med mellanslag i båda teman. Kontrollera att fokus är kvar.
+   Lämna valet aktiverat.
+4. Lämna Linjer och Framträdande valda. Aktivera Alltid synlig, återgå till
    kartan och öppna Navigera. Kontrollera att Nollreferens är markerad.
    Panorera höger och välj Återställ vy. Reglaget är fortfarande markerat.
-4. Välj Visa mininavigering och byt till den smala bredden. Läs den synliga
+5. Välj Visa mininavigering och byt till den smala bredden. Läs den synliga
    etiketten Nollreferens. Fokusera reglaget och avmarkera med mellanslag.
    Kontrollera att fokus är kvar. Återgå till normal navigering och stäng.
-5. Öppna inställningarna igen. Alltid synlig är av, Linjer och Framträdande
-   finns kvar. Behåll storlek vid zoom är fortfarande aktiverat. Slå på
-   Visa bakgrund, ändra Zoomstyrka och välj Återställ rörelse. Kontrollera
-   att zoomstorleksvalet är kvar.
+6. Öppna inställningarna igen. Alltid synlig är av, Linjer och Framträdande
+   finns kvar, Behåll storlek vid zoom är aktiverat och Tonstyrka är
+   38 procent. Slå på Visa bakgrund, ändra Zoomstyrka och välj Återställ
+   rörelse. Kontrollera att zoomstorleksvalet och Tonstyrka är kvar.
 
 **Förväntat resultat:** Båda ytorna visar samma val. Bakgrundens av/på,
 miniläge, skärmbredd och återställning ändrar inte referensens övriga val.
@@ -117,7 +141,7 @@ serverlagring; de ersätter inte mänsklig observation på fysiska enheter.
   },
   "reference": "Alex i två profiler, Robin i en; två hushåll och omstart.",
   "outcomes": [
-    "Alex återfår Oval, Ursprunglig, Alltid synlig och zoomstorlek efter omstart.",
+    "Alex återfår de fem egna referensvalen efter omstart.",
     "En annan enhet med Alex visar samma val i Linden.",
     "Robin har egna förval och kan ändra dem utan att ändra Alex val.",
     "Alex val i Eken är separata från Linden."
@@ -129,16 +153,18 @@ serverlagring; de ersätter inte mänsklig observation på fysiska enheter.
 **Steg:**
 
 1. Välj Oval, Ursprunglig, Alltid synlig och Behåll storlek vid zoom som
-   Alex i Linden. Vänta på sparbekräftelsen. Gå till kartan och öppna
-   inställningarna igen.
-2. Starta om provinstallationen och ladda om sidan. Läs samma fyra val.
+   Alex i Linden. Vänta på sparbekräftelsen efter varje val. Ange sedan
+   Tonstyrka 23 procent, lämna talfältet och invänta sparandet. Gå till
+   kartan och öppna inställningarna igen.
+2. Starta om provinstallationen och ladda om sidan. Läs samma fem val.
    Logga in som Alex på den andra enheten och läs valen i Linden.
-3. Öppna Linden som Robin. Kontrollera Cirkel, Diskret och Alltid synlig
-   av samt Behåll storlek vid zoom av. Välj Kvadrat och vänta på
-   sparbekräftelsen. Ladda om Alex vy: de fyra egna valen är kvar.
-4. Öppna Eken som Alex. Kontrollera Cirkel, Diskret, Alltid synlig av och
-   Behåll storlek vid zoom av. Återgå till Linden och läs de sparade egna
-   valen igen.
+3. Öppna Linden som Robin. Kontrollera Cirkel, Diskret, Alltid synlig
+   av, Behåll storlek vid zoom av och Tonstyrka 0 procent. Välj Kvadrat
+   och vänta på sparbekräftelsen. Ladda om Alex vy: de fem egna valen
+   är kvar.
+4. Öppna Eken som Alex. Kontrollera Cirkel, Diskret, Alltid synlig av,
+   Behåll storlek vid zoom av och Tonstyrka 0 procent. Återgå till
+   Linden och läs de sparade egna valen igen.
 
 **Förväntat resultat:** Valen sparas per Skyttel-användare och hushåll och
 återkommer över återbesök, webbläsarsessioner, omstart och enheter.
@@ -180,7 +206,13 @@ förstoring i ljust och mörkt tema. Anteckna utrustning och resultat.
    Läs gruppnamnet, hjälptexten och varje aktuellt värde och tillstånd.
 2. Prova samma val med fysisk pekning och med förstoring i båda teman.
    Läs hela etiketten Nollreferens i båda navigeringslägena.
-3. Anteckna synligt fokus, kontrast, omflöde och eventuella hinder.
+3. Ändra Tonstyrka med tangentbord och fysisk pekning. Hör det aktuella
+   procentvärdet, förklaringen och inaktiveringen för Linjer. Prova 0 och
+   85 procent med planvarianterna i båda teman och bakgrunderna av och på.
+   Välj objekt och samband, läs deras text och kontrollera att symboler,
+   markering och fokus fortfarande går att använda. Använd de namngivna
+   koordinaterna för att förstå positionen utan att urskilja färger.
+4. Anteckna synligt fokus, kontrast, omflöde och eventuella hinder.
 
 **Förväntat resultat:** Användaren kan förstå och ändra samma personliga
 val utan att urskilja färger eller använda visuell navigering i kartan.

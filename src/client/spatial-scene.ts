@@ -9,6 +9,7 @@ import {
   zeroReferencePlanes,
   zeroReferencePoint,
 } from './zero-reference.js';
+import { projectDepthPatches } from './zero-reference-depth.js';
 
 export type ProjectedPoint = {
   id: string;
@@ -47,6 +48,9 @@ export function spatialScene(
   let reference: ReturnType<typeof zeroReference> | undefined;
   let referenceKey = '';
   let referenceVisible = false;
+  let referenceTint = 0;
+  let referenceVariant: ViewSettings['zeroReferenceVariant'] = 'circle';
+  let referenceTheme: 'light' | 'dark' = 'dark';
   let referenceLabels: { id: string; text: string; position: Position }[] = [];
   sky.background = new Color('#132e25');
   const skyCamera = new PerspectiveCamera(45, 1, 0.1, 1000);
@@ -551,6 +555,10 @@ export function spatialScene(
       // until this visit. Fit it before recording reference zoom distances.
       if (needsFrame && canvas.clientWidth && canvas.clientHeight) reset();
       settings = value;
+      if (referenceTint !== value.zeroReferenceTint) projectionRevision++;
+      referenceTint = value.zeroReferenceTint;
+      referenceVariant = value.zeroReferenceVariant;
+      referenceTheme = theme;
       const nextReferenceKey = `${theme}:${value.zeroReferenceVariant}:${value.zeroReferenceWeight}`;
       if (referenceKey !== nextReferenceKey) {
         if (reference) reference.configure(value, theme);
@@ -604,6 +612,18 @@ export function spatialScene(
       painted = false;
       projectionRevision++;
       draw();
+    },
+    referenceDepthPatches() {
+      return reference && referenceVisible && referenceTint > 0
+        ? projectDepthPatches(
+            reference,
+            { zeroReferenceVariant: referenceVariant },
+            referenceTheme,
+            camera,
+            canvas.clientWidth,
+            canvas.clientHeight,
+          )
+        : [];
     },
     beginCameraGesture: gestures.beginTouch,
     position(id: string): Position | null {

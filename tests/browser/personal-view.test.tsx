@@ -1,11 +1,12 @@
 import { cleanup, render } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { FormLeaveProvider } from '../../src/client/FormLeave.js';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
 import { openMap, openTable } from '../support/workspace-browser.js';
 import '../../src/client/styles.css';
+import type { MapState } from '../../src/shared/map.js';
 import { defaultViewSettings, type PersonalView } from '../../src/shared/personal-view.js';
 
 const state = {
@@ -26,10 +27,10 @@ const state = {
   draft: { version: 0, changes: [] },
 };
 
-function service(mapState = state) {
+function service(mapState: MapState = state, positions: PersonalView['positions'] = []) {
   let view: PersonalView = {
     contentVersion: 1,
-    positions: [],
+    positions,
     settings: { ...defaultViewSettings, background: false, version: 0 },
   };
   let failure: 'network' | 'conflict' | 'denied' | 'uncertain' | null = null;
@@ -129,6 +130,100 @@ async function open(selectObject = true) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+test('tint retains values through delayed and failed saves', {
+  tags: ['technical'],
+}, async () => {
+  const server = service(
+    {
+      ...state,
+      objects: [...state.objects, { ...state.objects[0], id: 'bike', name: 'Cykeln' }],
+      relationshipTypes: [
+        {
+          id: 'uses',
+          householdId: 'home',
+          revision: 1,
+          name: 'Använder',
+          description: '',
+          forwardLabel: 'använder',
+          reverseLabel: 'används av',
+        },
+      ],
+      relationships: [
+        {
+          id: 'uses-bike',
+          householdId: 'home',
+          revision: 1,
+          typeId: 'uses',
+          sourceId: 'lamp',
+          targetId: 'bike',
+          properties: [],
+        },
+      ],
+    },
+    [
+      { id: 'lamp', x: -6, y: -4, z: -8, version: 1 },
+      { id: 'bike', x: 6, y: 3, z: 7, version: 1 },
+    ],
+  );
+  await open(false);
+  await page.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
+  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Alltid synlig', exact: true }).click();
+  await expect.poll(() => server.read().settings.zeroReferenceAlwaysVisible).toBe(true);
+  const number = page.getByRole('spinbutton', { name: 'Tonstyrka i procent', exact: true });
+  const slider = page.getByRole('slider', { name: 'Tonstyrka', exact: true });
+  let release!: () => void;
+  server.pause(
+    new Promise<void>((resolve) => {
+      release = resolve;
+    }),
+  );
+  await number.fill('23');
+  await expect.element(slider).toHaveValue('23');
+  await number.element().blur();
+  await expect.element(slider).toHaveAttribute('aria-disabled', 'true');
+  await expect.element(number).toHaveAttribute('aria-disabled', 'true');
+  expect(server.read().settings.zeroReferenceTint).toBe(0);
+  release();
+  await expect.poll(() => server.read().settings.zeroReferenceTint).toBe(23);
+  await expect.element(number).not.toHaveAttribute('aria-disabled', 'true');
+  const variant = page.getByRole('combobox', { name: 'Variant', exact: true });
+  await variant.selectOptions('lines');
+  await expect.element(number).toBeDisabled();
+  await expect.element(slider).toBeDisabled();
+  await expect.element(number).toHaveValue(23);
+  await variant.selectOptions('circle');
+  await expect.element(slider).toBeEnabled();
+  await expect.element(slider).not.toHaveAttribute('aria-disabled', 'true');
+  await slider.element().focus();
+  await userEvent.keyboard('{End}');
+  await expect.poll(() => server.read().settings.zeroReferenceTint).toBe(85);
+  await expect.element(number).toHaveValue(85);
+  await page.getByRole('button', { name: 'Tillbaka till kartan', exact: true }).click();
+  await expect
+    .element(page.getByRole('button', { name: 'Välj objekt: Lampan', exact: true }))
+    .toBeEnabled();
+  await page.getByRole('button', { name: 'Alla etiketter', exact: true }).click();
+  await expect
+    .element(
+      page.getByRole('button', { name: 'Välj samband: Lampan → använder → Cykeln', exact: true }),
+    )
+    .toBeEnabled();
+  await page.getByRole('button', { name: 'Visa verktygens namn', exact: true }).click();
+  await page.getByRole('button', { name: 'Inställningar', exact: true }).click();
+  await expect.element(number).toHaveValue(85);
+  await expect.element(slider).toHaveValue('85');
+  server.fail('uncertain');
+  await number.fill('61');
+  await number.element().blur();
+  await expect
+    .element(page.getByRole('status'))
+    .toHaveTextContent(
+      'Ändringen kunde inte bekräftas. Aktuella placeringar och inställningar visas.',
+    );
+  expect(server.read().settings.zeroReferenceTint).toBe(85);
 });
 
 test('the public household editor saves personal movement and settings and reloads its latest view', async () => {
