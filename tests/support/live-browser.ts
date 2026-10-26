@@ -16,9 +16,22 @@ export const liveBrowserFixtureSource = `
   const sentAudio = [];
   const captureChanges = [];
   const microphoneWave = new Float32Array(2048);
+  const timeline = [];
+  let droppedEvents = 0;
+  let pendingMicrophone = 0;
+  const record = (event, context) => {
+    if (timeline.length === 128) { timeline.shift(); droppedEvents++; }
+    timeline.push({
+      event, browserPerformanceMs: performance.now(), browserDateMs: Date.now(),
+      audioContextSeconds: context?.currentTime ?? null,
+      audioState: context?.state ?? null, pendingMicrophone
+    });
+  };
 
   function silentStream(tracks) {
     const context = new AudioContext();
+    record('audio-created', context);
+    context.addEventListener('statechange', () => record('audio-state', context));
     const destination = context.createMediaStreamDestination();
     const oscillator = context.createOscillator();
     const gain = context.createGain();
@@ -41,6 +54,7 @@ export const liveBrowserFixtureSource = `
       const stop = track.stop.bind(track);
       track.stop = () => {
         stop();
+        record('track-stopped', context);
         if (context.state !== 'closed') void context.close();
       };
     }
@@ -101,6 +115,7 @@ export const liveBrowserFixtureSource = `
       this.change('connected');
       this.channel.readyState = 'open';
       this.channel.dispatchEvent(new Event('open'));
+      record('channel-open');
       setTimeout(() => {
         if (this.connectionState !== 'connected') return;
         this.remoteTrack();
@@ -128,6 +143,7 @@ export const liveBrowserFixtureSource = `
       if (this.connectionState === 'closed') return;
       this.change('closed');
       this.channel.close();
+      record('peer-closed');
       for (const meter of this.meters) {
         clearInterval(meter.timer);
         meter.source.disconnect();
@@ -142,11 +158,20 @@ export const liveBrowserFixtureSource = `
     configurable: true,
     value: async () => {
       microphoneRequests++;
+      record('microphone-request');
       if (microphone === 'deny') throw new DOMException('Synthetic denied microphone', 'NotAllowedError');
       if (microphone === 'busy') throw new DOMException('Synthetic busy microphone', 'NotReadableError');
       if (microphone === 'error') throw new DOMException('Synthetic missing microphone', 'NotFoundError');
-      if (microphone === 'hold') await new Promise(resolve => { releaseMicrophone = resolve; });
-      return silentStream(microphoneTracks);
+      if (microphone === 'hold') {
+        pendingMicrophone++;
+        record('microphone-held');
+        await new Promise(resolve => { releaseMicrophone = resolve; });
+        pendingMicrophone--;
+        record('microphone-released');
+      }
+      const stream = silentStream(microphoneTracks);
+      record('microphone-ready', signals.get(microphoneTracks).context);
+      return stream;
     }
   });
   HTMLMediaElement.prototype.play = function () {
@@ -196,8 +221,17 @@ export const liveBrowserFixtureSource = `
       const signal = signals.get(source === 'microphone' ? microphoneTracks : remoteTracks);
       if (!signal) throw new Error('Missing media signal');
       signal.gain.gain.value = active ? level : 0;
+      record(active ? 'sound-start-requested' : 'sound-stop-requested', signal.context);
       void signal.context.resume();
     },
+    diagnostics: () => ({
+      timeSources: { browserPerformanceMs: 'browser-performance-may-be-simulated', browserDateMs: 'browser-date-may-be-simulated', audioContextSeconds: 'real-audio-context' },
+      timeline: [...timeline], droppedEvents, pendingMicrophone,
+      contexts: [...signals.values()].slice(-8).map(signal => ({ state: signal.context.state, audioContextSeconds: signal.context.currentTime })),
+      openPeers: peers.filter(peer => peer.connectionState !== 'closed').length,
+      liveTracks: [...microphoneTracks, ...remoteTracks].filter(track => track.readyState === 'live').length,
+      activeMeters: peers.reduce((count, peer) => count + (peer.connectionState === 'closed' ? 0 : peer.meters.length), 0)
+    }),
     stats: () => ({
       microphoneRequests,
       peers: peers.length,
@@ -232,6 +266,23 @@ declare global {
       setMicrophoneTone(frequency: number): void;
       /** The level is the sound's strength, from 0 to 1. A quiet voice when it is left out. */
       setSound(source: 'microphone' | 'remote', active: boolean, level?: number): void;
+      diagnostics(): {
+        timeSources: Record<string, string>;
+        timeline: {
+          event: string;
+          browserPerformanceMs: number;
+          browserDateMs: number;
+          audioContextSeconds: number | null;
+          audioState: string | null;
+          pendingMicrophone: number;
+        }[];
+        droppedEvents: number;
+        pendingMicrophone: number;
+        contexts: { state: string; audioContextSeconds: number }[];
+        openPeers: number;
+        liveTracks: number;
+        activeMeters: number;
+      };
       stats(): {
         microphoneRequests: number;
         peers: number;

@@ -11,6 +11,7 @@ export const productionInputs = [
   '.node-version',
   'scripts/install-repository-npm.mjs',
   'scripts/testing/run-with-test-environment.py',
+  'scripts/testing/dependency-environment.mjs',
   'tsconfig.json',
   'tsconfig.server.json',
   'vite.config.ts',

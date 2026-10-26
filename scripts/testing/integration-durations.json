@@ -1,0 +1,573 @@
+{
+  "version": 1,
+  "groups": 4,
+  "baseline": {
+    "commit": "5a748df8277110789e2492f7a652bd645d468ef4",
+    "run": 40320869902,
+    "attempt": 2,
+    "job": 121605817645,
+    "method": "Elapsed time between sequential line-reporter test starts, ending at the test step completion; includes fixture and runner overhead."
+  },
+  "files": {
+    "tests/integration/access-onboarding.spec.ts": {
+      "seconds": 14.386,
+      "tests": 5
+    },
+    "tests/integration/access.spec.ts": {
+      "seconds": 1.273,
+      "tests": 6
+    },
+    "tests/integration/application-error.spec.ts": {
+      "seconds": 0.816,
+      "tests": 1
+    },
+    "tests/integration/assistant-advanced.spec.ts": {
+      "seconds": 24.518,
+      "tests": 5
+    },
+    "tests/integration/assistant-map.spec.ts": {
+      "seconds": 32.904,
+      "tests": 5
+    },
+    "tests/integration/assistant-work.spec.ts": {
+      "seconds": 15.045,
+      "tests": 4
+    },
+    "tests/integration/assistants.spec.ts": {
+      "seconds": 14.919,
+      "tests": 8
+    },
+    "tests/integration/background-accessibility.spec.ts": {
+      "seconds": 68.907,
+      "tests": 2
+    },
+    "tests/integration/background-appearance.spec.ts": {
+      "seconds": 123.284,
+      "tests": 2
+    },
+    "tests/integration/background-ocean.spec.ts": {
+      "seconds": 325.719,
+      "tests": 2
+    },
+    "tests/integration/background-reduced-motion.spec.ts": {
+      "seconds": 211.292,
+      "tests": 2
+    },
+    "tests/integration/background-stability.spec.ts": {
+      "seconds": 154.501,
+      "tests": 1
+    },
+    "tests/integration/bootstrap.spec.ts": {
+      "seconds": 6.615,
+      "tests": 4
+    },
+    "tests/integration/browser-binding.spec.ts": {
+      "seconds": 8.719,
+      "tests": 15
+    },
+    "tests/integration/changed-removal.spec.ts": {
+      "seconds": 5.194,
+      "tests": 2
+    },
+    "tests/integration/conflict-continuity.spec.ts": {
+      "seconds": 37.226,
+      "tests": 21
+    },
+    "tests/integration/conflict-definition-restoration.spec.ts": {
+      "seconds": 79.622,
+      "tests": 10
+    },
+    "tests/integration/conflict-external-corrections.spec.ts": {
+      "seconds": 13.82,
+      "tests": 4
+    },
+    "tests/integration/conflict-properties.spec.ts": {
+      "seconds": 16.819,
+      "tests": 7
+    },
+    "tests/integration/conflict-special.spec.ts": {
+      "seconds": 22.982,
+      "tests": 14
+    },
+    "tests/integration/connected-work.spec.ts": {
+      "seconds": 38.295,
+      "tests": 2
+    },
+    "tests/integration/contract-forms.spec.ts": {
+      "seconds": 19.018,
+      "tests": 5
+    },
+    "tests/integration/contract-relationships.spec.ts": {
+      "seconds": 18.687,
+      "tests": 1
+    },
+    "tests/integration/conversation-accessibility.spec.ts": {
+      "seconds": 21.623,
+      "tests": 6
+    },
+    "tests/integration/conversation-audit.spec.ts": {
+      "seconds": 29.29,
+      "tests": 4
+    },
+    "tests/integration/conversation-capacity.spec.ts": {
+      "seconds": 16.243,
+      "tests": 5
+    },
+    "tests/integration/conversation-consent.spec.ts": {
+      "seconds": 14.168,
+      "tests": 4
+    },
+    "tests/integration/conversation-context.spec.ts": {
+      "seconds": 33.4,
+      "tests": 3
+    },
+    "tests/integration/conversation-draft.spec.ts": {
+      "seconds": 17.92,
+      "tests": 7
+    },
+    "tests/integration/conversation-help.spec.ts": {
+      "seconds": 7.928,
+      "tests": 2
+    },
+    "tests/integration/conversation-notices.spec.ts": {
+      "seconds": 38.832,
+      "tests": 15
+    },
+    "tests/integration/conversation-preparation.spec.ts": {
+      "seconds": 45.785,
+      "tests": 3
+    },
+    "tests/integration/conversation-questions.spec.ts": {
+      "seconds": 55.754,
+      "tests": 10
+    },
+    "tests/integration/conversation-queue.spec.ts": {
+      "seconds": 17.718,
+      "tests": 5
+    },
+    "tests/integration/conversation-settings.spec.ts": {
+      "seconds": 36.578,
+      "tests": 14
+    },
+    "tests/integration/conversation-summary.spec.ts": {
+      "seconds": 34.475,
+      "tests": 7
+    },
+    "tests/integration/conversation-voice-text.spec.ts": {
+      "seconds": 12.087,
+      "tests": 4
+    },
+    "tests/integration/conversation-widths.spec.ts": {
+      "seconds": 29.453,
+      "tests": 7
+    },
+    "tests/integration/cookie-storage-form.spec.ts": {
+      "seconds": 8.24,
+      "tests": 7
+    },
+    "tests/integration/cookie-storage.spec.ts": {
+      "seconds": 9.536,
+      "tests": 8
+    },
+    "tests/integration/costs.spec.ts": {
+      "seconds": 26.262,
+      "tests": 6
+    },
+    "tests/integration/database-restore.spec.ts": {
+      "seconds": 8.095,
+      "tests": 2
+    },
+    "tests/integration/database-setup.spec.ts": {
+      "seconds": 20.277,
+      "tests": 5
+    },
+    "tests/integration/definition-removal.spec.ts": {
+      "seconds": 18.712,
+      "tests": 3
+    },
+    "tests/integration/draft-conflicts.spec.ts": {
+      "seconds": 138.692,
+      "tests": 30
+    },
+    "tests/integration/draft-creation.spec.ts": {
+      "seconds": 39.437,
+      "tests": 6
+    },
+    "tests/integration/draft-removal.spec.ts": {
+      "seconds": 106.947,
+      "tests": 17
+    },
+    "tests/integration/draft-review.spec.ts": {
+      "seconds": 15.278,
+      "tests": 7
+    },
+    "tests/integration/draft-save.spec.ts": {
+      "seconds": 24.316,
+      "tests": 11
+    },
+    "tests/integration/draft-status.spec.ts": {
+      "seconds": 56.813,
+      "tests": 13
+    },
+    "tests/integration/family.spec.ts": {
+      "seconds": 23.334,
+      "tests": 5
+    },
+    "tests/integration/free-object-properties.spec.ts": {
+      "seconds": 8.245,
+      "tests": 2
+    },
+    "tests/integration/free-relationship-properties.spec.ts": {
+      "seconds": 8.521,
+      "tests": 2
+    },
+    "tests/integration/history.spec.ts": {
+      "seconds": 14.023,
+      "tests": 10
+    },
+    "tests/integration/household-erasure-preparation.spec.ts": {
+      "seconds": 1.291,
+      "tests": 1
+    },
+    "tests/integration/household-erasure.spec.ts": {
+      "seconds": 71.909,
+      "tests": 20
+    },
+    "tests/integration/household-export-ui.spec.ts": {
+      "seconds": 36.587,
+      "tests": 15
+    },
+    "tests/integration/household-import-backgrounds.spec.ts": {
+      "seconds": 39.646,
+      "tests": 1
+    },
+    "tests/integration/household-import-cancel.spec.ts": {
+      "seconds": 14.951,
+      "tests": 5
+    },
+    "tests/integration/household-import-definitions.spec.ts": {
+      "seconds": 9.774,
+      "tests": 1
+    },
+    "tests/integration/household-import-discovery.spec.ts": {
+      "seconds": 21.023,
+      "tests": 4
+    },
+    "tests/integration/household-import-history.spec.ts": {
+      "seconds": 10.155,
+      "tests": 1
+    },
+    "tests/integration/household-import-properties.spec.ts": {
+      "seconds": 7.054,
+      "tests": 2
+    },
+    "tests/integration/household-import-recovery.spec.ts": {
+      "seconds": 3.238,
+      "tests": 1
+    },
+    "tests/integration/household-import-settings.spec.ts": {
+      "seconds": 11.02,
+      "tests": 2
+    },
+    "tests/integration/household-import-ui.spec.ts": {
+      "seconds": 7.884,
+      "tests": 2
+    },
+    "tests/integration/household-owners-ui.spec.ts": {
+      "seconds": 11.171,
+      "tests": 1
+    },
+    "tests/integration/household-reading.spec.ts": {
+      "seconds": 34.692,
+      "tests": 8
+    },
+    "tests/integration/household-recovery-accessibility.spec.ts": {
+      "seconds": 67.663,
+      "tests": 4
+    },
+    "tests/integration/household-recovery-preparation.spec.ts": {
+      "seconds": 3.84,
+      "tests": 4
+    },
+    "tests/integration/household-recovery.spec.ts": {
+      "seconds": 11.602,
+      "tests": 1
+    },
+    "tests/integration/household-table.spec.ts": {
+      "seconds": 16.475,
+      "tests": 5
+    },
+    "tests/integration/household-work-preparation.spec.ts": {
+      "seconds": 12.087,
+      "tests": 1
+    },
+    "tests/integration/household-work.spec.ts": {
+      "seconds": 31.524,
+      "tests": 9
+    },
+    "tests/integration/invitations.spec.ts": {
+      "seconds": 1.47,
+      "tests": 6
+    },
+    "tests/integration/large-map.spec.ts": {
+      "seconds": 22.582,
+      "tests": 1
+    },
+    "tests/integration/lifecycle.spec.ts": {
+      "seconds": 29.96,
+      "tests": 6
+    },
+    "tests/integration/linking.spec.ts": {
+      "seconds": 13.226,
+      "tests": 15
+    },
+    "tests/integration/login-binding-reset.spec.ts": {
+      "seconds": 4.753,
+      "tests": 2
+    },
+    "tests/integration/manual-mcp-preparation.spec.ts": {
+      "seconds": 2.344,
+      "tests": 1
+    },
+    "tests/integration/map-camera.spec.ts": {
+      "seconds": 24.914,
+      "tests": 7
+    },
+    "tests/integration/map-exploration.spec.ts": {
+      "seconds": 26.781,
+      "tests": 6
+    },
+    "tests/integration/map-navigation.spec.ts": {
+      "seconds": 73.348,
+      "tests": 19
+    },
+    "tests/integration/map-selection-details.spec.ts": {
+      "seconds": 11.049,
+      "tests": 4
+    },
+    "tests/integration/map-selection.spec.ts": {
+      "seconds": 15.509,
+      "tests": 5
+    },
+    "tests/integration/map-workflows.spec.ts": {
+      "seconds": 43.959,
+      "tests": 10
+    },
+    "tests/integration/map.spec.ts": {
+      "seconds": 13.129,
+      "tests": 3
+    },
+    "tests/integration/membership-ui.spec.ts": {
+      "seconds": 50.218,
+      "tests": 9
+    },
+    "tests/integration/microphone-press.spec.ts": {
+      "seconds": 28.463,
+      "tests": 9
+    },
+    "tests/integration/mobile-conversation.spec.ts": {
+      "seconds": 21.363,
+      "tests": 11
+    },
+    "tests/integration/object-actions.spec.ts": {
+      "seconds": 1.725,
+      "tests": 1
+    },
+    "tests/integration/object-builtins.spec.ts": {
+      "seconds": 16.262,
+      "tests": 5
+    },
+    "tests/integration/object-dialog.spec.ts": {
+      "seconds": 23.536,
+      "tests": 13
+    },
+    "tests/integration/object-icons.spec.ts": {
+      "seconds": 12.374,
+      "tests": 5
+    },
+    "tests/integration/object-list-flow.spec.ts": {
+      "seconds": 90.747,
+      "tests": 1
+    },
+    "tests/integration/object-list.spec.ts": {
+      "seconds": 33.424,
+      "tests": 5
+    },
+    "tests/integration/object-removal-suppression.spec.ts": {
+      "seconds": 2.002,
+      "tests": 1
+    },
+    "tests/integration/object-search.spec.ts": {
+      "seconds": 33.49,
+      "tests": 6
+    },
+    "tests/integration/object-types.spec.ts": {
+      "seconds": 16.654,
+      "tests": 5
+    },
+    "tests/integration/operations.spec.ts": {
+      "seconds": 15.446,
+      "tests": 7
+    },
+    "tests/integration/personal-view.spec.ts": {
+      "seconds": 99.124,
+      "tests": 12
+    },
+    "tests/integration/policy-contact.spec.ts": {
+      "seconds": 0.981,
+      "tests": 1
+    },
+    "tests/integration/profile-image-types.spec.ts": {
+      "seconds": 5.291,
+      "tests": 1
+    },
+    "tests/integration/profile-image-work.spec.ts": {
+      "seconds": 32.816,
+      "tests": 11
+    },
+    "tests/integration/profile-images.spec.ts": {
+      "seconds": 11.498,
+      "tests": 3
+    },
+    "tests/integration/property-reading.spec.ts": {
+      "seconds": 3.132,
+      "tests": 2
+    },
+    "tests/integration/relationship-dialog-accessibility.spec.ts": {
+      "seconds": 3.277,
+      "tests": 2
+    },
+    "tests/integration/relationship-dialog.spec.ts": {
+      "seconds": 24.956,
+      "tests": 13
+    },
+    "tests/integration/relationship-fields.spec.ts": {
+      "seconds": 9.901,
+      "tests": 3
+    },
+    "tests/integration/relationship-outcome-absence.spec.ts": {
+      "seconds": 6.344,
+      "tests": 2
+    },
+    "tests/integration/relationship-types.spec.ts": {
+      "seconds": 18.175,
+      "tests": 5
+    },
+    "tests/integration/remembered-login.spec.ts": {
+      "seconds": 5.967,
+      "tests": 9
+    },
+    "tests/integration/remembered-revocation.spec.ts": {
+      "seconds": 6.792,
+      "tests": 11
+    },
+    "tests/integration/save-check.spec.ts": {
+      "seconds": 28.281,
+      "tests": 9
+    },
+    "tests/integration/session-inactivity.spec.ts": {
+      "seconds": 6.624,
+      "tests": 4
+    },
+    "tests/integration/settings-profile.spec.ts": {
+      "seconds": 23.863,
+      "tests": 11
+    },
+    "tests/integration/spatial.spec.ts": {
+      "seconds": 40.127,
+      "tests": 10
+    },
+    "tests/integration/stale-relationships.spec.ts": {
+      "seconds": 5.266,
+      "tests": 2
+    },
+    "tests/integration/startup.spec.ts": {
+      "seconds": 11.408,
+      "tests": 6
+    },
+    "tests/integration/storage-consent-export.spec.ts": {
+      "seconds": 1.446,
+      "tests": 2
+    },
+    "tests/integration/storage-consent.spec.ts": {
+      "seconds": 13.2,
+      "tests": 8
+    },
+    "tests/integration/storage-login-offer.spec.ts": {
+      "seconds": 5.385,
+      "tests": 2
+    },
+    "tests/integration/storage-result-recovery.spec.ts": {
+      "seconds": 14.312,
+      "tests": 6
+    },
+    "tests/integration/task-delivery.spec.ts": {
+      "seconds": 33.096,
+      "tests": 4
+    },
+    "tests/integration/text-assistant.spec.ts": {
+      "seconds": 32.361,
+      "tests": 8
+    },
+    "tests/integration/text-button-status.spec.ts": {
+      "seconds": 17.899,
+      "tests": 6
+    },
+    "tests/integration/text-task-deadlines.spec.ts": {
+      "seconds": 0.222,
+      "tests": 1
+    },
+    "tests/integration/text-view.spec.ts": {
+      "seconds": 11.508,
+      "tests": 4
+    },
+    "tests/integration/theme-preference.spec.ts": {
+      "seconds": 10.661,
+      "tests": 9
+    },
+    "tests/integration/transport-controls.spec.ts": {
+      "seconds": 8.405,
+      "tests": 1
+    },
+    "tests/integration/type-change.spec.ts": {
+      "seconds": 22.172,
+      "tests": 8
+    },
+    "tests/integration/usability.spec.ts": {
+      "seconds": 17.28,
+      "tests": 9
+    },
+    "tests/integration/voice-assistant.spec.ts": {
+      "seconds": 95.528,
+      "tests": 9
+    },
+    "tests/integration/voice-box.spec.ts": {
+      "seconds": 73.886,
+      "tests": 11
+    },
+    "tests/integration/voice-controls-preparation.spec.ts": {
+      "seconds": 77.896,
+      "tests": 4
+    },
+    "tests/integration/voice-errors.spec.ts": {
+      "seconds": 14.79,
+      "tests": 8
+    },
+    "tests/integration/workspace-panels.spec.ts": {
+      "seconds": 26.458,
+      "tests": 6
+    },
+    "tests/integration/workspace-preparation.spec.ts": {
+      "seconds": 2.304,
+      "tests": 2
+    },
+    "tests/integration/workspace-shell.spec.ts": {
+      "seconds": 22.913,
+      "tests": 8
+    },
+    "tests/integration/zero-reference-settings.spec.ts": {
+      "seconds": 16.945,
+      "tests": 2
+    }
+  }
+}

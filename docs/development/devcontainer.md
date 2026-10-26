@@ -255,7 +255,7 @@ From the repository root, install the pinned npm and dependencies:
 
 ```sh
 node scripts/install-repository-npm.mjs
-npm ci
+npm run deps:prepare
 npx playwright install --with-deps chromium
 cp -n .env.example .env.local
 chmod 600 .env.local
@@ -284,6 +284,41 @@ npm run dev:all
 Follow the same provider registration and administrator steps above.
 On the host, restart the development command after editing the file;
 there is no container to recreate. Keep ports 3300 and 5173 available.
+
+## Prepare an additional worktree
+
+From the selected checkout's root, using the repository's Node.js version
+and pinned npm, run:
+
+```sh
+node scripts/install-repository-npm.mjs
+npm run deps:prepare
+npm run test:env -- playwright install chromium
+```
+
+Preparation works before project dependencies are installed. It runs
+`npm ci --include=dev` against this checkout's existing lockfile and validates
+the result. It replaces this checkout's dependency contents while preserving
+the directory itself, including a devcontainer volume mount. It preserves
+the lockfile, private configuration and application data. It needs neither
+provider credentials nor database setup. CI and devcontainer creation
+continue to use `npm ci`.
+
+Supported installations have a checkout-local `node_modules` directory or
+a dependency volume mounted at that path for that checkout. npm's internal
+package and executable symlinks are supported when their resolved targets
+stay within that directory and match the locked packages. A top-level
+`node_modules` symlink to another installation is unsupported. Preparation
+refuses that alias; inspect its target and remove only the symlink before
+rerunning preparation. Other checkout dependency directories remain intact.
+
+Preparation and verification share the process lock described in the
+[testing guide](testing.md). Verification checks tool versions, direct locked
+dependencies, executable links and browser/coverage tool resolution before
+starting work; it does not install or repair anything. Use the Node range
+in `engines` and npm pin in `packageManager` when a tool-version check fails.
+Use `deps:prepare` for missing or inconsistent dependencies, reserving
+`purge:install` for intentional dependency and lockfile maintenance.
 
 ## Optional assistant access
 
@@ -325,8 +360,9 @@ A normal container stop/start or application restart preserves those contents.
 The same Compose project retains dependencies, editor state, `~/.config`,
 Claude Code's `~/.claude`, and `/home/vscode/worktrees` in named volumes
 across rebuilds.
-Install dependencies in each additional Git worktree. Worktrees that you
-create manually can go in `/home/vscode/worktrees`. Changing profiles or the
+Follow [worktree preparation](#prepare-an-additional-worktree) for each
+additional checkout. Worktrees that you create manually can go in
+`/home/vscode/worktrees`. Changing profiles or the
 Compose project name selects different volumes; removing volumes deletes
 their contents.
 
@@ -353,5 +389,6 @@ For container startup failures, use **Dev Containers: Show Container Log**.
 For application failures, inspect its terminal, private environment settings,
 and database permissions. Check `http://localhost:5173/healthz` for
 `{"status":"ok"}`. A healthy response does not verify provider credentials;
-test a fresh sign-in. Run `npm ci` inside the container for missing or
-incompatible dependencies; keep host `node_modules` out of Linux containers.
+test a fresh sign-in. Run `npm run deps:prepare` inside the container for
+missing or incompatible dependencies; keep host `node_modules` out of Linux
+containers.

@@ -8,6 +8,7 @@ import type {
   TestError,
   TestResult,
 } from '@playwright/test/reporter';
+import { executionContext, executionEvidence, testIdentity } from './execution-evidence.js';
 import { type ResourceSample, sampleResources } from './system-resources.js';
 
 /** Keep runner and fixture-server output beside retained browser failure traces. */
@@ -17,6 +18,22 @@ export default class DiagnosticsReporter implements Reporter {
   private timer: ReturnType<typeof setInterval> | undefined;
   private previous: ResourceSample | undefined;
   private active = new Map<string, string>();
+  private context: ReturnType<typeof executionContext> | undefined;
+  private directory = '';
+  private sequence = 0;
+  private orders = new Map<TestResult, { sequence: number; previousTest: string | null }>();
+  private previousTests = new Map<number, string>();
+  private warned = false;
+
+  private retain(operation: () => void) {
+    try {
+      operation();
+    } catch {
+      if (!this.warned)
+        console.error('Test diagnostics unavailable; original test outcome is unchanged.');
+      this.warned = true;
+    }
+  }
 
   private sample() {
     try {
@@ -32,22 +49,32 @@ export default class DiagnosticsReporter implements Reporter {
   }
 
   private write(chunk: string | Buffer) {
-    if (this.log) appendFileSync(this.log, chunk);
+    if (this.log) this.retain(() => appendFileSync(this.log, chunk));
   }
 
   onBegin(config: FullConfig) {
-    const directory = join(config.projects[0].outputDir, 'diagnostics');
-    mkdirSync(directory, { recursive: true });
-    this.log = join(directory, 'runner.log');
-    writeFileSync(this.log, 'Skyttel integration diagnostics\n');
-    this.resources = join(directory, 'resources.jsonl');
-    writeFileSync(this.resources, '');
-    this.sample();
-    this.timer = setInterval(() => this.sample(), 5000);
-    this.timer.unref();
+    this.retain(() => {
+      const directory = join(config.projects[0].outputDir, 'diagnostics');
+      this.directory = directory;
+      mkdirSync(directory, { recursive: true });
+      this.log = join(directory, 'runner.log');
+      writeFileSync(this.log, 'Skyttel integration diagnostics\n');
+      this.resources = join(directory, 'resources.jsonl');
+      writeFileSync(this.resources, '');
+      writeFileSync(join(directory, 'executions.jsonl'), '');
+      this.context = executionContext(config);
+      this.sample();
+      this.timer = setInterval(() => this.sample(), 5000);
+      this.timer.unref();
+    });
   }
 
-  onTestBegin(test: TestCase) {
+  onTestBegin(test: TestCase, result: TestResult) {
+    this.orders.set(result, {
+      sequence: ++this.sequence,
+      previousTest: this.previousTests.get(result.workerIndex) ?? null,
+    });
+    this.previousTests.set(result.workerIndex, testIdentity(test).key);
     this.active.set(test.id, test.titlePath().filter(Boolean).join(' > '));
   }
 
@@ -60,6 +87,22 @@ export default class DiagnosticsReporter implements Reporter {
   }
 
   onTestEnd(test: TestCase, result: TestResult) {
+    this.retain(() => {
+      if (this.context)
+        appendFileSync(
+          join(this.directory, 'executions.jsonl'),
+          `${JSON.stringify(
+            executionEvidence(
+              this.context,
+              test,
+              result,
+              this.orders.get(result) ?? { sequence: ++this.sequence, previousTest: null },
+              this.directory,
+            ),
+          )}\n`,
+        );
+    });
+    this.orders.delete(result);
     if (['failed', 'timedOut', 'interrupted'].includes(result.status)) {
       this.sample();
       const sample = this.previous;

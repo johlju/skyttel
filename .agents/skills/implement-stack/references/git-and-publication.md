@@ -9,12 +9,12 @@
   the version that started it.
 - All PR branches must be in the target repository. Resolve both the push
   remote and `gh repo view --json nameWithOwner`; gh-stack's `--remote` does
-  not override its API context. The fork-based `push-pr` skill does not fit
-  this publication path.
+  not override its API context.
 - Check `gh api 'repos/<owner>/<repo>/stacks?per_page=1'` for native stack
   availability. Read access alone does not establish publication permission.
-- Preserve other stacks and ongoing operations in the shared gh-stack catalog.
-  Use unique batch branches. `init --base <target>` leaves an existing local
+- Apply [catalog coordination](state-and-recovery.md#catalog-coordination)
+  around shared gh-stack operations. Use Spec-qualified branch, worktree and
+  recovery-ref names. `init --base <target>` leaves an existing local
   target alone, but can fetch and create it if absent; recheck the captured
   target after initialization.
 
@@ -111,12 +111,16 @@ would add pushes and generated PR text; `sync` also reconciles remote state.
    gh api repos/<owner>/<repo>/stacks/<stack-number>
    ```
 
-5. Wait for required CI on every published head. Route failures through
+5. Use [CI monitoring](ci-monitoring.md) to wait for required CI on every
+   published head. Route failures through
    [Repair a failing layer](state-and-recovery.md#repair-a-failing-layer).
    Once all evidence is valid, mark each PR ready with
    `gh pr ready <pr> --repo <owner/repo>`. Read back the complete stack again
-   and account for required checks triggered by readiness. Report outstanding
-   human approvals separately from required CI.
+   and start the watcher's ready phase with the applicable readiness-triggered
+   checks. Require fresh successful evidence after each readiness-triggered
+   check's `readyAfter` boundary. Checks without `readyAfter` may reuse
+   successful evidence from the same head. Report outstanding human approvals
+   separately from required CI.
 
 Completion: exact intended PRs, order, heads, and bases are confirmed;
 every PR is non-draft with valid required checks. For later changes, restore

@@ -127,11 +127,43 @@ remains open.
 - Follow [publication](references/git-and-publication.md#publish) to create
   and verify one ready PR per nonempty layer in a native GitHub stack.
 - Record the ordered PR links, starting commit, reviewed target and layer commits,
-  verification, review results, and journal location on the **Spec**. Report
-  outstanding human approvals and return the PR stack to the user.
-- Release the local writer claim; retain the journal, worktrees, and recovery
-  refs for follow-up. Leave the **Spec** open for the separate merge workflow.
+  verification, review results, and journal location on the **Spec**.
+- Follow [retention and manual cleanup](references/journal-lifecycle.md#retention-and-manual-cleanup)
+  when releasing the writer claim and reporting the journal location.
+  Leave the **Spec** open for the separate merge workflow.
+- Prepare the development handoff from the final verified head, including
+  repair layers. Inspect `git worktree list --porcelain`, the selected directory's
+  HEAD and working-tree status. Prefer running in its existing worktree; any
+  checkout must respect branch ownership and preserve uncommitted changes.
+  Account for local changes before describing the directory as the verified
+  result. Locate it independently of the journal's storage location.
+- Derive required preparation and launch commands from that revision's
+  `package.json`, development scripts and environment configuration.
+  Check dependencies and available private configuration without exposing
+  secrets. When ignored configuration is absent from the selected worktree,
+  locate the existing file and export its absolute path through
+  `SKYTTEL_DEV_ENV_FILE` (or the revision's equivalent) before every command
+  sequence, including separately offered setup. Respect exported environment
+  precedence; resolve relative configuration and data paths against the intended
+  working directory so changing directories preserves the selected data.
+- Use existing data by default. Separate required preparation from optional
+  reset or seeding; include reset commands only when requested. Explain their
+  data and session deletion effects and confirm the selected database path.
+  Check startup's migration behavior before adding a separate migration step.
+- Validate head, paths, configuration scope, command availability and data
+  preservation for both the main workspace with local configuration and a
+  separate worktree with configuration elsewhere. Use read-only checks for
+  user data; distinguish static validation, executed commands, application
+  launch and browser verification in the report.
+- Return the PR stack, outstanding human approvals and the PR/branch and commit
+  containing the complete result. End the response with a copyable shell
+  sequence using actual, safely quoted paths and applicable repository commands.
+  Include the browser URL or port-forwarding step and shutdown instructions
+  immediately before it or as shell comments. State any missing configuration
+  or prerequisite and the user action needed before launch; claim a working
+  launch only when verified.
 
-Completion criterion: publication checks pass for every intended PR. One
-layer yields one ordinary PR; an already satisfied Spec needs no artificial
-changes.
+Completion criterion: publication checks pass for every intended PR, and the
+final response identifies the complete head and ends with validated launch
+instructions or explicit prerequisites blocking them. One layer yields one
+ordinary PR; an already satisfied Spec needs no artificial changes.

@@ -22,7 +22,7 @@ workflow to local verification; preserve CI's configured test scope.
 - Include user-requested spec paths, scenarios and reported failures as
   selection inputs. For a test-repair request without code changes, use
   those inputs as the initial scope.
-- Read repository npm scripts, runner configuration and testing guidance
+- Read repository npm scripts, runner configuration and test-environment scripts
   to identify supported spec filters and runtime variants.
 
 ### 2. Trace impact
@@ -48,6 +48,14 @@ workflow to local verification; preserve CI's configured test scope.
 - Track scenarios, commands, runtime variants, results and the code and
   configuration tested. Preserve completed results from partial runs;
   record interrupted and unexecuted scenarios separately.
+- For intermittent failures, preserve stable test identity, original and later
+  execution IDs, commit/dirty state, command/selection, runtime/fonts, tool
+  versions, order/seed, outcomes and retained artifact references. Mark missing
+  context unavailable. Keep facts, hypotheses and confirmed causes distinct.
+- Select each reproduction from an explicit hypothesis, finite attempt budget
+  and stop condition. Record its result and next step at the limit. Reuse valid
+  passing verification without treating it as a confirmed cause or repair;
+  retain unresolved follow-up independently of verification status.
 - After every change, invalidate earlier passes for every affected scenario.
   Include implementation, test, helper, dependency and runtime configuration
   changes. Expected behavior preservation is not evidence of a valid pass;
@@ -83,3 +91,6 @@ workflow to local verification; preserve CI's configured test scope.
 - Return commands, reused results and untested scope for the calling
   workflow's final report. Describe only the scope actually verified.
   Require another run only for missing or invalidated passing evidence.
+- Report unresolved intermittent investigations alongside verification results,
+  including their evidence record and next step. A later pass neither erases
+  their failure evidence nor requires unrelated passing scenarios to rerun.

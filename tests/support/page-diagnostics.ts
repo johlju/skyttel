@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import { getHeapStatistics } from 'node:v8';
 import type { Page, Request, TestInfo } from '@playwright/test';
 
@@ -114,6 +115,7 @@ export async function pageDiagnostics(page: Page) {
             label: document.activeElement?.getAttribute('aria-label'),
           },
           renderer: Reflect.get(window, '__skyttelIntegrationDiagnostics'),
+          media: window.skyttelVoiceFixture?.diagnostics?.() ?? null,
         })),
       ),
       bounded(async () => {
@@ -131,11 +133,14 @@ export async function pageDiagnostics(page: Page) {
         }
       }),
     ]);
-    await info.attach('browser-diagnostics', {
-      body: JSON.stringify(
+    const path = info.outputPath('browser-diagnostics.json');
+    await writeFile(
+      path,
+      JSON.stringify(
         {
           at: new Date().toISOString(),
           elapsedMs: performance.now() - started,
+          elapsedTimeSource: 'runner-monotonic',
           url: address(page.url()),
           workerMemoryBytes: process.memoryUsage(),
           workerHeap: getHeapStatistics(),
@@ -147,6 +152,9 @@ export async function pageDiagnostics(page: Page) {
         null,
         2,
       ),
+    );
+    await info.attach('browser-diagnostics', {
+      path,
       contentType: 'application/json',
     });
   };

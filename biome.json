@@ -8,7 +8,15 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["src/**", "tests/**", "scripts/**", "*.json", "*.config.ts", "!package-lock.json"]
+    "includes": [
+      "src/**",
+      "tests/**",
+      "scripts/**",
+      ".agents/skills/implement-stack/scripts/**",
+      "*.json",
+      "*.config.ts",
+      "!package-lock.json"
+    ]
   },
   "formatter": {
     "indentStyle": "space",

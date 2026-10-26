@@ -69,13 +69,17 @@ test('CI retains test output without turning failing commands into successful te
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-ci-test-logs-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   for (const [jobName, name] of [
-    ['application', 'Workflow gate tests'],
-    ['application', 'Manual mapping'],
+    ['checks', 'Workflow gate tests'],
+    ['checks', 'Manual mapping'],
     ['unit', 'Unit coverage with CI fonts'],
     ['integration', 'Integration tests with CI fonts'],
-    ['application', 'Container checks'],
+    ['checks', 'Container checks'],
   ]) {
-    const body = job(jobName);
+    const source =
+      jobName === 'integration'
+        ? readFileSync('.github/workflows/integration-group.yml', 'utf8')
+        : workflow;
+    const body = job(jobName, source);
     const step = body.match(new RegExp(`- name: ${name}\\n((?: {8}.*\\n)+)`));
     assert.ok(step, `Missing ${name}`);
     const script = step[1].match(/ {8}run: \|\n((?: {10}.*\n)+)/)?.[1].replace(/^ {10}/gmu, '');
@@ -86,7 +90,7 @@ test('CI retains test output without turning failing commands into successful te
       const result = spawnSync(
         'bash',
         [
-          ...bashArguments(workflow, body, step[1]),
+          ...bashArguments(source, body, step[1]),
           '-c',
           `mkdir -p logs/tests\nnpm() { echo synthetic-fixture-error >&2; return 13; }\n${script}`,
         ],
@@ -137,26 +141,47 @@ ${command}`,
   }
 });
 
-test('independent unit and integration jobs feed an application check that rejects every incomplete result', () => {
-  for (const name of ['unit', 'integration']) {
+test('independent checks and every integration group feed a small gate that rejects incomplete results', () => {
+  for (const name of ['unit', 'checks']) {
     const body = job(name);
     assert.doesNotMatch(body, /^ {4}needs:/mu, `${name} must start independently`);
     assert.doesNotMatch(body, /^ {4}timeout-minutes:/mu);
-    assert.match(body, new RegExp(`name: ${name}-test-diagnostics-`));
   }
   assert.match(job('unit'), /npm run test:unit:ci -- --coverage/);
   assert.match(job('unit'), /- run: npm run build[\s\S]+- name: Unit coverage with CI fonts/);
-  assert.match(job('integration'), /npm run build/);
-  assert.match(job('integration'), /npm run test:integration:ci/);
+  const count = JSON.parse(
+    readFileSync('scripts/testing/integration-durations.json', 'utf8'),
+  ).groups;
+  const groupNames = Array.from({ length: count }, (_, i) => `integration-${i + 1}`);
+  for (const [i, name] of groupNames.entries()) {
+    const body = job(name);
+    assert.doesNotMatch(body, /^ {4}needs:/mu);
+    assert.match(body, /uses: .\/\.github\/workflows\/integration-group.yml/);
+    assert.match(body, new RegExp(`group: ${i + 1}\\n`));
+    assert.doesNotMatch(body, /continue-on-error|if:/);
+  }
+  const integration = job(
+    'integration',
+    readFileSync('.github/workflows/integration-group.yml', 'utf8'),
+  );
+  assert.match(integration, /npm run build/);
+  assert.match(integration, /npm run test:integration:group -- --group "\$INTEGRATION_GROUP"/);
+  assert.match(
+    integration,
+    /name: integration-test-diagnostics-group-\$\{\{ inputs.group \}\}-\$\{\{ github.run_attempt \}\}/,
+  );
+  assert.match(integration, /if: always\(\)[\s\S]+retention-days: 7/);
+  assert.match(integration, /test-results\/[\s\S]+logs\/tests\//);
   const application = job('application');
   assert.match(
-    application,
+    job('checks'),
     /- run: npx playwright install --with-deps chromium[\s\S]+- name: Workflow gate tests/,
   );
   assert.match(application, /^ {4}if: always\(\)$/mu);
   assert.match(application, /REQUIRED_RESULTS: \$\{\{ toJSON\(needs\) \}\}/);
   const required = application.match(/^ {4}needs: \[(.+)\]$/mu)?.[1].split(', ');
-  assert.deepEqual(required, ['unit', 'integration']);
+  assert.deepEqual(required, ['checks', 'unit', ...groupNames]);
+  assert.doesNotMatch(application, /npm ci|npm run|playwright install|upload-artifact/);
   const command = application.match(
     /^ {8}run: (node scripts\/security\/check-results.mjs jobs .+)$/mu,
   )?.[1];

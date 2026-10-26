@@ -11,8 +11,10 @@ description: >-
 
 ## Scope
 
-- Apply [test placement](../maintain-manual-tests/references/cases.md#test-placement)
-  when changing coverage or moving technical checks between suites.
+- Call the Skill tool with "maintain-manual-tests" when changing coverage or
+  moving technical checks between suites. Keep integration scenarios as user
+  journeys; place standalone technical checks in the appropriate unit,
+  browser or tooling suite.
 - Edit failing specs and the shared helpers they use under `tests/support/`.
   Keep helper changes limited to test setup, assertions or measurements.
   Preserve production contracts and assertions.
@@ -23,27 +25,32 @@ description: >-
 
 ## Project Setup
 
-- Read `package.json`, the Playwright configuration, and the project's testing
-  guide to identify available suites, setup steps, and commands for running a
-  suite or a single spec. Use the project's scripts and supported arguments.
+- Read `package.json`, the Playwright configuration and test-environment scripts
+  to identify suites, preparation and commands for a suite or selected case.
+  Run builds and tests through repository npm scripts and supported arguments.
 - Chunks: only when project scripts, runner configuration, or testing docs
   define integration-test chunks, read [CHUNKS.md](CHUNKS.md) before building
   the phase list. Otherwise, use the suite and spec workflow below.
-- Complete the documented test setup before running tests.
+- Complete dependency and browser preparation required by those scripts before
+  running tests. Preserve existing data and configuration.
 
 ## Workflow
 
-1. Call the Skill tool with "select-integration-tests"
-   ([SKILL.md](../select-integration-tests/SKILL.md)), supplying user-provided
+1. Call the Skill tool with "select-integration-tests", supplying user-provided
    paths, reported failures and the current change. Group its selected
    scenarios by spec file into phases; execute its required runs to collect
    failures.
 2. Pick one failing spec file.
-3. Inspect its existing failure evidence; reproduce only when needed for diagnosis.
+3. Inspect existing failure evidence. For an intermittent failure, follow
+   [intermittent investigation](references/intermittent-failures.md)
+   before another run replaces artifacts: preserve the original execution,
+   separate facts from hypotheses, and set a bounded reproduction plan.
 4. Inspect Playwright output, traces, screenshots, console errors, app-server
    logs, and available memory diagnostics.
-5. Fix the smallest test defect that explains the failure. Repair a shared
-   helper once instead of copying a corrected implementation into a spec.
+5. Fix the smallest established test defect. Repair a shared helper once
+   instead of copying a corrected implementation into a spec. If the cause
+   remains unknown at the experiment limit, retain an unresolved record with
+   the attempted experiments and specific next step; continue other phases.
 6. Call the Skill tool with "select-integration-tests" after the fix;
    execute its required runs.
 7. Repeat steps 3-6 for each failing spec file.
@@ -61,6 +68,10 @@ description: >-
 - Use Playwright locator, navigation, and state waits instead of fixed
   timeouts.
 - Treat env-only failures as setup issues before changing spec code.
+- Report execution verification separately from cause disposition. An unchanged
+  pass preserves the original intermittent failure and unresolved follow-up.
+- Keep billable provider calls subject to explicit user authorization;
+  credentials and opt-in configuration do not authorize execution.
 - Do not edit production code, including application, component, hook, runtime
   library, translation, config, migration, or seed files.
 - If a production change is required, report
