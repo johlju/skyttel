@@ -22,6 +22,7 @@ export const viewSettingsSchema = z
     zeroReferenceAlwaysVisible: z.boolean(),
     zeroReferenceOnMovement: z.boolean(),
     zeroReferenceTint: z.number().int().min(0).max(85),
+    // Keep the inert serialized field compatible with existing schema38 clients and archives.
     zeroReferenceKeepSize: z.boolean(),
   })
   .strict();

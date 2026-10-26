@@ -60,10 +60,9 @@ export function spatialScene(
   // Pointer transitions and independent pan directions belong to our gesture
   // adapter; Three retains camera projection and public orbit mathematics.
   controls.disconnect();
-  let settings: Pick<ViewSettings, 'invertX' | 'invertY' | 'zeroReferenceKeepSize'> = {
+  let settings: Pick<ViewSettings, 'invertX' | 'invertY'> = {
     invertX: false,
     invertY: false,
-    zeroReferenceKeepSize: false,
   };
   let selection: string[] = [];
   let rotating = false;
@@ -187,10 +186,6 @@ export function spatialScene(
   let projectedOverviewDistance = -1;
   function draw() {
     if (lost || rotating) return;
-    if (reference?.updateSize(settings.zeroReferenceKeepSize, controls.getDistance())) {
-      painted = false;
-      projectionRevision++;
-    }
     reference?.group.updateMatrixWorld();
     camera.updateMatrixWorld();
     // A bounded translation gives the distant sky gentle pan parallax without
@@ -557,7 +552,7 @@ export function spatialScene(
       visible = value.zeroReferenceAlwaysVisible,
     ) {
       // A scene retained while Settings is open may not have a visible canvas
-      // until this visit. Fit it before recording reference zoom distances.
+      // until this visit. Frame the layout once its dimensions are available.
       if (needsFrame && canvas.clientWidth && canvas.clientHeight) reset();
       settings = value;
       if (referenceTint !== value.zeroReferenceTint) projectionRevision++;
@@ -607,16 +602,6 @@ export function spatialScene(
       sky.background = new Color(theme === 'light' ? '#eef3f3' : '#101b29');
       draw();
       publishHistory();
-    },
-    startReferenceVisit() {
-      // The retained camera and initial label fit can differ between visits.
-      // Begin each visit at the approved extents without persisting its size.
-      const distance = controls.getDistance();
-      reference?.updateSize(false, distance);
-      reference?.updateSize(settings.zeroReferenceKeepSize, distance);
-      painted = false;
-      projectionRevision++;
-      draw();
     },
     referenceDepthPatches() {
       return reference && referenceVisible && referenceTint > 0

@@ -339,7 +339,6 @@ export function SpatialMap({
   }, [unavailable, contextLost, onAvailabilityChange]);
   const allLabels = preferences.allLabels;
   const previousLabels = useRef(false);
-  const referenceVisitActive = useRef(false);
   const labelsInitialized = useRef(false);
   const [closerLabels, setCloserLabels] = useState(false);
   const [heightHelp, setHeightHelp] = useState(false);
@@ -423,7 +422,6 @@ export function SpatialMap({
     element.addEventListener('webglcontextlost', lost);
     element.addEventListener('webglcontextrestored', restored);
     try {
-      referenceVisitActive.current = false;
       scene.current = spatialScene(
         element,
         setPoints,
@@ -468,22 +466,14 @@ export function SpatialMap({
     scene.current?.select(selectedIds);
   }, [activated, selectedIds]);
   useEffect(() => {
-    if (!activated || !personalReady) {
-      referenceVisitActive.current = false;
-      return;
-    }
+    if (!activated || !personalReady) return;
     scene.current?.configure(preferences, theme, reducedMotion, movement.referenceVisible);
-    if (!active) {
-      referenceVisitActive.current = false;
-      return;
-    }
+    if (!active) return;
     if (preferences.allLabels && !previousLabels.current) {
       if (scene.current?.openLabelView(labelsInitialized.current)) setCloserLabels(true);
     }
     labelsInitialized.current = true;
     previousLabels.current = preferences.allLabels;
-    if (!referenceVisitActive.current) scene.current?.startReferenceVisit();
-    referenceVisitActive.current = true;
   }, [
     preferences,
     activated,
@@ -1424,23 +1414,6 @@ export function SpatialMap({
                 onCommit={(zeroReferenceTint) => configure({ zeroReferenceTint })}
                 onUnsavedChange={setHasUnsavedTint}
               />
-              <label>
-                <input
-                  type="checkbox"
-                  checked={preferences.zeroReferenceKeepSize}
-                  aria-describedby={`${labelPrefix}-reference-size-help`}
-                  aria-disabled={personal?.pending || undefined}
-                  onChange={(event) => {
-                    if (!personal?.pending)
-                      configure({ zeroReferenceKeepSize: event.target.checked });
-                  }}
-                />
-                Behåll storlek vid zoom
-              </label>
-              <p id={`${labelPrefix}-reference-size-help`}>
-                Nollreferensen behåller ungefär samma storlek på skärmen när du zoomar. Objektens
-                positioner ändras inte.
-              </p>
               <p>
                 Referensen visar kartans fasta nollpunkt. Den är inget verkligt mått, golv eller
                 tak. Dina val gäller bara dig i det här hushållet.

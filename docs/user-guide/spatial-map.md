@@ -549,14 +549,10 @@ så båda reglagen för Tonstyrka är inaktiva där. Värdet finns kvar när du
 väljer ett plan igen. Färg och ton räcker inte för att avgöra ett objekts
 koordinater; läs Sidled (X), Höjd (Y) och Djup (Z) i Navigera.
 
-**Behåll storlek vid zoom** är av från början. Aktivera valet om
-nollreferensen ska behålla ungefär samma storlek på skärmen när du zoomar.
-Objektens positioner ändras inte. När du öppnar kartan eller aktiverar
-valet börjar referensen med sin fasta storlek. Därefter förstoras den i
-kartans koordinater vid utzoomning och minskas vid inzoomning. Fokus och
-kameraåterställning följer samma zoomrespons; panorering och rotation
-ändrar inte referensens utbredning. Avmarkera för att återgå till fast
-storlek. Valet är oberoende av bakgrundens **Zoomstyrka**.
+Nollreferensen har fasta mått i kartans koordinater. Den ser mindre ut när
+du zoomar ut och större när du zoomar in, med samma perspektiv som kartan.
+Zoom, fokus och kameraåterställning ändrar inte referensens mått eller
+objektens positioner. Bakgrundens **Zoomstyrka** styr bara bakgrunden.
 
 Dina val sparas för dig i det aktuella hushållet och följer med till andra
 enheter. Andra användare och hushåll har egna val. **Återställ vy** och

@@ -27,7 +27,7 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
-test('a new personal view keeps all six zero-reference preferences hidden and independent of the background', async () => {
+test('new personal views preserve reference defaults and the inert legacy field independently of the background', async () => {
   expect((await (await client.request(`${path}/view`)).json()).settings).toMatchObject({
     zeroReferenceVariant: 'circle',
     zeroReferenceWeight: 'subtle',

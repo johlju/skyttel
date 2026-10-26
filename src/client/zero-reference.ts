@@ -34,8 +34,6 @@ export function zeroReferencePoint(plane: number, u: number, v: number) {
 
 export function zeroReference(value: ZeroReferenceChoices, theme: 'light' | 'dark') {
   const group = new Group();
-  let keepSize = false;
-  let startingDistance = 1;
   const disposables: { dispose(): void }[] = [];
   function configure(value: ZeroReferenceChoices, theme: 'light' | 'dark') {
     for (const item of disposables) item.dispose();
@@ -135,14 +133,6 @@ export function zeroReference(value: ZeroReferenceChoices, theme: 'light' | 'dar
   return {
     group,
     configure,
-    updateSize(enabled: boolean, distance: number) {
-      if (!enabled || !keepSize) startingDistance = distance;
-      keepSize = enabled;
-      const scale = enabled ? distance / startingDistance : 1;
-      const changed = group.scale.x !== scale;
-      group.scale.setScalar(scale);
-      return changed;
-    },
     dispose: () => {
       for (const item of disposables) item.dispose();
     },

@@ -61,13 +61,12 @@ Det ersätter inte beständighetsprovet mot riktig server.
   },
   "reference": "Tolv kombinationer, båda teman, dator och 390 × 844.",
   "outcomes": [
-    "Förvalen är Cirkel, Diskret, båda synlighetsval av, fast storlek och 0 procent.",
+    "Förvalen är Cirkel, Diskret, båda synlighetsval av och 0 procent.",
     "Alla varianter och styrkor kan väljas med dekorativ bakgrund av.",
     "Inställningar och Navigera visar samma sparade synlighetsval.",
     "Nollreferens har synlig etikett i miniläge på liten skärm.",
     "Kamera- och rörelseåterställning behåller nollreferensens val.",
     "Tangentbordsfokus behålls efter sparande.",
-    "Behåll storlek vid zoom har läsbar hjälp och är oberoende av Zoomstyrka.",
     "Tonstyrkans talfält och reglage visar samma värde i enprocentsteg.",
     "Linjer inaktiverar båda tonreglagen med förklaring och behåller värdet.",
     "Synlig vid dragning behålls inaktivt med läsbar hjälp vid Alltid synlig."
@@ -88,9 +87,9 @@ Det ersätter inte beständighetsprovet mot riktig server.
 
 **Steg:**
 
-1. Läs förvalen Cirkel, Diskret, Alltid synlig av, Synlig vid dragning av,
-   Behåll storlek vid zoom av och Tonstyrka 0 procent. Stäng av Visa
-   bakgrund. Kontrollera att Nollreferens fortfarande går att ändra.
+1. Läs förvalen Cirkel, Diskret, Alltid synlig av, Synlig vid dragning av
+   och Tonstyrka 0 procent. Stäng av Visa bakgrund. Kontrollera att
+   Nollreferens fortfarande går att ändra.
    Läs hjälpen om dragning, flyttknappar, koordinater och musens primära
    knapp i 1,5 sekunder. Aktivera Synlig vid dragning med mellanslag,
    invänta sparandet och kontrollera att fokus är kvar.
@@ -102,9 +101,6 @@ Det ersätter inte beständighetsprovet mot riktig server.
    valet och kontrollera att fokus stannar på väljaren. Tonstyrka är 38
    procent hela tiden. Linjer gör båda tonreglagen inaktiva och visar
    förklaringen att värdet finns kvar. Planvarianterna aktiverar dem igen.
-   Läs hjälpen till Behåll storlek vid zoom, aktivera och avaktivera
-   med mellanslag i båda teman. Kontrollera att fokus är kvar.
-   Lämna valet aktiverat.
 4. Lämna Linjer och Framträdande valda. Aktivera Alltid synlig. Läs att
    Synlig vid dragning är inaktivt med markerat val och förklaring om att
    valet finns kvar. Återgå till
@@ -114,11 +110,10 @@ Det ersätter inte beständighetsprovet mot riktig server.
    etiketten Nollreferens. Fokusera reglaget och avmarkera med mellanslag.
    Kontrollera att fokus är kvar. Återgå till normal navigering och stäng.
 6. Öppna inställningarna igen. Alltid synlig är av och Synlig vid dragning
-   är aktivt och markerat. Linjer och Framträdande
-   finns kvar, Behåll storlek vid zoom är aktiverat och Tonstyrka är
-   38 procent. Slå på Visa bakgrund, ändra Zoomstyrka och välj Återställ
-   rörelse. Kontrollera att zoomstorleksvalet, Synlig vid dragning och
-   Tonstyrka är kvar.
+   är aktivt och markerat. Linjer och Framträdande finns kvar och
+   Tonstyrka är 38 procent. Slå på Visa bakgrund, ändra
+   Zoomstyrka och välj Återställ rörelse. Kontrollera att Synlig vid
+   dragning och Tonstyrka är kvar.
 
 **Förväntat resultat:** Båda ytorna visar samma val. Bakgrundens av/på,
 miniläge, skärmbredd och återställning ändrar inte referensens övriga val.
@@ -149,7 +144,7 @@ serverlagring; de ersätter inte mänsklig observation på fysiska enheter.
   },
   "reference": "Alex i två profiler, Robin i en; två hushåll och omstart.",
   "outcomes": [
-    "Alex återfår de sex egna referensvalen efter omstart.",
+    "Alex återfår de fem egna referensvalen efter omstart.",
     "En annan enhet med Alex visar samma val i Linden.",
     "Robin har egna förval och kan ändra dem utan att ändra Alex val.",
     "Alex val i Eken är separata från Linden."
@@ -161,22 +156,18 @@ serverlagring; de ersätter inte mänsklig observation på fysiska enheter.
 **Steg:**
 
 1. Välj Oval, Ursprunglig och Synlig vid dragning som Alex i Linden.
-   Aktivera sedan Alltid synlig och Behåll storlek vid zoom. Vänta på
-   sparbekräftelsen efter varje val. Ange sedan
-   Tonstyrka 23 procent, lämna talfältet och invänta sparandet. Gå till
+   Aktivera sedan Alltid synlig. Vänta på sparbekräftelsen efter varje val.
+   Ange sedan Tonstyrka 23 procent, lämna talfältet och invänta sparandet. Gå till
    kartan och öppna inställningarna igen.
-2. Starta om provinstallationen och ladda om sidan. Läs samma sex val.
+2. Starta om provinstallationen och ladda om sidan. Läs samma fem val.
    Synlig vid dragning är markerat men inaktivt med läsbar förklaring.
    Logga in som Alex på den andra enheten och läs valen i Linden.
 3. Öppna Linden som Robin. Kontrollera Cirkel, Diskret, Alltid synlig
-   av, Synlig vid dragning av, Behåll storlek vid zoom av och Tonstyrka
-   0 procent. Välj Kvadrat och vänta på sparbekräftelsen. Ladda om Alex vy:
-   de sex egna valen
-   är kvar.
+   av, Synlig vid dragning av och Tonstyrka 0 procent. Välj Kvadrat och
+   vänta på sparbekräftelsen. Ladda om Alex vy: de fem egna valen är kvar.
 4. Öppna Eken som Alex. Kontrollera Cirkel, Diskret, Alltid synlig av,
-   Synlig vid dragning av, Behåll storlek vid zoom av och Tonstyrka
-   0 procent. Återgå till
-   Linden och läs de sparade egna valen igen.
+   Synlig vid dragning av och Tonstyrka 0 procent. Återgå till Linden och
+   läs de sparade egna valen igen.
 
 **Förväntat resultat:** Valen sparas per Skyttel-användare och hushåll och
 återkommer över återbesök, webbläsarsessioner, omstart och enheter.

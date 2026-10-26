@@ -17,6 +17,7 @@ export type ViewSettings = {
   zeroReferenceAlwaysVisible: boolean;
   zeroReferenceOnMovement: boolean;
   zeroReferenceTint: number;
+  /** Legacy schema38 field retained for API/archive compatibility; has no display effect. */
   zeroReferenceKeepSize: boolean;
 };
 export const defaultViewSettings: ViewSettings = {

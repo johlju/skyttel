@@ -688,8 +688,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   Sparat resultat och historik läses genom webbläsaren efter omstart.
 - [Nollreferens](zero-reference.md): alla fyra varianter och tre visuella
   styrkor, samma sparade reglage i inställningar och normal- eller
-  mininavigering, zoomstorlek skild från bakgrundens zoomstyrka och
-  återställning samt egna val mellan användare, hushåll, sessioner och
+  mininavigering, bevarade val vid kamera- och rörelseåterställning samt
+  egna val mellan användare, hushåll, sessioner och
   enheter. Tonstyrkans synkroniserade reglage behåller värdet när Linjer
   gör dem inaktiva. Synlig vid dragning behålls när Alltid synlig
   inaktiverar valet. Automatisk visning, faktisk skärmläsare och fysisk
