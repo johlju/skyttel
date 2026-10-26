@@ -905,10 +905,10 @@ PLACERING-09.
 - Toasten ryms, försvinner och lämnar fokus på den använda kontrollen.
 - Placering och etikettval består genom vybyte utan ändrat hushållsarbete.
 
-### PLACERING-11: faktiskt uppläst sparbesked
+### PLACERING-11: faktiskt upplästa flyttbesked och sparbesked
 
-**Syfte:** NVDA eller VoiceOver läser bekräftelsen en gång per personlig
-sparning utan att avbryta pågående läsning.
+**Syfte:** NVDA eller VoiceOver skiljer senaste flyttresultat från sparande,
+fel och återhämtning utan att avbryta pågående läsning.
 
 **Användare:** Alex enligt områdets förberedelse.
 
@@ -916,7 +916,8 @@ sparning utan att avbryta pågående läsning.
 390 pixlar.
 
 **Kräver mänsklig observation:** NVDA eller VoiceOver läser bekräftelsen en gång
-per personlig sparning utan att avbryta pågående läsning.
+per personlig sparning utan att avbryta pågående läsning. Flyttresultat och
+återställd ogiltig inmatning går att skilja från sparbesked.
 
 **Separat förberedelse inför steg 4:**
 
@@ -936,11 +937,12 @@ oskickade ändringar:
 {
   "humanObservation": {
     "kind": "screen-reader",
-    "observation": "NVDA eller VoiceOver läser sparbesked, återhämtningsresultat och förlustfrågor begripligt, med användbart fokus och utan dubbla besked."
+    "observation": "NVDA eller VoiceOver läser senaste flyttresultat, ogiltig inmatning, sparbesked, återhämtningsresultat och förlustfrågor begripligt, med användbart fokus och utan dubbla besked."
   },
   "reference": "Sparade Lampan och Cykeln; faktisk skärmläsare vid 1440 och 390 pixlar.",
   "outcomes": [
     "NVDA eller VoiceOver läser bekräftelsen en gång per personlig sparning utan att avbryta pågående läsning.",
+    "Koordinatinmatning läser bara det senaste flyttresultatet efter en halv sekunds paus och förklarar återställt värde vid ogiltig inmatning.",
     "Återhämtning och båda förlustfrågorna har begripliga namn, upplästa resultat och användbart fokus."
   ],
   "evidence": [
@@ -967,6 +969,13 @@ oskickade ändringar:
 1. Starta skärmläsaren och följ PLACERING-09 steg 1–3 en gång.
 2. Lyssna på båda bekräftelserna. Kontrollera att knapparnas fokus stannar
    kvar när toasten försvinner. Anteckna hjälpmedel, version och resultat.
+   Välj Lampan och **Navigera**. Skriv snabbt **1,005** och sedan **2,005**
+   i **Sidled (X)**. Gör en halv sekunds paus. Lyssna efter det senaste
+   flyttresultatet för Lampan och X-värdet **2.01**, skilt från sparbeskeden.
+   Skriv **-** i samma fält och flytta fokus till **Höjd (Y)**. Lyssna på
+   förklaringen och det återställda X-värdet **2.01**. Prova ett giltigt
+   Y-värde utan att rätta X igen. Växla till miniläge och tillbaka och stäng
+   Navigera. Kontrollera att flyttbesked inte kräver det öppna fönstret.
 3. Följ PLACERING-17 med skärmläsaren. Lyssna på vilket objekt som inte
    är sparat, återhämtningsknapparnas namn och resultatet efter varje val.
    Byt urval och stäng Navigera innan återhämtningen. Flyttbesked och
@@ -985,6 +994,9 @@ oskickade ändringar:
 
 - NVDA eller VoiceOver läser bekräftelsen en gång per personlig sparning utan
   att avbryta pågående läsning.
+- Flyttresultat anger objektets namn och ändrade axlar med två decimaler efter
+  en halv sekunds paus; mellanresultat köas inte. Ogiltig inmatning förklaras
+  tillsammans med det återställda värdet utan att blockera en annan axel.
 - Återhämtning och beslut om att lämna hushållet har begripliga namn,
   upplästa resultat och användbart fokus. Anteckna dessa faktiska
   observationer separat från automatiserade kontroller.
@@ -1066,7 +1078,8 @@ PLACERING-02. Inga grafiska resultat jämförs.
 
 **Syfte:** Fysiska fingrar på iPhone eller iPad flyttar i bildplan och höjd,
 medan avbrutna gester och flyttat ankare återställer utan oavsiktlig
-objektflytt.
+objektflytt. Koordinatfälten fungerar med faktiskt skärmtangentbord och
+förstoring i båda navigeringslägena.
 
 **Användare:** Alex enligt områdets förberedelse.
 
@@ -1075,7 +1088,8 @@ Cykeln.
 
 **Kräver mänsklig observation:** Fysiska fingrar på iPhone eller iPad flyttar i
 bildplan och höjd, medan avbrutna gester och flyttat ankare återställer utan
-oavsiktlig objektflytt.
+oavsiktlig objektflytt. Skärmtangentbord, fokus och läsbarhet fungerar vid
+koordinatinmatning i båda teman och navigeringslägena.
 
 <!-- markdownlint-disable MD013 -->
 <!--
@@ -1083,11 +1097,12 @@ oavsiktlig objektflytt.
 {
   "humanObservation": {
     "kind": "physical-input",
-    "observation": "Fysiska fingrar på iPhone eller iPad flyttar i bildplan och höjd, medan avbrutna gester och flyttat ankare återställer utan oavsiktlig objektflytt."
+    "observation": "Fysiska fingrar flyttar utan oavsiktlig objektflytt vid avbrott. Koordinatinmatning med faktiskt skärmtangentbord har användbart fokus och läsbara värden i båda teman och navigeringslägena."
   },
   "reference": "Chrome på faktisk iPhone eller iPad med sparade Lampan och Cykeln.",
   "outcomes": [
-    "Fysiska fingrar på iPhone eller iPad flyttar i bildplan och höjd, medan avbrutna gester och flyttat ankare återställer utan oavsiktlig objektflytt."
+    "Fysiska fingrar på iPhone eller iPad flyttar i bildplan och höjd, medan avbrutna gester och flyttat ankare återställer utan oavsiktlig objektflytt.",
+    "Koordinater går att skriva med faktiskt skärmtangentbord med användbart fokus och läsbarhet i båda teman och navigeringslägena."
   ],
   "evidence": [
     {
@@ -1107,8 +1122,16 @@ oavsiktlig objektflytt.
 1. Följ PLACERING-03 steg 1–5 en gång på den faktiska pekskärmen.
 2. Anteckna fingerordningen, avbrottet när webbläsaren lämnas och faktisk
    återgång. Jämför observerad höjdhjälp och kamerarörelse.
+3. Välj Lampan och **Navigera**. Använd det fysiska skärmtangentbordet för
+   **Sidled (X)** och **Höjd (Y)** i normal- och miniläge. Prova **1,005**,
+   **-1.005**, **-** och ett värde utanför gränsen, och lämna varje fält.
+   Kontrollera läsbara hela värden, begriplig återställning och användbart
+   fokus i båda teman vid verklig förstoring. Anteckna enhet, tangentbord,
+   tema, förstoring och faktiskt resultat separat från syntetiska pekprov.
 
 **Förväntat resultat:**
 
 - Fysiska fingrar på iPhone eller iPad flyttar i bildplan och höjd, medan
   avbrutna gester och flyttat ankare återställer utan oavsiktlig objektflytt.
+- Koordinater kan skrivas med det faktiska skärmtangentbordet och nås med
+  bibehållen läsbarhet och användbart fokus i båda navigeringslägena.

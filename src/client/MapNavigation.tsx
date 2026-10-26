@@ -70,6 +70,105 @@ type Drag = {
   moved: boolean;
 };
 
+const coordinateAxes = [
+  ['x', 'Sidled (X)'],
+  ['y', 'Höjd (Y)'],
+  ['z', 'Djup (Z)'],
+] as const;
+
+function coordinate(text: string): number | null {
+  const match = /^([+-]?)(?:(\d+)(?:[.,](\d+))?|[.,](\d+))$/.exec(text.trim());
+  if (!match) return null;
+  const integer = (match[2] ?? '0').replace(/^0+/, '') || '0';
+  const fraction = match[3] ?? match[4] ?? '';
+  if (
+    integer.length > 5 ||
+    (integer.length === 5 && integer > '10000') ||
+    (integer === '10000' && /[1-9]/.test(fraction))
+  )
+    return null;
+  // Decimal digits determine ties before binary floating-point conversion.
+  const hundredths =
+    Number(integer) * 100 +
+    Number(`${fraction}00`.slice(0, 2)) +
+    Number((fraction[2] ?? '0') >= '5');
+  const value = (match[1] === '-' ? -hundredths : hundredths) / 100;
+  return value === 0 ? 0 : value;
+}
+
+export function formatCoordinate(value: number) {
+  const formatted = value.toFixed(2);
+  return formatted === '-0.00' ? '0.00' : formatted;
+}
+
+function CoordinateFields({
+  position,
+  disabled,
+  onEdit,
+}: {
+  position: Position;
+  disabled: boolean;
+  onEdit: (axis: keyof Position, value: number) => void;
+}) {
+  const id = useId();
+  const [draft, setDraft] = useState<{
+    axis: keyof Position;
+    text: string;
+    applied: number | null;
+  } | null>(null);
+  const [feedback, setFeedback] = useState<{ axis: keyof Position; text: string } | null>(null);
+  const observedPosition = useRef({ ...position });
+  useEffect(() => {
+    const previous = observedPosition.current;
+    observedPosition.current = { ...position };
+    if (
+      draft &&
+      draft.applied !== null &&
+      previous[draft.axis] !== position[draft.axis] &&
+      draft.applied !== position[draft.axis]
+    )
+      setDraft(null);
+  }, [position, draft]);
+  return (
+    <>
+      <div className="navigation-coordinate-fields">
+        {coordinateAxes.map(([axis, label]) => (
+          <label key={axis}>
+            <span aria-hidden="true">{axis.toUpperCase()}</span>
+            <input
+              type="text"
+              spellCheck={false}
+              aria-label={label}
+              disabled={disabled}
+              aria-invalid={draft?.axis === axis && draft.applied === null ? true : undefined}
+              aria-describedby={feedback?.axis === axis ? `${id}-feedback` : undefined}
+              value={draft?.axis === axis ? draft.text : formatCoordinate(position[axis])}
+              onChange={(event) => {
+                const text = event.target.value;
+                const value = coordinate(text);
+                setDraft({ axis, text, applied: value });
+                setFeedback((current) => (current?.axis === axis ? null : current));
+                if (value !== null && value !== position[axis]) onEdit(axis, value);
+              }}
+              onBlur={() => {
+                if (draft?.axis === axis && draft.applied === null)
+                  setFeedback({
+                    axis,
+                    text: `${label}: Ange ett tal från −10000 till +10000 med decimalpunkt eller decimalkomma. Värdet ${formatCoordinate(position[axis])} återställs.`,
+                  });
+                setDraft(null);
+              }}
+            />
+          </label>
+        ))}
+      </div>
+      <p id={`${id}-feedback`} role="status" aria-atomic="true" hidden={!feedback}>
+        {feedback?.text}
+      </p>
+    </>
+  );
+}
+
 export function MapNavigation({
   open,
   area,
@@ -79,6 +178,7 @@ export function MapNavigation({
   object,
   objectPosition,
   onMove,
+  onEditPosition,
   disabled,
   movementDisabled,
   children,
@@ -91,6 +191,7 @@ export function MapNavigation({
   object?: { id: string; name: string };
   objectPosition?: Position | null;
   onMove: (id: string, axis: keyof Position, step: number) => void | Promise<void>;
+  onEditPosition: (id: string, axis: keyof Position, value: number) => void;
   disabled: boolean;
   movementDisabled: boolean;
   children?: ReactNode;
@@ -463,28 +564,12 @@ export function MapNavigation({
                     två decimaler.
                   </p>
                 </div>
-                <div className="navigation-coordinate-fields">
-                  {(
-                    [
-                      ['x', 'Sidled (X)'],
-                      ['y', 'Höjd (Y)'],
-                      ['z', 'Djup (Z)'],
-                    ] as const
-                  ).map(([axis, label]) => {
-                    const formatted = objectPosition[axis].toFixed(2);
-                    return (
-                      <label key={axis}>
-                        <span aria-hidden="true">{axis.toUpperCase()}</span>
-                        <input
-                          type="text"
-                          readOnly
-                          aria-label={label}
-                          value={formatted === '-0.00' ? '0.00' : formatted}
-                        />
-                      </label>
-                    );
-                  })}
-                </div>
+                <CoordinateFields
+                  key={object.id}
+                  position={objectPosition}
+                  disabled={movementDisabled}
+                  onEdit={(axis, value) => onEditPosition(object.id, axis, value)}
+                />
               </fieldset>
             )}
             <div className="map-navigation-grid">

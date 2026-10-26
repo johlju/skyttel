@@ -270,7 +270,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   beständiga personliga riktningar och nypzoom med styrplatta.
   NAVIGATION-20–21 läser sparade och automatiska koordinater via
   **Tabell → Karta → Navigera**, med hjälp, ändpunktsval och normal- och
-  miniläge i ljust datorläge respektive mörkt läge vid 320 pixlar.
+  miniläge i ljust datorläge respektive mörkt läge vid 320 pixlar. Fälten
+  behåller sin läsning och redigerbarhet utan flyttning under läsproven.
   NAVIGATION-02 har komplett 1440 × 1000-referens; NAVIGATION-06–18
   skyddar alla sju mått och båda öppningsordningarna. NAVIGATION-05 bevarar
   native Ctrl/hjul, hastighet, begränsat hjulsteg och sidans skala i Chromium
@@ -707,7 +708,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   Återhämtning efter placeringsfel bevarar senaste lokala position,
   erbjuder nytt sparförsök eller inläsning för ett objekt och finns kvar
   efter urvalsbyte och stängd navigering. Skärmläsarprovet omfattar även
-  varningar innan osparade positioner eller formulärtext lämnas.
+  senaste flyttresultat, återställd koordinatinmatning och varningar innan
+  osparade positioner eller formulärtext lämnas. Det fysiska pekprovet
+  omfattar koordinatfält med faktiskt skärmtangentbord och förstoring.
 - [Kartans bakgrunder](background.md): Gryningsdis, Universum samt ljust
   och mörkt Under världshavet som personliga temaval, återläsning utan
   ändrad karta, sandbotten, vattenyta och sex ljusformer genom vanlig

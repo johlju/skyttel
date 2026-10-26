@@ -91,14 +91,16 @@ NAVIGATION-20.
    tangentbordet. Navigationens titelrad får fokus.
 2. Läs **Sidled (X)**, **Höjd (Y)** och **Djup (Z)** i gruppen för
    Lo Exempel: **-10000.00**, **1.23** och **0.00**. Fälten ligger i en rad
-   ovanför flyttknapparna. Hela värdena ska gå att läsa vid normal textstorlek.
+   ovanför flyttknapparna. Fälten är redigerbara; behåll deras värden under
+   läsprovet. Hela värdena ska gå att läsa vid normal textstorlek.
 3. Fokusera **Om koordinater** bredvid **Ange position** och tryck Enter.
    Läs fasta axlar, att värdena inte är verkliga mått, inklusive gränser
    och tvådecimalers avrundning. Tryck Escape. Hjälpen stängs, Navigation
    är kvar och fokus stannar på infoikonen.
 4. Öppna hjälpen igen och välj **Visa mininavigering**. Rubriken, infoikonen
    och hjälpen döljs. Fälten ligger i en kolumn i ordningen X, Y, Z.
-   Fokusera och läs varje helt värde med tangentbordet. Välj
+   Fokusera och läs varje helt värde med tangentbordet. Fälten är fortfarande
+   redigerbara. Välj
    **Visa normal navigering**. Den öppna hjälpen visas igen.
 5. Välj **Stäng navigering**. Fokus återgår till **Navigera**. Öppna
    **Tabell** och **Samband för Lo Exempel**. Läs att sambandet går från
@@ -110,9 +112,9 @@ NAVIGATION-20.
 
 **Förväntat resultat:**
 
-- Objektet förblir markerat vid vybytet. Läsbara fält, namn, fokus och
-  hjälp fungerar i båda navigeringslägena. Vanlig markering flyttar inte
-  kameran.
+- Objektet förblir markerat vid vybytet. Läsbara, redigerbara fält, namn,
+  fokus och hjälp fungerar i båda navigeringslägena. Vanlig markering
+  flyttar inte kameran.
 - Läsning flyttar inget objekt och sparar ingen ny placering. Ingen
   positionsinformation behöver läsas ur kartgrafiken.
 - Sambandet har ingen egen koordinat; dess två objekts positioner nås

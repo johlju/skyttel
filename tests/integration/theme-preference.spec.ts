@@ -67,7 +67,11 @@ test('TEMA-02: open tabs refresh account choices on focus and System follows eac
     await expect(tab.locator('.app-shell')).toHaveAttribute('data-theme', 'dark');
     await tab.getByRole('button', { name: /^Tema:/ }).click();
     await tab.getByRole('radio', { name: 'Ljust', exact: true }).click();
-    await expect(tab.getByRole('status')).toContainText('Temavalet har sparats');
+    await expect(
+      tab.getByRole('status').filter({
+        has: tab.getByRole('button', { name: 'Stäng temabeskedet', exact: true }),
+      }),
+    ).toContainText('Temavalet har sparats');
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await expect(page.getByRole('button', { name: /^Tema: Ljust/ })).toBeVisible();
     await page.getByRole('button', { name: /^Tema:/ }).click();

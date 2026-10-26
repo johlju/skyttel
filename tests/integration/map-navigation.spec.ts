@@ -134,6 +134,8 @@ for (const [caseId, width, theme] of [
       await expect(coordinates.getByRole('textbox', { name: 'Höjd (Y)' })).toHaveValue('1.23');
       await expect(coordinates.getByRole('textbox', { name: 'Djup (Z)' })).toHaveValue('0.00');
       await expect(coordinates.getByRole('textbox')).toHaveCount(3);
+      for (const label of ['Sidled (X)', 'Höjd (Y)', 'Djup (Z)'])
+        await expect(coordinates.getByRole('textbox', { name: label })).toBeEditable();
       const help = navigation.getByRole('button', { name: 'Om koordinater', exact: true });
       await help.focus();
       await help.press('Enter');
@@ -153,6 +155,7 @@ for (const [caseId, width, theme] of [
         await field.focus();
         await expect(field).toBeFocused();
         await expect(field).toBeVisible();
+        await expect(field).toBeEditable();
       }
       await navigation.getByRole('button', { name: 'Visa normal navigering' }).click();
       await expect(help).toHaveAttribute('aria-expanded', 'true');

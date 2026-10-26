@@ -178,6 +178,26 @@ Fälten heter **Sidled (X)**, **Höjd (Y)** och **Djup (Z)** och visar
 positionen med två decimaler. Läsning sparar eller låser inte en automatisk
 placering och ändrar inte precisionen i en sparad position.
 
+Skriv i ett av fälten för att ändra positionen direkt. Du behöver inte trycka
+Enter eller lämna fältet. Decimalpunkt och decimalkomma fungerar. Värdet ska
+ligga mellan −10 000 och +10 000 och avrundas till två decimaler, bort från
+noll vid halva steg: **1,005** blir **1.01**, **-1,005** blir **-1.01** och
+**-0,001** blir **0.00**. De andra två axlarnas värden behåller sin precision.
+Det första ändrade värdet sparar hela den personliga positionen, även för ett
+objekt som hittills har placerats automatiskt.
+
+Ett tomt fält, ett minustecken eller en påbörjad decimal som **2.** får vara
+kvar medan du skriver. De flyttar inte objektet. När du lämnar ett ofullständigt
+eller ogiltigt fält återkommer det senaste giltiga värdet med en förklaring.
+De andra axlarna går fortfarande att använda. Byte av valt objekt tar bort
+ofärdig inmatning; byte mellan normal- och miniläge behåller positionen.
+
+Fälten följer också flyttknapparna och dragning. Du kan fortsätta flytta medan
+en tidigare position sparas. Efter en halv sekund utan ny flytt ger
+skärmläsaren det senaste flyttresultatet med objektets namn och ändrade axlar.
+Flyttbeskedet är skilt från besked om sparande och fel och fungerar även när
+Navigera är stängt.
+
 I normalläget visas fälten bredvid varandra under **Ange position**.
 **Om koordinater**, infoikonen bredvid rubriken, förklarar kartans fasta
 axlar, att värdena inte är verkliga mått, gränserna −10 000 till +10 000

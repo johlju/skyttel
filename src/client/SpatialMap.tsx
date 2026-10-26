@@ -16,7 +16,7 @@ import { defaultViewSettings, type Position, type ViewSettings } from '../shared
 import { relationshipLabel } from '../shared/relationship-label.js';
 import { BackgroundMotionSlider } from './BackgroundMotionSlider.js';
 import { LifecycleStatus } from './Lifecycle.js';
-import { MapNavigation } from './MapNavigation.js';
+import { formatCoordinate, MapNavigation } from './MapNavigation.js';
 import type { MapRevealRequest } from './map-display.js';
 import { mapConnections, proposalKind } from './map-presentation.js';
 import { ObjectActions, type ObjectActionsEntry } from './ObjectActions.js';
@@ -391,6 +391,17 @@ export function SpatialMap({
     cancelHold,
     onMove: (id, position) => personal?.move(id, position),
   });
+  const announcedMove = movement.announcement;
+  const announcedObject = announcedMove && objects.get(announcedMove.id);
+  const movementResult =
+    announcedMove && announcedObject
+      ? `${announcedObject.name}: ${announcedMove.axes
+          .map(
+            (axis) =>
+              `${{ x: 'Sidled (X)', y: 'Höjd (Y)', z: 'Djup (Z)' }[axis]} ${formatCoordinate(announcedMove.position[axis])}`,
+          )
+          .join(', ')}.`
+      : '';
   useEffect(() => {
     if (!activated || !canvas.current) return;
     const element = canvas.current;
@@ -440,6 +451,7 @@ export function SpatialMap({
       [...relationships.values()],
       movement.movingObjectId(),
     );
+    movement.clearStaleAnnouncement();
   }, [
     objects,
     relationships,
@@ -447,6 +459,7 @@ export function SpatialMap({
     personal?.view?.positions,
     personalReady,
     movement.movingObjectId,
+    movement.clearStaleAnnouncement,
   ]);
   useEffect(() => {
     if (!activated) return;
@@ -1116,6 +1129,14 @@ export function SpatialMap({
       </button>
     </nav>
   );
+  function editPosition(id: string, axis: keyof Position, value: number) {
+    const start = scene.current?.position(id);
+    if (!start || !personal?.view || disabled || unavailable || contextLost) return;
+    const end = scene.current?.place(id, { ...start, [axis]: value });
+    if (!end || (end.x === start.x && end.y === start.y && end.z === start.z)) return;
+    movement.recordMove(id, start, end, axis === 'y');
+    return personal.move(id, end);
+  }
   const navigation = (
     <MapNavigation
       open={navigationOpen && !navigationHidden}
@@ -1129,13 +1150,11 @@ export function SpatialMap({
       }
       disabled={!personalReady || unavailable || contextLost}
       movementDisabled={!personal?.view || disabled || unavailable || contextLost}
+      onEditPosition={(id, axis, value) => void editPosition(id, axis, value)}
       onMove={(id, axis, step) => {
         const position = scene.current?.position(id);
         if (!position) return;
-        const next = { ...position, [axis]: position[axis] + step };
-        const end = scene.current?.place(id, next) ?? next;
-        movement.recordMove(id, position, end, axis === 'y');
-        return personal?.move(id, end);
+        return editPosition(id, axis, position[axis] + step);
       }}
     >
       <label className="navigation-zero-reference">
@@ -2033,6 +2052,14 @@ export function SpatialMap({
           <SpatialOrientation orientation={orientation} corner={preferences.axisCorner} />
         )}
       </div>
+      <p
+        className="spatial-movement-result"
+        role="status"
+        aria-label="Flyttresultat"
+        aria-atomic="true"
+      >
+        {movementResult}
+      </p>
       <div aria-live="polite" aria-atomic="true">
         {personal?.message && !positionRecoveryActive && (
           <p

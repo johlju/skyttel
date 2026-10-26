@@ -22,6 +22,7 @@ type Gesture = {
   moved: boolean;
   second?: { id: number; x: number; y: number };
 };
+type MovementResult = { id: string; position: Position; axes: (keyof Position)[] };
 
 export function useObjectMovement(
   scene: RefObject<ReturnType<typeof spatialScene> | null>,
@@ -48,6 +49,35 @@ export function useObjectMovement(
     source: 'drag' | 'buttons';
   } | null>(null);
   const [heightActive, setHeightActive] = useState(false);
+  const [announcement, setAnnouncement] = useState<MovementResult | null>(null);
+  const latestAnnouncement = useRef<MovementResult | null>(null);
+  const announcementTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const clearAnnouncement = useCallback(() => {
+    clearTimeout(announcementTimer.current);
+    latestAnnouncement.current = null;
+    setAnnouncement(null);
+  }, []);
+  const clearStaleAnnouncement = useCallback(() => {
+    const result = latestAnnouncement.current;
+    if (!result) return;
+    const position = scene.current?.position(result.id);
+    if (
+      !position ||
+      (['x', 'y', 'z'] as const).some((axis) => position[axis] !== result.position[axis])
+    )
+      clearAnnouncement();
+  }, [scene, clearAnnouncement]);
+  useEffect(() => () => clearTimeout(announcementTimer.current), []);
+  function announce(id: string, start: Position, end: Position) {
+    const axes = (['x', 'y', 'z'] as const).filter((axis) => start[axis] !== end[axis]);
+    if (!axes.length) return;
+    clearAnnouncement();
+    const result = { id, position: end, axes };
+    latestAnnouncement.current = result;
+    announcementTimer.current = setTimeout(() => {
+      setAnnouncement(result);
+    }, 500);
+  }
   const movingObjectId = useCallback(
     () => (gesture.current?.moved ? gesture.current.id : undefined),
     [],
@@ -58,25 +88,30 @@ export function useObjectMovement(
       scene.current?.place(current.id, current.origin);
       suppressed.current = true;
       setGuide(null);
+      if (current.moved) clearAnnouncement();
     }
     gesture.current = null;
     touches.current.clear();
     waiting.current = false;
     setHeightActive(false);
     cancelHold();
-  }, [scene, cancelHold]);
+  }, [scene, cancelHold, clearAnnouncement]);
   useEffect(() => {
-    if (!active || !enabled) cancel();
-    window.addEventListener('blur', cancel);
+    const interrupt = () => {
+      cancel();
+      clearAnnouncement();
+    };
+    if (!active || !enabled) interrupt();
+    window.addEventListener('blur', interrupt);
     const visibility = () => {
-      if (document.hidden) cancel();
+      if (document.hidden) interrupt();
     };
     document.addEventListener('visibilitychange', visibility);
     return () => {
-      window.removeEventListener('blur', cancel);
+      window.removeEventListener('blur', interrupt);
       document.removeEventListener('visibilitychange', visibility);
     };
-  }, [active, enabled, cancel]);
+  }, [active, enabled, cancel, clearAnnouncement]);
   function rebase(current: Gesture, height: boolean) {
     current.segment = scene.current?.position(current.id) ?? current.segment;
     current.x = current.currentX;
@@ -86,9 +121,12 @@ export function useObjectMovement(
   return {
     guide,
     heightActive,
+    announcement,
+    clearStaleAnnouncement,
     movingObjectId,
     cancel,
     recordMove(id: string, start: Position, end: Position, height: boolean) {
+      announce(id, start, end);
       setGuide((previous) =>
         height
           ? {
@@ -165,6 +203,7 @@ export function useObjectMovement(
           suppressed.current = true;
           setGuide(null);
           setHeightActive(false);
+          clearAnnouncement();
           scene.current?.beginCameraGesture(touches.current);
         }
         return;
@@ -187,7 +226,9 @@ export function useObjectMovement(
         height,
       );
       if (position) {
+        const previous = scene.current?.position(current.id);
         const end = scene.current?.place(current.id, position) ?? position;
+        if (previous) announce(current.id, previous, end);
         setGuide(height ? { id: current.id, start: current.segment, end, source: 'drag' } : null);
         setHeightActive(height);
       }
