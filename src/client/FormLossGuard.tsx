@@ -1,16 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { type FormLeaveGuard, useFormLeave } from './FormLeave.js';
+import { type FormLeaveGuard, type LeaveConfirmation, useFormLeave } from './FormLeave.js';
 import { trapDialogTab } from './modal-focus.js';
 
-/** Protect only the active form's unsent values. Completed proposals belong to the draft. */
+/** Retain unsent work until all applicable departure decisions are confirmed. */
 export function FormLossGuard({
   dirty,
   busy,
   householdId,
   onDiscard,
   onBlocked,
-  description = 'Ändringar som inte lagts i utkastet försvinner. Förslag som redan finns i ditt utkast behålls.',
+  description,
+  kind = 'form',
 }: {
   dirty: boolean;
   busy: boolean;
@@ -18,18 +19,28 @@ export function FormLossGuard({
   onDiscard: () => void;
   onBlocked: () => void;
   description?: string;
+  kind?: 'form' | 'positions';
 }) {
   const { register } = useFormLeave();
-  const [leave, setLeave] = useState<{ proceed: () => void; cancel: () => void } | null>(null);
+  const [leave, setLeave] = useState<{ proceed: LeaveConfirmation; cancel: () => void } | null>(
+    null,
+  );
   const dialog = useRef<HTMLDialogElement>(null);
   const continueButton = useRef<HTMLButtonElement>(null);
   const editingFocus = useRef<HTMLElement | null>(null);
   const guard = useRef<FormLeaveGuard>({ active: () => true, leave: () => {} });
+  const positions = kind === 'positions';
+  const title = positions ? 'Lämna osparade positioner?' : 'Lämna ändrade uppgifter?';
+  guard.current.active = () => (positions ? dirty : true);
+  guard.current.scope = positions ? 'household' : undefined;
   guard.current.retain = (pathname, search) =>
     Boolean(
       householdId &&
-        pathname === `/households/${encodeURIComponent(householdId)}` &&
-        new URLSearchParams(search).has('report'),
+        (positions
+          ? pathname === `/households/${encodeURIComponent(householdId)}` ||
+            pathname.startsWith(`/households/${encodeURIComponent(householdId)}/`)
+          : pathname === `/households/${encodeURIComponent(householdId)}` &&
+            new URLSearchParams(search).has('report')),
     );
   guard.current.leave = (proceed, cancel) => {
     if (busy) {
@@ -40,8 +51,7 @@ export function FormLossGuard({
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setLeave({ proceed, cancel });
     } else {
-      onDiscard();
-      proceed();
+      proceed(onDiscard);
     }
   };
   useLayoutEffect(() => register(guard.current), [register]);
@@ -61,8 +71,8 @@ export function FormLossGuard({
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty, busy]);
   function cancel() {
-    leave?.cancel();
     dialog.current?.close();
+    leave?.cancel();
     setLeave(null);
     editingFocus.current?.focus({ preventScroll: true });
   }
@@ -70,7 +80,7 @@ export function FormLossGuard({
     <dialog
       ref={dialog}
       className="object-type-loss"
-      aria-label="Lämna ändrade uppgifter?"
+      aria-label={title}
       onKeyDown={(event) => {
         event.stopPropagation();
         trapDialogTab(event);
@@ -82,14 +92,21 @@ export function FormLossGuard({
       }}
     >
       <header>
-        <h2>Lämna ändrade uppgifter?</h2>
+        <h2>{title}</h2>
       </header>
       <div className="object-type-loss-body">
-        <p>{description}</p>
+        <p>
+          {description ??
+            (positions
+              ? dirty
+                ? 'Dina senaste positioner är inte sparade. Om du lämnar hushållet försvinner de lokala ändringarna.'
+                : 'Alla positioner är nu sparade. Du kan lämna hushållet.'
+              : 'Ändringar som inte lagts i utkastet försvinner. Förslag som redan finns i ditt utkast behålls.')}
+        </p>
       </div>
       <footer>
         <button ref={continueButton} type="button" className="primary" onClick={cancel}>
-          Fortsätt redigera
+          {positions ? 'Stanna kvar' : 'Fortsätt redigera'}
         </button>
         <button
           type="button"
@@ -97,11 +114,14 @@ export function FormLossGuard({
             const proceed = leave?.proceed;
             dialog.current?.close();
             setLeave(null);
-            onDiscard();
-            proceed?.();
+            proceed?.(onDiscard);
           }}
         >
-          Kasta ändringarna och fortsätt
+          {positions
+            ? dirty
+              ? 'Lämna och kasta positionerna'
+              : 'Lämna hushållet'
+            : 'Kasta ändringarna och fortsätt'}
         </button>
       </footer>
     </dialog>,

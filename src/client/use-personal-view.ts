@@ -27,8 +27,21 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
   const [pending, setPending] = useState(false);
   const current = useRef(view);
   current.current = view;
-  const localPositions = useRef(new Map<string, { position: Position; revision: number }>());
-  const positionSaves = useRef(new Map<string, Promise<void>>());
+  const localPositions = useRef(
+    new Map<
+      string,
+      { position: Position; revision: number; saved?: PersonalPosition; failed: boolean }
+    >(),
+  );
+  const positionRevision = useRef(0);
+  const positionEpochs = useRef(new Map<string, number>());
+  const [reloadingPositions, setReloadingPositions] = useState<string[]>([]);
+  const [positionRecovery, setPositionRecovery] = useState<{
+    id: string;
+    message: string;
+    error?: boolean;
+  }>();
+  const positionSaves = useRef(new Map<string, Promise<'saved' | undefined>>());
   const alive = useRef(true);
   const generation = useRef(0);
   const settingsSaving = useRef(false);
@@ -40,6 +53,9 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
   const reset = useCallback(() => {
     localPositions.current.clear();
     positionSaves.current.clear();
+    positionEpochs.current.clear();
+    setReloadingPositions([]);
+    setPositionRecovery(undefined);
     settingsSaving.current = false;
     settingsFailureMessage.current = '';
     publish(null);
@@ -53,12 +69,17 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
   function mergeLocal(latest: PersonalView) {
     const positions = new Map(latest.positions.map((position) => [position.id, position]));
     if (current.current?.contentVersion === latest.contentVersion) {
-      for (const position of current.current.positions)
-        if (position.version > (positions.get(position.id)?.version ?? 0))
-          positions.set(position.id, position);
+      for (const position of current.current.positions) {
+        const local = localPositions.current.get(position.id);
+        const saved = local ? local.saved : position;
+        if (saved && saved.version > (positions.get(saved.id)?.version ?? 0))
+          positions.set(saved.id, saved);
+      }
     }
-    for (const [id, local] of localPositions.current)
-      positions.set(id, { id, ...local.position, version: positions.get(id)?.version ?? 0 });
+    for (const [id, local] of localPositions.current) {
+      local.saved = positions.get(id);
+      positions.set(id, { id, ...local.position, version: local.saved?.version ?? 0 });
+    }
     const settings =
       current.current?.contentVersion === latest.contentVersion &&
       current.current.settings.version > latest.settings.version
@@ -128,12 +149,15 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
   }
   async function savePosition(id: string) {
     const session = generation.current;
+    const epoch = positionEpochs.current.get(id);
+    const isCurrent = () =>
+      session === generation.current && epoch === positionEpochs.current.get(id);
     const contentVersion = current.current?.contentVersion;
     let completed = false;
     setPending(true);
     setMessage(hasFailedPosition(id) ? 'Positionen är inte sparad' : 'Din personliga vy sparas…');
     try {
-      while (session === generation.current && current.current && localPositions.current.has(id)) {
+      while (isCurrent() && current.current && localPositions.current.has(id)) {
         const local = localPositions.current.get(id);
         if (!local) break;
         const revision = local.revision;
@@ -144,23 +168,24 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
             contentVersion,
             version: current.current.positions.find((item) => item.id === id)?.version ?? 0,
           });
-          if (session !== generation.current || !current.current) return;
-          if (localPositions.current.get(id)?.revision === revision)
-            localPositions.current.delete(id);
+          if (!isCurrent() || !current.current) return;
+          const latestLocal = localPositions.current.get(id);
+          if (latestLocal?.revision === revision) localPositions.current.delete(id);
+          else if (latestLocal) latestLocal.saved = position;
           const next = { ...position, ...localPositions.current.get(id)?.position };
           publish({
             ...current.current,
             positions: [...current.current.positions.filter((item) => item.id !== id), next],
           });
         } catch (error) {
-          if (session !== generation.current) return;
+          if (!isCurrent()) return;
           if (error instanceof MapRequestError && [401, 403].includes(error.status)) {
             report(error);
             return;
           }
           if (error instanceof MapRequestError && error.code === 'position_conflict') {
             const latest = await request<PersonalView>(`${path}/view`);
-            if (session !== generation.current) return;
+            if (!isCurrent()) return;
             if (latest.contentVersion !== contentVersion) {
               invalidate('Hushållets innehåll har ersatts. Läs in kartan innan du fortsätter.');
               return;
@@ -173,7 +198,7 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
             ['content_conflict', 'object_unavailable'].includes(error.code)
           ) {
             const latest = await request<PersonalView>(`${path}/view`);
-            if (session !== generation.current) return;
+            if (!isCurrent()) return;
             if (error.code === 'content_conflict' || latest.contentVersion !== contentVersion) {
               invalidate('Hushållets innehåll har ersatts. Läs in kartan innan du fortsätter.');
               return;
@@ -192,18 +217,24 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
           }
           // A failed older request must not stop a newer local move from saving.
           if (localPositions.current.get(id)?.revision !== revision) continue;
+          local.failed = true;
           setMessage('Positionen är inte sparad');
           return;
         }
       }
       completed = true;
+      return 'saved' as const;
     } catch (error) {
-      if (session === generation.current) {
+      if (isCurrent()) {
         if (error instanceof MapRequestError && [401, 403].includes(error.status)) report(error);
-        else setMessage('Positionen är inte sparad');
+        else {
+          const local = localPositions.current.get(id);
+          if (local) local.failed = true;
+          setMessage('Positionen är inte sparad');
+        }
       }
     } finally {
-      if (session === generation.current) {
+      if (isCurrent()) {
         positionSaves.current.delete(id);
         setPending(positionSaves.current.size > 0 || settingsSaving.current);
         if (completed) saveFeedback();
@@ -250,16 +281,136 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
     }
     if (session === generation.current) saveFeedback();
   }
+  function startPositionSave(id: string) {
+    if (!current.current || !localPositions.current.has(id)) return;
+    setPositionRecovery((notice) => (notice?.id === id ? undefined : notice));
+    const existing = positionSaves.current.get(id);
+    if (existing) return existing;
+    const saving = savePosition(id);
+    positionSaves.current.set(id, saving);
+    return saving;
+  }
+  async function retryPosition(id: string) {
+    if (!current.current || !localPositions.current.has(id)) return;
+    const session = generation.current;
+    const epoch = positionEpochs.current.get(id);
+    const outcome = await startPositionSave(id);
+    if (session !== generation.current || epoch !== positionEpochs.current.get(id)) return;
+    const failed = localPositions.current.has(id);
+    if (!failed && outcome !== 'saved') return;
+    setPositionRecovery({
+      id,
+      message: failed
+        ? 'Positionen kunde inte sparas. Din lokala position finns kvar.'
+        : 'Positionen är sparad.',
+      error: failed,
+    });
+    setMessage(
+      hasFailedPosition()
+        ? 'Positionen är inte sparad'
+        : settingsFailureMessage.current ||
+            (positionSaves.current.size ? 'Din personliga vy sparas…' : ''),
+    );
+  }
+  async function reloadPosition(id: string) {
+    const local = localPositions.current.get(id);
+    if (!current.current || !local) return;
+    const session = generation.current;
+    const contentVersion = current.current.contentVersion;
+    const revision = local.revision;
+    const epoch = (positionEpochs.current.get(id) ?? 0) + 1;
+    positionEpochs.current.set(id, epoch);
+    positionSaves.current.delete(id);
+    setPending(positionSaves.current.size > 0 || settingsSaving.current);
+    setReloadingPositions((ids) => [...ids.filter((value) => value !== id), id]);
+    setPositionRecovery(undefined);
+    setMessage('Sparad position hämtas…');
+    const isCurrent = () =>
+      session === generation.current && positionEpochs.current.get(id) === epoch;
+    try {
+      const latest = await request<PersonalView>(`${path}/view`);
+      if (!isCurrent() || !current.current) return;
+      if (latest.contentVersion !== contentVersion) {
+        invalidate('Hushållets innehåll har ersatts. Läs in kartan innan du fortsätter.');
+        return;
+      }
+      if (localPositions.current.get(id)?.revision !== revision) return;
+      localPositions.current.delete(id);
+      const saved = latest.positions.find((position) => position.id === id);
+      publish({
+        ...current.current,
+        positions: [
+          ...current.current.positions.filter((position) => position.id !== id),
+          ...(saved ? [saved] : []),
+        ],
+      });
+      setPositionRecovery({
+        id,
+        message: saved
+          ? 'Sparad position är inläst.'
+          : 'Ingen position är sparad. Automatisk placering används.',
+      });
+      setMessage(
+        localPositions.current.size ? 'Positionen är inte sparad' : settingsFailureMessage.current,
+      );
+    } catch (error) {
+      if (!isCurrent()) return;
+      if (error instanceof MapRequestError && [401, 403].includes(error.status)) report(error);
+      else if (localPositions.current.get(id)?.revision === revision) {
+        setPositionRecovery({
+          id,
+          message: 'Positionen kunde inte hämtas. Din lokala position finns kvar. Försök igen.',
+          error: true,
+        });
+        setMessage('Positionen är inte sparad');
+      }
+    } finally {
+      if (isCurrent()) setReloadingPositions((ids) => ids.filter((value) => value !== id));
+    }
+  }
+  function discardPositions() {
+    const restored = new Map(current.current?.positions.map((position) => [position.id, position]));
+    for (const [id, local] of localPositions.current) {
+      positionEpochs.current.set(id, (positionEpochs.current.get(id) ?? 0) + 1);
+      if (local.saved) restored.set(id, local.saved);
+      else restored.delete(id);
+    }
+    localPositions.current.clear();
+    positionSaves.current.clear();
+    setReloadingPositions([]);
+    setPositionRecovery(undefined);
+    setPending(settingsSaving.current);
+    if (current.current) publish({ ...current.current, positions: [...restored.values()] });
+    setMessage(settingsFailureMessage.current);
+  }
   return {
     view,
     message: notice.message,
     ...(notice.toast && notice.message ? { toast: true, messageId: notice.id } : {}),
     pending,
     refresh,
+    unsavedPositions: [...localPositions.current.keys()].map((id) => ({
+      id,
+      saving: positionSaves.current.has(id),
+      reloading: reloadingPositions.includes(id),
+      failed: localPositions.current.get(id)?.failed ?? false,
+    })),
+    retryPosition,
+    positionRecovery,
+    reloadPosition,
+    discardPositions,
     move(id: string, position: Position) {
       if (!current.current) return;
-      const revision = (localPositions.current.get(id)?.revision ?? 0) + 1;
-      localPositions.current.set(id, { position, revision });
+      const previous = localPositions.current.get(id);
+      const saved = previous
+        ? previous.saved
+        : current.current.positions.find((item) => item.id === id);
+      localPositions.current.set(id, {
+        position,
+        revision: ++positionRevision.current,
+        saved,
+        failed: previous?.failed ?? false,
+      });
       const version = current.current.positions.find((item) => item.id === id)?.version ?? 0;
       current.current = {
         ...current.current,
@@ -269,11 +420,7 @@ export function usePersonalView(path: string, onAccessLost: () => void) {
         ],
       };
       publish(current.current);
-      const existing = positionSaves.current.get(id);
-      if (existing) return existing;
-      const saving = savePosition(id);
-      positionSaves.current.set(id, saving);
-      return saving;
+      return startPositionSave(id)?.then(() => {});
     },
     configure(settings: ViewSettings) {
       if (!current.current || positionSaves.current.size || settingsSaving.current) return;

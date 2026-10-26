@@ -51,6 +51,319 @@ async function openView() {
   };
 }
 
+test('retry saves the latest failed whole position and keeps another failed object local', async () => {
+  const hook = await openView();
+  hook.write(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+  await act(async () => {
+    await hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+    await hook.result.current.move('bike', { x: 4, y: 5, z: 6 });
+  });
+  expect(hook.result.current.unsavedPositions.map(({ id }) => id)).toEqual(['lamp', 'bike']);
+  hook.write(async (body) =>
+    Response.json({ id: body.id, ...(body.position as object), version: 1 }),
+  );
+  await act(async () => {
+    await hook.result.current.retryPosition('lamp');
+  });
+  expect(hook.result.current.unsavedPositions.map(({ id }) => id)).toEqual(['bike']);
+  expect(hook.result.current.view?.positions).toEqual([
+    { id: 'bike', x: 4, y: 5, z: 6, version: 0 },
+    { id: 'lamp', x: 1, y: 2, z: 3, version: 1 },
+  ]);
+  expect(hook.result.current.message).toBe('Positionen är inte sparad');
+});
+
+test('retrying a removed object preserves the changed-object warning and another failed position', async () => {
+  const hook = await openView();
+  hook.write(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+  await act(async () => {
+    await hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+    await hook.result.current.move('bike', { x: 4, y: 5, z: 6 });
+  });
+  hook.write(async () => Response.json({ error: 'object_unavailable' }, { status: 400 }));
+  await act(async () => {
+    await hook.result.current.retryPosition('lamp');
+  });
+  expect(hook.result.current.message).toBe(
+    'Objektet eller hushållets innehåll har ändrats. Läs in kartan innan du fortsätter.',
+  );
+  expect(hook.result.current.positionRecovery).toBeUndefined();
+  expect(hook.result.current.unsavedPositions.map(({ id }) => id)).toEqual(['bike']);
+  expect(hook.result.current.view?.positions).toEqual([
+    { id: 'bike', x: 4, y: 5, z: 6, version: 0 },
+  ]);
+  expect(hook.result.current.pending).toBe(false);
+});
+
+test('loading one saved position leaves other unsaved positions intact and ignores its older write', async () => {
+  const hook = await openView();
+  hook.write(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+  await act(async () => {
+    await hook.result.current.move('bike', { x: 4, y: 5, z: 6 });
+  });
+  let release!: (response: Response) => void;
+  hook.write(
+    () =>
+      new Promise<Response>((resolve) => {
+        release = resolve;
+      }),
+  );
+  let saving: Promise<void> | undefined;
+  act(() => {
+    saving = hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+  });
+  hook.saved({
+    contentVersion: 1,
+    positions: [{ id: 'lamp', x: 90, y: 80, z: 70, version: 4 }],
+    settings: { ...defaultViewSettings, version: 0 },
+  });
+  await act(async () => {
+    await hook.result.current.reloadPosition('lamp');
+  });
+  expect(hook.result.current.view?.positions).toEqual([
+    { id: 'bike', x: 4, y: 5, z: 6, version: 0 },
+    { id: 'lamp', x: 90, y: 80, z: 70, version: 4 },
+  ]);
+  expect(hook.result.current.unsavedPositions.map(({ id }) => id)).toEqual(['bike']);
+  await act(async () => {
+    release(Response.json({ id: 'lamp', x: 1, y: 2, z: 3, version: 1 }));
+    await saving;
+  });
+  expect(hook.result.current.view?.positions.find(({ id }) => id === 'lamp')).toEqual({
+    id: 'lamp',
+    x: 90,
+    y: 80,
+    z: 70,
+    version: 4,
+  });
+  expect(hook.result.current.unsavedPositions.map(({ id }) => id)).toEqual(['bike']);
+  expect(hook.result.current.toast).toBeUndefined();
+});
+
+test.each(['success', 'failure'] as const)(
+  'a late saved-position read %s cannot replace a newer failed move or its status',
+  async (outcome) => {
+    const hook = await openView();
+    hook.write(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+    await act(async () => {
+      await hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+    });
+    let release!: (response: Response) => void;
+    hook.read(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    let loading: Promise<void> | undefined;
+    act(() => {
+      loading = hook.result.current.reloadPosition('lamp');
+    });
+    await act(async () => {
+      await hook.result.current.move('lamp', { x: 7, y: 8, z: 9 });
+    });
+    await act(async () => {
+      release(
+        outcome === 'failure'
+          ? Response.json({ error: 'internal_error' }, { status: 500 })
+          : Response.json({
+              contentVersion: 1,
+              positions: [{ id: 'lamp', x: 90, y: 80, z: 70, version: 4 }],
+              settings: { ...defaultViewSettings, version: 0 },
+            }),
+      );
+      await loading;
+    });
+    expect(hook.result.current.view?.positions).toEqual([
+      { id: 'lamp', x: 7, y: 8, z: 9, version: 0 },
+    ]);
+    expect(hook.result.current.unsavedPositions).toEqual([
+      { id: 'lamp', saving: false, reloading: false, failed: true },
+    ]);
+    expect(hook.result.current.message).toBe('Positionen är inte sparad');
+    expect(hook.result.current.positionRecovery).toBeUndefined();
+  },
+);
+
+test('a failed saved-position read keeps recovery available and reports the retained local position', async () => {
+  const hook = await openView();
+  hook.write(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+  await act(async () => {
+    await hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+  });
+  hook.read(async () => Response.json({ error: 'internal_error' }, { status: 500 }));
+  await act(async () => {
+    await hook.result.current.reloadPosition('lamp');
+  });
+  expect(hook.result.current.view?.positions[0]).toEqual({
+    id: 'lamp',
+    x: 1,
+    y: 2,
+    z: 3,
+    version: 0,
+  });
+  expect(hook.result.current.positionRecovery).toEqual({
+    id: 'lamp',
+    message: 'Positionen kunde inte hämtas. Din lokala position finns kvar. Försök igen.',
+    error: true,
+  });
+  hook.read(async () =>
+    Response.json({
+      contentVersion: 1,
+      positions: [],
+      settings: { ...defaultViewSettings, version: 0 },
+    }),
+  );
+  await act(async () => {
+    await hook.result.current.reloadPosition('lamp');
+  });
+  expect(hook.result.current.view?.positions).toEqual([]);
+  expect(hook.result.current.unsavedPositions).toEqual([]);
+  expect(hook.result.current.positionRecovery?.message).toBe(
+    'Ingen position är sparad. Automatisk placering används.',
+  );
+});
+
+test.each([401, 403])('reloading saved positions respects access denial %s', async (status) => {
+  const hook = await openView();
+  hook.write(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+  await act(async () => {
+    await hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+  });
+  hook.read(async () => Response.json({ error: 'forbidden' }, { status }));
+  await act(async () => {
+    await hook.result.current.reloadPosition('lamp');
+  });
+  expect(hook.result.current.view).toBeNull();
+  expect(hook.result.current.unsavedPositions).toEqual([]);
+  expect(hook.onAccessLost).toHaveBeenCalledOnce();
+});
+
+test('replacement content discovered during position recovery invalidates the old arrangement', async () => {
+  const hook = await openView();
+  hook.write(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+  await act(async () => {
+    await hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+  });
+  hook.read(async () =>
+    Response.json({
+      contentVersion: 2,
+      positions: [],
+      settings: { ...defaultViewSettings, version: 0 },
+    }),
+  );
+  await act(async () => {
+    await hook.result.current.reloadPosition('lamp');
+  });
+  expect(hook.result.current.view).toBeNull();
+  expect(hook.result.current.unsavedPositions).toEqual([]);
+  expect(hook.result.current.message).toContain('Hushållets innehåll har ersatts');
+});
+
+test.each(['success', 'failure'] as const)(
+  'a saved-position read %s from a previous household cannot affect the new household',
+  async (outcome) => {
+    const hook = await openView();
+    hook.write(async () => Response.json({ error: 'unavailable' }, { status: 503 }));
+    await act(async () => {
+      await hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+    });
+    let release!: (response: Response) => void;
+    hook.read(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    let loading: Promise<void> | undefined;
+    act(() => {
+      loading = hook.result.current.reloadPosition('lamp');
+    });
+    const other = {
+      contentVersion: 7,
+      positions: [{ id: 'other', x: 4, y: 5, z: 6, version: 8 }],
+      settings: { ...defaultViewSettings, version: 9 },
+    };
+    hook.read(async () => Response.json(other));
+    await act(async () => {
+      hook.rerender({ path: '/other' });
+    });
+    await act(async () => {
+      release(
+        outcome === 'failure'
+          ? Response.json({ error: 'forbidden' }, { status: 403 })
+          : Response.json({ ...other, contentVersion: 1, positions: [] }),
+      );
+      await loading;
+    });
+    expect(hook.result.current.view).toEqual(other);
+    expect(hook.result.current.positionRecovery).toBeUndefined();
+    expect(hook.onAccessLost).not.toHaveBeenCalled();
+  },
+);
+
+test('discard restores the last confirmed placement and old replies cannot erase a later move', async () => {
+  const hook = await openView();
+  hook.saved({
+    contentVersion: 1,
+    positions: [{ id: 'lamp', x: 90, y: 80, z: 70, version: 4 }],
+    settings: { ...defaultViewSettings, version: 0 },
+  });
+  await act(async () => {
+    await hook.result.current.refresh();
+  });
+  const releases: ((response: Response) => void)[] = [];
+  hook.write(
+    () =>
+      new Promise<Response>((resolve) => {
+        releases.push(resolve);
+      }),
+  );
+  let old: Promise<void> | undefined;
+  act(() => {
+    old = hook.result.current.move('lamp', { x: 1, y: 2, z: 3 });
+  });
+  act(() => {
+    hook.result.current.discardPositions();
+  });
+  expect(hook.result.current.view?.positions[0]).toEqual({
+    id: 'lamp',
+    x: 90,
+    y: 80,
+    z: 70,
+    version: 4,
+  });
+  expect(hook.result.current.unsavedPositions).toEqual([]);
+  let latest: Promise<void> | undefined;
+  act(() => {
+    latest = hook.result.current.move('lamp', { x: 7, y: 8, z: 9 });
+  });
+  await act(async () => {
+    releases[0](Response.json({ id: 'lamp', x: 1, y: 2, z: 3, version: 5 }));
+    await old;
+  });
+  expect(hook.result.current.view?.positions[0]).toEqual({
+    id: 'lamp',
+    x: 7,
+    y: 8,
+    z: 9,
+    version: 4,
+  });
+  expect(hook.result.current.unsavedPositions[0].saving).toBe(true);
+  await act(async () => {
+    releases[1](Response.json({ id: 'lamp', x: 7, y: 8, z: 9, version: 6 }));
+    await latest;
+  });
+  expect(hook.result.current.unsavedPositions).toEqual([]);
+  expect(hook.result.current.view?.positions[0]).toEqual({
+    id: 'lamp',
+    x: 7,
+    y: 8,
+    z: 9,
+    version: 6,
+  });
+});
+
 test('successive moves stay local while older confirmations cannot report the newer position saved', async () => {
   const hook = await openView();
   const replies: ((response: Response) => void)[] = [];

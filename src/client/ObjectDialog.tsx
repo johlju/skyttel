@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { sameConflictValue } from '../shared/conflict-properties.js';
 import type { MapDraft, MapState, ObjectType, ObjectValue } from '../shared/map.js';
-import { type FormLeaveGuard, useFormLeave } from './FormLeave.js';
+import { type FormLeaveGuard, type LeaveConfirmation, useFormLeave } from './FormLeave.js';
 import { validateFormControls } from './form-validation.js';
 import { LifecycleEditor } from './Lifecycle.js';
 import { MapRequestError } from './map-request.js';
@@ -57,7 +57,9 @@ export function ObjectDialog({
   ).current;
   const [editor, setEditor] = useState(initial);
   const { register } = useFormLeave();
-  const [leave, setLeave] = useState<{ proceed: () => void; cancel: () => void } | null>(null);
+  const [leave, setLeave] = useState<{ proceed: LeaveConfirmation; cancel: () => void } | null>(
+    null,
+  );
   const [pending, setPending] = useState(false);
   const [unknown, setUnknown] = useState(false);
   const requestLock = useRef(false);
@@ -109,8 +111,7 @@ export function ObjectDialog({
       cancel();
     } else if (dirty) setLeave({ proceed, cancel });
     else {
-      onClose();
-      proceed();
+      proceed(onClose);
     }
   };
   useLayoutEffect(() => register(guard.current), [register]);
@@ -124,7 +125,12 @@ export function ObjectDialog({
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty, busy]);
   function close() {
-    guard.current.leave(onClose, () => {});
+    guard.current.leave(
+      (discard) => {
+        discard?.();
+      },
+      () => {},
+    );
   }
   const [error, setError] = useState('');
   const [section, setSection] = useState('Grunduppgifter');
@@ -547,8 +553,7 @@ export function ObjectDialog({
           onConfirm={() => {
             const proceed = leave.proceed;
             setLeave(null);
-            onClose();
-            proceed();
+            proceed(onClose);
           }}
         />
       )}

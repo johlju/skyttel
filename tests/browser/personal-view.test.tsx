@@ -1,8 +1,10 @@
 import { cleanup, render } from '@testing-library/react';
 import { useState } from 'react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, onTestFinished, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
+import { FormLeaveProvider } from '../../src/client/FormLeave.js';
 import { HouseholdMap } from '../../src/client/HouseholdMap.js';
+import { openMap, openTable } from '../support/workspace-browser.js';
 import '../../src/client/styles.css';
 import { defaultViewSettings, type PersonalView } from '../../src/shared/personal-view.js';
 
@@ -24,7 +26,7 @@ const state = {
   draft: { version: 0, changes: [] },
 };
 
-function service() {
+function service(mapState = state) {
   let view: PersonalView = {
     contentVersion: 1,
     positions: [],
@@ -74,7 +76,7 @@ function service() {
       return Response.json(settings);
     }
     if (url.endsWith('/operations')) return Response.json({ operations: [] });
-    if (url.includes('/map?')) return Response.json(state);
+    if (url.includes('/map?')) return Response.json(mapState);
     throw new Error(`Unexpected HTTP request: ${url}`);
   });
   return {
@@ -114,7 +116,11 @@ function PersonalMap() {
   );
 }
 async function open(selectObject = true) {
-  render(<PersonalMap />);
+  render(
+    <FormLeaveProvider>
+      <PersonalMap />
+    </FormLeaveProvider>,
+  );
   if (selectObject)
     await page.getByRole('button', { name: 'Välj objekt: Lampan', exact: true }).click();
   await page.getByRole('button', { name: 'Navigera', exact: true }).click();
@@ -150,6 +156,62 @@ test('the public household editor saves personal movement and settings and reloa
   await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
   await page.getByRole('button', { name: 'Återställ vy', exact: true }).click();
   expect(server.read().settings.version).toBe(1);
+});
+
+test('PLACERING-17: failed personal positions retain recovery outside Navigation after selection and mode changes', async () => {
+  const original = { width: window.innerWidth, height: window.innerHeight };
+  onTestFinished(() => page.viewport(original.width, original.height));
+  for (const viewport of [
+    { width: 390, height: 740 },
+    { width: 320, height: 250 },
+  ]) {
+    await page.viewport(viewport.width, viewport.height);
+    const server = service({
+      ...state,
+      objects: [...state.objects, { ...state.objects[0], id: 'bike', name: 'Cykeln' }],
+    });
+    await open();
+    server.fail('uncertain');
+    await page.getByRole('button', { name: 'Flytta Lampan: uppåt', exact: true }).click();
+    await page.getByRole('button', { name: 'Visa mininavigering', exact: true }).click();
+    await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
+    await openTable();
+    await page
+      .getByRole('region', { name: 'Hushållets tabell', exact: true })
+      .getByRole('button', { name: 'Cykeln', exact: true })
+      .click();
+    await openMap();
+    const recovery = page.getByRole('group', { name: 'Position för Lampan', exact: true });
+    await expect
+      .element(recovery.getByText('Positionen är inte sparad', { exact: true }))
+      .toBeVisible();
+    server.fail(null);
+    await recovery.getByRole('button', { name: 'Försök igen', exact: true }).click();
+    await expect
+      .element(page.getByText('Lampan: Positionen är sparad.', { exact: true }))
+      .toBeVisible();
+    await openTable();
+    await page
+      .getByRole('region', { name: 'Hushållets tabell', exact: true })
+      .getByRole('button', { name: 'Lampan', exact: true })
+      .click();
+    await openMap();
+    await page.getByRole('button', { name: 'Navigera', exact: true }).click();
+    server.fail('uncertain');
+    await page.getByRole('button', { name: 'Flytta Lampan: höger', exact: true }).click();
+    await page.getByRole('button', { name: 'Visa normal navigering', exact: true }).click();
+    await page.getByRole('button', { name: 'Stäng navigering', exact: true }).click();
+    server.fail(null);
+    await recovery.getByRole('button', { name: 'Läs in sparad position', exact: true }).click();
+    const result = page.getByText('Lampan: Sparad position är inläst.', { exact: true });
+    await expect.element(result).toBeVisible();
+    await expect.element(result).toHaveFocus();
+    await expect
+      .element(page.getByRole('region', { name: 'Osparade personliga positioner' }))
+      .not.toBeInTheDocument();
+    cleanup();
+    vi.unstubAllGlobals();
+  }
 });
 
 test.each(['position', 'settings'] as const)(

@@ -1406,7 +1406,7 @@ function LoginConfirmation({ proof }: { proof: string }) {
 }
 
 function Application() {
-  const { requestLeave } = useFormLeave();
+  const { requestHouseholdLeave } = useFormLeave();
   const navigate = useNavigate();
   const location = useLocation();
   const [mapSettingsTarget, setMapSettingsTarget] = useState<HTMLDivElement | null>(null);
@@ -1540,7 +1540,7 @@ function Application() {
         type="button"
         disabled={signingOut}
         onClick={() =>
-          requestLeave(() => {
+          requestHouseholdLeave(() => {
             void signOut();
           })
         }

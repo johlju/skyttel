@@ -918,17 +918,30 @@ sparning utan att avbryta pågående läsning.
 **Kräver mänsklig observation:** NVDA eller VoiceOver läser bekräftelsen en gång
 per personlig sparning utan att avbryta pågående läsning.
 
+**Separat förberedelse inför steg 4:**
+
+Gör detta efter steg 3, när återhämtningen är klar och inget formulär har
+oskickade ändringar:
+
+1. Öppna **Din profil** i kartans verktyg och välj **Kakor och lagring**.
+   Vänta tills sidan med samma rubrik visas.
+2. Välj sidans **Tillbaka till kartan**. Hushållet är nu den senaste posten
+   i samma fliks navigeringshistorik, med **Kakor och lagring** precis före.
+   Öppna inga andra sidor och ladda inte om fliken före steg 4. Webbläsarens
+   Bakåt ska begära återgång till den förberedda sidan utanför hushållet.
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
 {
   "humanObservation": {
     "kind": "screen-reader",
-    "observation": "NVDA eller VoiceOver läser bekräftelsen en gång per personlig sparning utan att avbryta pågående läsning."
+    "observation": "NVDA eller VoiceOver läser sparbesked, återhämtningsresultat och förlustfrågor begripligt, med användbart fokus och utan dubbla besked."
   },
   "reference": "Sparade Lampan och Cykeln; faktisk skärmläsare vid 1440 och 390 pixlar.",
   "outcomes": [
-    "NVDA eller VoiceOver läser bekräftelsen en gång per personlig sparning utan att avbryta pågående läsning."
+    "NVDA eller VoiceOver läser bekräftelsen en gång per personlig sparning utan att avbryta pågående läsning.",
+    "Återhämtning och båda förlustfrågorna har begripliga namn, upplästa resultat och användbart fokus."
   ],
   "evidence": [
     {
@@ -954,11 +967,100 @@ per personlig sparning utan att avbryta pågående läsning.
 1. Starta skärmläsaren och följ PLACERING-09 steg 1–3 en gång.
 2. Lyssna på båda bekräftelserna. Kontrollera att knapparnas fokus stannar
    kvar när toasten försvinner. Anteckna hjälpmedel, version och resultat.
+3. Följ PLACERING-17 med skärmläsaren. Lyssna på vilket objekt som inte
+   är sparat, återhämtningsknapparnas namn och resultatet efter varje val.
+   Byt urval och stäng Navigera innan återhämtningen. Flyttbesked och
+   sparresultat ska kunna skiljas åt.
+4. Utför förberedelsen ovan. Förbered sedan ett nytt placeringsfel enligt
+   PLACERING-17. Öppna ett objektformulär och skriv en oskickad ändring.
+   Använd webbläsarens **Bakåt** medan formuläret är öppet. Bekräfta
+   formulärfrågan men välj **Stanna kvar** i **Lämna osparade positioner?**.
+   Formulärtexten och den osparade positionen finns kvar i hushållet, med
+   användbart fokus i objektformuläret. Använd **Bakåt** igen och bekräfta
+   båda frågorna. **Kakor och lagring** öppnas först efter båda besluten.
+   Kontrollera uppläsning och fokus genom hela förloppet. Ta bort
+   nätverksblockeringen efter provet.
 
 **Förväntat resultat:**
 
 - NVDA eller VoiceOver läser bekräftelsen en gång per personlig sparning utan
   att avbryta pågående läsning.
+- Återhämtning och beslut om att lämna hushållet har begripliga namn,
+  upplästa resultat och användbart fokus. Anteckna dessa faktiska
+  observationer separat från automatiserade kontroller.
+
+### PLACERING-17: återhämtning utanför Navigera
+
+**Syfte:** Behålla osparade positioner efter urvals- och lägesbyte och låta
+användaren välja ett nytt sparförsök eller det berörda objektets sparade läge.
+
+**Användare:** Alex Exempel med tangentbord och pekdon.
+
+**Förutsättningar:** Lampan och Cykeln är sparade i provhushållet. Välj ljust
+tema. Kör flödet vid 390 × 740 och 320 × 250 bildpunkter.
+
+**Separat förberedelse:**
+
+1. Öppna Chromiums utvecklarverktyg och verktyget för blockering av
+   nätverksanrop. Lägg till mönstret `*/map/view/position` och aktivera
+   blockeringen före det första flyttförsöket. Övriga anrop ska tillåtas.
+2. Avaktivera blockeringen när ett återhämtningssteg nedan säger det.
+   Aktivera samma mönster inför nästa skrivfel. Ta bort regeln efter provet.
+
+**Automatiskt motsvarande webbläsartest:**
+[personal-view.test.tsx](../../tests/browser/personal-view.test.tsx),
+PLACERING-17. Chromium använder kontrollerade skrivfel och lässvar vid
+det befintliga nätverksgränssnittet. Testet bekräftar kontroller, status och
+fokus; faktisk serverbeständighet provas separat i PLACERING-01 och
+PLACERING-02. Inga grafiska resultat jämförs.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "vitest",
+    "suite": "browser",
+    "spec": "tests/browser/personal-view.test.tsx",
+    "caseId": "PLACERING-17"
+  },
+  "reference": "Chromium i ljust tema vid 390 × 740 och 320 × 250; kontrollerat skrivfel före återhämtning, Lampan och Cykeln, normal och liten navigering.",
+  "outcomes": [
+    "Senaste lokala position och återhämtning finns kvar efter urvalsbyte, lägesbyte och stängd Navigera.",
+    "Försök igen visar ett bekräftat sparresultat för det berörda objektet.",
+    "Läs in sparad position visar sitt resultat och ger användbart fokus även när den sista osparade posten försvinner."
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Välj Lampan och öppna **Navigera**. Välj **Flytta Lampan: uppåt** med
+   skrivblockeringen aktiv. Under **Osparade personliga positioner** visas
+   Lampan och **Positionen är inte sparad**.
+2. Byt till mininavigering och stäng Navigera. Välj Cykeln genom **Tabell**
+   och återgå till **Karta**. Lampans felbesked och båda återhämtningsknapparna
+   går fortfarande att nå.
+3. Avaktivera skrivblockeringen. Välj **Försök igen** för Lampan. Läs
+   **Lampan: Positionen är sparad.**.
+4. Välj Lampan genom Tabell och återgå till Karta. Öppna Navigera och
+   aktivera skrivblockeringen. Välj **Flytta Lampan: höger**. Återgå till
+   normal navigering och stäng fönstret.
+5. Avaktivera blockeringen och välj **Läs in sparad position** för Lampan.
+   Läs **Lampan: Sparad position är inläst.** och kontrollera att fokus
+   återfinns vid resultatet när återhämtningsknapparna försvinner.
+
+**Förväntat resultat:**
+
+- Kontroller och fullständiga besked går att läsa och använda vid båda
+  storlekarna. Återhämtningspanelen hindrar inte verktygen eller tabellvalet.
+- Ett urvals- eller navigeringsbyte förlorar inte Lampans lokala arbete.
+- Ett nytt sparförsök bekräftar bara sitt sparresultat. Inläsning ersätter
+  den avsedda inläsningen och återger ett tydligt resultat.
+- Faktisk skärmläsning och fysiska pekgester provas och antecknas separat i
+  PLACERING-11 och PLACERING-12.
 
 ### PLACERING-12: fysiska fingerbyten och avbruten pekgest
 

@@ -457,6 +457,23 @@ Om en flytt inte kan sparas behålls placeringen och texten
 **Positionen är inte sparad** visas. Du kan fortsätta flytta objekt;
 beskedet bekräftar inte att de osparade placeringarna finns på servern.
 
+Under **Osparade personliga positioner** hittar du det berörda objektet
+även när Navigera är stängd eller när du använder Tabell. **Försök igen**
+sparar den senaste hela lokala positionen. **Läs in sparad position** hämtar
+just det objektets sparade position och lämnar andra objekts osparade
+flyttar kvar. Om objektet ännu inte har någon sparad position återgår det
+till automatisk placering. Ett misslyckat försök behåller din lokala position
+och ger ett läsbart felbesked.
+
+Val av andra objekt, normal eller liten navigering, stängd Navigera och
+inställningar i samma hushåll behåller de osparade positionerna. Innan du
+lämnar hushållet eller loggar ut kan du välja **Stanna kvar** eller
+**Lämna och kasta positionerna**. Om ett formulär också har oskickade
+uppgifter bekräftar du båda besluten; ett avbrott i någon fråga behåller
+allt arbete. Vid omladdning eller stängning varnar webbläsaren för osparade
+ändringar. Lokala positioner som inte är sparade kan inte återställas efter
+en genomförd omladdning.
+
 Återkallad tillgång hindrar fortsatt läsning och sparande. Personliga
 placeringar kan finnas kvar för borttaget innehåll och återkommer om det
 återställs. Vanlig borttagning är inte permanent radering.

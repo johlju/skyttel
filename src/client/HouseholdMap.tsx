@@ -62,6 +62,7 @@ import {
 } from './ObjectSearch.js';
 import { ObjectTypeEditor } from './ObjectTypes.js';
 import type { ObjectEditor } from './object-editor.js';
+import { PersonalPositionRecovery } from './PersonalPositionRecovery.js';
 import { RelationshipTypeEditor } from './RelationshipTypes.js';
 import { Reports } from './Reports.js';
 import { rejectionMessage } from './SaveOperations.js';
@@ -1246,6 +1247,14 @@ export function HouseholdMap({
     </p>
   );
 
+  const personalRecovery = (
+    <PersonalPositionRecovery
+      personal={personal}
+      householdId={householdId}
+      objectName={(id) => displayed.get(id)?.name ?? id}
+      announce={!mapSettingsTarget}
+    />
+  );
   return (
     <section
       ref={workspace}
@@ -1510,6 +1519,7 @@ export function HouseholdMap({
       )}
       {/* Outside the map, where its tools are not shown, the voice box still says what the voice does. */}
       {!active && voiceBox}
+      {!(active && workspaceSurface === 'table') && personalRecovery}
       <VoiceStatusAnnouncements
         conversation={conversation}
         announceSaved={!active}
@@ -1661,6 +1671,9 @@ export function HouseholdMap({
             )}
             onAvailabilityChange={setMapAvailable}
             personal={personal}
+            positionRecoveryActive={personal.unsavedPositions.some(
+              ({ failed, reloading }) => failed || reloading,
+            )}
             settingsMount={mapSettingsTarget}
             active={active && workspaceSurface === 'map' && !mapCovered}
             state={effectiveState ?? state}
@@ -1820,6 +1833,7 @@ export function HouseholdMap({
           onReveal={revealObject}
           statusContent={
             <>
+              {active && workspaceSurface === 'table' && personalRecovery}
               {active && workspaceSurface === 'table' && workStatus}
               <DraftSaveFollowUp
                 progress={saveProgress}

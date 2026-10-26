@@ -99,6 +99,7 @@ export function SpatialMap({
   onRemove,
   onObjectActions,
   personal,
+  positionRecoveryActive = false,
   revealRequest,
   focusRequest,
   onFocusSelection,
@@ -140,7 +141,11 @@ export function SpatialMap({
   onSearchClear?: () => void;
   onRemove: (object: MapObject) => void;
   onObjectActions?: (entry: ObjectActionsEntry) => void;
-  personal?: ReturnType<typeof usePersonalView>;
+  personal?: Pick<
+    ReturnType<typeof usePersonalView>,
+    'view' | 'pending' | 'message' | 'toast' | 'messageId' | 'refresh' | 'move' | 'configure'
+  >;
+  positionRecoveryActive?: boolean;
   revealRequest?: MapRevealRequest;
   focusRequest?: { id: string; objectIds: string[] };
   onFocusSelection?: () => void;
@@ -1876,7 +1881,7 @@ export function SpatialMap({
         )}
       </div>
       <div aria-live="polite" aria-atomic="true">
-        {personal?.message && (
+        {personal?.message && !positionRecoveryActive && (
           <p
             key={personal.messageId}
             ref={showPersonalToast}

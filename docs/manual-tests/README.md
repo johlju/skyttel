@@ -703,6 +703,10 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   provhushåll på samma installation förbereds med ett lokalt kommando.
   Höjdhjälpen har stabil förhandsvisning och ett bevarat val i båda
   navigeringsstorlekarna.
+  Återhämtning efter placeringsfel bevarar senaste lokala position,
+  erbjuder nytt sparförsök eller inläsning för ett objekt och finns kvar
+  efter urvalsbyte och stängd navigering. Skärmläsarprovet omfattar även
+  varningar innan osparade positioner eller formulärtext lämnas.
 - [Kartans bakgrunder](background.md): Gryningsdis, Universum samt ljust
   och mörkt Under världshavet som personliga temaval, återläsning utan
   ändrad karta, sandbotten, vattenyta och sex ljusformer genom vanlig
