@@ -56,7 +56,11 @@ export function spatialScene(
   // Pointer transitions and independent pan directions belong to our gesture
   // adapter; Three retains camera projection and public orbit mathematics.
   controls.disconnect();
-  let settings: Pick<ViewSettings, 'invertX' | 'invertY'> = { invertX: false, invertY: false };
+  let settings: Pick<ViewSettings, 'invertX' | 'invertY' | 'zeroReferenceKeepSize'> = {
+    invertX: false,
+    invertY: false,
+    zeroReferenceKeepSize: false,
+  };
   let selection: string[] = [];
   let rotating = false;
   let overviewDistance = 30;
@@ -179,6 +183,11 @@ export function spatialScene(
   let projectedOverviewDistance = -1;
   function draw() {
     if (lost || rotating) return;
+    if (reference?.updateSize(settings.zeroReferenceKeepSize, controls.getDistance())) {
+      painted = false;
+      projectionRevision++;
+    }
+    reference?.group.updateMatrixWorld();
     camera.updateMatrixWorld();
     // A bounded translation gives the distant sky gentle pan parallax without
     // ever leaving its sphere. Personal object movement does not move the sky.
@@ -252,7 +261,9 @@ export function spatialScene(
     onReferenceProject(
       referenceVisible
         ? referenceLabels.map(({ id, text, position }) => {
-            const point = new Vector3(position.x, position.y, position.z).project(camera);
+            const point = new Vector3(position.x, position.y, position.z);
+            if (reference) point.applyMatrix4(reference.group.matrixWorld);
+            point.project(camera);
             return {
               id,
               text,
@@ -536,13 +547,17 @@ export function spatialScene(
       return true;
     },
     configure(value: ViewSettings, theme: 'light' | 'dark' = 'dark', reducedMotion = false) {
+      // A scene retained while Settings is open may not have a visible canvas
+      // until this visit. Fit it before recording reference zoom distances.
+      if (needsFrame && canvas.clientWidth && canvas.clientHeight) reset();
       settings = value;
       const nextReferenceKey = `${theme}:${value.zeroReferenceVariant}:${value.zeroReferenceWeight}`;
       if (referenceKey !== nextReferenceKey) {
-        reference?.dispose();
-        referenceScene.clear();
-        reference = zeroReference(value, theme);
-        referenceScene.add(reference.group);
+        if (reference) reference.configure(value, theme);
+        else {
+          reference = zeroReference(value, theme);
+          referenceScene.add(reference.group);
+        }
         referenceKey = nextReferenceKey;
         const extent = zeroReferenceExtent;
         referenceLabels =
@@ -579,6 +594,16 @@ export function spatialScene(
       sky.background = new Color(theme === 'light' ? '#eef3f3' : '#101b29');
       draw();
       publishHistory();
+    },
+    startReferenceVisit() {
+      // The retained camera and initial label fit can differ between visits.
+      // Begin each visit at the approved extents without persisting its size.
+      const distance = controls.getDistance();
+      reference?.updateSize(false, distance);
+      reference?.updateSize(settings.zeroReferenceKeepSize, distance);
+      painted = false;
+      projectionRevision++;
+      draw();
     },
     beginCameraGesture: gestures.beginTouch,
     position(id: string): Position | null {

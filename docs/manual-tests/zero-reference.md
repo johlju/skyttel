@@ -55,12 +55,13 @@ reglage och val utan att hävda verifierad grafisk återgivning.
   },
   "reference": "Tolv kombinationer, båda teman, dator och 390 × 844.",
   "outcomes": [
-    "Cirkel och Diskret är förval med Alltid synlig av.",
+    "Cirkel och Diskret är förval med Alltid synlig och zoomstorlek av.",
     "Alla varianter och styrkor kan väljas med dekorativ bakgrund av.",
     "Inställningar och Navigera visar samma sparade synlighetsval.",
     "Nollreferens har synlig etikett i miniläge på liten skärm.",
     "Kamera- och rörelseåterställning behåller nollreferensens val.",
-    "Tangentbordsfokus behålls efter sparande."
+    "Tangentbordsfokus behålls efter sparande.",
+    "Behåll storlek vid zoom har läsbar hjälp och är oberoende av Zoomstyrka."
   ]
 }
 ```
@@ -68,11 +69,14 @@ reglage och val utan att hävda verifierad grafisk återgivning.
 
 **Steg:**
 
-1. Läs förvalen Cirkel, Diskret och Alltid synlig av. Stäng av Visa
-   bakgrund. Kontrollera att Nollreferens fortfarande går att ändra.
+1. Läs förvalen Cirkel, Diskret, Alltid synlig av och Behåll storlek vid
+   zoom av. Stäng av Visa bakgrund. Kontrollera att Nollreferens
+   fortfarande går att ändra.
 2. Prova Kvadrat, Oval, Cirkel och Linjer med Diskret, Ursprunglig och
    Framträdande. Upprepa med ljust och mörkt systemtema. Läs det sparade
-   valet och kontrollera att fokus stannar på väljaren.
+   valet och kontrollera att fokus stannar på väljaren. Läs hjälpen till
+   Behåll storlek vid zoom, aktivera och avaktivera med mellanslag.
+   Kontrollera att fokus är kvar. Lämna valet aktiverat.
 3. Lämna Linjer och Framträdande valda. Aktivera Alltid synlig, återgå till
    kartan och öppna Navigera. Kontrollera att Nollreferens är markerad.
    Panorera höger och välj Återställ vy. Reglaget är fortfarande markerat.
@@ -80,7 +84,9 @@ reglage och val utan att hävda verifierad grafisk återgivning.
    etiketten Nollreferens. Fokusera reglaget och avmarkera med mellanslag.
    Kontrollera att fokus är kvar. Återgå till normal navigering och stäng.
 5. Öppna inställningarna igen. Alltid synlig är av, Linjer och Framträdande
-   finns kvar. Slå på Visa bakgrund och välj Återställ rörelse.
+   finns kvar. Behåll storlek vid zoom är fortfarande aktiverat. Slå på
+   Visa bakgrund, ändra Zoomstyrka och välj Återställ rörelse. Kontrollera
+   att zoomstorleksvalet är kvar.
 
 **Förväntat resultat:** Båda ytorna visar samma val. Bakgrundens av/på,
 miniläge, skärmbredd och återställning ändrar inte referensens övriga val.
@@ -111,7 +117,7 @@ serverlagring; de ersätter inte mänsklig observation på fysiska enheter.
   },
   "reference": "Alex i två profiler, Robin i en; två hushåll och omstart.",
   "outcomes": [
-    "Alex återfår Oval, Ursprunglig och Alltid synlig efter återbesök och omstart.",
+    "Alex återfår Oval, Ursprunglig, Alltid synlig och zoomstorlek efter omstart.",
     "En annan enhet med Alex visar samma val i Linden.",
     "Robin har egna förval och kan ändra dem utan att ändra Alex val.",
     "Alex val i Eken är separata från Linden."
@@ -122,15 +128,17 @@ serverlagring; de ersätter inte mänsklig observation på fysiska enheter.
 
 **Steg:**
 
-1. Välj Oval, Ursprunglig och Alltid synlig som Alex i Linden. Vänta på
-   sparbekräftelsen. Gå till kartan och öppna inställningarna igen.
-2. Starta om provinstallationen och ladda om sidan. Läs samma tre val.
+1. Välj Oval, Ursprunglig, Alltid synlig och Behåll storlek vid zoom som
+   Alex i Linden. Vänta på sparbekräftelsen. Gå till kartan och öppna
+   inställningarna igen.
+2. Starta om provinstallationen och ladda om sidan. Läs samma fyra val.
    Logga in som Alex på den andra enheten och läs valen i Linden.
 3. Öppna Linden som Robin. Kontrollera Cirkel, Diskret och Alltid synlig
-   av. Välj Kvadrat och vänta på sparbekräftelsen. Ladda om Alex vy:
-   Oval, Ursprunglig och Alltid synlig är kvar.
-4. Öppna Eken som Alex. Kontrollera Cirkel, Diskret och Alltid synlig av.
-   Återgå till Linden och läs de sparade egna valen igen.
+   av samt Behåll storlek vid zoom av. Välj Kvadrat och vänta på
+   sparbekräftelsen. Ladda om Alex vy: de fyra egna valen är kvar.
+4. Öppna Eken som Alex. Kontrollera Cirkel, Diskret, Alltid synlig av och
+   Behåll storlek vid zoom av. Återgå till Linden och läs de sparade egna
+   valen igen.
 
 **Förväntat resultat:** Valen sparas per Skyttel-användare och hushåll och
 återkommer över återbesök, webbläsarsessioner, omstart och enheter.

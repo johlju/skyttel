@@ -1035,7 +1035,8 @@
     "tolvmånadersgräns",
     "sjudygnsgränsen",
     "skärmläsarobservationerna",
-    "rättningsbatchen"
+    "rättningsbatchen",
+    "utzoomning"
   ],
   "overrides": [
     {

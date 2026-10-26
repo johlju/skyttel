@@ -687,7 +687,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   Sparat resultat och historik läses genom webbläsaren efter omstart.
 - [Nollreferens](zero-reference.md): alla fyra varianter och tre visuella
   styrkor, samma sparade reglage i inställningar och normal- eller
-  mininavigering, separat dekorativ bakgrund och återställning samt egna
+  mininavigering, zoomstorlek skild från bakgrundens zoomstyrka och
+  återställning samt egna
   val mellan användare, hushåll, sessioner och enheter. Faktisk skärmläsare
   och fysisk pekning observeras separat.
 - [Personliga placeringar](personal-view.md): bakgrundsval per tema i Rymdkartans
