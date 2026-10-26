@@ -27,6 +27,61 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
+test('a new personal view keeps all six zero-reference preferences hidden and independent of the background', async () => {
+  expect((await (await client.request(`${path}/view`)).json()).settings).toMatchObject({
+    zeroReferenceVariant: 'circle',
+    zeroReferenceWeight: 'subtle',
+    zeroReferenceAlwaysVisible: false,
+    zeroReferenceOnMovement: false,
+    zeroReferenceTint: 0,
+    zeroReferenceKeepSize: false,
+  });
+});
+
+test('zero-reference preferences validate all retained choices and reject malformed values without changing the view', async () => {
+  let version = 0;
+  for (const zeroReferenceVariant of ['square', 'oval', 'circle', 'lines']) {
+    for (const zeroReferenceWeight of ['subtle', 'original', 'prominent']) {
+      const settings = {
+        ...defaultViewSettings,
+        background: false,
+        zeroReferenceVariant,
+        zeroReferenceWeight,
+        zeroReferenceAlwaysVisible: true,
+        zeroReferenceOnMovement: true,
+        zeroReferenceTint: 85,
+        zeroReferenceKeepSize: true,
+      };
+      expect((await client.json(`${path}/view/settings`, { version, settings })).status).toBe(200);
+      expect((await (await client.request(`${path}/view`)).json()).settings).toEqual({
+        ...settings,
+        version: ++version,
+      });
+    }
+  }
+  const before = await (await client.request(`${path}/view`)).json();
+  for (const invalid of [
+    { zeroReferenceVariant: 'triangle' },
+    { zeroReferenceWeight: 'hidden' },
+    { zeroReferenceAlwaysVisible: 'yes' },
+    { zeroReferenceOnMovement: 1 },
+    { zeroReferenceTint: -1 },
+    { zeroReferenceTint: 86 },
+    { zeroReferenceTint: 0.5 },
+    { zeroReferenceKeepSize: null },
+    { zeroReferencePlaneX: false },
+  ])
+    expect(
+      (
+        await client.json(`${path}/view/settings`, {
+          version,
+          settings: { ...defaultViewSettings, ...invalid },
+        })
+      ).status,
+    ).toBe(400);
+  expect(await (await client.request(`${path}/view`)).json()).toEqual(before);
+});
+
 test('personal object placements survive rereading without changing shared content or the private proposal', async () => {
   const before = await (await client.request(path)).json();
   const moved = await client.json(`${path}/view/position`, {
@@ -69,7 +124,19 @@ test('positions and settings require current membership and never expose another
     200,
   );
   const ownerMove = { id: 'lamp', version: 0, position: { x: 1, y: 2, z: 3 } };
-  const ownerSettings = { version: 0, settings: { ...defaultViewSettings, background: true } };
+  const ownerSettings = {
+    version: 0,
+    settings: {
+      ...defaultViewSettings,
+      background: true,
+      zeroReferenceVariant: 'square',
+      zeroReferenceWeight: 'prominent',
+      zeroReferenceAlwaysVisible: true,
+      zeroReferenceOnMovement: true,
+      zeroReferenceTint: 23,
+      zeroReferenceKeepSize: true,
+    },
+  };
   expect((await client.json(`${path}/view/position`, ownerMove)).status).toBe(200);
   expect((await client.json(`${path}/view/settings`, ownerSettings)).status).toBe(200);
   const ownerBefore = await (await client.request(`${path}/view`)).json();

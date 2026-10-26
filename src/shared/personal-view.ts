@@ -12,6 +12,12 @@ export type ViewSettings = {
   zoomStrength: number;
   layerDistance: number;
   allLabels: boolean;
+  zeroReferenceVariant: 'square' | 'oval' | 'circle' | 'lines';
+  zeroReferenceWeight: 'subtle' | 'original' | 'prominent';
+  zeroReferenceAlwaysVisible: boolean;
+  zeroReferenceOnMovement: boolean;
+  zeroReferenceTint: number;
+  zeroReferenceKeepSize: boolean;
 };
 export const defaultViewSettings: ViewSettings = {
   invertX: false,
@@ -25,6 +31,12 @@ export const defaultViewSettings: ViewSettings = {
   zoomStrength: 0.7,
   layerDistance: 1,
   allLabels: false,
+  zeroReferenceVariant: 'circle',
+  zeroReferenceWeight: 'subtle',
+  zeroReferenceAlwaysVisible: false,
+  zeroReferenceOnMovement: false,
+  zeroReferenceTint: 0,
+  zeroReferenceKeepSize: false,
 };
 export type PersonalView = {
   contentVersion: number;

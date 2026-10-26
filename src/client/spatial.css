@@ -50,6 +50,41 @@
   display: block;
   touch-action: none;
 }
+.zero-reference-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: var(--space-surface, #fff);
+  color: var(--space-text, #173744);
+  font-size: 13px;
+  line-height: 18px;
+}
+.zero-reference-settings {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.zero-reference-settings select {
+  width: 100%;
+  min-height: 44px;
+}
+.zero-reference-settings label:has(input),
+.navigation-zero-reference {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.navigation-zero-reference input,
+.zero-reference-settings input[type="checkbox"] {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+}
 
 .presentation-map {
   position: fixed;

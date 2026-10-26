@@ -48,6 +48,33 @@ function mount(path = '/') {
     </BrowserRouter>,
   );
 }
+
+test('household Settings links and administrator choices follow the requested household rather than the login default', async () => {
+  await signIn(client, installation.origin);
+  const { household } = await (await createHousehold(client, installation.origin)).json();
+  const { user } = await (await client.get(`${installation.origin}/api/bootstrap`)).json();
+  installation.seedMembership(user.id, 'other-settings-household', 'Eken', 'member');
+  mount('/households/other-settings-household/settings');
+  const overview = await screen.findByRole('heading', { name: 'Inställningar', level: 1 });
+  expect(overview).toBeDefined();
+  const card = await within(overview.closest('section') as HTMLElement).findByRole('link', {
+    name: /^Rymdkartan/,
+  });
+  await waitFor(() =>
+    expect(card.getAttribute('href')).toBe('/households/other-settings-household/settings/map'),
+  );
+  expect(screen.queryByRole('link', { name: 'Fullständig export' })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Administrera tillgång' })).toBeNull();
+  expect(screen.getByRole('link', { name: 'Tillbaka till kartan' }).getAttribute('href')).toBe(
+    '/households/other-settings-household',
+  );
+  await userEvent.click(card);
+  expect((await screen.findByRole('heading', { name: 'Rymdkartan', level: 1 })).textContent).toBe(
+    'Rymdkartan',
+  );
+  expect(window.location.pathname).toBe('/households/other-settings-household/settings/map');
+  expect(window.location.pathname).not.toContain(household.id);
+});
 async function post(actor: APIRequestContext, path: string, data: unknown) {
   const response = await actor.post(`${installation.origin}${path}`, {
     headers: { origin: installation.origin },

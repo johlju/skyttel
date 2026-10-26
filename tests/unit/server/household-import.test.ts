@@ -3,6 +3,7 @@ import { chmodSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { unzipSync, zipSync } from 'fflate';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { defaultViewSettings } from '../../../src/shared/personal-view.js';
 import { applicationFixture } from './fixture.js';
 
 let fixture: Awaited<ReturnType<typeof applicationFixture>>;
@@ -32,6 +33,76 @@ beforeEach(async () => {
 });
 afterEach(() => fixture.close());
 
+test('zero-reference choices round-trip and schema37 archives receive only missing defaults', async () => {
+  const preferences = {
+    ...defaultViewSettings,
+    invertX: true,
+    background: false,
+    zeroReferenceVariant: 'lines',
+    zeroReferenceWeight: 'prominent',
+    zeroReferenceAlwaysVisible: true,
+    zeroReferenceOnMovement: true,
+    zeroReferenceTint: 85,
+    zeroReferenceKeepSize: true,
+  };
+  expect(
+    (await client.json(`${path}/map/view/settings`, { version: 0, settings: preferences })).status,
+  ).toBe(200);
+  const exported = await (await client.json(`${path}/exports`, {})).json();
+  const bytes = new Uint8Array(
+    await (await client.request(`${path}/exports/${exported.id}`)).arrayBuffer(),
+  );
+  const ready = await (await upload(bytes)).json();
+  expect(
+    (
+      await client.json(`${path}/imports/${ready.id}/confirm`, {
+        contentVersion: 1,
+        confirmed: true,
+      })
+    ).status,
+  ).toBe(200);
+  expect((await (await client.request(`${path}/map/view`)).json()).settings).toEqual({
+    ...preferences,
+    version: 1,
+  });
+
+  archive = bytes;
+  const legacy = changedContent((content) => {
+    for (const row of content.viewSettings as { settings: Record<string, unknown> }[])
+      for (const key of Object.keys(row.settings))
+        if (key.startsWith('zeroReference')) delete row.settings[key];
+  });
+  const parts = unzipSync(legacy);
+  const manifest = JSON.parse(new TextDecoder().decode(parts['manifest.json']));
+  manifest.schemaVersion = 37;
+  parts['manifest.json'] = new TextEncoder().encode(JSON.stringify(manifest));
+  const response = await client.request(`${path}/imports`, {
+    method: 'POST',
+    headers: {
+      origin: fixture.config.origin,
+      'content-type': 'application/zip',
+      'X-Skyttel-Content-Version': '2',
+    },
+    body: zipSync(parts) as BodyInit,
+  });
+  expect(response.status).toBe(201);
+  const older = await response.json();
+  expect(
+    (
+      await client.json(`${path}/imports/${older.id}/confirm`, {
+        contentVersion: 2,
+        confirmed: true,
+      })
+    ).status,
+  ).toBe(200);
+  expect((await (await client.request(`${path}/map/view`)).json()).settings).toEqual({
+    ...defaultViewSettings,
+    invertX: true,
+    background: false,
+    version: 1,
+  });
+});
+
 test('household archives exclude personal conversation choices and import preserves them', async () => {
   const preferences = { showDraftOnStart: true, textWidth: 624, draftWidth: 460 };
   expect((await client.json('/api/theme-preference', { mode: 'dark' })).status).toBe(200);
@@ -41,7 +112,7 @@ test('household archives exclude personal conversation choices and import preser
     await (await client.request(`${path}/exports/${prepared.id}`)).arrayBuffer(),
   );
   const parts = unzipSync(bytes);
-  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(37);
+  expect(JSON.parse(new TextDecoder().decode(parts['manifest.json'])).schemaVersion).toBe(38);
   const encoded = new TextDecoder().decode(parts['content.json']);
   for (const field of [
     'showDraftOnStart',

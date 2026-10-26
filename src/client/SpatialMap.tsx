@@ -25,7 +25,11 @@ import { SpatialObjectGlyph } from './SpatialObjectGlyph.js';
 import { SpatialOrientation } from './SpatialOrientation.js';
 import { navigationDragThreshold } from './spatial-navigation.js';
 import { connectionOcclusion } from './spatial-occlusion.js';
-import { type ProjectedPoint, spatialScene } from './spatial-scene.js';
+import {
+  type ProjectedPoint,
+  type ProjectedReferenceLabel,
+  spatialScene,
+} from './spatial-scene.js';
 import { useObjectMovement } from './use-object-movement.js';
 import type { usePersonalView } from './use-personal-view.js';
 import { WorkspaceIcon } from './WorkspaceTools.js';
@@ -316,6 +320,7 @@ export function SpatialMap({
     else setLocalSettings(next);
   }
   const [points, setPoints] = useState<ProjectedPoint[]>([]);
+  const [referenceLabels, setReferenceLabels] = useState<ProjectedReferenceLabel[]>([]);
   const [completedRevealId, setCompletedRevealId] = useState<string>();
   const [completedFocusId, setCompletedFocusId] = useState<string>();
   const [cameraHistory, setCameraHistory] = useState({ canGoBack: false, changed: false });
@@ -403,6 +408,7 @@ export function SpatialMap({
         motion,
         surface.current ?? element,
         setCameraHistory,
+        setReferenceLabels,
       );
     } catch {
       setUnavailable(true);
@@ -939,6 +945,30 @@ export function SpatialMap({
     if (box) labels.set(point.id, box);
   }
   labeledEdges.push(...placeEdges(labelEdges.filter((edge) => !primaryEdges.includes(edge))));
+  // Reference text has one projected anchor and yields to all household text.
+  // It never uses the object-label fallback or a viewport-edge position.
+  const visibleReferenceLabels = referenceLabels.filter((label) => {
+    if (!label.visible) return false;
+    const size = labelSize(`reference-${label.id}`, { width: 108, height: 24 });
+    const box = { ...label, ...size };
+    if (
+      box.x - box.width / 2 < 8 ||
+      box.x + box.width / 2 > surfaceWidth - 8 ||
+      box.y - box.height / 2 < 8 ||
+      box.y + box.height / 2 > surfaceHeight - 8
+    )
+      return false;
+    if (
+      [...nearby(box)].some(
+        (other) =>
+          Math.abs(other.x - box.x) < (other.width + box.width) / 2 + 5 &&
+          Math.abs(other.y - box.y) < (other.height + box.height) / 2 + 5,
+      )
+    )
+      return false;
+    reserve(box);
+    return true;
+  });
   const hiddenLabels = locations.size - labels.size + labelEdges.length - labeledEdges.length;
   const adjacent = new Set<string>();
   const guideId = movement.heightActive
@@ -1077,6 +1107,18 @@ export function SpatialMap({
         return personal?.move(id, end);
       }}
     >
+      <label className="navigation-zero-reference">
+        <input
+          type="checkbox"
+          checked={preferences.zeroReferenceAlwaysVisible}
+          disabled={Boolean(personal && !personal.view)}
+          aria-disabled={personal?.pending || undefined}
+          onChange={(event) => {
+            if (!personal?.pending) configure({ zeroReferenceAlwaysVisible: event.target.checked });
+          }}
+        />
+        Nollreferens
+      </label>
       <div className="navigation-height-help">
         <label>
           <input
@@ -1234,6 +1276,68 @@ export function SpatialMap({
               </button>
             </fieldset>
             {reducedMotion && <p>Bakgrunden är stilla eftersom minskad rörelse är aktiverad.</p>}
+            <fieldset
+              className="zero-reference-settings"
+              disabled={Boolean(personal && !personal.view)}
+              aria-busy={personal?.pending || undefined}
+            >
+              <legend>Nollreferens</legend>
+              <label htmlFor={`${labelPrefix}-reference-variant`}>Variant</label>
+              <select
+                id={`${labelPrefix}-reference-variant`}
+                value={preferences.zeroReferenceVariant}
+                aria-disabled={personal?.pending || undefined}
+                onChange={(event) => {
+                  if (!personal?.pending)
+                    configure({
+                      zeroReferenceVariant: event.target
+                        .value as ViewSettings['zeroReferenceVariant'],
+                    });
+                }}
+              >
+                <option value="square">Kvadrat</option>
+                <option value="oval">Oval</option>
+                <option value="circle">Cirkel</option>
+                <option value="lines">Linjer</option>
+              </select>
+              <label htmlFor={`${labelPrefix}-reference-weight`}>Synlighet</label>
+              <select
+                id={`${labelPrefix}-reference-weight`}
+                value={preferences.zeroReferenceWeight}
+                aria-describedby={`${labelPrefix}-reference-weight-help`}
+                aria-disabled={personal?.pending || undefined}
+                onChange={(event) => {
+                  if (!personal?.pending)
+                    configure({
+                      zeroReferenceWeight: event.target
+                        .value as ViewSettings['zeroReferenceWeight'],
+                    });
+                }}
+              >
+                <option value="subtle">Diskret</option>
+                <option value="original">Ursprunglig</option>
+                <option value="prominent">Framträdande</option>
+              </select>
+              <p id={`${labelPrefix}-reference-weight-help`}>
+                Synlighet anger referensens visuella styrka.
+              </p>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={preferences.zeroReferenceAlwaysVisible}
+                  aria-disabled={personal?.pending || undefined}
+                  onChange={(event) => {
+                    if (!personal?.pending)
+                      configure({ zeroReferenceAlwaysVisible: event.target.checked });
+                  }}
+                />
+                Alltid synlig
+              </label>
+              <p>
+                Referensen visar kartans fasta nollpunkt. Den är inget verkligt mått, golv eller
+                tak. Dina val gäller bara dig i det här hushållet.
+              </p>
+            </fieldset>
             <p>Bakgrunden är dekorativ. Dina val sparas direkt för dig i det här hushållet.</p>
             <div role="status" aria-atomic="true">
               {hasUnsavedMotion && !personal?.pending ? (
@@ -1400,6 +1504,18 @@ export function SpatialMap({
             pointer.current = null;
           }}
         />
+        {visibleReferenceLabels.map((label) => (
+          <span
+            key={label.id}
+            ref={observeLabel}
+            data-layout-id={`reference-${label.id}`}
+            className="zero-reference-label"
+            aria-hidden="true"
+            style={{ left: label.x, top: label.y }}
+          >
+            {label.text}
+          </span>
+        ))}
         <svg className="spatial-lines" aria-hidden="true">
           <defs>
             {/* WebKit ignores context-stroke, so each kind colours its own arrowhead. */}

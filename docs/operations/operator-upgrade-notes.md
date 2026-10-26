@@ -6,6 +6,16 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Personal map references and archive compatibility
+
+Keep a backup from before the update if rollback is required. The update adds
+hidden zero-reference defaults to existing personal views and preserves their
+other choices. No configuration change is required.
+
+New household exports require this version or a later compatible version for
+import. This version also accepts the previously supported household archive
+format and supplies the new reference defaults for its personal views.
+
 ### Image security registry access
 
 After rollout, run **Deployed image security** on the main branch. Verify

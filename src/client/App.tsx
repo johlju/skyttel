@@ -81,13 +81,15 @@ type LoadState<T> =
   | { status: 'error'; code?: number }
   | { status: 'loaded'; data: T };
 
-function useResource<T>(path: string, revision = 0, refreshAccess = false): LoadState<T> {
+function useResource<T>(path: string | null, revision = 0, refreshAccess = false): LoadState<T> {
   const key = `${path}:${revision}`;
   const [result, setResult] = useState<{ key: string; state: LoadState<T> }>({
     key,
     state: { status: 'loading' },
   });
   useEffect(() => {
+    if (!path) return;
+    const resourcePath = path;
     const controller = new AbortController();
     setResult({ key, state: { status: 'loading' } });
     let pending = false;
@@ -95,7 +97,7 @@ function useResource<T>(path: string, revision = 0, refreshAccess = false): Load
       if (pending) return;
       pending = true;
       try {
-        const data = await request<T>(path, undefined, controller.signal);
+        const data = await request<T>(resourcePath, undefined, controller.signal);
         if (!controller.signal.aborted) setResult({ key, state: { status: 'loaded', data } });
       } catch (error) {
         if (!controller.signal.aborted)
@@ -1431,6 +1433,17 @@ function Application() {
   const bootstrap = useResource<Bootstrap>('/api/bootstrap', revision, true);
   const reload = useCallback(() => setRevision((value) => value + 1), []);
   const data = bootstrap.status === 'loaded' ? bootstrap.data : undefined;
+  const settingsHouseholdId =
+    matchPath('/households/:id/settings/*', location.pathname)?.params.id ??
+    matchPath('/households/:id/administration', location.pathname)?.params.id;
+  const defaultHousehold = data?.status === 'ready' ? data.household : undefined;
+  const alternateSettingsHousehold = useResource<{ household: Household }>(
+    defaultHousehold && settingsHouseholdId && settingsHouseholdId !== defaultHousehold.id
+      ? `/api/households/${encodeURIComponent(settingsHouseholdId)}`
+      : null,
+    revision,
+    true,
+  );
   const activity = useSessionActivity(
     signOutRequested.current ? undefined : data?.loginId,
     revision,
@@ -1510,7 +1523,12 @@ function Application() {
         Boolean(matchPath('/households/:id/settings/*', location.pathname))) ||
       (data?.status === 'ready' &&
         Boolean(matchPath('/households/:id/administration', location.pathname))));
-  const household = data?.status === 'ready' ? data.household : undefined;
+  const household =
+    settingsHouseholdId && settingsHouseholdId !== defaultHousehold?.id
+      ? alternateSettingsHousehold.status === 'loaded'
+        ? alternateSettingsHousehold.data.household
+        : undefined
+      : defaultHousehold;
   const accessGate =
     !storagePage &&
     (loginPage ||
@@ -1628,7 +1646,10 @@ function Application() {
               element={
                 <section className="panel">
                   <Heading>Rymdkartan</Heading>
-                  <p>Välj bakgrund för din personliga vy. Hushållets karta påverkas inte.</p>
+                  <p>
+                    Välj bakgrund och nollreferens för din personliga vy. Hushållets karta påverkas
+                    inte.
+                  </p>
                   <div ref={setMapSettingsTarget} />
                 </section>
               }

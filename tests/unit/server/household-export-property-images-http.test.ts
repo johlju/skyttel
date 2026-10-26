@@ -135,7 +135,7 @@ test('a full archive preserves object identities and saved, historical and priva
     expect(manifest).toMatchObject({
       format: 'skyttel-household',
       version: 2,
-      schemaVersion: 37,
+      schemaVersion: 38,
       householdId: household.id,
     });
     for (const part of manifest.parts) {

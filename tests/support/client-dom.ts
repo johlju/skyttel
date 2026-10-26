@@ -45,6 +45,7 @@ vi.mock('three', async (importOriginal) => {
         }
         setSize = vi.fn();
         clear = vi.fn();
+        clearDepth = vi.fn();
         render = vi.fn();
         dispose = vi.fn();
       },

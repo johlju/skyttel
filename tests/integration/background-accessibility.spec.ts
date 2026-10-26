@@ -206,6 +206,17 @@ test('BAKGRUND-07: keyboard and touch settings reflow with honest disabled and s
     );
     const reset = page.getByRole('button', { name: 'Återställ rörelse', exact: true });
     const refresh = page.getByRole('button', { name: 'Läs in min aktuella vy', exact: true });
+    const reference = form.getByRole('group', { name: 'Nollreferens', exact: true });
+    const tabThroughReference = async () => {
+      await expect(reference.getByRole('combobox', { name: 'Variant', exact: true })).toBeFocused();
+      const controls = reference.locator('select:enabled, input:enabled, button:enabled');
+      expect(await controls.count()).toBeGreaterThanOrEqual(3);
+      for (const control of await controls.all()) {
+        await expect(control).toBeFocused();
+        await control.press('Tab');
+      }
+      await expect(refresh).toBeFocused();
+    };
     for (const control of [light, dark, ...ranges, reset, refresh]) {
       const target = await control.boundingBox();
       expect(target?.height, 'background control target height').toBeGreaterThanOrEqual(24);
@@ -272,7 +283,7 @@ test('BAKGRUND-07: keyboard and touch settings reflow with honest disabled and s
     await expect(status).toHaveText('Din personliga vy är sparad.');
     for (const control of [light, dark, ...ranges, reset]) await expect(control).toBeDisabled();
     await visible.press('Tab');
-    await expect(refresh).toBeFocused();
+    await tabThroughReference();
     await visible.focus();
     await visible.press('Space');
     await expect(status).toHaveText('Din personliga vy är sparad.');
@@ -285,7 +296,7 @@ test('BAKGRUND-07: keyboard and touch settings reflow with honest disabled and s
     await light.press('Tab');
     await expect(dark).toBeFocused();
     await dark.press('Tab');
-    await expect(refresh).toBeFocused();
+    await tabThroughReference();
     expect(await read()).toEqual(saved);
     for (const theme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: theme });

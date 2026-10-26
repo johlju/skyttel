@@ -17,5 +17,11 @@ export const viewSettingsSchema = z
     panStrength: strength,
     zoomStrength: strength,
     layerDistance: z.number().min(0.5).max(2).multipleOf(0.1),
+    zeroReferenceVariant: z.enum(['square', 'oval', 'circle', 'lines']),
+    zeroReferenceWeight: z.enum(['subtle', 'original', 'prominent']),
+    zeroReferenceAlwaysVisible: z.boolean(),
+    zeroReferenceOnMovement: z.boolean(),
+    zeroReferenceTint: z.number().int().min(0).max(85),
+    zeroReferenceKeepSize: z.boolean(),
   })
   .strict();

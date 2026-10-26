@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { DraftChange } from '../shared/map.js';
 import { isObjectIconId } from '../shared/object-icons.js';
+import { defaultViewSettings } from '../shared/personal-view.js';
 import { propertiesSchema } from '../shared/properties.js';
 import { viewSettingsSchema } from './view-settings-schema.js';
 
@@ -148,7 +149,28 @@ const receipt = z
     relationshipTypes: z.array(relationshipTypeChange).optional(),
   })
   .strict();
-const viewSettings = viewSettingsSchema;
+// Supported schema37 archives have no zero-reference fields. Defaults apply
+// only at this archive boundary; ordinary settings requests remain strict.
+const viewSettings = viewSettingsSchema.extend({
+  zeroReferenceVariant: viewSettingsSchema.shape.zeroReferenceVariant.default(
+    defaultViewSettings.zeroReferenceVariant,
+  ),
+  zeroReferenceWeight: viewSettingsSchema.shape.zeroReferenceWeight.default(
+    defaultViewSettings.zeroReferenceWeight,
+  ),
+  zeroReferenceAlwaysVisible: viewSettingsSchema.shape.zeroReferenceAlwaysVisible.default(
+    defaultViewSettings.zeroReferenceAlwaysVisible,
+  ),
+  zeroReferenceOnMovement: viewSettingsSchema.shape.zeroReferenceOnMovement.default(
+    defaultViewSettings.zeroReferenceOnMovement,
+  ),
+  zeroReferenceTint: viewSettingsSchema.shape.zeroReferenceTint.default(
+    defaultViewSettings.zeroReferenceTint,
+  ),
+  zeroReferenceKeepSize: viewSettingsSchema.shape.zeroReferenceKeepSize.default(
+    defaultViewSettings.zeroReferenceKeepSize,
+  ),
+});
 
 export const importContentSchema = z
   .object({
@@ -286,7 +308,7 @@ export const importManifestSchema = z
     version: z.literal(2),
     createdAt: text,
     householdId: id,
-    schemaVersion: z.literal(37),
+    schemaVersion: z.union([z.literal(37), z.literal(38)]),
     parts: z
       .array(
         z

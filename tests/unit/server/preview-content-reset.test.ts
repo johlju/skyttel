@@ -26,6 +26,14 @@ import { configurationEnvironment } from './fixture.js';
 
 const generation = '11111111-1111-4111-8111-111111111111';
 const authorityFence = { generation };
+const referenceDefaults = {
+  zeroReferenceVariant: 'circle',
+  zeroReferenceWeight: 'subtle',
+  zeroReferenceAlwaysVisible: false,
+  zeroReferenceOnMovement: false,
+  zeroReferenceTint: 0,
+  zeroReferenceKeepSize: false,
+};
 let directory: string;
 let path: string;
 let database: Database.Database | undefined;
@@ -137,7 +145,7 @@ test('the deployed preview before backgrounds upgrades directly and preserves ac
     draft: { changes: [] },
   });
   expect(database.prepare('SELECT MAX(version) AS version FROM schema_migration').get()).toEqual({
-    version: 37,
+    version: 38,
   });
   const view = database
     .prepare('SELECT settings, backgroundVersion FROM personal_view_settings')
@@ -151,6 +159,7 @@ test('the deployed preview before backgrounds upgrades directly and preserves ac
     panStrength: 0.7,
     zoomStrength: 0.7,
     layerDistance: 1,
+    ...referenceDefaults,
   });
   expect(
     database.prepare('SELECT operationId FROM retired_operation ORDER BY operationId').all(),
@@ -208,7 +217,6 @@ test('automatic preview migration keeps the household and its administrator whil
     'theme_preferences',
     'conversation_preferences',
     'conversation_consent',
-    'personal_view_settings',
     'policy_contact',
     'cost_attempt',
     'cost_assumptions',
@@ -241,6 +249,17 @@ test('automatic preview migration keeps the household and its administrator whil
   expect(retainedTables.map((table) => database?.prepare(`SELECT * FROM ${table}`).all())).toEqual(
     retained,
   );
+  const view = database.prepare('SELECT * FROM personal_view_settings').get() as {
+    settings: string;
+  };
+  expect(view).toEqual({
+    householdId: 'home',
+    userId: 'alex',
+    version: 1,
+    backgroundVersion: 1,
+    settings: expect.any(String),
+  });
+  expect(JSON.parse(view.settings)).toEqual({ allLabels: true, ...referenceDefaults });
   for (const table of [
     'map_object',
     'map_relationship',
@@ -312,14 +331,14 @@ test.each([33, 34])(
     const migrationsDirectory = join(directory, 'later-release');
     cpSync(resolve('migrations'), migrationsDirectory, { recursive: true });
     writeFileSync(
-      join(migrationsDirectory, '038_next_release.sql'),
+      join(migrationsDirectory, '039_next_release.sql'),
       'CREATE TABLE next_release_setting (name TEXT PRIMARY KEY);',
     );
     database.close();
     database = openDatabase(path, { authorityFence, migrationsDirectory });
     const upgraded = householdMap(database, 'alex', 'home');
     expect(database.prepare('SELECT MAX(version) AS version FROM schema_migration').get()).toEqual({
-      version: 38,
+      version: 39,
     });
     expect(upgraded.read()).toEqual(retainedMap);
     expect(upgraded.history()).toEqual(retainedHistory);
@@ -476,7 +495,7 @@ test.each([
     seedPreviousPreview(version);
     const migrationsDirectory = join(directory, 'migrations');
     cpSync(resolve('migrations'), migrationsDirectory, { recursive: true });
-    writeFileSync(join(migrationsDirectory, '038_failure.sql'), failure);
+    writeFileSync(join(migrationsDirectory, '039_failure.sql'), failure);
     const previous = new Database(path, { readonly: true });
     const before = previous.serialize();
     previous.close();

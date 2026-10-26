@@ -17,7 +17,7 @@ export function settingsEntries(
           {
             to: `${householdPath}/settings/map`,
             title: 'Rymdkartan',
-            description: 'Bakgrund och minskad rörelse i din personliga vy.',
+            description: 'Bakgrund, nollreferens och minskad rörelse i din personliga vy.',
             group: 'Hushållets karta',
           },
           {

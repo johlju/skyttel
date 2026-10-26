@@ -460,3 +460,27 @@ beskedet bekräftar inte att de osparade placeringarna finns på servern.
 Återkallad tillgång hindrar fortsatt läsning och sparande. Personliga
 placeringar kan finnas kvar för borttaget innehåll och återkommer om det
 återställs. Vanlig borttagning är inte permanent radering.
+
+## Nollreferens
+
+Gruppen **Nollreferens** under Bakgrund ger en frivillig referens vid
+kartans fasta nollpunkt. Välj **Kvadrat**, **Oval**, **Cirkel** eller
+**Linjer**. **Synlighet** anger den visuella styrkan **Diskret**,
+**Ursprunglig** eller **Framträdande**. Alla kombinationer är tillgängliga.
+Första gången är Cirkel och Diskret valda och referensen är dold.
+
+**Alltid synlig** visar referensen. Samma val heter **Nollreferens** i
+Navigera, både i normal- och miniläge. Referensen fungerar även när
+**Visa bakgrund** är av. Den ändrar bara din personliga vy, inte
+hushållets uppgifter, egenskaper, utkast eller ändringshistorik.
+
+X är sidled, Y är höjd och Z är djup i kartans fasta axlar. Referensen är
+inget verkligt mått, golv eller tak. Objekt kan ligga på båda sidor om
+nollan och utanför referensens kanter. Kameran kan lämna nollpunkten
+utanför bild; val eller visning av referensen flyttar inte kameran.
+Kantställda plan kan se ut som linjer. Referenstext döljs om den ligger
+utanför vyn eller kolliderar med hushållets text.
+
+Dina val sparas för dig i det aktuella hushållet och följer med till andra
+enheter. Andra användare och hushåll har egna val. **Återställ vy** och
+**Återställ rörelse** behåller nollreferensens inställningar.

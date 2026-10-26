@@ -3,6 +3,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { PersonalPosition, Position, ViewSettings } from '../shared/personal-view.js';
 import { spaceBackground } from './space-background.js';
 import { cameraGestures } from './spatial-navigation.js';
+import {
+  zeroReference,
+  zeroReferenceExtent,
+  zeroReferencePlanes,
+  zeroReferencePoint,
+} from './zero-reference.js';
 
 export type ProjectedPoint = {
   id: string;
@@ -15,6 +21,13 @@ export type ProjectedPoint = {
 };
 
 export type CameraHistoryState = { canGoBack: boolean; changed: boolean };
+export type ProjectedReferenceLabel = {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  visible: boolean;
+};
 type CameraView = { position: Vector3; target: Vector3; distance: number };
 
 /** Owns only graphics and the camera. Household content stays in the shared editor. */
@@ -25,10 +38,16 @@ export function spatialScene(
   onMotion: () => void = () => {},
   surface: HTMLElement = canvas,
   onHistoryChange: (state: CameraHistoryState) => void = () => {},
+  onReferenceProject: (labels: ProjectedReferenceLabel[]) => void = () => {},
 ) {
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   const sky = new Scene();
+  const referenceScene = new Scene();
+  let reference: ReturnType<typeof zeroReference> | undefined;
+  let referenceKey = '';
+  let referenceVisible = false;
+  let referenceLabels: { id: string; text: string; position: Position }[] = [];
   sky.background = new Color('#132e25');
   const skyCamera = new PerspectiveCamera(45, 1, 0.1, 1000);
   const camera = new PerspectiveCamera(45, 1, 0.1, 500000);
@@ -151,6 +170,8 @@ export function spatialScene(
   let backgroundVisible = false;
   const paintedWorld = new Matrix4();
   const paintedProjection = new Matrix4();
+  const paintedReferenceWorld = new Matrix4();
+  const paintedReferenceProjection = new Matrix4();
   const projectedWorld = new Matrix4();
   const projectedProjection = new Matrix4();
   let projectionRevision = 0;
@@ -175,12 +196,21 @@ export function spatialScene(
     if (
       !painted ||
       paintedKey !== backgroundKey ||
+      (referenceVisible &&
+        (!paintedReferenceWorld.equals(camera.matrixWorld) ||
+          !paintedReferenceProjection.equals(camera.projectionMatrix))) ||
       (backgroundVisible &&
         (!paintedWorld.equals(decorativeCamera.matrixWorld) ||
           !paintedProjection.equals(decorativeCamera.projectionMatrix)))
     ) {
       renderer.clear();
       renderer.render(sky, decorativeCamera);
+      if (referenceVisible) {
+        renderer.clearDepth();
+        renderer.render(referenceScene, camera);
+      }
+      paintedReferenceWorld.copy(camera.matrixWorld);
+      paintedReferenceProjection.copy(camera.projectionMatrix);
       paintedWorld.copy(decorativeCamera.matrixWorld);
       paintedProjection.copy(decorativeCamera.projectionMatrix);
       paintedKey = backgroundKey;
@@ -218,6 +248,21 @@ export function spatialScene(
           depth,
         };
       }),
+    );
+    onReferenceProject(
+      referenceVisible
+        ? referenceLabels.map(({ id, text, position }) => {
+            const point = new Vector3(position.x, position.y, position.z).project(camera);
+            return {
+              id,
+              text,
+              x: ((point.x + 1) * canvas.clientWidth) / 2,
+              y: ((1 - point.y) * canvas.clientHeight) / 2,
+              visible:
+                point.z > -1 && point.z < 1 && Math.abs(point.x) <= 1 && Math.abs(point.y) <= 1,
+            };
+          })
+        : [],
     );
   }
   function reset() {
@@ -492,6 +537,42 @@ export function spatialScene(
     },
     configure(value: ViewSettings, theme: 'light' | 'dark' = 'dark', reducedMotion = false) {
       settings = value;
+      const nextReferenceKey = `${theme}:${value.zeroReferenceVariant}:${value.zeroReferenceWeight}`;
+      if (referenceKey !== nextReferenceKey) {
+        reference?.dispose();
+        referenceScene.clear();
+        reference = zeroReference(value, theme);
+        referenceScene.add(reference.group);
+        referenceKey = nextReferenceKey;
+        const extent = zeroReferenceExtent;
+        referenceLabels =
+          value.zeroReferenceVariant === 'lines'
+            ? (['X', 'Y', 'Z'] as const).map((text, axis) => ({
+                id: text,
+                text,
+                position: {
+                  x: axis === 0 ? extent : 0,
+                  y: axis === 1 ? extent : 0,
+                  z: axis === 2 ? extent : 0,
+                },
+              }))
+            : zeroReferencePlanes.map(({ name }, plane) => ({
+                id: name,
+                text: name,
+                position: zeroReferencePoint(
+                  plane,
+                  extent * 0.8,
+                  extent * (value.zeroReferenceVariant === 'oval' ? 0.7 : 1) * 0.4,
+                ),
+              }));
+        painted = false;
+        projectionRevision++;
+      }
+      if (referenceVisible !== value.zeroReferenceAlwaysVisible) {
+        referenceVisible = value.zeroReferenceAlwaysVisible;
+        painted = false;
+        projectionRevision++;
+      }
       background.configure(value, theme, reducedMotion);
       backgroundVisible = value.background;
       backgroundKey = `${theme}:${value.background}:${theme === 'light' ? value.lightBackground : value.darkBackground}`;
@@ -557,6 +638,7 @@ export function spatialScene(
       controls.dispose();
       gestures.dispose();
       background.dispose();
+      reference?.dispose();
       renderer.dispose();
     },
   };

@@ -685,6 +685,11 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
 - [Stora kartor](large-map.md): åtkomst till 500 objekt och 1 500 samband
   genom sidvisning, sökning och fokus, med bevarad text och placering.
   Sparat resultat och historik läses genom webbläsaren efter omstart.
+- [Nollreferens](zero-reference.md): alla fyra varianter och tre visuella
+  styrkor, samma sparade reglage i inställningar och normal- eller
+  mininavigering, separat dekorativ bakgrund och återställning samt egna
+  val mellan användare, hushåll, sessioner och enheter. Faktisk skärmläsare
+  och fysisk pekning observeras separat.
 - [Personliga placeringar](personal-view.md): bakgrundsval per tema i Rymdkartans
   inställningar, oberoende panorering, zoom och lageravstånd med återställning,
   sparbekräftelse som toast i tre sekunder med bevarat fokus,

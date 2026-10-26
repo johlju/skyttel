@@ -58,6 +58,12 @@ test('background upgrade preserves explicit and implicit legacy choices and neve
           zoomStrength: 0.7,
           layerDistance: 1,
           version: index < 2 ? 7 : 0,
+          zeroReferenceVariant: 'circle',
+          zeroReferenceWeight: 'subtle',
+          zeroReferenceAlwaysVisible: false,
+          zeroReferenceOnMovement: false,
+          zeroReferenceTint: 0,
+          zeroReferenceKeepSize: false,
         });
         expect(view.settings).not.toHaveProperty('stars');
         if (index < 2)
@@ -70,7 +76,17 @@ test('background upgrade preserves explicit and implicit legacy choices and neve
       const { version, ...settings } = own.read().settings;
       own.configure({
         version,
-        settings: { ...settings, background: false, darkBackground: 'atmosphere' },
+        settings: {
+          ...settings,
+          background: false,
+          darkBackground: 'atmosphere',
+          zeroReferenceVariant: 'oval',
+          zeroReferenceWeight: 'prominent',
+          zeroReferenceAlwaysVisible: true,
+          zeroReferenceOnMovement: true,
+          zeroReferenceTint: 37,
+          zeroReferenceKeepSize: true,
+        },
       });
     } finally {
       database.close();
@@ -81,6 +97,12 @@ test('background upgrade preserves explicit and implicit legacy choices and neve
         background: false,
         darkBackground: 'atmosphere',
         version: 8,
+        zeroReferenceVariant: 'oval',
+        zeroReferenceWeight: 'prominent',
+        zeroReferenceAlwaysVisible: true,
+        zeroReferenceOnMovement: true,
+        zeroReferenceTint: 37,
+        zeroReferenceKeepSize: true,
       });
     } finally {
       reopened.close();

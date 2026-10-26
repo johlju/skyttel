@@ -173,12 +173,14 @@ att kontrollera väntande tillstånd. Det är ingen fysisk pekskärmskontroll.
    Under väntande sparande ska fokus vara kvar och ytterligare ändring
    inte ske. Läs sparbeskedet när svaret kommer.
 3. Slå av **Visa bakgrund** med mellanslag. Val och rörelse ska vara
-   inaktiva med samma värden kvar. Tab ska nå **Läs in min aktuella vy**
-   utan att stanna i inaktiva fält. Slå på igen.
+   inaktiva med samma värden kvar. Tabba genom de aktiva kontrollerna under
+   **Nollreferens**, från **Variant** till **Läs in min aktuella vy**, utan
+   att stanna i inaktiva fält. Slå på bakgrunden igen.
 4. Aktivera systemets minskade rörelse. Läs förklaringen. Båda
    bakgrundsväljarna ska gå att nå; rörelsereglagen och
    **Återställ rörelse** ska vara inaktiva. Tabba från den mörka väljaren
-   till **Läs in min aktuella vy**.
+   genom de aktiva kontrollerna under **Nollreferens** till
+   **Läs in min aktuella vy**.
 5. Växla mellan ljust och mörkt tema. Rulla till alla inställningar utan
    horisontell sidrullning. Ladda om och kontrollera samma sparade val.
 6. Återgå till kartan. Öppna **Navigera** med tangentbordet och panorera
