@@ -77,6 +77,7 @@ export function MapNavigation({
   onClose,
   onNavigate,
   object,
+  objectPosition,
   onMove,
   disabled,
   movementDisabled,
@@ -88,6 +89,7 @@ export function MapNavigation({
   onClose: () => void;
   onNavigate: (action: (typeof cameraButtons)[number][0]) => void;
   object?: { id: string; name: string };
+  objectPosition?: Position | null;
   onMove: (id: string, axis: keyof Position, step: number) => void | Promise<void>;
   disabled: boolean;
   movementDisabled: boolean;
@@ -98,6 +100,7 @@ export function MapNavigation({
   const handle = useRef<HTMLElement>(null);
   const drag = useRef<Drag | null>(null);
   const [mini, setMini] = useState(false);
+  const [coordinateHelp, setCoordinateHelp] = useState(false);
   const [position, setPosition] = useState<WindowPosition | null>(null);
   const preferredPosition = useRef<WindowPosition | null>(null);
   const [size, setSize] = useState({
@@ -425,6 +428,65 @@ export function MapNavigation({
               Flytta bara det markerade objektet i din personliga vy. Hushållets uppgifter ändras
               inte.
             </p>
+            {objectPosition && (
+              <fieldset className="navigation-coordinates">
+                <legend className="visually-hidden">Position för {object.name}</legend>
+                <div className="navigation-coordinate-heading" hidden={mini}>
+                  <span>Ange position</span>
+                  <button
+                    type="button"
+                    aria-label="Om koordinater"
+                    aria-expanded={coordinateHelp}
+                    aria-controls={`${id}-coordinates-help`}
+                    onClick={() => setCoordinateHelp(!coordinateHelp)}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Escape' || !coordinateHelp) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setCoordinateHelp(false);
+                    }}
+                  >
+                    <WorkspaceIcon name="info" />
+                  </button>
+                </div>
+                <div
+                  id={`${id}-coordinates-help`}
+                  className="navigation-coordinate-help"
+                  hidden={mini || !coordinateHelp}
+                >
+                  <p>
+                    X är sidled, Y är höjd och Z är djup i kartans fasta axlar. Värdena är inte
+                    verkliga mått.
+                  </p>
+                  <p>
+                    Värden mellan −10 000 och +10 000, inklusive gränserna. Nya värden avrundas till
+                    två decimaler.
+                  </p>
+                </div>
+                <div className="navigation-coordinate-fields">
+                  {(
+                    [
+                      ['x', 'Sidled (X)'],
+                      ['y', 'Höjd (Y)'],
+                      ['z', 'Djup (Z)'],
+                    ] as const
+                  ).map(([axis, label]) => {
+                    const formatted = objectPosition[axis].toFixed(2);
+                    return (
+                      <label key={axis}>
+                        <span aria-hidden="true">{axis.toUpperCase()}</span>
+                        <input
+                          type="text"
+                          readOnly
+                          aria-label={label}
+                          value={formatted === '-0.00' ? '0.00' : formatted}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
             <div className="map-navigation-grid">
               {directions.map(([label, icon, axis, step]) => (
                 <button

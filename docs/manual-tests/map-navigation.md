@@ -1,7 +1,7 @@
 # Manuella testfall för navigeringsfönstret
 
-Fallen omfattar navigering, personlig objektflyttning, samtidiga detaljer
-och nypzoom med styrplatta.
+Fallen omfattar navigering, personlig objektflyttning, koordinatläsning,
+samtidiga detaljer och nypzoom med styrplatta.
 Anteckna commit, webbläsare och godkänt eller underkänt resultat vid körning.
 Fysiska enheter och skärmläsare provas och redovisas separat.
 
@@ -21,6 +21,159 @@ påhittade uppgifter. Administratörsrollen behövs inte för kartarbetet.
    också verklig webbläsarzoom, synligt fokus och minskad rörelse.
 
 ## Fönster och personlig vy
+
+### NAVIGATION-20: Läs koordinater via tabellen i ljust datorläge
+
+**Syfte:** Läs sparade och automatiska positioner med tangentbord utan
+att placera objekten eller ändra sparade värdens precision.
+
+**Användare:** Alex Exempel.
+
+**Förutsättningar:** 1440 × 1000 CSS-pixlar och systemets ljusa tema.
+Använd standardvalet **System** för Skyttels tema.
+
+**Separat förberedelse:** Skapa och spara Lo Exempel och Kim Exempel.
+Förbered ett samband **Lo Exempel → Använder → Kim Exempel** med vanliga
+formulär. Kim ska sakna sparad personlig position. Förbered Los sparade
+position före teststegen. Öppna hushållet och kör följande i webbläsarens
+konsol för detta provhushåll:
+
+```js
+const household = location.pathname.split('/')[2];
+const path = `/api/households/${household}/map`;
+const map = await (await fetch(path)).json();
+const view = await (await fetch(`${path}/view`)).json();
+const lo = map.objects.find((object) => object.name === 'Lo Exempel');
+const response = await fetch(`${path}/view/position`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    id: lo.id,
+    contentVersion: map.contentVersion,
+    version: view.positions.find((p) => p.id === lo.id)?.version ?? 0,
+    position: { x: -10000, y: 1.23456789, z: -0.001 },
+  }),
+});
+if (!response.ok) throw new Error(`Förberedelsen misslyckades: ${response.status}`);
+location.reload();
+```
+
+Förväntad förberedelse är en sparad Lo-position och automatisk placering
+för Kim. Återställ ett separat provhushåll inför nästa körning.
+
+**Automatiskt motsvarande integrationstest:**
+[map-navigation.spec.ts](../../tests/integration/map-navigation.spec.ts),
+NAVIGATION-20.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/map-navigation.spec.ts",
+    "caseId": "NAVIGATION-20"
+  },
+  "reference": "Ljust systemtema, 1440 × 1000, förberedda positioner och samband.",
+  "outcomes": [
+    "Valet i tabellen följer med till Navigation och koordinaterna kan läsas.",
+    "Hjälpen stängs med Escape och återkommer efter byte från miniläge.",
+    "Sambandets båda objekt kan identifieras och deras koordinater nås via tabellen."
+  ]
+}
+```
+-->
+
+**Steg:**
+
+1. Öppna **Tabell**. Fokusera **Lo Exempel** och tryck Enter. Kontrollera
+   **Markerad** i raden. Välj **Karta** och sedan **Navigera** med
+   tangentbordet. Navigationens titelrad får fokus.
+2. Läs **Sidled (X)**, **Höjd (Y)** och **Djup (Z)** i gruppen för
+   Lo Exempel: **-10000.00**, **1.23** och **0.00**. Fälten ligger i en rad
+   ovanför flyttknapparna. Hela värdena ska gå att läsa vid normal textstorlek.
+3. Fokusera **Om koordinater** bredvid **Ange position** och tryck Enter.
+   Läs fasta axlar, att värdena inte är verkliga mått, inklusive gränser
+   och tvådecimalers avrundning. Tryck Escape. Hjälpen stängs, Navigation
+   är kvar och fokus stannar på infoikonen.
+4. Öppna hjälpen igen och välj **Visa mininavigering**. Rubriken, infoikonen
+   och hjälpen döljs. Fälten ligger i en kolumn i ordningen X, Y, Z.
+   Fokusera och läs varje helt värde med tangentbordet. Välj
+   **Visa normal navigering**. Den öppna hjälpen visas igen.
+5. Välj **Stäng navigering**. Fokus återgår till **Navigera**. Öppna
+   **Tabell** och **Samband för Lo Exempel**. Läs att sambandet går från
+   Lo Exempel till Kim Exempel. Stäng med **Stäng samband**.
+6. Välj **Kim Exempel** i tabellen med tangentbordet. Gå till **Karta**
+   och **Navigera**. Läs Kims automatiska X/Y/Z med två decimaler i den
+   namngivna gruppen. Stäng Navigation, välj Lo igen via tabellen och läs
+   samma tre Lo-värden.
+
+**Förväntat resultat:**
+
+- Objektet förblir markerat vid vybytet. Läsbara fält, namn, fokus och
+  hjälp fungerar i båda navigeringslägena. Vanlig markering flyttar inte
+  kameran.
+- Läsning flyttar inget objekt och sparar ingen ny placering. Ingen
+  positionsinformation behöver läsas ur kartgrafiken.
+- Sambandet har ingen egen koordinat; dess två objekts positioner nås
+  genom vanliga objektval.
+
+### NAVIGATION-21: Läs koordinater vid 320 pixlar i mörkt läge
+
+**Syfte:** Behåll hela koordinatvärden, logisk fokusordning och åtkomlig
+hjälp i normal- och miniläge på en smal skärm.
+
+**Användare:** Alex Exempel.
+
+**Förutsättningar och separat förberedelse:** Följ NAVIGATION-20:s
+förberedelse. Använd 320 × 1000 CSS-pixlar och systemets mörka tema.
+De korta dellägena använder 320 × 250 samt 701 × 500, 800 × 500 och
+1000 × 500 CSS-pixlar med öppna objektuppgifter. Det första skyddar smala
+fält bredvid uppgifterna; de övriga skyddar läsningen i liggande läge vid
+dess gränsbredder och en mellanbredd.
+
+**Automatiskt motsvarande integrationstest:**
+[map-navigation.spec.ts](../../tests/integration/map-navigation.spec.ts),
+NAVIGATION-21.
+
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/map-navigation.spec.ts",
+    "caseId": "NAVIGATION-21"
+  },
+  "reference": "Mörkt: 320 × 1000/250, 701/800/1000 × 500. Uppgifter öppna.",
+  "outcomes": [
+    "Hela koordinater och namngivna kontroller är tillgängliga i normal- och miniläge.",
+    "Val, fokus och öppen hjälp består vid läsning av båda ändpunkternas objekt."
+  ]
+}
+```
+-->
+
+**Steg:** Följ NAVIGATION-20 steg 1–6 vid den angivna smala bredden.
+Efter steg 4: ändra till 320 × 250. Fokusera Lo i kartan, tryck Skift+F10
+och välj **Visa uppgifter för Lo Exempel**. Behåll uppgifterna öppna och
+fokusera **Sidled (X)** i både normal- och miniläge. Läs hela värdet
+**-10000.00** vid normal textstorlek. Rulla navigationens innehåll vid behov.
+Kontrollera tre lodräta fält i miniläget. Ändra till 701 × 500,
+800 × 500 och 1000 × 500 med uppgifterna kvar. Upprepa läsningen i
+normal- och miniläge vid varje bredd.
+Återgå till normal navigering och 320 × 1000,
+**Stäng uppgifterna** och återgå till normal navigering före steg 5.
+
+**Förväntat resultat:** Samma läsning, val och hjälp som NAVIGATION-20
+fungerar utan att minska textstorleken eller behöva hitta objekt visuellt.
+
+**Separata mänskliga observationer för NAVIGATION-20–21:** Kör samma
+läsflöde med faktisk skärmläsare, fysisk pekskärm och verklig förstoring
+i båda teman. Kontrollera upplästa grupp- och fältnamn, fokusmarkering,
+kontrollernas kontrast och att hela värden kan läsas vid omflöde.
+Automationen utför inte dessa observationer och fastställer inte full
+WCAG-överensstämmelse.
 
 ### NAVIGATION-01: Normal- och miniläge med oberoende fönsterflytt
 

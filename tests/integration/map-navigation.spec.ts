@@ -6,6 +6,7 @@ import {
   createHousehold,
   openDraftReview,
   openMap,
+  openTable,
   signIn,
 } from '../support/client.js';
 import { saveReviewedConflictDraft } from '../support/conflict-special.js';
@@ -61,6 +62,181 @@ async function arrange(page: Page, origin: string, selection: 'pointer' | 'keybo
     await expect(lo).toBeFocused();
   } else await lo.click({ trial: true });
   return { lo, path, read };
+}
+
+/** Prepare saved and automatic positions before the coordinate-reading journey. */
+async function arrangeCoordinateReading(page: Page, origin: string) {
+  const { path, read } = await arrange(page, origin);
+  const state = await read();
+  expect(
+    (
+      await page.request.post(`${path}/view/position`, {
+        headers: { origin },
+        data: {
+          id: 'lo',
+          contentVersion: state.contentVersion,
+          version: 0,
+          position: { x: -10000, y: 1.23456789, z: -0.001 },
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  expect(
+    (
+      await page.request.post(`${path}/relationship`, {
+        headers: { origin },
+        data: {
+          version: state.draft.version,
+          id: 'coordinate-reading-edge',
+          baseRevision: null,
+          value: {
+            typeId: state.relationshipTypes.find((type) => type.name === 'Använder')?.id,
+            sourceId: 'lo',
+            targetId: 'kim',
+          },
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  await page.reload();
+}
+
+for (const [caseId, width, theme] of [
+  ['NAVIGATION-20', 1440, 'light'],
+  ['NAVIGATION-21', 320, 'dark'],
+] as const) {
+  test(`${caseId}: read saved and automatic coordinates through the table in ${theme} at ${width}px`, async ({
+    page,
+  }) => {
+    const installation = await createInstallation();
+    try {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.emulateMedia({ colorScheme: theme });
+      await arrangeCoordinateReading(page, installation.origin);
+      await openTable(page);
+      const table = page.getByRole('region', { name: 'Hushållets tabell', exact: true });
+      const selectLo = table.getByRole('button', { name: 'Lo Exempel', exact: true });
+      await selectLo.focus();
+      await selectLo.press('Enter');
+      await expect(selectLo.locator('xpath=ancestor::tr')).toContainText('Markerad');
+      await openMap(page);
+      const trigger = page.getByRole('button', { name: 'Navigera', exact: true });
+      await trigger.focus();
+      await trigger.press('Enter');
+      const navigation = page.getByRole('region', { name: 'Navigation', exact: true });
+      await expect(
+        navigation.getByRole('group', { name: 'Navigation', exact: true }),
+      ).toBeFocused();
+      const coordinates = navigation.getByRole('group', { name: 'Position för Lo Exempel' });
+      await expect(coordinates.getByRole('textbox', { name: 'Sidled (X)' })).toHaveValue(
+        '-10000.00',
+      );
+      await expect(coordinates.getByRole('textbox', { name: 'Höjd (Y)' })).toHaveValue('1.23');
+      await expect(coordinates.getByRole('textbox', { name: 'Djup (Z)' })).toHaveValue('0.00');
+      await expect(coordinates.getByRole('textbox')).toHaveCount(3);
+      const help = navigation.getByRole('button', { name: 'Om koordinater', exact: true });
+      await help.focus();
+      await help.press('Enter');
+      await expect(help).toHaveAttribute('aria-expanded', 'true');
+      await expect(navigation.getByText(/X är sidled/)).toBeVisible();
+      await help.press('Escape');
+      await expect(help).toHaveAttribute('aria-expanded', 'false');
+      await expect(navigation).toBeVisible();
+      await expect(help).toBeFocused();
+      await help.press('Enter');
+      await navigation.getByRole('button', { name: 'Visa mininavigering' }).click();
+      await expect(navigation.getByText('Ange position', { exact: true })).toBeHidden();
+      await expect(help).toBeHidden();
+      await expect(navigation.getByText(/X är sidled/)).toBeHidden();
+      for (const label of ['Sidled (X)', 'Höjd (Y)', 'Djup (Z)']) {
+        const field = coordinates.getByRole('textbox', { name: label });
+        await field.focus();
+        await expect(field).toBeFocused();
+        await expect(field).toBeVisible();
+      }
+      await navigation.getByRole('button', { name: 'Visa normal navigering' }).click();
+      await expect(help).toHaveAttribute('aria-expanded', 'true');
+      await expect(navigation.getByText(/X är sidled/)).toBeVisible();
+      if (width === 320) {
+        await page.setViewportSize({ width, height: 250 });
+        const lo = page.getByRole('button', { name: 'Välj objekt: Lo Exempel', exact: true });
+        await lo.focus();
+        await lo.press('Shift+F10');
+        await page
+          .getByRole('toolbar', { name: 'Åtgärder för Lo Exempel', exact: true })
+          .getByRole('button', { name: 'Visa uppgifter för Lo Exempel', exact: true })
+          .click();
+        const reader = page.getByRole('region', { name: 'Lo Exempel', exact: true });
+        await expect(reader).toBeVisible();
+        const field = coordinates.getByRole('textbox', { name: 'Sidled (X)' });
+        for (const viewport of [
+          { width: 320, height: 250 },
+          { width: 701, height: 500 },
+          { width: 800, height: 500 },
+          { width: 1000, height: 500 },
+        ]) {
+          await page.setViewportSize(viewport);
+          await expect(reader).toBeVisible();
+          for (const mode of ['normal', 'mini']) {
+            if (mode === 'mini')
+              await navigation.getByRole('button', { name: 'Visa mininavigering' }).click();
+            if (mode === 'normal')
+              await expect(navigation.getByText('Ange position', { exact: true })).toBeVisible();
+            else await expect(navigation.getByText('Ange position', { exact: true })).toBeHidden();
+            await field.focus();
+            await expect(field).toBeFocused();
+            await expect
+              .poll(() =>
+                field.evaluate((element: HTMLInputElement) => {
+                  const style = getComputedStyle(element);
+                  const context = document.createElement('canvas').getContext('2d');
+                  if (!context) throw new Error('Text measurement requires the browser canvas.');
+                  context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+                  const available =
+                    element.clientWidth -
+                    Number.parseFloat(style.paddingLeft) -
+                    Number.parseFloat(style.paddingRight);
+                  return {
+                    complete: context.measureText(element.value).width <= available,
+                    normalText: Number.parseFloat(style.fontSize) >= 16,
+                  };
+                }),
+              )
+              .toEqual({ complete: true, normalText: true });
+          }
+          await navigation.getByRole('button', { name: 'Visa normal navigering' }).click();
+        }
+        await page.setViewportSize({ width, height: 1000 });
+        await reader.getByRole('button', { name: 'Stäng uppgifterna', exact: true }).click();
+      }
+      await navigation.getByRole('button', { name: 'Stäng navigering' }).click();
+      await expect(trigger).toBeFocused();
+
+      const relationships = await openObjectRelationships(page, 'Lo Exempel');
+      const edge = relationships
+        .getByRole('heading', { name: 'Lo Exempel → Använder → Kim Exempel', exact: true })
+        .locator('..');
+      await expect(edge).toContainText('Från objektLo Exempel');
+      await expect(edge).toContainText('Till objektKim Exempel');
+      await relationships.getByRole('button', { name: 'Stäng samband', exact: true }).click();
+      await table.getByRole('button', { name: 'Kim Exempel', exact: true }).focus();
+      await page.keyboard.press('Enter');
+      await openMap(page);
+      await trigger.focus();
+      await trigger.press('Enter');
+      const automatic = navigation.getByRole('group', { name: 'Position för Kim Exempel' });
+      for (const label of ['Sidled (X)', 'Höjd (Y)', 'Djup (Z)'])
+        await expect(automatic.getByRole('textbox', { name: label })).toHaveValue(/^-?\d+\.\d{2}$/);
+      await navigation.getByRole('button', { name: 'Stäng navigering' }).click();
+      await openTable(page);
+      await selectLo.click();
+      await openMap(page);
+      await trigger.click();
+      await expect(coordinates.getByRole('textbox', { name: 'Höjd (Y)' })).toHaveValue('1.23');
+    } finally {
+      await installation.close();
+    }
+  });
 }
 
 async function center(node: Locator) {

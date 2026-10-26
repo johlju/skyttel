@@ -171,6 +171,24 @@ Kameraåtgärder fäller ihop verktygsnamnen så kartan får plats. Fokus och
 
 Navigeringsfönstret har normal- och miniläge. Miniikonen i titelraden
 växlar till ikoner med verktygstips; alla knappar har tillgängliga namn.
+För ett markerat objekt visas **X**, **Y** och **Z** ovanför flyttknapparna.
+Du kan också välja objektet i **Tabell**, gå till **Karta** och öppna
+**Navigera**. Markeringen följer med utan att flytta kameran.
+Fälten heter **Sidled (X)**, **Höjd (Y)** och **Djup (Z)** och visar
+positionen med två decimaler. Läsning sparar eller låser inte en automatisk
+placering och ändrar inte precisionen i en sparad position.
+
+I normalläget visas fälten bredvid varandra under **Ange position**.
+**Om koordinater**, infoikonen bredvid rubriken, förklarar kartans fasta
+axlar, att värdena inte är verkliga mått, gränserna −10 000 till +10 000
+och avrundning av nya värden till två decimaler. Escape på infoikonen
+stänger hjälpen. Miniläget staplar fälten X, Y och Z, döljer rubrik och
+hjälp och återger öppen hjälp när du går tillbaka till normalläget.
+Koordinaterna kan läsas oberoende av kamerans riktning och kartans bakgrund.
+Ett samband har ingen egen position. Läs vilka objekt sambandet går mellan
+i dess vanliga uppgifter eller sambandslista och välj sedan varje objekt
+via **Tabell → Karta → Navigera**.
+
 Dra titelraden eller fokusera den och använd piltangenterna för att flytta
 fönstret. Skift och piltangent flyttar ett större steg. Escape avbryter
 pågående dragning; annars stängs navigationen och fokus återgår till

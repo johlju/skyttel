@@ -1063,6 +1063,9 @@ export function SpatialMap({
       onClose={() => changeNavigation(false)}
       onNavigate={(command) => scene.current?.navigate(command)}
       object={selectedIds.length === 1 ? objects.get(selectedIds[0]) : undefined}
+      objectPosition={
+        selectedIds.length === 1 ? scene.current?.position(selectedIds[0]) : undefined
+      }
       disabled={!personalReady || unavailable || contextLost}
       movementDisabled={!personal?.view || disabled || unavailable || contextLost}
       onMove={(id, axis, step) => {

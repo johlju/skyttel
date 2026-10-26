@@ -268,6 +268,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   fönsterflytt, samtidiga läsbara detaljer och knapptext på flera rader
   med öppen samtalsnotis, sex
   beständiga personliga riktningar och nypzoom med styrplatta.
+  NAVIGATION-20–21 läser sparade och automatiska koordinater via
+  **Tabell → Karta → Navigera**, med hjälp, ändpunktsval och normal- och
+  miniläge i ljust datorläge respektive mörkt läge vid 320 pixlar.
   NAVIGATION-02 har komplett 1440 × 1000-referens; NAVIGATION-06–18
   skyddar alla sju mått och båda öppningsordningarna. NAVIGATION-05 bevarar
   native Ctrl/hjul, hastighet, begränsat hjulsteg och sidans skala i Chromium

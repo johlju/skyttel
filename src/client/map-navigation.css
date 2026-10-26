@@ -134,6 +134,60 @@
   font-size: 15px;
   font-weight: 500;
 }
+.map-navigation fieldset.navigation-coordinates {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.navigation-coordinate-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.navigation-coordinate-heading[hidden],
+.navigation-coordinate-help[hidden] {
+  display: none;
+}
+.navigation-coordinate-heading button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+.navigation-coordinate-help p {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.navigation-coordinate-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.navigation-coordinate-fields label {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  font-size: 14px;
+}
+.navigation-coordinate-fields input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 5px 3px;
+  border: 1px solid var(--space-control, #607c89);
+  border-radius: 8px;
+  background: var(--space-surface, #fff);
+  color: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.map-navigation[data-mini="true"] .navigation-coordinate-fields {
+  grid-template-columns: minmax(0, 1fr);
+}
 .navigation-settings summary {
   min-height: 44px;
   padding-block: 12px;
@@ -333,5 +387,19 @@
   .household-map.workspace-shell:is([data-work-layout="compact"], [data-work-layout="minimal"])
     .map-navigation-body {
     overflow: visible;
+  }
+  /* Coordinates need their full text width beside a reader. Focus already
+     raises each overlapping tool window; keep numeric text at normal size. */
+  .map-navigation:has(.navigation-coordinates) {
+    min-width: min(226px, calc(100vw - 24px));
+  }
+  .map-navigation:not([data-mini="true"]):has(.navigation-coordinates) {
+    min-width: min(296px, calc(100vw - 24px));
+  }
+  .map-navigation:not([data-mini="true"]) .map-navigation-body:has(.navigation-coordinates) {
+    padding: 6px;
+  }
+  .map-navigation:not([data-mini="true"]) .navigation-coordinate-fields {
+    gap: 4px;
   }
 }
