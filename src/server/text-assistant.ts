@@ -208,55 +208,50 @@ export function textAssistantRoutes({
   const consentKey = (actorId: string, householdId: string) =>
     JSON.stringify([householdId, actorId]);
   const respond = config.openaiApiKey
-    ? textModel(
-        config.openaiApiKey,
-        modelFetch,
-        (attempt) => {
-          // Cost accounting remains independent and executes for every attempt.
-          modelUsage?.(attempt);
-          if (!observe) return;
-          const work = observationWork.getStore();
-          if (work) work.providerCallId = attempt.attemptId;
-          observe({
-            at: now(),
-            sessionId: work?.session.id ?? '',
-            taskId: work?.context.requestId,
-            revision: work?.revision,
-            context: {
-              owner: 'backend',
-              traceId: work?.context.traceId ?? attempt.attemptId,
-              spanId: attempt.attemptId,
-              parentSpanId: work?.context.spanId,
-              requestId: work?.context.requestId,
-              providerCallId: attempt.attemptId,
-            },
-            kind: 'model_attempt',
-            status:
-              attempt.outcome === 'completed'
-                ? 'completed'
-                : attempt.outcome === 'failed'
-                  ? 'failed'
-                  : attempt.outcome === 'aborted'
-                    ? 'canceled'
-                    : 'incomplete',
-            ...(!work ? { evidenceGap: 'unknown_parent' as const } : {}),
-            data: {
-              attemptId: attempt.attemptId,
-              startedAt: attempt.startedAt,
-              endedAt: attempt.endedAt,
-              model: attempt.model,
-              resolvedModel: attempt.resolvedModel,
-              serviceTier: attempt.serviceTier,
-              providerRequestId: attempt.requestId,
-              responseId: attempt.responseId,
-              outcome: attempt.outcome,
-              completeness: attempt.completeness,
-              usage: attempt.usage,
-            },
-          });
-        },
-        modelProfile,
-      )
+    ? textModel(config.openaiApiKey, modelFetch, modelUsage, modelProfile, (attempt, content) => {
+        if (!observe) return;
+        const work = observationWork.getStore();
+        if (work) work.providerCallId = attempt.attemptId;
+        observe({
+          at: now(),
+          sessionId: work?.session.id ?? '',
+          taskId: work?.context.requestId,
+          revision: work?.revision,
+          consentTextVersion: work?.session.consentTextVersion,
+          context: {
+            owner: 'backend',
+            traceId: work?.context.traceId ?? attempt.attemptId,
+            spanId: attempt.attemptId,
+            parentSpanId: work?.context.spanId,
+            requestId: work?.context.requestId,
+            providerCallId: attempt.attemptId,
+          },
+          kind: 'model_attempt',
+          status:
+            attempt.outcome === 'completed'
+              ? 'completed'
+              : attempt.outcome === 'failed'
+                ? 'failed'
+                : attempt.outcome === 'aborted'
+                  ? 'canceled'
+                  : 'incomplete',
+          ...(!work ? { evidenceGap: 'unknown_parent' as const } : {}),
+          data: {
+            attemptId: attempt.attemptId,
+            startedAt: attempt.startedAt,
+            endedAt: attempt.endedAt,
+            model: attempt.model,
+            resolvedModel: attempt.resolvedModel,
+            serviceTier: attempt.serviceTier,
+            providerRequestId: attempt.requestId,
+            responseId: attempt.responseId,
+            outcome: attempt.outcome,
+            completeness: attempt.completeness,
+            usage: attempt.usage,
+            ...content,
+          },
+        });
+      })
     : null;
   function authorityLost(error: unknown) {
     return (
@@ -578,6 +573,7 @@ export function textAssistantRoutes({
       };
       const identity = {
         sessionId: session.id,
+        consentTextVersion: session.consentTextVersion,
         taskId: parent?.requestId,
         revision: session.revision,
         context,
@@ -1289,6 +1285,7 @@ export function textAssistantRoutes({
           observe?.({
             at: now(),
             sessionId: session.id,
+            consentTextVersion: session.consentTextVersion,
             taskId: session.taskId,
             revision,
             context: observed && {
@@ -1917,12 +1914,21 @@ export function textAssistantRoutes({
     observe?.({
       at: startedAt,
       sessionId: session.id,
+      consentTextVersion: session.consentTextVersion,
       taskId: message.id,
       revision,
       context: observationContext,
       kind: 'task_started',
       status: 'incomplete',
-      data: { source: message.voice ? 'voice' : 'text', startedAt },
+      data: {
+        source: message.voice ? 'voice' : 'text',
+        startedAt,
+        request: {
+          text: message.text,
+          draftVersion: session.workVersion ?? session.review.version,
+          contentVersion: message.contentVersion,
+        },
+      },
     });
     const guard = () => {
       if (
@@ -2073,6 +2079,7 @@ export function textAssistantRoutes({
         observe?.({
           at: now(),
           sessionId: session.id,
+          consentTextVersion: session.consentTextVersion,
           taskId: message.id,
           revision,
           context: observationContext,
@@ -2083,6 +2090,16 @@ export function textAssistantRoutes({
             source: message.voice ? 'voice' : 'text',
             startedAt,
             endedAt: now(),
+            ...(session.task === task && session.revision === revision
+              ? {
+                  view: {
+                    ...session,
+                    pendingParts: session.parts.values(),
+                    questionPending: Boolean(session.questions?.length),
+                    saveBlocked: session.parts.blocked(),
+                  },
+                }
+              : {}),
             ...(observationStatus === 'completed' ? {} : { error: `task_${observationStatus}` }),
           },
         });

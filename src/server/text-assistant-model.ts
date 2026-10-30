@@ -32,6 +32,11 @@ export interface TextModelAttempt {
   };
 }
 export type TextModelUsage = (attempt: TextModelAttempt) => void;
+/** Ephemeral evidence has its own sink; cost records never receive content. */
+export type TextModelEvidence = (
+  attempt: TextModelAttempt,
+  content: { input?: unknown; output?: unknown },
+) => void;
 const count = (value: unknown) =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
 const identifier = (value: unknown) =>
@@ -42,6 +47,7 @@ export function textModel(
   modelFetch?: typeof fetch,
   record?: TextModelUsage,
   profile?: TextModelProfile,
+  observe?: TextModelEvidence,
 ) {
   if (
     profile &&
@@ -87,22 +93,30 @@ export function textModel(
       completeness: 'unknown',
       usage: { input: null, cached: null, cacheWrite: null, output: null, reasoning: null },
     };
+    const request = {
+      model: attempt.model,
+      reasoning: { effort: profile?.effort ?? textConversationModel.effort },
+      ...(profile ? { service_tier: 'default' as const } : {}),
+      store: false as const,
+      parallel_tool_calls: false,
+      instructions,
+      input,
+      tools,
+      ...(outputLimit === undefined ? {} : { max_output_tokens: outputLimit }),
+    };
+    const evidence = (content: { input?: unknown; output?: unknown }) => {
+      try {
+        observe?.({ ...attempt }, content);
+      } catch {
+        // Diagnostic consumers cannot change the request or its result.
+      }
+    };
     record?.({ ...attempt });
+    evidence({ input: request });
+    let output: unknown;
     try {
-      const response = await client.responses.create(
-        {
-          model: attempt.model,
-          reasoning: { effort: profile?.effort ?? textConversationModel.effort },
-          ...(profile ? { service_tier: 'default' as const } : {}),
-          store: false,
-          parallel_tool_calls: false,
-          instructions,
-          input,
-          tools,
-          ...(outputLimit === undefined ? {} : { max_output_tokens: outputLimit }),
-        },
-        { signal },
-      );
+      const response = await client.responses.create(request, { signal });
+      output = response;
       attempt.requestId = identifier(response._request_id);
       attempt.responseId = identifier(response.id);
       attempt.resolvedModel =
@@ -147,6 +161,7 @@ export function textModel(
       } catch {
         console.error(JSON.stringify({ event: 'model_usage_unavailable' }));
       }
+      evidence({ output });
     }
   };
 }

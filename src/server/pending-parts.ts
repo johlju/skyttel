@@ -85,6 +85,11 @@ export function pendingParts() {
     };
   }
   return {
+    /** Iterate without copying the ledger. Each consumer gets a fresh iterator;
+     * bounded projections must not mutate entries and admit only known fields. */
+    values(): Iterable<Readonly<PendingPart>> {
+      return { [Symbol.iterator]: () => parts.values() };
+    },
     read: () => structuredClone(parts),
     questions: () => parts.filter((part) => part.status === 'waiting').map((part) => part.question),
     blocked: () => parts.some((part) => part.kind === 'change' && active(part)),

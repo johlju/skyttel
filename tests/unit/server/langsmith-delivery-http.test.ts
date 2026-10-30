@@ -118,7 +118,10 @@ async function setup(
   const path = `${app.origin}/api/households/${household.id}`;
   const start = await client.post(`${path}/text-assistant`, {
     headers: { origin: app.origin },
-    data: approvedForVisit,
+    data:
+      options.consentTextVersion === undefined
+        ? approvedForVisit
+        : { consent: { textVersion: options.consentTextVersion } },
   });
   expect(start.status(), await start.text()).toBe(201);
   return { path, session: await start.json() };
@@ -135,15 +138,17 @@ async function send(
     };
   },
   requestId = 'read-lina',
+  text = 'Läs Lina.',
+  browser = client,
 ) {
-  const response = await client.post(`${path}/text-assistant/${session.id}/messages`, {
+  const response = await browser.post(`${path}/text-assistant/${session.id}/messages`, {
     headers: { origin: app.origin },
     data: {
       requestId,
       revision: session.revision,
       draftVersion: session.review.version,
       contentVersion: session.review.contentVersion,
-      text: 'Läs Lina.',
+      text,
     },
   });
   expect(response.status(), await response.text()).toBe(202);
@@ -152,13 +157,13 @@ async function send(
       async () =>
         (
           await (
-            await client.get(`${path}/text-assistant/${session.id}/messages/${requestId}`)
+            await browser.get(`${path}/text-assistant/${session.id}/messages/${requestId}`)
           ).json()
         ).taskStatus,
       { timeout: 20000 },
     )
     .toBe('completed');
-  return (await client.get(`${path}/text-assistant/${session.id}`)).json();
+  return (await browser.get(`${path}/text-assistant/${session.id}`)).json();
 }
 
 async function restart(duringShutdown?: () => void) {
@@ -170,6 +175,424 @@ async function restart(duringShutdown?: () => void) {
   await restarting;
   client = await request.newContext({ storageState: state });
 }
+
+test('complete text evidence preserves the exact model exchange and all actions under one task', async () => {
+  const actions = [
+    modelTool('read_map', { query: 'Lina' }),
+    modelTool('read_map', { query: 'Eken' }),
+  ];
+  const reasoning = {
+    type: 'reasoning',
+    id: 'reasoning_example',
+    summary: [{ type: 'summary_text', text: 'Läs båda namnen.' }],
+    encrypted_content: 'excluded-provider-encrypted',
+  };
+  const reply = modelMessage('Lina och Eken är lästa.\n"Exakt" åäö 🌌');
+  const costs: unknown[] = [];
+  let turn = 0;
+  const model = textModel(() =>
+    (turn++ === 0 ? [reasoning, ...actions] : [reply]).map((item) => ({
+      ...item,
+      provider_metadata: 'excluded-provider-metadata',
+      audio: 'excluded-raw-audio',
+      headers: { authorization: 'excluded-provider-credential' },
+    })),
+  );
+  const { path, session } = await setup({
+    modelFetch: model.provider,
+    modelUsage: (attempt) => costs.push(structuredClone(attempt)),
+  });
+  const result = await send(path, session);
+  expect(result.modelReply).toBe('Lina och Eken är lästa.\n"Exakt" åäö 🌌');
+  await expect
+    .poll(
+      () =>
+        endpoint.received.filter(
+          (item) => item.method === 'PATCH' && item.body.parent_run_id === undefined,
+        ).length,
+    )
+    .toBe(1);
+  const root = endpoint.received.find(
+    (item) => item.method === 'POST' && item.body.parent_run_id === undefined,
+  )!.body;
+  expect(root.inputs).toMatchObject({ request: { text: 'Läs Lina.' } });
+  expect(
+    endpoint.received.find((item) => item.path === `/runs/${root.id}`)?.body.outputs,
+  ).toMatchObject({ view: { modelReply: result.modelReply } });
+  const attempts = endpoint.received.filter(
+    (item) => item.method === 'POST' && item.body.run_type === 'llm',
+  );
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0].body.inputs).toEqual(model.requests[0]);
+  expect(attempts[1].body.inputs).toMatchObject({
+    model: model.requests[1].model,
+    instructions: model.requests[1].instructions,
+  });
+  const firstEnding = endpoint.received.find(
+    (item) => item.path === `/runs/${attempts[0].body.id}`,
+  )!.body;
+  expect(firstEnding.outputs).toMatchObject({
+    output: [
+      {
+        type: 'reasoning',
+        id: 'reasoning_example',
+        summary: [{ type: 'summary_text', text: 'Läs båda namnen.' }],
+      },
+      ...actions,
+    ],
+  });
+  const secondEnding = endpoint.received.find(
+    (item) => item.path === `/runs/${attempts[1].body.id}`,
+  )!.body;
+  expect(secondEnding.outputs).toMatchObject({
+    output: [{ ...reply, content: [{ type: 'output_text', text: result.modelReply }] }],
+  });
+  expect(
+    attempts.every((item) => item.body.parent_run_id === root.id && item.body.trace_id === root.id),
+  ).toBe(true);
+  expect(new Set(attempts.map((item) => item.body.id)).size).toBe(2);
+  expect(JSON.stringify(endpoint.received)).not.toMatch(
+    /excluded-provider|excluded-raw-audio|synthetic-model-key|synthetic-trace-secret/,
+  );
+  expect(
+    JSON.stringify(await (await client.get(`${app.origin}/api/operator/tracing`)).json()),
+  ).not.toMatch(
+    /Lina|Eken|excluded-provider|excluded-raw-audio|synthetic-model-key|synthetic-trace-secret/,
+  );
+  expect(costs).toHaveLength(4);
+  expect(JSON.stringify(costs)).not.toMatch(/instructions|Lina|Eken|arguments|excluded-provider/);
+});
+
+test('later current acceptance never makes an old conversation eligible for live evidence', async () => {
+  const observed: { consentTextVersion?: number }[] = [];
+  const { path, session } = await setup({
+    consentTextVersion: 2,
+    observe: (event) => observed.push(event),
+  });
+  const current = await send(path, session, 'old-before');
+  expect(endpoint.received).toEqual([]);
+  const { user, household } = await (await client.get(`${app.origin}/api/bootstrap`)).json();
+  app.seedConversationConsent(user.id, household.id, 3);
+  expect(await (await client.get(`${path}/conversation-consent`)).json()).toMatchObject({
+    saved: { textVersion: 3 },
+  });
+  await send(path, current, 'old-after');
+  expect(endpoint.received).toEqual([]);
+  expect(observed.length).toBeGreaterThan(0);
+  expect(observed.every((event) => event.consentTextVersion === 2)).toBe(true);
+});
+
+test.each(['large text', 'many content parts'])(
+  'oversized model %s is lost as one event while the public task remains authoritative',
+  async (shape) => {
+    const message = modelMessage(
+      shape === 'large text' ? 'model-oversize-marker'.repeat(60000) : 'exact-part',
+    );
+    if (shape === 'many content parts')
+      message.content = Array.from({ length: 60000 }, () => ({
+        type: 'output_text',
+        text: 'exact-part',
+        annotations: [],
+      }));
+    const { path, session } = await setup({ modelFetch: textModel(() => [message]).provider });
+    const result = await send(path, session);
+    expect(result.phase).toBe('ready');
+    expect(result.modelReply).toBe(
+      shape === 'large text' ? 'model-oversize-marker'.repeat(60000) : 'exact-part'.repeat(60000),
+    );
+    const health = await (await client.get(`${app.origin}/api/operator/tracing`)).json();
+    expect(health).toMatchObject({ state: 'sending', lastError: 'oversized' });
+    expect(health.droppedEvents).toBeGreaterThan(0);
+    const attempt = endpoint.received.find(
+      (item) => item.method === 'POST' && item.body.run_type === 'llm',
+    )!;
+    expect(attempt).toBeDefined();
+    expect(endpoint.received.filter((item) => item.path === `/runs/${attempt.body.id}`)).toEqual(
+      [],
+    );
+    expect(JSON.stringify(endpoint.received)).not.toContain('model-oversize-marker');
+    expect(endpoint.received.every((item) => item.bytes <= 1024 * 1024)).toBe(true);
+  },
+  20000,
+);
+
+test.each(['healthy', 'disabled', 'failing'])(
+  'writing, saving and waiting work stay authoritative with %s tracing',
+  async (delivery) => {
+    let typeId = '';
+    let turn = 0;
+    const callerPending: unknown[] = [];
+    const model = textModel((request) => {
+      const input = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      );
+      if (turn++ === 0)
+        return [
+          modelTool('submit_changes', {
+            version: input.draft.version,
+            contentVersion: input.draft.contentVersion,
+            completion: 'draft',
+            questions: [
+              {
+                kind: 'information',
+                request: 'Hitta hjälmen',
+                question: 'Vilken hjälm?',
+                dependsOnDraft: false,
+              },
+            ],
+            operations: [
+              {
+                name: 'propose_object',
+                arguments: {
+                  id: 'diagnostic-bike',
+                  baseRevision: null,
+                  value: { typeId, name: 'Blå cykeln' },
+                },
+              },
+            ],
+          }),
+        ];
+      if (turn === 2) return [modelMessage('Utkastet är färdigt.')];
+      return [
+        modelTool('save_draft', {
+          version: input.draft.version,
+          contentVersion: input.draft.contentVersion,
+          operationId: 'model-cannot-repeat-save',
+        }),
+      ];
+    });
+    const { path, session } = await setup(
+      {
+        modelFetch: model.provider,
+        observe: (event) => {
+          const content = event.data as {
+            input?: { instructions?: string };
+            view?: { pendingParts?: unknown[] };
+          };
+          if (content.input)
+            content.input.instructions = 'caller mutation cannot change provider input';
+          if (event.kind === 'task_completed' && content.view?.pendingParts) {
+            callerPending.push(structuredClone(content.view.pendingParts));
+            content.view.pendingParts.splice(0);
+          }
+        },
+      },
+      (_request, response) => response.writeHead(delivery === 'failing' ? 503 : 204).end(),
+    );
+    if (delivery === 'disabled')
+      await client.post(`${app.origin}/api/operator/tracing`, {
+        headers: { origin: app.origin },
+        data: { action: 'disable' },
+      });
+    const map = await (await client.get(`${path}/map`)).json();
+    typeId = map.types[0].id;
+    const draft = await send(
+      path,
+      session,
+      'create-draft',
+      'Lägg till Blå cykeln och hitta hjälmen.',
+    );
+    expect(draft.review.changes).toMatchObject([
+      { id: 'diagnostic-bike', after: { name: 'Blå cykeln' } },
+    ]);
+    expect(draft.pendingParts).toMatchObject([
+      { kind: 'information', status: 'waiting', question: 'Vilken hjälm?' },
+    ]);
+    expect(callerPending[0]).toMatchObject([
+      { kind: 'information', status: 'waiting', question: 'Vilken hjälm?' },
+    ]);
+    expect(model.requests[0].instructions).not.toContain('caller mutation');
+    expect(draft.receipt).toBeUndefined();
+    expect((await (await client.get(`${path}/map`)).json()).objects).toEqual([]);
+    const saved = await send(path, draft, 'save-once', 'Spara hela utkastet.');
+    expect(saved.receipt).toMatchObject({ operationId: expect.any(String), contentVersion: 1 });
+    expect(saved.pendingParts).toEqual(draft.pendingParts);
+    const operation = await (
+      await client.get(`${path}/map/operations/${saved.receipt.operationId}`)
+    ).json();
+    expect(operation).toMatchObject({ operation: { status: 'succeeded', receipt: saved.receipt } });
+    const after = await (await client.get(`${path}/map`)).json();
+    expect(after.objects).toMatchObject([{ id: 'diagnostic-bike', name: 'Blå cykeln' }]);
+    expect(after.draft.changes).toEqual([]);
+    // Replay the same accepted request, then let a model try to reuse expired
+    // save authority under a new request. Neither may create another save.
+    await send(path, draft, 'save-once', 'Spara hela utkastet.');
+    expect(model.requests).toHaveLength(2);
+    const refused = await send(path, saved, 'no-new-save', 'Berätta vad som finns kvar.');
+    expect(refused).toMatchObject({ phase: 'error', error: 'assistant_save_not_requested' });
+    expect(refused.receipt).toBeUndefined();
+    expect((await (await client.get(`${path}/map/history`)).json()).history).toHaveLength(1);
+    expect(await (await client.get(`${path}/map`)).json()).toEqual(after);
+    expect(
+      await (
+        await client.get(
+          `${app.origin}/api/operator/costs?month=${new Date().toISOString().slice(0, 7)}`,
+        )
+      ).json(),
+    ).toMatchObject({
+      terra: { attempts: 3, usage: { input: { known: 360 }, output: { known: 90 } } },
+    });
+    if (delivery === 'healthy') {
+      await expect
+        .poll(
+          () =>
+            endpoint.received.filter(
+              (item) => item.method === 'PATCH' && item.body.parent_run_id === undefined,
+            ).length,
+        )
+        .toBe(3);
+      const roots = endpoint.received.filter(
+        (item) => item.method === 'POST' && item.body.parent_run_id === undefined,
+      );
+      expect(roots).toHaveLength(3);
+      const created = roots.find(
+        (item) =>
+          (item.body.extra as { metadata: { request_id: string } }).metadata.request_id ===
+          'create-draft',
+      )!;
+      expect(
+        endpoint.received.find((item) => item.path === `/runs/${created.body.id}`)?.body.outputs,
+      ).toMatchObject({
+        view: {
+          pendingParts: [{ kind: 'information', status: 'waiting', question: 'Vilken hjälm?' }],
+        },
+      });
+      const saving = roots.find(
+        (item) =>
+          (item.body.extra as { metadata: { request_id: string } }).metadata.request_id ===
+          'save-once',
+      )!;
+      expect(
+        endpoint.received.find((item) => item.path === `/runs/${saving.body.id}`)?.body.outputs,
+      ).toMatchObject({
+        view: {
+          receipt: { operationId: saved.receipt.operationId, contentVersion: 1, draftVersion: 1 },
+        },
+      });
+      expect(
+        new Set(
+          endpoint.received.filter((item) => item.method === 'POST').map((item) => item.body.id),
+        ).size,
+      ).toBe(endpoint.received.filter((item) => item.method === 'POST').length);
+    } else if (delivery === 'disabled') expect(endpoint.received).toEqual([]);
+    else
+      expect(
+        (await (await client.get(`${app.origin}/api/operator/tracing`)).json()).lastError,
+      ).toBe('network');
+  },
+  20000,
+);
+
+test('overlapping devices keep separate task evidence and a canceled late model cannot finish another task', async () => {
+  const reached: string[] = [];
+  const releases = new Map<string, () => void>();
+  const model = textModel(async (request) => {
+    const input = JSON.parse(
+      String(request.input.findLast((item) => item.role === 'user')?.content),
+    );
+    reached.push(input.message);
+    await new Promise<void>((resolve) => releases.set(input.message, resolve));
+    return [modelMessage(`Svar för ${input.message}`)];
+  });
+  const { path, session } = await setup({ modelFetch: model.provider });
+  const other = await request.newContext();
+  try {
+    await signIn(other, app.origin);
+    const started = await other.post(`${path}/text-assistant`, {
+      headers: { origin: app.origin },
+      data: approvedForVisit,
+    });
+    expect(started.status(), await started.text()).toBe(201);
+    const second = await started.json();
+    const submitted = await client.post(`${path}/text-assistant/${session.id}/messages`, {
+      headers: { origin: app.origin },
+      data: {
+        requestId: 'same-request',
+        revision: session.revision,
+        draftVersion: session.review.version,
+        contentVersion: session.review.contentVersion,
+        text: 'Alfa',
+      },
+    });
+    expect(submitted.status()).toBe(202);
+    const beta = send(path, second, 'same-request', 'Beta', other);
+    await expect.poll(() => reached.length).toBe(2);
+    await expect
+      .poll(
+        () =>
+          endpoint.received.filter((item) => item.method === 'POST' && item.body.run_type === 'llm')
+            .length,
+      )
+      .toBe(2);
+    const roots = endpoint.received.filter(
+      (item) => item.method === 'POST' && item.body.parent_run_id === undefined,
+    );
+    expect(roots).toHaveLength(2);
+    expect(new Set(roots.map((item) => item.body.id)).size).toBe(2);
+    expect(roots.every((item) => item.body.end_time === undefined)).toBe(true);
+    expect(
+      endpoint.received.filter(
+        (item) => item.method === 'PATCH' && item.body.parent_run_id === undefined,
+      ),
+    ).toEqual([]);
+    const canceled = await client.post(`${path}/text-assistant/${session.id}/cancel`, {
+      headers: { origin: app.origin },
+      data: { all: true },
+    });
+    expect(canceled.status()).toBe(200);
+    releases.get('Beta')!();
+    expect(await beta).toMatchObject({ phase: 'ready', modelReply: 'Svar för Beta' });
+    releases.get('Alfa')!();
+    await expect
+      .poll(
+        () =>
+          endpoint.received.filter(
+            (item) => item.method === 'PATCH' && item.body.parent_run_id === undefined,
+          ).length,
+      )
+      .toBe(2);
+    const byConversation = (conversation: string) =>
+      roots.find(
+        (item) =>
+          (item.body.extra as { metadata: { conversation_id: string } }).metadata
+            .conversation_id === conversation,
+      )!.body.id;
+    const alphaRoot = byConversation(session.id);
+    const betaRoot = byConversation(second.id);
+    expect(
+      endpoint.received.find((item) => item.path === `/runs/${alphaRoot}`)?.body,
+    ).toMatchObject({ error: 'observed_canceled', extra: { metadata: { status: 'canceled' } } });
+    expect(endpoint.received.find((item) => item.path === `/runs/${betaRoot}`)?.body).toMatchObject(
+      {
+        extra: { metadata: { status: 'completed' } },
+        outputs: { view: { modelReply: 'Svar för Beta' } },
+      },
+    );
+    for (const conversation of [session.id, second.id]) {
+      const rootId = byConversation(conversation);
+      const attempt = endpoint.received.find(
+        (item) =>
+          item.method === 'POST' && item.body.run_type === 'llm' && item.body.trace_id === rootId,
+      )!;
+      expect(attempt.body.parent_run_id).toBe(rootId);
+      expect(attempt.body.inputs).toMatchObject({ input: expect.any(Array) });
+      expect(
+        endpoint.received.filter((item) => item.path === `/runs/${attempt.body.id}`),
+      ).toHaveLength(1);
+    }
+    const late = await (
+      await client.get(`${path}/text-assistant/${session.id}/messages/same-request`)
+    ).json();
+    expect(late).toMatchObject({ taskStatus: 'canceled', canceled: true });
+    expect(JSON.stringify(late)).not.toContain('Svar för Alfa');
+    expect(
+      endpoint.received.filter((item) => item.method === 'POST' && item.body.run_type === 'llm'),
+    ).toHaveLength(2);
+  } finally {
+    for (const release of releases.values()) release();
+    await other.dispose();
+  }
+});
 
 test('an authenticated task reaches ingestion through the real SDK with one backend owner and honest lifecycle', async () => {
   const { path, session } = await setup();
@@ -303,6 +726,13 @@ test('temporary ingestion failure gets at most two retries per event without cha
     expect(
       endpoint.received.filter((item) => item.path === `/runs/${starts[0].body.id}`),
     ).toHaveLength(3);
+    const attempts = endpoint.received.filter(
+      (item) => item.method === 'POST' && item.body.run_type === 'llm',
+    );
+    const identities = new Set(attempts.map((item) => item.body.id));
+    expect(identities.size).toBe(2);
+    for (const id of identities)
+      expect(attempts.filter((item) => item.body.id === id)).toHaveLength(3);
     expect(await (await client.get(`${path}/map`)).json()).toEqual(before);
     const costs = await (
       await client.get(
@@ -762,6 +1192,69 @@ test('a failed provider task ends its own SDK span as failed without exposing pr
   ).toMatchObject({ taskStatus: 'completed', phase: 'error', error: 'assistant_provider_failed' });
   expect(await (await client.get(`${path}/map`)).json()).toEqual(before);
   expect(JSON.stringify(endpoint.received)).not.toContain('synthetic-provider-failure-secret');
+  const attempt = endpoint.received.find(
+    (item) => item.method === 'POST' && item.body.run_type === 'llm',
+  )!;
+  expect(attempt.body.inputs).toMatchObject({
+    instructions: expect.any(String),
+    input: expect.any(Array),
+  });
+  expect(
+    endpoint.received.find((item) => item.path === `/runs/${attempt.body.id}`)?.body,
+  ).toMatchObject({ error: 'observed_failed', extra: { metadata: { outcome: 'failed' } } });
+});
+
+test('an incomplete model output remains incomplete evidence and cannot execute its returned save action', async () => {
+  const action = modelTool('save_draft', {
+    version: 0,
+    contentVersion: 1,
+    operationId: 'incomplete-must-not-save',
+  });
+  const { path, session } = await setup({
+    modelFetch: async (_url, init) => {
+      const request = JSON.parse(String(init?.body));
+      return Response.json(
+        {
+          id: 'resp_incomplete',
+          status: 'incomplete',
+          model: request.model,
+          output: [action],
+          incomplete_details: { reason: 'max_output_tokens' },
+          metadata: { credential: 'excluded-partial-secret' },
+          error: { message: 'excluded-partial-error' },
+        },
+        {
+          headers: {
+            'x-request-id': 'request_incomplete',
+            authorization: 'excluded-partial-header',
+          },
+        },
+      );
+    },
+  });
+  const result = await send(path, session);
+  expect(result).toMatchObject({ phase: 'error', error: 'assistant_provider_failed' });
+  expect(result.receipt).toBeUndefined();
+  await expect
+    .poll(() =>
+      endpoint.received.some(
+        (item) => item.method === 'PATCH' && item.body.parent_run_id === undefined,
+      ),
+    )
+    .toBe(true);
+  const attempt = endpoint.received.find(
+    (item) => item.method === 'POST' && item.body.run_type === 'llm',
+  )!;
+  expect(
+    endpoint.received.find((item) => item.path === `/runs/${attempt.body.id}`)?.body,
+  ).toMatchObject({
+    error: 'observed_incomplete',
+    extra: { metadata: { status: 'incomplete', outcome: 'incomplete' } },
+    outputs: { status: 'incomplete', output: [action] },
+  });
+  expect(endpoint.received.some((item) => item.body.name === 'save_draft')).toBe(false);
+  expect((await (await client.get(`${path}/map/history`)).json()).history).toEqual([]);
+  expect(JSON.stringify(endpoint.received)).not.toContain('excluded-partial');
 });
 
 test.each(['complete', 'cancel'])(
@@ -962,7 +1455,12 @@ test('reviewed MCP text and model attempts keep exact content, explicit parentag
 test('an oversized MCP event is dropped with a gap instead of shortening or uploading its content', async () => {
   const oversized = 'synthetic-large-text-'.repeat(60000);
   let admitted = '';
+  let turn = 0;
+  const model = textModel(() =>
+    turn++ === 0 ? [modelTool('read_map', { query: 'Lina' })] : [modelMessage('Lina är läst.')],
+  );
   const { path, session } = await setup({
+    modelFetch: model.provider,
     assistantDispatch: async (incoming, dispatch) => {
       const rpc = await incoming
         .clone()
@@ -984,7 +1482,13 @@ test('an oversized MCP event is dropped with a gap instead of shortening or uplo
   });
   await send(path, session);
   const health = await (await client.get(`${app.origin}/api/operator/tracing`)).json();
-  expect(health).toMatchObject({ droppedEvents: 1, lastError: 'oversized' });
+  // The same exact MCP text also enters the following model request. Both
+  // complete evidence events exceed the limit; neither may be shortened.
+  expect(health).toMatchObject({ droppedEvents: 2, lastError: 'oversized' });
+  expect(Buffer.byteLength(JSON.stringify(model.requests[1]))).toBeGreaterThan(1024 * 1024);
+  expect(JSON.stringify(model.requests[1].input)).toContain(
+    admitted.replaceAll('"', '\\"').slice(0, 50),
+  );
   expect(Buffer.byteLength(admitted)).toBeGreaterThan(1024 * 1024);
   expect(endpoint.received.every((item) => item.bytes <= 1024 * 1024)).toBe(true);
   expect(
@@ -996,6 +1500,25 @@ test('an oversized MCP event is dropped with a gap instead of shortening or uplo
   expect(tool?.body.extra).toMatchObject({ metadata: { status: 'incomplete' } });
   expect(endpoint.received.some((item) => item.path === `/runs/${tool?.body.id}`)).toBe(false);
   expect(JSON.stringify(health)).not.toContain('synthetic-large-text-');
+  await expect
+    .poll(
+      () =>
+        endpoint.received.filter(
+          (item) => item.method === 'PATCH' && item.body.parent_run_id === undefined,
+        ).length,
+    )
+    .toBe(1);
+  expect(
+    endpoint.received.filter((item) => item.method === 'POST' && item.body.run_type === 'llm'),
+  ).toHaveLength(1);
+  expect(
+    endpoint.received.filter(
+      (item) =>
+        item.method === 'PATCH' &&
+        (item.body.extra as { metadata?: { provider_call_id?: string } })?.metadata
+          ?.provider_call_id,
+    ),
+  ).toHaveLength(2);
 });
 
 test('many small MCP text entries exceed one event budget as a whole without changing the task', async () => {

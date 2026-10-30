@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { buildIdentity } from '../shared/build-identity.js';
+import { conversationConsentTextVersion } from '../shared/conversation-consent.js';
 import { normalizeHouseholdName } from '../shared/household-name.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import { AdministrationError } from './administration.js';
@@ -111,7 +112,10 @@ export function createApp({
     callerObservation || deliveryObservation
       ? (event) => {
           callerObservation?.(event);
-          if (sending.canSend()) deliveryObservation?.(event);
+          // Only the conversation's original information version authorizes
+          // live evidence. A later saved acceptance cannot upgrade that session.
+          if (sending.canSend() && event.consentTextVersion === conversationConsentTextVersion)
+            deliveryObservation?.(event);
         }
       : undefined;
   const linking = createLoginMethods(database, auth, config.origin, bindings);

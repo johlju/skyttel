@@ -11,9 +11,13 @@ See the [assessment procedure](langsmith-assessment.md) for that work.
 Each accepted backend task has one stable trace root. MCP executions and model
 attempts have explicit child identities. Starts remain incomplete until an
 observed ending updates them. Missing or discarded endings never imply success.
-The sender carries the reviewed task lifecycle, MCP arguments and text results,
-and model-attempt metadata. Complete model inputs and outputs, additional text
-evidence, consent eligibility and voice export require subsequent integration.
+The sender carries exact admitted task requests, selected backend results,
+MCP arguments and text results, model instructions, conversation input, tool
+definitions, reviewed model output and actions, and model-attempt metadata.
+Each model response retains its admitted actions together. Content is eligible
+only when its conversation starts under the current LangSmith information;
+later saved acceptance does not make an older conversation eligible.
+Voice export requires subsequent integration.
 It excludes raw audio, authentication, headers, environment values and unrelated
 provider metadata.
 

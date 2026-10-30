@@ -337,6 +337,15 @@ export async function createInstallation(
     revokeMembership(userId: string) {
       database.prepare('DELETE FROM membership WHERE userId = ?').run(userId);
     },
+    // Arrange a later saved acceptance without restarting the old in-memory
+    // conversation. Assertions still use public conversation/ingestion APIs.
+    seedConversationConsent(userId: string, householdId: string, textVersion: number) {
+      database
+        .prepare(`INSERT INTO conversation_consent (userId, householdId, textVersion, savedAt)
+        VALUES (?, ?, ?, ?) ON CONFLICT(householdId, userId) DO UPDATE SET
+        textVersion = excluded.textVersion, savedAt = excluded.savedAt`)
+        .run(userId, householdId, textVersion, new Date().toISOString());
+    },
     async saveDatabase(destination: string) {
       await database.backup(destination);
     },
