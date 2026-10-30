@@ -20,7 +20,12 @@ import type {
 } from '../shared/text-assistant.js';
 import { assistantFailureMessage, newConversationMessage } from './assistant-feedback.js';
 import { textAssistantInstructions } from './assistant-instructions.js';
-import type { ObserveAssistant } from './assistant-observation.js';
+import {
+  type AssistantObservationContext,
+  backendTaskObservationContext,
+  type ObservationStatus,
+  type ObserveAssistant,
+} from './assistant-observation.js';
 import { assistantReadCache } from './assistant-read-cache.js';
 import type { Auth } from './auth.js';
 import { sessionDeadline } from './browser-binding.js';
@@ -89,6 +94,8 @@ type Session = TextAssistantView & {
   /** Version reached by this FIFO, unaffected by view reads of external edits. */
   workVersion?: number;
   accepted: Map<string, AcceptedMessage>;
+  /** Request IDs may be reused only after an explicit conversation reset. */
+  resetGeneration: number;
   capacity: ConversationCapacity;
   summary?: string;
   summaryOffset?: number;
@@ -181,6 +188,15 @@ export function textAssistantRoutes({
     session: Session;
     guard: () => void;
   }>();
+  // Observation identity is independent of the authorization context. Voice
+  // keeps its existing access checks while sharing the backend's one owner.
+  const observationWork = new AsyncLocalStorage<{
+    session: Session;
+    context: AssistantObservationContext;
+    revision: number;
+    deadline: number;
+    providerCallId?: string;
+  }>();
   // The conversations that a revoked consent has ended, until the time they
   // would have expired by themselves. Work with them is refused with the reason.
   const revoked = new Map<string, { actorId: string; householdId: string }>();
@@ -191,7 +207,55 @@ export function textAssistantRoutes({
   const consentKey = (actorId: string, householdId: string) =>
     JSON.stringify([householdId, actorId]);
   const respond = config.openaiApiKey
-    ? textModel(config.openaiApiKey, modelFetch, modelUsage, modelProfile)
+    ? textModel(
+        config.openaiApiKey,
+        modelFetch,
+        (attempt) => {
+          // Cost accounting remains independent and executes for every attempt.
+          modelUsage?.(attempt);
+          if (!observe) return;
+          const work = observationWork.getStore();
+          if (work) work.providerCallId = attempt.attemptId;
+          observe({
+            at: now(),
+            sessionId: work?.session.id ?? '',
+            taskId: work?.context.requestId,
+            revision: work?.revision,
+            context: {
+              owner: 'backend',
+              traceId: work?.context.traceId ?? attempt.attemptId,
+              spanId: attempt.attemptId,
+              parentSpanId: work?.context.spanId,
+              requestId: work?.context.requestId,
+              providerCallId: attempt.attemptId,
+            },
+            kind: 'model_attempt',
+            status:
+              attempt.outcome === 'completed'
+                ? 'completed'
+                : attempt.outcome === 'failed'
+                  ? 'failed'
+                  : attempt.outcome === 'aborted'
+                    ? 'canceled'
+                    : 'incomplete',
+            ...(!work ? { evidenceGap: 'unknown_parent' as const } : {}),
+            data: {
+              attemptId: attempt.attemptId,
+              startedAt: attempt.startedAt,
+              endedAt: attempt.endedAt,
+              model: attempt.model,
+              resolvedModel: attempt.resolvedModel,
+              serviceTier: attempt.serviceTier,
+              providerRequestId: attempt.requestId,
+              responseId: attempt.responseId,
+              outcome: attempt.outcome,
+              completeness: attempt.completeness,
+              usage: attempt.usage,
+            },
+          });
+        },
+        modelProfile,
+      )
     : null;
   function authorityLost(error: unknown) {
     return (
@@ -499,6 +563,24 @@ export function textAssistantRoutes({
     if (work?.session === session) work.guard();
     const value = await session.reads.read(name, args, async () => {
       const at = now();
+      const observed = observationWork.getStore();
+      const parent = observed?.session === session ? observed.context : undefined;
+      const spanId = randomUUID();
+      const context: AssistantObservationContext = {
+        owner: 'backend',
+        traceId: parent?.traceId ?? spanId,
+        spanId,
+        parentSpanId: parent?.spanId,
+        requestId: parent?.requestId,
+        toolExecutionId: spanId,
+      };
+      const identity = {
+        sessionId: session.id,
+        taskId: parent?.requestId,
+        revision: session.revision,
+        context,
+        ...(!parent ? { evidenceGap: 'unknown_parent' as const } : {}),
+      };
       if (work?.session === session && session.phase === 'working') {
         session.activity = assistantToolActivity(name);
         const steps = session.activitySteps ?? [];
@@ -509,23 +591,54 @@ export function textAssistantRoutes({
       }
       observe?.({
         at,
-        sessionId: session.id,
-        taskId: session.taskId,
-        revision: session.revision,
+        ...identity,
         kind: 'mcp_started',
+        status: 'incomplete',
         data: { name, args },
       });
-      const result = await session.mcp.call(name, args, guard, work?.session === session);
-      guard?.();
-      if (work?.session === session) work.guard();
+      let result: Awaited<ReturnType<Mcp['call']>>;
+      try {
+        result = await session.mcp.call(name, args, guard, work?.session === session);
+      } catch (error) {
+        // The MCP transport can wrap a task guard's error. Use the caller's
+        // current authority for the observed ending, while preserving the
+        // original exception and application failure handling below.
+        let observedError = error;
+        try {
+          guard?.();
+          if (work?.session === session) work.guard();
+        } catch (reason) {
+          observedError = reason;
+        }
+        const canceled =
+          observedError instanceof MapError && observedError.code === 'assistant_canceled';
+        // Expiry can also abort work; the original deadline takes precedence
+        // over that signal, as it does for the task's observed ending.
+        const expired =
+          (observed?.session === session && now() >= observed.deadline) ||
+          (observedError instanceof MapError && observedError.code === 'assistant_task_expired');
+        observe?.({
+          at: now(),
+          ...identity,
+          kind: 'mcp_failed',
+          status: expired ? 'incomplete' : canceled ? 'canceled' : 'failed',
+          data: {
+            name,
+            startedAt: at,
+            error: expired ? 'tool_incomplete' : canceled ? 'tool_canceled' : 'tool_failed',
+          },
+        });
+        throw error;
+      }
       observe?.({
         at: now(),
-        sessionId: session.id,
-        taskId: session.taskId,
-        revision: session.revision,
+        ...identity,
         kind: 'mcp_completed',
+        status: result.isError ? 'failed' : 'completed',
         data: { name, result, startedAt: at },
       });
+      guard?.();
+      if (work?.session === session) work.guard();
       if (!Array.isArray(result.content)) throw new Error('invalid_tool_result');
       const text = result.content.find((item) => item.type === 'text');
       if (!text || typeof text.text !== 'string') throw new Error('invalid_tool_result');
@@ -895,6 +1008,7 @@ export function textAssistantRoutes({
     for (const accepted of session.accepted.values()) accepted.delivery?.stop();
     session.accepted.clear();
     session.taskId = undefined;
+    session.resetGeneration++;
     syncWork();
     session.taskSource = undefined;
     session.canceled = undefined;
@@ -1168,12 +1282,23 @@ export function textAssistantRoutes({
         session.input.push(...toResponseInputItems(response.output));
         session.capacity.text(response.usage, contextBytes(session));
         let calls = response.output.filter((item) => item.type === 'function_call');
+        const observed = observationWork.getStore();
         for (const action of calls)
           observe?.({
             at: now(),
             sessionId: session.id,
             taskId: session.taskId,
             revision,
+            context: observed && {
+              ...observed.context,
+              ...(observed.providerCallId
+                ? {
+                    spanId: observed.providerCallId,
+                    parentSpanId: observed.context.spanId,
+                    providerCallId: observed.providerCallId,
+                  }
+                : {}),
+            },
             kind: 'model_action',
             data: { name: action.name, arguments: action.arguments, callId: action.call_id },
           });
@@ -1781,6 +1906,22 @@ export function textAssistantRoutes({
     session.displayedItem = undefined;
     if (!message.voice) session.conversation.push({ role: 'user', text: message.text });
     const revision = session.revision;
+    const startedAt = now();
+    const observationContext = backendTaskObservationContext(
+      session.id,
+      message.id,
+      session.resetGeneration,
+    );
+    observe?.({
+      at: startedAt,
+      sessionId: session.id,
+      taskId: message.id,
+      revision,
+      context: observationContext,
+      kind: 'task_started',
+      status: 'incomplete',
+      data: { source: message.voice ? 'voice' : 'text', startedAt },
+    });
     const guard = () => {
       if (
         task.signal.aborted ||
@@ -1877,7 +2018,39 @@ export function textAssistantRoutes({
           else await summarize(session, guard);
       }
     };
-    const executing = message.voice ? execute() : textWork.run({ session, guard }, execute);
+    let observationStatus: ObservationStatus = 'incomplete';
+    const executing = observationWork.run(
+      { session, context: observationContext, revision, deadline: message.deadline },
+      async () => {
+        try {
+          await (message.voice ? execute() : textWork.run({ session, guard }, execute));
+          // Capture the outcome before a queued or concurrent request can replace
+          // the mutable conversation view. A stale execution has no known success.
+          observationStatus =
+            now() >= message.deadline
+              ? 'incomplete'
+              : task.signal.aborted
+                ? 'canceled'
+                : session.revision !== revision ||
+                    session.task !== task ||
+                    !sessions.has(session.id)
+                  ? 'incomplete'
+                  : session.error || session.phase === 'error' || session.phase === 'recovery'
+                    ? 'failed'
+                    : 'completed';
+        } catch (error) {
+          observationStatus =
+            now() >= message.deadline ||
+            (error instanceof MapError && error.code === 'assistant_task_expired')
+              ? 'incomplete'
+              : task.signal.aborted ||
+                  (error instanceof MapError && error.code === 'assistant_canceled')
+                ? 'canceled'
+                : 'failed';
+          throw error;
+        }
+      },
+    );
     void executing
       .catch((error) => {
         if (task.signal.aborted || session.revision !== revision) return;
@@ -1895,6 +2068,22 @@ export function textAssistantRoutes({
         session.saveIntent = undefined;
       })
       .finally(() => {
+        observe?.({
+          at: now(),
+          sessionId: session.id,
+          taskId: message.id,
+          revision,
+          context: observationContext,
+          kind: 'task_completed',
+          status: observationStatus,
+          ...(observationStatus === 'incomplete' ? { evidenceGap: 'missing_end' as const } : {}),
+          data: {
+            source: message.voice ? 'voice' : 'text',
+            startedAt,
+            endedAt: now(),
+            ...(observationStatus === 'completed' ? {} : { error: `task_${observationStatus}` }),
+          },
+        });
         clearTimeout(message.timer);
         if (task.signal.aborted || session.task !== task || !sessions.has(session.id)) return;
         accepted.status = now() >= message.deadline ? 'expired' : 'completed';
@@ -2038,6 +2227,7 @@ export function textAssistantRoutes({
         queue: [],
         boundaryRevision: 0,
         accepted: new Map(),
+        resetGeneration: 0,
         completedReplies: [],
         timer: setTimeout(
           () => expireConversation(session),
@@ -2632,6 +2822,7 @@ export function textAssistantRoutes({
     },
     /** Private ephemeral context shared by text and every voice connection.
      * Never expose it in status responses or write it to the household. */
+    observationResetGeneration: (sessionId: string) => sessions.get(sessionId)?.resetGeneration,
     conversation: (sessionId: string) => {
       const session = sessions.get(sessionId);
       return session ? providerConversation(session) : [];

@@ -220,6 +220,7 @@ export function voiceWork({
     answerTo?: PendingPartReference[],
   ) {
     const acceptedInput = inputVersion;
+    let requestId: string | undefined;
     const current = () => !stopped && allowed() && generation === task;
     inFlight.set(task, (inFlight.get(task) ?? 0) + 1);
     try {
@@ -266,7 +267,7 @@ export function voiceWork({
       } else {
         const controller = new AbortController();
         dispatching = controller;
-        const requestId = randomUUID();
+        requestId = randomUUID();
         observe?.('backend_request', { delegationId: id, requestId, text, context });
         owned = view.phase === 'working' ? view.revision : view.revision + 1;
         view = await request(
@@ -311,7 +312,7 @@ export function voiceWork({
       }
       if (!current()) return;
       rememberQuestion(view);
-      observe?.('backend_result', { delegationId: id, view });
+      observe?.('backend_result', { delegationId: id, requestId, view });
       while (
         current() &&
         inputVersion === acceptedInput &&
@@ -402,7 +403,14 @@ export function voiceWork({
       return;
     }
     events.add(event.event_id);
-    observe?.('voice_event', { role, ...event });
+    observe?.('voice_event', {
+      type: role === 'user' ? 'session.input_transcript.delta' : 'session.output_transcript.delta',
+      role,
+      event_id: event.event_id,
+      delta: event.delta,
+      start_ms: event.start_ms,
+      end_ms: event.end_ms,
+    });
     transcript?.(role, event.delta);
     if (role === 'user') {
       inputVersion++;

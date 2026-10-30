@@ -9,7 +9,11 @@ import type { TextAssistantView } from '../shared/text-assistant.js';
 import type { VoiceAssistantView } from '../shared/voice-assistant.js';
 import { voiceErrorGroup } from '../shared/voice-error.js';
 import { voiceAssistantInstructions } from './assistant-instructions.js';
-import type { ObserveAssistant } from './assistant-observation.js';
+import {
+  type AssistantObservationContext,
+  backendTaskObservationContext,
+  type ObserveAssistant,
+} from './assistant-observation.js';
 import type { Config } from './config.js';
 import { voiceConversationModel } from './conversation-capacity.js';
 import type {
@@ -71,6 +75,7 @@ export function voiceAssistantRoutes({
   prepareVoiceContext,
   voiceInput,
   observe,
+  observationResetGeneration,
   liveProfile = voiceConversationModel,
   now = () => Date.now(),
   voiceAccess,
@@ -102,6 +107,7 @@ export function voiceAssistantRoutes({
   ) => Promise<TextAssistantView | undefined>;
   voiceInput?: (sessionId: string, pending: boolean, text?: string) => void;
   observe?: ObserveAssistant;
+  observationResetGeneration: (sessionId: string) => number | undefined;
   liveProfile?: LiveModelProfile;
 }) {
   if (
@@ -154,6 +160,14 @@ export function voiceAssistantRoutes({
   function record(voice: Voice) {
     report(voice.usage);
   }
+  function observationContext(voice: Voice): AssistantObservationContext {
+    return {
+      owner: 'voice',
+      traceId: voice.view.id,
+      spanId: voice.view.id,
+      voiceSessionId: voice.view.id,
+    };
+  }
   function close(voice: Voice, error?: string) {
     if (voice.closed) return voice.closed;
     const authorityEnded = error === 'voice_session_expired' || error === 'voice_access_lost';
@@ -192,6 +206,29 @@ export function voiceAssistantRoutes({
       voice.view.phase = error ? 'error' : 'closed';
       voice.usage.endedAt = new Date().toISOString();
       voice.usage.outcome = voice.view.usageFinal ? 'closed' : 'interrupted';
+      const status =
+        error === 'voice_connection_lost'
+          ? 'disconnected'
+          : error
+            ? 'failed'
+            : voice.view.usageFinal
+              ? 'completed'
+              : 'incomplete';
+      observe?.({
+        at: now(),
+        sessionId: voice.assistant.id,
+        context: observationContext(voice),
+        kind: 'voice_completed',
+        status,
+        ...(status === 'incomplete' ? { evidenceGap: 'missing_end' as const } : {}),
+        data: {
+          model: liveProfile.model,
+          endedAt: now(),
+          ...(error
+            ? { error: status === 'disconnected' ? 'voice_disconnected' : 'voice_failed' }
+            : {}),
+        },
+      });
       record(voice);
       voice.channel.close();
       setTimeout(() => voices.delete(voice.view.id), 60_000).unref();
@@ -455,6 +492,14 @@ export function voiceAssistantRoutes({
         }, 1000).unref(),
       };
       activeVoice = voice;
+      observe?.({
+        at: now(),
+        sessionId: voice.assistant.id,
+        context: observationContext(voice),
+        kind: 'voice_started',
+        status: 'incomplete',
+        data: { model: liveProfile.model, startedAt: now() },
+      });
       // Provider creation may resolve despite an abort. Attach only to close
       // that session; no work or provider event may regain its authority.
       if (expired) void close(voice, endReason);
@@ -503,6 +548,8 @@ export function voiceAssistantRoutes({
         voice.finish?.();
       });
       const deliveryConnectionId = body.deliveryConnectionId;
+      // Keep the old generation for delayed results after this voice is retired.
+      const resetGeneration = observationResetGeneration(sessionId);
       voice.work = voiceWork({
         now,
         allowed: () => {
@@ -514,8 +561,32 @@ export function voiceAssistantRoutes({
             return false;
           }
         },
-        observe: (kind, data) =>
-          observe?.({ at: now(), sessionId: voice.assistant.id, kind, data }),
+        observe: (kind, data) => {
+          const identifiers = data as { delegationId?: string | null; requestId?: string };
+          const requestId =
+            typeof identifiers.requestId === 'string' ? identifiers.requestId : undefined;
+          const backend =
+            requestId && resetGeneration !== undefined
+              ? backendTaskObservationContext(voice.assistant.id, requestId, resetGeneration)
+              : undefined;
+          observe?.({
+            at: now(),
+            sessionId: voice.assistant.id,
+            context: {
+              ...observationContext(voice),
+              requestId,
+              ...(typeof identifiers.delegationId === 'string' || identifiers.delegationId === null
+                ? { delegationId: identifiers.delegationId }
+                : {}),
+              ...(backend ? { links: [{ traceId: backend.traceId, spanId: backend.spanId }] } : {}),
+            },
+            ...((kind === 'backend_request' || kind === 'backend_result') && !backend
+              ? { evidenceGap: 'unknown_parent' as const }
+              : {}),
+            kind,
+            data,
+          });
+        },
         channel,
         initial: current,
         response: (value) => {

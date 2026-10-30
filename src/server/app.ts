@@ -9,7 +9,7 @@ import { normalizeHouseholdName } from '../shared/household-name.js';
 import type { TextAssistantView } from '../shared/text-assistant.js';
 import { AdministrationError } from './administration.js';
 import { administrationRoutes } from './administration-routes.js';
-import type { ObserveAssistant } from './assistant-observation.js';
+import { assistantObservationBoundary, type ObserveAssistant } from './assistant-observation.js';
 import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
 import { authenticationCleanup } from './authentication-cleanup.js';
@@ -55,7 +55,7 @@ export function createApp({
   assistantDispatch,
   modelProfile,
   liveProfile,
-  observe,
+  observe: observationSink,
   traceDelivery,
   now = () => Date.now(),
 }: {
@@ -78,6 +78,7 @@ export function createApp({
   /** Installation time in milliseconds since the Unix epoch. */
   now?: () => number;
 }) {
+  const observe = assistantObservationBoundary(observationSink);
   const app = new Hono();
   // Historical test installations can intentionally stop before this migration.
   const hasBindings = !!database
@@ -374,6 +375,7 @@ export function createApp({
   const voiceAssistant = voiceAssistantRoutes({
     now,
     voiceAccess: textAssistant.voiceAccess,
+    observationResetGeneration: textAssistant.observationResetGeneration,
     expireVoiceWork: textAssistant.expireVoiceWork,
     config,
     liveProfile,

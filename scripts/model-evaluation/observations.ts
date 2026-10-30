@@ -8,7 +8,7 @@ export function retainedObservation(
   record?: (event: AssistantObservation) => void,
 ): AssistantObservation {
   record?.(event);
-  if (record && ['mcp_started', 'mcp_completed'].includes(event.kind)) {
+  if (record && ['mcp_started', 'mcp_completed', 'mcp_failed'].includes(event.kind)) {
     const data = event.data as { name: string; startedAt?: number };
     return { ...event, data: { name: data.name, startedAt: data.startedAt } };
   }
@@ -33,7 +33,9 @@ export function modelActions(events: AssistantObservation[]) {
 export function lastVoiceActivityAt(events: AssistantObservation[], fallback: number) {
   return (
     events.findLast(
-      (event) => !['mcp_started', 'mcp_completed'].includes(event.kind) || Boolean(event.taskId),
+      (event) =>
+        !['mcp_started', 'mcp_completed', 'mcp_failed'].includes(event.kind) ||
+        Boolean(event.taskId),
     )?.at ?? fallback
   );
 }

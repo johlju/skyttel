@@ -13,6 +13,7 @@ test('status polling permits voice quiet observation while late output and task 
   for (let at = 150; at <= 2150; at += 25) {
     events.push({ at, sessionId: 'dialog', kind: 'mcp_started', data: {} });
     events.push({ at: at + 1, sessionId: 'dialog', kind: 'mcp_completed', data: {} });
+    events.push({ at: at + 2, sessionId: 'dialog', kind: 'mcp_failed', data: {} });
   }
   expect(2200 - lastVoiceActivityAt(events, 0)).toBeGreaterThanOrEqual(2000);
   events.push({
