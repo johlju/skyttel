@@ -358,7 +358,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   [klientfångster](assistant-client-preparation.md) ger körbara indata och
   tekniska jämförelser utan modell.
 
-- [Samtalsmedgivandet](conversation-consent.md): medgivanderutan från
+- [Samtalsmedgivandet](conversation-consent.md): aktuell information om
+  OpenAI och LangSmith, förnyat medgivande och medgivanderutan från
   verktygsraden och snabblänken, avbruten start med bevarat
   fokus, start med röst eller text efter vald knapp, medgivande för besöket
   eller sparat per användare och hushåll på flera enheter samt tangentbord,

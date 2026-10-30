@@ -84,6 +84,12 @@ test.describe('Windows och Linux', () => {
       expect(text).toContain('Skyttel kan höra och förstå fel');
       expect(text).toContain('samtalstexten kan innehålla fel');
       expect(text).toContain('hela ditt utkast');
+      expect(text).toContain('exakt samtalstext');
+      expect(text).toContain('hushållets verktygsförfrågningar och resultat');
+      expect(text).toContain('Rått ljud och tekniska autentiseringsuppgifter ingår inte');
+      expect(text).toContain('Ditt samtalsmedgivande är ett separat val');
+      expect(text).toContain('rullande 14 dagars grundlagring');
+      expect(text).toContain('Radering i molnet är separat');
       expect(text).toContain('Återkalla och avsluta samtalet');
       expect(text).toContain('Skyttel begär att OpenAI inte lagrar samtalet');
       expect(text).toContain('loggar för att förebygga missbruk');

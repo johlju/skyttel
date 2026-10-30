@@ -82,7 +82,7 @@ afterEach(() => {
 });
 
 test('the consent box opens next to the chosen button, on the side that has room', async () => {
-  const starts = await open(1280, 1200);
+  const starts = await open(1280, 1800);
   for (const name of ['Prata med Skyttel']) {
     await tool(name).click();
     await expect.element(box()).toBeVisible();
@@ -126,7 +126,7 @@ test('the consent box opens next to the chosen button, on the side that has room
   await expect
     .element(page.getByRole('complementary', { name: 'Kom igång med kartan' }))
     .not.toBeInTheDocument();
-  expect(starts).toEqual([{ consent: { textVersion: 2 } }]);
+  expect(starts).toEqual([{ consent: { textVersion: 3 } }]);
   await expect
     .element(page.getByRole('region', { name: 'Samtal och text', exact: true }))
     .not.toBeInTheDocument();

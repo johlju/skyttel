@@ -254,6 +254,11 @@ YTA-07.
 3. Läs vilka uppgifter OpenAI behandlar. Läs att begäran om att inte lagra inte
    garanterar behandling enbart i EU eller omedelbar radering av alla kopior. Nå
    **Läs OpenAI:s datavillkor** med Tab och kontrollera länkens namn.
+   Läs också att aktiv sändning kan skicka exakt samtalstext och hushållets
+   verktygsinnehåll till LangSmith, men inte rått ljud. Skilj ditt medgivande
+   från installationsansvarigs sändningsval. Läs om 14 dagars grundlagring,
+   att skickade uppgifter inte återtas och att radering i molnet är separat
+   och kan lämna viss metadata längre.
 4. Stäng med Escape. Välj **Tabell → Nytt objekt**, ange **Oskickat formulär**
    och välj krysset. Kräv fokus på **Fortsätt redigera**; Escape ska behålla
    namnet. Välj krysset igen och **Kasta ändringarna och fortsätt**. Öppna
@@ -303,6 +308,9 @@ YTA-07.
   utan löfte om omedelbar radering eller behandling enbart i EU. Automationen
   granskar också att verkliga text- och röstanrop begär att inte lagra svar
   eller session; den provar inte leverantörens drift.
+- LangSmiths behandling av exakt text och verktygsinnehåll vid aktiv
+  sändning, undantaget för rått ljud, det separata sändningsvalet samt
+  grundlagring och raderingsbegränsningar går att läsa före medgivandet.
 
 ### YTA-08: hjälpens långa text går att läsa och stänga på smal skärm
 
@@ -409,7 +417,10 @@ sparande eller återkallande mot servern.
 1. Nå **Information och hjälp** med tangentbord och öppna med Enter. Kräv
    fokus på rubriken. Läs samma innehåll som i YTA-07:s steg 1–3, inklusive
    **Ctrl+Skift+Mellanslag**, kort och långt tryck, formuläralternativ,
-   förlustvarning, sparbesked och OpenAI:s begränsningar. Läs datavillkorslänken.
+   förlustvarning, sparbesked, OpenAI:s begränsningar och LangSmiths
+   behandling av exakt text och verktygsinnehåll vid aktiv sändning. Läs
+   undantaget för rått ljud, installationsansvarigs separata sändningsval,
+   14 dagars grundlagring och raderingsbegränsningar. Läs datavillkorslänken.
 2. Stäng med Escape och kräv fokus på hjälpknappen.
 3. Öppna med hjälpknappen igen och välj **Stäng verktyget**. Kräv att hjälpen
    stängs och fokus återgår till hjälpknappen.

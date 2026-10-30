@@ -72,6 +72,7 @@ type AcceptedMessage = {
 };
 const savedReply = 'Sparat. Hela utkastet finns i hushållets karta.';
 type Session = TextAssistantView & {
+  readonly consentTextVersion: number;
   parts: ReturnType<typeof pendingParts>;
   answers?: string[];
   id: string;
@@ -377,6 +378,7 @@ export function textAssistantRoutes({
     } = session;
     return {
       id,
+      consentTextVersion: session.consentTextVersion,
       revision,
       contextRevision,
       contextGeneration: session.contextGeneration,
@@ -2207,6 +2209,7 @@ export function textAssistantRoutes({
       });
       contentVersion = review.contentVersion;
       const session: Session = {
+        consentTextVersion: consents.textVersion,
         parts: pendingParts(),
         id: randomUUID(),
         actorId,
@@ -2827,6 +2830,8 @@ export function textAssistantRoutes({
       const session = sessions.get(sessionId);
       return session ? providerConversation(session) : [];
     },
+    /** Export eligibility belongs to the original conversation, never later saved consent. */
+    consentVersion: (sessionId: string) => sessions.get(sessionId)?.consentTextVersion,
     prepareVoiceContext: async (sessionId: string, signal?: AbortSignal) => {
       const session = sessions.get(sessionId);
       if (!session) return;

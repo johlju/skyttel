@@ -48,7 +48,7 @@ function show({ failedSaves = 0 } = {}) {
     if (url === consentPath)
       return failedSaves-- > 0
         ? Response.json({ error: 'internal_error' }, { status: 500 })
-        : Response.json({ saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' } });
+        : Response.json({ saved: { textVersion: 3, savedAt: '2026-10-01T08:00:00.000Z' } });
     return Response.json(session);
   });
   render(
@@ -84,6 +84,8 @@ test('the consent box states the consent text word for word and offers to rememb
 
   const text = document.getElementById(box.getAttribute('aria-describedby') ?? '');
   expect([...(text?.children ?? [])].map((paragraph) => paragraph.tagName)).toEqual([
+    'P',
+    'P',
     'P',
     'P',
     'P',
@@ -146,7 +148,7 @@ test.each([
     await started();
     expect(queryConsentBox()).toBeNull();
     // Approved for the visit: nothing is saved, and the start states the consent.
-    expect(posts).toEqual([{ url: path, body: { consent: { textVersion: 2 } } }]);
+    expect(posts).toEqual([{ url: path, body: { consent: { textVersion: 3 } } }]);
     // jsdom has no microphone, so a start with voice says that the voice is not supported.
     if (withVoice)
       expect((await screen.findByRole('region', { name: 'Samtalsnotis' })).textContent).toContain(
@@ -166,14 +168,14 @@ test('a remembered consent is saved before the start, and a save that fails is t
   );
   expect(getConsentBoxControls().remember.checked).toBe(true);
   expect(messageField()).not.toBeNull();
-  expect(posts).toEqual([{ url: consentPath, body: { textVersion: 2 } }]);
+  expect(posts).toEqual([{ url: consentPath, body: { textVersion: 3 } }]);
 
   await userEvent.click(getConsentBoxControls().approve);
   await started();
   expect(queryConsentBox()).toBeNull();
   expect(posts).toEqual([
-    { url: consentPath, body: { textVersion: 2 } },
-    { url: consentPath, body: { textVersion: 2 } },
+    { url: consentPath, body: { textVersion: 3 } },
+    { url: consentPath, body: { textVersion: 3 } },
     { url: path, body: {} },
   ]);
 });
@@ -196,6 +198,6 @@ test('a consent that is being saved can be neither approved again nor cancelled'
   // Escape does not withdraw a consent that is already on its way to the server.
   fireEvent(await findConsentBox(), new Event('cancel', { cancelable: true }));
   expect(queryConsentBox()).not.toBeNull();
-  answer?.(Response.json({ saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' } }));
+  answer?.(Response.json({ saved: { textVersion: 3, savedAt: '2026-10-01T08:00:00.000Z' } }));
   await started();
 });

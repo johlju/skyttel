@@ -34,6 +34,8 @@ export function conversationConsents(
     );
   }
   return {
+    /** The running release's information version, captured at conversation start. */
+    textVersion,
     approvesCurrentText,
     saved,
     /** Saves the user's consent to the current consent text for the household. */

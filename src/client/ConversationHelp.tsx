@@ -1,3 +1,4 @@
+import { conversationConsentText } from '../shared/conversation-consent.js';
 import { FullMapLegend } from './MapLegend.js';
 import { microphoneShortcut } from './use-microphone-press.js';
 
@@ -38,18 +39,15 @@ export function ConversationHelp() {
         alltid, även med skärmläsare på pekskärm.
       </p>
       <h3>Uppgifter och medgivande</h3>
-      <p>
-        Med ditt medgivande behandlar OpenAI ljud som spelas in medan din mikrofon är på, det du
-        skriver, hela ditt utkast och de uppgifter i hushållets karta som behövs. Skyttel föreslår
-        ändringar i ditt utkast och sparar dem först när du ber om det. Skyttel sparar inte
-        samtalet. Säg eller skriv inga lösenord, koder eller fullständiga konto- och kortnummer.
-      </p>
+      {conversationConsentText.map((paragraph) => (
+        <p key={paragraph}>{paragraph}</p>
+      ))}
       <p>
         Återkalla medgivandet i Inställningar, Samtal med Skyttel, under Medgivande. Välj Återkalla
         medgivandet och, om ett samtal pågår, Återkalla och avsluta samtalet. Dina samtal i
         hushållet avslutas på alla dina enheter, samtalstexten töms och utkastet ligger kvar. Ett
-        redan påbörjat sparande slutförs. Återkallandet tar inte tillbaka uppgifter som OpenAI redan
-        har fått.
+        redan påbörjat sparande slutförs. Återkallandet tar inte tillbaka uppgifter som OpenAI eller
+        LangSmith redan har fått.
       </p>
       <h3>Vad OpenAI kan behålla</h3>
       <p>

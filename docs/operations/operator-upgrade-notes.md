@@ -20,6 +20,19 @@ Stopping sending discards pending events and cancels delivery where possible;
 it does not delete data already sent to LangSmith. Cloud deletion requires
 a separate procedure.
 
+### Renew conversation consent before diagnostic sending
+
+End active conversations when deploying this update. Users must accept the
+current conversation information before they can start again. Previous
+saved or visit-only acceptance does not cover LangSmith processing. Keep
+existing household data and saved changes.
+
+This update prepares user information and binds its version to each new
+conversation. It does not activate diagnostic sending. Before enabling a
+connected sender, verify that users can read and accept the current text
+and that conversations started under earlier information cannot upload.
+Later acceptance does not authorize export of an older conversation.
+
 ### Personal map references and archive compatibility
 
 Keep a backup from before the update if rollback is required. The update adds

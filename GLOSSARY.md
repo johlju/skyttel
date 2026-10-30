@@ -368,8 +368,9 @@ använder.
 _Undvik_: Minne och samtalsminne för samma begrepp.
 
 **Samtalsmedgivande**:
-En Skyttel-användares medgivande, för ett visst hushåll, till att OpenAI
-behandlar samtalets uppgifter och att Skyttel föreslår och sparar ändringar
-när användaren uttryckligen ber om det.
+En Skyttel-användares medgivande, för ett visst hushåll, till samtalets
+beskrivna behandling hos OpenAI och, när installationens sändning är aktiv,
+LangSmith samt till Skyttels förslag och uttryckligen begärda sparande.
 Samma medgivande gäller röst och text. Användaren kan låta det gälla även
 framtida samtal och återkalla det senare.
+Medgivandet är skilt från installationsansvarigs beslut om sändning.

@@ -13,7 +13,7 @@ import { giveConversationConsent, queryConsentBox } from '../../support/conversa
 const path = '/api/households/linden/text-assistant';
 const consentPath = '/api/households/linden/conversation-consent';
 const revokePath = `${consentPath}/revoke`;
-const savedConsent = { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' };
+const savedConsent = { textVersion: 3, savedAt: '2026-10-01T08:00:00.000Z' };
 const session: TextAssistantView = {
   id: 'session',
   revision: 0,
@@ -154,7 +154,7 @@ test('Spara medgivandet saves at once without starting a conversation, and the n
   expect(buttons()).toEqual(['Återkalla medgivandet']);
   expect(button('Återkalla medgivandet')).toBe(pressed);
   expect(document.activeElement).toBe(pressed);
-  expect(posts).toEqual([{ url: consentPath, body: { textVersion: 2 } }]);
+  expect(posts).toEqual([{ url: consentPath, body: { textVersion: 3 } }]);
   expect(screen.getByText('Inget samtal pågår')).toBeDefined();
 
   await userEvent.click(screen.getByRole('button', { name: 'Starta samtalet' }));
@@ -227,7 +227,7 @@ test('saving a consent for the visit leaves the conversation that goes on as it 
     'Lägg till en cykel',
   );
   // The only request is the save: nothing is started, stopped or sent.
-  expect(posts.slice(before)).toEqual([{ url: consentPath, body: { textVersion: 2 } }]);
+  expect(posts.slice(before)).toEqual([{ url: consentPath, body: { textVersion: 3 } }]);
 });
 
 test('revoking while a conversation goes on ends it and keeps the unsent text', async () => {

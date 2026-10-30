@@ -26,10 +26,12 @@ export const consentBoxName = 'Samtal med Skyttel';
 // The voice box, which shows what the voice does while no panel is open.
 export const voiceBoxName = 'Röstruta';
 
-// The consent text, version 2, including the clarified held-speech rule: three
-// paragraphs. Tests compare what the product shows with this copy.
+// The consent text, version 3, including LangSmith processing and retention.
+// Tests compare the product with this independent expected copy.
 export const specifiedConsentText = [
-  'Med ditt medgivande behandlar OpenAI ljud som spelas in medan din mikrofon är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta som behövs. Vid långt tryck kan tal från starten vänta i webbläsaren och skickas efter att du släppt knappen. Släpp stänger av ny inspelning direkt. Skyttel föreslår ändringar i ditt utkast och sparar dem först när du ber om det. Skyttel sparar inte samtalet.',
+  'Med ditt medgivande behandlar OpenAI ljud som spelas in medan din mikrofon är på, det du skriver, hela ditt utkast och de uppgifter i hushållets karta som behövs. Vid långt tryck kan tal från starten vänta i webbläsaren och skickas efter att du släppt knappen. Släpp stänger av ny inspelning direkt. Skyttel föreslår ändringar i ditt utkast och sparar dem först när du ber om det.',
+  'När installationens sändning till LangSmith är aktiv kan LangSmith få exakt samtalstext, relevanta indata och utdata från modellen samt hushållets verktygsförfrågningar och resultat för felsökning. Rått ljud och tekniska autentiseringsuppgifter ingår inte. Samma information gäller röst och text.',
+  'Installationsansvarig styr sändningen för hela installationen. Ditt samtalsmedgivande är ett separat val. LangSmith använder rullande 14 dagars grundlagring. Att stoppa sändningen eller återkalla medgivandet tar inte tillbaka redan skickade uppgifter. Radering i molnet är separat och kan ta tid; all analys- och faktureringsmetadata behöver inte försvinna inom 14 dagar. Skyttel har inget lokalt samtalsarkiv.',
   'Skyttel kan höra och förstå fel. Kartan visar vad som har ändrats och sparats.',
   'Säg eller skriv inga lösenord, koder eller fullständiga konto- och kortnummer.',
 ];

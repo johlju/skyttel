@@ -37,8 +37,8 @@ export async function checkContainerTextAssistant({
   assert.equal((await request(name, `${path}/text-assistant`)).status, 401);
   assert.equal((await call('/text-assistant')).available, true);
   // A conversation starts only with a consent for the current consent text,
-  // version 2 in src/shared/conversation-consent.ts.
-  const consent = { consent: { textVersion: 2 } };
+  // version 3 in src/shared/conversation-consent.ts.
+  const consent = { consent: { textVersion: 3 } };
   for (const body of [{}, { consent: { textVersion: 0 } }, { externalAi: true, mapWork: true }]) {
     const refused = await call('/text-assistant', body, 403);
     assert.equal(refused.error, 'conversation_consent_required');

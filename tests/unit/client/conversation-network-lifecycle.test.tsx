@@ -292,7 +292,7 @@ test('late availability, consent and online responses from a departed household 
       resolve(
         Response.json({
           available: true,
-          saved: { textVersion: 2, savedAt: '2026-10-01T08:00:00.000Z' },
+          saved: { textVersion: 3, savedAt: '2026-10-01T08:00:00.000Z' },
         }),
       );
   });

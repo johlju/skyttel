@@ -55,6 +55,8 @@ export type ConversationReply = {
   saveCheck?: SaveCheck;
 };
 export interface TextAssistantView {
+  /** Information accepted when this conversation began; later acceptance cannot replace it. */
+  readonly consentTextVersion?: number;
   id: string;
   revision: number;
   /** Advances only when the conversation text and context are explicitly cleared. */

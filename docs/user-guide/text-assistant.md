@@ -11,18 +11,20 @@ Utkastets granskning och kartans formulär fungerar även när samtal saknas.
 
 ## Medgivande
 
-Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 2
-förklarar att tal från långt tryck kan skickas efter släpp, medan ny
-inspelning stängs av direkt. Ett sparat medgivande för version 1 behöver
-godkännas på nytt. Samma medgivande
+Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 3
+beskriver även felsökning hos LangSmith när installationens sändning är
+aktiv. Ett sparat medgivande eller ett besöksmedgivande för version 1
+eller 2 räcker inte; du behöver godkänna den aktuella informationen.
+Samma medgivande
 gäller röst och text. Medgivanderutan **Samtal med Skyttel** visas när du
 väljer **Prata med Skyttel** eller börjar använda samtalet i textvyn.
 Att bara öppna textvyn eller läsa utkastet kräver inget medgivande.
 **Information och hjälp** i verktygsraden förklarar röst, text, långt tryck,
 tangentkombinationen och hur uppgifterna behandlas.
 
-1. Läs texten i rutan. Den säger vad OpenAI behandlar, att Skyttel sparar
-   ändringar först när du ber om det och att samtalet inte sparas.
+1. Läs texten i rutan. Den beskriver OpenAI:s behandling, eventuell
+   felsökning hos LangSmith och att Skyttel sparar ändringar först när du
+   ber om det.
 2. Markera **Fråga inte igen för det här hushållet** om du vill spara
    medgivandet. Det gäller då dig i det här hushållet, på alla dina enheter.
 3. Välj **Godkänn och starta**. Samtalet startar med röst eller text, efter
@@ -76,7 +78,11 @@ Om du bjuds in igen frågar Skyttel på nytt. Medgivandet ingår inte i en
 [återimport](household-import.md).
 
 Medgivandet är skilt från cookieval och från andra klienters medgivanden
-under **Assistentanslutningar**.
+under **Assistentanslutningar**, och från installationsansvarigs beslut
+om sändning till LangSmith. Ett samtal behåller den informationsversion
+som godkändes när det började. Ett senare godkännande gör inte äldre
+samtalsinnehåll tillgängligt för sändning. Vid uppdateringen avslutas
+pågående samtal; börja ett nytt och godkänn den aktuella informationen.
 
 ## Håll in för att tala
 
@@ -535,7 +541,8 @@ Utloggning, återkallat medgivande eller återkallad åtkomst stoppar fortsatt
 arbete. Återimport eller byte av innehållsägare kräver en ny anslutning.
 Redan lagrade förslag finns i ditt utkast efter ny inloggning. Sparade
 uppgifter och kvitton finns också kvar. Vid serveromstart fortsätter inget
-modellarbete, och samtalstexten sparas inte. Ett svar som servern gör klart
+modellarbete, och den lokala samtalstexten försvinner. Uppgifter som redan
+skickats till LangSmith kan finnas kvar där. Ett svar som servern gör klart
 är ingen bekräftelse på att det har nått din webbläsare.
 
 ## Vilka uppgifter behandlas?
@@ -545,7 +552,7 @@ Med ditt medgivande behandlar OpenAI ljud som spelas in medan mikrofonen
 som behövs. Samtalets tillfälliga text ingår också, så att Skyttel kan svara
 i samma sammanhang. Tal från starten kan vänta i webbläsaren och skickas
 efter släpp, medan ny inspelning stängs av direkt. Bilder skickas inte till
-OpenAI. Skyttel sparar inte samtalet. Säg eller skriv inga lösenord,
+OpenAI. Skyttel har inget lokalt samtalsarkiv. Säg eller skriv inga lösenord,
 koder eller fullständiga konto- och kortnummer.
 
 Skyttel begär att OpenAI inte lagrar samtalet. OpenAI kan ändå behålla
@@ -557,6 +564,27 @@ tar inte tillbaka uppgifter som redan har skickats. Läs
 [OpenAI:s datavillkor](https://developers.openai.com/api/docs/guides/your-data).
 Hushållets administratör hanterar användare, export, återimport och
 permanent radering i Skyttels egna administrationsvyer.
+
+När sändningen till LangSmith är aktiv kan exakt samtalstext, relevanta
+modellindata och modellutdata samt hushållets verktygsförfrågningar och
+resultat skickas dit för felsökning. Hushållsinnehåll ingår alltså; det är
+inte anonymiserat. Rått ljud och tekniska autentiseringsuppgifter ingår
+inte. Samma behandling gäller röst och text. Installationen kan ha
+sändningen avstängd eller ännu sakna anslutning till LangSmith.
+
+Installationsansvarig styr sändningen för hela installationen. Ett stopp
+hindrar nya sändningar och kasserar väntande uppgifter; redan skickade
+förfrågningar kan inte tas tillbaka. Ett nytt godkännande av
+samtalsmedgivandet startar inte installationens sändning och ger inte
+hushållets administratör rätt att ändra den.
+
+LangSmith ska använda rullande 14 dagars grundlagring under fortsatt
+användning. Stoppad sändning och återkallat samtalsmedgivande raderar inte
+redan skickade uppgifter. Radering i molnet är en separat åtgärd för
+installationsansvarig och kan ta tid. Viss analys- och faktureringsmetadata
+kan behållas längre; 14 dagar är ingen garanti att varje kopia eller
+varje slags metadata är fysiskt raderad. Permanent radering i Skyttel
+tar inte i sig bort uppgifter hos LangSmith.
 
 ## När inloggningen går ut under tal
 
