@@ -616,8 +616,10 @@ test.each([
       owner: 'voice',
       voiceSessionId: voice.id,
       traceId: voice.id,
-      spanId: voice.id,
+      parentSpanId: voice.id,
+      spanId: expect.any(String),
     });
+    expect(transcript?.context?.spanId).not.toBe(voice.id);
     live.emit(providerId, {
       type: 'session.output_transcript.delta',
       event_id: 'output-fragment-1',

@@ -739,4 +739,6 @@ test.each(['production', 'declared restore'])(
     );
     expect(readFileSync(path)).toEqual(before);
   },
+  // Let the bounded 10-second subprocess finish before the enclosing test expires.
+  15000,
 );

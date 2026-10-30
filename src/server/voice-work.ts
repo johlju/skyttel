@@ -28,7 +28,12 @@ export function voiceWork({
   now?: () => number;
   channel: LiveSideband;
   initial: TextAssistantView;
-  request: (action?: string, body?: unknown, signal?: AbortSignal) => Promise<TextAssistantView>;
+  request: (
+    action?: string,
+    body?: unknown,
+    signal?: AbortSignal,
+    observation?: { requestId: string },
+  ) => Promise<TextAssistantView>;
   interrupt: (revision?: number) => void;
   /** The conversation as the voice last saw it, and whether the voice has a task in progress. */
   update: (view: TextAssistantView, working: boolean) => void;
@@ -221,7 +226,61 @@ export function voiceWork({
   ) {
     const acceptedInput = inputVersion;
     let requestId: string | undefined;
+    let resultObserved = false;
+    let resultStatus: 'failed' | 'canceled' | 'incomplete' = 'incomplete';
+    const result = (
+      status: 'completed' | 'failed' | 'canceled' | 'incomplete',
+      view?: TextAssistantView,
+    ) => {
+      if (resultObserved) return;
+      resultObserved = true;
+      observe?.('backend_result', {
+        delegationId: id,
+        requestId,
+        status,
+        ...(view ? { view } : {}),
+        ...(status !== 'completed'
+          ? { error: status === 'failed' ? 'backend_failed' : `task_${status}` }
+          : {}),
+      });
+    };
     const current = () => !stopped && allowed() && generation === task;
+    const recover = async (operation: 'recover' | 'retry', body: unknown, signal?: AbortSignal) => {
+      const recoveryRequestId = randomUUID();
+      observe?.('backend_request', {
+        delegationId: id,
+        requestId: recoveryRequestId,
+        operation,
+        text,
+        context,
+      });
+      let status: 'completed' | 'failed' | 'canceled' = 'failed';
+      let observedView: TextAssistantView | undefined;
+      try {
+        observedView = await request(operation, body, signal, { requestId: recoveryRequestId });
+        status =
+          stopped || generation !== task || signal?.aborted
+            ? 'canceled'
+            : observedView.error
+              ? 'failed'
+              : 'completed';
+        return observedView;
+      } catch (error) {
+        status = stopped || generation !== task || signal?.aborted ? 'canceled' : 'failed';
+        throw error;
+      } finally {
+        observe?.('backend_result', {
+          delegationId: id,
+          requestId: recoveryRequestId,
+          operation,
+          status,
+          ...(observedView ? { view: observedView } : {}),
+          ...(status !== 'completed'
+            ? { error: status === 'failed' ? 'backend_failed' : 'task_canceled' }
+            : {}),
+        });
+      }
+    };
     inFlight.set(task, (inFlight.get(task) ?? 0) + 1);
     try {
       const canceled = await canceling;
@@ -252,13 +311,14 @@ export function voiceWork({
         expected = { ...expected, revision: view.revision };
       }
       if (view.phase === 'recovery') {
-        view = await request('recover', {});
+        resultObserved = true;
+        view = await recover('recover', {});
         if (!current()) return;
         const pending = view.operations.filter((operation) => operation.status === 'pending');
         if (pending.length === 1 && /^slutför samma sparförsök[.!]?$/iu.test(text.trim())) {
           const controller = new AbortController();
           dispatching = controller;
-          view = await request(
+          view = await recover(
             'retry',
             { operationId: pending[0].operationId, revision: view.revision },
             controller.signal,
@@ -300,6 +360,7 @@ export function voiceWork({
           view = await request(`messages/${requestId}`);
         }
         if (view.taskStatus === 'canceled') {
+          resultStatus = 'canceled';
           // The task was stopped or replaced in the conversation, outside the
           // voice. The voice no longer works with it and says nothing about it.
           if (current()) {
@@ -312,7 +373,7 @@ export function voiceWork({
       }
       if (!current()) return;
       rememberQuestion(view);
-      observe?.('backend_result', { delegationId: id, requestId, view });
+      result(view.error ? 'failed' : 'completed', view);
       while (
         current() &&
         inputVersion === acceptedInput &&
@@ -339,7 +400,11 @@ export function voiceWork({
       update(view, false);
       append(id, completion(view), view);
     } catch (error) {
-      if (!current()) return;
+      if (!current()) {
+        resultStatus = 'canceled';
+        return;
+      }
+      resultStatus = 'failed';
       if (
         answerTo &&
         error instanceof Error &&
@@ -375,6 +440,12 @@ export function voiceWork({
         if (!stopped && allowed() && generation === recoveryGeneration) failed();
       }
     } finally {
+      if (!resultObserved && (requestId || resultStatus === 'failed'))
+        result(
+          resultStatus === 'incomplete' && (stopped || generation !== task)
+            ? 'canceled'
+            : resultStatus,
+        );
       const remaining = (inFlight.get(task) ?? 1) - 1;
       if (remaining) inFlight.set(task, remaining);
       else inFlight.delete(task);
@@ -493,7 +564,16 @@ export function voiceWork({
       return;
     }
     delegations.add(event.delegation.id);
-    observe?.('voice_event', event);
+    observe?.('voice_event', {
+      type: 'session.delegation.created',
+      event_id: event.event_id,
+      offset_ms: event.offset_ms,
+      delegation: {
+        id: event.delegation.id,
+        target: event.delegation.target,
+        type: event.delegation.type,
+      },
+    });
     const selected = pending.filter((item) => item.startMs <= event.offset_ms);
     if (!anchor || !selected.some((item) => item.text.trim())) {
       // Live can delegate after the application has already forwarded a reply.

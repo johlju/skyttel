@@ -125,7 +125,6 @@ export function voiceCommentary(channel: LiveSideband, observe?: (event: unknown
       }));
       for (const event of events) pending.set(event.event_id, answer);
       for (const event of events) {
-        observe?.({ type: event.type, event_id: event.event_id, answerId });
         channel.send(event);
       }
     },

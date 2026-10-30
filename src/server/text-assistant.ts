@@ -22,6 +22,7 @@ import { assistantFailureMessage, newConversationMessage } from './assistant-fee
 import { textAssistantInstructions } from './assistant-instructions.js';
 import {
   type AssistantObservationContext,
+  backendObservationRequest,
   backendTaskObservationContext,
   type ObservationStatus,
   type ObserveAssistant,
@@ -458,14 +459,112 @@ export function textAssistantRoutes({
       Buffer.byteLength(JSON.stringify(providerConversation(session))),
     );
   }
+  function observationResult(session: Session) {
+    return {
+      ...session,
+      pendingParts: session.parts.values(),
+      questionPending: Boolean(session.questions?.length),
+      saveBlocked: session.parts.blocked(),
+    };
+  }
+  async function observedOperation<T>(
+    session: Session,
+    source: 'summary' | 'recover' | 'retry',
+    work: (
+      finish: (
+        status: ObservationStatus,
+        view?: unknown,
+        noOp?: 'already_working' | 'already_checked',
+      ) => void,
+    ) => Promise<T>,
+    request?: unknown,
+    voiceLink?: { traceId: string; spanId: string },
+  ): Promise<T> {
+    const caller = backendObservationRequest();
+    if (!observe || (!caller && observationWork.getStore()?.session === session))
+      return work(() => {});
+    const requestId = caller?.requestId ?? randomUUID();
+    const link = voiceLink ?? caller?.voiceLink;
+    const context = {
+      ...backendTaskObservationContext(session.id, requestId, session.resetGeneration),
+      ...(link ? { links: [link] } : {}),
+    };
+    const startedAt = now();
+    const identity = {
+      sessionId: session.id,
+      consentTextVersion: session.consentTextVersion,
+      taskId: requestId,
+      revision: session.revision,
+      context,
+    };
+    observe({
+      ...identity,
+      at: startedAt,
+      kind: 'task_started',
+      status: 'incomplete',
+      data: { source, startedAt, request },
+    });
+    let ended = false;
+    const finish = (
+      status: ObservationStatus,
+      view?: unknown,
+      noOp?: 'already_working' | 'already_checked',
+    ) => {
+      if (ended) return;
+      ended = true;
+      observe({
+        ...identity,
+        at: now(),
+        kind: 'task_completed',
+        status,
+        ...(status === 'incomplete' ? { evidenceGap: 'missing_end' as const } : {}),
+        data: {
+          source,
+          startedAt,
+          endedAt: now(),
+          ...(view ? { view } : {}),
+          ...(noOp ? { noOp } : {}),
+          ...(status !== 'completed' ? { error: `task_${status}` } : {}),
+        },
+      });
+    };
+    try {
+      return await observationWork.run(
+        { session, context, revision: session.revision, deadline: Number.POSITIVE_INFINITY },
+        () => work(finish),
+      );
+    } catch (error) {
+      finish(
+        error instanceof MapError && error.code === 'assistant_canceled' ? 'canceled' : 'failed',
+      );
+      throw error;
+    } finally {
+      finish('incomplete');
+    }
+  }
   async function summarize(
     session: Session,
     parentGuard?: () => void,
     continuation: ResponseInputItem[] = [],
     handoff = false,
     parentSignal?: AbortSignal,
-  ) {
+    voiceLink?: { traceId: string; spanId: string },
+  ): Promise<ObservationStatus | undefined> {
     if (session.summaryTask || session.contextSummaryState === 'failed') return;
+    if (observe && observationWork.getStore()?.session !== session)
+      return observedOperation(
+        session,
+        'summary',
+        async (finish) => {
+          const status =
+            (await summarize(session, parentGuard, continuation, handoff, parentSignal)) ??
+            'incomplete';
+          finish(status);
+          return status;
+        },
+        undefined,
+        voiceLink,
+      );
     const task = new AbortController();
     // A voice startup owns only the summary it starts here. An already active
     // text summary returns above and never inherits this signal.
@@ -532,14 +631,17 @@ export function textAssistantRoutes({
       session.contextSummaryState = undefined;
       session.capacity.reset();
     } catch (error) {
-      if (task.signal.aborted || session.revision !== revision || !sessions.has(session.id)) return;
+      if (task.signal.aborted) return 'canceled' as const;
+      if (session.revision !== revision || sessions.get(session.id) !== session)
+        return 'canceled' as const;
       if (authorityLost(error)) {
-        if (stopExpiredVoice(session)) return;
+        if (stopExpiredVoice(session)) return 'canceled' as const;
         await stop(session);
-        return;
+        return 'canceled' as const;
       }
       session.contextSummaryState = 'failed';
       // A distinct DTO state, not a generic task/provider failure.
+      return 'failed' as const;
     } finally {
       parentSignal?.removeEventListener('abort', aborted);
       if (session.summaryTask === task) {
@@ -547,6 +649,7 @@ export function textAssistantRoutes({
         if (session.contextSummaryState === 'summarizing') session.contextSummaryState = 'needed';
       }
     }
+    return 'completed' as const;
   }
   async function call(
     session: Session,
@@ -2092,12 +2195,7 @@ export function textAssistantRoutes({
             endedAt: now(),
             ...(session.task === task && session.revision === revision
               ? {
-                  view: {
-                    ...session,
-                    pendingParts: session.parts.values(),
-                    questionPending: Boolean(session.questions?.length),
-                    saveBlocked: session.parts.blocked(),
-                  },
+                  view: observationResult(session),
                 }
               : {}),
             ...(observationStatus === 'completed' ? {} : { error: `task_${observationStatus}` }),
@@ -2554,57 +2652,84 @@ export function textAssistantRoutes({
   routes.post(`${base}/:sessionId/recover`, async (context) => {
     const session = sessions.get(context.req.param('sessionId'));
     if (!session) return context.json({ error: 'assistant_session_expired' }, 404);
-    if (session.phase === 'working') return context.json(view(session));
+    if (session.phase === 'working')
+      return observedOperation(session, 'recover', async (finish) => {
+        finish('completed', observationResult(session), 'already_working');
+        return context.json(view(session));
+      });
     const body = await context.req.json().catch(() => ({}));
     if (
       body.checkId !== undefined &&
       (typeof body.checkId !== 'string' || !/^[a-f0-9-]{36}$/.test(body.checkId))
     )
       return context.json({ error: 'invalid_request' }, 400);
-    if (body.checkId && session.saveCheck?.id === body.checkId) return context.json(view(session));
-    const ids = session.pendingSave
-      ? [session.pendingSave.operationId]
-      : session.receipt
-        ? [session.receipt.operationId]
-        : undefined;
-    const checked = checkSaves(database, session.actorId, session.householdId, ids, body.checkId);
-    await refresh(session);
-    if (checked.receipt) {
-      const operation = checked.operations.find((item) => item.status === 'succeeded');
-      if (!operation) throw new Error('invalid_receipt');
-      verifyReceipt(session, checked.receipt, {
-        operationId: operation.operationId,
-        version: operation.draftVersion,
-        contentVersion: operation.contentVersion,
-      });
-      saved(session, checked.receipt);
-    }
-    if (session.saveCheck?.id !== checked.id) {
-      session.revision++;
-      session.conversation.push({ role: 'assistant', text: checked.reply });
-      session.completedReplies?.push({
-        id: `check-${checked.id}`,
-        source: 'text',
-        revision: session.revision,
-        text: '',
-        reply: checked.reply,
-        receipt: checked.receipt,
-        saveCheck: checked,
-      });
-    }
-    session.saveCheck = checked;
-    session.reply = checked.reply;
-    session.modelReply = undefined;
-    syncQuestions(session);
-    session.newQuestions = [];
-    session.answers = [];
-    session.requiredNotice = undefined;
-    session.error = undefined;
-    session.result = undefined;
-    session.pendingSave = undefined;
-    session.phase = 'ready';
-    nextMessage(session);
-    return context.json(view(session));
+    if (body.checkId && session.saveCheck?.id === body.checkId)
+      return observedOperation(
+        session,
+        'recover',
+        async (finish) => {
+          finish('completed', observationResult(session), 'already_checked');
+          return context.json(view(session));
+        },
+        body,
+      );
+    return observedOperation(
+      session,
+      'recover',
+      async (finish) => {
+        const ids = session.pendingSave
+          ? [session.pendingSave.operationId]
+          : session.receipt
+            ? [session.receipt.operationId]
+            : undefined;
+        const checked = checkSaves(
+          database,
+          session.actorId,
+          session.householdId,
+          ids,
+          body.checkId,
+        );
+        await refresh(session);
+        if (checked.receipt) {
+          const operation = checked.operations.find((item) => item.status === 'succeeded');
+          if (!operation) throw new Error('invalid_receipt');
+          verifyReceipt(session, checked.receipt, {
+            operationId: operation.operationId,
+            version: operation.draftVersion,
+            contentVersion: operation.contentVersion,
+          });
+          saved(session, checked.receipt);
+        }
+        if (session.saveCheck?.id !== checked.id) {
+          session.revision++;
+          session.conversation.push({ role: 'assistant', text: checked.reply });
+          session.completedReplies?.push({
+            id: `check-${checked.id}`,
+            source: 'text',
+            revision: session.revision,
+            text: '',
+            reply: checked.reply,
+            receipt: checked.receipt,
+            saveCheck: checked,
+          });
+        }
+        session.saveCheck = checked;
+        session.reply = checked.reply;
+        session.modelReply = undefined;
+        syncQuestions(session);
+        session.newQuestions = [];
+        session.answers = [];
+        session.requiredNotice = undefined;
+        session.error = undefined;
+        session.result = undefined;
+        session.pendingSave = undefined;
+        session.phase = 'ready';
+        finish('completed', observationResult(session));
+        nextMessage(session);
+        return context.json(view(session));
+      },
+      body,
+    );
   });
   routes.post(`${base}/:sessionId/retry`, async (context) => {
     const session = sessions.get(context.req.param('sessionId'));
@@ -2625,49 +2750,68 @@ export function textAssistantRoutes({
       guard();
       if (body?.revision !== undefined && body.revision !== revision)
         throw new MapError('assistant_turn_changed', 409);
-      await refresh(session, guard);
-      guard();
-      const operation = session.operations.find((item) => item.operationId === body?.operationId);
-      if (!operation) throw new MapError('operation_conflict', 409);
-      if (operation.status === 'succeeded') {
-        verifyReceipt(session, operation.receipt, {
-          operationId: operation.operationId,
-          version: operation.draftVersion,
-          contentVersion: operation.contentVersion,
-        });
-        saved(session, operation.receipt);
-      } else if (operation.status === 'rejected') throw new MapError(operation.error, 409);
-      else {
-        session.task?.abort();
-        session.task = task;
-        revision = ++session.revision;
-        session.phase = 'working';
-        session.pendingSave = {
-          operationId: operation.operationId,
-          version: operation.draftVersion,
-          contentVersion: operation.contentVersion,
-        };
-        try {
-          const result = await call(session, 'save_draft', session.pendingSave, guard);
+      return await observedOperation(
+        session,
+        'retry',
+        async (finish) => {
+          await refresh(session, guard);
           guard();
-          verifyReceipt(session, result.receipt, session.pendingSave);
-          saved(session, result.receipt);
-          await refreshConfirmed(session, guard);
-        } catch (error) {
-          if (authorityLost(error)) await stop(session);
-          if (sessions.has(session.id) && session.revision === revision) {
-            session.phase = 'recovery';
-            session.error = 'assistant_save_unknown';
-            session.previousFailure = assistantFailureMessage(session.error);
+          const operation = session.operations.find(
+            (item) => item.operationId === body?.operationId,
+          );
+          if (!operation) throw new MapError('operation_conflict', 409);
+          if (operation.status === 'succeeded') {
+            verifyReceipt(session, operation.receipt, {
+              operationId: operation.operationId,
+              version: operation.draftVersion,
+              contentVersion: operation.contentVersion,
+            });
+            saved(session, operation.receipt);
+          } else if (operation.status === 'rejected') throw new MapError(operation.error, 409);
+          else {
+            session.task?.abort();
+            session.task = task;
+            revision = ++session.revision;
+            session.phase = 'working';
+            session.pendingSave = {
+              operationId: operation.operationId,
+              version: operation.draftVersion,
+              contentVersion: operation.contentVersion,
+            };
+            try {
+              const result = await call(session, 'save_draft', session.pendingSave, guard);
+              guard();
+              verifyReceipt(session, result.receipt, session.pendingSave);
+              saved(session, result.receipt);
+              await refreshConfirmed(session, guard);
+            } catch (error) {
+              if (authorityLost(error)) await stop(session);
+              if (sessions.has(session.id) && session.revision === revision) {
+                session.phase = 'recovery';
+                session.error = 'assistant_save_unknown';
+                session.previousFailure = assistantFailureMessage(session.error);
+              }
+            }
           }
-        }
-      }
-      if (!sessions.has(session.id))
-        return context.json({ error: 'assistant_session_expired' }, 404);
-      authorize(session.actorId, session.browserSessionId, session.householdId);
-      if (session.task === task) session.task = undefined;
-      if (session.revision === revision && !task.signal.aborted) nextMessage(session);
-      return context.json(view(session));
+          if (!sessions.has(session.id)) {
+            finish('canceled');
+            return context.json({ error: 'assistant_session_expired' }, 404);
+          }
+          authorize(session.actorId, session.browserSessionId, session.householdId);
+          finish(
+            task.signal.aborted
+              ? 'canceled'
+              : session.phase === 'recovery'
+                ? 'failed'
+                : 'completed',
+            observationResult(session),
+          );
+          if (session.task === task) session.task = undefined;
+          if (session.revision === revision && !task.signal.aborted) nextMessage(session);
+          return context.json(view(session));
+        },
+        body,
+      );
     } finally {
       context.req.raw.signal.removeEventListener('abort', abort);
       if (session.task === task) session.task = undefined;
@@ -2849,12 +2993,16 @@ export function textAssistantRoutes({
     },
     /** Export eligibility belongs to the original conversation, never later saved consent. */
     consentVersion: (sessionId: string) => sessions.get(sessionId)?.consentTextVersion,
-    prepareVoiceContext: async (sessionId: string, signal?: AbortSignal) => {
+    prepareVoiceContext: async (
+      sessionId: string,
+      signal?: AbortSignal,
+      voiceLink?: { traceId: string; spanId: string },
+    ) => {
       const session = sessions.get(sessionId);
       if (!session) return;
       const bytes = Buffer.byteLength(JSON.stringify(providerConversation(session)));
       if (!session.contextSummaryState && bytes / 3 >= voiceTokens * 0.89)
-        await summarize(session, undefined, [], false, signal);
+        await summarize(session, undefined, [], false, signal, voiceLink);
       if (signal?.aborted || sessions.get(sessionId) !== session) return;
       if (
         Buffer.byteLength(JSON.stringify(providerConversation(session))) / 3 >=

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import { TraceJsonFailure, traceJson } from './trace-json.js';
 
@@ -37,6 +38,24 @@ export type AssistantObservationContext = {
   links?: { traceId: string; spanId: string }[];
 };
 
+type BackendObservationRequest = Readonly<{
+  requestId: string;
+  voiceLink: Readonly<{ traceId: string; spanId: string }>;
+}>;
+const backendRequest = new AsyncLocalStorage<BackendObservationRequest>();
+
+/** In-process diagnostic correlation only. HTTP/provider fields cannot select
+ * this identity, and it grants no request or household authority. */
+export function withBackendObservationRequest<T>(
+  identity: BackendObservationRequest,
+  work: () => T,
+): T {
+  return backendRequest.run(identity, work);
+}
+export function backendObservationRequest() {
+  return backendRequest.getStore();
+}
+
 /** Explicit protocol mapping shared by the backend and its voice caller. The
  * session/reset-generation/request tuple identifies one accepted task. Its SHA-256
  * UUID (version 8) lets a voice link name a backend root before delivery, without
@@ -46,17 +65,37 @@ export function backendTaskObservationContext(
   requestId: string,
   resetGeneration: number,
 ): AssistantObservationContext {
-  const bytes = createHash('sha256')
-    .update(
-      JSON.stringify(['skyttel-backend-task-v2', sessionId, String(resetGeneration), requestId]),
-    )
-    .digest()
-    .subarray(0, 16);
+  const traceId = observationId([
+    'skyttel-backend-task-v2',
+    sessionId,
+    String(resetGeneration),
+    requestId,
+  ]);
+  return { owner: 'backend', traceId, spanId: traceId, requestId };
+}
+
+/** One delegation execution stays under its voice root while linking to the
+ * independently owned backend task. No mutable correlation cache is needed. */
+export function voiceDelegationObservationContext(
+  voiceSessionId: string,
+  requestId: string,
+): AssistantObservationContext {
+  return {
+    owner: 'voice',
+    traceId: voiceSessionId,
+    spanId: observationId(['skyttel-voice-delegation-v1', voiceSessionId, requestId]),
+    parentSpanId: voiceSessionId,
+    voiceSessionId,
+    requestId,
+  };
+}
+
+function observationId(parts: string[]) {
+  const bytes = createHash('sha256').update(JSON.stringify(parts)).digest().subarray(0, 16);
   bytes[6] = (bytes[6] & 0x0f) | 0x80;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   const hex = bytes.toString('hex');
-  const traceId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-  return { owner: 'backend', traceId, spanId: traceId, requestId };
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export type ObservationStatus = 'incomplete' | 'completed' | 'failed' | 'canceled' | 'disconnected';
@@ -80,6 +119,7 @@ export type AssistantObservation = {
     | 'mcp_failed'
     | 'voice_started'
     | 'voice_completed'
+    | 'voice_attempt'
     | 'voice_event'
     | 'voice_commentary'
     | 'backend_request'
@@ -212,7 +252,9 @@ const safeErrors = new Set([
   'task_canceled',
   'task_incomplete',
   'voice_failed',
+  'voice_canceled',
   'voice_disconnected',
+  'backend_failed',
 ]);
 function errorFields(value: unknown, names: readonly string[]) {
   const admitted = fields(value, names);
@@ -291,6 +333,16 @@ function modelExchange(value: unknown, project: ProjectArray, input: boolean) {
   return admitted;
 }
 
+function liveInput(value: unknown, project: ProjectArray) {
+  const source = value as { delegation?: unknown; audio?: { output?: unknown } };
+  const voice = fields(source.audio?.output, ['voice']).voice;
+  return {
+    ...modelExchange(value, project, true),
+    delegation: fields(source.delegation, ['type']),
+    ...(voice !== undefined ? { output_voice: voice } : {}),
+  };
+}
+
 /** The only content admitted from an MCP envelope is its text result and error
  * flag. Tool arguments already cross the application's tool schema boundary.
  * Neither provider metadata nor additional MCP content types are trace data. */
@@ -303,10 +355,15 @@ function data(event: AssistantObservation, project: ProjectArray) {
           'text',
           'draftVersion',
           'contentVersion',
+          'operationId',
+          'checkId',
+          'revision',
         ]),
       };
     case 'task_completed': {
       const admitted = errorFields(event.data, ['source', 'startedAt', 'endedAt']);
+      const noOp = (event.data as { noOp?: unknown })?.noOp;
+      if (noOp === 'already_working' || noOp === 'already_checked') admitted.noOp = noOp;
       const view = (event.data as { view?: unknown })?.view;
       if (view) admitted.view = backendResult(view, project);
       return admitted;
@@ -363,22 +420,52 @@ function data(event: AssistantObservation, project: ProjectArray) {
             }
           : {}),
       };
-    case 'voice_started':
+    case 'voice_started': {
+      const input = (event.data as { input?: unknown })?.input;
+      return {
+        ...errorFields(event.data, ['model', 'startedAt']),
+        ...(input ? { input: liveInput(input, project) } : {}),
+      };
+    }
+    case 'voice_attempt': {
+      const source = event.data as { input?: unknown; output?: unknown };
+      return {
+        ...errorFields(event.data, ['model', 'outcome', 'startedAt', 'endedAt']),
+        ...(source.input ? { input: liveInput(source.input, project) } : {}),
+        ...(source.output
+          ? { output: fields(source.output, ['id', 'model', 'status', 'expires_at']) }
+          : {}),
+      };
+    }
     case 'voice_completed':
       return errorFields(event.data, ['model', 'startedAt', 'endedAt']);
     case 'voice_event': {
-      const admitted = fields(event.data, [
-        'type',
-        'role',
-        'event_id',
-        'client_event_id',
-        'answerId',
-        'delta',
-        'start_ms',
-        'end_ms',
-        'offset_ms',
-      ]);
-      const delegation = fields((event.data as { delegation?: unknown })?.delegation, [
+      const source = (event.data as { event?: unknown })?.event ?? event.data;
+      const outgoing = (event.data as { direction?: unknown })?.direction === 'outgoing';
+      const admitted: Record<string, unknown> = {
+        ...(outgoing ? { direction: 'outgoing' } : {}),
+        ...fields(source, [
+          'type',
+          'role',
+          'event_id',
+          'client_event_id',
+          'answerId',
+          'delta',
+          'start_ms',
+          'end_ms',
+          'offset_ms',
+        ]),
+      };
+      if (
+        outgoing &&
+        [
+          'session.thinking.append',
+          'session.commentary.append',
+          'session.instructions.append',
+        ].includes(String((source as { type?: unknown })?.type))
+      )
+        Object.assign(admitted, fields(source, ['content', 'delegation_id']));
+      const delegation = fields((source as { delegation?: unknown })?.delegation, [
         'id',
         'target',
         'type',
@@ -389,10 +476,10 @@ function data(event: AssistantObservation, project: ProjectArray) {
     case 'voice_commentary':
       return fields(event.data, ['delegationId', 'content', 'revision']);
     case 'backend_request':
-      return fields(event.data, ['delegationId', 'requestId', 'text', 'context']);
+      return fields(event.data, ['delegationId', 'requestId', 'text', 'context', 'operation']);
     case 'backend_result':
       return {
-        ...fields(event.data, ['delegationId', 'requestId']),
+        ...errorFields(event.data, ['delegationId', 'requestId', 'operation']),
         view: backendResult((event.data as { view?: unknown })?.view, project),
       };
   }

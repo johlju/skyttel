@@ -331,12 +331,13 @@ export function langSmithDelivery(options: LangSmithDeliveryOptions): ConnectTra
       },
       observe(event) {
         const context = event.context;
-        if (!running || context?.owner !== 'backend' || !event.taskId) return;
+        if (!running || !context || (context.owner === 'backend' && !event.taskId)) return;
         const data = event.data as Record<string, unknown>;
         let creating: boolean;
         let name: string;
         let type: string;
         let content: Record<string, unknown>;
+        let instantaneous = false;
         switch (event.kind) {
           case 'task_started':
           case 'task_completed':
@@ -359,6 +360,35 @@ export function langSmithDelivery(options: LangSmithDeliveryOptions): ConnectTra
             type = 'llm';
             content = ((creating ? data.input : data.output) as Record<string, unknown>) ?? data;
             break;
+          case 'voice_started':
+          case 'voice_completed':
+            creating = event.kind === 'voice_started';
+            name = 'Skyttel voice session';
+            type = 'chain';
+            content = (creating ? data.input : data) as Record<string, unknown>;
+            break;
+          case 'voice_attempt':
+            creating = data.outcome === 'started';
+            name = 'Skyttel Live creation';
+            type = 'llm';
+            content = ((creating ? data.input : data.output) as Record<string, unknown>) ?? data;
+            break;
+          case 'voice_event':
+          case 'voice_commentary':
+            creating = true;
+            instantaneous = true;
+            name = event.kind === 'voice_event' ? String(data.type) : 'Skyttel voice commentary';
+            type = 'chain';
+            content = data;
+            break;
+          case 'backend_request':
+          case 'backend_result':
+            creating = event.kind === 'backend_request' || !context.requestId;
+            instantaneous = !context.requestId;
+            name = 'Skyttel voice delegation';
+            type = 'chain';
+            content = data;
+            break;
           default:
             // Complete actions belong to model-attempt output. Voice traces are
             // separate; never replace a model response with one action here.
@@ -375,13 +405,16 @@ export function langSmithDelivery(options: LangSmithDeliveryOptions): ConnectTra
         }
         const status = event.status ?? 'incomplete';
         const metadata = {
-          owner: 'backend',
+          owner: context.owner,
           conversation_id: event.sessionId,
           consent_text_version: event.consentTextVersion,
           request_id: context.requestId,
           task_id: event.taskId,
           provider_call_id: context.providerCallId,
           tool_execution_id: context.toolExecutionId,
+          voice_session_id: context.voiceSessionId,
+          delegation_id: context.delegationId,
+          links: context.links,
           ...(event.kind === 'model_attempt'
             ? {
                 model: data.model,
@@ -411,6 +444,8 @@ export function langSmithDelivery(options: LangSmithDeliveryOptions): ConnectTra
                 run_type: type,
                 session_name: options.project,
                 start_time: event.at,
+                ...(instantaneous ? { end_time: event.at } : {}),
+                ...(instantaneous && status !== 'completed' ? { error: `observed_${status}` } : {}),
                 inputs: content,
               },
             }

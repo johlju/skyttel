@@ -17,9 +17,25 @@ definitions, reviewed model output and actions, and model-attempt metadata.
 Each model response retains its admitted actions together. Content is eligible
 only when its conversation starts under the current LangSmith information;
 later saved acceptance does not make an older conversation eligible.
-Voice export requires subsequent integration.
-It excludes raw audio, authentication, headers, environment values and unrelated
-provider metadata.
+Each voice session has a separate root. Its creation attempt contains the
+prepared Live instructions and reviewed session result. Transcript fragments,
+delegations, commentary and outgoing instructions have independent child
+identities. An observed send records the local send outcome; it does not prove
+that audio was delivered or heard. Session endings distinguish completion,
+failure, disconnection, cancellation and missing final evidence.
+
+Delegated work retains its own backend root and model and MCP children. Explicit
+links join it to the calling voice session and delegation. Voice preparation
+can also link a separate backend summary operation. A summary within an
+existing backend task retains that task's ownership. Standalone summaries have
+no inferred voice link. Recovery and retry requests have separate identities;
+an accepted no-op can have a backend root with no model or MCP children.
+
+Use the exact UUID in the `trace_id` filter to find a linked trace. The link
+metadata contains the trace and span identities; the sender does not query the
+cloud to resolve them. Local ingestion checks do not verify cloud rendering.
+Evidence excludes raw audio, authentication, headers, environment values and
+unrelated provider metadata.
 
 Delivery runs independently of household work. The sender drops whole events
 when they exceed a limit or cannot be serialized. It never shortens content or
