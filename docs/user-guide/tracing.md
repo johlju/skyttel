@@ -11,8 +11,9 @@ När leveransen är ansluten och sändningen aktiverad kan LangSmith få exakt
 samtalstext, modellens in- och utdata samt hushållets verktygsfrågor och
 resultat. Rått ljud ingår inte. Ett aktiverat val med **Inte ansluten**
 betyder att leveransen inte är ansluten eller konfigurerad, inte att
-någon information levereras. Denna förberedande version ansluter ingen
-produktionsleverans.
+någon information levereras. En konfigurerad installation ansluter leveransen
+vid start och har sändningen aktiverad som grundval. Ett tidigare avstängt val
+eller en spärr gäller fortfarande.
 
 ## Stäng av eller aktivera sändning
 

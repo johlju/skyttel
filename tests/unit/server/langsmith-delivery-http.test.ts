@@ -29,7 +29,10 @@ type Ingestion = Awaited<ReturnType<typeof ingestion>>;
 let app: Awaited<ReturnType<typeof createInstallation>>;
 let client: APIRequestContext;
 let endpoint: Ingestion;
+let releaseVoiceSave: (() => void) | undefined;
 afterEach(async () => {
+  releaseVoiceSave?.();
+  releaseVoiceSave = undefined;
   vi.useRealTimers();
   await client?.dispose();
   await app?.close();
@@ -106,12 +109,11 @@ async function setup(
     modelFetch: textModel(() =>
       turn++ === 0 ? [modelTool('read_map', { query: 'Lina' })] : [modelMessage('Lina är läst.')],
     ).provider,
-    traceDelivery: langSmithDelivery({
+    langSmith: {
       endpoint: endpoint.url,
       project: 'synthetic-diagnostics',
       apiKey: 'synthetic-trace-secret',
-      now: options.now,
-    }),
+    },
     ...options,
   });
   client = await request.newContext();
@@ -1101,6 +1103,20 @@ test.each(['healthy', 'disabled', 'failing'])(
     const live = liveProvider();
     let typeId = '';
     let turn = 0;
+    let releaseSaveModel = () => {};
+    const saveModelReady = new Promise<void>((resolve) => {
+      releaseSaveModel = resolve;
+    });
+    let saveModelHeld = false;
+    let racedSnapshot = false;
+    let saveAnnounced = () => {};
+    const saveAnnouncement = new Promise<void>((resolve) => {
+      saveAnnounced = resolve;
+    });
+    releaseVoiceSave = () => {
+      releaseSaveModel();
+      saveAnnounced();
+    };
     const model = textModel((body) => {
       const input = JSON.parse(
         String(body.input.findLast((item) => item.role === 'user')?.content),
@@ -1141,7 +1157,41 @@ test.each(['healthy', 'disabled', 'failing'])(
       ];
     });
     const { path, session } = await setup(
-      { modelFetch: model.provider, liveFetch: live.provider, liveSideband: live.attach },
+      {
+        modelFetch: async (...args) => {
+          const response = await model.provider(...args);
+          if (delivery === 'disabled' && model.requests.length === 2) {
+            saveModelHeld = true;
+            await saveModelReady;
+          }
+          return response;
+        },
+        liveFetch: live.provider,
+        liveSideband: live.attach,
+        observe: (event) => {
+          if (
+            event.kind === 'voice_commentary' &&
+            (event.data as { delegationId?: string }).delegationId === 'voice-save'
+          )
+            saveAnnounced();
+        },
+        deliverResponse: async (incoming, response) => {
+          if (
+            saveModelHeld &&
+            incoming.method === 'GET' &&
+            /\/text-assistant\/[^/]+$/.test(new URL(incoming.url).pathname)
+          ) {
+            saveModelHeld = false;
+            // The client can read a working snapshot just before the save
+            // completes, then receive its new draft version from the poll.
+            expect((await response.clone().json()).phase).toBe('working');
+            racedSnapshot = true;
+            releaseSaveModel();
+            await saveAnnouncement;
+          }
+          return response;
+        },
+      },
       (_request, response) => response.writeHead(delivery === 'failing' ? 503 : 204).end(),
     );
     typeId = (await (await client.get(`${path}/map`)).json()).types[0].id;
@@ -1210,6 +1260,20 @@ test.each(['healthy', 'disabled', 'failing'])(
           { timeout: 8000 },
         )
         .toMatchObject({ progressed: true, phase: 'listening' });
+      // Render the received result before the next synthetic utterance. The
+      // completing poll may carry older draft versions than its response.
+      const rendered = await client.post(
+        `${path}/text-assistant/${session.id}/voice/${voice.id}/poll`,
+        {
+          headers: { origin: app.origin },
+          data: {
+            revision: result.assistant.revision,
+            draftVersion: result.assistant.review.version,
+            contentVersion: result.assistant.review.contentVersion,
+          },
+        },
+      );
+      expect(rendered.status(), await rendered.text()).toBe(200);
       return result.assistant;
     };
     const draft = await spoken('Lägg till Talad blå cykel och hitta hjälmen.', 'voice-propose', 0);
@@ -1230,6 +1294,7 @@ test.each(['healthy', 'disabled', 'failing'])(
     expect(after.objects).toMatchObject([{ id: 'voice-bike', name: 'Talad blå cykel' }]);
     expect(after.draft.changes).toEqual([]);
     const denied = await spoken('Berätta vad som finns kvar.', 'voice-no-save', saved.revision);
+    if (delivery === 'disabled') expect(racedSnapshot).toBe(true);
     expect(denied).toMatchObject({ phase: 'error', error: 'assistant_save_not_requested' });
     expect(denied.receipt).toBeUndefined();
     expect((await (await client.get(`${path}/map/history`)).json()).history).toHaveLength(1);
@@ -2395,6 +2460,12 @@ test('overlapping devices keep separate task evidence and a canceled late model 
 
 test('an authenticated task reaches ingestion through the real SDK with one backend owner and honest lifecycle', async () => {
   const { path, session } = await setup();
+  expect(await (await client.get(`${app.origin}/api/operator/tracing`)).json()).toMatchObject({
+    connected: true,
+    enabled: true,
+    state: 'sending',
+    lastSuccessfulDelivery: null,
+  });
   const before = await (await client.get(`${path}/map`)).json();
   expect(await send(path, session)).toMatchObject({ phase: 'ready', modelReply: 'Lina är läst.' });
   await expect
@@ -2616,23 +2687,69 @@ test.each([
   { endpoint: '' },
   { endpoint: "'   '" },
   { endpoint: '\'""\'' },
+  { endpoint: 'not-a-url' },
+  { endpoint: 'http://diagnostics.example.test' },
+  { endpoint: 'https://user:secret@example.test' },
+  { endpoint: 'https://example.test/api/v1' },
 ])(
   'invalid explicit sending configuration %j cannot fall back to SDK defaults',
   async (invalid) => {
     vi.stubEnv('LANGSMITH_API_KEY', 'synthetic-ambient-key');
     vi.stubEnv('LANGSMITH_PROJECT', 'synthetic-ambient-project');
     const { path, session } = await setup({
-      traceDelivery: (sending) =>
-        langSmithDelivery({
-          endpoint: endpoint.url,
-          project: 'synthetic-diagnostics',
-          apiKey: 'synthetic-trace-secret',
-          ...invalid,
-        })(sending),
+      langSmith: {
+        endpoint: 'http://127.0.0.1:9',
+        project: 'synthetic-diagnostics',
+        apiKey: 'synthetic-trace-secret',
+        ...invalid,
+      },
     });
     expect(await send(path, session)).toMatchObject({ phase: 'ready' });
     const health = await (await client.get(`${app.origin}/api/operator/tracing`)).json();
     expect(health).toMatchObject({ connected: false, state: 'not_connected', lastError: 'export' });
+    expect(endpoint.received).toEqual([]);
+  },
+);
+
+test.each([
+  { mode: 'missing', langSmith: undefined, lastError: null },
+  {
+    mode: 'partial',
+    langSmith: { endpoint: '', project: '', apiKey: 'synthetic-config-key' },
+    lastError: 'export',
+  },
+])(
+  '$mode explicit diagnostic configuration leaves text and voice usable despite ambient SDK credentials',
+  async ({ langSmith, lastError }) => {
+    vi.stubEnv('LANGSMITH_API_KEY', 'synthetic-ambient-key');
+    vi.stubEnv('LANGSMITH_ENDPOINT', 'http://127.0.0.1:9');
+    vi.stubEnv('SKYTTEL_LANGSMITH_API_KEY', 'synthetic-process-key');
+    const live = liveProvider();
+    const { path, session } = await setup({
+      langSmith,
+      liveFetch: live.provider,
+      liveSideband: live.attach,
+    });
+    const current = await send(path, session);
+    const connected = await client.post(`${path}/text-assistant/${session.id}/voice`, {
+      headers: { origin: app.origin },
+      data: {
+        sdp: 'synthetic-offer',
+        revision: current.revision,
+        draftVersion: current.review.version,
+        contentVersion: current.review.contentVersion,
+      },
+    });
+    expect(connected.status(), await connected.text()).toBe(201);
+    expect(live.requests).toHaveLength(1);
+    await restart();
+    expect((await client.get(`${app.origin}/healthz`)).status()).toBe(200);
+    expect(await (await client.get(`${app.origin}/api/operator/tracing`)).json()).toMatchObject({
+      connected: false,
+      state: 'not_connected',
+      lastError,
+      lastSuccessfulDelivery: null,
+    });
     expect(endpoint.received).toEqual([]);
   },
 );
@@ -3510,6 +3627,59 @@ test('sixty-second expiry discards pending and active old evidence before admitt
     )
     .toBe(true);
   expect(endpoint.received.filter((item) => item.body.trace_id === oldRoot)).toHaveLength(1);
+});
+
+test('normal configured sending expires old evidence by monotonic time when the wall clock moves backward', async () => {
+  const wallNow = Date.now.bind(Date);
+  const elapsedNow = performance.now.bind(performance);
+  let wallOffset = 0;
+  let elapsedOffset = 0;
+  vi.spyOn(Date, 'now').mockImplementation(() => wallNow() + wallOffset);
+  vi.spyOn(performance, 'now').mockImplementation(() => elapsedNow() + elapsedOffset);
+  let release!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const held: ServerResponse[] = [];
+  let blocked = true;
+  const { path, session } = await setup(
+    {
+      modelFetch: textModel(async () => {
+        await waiting;
+        return [modelMessage('Svaret är klart.')];
+      }).provider,
+    },
+    (_request, response) => {
+      if (blocked) held.push(response);
+      else response.writeHead(204).end();
+    },
+  );
+  const work = send(path, session, 'wall-clock-rollback');
+  try {
+    await expect.poll(() => endpoint.received.length).toBe(1);
+    const oldRoot = endpoint.received[0].body.id;
+    wallOffset = -60001;
+    elapsedOffset = 60001;
+    release();
+    // A real later model observation crosses the public export boundary.
+    // Clock rollback must not keep the old active request or its queued create.
+    await expect.poll(() => endpoint.received[0].closed).toBe(true);
+    wallOffset = 0;
+    expect(await work).toMatchObject({ phase: 'ready', modelReply: 'Svaret är klart.' });
+    const health = await (await client.get(`${app.origin}/api/operator/tracing`)).json();
+    expect(health.lastError).toBe('expired');
+    expect(health.droppedEvents).toBeGreaterThanOrEqual(2);
+    blocked = false;
+    for (const response of held) if (!response.destroyed) response.writeHead(204).end();
+    await app.restart();
+    expect(
+      endpoint.received.filter((item) => item.method === 'POST' && item.body.trace_id === oldRoot),
+    ).toHaveLength(1);
+  } finally {
+    wallOffset = 0;
+    release();
+    await work;
+  }
 });
 
 test.each([

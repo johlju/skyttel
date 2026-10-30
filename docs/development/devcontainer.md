@@ -84,9 +84,80 @@ its own process.
 The development commands read `.devcontainer/.env` by default.
 `SKYTTEL_DEV_ENV_FILE` selects another private file. Exported environment
 values take precedence over file values. Compose exports settings when
-creating the container, so recreate it after changing those settings.
+creating the container. For tracing changes, use the restart steps below
+to load the edited file without recreating the container.
 The container database is `/data/skyttel.sqlite`; ordinary startup applies
 pending migrations and preserves application data.
+
+## Configure development tracing
+
+Use the [LangSmith setup guide](../operations/langsmith-rollout.md) to create
+the `skyttel-dev` and `skyttel-prod` destinations and their runtime keys.
+Complete its required preparation through step 5 before adding credentials.
+That step also offers an optional wait before sending; skip that option
+if you want sending to start when the configuration is loaded.
+Use the development destination and development key for this container.
+
+1. Stop the running development command with Ctrl+C. Work from the checkout
+   that includes the LangSmith integration; a separate worktree can contain
+   a different revision from `/workspace`.
+2. Edit the existing private `.devcontainer/.env` file. Preserve its database,
+   authentication and installation settings. Add the following four values,
+   replacing every placeholder, including its angle brackets, with values
+   from your setup worksheet. Keep the key private and the file outside Git.
+
+   ```dotenv
+   SKYTTEL_LANGSMITH_ENDPOINT=<regional-api-endpoint>
+   SKYTTEL_LANGSMITH_PROJECT=<development-destination-name>
+   SKYTTEL_LANGSMITH_API_KEY=<development-tracing-only-key>
+   SKYTTEL_LANGSMITH_WORKSPACE_ID=<workspace-uuid>
+   ```
+
+   For a project-based workspace, the destination name is `skyttel-dev`.
+   For an agent-based workspace, copy the value after
+   `SKYTTEL_LANGSMITH_PROJECT:` under `skyttel-dev DEVELOPMENT` in the
+   [lookup output](../operations/langsmith-rollout.md#read-the-agent-lookup-output).
+   The script reads this value from the API field `tracer_session_name`;
+   do not enter that field name as the value. Remove any `LANGSMITH_AGENT_ID` and
+   `LANGSMITH_AGENT_ENVIRONMENT` entries from the private file; this
+   integration uses the four application settings above.
+3. In the terminal that will start Skyttel, run the following from the
+   intended checkout. The absolute file path also works from a linked
+   worktree. Adjust it if your existing private file is elsewhere.
+
+   ```sh
+   export SKYTTEL_DEV_ENV_FILE='/workspace/.devcontainer/.env'
+   unset SKYTTEL_LANGSMITH_ENDPOINT SKYTTEL_LANGSMITH_PROJECT
+   unset SKYTTEL_LANGSMITH_API_KEY SKYTTEL_LANGSMITH_WORKSPACE_ID
+   unset LANGSMITH_AGENT_ID LANGSMITH_AGENT_ENVIRONMENT
+   npm run dev:all
+   ```
+
+   The `unset` commands clear inherited values in this terminal so the
+   development launcher can read the edited file. They do not delete the
+   file or its values. Repeat them in a new terminal if Compose still
+   supplies older values. Keep the container's existing database path,
+   normally `/data/skyttel.sqlite`.
+4. Open [Skyttel](http://localhost:5173), sign in and confirm the same
+   household data is present. Check the sending state in
+   **Inställningar → Drift → Diagnostik med LangSmith**. Valid configuration
+   enables sending by default. If you chose the optional wait, or have a
+   saved opt-out or suspension, it will not start sending automatically.
+   Follow
+   [activation and verification](../operations/langsmith-rollout.md#8-activate-and-verify-one-installation-at-a-time)
+   to enable sending if needed and inspect the correct destination.
+
+After changing tracing settings, stop and restart the development command
+using step 3. Source hot reload does not reload this environment file.
+Do not rebuild the devcontainer just to change tracing: rebuilding runs
+the database reset described above. These steps preserve application data.
+
+For `npm run dev:prodlike`, use the same file and unset commands, replacing
+the final startup command. In step 4, open the compiled application at
+[http://localhost:3301](http://localhost:3301). It still uses the development
+destination even though its runtime mode is production. Ordinary automated
+tests use isolated configuration; this setup enables tracing for interactive
+application use and manual testing.
 
 ## Set up local sign-in
 

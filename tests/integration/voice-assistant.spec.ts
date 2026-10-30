@@ -1138,7 +1138,11 @@ test('TAL-03: synlig markering och exakt sparåterhämtning fungerar efter röst
     // Lose the automatic check before it reaches the server, preserving the
     // registered original attempt across restart.
     await page.route('**/text-assistant/*/recover', (route) => route.abort());
+    const failedRecovery = page.waitForEvent('requestfailed', (request) =>
+      request.url().endsWith('/recover'),
+    );
     speak(live, 'Spara.');
+    await failedRecovery;
     await expect(page.getByRole('region', { name: 'Samtalsnotis', exact: true })).toContainText(
       'Skyttel kunde inte kontrollera om utkastet sparades.',
     );

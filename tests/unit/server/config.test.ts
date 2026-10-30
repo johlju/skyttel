@@ -5,6 +5,30 @@ import { configurationEnvironment } from './fixture.js';
 afterEach(() => vi.unstubAllEnvs());
 
 describe('installation configuration', () => {
+  test('diagnostic settings come only from the explicit Skyttel configuration', () => {
+    vi.stubEnv('LANGSMITH_API_KEY', 'synthetic-ambient-key');
+    vi.stubEnv('SKYTTEL_LANGSMITH_API_KEY', 'synthetic-process-key');
+    expect(readConfig(configurationEnvironment()).langSmith).toBeUndefined();
+    expect(
+      readConfig({
+        ...configurationEnvironment(),
+        SKYTTEL_LANGSMITH_ENDPOINT: 'https://eu.api.smith.langchain.com',
+        SKYTTEL_LANGSMITH_PROJECT: 'synthetic-production',
+        SKYTTEL_LANGSMITH_API_KEY: 'synthetic-trace-key',
+        SKYTTEL_LANGSMITH_WORKSPACE_ID: 'synthetic-workspace',
+      }).langSmith,
+    ).toEqual({
+      endpoint: 'https://eu.api.smith.langchain.com',
+      project: 'synthetic-production',
+      apiKey: 'synthetic-trace-key',
+      workspaceId: 'synthetic-workspace',
+    });
+    // Partial/empty configuration must reach the optional boundary as invalid,
+    // rather than selecting SDK defaults or blocking household startup.
+    expect(
+      readConfig({ ...configurationEnvironment(), SKYTTEL_LANGSMITH_API_KEY: '' }).langSmith,
+    ).toEqual({ endpoint: '', project: '', apiKey: '', workspaceId: undefined });
+  });
   test('requires an explicit client address policy in production and validates ingress trust', () => {
     const environment = { ...configurationEnvironment(), NODE_ENV: 'production' };
     expect(() => readConfig(environment)).toThrow(

@@ -2,6 +2,7 @@
 
 This procedure is for Skyttel's sole developer and installationsansvarig.
 Use it after a separately authorized rollout of the tracing integration.
+Complete the [account and Render rollout](langsmith-rollout.md) first.
 Writing or reviewing this guide does not authorize production configuration,
 deployment, household-data uploads, assessment comments, or billable model,
 voice, or judge calls. Available credentials do not provide that authorization.

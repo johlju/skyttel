@@ -15,6 +15,12 @@ release but does not replace production.
 If this installation already contains household data, start with
 [updating an existing installation](#updating-an-existing-installation).
 
+Before adding diagnostic credentials or deploying the first release with
+configured LangSmith sending, complete the [LangSmith rollout runbook](langsmith-rollout.md).
+Saved environment changes can apply on the next automatic deployment.
+User information, account checks and ending active conversations must be
+complete before that release can send household data.
+
 ## Setup checklist
 
 Use this inventory to prepare for the first deployment and track progress.

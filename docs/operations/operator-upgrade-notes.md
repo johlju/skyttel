@@ -8,17 +8,21 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ### Installation diagnostic sending control
 
-The installation operator can prepare the LangSmith sending choice in
-settings. This update does not connect production delivery. When delivery
-is connected, sending defaults to enabled unless the operator has selected
-off. Keep the database to preserve this choice and any quota or credential
-suspension. A process restart does not clear a suspension; resolve its cause
-and explicitly restart sending. Do not add a payment method for recovery.
+Normal startup now connects configured LangSmith delivery. Sending defaults
+on unless a stored opt-out or suspension prevents it. Before an enabled
+release, complete the account, free quota, retention, user-information and
+conversation-stop checks in the [rollout runbook](langsmith-rollout.md).
+An approved main merge can deploy automatically without another approval.
+If the running release has no diagnostic control or current information,
+first deploy with diagnostic configuration absent. Then verify the new
+information and set sending off before adding credentials.
 
-Delivery counters and last delivery status reset on process restart.
-Stopping sending discards pending events and cancels delivery where possible;
-it does not delete data already sent to LangSmith. Cloud deletion requires
-a separate procedure.
+Keep the existing database to preserve opt-out and suspension. Resolve a
+suspension before explicitly restarting sending; do not add a payment
+method for recovery. Delivery health resets on process restart. Opt-out
+discards buffers and cancels delivery where possible. It cannot recall
+accepted requests or delete cloud data. Stop sending before recovery and
+repair forward; an older image against upgraded data is unsupported.
 
 ### Renew conversation consent before diagnostic sending
 
@@ -27,11 +31,11 @@ current conversation information before they can start again. Previous
 saved or visit-only acceptance does not cover LangSmith processing. Keep
 existing household data and saved changes.
 
-This update prepares user information and binds its version to each new
-conversation. It does not activate diagnostic sending. Before enabling a
-connected sender, verify that users can read and accept the current text
-and that conversations started under earlier information cannot upload.
-Later acceptance does not authorize export of an older conversation.
+Verify the current information before the first enabled release. Each
+conversation keeps its original information version. Later acceptance
+does not authorize export of an older conversation. Opening voice can
+send identifiers and lifecycle evidence before context preparation or
+any transcript. Complete the rollout checks before opening it.
 
 ### Personal map references and archive compatibility
 

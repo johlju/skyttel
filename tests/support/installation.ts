@@ -55,6 +55,7 @@ export async function createInstallation(
     liveProfile?: Parameters<typeof createApp>[0]['liveProfile'];
     observe?: Parameters<typeof createApp>[0]['observe'];
     traceDelivery?: Parameters<typeof createApp>[0]['traceDelivery'];
+    langSmith?: Config['langSmith'];
     https?: boolean;
     now?: () => number;
     deliverResponse?: (request: Request, response: Response) => Response | Promise<Response>;
@@ -103,6 +104,7 @@ export async function createInstallation(
     microsoft: { clientId: 'fake-microsoft', clientSecret: 'fake-secret' },
     port: 0,
     host: '127.0.0.1',
+    langSmith: databaseOptions.langSmith,
     ...(databaseOptions.providerApiKey
       ? { openaiApiKey: databaseOptions.providerApiKey }
       : databaseOptions.modelFetch

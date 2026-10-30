@@ -83,7 +83,15 @@ leverans utan anslutning. Alla kontroller är åtkomliga i den smala vyn.
     "caseId": "SPARNING-02"
   },
   "reference": "1280×900, kontrollerad leveransadapter, verklig HTTP och SQLite. Kvot och ogiltiga uppgifter provas som två spärrorsaker.",
-  "outcomes": ["Säkra leveransvärden kan läsas.", "Spärrar består efter omstart och kräver uttrycklig återhämtning.", "Diagnostiska värden nollställs vid omstart."]
+  "outcomes": ["Säkra leveransvärden kan läsas.", "Spärrar består efter omstart och kräver uttrycklig återhämtning.", "Diagnostiska värden nollställs vid omstart."],
+  "evidence": [{
+    "kind": "technical",
+    "runner": "vitest",
+    "suite": "server",
+    "spec": "tests/unit/server/langsmith-delivery-http.test.ts",
+    "title": "ingestion 429 suspends durably without backlog until explicit operator recovery",
+    "purpose": "Normal konfigurerad SDK-leverans med verklig HTTP och SQLite bevarar spärren och kräver uttrycklig återhämtning utan återspelning."
+  }]
 }
 ```
 -->
@@ -109,6 +117,10 @@ leverans utan anslutning. Alla kontroller är åtkomliga i den smala vyn.
 **Förväntat resultat:** Båda spärrarna består efter omstart. En uttrycklig
 återhämtning krävs. Diagnostikens nollställning är tydlig och säkra
 kategorier innehåller inga hushållsuppgifter eller leverantörsfel.
+
+Separat HTTP-evidens använder normal konfiguration och den riktiga SDK:n
+mot kontrollerad lokal mottagning. Webbläsarfallet använder en kontrollerad
+adapter. Inget av fallen verifierar ett verkligt molnkonto eller dess kvot.
 
 ### SPARNING-03: hushållsadministration ger inte installationskontroll
 

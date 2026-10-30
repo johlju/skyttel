@@ -67,6 +67,13 @@ export function langSmithDelivery(options: LangSmithDeliveryOptions): ConnectTra
     const endpoint = unquote(options.endpoint);
     if (!unquote(apiKey).trim() || !unquote(endpoint).trim() || !options.project.trim())
       throw new Error('invalid_trace_configuration');
+    const destination = new URL(endpoint);
+    const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(destination.hostname);
+    if (
+      destination.origin !== endpoint ||
+      (destination.protocol !== 'https:' && !(destination.protocol === 'http:' && loopback))
+    )
+      throw new Error('invalid_trace_configuration');
     // The pinned SDK warns about ambient agent addressing before honoring the
     // explicit project. Those warnings can contain the raw environment value.
     if (process.env.LANGSMITH_AGENT_ID || process.env.LANGSMITH_AGENT_ENVIRONMENT)

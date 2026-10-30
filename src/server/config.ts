@@ -41,6 +41,13 @@ export interface Config {
   port: number;
   host: string;
   openaiApiKey?: string;
+  /** Optional diagnostic destination. Invalid values disconnect only this sender. */
+  langSmith?: {
+    endpoint: string;
+    project: string;
+    apiKey: string;
+    workspaceId?: string;
+  };
 }
 
 export class ConfigurationError extends Error {
@@ -122,6 +129,21 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
     port,
     host: environment.HOST ?? '0.0.0.0',
     openaiApiKey: environment.OPENAI_API_KEY || undefined,
+    ...([
+      'SKYTTEL_LANGSMITH_ENDPOINT',
+      'SKYTTEL_LANGSMITH_PROJECT',
+      'SKYTTEL_LANGSMITH_API_KEY',
+      'SKYTTEL_LANGSMITH_WORKSPACE_ID',
+    ].some((key) => environment[key] !== undefined)
+      ? {
+          langSmith: {
+            endpoint: environment.SKYTTEL_LANGSMITH_ENDPOINT ?? '',
+            project: environment.SKYTTEL_LANGSMITH_PROJECT ?? '',
+            apiKey: environment.SKYTTEL_LANGSMITH_API_KEY ?? '',
+            workspaceId: environment.SKYTTEL_LANGSMITH_WORKSPACE_ID,
+          },
+        }
+      : {}),
   };
 }
 

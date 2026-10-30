@@ -1,10 +1,11 @@
 # Bounded LangSmith delivery
 
 This contract helps installation operators interpret delivery health and
-recover from loss or suspension. Normal application startup does not connect
-the optional backend sender.
-Production activation and cloud verification require a separate rollout.
-See the [assessment procedure](langsmith-assessment.md) for that work.
+recover from loss or suspension. Normal startup connects the real sender when
+its explicit destination and credential configuration is present. Configured
+sending defaults on; a stored opt-out or suspension remains effective.
+Complete the [rollout runbook](langsmith-rollout.md) before the first enabled
+release. Use the [assessment procedure](langsmith-assessment.md) afterward.
 
 ## Evidence and loss
 
