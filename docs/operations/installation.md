@@ -19,6 +19,10 @@ For production on Render, follow the [deployment runbook](render.md) to
 configure the persistent disk, automatic digest deployment and recovery.
 For provider registration and first administrator setup on the running
 production service, use [production authentication](authentication.md).
+For an authorized LangSmith rollout, use the
+[failure diagnosis and assessment procedure](langsmith-assessment.md)
+to review natural text and voice failures without creating another trace
+archive.
 
 ## Configure the installation
 

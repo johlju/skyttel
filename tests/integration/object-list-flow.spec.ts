@@ -36,7 +36,17 @@ test('LISTA-05: short-screen table returns preserve the visible result and keybo
     const path = `${installation.origin}/api/households/${household.id}/map`;
     const before = await (await page.request.get(path)).json();
     await page.setViewportSize({ width: 320, height: 250 });
-    await page.goto(installation.origin);
+    // Navigation can finish before startup has fetched the large household map.
+    // Begin the table journey only after that prerequisite has loaded.
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url() === `${path}/view` &&
+          response.request().method() === 'GET' &&
+          response.ok(),
+      ),
+      page.goto(installation.origin),
+    ]);
     await openTable(page);
     const table = page.getByRole('region', { name: 'Hushållets tabell', exact: true });
     await table.getByRole('button', { name: 'Filter', exact: true }).click();

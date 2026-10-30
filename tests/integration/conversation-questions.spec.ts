@@ -630,6 +630,61 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
 }) => {
   await page.clock.install();
   const { app, live, path, responses } = await fixture(page, saveModel());
+  // Keep the original intermittent failure diagnosable across the independent
+  // browser clock and real audio clock without recording conversation content.
+  await page
+    .evaluate(() => {
+      const timeline: unknown[] = [];
+      let droppedEvents = 0;
+      const record = (event: string, characters?: number) => {
+        if (timeline.length === 128) {
+          timeline.shift();
+          droppedEvents++;
+        }
+        timeline.push({
+          event,
+          characters,
+          browserPerformanceMs: performance.now(),
+          browserDateMs: Date.now(),
+          audioContexts: window.skyttelVoiceFixture.diagnostics().contexts,
+        });
+      };
+      const emit = window.skyttelVoiceFixture.emit;
+      window.skyttelVoiceFixture.emit = (event) => {
+        emit(event);
+        if (event.type === 'session.output_transcript.delta')
+          record('output-transcript-dispatched', String(event.delta ?? '').length);
+      };
+      let status = '';
+      const observer = new MutationObserver(() => {
+        const text = document.querySelector('[aria-label="Röstruta"]')?.textContent ?? '';
+        const next =
+          ['Skyttel arbetar', 'Skyttel talar', 'Sparat', 'Rösten startar', 'Lyssnar'].find((word) =>
+            text.includes(word),
+          ) ?? 'other';
+        if (status !== next) {
+          status = next;
+          record(`voice-status:${status}`);
+        }
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+      Object.assign(window, {
+        finishSaveAcknowledgementTimeline: () => {
+          observer.disconnect();
+          window.skyttelVoiceFixture.emit = emit;
+          return {
+            timeSources: window.skyttelVoiceFixture.diagnostics().timeSources,
+            timeline,
+            droppedEvents,
+          };
+        },
+      });
+    })
+    .catch(() => {});
   const advanceUntilStatus = async (status: string) => {
     // AudioContext uses real time; step the paused activity sampler until the
     // actual playback transition is observed, then measure its timeout exactly.
@@ -730,6 +785,20 @@ test('FRAGA-04: ett verifierat Sparat väntar på hela ordet och ljudet innan fy
         .locator('dd'),
     ).toHaveCount(0);
   } finally {
+    try {
+      await test.info().attach('save-acknowledgement-timeline', {
+        body: JSON.stringify(
+          await page.evaluate(() =>
+            (
+              window as unknown as { finishSaveAcknowledgementTimeline(): unknown }
+            ).finishSaveAcknowledgementTimeline(),
+          ),
+        ),
+        contentType: 'application/json',
+      });
+    } catch {
+      // An unavailable diagnostic must not replace the original test result.
+    }
     await app.close();
   }
 });

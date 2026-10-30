@@ -341,15 +341,17 @@ test('TABELL-03: mobile horizontal reading preserves shared selection, draft and
       true,
     );
     await scroller.focus();
-    const scrollEnd = scroller.evaluate(
-      (element) =>
-        new Promise<number>((resolve) => {
-          element.addEventListener('scrollend', () => resolve(element.scrollLeft), { once: true });
-        }),
-    );
+    // Register before the key press; locator resolution can otherwise finish
+    // after the browser has already scrolled and emitted scrollend.
+    const scrollEnd = await scroller.evaluateHandle((element) => ({
+      position: new Promise<number>((resolve) => {
+        element.addEventListener('scrollend', () => resolve(element.scrollLeft), { once: true });
+      }),
+    }));
     await page.keyboard.press('ArrowRight');
     await expect.poll(() => scroller.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-    const horizontal = await scrollEnd;
+    const horizontal = await scrollEnd.evaluate(({ position }) => position);
+    await scrollEnd.dispose();
     await page.getByRole('button', { name: 'Karta', exact: true }).click();
     const mapObject = page.getByRole('button', { name: 'Välj objekt: A 2', exact: true });
     await expect(mapObject).toHaveAttribute('aria-pressed', 'true');
