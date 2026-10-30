@@ -78,6 +78,12 @@ export function settingsEntries(
             group: 'Drift',
           },
           {
+            to: '/tracing',
+            title: 'Diagnostik med LangSmith',
+            description: 'Installationens sändningsval och leveransstatus.',
+            group: 'Drift',
+          },
+          {
             to: '/costs',
             title: 'Månadskostnad',
             description: 'Installationens drift, förbrukning, priser och antaganden.',

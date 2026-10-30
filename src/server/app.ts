@@ -37,6 +37,8 @@ import { textAssistantRoutes } from './text-assistant.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
 import type { TextModelProfile, TextModelUsage } from './text-assistant-model.js';
 import { themePreferenceRoutes } from './theme-preference-routes.js';
+import { type ConnectTraceDelivery, traceSending } from './trace-sending.js';
+import { traceSendingRoutes } from './trace-sending-routes.js';
 import { voiceAssistantRoutes } from './voice-assistant.js';
 
 export function createApp({
@@ -54,6 +56,7 @@ export function createApp({
   modelProfile,
   liveProfile,
   observe,
+  traceDelivery,
   now = () => Date.now(),
 }: {
   config: Config;
@@ -71,6 +74,7 @@ export function createApp({
   modelProfile?: TextModelProfile;
   liveProfile?: LiveModelProfile;
   observe?: ObserveAssistant;
+  traceDelivery?: ConnectTraceDelivery;
   /** Installation time in milliseconds since the Unix epoch. */
   now?: () => number;
 }) {
@@ -93,6 +97,8 @@ export function createApp({
       } as Auth)
     : originalAuth;
   const costs = installationCosts(database);
+  const sending = traceSending(database, now);
+  if (traceDelivery) sending.connect(traceDelivery);
   const linking = createLoginMethods(database, auth, config.origin, bindings);
   const consents = conversationConsents(database, consentTextVersion);
   let revalidateWork: (() => void) | undefined;
@@ -309,6 +315,7 @@ export function createApp({
   });
   app.route('/api', administrationRoutes(database, auth, config.origin));
   app.route('/api', costRoutes(database, auth, config, costs));
+  app.route('/api', traceSendingRoutes(database, auth, config, sending));
   app.route('/api', contentOwnerRoutes(database, auth, config.origin));
   app.route('/api', householdExportRoutes(database, auth, config.origin));
   app.route('/api', householdErasureRoutes(database, auth, config.origin));
@@ -414,6 +421,7 @@ export function createApp({
     summarizeForEvaluation: textAssistant.summarizeForEvaluation,
     close: async () => {
       stopCleanup?.();
+      sending.close();
       await voiceAssistant.close();
       await textAssistant.close();
     },

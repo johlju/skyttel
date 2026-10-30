@@ -329,6 +329,9 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   och två medlemmars skilda utkast;
   samma fullständiga arbete provas med text och listor utan grafik eller ljud.
 
+- [Installationens diagnostik](tracing.md): sändningsval, beständig
+  avstängning och spärr, säker leveransstatus och skild driftbehörighet.
+  Faktisk skärmläsning redovisas separat.
 - [Månadskostnad](costs.md): separata belopp för Render, Live och textmodell,
   prisunderlag, månadens antaganden, okända värden, kumulativa mätningar,
   omstart, hämtningsfel, okänt sparresultat, tangentbordsfokus och

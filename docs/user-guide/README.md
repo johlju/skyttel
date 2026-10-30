@@ -66,6 +66,9 @@ med ett [familjeabonnemang](family-subscription.md).
 
 ### För driftansvarig
 
+- [Diagnostik med LangSmith](tracing.md): styra installationens sändning,
+  läsa leveransstatus och återhämta en spärr efter kontroll.
+
 - [Installationens månadskostnad](costs.md): läsa kostnadsöversikten och
   ändra månadens antaganden. Kräver särskild tillgång som driftansvarig;
   hushållets administratörsroll ger inte denna åtkomst.

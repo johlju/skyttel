@@ -51,6 +51,7 @@ import { PolicyContact } from './PolicyContact.js';
 import { SettingsOverview, SettingsScreen, settingsEntries } from './SettingsScreen.js';
 import { StorageConsentProvider } from './StorageConsent.js';
 import { useSessionActivity } from './session-activity.js';
+import { TraceSending } from './TraceSending.js';
 import {
   TaskDeliveryContext,
   TaskDeliveryResults,
@@ -1518,7 +1519,7 @@ function Application() {
     (authenticated || storagePage) &&
     !mapActive &&
     (personal ||
-      ['/costs', '/policy-contact'].includes(location.pathname) ||
+      ['/costs', '/policy-contact', '/tracing'].includes(location.pathname) ||
       (data?.status === 'ready' &&
         Boolean(matchPath('/households/:id/settings/*', location.pathname))) ||
       (data?.status === 'ready' &&
@@ -1617,11 +1618,26 @@ function Application() {
             <Link to="/">Till startsidan</Link>
           </section>
         ))}
+      {location.pathname === '/tracing' &&
+        (data.operator ? (
+          <TraceSending />
+        ) : (
+          <section className="panel">
+            <Heading>Endast installationsansvarig har tillgång till diagnostiken</Heading>
+            <Link to="/">Till startsidan</Link>
+          </section>
+        ))}
       {location.pathname === '/policy-contact' &&
         (data.operator ? <PolicyContact /> : <Forbidden />)}
-      {!['/login-methods', '/profile', '/costs', '/cookies', '/login', '/policy-contact'].includes(
-        location.pathname,
-      ) &&
+      {![
+        '/login-methods',
+        '/profile',
+        '/costs',
+        '/cookies',
+        '/login',
+        '/policy-contact',
+        '/tracing',
+      ].includes(location.pathname) &&
         (data.status === 'ready' || data.status === 'setup') && (
           <Routes>
             <Route path="/assistant-consent" element={<Assistants consent />} />

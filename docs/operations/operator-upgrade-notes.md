@@ -6,6 +6,20 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Installation diagnostic sending control
+
+The installation operator can prepare the LangSmith sending choice in
+settings. This update does not connect production delivery. When delivery
+is connected, sending defaults to enabled unless the operator has selected
+off. Keep the database to preserve this choice and any quota or credential
+suspension. A process restart does not clear a suspension; resolve its cause
+and explicitly restart sending. Do not add a payment method for recovery.
+
+Delivery counters and last delivery status reset on process restart.
+Stopping sending discards pending events and cancels delivery where possible;
+it does not delete data already sent to LangSmith. Cloud deletion requires
+a separate procedure.
+
 ### Personal map references and archive compatibility
 
 Keep a backup from before the update if rollback is required. The update adds

@@ -17,6 +17,7 @@ import {
   type ExportManifest,
   type ExportPart,
   exportLifetimeMs,
+  householdArchiveSchemaVersion,
   type ReadyExport,
 } from '../shared/household-export.js';
 import { AdministrationError } from './administration.js';
@@ -220,9 +221,6 @@ async function snapshot(database: Database.Database, job: Job): Promise<ExportMa
       first = false;
     }
     await write(']}');
-    const { version: schemaVersion } = reader
-      .prepare('SELECT max(version) AS version FROM schema_migration')
-      .get() as { version: number };
     reader.exec('COMMIT');
     const parts: ExportPart[] = [
       { path: 'content.json', bytes: contentBytes, sha256: contentHash.digest('hex') },
@@ -233,7 +231,7 @@ async function snapshot(database: Database.Database, job: Job): Promise<ExportMa
       version: 2,
       createdAt: new Date().toISOString(),
       householdId: job.householdId,
-      schemaVersion,
+      schemaVersion: householdArchiveSchemaVersion,
       parts,
     };
   } finally {

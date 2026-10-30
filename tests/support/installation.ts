@@ -54,6 +54,7 @@ export async function createInstallation(
     modelProfile?: Parameters<typeof createApp>[0]['modelProfile'];
     liveProfile?: Parameters<typeof createApp>[0]['liveProfile'];
     observe?: Parameters<typeof createApp>[0]['observe'];
+    traceDelivery?: Parameters<typeof createApp>[0]['traceDelivery'];
     https?: boolean;
     now?: () => number;
     deliverResponse?: (request: Request, response: Response) => Response | Promise<Response>;
@@ -217,6 +218,7 @@ export async function createInstallation(
       modelProfile: databaseOptions.modelProfile,
       liveProfile: databaseOptions.liveProfile,
       observe: databaseOptions.observe,
+      traceDelivery: databaseOptions.traceDelivery,
       consentTextVersion: databaseOptions.consentTextVersion,
       now: databaseOptions.now,
     });
