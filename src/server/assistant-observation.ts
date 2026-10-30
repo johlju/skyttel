@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { TraceJsonFailure, traceJson } from './trace-json.js';
 
 /** Reviewed, opt-in, in-memory observations shared by evaluation and live export.
  * This module owns no storage, transport or retries. Production never imports
@@ -87,6 +88,30 @@ export type AssistantObservation = {
 };
 export type ObserveAssistant = (event: AssistantObservation) => void;
 
+type ProjectArray = <T>(
+  source: readonly unknown[],
+  project: (value: unknown) => T | undefined,
+) => T[];
+
+function projectionArrays(limit?: number): ProjectArray {
+  let remaining = limit;
+  return (source, project) => {
+    const result = [];
+    if (remaining !== undefined) remaining -= 2;
+    for (const value of source) {
+      const item = project(value);
+      if (item === undefined) continue;
+      if (remaining !== undefined) {
+        const json = traceJson(item, remaining);
+        remaining -= Buffer.byteLength(json) + (result.length ? 1 : 0);
+        if (remaining < 0) throw new TraceJsonFailure('oversized');
+      }
+      result.push(item);
+    }
+    return result;
+  };
+}
+
 const fields = (value: unknown, names: readonly string[]) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   const source = value as Record<string, unknown>;
@@ -105,7 +130,7 @@ const fields = (value: unknown, names: readonly string[]) => {
  * results, not a duplicate voice-side copy of the backend's whole view. The
  * evaluation consumers use delegationId for correlation and read full domain
  * evidence separately through authenticated application HTTP endpoints. */
-function backendResult(value: unknown) {
+function backendResult(value: unknown, project: ProjectArray) {
   const source = value as Record<string, unknown> | undefined;
   const admitted = fields(value, [
     'id',
@@ -130,7 +155,7 @@ function backendResult(value: unknown) {
     admitted.result = fields(source.result, ['kind', 'message']);
     const changes = (source.result as { changes?: unknown }).changes;
     if (Array.isArray(changes))
-      (admitted.result as Record<string, unknown>).changes = changes.map((change) =>
+      (admitted.result as Record<string, unknown>).changes = project(changes, (change) =>
         fields(change, ['subject', 'action']),
       );
   }
@@ -179,7 +204,7 @@ function errorFields(value: unknown, names: readonly string[]) {
 /** The only content admitted from an MCP envelope is its text result and error
  * flag. Tool arguments already cross the application's tool schema boundary.
  * Neither provider metadata nor additional MCP content types are trace data. */
-function data(event: AssistantObservation) {
+function data(event: AssistantObservation, project: ProjectArray) {
   switch (event.kind) {
     case 'task_started':
     case 'task_completed':
@@ -191,9 +216,12 @@ function data(event: AssistantObservation) {
       const source = (event.data as { result?: { content?: unknown } })?.result;
       const result = fields(source, ['isError']);
       result.content = Array.isArray(source?.content)
-        ? source.content
-            .filter((item) => item?.type === 'text' && typeof item.text === 'string')
-            .map((item) => ({ type: 'text', text: item.text }))
+        ? project(source.content, (item) => {
+            const value = item as { type?: unknown; text?: unknown } | null;
+            return value?.type === 'text' && typeof value.text === 'string'
+              ? { type: 'text', text: value.text }
+              : undefined;
+          })
         : [];
       return { ...admitted, result };
     }
@@ -253,7 +281,7 @@ function data(event: AssistantObservation) {
     case 'backend_result':
       return {
         ...fields(event.data, ['delegationId', 'requestId']),
-        view: backendResult((event.data as { view?: unknown })?.view),
+        view: backendResult((event.data as { view?: unknown })?.view, project),
       };
   }
 }
@@ -263,10 +291,19 @@ function data(event: AssistantObservation) {
  * consumer must enqueue synchronously; application work never awaits export. */
 export function assistantObservationBoundary(
   sink?: ObserveAssistant,
+  delivery?: { maxBytes: number; failed: (category: 'oversized' | 'export') => void },
 ): ObserveAssistant | undefined {
   if (!sink) return undefined;
+  function failed(category: 'oversized' | 'export') {
+    try {
+      delivery?.failed(category);
+    } catch {
+      /* Reporting cannot fail application work. */
+    }
+  }
   return (event) => {
     try {
+      const project = projectionArrays(delivery?.maxBytes);
       const context =
         event.context &&
         fields(event.context, [
@@ -281,29 +318,31 @@ export function assistantObservationBoundary(
           'toolExecutionId',
         ]);
       if (context && event.context?.links)
-        context.links = event.context.links.map((link) => fields(link, ['traceId', 'spanId']));
+        context.links = project(event.context.links, (link) => fields(link, ['traceId', 'spanId']));
       // JSON also rejects cyclic values and BigInt. Do not silently truncate or
       // stringify failed content as if it were the exact observed value.
+      const projected = {
+        ...fields(event, [
+          'at',
+          'sessionId',
+          'taskId',
+          'revision',
+          'consentTextVersion',
+          'status',
+          'evidenceGap',
+          'kind',
+        ]),
+        ...(context ? { context } : {}),
+        data: data(event, project),
+      };
       const admitted: AssistantObservation = JSON.parse(
-        JSON.stringify({
-          ...fields(event, [
-            'at',
-            'sessionId',
-            'taskId',
-            'revision',
-            'consentTextVersion',
-            'status',
-            'evidenceGap',
-            'kind',
-          ]),
-          ...(context ? { context } : {}),
-          data: data(event),
-        }),
+        delivery ? traceJson(projected, delivery.maxBytes) : JSON.stringify(projected),
       );
       const result = sink(admitted) as unknown;
       if (result && typeof (result as Promise<void>).catch === 'function')
-        void (result as Promise<void>).catch(() => {});
-    } catch {
+        void (result as Promise<void>).catch(() => failed('export'));
+    } catch (error) {
+      failed(error instanceof TraceJsonFailure ? error.category : 'export');
       // The exporter owns its safe delivery-health category. Never log a
       // diagnostic payload or raw exception here or turn it into map failure.
     }

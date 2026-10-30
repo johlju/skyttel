@@ -4,11 +4,15 @@ import type {
   TraceSendingStatus,
   TraceSuspension,
 } from '../shared/trace-sending.js';
+import type { AssistantObservation, ObserveAssistant } from './assistant-observation.js';
 
 /** stop must synchronously discard buffers and cancel active delivery where possible. */
 export interface TraceDeliveryAdapter {
   start(): void;
   stop(): void;
+  observe?: ObserveAssistant;
+  /** Seal admission, then finish or discard delivery within two seconds. */
+  shutdown?(): Promise<void>;
 }
 
 export interface TraceSending {
@@ -17,9 +21,12 @@ export interface TraceSending {
   connect(connect: ConnectTraceDelivery): void;
   update(action: 'enable' | 'disable' | 'restart'): TraceSendingStatus | null;
   delivered(): void;
-  dropped(category: TraceDeliveryError, count?: number): void;
+  /** A null category records an intentional discard without inventing an error. */
+  dropped(category: TraceDeliveryError | null, count?: number): void;
   suspend(reason: TraceSuspension): void;
   close(): void;
+  observe(event: AssistantObservation): void;
+  shutdown(): Promise<void>;
 }
 export type ConnectTraceDelivery = (sending: TraceSending) => TraceDeliveryAdapter;
 
@@ -87,6 +94,14 @@ export function traceSending(
   return {
     read,
     canSend,
+    observe(event) {
+      if (!canSend()) return;
+      try {
+        return adapter?.observe?.(event);
+      } catch {
+        this.dropped('export');
+      }
+    },
     connect(connect: ConnectTraceDelivery) {
       try {
         adapter = connect(this);
@@ -123,8 +138,9 @@ export function traceSending(
     delivered() {
       lastSuccessfulDelivery = now();
     },
-    dropped(category: TraceDeliveryError, count = 1) {
+    dropped(category: TraceDeliveryError | null, count = 1) {
       if (
+        category !== null &&
         ![
           'quota',
           'credentials',
@@ -139,7 +155,7 @@ export function traceSending(
         category = 'export';
       if (Number.isSafeInteger(count) && count > 0)
         droppedEvents = Math.min(Number.MAX_SAFE_INTEGER, droppedEvents + count);
-      lastError = category;
+      if (category !== null) lastError = category;
     },
     suspend(reason: TraceSuspension) {
       if (reason !== 'quota' && reason !== 'credentials') return;
@@ -154,6 +170,15 @@ export function traceSending(
     close() {
       stop();
       adapter = undefined;
+    },
+    async shutdown() {
+      try {
+        await adapter?.shutdown?.();
+      } catch {
+        lastError = 'export';
+      } finally {
+        this.close();
+      }
     },
   };
 }

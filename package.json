@@ -59,6 +59,7 @@
     "better-auth": "^1.7.12",
     "better-sqlite3": "13.0.3",
     "hono": "^4.13.13",
+    "langsmith": "0.11.1",
     "openai": "^7.43.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

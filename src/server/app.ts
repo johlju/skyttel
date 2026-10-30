@@ -37,6 +37,7 @@ import { textAssistantRoutes } from './text-assistant.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
 import type { TextModelProfile, TextModelUsage } from './text-assistant-model.js';
 import { themePreferenceRoutes } from './theme-preference-routes.js';
+import { traceEventByteLimit } from './trace-json.js';
 import { type ConnectTraceDelivery, traceSending } from './trace-sending.js';
 import { traceSendingRoutes } from './trace-sending-routes.js';
 import { voiceAssistantRoutes } from './voice-assistant.js';
@@ -78,7 +79,6 @@ export function createApp({
   /** Installation time in milliseconds since the Unix epoch. */
   now?: () => number;
 }) {
-  const observe = assistantObservationBoundary(observationSink);
   const app = new Hono();
   // Historical test installations can intentionally stop before this migration.
   const hasBindings = !!database
@@ -100,6 +100,20 @@ export function createApp({
   const costs = installationCosts(database);
   const sending = traceSending(database, now);
   if (traceDelivery) sending.connect(traceDelivery);
+  const callerObservation = assistantObservationBoundary(observationSink);
+  const deliveryObservation = traceDelivery
+    ? assistantObservationBoundary((event) => sending.observe(event), {
+        maxBytes: traceEventByteLimit,
+        failed: (category) => sending.dropped(category),
+      })
+    : undefined;
+  const observe: ObserveAssistant | undefined =
+    callerObservation || deliveryObservation
+      ? (event) => {
+          callerObservation?.(event);
+          if (sending.canSend()) deliveryObservation?.(event);
+        }
+      : undefined;
   const linking = createLoginMethods(database, auth, config.origin, bindings);
   const consents = conversationConsents(database, consentTextVersion);
   let revalidateWork: (() => void) | undefined;
@@ -423,9 +437,10 @@ export function createApp({
     summarizeForEvaluation: textAssistant.summarizeForEvaluation,
     close: async () => {
       stopCleanup?.();
-      sending.close();
+      const delivery = sending.shutdown();
       await voiceAssistant.close();
       await textAssistant.close();
+      await delivery;
     },
   });
 }
