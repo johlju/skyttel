@@ -113,9 +113,19 @@ Use the development destination and development key for this container.
    SKYTTEL_LANGSMITH_WORKSPACE_ID=<workspace-uuid>
    ```
 
+   Also save the development project UUID for later operator cleanup:
+
+   ```dotenv
+   SKYTTEL_LANGSMITH_PROJECT_ID=<development-project-uuid>
+   ```
+
+   Copy this assignment from the lookup output, replacing the placeholder
+   with the returned UUID. This identifier is not a secret. Skyttel does not
+   read it; keep it with the installation settings for future reference.
+
    For a project-based workspace, the destination name is `skyttel-dev`.
    For an agent-based workspace, copy the value after
-   `SKYTTEL_LANGSMITH_PROJECT:` under `skyttel-dev DEVELOPMENT` in the
+   `SKYTTEL_LANGSMITH_PROJECT=` under `skyttel-dev DEVELOPMENT` in the
    [lookup output](../operations/langsmith-rollout.md#read-the-agent-lookup-output).
    The script reads this value from the API field `tracer_session_name`;
    do not enter that field name as the value. Remove any `LANGSMITH_AGENT_ID` and

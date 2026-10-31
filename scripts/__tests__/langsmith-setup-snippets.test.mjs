@@ -111,7 +111,7 @@ test('approved regions preserve workspace, agent, and project read/create reques
       assert.equal(workspace.requests[0].url, `${base}/api/v1/workspaces`);
       assert.equal(workspace.requests[0].method, 'GET');
       assert.equal(workspace.requests[0].headers['X-organization-id'], 'synthetic-scope');
-      assert.match(workspace.output, /SKYTTEL_LANGSMITH_WORKSPACE_ID: workspace-id/);
+      assert.match(workspace.output, /SKYTTEL_LANGSMITH_WORKSPACE_ID=workspace-id/);
       for (const result of [agents, read, create]) {
         assert.equal(result.requests.length, 2);
         assert.ok(result.requests.every((r) => r.headers['X-tenant-id'] === 'synthetic-scope'));
@@ -125,11 +125,11 @@ test('approved regions preserve workspace, agent, and project read/create reques
         assert.equal(create.requests[i].method, 'POST');
         assert.deepEqual(create.requests[i].data, { name, extra: {}, description: null });
         for (const result of [read, create]) {
-          assert.ok(result.output.includes(`SKYTTEL_LANGSMITH_PROJECT: ${name}`));
+          assert.ok(result.output.includes(`SKYTTEL_LANGSMITH_PROJECT=${name}`));
         }
       }
-      assert.match(agents.output, /SKYTTEL_LANGSMITH_PROJECT: skyttel-dev-development/);
-      assert.match(agents.output, /SKYTTEL_LANGSMITH_PROJECT: skyttel-prod-production/);
+      assert.match(agents.output, /SKYTTEL_LANGSMITH_PROJECT=skyttel-dev-development/);
+      assert.match(agents.output, /SKYTTEL_LANGSMITH_PROJECT=skyttel-prod-production/);
     }
   }
 });
