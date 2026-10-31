@@ -146,8 +146,8 @@ and [environments](https://docs.langchain.com/langsmith/agent-environments).
 
 `tracer_session_name` is the name of a field in LangSmith's API response.
 The lookup script reads that field and prints its value after the label
-`SKYTTEL_LANGSMITH_PROJECT:`. It does not print a separate line labelled
-`tracer_session_name`. Copy the value after the colon into Skyttel's
+`SKYTTEL_LANGSMITH_PROJECT=`. It does not print a separate line labelled
+`tracer_session_name`. Copy the value after the equals sign into Skyttel's
 destination setting; do not enter the literal text `tracer_session_name`.
 See the [output example](#read-the-agent-lookup-output) below.
 
@@ -183,6 +183,11 @@ projects. See the [tracing quickstart](https://docs.langchain.com/langsmith/obse
 ### Record the two destinations
 
 Keep this worksheet privately. It contains identities, not API-key secrets.
+The project UUID does not grant access and does not require password-vault
+storage. Save it as `SKYTTEL_LANGSMITH_PROJECT_ID` alongside each
+installation's environment settings in steps 6 and 7 so it is available
+for later cleanup. This is an operator reference; Skyttel does not read it
+or require it to send traces. API keys and PATs remain secrets.
 
 <!-- markdownlint-disable MD013 -->
 | Setting | Development | Production |
@@ -190,8 +195,8 @@ Keep this worksheet privately. It contains identities, not API-key secrets.
 | Region and API endpoint | From step 2 | Same region and endpoint |
 | Workspace UUID | From step 2 | Same workspace UUID |
 | Agent/environment, if applicable | `skyttel-dev` / Development | `skyttel-prod` / Production |
-| Destination name | Value after `SKYTTEL_LANGSMITH_PROJECT:` under `skyttel-dev DEVELOPMENT`, or `skyttel-dev` for Path B | Value after `SKYTTEL_LANGSMITH_PROJECT:` under `skyttel-prod PRODUCTION`, or `skyttel-prod` for Path B |
-| Project UUID for inspection/deletion | Returned development UUID | Returned production UUID |
+| Destination name | Value after `SKYTTEL_LANGSMITH_PROJECT=` under `skyttel-dev DEVELOPMENT`, or `skyttel-dev` for Path B | Value after `SKYTTEL_LANGSMITH_PROJECT=` under `skyttel-prod PRODUCTION`, or `skyttel-prod` for Path B |
+| `SKYTTEL_LANGSMITH_PROJECT_ID` for inspection/deletion | Returned development UUID | Returned production UUID |
 <!-- markdownlint-enable MD013 -->
 
 **Check before continuing:** the two destination names and UUIDs are
@@ -320,9 +325,13 @@ The application reads these four settings:
 <!-- markdownlint-enable MD013 -->
 
 For Path B, the project value is `skyttel-dev`. For Path A, copy the value
-after `SKYTTEL_LANGSMITH_PROJECT:` in the script's `skyttel-dev DEVELOPMENT`
+after `SKYTTEL_LANGSMITH_PROJECT=` in the script's `skyttel-dev DEVELOPMENT`
 output. That value comes from the API field named `tracer_session_name`.
 See the [output example](#read-the-agent-lookup-output).
+
+Also save `SKYTTEL_LANGSMITH_PROJECT_ID` from the development lookup output
+in the same private environment file. Keep the worksheet as a durable record
+of the project UUID, workspace and region if that file is removed later.
 
 Skyttel uses these application-specific variables. Do not copy the generic
 `LANGSMITH_TRACING` or `LANGSMITH_PROJECT` examples from LangSmith into
@@ -354,6 +363,8 @@ authorization for billable calls.
    destination and production runtime key. For Path B the project value is
    `skyttel-prod`; for Path A use the Production environment's returned name.
    Enter plain values without surrounding shell quotes.
+   Also add `SKYTTEL_LANGSMITH_PROJECT_ID` with the production project UUID
+   from the lookup output. This additional value is for operator reference.
 4. Check linked environment groups for conflicting values. Service values
    take precedence. Confirm no development destination or key is selected.
 5. Choose **Save only** if deployment must wait. When you are ready,
@@ -483,10 +494,14 @@ authority. Household restoration uses [controlled recovery](database-restore.md)
    from the private development file and exported environment, or from Render
    and linked groups. Restart development or deploy the Render environment.
    Verify `Inte ansluten` if enabled, or the durable disabled state.
+   Retain `SKYTTEL_LANGSMITH_PROJECT_ID` until cleanup is complete. Before
+   removing settings or the service, keep the project UUID, workspace UUID
+   and regional endpoint in the worksheet so cleanup remains possible.
 2. Revoke its runtime key. Keep the other installation's key, household
    storage and authority intact.
 3. Use your LangSmith admin account's read/delete access and the
-   worksheet's exact project UUID to identify remaining traces. For Path A,
+   saved `SKYTTEL_LANGSMITH_PROJECT_ID` or worksheet's exact project UUID to
+   identify remaining traces. For Path A,
    this UUID is `tracer_session_id`. Do not use the agent name, destination
    name or a Skyttel conversation ID. Do not bulk-export payloads.
 4. Request deletion using the current
@@ -587,7 +602,8 @@ if not workspaces:
     raise SystemExit('No visible workspaces; check account access and region.')
 for workspace in workspaces:
     print('Workspace:', workspace['display_name'])
-    print('SKYTTEL_LANGSMITH_WORKSPACE_ID:', workspace['id'])
+    print('SKYTTEL_LANGSMITH_ENDPOINT=' + base)
+    print('SKYTTEL_LANGSMITH_WORKSPACE_ID=' + workspace['id'])
 PY
 ```
 
@@ -641,8 +657,10 @@ for agent, target in [('skyttel-dev', 'DEVELOPMENT'),
     if environment is None:
         raise SystemExit(f'{agent}: {target} environment is missing.')
     print(agent, target)
-    print('SKYTTEL_LANGSMITH_PROJECT:', environment['tracer_session_name'])
-    print('Project UUID for cleanup:', environment['tracer_session_id'])
+    print('SKYTTEL_LANGSMITH_ENDPOINT=' + base)
+    print('SKYTTEL_LANGSMITH_PROJECT=' + environment['tracer_session_name'])
+    print('SKYTTEL_LANGSMITH_PROJECT_ID=' + environment['tracer_session_id'])
+    print('SKYTTEL_LANGSMITH_API_KEY=<tracing-only-key-from-step-4>')
 PY
 ```
 
@@ -652,8 +670,10 @@ For example, the development part of the script's output might be:
 
 ```text
 skyttel-dev DEVELOPMENT
-SKYTTEL_LANGSMITH_PROJECT: skyttel-dev-development
-Project UUID for cleanup: <development-project-uuid>
+SKYTTEL_LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+SKYTTEL_LANGSMITH_PROJECT=skyttel-dev-development
+SKYTTEL_LANGSMITH_PROJECT_ID=<development-project-uuid>
+SKYTTEL_LANGSMITH_API_KEY=<tracing-only-key-from-step-4>
 ```
 
 Here, `skyttel-dev-development` is the value of LangSmith's
@@ -662,14 +682,35 @@ name so you know where to use it. For this output, put the following in
 your private development environment file:
 
 ```dotenv
+SKYTTEL_LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 SKYTTEL_LANGSMITH_PROJECT=skyttel-dev-development
+SKYTTEL_LANGSMITH_PROJECT_ID=<development-project-uuid>
+SKYTTEL_LANGSMITH_API_KEY=<tracing-only-key-from-step-4>
 ```
 
-Copy only the value after the colon. Do not include the colon, the output
-label or the literal text `tracer_session_name` in the value. Use the value
+Copy the complete assignment into an environment file. In Render, enter
+the name and value separately, without the equals sign. Do not use the
+literal text `tracer_session_name` as the value. Use the value
 your own lookup returns; this example is not a naming rule. For production,
-use the value after `SKYTTEL_LANGSMITH_PROJECT:` in the separate
+use the value after `SKYTTEL_LANGSMITH_PROJECT=` in the separate
 `skyttel-prod PRODUCTION` part of the output.
+
+All three setup scripts print `SKYTTEL_LANGSMITH_ENDPOINT` using the
+validated regional endpoint you enter, without a trailing slash. Use that
+returned value; the US endpoint above is only an example.
+
+Both destination scripts print a placeholder for `SKYTTEL_LANGSMITH_API_KEY`.
+Replace `<tracing-only-key-from-step-4>`, including the angle brackets, with
+that installation's tracing-only runtime key from step 4. The scripts do
+not print your setup PAT; do not use it as the application key.
+
+Replace `<development-project-uuid>` with the returned UUID. The lookup
+prints a ready-to-copy `SKYTTEL_LANGSMITH_PROJECT_ID=...` assignment for each
+destination; it does not edit files or set variables in your terminal.
+Save the development assignment in the private environment file and the
+production name/value pair in Render. A terminal-only `export` lasts only
+for that shell and its child processes, so keep the saved settings for
+future operators.
 
 Copy the two different destination values and UUIDs into the worksheet.
 Keep the project
@@ -728,13 +769,20 @@ for name in ['skyttel-dev', 'skyttel-prod']:
                if action == 'read' else result)
     if project is None:
         raise SystemExit(f'{name}: no matching project; check workspace.')
-    print('SKYTTEL_LANGSMITH_PROJECT:', project['name'])
-    print('Project UUID for cleanup:', project['id'])
+    print('SKYTTEL_LANGSMITH_ENDPOINT=' + base)
+    print('SKYTTEL_LANGSMITH_PROJECT=' + project['name'])
+    print('SKYTTEL_LANGSMITH_PROJECT_ID=' + project['id'])
+    print('SKYTTEL_LANGSMITH_API_KEY=<tracing-only-key-from-step-4>')
 PY
 ```
 
-Record both names and UUIDs, revoke temporary setup access when no longer
-needed, and return to step 4.
+Record both names and UUIDs. Save each printed
+`SKYTTEL_LANGSMITH_PROJECT_ID=...` assignment in the corresponding
+installation's environment settings in steps 6 and 7; the script only prints
+these values and does not set them in your terminal or edit files.
+Replace the printed API-key placeholder with that installation's
+tracing-only runtime key from step 4, not the setup PAT.
+Revoke temporary setup access when no longer needed, and return to step 4.
 
 Primary service documentation is checked on 2026-10-28. Verify actual account
 conditions and UI labels during setup; local checks do not verify your account.

@@ -58,7 +58,7 @@ unnecessary account permissions to the application.
    `SKYTTEL_LANGSMITH_ENDPOINT` and `SKYTTEL_LANGSMITH_WORKSPACE_ID` with
    the worksheet's region and workspace UUID.
 3. Compare `SKYTTEL_LANGSMITH_PROJECT` with the value printed after
-   `SKYTTEL_LANGSMITH_PROJECT:` under `skyttel-prod PRODUCTION` by the
+   `SKYTTEL_LANGSMITH_PROJECT=` under `skyttel-prod PRODUCTION` by the
    [agent lookup](langsmith-rollout.md#look-up-agent-destination-values).
    For a classic project-based workspace, use `skyttel-prod`.
 4. In LangSmith **Settings → API Keys**, select **Tracing** and find the
