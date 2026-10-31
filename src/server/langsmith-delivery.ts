@@ -50,8 +50,9 @@ export interface LangSmithDeliveryOptions {
  *
  * This does not wrap OpenAI (installed 7.43.0) or change ModelClient's custom
  * long-running fetch/caller signal. Export cancellation belongs only here.
- * Direct ingestion derives dotted_order from explicit parent_run_id; no
- * parent-order cache is needed: docs.langchain.com/langsmith/trace-with-api.
+ * Direct ingestion derives trace_id and dotted_order from id/parent_run_id.
+ * Omit both derived fields: supplying trace_id alone is rejected even on
+ * updates. No parent-order cache is needed: docs.langchain.com/langsmith/trace-with-api.
  * Reinspect matching published source and wire tests before upgrading. */
 export function langSmithDelivery(options: LangSmithDeliveryOptions): ConnectTraceDelivery {
   return (sending) => {
@@ -437,7 +438,6 @@ export function langSmithDelivery(options: LangSmithDeliveryOptions): ConnectTra
           evidence_gap: event.evidenceGap,
         };
         const common = {
-          trace_id: context.traceId,
           parent_run_id: context.parentSpanId,
           extra: { metadata },
         };

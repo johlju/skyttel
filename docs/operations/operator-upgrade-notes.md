@@ -6,6 +6,17 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### LangSmith delivery compatibility
+
+Configured installations with sending enabled can begin uploading diagnostics
+after this update. Before rollout, check the sending state and intended
+destination. Disable sending first if uploads must wait.
+
+After rollout, verify a recent accepted delivery and a complete trace in the
+intended destination. Rejected events are not replayed. Existing credentials,
+opt-out and suspension remain unchanged. Use the
+[activation checks](langsmith-rollout.md#8-activate-and-verify-one-installation-at-a-time).
+
 ### Installation diagnostic sending control
 
 Normal startup now connects configured LangSmith delivery. Sending defaults

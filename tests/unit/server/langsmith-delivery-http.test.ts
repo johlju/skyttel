@@ -20,6 +20,8 @@ type Ingested = {
   method: string;
   path: string;
   body: Record<string, unknown>;
+  /** Receiver-derived identity; the wire body remains unchanged. */
+  traceId: unknown;
   bytes: number;
   closed: boolean;
   closedAt?: number;
@@ -63,10 +65,17 @@ async function ingestion(
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
     const bytes = Buffer.concat(chunks);
+    const body = JSON.parse(bytes.toString());
+    const id = body.id ?? request.url?.split('/').at(-1);
+    const traceId = body.parent_run_id
+      ? (received.find((item) => item.body.id === body.parent_run_id)?.traceId ??
+        body.parent_run_id)
+      : id;
     const entry: Ingested = {
       method: request.method ?? '',
       path: request.url ?? '',
-      body: JSON.parse(bytes.toString()),
+      body,
+      traceId,
       bytes: bytes.length,
       closed: false,
       accepted: false,
@@ -79,7 +88,11 @@ async function ingestion(
       entry.closed = true;
       entry.closedAt = performance.now();
     });
-    respond(request, response);
+    // Direct ingestion derives hierarchy from id/parent_run_id. Supplying
+    // trace_id instead requires dotted_order, including on PATCH requests.
+    if (body.trace_id !== undefined && body.dotted_order === undefined)
+      response.writeHead(400).end('dotted_order is required when trace_id is provided');
+    else respond(request, response);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
@@ -412,7 +425,7 @@ test('an invalidated standalone summary records known cancellation without repla
       item.method === 'POST' && (item.body.inputs as { source?: string })?.source === 'summary',
   )!.body;
   expect((summary.extra as { metadata: { links?: unknown } }).metadata.links).toBeUndefined();
-  expect(summary.trace_id).not.toBe(voice.id);
+  expect(summary.id).not.toBe(voice.id);
 });
 
 test.each(['concurrent text', 'voice stopped'])(
@@ -565,9 +578,9 @@ test.each(['concurrent text', 'voice stopped'])(
         .toBe(true);
       const ended = endpoint.received.find(
         (item) => (item.body.outputs as { noOp?: string })?.noOp === 'already_working',
-      )!.body;
+      )!;
       const root = endpoint.received.find(
-        (item) => item.method === 'POST' && item.body.id === ended.trace_id,
+        (item) => item.method === 'POST' && item.body.id === ended.traceId,
       )!.body;
       expect(root).toMatchObject({
         extra: { metadata: { owner: 'backend', links: [{ traceId: voice.id, spanId: voice.id }] } },
@@ -711,7 +724,7 @@ test('concurrent voice sessions keep overlapping delegation and late results und
       [alpha, 'canceled', session.id],
       [beta, 'completed', second.id],
     ] as const) {
-      const delegated = delegations.find((item) => item.body.trace_id === voice.voice.id)!.body;
+      const delegated = delegations.find((item) => item.traceId === voice.voice.id)!.body;
       await expect
         .poll(() => endpoint.received.find((item) => item.path === `/runs/${delegated.id}`)?.body)
         .toMatchObject({ extra: { metadata: { status } } });
@@ -728,7 +741,7 @@ test('concurrent voice sessions keep overlapping delegation and late results und
           (item) =>
             item.method === 'POST' &&
             item.body.name === 'Skyttel model attempt' &&
-            item.body.trace_id === linked,
+            item.traceId === linked,
         ),
       ).toHaveLength(1);
     }
@@ -1080,7 +1093,7 @@ test.each(['voice recover', 'public retry'])(
         .toBe(true);
       const unchanged = endpoint.received.find(
         (item) => (item.body.outputs as { noOp?: string })?.noOp === 'already_checked',
-      )!.body.trace_id;
+      )!.traceId;
       expect(
         endpoint.received.some(
           (item) => item.method === 'POST' && item.body.parent_run_id === unchanged,
@@ -1335,13 +1348,13 @@ test.each(['healthy', 'disabled', 'failing'])(
       );
       expect(backends).toHaveLength(3);
       expect(delegations).toHaveLength(3);
-      expect(delegations.every((item) => item.body.trace_id === voice.id)).toBe(true);
+      expect(delegations.every((item) => item.traceId === voice.id)).toBe(true);
       for (const delegated of delegations)
         expect(
           backends.some(
             (backend) =>
               (delegated.body.extra as { metadata: { links: { traceId: string }[] } }).metadata
-                .links[0].traceId === backend.body.trace_id,
+                .links[0].traceId === backend.traceId,
           ),
         ).toBe(true);
       expect(
@@ -1649,7 +1662,7 @@ test('voice context preparation owns its summary once in an explicitly linked ba
     (item) =>
       item.method === 'POST' &&
       item.body.name === 'Skyttel model attempt' &&
-      item.body.trace_id === summary.trace_id,
+      item.traceId === summary.id,
   );
   expect(summaryModels).toHaveLength(1);
   expect(summaryModels[0].body.parent_run_id).toBe(summary.id);
@@ -1657,9 +1670,7 @@ test('voice context preparation owns its summary once in an explicitly linked ba
   expect(
     endpoint.received.some(
       (item) =>
-        item.method === 'POST' &&
-        item.body.name === 'read_my_draft' &&
-        item.body.trace_id === summary.trace_id,
+        item.method === 'POST' && item.body.name === 'read_my_draft' && item.traceId === summary.id,
     ),
   ).toBe(true);
   expect(await (await client.get(`${path}/map`)).json()).toEqual(before);
@@ -1676,7 +1687,6 @@ test('voice context preparation owns its summary once in an explicitly linked ba
     (item) => item.method === 'POST' && item.body.name === 'Skyttel Live creation',
   )?.body;
   expect(creation).toMatchObject({
-    trace_id: voice.id,
     parent_run_id: voice.id,
     inputs: { model: 'gpt-live-1', input: live.requests[0].session.input, output_voice: 'marin' },
   });
@@ -1785,7 +1795,6 @@ test('voice delegation links one backend owner and captures actual outbound Live
     (item) => item.method === 'POST' && item.body.name === 'Skyttel voice delegation',
   )?.body;
   expect(delegation).toMatchObject({
-    trace_id: voice.id,
     parent_run_id: voice.id,
     inputs: { text: 'Läs Lina.', delegationId: 'read-delegation' },
     extra: {
@@ -1794,7 +1803,7 @@ test('voice delegation links one backend owner and captures actual outbound Live
         request_id:
           backend?.extra &&
           (backend.extra as { metadata: { request_id: string } }).metadata.request_id,
-        links: [{ traceId: backend?.trace_id, spanId: backend?.id }],
+        links: [{ traceId: backend?.id, spanId: backend?.id }],
         status: 'incomplete',
       },
     },
@@ -1811,7 +1820,7 @@ test('voice delegation links one backend owner and captures actual outbound Live
   expect(modelStarts).toHaveLength(2);
   expect(
     modelStarts.every(
-      (item) => item.body.trace_id === backend?.trace_id && item.body.parent_run_id === backend?.id,
+      (item) => item.traceId === backend?.id && item.body.parent_run_id === backend?.id,
     ),
   ).toBe(true);
   const outgoing = endpoint.received.filter(
@@ -1947,7 +1956,6 @@ test('voice startup and exact transcripts reach a separate trace without transpo
   expect(roots).toHaveLength(1);
   expect(roots[0].body).toMatchObject({
     id: voice.id,
-    trace_id: voice.id,
     name: 'Skyttel voice session',
     extra: {
       metadata: {
@@ -1992,7 +2000,7 @@ test('voice startup and exact transcripts reach a separate trace without transpo
   expect(
     transcript.every(
       (item) =>
-        item.body.trace_id === voice.id &&
+        item.traceId === voice.id &&
         item.body.parent_run_id === voice.id &&
         item.body.end_time !== undefined,
     ),
@@ -2087,7 +2095,7 @@ test('complete text evidence preserves the exact model exchange and all actions 
     output: [{ ...reply, content: [{ type: 'output_text', text: result.modelReply }] }],
   });
   expect(
-    attempts.every((item) => item.body.parent_run_id === root.id && item.body.trace_id === root.id),
+    attempts.every((item) => item.body.parent_run_id === root.id && item.traceId === root.id),
   ).toBe(true);
   expect(new Set(attempts.map((item) => item.body.id)).size).toBe(2);
   expect(JSON.stringify(endpoint.received)).not.toMatch(
@@ -2435,8 +2443,7 @@ test('overlapping devices keep separate task evidence and a canceled late model 
     for (const conversation of [session.id, second.id]) {
       const rootId = byConversation(conversation);
       const attempt = endpoint.received.find(
-        (item) =>
-          item.method === 'POST' && item.body.run_type === 'llm' && item.body.trace_id === rootId,
+        (item) => item.method === 'POST' && item.body.run_type === 'llm' && item.traceId === rootId,
       )!;
       expect(attempt.body.parent_run_id).toBe(rootId);
       expect(attempt.body.inputs).toMatchObject({ input: expect.any(Array) });
@@ -2494,7 +2501,11 @@ test('an authenticated task reaches ingestion through the real SDK with one back
       },
     },
   });
-  expect(root.id).toBe(root.trace_id);
+  expect(root.id).toBe(roots[0].traceId);
+  for (const item of endpoint.received) {
+    expect(item.body).not.toHaveProperty('trace_id');
+    expect(item.body).not.toHaveProperty('dotted_order');
+  }
   expect(root.end_time).toBeUndefined();
   expect(endpoint.received.find((item) => item.path === `/runs/${root.id}`)?.body).toMatchObject({
     extra: { metadata: { status: 'completed' } },
@@ -3007,7 +3018,7 @@ test('a stale credential response after disable and enable cannot suspend new de
         ),
       )
       .toBe(true);
-    expect(endpoint.received.filter((item) => item.body.trace_id === oldRoot)).toHaveLength(1);
+    expect(endpoint.received.filter((item) => item.traceId === oldRoot)).toHaveLength(1);
     expect(await (await client.get(`${app.origin}/api/operator/tracing`)).json()).toMatchObject({
       state: 'sending',
       suspension: null,
@@ -3346,7 +3357,6 @@ test('reviewed MCP text and model attempts keep exact content, explicit parentag
   expect(tool).toMatchObject({
     run_type: 'tool',
     parent_run_id: root?.id,
-    trace_id: root?.id,
     inputs: { query: 'Lina' },
   });
   const result = endpoint.received.find((item) => item.path === `/runs/${tool?.id}`);
@@ -3358,7 +3368,8 @@ test('reviewed MCP text and model attempts keep exact content, explicit parentag
   );
   expect(models).toHaveLength(2);
   for (const model of models) {
-    expect(model.body).toMatchObject({ parent_run_id: root?.id, trace_id: root?.id });
+    expect(model.body).toMatchObject({ parent_run_id: root?.id });
+    expect(model.traceId).toBe(root?.id);
     expect(endpoint.received.filter((item) => item.path === `/runs/${model.body.id}`)).toHaveLength(
       1,
     );
@@ -3626,7 +3637,7 @@ test('sixty-second expiry discards pending and active old evidence before admitt
       ),
     )
     .toBe(true);
-  expect(endpoint.received.filter((item) => item.body.trace_id === oldRoot)).toHaveLength(1);
+  expect(endpoint.received.filter((item) => item.traceId === oldRoot)).toHaveLength(1);
 });
 
 test('normal configured sending expires old evidence by monotonic time when the wall clock moves backward', async () => {
@@ -3673,7 +3684,7 @@ test('normal configured sending expires old evidence by monotonic time when the 
     for (const response of held) if (!response.destroyed) response.writeHead(204).end();
     await app.restart();
     expect(
-      endpoint.received.filter((item) => item.method === 'POST' && item.body.trace_id === oldRoot),
+      endpoint.received.filter((item) => item.method === 'POST' && item.traceId === oldRoot),
     ).toHaveLength(1);
   } finally {
     wallOffset = 0;
