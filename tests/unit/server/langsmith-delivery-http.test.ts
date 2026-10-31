@@ -68,8 +68,9 @@ async function ingestion(
     const body = JSON.parse(bytes.toString());
     const id = body.id ?? request.url?.split('/').at(-1);
     const traceId = body.parent_run_id
-      ? (received.find((item) => item.body.id === body.parent_run_id)?.traceId ??
-        body.parent_run_id)
+      ? received.find(
+          (item) => item.accepted && item.method === 'POST' && item.body.id === body.parent_run_id,
+        )?.traceId
       : id;
     const entry: Ingested = {
       method: request.method ?? '',
@@ -423,9 +424,10 @@ test('an invalidated standalone summary records known cancellation without repla
   const summary = endpoint.received.find(
     (item) =>
       item.method === 'POST' && (item.body.inputs as { source?: string })?.source === 'summary',
-  )!.body;
-  expect((summary.extra as { metadata: { links?: unknown } }).metadata.links).toBeUndefined();
-  expect(summary.id).not.toBe(voice.id);
+  )!;
+  expect((summary.body.extra as { metadata: { links?: unknown } }).metadata.links).toBeUndefined();
+  expect(summary.body.parent_run_id).toBeUndefined();
+  expect(summary.traceId).not.toBe(voice.id);
 });
 
 test.each(['concurrent text', 'voice stopped'])(
