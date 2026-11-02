@@ -6,6 +6,22 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Apply container filesystem and resource limits
+
+Recreate the Compose service during rollout to apply the read-only root and
+new resource limits. Keep the existing persistent data volume writable.
+Allow 512 MiB memory, half a CPU and up to 128 processes or threads;
+temporary files have a separate 64 MiB size limit within the memory budget.
+Operator commands share these resources. Use temporary storage for
+disposable maintenance files, and keep application files read-only.
+
+Before opening access, verify startup, health, image upload, household
+export and import, maintenance and clean shutdown with synthetic data.
+Monitor resource use and restarts. For hosted deployments, confirm the
+host's equivalent limits and terminal access. Record unavailable controls
+and their residual risk; Compose settings do not apply to the hosted image.
+See the [installation guidance](installation.md#compose-filesystem-and-resource-limits).
+
 ### Allow retries for assistant registration
 
 Before rollout, check that external assistant clients honor HTTP 429 and

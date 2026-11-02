@@ -383,6 +383,40 @@ The named volume retains household records, identities, and sessions across
 container restarts and replacements. `docker compose down` keeps that volume;
 adding `--volumes` deletes it and its household data.
 
+### Compose filesystem and resource limits
+
+The Compose service has a read-only root filesystem. Application files and
+the runtime user's home directory cannot be changed during ordinary
+execution. `/data` remains writable for SQLite, its WAL and shared-memory
+files, images, archive preparation and maintenance. Keep enough persistent
+space for [household archives](#space-for-household-archives).
+
+Temporary files use a 64 MiB memory-backed `/tmp` mount with `noexec`,
+`nosuid` and `nodev`. Its contents disappear when the container stops.
+The service allows 512 MiB of memory with no additional swap, 0.5 CPU,
+and 128 processes or threads. Temporary storage and operator commands share
+these budgets with the application. The shutdown grace period is 20 seconds.
+These limits bound resource use; they do not guarantee capacity for every
+workload. Monitor memory, CPU throttling, process count, disk space and
+restarts. Test representative imports and images before increasing load.
+
+Use `docker compose exec skyttel sh` for maintenance. The shell and shipped
+Node commands work with the read-only home directory; use `/tmp` for
+disposable operator files. The image retains `/home/node/.ssh` for hosts
+that provide managed SSH. Compose does not provide an SSH server. Do not
+make the whole home directory or application installation writable to add
+terminal access.
+
+After updating the Compose settings, use `docker compose up -d` to recreate
+the service; a restart alone does not apply changed limits. Keep the same
+data volume. If the host needs different budgets, use a Compose override
+and inspect the effective configuration with `docker compose config`.
+Retain the read-only root and bounded writable mounts. Validate startup,
+health, image upload, export/import, maintenance and clean shutdown with
+synthetic data before opening access. See the
+[Compose service reference](https://docs.docker.com/reference/compose-file/services/)
+for these runtime settings.
+
 Before updating, read the [operator upgrade notes](operator-upgrade-notes.md)
 and follow any release-specific retention requirements. For ordinary updates
 that retain existing map content, download a

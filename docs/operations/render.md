@@ -284,6 +284,33 @@ Render's [web service guide](https://render.com/docs/web-services) and
 See [Render's deployment guide](https://render.com/docs/deploys#automatic-deploys)
 for the difference between Git-triggered and image-service deployments.
 
+### Filesystem and resource policy on Render
+
+Render runs the image without the repository's Compose settings. Record
+the selected instance's memory and CPU allocation from the dashboard and
+[Render compute plans](https://render.com/pricing). The local Compose
+baseline is 512 MiB memory and 0.5 CPU; choose capacity for the actual
+workload and monitor memory, CPU and restarts. Terminal sessions and their
+commands share the service's memory allocation.
+
+The repository does not enforce a read-only root, a 64 MiB temporary mount,
+a 128-process limit or disabled swap on Render. Confirm available controls
+and their effective values with the host before treating them as equivalent
+to [the Compose policy](installation.md#compose-filesystem-and-resource-limits).
+Record any unavailable controls in the installation's risk review. Without
+them, a compromised application can write to runtime-owned ephemeral paths
+and consume temporary storage or processes up to the platform's limits.
+Ephemeral storage is not a write restriction or a storage budget.
+
+Keep persistent application data at `/data`. Preserve the runtime user's
+private `.ssh` directory and shell when applying host restrictions, then
+verify dashboard Shell or SSH, health, SQLite persistence, image handling,
+maintenance and controlled shutdown with synthetic data. Do not mount the
+persistent disk over the user's home directory. See
+[Render's Docker SSH requirements](https://render.com/docs/ssh#docker-specific-configuration).
+Local container verification does not establish these controls or terminal
+access on the live Render service.
+
 The disk must be writable by the image's UID/GID 1000 user. If startup later
 reports a disk permission failure, use the troubleshooting section; do not
 switch to temporary storage. A separate database service is unnecessary.
