@@ -54,6 +54,11 @@ maskinläsbart innehåll och bilddata. En aktuell administratör kan
 inte någon ny tillgång till hushållet och innehåller inte sessioner,
 aktiva OAuth-token eller serverhemligheter.
 
+Förberedelse och hämtning ger begränsade säkerhetsuppgifter i
+installationens driftloggar. Loggarna innehåller tid, utfall och interna
+identifierare, inte exportens innehåll, och ingår inte i ZIP-filen.
+En slutförd överföring på servern bekräftar inte att filen sparas hos dig.
+
 ## Avbryt eller försök igen
 
 Import och export delar på tillgängligt arbetsutrymme. Om förberedelsen

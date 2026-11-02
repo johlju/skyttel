@@ -75,6 +75,11 @@ Skyttels städning är klar. Välj **Läs in kartan på nytt** efteråt; gamla
 
 ## Kopior utanför raderingen
 
+Säkerhetsuppgifter om inbjudningar, medlemskap, externa assistenters
+anslutningar och fullständiga exporter finns i separata driftloggar.
+Hushållets permanenta radering tar inte bort dessa logguppgifter.
+Installationsansvarig hanterar deras åtkomst, lagringstid och externa kopior.
+
 Redan nedladdade exporter ändras inte. Förvara eller ta bort dem enligt
 hushållets beslut. En uttrycklig [import](household-import.md) av en äldre
 export kan återställa information som raderas här.

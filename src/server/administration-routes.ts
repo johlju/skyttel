@@ -10,6 +10,7 @@ import {
 } from './administration.js';
 import type { Auth } from './auth.js';
 import { invalidateHouseholdExports } from './household-export.js';
+import { securityActor, securityOperation } from './security-events.js';
 
 export function administrationRoutes(database: Database.Database, auth: Auth, origin: string) {
   type Environment = { Variables: { userId: string; body: Record<string, unknown> } };
@@ -18,6 +19,7 @@ export function administrationRoutes(database: Database.Database, auth: Auth, or
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
     if (!session) throw new AdministrationError('unauthenticated', 401);
     context.set('userId', session.user.id);
+    securityActor(session.user.id);
     if (context.req.method === 'POST') {
       if (context.req.header('Origin') !== origin) throw new AdministrationError('forbidden', 403);
       if (
@@ -86,12 +88,15 @@ export function administrationRoutes(database: Database.Database, auth: Auth, or
       context.req.param('userId'),
       role,
     );
+    const event = securityOperation('membership_role');
+    event.stage = 'cleanup';
     if (role !== 'administrator')
       await invalidateHouseholdExports(
         database,
         context.req.param('id'),
         context.req.param('userId'),
       );
+    event.stage = 'response';
     return context.json(result);
   });
   routes.post('/households/:id/members/:userId/revoke', async (context) => {
@@ -102,11 +107,14 @@ export function administrationRoutes(database: Database.Database, auth: Auth, or
       context.req.param('userId'),
       null,
     );
+    const event = securityOperation('membership_remove');
+    event.stage = 'cleanup';
     await invalidateHouseholdExports(
       database,
       context.req.param('id'),
       context.req.param('userId'),
     );
+    event.stage = 'response';
     return context.json(result);
   });
   return routes;

@@ -6,6 +6,19 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Restrict access to privileged-operation logs
+
+Review who can read application logs before rollout. Access changes,
+invitations, external assistant consent and full exports now produce
+security events with restricted identity references. After rollout, check
+collection with synthetic actions in a test installation. Use the
+[security event guide](privileged-security-events.md).
+
+Confirm the hosting plan's retention period and the policy for copied or
+forwarded logs. Household content erasure does not delete operator logs.
+Events can be lost when output fails; repeated rejections have bounded
+suppression. Do not treat missing events as proof that no action occurs.
+
 ### Check upload limits at public ingress
 
 Before rollout, set finite body-read deadlines, concurrent upload limits and

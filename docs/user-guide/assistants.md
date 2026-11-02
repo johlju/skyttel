@@ -7,6 +7,11 @@ hushålls sparade karta och ditt eget privata utkast. Personer i kartan
 ger aldrig inloggning. Du kan välja en läsanslutning eller uttryckligen
 tillåta förslag och sparande. Äldre läsanslutningar förblir läsande.
 
+Godkännande, avböjande och återkallelse av anslutningar ger begränsade
+säkerhetsuppgifter i installationens driftloggar. Där finns tid, utfall
+och interna identifierare, inte samtal, kartinnehåll eller åtkomstnycklar.
+Installationsansvarig hanterar loggarnas åtkomst och lagringstid.
+
 ## Anslut och välj AI-behandling
 
 1. Öppna **Assistentanslutningar** från hushållets karta och kopiera

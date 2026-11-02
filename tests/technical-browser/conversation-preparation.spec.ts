@@ -14,6 +14,7 @@ import {
   voiceBox,
 } from '../support/conversation-page.js';
 import { editTableObject, readDraftProposal } from '../support/domain-work.js';
+import { unexpectedPreparationDiagnostics } from '../support/preparation-diagnostics.js';
 import { openProperties, propertyRow } from '../support/property-controls.js';
 import { createPreparedContext, expect, test } from '../support/test.js';
 
@@ -509,7 +510,7 @@ for (const seeded of [false, true]) {
       await expect.poll(() => child.exitCode).toBe(0);
       await expect(stat(ready.directory)).rejects.toMatchObject({ code: 'ENOENT' });
       expect(events.filter((item) => item.event === 'error')).toEqual([]);
-      expect(diagnostics).toBe('');
+      expect(unexpectedPreparationDiagnostics(diagnostics)).toBe('');
     } finally {
       if (child.exitCode === null) command('quit');
       await expect.poll(() => child.exitCode).toBe(0);
@@ -686,7 +687,7 @@ test('context preparation preserves buffered PCM through summary on seeded publi
     child.stdin.write('quit\n');
     await expect.poll(() => events.some(({ event }) => event === 'closed')).toBe(true);
     await expect(stat(ready.directory)).rejects.toMatchObject({ code: 'ENOENT' });
-    expect(diagnostics).toBe('');
+    expect(unexpectedPreparationDiagnostics(diagnostics)).toBe('');
     expect(events.filter(({ event }) => event === 'error')).toEqual([]);
   } finally {
     await page.mouse.up();

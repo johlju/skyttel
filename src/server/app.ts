@@ -41,6 +41,11 @@ import { propertyWriteLimit } from './properties.js';
 import { withProviderProof } from './provider-proof.js';
 import { relationshipConfirmationCleanup } from './relationship-form-attempts.js';
 import { requestBodyLimit } from './request-body-limit.js';
+import {
+  createSecurityEvents,
+  type SecurityEventSink,
+  securityEventMiddleware,
+} from './security-events.js';
 import { textAssistantRoutes } from './text-assistant.js';
 import type { LocalDispatch } from './text-assistant-mcp.js';
 import type { TextModelProfile, TextModelUsage } from './text-assistant-model.js';
@@ -66,6 +71,7 @@ export function createApp({
   liveProfile,
   observe: observationSink,
   traceDelivery,
+  securityEventSink,
   now: suppliedNow,
 }: {
   config: Config;
@@ -84,11 +90,16 @@ export function createApp({
   liveProfile?: LiveModelProfile;
   observe?: ObserveAssistant;
   traceDelivery?: ConnectTraceDelivery;
+  securityEventSink?: SecurityEventSink;
   /** Installation time in milliseconds since the Unix epoch. */
   now?: () => number;
 }) {
   const now = suppliedNow ?? (() => Date.now());
   const app = new Hono();
+  app.use(
+    '*',
+    securityEventMiddleware(createSecurityEvents({ identity, sink: securityEventSink, now })),
+  );
   // Historical test installations can intentionally stop before this migration.
   const hasBindings = !!database
     .prepare("SELECT 1 FROM sqlite_master WHERE name = 'browser_binding' AND type = 'table'")

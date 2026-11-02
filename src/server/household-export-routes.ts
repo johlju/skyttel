@@ -8,6 +8,7 @@ import {
   initializeHouseholdExports,
   prepareHouseholdExport,
 } from './household-export.js';
+import { securityActor } from './security-events.js';
 
 export function householdExportRoutes(database: Database.Database, auth: Auth, origin: string) {
   initializeHouseholdExports(database);
@@ -16,6 +17,7 @@ export function householdExportRoutes(database: Database.Database, auth: Auth, o
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
     if (!session) throw new AdministrationError('unauthenticated', 401);
     context.set('userId', session.user.id);
+    securityActor(session.user.id);
     if (context.req.method === 'POST' && context.req.header('Origin') !== origin)
       throw new AdministrationError('forbidden', 403);
     await next();

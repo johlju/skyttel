@@ -17,6 +17,7 @@ import {
   turnMicrophoneOn,
 } from '../support/conversation-page.js';
 import { editTableObject } from '../support/domain-work.js';
+import { unexpectedPreparationDiagnostics } from '../support/preparation-diagnostics.js';
 import {
   openProperties,
   propertyRow,
@@ -335,7 +336,7 @@ test('literal household preparation completes the family tools on seeded public 
     await expect.poll(() => child.exitCode).toBe(0);
     await expect(stat(ready.directory)).rejects.toMatchObject({ code: 'ENOENT' });
     expect(events.filter((item) => item.event === 'error')).toEqual([]);
-    expect(diagnostics).toBe('');
+    expect(unexpectedPreparationDiagnostics(diagnostics)).toBe('');
   } finally {
     if (child.exitCode === null) command('quit');
     await expect.poll(() => child.exitCode).toBe(0);

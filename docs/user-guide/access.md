@@ -139,6 +139,11 @@ tjänsten före kopplingen kan skapa en sådan separat användare.
 
 Du behöver vara administratör för att bjuda in någon.
 
+Inbjudningar och ändringar av medlemskap ger begränsade säkerhetsuppgifter
+i installationens driftloggar, till exempel tid, utfall och interna
+identifierare. Namn, inbjudningskoder och hushållets innehåll ingår inte.
+Installationsansvarig hanterar loggarnas åtkomst och lagringstid.
+
 1. Be personen öppna er Skyttel-installation och logga in. Utan
    medlemskap visas **Du har inte tillgång till hushållet**. Inloggningen
    fungerar, men hushållet är ännu inte tillgängligt.

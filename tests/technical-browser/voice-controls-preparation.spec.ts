@@ -9,6 +9,7 @@ import {
   startConversationWithText,
   voiceBox,
 } from '../support/conversation-page.js';
+import { unexpectedPreparationDiagnostics } from '../support/preparation-diagnostics.js';
 import { expect, prepareStorageChoice, test } from '../support/test.js';
 import {
   voiceControlsPreparationSource,
@@ -148,9 +149,15 @@ for (const { seeded, viewport } of references)
       expect(stoppedVoice.status()).toBe(200);
       expect((await stoppedVoice.json()).voice.phase).toBe('closed');
       // The other documented hold prevents assistant admission during startup.
-      expect(diagnostics, 'before deliberate first-page reload').toBe('');
+      expect(
+        unexpectedPreparationDiagnostics(diagnostics),
+        'before deliberate first-page reload',
+      ).toBe('');
       await page.reload();
-      expect(diagnostics, 'after deliberate first-page reload').toBe('');
+      expect(
+        unexpectedPreparationDiagnostics(diagnostics),
+        'after deliberate first-page reload',
+      ).toBe('');
       await expect(microphoneButton(page)).toBeVisible();
       await page.evaluate(voiceControlsPreparationSource);
       await page.evaluate(voiceTonePreparationSource);
@@ -184,7 +191,10 @@ for (const { seeded, viewport } of references)
       );
       await page.evaluate(() => window.skyttelVoicePreparation?.release());
       expect((await admitted).status()).toBe(201);
-      expect(diagnostics, 'after the held assistant is admitted').toBe('');
+      expect(
+        unexpectedPreparationDiagnostics(diagnostics),
+        'after the held assistant is admitted',
+      ).toBe('');
       await expect
         .poll(() => page.evaluate(() => window.skyttelVoicePreparation?.status().held))
         .toBeNull();
@@ -225,7 +235,10 @@ for (const { seeded, viewport } of references)
       );
       expect(stoppedSecondVoice.status()).toBe(200);
       expect((await stoppedSecondVoice.json()).voice.phase).toBe('closed');
-      expect(diagnostics, 'after deliberate prepared-transport cleanup').toBe('');
+      expect(
+        unexpectedPreparationDiagnostics(diagnostics),
+        'after deliberate prepared-transport cleanup',
+      ).toBe('');
 
       const runner = spawn(
         process.execPath,
@@ -368,7 +381,10 @@ for (const { seeded, viewport } of references)
         }
         expect(await (await page.request.get(path)).json()).toEqual(before);
         expect(await (await page.request.get(`${path}/history`)).json()).toEqual(history);
-        expect(diagnostics, 'before deliberate observation-browser quit').toBe('');
+        expect(
+          unexpectedPreparationDiagnostics(diagnostics),
+          'before deliberate observation-browser quit',
+        ).toBe('');
         runner.stdin.write('quit\n');
         await expect.poll(() => runner.exitCode).toBe(0);
         expect(controls.some(({ event }) => event === 'closed')).toBe(true);
@@ -391,15 +407,19 @@ for (const { seeded, viewport } of references)
         }
       }
       // Only the deliberate fixture shutdown below may emit access-lost diagnostics.
-      // Any earlier diagnostic, provider detail, transcript or PCM logging fails.
-      expect(diagnostics).toBe('');
+      // Expected access events are allowed; other diagnostics, provider details,
+      // transcripts and PCM logging still fail.
+      expect(unexpectedPreparationDiagnostics(diagnostics)).toBe('');
       child.stdin.write('quit\n');
       await expect.poll(() => child.exitCode).toBe(0);
       expect(events.some(({ event }) => event === 'closed')).toBe(true);
       expect(events.filter(({ event }) => event === 'error')).toEqual([]);
       expect(unexpectedOutput).toEqual([]);
       expect(events.every(({ event }) => ['ready', 'seeded', 'closed'].includes(event))).toBe(true);
-      for (const line of diagnostics.trim().split('\n').filter(Boolean)) {
+      for (const line of unexpectedPreparationDiagnostics(diagnostics)
+        .trim()
+        .split('\n')
+        .filter(Boolean)) {
         const entry = JSON.parse(line);
         expect(Object.keys(entry).sort()).toEqual([
           'code',
@@ -612,7 +632,10 @@ for (const { seeded, viewport } of references)
       await closeConversationText(page);
       expect(await (await page.request.get(path)).json()).toEqual(before);
       expect(await (await page.request.get(`${path}/history`)).json()).toEqual(history);
-      expect(diagnostics, 'after literal playback/notice preparation and reset').toBe('');
+      expect(
+        unexpectedPreparationDiagnostics(diagnostics),
+        'after literal playback/notice preparation and reset',
+      ).toBe('');
       expect(events.filter(({ event }) => event === 'held')).toHaveLength(2);
       expect(events.filter(({ event }) => event === 'released')).toHaveLength(4);
       expect(
@@ -628,7 +651,10 @@ for (const { seeded, viewport } of references)
       expect(
         events.every(({ event }) => ['ready', 'seeded', 'held', 'released'].includes(event)),
       ).toBe(true);
-      expect(diagnostics, 'before literal-proof launcher quit').toBe('');
+      expect(
+        unexpectedPreparationDiagnostics(diagnostics),
+        'before literal-proof launcher quit',
+      ).toBe('');
       child.stdin.write('quit\n');
       await expect.poll(() => child.exitCode).toBe(0);
       expect(events.filter(({ event }) => event === 'closed')).toHaveLength(1);
@@ -639,7 +665,10 @@ for (const { seeded, viewport } of references)
           ['ready', 'seeded', 'held', 'released', 'closed'].includes(event),
         ),
       ).toBe(true);
-      expect(diagnostics, 'after literal-proof launcher quit').toBe('');
+      expect(
+        unexpectedPreparationDiagnostics(diagnostics),
+        'after literal-proof launcher quit',
+      ).toBe('');
       await expect(stat(ready.directory)).rejects.toMatchObject({ code: 'ENOENT' });
     } finally {
       if (child.exitCode === null) {

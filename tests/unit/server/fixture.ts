@@ -30,6 +30,7 @@ export async function applicationFixture({
   now,
   origin,
   traceDelivery,
+  securityEventSink,
 }: {
   migrationsDirectory?: string;
   identity?: { version: string; commit: string };
@@ -37,6 +38,7 @@ export async function applicationFixture({
   now?: () => number;
   origin?: string;
   traceDelivery?: Parameters<typeof createApp>[0]['traceDelivery'];
+  securityEventSink?: Parameters<typeof createApp>[0]['securityEventSink'];
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'skyttel-unit-'));
   const config = readConfig({
@@ -100,7 +102,7 @@ export async function applicationFixture({
     }
   }
   await configureAuth();
-  let app = createApp({ config, database, auth, identity, now, traceDelivery });
+  let app = createApp({ config, database, auth, identity, now, traceDelivery, securityEventSink });
   function client() {
     const cookies = new Map<string, string>();
     async function request(path: string, init: RequestInit = {}) {
@@ -174,7 +176,7 @@ export async function applicationFixture({
     },
     async restart() {
       await app.close();
-      app = createApp({ config, database, auth, identity, now, traceDelivery });
+      app = createApp({ config, database, auth, identity, now, traceDelivery, securityEventSink });
     },
     async upgradeLegacyLogin() {
       // Tests invoke the same stopped-process boundary as the operator command.
@@ -183,7 +185,7 @@ export async function applicationFixture({
       adoptLegacyInstallationAuthority(database, config.authorityFence.generation);
       auth = createAuth(config, database);
       await configureAuth();
-      app = createApp({ config, database, auth, identity, now, traceDelivery });
+      app = createApp({ config, database, auth, identity, now, traceDelivery, securityEventSink });
     },
     client,
     setSubject(value: unknown) {

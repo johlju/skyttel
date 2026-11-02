@@ -26,6 +26,7 @@ import { type ArchiveReservation, reserveArchiveStorage } from './archive-storag
 import { assertContentAvailable } from './content-maintenance.js';
 import { householdAccess } from './households.js';
 import { MapError } from './map-error.js';
+import { type SecurityOperation, securityOperation } from './security-events.js';
 
 type Job = {
   id: string;
@@ -41,6 +42,7 @@ type Job = {
   expiresAt: string;
   timer?: NodeJS.Timeout;
   stream?: ReturnType<typeof createReadStream>;
+  event: SecurityOperation;
 };
 type Store = { directory: string; jobs: Map<string, Job> };
 const stores = new WeakMap<Database.Database, Store>();
@@ -69,6 +71,10 @@ function authorize(database: Database.Database, actorId: string, householdId: st
 }
 
 async function discard(store: Store, job: Job) {
+  if (job.state === 'ready' && !job.controller.signal.aborted) {
+    job.event.stage = 'cleanup';
+    job.event.record('cancelled', 'export_cancelled');
+  }
   job.controller.abort();
   job.stream?.destroy();
   clearTimeout(job.timer);
@@ -77,10 +83,6 @@ async function discard(store: Store, job: Job) {
   await rm(job.directory, { recursive: true, force: true });
   job.reservation.release();
   store.jobs.delete(job.id);
-}
-
-function reportCleanupFailure() {
-  console.error(JSON.stringify({ event: 'export_cleanup_failed' }));
 }
 
 /** Await before erasure/checkpoint: closes readers, aborts downloads, removes copies. */
@@ -291,55 +293,77 @@ export async function prepareHouseholdExport(
   householdId: string,
   signal?: AbortSignal,
 ): Promise<ReadyExport> {
-  authorize(database, actorId, householdId);
-  const store = storeFor(database);
-  // A single writer keeps disk and compression work bounded. Ready archives
-  // remain available until consumed, cancelled or expired.
-  if ([...store.jobs.values()].some((job) => job.state === 'preparing'))
-    throw new AdministrationError('export_busy', 409);
-  for (const job of [...store.jobs.values()])
-    if (job.actorId === actorId && job.householdId === householdId) await discard(store, job);
-  if (store.jobs.size >= 2 || [...store.jobs.values()].some((job) => job.state === 'preparing'))
-    throw new AdministrationError('export_busy', 409);
-  authorize(database, actorId, householdId);
-  const id = randomUUID();
-  const job: Job = {
-    id,
-    actorId,
-    householdId,
-    directory: join(store.directory, id),
-    reservation: reserveArchiveStorage(database, 'export'),
-    controller: new AbortController(),
-    settled: Promise.resolve(),
-    state: 'preparing',
-    contentVersion: 0,
-    bytes: 0,
-    expiresAt: new Date(Date.now() + exportLifetimeMs).toISOString(),
-  };
-  store.jobs.set(id, job);
-  const abort = () => job.controller.abort();
-  signal?.addEventListener('abort', abort, { once: true });
-  if (signal?.aborted) abort();
-  const generation = generate(database, job);
-  job.settled = generation.catch(() => {});
+  const event = securityOperation('export_prepare');
   try {
-    await generation;
-    job.controller.signal.throwIfAborted();
+    event.stage = 'authorization';
     authorize(database, actorId, householdId);
-    if (!currentGeneration(database, job)) throw new AdministrationError('export_unavailable', 409);
-    job.state = 'ready';
-    job.expiresAt = new Date(Date.now() + exportLifetimeMs).toISOString();
-    job.timer = setTimeout(() => {
-      void discard(store, job).catch(reportCleanupFailure);
-    }, exportLifetimeMs).unref();
-    return { id, bytes: job.bytes, expiresAt: job.expiresAt };
+    event.known({ actorId, householdId });
+    event.stage = 'preparation';
+    const store = storeFor(database);
+    // A single writer keeps disk and compression work bounded. Ready archives
+    // remain available until consumed, cancelled or expired.
+    if ([...store.jobs.values()].some((job) => job.state === 'preparing'))
+      throw new AdministrationError('export_busy', 409);
+    for (const job of [...store.jobs.values()])
+      if (job.actorId === actorId && job.householdId === householdId) await discard(store, job);
+    if (store.jobs.size >= 2 || [...store.jobs.values()].some((job) => job.state === 'preparing'))
+      throw new AdministrationError('export_busy', 409);
+    authorize(database, actorId, householdId);
+    const id = randomUUID();
+    const job: Job = {
+      event,
+      id,
+      actorId,
+      householdId,
+      directory: join(store.directory, id),
+      reservation: reserveArchiveStorage(database, 'export'),
+      controller: new AbortController(),
+      settled: Promise.resolve(),
+      state: 'preparing',
+      contentVersion: 0,
+      bytes: 0,
+      expiresAt: new Date(Date.now() + exportLifetimeMs).toISOString(),
+    };
+    event.known({ targetId: id });
+    store.jobs.set(id, job);
+    const abort = () => job.controller.abort();
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
+    const generation = generate(database, job);
+    job.settled = generation.catch(() => {});
+    try {
+      await generation;
+      job.controller.signal.throwIfAborted();
+      authorize(database, actorId, householdId);
+      if (!currentGeneration(database, job))
+        throw new AdministrationError('export_unavailable', 409);
+      job.state = 'ready';
+      job.expiresAt = new Date(Date.now() + exportLifetimeMs).toISOString();
+      job.timer = setTimeout(() => {
+        void discard(store, job).catch((error) => {
+          event.stage = 'cleanup';
+          event.failure(error, null);
+        });
+      }, exportLifetimeMs).unref();
+      event.record('succeeded', 'archive_ready', { status: 201 });
+      event.stage = 'response';
+      return { id, bytes: job.bytes, expiresAt: job.expiresAt };
+    } catch (error) {
+      const cancelled = job.controller.signal.aborted;
+      event.failure(cancelled ? new AdministrationError('export_cancelled', 409) : error);
+      event.stage = 'cleanup';
+      await discard(store, job).catch((cleanupError) => {
+        event.failure(cleanupError);
+        throw cleanupError;
+      });
+      if (cancelled) throw new AdministrationError('export_cancelled', 409);
+      throw error;
+    } finally {
+      signal?.removeEventListener('abort', abort);
+    }
   } catch (error) {
-    const cancelled = job.controller.signal.aborted;
-    await discard(store, job);
-    if (cancelled) throw new AdministrationError('export_cancelled', 409);
+    if (!event.recorded) event.failure(error);
     throw error;
-  } finally {
-    signal?.removeEventListener('abort', abort);
   }
 }
 
@@ -359,10 +383,25 @@ export async function cancelHouseholdExport(
   householdId: string,
   id: string,
 ) {
-  authorize(database, actorId, householdId);
-  const store = storeFor(database);
-  const job = store.jobs.get(id);
-  if (job?.actorId === actorId && job.householdId === householdId) await discard(store, job);
+  const event = securityOperation('export_cancel');
+  try {
+    event.stage = 'authorization';
+    authorize(database, actorId, householdId);
+    event.known({ actorId, householdId });
+    const store = storeFor(database);
+    const job = store.jobs.get(id);
+    if (job?.actorId === actorId && job.householdId === householdId) {
+      event.known({ targetId: job.id });
+      event.operationReference = job.event.operationReference;
+      event.stage = 'cleanup';
+      await discard(store, job);
+      event.record('succeeded', 'export_cancelled');
+    } else event.record('unchanged', 'no_change');
+    event.stage = 'response';
+  } catch (error) {
+    event.failure(error);
+    throw error;
+  }
 }
 
 export async function downloadHouseholdExport(
@@ -371,62 +410,84 @@ export async function downloadHouseholdExport(
   householdId: string,
   id: string,
 ) {
-  authorize(database, actorId, householdId);
-  const store = storeFor(database);
-  const job = store.jobs.get(id);
-  if (
-    !job ||
-    job.actorId !== actorId ||
-    job.householdId !== householdId ||
-    job.state !== 'ready' ||
-    job.controller.signal.aborted
-  )
-    throw new AdministrationError('export_unavailable', 404);
-  if (Date.parse(job.expiresAt) <= Date.now() || !currentGeneration(database, job)) {
-    await discard(store, job);
-    throw new AdministrationError('export_unavailable', 404);
-  }
-  job.state = 'reading';
-  const stream = createReadStream(join(job.directory, 'archive.zip'));
-  job.stream = stream;
-  let cancelled = false;
-  const body = new ReadableStream<Uint8Array>(
-    {
-      start(controller) {
-        stream.pause();
-        stream.on('data', (chunk) => {
+  const event = securityOperation('export_download');
+  try {
+    event.stage = 'authorization';
+    authorize(database, actorId, householdId);
+    event.known({ actorId, householdId });
+    const store = storeFor(database);
+    const job = store.jobs.get(id);
+    if (
+      !job ||
+      job.actorId !== actorId ||
+      job.householdId !== householdId ||
+      job.state !== 'ready' ||
+      job.controller.signal.aborted
+    )
+      throw new AdministrationError('export_unavailable', 404);
+    event.known({ targetId: job.id });
+    event.operationReference = job.event.operationReference;
+    if (Date.parse(job.expiresAt) <= Date.now() || !currentGeneration(database, job)) {
+      await discard(store, job);
+      throw new AdministrationError('export_unavailable', 404);
+    }
+    job.state = 'reading';
+    const stream = createReadStream(join(job.directory, 'archive.zip'));
+    event.stage = 'download';
+    event.record('started', 'download_started', { status: 200 });
+    job.stream = stream;
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        start(controller) {
           stream.pause();
-          controller.enqueue(chunk as Buffer);
-        });
-        void finished(stream)
-          .then(
-            () => {
-              if (!cancelled) controller.close();
-            },
-            (error) => {
-              if (cancelled) return;
-              // Only an intentional discard may end a partial response quietly.
-              // File errors still reach the HTTP server's normal error handler.
-              if (job.controller.signal.aborted && !stream.errored) controller.close();
-              else controller.error(error);
-            },
-          )
-          .then(() => discard(store, job))
-          .catch(reportCleanupFailure);
+          stream.on('data', (chunk) => {
+            stream.pause();
+            controller.enqueue(chunk as Buffer);
+          });
+          void finished(stream)
+            .then(
+              () => {
+                event.record(
+                  cancelled ? 'cancelled' : 'completed',
+                  cancelled ? 'download_cancelled' : 'download_completed',
+                );
+                if (!cancelled) controller.close();
+              },
+              (error) => {
+                if (cancelled || (job.controller.signal.aborted && !stream.errored))
+                  event.record('cancelled', 'download_cancelled');
+                else event.failure(error, null);
+                if (cancelled) return;
+                // Only an intentional discard may end a partial response quietly.
+                // File errors still reach the HTTP server's normal error handler.
+                if (job.controller.signal.aborted && !stream.errored) controller.close();
+                else controller.error(error);
+              },
+            )
+            .then(() => discard(store, job))
+            .catch((error) => {
+              event.stage = 'cleanup';
+              event.failure(error, null);
+            });
+        },
+        pull() {
+          stream.resume();
+        },
+        cancel() {
+          cancelled = true;
+          stream.destroy();
+        },
       },
-      pull() {
-        stream.resume();
-      },
-      cancel() {
-        cancelled = true;
-        stream.destroy();
-      },
-    },
-    // Do not queue archive bytes beyond the consumer's current read.
-    { highWaterMark: 0 },
-  );
-  return {
-    body,
-    bytes: job.bytes,
-  };
+      // Do not queue archive bytes beyond the consumer's current read.
+      { highWaterMark: 0 },
+    );
+    return {
+      body,
+      bytes: job.bytes,
+    };
+  } catch (error) {
+    event.failure(error);
+    throw error;
+  }
 }

@@ -156,8 +156,11 @@ ljudaktivitet med mikrofonen av. Dessa två prov använder egna publika launcher
 med `seed-family`-underlag vid 320 × 250 respektive tomt underlag vid
 1280 × 900. Proven hämtar kommandona före start och behåller egna
 samtyckesstarter,
-återställningar, status 201/200, oförändrad karta/utkast/historik, tomma
-diagnostikutdata och borttagen provkatalog. De delar inte tidsbudget med
+återställningar, status 201/200, oförändrad karta/utkast/historik och borttagen
+provkatalog. Serverns förväntade säkerhetshändelser för lyckade
+åtkomständringar valideras separat; övriga diagnostikutdata ska vara tomma.
+Okända fält, misslyckade säkerhetshändelser och råa fel godtas inte.
+Proven delar inte tidsbudget med
 blockens och runnerns fullständiga prov.
 
 Detta är representativ täckning: tomt underlag vid 320 × 250 och

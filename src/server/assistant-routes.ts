@@ -25,6 +25,7 @@ import { recoveryPending } from './installation-recovery.js';
 import { householdMap, MapError } from './map.js';
 import { propertyWriteLimit } from './properties.js';
 import { requestBodyLimit } from './request-body-limit.js';
+import { securityActor, securityOperation } from './security-events.js';
 
 type Connection = { id: string; userId: string; householdId: string; clientId: string };
 
@@ -88,8 +89,11 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
     });
   });
   routes.post('/api/assistants/consent', async (context) => {
+    const event = securityOperation('grant_approve');
+    event.stage = 'authorization';
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
     if (!session) return context.json({ error: 'unauthenticated' }, 401);
+    securityActor(session.user.id);
     const body = await context.req.json().catch(() => null);
     if (!body || typeof body.oauth_query !== 'string' || typeof body.accept !== 'boolean')
       return context.json({ error: 'invalid_request' }, 400);
@@ -112,38 +116,72 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
         .prepare('SELECT 1 FROM oauthClient WHERE clientId = ? AND coalesce(disabled, 0) = 0')
         .get(clientId);
       if (!client) return context.json({ error: 'invalid_request' }, 400);
+      event.known({ actorId: session.user.id, householdId: body.householdId });
+      event.stage = 'mutation';
       database
         .prepare(
           'INSERT INTO assistant_connection (id, userId, householdId, clientId, createdAt) VALUES (?, ?, ?, ?, ?)',
         )
         .run(id, session.user.id, body.householdId, clientId, new Date().toISOString());
     }
-    const headers = new Headers(context.req.raw.headers);
-    headers.set('Content-Type', 'application/json');
-    const result = await assistantConsent.run(id, () =>
-      auth.handler(
-        new Request(`${origin}/api/auth/oauth2/consent`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ accept: body.accept, oauth_query: body.oauth_query }),
-        }),
-      ),
-    );
-    const returned = await result
-      .clone()
-      .json()
-      .catch(() => null);
-    if (
-      !result.ok ||
-      typeof returned?.url !== 'string' ||
-      !new URL(returned.url, origin).searchParams.has('code')
-    )
-      database.prepare('DELETE FROM assistant_connection WHERE id = ?').run(id);
+    event.stage = 'consent';
+    let approved = false;
+    let result: Response;
+    function cleanup() {
+      event.stage = 'cleanup';
+      try {
+        database.prepare('DELETE FROM assistant_connection WHERE id = ?').run(id);
+      } catch (error) {
+        event.failure(error);
+        throw error;
+      }
+    }
+    try {
+      const headers = new Headers(context.req.raw.headers);
+      headers.set('Content-Type', 'application/json');
+      result = await assistantConsent.run(id, () =>
+        auth.handler(
+          new Request(`${origin}/api/auth/oauth2/consent`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ accept: body.accept, oauth_query: body.oauth_query }),
+          }),
+        ),
+      );
+      const returned = await result
+        .clone()
+        .json()
+        .catch(() => null);
+      approved =
+        body.accept &&
+        result.ok &&
+        typeof returned?.url === 'string' &&
+        new URL(returned.url, origin).searchParams.has('code');
+      if (approved) {
+        event.known({ targetId: id });
+        event.record('succeeded', 'committed', { status: result.status });
+      } else if (!body.accept && result.ok)
+        event.record('refused', 'consent_refused', { status: result.status });
+      else if (result.ok) event.record('failed', 'internal_failure', { status: result.status });
+      else
+        event.record(result.status >= 500 ? 'failed' : 'rejected', 'consent_rejected', {
+          status: result.status,
+        });
+    } catch (error) {
+      event.failure(error);
+      cleanup();
+      throw error;
+    }
+    if (!approved) cleanup();
+    event.stage = 'response';
     return result;
   });
   routes.post('/api/assistants/:id/revoke', async (context) => {
+    const event = securityOperation('grant_revoke');
+    event.stage = 'authorization';
     const session = await auth.api.getSession({ headers: context.req.raw.headers });
     if (!session) return context.json({ error: 'unauthenticated' }, 401);
+    securityActor(session.user.id);
     database
       .transaction(() => {
         const connection = database
@@ -153,12 +191,21 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
         const member = householdAccess(database, session.user.id, connection.householdId);
         if (!member || (session.user.id !== connection.userId && member.role !== 'administrator'))
           throw new MapError('forbidden', 403);
+        event.known({
+          actorId: session.user.id,
+          householdId: connection.householdId,
+          targetId: connection.id,
+          targetUserId: connection.userId,
+        });
+        event.stage = 'mutation';
         database.prepare('DELETE FROM oauthRefreshToken WHERE referenceId = ?').run(connection.id);
         database.prepare('DELETE FROM oauthAccessToken WHERE referenceId = ?').run(connection.id);
         database.prepare('DELETE FROM oauthConsent WHERE referenceId = ?').run(connection.id);
         database.prepare('DELETE FROM assistant_connection WHERE id = ?').run(connection.id);
       })
       .immediate();
+    event.record('succeeded', 'committed');
+    event.stage = 'response';
     return context.json({ revoked: true });
   });
 
