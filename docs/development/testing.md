@@ -713,7 +713,8 @@ relevant check. Markdown lint and spelling checks are separate from Biome.
 
 ## Container and environment changes
 
-With a running Docker daemon, run the check matching the changed inputs:
+With a running Docker daemon and Docker Compose v2, run the check matching
+the changed inputs:
 
 ```sh
 npm run test:container
@@ -721,8 +722,10 @@ npm run test:devcontainer
 ```
 
 `test:container` builds the production image with disposable storage and
-synthetic configuration. It checks startup, permissions, migrations and
-persistence across restarts, then removes its test containers and volumes.
+synthetic configuration. It uses the runtime restrictions from `compose.yaml`
+without loading local secrets or publishing ports. It checks filesystem and
+resource limits, health, migrations, SQLite persistence, images, maintenance
+and shutdown, then removes its test containers, volumes and fixture images.
 It does not deploy the image or verify a live provider registration.
 
 `test:devcontainer` checks both development profiles using isolated storage,

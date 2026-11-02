@@ -18,6 +18,7 @@ const docker = process.env.DOCKER_BIN ?? 'docker';
 const suffix = randomUUID();
 const suppliedImage = process.env.SKYTTEL_CHECK_IMAGE;
 const image = suppliedImage ?? `skyttel-container-check:${suffix}`;
+const failedMigrationImage = `skyttel-container-failed-migration:${suffix}`;
 const volume = `skyttel-container-check-${suffix}`;
 const persistedVolume = `skyttel-container-persisted-${suffix}`;
 const containers = new Set();
@@ -25,6 +26,7 @@ const directory = await mkdtemp(join(tmpdir(), 'skyttel-container-check-'));
 const authSecret = 'synthetic-test-secret-with-at-least-32-characters';
 const configuredOrigin = 'http://localhost:3000';
 let buildHeader;
+let composeService;
 const environment = {
   SKYTTEL_CLIENT_ADDRESS_MODE: 'direct',
   SKYTTEL_ORIGIN: configuredOrigin,
@@ -42,12 +44,12 @@ const environment = {
 };
 
 async function command(args) {
-  return (
-    await exec(docker, args, {
-      maxBuffer: 5 * 1024 * 1024,
-      timeout: 60_000,
-    })
-  ).stdout.trim();
+  const result = await exec(docker, args, {
+    maxBuffer: 5 * 1024 * 1024,
+    timeout: 60_000,
+  });
+  if (!result.stdout.trim() && result.stderr.trim()) console.error(result.stderr.trim());
+  return result.stdout.trim();
 }
 
 async function build() {
@@ -73,15 +75,37 @@ async function build() {
   });
 }
 
-async function createApplication(name, mounts) {
+async function createApplication(name, dataVolume, applicationImage = image) {
   containers.add(name);
+  // Use the shipped Compose policy, with isolated synthetic configuration.
+  const { build, env_file, ports, networks, ...service } = composeService;
+  const configPath = join(directory, `${name}.json`);
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      services: {
+        skyttel: {
+          ...service,
+          image: applicationImage,
+          container_name: name,
+          environment,
+          restart: 'no',
+          network_mode: 'bridge',
+          volumes: [{ type: 'volume', source: dataVolume, target: '/data' }],
+        },
+      },
+      volumes: { [dataVolume]: { external: true } },
+    }),
+  );
   await command([
-    'create',
-    '--name',
+    'compose',
+    '--project-name',
     name,
-    ...Object.entries(environment).flatMap(([key, value]) => ['--env', `${key}=${value}`]),
-    ...mounts.flatMap((mount) => ['--mount', mount]),
-    image,
+    '--file',
+    configPath,
+    'create',
+    '--no-build',
+    'skyttel',
   ]);
 }
 
@@ -97,20 +121,33 @@ async function request(name, path, options = {}) {
     '-e',
     `const http = require('node:http');
      const { path, options } = JSON.parse(process.argv[1]);
+     // Keep remote Docker attach proxies from closing a silent output stream.
+     const heartbeat = setInterval(() => process.stderr.write('.'), 100);
+     heartbeat.unref();
+     let completed = false;
+     process.once('beforeExit', () => {
+       if (!completed) { console.error('HTTP client exited before response end: ' + path); process.exitCode = 1; }
+     });
      const request = http.request({
        hostname: '127.0.0.1', port: 3000, path,
-       method: options.method, headers: options.headers, timeout: 1000,
+       method: options.method, headers: options.headers, timeout: 10000,
      }, (response) => {
        const chunks = [];
+       response.on('error', (error) => { console.error(error.message); process.exitCode = 1; });
        response.on('data', (chunk) => { chunks.push(chunk); });
-       response.on('end', () => console.log(JSON.stringify({ status: response.statusCode, headers: response.headers,
-         body: Buffer.concat(chunks).toString(options.binary ? 'base64' : 'utf8') })));
+       response.on('end', () => {
+         completed = true;
+         clearInterval(heartbeat);
+         console.log(JSON.stringify({ status: response.statusCode, headers: response.headers,
+           body: Buffer.concat(chunks).toString(options.binary ? 'base64' : 'utf8') }));
+       });
      });
      request.on('timeout', () => request.destroy(new Error('Container request timed out')));
      request.on('error', (error) => { console.error(error.message); process.exitCode = 1; });
      request.end(options.bodyBase64 ? Buffer.from(options.bodyBase64, 'base64') : options.body);`,
     JSON.stringify({ path, options }),
   ]);
+  assert.notEqual(output, '', `Container HTTP request returned no result: ${name} ${path}`);
   return JSON.parse(output);
 }
 
@@ -143,13 +180,64 @@ async function household(name, fixture) {
 
 try {
   await command(['info', '--format', '{{.ServerVersion}}']);
+  composeService = JSON.parse(
+    await command([
+      'compose',
+      '--file',
+      'compose.yaml',
+      'config',
+      '--no-env-resolution',
+      '--no-interpolate',
+      '--format',
+      'json',
+    ]),
+  ).services.skyttel;
   if (!suppliedImage) await build();
   await command(['volume', 'create', volume]);
 
   const fresh = `skyttel-fresh-${suffix}`;
-  await createApplication(fresh, [`type=volume,src=${volume},dst=/data`]);
+  await createApplication(fresh, volume);
   await command(['start', fresh]);
   await waitUntilReady(fresh);
+  const host = JSON.parse(await command(['inspect', '--format', '{{json .HostConfig}}', fresh]));
+  assert.equal(host.ReadonlyRootfs, true, 'Compose must enforce a read-only root filesystem');
+  assert.equal(host.Memory, 512 * 1024 * 1024, 'Compose must bound runtime memory');
+  assert.equal(host.MemorySwap, host.Memory, 'The memory budget must not grow through swap');
+  assert.equal(host.NanoCpus, 500_000_000, 'Compose must bound runtime CPU');
+  assert.equal(host.PidsLimit, 128, 'Compose must bound processes and threads');
+  assert.equal(host.Init, true);
+  assert.deepEqual(host.CapDrop, ['ALL']);
+  assert.ok(host.SecurityOpt.includes('no-new-privileges:true'));
+  await command([
+    'exec',
+    fresh,
+    'node',
+    '--input-type=module',
+    '-e',
+    `import assert from 'node:assert/strict';
+     import { writeFileSync, unlinkSync, statSync, statfsSync, readFileSync } from 'node:fs';
+     import { spawnSync } from 'node:child_process';
+     for (const path of ['/app/runtime-write-probe', '/home/node/runtime-write-probe']) {
+       assert.throws(() => writeFileSync(path, 'blocked'),
+         (error) => ['EROFS', 'EACCES'].includes(error.code), path + ' must not be writable');
+     }
+     const ssh = statSync('/home/node/.ssh');
+     assert.equal(ssh.uid, 1000);
+     assert.equal(ssh.mode & 0o777, 0o700);
+     assert.ok(statSync('/data/skyttel.sqlite-wal').isFile());
+     assert.ok(statSync('/data/skyttel.sqlite-shm').isFile());
+     const temporary = statfsSync('/tmp');
+     assert.equal(temporary.type, 0x01021994, '/tmp must use tmpfs');
+     assert.equal(temporary.blocks * temporary.bsize, 64 * 1024 * 1024);
+     const mount = readFileSync('/proc/self/mountinfo', 'utf8').split('\\n')
+       .find((line) => line.split(' ')[4] === '/tmp');
+     const flags = mount.split(' ')[5].split(',');
+     for (const flag of ['noexec', 'nosuid', 'nodev']) assert.ok(flags.includes(flag));
+     writeFileSync('/tmp/runtime-write-probe', '#!/bin/sh\\nexit 0\\n', { mode: 0o700 });
+     assert.equal(spawnSync('/tmp/runtime-write-probe').error?.code, 'EACCES');
+     writeFileSync('/data/runtime-write-probe', 'writable');
+     unlinkSync('/data/runtime-write-probe');`,
+  ]);
   const identity = JSON.parse((await request(fresh, '/api/version')).body);
   buildHeader = `${identity.commit}:${identity.version}`;
   assert.match(identity.commit, /^[a-f0-9]{40}$/u);
@@ -195,6 +283,7 @@ try {
   assert.equal(denied.status, 401);
   await command(['restart', fresh]);
   await waitUntilReady(fresh);
+  await command(['exec', fresh, 'sh', '-ec', 'test ! -e /tmp/runtime-write-probe']);
   console.log(
     'PASS: fresh volume, non-root runtime, readiness, and production authentication boundary',
   );
@@ -239,7 +328,7 @@ try {
   assert.equal(await command(['inspect', '--format', '{{.State.ExitCode}}', seedContainer]), '0');
 
   let persisted = `skyttel-persisted-${suffix}`;
-  await createApplication(persisted, [`type=volume,src=${persistedVolume},dst=/data`]);
+  await createApplication(persisted, persistedVolume);
   await command(['start', persisted]);
   await waitUntilReady(persisted);
   const before = await household(persisted, fixture);
@@ -329,7 +418,7 @@ try {
   assert.deepEqual(await mapRequest(), privateDraft);
   await command(['stop', persisted]);
   persisted = `skyttel-replaced-draft-${suffix}`;
-  await createApplication(persisted, [`type=volume,src=${persistedVolume},dst=/data`]);
+  await createApplication(persisted, persistedVolume);
   await command(['start', persisted]);
   await waitUntilReady(persisted);
   assert.deepEqual(await mapRequest(), privateDraft);
@@ -346,7 +435,7 @@ try {
   assert.deepEqual((await mapRequest('/history')).history, [receipt.receipt]);
   await command(['stop', persisted]);
   persisted = `skyttel-replaced-saved-${suffix}`;
-  await createApplication(persisted, [`type=volume,src=${persistedVolume},dst=/data`]);
+  await createApplication(persisted, persistedVolume);
   await command(['start', persisted]);
   await waitUntilReady(persisted);
   assert.deepEqual(await household(persisted, fixture), before);
@@ -358,13 +447,20 @@ try {
   );
 
   await command(['stop', persisted]);
-  const brokenSql = join(directory, 'broken.sql');
-  await writeFile(brokenSql, 'THIS IS NOT VALID SQL;\n');
+  const migrationBuild = join(directory, 'migration-build');
+  await mkdir(migrationBuild);
+  await writeFile(join(migrationBuild, 'broken.sql'), 'THIS IS NOT VALID SQL;\n');
   const failed = `skyttel-failed-${suffix}`;
-  await createApplication(failed, [`type=volume,src=${persistedVolume},dst=/data`]);
   const migrationFiles = (await readdir('migrations')).filter((name) => name.endsWith('.sql'));
   const nextVersion = String(migrationFiles.length + 1).padStart(3, '0');
-  await command(['cp', brokenSql, `${failed}:/app/migrations/${nextVersion}_container_smoke.sql`]);
+  // Install the deliberately broken migration at build time: runtime files
+  // must remain read-only, including in the failure-path fixture.
+  await writeFile(
+    join(migrationBuild, 'Dockerfile'),
+    `FROM ${image}\nCOPY broken.sql /app/migrations/${nextVersion}_container_smoke.sql\n`,
+  );
+  await command(['build', '--tag', failedMigrationImage, migrationBuild]);
+  await createApplication(failed, persistedVolume, failedMigrationImage);
   await command(['start', failed]);
   const exitCode = await command(['wait', failed]);
   assert.equal(exitCode, '1', 'Migration failure must exit with failure');
@@ -433,12 +529,45 @@ try {
     fixture,
     origin: configuredOrigin,
   });
+  assert.equal(
+    await command(['inspect', '--format', '{{.State.Health.Status}}', fresh]),
+    'healthy',
+    'The image health check must succeed under the Compose policy',
+  );
+  for (const name of [fresh, persisted]) {
+    assert.equal(await command(['inspect', '--format', '{{.Config.StopTimeout}}', name]), '20');
+    await command(['stop', name]);
+    const state = JSON.parse(await command(['inspect', '--format', '{{json .State}}', name]));
+    assert.equal(state.ExitCode, 0, 'SIGTERM must complete without forced termination');
+    assert.equal(state.OOMKilled, false);
+  }
+  console.log(
+    'PASS: Compose filesystem and resource limits, bounded temporary storage, Docker health and controlled shutdown',
+  );
+} catch (error) {
+  for (const name of containers) {
+    console.error(
+      name,
+      await command(['inspect', '--format', '{{json .State}}', name]).catch(() => 'unavailable'),
+    );
+    console.error(
+      await command([
+        'exec',
+        name,
+        'sh',
+        '-c',
+        'cat /sys/fs/cgroup/memory.events /sys/fs/cgroup/memory.peak /sys/fs/cgroup/pids.events',
+      ]).catch(() => 'Resource counters unavailable'),
+    );
+  }
+  throw error;
 } finally {
   for (const name of containers) {
     await command(['rm', '--force', name]).catch(() => {});
   }
   await command(['volume', 'rm', volume]).catch(() => {});
   await command(['volume', 'rm', persistedVolume]).catch(() => {});
+  await command(['image', 'rm', failedMigrationImage]).catch(() => {});
   if (!suppliedImage) await command(['image', 'rm', image]).catch(() => {});
   await rm(directory, { recursive: true, force: true });
 }
