@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
@@ -69,8 +69,9 @@ async function setup(migrationsDirectory?: string) {
 test('upgrading retained receipts restores deletion meanings and conflict attribution without changing history', async () => {
   migrationDirectory = mkdtempSync(join(tmpdir(), 'skyttel-history-migrations-'));
   cpSync(resolve('migrations'), migrationDirectory, { recursive: true });
-  rmSync(join(migrationDirectory, '041_map_history_changes.sql'));
-  rmSync(join(migrationDirectory, '042_relationship_confirmation_retention.sql'));
+  for (const name of readdirSync(migrationDirectory))
+    if (name.endsWith('.sql') && Number(name.split('_')[0]) > 40)
+      rmSync(join(migrationDirectory, name));
   const app = await setup(migrationDirectory);
   await app.post('save', { operationId: 'combined' });
   const history = await (await app.owner.request(`${app.path}/map/history`)).json();

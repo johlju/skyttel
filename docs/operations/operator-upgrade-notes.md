@@ -6,6 +6,21 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Allow retries for assistant registration
+
+Before rollout, check that external assistant clients honor HTTP 429 and
+the `Retry-After` delay when they register. The installation admits at most
+30 registration attempts per rolling minute and allows at most 1,000
+unconnected clients. These limits also apply when a new built-in
+conversation starts. Rate history persists across restarts.
+
+Existing registrations above the cap remain available. New registrations
+must wait for connections or automatic cleanup to release capacity.
+Connected clients can continue to use and refresh their grants. After
+rollout, check registration and retry behavior with synthetic clients. Keep
+one application instance for the installation. See
+[registration limits and retention](installation.md#abandoned-assistant-registrations).
+
 ### Restrict access to privileged-operation logs
 
 Review who can read application logs before rollout. Access changes,

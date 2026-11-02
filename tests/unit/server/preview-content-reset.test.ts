@@ -27,6 +27,12 @@ import { configurationEnvironment } from './fixture.js';
 
 const generation = '11111111-1111-4111-8111-111111111111';
 const authorityFence = { generation };
+const latestMigrationVersion = Math.max(
+  ...readdirSync(resolve('migrations'))
+    .filter((name) => name.endsWith('.sql'))
+    .map((name) => Number(name.split('_')[0])),
+);
+const nextMigrationPrefix = String(latestMigrationVersion + 1).padStart(3, '0');
 const referenceDefaults = {
   zeroReferenceVariant: 'circle',
   zeroReferenceWeight: 'subtle',
@@ -153,7 +159,7 @@ test('the deployed preview before backgrounds upgrades directly and preserves ac
     draft: { changes: [] },
   });
   expect(database.prepare('SELECT MAX(version) AS version FROM schema_migration').get()).toEqual({
-    version: 42,
+    version: latestMigrationVersion,
   });
   const view = database
     .prepare('SELECT settings, backgroundVersion FROM personal_view_settings')
@@ -346,14 +352,14 @@ test.each([33, 34])(
     const migrationsDirectory = join(directory, 'later-release');
     cpSync(resolve('migrations'), migrationsDirectory, { recursive: true });
     writeFileSync(
-      join(migrationsDirectory, '043_next_release.sql'),
+      join(migrationsDirectory, `${nextMigrationPrefix}_next_release.sql`),
       'CREATE TABLE next_release_setting (name TEXT PRIMARY KEY);',
     );
     database.close();
     database = openDatabase(path, { authorityFence, migrationsDirectory });
     const upgraded = householdMap(database, 'alex', 'home');
     expect(database.prepare('SELECT MAX(version) AS version FROM schema_migration').get()).toEqual({
-      version: 43,
+      version: latestMigrationVersion + 1,
     });
     expect(upgraded.read()).toEqual(retainedMap);
     expect(upgraded.history()).toEqual(retainedHistory);
@@ -530,7 +536,7 @@ test.each([
     seedPreviousPreview(version);
     const migrationsDirectory = join(directory, 'migrations');
     cpSync(resolve('migrations'), migrationsDirectory, { recursive: true });
-    writeFileSync(join(migrationsDirectory, '043_failure.sql'), failure);
+    writeFileSync(join(migrationsDirectory, `${nextMigrationPrefix}_failure.sql`), failure);
     const previous = new Database(path, { readonly: true });
     const before = previous.serialize();
     previous.close();

@@ -273,8 +273,22 @@ assistants retain their registrations. A newly registered client can
 complete consent during the retention window.
 
 Retention uses age rather than count-based eviction, so later registrations
-do not displace a pending consent flow. The existing registration rate
-limit still applies; there is no installation-wide registration count cap.
+do not displace a pending consent flow. Registration admission allows at
+most 30 attempts in a rolling minute across the installation, with a cap
+of 1,000 clients without an assistant connection. Registrations in progress
+also reserve capacity. The aggregate limits apply to signed-in and anonymous
+registration requests, including new built-in conversations. The provider's
+production limit of five requests per minute per client address still applies.
+
+When an aggregate limit is reached, registration returns HTTP 429 with
+`temporarily_unavailable` and a `Retry-After` delay in seconds. Clients must
+wait for that delay before retrying; capacity can remain unavailable on the
+next attempt. At the client cap, the retry delay is 60 seconds. An existing
+registration can still complete consent, and connected clients can still
+use and refresh their grants. Rate history survives application restarts.
+Existing clients above the cap are retained, and new registration waits
+until capacity is available. Keep the supported single application instance.
+
 If an abandoned registration expires, restart the connection from the
 external client so it registers again. SQLite can reuse deleted storage;
 cleanup does not shrink the database file or remove existing backups.

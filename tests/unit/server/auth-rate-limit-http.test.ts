@@ -15,6 +15,7 @@ test.each([
   'normalization',
   'login',
   'protected-origin',
+  'registration',
 ])(
   'production authentication address policy: %s',
   async (scenario) => {

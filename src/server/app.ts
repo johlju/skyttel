@@ -11,6 +11,7 @@ import type { TextAssistantView } from '../shared/text-assistant.js';
 import { AdministrationError } from './administration.js';
 import { administrationRoutes } from './administration-routes.js';
 import { assistantObservationBoundary, type ObserveAssistant } from './assistant-observation.js';
+import { assistantRegistrationAdmission } from './assistant-registration-admission.js';
 import { assistantRoutes } from './assistant-routes.js';
 import type { Auth } from './auth.js';
 import { authenticationCleanup } from './authentication-cleanup.js';
@@ -95,6 +96,7 @@ export function createApp({
   now?: () => number;
 }) {
   const now = suppliedNow ?? (() => Date.now());
+  const registerAssistant = assistantRegistrationAdmission(database, now);
   const app = new Hono();
   app.use(
     '*',
@@ -299,6 +301,8 @@ export function createApp({
       // which Skyttel's browser-binding boundary rejects. Keep its ordinary
       // anonymous OAuth/login response and validation behavior.
       if (bindings && !(await bindings.session(request.headers))) request.headers.delete('cookie');
+      if (context.req.path === '/api/auth/oauth2/register' && context.req.method === 'POST')
+        return registerAssistant(() => auth.handler(request));
       return auth.handler(request);
     }
     if (context.req.path === '/api/auth/get-session' && bindings)

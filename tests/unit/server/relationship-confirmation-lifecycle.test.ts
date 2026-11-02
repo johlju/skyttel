@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type Database from 'better-sqlite3';
@@ -25,7 +25,8 @@ async function prepare(legacy = false) {
   if (legacy) {
     directory = mkdtempSync(join(tmpdir(), 'skyttel-confirmation-migrations-'));
     cpSync(resolve('migrations'), directory, { recursive: true });
-    rmSync(join(directory, '042_relationship_confirmation_retention.sql'));
+    for (const name of readdirSync(directory))
+      if (name.endsWith('.sql') && Number(name.split('_')[0]) > 41) rmSync(join(directory, name));
   }
   fixture = await applicationFixture({ migrationsDirectory: legacy ? directory : undefined });
   const client = fixture.client();

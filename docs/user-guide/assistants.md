@@ -32,6 +32,11 @@ gammal. Om du lämnar anslutningen oavslutad så länge behöver klienten
 registrera sig på nytt. Starta då om anslutningen från den externa klienten.
 Redan godkända anslutningar påverkas inte av den rensningen.
 
+Om många klienter försöker ansluta samtidigt kan en ny registrering behöva
+vänta. Följ klientens besked om när du kan försöka igen. Om anslutningen
+fortfarande inte går att starta, kontakta installationsansvarig. Redan
+godkända anslutningar kan fortsätta användas.
+
 AI-valet är skilt från cookies och annan lagring. Ett nej lämnar
 formulär och manuellt kartarbete tillgängliga. Den externa tjänsten
 behandlar de hämtade uppgifterna enligt ditt avtal och dina inställningar

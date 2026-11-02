@@ -37,7 +37,39 @@ async function exhaust(address?: string) {
 }
 
 try {
-  if (scenario === 'encoded') {
+  if (scenario === 'registration') {
+    async function register(address: string) {
+      return fetch(`${installation.origin}/api/auth/oauth2/register`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'cf-connecting-ip': address },
+        body: JSON.stringify({
+          application_type: 'native',
+          redirect_uris: ['http://127.0.0.1:7777/callback'],
+          token_endpoint_auth_method: 'none',
+          grant_types: ['authorization_code'],
+          response_types: ['code'],
+        }),
+      });
+    }
+    for (let index = 0; index < 5; index++) {
+      const response = await register('192.0.2.1');
+      assert.equal(response.status, 201);
+      await response.arrayBuffer();
+    }
+    const perAddress = await register('192.0.2.1');
+    assert.equal(perAddress.status, 429);
+    await perAddress.arrayBuffer();
+    // The rejected provider request still consumes an aggregate attempt.
+    for (let index = 2; index <= 25; index++) {
+      const response = await register(`192.0.2.${index}`);
+      assert.equal(response.status, 201);
+      await response.arrayBuffer();
+    }
+    const aggregate = await register('192.0.2.26');
+    assert.equal(aggregate.status, 429);
+    assert.ok(Number(aggregate.headers.get('retry-after')) > 0);
+    assert.equal((await aggregate.json()).error, 'temporarily_unavailable');
+  } else if (scenario === 'encoded') {
     for (const path of [
       '/%61pi/auth/sign-in/social',
       '/api/%61uth/jwks',
