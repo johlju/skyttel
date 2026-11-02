@@ -713,8 +713,8 @@ relevant check. Markdown lint and spelling checks are separate from Biome.
 
 ## Container and environment changes
 
-With a running Docker daemon and Docker Compose v2, run the check matching
-the changed inputs:
+With a running Docker daemon and Docker Compose 2.35.0 or later, run the
+check matching the changed inputs:
 
 ```sh
 npm run test:container
