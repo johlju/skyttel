@@ -28,6 +28,12 @@ Vid ett större driftfel kan ändringar sedan din senaste egna export gå
 förlorade. En export innehåller den information som finns när kopian
 skapas; senare ändringar kräver en ny export.
 
+Exporten får innehålla högst 32 MiB textinnehåll och 64 MiB bilder; ZIP-filen
+får vara högst 128 MiB. Även historik och äldre bildversioner räknas.
+Om hushållet är för stort behövs en annan säkerhetskopiering tillsammans
+med installationsansvarig. Ta inte bort hushållets uppgifter för att få
+plats i en export.
+
 ## Förbered och hämta filen
 
 1. Läs informationen under **Fullständig export** och välj
@@ -49,6 +55,11 @@ inte någon ny tillgång till hushållet och innehåller inte sessioner,
 aktiva OAuth-token eller serverhemligheter.
 
 ## Avbryt eller försök igen
+
+Import och export delar på tillgängligt arbetsutrymme. Om förberedelsen
+misslyckas, avsluta eller avbryt andra exporter och importer innan du
+försöker igen. Vid fortsatta problem behöver installationsansvarig
+kontrollera filstorlek, ledigt diskutrymme och rensning.
 
 Välj **Avbryt export** för att avbryta förberedelsen eller hämtningen.
 Du kan också avbryta en färdig export innan du hämtar den. Hushållets

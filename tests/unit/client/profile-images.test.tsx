@@ -223,6 +223,68 @@ test.each([401, 403, 409, 503])(
   },
 );
 
+test('image capacity rejection keeps the complete form editable and permits a direct retry', async () => {
+  const form = await open();
+  const before = await read();
+  await userEvent.upload(form.getByLabelText('Profilbild', { exact: true }), await file());
+  const forward = globalThis.fetch;
+  let reject = true;
+  vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+    if (url.endsWith('/object-form') && reject)
+      return Promise.resolve(Response.json({ error: 'image_processing_busy' }, { status: 503 }));
+    return forward(url, init);
+  });
+  await stage(form);
+  expect(await form.findByRole('alert')).toHaveProperty(
+    'textContent',
+    'Bildbehandlingen är full för tillfället. Försök igen om en stund. Alla uppgifter finns kvar.',
+  );
+  expect(form.getByRole('button', { name: 'Lägg i utkastet och stäng' })).toHaveProperty(
+    'disabled',
+    false,
+  );
+  expect(
+    form.queryByRole('button', { name: 'Kontrollera om ändringen lades i utkastet' }),
+  ).toBeNull();
+  expect(form.getByRole('img').getAttribute('src')).toContain('data:image/png');
+  expect(await read()).toEqual(before);
+  await userEvent.click(form.getByRole('button', { name: 'Grunduppgifter' }));
+  await userEvent.type(await propertyInput(form, 'Beskrivning'), ' och nytt försök');
+  reject = false;
+  await stage(form);
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect((await read()).draft.changes[0].after).toMatchObject({
+    profileImageId: expect.any(String),
+    properties: expect.arrayContaining([
+      expect.objectContaining({ label: 'Beskrivning', value: 'Befintlig text och nytt försök' }),
+    ]),
+  });
+});
+
+test.each([500, 503])(
+  'other HTTP %s image failures still require an outcome check before retry',
+  async (status) => {
+    const form = await open();
+    await userEvent.upload(form.getByLabelText('Profilbild', { exact: true }), await file());
+    const forward = globalThis.fetch;
+    vi.stubGlobal('fetch', (url: string, init?: RequestInit) =>
+      url.endsWith('/object-form')
+        ? Promise.resolve(Response.json({ error: 'internal_error' }, { status }))
+        : forward(url, init),
+    );
+    await stage(form);
+    expect((await form.findByRole('alert')).textContent).toContain('Det är oklart');
+    expect(form.getByRole('button', { name: 'Lägg i utkastet och stäng' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(
+      form.getByRole('button', { name: 'Kontrollera om ändringen lades i utkastet' }),
+    ).toBeTruthy();
+    expect(form.getByRole('img').getAttribute('src')).toContain('data:image/png');
+  },
+);
+
 test('a stale complete image proposal keeps text and local image without overwriting an independent proposal', async () => {
   const form = await open();
   await userEvent.upload(form.getByLabelText('Profilbild', { exact: true }), await file());

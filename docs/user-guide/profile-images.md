@@ -39,10 +39,14 @@ Servern kontrollerar bildinnehållet;
 filnamnet eller filtypen som webbläsaren anger avgör inte vad som godkänns.
 En trasig bild kan avvisas även om dess filnamn slutar med rätt ändelse.
 
-När flera bilder skickas samtidigt kan du behöva vänta eller försöka igen
-senare. Om formuläret visar att resultatet är oklart, välj
+När flera bilder skickas samtidigt kan du behöva vänta. Om bildbehandlingen
+är full avvisas försöket utan att formuläret läggs i utkastet. Dina uppgifter
+och bildval finns kvar, och du kan fortsätta redigera eller försöka igen
+om en stund med **Lägg i utkastet och stäng** eller
+**Lägg i utkastet och öppna samband**.
+
+Om formuläret i stället visar att resultatet är oklart, välj
 **Kontrollera om ändringen lades i utkastet** före nästa försök.
-Dina formulärvärden finns kvar.
 
 Bilden anpassas till högst 300 × 300 bildpunkter med samma proportioner.
 Mindre bilder förstoras inte. En animerad bild blir en stillbild av den

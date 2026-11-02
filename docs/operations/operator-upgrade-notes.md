@@ -631,13 +631,25 @@ archives. Archive readers must support ZIP64 when needed.
 No automatic backup is added; keep usable recovery copies
 outside the running disk.
 
-Allow free persistent disk space for an export snapshot and its ZIP archive,
-or an uploaded archive and its extracted parts, in addition to the database
-and active journal. Import accepts supported full archives up to about 1.1 GB,
-with a 32 MiB content part and a 1 GiB image part. Only one export preparation
-runs at a time. Temporary export copies expire after ten minutes; interrupted
-export and import preparations are removed at startup. Check storage and
-cleanup failures before retrying. A failed export is not a recovery copy.
+Before upgrade, check household size and existing recovery copies. Import and
+export allow a 128 MiB ZIP, a 32 MiB content part and a 64 MiB image part.
+Larger households cannot produce a full archive; larger existing archives
+cannot be imported. Keep a consistent installation backup and use the
+[database restore procedure](database-restore.md) when these limits prevent
+household recovery. Do not delete household information to fit the limit.
+
+Allow at least 896 MiB free for one import or 384 MiB for one export with a
+small database. Larger databases need more headroom. Import and export share
+a reservation budget and can reject new work before the disk is full. Check
+the [archive space guidance](installation.md#space-for-household-archives)
+before retrying or increasing disk capacity. Failed cleanup keeps its space
+reserved until removal succeeds. Keep disk monitoring in place.
+
+Upload and validation must finish within five minutes. A completed preparation
+has a separate ten-minute review lifetime. Temporary export copies expire
+after ten minutes; interrupted export and import files are removed at startup.
+Check storage and cleanup failures before retrying. A failed export is not a
+recovery copy.
 
 A committed replacement stays committed after restart. If cleanup fails,
 content remains unavailable until cleanup completes. Check the durable import

@@ -9,7 +9,7 @@ import {
 } from 'node:fs';
 import { type FileHandle, mkdir, open, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import type { Readable } from 'node:stream';
+import { type Readable, Transform } from 'node:stream';
 import { finished, pipeline } from 'node:stream/promises';
 import Database from 'better-sqlite3';
 import { ZipFile } from 'yazl';
@@ -21,14 +21,18 @@ import {
   type ReadyExport,
 } from '../shared/household-export.js';
 import { AdministrationError } from './administration.js';
+import { archivePartLimits, archiveUploadLimit } from './archive-limits.js';
+import { type ArchiveReservation, reserveArchiveStorage } from './archive-storage.js';
 import { assertContentAvailable } from './content-maintenance.js';
 import { householdAccess } from './households.js';
+import { MapError } from './map-error.js';
 
 type Job = {
   id: string;
   actorId: string;
   householdId: string;
   directory: string;
+  reservation: ArchiveReservation;
   controller: AbortController;
   settled: Promise<unknown>;
   state: 'preparing' | 'ready' | 'reading';
@@ -71,6 +75,7 @@ async function discard(store: Store, job: Job) {
   await job.settled;
   if (job.stream) await finished(job.stream).catch(() => {});
   await rm(job.directory, { recursive: true, force: true });
+  job.reservation.release();
   store.jobs.delete(job.id);
 }
 
@@ -164,7 +169,8 @@ async function snapshot(database: Database.Database, job: Job): Promise<ExportMa
       job.controller.signal.throwIfAborted();
       const bytes = Buffer.from(value);
       contentBytes += bytes.length;
-      if (!Number.isSafeInteger(contentBytes)) throw new Error('export_size_unrepresentable');
+      if (contentBytes > archivePartLimits['content.json'])
+        throw new MapError('archive_too_large', 400);
       contentHash.update(bytes);
       await content.writeFile(bytes);
     }
@@ -212,7 +218,8 @@ async function snapshot(database: Database.Database, job: Job): Promise<ExportMa
       const { bytes, ...image } = result as { bytes: Buffer; [key: string]: unknown };
       const offset = imageBytes;
       imageBytes += bytes.length;
-      if (!Number.isSafeInteger(imageBytes)) throw new Error('export_size_unrepresentable');
+      if (imageBytes > archivePartLimits['images.bin'])
+        throw new MapError('archive_too_large', 400);
       await images.writeFile(bytes);
       imageHash.update(bytes);
       await write(
@@ -244,7 +251,10 @@ async function snapshot(database: Database.Database, job: Job): Promise<ExportMa
 async function generate(database: Database.Database, job: Job) {
   await mkdir(job.directory, { mode: 0o700 });
   const manifest = await snapshot(database, job);
-  await writeFile(join(job.directory, 'manifest.json'), JSON.stringify(manifest), {
+  const manifestBytes = Buffer.from(JSON.stringify(manifest));
+  if (manifestBytes.length > archivePartLimits['manifest.json'])
+    throw new MapError('archive_too_large', 400);
+  await writeFile(join(job.directory, 'manifest.json'), manifestBytes, {
     mode: 0o600,
     flag: 'wx',
   });
@@ -259,6 +269,13 @@ async function generate(database: Database.Database, job: Job) {
   zip.end();
   await pipeline(
     output,
+    new Transform({
+      transform(chunk: Buffer, _encoding, callback) {
+        job.bytes += chunk.length;
+        if (job.bytes > archiveUploadLimit) return callback(new MapError('archive_too_large', 400));
+        callback(null, chunk);
+      },
+    }),
     createWriteStream(join(job.directory, 'archive.zip'), { mode: 0o600, flags: 'wx' }),
     { signal: job.controller.signal },
   );
@@ -291,6 +308,7 @@ export async function prepareHouseholdExport(
     actorId,
     householdId,
     directory: join(store.directory, id),
+    reservation: reserveArchiveStorage(database, 'export'),
     controller: new AbortController(),
     settled: Promise.resolve(),
     state: 'preparing',

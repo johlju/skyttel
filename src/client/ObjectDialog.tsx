@@ -253,7 +253,12 @@ export function ObjectDialog({
       await onStage(editor, stagingId, image);
       onConfirmed(editor.id, relationships, returnFocus);
     } catch (failure) {
-      if (!(failure instanceof MapRequestError) || failure.status >= 500) {
+      const imageCapacityRejected =
+        failure instanceof MapRequestError && failure.code === 'image_processing_busy';
+      if (
+        !(failure instanceof MapRequestError) ||
+        (failure.status >= 500 && !imageCapacityRejected)
+      ) {
         setUnknown(true);
         setError(
           'Det är oklart om ändringen lades i utkastet. Kontrollera utfallet innan du försöker igen. Alla uppgifter finns kvar.',
@@ -262,10 +267,12 @@ export function ObjectDialog({
         requestLock.current = false;
         attempt.current = null;
         setError(
-          failure instanceof Error &&
-            ['invalid_image', 'image_processing_failed', 'image_size'].includes(failure.message)
-            ? 'Profilbilden kunde inte läggas i utkastet. Välj en giltig PNG-, JPEG- eller WebP-bild på högst 10 MB och 8 miljoner bildpunkter. Alla uppgifter finns kvar.'
-            : 'Ändringen kunde inte bekräftas. Dina uppgifter finns kvar.',
+          imageCapacityRejected
+            ? 'Bildbehandlingen är full för tillfället. Försök igen om en stund. Alla uppgifter finns kvar.'
+            : failure instanceof Error &&
+                ['invalid_image', 'image_processing_failed', 'image_size'].includes(failure.message)
+              ? 'Profilbilden kunde inte läggas i utkastet. Välj en giltig PNG-, JPEG- eller WebP-bild på högst 10 MB och 8 miljoner bildpunkter. Alla uppgifter finns kvar.'
+              : 'Ändringen kunde inte bekräftas. Dina uppgifter finns kvar.',
         );
       }
     } finally {

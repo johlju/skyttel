@@ -4,6 +4,7 @@ import { mkdir, open, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type Database from 'better-sqlite3';
 import type { ImportDiscovery, ImportStatus } from '../shared/household-import.js';
+import { type ArchiveReservation, reserveArchiveStorage } from './archive-storage.js';
 import {
   assertContentAvailable,
   assertContentVersion,
@@ -30,6 +31,7 @@ type ReadyImport = {
   actorId: string;
   householdId: string;
   directory: string;
+  reservation: ArchiveReservation;
   contentVersion: number;
   fingerprint: string;
   content: ValidatedImportContent;
@@ -42,10 +44,14 @@ type Store = {
   jobs: Map<string, ReadyImport>;
   uploading?: { householdId: string; controller: AbortController; settled: Promise<void> };
   running: Set<string>;
-  abandoned: Map<string, { householdId: string; directory: string }>;
+  abandoned: Map<
+    string,
+    { householdId: string; directory: string; reservation: ArchiveReservation }
+  >;
 };
 const stores = new WeakMap<Database.Database, Store>();
 const lifetimeMs = 10 * 60 * 1000;
+const preparationMs = 5 * 60 * 1000;
 
 export function initializeHouseholdImports(database: Database.Database) {
   if (stores.has(database)) return;
@@ -167,6 +173,7 @@ function settleImport(
 async function discard(store: Store, job: ReadyImport) {
   clearTimeout(job.timer);
   await rm(job.directory, { recursive: true, force: true });
+  job.reservation.release();
   store.jobs.delete(job.id);
 }
 
@@ -187,6 +194,7 @@ export async function invalidateHouseholdImports(
   for (const [id, abandoned] of store.abandoned) {
     if (abandoned.householdId !== householdId) continue;
     await rm(abandoned.directory, { recursive: true, force: true });
+    abandoned.reservation.release();
     store.abandoned.delete(id);
   }
   for (const job of [...store.jobs.values()])
@@ -206,18 +214,37 @@ export async function prepareHouseholdImport(
   if (!request.body) throw new MapError('invalid_archive', 400);
   const store = storeFor(database);
   if (store.uploading || store.jobs.size >= 2) throw new MapError('import_busy');
-  const fingerprint = householdContentFingerprint(database, householdId);
   const id = randomUUID();
   const directory = join(store.directory, id);
+  const reservation = reserveArchiveStorage(database, 'import');
   const controller = new AbortController();
   const signal = AbortSignal.any([request.signal, controller.signal]);
+  const deadline = performance.now() + preparationMs;
+  let timedOut = false;
+  let expire = () => {};
+  const expired = new Promise<void>((resolve) => {
+    expire = resolve;
+  });
+  const preparationTimer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+    expire();
+  }, preparationMs).unref();
+  function assertPreparationTime() {
+    // Synchronous validation can cross the deadline before its timer can run.
+    if (performance.now() >= deadline) timedOut = true;
+    if (timedOut) throw new MapError('import_preparation_timeout', 400);
+    signal.throwIfAborted();
+  }
   let resolveSettled: () => void = () => {};
   const settled = new Promise<void>((resolve) => {
     resolveSettled = resolve;
   });
   store.uploading = { householdId, controller, settled };
-  store.abandoned.set(id, { householdId, directory });
+  store.abandoned.set(id, { householdId, directory, reservation });
   try {
+    const fingerprint = householdContentFingerprint(database, householdId);
+    assertPreparationTime();
     await mkdir(directory, { mode: 0o700 });
     const file = await open(join(directory, 'archive.zip'), 'wx', 0o600);
     try {
@@ -241,7 +268,9 @@ export async function prepareHouseholdImport(
         }
       } finally {
         signal.removeEventListener('abort', abort);
-        await (cancellation ?? reader.cancel());
+        // A broken request source may never acknowledge cancel(). It cannot
+        // write files itself, so release the reader at the preparation deadline.
+        await Promise.race([cancellation ?? reader.cancel(), expired]);
         reader.releaseLock();
       }
     } finally {
@@ -253,11 +282,13 @@ export async function prepareHouseholdImport(
     assertContentAvailable(database, householdId);
     assertContentVersion(database, householdId, contentVersion);
     assertImportCollisions(database, householdId, content);
+    assertPreparationTime();
     const job: ReadyImport = {
       id,
       actorId,
       householdId,
       directory,
+      reservation,
       contentVersion,
       fingerprint,
       content,
@@ -273,10 +304,13 @@ export async function prepareHouseholdImport(
     return readyStatus(job);
   } catch (error) {
     await rm(directory, { recursive: true, force: true });
+    reservation.release();
     store.abandoned.delete(id);
+    if (timedOut) throw new MapError('import_preparation_timeout', 400);
     if (error instanceof MapError) throw error;
     throw new MapError(signal.aborted ? 'import_cancelled' : 'invalid_archive', 400);
   } finally {
+    clearTimeout(preparationTimer);
     store.uploading = undefined;
     resolveSettled();
   }
@@ -360,6 +394,7 @@ export async function confirmHouseholdImport(
       return status;
     if (status.status === 'cleanup') {
       await rm(join(store.directory, id), { recursive: true, force: true });
+      store.jobs.get(id)?.reservation.release();
       store.jobs.delete(id);
       const completed = settleImport(database, householdId, id, 'cleanup', null);
       authorize(database, actorId, householdId);
@@ -392,6 +427,7 @@ export async function confirmHouseholdImport(
   try {
     await invalidateHouseholdImports(database, householdId, { exceptImportId: id });
     await invalidateHouseholdExports(database, householdId);
+    job.reservation.check();
     maintenance.apply(id, () =>
       replaceHouseholdContent(database, householdId, job.content, job.directory),
     );

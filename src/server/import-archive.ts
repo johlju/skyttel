@@ -6,17 +6,13 @@ import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import sharp from 'sharp';
 import { openPromise } from 'yauzl';
+import { archiveUploadLimit, archivePartLimits as limits } from './archive-limits.js';
 import { validateImportReferences } from './import-references.js';
 import { type ImportContent, importContentSchema, importManifestSchema } from './import-schema.js';
 import { MapError } from './map-error.js';
 
-export const importUploadLimit = 1_100_000_000;
+export const importUploadLimit = archiveUploadLimit;
 export type ValidatedImportContent = ImportContent;
-const limits = {
-  'manifest.json': 16_384,
-  'content.json': 32 * 1024 * 1024,
-  'images.bin': 1024 * 1024 * 1024,
-};
 
 function parseJson(source: string): unknown {
   const value: unknown = JSON.parse(source);

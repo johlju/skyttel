@@ -30,9 +30,18 @@ förslag behöver fortfarande rättas eller kastas före sparande.
 
 Om någon ändrar innehållet under förberedelsen måste filen förberedas igen.
 En trasig, ofullständig eller okänd export avvisas före ersättning.
-Gränserna är cirka
-1,1 GB för ZIP-filen, 32 MiB för innehållsfilen och 1 GiB för bilddelen.
-Förberedda kopior rensas efter tio minuter eller vid serverns nästa start.
+Gränserna är 128 MiB för ZIP-filen, 32 MiB för innehållsfilen och 64 MiB
+för bilddelen. Uppladdning och kontroll måste bli klara inom fem minuter.
+Vid tidsgränsen avbryts förberedelsen och den tillfälliga kopian tas bort.
+Förberedda kopior har därefter tio minuters granskningstid och rensas även
+vid serverns nästa start.
+
+Import och export delar på tillgängligt arbetsutrymme. Om förberedelsen
+misslyckas, avsluta eller avbryt andra exporter och importer innan du
+försöker igen. Vid fortsatta problem behöver installationsansvarig
+kontrollera ledigt diskutrymme och rensning. Även en liten fil kan nekas
+när arbetsutrymmet är upptaget. En större fil än gränserna kräver en annan
+återställningsväg tillsammans med installationsansvarig.
 
 Exporter bevarar varje personlig vys bakgrund, val för båda temana och
 rörelsevärden. Nya personliga vyer har bakgrunden på. Systemets minskade

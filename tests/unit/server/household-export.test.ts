@@ -390,7 +390,7 @@ test('household invalidation closes active readers and removes prepared archives
   expect(readdirSync(directory)).toEqual([]);
 });
 
-test('a full image history larger than 64 MiB streams completely and invalidation interrupts an active download', async () => {
+test('a full image history larger than 32 MiB streams completely and invalidation interrupts an active download', async () => {
   const state = await (await client.request(`${path}/map`)).json();
   const pixels = await sharp(randomBytes(256 * 256 * 3), {
     raw: { width: 256, height: 256, channels: 3 },
@@ -399,7 +399,7 @@ test('a full image history larger than 64 MiB streams completely and invalidatio
     .toBuffer();
   expect(pixels.length).toBeLessThanOrEqual(262144);
   fixture.database.transaction(() => {
-    for (let index = 0; index < 400; index++) {
+    for (let index = 0; index < 200; index++) {
       const id = `image-${index}`;
       fixture.database
         .prepare('INSERT INTO profile_image VALUES (?, ?, ?, ?, ?, 256, 256)')
@@ -419,7 +419,7 @@ test('a full image history larger than 64 MiB streams completely and invalidatio
   let prepared = await client.json(`${path}/exports`, {});
   expect(prepared.status).toBe(201);
   let ready = await prepared.json();
-  expect(ready.bytes).toBeGreaterThan(64 * 1024 * 1024);
+  expect(ready.bytes).toBeGreaterThan(32 * 1024 * 1024);
   const complete = await client.request(`${path}/exports/${ready.id}`);
   expect(complete.headers.get('content-length')).toBe(String(ready.bytes));
   if (!complete.body) throw new Error('Complete archive stream required');
