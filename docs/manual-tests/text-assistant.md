@@ -224,6 +224,11 @@ ingår inte.
 [text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
 TEXT-17.
 
+**Separat försöksförberedelse:**
+[Överlappning och sekventiell baslinje](text-conversation-preparation.md#separat-överlappningsförsök)
+kan prövas med samma förväntade användarutfall. Tekniska prov redovisas
+som stöd, skilt från hela det ordinarie fallet.
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -346,6 +351,78 @@ TEXT-17.
       "spec": "tests/unit/server/voice-typed-delivery.test.ts",
       "title": "a failed typed completion delivers its own question before a later task question",
       "purpose": "En senare begärans fråga får inte ersätta en tidigare slutförd begärans väntande fråga i röstleveransen."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap reads current facts while interpretation is held but changes await independent checking",
+      "purpose": "Överlappning läser aktuella fakta före tolkningens slut men ändrar först efter separat kontroll; samma modell och nivå används."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential keeps a verified existing-draft save used after explanation error",
+      "purpose": "Ett verkligt sparande av ett tidigare utkast räknas som använt modellarbete även när förklaringen misslyckas; senare oanvänt arbete och okänd kostnad bevaras."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap keeps a verified existing-draft save used after explanation error",
+      "purpose": "Försöksvarianten behåller samma verkliga sparkvitto, karta och historik samt skiljer använt modellarbete för sparandet från senare oanvänt arbete och okänd kostnad."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential keeps a verified existing-draft save used after explanation stop",
+      "purpose": "Stopp efter verifierat sparande behåller det använda modellarbetet, kartan och historiken utan att räkna senare avbrutet arbete som använt eller okänd kostnad som noll."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap keeps a verified existing-draft save used after explanation stop",
+      "purpose": "Försöksvarianten behåller samma verifierade sparresultat efter stopp och redovisar senare avbrutet arbete och okänd kostnad separat."
+    },
+    {
+      "kind": "technical",
+      "runner": "playwright",
+      "suite": "technical-browser",
+      "spec": "tests/technical-browser/assistant-overlap.spec.ts",
+      "title": "sequential public preparation gates edits, clarification and Escape in the real browser",
+      "purpose": "Publicerad försöksförberedelse med riktig webbläsare: enkelt förslag, separat fråga och avbrott bevarar samma utkast. Ersätter inte hela ordinarie resan."
+    },
+    {
+      "kind": "technical",
+      "runner": "playwright",
+      "suite": "technical-browser",
+      "spec": "tests/technical-browser/assistant-overlap.spec.ts",
+      "title": "overlap public preparation gates edits, clarification and Escape in the real browser",
+      "purpose": "Publicerad försöksförberedelse med riktig webbläsare: enkelt förslag, separat fråga och avbrott bevarar samma utkast. Ersätter inte hela ordinarie resan."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential spoken allowed shares the guarded draft and real delivery flow",
+      "purpose": "Talad enkel ändring får ett verifierat osparat slutbesked genom verklig backendleverans med kontrollerad Live-leverantör."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap spoken allowed shares the guarded draft and real delivery flow",
+      "purpose": "Talad enkel ändring får ett verifierat osparat slutbesked genom verklig backendleverans med kontrollerad Live-leverantör."
     }
   ]
 }
@@ -511,6 +588,11 @@ nytt arbete”.
 **Separat förberedelse:**
 [Operatörens exakta verktyg och felgränser](text-conversation-preparation.md).
 
+**Separat försöksförberedelse:**
+[Överlappning och sekventiell baslinje](text-conversation-preparation.md#separat-överlappningsförsök)
+kan prövas med samma förväntade användarutfall. Tekniska prov redovisas
+som stöd, skilt från hela det ordinarie fallet.
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -522,6 +604,24 @@ nytt arbete”.
   "reference": "Dator; kontrollerad leverantör och den angivna motiverade felgränsen.",
   "outcomes": [
     "Ett äldre uppdrag får inte återinföra ett kastat förslag."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential stop cannot bypass interpretation and independent checking",
+      "purpose": "Stopp under hållen tolkning förkastar kvarvarande arbete utan att återuppliva ett förslag."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap stop cannot bypass interpretation and independent checking",
+      "purpose": "Stopp under hållen tolkning förkastar kvarvarande arbete utan att återuppliva ett förslag."
+    }
   ]
 }
 ```
@@ -637,6 +737,38 @@ dubbelt sparande”.
   "evidence": [
     {
       "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential keeps a registered save used when Stop precedes its transport reply",
+      "purpose": "Ett verkligt registrerat sparförsök före stopp räknas som använt modellarbete när samma försök kontrolleras till kvitto, karta och en enda historikpost; sent transportsvar upprepar inget sparande."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap keeps a registered save used when Stop precedes its transport reply",
+      "purpose": "Försöksvarianten behåller samma registrerade försök efter stopp, verifierar dess verkliga sparkvitto och skiljer detta använda modellarbete från oanvända resultat."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential keeps a registered save unknown after access revocation before its transport reply",
+      "purpose": "Registrerat sparförsök med fördröjt svar och återkallad assistentåtkomst klassificeras som okänt när underlaget inte längre får läsas; modellförbrukning räknas en gång och återställning utan åtkomst avvisas."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap keeps a registered save unknown after access revocation before its transport reply",
+      "purpose": "Försöksvarianten behåller samma okända klassificering efter fördröjt registreringssvar och återkallad åtkomst, utan extra modellförbrukning, kvitto eller historikpost."
+    },
+    {
+      "kind": "technical",
       "runner": "playwright",
       "suite": "technical-browser",
       "spec": "tests/technical-browser/text-assistant.spec.ts",
@@ -741,6 +873,70 @@ om samma server med samma databas vid det angivna steget.
     "Den oberoende väntande frågan om vilket år uppgifterna gäller finns kvar i både text och den återhämtade röstleveransen."
   ],
   "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential keeps a committed batch used while its lost reply and status remain unavailable",
+      "purpose": "Genomförd verklig batch räknas som använt modellarbete trots tappat svar och statusfel; samma leverantörsanrops token och kostnad bevaras medan nytt arbete spärras."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential resolves unknown batch work only after status proves it was not committed",
+      "purpose": "Ett ännu okänt utfall räknas inte som oanvänt arbete förrän samma operations status visar att den inte genomförs; senaste klassificering kopplas till token en enda gång och tidigare klassificering bevaras."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential accounts for a held committed batch reply after stop",
+      "purpose": "Stopp före ett verkligt genomfört ändringsbesked behåller använt modellarbete och spärren tills status kontrolleras utan nya ändringar."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential accounts for a held committed batch reply after revoke",
+      "purpose": "Återkallad åtkomst före ändringsbeskedet ger okänd arbetsklassificering när bevis inte längre får läsas; statuskontroll får inte kringgå behörigheten."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap keeps a committed batch used while its lost reply and status remain unavailable",
+      "purpose": "Genomförd verklig batch räknas som använt modellarbete trots tappat svar och statusfel; samma leverantörsanrops token och kostnad bevaras medan nytt arbete spärras."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap resolves unknown batch work only after status proves it was not committed",
+      "purpose": "Ett ännu okänt utfall räknas inte som oanvänt arbete förrän samma operations status visar att den inte genomförs; senaste klassificering kopplas till token en enda gång och tidigare klassificering bevaras."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap accounts for a held committed batch reply after stop",
+      "purpose": "Stopp före ett verkligt genomfört ändringsbesked behåller använt modellarbete och spärren tills status kontrolleras utan nya ändringar."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap accounts for a held committed batch reply after revoke",
+      "purpose": "Återkallad åtkomst före ändringsbeskedet ger okänd arbetsklassificering när bevis inte längre får läsas; statuskontroll får inte kringgå behörigheten."
+    },
     {
       "kind": "technical",
       "runner": "vitest",

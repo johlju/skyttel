@@ -123,7 +123,58 @@ export function observationDiagnostics(events: AssistantObservation[], origin: n
     (event) =>
       event.kind === 'voice_event' && (event.data as { role?: string }).role === 'assistant',
   );
+  // Status-only recovery can resolve an earlier unknown result. Preserve its
+  // history, but join usage once to the latest classification of each call.
+  // Missing provider identities cannot justify merging unrelated observations.
+  const workHistory = new Map<string | AssistantObservation, AssistantObservation[]>();
+  for (const event of events.filter((event) => event.kind === 'work_result')) {
+    const { providerCallId } = event.data as { providerCallId?: string };
+    const key = providerCallId || event;
+    const history = workHistory.get(key) ?? [];
+    history.push(event);
+    workHistory.set(key, history);
+  }
+  const workResults = [...workHistory.values()].map((history) => {
+    const event = history[history.length - 1];
+    const data = event.data as {
+      providerCallId?: string;
+      executionMode: string;
+      disposition: string;
+      reason?: string;
+    };
+    const attempt = events.findLast(
+      (candidate) =>
+        candidate.kind === 'model_attempt' &&
+        Boolean(data.providerCallId) &&
+        (candidate.data as { attemptId?: string }).attemptId === data.providerCallId &&
+        (candidate.data as { endedAt?: unknown }).endedAt != null,
+    )?.data as
+      | {
+          usage?: unknown;
+          outcome?: string;
+          responseId?: string;
+          providerRequestId?: string;
+        }
+      | undefined;
+    return {
+      atMs: event.at - origin,
+      taskId: event.taskId,
+      ...data,
+      classificationHistory: history.map((observation) => {
+        const { disposition, reason } = observation.data as {
+          disposition: string;
+          reason?: string;
+        };
+        return { atMs: observation.at - origin, disposition, ...(reason ? { reason } : {}) };
+      }),
+      usage: attempt?.usage ?? null,
+      outcome: attempt?.outcome ?? null,
+      responseId: attempt?.responseId ?? null,
+      providerRequestId: attempt?.providerRequestId ?? null,
+    };
+  });
   return {
+    workResults,
     eventCounts: Object.fromEntries(
       [...new Set(events.map((event) => event.kind))].map((kind) => [
         kind,

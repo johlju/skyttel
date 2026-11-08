@@ -381,11 +381,17 @@ export function langSmithDelivery(options: LangSmithDeliveryOptions): ConnectTra
             type = 'llm';
             content = ((creating ? data.input : data.output) as Record<string, unknown>) ?? data;
             break;
+          case 'work_result':
           case 'voice_event':
           case 'voice_commentary':
             creating = true;
             instantaneous = true;
-            name = event.kind === 'voice_event' ? String(data.type) : 'Skyttel voice commentary';
+            name =
+              event.kind === 'work_result'
+                ? 'Skyttel work result'
+                : event.kind === 'voice_event'
+                  ? String(data.type)
+                  : 'Skyttel voice commentary';
             type = 'chain';
             content = data;
             break;

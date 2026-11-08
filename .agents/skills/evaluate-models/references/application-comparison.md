@@ -23,6 +23,13 @@ profile limits and prices, judge configuration, assistance policy and audio.
 An incompatible revision is an untested configuration; preserve it and explain
 the gap before payment.
 
+For the separate overlap experiment, set `conversationWorkMode` explicitly
+on both application selections: `sequential` for baseline and `overlap` for
+candidate. Distinct IDs may select the same clean commit and directory.
+The adapter refuses overlap when that revision does not declare support.
+Keep every other condition equal. Record the selected modes with the
+application identities; mode selection grants no payment authorization.
+
 Use the checked-in optimization plan for the initial wait-time comparison.
 Read `scripts/model-evaluation/optimization-comparison-plan.json` for its
 models, effort, repetitions, target scenarios and acceptance limits. For voice,
@@ -107,6 +114,11 @@ summary and judge calls. Keep read-cache observations separate from provider
 cache tokens; an unobserved read-cache count is unknown. Label missing fields
 as null and state their limits. Diagnostic improvements do not replace full
 user-wait measurement.
+Retain each work result's used/discarded disposition and provider identity,
+including clarification, early error and Stop. Join it to terminal attempt
+usage and billing evidence; preserve unknown canceled usage. Count actual
+calls in each attempt. Ordinary successful requests already require scope
+and work calls; apply no fixed extra-call surcharge to every request.
 Publish each MCP metric's `scope`, `limitation` and `complete` fields with its
 counts and durations. Use the emitted boundary when explaining diagnostics.
 

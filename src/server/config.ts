@@ -53,6 +53,8 @@ export interface Config {
   host: string;
   openaiApiKey?: string;
   conversationModels?: ConversationModelChoice[];
+  /** Experimental scheduling only; sequential remains the default. */
+  conversationWorkMode?: 'sequential' | 'overlap';
   /** Optional diagnostic destination. Invalid values disconnect only this sender. */
   langSmith?: {
     endpoint: string;
@@ -136,7 +138,16 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
     };
   }
 
+  const conversationWorkMode = environment.SKYTTEL_CONVERSATION_WORK_MODE ?? 'sequential';
+  if (!['sequential', 'overlap'].includes(conversationWorkMode))
+    throw new ConfigurationError('SKYTTEL_CONVERSATION_WORK_MODE');
+
   return {
+    ...(environment.SKYTTEL_CONVERSATION_WORK_MODE === undefined
+      ? {}
+      : {
+          conversationWorkMode: conversationWorkMode as 'sequential' | 'overlap',
+        }),
     clientAddress: readClientAddressPolicy(environment),
     origin,
     databasePath,

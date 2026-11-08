@@ -36,6 +36,8 @@ export const robin: Identity = {
   email: 'robin@example.test',
 };
 
+export const supportedConversationWorkModes = ['sequential', 'overlap'] as const;
+
 export async function createInstallation(
   firstAdmin = { provider: 'google' as 'google' | 'microsoft', subject: alex.subject },
   databaseOptions: {
@@ -62,6 +64,7 @@ export async function createInstallation(
     authorityFence?: Config['authorityFence'];
     clientAddress?: Config['clientAddress'];
     conversationModels?: Config['conversationModels'];
+    conversationWorkMode?: 'sequential' | 'overlap';
   } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
@@ -107,6 +110,7 @@ export async function createInstallation(
     host: '127.0.0.1',
     langSmith: databaseOptions.langSmith,
     conversationModels: databaseOptions.conversationModels,
+    conversationWorkMode: databaseOptions.conversationWorkMode,
     ...(databaseOptions.providerApiKey
       ? { openaiApiKey: databaseOptions.providerApiKey }
       : databaseOptions.modelFetch

@@ -144,7 +144,7 @@ export function compareApplicationVersions(
     (scenario) => run.plan.modality !== 'voice' || scenario.voice,
   );
   const attemptProfile = run.voiceProfile?.id ?? run.profile.id;
-  const versions = run.versions.map(({ id, commit }) => {
+  const versions = run.versions.map(({ id, commit, conversationWorkMode }) => {
     const values = attempts.filter(
       (attempt) =>
         attempt.applicationVersion === id &&
@@ -154,6 +154,7 @@ export function compareApplicationVersions(
     return {
       id,
       commit,
+      conversationWorkMode: conversationWorkMode ?? 'sequential',
       attempts: values,
       metrics: aggregateMetrics(values),
       summary: summarizeProfile(

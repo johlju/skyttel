@@ -24,6 +24,22 @@ draft values. Household exports do not include these records. Content
 replacement removes the records and retains opaque identities to prevent
 old operations from changing replacement content.
 
+### Keep the sequential conversation baseline
+
+Conversation work uses sequential execution by default. Enable overlapping
+interpretation and work only for an explicit experiment. Keep model choices,
+reasoning levels and starting data equal when comparing the two modes.
+Include discarded work and unknown usage in cost review. This option does
+not establish a performance gain or authorize billable evaluation. Use the
+[model activation guide](conversation-models.md#separat-försök-med-överlappning)
+to select the mode before restarting the server.
+
+For diagnostic consumers, use the latest work classification for each provider
+call. Keep earlier classifications as history and count its usage once.
+A lost reply does not prove unused work. Treat an unverified outcome as unknown
+until authorized evidence confirms whether the batch is committed or the save
+request is registered.
+
 ### Check conversation model access and activation
 
 Before rollout, confirm that the installation's OpenAI project can use

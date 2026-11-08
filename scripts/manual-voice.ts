@@ -26,6 +26,10 @@ async function main() {
     throw new Error('Run without arguments in the development environment.');
   process.umask(0o077);
   const pending = new Map<string, Pending>();
+  const conversationWorkMode = process.env.SKYTTEL_CONVERSATION_WORK_MODE ?? 'sequential';
+  if (conversationWorkMode !== 'sequential' && conversationWorkMode !== 'overlap')
+    throw new Error('Use sequential or overlap for SKYTTEL_CONVERSATION_WORK_MODE.');
+  let holdScope = false;
   let holdCheck = false;
   let scopeMode: 'read' | 'work' | undefined;
   let responseRequired = true;
@@ -45,11 +49,13 @@ async function main() {
     const current = user && typeof user.content === 'string' ? JSON.parse(user.content) : {};
     return {
       id,
-      kind: item.request.instructions.startsWith('SKYTTEL_TURN_ACTIONS')
-        ? 'action-check'
-        : item.request.tools.length
-          ? 'work'
-          : 'context-summary',
+      kind: item.request.instructions.startsWith('SKYTTEL_TURN_SCOPE')
+        ? 'scope'
+        : item.request.instructions.startsWith('SKYTTEL_TURN_ACTIONS')
+          ? 'action-check'
+          : item.request.tools.length
+            ? 'work'
+            : 'context-summary',
       comparison: item.request.instructions.startsWith('SKYTTEL_TURN_ACTIONS')
         ? current
         : undefined,
@@ -72,6 +78,8 @@ async function main() {
       // application's task/version checks, not this fixture, must reject them.
     });
   const model = textModel(holdRequest, (request) => {
+    if (request.instructions.startsWith('SKYTTEL_TURN_SCOPE') && holdScope)
+      return holdRequest(request);
     if (request.instructions.startsWith('SKYTTEL_TURN_ACTIONS') && holdCheck)
       return holdRequest(request);
     return [
@@ -91,6 +99,7 @@ async function main() {
     ];
   });
   const app = await createInstallation(undefined, {
+    conversationWorkMode,
     modelFetch: async (input, init) => {
       let response: Response;
       try {
@@ -160,6 +169,7 @@ async function main() {
   }
   try {
     emit('ready', {
+      executionMode: conversationWorkMode,
       origin: app.origin,
       directory: app.directory,
       message:
@@ -194,6 +204,7 @@ async function main() {
               'batch-delivery',
               'hold-save on|off',
               'hold-check on|off',
+              'hold-scope on|off',
               'scope-read | scope-work',
               'response-required on|off',
               'release-save',
@@ -206,6 +217,12 @@ async function main() {
               'quit',
             ],
           });
+          continue;
+        }
+        if (command === 'hold-scope') {
+          if (id !== 'on' && id !== 'off') throw new Error('Use hold-scope on or off.');
+          holdScope = id === 'on';
+          emit('scope-hold', { active: holdScope });
           continue;
         }
         if (command === 'hold-check') {

@@ -5,9 +5,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { approvedForVisit } from '../../tests/support/conversation.js';
 import { createInstallation } from '../../tests/support/installation.js';
 
-export type ApplicationVersion = { id: string; directory: string; commit: string };
-export const validApplicationIdentity = ({ id, commit }: ApplicationVersion) =>
-  /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(id) && /^[a-f0-9]{40}$/.test(commit);
+export type ApplicationVersion = {
+  id: string;
+  directory: string;
+  commit: string;
+  conversationWorkMode?: 'sequential' | 'overlap';
+};
+export const validApplicationIdentity = ({
+  id,
+  commit,
+  conversationWorkMode,
+}: ApplicationVersion) =>
+  /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(id) &&
+  /^[a-f0-9]{40}$/.test(commit) &&
+  (conversationWorkMode === undefined || ['sequential', 'overlap'].includes(conversationWorkMode));
 const loadedApplications = new Map<string, string>();
 const evaluatorDirectory = fileURLToPath(new URL('../../', import.meta.url));
 const loadedEvaluator = (() => {
@@ -80,11 +91,20 @@ export async function applicationAdapter(selected?: ApplicationVersion) {
     consent.conversationConsentTextVersion <= 0
   )
     throw new Error(`evaluation_application_incompatible:${selected.id}`);
+  if (
+    selected.conversationWorkMode === 'overlap' &&
+    !implementation.supportedConversationWorkModes?.includes('overlap')
+  )
+    throw new Error(`evaluation_application_incompatible:${selected.id}`);
   const create = implementation.createInstallation as typeof createInstallation;
   return {
     version: { ...selected, directory },
     approval: { consent: { textVersion: consent.conversationConsentTextVersion as number } },
     create: (options: Parameters<typeof createInstallation>[1]) =>
-      create(undefined, { ...options, migrationsDirectory: join(directory, 'migrations') }),
+      create(undefined, {
+        ...options,
+        conversationWorkMode: selected.conversationWorkMode ?? 'sequential',
+        migrationsDirectory: join(directory, 'migrations'),
+      }),
   };
 }

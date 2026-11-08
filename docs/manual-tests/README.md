@@ -3,7 +3,10 @@
 Testfallen är grupperade efter område i applikationen. Varje områdesfil
 beskriver användare, förberedelser, steg och förväntat resultat samt länkar
 till motsvarande automatiserade prov i integrations- eller Chromium-sviten.
-Tekniskt stödjande prov anges separat från ett falls motsvarighet. Fall som
+Tekniskt stödjande prov anges separat från ett falls motsvarighet.
+[Textförberedelsen](text-conversation-preparation.md#separat-överlappningsförsök)
+ger även ett separat försök med överlappning och sekventiell baslinje
+för ändringar, frågor och avbrott. Fall som
 kräver mänskliga observationer anger vad som behöver kontrolleras på riktigt;
 automatik ersätter inte de observationerna.
 HTTP- och processprov körs i server-sviten. Tekniska prov av kakleverans och

@@ -14,7 +14,7 @@ import { createHousehold, signIn } from '../../support/client.js';
 import { approvedForVisit } from '../../support/conversation.js';
 import { createInstallation } from '../../support/installation.js';
 import { liveProvider } from '../../support/live-provider.js';
-import { modelMessage, modelTool, textModel } from '../../support/text-model.js';
+import { modelMessage, modelTool, readOnlyScope, textModel } from '../../support/text-model.js';
 
 type Ingested = {
   method: string;
@@ -1617,11 +1617,7 @@ test('voice context preparation owns its summary once in an explicitly linked ba
     },
     // Completed read-only discussion can be summarized. A work scope with
     // narrative alone must preserve its unfinished requests verbatim.
-    () => [
-      modelMessage(
-        JSON.stringify({ mode: 'read', request: 'Besvara den aktuella frågan utan ändringar.' }),
-      ),
-    ],
+    readOnlyScope,
   );
   const { path, session } = await setup({
     modelFetch: model.provider,
@@ -3558,6 +3554,7 @@ test.each([
               'task_started',
               'task_completed',
               'model_attempt',
+              'work_result',
               'mcp_started',
               'mcp_completed',
               'mcp_failed',

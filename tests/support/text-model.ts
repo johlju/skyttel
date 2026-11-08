@@ -131,6 +131,15 @@ export function textModel(
   };
   return { provider, requests, authorizationRequests };
 }
+export function pricedProvider(provider: typeof fetch): typeof fetch {
+  return async (url, init) => {
+    const response = await provider(url, init);
+    return Response.json(
+      { ...(await response.json()), service_tier: 'default' },
+      { headers: response.headers },
+    );
+  };
+}
 export function failExplanation(
   model: ReturnType<typeof textModel>,
   failure: Response | (() => Response),

@@ -8,9 +8,9 @@ import catalog from '../../../scripts/model-evaluation/catalog.json' with { type
 import profiles from '../../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 import { verifiedProfile } from '../../../scripts/model-evaluation/provider.js';
 import { runTextScenario } from '../../../scripts/model-evaluation/runner.js';
-import { modelMessage, textModel } from '../../support/text-model.js';
+import { modelMessage, pricedProvider, textModel } from '../../support/text-model.js';
 
-async function applicationVersion(label: string, evaluator = false) {
+async function applicationVersion(label: string, evaluator = false, sequentialOnly = false) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-evaluation-version-'));
   const archive = execFileSync(
     'git',
@@ -32,6 +32,16 @@ async function applicationVersion(label: string, evaluator = false) {
     await cp(resolve('scripts/model-evaluation'), join(directory, 'scripts/model-evaluation'), {
       recursive: true,
     });
+  if (sequentialOnly) {
+    const installation = join(directory, 'tests/support/installation.ts');
+    await writeFile(
+      installation,
+      (await readFile(installation, 'utf8')).replace(
+        "export const supportedConversationWorkModes = ['sequential', 'overlap'] as const;",
+        "export const supportedConversationWorkModes = ['sequential'] as const;",
+      ),
+    );
+  }
   // Each committed server variant changes its public HTTP response. The
   // fixture knows the application factory, not the conversation internals.
   const path = join(directory, 'src/server/app.ts');
@@ -56,6 +66,7 @@ export function createApp(options: Parameters<typeof original>[0]) {
   }) as typeof app.fetch;
   return app;
 }
+
 `,
   );
   const git = (...args: string[]) =>
@@ -76,6 +87,111 @@ export function createApp(options: Parameters<typeof original>[0]) {
   return { id: label, directory, commit: git('rev-parse', 'HEAD') };
 }
 
+test('committed application modes retain comparable actual work and usage through public evaluation', {
+  tags: ['technical'],
+  timeout: 30_000,
+}, async () => {
+  const version = await applicationVersion('Overlap-capable');
+  try {
+    for (const conversationWorkMode of ['sequential', 'overlap'] as const) {
+      let releaseScope = () => {};
+      const scope = new Promise<void>((resolve) => {
+        releaseScope = resolve;
+      });
+      const model = textModel(
+        () => [modelMessage('Hela svaret.')],
+        async () => {
+          await scope;
+          return [modelMessage(JSON.stringify({ mode: 'read', request: 'Besvara frågan.' }))];
+        },
+      );
+      const executing = runTextScenario(
+        {
+          id: 'overlap-comparison',
+          title: 'Same bounded request',
+          voice: false,
+          steps: [
+            { id: 'read', text: 'Vad vet du?', expected: { requirements: ['Ge hela svaret.'] } },
+          ],
+        },
+        {
+          modelProfile: verifiedProfile('sol-high'),
+          modelFetch: pricedProvider(model.provider),
+        },
+        {
+          profile: 'local',
+          repetition: 1,
+          application: { ...version, id: conversationWorkMode, conversationWorkMode },
+          judge: async (input) => {
+            expect(input.sources.backend?.text).toBe('Overlap-capable Hela svaret.');
+            return input.requirements.map(({ id }) => ({
+              id,
+              outcome: 'pass',
+              reason: 'The complete controlled answer is delivered.',
+            }));
+          },
+        },
+      );
+      try {
+        await expect.poll(() => model.authorizationRequests.length, { timeout: 5000 }).toBe(1);
+        if (conversationWorkMode === 'overlap')
+          await expect.poll(() => model.requests.length).toBe(1);
+        else expect(model.requests).toHaveLength(0);
+      } finally {
+        releaseScope();
+      }
+      const result = await executing;
+      expect(result.attempts[0].outcome).toBe('pass');
+      expect(result.attempts[0].diagnostics?.workResults).toMatchObject([
+        {
+          executionMode: conversationWorkMode,
+          disposition: 'used',
+          usage: { input: 120, output: 30, cached: 20, reasoning: 10 },
+          outcome: 'completed',
+        },
+      ]);
+      expect(model.requests).toHaveLength(1);
+      expect(model.authorizationRequests).toHaveLength(1);
+      expect(model.requests[0]).toMatchObject({
+        model: 'gpt-6.1-sol',
+        reasoning: { effort: 'high' },
+      });
+    }
+  } finally {
+    await rm(version.directory, { recursive: true, force: true });
+  }
+});
+
+test('a committed application without overlap capability refuses the experimental mode before model work', {
+  tags: ['technical'],
+  timeout: 30_000,
+}, async () => {
+  const application = await applicationVersion('Sequential-only', false, true);
+  const model = textModel(() => [modelMessage('Unused.')]);
+  try {
+    await expect(
+      runTextScenario(
+        {
+          id: 'unsupported-overlap',
+          title: 'Unavailable experimental mode',
+          voice: false,
+          steps: [{ id: 'read', text: 'Vad vet du?', expected: { requirements: [] } }],
+        },
+        { modelFetch: model.provider },
+        {
+          profile: 'local',
+          repetition: 1,
+          application: { ...application, conversationWorkMode: 'overlap' },
+        },
+      ),
+    ).rejects.toThrow('evaluation_application_incompatible:Sequential-only');
+    expect(model.requests).toHaveLength(0);
+    expect(model.authorizationRequests).toHaveLength(0);
+  } finally {
+    await rm(application.directory, { recursive: true, force: true });
+  }
+});
+
 test('explicit application versions execute their own committed server with the same scenario', {
   tags: ['technical'],
   timeout: 30_000,
@@ -95,13 +211,7 @@ test('explicit application versions execute their own committed server with the 
         },
         {
           modelProfile: verifiedProfile('sol-high'),
-          modelFetch: async (url, init) => {
-            const response = await model.provider(url, init);
-            return Response.json(
-              { ...(await response.json()), service_tier: 'default' },
-              { headers: response.headers },
-            );
-          },
+          modelFetch: pricedProvider(model.provider),
         },
         {
           profile: 'local',

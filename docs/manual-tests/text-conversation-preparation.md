@@ -110,6 +110,65 @@ granska utkastet igen. Avsluta med `quit`; den tillfälliga databasen tas
 bort. Detta prov använder faktisk verktygsleverans efter genomförande,
 utan offlineläge eller verkliga leverantörsanrop.
 
+## Separat överlappningsförsök
+
+Operatören kan upprepa TEXT-17:s enkla osparade ändring, FRAGA-01:s
+fråga och TEXT-02:s avbrott med samma underlag i båda körsätten.
+Starta en ny tillfällig röstinstallation för varje körsätt:
+
+<!-- markdownlint-disable MD013 -->
+```sh
+SKYTTEL_CONVERSATION_WORK_MODE=sequential npm run test:env -- node --import tsx scripts/manual-voice.ts
+SKYTTEL_CONVERSATION_WORK_MODE=overlap npm run test:env -- node --import tsx scripts/manual-voice.ts
+```
+<!-- markdownlint-enable MD013 -->
+
+Kör en rad i taget och avsluta installationen med `quit` före nästa.
+`ready.executionMode` ska ange valt körsätt. Före det aktuella
+användarmeddelandet sätter operatören:
+
+```text
+hold-scope on
+hold-check on
+response-required off
+```
+
+`held.kind:scope` är uppdragstolkningen, `work` är arbetsmodellen och
+`action-check` är den separata ändringskontrollen. Ersätt SCOPE med
+tolkningens ID. Vid överlappning kan arbetsmodellen läsa innan
+tolkningen släpps. Sekventiell körning väntar. Använd `pending` för
+att läsa vilka anrop som faktiskt hålls.
+
+För den enkla ändringen släpper operatören samma verktyg och värden
+som i fallet. Tolkningen släpps separat:
+
+<!-- markdownlint-disable MD013 -->
+```text
+reply SCOPE {"mode":"work","request":"Lägg till Kim Lind utan att spara.","responseRequired":false}
+```
+<!-- markdownlint-enable MD013 -->
+
+Ingen utkaständring får finnas före den oberoende kontrollens
+godkännande. Vid identitetsfrågan släpps i stället tolkningen med:
+
+<!-- markdownlint-disable MD013 -->
+```text
+reply SCOPE {"mode":"clarify","request":"Vilken person avses med Lo, och vilket namn ska objektet ha?"}
+```
+<!-- markdownlint-enable MD013 -->
+
+Detta är en fråga om begäran, utan en ny del i frågeregistret. Frågan
+ska visas i samma samtal; ett oförenligt arbetsförslag ska lämnas
+oanvänt. I avbrottsfallet hålls tolkningen tills användaren avbryter,
+varefter gamla svar kan släppas. Sena svar får inte lägga tillbaka
+arbete eller ändra tidigare slutförda förslag.
+
+Återställ med `hold-scope off` och `hold-check off` inför vanliga
+förberedelser. Automatikens tekniska variant använder ett tomt utkast,
+en enkel Kim-batch, en separat fråga och Escape. Den ersätter inte
+hela de ordinarie fallen, fysisk uppläsning eller en mätning med verklig
+modell. Ingen väntetidsvinst eller fakturerbar körning ingår.
+
 ## Familjerättelsen
 
 TEXT-01 använder röstinstallationen. Kör `seed-family` **före all

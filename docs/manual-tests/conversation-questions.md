@@ -107,6 +107,11 @@ nya förslag i utkastet eller utföra ett extra sparande.
 testfallet “FRAGA-01: en nödvändig identitetsfråga finns i samtalstexten
 med serverns väntesignal”.
 
+**Separat försöksförberedelse:**
+[Överlappning och sekventiell baslinje](text-conversation-preparation.md#separat-överlappningsförsök)
+kan prövas med samma förväntade användarutfall. Tekniska prov redovisas
+som stöd, skilt från hela det ordinarie fallet.
+
 <!-- markdownlint-disable MD013 -->
 <!--
 ```manual-mapping
@@ -118,6 +123,40 @@ med serverns väntesignal”.
   "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Angiven talad eller skriven ingång skyddar nödvändig väntan och verifierat sparbesked.",
   "outcomes": [
     "Frågan står som Skyttels svar i samtalstexten. Ingen röstruta visas i ett samtal med enbart text och inget sparas."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential preserves actual unused work and costs on clarification before a fresh read",
+      "purpose": "En separat tolkningsfråga lämnar utkastet oförändrat, bevarar faktisk oanvänd tokenåtgång och kan följas av en ny läsbegäran utan gammalt förslag."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap preserves actual unused work and costs on clarification before a fresh read",
+      "purpose": "En separat tolkningsfråga lämnar utkastet oförändrat, bevarar faktisk oanvänd tokenåtgång och kan följas av en ny läsbegäran utan gammalt förslag."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "sequential spoken clarify shares the guarded draft and real delivery flow",
+      "purpose": "Den tillfälliga frågan om begäran följer hela den kontrollerade röstleveransen och utkastet bevaras; fysisk hörbarhet ingår inte."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/assistant-overlap.test.ts",
+      "title": "overlap spoken clarify shares the guarded draft and real delivery flow",
+      "purpose": "Den tillfälliga frågan om begäran följer hela den kontrollerade röstleveransen och utkastet bevaras; fysisk hörbarhet ingår inte."
+    }
   ]
 }
 ```

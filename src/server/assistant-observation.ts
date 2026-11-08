@@ -114,6 +114,7 @@ export type AssistantObservation = {
     | 'task_completed'
     | 'model_attempt'
     | 'model_action'
+    | 'work_result'
     | 'mcp_started'
     | 'mcp_completed'
     | 'mcp_failed'
@@ -352,7 +353,7 @@ function data(event: AssistantObservation, project: ProjectArray) {
   switch (event.kind) {
     case 'task_started':
       return {
-        ...errorFields(event.data, ['source', 'startedAt']),
+        ...errorFields(event.data, ['source', 'startedAt', 'executionMode']),
         request: fields((event.data as { request?: unknown })?.request, [
           'text',
           'draftVersion',
@@ -363,7 +364,7 @@ function data(event: AssistantObservation, project: ProjectArray) {
         ]),
       };
     case 'task_completed': {
-      const admitted = errorFields(event.data, ['source', 'startedAt', 'endedAt']);
+      const admitted = errorFields(event.data, ['source', 'startedAt', 'endedAt', 'executionMode']);
       const noOp = (event.data as { noOp?: unknown })?.noOp;
       if (noOp === 'already_working' || noOp === 'already_checked') admitted.noOp = noOp;
       const view = (event.data as { view?: unknown })?.view;
@@ -388,6 +389,8 @@ function data(event: AssistantObservation, project: ProjectArray) {
     }
     case 'mcp_failed':
       return errorFields(event.data, ['name', 'startedAt']);
+    case 'work_result':
+      return fields(event.data, ['providerCallId', 'executionMode', 'disposition', 'reason']);
     case 'model_action':
       return fields(event.data, ['name', 'arguments', 'callId']);
     case 'model_attempt':
