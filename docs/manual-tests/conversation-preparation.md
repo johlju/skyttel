@@ -44,6 +44,29 @@ Röstkommentarer, råa operations-ID:n, exakta kvitton, anropsordning,
 `store:false`, filinnehåll och resursantal är tekniskt underlag i
 automationen, separat från de synliga vanliga arbetsstegen.
 
+## Fel i en beroende ändringsbatch
+
+För FRAGA-13/14: börja med ett identifierat, osparat **Lo Exempel**
+utan egenskaper. Släpp första uppdraget enligt **Utkastbatch och
+sparande**, med namnet **Lo Lind**. Det är en egen slutförd batch.
+
+Vid nästa uppdrag, läs sambandstyperna med
+`tool REQUEST read_type_catalog {}`. Kopiera ett verkligt ID till REL
+från nästa `held.lastToolResult.relationshipTypes`. Kopiera TYPE från
+Lo-förslagets `after.typeId`, och V/C från aktuellt `held.draft`.
+Släpp sedan följande, med aktuellt REQUEST. Den andra operationens
+avsiktligt saknade ändpunkt provar fel efter ett giltigt objektförslag:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST submit_changes {"version":V,"contentVersion":C,"completion":"draft","questions":["Vilket kort ska användas?"],"operations":[{"name":"propose_object","arguments":{"id":"lamp","baseRevision":null,"value":{"typeId":"TYPE","name":"Lampan"}}},{"name":"propose_relationship","arguments":{"id":"required-link","baseRevision":null,"value":{"typeId":"REL","sourceId":"lamp","targetId":"missing-endpoint"}}}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Inget steg från den misslyckade batchen får finnas i utkastet. Läs
+resultatet enligt det manuella fallet. Starta om provinstallationen
+efter fallet; använd inte riktiga hushållsdata för denna felinjektion.
+
 ## Sammanfattning och mätning
 
 `text-context 99` gäller nästa textsvar; släpp arbetssvaret innan det nya

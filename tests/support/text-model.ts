@@ -51,7 +51,7 @@ export function textModel(
               JSON.stringify(
                 request.instructions.startsWith('SKYTTEL_TURN_SCOPE')
                   ? { mode: 'work', request: 'Perform the controlled test request.' }
-                  : { decision: 'allow' },
+                  : { decision: 'allow', complete: true },
               ),
             ),
           ])

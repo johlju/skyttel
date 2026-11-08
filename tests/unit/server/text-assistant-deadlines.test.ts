@@ -387,7 +387,7 @@ test('accepted text finishes after natural login expiry and its committed draft 
     observe: (event) => {
       if (
         event.kind === 'mcp_completed' &&
-        (event.data as { name: string }).name === 'propose_object'
+        (event.data as { name: string }).name === 'apply_draft_batch'
       )
         completed = true;
     },
@@ -709,7 +709,7 @@ test('a late voice result before its timer runs preserves already accepted queue
     observe: (event) => {
       if (
         event.kind === 'mcp_completed' &&
-        (event.data as { name: string }).name === 'propose_object'
+        (event.data as { name: string }).name === 'apply_draft_batch'
       )
         proposalCommitted = true;
     },

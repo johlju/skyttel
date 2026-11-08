@@ -1169,7 +1169,7 @@ test('the owning browser cannot save pending changes and a verified external dis
 });
 
 test.each([false, true])(
-  'retrying a partial batch skips successful operations, including overlapping effects: %s',
+  'retrying an atomic batch repeats its rolled-back operations, including overlapping effects: %s',
   async (overlap) => {
     let step = 0;
     let typeId = '';
@@ -1236,11 +1236,12 @@ test.each([false, true])(
     const waiting = await message(await start(), 'Lägg till två saker.');
     const failed = await message(waiting, 'Cykeln och hjälmen.');
     expect(failed.phase).toBe('error');
-    expect(failed.pendingParts?.[0].operations).toHaveLength(overlap ? 2 : 1);
-    expect(failed.review.changes.map((item: { id: string }) => item.id)).toContain('bike');
+    expect(failed.pendingParts?.[0].operations).toEqual([]);
+    expect(failed.pendingParts?.[0].status).toBe('ready');
+    expect(failed.review.changes.map((item: { id: string }) => item.id)).toEqual(['web-object']);
     const retried = await message(failed, 'Fortsätt med det som återstår.');
     expect(retried.error).toBeUndefined();
-    expect(retried.review.version).toBe(failed.review.version + 1);
+    expect(retried.review.version).toBe(failed.review.version + (overlap ? 3 : 2));
     expect(retried.pendingParts?.[0].status).toBe('completed');
     expect(retried.review.changes.map((item: { id: string }) => item.id)).toEqual([
       'web-object',

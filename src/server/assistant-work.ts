@@ -1,10 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type Database from 'better-sqlite3';
 import { z } from 'zod';
 import { conflictBasis, conflictProperties } from '../shared/conflict-properties.js';
 import { draftConflicts } from '../shared/draft-conflicts.js';
 import { proposedObjectTypes, proposedRelationshipTypes } from '../shared/map.js';
 import { isObjectIconId, searchObjectIcons } from '../shared/object-icons.js';
 import { propertyInputSchema } from '../shared/properties.js';
+import { draftDiscards } from './draft-discards.js';
 import type { householdMap } from './map.js';
 import { MapError } from './map.js';
 
@@ -117,7 +119,30 @@ const proposalFields = {
 const lifecycle = z.enum(['active', 'ended']).optional();
 const saveFields = z.object({ ...versionFields, operationId: id }).strict();
 
-export function registerAssistantWork(server: McpServer, map: () => HouseholdMap) {
+export function registerAssistantWork(
+  server: McpServer,
+  map: () => HouseholdMap,
+  database: Database.Database,
+) {
+  const mutations = new Map<
+    string,
+    { schema: z.ZodType; apply: (domain: HouseholdMap, body: unknown) => unknown }
+  >();
+  function registerDraftTool<T>(
+    name: string,
+    config: {
+      description: string;
+      inputSchema: z.ZodType<T>;
+      annotations: { readOnlyHint: boolean; destructiveHint: boolean; openWorldHint: boolean };
+    },
+    apply: (domain: HouseholdMap, body: T) => unknown,
+  ) {
+    mutations.set(name, {
+      schema: config.inputSchema,
+      apply: (domain, body) => apply(domain, config.inputSchema.parse(body)),
+    });
+    server.registerTool(name, config, async (body) => run((domain) => apply(domain, body)));
+  }
   function run(action: (domain: HouseholdMap) => unknown) {
     try {
       return assistantResult(action(map()));
@@ -209,7 +234,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
         };
       }),
   );
-  server.registerTool(
+  registerDraftTool(
     'propose_object_type',
     {
       description:
@@ -230,16 +255,15 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
         .strict(),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
-    async (body) =>
-      run((domain) => {
-        domain.proposeObjectType({
-          ...body,
-          value: body.value,
-        });
-        return assistantDraftReview(domain);
-      }),
+    (domain, body) => {
+      domain.proposeObjectType({
+        ...body,
+        value: body.value,
+      });
+      return assistantDraftReview(domain);
+    },
   );
-  server.registerTool(
+  registerDraftTool(
     'propose_object',
     {
       description:
@@ -263,16 +287,15 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
         .strict(),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
-    async (body) =>
-      run((domain) => {
-        domain.propose({
-          ...body,
-          value: body.value,
-        });
-        return assistantDraftReview(domain);
-      }),
+    (domain, body) => {
+      domain.propose({
+        ...body,
+        value: body.value,
+      });
+      return assistantDraftReview(domain);
+    },
   );
-  server.registerTool(
+  registerDraftTool(
     'propose_relationship_type',
     {
       description:
@@ -295,13 +318,12 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
         .strict(),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
-    async (body) =>
-      run((domain) => {
-        domain.proposeRelationshipType(body);
-        return assistantDraftReview(domain);
-      }),
+    (domain, body) => {
+      domain.proposeRelationshipType(body);
+      return assistantDraftReview(domain);
+    },
   );
-  server.registerTool(
+  registerDraftTool(
     'propose_relationship',
     {
       description:
@@ -323,17 +345,16 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
         .strict(),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
-    async (body) =>
-      run((domain) => {
-        const result = domain.proposeRelationship({
-          ...body,
-          value: body.value,
-        });
-        return {
-          ...assistantDraftReview(domain),
-          ...(result.existingId ? { existingId: result.existingId } : {}),
-        };
-      }),
+    (domain, body) => {
+      const result = domain.proposeRelationship({
+        ...body,
+        value: body.value,
+      });
+      return {
+        ...assistantDraftReview(domain),
+        ...(result.existingId ? { existingId: result.existingId } : {}),
+      };
+    },
   );
   server.registerTool(
     'read_history',
@@ -436,7 +457,7 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
     },
     async () => run((domain) => domain.operations()),
   );
-  server.registerTool(
+  registerDraftTool(
     'discard_proposal',
     {
       description:
@@ -450,13 +471,12 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
         .strict(),
       annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
     },
-    async (body) =>
-      run((domain) => {
-        domain.discardChange(body);
-        return assistantDraftReview(domain);
-      }),
+    (domain, body) => {
+      domain.discardChange(body);
+      return assistantDraftReview(domain);
+    },
   );
-  server.registerTool(
+  registerDraftTool(
     'resolve_conflict',
     {
       description:
@@ -472,13 +492,12 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
         .strict(),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
-    async (body) =>
-      run((domain) => {
-        domain.resolve(body);
-        return assistantDraftReview(domain);
-      }),
+    (domain, body) => {
+      domain.resolve(body);
+      return assistantDraftReview(domain);
+    },
   );
-  server.registerTool(
+  registerDraftTool(
     'discard_draft',
     {
       description:
@@ -486,11 +505,68 @@ export function registerAssistantWork(server: McpServer, map: () => HouseholdMap
       inputSchema: z.object(versionFields).strict(),
       annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
     },
+    (domain, body) => {
+      domain.discard(body.version, body.contentVersion);
+      return assistantDraftReview(domain);
+    },
+  );
+  server.registerTool(
+    'apply_draft_batch',
+    {
+      description:
+        'Genomför en sammanhängande ordnad batch av utkaständringar atomiskt. Ange aktuella versioner en gång; operationerna använder de verifierade versionerna i beroendeordning. Ett fel lämnar hela utkastet oförändrat. Sparande ingår inte i batchen.',
+      inputSchema: z
+        .object({
+          ...versionFields,
+          operations: z
+            .array(
+              z.object({ name: z.string(), arguments: z.record(z.string(), z.unknown()) }).strict(),
+            )
+            .min(1)
+            .max(24),
+        })
+        .strict(),
+      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+    },
     async (body) =>
-      run((domain) => {
-        domain.discard(body.version, body.contentVersion);
-        return assistantDraftReview(domain);
-      }),
+      run((domain) =>
+        draftDiscards(database).atomic(() => {
+          let review = assistantDraftReview(domain);
+          if (review.version !== body.version || review.contentVersion !== body.contentVersion)
+            throw new MapError('draft_conflict');
+          // Validate the whole request before its first mutation; domain checks
+          // still run for every operation inside this same SQLite transaction.
+          for (const operation of body.operations) {
+            const tool = mutations.get(operation.name);
+            if (
+              !tool ||
+              'version' in operation.arguments ||
+              'contentVersion' in operation.arguments ||
+              !tool.schema.safeParse({
+                ...operation.arguments,
+                version: body.version,
+                contentVersion: body.contentVersion,
+              }).success
+            )
+              throw new MapError('invalid_request', 400);
+          }
+          const applied = [];
+          for (const operation of body.operations) {
+            const tool = mutations.get(operation.name);
+            if (!tool) throw new MapError('invalid_request', 400);
+            const before = review;
+            const args = {
+              ...operation.arguments,
+              version: review.version,
+              contentVersion: review.contentVersion,
+            };
+            tool.apply(domain, args);
+            review = assistantDraftReview(domain);
+            applied.push({ ...operation, before, after: review });
+          }
+          return { ...review, applied };
+        }),
+      ),
   );
   server.registerTool(
     'read_save_operation',

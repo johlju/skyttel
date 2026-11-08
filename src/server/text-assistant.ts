@@ -1257,6 +1257,8 @@ export function textAssistantRoutes({
         if (decision.decision === 'deny')
           rejectAction(operations[decision.operation].name, 'outside_requested_work');
         if (decision.decision === 'clarify') throw new MapError('assistant_scope_unclear', 409);
+        if (decision.decision === 'incomplete')
+          throw new MapError('assistant_batch_incomplete', 409);
       };
       scopeReady(checkActions);
       const review = (await call(session, 'read_my_draft', {}, guard)) as TextAssistantReview;
@@ -1282,6 +1284,29 @@ export function textAssistantRoutes({
       }
       let version = review.version;
       const mutations = new Set<string>();
+      function recordMutation(
+        name: string,
+        args: Record<string, unknown>,
+        before: TextAssistantReview,
+        after: TextAssistantReview,
+        resolves: z.infer<typeof partReference>[] = [],
+      ) {
+        session.execution.parts.operation(resolves, name, args, before, after);
+        if (after.version === before.version) return;
+        const restored =
+          name === 'discard_proposal' &&
+          [before.changes, before.relationships, before.objectTypes, before.relationshipTypes].some(
+            (changes) =>
+              changes?.some((change) => change.id === args.id && change.before && !change.after),
+          );
+        mutations.add(restored ? 'restored' : 'draft');
+        const kind = mutations.size === 1 && mutations.has('restored') ? 'restored' : 'draft';
+        session.state.result = {
+          kind,
+          message: kind === 'restored' ? 'Återställt i utkastet.' : 'Utkastet är uppdaterat.',
+          changes: [...(session.state.result?.changes ?? []), ...draftUpdateDetails(before, after)],
+        };
+      }
       let contentVersion = review.contentVersion;
       finishInterruptedInput(session);
       const dialogue = session.state.conversation.slice(session.state.contextOffset);
@@ -1325,13 +1350,17 @@ export function textAssistantRoutes({
             return;
           }
         }
-        const tools = session.execution.mcp.tools.map((tool) => ({
-          type: 'function' as const,
-          name: tool.name,
-          description: tool.description,
-          parameters: tool.inputSchema,
-          strict: false,
-        }));
+        // The executor owns the atomic transport command. The work model
+        // proposes submit_changes, which must pass independent batch review.
+        const tools = session.execution.mcp.tools
+          .filter((tool) => tool.name !== 'apply_draft_batch')
+          .map((tool) => ({
+            type: 'function' as const,
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.inputSchema,
+            strict: false,
+          }));
         tools.push({
           type: 'function',
           name: 'show_map_object',
@@ -1364,13 +1393,13 @@ export function textAssistantRoutes({
         const draftTools = session.execution.mcp.tools.filter(
           (tool) =>
             tool.annotations?.readOnlyHint === false &&
-            !['save_draft', 'prepare_save'].includes(tool.name),
+            !['save_draft', 'prepare_save', 'apply_draft_batch'].includes(tool.name),
         );
         tools.push({
           type: 'function',
           name: 'submit_changes',
           description:
-            'Utför en ordnad ändringsbatch med aktuella versioner. Behåll andra förslag. completion draft lämnar allt osparat; save kräver ett aktuellt uttryckligt besked om hela utkastet. questions registrerar nya väntande delar med kind, request, question och dependsOnDraft. resolves anger id och revision för förtydligade ändringsdelar som batchens återstående operationer slutför. Ofärdiga ändringsdelar hindrar sparande även efter förtydligande; oberoende informationsfrågor gör det inte. Sätt continueResponse true om faktasvar, detaljer eller markering återstår. Annars avslutar servern.',
+            'Utför en sammanhängande ordnad ändringsbatch atomiskt med aktuella versioner. Ett nytt objekt och dess nödvändiga samband ska ingå i samma batch; ett fel lämnar hela batchen ogenomförd. Lägg självständiga delar i separata batcher. Behåll andra förslag. completion draft lämnar allt osparat; save kräver ett aktuellt uttryckligt besked om hela utkastet. questions registrerar nya väntande delar med kind, request, question och dependsOnDraft. resolves anger id och revision för förtydligade ändringsdelar som batchens återstående operationer slutför. Ofärdiga ändringsdelar hindrar sparande även efter förtydligande; oberoende informationsfrågor gör det inte. Sätt continueResponse true om faktasvar, detaljer eller markering återstår. Annars avslutar servern.',
           parameters: {
             type: 'object',
             properties: {
@@ -1564,15 +1593,52 @@ export function textAssistantRoutes({
           session.execution.parts.validateCompletion(batch.resolves);
           updateParts(session, batch.questions, [], original.call_id);
           combined = { ...batch, callId: original.call_id };
-          calls = batch.operations.map((operation) => ({
-            ...original,
-            name: operation.name,
-            arguments: JSON.stringify(operation.arguments),
-          }));
-          if (batch.completion === 'save')
-            calls.push({ ...original, name: 'save_draft', arguments: '{}' });
+          const operations = batch.operations.filter((operation) =>
+            session.execution.parts.shouldRun(
+              batch.resolves,
+              operation.name,
+              operation.arguments,
+              session.state.review,
+            ),
+          );
+          if (operations.length) {
+            const value = await call(
+              session,
+              'apply_draft_batch',
+              {
+                version,
+                contentVersion,
+                operations,
+              },
+              guard,
+            );
+            // No operation is recorded as completed until the whole batch has
+            // committed. A failed batch preserves its pending parts unchanged.
+            for (const applied of value.applied as {
+              name: string;
+              arguments: Record<string, unknown>;
+              before: TextAssistantReview;
+              after: TextAssistantReview;
+            }[]) {
+              recordMutation(
+                applied.name,
+                applied.arguments,
+                applied.before,
+                applied.after,
+                batch.resolves,
+              );
+            }
+            session.state.workVersion = value.version;
+            session.state.review = await call(session, 'read_my_draft', {}, guard);
+            version = session.state.review.version;
+            contentVersion = session.state.review.contentVersion;
+          }
+          calls =
+            batch.completion === 'save'
+              ? [{ ...original, name: 'save_draft', arguments: '{}' }]
+              : [];
         }
-        if (!calls.length) {
+        if (!calls.length && !combined) {
           session.state.modelReply = turnReply(session, response.output_text, '\n');
           if (response.output_text)
             session.state.conversation.push({ role: 'assistant', text: response.output_text });
@@ -1585,6 +1651,8 @@ export function textAssistantRoutes({
         if (!combined) {
           const operations = [];
           for (const action of calls) {
+            if (!tools.some((tool) => tool.name === action.name))
+              throw new MapError('assistant_unknown_tool', 409);
             const tool = session.execution.mcp.tools.find((tool) => tool.name === action.name);
             if (!tool) continue; // Local conversation/display tools do not mutate the draft.
             const args = JSON.parse(action.arguments) as Record<string, unknown>;
@@ -1612,6 +1680,15 @@ export function textAssistantRoutes({
               operations.push({ name: action.name, arguments: args });
             }
           }
+          // Multiple draft mutations must name their shared atomic boundary.
+          // Individual MCP calls remain available for one-operation work and
+          // saving remains a separate step after committed draft changes.
+          if (
+            operations.filter((operation) =>
+              draftTools.some((tool) => tool.name === operation.name),
+            ).length > 1
+          )
+            throw new MapError('assistant_batch_required', 409);
           await checkActions(operations);
         }
         for (const action of calls) {
@@ -1904,38 +1981,7 @@ export function textAssistantRoutes({
             const before = previousReview ?? session.state.review;
             session.state.review = await call(session, 'read_my_draft', {}, guard);
             version = session.state.review.version;
-            if (combined && !isSave)
-              session.execution.parts.operation(
-                combined.resolves,
-                action.name,
-                args,
-                previousReview ?? session.state.review,
-                session.state.review,
-              );
-            if (version !== before.version && !isSave) {
-              const restored =
-                action.name === 'discard_proposal' &&
-                [
-                  before.changes,
-                  before.relationships,
-                  before.objectTypes,
-                  before.relationshipTypes,
-                ].some((changes) =>
-                  changes?.some(
-                    (change) => change.id === args.id && change.before && !change.after,
-                  ),
-                );
-              mutations.add(restored ? 'restored' : 'draft');
-              const kind = mutations.size === 1 && mutations.has('restored') ? 'restored' : 'draft';
-              session.state.result = {
-                kind,
-                message: kind === 'restored' ? 'Återställt i utkastet.' : 'Utkastet är uppdaterat.',
-                changes: [
-                  ...(session.state.result?.changes ?? []),
-                  ...draftUpdateDetails(before, session.state.review),
-                ],
-              };
-            }
+            if (!isSave) recordMutation(action.name, args, before, session.state.review);
           }
         }
         if (combined) {
@@ -2366,6 +2412,7 @@ export function textAssistantRoutes({
                 'assistant_action_out_of_scope',
                 'assistant_scope_unclear',
                 'assistant_scope_unavailable',
+                'assistant_batch_incomplete',
               ].includes(error.code)
             ? error.code
             : 'assistant_draft_changed';
@@ -2378,7 +2425,11 @@ export function textAssistantRoutes({
           session.state.requiredNotice = blockedActionMessage(session.state.securityReference);
           session.state.reply = session.state.requiredNotice;
         }
-        if (session.state.securityReference || session.state.error.startsWith('assistant_scope_')) {
+        if (
+          session.state.securityReference ||
+          session.state.error.startsWith('assistant_scope_') ||
+          session.state.error === 'assistant_batch_incomplete'
+        ) {
           session.state.modelReply = undefined;
           session.state.previousFailure = session.state.reply;
           session.state.conversation.push({ role: 'assistant', text: session.state.reply });

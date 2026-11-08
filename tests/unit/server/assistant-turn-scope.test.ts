@@ -412,12 +412,13 @@ test('literal instruction text, mixed edits, clarification and a later save pres
     (input) => {
       if (input.instructions.startsWith('SKYTTEL_TURN_ACTIONS')) {
         const operations = JSON.parse(String(input.input[0].content)).untrusted.operations;
-        if (operations[0].name === 'prepare_save') return [modelMessage('{"decision":"allow"}')];
+        if (operations[0].name === 'prepare_save')
+          return [modelMessage('{"decision":"allow","complete":true}')];
         expect(
           JSON.parse(String(input.input[0].content)).untrusted.operations[0].arguments.value
             .properties[0].value,
         ).toBe(literal);
-        return [modelMessage('{"decision":"allow"}')];
+        return [modelMessage('{"decision":"allow","complete":true}')];
       }
       const { current, earlier } = JSON.parse(String(input.input[0].content));
       expect(JSON.stringify(input.input)).not.toContain('BROWSER-PRIVATE');
@@ -495,7 +496,7 @@ test('voice read-only work rejects an injected mutation and text can subsequentl
     (input) => [
       modelMessage(
         input.instructions.startsWith('SKYTTEL_TURN_ACTIONS')
-          ? '{"decision":"allow"}'
+          ? '{"decision":"allow","complete":true}'
           : JSON.stringify({
               mode: JSON.parse(String(input.input[0].content)).current.includes('Lägg')
                 ? 'work'
@@ -615,7 +616,7 @@ test('a later violation stops the turn while retaining its earlier confirmed dra
       return [
         modelMessage(
           action.arguments.id === 'Requested'
-            ? '{"decision":"allow"}'
+            ? '{"decision":"allow","complete":true}'
             : '{"decision":"deny","operation":0}',
         ),
       ];
@@ -731,7 +732,7 @@ test('the automatic save fallback cannot expand a literal-name edit into saving'
         modelMessage(
           operations.some((operation: { name: string }) => operation.name === 'prepare_save')
             ? '{"decision":"deny","operation":0}'
-            : '{"decision":"allow"}',
+            : '{"decision":"allow","complete":true}',
         ),
       ];
     },

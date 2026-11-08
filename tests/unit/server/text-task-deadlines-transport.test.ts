@@ -40,7 +40,7 @@ test('an accepted text tool waiting at MCP cannot write at its original deadline
         .clone()
         .json()
         .catch(() => null);
-      if (rpc?.params?.name === 'propose_object') {
+      if (rpc?.params?.name === 'apply_draft_batch') {
         toolReached = true;
         await waiting;
       }

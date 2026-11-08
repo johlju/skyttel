@@ -400,6 +400,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   återtagande, oberoende mellanturer, identiteter,
   konflikter, datatyper, upprepade egenskapsetiketter och lika objektnamn,
   oberoende svar under väntande frågor, förnyad sparbegäran,
+  atomiska ändringsbatcher med bevarat tidigare arbete vid fel,
   väntan med mikrofonen av, beständigt kvitto och fyra
   sekunders sparbesked efter ljud eller stopp. Talad och skriven ingång
   har skilda vanliga fall; uppläsning och faktiskt ljud har FRAGA-08/09.

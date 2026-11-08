@@ -51,7 +51,7 @@ async function main() {
         JSON.stringify(
           request.instructions.startsWith('SKYTTEL_TURN_SCOPE')
             ? { mode: readOnlyScope ? 'read' : 'work', request: 'Controlled manual request.' }
-            : { decision: 'allow' },
+            : { decision: 'allow', complete: true },
         ),
       ),
     ],

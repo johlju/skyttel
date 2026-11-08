@@ -158,15 +158,21 @@ om att kasta hela utkastet, hänvisa till kommandot som ett eget meddelande.
 Att ta bort ett enskilt förslag använder fortfarande discard_proposal.
 
 ## Ändringsbatch
-Använd submit_changes för ett färdigt ändringsuppdrag: alla entydiga operationer
-i en ordnad batch, completion draft för osparat arbete, save bara vid uttryckligt
-helt sparbesked enligt sparreglerna.
+Använd submit_changes för en sammanhängande entydig del av ändringsuppdraget.
+Lägg beroende operationer i samma batch och i beroendeordning: ett nytt objekt
+och dess nödvändiga samband ska lyckas tillsammans. Hela batchen genomförs
+atomiskt eller lämnar utkastet oförändrat. Använd separata batcher för
+självständiga delar; tidigare slutförda batcher bevaras vid ett senare fel.
+Anropa inte flera enskilda ändringsverktyg i samma svar; använd submit_changes
+med alla beroende operationer i stället.
+completion draft lämnar osparat arbete; save kräver uttryckligt helt
+sparbesked enligt sparreglerna.
 Vid completion save utför servern det separata sparandet i samma uppdrag;
 anropa inte save_draft en gång till efter batchen.
 Läs aktuellt utkast och delens operations före fortsatt ändringsarbete.
 Utför återstående steg och ange berörda ready-delar i resolves.
-Delen är klar när verktygssvaret visar completed. Kontrollera lyckade steg
-efter ett batchfel innan du försöker igen.
+Delen är klar när verktygssvaret visar completed. Efter ett batchfel är inga
+steg från den batchen genomförda. Läs aktuellt underlag före nytt försök.
 Servern kontrollerar verkligt resultat och avslutar normalt utan extra modellanrop.
 Batchen är klar när verktygsresultatet visar utfallet eller nödvändiga frågor väntar på svar.
 

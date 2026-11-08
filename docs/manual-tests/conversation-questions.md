@@ -255,6 +255,172 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
   är då nedtonade. Faktisk uppläsning provas i FRAGA-08.
 - Det skrivna svaret avlägsnar det gamla vänteläget; mikrofonen förblir av.
 
+### FRAGA-13: en beroende batch från text misslyckas utan delresultat
+
+**Syfte:** Ett fel i batchens nödvändiga samband lämnar inget nytt objekt.
+En tidigare slutförd batch och en väntande ändringsfråga finns kvar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Ny kontrollerad installation med identifierad,
+osparad **Lo Exempel**, typ Person, utan egenskaper.
+
+**Separat förberedelse:** Följ
+[fel i en beroende ändringsbatch](conversation-preparation.md#fel-i-en-beroende-ändringsbatch).
+Operatören släpper den giltiga namnändringen först och den felaktiga
+sammanhängande batchen vid nästa uppdrag. Kör i Chromium med kontrollerad
+textleverantör, riktig server och SQLite. Fysisk
+mikrofon och faktisk modellförståelse verifieras separat.
+
+**Automatiskt motsvarande test:**
+[conversation-questions.spec.ts](../../tests/integration/conversation-questions.spec.ts),
+FRAGA-13.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-questions.spec.ts",
+    "caseId": "FRAGA-13"
+  },
+  "reference": "Chromium med kontrollerade leverantörer, riktig server, SQLite och skriven felutlösande begäran. Felet ligger i batchens andra beroende operation.",
+  "outcomes": [
+    "Den första batchens Lo Lind finns kvar med typ Person och utan egenskaper.",
+    "Efter felet finns varken Lampan eller dess nödvändiga samband i utkastet.",
+    "Samtalet visar fel och den kvarvarande kortfrågan. Sparande av hela utkastet är spärrat."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-boundaries-http.test.ts",
+      "title": "a failed dependent batch rolls back its object and retains an earlier independent batch and pending changes",
+      "purpose": "Jämför hela utkastet före och efter rollback och kontrollerar bevarad delstatus genom publika HTTP-vägar."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-boundaries-http.test.ts",
+      "title": "an unchecked connected proposal cannot commit before its later dependent operation",
+      "purpose": "Kontrollerar att en oberoende bekräftelse utan uttrycklig kontroll av delens fullständighet inte tillåter ett första beroende steg genom publika HTTP-vägar."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-boundaries-http.test.ts",
+      "title": "an incomplete batch proposal preserves complete independent work and pending parts",
+      "purpose": "Verifierar att ett ofullständigt sammanhängande förslag avvisas före ändring, med tidigare självständigt arbete och väntande delar kvar."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel → Nytt samtal** och godkänn samtalet.
+   Skriv **Ändra namnet på Lo till Lo Lind i utkastet.** och välj
+   **Skicka**. Låt operatören släppa första batchen.
+1. Öppna **Visa utkastet → Visa förslaget: Lo Lind**. Läs Person,
+   Lo Lind och att inga egenskaper finns. Stäng läsdialogen och välj
+   **Dölj utkastet (1)**.
+1. Skriv
+   **Lägg Lampan och dess nödvändiga samband i utkastet. Fråga om kortet.**
+   Välj **Skicka** och låt operatören släppa felbatchen.
+1. Läs **Uppdraget kunde inte slutföras.** och **Vilket kort ska användas?**
+   i samtalstexten. Öppna utkastet och kontrollera att bara Lo Lind finns.
+   **Spara hela utkastet** är spärrad. Öppna Lo Lind och läs samma
+   namn, typ och tomma egenskapslista som före felet.
+
+**Förväntat resultat:**
+
+- Varken Lampan eller sambandet blir kvar från den misslyckade batchen.
+  Lo Lind från den tidigare slutförda batchen är bevarad.
+- Samtalet visar felet och frågan. Uppdraget framställs inte som färdigt.
+  Den oavslutade ändringsdelen hindrar sparande av hela utkastet.
+
+### FRAGA-14: en beroende batch från röst misslyckas utan delresultat
+
+**Syfte:** Ett fel i batchens nödvändiga samband lämnar inget nytt objekt.
+En tidigare slutförd batch och en väntande ändringsfråga finns kvar.
+
+**Användare:** Alex.
+
+**Förutsättningar:** Ny kontrollerad installation med identifierad,
+osparad **Lo Exempel**, typ Person, utan egenskaper.
+
+**Separat förberedelse:** Följ
+[fel i en beroende ändringsbatch](conversation-preparation.md#fel-i-en-beroende-ändringsbatch).
+Operatören släpper den giltiga namnändringen först och den felaktiga
+sammanhängande batchen vid nästa uppdrag. Kör i Chromium med kontrollerad
+text- och rösttransport, riktig server och SQLite. Fysisk
+mikrofon och faktisk modellförståelse verifieras separat.
+
+**Automatiskt motsvarande test:**
+[conversation-questions.spec.ts](../../tests/integration/conversation-questions.spec.ts),
+FRAGA-14.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/conversation-questions.spec.ts",
+    "caseId": "FRAGA-14"
+  },
+  "reference": "Chromium med kontrollerade leverantörer, riktig server, SQLite och talad felutlösande begäran. Felet ligger i batchens andra beroende operation.",
+  "outcomes": [
+    "Den första batchens Lo Lind finns kvar med typ Person och utan egenskaper.",
+    "Efter felet finns varken Lampan eller dess nödvändiga samband i utkastet.",
+    "Samtalet visar fel och den kvarvarande kortfrågan. Sparande av hela utkastet är spärrat."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-boundaries-http.test.ts",
+      "title": "a failed dependent batch rolls back its object and retains an earlier independent batch and pending changes",
+      "purpose": "Jämför hela utkastet före och efter rollback och kontrollerar bevarad delstatus genom publika HTTP-vägar."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Välj **Skriv till Skyttel → Nytt samtal** och godkänn samtalet.
+   Skriv **Ändra namnet på Lo till Lo Lind i utkastet.** och välj
+   **Skicka**. Låt operatören släppa första batchen.
+1. Öppna **Visa utkastet → Visa förslaget: Lo Lind**. Läs Person,
+   Lo Lind och att inga egenskaper finns. Stäng läsdialogen och välj
+   **Dölj utkastet (1)**.
+1. Välj **Prata med Skyttel**, invänta **Lyssnar** och säg
+   **Lägg Lampan och dess nödvändiga samband i utkastet. Fråga om kortet.**
+   Låt operatören släppa felbatchen.
+1. Läs **Uppdraget kunde inte slutföras.** och **Vilket kort ska användas?**
+   i samtalstexten. Öppna utkastet och kontrollera att bara Lo Lind finns.
+   **Spara hela utkastet** är spärrad. Öppna Lo Lind och läs samma
+   namn, typ och tomma egenskapslista som före felet.
+
+**Förväntat resultat:**
+
+- Varken Lampan eller sambandet blir kvar från den misslyckade batchen.
+  Lo Lind från den tidigare slutförda batchen är bevarad.
+- Samtalet visar felet och frågan. Uppdraget framställs inte som färdigt.
+  Den oavslutade ändringsdelen hindrar sparande av hela utkastet.
+
 ### FRAGA-11: egenskapsfrågor och lika namn rättas i samma samtal
 
 **Syfte:** Ett tydligt telefonnummer läggs i utkastet medan oklar datatyp,

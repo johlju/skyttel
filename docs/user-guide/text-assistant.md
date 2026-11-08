@@ -437,6 +437,13 @@ omladdning och omstart.
 
 ## Granska, rätta och spara
 
+Sammanhängande utkaständringar genomförs tillsammans. Om ett nytt objekt
+behöver ett samband och sambandet inte kan läggas till, lämnar hela den
+ändringsgruppen utkastet oförändrat. Tidigare slutförda ändringar ligger
+kvar. Läs utkastet och red ut eventuella frågor innan du försöker igen.
+En kvarstående ändringsfråga hindrar sparande av hela utkastet; ett
+förtydligande avslutar inte frågan förrän ändringen också lyckas.
+
 **Visa utkastet** i textvyn visar de samlade förslagen för objekt,
 samband och typer. Rättelser visar tidigare och föreslagna värden, exempelvis
 **Sista fyra: 1111 → 2222**. Välj förslagets rad för att läsa alla tidigare

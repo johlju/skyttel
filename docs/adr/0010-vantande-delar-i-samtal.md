@@ -88,8 +88,8 @@ Varje väntande del ska innehålla följande underlag på servern:
 - Referenser till berörda objekt, samband eller förslag när de är kända,
   samt om delen beror på utkastet. Okänt beroende behandlas försiktigt
   som utkastberoende tills aktuellt underlag visar annat.
-- Bekräftade utförda operationer och återstående arbete, så att en delvis
-  genomförd batch kan fortsätta utan att dess lyckade steg upprepas.
+- Bekräftade slutförda batcher och återstående arbete, så att en senare
+  misslyckad batch kan göras om utan att tidigare batcher upprepas.
 - Status: `waiting`, `ready`, `completed`, `withdrawn`, `superseded`
   eller `discarded`. `ready` betyder att förtydligandet är tillräckligt
   men att resultatet ännu inte är verifierat. En ändring i detta läge
@@ -155,9 +155,31 @@ utan att påverka andra delar. En återleverans med samma anropsidentitet
 ordalydelse; deduplicering ska använda identitet, inte textlikhet.
 
 `submit_changes` ska registrera nya väntande delar innan dess operationer
-körs, så att ett senare batchfel inte tappar bort olösta delar. Oberoende
-operationer får fortsätta även när andra delar väntar. Ett svar på en
-del får varken avsluta en annan del eller återställa sparmedgivande.
+körs, så att ett senare batchfel inte tappar bort olösta delar. Varje
+sammanhängande batch ska genomföras atomiskt: alla operationer lyckas
+eller lämnar utkastet oförändrat. Ett nytt objekt och dess nödvändiga
+samband ska ingå i samma batch och köras i beroendeordning. Endast
+verifierade resultat från en helt genomförd batch får avsluta en del.
+En separat uppdragstolkning gäller begäran och en oberoende modell
+kontrollerar hela batchen före tillämpning; ingen extra modellkontroll
+krävs per operation. Serverns åtkomst-, ägar- och versionskontroller
+gäller varje operation inom samma transaktion.
+
+Den oberoende kontrollen ska uttryckligen bekräfta att varje berörd
+sammanhängande del är komplett utifrån användarens uppdrag. Nödvändiga
+beroende ändringar ska ingå i samma batch eller redan vara uppfyllda i
+aktuellt underlag. Ett ofullständigt förslag ska avvisas före tillämpning,
+även om det lämnas som enstaka verktygsanrop i flera modellomgångar.
+Avvisningen är ett fel i förslaget och innebär inte att användarens
+begäran är oklar. Tidigare slutförda batcher och väntande delar bevaras;
+en sparbegäran återupplivas inte. Den språkliga bedömningen är fortfarande
+modellens ansvar och bevisas inte av en schemaenlig bekräftelse.
+
+Självständiga delar får använda separata batcher och fortsätta även när
+andra delar väntar. Ett senare batchfel påverkar inte tidigare slutförda
+batcher. Sparande är ett separat steg efter batchen; avvisat sparande
+behåller de genomförda utkaständringarna. Ett svar på en del får varken
+avsluta en annan del eller återställa sparmedgivande.
 
 ## Sparande och andra klienter
 

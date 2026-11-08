@@ -343,6 +343,74 @@ test('write authorization requires separate map consent and signed requested sco
   ).toEqual([]);
 });
 
+test('atomic MCP batches validate the whole request, preserve write grants and apply object dependencies in order', async () => {
+  const token = await connect();
+  const initial = await (await browser.get(path)).json();
+  const object = {
+    name: 'propose_object',
+    arguments: {
+      id: 'source',
+      baseRevision: null,
+      value: { typeId: initial.types[0].id, name: 'Lo' },
+    },
+  };
+  const body = { version: 0, contentVersion: initial.contentVersion };
+  for (const operation of [
+    { name: 'apply_draft_batch', arguments: { operations: [object] } },
+    { name: 'save_draft', arguments: { operationId: 'forbidden-save' } },
+    { ...object, arguments: { ...object.arguments, version: 1 } },
+    { name: 'read_map', arguments: {} },
+  ]) {
+    expect(
+      await tool(token, 'apply_draft_batch', { ...body, operations: [object, operation] }),
+    ).toMatchObject({ error: true, value: { error: 'invalid_request' } });
+    expect(await (await browser.get(path)).json()).toEqual(initial);
+  }
+  const readToken = await connect(false);
+  const denied = await callAssistant(app.origin, readToken, 'apply_draft_batch', {
+    ...body,
+    operations: [object],
+  });
+  const deniedBody = await denied.json();
+  expect(deniedBody.result?.isError || deniedBody.error).toBeTruthy();
+  expect(await (await browser.get(path)).json()).toEqual(initial);
+  const success = await tool(token, 'apply_draft_batch', {
+    ...body,
+    operations: [
+      object,
+      {
+        name: 'propose_object',
+        arguments: {
+          ...object.arguments,
+          id: 'target',
+          value: { ...object.arguments.value, name: 'Cykeln' },
+        },
+      },
+      {
+        name: 'propose_relationship',
+        arguments: {
+          id: 'uses',
+          baseRevision: null,
+          value: {
+            typeId: initial.relationshipTypes[0].id,
+            sourceId: 'source',
+            targetId: 'target',
+          },
+        },
+      },
+    ],
+  });
+  expect(success.error).toBe(false);
+  expect(success.value.changes.map(({ id }: { id: string }) => id)).toEqual(['source', 'target']);
+  expect(success.value.relationships).toEqual([expect.objectContaining({ id: 'uses' })]);
+  const beforeStale = await (await browser.get(path)).json();
+  expect(await tool(token, 'apply_draft_batch', { ...body, operations: [object] })).toMatchObject({
+    error: true,
+    value: { error: 'draft_conflict' },
+  });
+  expect(await (await browser.get(path)).json()).toEqual(beforeStale);
+});
+
 test('whole-draft reviews keep changed saved facts but project untouched endpoints without expanding their graph', async () => {
   const token = await connect();
   const catalog = (await tool(token, 'read_type_catalog')).value;

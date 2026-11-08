@@ -165,6 +165,88 @@ test('FRAGA-10: en väntande fråga bevarar oberoende svar och besked om nytt sp
   }
 });
 
+for (const mode of ['text', 'voice'] as const) {
+  test(`${mode === 'text' ? 'FRAGA-13' : 'FRAGA-14'}: en misslyckad beroende batch från ${mode} bevarar tidigare utkast och väntande fråga`, async ({
+    page,
+  }) => {
+    let turn = 0;
+    let relationshipTypeId = '';
+    const pending = 'Vilket kort ska användas?';
+    const model = textModel((request) => {
+      const { draft } = JSON.parse(
+        String(request.input.findLast((item) => item.role === 'user')?.content),
+      );
+      const lo = draft.changes.find((change: { id: string }) => change.id === 'lo');
+      const first = turn++ === 0;
+      return [
+        modelTool('submit_changes', {
+          version: draft.version,
+          contentVersion: draft.contentVersion,
+          completion: 'draft',
+          questions: first ? [] : [pending],
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: first ? 'lo' : 'lamp',
+                baseRevision: null,
+                value: { typeId: lo.after.typeId, name: first ? 'Lo Lind' : 'Lampan' },
+              },
+            },
+            ...(first
+              ? []
+              : [
+                  {
+                    name: 'propose_relationship',
+                    arguments: {
+                      id: 'required-link',
+                      baseRevision: null,
+                      value: {
+                        typeId: relationshipTypeId,
+                        sourceId: 'lamp',
+                        targetId: 'missing-endpoint',
+                      },
+                    },
+                  },
+                ]),
+          ],
+        }),
+      ];
+    });
+    const { app, live, path } = await fixture(page, model);
+    try {
+      const state: MapState = await (await page.request.get(path)).json();
+      relationshipTypeId = state.relationshipTypes[0].id;
+      await startConversationWithText(page);
+      await send(page, 'Ändra namnet på Lo till Lo Lind i utkastet.');
+      const transcript = page.getByRole('log', { name: 'Samtalstext' });
+      await readVoiceProposal(page, 'Lo Lind', null);
+      await page.getByRole('button', { name: 'Dölj utkastet (1)', exact: true }).click();
+      const instruction = 'Lägg Lampan och dess nödvändiga samband i utkastet. Fråga om kortet.';
+      if (mode === 'voice') {
+        await microphoneButton(page).click();
+        await expect(voiceBox(page)).toHaveText('Lyssnar');
+        speak(live, instruction);
+      } else await send(page, instruction);
+      await expect(transcript).toContainText('Uppdraget kunde inte slutföras.');
+      await expect(transcript).toContainText(pending);
+      const draft = await openConversationDraft(page);
+      await expect(
+        draft.getByRole('button', { name: 'Visa förslaget: Lo Lind', exact: true }),
+      ).toBeVisible();
+      await expect(
+        draft.getByRole('button', { name: 'Visa förslaget: Lampan', exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        draft.getByRole('button', { name: 'Spara hela utkastet', exact: true }),
+      ).toBeDisabled();
+      await readVoiceProposal(page, 'Lo Lind', null);
+    } finally {
+      await app.close();
+    }
+  });
+}
+
 test('FRAGA-11: egenskapsfrågor och lika namn rättas med text i samma röstsamtal', async ({
   page,
 }) => {
