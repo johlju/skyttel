@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
 import * as environments from '../../../scripts/model-evaluation/environment.js';
+import { recordedPlayback } from '../../../scripts/model-evaluation/playback.js';
 import * as speech from '../../../scripts/model-evaluation/speech.js';
 import type { Scenario } from '../../../scripts/model-evaluation/types.js';
 import { runVoiceScenario } from '../../../scripts/model-evaluation/voice-runner.js';
@@ -60,15 +61,35 @@ function setup(complete = false) {
     return environment as unknown as Awaited<ReturnType<typeof environments.evaluationEnvironment>>;
   });
   const connection = {
+    observedAt: async () => Date.now(),
     start: vi.fn(async () => 'voice'),
     play: vi.fn(async () => ({
       startedAt: Date.now() - 3000,
       endedAt: Date.now() - 2500,
       frames: 1,
+      speechFrames: 1,
+      drainedAt: Date.now() - 2500,
+      ended: { lower: Date.now() - 2520, upper: Date.now() - 2500 },
       sha256: 'test',
     })),
     retire: vi.fn(async () => {}),
     close: vi.fn(async () => {}),
+    recording: vi.fn(async () =>
+      recordedPlayback(
+        {
+          sampleRate: 48000,
+          firstFrame: 0,
+          frames: 48000,
+          lastActiveFrame: 4800,
+          observedAt: Date.now(),
+          clocks: [
+            { position: 0, at: Date.now() - 3000 },
+            { position: 1, at: Date.now() - 2000 },
+          ],
+        },
+        Buffer.alloc(96000),
+      ),
+    ),
   };
   vi.spyOn(speech, 'speechConnection').mockResolvedValue(
     connection as unknown as Awaited<ReturnType<typeof speech.speechConnection>>,
@@ -88,6 +109,15 @@ function setup(complete = false) {
     sessionTimeLimit: timeLimit,
     stopped: () => stopped,
     stopReason: () => (stopped ? 'evaluation_live_time_limit' : null),
+    assessPlayback: async () => ({
+      outcome: 'recognized' as const,
+      text: 'Done',
+      lastWordEndSeconds: 0.1,
+      alignmentMarginMs: 100,
+      profile: 'controlled-lifecycle-only',
+      callId: 'lifecycle',
+      costUsd: 0,
+    }),
   };
   const step = { id: 'utterance', text: 'Test', expected: { requirements: ['Test requirement'] } };
   const scenario: Scenario = {
@@ -173,6 +203,32 @@ test('voice deadlines retire a connection even when startup never finishes', {
   });
 });
 
+test.each(['canceled', 'expired'] as const)(
+  'voice treats application %s as terminal before assessment',
+  {
+    tags: ['technical'],
+  },
+  async (terminal) => {
+    const { scenario, options, environment, connection } = setup();
+    const view = await environment.get();
+    environment.post.mockImplementation(async () => ({
+      assistant: { ...view, taskStatus: terminal },
+      voice: { phase: 'listening' },
+    }));
+    const judge = vi.fn(async () => []);
+    const result = await runVoiceScenario(scenario, {}, { ...options, judge });
+    expect(result.attempts[0]).toMatchObject({
+      outcome: terminal === 'canceled' ? 'aborted' : 'error',
+      reason: `evaluation_application_${terminal}`,
+      elapsedMs: null,
+    });
+    expect(result.attempts[1].outcome).toBe('not_run');
+    expect(judge).not.toHaveBeenCalled();
+    expect(connection.retire).toHaveBeenCalledOnce();
+    expect(connection.close).toHaveBeenCalledOnce();
+  },
+);
+
 test('normal closure clears deadlines and summary transitions start a fresh timer', {
   tags: ['technical'],
 }, async () => {
@@ -182,7 +238,19 @@ test('normal closure clears deadlines and summary transitions start a fresh time
     transition: 'summary',
     expected: { requirements: [] },
   });
-  const result = await runVoiceScenario(scenario, {}, { ...options, judge: async () => [] });
+  const result = await runVoiceScenario(
+    scenario,
+    {},
+    {
+      ...options,
+      judge: async (input) =>
+        input.requirements.map(({ id }) => ({
+          id,
+          outcome: 'pass',
+          reason: 'Controlled lifecycle.',
+        })),
+    },
+  );
   expect(result.attempts.map((attempt) => attempt.outcome)).toEqual(['pass', 'pass', 'pass']);
   expect(connection.start).toHaveBeenCalledTimes(2);
   expect(connection.close).toHaveBeenCalledTimes(2);
@@ -211,7 +279,19 @@ test.each([false, true])(
       }
       return original(path);
     });
-    const run = runVoiceScenario(scenario, {}, { ...options, judge: async () => [] });
+    const run = runVoiceScenario(
+      scenario,
+      {},
+      {
+        ...options,
+        judge: async (input) =>
+          input.requirements.map(({ id }) => ({
+            id,
+            outcome: 'pass',
+            reason: 'Controlled lifecycle.',
+          })),
+      },
+    );
     await vi.advanceTimersByTimeAsync(0);
     expect(environment.post).toHaveBeenCalledWith('assistant/voice/voice/stop', {});
     expect(connection.retire).not.toHaveBeenCalled();

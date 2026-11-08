@@ -14,6 +14,20 @@ import type { Catalog } from '../../../scripts/model-evaluation/types.js';
 import * as voiceRunner from '../../../scripts/model-evaluation/voice-runner.js';
 import * as modelClient from '../../../src/server/model-client.js';
 
+const playbackAssessorProfile = {
+  id: 'controlled-transcriber',
+  model: 'whisper-1' as const,
+  language: 'sv' as const,
+  usdPerMinute: 0.01,
+  billingQuantumSeconds: 1,
+  alignmentMarginMs: 100,
+  minimumAverageLogProbability: -1,
+  maximumNoSpeechProbability: 0.5,
+  maximumCandidates: 8,
+  checkedAt: 'controlled-profile',
+  sources: ['https://example.test/controlled-transcription'],
+};
+
 test('voice plans validate optional audio and enable clarification in the runner', {
   tags: ['technical'],
 }, async () => {
@@ -39,6 +53,7 @@ test('voice plans validate optional audio and enable clarification in the runner
         commit: 'test',
         textProfiles: [],
         voice: true,
+        playbackAssessorProfile,
         followUps: true,
         referenceVoice: 'marin',
         voiceProfile: profiles.profiles.find(
@@ -187,6 +202,7 @@ test.each(['marin'] as const)(
         textProfiles: [],
         voice: true,
         referenceVoice,
+        playbackAssessorProfile,
         voiceProfile: profiles.profiles.find(
           (item) => item.role === 'voice',
         ) as LiveEvaluationProfile,

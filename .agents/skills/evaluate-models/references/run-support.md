@@ -56,7 +56,8 @@ for billable calls. Apply a dollar ceiling only when the user specifies a
 budget; otherwise execute the authorized scope without a cost ceiling.
 For a specified budget, record its scope: per model run or combined campaign.
 Include prior calls and outstanding holds within that scope. A per-run ceiling
-covers calibration, backend, summary, voice and counting for that model's entire
+covers calibration, backend, summary, voice, rendered-recording recognition and
+counting for that model's entire
 run, rather than a new allowance for each scenario. Report campaign spending
 separately; preserve historical ledgers when the authorization scope changes.
 Verify prior consumption from original usage evidence. Account for a documented
@@ -139,7 +140,10 @@ Admission refused before any provider call is `not_run`, with no behavior
 verdict or completion time. A stop after paid execution begins is `aborted`;
 retain its charges and observed error time.
 
-Judge each step once in one tool-free call covering all requirements.
+Judge each text step once in one tool-free call covering all requirements.
+For voice, apply the bounded rendered-recording candidate assessment in
+[voice evaluation](voice-evaluation.md#evidence-and-timing), then judge its
+collected answer requirements together. Reserve every candidate call separately.
 Score the application's collected answer. Provider prose discarded by the
 application is diagnostic evidence, not a delivered answer.
 Give the judge the actual state, receipt and history snapshot from the fixed

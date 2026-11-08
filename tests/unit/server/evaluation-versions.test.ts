@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { expect, test, vi } from 'vitest';
+import catalog from '../../../scripts/model-evaluation/catalog.json' with { type: 'json' };
+import profiles from '../../../scripts/model-evaluation/profiles.json' with { type: 'json' };
 import { verifiedProfile } from '../../../scripts/model-evaluation/provider.js';
 import { runTextScenario } from '../../../scripts/model-evaluation/runner.js';
 import { modelMessage, textModel } from '../../support/text-model.js';
@@ -226,116 +228,149 @@ test('a reused application path cannot mislabel already imported code as a diffe
   }
 });
 
-test('an application comparison accounts for both versions in the five-repeat plan without paying after a stop', {
-  tags: ['technical'],
-  timeout: 30_000,
-}, async () => {
-  const versions = [await applicationVersion('Baseline'), await applicationVersion('Candidate')];
-  const evaluator = await applicationVersion('Evaluator', true);
-  const directory = await mkdtemp(join(tmpdir(), 'skyttel-comparison-plan-'));
-  const { evaluateModels } = (await import(
-    /* @vite-ignore */ pathToFileURL(
-      join(evaluator.directory, 'scripts/model-evaluation/evaluate.ts'),
-    ).href
-  )) as typeof import('../../../scripts/model-evaluation/evaluate.js');
-  const modelClient = (await import(
-    /* @vite-ignore */ pathToFileURL(join(evaluator.directory, 'src/server/model-client.ts')).href
-  )) as typeof import('../../../src/server/model-client.js');
-  const network = vi
-    .spyOn(modelClient, 'modelTransport')
-    .mockRejectedValue(new Error('unexpected_network'));
-  try {
-    const configuration = {
-      issue: 341,
-      directory,
-      apiKey: 'synthetic-no-network-key',
-      authorized: true,
-      limitUsd: 0,
-      priorUsd: 0,
-      priorSource: 'Controlled zero-payment plan.',
-      commit: evaluator.commit,
-      textProfiles: ['sol-high'],
-      judgeProfile: verifiedProfile('judge-sol-high'),
-      baselineProfiles: { text: 'sol-high' },
-      applicationComparison: { baseline: versions[0], candidate: versions[1] },
-      localVerification: {
-        passed: true,
-        commands: ['npm run test:unit'],
-        evidence: 'Controlled application comparison contract.',
-      },
-    };
-    const run = await evaluateModels(configuration);
-    expect(network).not.toHaveBeenCalled();
-    expect(run.attempts).toHaveLength(260);
-    expect(
-      run.attempts.every((attempt) => attempt.outcome === 'not_run' && attempt.elapsedMs === null),
-    ).toBe(true);
-    expect(
-      run.attempts
-        .filter((attempt) => attempt.repetition === 1)
-        .map((attempt) => attempt.applicationVersion),
-    ).toEqual([...Array(26).fill('Baseline'), ...Array(26).fill('Candidate')]);
-    expect(
-      run.attempts
-        .filter((attempt) => attempt.repetition === 2)
-        .map((attempt) => attempt.applicationVersion),
-    ).toEqual([...Array(26).fill('Candidate'), ...Array(26).fill('Baseline')]);
-    expect(run.applicationComparison).toMatchObject({
-      status: 'inconclusive',
-      model: 'gpt-6.1-sol',
-    });
-    const manifest = JSON.parse(await readFile(join(directory, '0001-manifest.json'), 'utf8'));
-    expect(manifest.data.applicationComparison).toMatchObject({
-      contractId: expect.any(String),
-      plan: { repetitions: [1, 2, 3, 4, 5] },
-      versions: versions.map(({ id, commit }) => ({ id, commit })),
-    });
-    expect(manifest.data.evaluator).toEqual({
-      commit: evaluator.commit,
-      contract: 'committed-evaluator-v1',
-    });
-    await expect(evaluateModels({ ...configuration, commit: '0'.repeat(40) })).rejects.toThrow(
-      'evaluation_application_unverified:evaluator',
-    );
-    await writeFile(
-      join(evaluator.directory, 'scripts/model-evaluation/optimization-comparison-plan.json'),
-      '{}\n',
-    );
-    await expect(evaluateModels(configuration)).rejects.toThrow(
-      'evaluation_application_unverified:evaluator',
-    );
-    execFileSync('git', [
-      '-C',
-      evaluator.directory,
-      'add',
-      'scripts/model-evaluation/optimization-comparison-plan.json',
-    ]);
-    execFileSync('git', [
-      '-C',
-      evaluator.directory,
-      '-c',
-      'user.name=Evaluation',
-      '-c',
-      'user.email=evaluation@example.test',
-      '-c',
-      'commit.gpgSign=false',
-      'commit',
-      '-qm',
-      'Change imported evaluator data',
-    ]);
-    const changedCommit = execFileSync('git', ['-C', evaluator.directory, 'rev-parse', 'HEAD'], {
-      encoding: 'utf8',
-    }).trim();
-    await expect(evaluateModels({ ...configuration, commit: changedCommit })).rejects.toThrow(
-      'evaluation_application_unverified:evaluator',
-    );
-    expect(network).not.toHaveBeenCalled();
-  } finally {
-    network.mockRestore();
-    await Promise.all(
-      [...versions.map((version) => version.directory), evaluator.directory, directory].map(
-        (path) => rm(path, { recursive: true, force: true }),
-      ),
-    );
-  }
-});
+test.each([false, true])(
+  'an application comparison accounts for both versions in the five-repeat plan without paying after a stop (voice: %s)',
+  {
+    tags: ['technical'],
+    timeout: 30_000,
+  },
+  async (voice) => {
+    const versions = [await applicationVersion('Baseline'), await applicationVersion('Candidate')];
+    const evaluator = await applicationVersion('Evaluator', true);
+    const directory = await mkdtemp(join(tmpdir(), 'skyttel-comparison-plan-'));
+    const { evaluateModels } = (await import(
+      /* @vite-ignore */ pathToFileURL(
+        join(evaluator.directory, 'scripts/model-evaluation/evaluate.ts'),
+      ).href
+    )) as typeof import('../../../scripts/model-evaluation/evaluate.js');
+    const modelClient = (await import(
+      /* @vite-ignore */ pathToFileURL(join(evaluator.directory, 'src/server/model-client.ts')).href
+    )) as typeof import('../../../src/server/model-client.js');
+    const network = vi
+      .spyOn(modelClient, 'modelTransport')
+      .mockRejectedValue(new Error('unexpected_network'));
+    try {
+      const configuration = {
+        issue: 341,
+        directory,
+        apiKey: 'synthetic-no-network-key',
+        authorized: true,
+        limitUsd: 0,
+        priorUsd: 0,
+        priorSource: 'Controlled zero-payment plan.',
+        commit: evaluator.commit,
+        textProfiles: voice ? [] : ['sol-high'],
+        ...(voice
+          ? {
+              voice: true,
+              voiceProfile: {
+                ...profiles.profiles.find((item) => item.role === 'voice'),
+                id: 'controlled-live-sol',
+                backend: 'sol-high',
+              } as import('../../../scripts/model-evaluation/live.js').LiveEvaluationProfile,
+              playbackAssessorProfile: {
+                id: 'controlled-transcriber',
+                model: 'whisper-1' as const,
+                language: 'sv' as const,
+                usdPerMinute: 0.01,
+                billingQuantumSeconds: 1,
+                alignmentMarginMs: 100,
+                minimumAverageLogProbability: -1,
+                maximumNoSpeechProbability: 0.5,
+                maximumCandidates: 8,
+                checkedAt: 'controlled-profile',
+                sources: ['https://example.test/controlled-transcription'],
+              },
+            }
+          : {}),
+        judgeProfile: verifiedProfile('judge-sol-high'),
+        baselineProfiles: { text: 'sol-high' },
+        applicationComparison: { baseline: versions[0], candidate: versions[1] },
+        localVerification: {
+          passed: true,
+          commands: ['npm run test:unit'],
+          evidence: 'Controlled application comparison contract.',
+        },
+      };
+      const run = await evaluateModels(configuration);
+      expect(network).not.toHaveBeenCalled();
+      const steps = catalog.scenarios
+        .filter((scenario) => !voice || scenario.voice)
+        .reduce((sum, scenario) => sum + scenario.steps.length, 0);
+      expect(run.attempts).toHaveLength(steps * 10);
+      expect(
+        run.attempts.every(
+          (attempt) => attempt.outcome === 'not_run' && attempt.elapsedMs === null,
+        ),
+      ).toBe(true);
+      expect(
+        run.attempts
+          .filter((attempt) => attempt.repetition === 1)
+          .map((attempt) => attempt.applicationVersion),
+      ).toEqual([...Array(steps).fill('Baseline'), ...Array(steps).fill('Candidate')]);
+      expect(
+        run.attempts
+          .filter((attempt) => attempt.repetition === 2)
+          .map((attempt) => attempt.applicationVersion),
+      ).toEqual([...Array(steps).fill('Candidate'), ...Array(steps).fill('Baseline')]);
+      expect(run.applicationComparison).toMatchObject({
+        status: 'inconclusive',
+        model: 'gpt-6.1-sol',
+        modality: voice ? 'voice' : 'text',
+      });
+      const manifest = JSON.parse(await readFile(join(directory, '0001-manifest.json'), 'utf8'));
+      expect(manifest.data.applicationComparison).toMatchObject({
+        contractId: expect.any(String),
+        plan: { repetitions: [1, 2, 3, 4, 5] },
+        versions: versions.map(({ id, commit }) => ({ id, commit })),
+      });
+      expect(manifest.data.evaluator).toEqual({
+        commit: evaluator.commit,
+        contract: 'committed-evaluator-v1',
+      });
+      await expect(evaluateModels({ ...configuration, commit: '0'.repeat(40) })).rejects.toThrow(
+        'evaluation_application_unverified:evaluator',
+      );
+      await writeFile(
+        join(evaluator.directory, 'scripts/model-evaluation/optimization-comparison-plan.json'),
+        '{}\n',
+      );
+      await expect(evaluateModels(configuration)).rejects.toThrow(
+        'evaluation_application_unverified:evaluator',
+      );
+      execFileSync('git', [
+        '-C',
+        evaluator.directory,
+        'add',
+        'scripts/model-evaluation/optimization-comparison-plan.json',
+      ]);
+      execFileSync('git', [
+        '-C',
+        evaluator.directory,
+        '-c',
+        'user.name=Evaluation',
+        '-c',
+        'user.email=evaluation@example.test',
+        '-c',
+        'commit.gpgSign=false',
+        'commit',
+        '-qm',
+        'Change imported evaluator data',
+      ]);
+      const changedCommit = execFileSync('git', ['-C', evaluator.directory, 'rev-parse', 'HEAD'], {
+        encoding: 'utf8',
+      }).trim();
+      await expect(evaluateModels({ ...configuration, commit: changedCommit })).rejects.toThrow(
+        'evaluation_application_unverified:evaluator',
+      );
+      expect(network).not.toHaveBeenCalled();
+    } finally {
+      network.mockRestore();
+      await Promise.all(
+        [...versions.map((version) => version.directory), evaluator.directory, directory].map(
+          (path) => rm(path, { recursive: true, force: true }),
+        ),
+      );
+    }
+  },
+);

@@ -2,6 +2,45 @@
   "source": "https://github.com/viscalyx/skyttel/issues/333#issuecomment-6096537202",
   "cases": [
     {
+      "id": "rendered-final-response",
+      "context": "Begäran: Spara hela utkastet. fixedChecks är tom; aktuell karta och sparkvitto verifierar att hela utkastet sparats en gång. sources.voice kommer från oberoende igenkänning av den faktiskt renderade inspelningen.",
+      "sources": { "voice": { "text": "Hela utkastet är sparat.", "complete": false } },
+      "requirements": [
+        {
+          "id": "voice-rendered-response",
+          "source": "voice",
+          "text": "Det inspelade talet innehåller hela det nödvändiga slutliga svaret på den aktuella begäran, eller hela en nödvändig följdfråga eller säker oförmåga. Ett mellanbesked, avsikt eller avbruten mening räcker inte. Saknat eller osäkert innehåll ger inconclusive."
+        }
+      ],
+      "expected": { "voice-rendered-response": "pass" }
+    },
+    {
+      "id": "rendered-status-before-tail",
+      "context": "Begäran: Spara hela utkastet. fixedChecks är tom; sparkvittot verifierar sparande. sources.voice kommer från en oberoende igenkänd inspelningskandidat; senare ljud kan saknas. Tillstånd ersätter inte ett obligatoriskt talat resultatbesked.",
+      "sources": { "voice": { "text": "Jag arbetar med det.", "complete": false } },
+      "requirements": [
+        {
+          "id": "voice-rendered-response",
+          "source": "voice",
+          "text": "Det inspelade talet innehåller hela det nödvändiga slutliga svaret på den aktuella begäran, eller hela en nödvändig följdfråga eller säker oförmåga. Ett mellanbesked, avsikt eller avbruten mening räcker inte. Saknat eller osäkert innehåll ger inconclusive."
+        }
+      ],
+      "expected": { "voice-rendered-response": "inconclusive" }
+    },
+    {
+      "id": "rendered-truncated-response",
+      "context": "Begäran: Spara hela utkastet. Sparkvittot verifierar sparande. sources.voice är den oberoende igenkända inspelningen; den renderade meningen slutar här och eventuell fortsättning är okänd.",
+      "sources": { "voice": { "text": "Hela ditt utkast är", "complete": false } },
+      "requirements": [
+        {
+          "id": "voice-rendered-response",
+          "source": "voice",
+          "text": "Det inspelade talet innehåller hela det nödvändiga slutliga svaret på den aktuella begäran, eller hela en nödvändig följdfråga eller säker oförmåga. Ett mellanbesked, avsikt eller avbruten mening räcker inte. Saknat eller osäkert innehåll ger inconclusive."
+        }
+      ],
+      "expected": { "voice-rendered-response": "inconclusive" }
+    },
+    {
       "id": "1",
       "context": "Molnlagring-priset är ändrat till 229 och Spotify betalas med Hushållskortet i utkastet. Tidigare förslag är bevarade. Inget är sparat; ingen detaljbeskrivning är begärd.",
       "sources": {

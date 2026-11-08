@@ -1,0 +1,5 @@
+{
+  "id": "wait-optimization-voice-v1",
+  "modality": "voice",
+  "targetScenarios": ["change-price-payment", "relationship-direction"]
+}

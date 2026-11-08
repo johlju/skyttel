@@ -240,6 +240,10 @@ export function summarizeProfile(
         values.filter((attempt) => groupIds.has(attempt.scenario)),
         'voiceCostUsd',
       ),
+      playbackAssessmentCostUsd: totalCost(
+        values.filter((attempt) => groupIds.has(attempt.scenario)),
+        'playbackAssessmentCostUsd',
+      ),
     };
   }
   const groups = Object.fromEntries(
@@ -298,6 +302,9 @@ export function summarizeProfile(
           additionalBackendCostUsd: reply?.backendCostUsd ?? null,
           judgeCostUsd: reply ? totalCost([attempt, reply], 'judgeCostUsd') : null,
           voiceCostUsd: reply ? totalCost([attempt, reply], 'voiceCostUsd') : null,
+          playbackAssessmentCostUsd: reply
+            ? totalCost([attempt, reply], 'playbackAssessmentCostUsd')
+            : null,
         };
       }),
       outcomes: outcomeCounts(followUps),
@@ -311,6 +318,7 @@ export function summarizeProfile(
     backendCostUsd: totalCost(values, 'backendCostUsd'),
     judgeCostUsd: totalCost(values, 'judgeCostUsd'),
     voiceCostUsd: totalCost(values, 'voiceCostUsd'),
+    playbackAssessmentCostUsd: totalCost(values, 'playbackAssessmentCostUsd'),
   };
 }
 function outcomeCounts(values: Attempt[]) {
@@ -321,7 +329,10 @@ function outcomeCounts(values: Attempt[]) {
     ]),
   );
 }
-function totalCost(values: Attempt[], key: 'backendCostUsd' | 'judgeCostUsd' | 'voiceCostUsd') {
+function totalCost(
+  values: Attempt[],
+  key: 'backendCostUsd' | 'judgeCostUsd' | 'voiceCostUsd' | 'playbackAssessmentCostUsd',
+) {
   return values.length && values.every((attempt) => attempt[key] != null)
     ? values.reduce((sum, attempt) => sum + (attempt[key] ?? 0), 0)
     : null;
@@ -404,7 +415,8 @@ type ScopeField =
   | 'correctnessFailures'
   | 'unresolvedAssessments'
   | 'judgeCostUsd'
-  | 'voiceCostUsd';
+  | 'voiceCostUsd'
+  | 'playbackAssessmentCostUsd';
 type ProfileSummary = Omit<ReturnType<typeof summarizeProfile>, ScopeField> &
   Partial<Pick<ReturnType<typeof summarizeProfile>, ScopeField>>;
 export type RecordedReference = {

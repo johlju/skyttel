@@ -3,8 +3,29 @@ import { readFile } from 'node:fs/promises';
 import { chromium, type Page } from '@playwright/test';
 import manifest from './audio/manifest.json' with { type: 'json' };
 import type { evaluationEnvironment } from './environment.js';
+import {
+  type ClockSample,
+  type PlaybackSnapshot,
+  playbackInterval,
+  recordedPlayback,
+  type TimeInterval,
+} from './playback.js';
 
 export type ReferenceVoice = keyof typeof manifest.voices;
+export type SourcePlayback = {
+  startedAt: number;
+  endedAt: number;
+  drainedAt: number;
+  started: TimeInterval;
+  ended: TimeInterval;
+  sourceStartPosition: number;
+  speechPosition: number;
+  inputClocks: ClockSample[];
+  sampleRate: number;
+  frames: number;
+  speechFrames: number;
+  sha256: string;
+};
 
 export async function referenceSpeech(
   id: string,
@@ -45,7 +66,10 @@ export async function referenceSpeech(
   }
   if (!format || !pcm || pcm.length !== clip.frames * 2)
     throw new Error('evaluation_audio_format_failed');
-  return { clip, pcm: pcm.toString('base64') };
+  let speechFrames = clip.frames;
+  while (speechFrames > 0 && pcm.readInt16LE((speechFrames - 1) * 2) === 0) speechFrames--;
+  if (!speechFrames) throw new Error('evaluation_audio_empty');
+  return { clip, pcm: pcm.toString('base64'), speechFrames };
 }
 
 type BrowserVoice = {
@@ -53,14 +77,27 @@ type BrowserVoice = {
   audio: AudioContext;
   destination: MediaStreamAudioDestinationNode;
   output: HTMLAudioElement;
+  render: AudioContext;
+  recorder: AudioWorkletNode;
+  gain: GainNode;
+  chunks: Uint8Array[];
+  clocks: ClockSample[];
+  inputClocks: ClockSample[];
+  timer: ReturnType<typeof setInterval>;
+  requests: Map<string, (value: Record<string, unknown>) => void>;
+  lastSnapshot?: Record<string, unknown>;
+  interruption?: string;
+  error?: string;
   channel: RTCDataChannel;
   source?: AudioBufferSourceNode;
   closed: boolean;
 };
 type EvaluationWindow = Window & { evaluationVoice?: BrowserVoice };
 
-/** Actual WebRTC/Live transport using fixed synthetic audio. No recognition,
- * delegation or model output is substituted; acoustic output is not recorded. */
+/** The negotiated remote stream has one output destination. The common
+ * evaluator instrumentation records that destination, never a parallel player.
+ * The retained element supplies volume/mute controls; pause/resume is explicit
+ * because Chromium cannot record this RTC element with MediaElementAudioSource. */
 export async function speechConnection(
   environment: Awaited<ReturnType<typeof evaluationEnvironment>>,
   referenceVoice: ReferenceVoice = 'marin',
@@ -76,6 +113,7 @@ export async function speechConnection(
   await page.goto(environment.installation.origin);
   return {
     page,
+    observedAt: () => page.evaluate(() => performance.timeOrigin + performance.now()),
     async start() {
       const view = await environment.get<
         import('../../src/shared/text-assistant.js').TextAssistantView
@@ -93,17 +131,93 @@ export async function speechConnection(
           for (const track of destination.stream.getTracks())
             peer.addTrack(track, destination.stream);
           const output = document.createElement('audio');
-          output.autoplay = true;
-          peer.ontrack = (event) => {
-            output.srcObject = event.streams[0];
-            void output.play();
+          output.autoplay = false;
+          const render = new AudioContext();
+          await render.audioWorklet.addModule('/__evaluation_output.js');
+          const recorder = new AudioWorkletNode(render, 'skyttel-evaluation-output');
+          const outputGain = render.createGain();
+          outputGain.connect(recorder).connect(render.destination);
+          const chunks: Uint8Array[] = [];
+          const clocks: ClockSample[] = [];
+          const inputClocks: ClockSample[] = [];
+          const requests = new Map<string, (value: Record<string, unknown>) => void>();
+          recorder.port.onmessage = ({ data }) => {
+            const voice = (window as EvaluationWindow).evaluationVoice;
+            // The port orders prior-capture PCM before this acknowledgement.
+            // Reset at that boundary, after queued old blocks are delivered.
+            if (data.began) {
+              chunks.length = 0;
+              if (voice) voice.lastSnapshot = undefined;
+            }
+            if (data.pcm) chunks.push(new Uint8Array(data.pcm.buffer));
+            if (data.error && voice) voice.error = data.error;
+            if (data.snapshot && voice) voice.lastSnapshot = data;
+            const key = data.began ?? data.snapshot;
+            if (key) {
+              requests.get(key)?.(data);
+              requests.delete(key);
+            }
           };
+          recorder.onprocessorerror = () => {
+            const voice = (window as EvaluationWindow).evaluationVoice;
+            if (voice) voice.error = 'evaluation_output_processor_error';
+          };
+          peer.ontrack = (event) => {
+            if (event.track.kind !== 'audio' || output.srcObject) return;
+            output.srcObject = event.streams[0];
+            render.createMediaStreamSource(event.streams[0]).connect(outputGain);
+            event.track.addEventListener('ended', () => {
+              const voice = (window as EvaluationWindow).evaluationVoice;
+              if (voice) voice.interruption = 'evaluation_output_track_ended';
+            });
+          };
+          peer.onconnectionstatechange = () => {
+            const voice = (window as EvaluationWindow).evaluationVoice;
+            if (
+              voice &&
+              !voice.closed &&
+              ['failed', 'disconnected', 'closed'].includes(peer.connectionState)
+            )
+              voice.error = 'evaluation_output_transport_failed';
+          };
+          output.onvolumechange = () => {
+            outputGain.gain.value = output.muted ? 0 : output.volume;
+            const voice = (window as EvaluationWindow).evaluationVoice;
+            if (voice && (output.muted || output.volume < 1))
+              voice.interruption = 'evaluation_output_attenuated';
+          };
+          output.onerror = () => {
+            const voice = (window as EvaluationWindow).evaluationVoice;
+            if (voice) voice.error = 'evaluation_output_error';
+          };
+          const sample = () => {
+            const timestamp = render.getOutputTimestamp();
+            if (timestamp.contextTime && timestamp.performanceTime)
+              clocks.push({
+                position: timestamp.contextTime,
+                at: performance.timeOrigin + timestamp.performanceTime,
+              });
+            inputClocks.push({
+              position: audio.currentTime,
+              at: performance.timeOrigin + performance.now(),
+            });
+          };
+          const timer = setInterval(sample, 20);
+          sample();
           const channel = peer.createDataChannel('oai-events');
           (window as EvaluationWindow).evaluationVoice = {
             peer,
             audio,
             destination,
             output,
+            render,
+            recorder,
+            gain: outputGain,
+            chunks,
+            clocks,
+            inputClocks,
+            timer,
+            requests,
             channel,
             closed: false,
           };
@@ -124,6 +238,7 @@ export async function speechConnection(
               const result = await response.json();
               await peer.setRemoteDescription({ type: 'answer', sdp: result.sdp });
               await audio.resume();
+              await render.resume();
               while (peer.connectionState !== 'connected') {
                 if (['failed', 'closed'].includes(peer.connectionState))
                   throw new Error('evaluation_voice_connection_failed');
@@ -142,10 +257,10 @@ export async function speechConnection(
       );
       return voice;
     },
-    async play(id: string) {
+    async play(id: string): Promise<SourcePlayback> {
       const reference = await referenceSpeech(id, undefined, referenceVoice);
       const sent = await page.evaluate(
-        async ({ pcm, frames, sampleRate }) => {
+        async ({ pcm, frames, sampleRate, speechFrames }) => {
           const voice = (window as EvaluationWindow).evaluationVoice;
           if (!voice || voice.closed) throw new Error('evaluation_voice_not_connected');
           const bytes = Uint8Array.from(atob(pcm), (char) => char.charCodeAt(0));
@@ -158,21 +273,121 @@ export async function speechConnection(
           source.buffer = buffer;
           source.connect(voice.destination);
           voice.source = source;
-          const startedAt = Date.now();
+          const begin = crypto.randomUUID();
+          await new Promise((resolve) => {
+            voice.requests.set(begin, resolve);
+            voice.recorder.port.postMessage({ begin });
+          });
+          const position = voice.audio.currentTime + 0.05;
+          const startedAt = performance.timeOrigin + performance.now() + 50;
           await new Promise<void>((resolve) => {
             source.onended = () => resolve();
-            source.start();
+            source.start(position);
           });
           source.disconnect();
-          return { startedAt, endedAt: Date.now() };
+          if (voice.closed || voice.audio.state !== 'running')
+            throw new Error('evaluation_input_playback_interrupted');
+          const drainedAt = performance.timeOrigin + performance.now();
+          await new Promise((resolve) => setTimeout(resolve, 40));
+          return {
+            startedAt,
+            drainedAt,
+            sourceStartPosition: position,
+            speechPosition: position + speechFrames / sampleRate,
+            inputClocks: voice.inputClocks.filter(
+              (sample) =>
+                sample.position >= position - 0.1 &&
+                sample.position <= position + frames / sampleRate + 0.1,
+            ),
+          };
         },
         {
           pcm: reference.pcm,
           frames: reference.clip.frames,
           sampleRate: reference.clip.sampleRate,
+          speechFrames: reference.speechFrames,
         },
       );
-      return { ...sent, frames: reference.clip.frames, sha256: reference.clip.sha256 };
+      const ended = playbackInterval(sent.inputClocks, sent.speechPosition);
+      const started = playbackInterval(sent.inputClocks, sent.sourceStartPosition);
+      if (!ended || !started) throw new Error('evaluation_input_clock_unverified');
+      return {
+        ...sent,
+        startedAt: started.upper,
+        started,
+        endedAt: ended.upper,
+        ended,
+        frames: reference.clip.frames,
+        sampleRate: reference.clip.sampleRate,
+        speechFrames: reference.speechFrames,
+        sha256: reference.clip.sha256,
+      };
+    },
+    async recording() {
+      const result = await page.evaluate(async () => {
+        const voice = (window as EvaluationWindow).evaluationVoice;
+        if (!voice || voice.closed) throw new Error('evaluation_voice_not_connected');
+        const id = crypto.randomUUID();
+        const snapshot =
+          voice.render.state !== 'running' || voice.error
+            ? voice.lastSnapshot
+            : await new Promise<Record<string, unknown>>((resolve) => {
+                voice.requests.set(id, resolve);
+                voice.recorder.port.postMessage({ snapshot: id });
+              });
+        if (!snapshot)
+          throw new Error(voice.error ?? voice.interruption ?? 'evaluation_output_not_running');
+        const length = voice.chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const bytes = new Uint8Array(length);
+        let offset = 0;
+        for (const chunk of voice.chunks) {
+          bytes.set(chunk, offset);
+          offset += chunk.length;
+        }
+        let pcm = '';
+        for (const byte of bytes.subarray(0, Number(snapshot.frames) * 2))
+          pcm += String.fromCharCode(byte);
+        return {
+          snapshot: {
+            ...snapshot,
+            sampleRate: voice.render.sampleRate,
+            clocks: voice.clocks,
+            observedAt: performance.timeOrigin + performance.now(),
+            interruption: voice.interruption,
+            error: voice.error,
+          },
+          pcm: btoa(pcm),
+        };
+      });
+      return recordedPlayback(
+        result.snapshot as PlaybackSnapshot,
+        Buffer.from(result.pcm, 'base64'),
+      );
+    },
+    async control(action: 'pause' | 'resume' | 'mute' | 'interrupt' | 'error') {
+      await page.evaluate(async (action) => {
+        const voice = (window as EvaluationWindow).evaluationVoice;
+        if (!voice) throw new Error('evaluation_voice_not_connected');
+        if (voice.render.state === 'running') {
+          const snapshot = crypto.randomUUID();
+          await new Promise((resolve) => {
+            voice.requests.set(snapshot, resolve);
+            voice.recorder.port.postMessage({ snapshot });
+          });
+        }
+        if (action === 'resume') await voice.render.resume();
+        else if (action === 'pause') {
+          voice.interruption = 'evaluation_output_paused';
+          await voice.render.suspend();
+        } else if (action === 'mute') voice.output.muted = true;
+        else if (action === 'interrupt') {
+          voice.interruption = 'evaluation_output_interrupted';
+          voice.gain.gain.value = 0;
+        } else {
+          voice.error = 'evaluation_output_error';
+          voice.gain.disconnect();
+        }
+      }, action);
     },
     async retire() {
       await retire(page);
@@ -192,6 +407,7 @@ async function retire(page: Page) {
     const voice = (window as EvaluationWindow).evaluationVoice;
     if (!voice) return;
     voice.closed = true;
+    clearInterval(voice.timer);
     if (voice.channel.readyState === 'open')
       voice.channel.send(JSON.stringify({ type: 'session.close' }));
     voice.source?.stop();
@@ -199,6 +415,7 @@ async function retire(page: Page) {
     voice.output.pause();
     for (const track of voice.destination.stream.getTracks()) track.stop();
     await voice.audio.close();
+    await voice.render.close();
     delete (window as EvaluationWindow).evaluationVoice;
   });
 }

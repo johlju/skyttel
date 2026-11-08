@@ -1,8 +1,8 @@
 # Application-version comparison
 
 Use this contract to compare application changes within the same model and
-effort. The application-comparison runner currently measures text. Voice
-completion requires its own delivered-audio contract and separate evidence.
+effort. Select text or voice for each run. Voice uses its independently assessed
+rendered-audio contract and separate plan; never combine modality thresholds.
 Keep model selection separate from application changes.
 Require the user's authorization before paid execution.
 
@@ -25,7 +25,10 @@ the gap before payment.
 
 Use the checked-in optimization plan for the initial wait-time comparison.
 Read `scripts/model-evaluation/optimization-comparison-plan.json` for its
-models, effort, repetitions, target scenarios and acceptance limits.
+models, effort, repetitions, target scenarios and acceptance limits. For voice,
+apply the overrides in `optimization-voice-comparison-plan.json`; only scenarios
+with approved voice fixtures belong to that plan. Keep unavailable recordings
+untested rather than substituting text or generating unapproved speech.
 Reverse baseline/candidate order on alternate repetitions. Run each selected
 model separately at the plan's effort. Verify the exact model identity;
 registry aliases can identify a different model. Supply a separately verified
@@ -59,6 +62,15 @@ it does not prove that no earlier partial response was useful.
 The endpoint observes a client receiving the response, not browser paint.
 Synthetic summary preparation remains a separately identified technical step.
 
+For voice, configure the same exact Live/backend combination and verified
+recording assessor for both committed applications. Use the source-speech end
+and actual output-device/rendered recording evidence in
+[voice evaluation](voice-evaluation.md#evidence-and-timing). The common renderer,
+audio hashes, listening/speaking conditions, assessor profile and its uncertainty
+policy belong in the comparison contract. An output transcript alone cannot
+qualify a voice duration. Keep voice results and acceptance ratios separate from
+text results, even when both use the same backend and effort.
+
 Keep the first request's origin through a necessary clarification. Assisted
 completion includes the whole exchange, including selection/routing delay;
 preserve the original attempt and individual replies. Report direct and
@@ -69,7 +81,7 @@ Treat canceled and expired application requests as terminal unsuccessful
 outcomes before scoring or selecting another clarification. Retain their
 observed status and partial effects; cancellation does not undo committed work.
 
-Use the declared immediate-scripted-reply policy for text assistance. Record
+Use the declared immediate-scripted-reply policy for assistance. Record
 first-send-to-last-delivery wall time and measured harness-only gaps separately.
 Exclude scoring, scripted-reply selection and fixture bookkeeping between
 turns from assisted application wait. Keep every turn's delivered duration and

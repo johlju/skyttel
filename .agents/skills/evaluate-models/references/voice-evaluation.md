@@ -22,6 +22,18 @@ recorded voice result as the comparison reference.
 Supply an empty `EvaluationPlan.textProfiles` list, set `voice: true` and supply
 an explicit `voiceProfile`. Set `voiceProfile.backend` to the selected text
 profile and `voiceProfile.id` to the identity of that voice/backend combination.
+Supply `playbackAssessorProfile` after verifying its exact transcription model,
+word/segment timestamp support, usage fields, billing quantum and price against
+primary documentation. Set conservative alignment/confidence limits and a finite
+candidate-call limit. Record the profile's sources and verification date. Include
+recognition and candidate semantic-judgment calls in the authorized scope and
+same budget ledger; available credentials do not authorize these calls.
+Check the official [transcription API](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create),
+[timestamp support](https://developers.openai.com/api/docs/guides/speech-to-text)
+and [deprecations](https://developers.openai.com/api/docs/deprecations) before
+selecting the assessor. The current adapter requires `whisper-1` verbose word
+and segment evidence plus duration usage. Missing support or availability leaves
+the selection untested; do not substitute server transcripts.
 Verify support for the voice provider's adapter and credentials; record its model,
 limits and pricing in the profile. Include the supporting text result or the
 user's explicit backend selection in the issue description.
@@ -36,8 +48,8 @@ Use each file's declared sample rate for playback and timing.
 
 ## Run dialogs
 
-Keep ordinary dialogs connected, close before final judging and summary, then
-reopen after summary installation. Use the actual audio path rather than
+Keep ordinary dialogs connected through recording assessment, close before
+summary, then reopen after summary installation. Use the actual audio path rather than
 replacement speech or injected delegations/transcripts.
 
 Use the approved Marin recordings for every scenario and conditional reply.
@@ -114,11 +126,68 @@ for each interpretation and date policy corrections to earlier results.
 
 ## Evidence and timing
 
-Private observations retain fragment/delegation/request IDs, offsets, arrival
-times, actual backend text, MCP calls/results, commentary and output
-transcripts. Keep backend text and spoken transcript as separate sources for
-judging; required content must appear in its designated source.
+Use `voice-rendered-v1` for user wait. Start at the last nonzero PCM frame of
+the unchanged approved input fixture. Exclude only exact digital trailing zeros;
+retain the fixture's full drain time, frame count, hash and bracketed input-clock
+interval. Backend VAD and received input transcripts cannot establish this origin.
 
-Start response timing at reference-audio end and use the shared completion
-boundary. Preserve negative voice times. Report the two-second quiet
-observation separately from response time.
+Record the actual negotiated WebRTC remote stream through the common evaluator
+WebAudio renderer with one destination. Keep mute, volume, pause, interruption
+and output-error behavior visible. Declare the renderer/worklet instrumentation
+and its overhead for both compared versions. Never create a parallel speaker or
+replace the speech transport. Chromium's RTC media-element source can record
+silence despite inbound media; an advancing clock alone is insufficient proof.
+
+Retain bounded PCM WAV recordings and their hashes privately, with native frame
+positions, device-clock samples and interruption/error evidence. Quiet periods
+only select candidates. Server completion, transcript receipt and a first quiet
+gap cannot certify that the complete required response played.
+
+Transcribe only the rendered recording, without expected words or provider
+transcripts as hints. Validate usage, word/segment evidence and confidence under
+the explicit assessor profile. Have the calibrated semantic judge independently
+assess two separate requirements in each candidate call: useful content and the
+complete required final response or complete necessary question/safe inability.
+Useful content can be a correct relevant partial result before the whole answer;
+status, intent, irrelevant content and unverified success claims never qualify.
+Keep backend text separate. Unknown recognition,
+missing timing, dropped audio or uncertain completeness remains inconclusive.
+New audio during offline assessment invalidates the older completion candidate;
+retain already verified useful content from its rendered recording. Continue
+observation within the declared session and candidate bounds; never promote an
+interim status to successful completion.
+Live supplies no sample-exact required-response identity. Treat completeness
+and request attribution as independent semantic assessments of the recording
+and current application facts. Preserve ambiguity as inconclusive; do not claim
+that the protocol proves the absence of all future or unsolicited speech.
+
+Finish at the later of correct state and the conservative rendered end interval's
+upper bound, including the declared recognition alignment margin. The interval
+must be covered by actual output-device clock samples. Word timestamps are
+approximate; report uncertainty and avoid sample-exact or physical-audibility
+claims. Clamp a completed response preceding input end to zero user wait; retain
+the underlying signed observed interval separately.
+Use [Web Audio output timestamps](https://www.w3.org/TR/webaudio-1.0/#dom-audiocontext-getoutputtimestamp)
+for the actual rendering graph. Captured media or receiver statistics alone
+do not establish output-device playback.
+
+Exclude offline recognition/judging wall time from user wait; retain its calls,
+usage, cost and unknown holds. Keep queue wait when request-correlated, raw first
+response observations and verified usefulness separate. Report the first useful
+sample's conservative rendered end as an upper bound, not its first word onset.
+Retain each candidate's useful verdict and device-clock interval. An earlier
+inconclusive candidate leaves `firstUsefulMs` unknown; `firstVerifiedUsefulMs`
+still identifies the first certified useful boundary. Preserve usefulness if a
+later tail fails, without granting successful completion. Keep both semantic
+requirements in the common comparison identity and existing finite candidate
+call reservations. Interrupted, muted, paused,
+failed, canceled, expired or unfinished output has no successful duration. Retain
+partial state, recordings and every dependent unrun outcome.
+
+For assisted completion, retain the first speech-end origin, each delivered
+question/answer and final response. Include subsequent scripted input speech and
+application routing/queue waits. Report wall duration and measured between-turn
+evaluator gaps separately, excluding those gaps from application wait under the
+common immediate-scripted-reply policy. Apply the same rendering, listening,
+speaking, fixtures, assessor and judge conditions across application versions;
+see [application comparison](application-comparison.md).

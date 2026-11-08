@@ -39,6 +39,9 @@ export function evaluationPublication(markdown: string): string[] {
           backendCostUsd: value.data.backendCostUsd,
           judgeCostUsd: value.data.judgeCostUsd,
           voiceCostUsd: value.data.voiceCostUsd,
+          playbackAssessmentCostUsd: value.data.playbackAssessmentCostUsd,
+          playbackAssessmentElapsedMs: value.data.playbackAssessmentElapsedMs,
+          playback: value.data.playback,
           assessment: value.data.assessment,
         }
       : {}),

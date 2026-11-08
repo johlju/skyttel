@@ -4,6 +4,7 @@ import {
   scenarioUtterances,
   selectFollowUp,
 } from '../../../scripts/model-evaluation/follow-ups.js';
+import { recordedPlayback } from '../../../scripts/model-evaluation/playback.js';
 import { summarizeProfile } from '../../../scripts/model-evaluation/report.js';
 import { runTextScenario } from '../../../scripts/model-evaluation/runner.js';
 import * as speech from '../../../scripts/model-evaluation/speech.js';
@@ -68,6 +69,33 @@ const passingJudge = async (input: JudgeInput) =>
     outcome: 'pass' as const,
     reason: 'Verified by local fixture.',
   }));
+
+// These existing fixtures test state, clarification and connection lifecycle.
+// Actual rendered-audio evidence is covered by evaluation-playback.spec.ts.
+const lifecycleRecording = async () =>
+  recordedPlayback(
+    {
+      sampleRate: 48000,
+      firstFrame: 0,
+      frames: 48000,
+      lastActiveFrame: 4800,
+      observedAt: Date.now(),
+      clocks: [
+        { position: 0, at: Date.now() - 3000 },
+        { position: 1, at: Date.now() - 2000 },
+      ],
+    },
+    Buffer.alloc(96000),
+  );
+const lifecycleRecognition = async () => ({
+  outcome: 'recognized' as const,
+  text: 'Complete controlled response.',
+  lastWordEndSeconds: 0.1,
+  alignmentMarginMs: 100,
+  profile: 'controlled-state-only',
+  callId: 'lifecycle',
+  costUsd: 0,
+});
 
 test.each([
   { modality: 'text', evidence: 'preserved' },
@@ -216,6 +244,8 @@ test.each([
             },
             retire: async () => {},
             close: async () => {},
+            recording: lifecycleRecording,
+            observedAt: async () => Date.now(),
           }) as Awaited<ReturnType<typeof speech.speechConnection>>,
       );
     }
@@ -257,6 +287,7 @@ test.each([
         stopped: () => stopped,
         stopReason: () => (stopped ? 'evaluation_unknown_charge' : null),
         judgeCosts: () => (stopped ? null : judgeCalls * 0.001),
+        assessPlayback: lifecycleRecognition,
         judge: async (input) => {
           judgeCalls++;
           if (input.requirements.some(({ id }) => id.includes('-inability-'))) {
@@ -273,6 +304,7 @@ test.each([
           return input.requirements.map(({ id }) => ({
             id,
             outcome:
+              id === 'voice-rendered-response' ||
               id.includes('-inability-') ||
               id.includes('-follow-up') ||
               id.includes('-necessary') ||
@@ -755,6 +787,8 @@ test.each([0, 12000])(
       }),
       retire: vi.fn(async () => {}),
       close: vi.fn(async () => {}),
+      recording: vi.fn(lifecycleRecording),
+      observedAt: async () => Date.now(),
     };
     vi.spyOn(speech, 'speechConnection').mockResolvedValue(
       connection as unknown as Awaited<ReturnType<typeof speech.speechConnection>>,
@@ -770,23 +804,26 @@ test.each([0, 12000])(
         profile: 'local',
         repetition: 1,
         followUps: true,
+        assessPlayback: lifecycleRecognition,
         judge: async (input) => {
           if (judgeDelay) await new Promise((resolve) => setTimeout(resolve, judgeDelay));
           return passingJudge(input);
         },
       },
     );
-    await vi.advanceTimersByTimeAsync(judgeDelay * 4);
+    await vi.advanceTimersByTimeAsync(judgeDelay * 16);
     const result = await run;
-    expect(connection.play.mock.calls.map(([id]) => id)).toEqual([
-      'price',
-      'clarify-price',
-      'next',
-    ]);
+    expect(
+      connection.play.mock.calls.map(([id]) => id),
+      JSON.stringify(result.attempts),
+    ).toEqual(['price', 'clarify-price', 'next']);
     expect(connection.start).toHaveBeenCalledOnce();
     expect(connection.close).toHaveBeenCalledOnce();
     expect(result.attempts.map((attempt) => attempt.outcome)).toEqual(['fail', 'pass', 'pass']);
     expect(result.attempts[1].followUpFor).toBe('price');
+    expect(result.attempts[1].assistedElapsedMs).toBeGreaterThanOrEqual(
+      result.attempts[1].elapsedMs ?? Number.POSITIVE_INFINITY,
+    );
     expect(vi.getTimerCount()).toBe(0);
   },
 );

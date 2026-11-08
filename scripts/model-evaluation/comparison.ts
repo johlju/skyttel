@@ -1,14 +1,16 @@
 import { createHash } from 'node:crypto';
 import { type ApplicationVersion, validApplicationIdentity } from './application.js';
+import { type LiveEvaluationProfile, verifiedLiveProfile } from './live.js';
 import { aggregateMetrics } from './metrics.js';
 import preparedPlan from './optimization-comparison-plan.json' with { type: 'json' };
+import preparedVoicePlan from './optimization-voice-comparison-plan.json' with { type: 'json' };
 import { type EvaluationProfile, verifiedProfile } from './provider.js';
 import { summarizeProfile } from './report.js';
 import type { Attempt, Scenario } from './types.js';
 
 export type ComparisonPlan = {
   id: string;
-  modality: 'text';
+  modality: 'text' | 'voice';
   models: string[];
   effort: EvaluationProfile['effort'];
   repetitions: number[];
@@ -26,6 +28,7 @@ export type ComparisonRun = {
   contractId: string;
   plan: ComparisonPlan;
   profile: EvaluationProfile;
+  voiceProfile?: LiveEvaluationProfile;
   versions: ApplicationVersion[];
   order: { repetition: number; application: ApplicationVersion }[];
 };
@@ -54,16 +57,21 @@ export function prepareComparison(
     followUps: boolean;
     counting?: unknown;
     evaluator?: unknown;
+    voice?: LiveEvaluationProfile;
+    playback?: unknown;
   },
 ): ComparisonRun {
-  const plan = structuredClone(selection.plan ?? preparedPlan) as ComparisonPlan;
+  const voice = conditions.voice ? verifiedLiveProfile(conditions.voice) : undefined;
+  const plan = structuredClone(
+    selection.plan ?? { ...preparedPlan, ...(voice ? preparedVoicePlan : {}) },
+  ) as ComparisonPlan;
   const profile = verifiedProfile(suppliedProfile.id, suppliedProfile);
   const versions = [selection.baseline, selection.candidate].map((version) => ({ ...version }));
   if (
     versions[0].id === versions[1].id ||
     versions.some((version) => !validApplicationIdentity(version)) ||
     !plan.id ||
-    plan.modality !== 'text' ||
+    plan.modality !== (voice ? 'voice' : 'text') ||
     !plan.repetitions.length ||
     new Set(plan.repetitions).size !== plan.repetitions.length ||
     plan.repetitions.some((value) => !Number.isSafeInteger(value) || value <= 0) ||
@@ -72,7 +80,10 @@ export function prepareComparison(
     plan.targetScenarios.some(
       (id) =>
         !scenarios.some(
-          (scenario) => scenario.id === id && (scenario.group ?? 'everyday') === 'everyday',
+          (scenario) =>
+            scenario.id === id &&
+            (scenario.group ?? 'everyday') === 'everyday' &&
+            (!voice || scenario.voice),
         ),
     ) ||
     !Number.isFinite(plan.targetMaximumRatio) ||
@@ -87,14 +98,19 @@ export function prepareComparison(
   if (
     profile.role !== 'backend' ||
     !plan.models.includes(profile.model) ||
-    plan.effort !== profile.effort
+    plan.effort !== profile.effort ||
+    (voice && voice.backend !== profile.id)
   )
     throw new Error('evaluation_comparison_profile_mismatch');
   const contractId = createHash('sha256')
     .update(
       canonical({
         format: 'skyttel-application-comparison-v1',
-        measurement: { text: 'text-delivery-v2', summary: 'summary-execution-v1' },
+        measurement: {
+          text: 'text-delivery-v2',
+          voice: 'voice-rendered-v1',
+          summary: 'summary-execution-v1',
+        },
         assistanceTiming: 'immediate-scripted-reply-excluding-evaluator-gaps-v1',
         plan,
         profile,
@@ -106,6 +122,7 @@ export function prepareComparison(
     contractId,
     plan,
     profile,
+    voiceProfile: voice,
     versions,
     order: plan.repetitions.flatMap((repetition, index) =>
       (index % 2 ? [...versions].reverse() : versions).map((application) => ({
@@ -123,11 +140,15 @@ export function compareApplicationVersions(
   scenarios: Scenario[],
   run: ComparisonRun,
 ) {
+  const selectedScenarios = scenarios.filter(
+    (scenario) => run.plan.modality !== 'voice' || scenario.voice,
+  );
+  const attemptProfile = run.voiceProfile?.id ?? run.profile.id;
   const versions = run.versions.map(({ id, commit }) => {
     const values = attempts.filter(
       (attempt) =>
         attempt.applicationVersion === id &&
-        attempt.profile === run.profile.id &&
+        attempt.profile === attemptProfile &&
         attempt.modality === run.plan.modality,
     );
     return {
@@ -137,15 +158,15 @@ export function compareApplicationVersions(
       metrics: aggregateMetrics(values),
       summary: summarizeProfile(
         values,
-        scenarios,
-        run.profile.id,
+        selectedScenarios,
+        attemptProfile,
         run.plan.modality,
         run.plan.repetitions,
       ),
     };
   });
   const [baseline, candidate] = versions;
-  const rows = scenarios
+  const rows = selectedScenarios
     .filter((scenario) => (scenario.group ?? 'everyday') === 'everyday')
     .map((scenario) => {
       const a = baseline.summary.scenarioTimes.find((item) => item.scenario === scenario.id);
@@ -179,15 +200,30 @@ export function compareApplicationVersions(
         attempt.applicationCommit !== version.commit
       )
         return false;
-      if (attempt.outcome !== 'pass') return attempt.elapsedMs === null;
+      if (attempt.outcome !== 'pass')
+        return (
+          attempt.elapsedMs === null &&
+          (run.plan.modality !== 'voice' ||
+            !['necessary_clarification', 'safe_inability'].includes(
+              attempt.assessment?.kind ?? '',
+            ) ||
+            validVoicePlayback(attempt))
+        );
       const step = scenario.steps.find((item) => item.id === (attempt.followUpFor ?? attempt.step));
       return (
         attempt.timing?.contract ===
-          (step?.transition === 'summary' ? 'summary-execution-v1' : 'text-delivery-v2') &&
+          (step?.transition === 'summary'
+            ? 'summary-execution-v1'
+            : run.plan.modality === 'voice'
+              ? 'voice-rendered-v1'
+              : 'text-delivery-v2') &&
         attempt.timing.successfulCompletionMs === attempt.elapsedMs &&
         attempt.elapsedMs !== null &&
         Number.isFinite(attempt.elapsedMs) &&
-        attempt.elapsedMs >= 0
+        attempt.elapsedMs >= 0 &&
+        (run.plan.modality !== 'voice' ||
+          step?.transition === 'summary' ||
+          validVoicePlayback(attempt))
       );
     }),
   );
@@ -241,4 +277,49 @@ export function compareApplicationVersions(
     limitation: `${run.plan.repetitions.length} repetitions provide initial evidence, not a statistically secure ranking. Advanced capability limits and raw failures remain separate from everyday wait thresholds.`,
     productionModelChanged: false,
   };
+}
+
+function validVoicePlayback(attempt: Attempt) {
+  const proof = attempt.playback;
+  const input = proof?.input;
+  const end = proof?.renderedEnd;
+  const wait =
+    attempt.outcome === 'pass' ? attempt.elapsedMs : attempt.timing?.observedResponseEndMs;
+  return Boolean(
+    proof?.contract === 'voice-rendered-v1' &&
+      attempt.timing?.contract === 'voice-rendered-v1' &&
+      input &&
+      end &&
+      !proof.interruption &&
+      !proof.error &&
+      /^[a-f0-9]{64}$/.test(input.sha256) &&
+      /^[a-f0-9]{64}$/.test(proof.recordingSha256 ?? '') &&
+      Number.isSafeInteger(input.speechFrames) &&
+      input.speechFrames > 0 &&
+      input.speechFrames <= input.frames &&
+      Number.isFinite(input.ended.lower) &&
+      Number.isFinite(input.ended.upper) &&
+      input.ended.lower <= input.ended.upper &&
+      Number.isFinite(end.lower) &&
+      Number.isFinite(end.upper) &&
+      end.lower <= end.upper &&
+      proof.lastActiveFrame !== null &&
+      proof.lastActiveFrame !== undefined &&
+      Number.isSafeInteger(proof.frames) &&
+      (proof.frames ?? 0) > 0 &&
+      proof.candidates.some(
+        (candidate) =>
+          candidate.outcome === 'recognized' &&
+          candidate.profile &&
+          candidate.callId &&
+          candidate.recordingSha256 === proof.recordingSha256 &&
+          candidate.requiredResponse?.length === 1 &&
+          candidate.requiredResponse[0].id === 'voice-rendered-response' &&
+          candidate.requiredResponse[0].outcome === 'pass',
+      ) &&
+      wait !== null &&
+      wait !== undefined &&
+      Number.isFinite(wait) &&
+      Math.max(0, wait) >= Math.max(0, end.upper - input.ended.upper),
+  );
 }

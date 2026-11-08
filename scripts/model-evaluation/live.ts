@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+import { voiceAssistantInstructions } from '../../src/server/assistant-instructions.js';
 import type { LiveUsageAttempt } from '../../src/server/live-provider.js';
 import type { EvaluationBudget } from './budget.js';
 import registry from './profiles.json' with { type: 'json' };
@@ -28,6 +30,31 @@ export function verifiedLiveProfile(profile: LiveEvaluationProfile) {
   return profile;
 }
 
+/** Fixed speaking/listening configuration checked against the actual outgoing
+ * session before payment. Historical input remains scenario/application data. */
+export function commonLiveSession(profile: LiveEvaluationProfile) {
+  return {
+    model: profile.model,
+    audio: { output: { voice: 'marin' } },
+    delegation: { type: 'client' },
+    store: false,
+    instructions: voiceAssistantInstructions,
+    client: {
+      data_channel: {
+        allowed_client_events: ['session.close'],
+        allowed_server_events: [
+          'session.started',
+          'session.closed',
+          'session.input_transcript.delta',
+          'session.output_transcript.delta',
+          'session.delegation.created',
+          'error',
+        ].map((type) => ({ type })),
+      },
+    },
+  };
+}
+
 /** A dialog reservation includes audio, startup, collection and intermediate
  * judge waits. Partial usage never releases the outstanding hold. */
 export function budgetedLive(
@@ -38,6 +65,7 @@ export function budgetedLive(
   profile: LiveEvaluationProfile = registry.profiles.find(
     (profile) => profile.role === 'voice',
   ) as LiveEvaluationProfile,
+  options?: { requiredSession: unknown; recordDispatch?: (body: unknown) => void },
 ) {
   verifiedLiveProfile(profile);
   if (!Number.isSafeInteger(maximumSeconds) || maximumSeconds <= 0 || maximumSeconds > 3420)
@@ -47,19 +75,29 @@ export function budgetedLive(
   let sessions = 0;
   return {
     fetch: (async (url, init) => {
+      const body = JSON.parse(String(init?.body));
       const endpoint = new URL(
         typeof url === 'string' ? url : url instanceof URL ? url.href : url.url,
       );
       if (
         endpoint.origin !== 'https://api.openai.com' ||
         endpoint.pathname !== '/v1/live/sessions' ||
-        JSON.parse(String(init?.body)).session?.model !== profile.model
+        body.session?.model !== profile.model
       )
         throw new Error('evaluation_live_profile_mismatch');
+      if (options) {
+        const { input: _history, ...conditions } = body.session;
+        if (
+          body.transport?.type !== 'webrtc' ||
+          !isDeepStrictEqual(conditions, options.requiredSession)
+        )
+          throw new Error('evaluation_live_session_conditions_mismatch');
+      }
       if (++sessions > 2) throw new Error('evaluation_live_start_limit');
       const reservation = budget.reserve('voice', (maximumSeconds * profile.usdPerMinute) / 60);
       pending.push(reservation);
       budget.beginCall();
+      options?.recordDispatch?.(body);
       return transport(url, {
         ...init,
         signal: AbortSignal.any([

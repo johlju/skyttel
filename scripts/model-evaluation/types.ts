@@ -115,7 +115,7 @@ export type Attempt = {
   reason?: string;
   elapsedMs: number | null;
   timing?: {
-    contract: 'text-delivery-v2' | 'summary-execution-v1';
+    contract: 'text-delivery-v2' | 'summary-execution-v1' | 'voice-rendered-v1';
     submittedAt: number;
     queueMs: number | null;
     firstResponseMs: number | null;
@@ -126,6 +126,42 @@ export type Attempt = {
     successfulCompletionMs: number | null;
   };
   observedEndMs?: number;
+  playback?: {
+    contract: 'voice-rendered-v1';
+    input?: {
+      sha256: string;
+      frames: number;
+      speechFrames: number;
+      drainedAt: number;
+      sampleRate?: number;
+      sourceStartPosition?: number;
+      speechPosition?: number;
+      ended: import('./playback.js').TimeInterval;
+    };
+    recordingSha256?: string;
+    sampleRate?: number;
+    frames?: number;
+    firstFrame?: number;
+    lastActiveFrame?: number | null;
+    renderedEnd?: import('./playback.js').TimeInterval | null;
+    candidates: {
+      callId: string;
+      profile: string;
+      outcome: string;
+      costUsd: number | null;
+      recordingSha256: string;
+      alignmentMarginMs: number;
+      lastWordEndSeconds: number | null;
+      requiredResponse?: JudgeResult;
+      usefulContent?: JudgeResult;
+      renderedEnd?: import('./playback.js').TimeInterval;
+    }[];
+    interruption?: string;
+    error?: string;
+    limitation: string;
+  };
+  playbackAssessmentCostUsd?: number | null;
+  playbackAssessmentElapsedMs?: number;
   backendCostUsd: number | null;
   judgeCostUsd?: number | null;
   voiceCostUsd?: number | null;
