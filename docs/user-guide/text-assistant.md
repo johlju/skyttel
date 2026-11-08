@@ -409,14 +409,29 @@ direkt i ditt befintliga utkast; be uttryckligen om att spara hela utkastet
 när du vill spara.
 
 Om Skyttel upptäcker en åtgärd utanför din begäran stoppas fortsatt arbete
-i det uppdraget. Samtalsnotisen och textvyn visar en felreferens.
-Kontakta installationsansvarig med referensen. Tidigare genomförda
+i det uppdraget. Samtalsnotisen visar en felreferens; felet upprepas inte
+i samtalstexten. Välj **Kopiera felrapport** för ett färdigt
+felsökningsunderlag med felmeddelandet, begäran som utlöste felet och
+tillgängliga samtals- och uppdrags-ID:n. Kopieringsikonen finns till höger
+om texten, före stängningskrysset. **Läs mer** i slutet av feltexten
+expanderar samma text till hela rapporten, utan en extra ruta eller
+upprepat felmeddelande. **Visa mindre** i slutet av rapporten fäller ihop
+den igen. Om webbläsaren nekar kopiering kan du markera och kopiera den
+visade texten själv. Dela rapporten med installationsansvarig.
+Tidigare genomförda
 ändringar ligger kvar; kontrollera utkastet och eventuellt sparresultat
 innan du ger ett nytt uppdrag. Uppdraget upprepas inte automatiskt.
 
 Kontrollen kan misstolka en begäran och garanterar inte att alla fel
 upptäcks. Den gäller Skyttels eget samtal med röst och text, inte hur en
 extern assistent tolkar uppgifter.
+
+När du lägger till objekt av en ny sort får Skyttel också skapa den
+objekttyp som behövs. Ett nytt kategorinamn får normaliseras med stor
+begynnelsebokstav och utan en oavsiktlig slutpunkt när betydelsen är
+oförändrad. Be uttryckligen om exakt stavning om också skiljetecknen
+ska ingå i namnet. Tvetydiga befintliga identiteter kräver fortfarande
+ett förtydligande.
 
 ### Röst och text tillsammans
 

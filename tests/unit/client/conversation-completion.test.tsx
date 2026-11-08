@@ -82,7 +82,7 @@ test('hydrated completion stays quiet while a continued original request can pub
   ).toBe('Vilken cykel?');
 });
 
-test('partial changes, failed instructions and outstanding questions stay distinct', () => {
+test('partial changes and questions remain in the transcript while errors belong to the notice', () => {
   const complete = conversationCompletion();
   const first = updated(1, 'Spotify');
   const failed = {
@@ -97,12 +97,18 @@ test('partial changes, failed instructions and outstanding questions stay distin
   const result = complete({
     ...view,
     revision: 3,
+    workFailure: {
+      requestId: failed.id,
+      request: failed.request,
+      code: 'assistant_model_temporary',
+      message: failed.reply,
+    },
     questionPending: true,
     questions: ['Ska Sonja läggas till som en ny person?'],
     completedReplies: [first, failed],
   });
   expect(result?.text).toBe(
-    'Spotify lades till. Abonnemanget ändrades till Premium. ”Byt abonnemang och koppla Johan.”: Anslutningen till modellen bröts innan kopplingen kunde göras. Ska Sonja läggas till som en ny person?',
+    'Spotify lades till. Abonnemanget ändrades till Premium. Ska Sonja läggas till som en ny person?',
   );
   expect(result?.voiced).toBe(false);
 });

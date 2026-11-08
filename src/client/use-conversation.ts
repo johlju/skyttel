@@ -33,9 +33,8 @@ function conversationResultReply(
     failed?: boolean;
   },
 ) {
-  return draftUpdated(view) || view.result?.changes?.length || view.error || view.failed
-    ? view.requiredNotice
-    : view.reply;
+  if (view.error || view.failed) return undefined;
+  return draftUpdated(view) || view.result?.changes?.length ? view.requiredNotice : view.reply;
 }
 
 /** How a conversation starts: with the microphone, or with the conversation text. */
@@ -312,11 +311,13 @@ export function useConversation({
           (next.completedReplies ?? []).map((reply) => [reply.id, reply.revision]),
         );
         setTranscript([
-          ...(next.conversation ?? []).map((row, index) => ({
-            ...row,
-            id: `restored-${next.id}-${index}`,
-            voicePending: false,
-          })),
+          ...(next.conversation ?? [])
+            .filter((row) => !row.notice)
+            .map((row, index) => ({
+              ...row,
+              id: `restored-${next.id}-${index}`,
+              voicePending: false,
+            })),
           ...(next.queuedRequests ?? [])
             .filter(({ source }) => source !== 'voice')
             .map(({ id, text }) => ({
@@ -389,7 +390,12 @@ export function useConversation({
             voiced,
             voicePending,
           });
-        if (reply.text && !reply.questionPending && reply.text !== reply.result?.message)
+        if (
+          reply.text &&
+          !reply.failed &&
+          !reply.questionPending &&
+          reply.text !== reply.result?.message
+        )
           showTranscript({
             id:
               reply.revision === undefined
@@ -474,6 +480,7 @@ export function useConversation({
         });
       if (
         next.modelReply &&
+        !next.error &&
         !next.questionPending &&
         next.modelReply !== next.result?.message &&
         !(next.completedReplies ?? []).some((reply) => reply.text === next.modelReply) &&
@@ -1290,7 +1297,10 @@ export function useConversation({
   }, [selectionKey, pending, command]);
   const working = session?.phase === 'working';
   const deliveryFailed = deliveryResults.some(
-    (item) => item.state === 'failed' && session?.tasks?.some((task) => task.id === item.taskId),
+    (item) =>
+      item.state === 'failed' &&
+      session?.tasks?.some((task) => task.id === item.taskId) &&
+      !session.completedReplies?.some((reply) => reply.id === item.taskId && reply.failed),
   );
   return {
     available,

@@ -104,6 +104,9 @@ test('a read-only request rejects a model proposal after a map read and reports 
     .find((event) => event.event === 'assistant_action_out_of_scope');
   expect(event).toMatchObject({ source: 'text', tool: 'propose_object' });
   expect(ended.requiredNotice).toContain(event.reference);
+  expect(ended.conversation).toContainEqual(
+    expect.objectContaining({ role: 'assistant', notice: true }),
+  );
   expect(JSON.stringify(event)).not.toMatch(/PRIVATE-INJECTED|Sammanfatta|arguments|token/);
 });
 

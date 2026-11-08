@@ -38,6 +38,50 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.conversation-notice:has(.conversation-diagnostic-copy) {
+  grid-template-columns: 32px minmax(0, 1fr) 28px auto;
+  column-gap: 8px;
+}
+.household-map.workspace-shell .conversation-diagnostic-copy {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 4px;
+  border-color: transparent;
+  color: var(--space-text);
+  background: transparent;
+}
+.conversation-notice .conversation-diagnostic-copy svg {
+  width: 20px;
+  height: 20px;
+}
+.household-map.workspace-shell .conversation-diagnostic-toggle {
+  display: inline;
+  width: auto;
+  min-width: 0;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.conversation-diagnostic-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.conversation-notice:not([data-inline="true"]):has(
+  .conversation-diagnostic-toggle[aria-expanded="true"]
+) {
+  max-height: calc(var(--work-height, 100dvh) - 110px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .conversation-notice-content > button {
   margin-top: 8px;
 }
@@ -303,6 +347,10 @@
     .conversation-notice:not([data-inline="true"])
     .conversation-notice-symbol {
     display: none;
+  }
+  .household-map.workspace-shell[data-workspace-surface="map"]:not(.map-details-open)
+    .conversation-notice:not([data-inline="true"]):has(.conversation-diagnostic-copy) {
+    grid-template-columns: minmax(0, 1fr) 28px auto;
   }
   .household-map.workspace-shell[data-workspace-surface="map"]:not(.map-details-open)
     .conversation-notice:not([data-inline="true"]):not(:has(.conversation-notice-close))

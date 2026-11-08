@@ -696,11 +696,31 @@ export function textAssistantRoutes({
       workFailure,
       paused: session.state.paused,
       expiresAt: session.state.expiresAt,
-      conversation: session.state.conversation.map(({ role, text, partial }) => ({
-        role,
-        text,
-        partial,
-      })),
+      conversation: session.state.conversation.map(
+        ({ role, text, partial, notice, requestId }) => ({
+          role,
+          text,
+          partial,
+          // Older retained conversations have no presentation marker. Match only
+          // the same failed task's recorded notice, never arbitrary quoted text.
+          notice:
+            notice ??
+            (role === 'assistant' &&
+            !partial &&
+            completedReplies?.some(
+              (reply) =>
+                reply.failed &&
+                reply.id === requestId &&
+                (reply.securityReference || failure?.message.id === reply.id) &&
+                (text === reply.reply ||
+                  text === reply.requiredNotice ||
+                  (reply.securityReference &&
+                    text === assistantFailureMessage('assistant_action_out_of_scope'))),
+            )
+              ? true
+              : undefined),
+        }),
+      ),
       unfinishedRequests: session.state.unfinishedRequests.map(({ id, text, paused }) => ({
         id,
         text,
@@ -3679,7 +3699,12 @@ export function textAssistantRoutes({
       const messages = failureMessages(session, session.state.error);
       session.state.previousFailure = messages.ordinary;
       if (session.state.saveIntent) session.state.saveIntent = undefined;
-      appendConversation(session, { role: 'assistant', text: session.state.previousFailure });
+      appendConversation(session, {
+        role: 'assistant',
+        text: session.state.previousFailure,
+        notice:
+          Boolean(messages.security || modelFailureRecovery.has(session.state.error)) || undefined,
+      });
       session.state.reply = session.state.previousFailure;
       session.state.modelReply = undefined;
       session.state.requiredNotice = undefined;
@@ -4543,7 +4568,11 @@ export function textAssistantRoutes({
         ) {
           session.state.modelReply = undefined;
           session.state.previousFailure = session.state.reply;
-          appendConversation(session, { role: 'assistant', text: session.state.reply });
+          appendConversation(session, {
+            role: 'assistant',
+            text: session.state.reply,
+            notice: true,
+          });
         }
       })
       .finally(() => {

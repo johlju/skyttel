@@ -530,7 +530,7 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   karta, utkast och historik; separat körning från tomt hushåll ingår inte.
   Båda huvudreceptproven finns kvar, inklusive fylld konfliktlösning.
 - [Samtal med Skyttel](text-assistant.md): hela utkast,
-  stoppade obeställda åtgärder med gemensam felreferens och bevarat utkast,
+  stoppade obeställda åtgärder med kopierbar felrapport och bevarat utkast,
   rättelse och samlat sparande, sena svar, avbrott, återfunna kvitton och
   samtidigt synliga objekt och samband i karta och detaljpanel även på
   telefon, med skyddad formulärtext samt obekräftad samtalstext

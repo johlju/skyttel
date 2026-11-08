@@ -1,5 +1,6 @@
 import { type ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TextAssistantView } from '../shared/text-assistant.js';
+import { ConversationDiagnostic } from './ConversationDiagnostic.js';
 import {
   type ConversationNotice,
   type ConversationNoticeConditions,
@@ -182,6 +183,7 @@ export function ConversationNoticeCard({
   inline = false,
   actionPending = false,
   restoreActionFocus = false,
+  diagnosticReport,
   children,
 }: {
   notice: ConversationNotice;
@@ -194,6 +196,7 @@ export function ConversationNoticeCard({
   actionPending?: boolean;
   /** Recovery actions can disable their focused button before removing the card. */
   restoreActionFocus?: boolean;
+  diagnosticReport?: string;
   children?: ReactNode;
 }) {
   const element = useRef<HTMLElement>(null);
@@ -210,6 +213,16 @@ export function ConversationNoticeCard({
         (actionRestore.current ?? restore.current)()?.focus();
     };
   }, []);
+  const actions = (
+    <>
+      {notice.action && (
+        <button type="button" onClick={onAction} disabled={actionPending}>
+          {notice.action}
+        </button>
+      )}
+      {children}
+    </>
+  );
   return (
     <section
       ref={element}
@@ -235,15 +248,16 @@ export function ConversationNoticeCard({
           <path d={icons[notice.icon]} />
         </svg>
       </span>
-      <div className="conversation-notice-content">
-        <p>{notice.text}</p>
-        {notice.action && (
-          <button type="button" onClick={onAction} disabled={actionPending}>
-            {notice.action}
-          </button>
-        )}
-        {children}
-      </div>
+      {diagnosticReport ? (
+        <ConversationDiagnostic key={diagnosticReport} report={diagnosticReport} text={notice.text}>
+          {actions}
+        </ConversationDiagnostic>
+      ) : (
+        <div className="conversation-notice-content">
+          <p>{notice.text}</p>
+          {actions}
+        </div>
+      )}
       {closable && (
         <button
           type="button"

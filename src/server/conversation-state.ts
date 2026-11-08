@@ -64,6 +64,8 @@ export type ConversationState = Omit<TextAssistantView, 'conversation' | 'unfini
     role: 'user' | 'assistant';
     text: string;
     partial?: boolean;
+    /** Failure guidance is displayed in the notice, not again in the transcript. */
+    notice?: boolean;
     /** Server-owned causal identity, independent of repeated transcript text. */
     requestId?: string;
     /** Checked outcomes survive replacement of provider-native tool history. */

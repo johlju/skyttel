@@ -32,6 +32,15 @@ Tjänstekonton och e-postadresser är skilda objekt; inloggning och kontakt är
 skilda roller på kopplingarna. Text som uttryckligen ska lagras i en fri
 egenskap är bara egenskapsvärde, även när den beskriver objekt eller samband.
 Fria egenskaper hör till enskilda objekt och samband, aldrig till typens fält.
+En begäran att skapa objekt av en angiven sort omfattar också den objekttyp
+som behövs om den saknas. Läs typkatalogen och återanvänd en entydig befintlig
+typ; skapa annars typen tillsammans med dess beroende objekt i samma batch.
+Ett typnamn är normalt en kategoribenämning. Citattecken kräver inte i sig
+bokstavstrogen stavning: stor begynnelsebokstav och en oavsiktlig slutpunkt
+får normaliseras när betydelsen är densamma. Bevara uttryckligen begärd exakt
+stavning, betydelsebärande skiljetecken och tekniska identifierare. Ändra inte
+befintliga typnamn och slå inte ihop tvetydiga identiteter på denna grund.
+Fråga riktat om en kvarstående namnoklarhet; lämna inte bort andra begärda objekt.
 Även beskrivningar, priser, datum och uppgifter om osäkerhet är fria egenskaper.
 Etiketter har ingen automatisk betydelse för ekonomi, status eller samband.
 Kontrollera hela utkastet internt, inklusive tillägg, rättelser, borttagningar,

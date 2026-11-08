@@ -78,7 +78,13 @@ export interface TextAssistantView {
   /** Restored work never starts automatically. */
   paused?: boolean;
   expiresAt?: number;
-  conversation?: { role: 'user' | 'assistant'; text: string; partial?: boolean }[];
+  conversation?: {
+    role: 'user' | 'assistant';
+    text: string;
+    partial?: boolean;
+    /** Automatic failure shown in the notice; retained as model context only. */
+    notice?: boolean;
+  }[];
   /** Authenticated original wording, distinct from model summaries. */
   unfinishedRequests?: { id: string; text: string; paused?: boolean }[];
   queuedRequests?: { id: string; text: string; source?: 'text' | 'voice' }[];

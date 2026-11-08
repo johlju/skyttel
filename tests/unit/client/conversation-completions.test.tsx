@@ -65,6 +65,35 @@ async function send(text: string) {
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Skicka' })));
 }
 
+test('a failed task keeps its prompt but produces no duplicate error or model rows', async () => {
+  await arrange((url) => {
+    if (!url.endsWith('/messages')) return Response.json(initial);
+    const message = 'Skyttel stoppade en åtgärd utanför din begäran.';
+    return Response.json({
+      ...initial,
+      revision: 1,
+      phase: 'error',
+      error: 'assistant_action_out_of_scope',
+      reply: message,
+      requiredNotice: message,
+      modelReply: message,
+      completedReplies: [
+        {
+          id: 'failed',
+          revision: 1,
+          request: 'Läs bara.',
+          text: message,
+          reply: message,
+          requiredNotice: message,
+          failed: true,
+        },
+      ],
+    });
+  });
+  await send('Läs bara.');
+  expect(rows()).toEqual(['Du: Läs bara.']);
+});
+
 test('completed FIFO replies keep their separate checked outcomes while another typed task works, without duplicate rows', async () => {
   let current = initial;
   let sent = 0;

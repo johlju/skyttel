@@ -66,10 +66,18 @@ export function conversationCompletion(hydrated?: TextAssistantView) {
     const changes = assistantChangeSummary(
       finished.flatMap((reply) => reply.result?.changes ?? []),
     );
+    // Preserve earlier queued failures that no current notice can show. A
+    // blocked action or retained failed work already has its dedicated notice.
     const failures = [
       ...new Set(
         finished
-          .filter((reply) => reply.failed)
+          .filter(
+            (reply) =>
+              reply.failed &&
+              !reply.securityReference &&
+              reply.id !== view.workFailure?.requestId &&
+              !(view.error && reply.revision === view.revision),
+          )
           .map((reply) => {
             const message = reply.reply ?? reply.result?.message;
             return message && (reply.request ? `”${reply.request}”: ${message}` : message);
