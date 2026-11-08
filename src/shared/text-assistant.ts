@@ -107,6 +107,8 @@ export interface TextAssistantView {
   canceled?: boolean;
   /** An explicitly authorized immutable save is durably registered and unfinished. */
   saving?: boolean;
+  /** A submitted draft batch has an outcome still awaiting status verification. */
+  batchPending?: boolean;
   phase: 'ready' | 'working' | 'error' | 'recovery';
   /** Current public executor stage and recent actual MCP steps in this task. */
   activity?: string;

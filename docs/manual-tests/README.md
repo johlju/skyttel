@@ -527,6 +527,11 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   TEXT-07 är pensionerat till SAMTALSUTKAST-01 utan återanvänt ID.
   TEXT-04 återfinner den verkliga sparidentifieraren efter genomfört
   sparande med tappat svar och omstart. Varje TEXT-08-storlek har eget ID.
+  TEXT-16 återfinner osparade ändringar efter tappat verktygssvar och
+  bevarar tidigare förslag utan dubbletter även efter omstart.
+  Ett ofärdigt uppdrag behåller sin instruktion, sin väntande informationsfråga
+  och ett besked om pausat återstående arbete i text och kontrollerad
+  röstleverans.
   TEXT-15 bevarar tidigare och nya förslag efter avvisat sparande och
   kräver ett nytt uttryckligt talat ändra-och-spara-besked.
   TEXT-17 behåller även en väntande informationsfråga efter sparande när

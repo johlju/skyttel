@@ -3086,7 +3086,8 @@ test('streaming ingestion response content is canceled without collecting or log
         ).length,
     )
     .toBe(3);
-  expect(endpoint.received.every((item) => item.closed)).toBe(true);
+  // Request arrival precedes response cancellation and the receiver's close event.
+  await expect.poll(() => endpoint.received.every((item) => item.closed)).toBe(true);
   expect(endpoint.maximumActive).toBe(1);
   expect(
     JSON.stringify(await (await client.get(`${app.origin}/api/operator/tracing`)).json()),

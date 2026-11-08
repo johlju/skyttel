@@ -1,4 +1,5 @@
 import { createInterface } from 'node:readline';
+import { controlledBatchDelivery } from '../tests/support/batch-response-delivery.js';
 import { createInstallation } from '../tests/support/installation.js';
 import { liveBrowserFixtureSource } from '../tests/support/live-browser.js';
 import { manualTextDeliverySource } from '../tests/support/manual-text-delivery.js';
@@ -23,6 +24,7 @@ async function main() {
   const pending = new Map<string, Pending>();
   let sequence = 0;
   let readOnlyScope = false;
+  const batchDelivery = controlledBatchDelivery((status) => emit('batch-delivery', status));
   function describe(id: string, item: Pending) {
     const user = item.request.input.findLast((part) => part.role === 'user');
     const current = user && typeof user.content === 'string' ? JSON.parse(user.content) : {};
@@ -59,6 +61,7 @@ async function main() {
   const app = await createInstallation(undefined, {
     modelFetch: model.provider,
     browserProviderScript: `${manualTextDeliverySource}\n${liveBrowserFixtureSource}`,
+    assistantDispatch: batchDelivery.dispatch,
   });
   const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
   const stop = () => input.close();
@@ -87,6 +90,9 @@ async function main() {
               'reply REQUEST TEXT',
               'fail REQUEST',
               'restart',
+              'drop-batch',
+              'block-batch-status on|off',
+              'batch-delivery',
               'scope-read | scope-work',
               'quit',
             ],
@@ -98,8 +104,16 @@ async function main() {
           emit('pending', { requests: [...pending].map(([key, item]) => describe(key, item)) });
         } else if (command === 'restart') {
           releaseAll();
+          batchDelivery.clear();
           await app.restart();
           emit('restarted', { origin: app.origin });
+        } else if (command === 'drop-batch') {
+          batchDelivery.arm();
+        } else if (command === 'block-batch-status') {
+          if (id !== 'on' && id !== 'off') throw new Error('Use block-batch-status on or off.');
+          batchDelivery.blockStatus(id === 'on');
+        } else if (command === 'batch-delivery') {
+          emit('batch-delivery', batchDelivery.status());
         } else {
           const item = pending.get(id);
           if (!item) throw new Error('Use a currently held request ID from this terminal.');

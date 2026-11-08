@@ -273,7 +273,12 @@ test('the synchronous domain guard rejects a voice mutation at expiry even befor
         incoming.method === 'POST' && new URL(incoming.url).pathname === '/mcp'
           ? await incoming.clone().json()
           : null;
-      if (rpc?.params?.name === 'discard_draft') {
+      if (
+        rpc?.params?.name === 'apply_draft_batch' &&
+        rpc.params.arguments.operations.some(
+          (operation: { name: string }) => operation.name === 'discard_draft',
+        )
+      ) {
         // Move server time between the task's preflight and the actual domain
         // transaction, without running the active deadline timer.
         time += 3000;

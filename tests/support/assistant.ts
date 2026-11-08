@@ -87,3 +87,27 @@ export function callAssistant(origin: string, token: string, name: string, args 
     }),
   });
 }
+
+export async function authorizeAssistant(
+  browser: APIRequestContext,
+  origin: string,
+  householdId: string,
+) {
+  const flow = await beginAssistant(browser, origin, 'skyttel:read skyttel:write offline_access');
+  const consent = await flow.consent(householdId);
+  expect(consent.status()).toBe(200);
+  return (await (await flow.exchange((await consent.json()).url)).json()).access_token as string;
+}
+
+export async function callAssistantTool(
+  origin: string,
+  token: string,
+  name: string,
+  args: Record<string, unknown>,
+) {
+  const response = await callAssistant(origin, token, name, args);
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(body.error).toBeUndefined();
+  return { error: body.result.isError === true, value: JSON.parse(body.result.content[0].text) };
+}

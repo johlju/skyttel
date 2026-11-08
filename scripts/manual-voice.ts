@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import Database from 'better-sqlite3';
+import { controlledBatchDelivery } from '../tests/support/batch-response-delivery.js';
 import { alex, createInstallation, robin } from '../tests/support/installation.js';
 import { liveBrowserFixtureSource } from '../tests/support/live-browser.js';
 import { liveProvider } from '../tests/support/live-provider.js';
@@ -33,6 +34,7 @@ async function main() {
   let sequence = 0;
   let offset = 0;
   let textContextPercent: number | undefined;
+  const batchDelivery = controlledBatchDelivery((status) => emit('batch-delivery', status));
   const live = liveProvider();
   let retiredContextSource:
     | (typeof live.channels extends Map<string, infer Channel> ? Channel : never)
@@ -129,7 +131,7 @@ async function main() {
               .json()
               .catch(() => null)
           : null;
-      const response = await dispatch(request);
+      const response = await batchDelivery.dispatch(request, dispatch);
       if (holdSave && body?.method === 'tools/call' && body.params?.name === 'prepare_save') {
         emit('save-registered', { operationId: body.params.arguments.operationId });
         await new Promise<void>((resolve) => {
@@ -187,6 +189,9 @@ async function main() {
               'final SECONDS',
               'finalize on|off',
               'drop',
+              'drop-batch',
+              'block-batch-status on|off',
+              'batch-delivery',
               'hold-save on|off',
               'hold-check on|off',
               'scope-read | scope-work',
@@ -270,8 +275,22 @@ async function main() {
           emit('pending', { requests: [...pending].map(([key, item]) => describe(key, item)) });
           continue;
         }
+        if (command === 'drop-batch') {
+          batchDelivery.arm();
+          continue;
+        }
+        if (command === 'block-batch-status') {
+          if (id !== 'on' && id !== 'off') throw new Error('Use block-batch-status on or off.');
+          batchDelivery.blockStatus(id === 'on');
+          continue;
+        }
+        if (command === 'batch-delivery') {
+          emit('batch-delivery', batchDelivery.status());
+          continue;
+        }
         if (command === 'restart') {
           releaseAll();
+          batchDelivery.clear();
           await app.restart();
           emit('restarted', { origin: app.origin });
           continue;

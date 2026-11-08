@@ -642,6 +642,22 @@ dubbelt sparande”.
       "spec": "tests/technical-browser/text-assistant.spec.ts",
       "title": "manual text launcher public preparation seeded rejects an unaccepted delivery",
       "purpose": "Publik textstart med ett verkligt Lo-förslag: saknad session ger 404/not-accepted, oförändrat utkast, inga sparförsök, återställd leveranskontroll efter omladdning och borttagen provkatalog. Tomt utkast provas inte längre oberoende."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/save-operation-recovery-http.test.ts",
+      "title": "a lost registered save response survives conversation stop and restart with a repeatable known outcome",
+      "purpose": "Verklig registrering före tappat HTTP-svar, avslutat samtal och omstart; samma försök återfås utan nya modellbegäranden, kvitton eller historikposter."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/save-operation-recovery-http.test.ts",
+      "title": "a lost registered save response survives conversation stop and restart with a repeatable unknown outcome",
+      "purpose": "Bestående lagringsfel bevarar okänt utfall och spärr mot redigering och kastande vid upprepade kontroller; efter åtgärdat fel slutförs samma försök en gång utan modellarbete."
     }
   ]
 }
@@ -681,6 +697,184 @@ behåller ett faktiskt Lo-förslag. Det provar saknad session, oförändrat
 utkast, inga sparförsök samt återställning och städning enligt
 [förberedelsens avvisningsgräns](text-conversation-preparation.md#avvisad-leverans-med-befintligt-utkast).
 Det oberoende avvisningsprovet från tomt utkast ingår inte längre.
+Separat serverevidens tappar också registreringssvaret före avslut och
+omstart. Den provar både verifierat utfall och ett verkligt lagringsfel
+med fortsatt okänt utfall, bevarad spärr och upprepade statuskontroller.
+
+### TEXT-16: tappat ändringsbesked återfinns utan dubbla förslag
+
+**Syfte:** Återfinna genomförda osparade ändringar efter ett tappat
+verktygssvar, med tidigare självständiga förslag kvar. Skilj genomförandet
+från ett slutfört uppdrag när återstående arbete inte är klart.
+
+**Användare:** Alex i den kontrollerade textinstallationen.
+
+**Förutsättningar:** Lo Exempel av typen Person med beskrivningen
+Påhittad uppgift finns i ditt utkast. Kim finns inte ännu.
+
+**Separat förberedelse:** Operatören följer
+[tappat ändringsbesked](text-conversation-preparation.md#tappat-ändringsbesked).
+Den förberedelsen tappar svaret efter verkligt genomförande och startar
+om samma server med samma databas vid det angivna steget.
+
+**Automatiskt motsvarande test (integration):**
+[text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
+`TEXT-16`.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/text-assistant.spec.ts",
+    "caseId": "TEXT-16"
+  },
+  "reference": "Dator; kontrollerad leverantör, genomförda utkaständringar före tappat MCP-svar, tillfälligt otillgänglig statuskontroll och omstart med samma databas. Separat ny installation prövar ett skrivet uppdrag med beställd förklaring och mikrofonen på. Den enkla textvarianten saknar intyg om hela uppdragets slutförande; förklaringsvarianten har ett batchintyg men kräver fortfarande svar.",
+  "outcomes": [
+    "Ett verifierat ändringsbesked visas efter tappat verktygssvar.",
+    "Nytt arbete väntar tills samma ändringars utfall kan kontrolleras; notisen beskriver ändringar utan att påstå att något sparas.",
+    "Tidigare Lo-förslag och ett enda Kim-förslag ligger kvar osparade även efter omstart.",
+    "Genomförandet visas tillsammans med besked om pausat återstående arbete och ursprunglig instruktion när hela uppdraget inte är verifierat klart.",
+    "Beställd men utebliven förklaring blir inte ett lyckat slutbesked i text eller kontrollerad röstleverans; statuskontrollen startar inget nytt arbete.",
+    "Den oberoende väntande frågan om vilket år uppgifterna gäller finns kvar i både text och den återhämtade röstleveransen."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "status-only recovery preserves unfinished requested explanation in voice",
+      "purpose": "Tappat genomfört ändringsbesked och otillgänglig första statuskontroll får inte ersätta beställd förklaring med ett färdigt uppdrag; den ursprungliga instruktionen och felbeskedet följer även den accepterade begärans publika hämtning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "status-only recovery checks pending changes after batch resolution with another ready change",
+      "purpose": "En batch slutför sin bevisade väntande del men får inte ge ett färdigt uppdrag när en annan förtydligad ändring återstår."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "an unresolved batch retains its identity through failed status reads and recovers without new work",
+      "purpose": "Genomförd batch, tappat svar och otillgänglig första statuskontroll bevarar operationens identitet och spärrar nytt arbete tills samma utfall återhämtas utan nya modell- eller ändringsanrop."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "a text request recovers its committed batch after lost MCP delivery without another model call",
+      "purpose": "Verkligt genomförande, tappad MCP-leverans, en arbetsbegäran, beständigt utfall och oförändrat utkast efter omstart."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "a committed batch changed during withheld delivery pauses with its verified outcome and the actual current draft",
+      "purpose": "En verklig manuell rättelse under hållen leverans behålls och tidigare genomförande skiljs från aktuellt utkast."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "a committed batch changed during withheld delivery pauses with its verified outcome and the actual current draft during a draft response race",
+      "purpose": "Ett redan läst men fördröjt utkastbesked får inte ersätta en senare manuell rättelse eller ge ett falskt färdigbesked."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "an unresolved batch blocks direct admission in a new conversation on another browser",
+      "purpose": "Ett uttryckligen skickat uppdrag i en annan webbläsare väntar på samma utkast tills den tidigare batchens utfall är verifierat och fortsätter sedan en gång med aktuellt underlag."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/operation-recovery-http.test.ts",
+      "title": "an unresolved batch blocks direct admission in a previously opened conversation on another browser",
+      "purpose": "Ett redan öppet samtal i en annan webbläsare har samma spärr för nya uppdrag medan en tidigare batch har okänt utfall."
+    },
+    {
+      "kind": "technical",
+      "runner": "playwright",
+      "suite": "technical-browser",
+      "spec": "tests/technical-browser/text-assistant.spec.ts",
+      "title": "literal text preparation drops a committed batch reply and preserves its proposals across restart",
+      "purpose": "Den publicerade operatörsförberedelsen kör verkliga kommandon mot textverktyget, tappar genomfört MCP-svar, startar om samma databas och städar provkatalogen."
+    },
+    {
+      "kind": "technical",
+      "runner": "playwright",
+      "suite": "technical-browser",
+      "spec": "tests/technical-browser/text-assistant.spec.ts",
+      "title": "literal voice preparation drops a committed batch reply and preserves its proposals across restart",
+      "purpose": "Röstverktygets publicerade kommandon prövas med skrivet uppdrag och mikrofonen på: tappat genomfört MCP-svar återhämtas med Kim, pausat återstående arbete och väntande fråga i text och kontrollerad röstleverans utan nytt modellarbete eller sparande; utkastet bevaras vid omstart och provkatalogen städas."
+    }
+  ]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Starta med text. Skicka **Lägg till Kim utan att spara.** Låt operatören
+   leverera förslaget vid den förberedda felgränsen. Läs notisen att det är
+   oklart om ändringarna genomförs och att Skyttel kontrollerar dem.
+   Skriv **Vänta med nästa uppdrag.** utan att skicka. Kontrollera att
+   **Skicka** inte går att välja.
+   Låt operatören återställa statuskontrollen. Läs beskedet att Kim läggs
+   till i utkastet och att uppdraget inte är slutfört, med återstående
+   arbete pausat och ursprunglig instruktion kvar. Kontrollera att den
+   oskickade texten finns kvar och ta sedan bort den.
+2. Välj **Visa utkastet**. Läs det tidigare förslaget om Lo Exempel och ett
+   enda förslag om Kim. Öppna Kim-förslaget och kontrollera typen Person.
+   Stäng förslaget.
+3. Låt operatören starta om servern. Ladda om sidan, öppna tabellen och
+   starta med text igen. Välj **Visa utkastet** och läs samma Lo-förslag och
+   ett enda Kim-förslag.
+4. Upprepa i en ny kontrollerad röstinstallation med samma Lo-förslag.
+   Starta med text och slå på mikrofonen. Skriv **Lägg till Kim utan att
+   spara, förklara vad ett utkast betyder och beskriv vilket år uppgifterna
+   gäller.** Upprepa steg 1–3 med samma
+   leveransbortfall. Läs beskedet om genomfört förslag och pausat återstående
+   arbete i text och kontrollerad röstleverans. Kontrollera att hela din
+   instruktion finns kvar i samtalstexten.
+   Läs även **Vilket år gäller beskrivningen?** i text och i den återhämtade
+   röstleveransen. Lämna frågan obesvarad under kontrollen.
+
+**Förväntat resultat:**
+
+- Ändringsbeskedet bygger på det genomförda förslaget trots tappat
+  verktygssvar. Samma förslag utförs en gång.
+- Både Lo Exempel och Kim ligger kvar osparade före och efter omstart.
+  Inget sparbesked visas. Omstarten bevarar utkastet; ett nytt samtal får
+  sitt eget tillstånd.
+- Det genomförda förslaget betyder inte att den uteblivna förklaringen
+  är klar. Beskedet om pausat arbete finns kvar utan ny instruktion,
+  förklaring eller sparande genom statuskontrollen. Om hela det enkla
+  uppdraget har ett separat verifierat slutintyg räcker dess korta
+  ändringsbesked; den kontrollerade manuella textleverantören saknar det.
+
+Separat serverevidens kontrollerar nya och redan öppna samtal i andra
+webbläsare. Deras skickade uppdrag väntar på tidigare ändringars utfall och
+fortsätter sedan i ordning med aktuellt underlag. En manuell rättelse
+under fördröjd utkastläsning finns kvar och ger ett besked om att utkastet
+ändras efter det tidigare genomförandet.
+Ytterligare serverevidens skiljer en slutförd väntande del från en annan
+förtydligad ändring som återstår. Ett senare uttryckligen registrerat
+sparförsök kan kontrolleras även efter ett tidigare ändringsbesked.
 
 ### TEXT-05: markering kräver visning och skyddar oskickad text
 

@@ -638,6 +638,7 @@ export function useConversation({
     unknown ||
     checking ||
     Boolean(discovered?.some((id) => id !== manualSaveOperationId)) ||
+    session?.batchPending ||
     session?.phase === 'recovery' ||
     Boolean(
       session?.operations.some(

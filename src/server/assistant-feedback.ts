@@ -42,6 +42,14 @@ export function assistantFailureMessage(code: string): string {
     case 'draft_conflict':
     case 'version_conflict':
       return 'Utkastet eller kartan har ändrats. Det aktuella underlaget och eventuella konflikter behöver kontrolleras.';
+    case 'assistant_batch_committed_changed':
+      return 'Ändringarna genomfördes i utkastet. Utkastet har därefter ändrats. Granska det aktuella utkastet och förtydliga hur arbetet ska fortsätta.';
+    case 'assistant_batch_not_committed':
+      return 'De senaste ändringarna genomfördes inte. Granska ditt aktuella utkast innan du fortsätter.';
+    case 'assistant_batch_unknown':
+      return 'Resultatet av de senaste ändringarna är inte bekräftat. Samma ändringar behöver kontrolleras innan arbetet kan fortsätta.';
+    case 'assistant_request_unfinished':
+      return 'Uppdraget är inte slutfört. Återstående arbete är pausat och din ursprungliga instruktion finns kvar.';
     case 'content_conflict':
       return 'Hushållets innehåll har ersatts. Det nya underlaget behöver läsas innan arbetet kan fortsätta.';
     case 'operation_pending':

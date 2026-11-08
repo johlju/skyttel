@@ -1,12 +1,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type Database from 'better-sqlite3';
 import { z } from 'zod';
 import { conflictBasis, conflictProperties } from '../shared/conflict-properties.js';
 import { draftConflicts } from '../shared/draft-conflicts.js';
 import { proposedObjectTypes, proposedRelationshipTypes } from '../shared/map.js';
 import { isObjectIconId, searchObjectIcons } from '../shared/object-icons.js';
 import { propertyInputSchema } from '../shared/properties.js';
-import { draftDiscards } from './draft-discards.js';
 import type { householdMap } from './map.js';
 import { MapError } from './map.js';
 
@@ -119,11 +117,7 @@ const proposalFields = {
 const lifecycle = z.enum(['active', 'ended']).optional();
 const saveFields = z.object({ ...versionFields, operationId: id }).strict();
 
-export function registerAssistantWork(
-  server: McpServer,
-  map: () => HouseholdMap,
-  database: Database.Database,
-) {
+export function registerAssistantWork(server: McpServer, map: () => HouseholdMap) {
   const mutations = new Map<
     string,
     { schema: z.ZodType; apply: (domain: HouseholdMap, body: unknown) => unknown }
@@ -514,10 +508,11 @@ export function registerAssistantWork(
     'apply_draft_batch',
     {
       description:
-        'Genomför en sammanhängande ordnad batch av utkaständringar atomiskt. Ange aktuella versioner en gång; operationerna använder de verifierade versionerna i beroendeordning. Ett fel lämnar hela utkastet oförändrat. Sparande ingår inte i batchen.',
+        'Genomför en sammanhängande ordnad batch av utkaständringar atomiskt. Ange aktuella versioner en gång; operationerna använder de verifierade versionerna i beroendeordning. Ett fel lämnar hela utkastet oförändrat. Ange stabilt operationId för återhämtning: samma identitet och begäran återger verifierade genomförandemetadata utan nya ändringar. Läs aktuellt utkast före fortsatt arbete. Sparande ingår inte i batchen.',
       inputSchema: z
         .object({
           ...versionFields,
+          operationId: id.optional(),
           operations: z
             .array(
               z.object({ name: z.string(), arguments: z.record(z.string(), z.unknown()) }).strict(),
@@ -530,7 +525,7 @@ export function registerAssistantWork(
     },
     async (body) =>
       run((domain) =>
-        draftDiscards(database).atomic(() => {
+        domain.applyDraftBatch(body, () => {
           let review = assistantDraftReview(domain);
           if (review.version !== body.version || review.contentVersion !== body.contentVersion)
             throw new MapError('draft_conflict');
@@ -560,13 +555,26 @@ export function registerAssistantWork(
               version: review.version,
               contentVersion: review.contentVersion,
             };
-            tool.apply(domain, args);
+            const result = tool.apply(domain, args);
             review = assistantDraftReview(domain);
-            applied.push({ ...operation, before, after: review });
+            applied.push({ ...operation, before, after: review, result });
           }
           return { ...review, applied };
         }),
       ),
+  );
+  server.registerTool(
+    'read_draft_batch',
+    {
+      description:
+        'Återfinn en genomförd utkastbatch efter avbrott utan nya ändringar. Samma användare, hushåll och innehållsversion krävs. currentDraft anger om resultatets utkast fortfarande är aktuellt; läs alltid aktuellt utkast före fortsatt arbete.',
+      inputSchema: z
+        .object({ operationId: id, contentVersion: versionFields.contentVersion })
+        .strict(),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ operationId, contentVersion }) =>
+      run((domain) => domain.draftBatch(operationId, contentVersion)),
   );
   server.registerTool(
     'read_save_operation',

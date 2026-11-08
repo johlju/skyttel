@@ -344,7 +344,7 @@ export function assistantRoutes(database: Database.Database, auth: Auth, origin:
       },
       async () => assistantResult(assistantDraftReview(map())),
     );
-    if (canWrite) registerAssistantWork(server, map, database);
+    if (canWrite) registerAssistantWork(server, map);
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,

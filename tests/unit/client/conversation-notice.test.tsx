@@ -54,6 +54,27 @@ test.each([
   ).toBe('');
 });
 
+test('draft recovery and registered-save recovery announce their distinct outcomes when the same control changes purpose', () => {
+  function Screen({ batchPending }: { batchPending: boolean }) {
+    const state = useConversationNotice({
+      conditions: { saveChecking: true },
+      batchPending,
+      ongoing: true,
+      requested: 0,
+      eventKey: 'same-check',
+    });
+    return <ConversationNoticeAnnouncements announcement={state.announcement} />;
+  }
+  const { rerender } = render(<Screen batchPending />);
+  expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(
+    'Det är oklart om ändringarna genomfördes. Skyttel kontrollerar det.',
+  );
+  rerender(<Screen batchPending={false} />);
+  expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(
+    'Det är oklart om utkastet sparades. Skyttel kontrollerar det.',
+  );
+});
+
 test('all conversation situations follow the single priority order, including future notices', () => {
   const order = [
     'saveChecking',

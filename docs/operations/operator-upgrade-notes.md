@@ -6,6 +6,24 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Preserve operation recovery state
+
+Preserve the installation database during rollout. After rollout, use
+synthetic data to check recovery after a lost assistant reply and a server
+restart. Registered save attempts must continue to block changes until their
+outcome is verified. Recovery can complete the same attempt without a new
+save request or model work.
+
+Assistant clients that retry a draft batch must retain its operation identity
+and submitted versions. A committed result confirms the earlier operation;
+clients must read the current draft before further work. If the status check
+fails, keep later work blocked and repeat the check with the same identity.
+Batch recovery
+records contain identities, versions, counts and digests, without private
+draft values. Household exports do not include these records. Content
+replacement removes the records and retains opaque identities to prevent
+old operations from changing replacement content.
+
 ### Check conversation model access and activation
 
 Before rollout, confirm that the installation's OpenAI project can use

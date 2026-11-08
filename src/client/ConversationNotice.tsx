@@ -31,6 +31,7 @@ export function useConversationNotice({
   diagnostic,
   securityReference,
   contextSummaryFailure,
+  batchPending,
 }: {
   conditions: ConversationNoticeConditions;
   ongoing: boolean;
@@ -39,12 +40,13 @@ export function useConversationNotice({
   diagnostic?: { noticeId: ConversationNotice['id']; reference?: string; eventKey?: string };
   securityReference?: string;
   contextSummaryFailure?: TextAssistantView['contextSummaryFailure'];
+  batchPending?: boolean;
 }) {
   const voiceSession = useContext(VoiceSessionContext);
   const [dismissed, setDismissed] = useState<Partial<Record<ConversationNotice['id'], string>>>({});
   const [usedRequest, setUsedRequest] = useState(0);
   const identityFor = (notice: ConversationNotice) =>
-    `${notice.id}:${
+    `${notice.id}:${notice.id.startsWith('saveCheck') && batchPending ? 'batch:' : ''}${
       notice.id === 'actionBlocked' && securityReference
         ? securityReference
         : notice.kind === 'event'
@@ -61,15 +63,23 @@ export function useConversationNotice({
       visibleConditions[definition.id] = false;
   const selected = firstConversationNotice(visibleConditions);
   const definition =
-    selected?.id === 'contextFull' && contextSummaryFailure
-      ? {
-          ...selected,
-          text:
-            contextSummaryFailure.code === 'assistant_context_capacity'
-              ? contextSummaryFailure.message
-              : `Skyttel kunde inte sammanfatta samtalet. ${contextSummaryFailure.message} Samtalstexten och utkastet ligger kvar. Ett nytt samtal tömmer samtalstexten och kontexten och använder ditt senaste personliga modellval. Det löser inte modellfelet och ändrar inte kontots åtkomst.`,
-        }
-      : selected;
+    selected?.id === 'saveChecking' && batchPending
+      ? { ...selected, text: 'Det är oklart om ändringarna genomfördes. Skyttel kontrollerar det.' }
+      : selected?.id === 'saveCheckFailed' && batchPending
+        ? {
+            ...selected,
+            text: 'Skyttel kunde inte kontrollera om ändringarna genomfördes.',
+            action: 'Kontrollera ändringarnas resultat',
+          }
+        : selected?.id === 'contextFull' && contextSummaryFailure
+          ? {
+              ...selected,
+              text:
+                contextSummaryFailure.code === 'assistant_context_capacity'
+                  ? contextSummaryFailure.message
+                  : `Skyttel kunde inte sammanfatta samtalet. ${contextSummaryFailure.message} Samtalstexten och utkastet ligger kvar. Ett nytt samtal tömmer samtalstexten och kontexten och använder ditt senaste personliga modellval. Det löser inte modellfelet och ändrar inte kontots åtkomst.`,
+            }
+          : selected;
   const reference =
     definition?.id === 'actionBlocked'
       ? securityReference

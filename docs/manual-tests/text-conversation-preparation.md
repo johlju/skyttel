@@ -28,6 +28,88 @@ Behåll låset under den interaktiva körningen. Fysiska telefoner använder
 i stället för denna installation på loopback. Inga verkliga leverantörsanrop
 utförs av den kontrollerade installationen.
 
+## Tappat ändringsbesked
+
+TEXT-16 använder en ny kontrollerad textinstallation. Logga in som Alex,
+skapa Textprov och lägg Lo Exempel av typen Person med beskrivningen
+Påhittad uppgift i utkastet genom det vanliga formuläret. Starta med text
+och låt användaren skicka **Lägg till Kim utan att spara.**
+
+Vid första `held` hämtas hushållets aktuella typer:
+
+```text
+tool REQUEST read_type_catalog {}
+```
+
+Invänta nästa `held`. Kopiera `VERSION` från `draft.version`, `CONTENT`
+från `lastToolResult.contentVersion` och `TYPE` från typen Person i
+`lastToolResult.types`. Förberedelsen behöver inte få hela Lo-förslaget i
+det första underlaget. Blockera först kontrollen av batchens utfall:
+
+```text
+block-batch-status on
+```
+
+Arma bortfall av det verkliga MCP-svaret från nästa genomförda ändringsbatch:
+
+```text
+drop-batch
+```
+
+Invänta `batch-delivery` med `phase:"armed"`. Släpp sedan förslaget med
+det aktuella anropsnumret och de kopierade värdena:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"completion":"draft","operations":[{"name":"propose_object","arguments":{"id":"kim","baseRevision":null,"value":{"typeId":"TYPE","name":"Kim"}}}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Invänta `batch-delivery` med `phase:"dropped-after-commit"`. Händelsen
+betyder att den riktiga servern returnerar ett genomfört utfall innan
+förberedelsen tappar MCP-svaret. `not-committed` räknas som en felaktig
+förberedelse: läs orsaken, avsluta installationen och börja om med ett
+nytt utkast. Kontrollen `batch-delivery` visar senaste felgränsens status.
+Låt användaren läsa notisen att ändringarnas resultat är oklart och att
+Skyttel kontrollerar det. Användaren kan skriva men inte skicka nytt arbete.
+Återställ sedan kontrollens transport:
+
+```text
+block-batch-status off
+```
+
+Invänta beskedet om det redan genomförda Kim-förslaget. Statuskontrollen
+använder samma operation och skapar inget nytt förslag.
+Den kontrollerade leverantören intygar inte att hela uppdraget är klart.
+Läs därför även beskedet **Uppdraget är inte slutfört. Återstående arbete
+är pausat**. Ursprunglig instruktion finns kvar. Den inledande typläsningen
+är förberedande arbete. Återhämtningen verifierar endast genomförandet och
+skapar ingen ny hållen arbetsbegäran. Släpp inget extra modellsvar här.
+
+För varianten med beställd förklaring startar operatören en ny kontrollerad
+röstinstallation enligt inledningen. Förbered samma Lo-förslag, starta med
+text och slå på mikrofonen. Användaren skriver **Lägg till Kim utan att
+spara, förklara vad ett utkast betyder och beskriv vilket år uppgifterna
+gäller.** Kör samma typläsning och leveransbortfall ovan. Byt enbart
+förslagskommandot till följande variant med en oberoende väntande fråga:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST submit_changes {"version":VERSION,"contentVersion":CONTENT,"completion":"draft","questions":[{"kind":"information","request":"Beskriv vilket år uppgifterna gäller.","question":"Vilket år gäller beskrivningen?","dependsOnDraft":false}],"operations":[{"name":"propose_object","arguments":{"id":"kim","baseRevision":null,"value":{"typeId":"TYPE","name":"Kim"}}}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Återställ statuskontrollen enligt ovan. Läs det genomförda förslaget och
+beskedet om pausat återstående arbete i text och kontrollerad röstleverans.
+Frågan **Vilket år gäller beskrivningen?** följer det återhämtade beskedet.
+Ingen förklaring eller nytt sparande startar genom statuskontrollen.
+
+Låt användaren granska Lo och Kim och stänga förslaget. Kör därefter
+`restart`, invänta `restarted` och låt användaren ladda om sidan och
+granska utkastet igen. Avsluta med `quit`; den tillfälliga databasen tas
+bort. Detta prov använder faktisk verktygsleverans efter genomförande,
+utan offlineläge eller verkliga leverantörsanrop.
+
 ## Familjerättelsen
 
 TEXT-01 använder röstinstallationen. Kör `seed-family` **före all
@@ -411,7 +493,7 @@ Kör bara det publika avvisningsprovet när den gränsen ska kontrolleras:
 <!-- markdownlint-disable MD013 -->
 ```sh
 npm run build
-npm run test:integration -- tests/integration/text-assistant.spec.ts --grep 'manual text launcher public preparation seeded rejects an unaccepted delivery'
+npm run test:technical-browser -- tests/technical-browser/text-assistant.spec.ts --grep 'manual text launcher public preparation seeded rejects an unaccepted delivery'
 ```
 <!-- markdownlint-enable MD013 -->
 

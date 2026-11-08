@@ -1,5 +1,6 @@
 import type { ResponseInputItem } from 'openai/resources/responses/responses';
 import type { ConversationModelChoice } from '../shared/conversation-model.js';
+import type { DraftBatchRequest } from '../shared/draft-batch.js';
 import type { PendingPartReference, TextAssistantView } from '../shared/text-assistant.js';
 import type { PendingPartsState } from './pending-parts.js';
 import type { QueuedRequestReference } from './queued-request-context.js';
@@ -87,6 +88,21 @@ export type ConversationState = TextAssistantView & {
   pendingSummaryChoice?: ConversationModelChoice;
   previousFailure?: string;
   pendingSave?: { operationId: string; version: number; contentVersion: number };
+  /** Checked work awaiting status only; never a replacement mutation request. */
+  pendingBatch?: {
+    request: DraftBatchRequest & { operationId: string };
+    owner: string;
+    before: TextAssistantView['review'];
+    resolves: PendingPartReference[];
+    messageId?: string;
+    /** The submitting instruction also survives an explicit conversation reset. */
+    message?: Pick<ConversationMessage, 'text'>;
+    discarded: boolean;
+    /** Independent whole-request verdict before delivery; batch evidence alone is insufficient. */
+    finishesRequest: boolean;
+  };
+  /** Repeated checks preserve the last verified batch result until another turn. */
+  batchCheckId?: string;
   /** Authority belongs to unfinished current work, never historical dialogue. */
   saveIntent?: string;
   saveIntentDeadline?: number;
