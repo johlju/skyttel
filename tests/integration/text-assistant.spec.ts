@@ -15,6 +15,8 @@ import {
   openSavedHistory,
   readCommittedHistoryCard,
   startConversationWithText,
+  turnMicrophoneOn,
+  voiceBox,
 } from '../support/conversation-page.js';
 import {
   editObjectRelationship,
@@ -23,12 +25,159 @@ import {
   readTableObject,
 } from '../support/domain-work.js';
 import { createInstallation } from '../support/installation.js';
+import { liveBrowserFixtureSource } from '../support/live-browser.js';
+import { liveProvider } from '../support/live-provider.js';
 import { manualTextDeliverySource } from '../support/manual-text-delivery.js';
 import { verifyObjectDepartureAndDiscard } from '../support/object-form-departure.js';
 import { propertyRow, setProperty } from '../support/property-controls.js';
 import { stageRelationshipAndClose } from '../support/relationship-dialog.js';
 import { expect, test } from '../support/test.js';
 import { lastToolResult, modelMessage, modelTool, textModel } from '../support/text-model.js';
+
+test('TEXT-15: avvisat sparande bevarar utkastet före ett nytt talat sparbesked', async ({
+  page,
+}) => {
+  let checks = 0;
+  let checkingSave = false;
+  let releaseCheck = () => {};
+  const heldCheck = new Promise<void>((resolve) => {
+    releaseCheck = resolve;
+  });
+  const model = textModel(
+    (body) => {
+      const { message, draft } = JSON.parse(
+        String(body.input.findLast((item) => item.role === 'user')?.content),
+      );
+      if (message === 'Vad finns i utkastet?')
+        return [modelTool('report_result', { source: 'draft' })];
+      const previous = draft.changes.find((change: { id: string }) => change.id === 'kim');
+      return [
+        modelTool('submit_changes', {
+          version: draft.version,
+          contentVersion: draft.contentVersion,
+          completion: 'save',
+          operations: [
+            {
+              name: 'propose_object',
+              arguments: {
+                id: 'kim',
+                baseRevision: null,
+                value: previous
+                  ? { ...previous.after, name: 'Kim Lind' }
+                  : { typeId: draft.changes[0].after.typeId, name: 'Kim' },
+              },
+            },
+          ],
+        }),
+      ];
+    },
+    async (body) => {
+      const input = JSON.parse(String(body.input[0].content));
+      if (body.instructions.startsWith('SKYTTEL_TURN_SCOPE'))
+        return [
+          modelMessage(
+            JSON.stringify({
+              mode: input.current === 'Vad finns i utkastet?' ? 'read' : 'work',
+              request: input.current,
+            }),
+          ),
+        ];
+      if (input.untrusted.data.wholeDraft) {
+        expect(input.untrusted.data.draft.changes).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: 'lo',
+              after: expect.objectContaining({ name: 'Lo Exempel' }),
+            }),
+            expect.objectContaining({ id: 'kim' }),
+          ]),
+        );
+        if (checks++ === 0) return [modelMessage('{"decision":"clarify"}')];
+        checkingSave = true;
+        await heldCheck;
+      }
+      return [modelMessage('{"decision":"allow","complete":true}')];
+    },
+  );
+  const live = liveProvider();
+  const app = await createInstallation(undefined, {
+    modelFetch: model.provider,
+    liveFetch: live.provider,
+    liveSideband: live.attach,
+  });
+  try {
+    const { path } = await arrange(page, app);
+    await page.addInitScript({ content: liveBrowserFixtureSource });
+    await page.reload();
+    await consent(page);
+    await expect(await showDraft(page)).toContainText('Lo Exempel');
+    await send(page, 'Lägg till Kim som person och spara.');
+    await expect(transcript(page)).toContainText('Ändringarna ligger kvar osparade i ditt utkast.');
+    await expect(transcript(page)).toContainText('Be om sparande igen');
+    await expect(await showDraft(page)).toContainText('Lo Exempel');
+    await expect(await showDraft(page)).toContainText('Kim');
+    await (await showDraft(page))
+      .getByRole('button', { name: 'Visa förslaget: Lo Exempel', exact: true })
+      .click();
+    await expect(page.getByRole('dialog', { name: 'Lo Exempel', exact: true })).toContainText(
+      'Påhittad uppgift',
+    );
+    await closeSupportDialog(page, 'Lo Exempel');
+    await send(page, 'Vad finns i utkastet?');
+    await expect.poll(() => model.requests.length).toBe(2);
+    const report = transcript(page).getByRole('listitem').filter({ hasText: 'Utkast:' });
+    await expect(report).toContainText('Lo Exempel');
+    await expect(report).toContainText('Kim');
+    await expect(transcript(page).locator('.working')).toHaveCount(0);
+    await expect(transcript(page)).not.toContainText('Sparat.');
+    await expect(await showDraft(page)).toContainText('Kim');
+    await turnMicrophoneOn(page);
+    await expect(voiceBox(page)).toHaveText('Lyssnar');
+    const channel = [...live.channels.keys()].at(-1);
+    if (!channel) throw new Error('Missing current voice channel');
+    live.emit(channel, {
+      type: 'session.input_transcript.delta',
+      event_id: crypto.randomUUID(),
+      delta: 'Ändra namnet på Kim till Kim Lind och spara.',
+      start_ms: 0,
+      end_ms: 100,
+    });
+    live.emit(channel, {
+      type: 'session.delegation.created',
+      event_id: crypto.randomUUID(),
+      offset_ms: 100,
+      delegation: { id: crypto.randomUUID(), type: 'delegation', target: 'client' },
+    });
+    await expect.poll(() => checkingSave).toBe(true);
+    await expect(transcript(page)).not.toContainText('Sparat.');
+    await expect(await showDraft(page)).toContainText('Kim Lind');
+    releaseCheck();
+    await expect(page.locator('.draft-save-toast')).toHaveText('Utkastet är sparat');
+    await page.evaluate(() =>
+      window.skyttelVoiceFixture.emit({
+        type: 'session.output_transcript.delta',
+        event_id: crypto.randomUUID(),
+        delta: 'Sparat.',
+        start_ms: 200,
+        end_ms: 300,
+      }),
+    );
+    await expect(transcript(page)).toContainText('Sparat.');
+    await expect(await showDraft(page)).toContainText('Utkastet är tomt.');
+    await expect(await readTableObject(page, 'Lo Exempel')).toContainText('Påhittad uppgift');
+    await expect(await readTableObject(page, 'Kim Lind')).toContainText('Person');
+    const history = await openSavedHistory(page);
+    await history.getByText('Visa ändringarna', { exact: true }).click();
+    await expect(history.locator('.history-changes')).toContainText('Lo Exempel');
+    await expect(history.locator('.history-changes')).toContainText('Kim Lind');
+    const operations = (await (await page.request.get(`${path}/operations`)).json()).operations;
+    expect(operations).toHaveLength(1);
+    expect(operations[0].status).toBe('succeeded');
+  } finally {
+    releaseCheck();
+    await app.close();
+  }
+});
 
 const assistant = (page: Page) => page.getByRole('region', { name: 'Arbetsyta', exact: true });
 

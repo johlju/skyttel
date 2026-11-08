@@ -562,6 +562,10 @@ att rättelsen ändrar utkastversionen. Vid konflikt eller samtidig ändring
 visas aktuellt underlag och ett nytt besked behövs. Nekade, citerade,
 hypotetiska och uppskjutna sparkommandon ger inte tillåtelse att spara.
 Om formuleringen är oklar kan du behöva skriva **Spara hela utkastet nu**.
+Skyttel kontrollerar hela det resulterande utkastet före sparandet, även
+tidigare förslag. Om sparandet avvisas ligger genomförda ändringar kvar
+osparade i ditt utkast. Läs beskedet och granska utkastet innan du ber om
+sparande igen.
 
 Statusen **Sparat** kommer från ett beständigt kvitto. **Visa kvittot**
 visar vad sparandet omfattar. Fråga **Vad sparades senast?** för att få

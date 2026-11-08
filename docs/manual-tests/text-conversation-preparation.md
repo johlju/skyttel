@@ -66,6 +66,65 @@ Verklig svensk modellförståelse kräver separat uttryckligen godkänd
 leverantörskörning och redovisas separat, aldrig som mänsklig observation
 enbart därför att API-anropet kan vara debiterbart.
 
+## Avvisad kontroll av hela utkastet
+
+TEXT-15 använder en ny röstinstallation utan `seed-family`. Logga in som
+Alex, skapa Textprov och lägg Lo Exempel av typen Person med beskrivningen
+Påhittad uppgift i utkastet genom det vanliga formuläret. Lämna mikrofonen
+av. Aktivera `hold-check on` före användarens första textmeddelande.
+
+Vid dess `held` kopieras V och C från `draft`, och TYPE från
+Lo-förslagets `after.typeId`. Släpp en ny person i en kombinerad begäran:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST submit_changes {"version":V,"contentVersion":C,"completion":"save","operations":[{"name":"propose_object","arguments":{"id":"kim","baseRevision":null,"value":{"typeId":"TYPE","name":"Kim"}}}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Den första hållna kontrollen har `kind:"action-check"`. Godkänn batchen
+med dess eget anrops-ID i stället för CHECK:
+
+```text
+reply CHECK {"decision":"allow","complete":true}
+```
+
+Nästa hållna kontroll gäller sparandet efter den genomförda batchen.
+Kontrollera `comparison.untrusted.data.wholeDraft:true`, aktuell version
+och att `draft.changes` innehåller både Lo Exempel med beskrivningen och
+Kim. Underlaget kommer från hela aktuella utkastet. Avvisa just
+detta sparande med kontrollens eget ID:
+
+```text
+reply CHECK {"decision":"clarify"}
+hold-check off
+```
+
+Invänta avvisningen och det osparade utkastet. För nästa informationsfråga
+släpps `tool REQUEST report_result {"source":"draft"}`. Det avslutar
+uppdraget utan en ny arbetsbegäran och utan sparande.
+
+När användaren slår på mikrofonen i samma samtal kör operatören:
+
+```text
+user Ändra namnet på Kim till Kim Lind och spara.
+delegate
+```
+
+Kopiera aktuella V, C och hela Kims `after` från det nya `held`. Behåll
+typ och övriga egenskaper, och sätt bara namnet till Kim Lind i VALUE:
+
+<!-- markdownlint-disable MD013 -->
+```text
+tool REQUEST submit_changes {"version":V,"contentVersion":C,"completion":"save","operations":[{"name":"propose_object","arguments":{"id":"kim","baseRevision":null,"value":VALUE}}]}
+```
+<!-- markdownlint-enable MD013 -->
+
+Kontrollerna godkänns nu av den kontrollerade leverantören. Invänta det
+verifierade sparandet innan `assistant Sparat.` används för den simulerade
+samtalstexten. Läs resultatet enligt TEXT-15. Avsluta med `quit` och stäng
+provprofilen. Detta bevisar varken verklig talförståelse eller hörbart ljud.
+
 ## Sena svar och nekade sparverktyg
 
 För TEXT-02 antecknar operatören den första begärans versioner, Lo-ID och

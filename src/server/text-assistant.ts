@@ -13,6 +13,7 @@ import {
   conversationConsentRevoked,
 } from '../shared/conversation-consent.js';
 import { sameModelChoice } from '../shared/conversation-model.js';
+import { draftChangeCount } from '../shared/map.js';
 import { assistantSaveState, completeAssistantText } from '../shared/task-delivery.js';
 import type {
   MapSelection,
@@ -1318,6 +1319,30 @@ export function textAssistantRoutes({
       text.replace(/["'“”«»].*?["'“”«»]/gu, ''),
     );
   }
+  function unsavedDraftNotice(session: Session) {
+    return !session.state.pendingSave &&
+      !session.state.receipt &&
+      session.state.result &&
+      draftChangeCount(session.state.review) > 0 &&
+      ['draft', 'restored'].includes(session.state.result.kind)
+      ? ' Ändringarna ligger kvar osparade i ditt utkast.'
+      : '';
+  }
+  function failureMessages(session: Session, error: string) {
+    const saveRequested = !!session.state.saveIntent;
+    const unsavedNotice = saveRequested ? unsavedDraftNotice(session) : '';
+    return {
+      ordinary:
+        assistantFailureMessage(error) +
+        unsavedNotice +
+        (saveRequested
+          ? ' Din tidigare sparbegäran gäller inte längre. Be om sparande igen när detta är löst.'
+          : ''),
+      security: session.state.securityReference
+        ? blockedActionMessage(session.state.securityReference) + unsavedNotice
+        : undefined,
+    };
+  }
   async function saveReady(session: Session, serial: number, guard: () => void) {
     const deadline = now() + 180_000;
     for (;;) {
@@ -1812,6 +1837,9 @@ export function textAssistantRoutes({
         );
         if (reference === null && checksQueuedTarget)
           throw new MapError('assistant_scope_unclear', 409);
+        const wholeDraft = operations.every((operation) =>
+          ['save_draft', 'prepare_save'].includes(operation.name),
+        );
         const map = await call(session, 'read_map', {}, guard);
         guard();
         const decision = await compareTurnActions(
@@ -1819,8 +1847,32 @@ export function textAssistantRoutes({
           { current: text, scope },
           operations,
           {
-            map: turnActionData(map, operations),
+            map: turnActionData(
+              map,
+              wholeDraft
+                ? [
+                    ...operations,
+                    ...[
+                      { name: 'propose_object', changes: session.state.review.changes },
+                      { name: 'propose_relationship', changes: session.state.review.relationships },
+                      { name: 'propose_object_type', changes: session.state.review.objectTypes },
+                      {
+                        name: 'propose_relationship_type',
+                        changes: session.state.review.relationshipTypes,
+                      },
+                    ].flatMap(({ name, changes }) =>
+                      (changes ?? []).flatMap((change) =>
+                        [change.before, change.after].map((value) => ({
+                          name,
+                          arguments: { id: change.id, value },
+                        })),
+                      ),
+                    ),
+                  ]
+                : operations,
+            ),
             draft: session.state.review,
+            ...(wholeDraft ? { wholeDraft: true } : {}),
             queuedReference:
               reference && checksQueuedTarget
                 ? queuedActionReference(reference, operations)
@@ -2181,10 +2233,7 @@ export function textAssistantRoutes({
           }
           // Check the entire batch before its first mutation, even when an
           // otherwise requested edit precedes the whole-draft discard.
-          await checkActions([
-            ...batch.operations,
-            ...(batch.completion === 'save' ? [{ name: 'save_draft', arguments: {} }] : []),
-          ]);
+          await checkActions(batch.operations);
           if (
             batch.completion === 'save' &&
             !session.state.saveIntent &&
@@ -2294,7 +2343,12 @@ export function textAssistantRoutes({
             ).length > 1
           )
             throw new MapError('assistant_batch_required', 409);
-          await checkActions(operations);
+          await checkActions(
+            operations.filter(
+              (operation) =>
+                scope.mode === 'read' || !['save_draft', 'prepare_save'].includes(operation.name),
+            ),
+          );
         }
         for (const action of calls) {
           guard();
@@ -2532,6 +2586,13 @@ export function textAssistantRoutes({
             )
               throw new MapError('assistant_draft_changed', 409);
             if (isSave && current.conflicts.length) throw new MapError('assistant_conflict', 409);
+            if (isSave) {
+              session.state.review = current;
+              // Batch approval precedes its effects. Saving independently
+              // checks the complete resulting draft, including older proposals.
+              await checkActions([{ name: action.name, arguments: args }]);
+              currentSaveGuard(session, serial, guard)();
+            }
             previousReview = current;
           }
           if (isSave) {
@@ -2644,18 +2705,15 @@ export function textAssistantRoutes({
           : 'error';
       session.state.error = error instanceof MapError ? error.code : 'assistant_provider_failed';
       if (session.state.error === 'assistant_context_capacity') pauseCapacity(session);
-      session.state.previousFailure = assistantFailureMessage(session.state.error);
-      if (session.state.saveIntent) {
-        session.state.saveIntent = undefined;
-        session.state.previousFailure +=
-          ' Din tidigare sparbegäran gäller inte längre. Be om sparande igen när detta är löst.';
-      }
+      const messages = failureMessages(session, session.state.error);
+      session.state.previousFailure = messages.ordinary;
+      if (session.state.saveIntent) session.state.saveIntent = undefined;
       appendConversation(session, { role: 'assistant', text: session.state.previousFailure });
       session.state.reply = session.state.previousFailure;
       session.state.modelReply = undefined;
       session.state.requiredNotice = undefined;
-      if (session.state.securityReference) {
-        session.state.requiredNotice = blockedActionMessage(session.state.securityReference);
+      if (messages.security) {
+        session.state.requiredNotice = messages.security;
         session.state.reply = session.state.requiredNotice;
       }
       if (error instanceof MapError && error.code === 'assistant_task_expired') return;
@@ -3115,6 +3173,11 @@ export function textAssistantRoutes({
           if (await saveReady(session, serial, guard)) {
             const saveGuard = currentSaveGuard(session, serial, guard);
             const review = await call(session, 'read_my_draft', {}, saveGuard);
+            if (
+              review.version !== (session.state.workVersion ?? expected.version) ||
+              review.contentVersion !== expected.contentVersion
+            )
+              throw new MapError('assistant_draft_changed', 409);
             if (review.conflicts.length) throw new MapError('assistant_conflict', 409);
             if (
               ![
@@ -3235,13 +3298,11 @@ export function textAssistantRoutes({
             ? error.code
             : 'assistant_draft_changed';
         if (session.state.error === 'assistant_context_capacity') pauseCapacity(session);
-        session.state.reply = assistantFailureMessage(session.state.error);
-        if (session.state.saveIntent)
-          session.state.reply +=
-            ' Din tidigare sparbegäran gäller inte längre. Be om sparande igen när detta är löst.';
+        const messages = failureMessages(session, session.state.error);
+        session.state.reply = messages.ordinary;
         session.state.saveIntent = undefined;
-        if (session.state.securityReference) {
-          session.state.requiredNotice = blockedActionMessage(session.state.securityReference);
+        if (messages.security) {
+          session.state.requiredNotice = messages.security;
           session.state.reply = session.state.requiredNotice;
         }
         if (

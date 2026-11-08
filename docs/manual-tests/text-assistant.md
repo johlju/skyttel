@@ -30,6 +30,7 @@ formuläret; befintliga förslag i utkastet påverkas inte.
 
 1. TEXT-01 använder familjeunderlaget i
    [separat förberedelse](text-conversation-preparation.md#familjerättelsen).
+   TEXT-15 använder röstinstallationen enligt sin separata förberedelse.
    Övriga fall använder den
    [kontrollerade startguiden](#controlled-text-fixture).
    Den senare håller varje modellsvar tills du släpper det i terminalen.
@@ -201,6 +202,82 @@ formulärtext”.
   verifiering. Ingen sådan mänsklig körning påstås här vara genomförd.
 
 ## Kontrollerade sena svar och fel
+
+### TEXT-15: avvisat sparande bevarar utkastet före ett nytt talat sparbesked
+
+**Syfte:** Behålla både tidigare och nya förslag när sparandet inte kan
+godkännas, och sedan spara en uttryckligen begärd rättelse i samma samtal.
+
+**Användare:** Alex i Textprov.
+
+**Förutsättningar:** En ny kontrollerad röstinstallation med ett osparat
+Lo Exempel av typen Person och beskrivningen Påhittad uppgift. Mikrofonen
+är av från början. Inga verkliga leverantörer eller fysiska ljud används.
+
+**Separat förberedelse:** Följ
+[avvisad kontroll av hela utkastet](text-conversation-preparation.md#avvisad-kontroll-av-hela-utkastet).
+Operatören styr modellens svar och det simulerade talet där.
+
+**Automatiskt motsvarande test (integration eller webbläsare):**
+[text-assistant.spec.ts](../../tests/integration/text-assistant.spec.ts),
+TEXT-15.
+
+<!-- markdownlint-disable MD013 -->
+<!--
+```manual-mapping
+{
+  "counterpart": {
+    "runner": "playwright",
+    "suite": "integration",
+    "spec": "tests/integration/text-assistant.spec.ts",
+    "caseId": "TEXT-15"
+  },
+  "reference": "Samma samtal med text och simulerat tal; hela utkastets kontroll avvisas efter en genomförd rättelse och nästa uttryckliga begäran tillåts. Kontrollerade leverantörer bevisar inte svensk talförståelse eller hörbart ljud.",
+  "outcomes": [
+    "Lo och Kim finns kvar osparade efter avvisat sparande, med tydligt besked.",
+    "En informationsfråga återupplivar inget sparande.",
+    "Ett nytt talat ändra-och-spara-besked sparar både Lo och Kim Lind med ett kvitto utan extra ja."
+  ],
+  "evidence": [{
+    "kind": "technical",
+    "runner": "vitest",
+    "suite": "server",
+    "spec": "tests/unit/server/conversation-whole-draft-save.test.ts",
+    "title": "a rejected whole-draft check preserves both earlier proposals and the applied edit without registering a save",
+    "purpose": "Avvisar den oberoende kontrollen av hela det resulterande utkastet före registrering och verifierar bevarat utkast genom publika HTTP-vägar."
+  }, {
+    "kind": "technical",
+    "runner": "vitest",
+    "suite": "server",
+    "spec": "tests/unit/server/conversation-whole-draft-save.test.ts",
+    "title": "an old whole-draft approval cannot save newer proposals and a rejected attempt needs fresh authority",
+    "purpose": "Ändrar utkastet medan den oberoende kontrollen hålls och verifierar beständig avvisning, återhämtning och krav på ny uttrycklig sparbegäran."
+  }]
+}
+```
+-->
+<!-- markdownlint-enable MD013 -->
+
+**Steg:**
+
+1. Öppna textvyn, börja samtalet och godkänn. Visa utkastet och läs Lo.
+2. Skicka **Lägg till Kim som person och spara.** Låt operatören
+   släppa förslaget och avvisa sparandet enligt förberedelsen.
+3. Läs att ändringarna ligger kvar osparade och att ett nytt sparbesked
+   behövs. Läs både Lo Exempel och Kim i utkastet. Öppna Lo och
+   kontrollera att beskrivningen Påhittad uppgift finns kvar. Stäng detaljen.
+4. Skicka **Vad finns i utkastet?** Läs redovisningen av båda personerna.
+   Utkastet finns kvar och inget **Sparat.** visas.
+5. Slå på **Prata med Skyttel** i samma samtal. Låt operatören förmedla
+   **Ändra namnet på Kim till Kim Lind och spara.**
+6. Läs **Sparat.** och ett tomt utkast. Läs Lo Exempel och Kim Lind i
+   Tabell. Öppna **Rapporter → Ändringshistorik**, senaste sparandet och
+   **Visa ändringarna**. Båda personerna ingår i samma sparande.
+
+**Förväntat resultat:** Avvisat sparande lämnar genomförda förslag kvar
+osparade. Informationsfrågan sparar ingenting. Ett nytt uttryckligt
+talat besked kan både rätta och spara hela utkastet utan extra ja. Först
+ett verkligt sparkvitto ger sparbesked och en gemensam historikpost.
 
 ### TEXT-02: sena svar efter kastat utkast och avbrott ändrar inte nytt arbete
 

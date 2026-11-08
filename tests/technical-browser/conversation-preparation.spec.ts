@@ -24,6 +24,11 @@ for (const seeded of [false, true]) {
   }, async ({ page, browser }) => {
     const document = await readFile('docs/manual-tests/conversation-preparation.md', 'utf8');
     const questions = await readFile('docs/manual-tests/conversation-questions.md', 'utf8');
+    const savePreparation = await readFile(
+      'docs/manual-tests/text-conversation-preparation.md',
+      'utf8',
+    );
+    const allowSave = savePreparation.match(/^reply CHECK .*"decision":"allow".*$/mu)?.[0];
     const batch = document.match(/^tool REQUEST submit_changes .+$/mu)?.[0];
     const save = document.match(/^tool REQUEST save_draft .+$/mu)?.[0];
     const question = questions.match(/^\s*tool REQUEST ask_questions [^\n]+$/mu)?.[0].trim();
@@ -41,6 +46,7 @@ for (const seeded of [false, true]) {
       .find((source) => source.includes('VOICE_STOP_URL'));
     if (
       !batch ||
+      !allowSave ||
       !save ||
       !question ||
       !answeredQuestion ||
@@ -70,6 +76,7 @@ for (const seeded of [false, true]) {
       message?: string;
       messageId?: string;
       pendingParts?: PendingPart[];
+      comparison?: { untrusted: { data: { wholeDraft?: boolean; draft: TextAssistantReview } } };
       requests?: Event[];
     };
     const events: Event[] = [];
@@ -348,7 +355,23 @@ for (const seeded of [false, true]) {
         'value',
         '89',
       );
+      command('hold-check on');
       command(render(save, item));
+      const saveCheck = await held(at, 'action-check');
+      expect(saveCheck.comparison?.untrusted.data.wholeDraft).toBe(true);
+      expect(saveCheck.comparison?.untrusted.data.draft).toEqual(
+        expect.objectContaining({
+          version: item.draft?.version,
+          changes: expect.arrayContaining([
+            expect.objectContaining({
+              id: lo.id,
+              after: expect.objectContaining({ name: 'Lo Senaste' }),
+            }),
+          ]),
+        }),
+      );
+      command(allowSave.replace('CHECK', String(saveCheck.id)));
+      command('hold-check off');
       await expect
         .poll(
           async () =>

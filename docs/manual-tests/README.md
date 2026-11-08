@@ -519,6 +519,8 @@ Det ersätter inte verkliga leverantörs- eller skärmläsarprov.
   TEXT-07 är pensionerat till SAMTALSUTKAST-01 utan återanvänt ID.
   TEXT-04 återfinner den verkliga sparidentifieraren efter genomfört
   sparande med tappat svar och omstart. Varje TEXT-08-storlek har eget ID.
+  TEXT-15 bevarar tidigare och nya förslag efter avvisat sparande och
+  kräver ett nytt uttryckligt talat ändra-och-spara-besked.
   På smal skärm provas även tangentbordsåtkomst till kartans sammanhang
   efter ett nytt urval medan svaret finns kvar i textvyn.
   [Operatörsförberedelsen](text-conversation-preparation.md) skiljer
