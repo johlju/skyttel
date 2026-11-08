@@ -338,8 +338,11 @@ test('TEXT-03: nekade sparbesked och modellfel lämnar formulärarbetet tillgän
     }
     fail = true;
     await send(page, 'Beskriv mitt utkast.');
-    await expect.poll(async () => (await currentTask()).error).toBe('assistant_provider_failed');
+    await expect.poll(async () => (await currentTask()).error).toBe('assistant_model_temporary');
     await expect(notice(page)).toContainText('Skyttel kunde inte slutföra');
+    await expect(transcript(page)).toContainText(
+      'Modellen är tillfälligt otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet är löst.',
+    );
     await closeTextView(page);
     await editTableObject(page, 'Lo Exempel');
     await page.getByLabel('Namn', { exact: true }).fill('Lo Lind');

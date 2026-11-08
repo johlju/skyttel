@@ -731,7 +731,7 @@ test('stopping a pending task from Settings restores Settings focus and cannot d
   expect((await home.read()).draft.changes).toEqual([]);
 });
 
-test('the context failure notice resets the conversation without submitting unsent text or losing its private draft', async () => {
+test('the temporary summary failure notice resets the conversation without submitting unsent text or losing its private draft', async () => {
   const home = await household({
     textUsage: 1_040_000,
     reply: (request) => {
@@ -748,8 +748,13 @@ test('the context failure notice resets the conversation without submitting unse
   await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
   await waitFor(() =>
     expect(screen.getByRole('region', { name: 'Samtalsnotis' }).textContent).toContain(
-      'Kontexten är full',
+      'Skyttel kunde inte sammanfatta samtalet. Modellen är tillfälligt otillgänglig.',
     ),
+  );
+  const notice = screen.getByRole('region', { name: 'Samtalsnotis' });
+  expect(notice.textContent).not.toContain('Kontexten är full');
+  expect(notice.textContent).toContain(
+    'Det löser inte modellfelet och ändrar inte kontots åtkomst.',
   );
   await userEvent.type(field, 'Oskickat under återställning');
   expect(screen.getByRole('button', { name: 'Skicka' }).hasAttribute('disabled')).toBe(true);

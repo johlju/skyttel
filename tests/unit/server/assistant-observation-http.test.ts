@@ -187,7 +187,7 @@ test('a failed model task has a failed observed ending without its provider erro
   );
   expect(await send(path, session)).toMatchObject({
     phase: 'error',
-    error: 'assistant_provider_failed',
+    error: 'assistant_model_temporary',
   });
   expect(events.filter((event) => event.kind === 'task_completed')).toMatchObject([
     { status: 'failed', data: { error: 'task_failed' } },

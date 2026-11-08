@@ -505,7 +505,7 @@ test('a provider discovers the actual MCP catalog and makes a persistent proposa
   );
   for (const call of model.requests) {
     expect(call).toMatchObject({
-      model: 'gpt-6.1-sol',
+      model: 'gpt-6.1-terra',
       reasoning: { effort: 'high' },
       store: false,
     });
@@ -2631,7 +2631,7 @@ test('provider failure preserves the draft, emits unknown usage, and allows norm
   const status = await message(await start(), 'Hitta abonnemanget.');
   expect(status).toMatchObject({
     phase: 'error',
-    error: 'assistant_provider_failed',
+    error: 'assistant_model_temporary',
     review: { changes: [{ id: 'web-object' }] },
   });
   expect(attempts.at(-1)).toMatchObject({
@@ -2803,7 +2803,7 @@ test('an incomplete provider response cannot execute a save and retains only kno
           object: 'response',
           created_at: 1,
           status: 'incomplete',
-          model: 'gpt-6.1-sol',
+          model: 'gpt-6.1-terra',
           output: [
             modelTool('save_draft', { version: 1, contentVersion: 1, operationId: 'partial-save' }),
           ],
@@ -3127,7 +3127,7 @@ test('an HTTP provider refusal records its request identity without exposing its
     (attempt) => attempts.push(structuredClone(attempt)),
   );
   const view = await message(await start(), 'Läs mitt utkast.');
-  expect(view).toMatchObject({ phase: 'error', error: 'assistant_provider_failed' });
+  expect(view).toMatchObject({ phase: 'error', error: 'assistant_model_temporary' });
   expect(JSON.stringify(view)).not.toContain('Private provider body');
   expect(attempts.at(-1)).toMatchObject({
     outcome: 'failed',

@@ -20,7 +20,7 @@ import { readVoiceProposal } from '../support/voice-work-reading.js';
 
 const summaryLine = 'Skyttel har sammanfattat samtalet för att få plats i kontexten.';
 const failureLine =
-  'Kontexten är full, och Skyttel kunde inte sammanfatta samtalet. Inget har gått förlorat, och utkastet ligger kvar.';
+  'Skyttel kunde inte sammanfatta samtalet. Modellen är tillfälligt otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet är löst. Samtalstexten och utkastet ligger kvar. Ett nytt samtal tömmer samtalstexten och kontexten och använder ditt senaste personliga modellval. Det löser inte modellfelet och ändrar inte kontots åtkomst.';
 const log = (page: Page) => page.getByRole('log', { name: 'Samtalstext' });
 const field = (page: Page) => page.getByRole('textbox', { name: 'Meddelande till Skyttel' });
 const meter = (page: Page) => page.getByRole('meter', { name: 'Kontext', exact: true });

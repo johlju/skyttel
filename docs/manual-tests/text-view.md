@@ -1146,6 +1146,12 @@ TEXTMOBIL-11.
 
 **Syfte:** Skydda ytterst kort liggande pekare.
 
+Vid den minskade höjden, öppna textvyns **Modell och resonemang** före
+skickandet. Läs dialogrubriken, tryck Escape och kontrollera fokus på
+öppningsikonen. Välj meddelandefältet igen och kontrollera att den
+oskickade texten ligger kvar. Ikonen delar den kompakta rubrikraden så
+att meddelandefält och Skicka ryms på höjden.
+
 **Användare:** Alex.
 
 **Förutsättningar:** Ny installation med samma underlag som TEXTMOBIL-02,

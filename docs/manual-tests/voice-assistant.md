@@ -985,9 +985,9 @@ till TAL-17/23/24.
 3. Låt egen aktivitet, tystnad, väntande arbete och inkommande aktivitet
    tillkomma enligt tidslinjen. Läs respektive statusord, namngiven Röstruta och
    Avbryt.
-4. Tabba från Prata med Skyttel genom Skriv till Skyttel, Avbryt och Utkast. Slå
-   av mikrofonen och fokusera Återställ vy medan svaret fortsätter; avsluta
-   inkommande aktivitet.
+4. Tabba från Prata med Skyttel genom Skriv till Skyttel, Modell och
+   resonemang, Avbryt och Utkast. Slå av mikrofonen och fokusera Återställ vy
+   medan svaret fortsätter; avsluta inkommande aktivitet.
 5. Slå på mikrofonen, öppna Inställningar och låt inkommande aktivitet börja.
    Fokusera Avbryt och tryck Enter. Fokus ska gå till Tillbaka till kartan.
    Faktiskt hört besked bedöms i TAL-24.
@@ -1003,7 +1003,8 @@ till TAL-17/23/24.
 - Steg 4: **Skyttel arbetar** finns som status för hjälpmedel. **Skyttel talar**
   erbjuds inte som DOM-status. Stoppikonen heter **Avbryt**.
 - Steg 4: ordningen är **Prata med Skyttel**, **Skriv till Skyttel**,
-  **Avbryt**, **Utkast** när utkastet innehåller förslag.
+  **Modell och resonemang**, **Avbryt**, **Utkast** när utkastet innehåller
+  förslag.
 - Steg 4: **Mikrofonen är av** finns som status för hjälpmedel när röstrutan
   försvinner.
 - Röstrutan är gruppen **Röstruta**, och vågformen läses inte. Alla

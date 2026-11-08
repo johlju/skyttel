@@ -6,6 +6,21 @@ before upgrading Skyttel. For routine deployment steps, use the
 
 ## Unreleased
 
+### Check conversation model access and activation
+
+Before rollout, confirm that the installation's OpenAI project can use
+GPT-6.1 Terra and GPT-6.1 Sol at the enabled reasoning levels. Users without
+a saved personal choice start with Terra at high reasoning. Set the enabled
+combinations before opening access; an unavailable default stays selected
+until the user chooses another option. Activation does not prove account
+access. Use the [model activation guide](conversation-models.md).
+
+Personal model choices now persist across devices and households. Preserve
+the installation database during rollout. Check model access errors with
+synthetic work and retain the content-free diagnostic references. Model
+access recovery does not restart work. Cost estimates can remain unknown
+when the price list does not cover the selected model.
+
 ### Apply container filesystem and resource limits
 
 Recreate the Compose service during rollout to apply the read-only root and

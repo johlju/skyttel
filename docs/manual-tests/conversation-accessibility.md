@@ -157,7 +157,8 @@ separat. Utför arbetsflödet en gång.
 2. Låt förberedelsen ge inkommande aktivitet. Läs **Skyttel talar** och
    **Avbryt**.
 3. Fokusera **Prata med Skyttel**. Gå med Tab genom **Skriv till Skyttel**,
-   **Avbryt**, **Stäng notisen** och återstående synliga verktyg.
+   röstrutans **Modell och resonemang**, **Avbryt**, **Stäng notisen** och
+   återstående synliga verktyg.
 4. Stäng textvyn, prova samma ordning, öppna textvyn och prova igen. Läs
    dokumentordningen separat enligt förberedelsen.
 5. Fokusera **Stäng notisen** och tryck Enter. Fokus återgår till
@@ -167,7 +168,8 @@ separat. Utför arbetsflödet en gång.
 
 - **Navigera** ligger bland kartverktygen efter **Karta**, före
   samtalskontrollerna. Samtalets ordning är **Prata med Skyttel**,
-  **Skriv till Skyttel**, röstrutans **Avbryt**, **Stäng notisen**, sedan de
+  **Skriv till Skyttel**, röstrutans **Modell och resonemang**, **Avbryt**,
+  **Stäng notisen**, sedan de
   återstående synliga verktygen. En notisknapp, när en sådan finns, föregår
   stängknappen.
 - Läsordningen är densamma som tabbordningen. På smal skärm går fokus från
@@ -301,7 +303,8 @@ separat. Utför arbetsflödet en gång.
 1. Starta mikrofonen med förberedelsens blockerade uppspelning. Läs
    ljudhindret och **Starta ljudet** utan aktiv mikrofon.
 2. Fokusera **Prata med Skyttel**. Tabba till **Skriv till Skyttel**
-   och sedan **Starta ljudet**; läs den artiga DOM-statusen separat.
+   och röstrutans **Modell och resonemang**, sedan **Starta ljudet**; läs
+   den artiga DOM-statusen separat.
 3. När förberedelsen tillåter ljudet, tryck Enter på **Starta ljudet**.
    Notisen försvinner, mikrofonknappen får fokus och **Lyssnar** visas.
 

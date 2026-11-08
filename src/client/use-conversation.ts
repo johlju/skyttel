@@ -39,6 +39,7 @@ export type ConversationMode = 'voice' | 'text';
  * owns the conversation, so it survives whichever of them is shown.
  */
 export type Conversation = {
+  configureModel?: (choice: ConversationModelChoice) => Promise<boolean>;
   /** Conversation input is stopped; the unsent text remains editable. */
   inputBlocked?: boolean;
   disconnected?: boolean;
@@ -251,6 +252,15 @@ export function useConversation({
     (next: TextAssistantView) => {
       if (!mounted.current) return;
       const previous = active.current;
+      if (previous && (next.modelChoiceRevision ?? 0) < (previous.modelChoiceRevision ?? 0)) {
+        next = {
+          ...next,
+          modelChoice: previous.modelChoice,
+          modelChoiceRevision: previous.modelChoiceRevision,
+          enabledModelChoices: previous.enabledModelChoices,
+          modelChoiceUnavailable: previous.modelChoiceUnavailable,
+        };
+      }
       if (
         previous &&
         (next.id !== previous.id ||
@@ -1149,6 +1159,19 @@ export function useConversation({
     },
     session,
     transcript,
+    configureModel: async (choice: ConversationModelChoice) => {
+      const current = active.current;
+      if (!current) return false;
+      const epoch = requestEpoch.current;
+      try {
+        const next = await request<TextAssistantView>(`${path}/${current.id}/model-choice`, choice);
+        if (epoch !== requestEpoch.current || active.current?.id !== current.id) return false;
+        update(next);
+        return true;
+      } catch {
+        return false;
+      }
+    },
     text,
     pending,
     error,
@@ -1205,3 +1228,5 @@ export function useConversation({
     retry: (operationId) => command('retry', { operationId }),
   };
 }
+
+import type { ConversationModelChoice } from '../shared/conversation-model.js';

@@ -757,13 +757,17 @@ test('TAL-16: hjälpmedel får röstrutans namn, knappens läge och uppläsninga
     await expect(announcement).toHaveText('Skyttel arbetar');
     await expect(stopIcon(page)).toHaveAccessibleName('Avbryt');
 
-    // The tab order: the two conversation buttons, then the stop icon, then the other tools.
+    // Conversation controls precede model choice, stop, and the remaining tools.
     await microphoneButton(page).focus();
     await page.keyboard.press('Tab');
     await expect(
       page
         .getByRole('navigation', { name: 'Kartans verktyg' })
         .getByRole('button', { name: 'Skriv till Skyttel', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      voiceBox(page).getByRole('button', { name: /^Modell och resonemang:/ }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(stopIcon(page)).toBeFocused();

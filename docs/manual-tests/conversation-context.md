@@ -728,6 +728,12 @@ uttryckligt sammanfattningsfel, och kunna börja om.
 **Förutsättningar:** Lo-förslaget ligger osparat. Textvyn är öppen. KONTEXT-15
 provar röst som ingång.
 
+Det kontrollerade felet ger också beskedet **Modellen är tillfälligt
+otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet
+är löst.** Läs detta tillsammans med sammanfattningsfelet i steg 2.
+Saknad kontoåtkomst och kombinationer som inte stöds har egna förklaringar;
+de separata HTTP-proven verifierar dessa fel vid leverantörsgränsen.
+
 **Integrationstest:**
 [conversation-summary.spec.ts](../../tests/integration/conversation-summary.spec.ts),
 KONTEXT-10, text som ingång.
@@ -743,7 +749,33 @@ KONTEXT-10, text som ingång.
   "reference": "Chromium, kontrollerad leverantör, riktig server och SQLite. Angiven ingång, mikrofonval och bredd skyddar kontextens gräns, bevarat utkast och återstart.",
   "outcomes": [
     "Servern skiljer sammanfattningsfel från allmänt uppdragsfel och blockerar användning av Skicka och mikrofonen; servergränserna kontrolleras separat i automationen. Ursprunglig kontext, samtalstext och utkast finns kvar tills användaren uttryckligen väljer nytt samtal. Inga nya uppgifter spelas in.",
-    "Notisen visar hinderbeskedet. Knappen **Nytt samtal** går att nå, har synligt fokus och kan användas utan tal eller pekdon."
+    "Notisen visar hinderbeskedet och modellfelets förklaring. Knappen **Nytt samtal** går att nå, har synligt fokus och kan användas utan tal eller pekdon."
+  ],
+  "evidence": [
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-model-choice.test.ts",
+      "title": "summary provider HTTP 403 preserves its classified failure and the completed work",
+      "purpose": "Saknad kontoåtkomst vid sammanfattning bevaras separat från färdigt arbete."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-model-choice.test.ts",
+      "title": "summary provider HTTP 400 preserves its classified failure and the completed work",
+      "purpose": "Modell eller nivå som inte stöds får en egen förklaring vid sammanfattning."
+    },
+    {
+      "kind": "technical",
+      "runner": "vitest",
+      "suite": "server",
+      "spec": "tests/unit/server/conversation-model-choice.test.ts",
+      "title": "summary provider HTTP 503 preserves its classified failure and the completed work",
+      "purpose": "Tillfälligt leverantörsfel vid sammanfattning ändrar inte verifierat resultat eller modellval."
+    }
   ]
 }
 ```
@@ -771,10 +803,11 @@ efter känt utfall, avsluta med `quit` och starta nytt mellan fallen.
 1. Be operatören förbereda sammanfattningsgränsen och invänta bekräftelse.
    Skicka **Fyll kontexten.**. Be operatören släppa det vanliga svaret och
    därefter låta just sammanfattningen misslyckas. Invänta bekräftelse.
-2. Kräv notisen **Kontexten är full, och Skyttel kunde inte sammanfatta
-   samtalet. Inget har gått förlorat, och utkastet ligger kvar.** Samtalsrader
-   och Lo-förslaget ligger kvar. Ingen lyckad sammanfattningsrad visas, och det
-   allmänna uppdragsfelet används inte.
+2. Kräv notisen **Skyttel kunde inte sammanfatta samtalet.** Läs
+   modellfelets förklaring och nästa steg. Läs att samtalstext och utkast
+   ligger kvar och att ett nytt samtal inte löser modellfelet eller ändrar
+   kontots åtkomst. Samtalsrader och Lo-förslaget ligger kvar. Ingen lyckad
+   sammanfattningsrad visas, och det allmänna uppdragsfelet används inte.
 3. Skriv **Detta ska inte skickas.**. **Skicka** är avstängd. Fokusera
    mikrofonknappen med tangentbord och tryck Enter; den ser avstängd ut och ska
    inte börja spela in. Inget nytt modelluppdrag skapas.
@@ -1140,9 +1173,10 @@ ska höras; ett allmänt uppdragsfel får inte ersätta det.
 
 **Förväntat resultat:**
 
-- NVDA läser **Kontexten är full, och Skyttel kunde inte sammanfatta
-  samtalet. Inget har gått förlorat, och utkastet ligger kvar.** vid båda
-  ingångarna. Ett allmänt uppdragsfel ersätter inte beskedet.
+- NVDA läser **Skyttel kunde inte sammanfatta samtalet**, modellfelets
+  orsak och nästa steg vid båda ingångarna. Beskedet bevarar skillnaden
+  mellan ett modellfel och valet att tömma samtalet. Ett allmänt
+  uppdragsfel ersätter inte beskedet.
 - **Nytt samtal** kan nås, har synligt fokus och fungerar med tangentbord.
 
 ### KONTEXT-16: kontextens verkliga uppläsning

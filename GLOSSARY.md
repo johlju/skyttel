@@ -320,6 +320,15 @@ uttryckligen begär.
 
 ## Samtal med Skyttel
 
+**Modellval**:
+Skyttel-användarens val av AI-modell för samtalets arbete, tolkning,
+kontroll av föreslagna ändringar och sammanfattning, skilt från modellen
+som lyssnar och talar.
+
+**Resonemangsnivå**:
+Skyttel-användarens val av låg, medium eller hög nivå för den valda
+modellens resonemangsarbete i samtalet.
+
 **Samtal**:
 En pågående dialog mellan en Skyttel-användare och Skyttel om hushållets
 karta, som förs med röst, med text eller med båda.

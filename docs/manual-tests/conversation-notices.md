@@ -467,8 +467,8 @@ konfiguration före samma steg.
 
 1. Skicka **Ge ett förslag.** och låt det misslyckas enligt tidslinjen.
 2. Stäng textvyn. Läs notisen, röstrutan och kartans status.
-3. Fokusera **Skriv till Skyttel** och tryck Tab. Tryck Retur på
-   **Stäng notisen**.
+3. Fokusera **Skriv till Skyttel** och tryck Tab till röstrutans
+   **Modell och resonemang**. Tryck Tab igen och Retur på **Stäng notisen**.
 
 **Förväntat resultat:**
 
@@ -476,7 +476,8 @@ konfiguration före samma steg.
   kortet ovanför röstrutan, över hela bredden. Symbolen står till vänster,
   texten bredvid och stängknappen uppe till höger.
 - Ingen överlappning döljer röstrutan eller återkopplingen. Tab går från
-  textknappen till notisens stängknapp när ingen Avbryt-knapp finns.
+  textknappen via **Modell och resonemang** till notisens stängknapp när
+  ingen Avbryt-knapp finns.
 - Stängning återför fokus till mikrofonknappen. Mikrofonen och **Lyssnar** finns
   kvar; att stänga ett felbesked avslutar inget samtal.
 

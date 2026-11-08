@@ -94,6 +94,7 @@ for (const width of [1280, 390])
             '.workspace-tools [aria-label="Navigera"]',
             '.workspace-talk',
             '.workspace-text',
+            '.voice-box .conversation-model-button',
             '.voice-stop',
             '.conversation-notice-close',
             '.workspace-tools-footer button',
@@ -112,6 +113,10 @@ for (const width of [1280, 390])
         await microphoneButton(page).focus();
         await page.keyboard.press('Tab');
         await expect(await utilityButton(page, 'Skriv till Skyttel')).toBeFocused();
+        await page.keyboard.press('Tab');
+        await expect(
+          voiceBox(page).getByRole('button', { name: /^Modell och resonemang:/ }),
+        ).toBeFocused();
         await page.keyboard.press('Tab');
         await expect(voiceBox(page).getByRole('button', { name: 'Avbryt' })).toBeFocused();
         await page.keyboard.press('Tab');
@@ -235,6 +240,10 @@ for (const width of [1280, 390])
       await microphoneButton(page).focus();
       await page.keyboard.press('Tab');
       await expect(await utilityButton(page, 'Skriv till Skyttel')).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
+        voiceBox(page).getByRole('button', { name: /^Modell och resonemang:/ }),
+      ).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(action).toBeFocused();
       await expect(page.locator('.notice-announcement[aria-live="polite"]')).toHaveText(

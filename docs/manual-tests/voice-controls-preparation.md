@@ -158,7 +158,10 @@ med `seed-family`-underlag vid 320 × 250 respektive tomt underlag vid
 samtyckesstarter,
 återställningar, status 201/200, oförändrad karta/utkast/historik och borttagen
 provkatalog. Serverns förväntade säkerhetshändelser för lyckade
-åtkomständringar valideras separat; övriga diagnostikutdata ska vara tomma.
+åtkomständringar valideras separat. Det avsiktliga modellfelet ska ge en enda
+diagnostikhändelse med modell, resonemangsnivå, felkategori, tidpunkt och
+UUID-referens utan samtalsinnehåll eller inloggningsuppgifter. Övriga
+diagnostikutdata ska vara tomma även efter återhämtning och avslut.
 Okända fält, misslyckade säkerhetshändelser och råa fel godtas inte.
 Proven delar inte tidsbudget med
 blockens och runnerns fullständiga prov.
@@ -643,7 +646,8 @@ läsbarhet och nåbara kontroller.
    .
 4. Kör `user Beskriv utkastet.`, `delegate`, släpp anropet med ett svar och
    kör `setSound('remote', true)`.
-5. Gå med Tab från **Prata med Skyttel**.
+5. Gå med Tab från **Prata med Skyttel** via **Skriv till Skyttel** och
+   **Modell och resonemang** till **Avbryt** och **Utkast**.
 6. Välj **Prata med Skyttel**, flytta fokus till **Återställ vy** och kör
    `setSound('remote', false)`.
 7. Slå på mikrofonen igen och öppna **Inställningar**. Kör
@@ -992,7 +996,8 @@ efter fallet och avsluta med `quit`.
 
 1. Kör `window.skyttelVoiceFixture.setPlayback('blocked')` i konsolen. Tryck
    **Prata med Skyttel**.
-2. Fokusera mikrofonknappen och tabba via **Skriv till Skyttel** till
+2. Fokusera mikrofonknappen och tabba via **Skriv till Skyttel** och
+   röstrutans **Modell och resonemang** till
    **Starta ljudet**.
 3. Kör `window.skyttelVoiceFixture.setPlayback('allow')`. Tryck Retur medan
    **Starta ljudet** är fokuserad.

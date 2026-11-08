@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import OpenAI from 'openai';
 import type { ResponseInputItem, Tool } from 'openai/resources/responses/responses';
 import { textConversationModel } from './conversation-capacity.js';
+import { MapError } from './map-error.js';
 import { ModelClient } from './model-client.js';
 
 export interface TextModelProfile {
@@ -48,6 +49,7 @@ export function textModel(
   record?: TextModelUsage,
   profile?: TextModelProfile,
   observe?: TextModelEvidence,
+  selectProfile?: () => TextModelProfile,
 ) {
   if (
     profile &&
@@ -74,19 +76,20 @@ export function textModel(
     signal: AbortSignal,
     maxOutputTokens?: number,
   ) => {
-    const outputLimit = maxOutputTokens ?? profile?.maxOutputTokens;
+    const selected = profile ?? selectProfile?.();
+    const outputLimit = maxOutputTokens ?? selected?.maxOutputTokens;
     if (
       outputLimit !== undefined &&
       (!Number.isSafeInteger(outputLimit) ||
         outputLimit <= 0 ||
-        (profile && outputLimit > profile.maxOutputTokens))
+        (selected && outputLimit > selected.maxOutputTokens))
     )
       throw new Error('invalid_model_output_limit');
     const attempt: TextModelAttempt = {
       attemptId: randomUUID(),
       startedAt: new Date().toISOString(),
       endedAt: null,
-      model: profile?.model ?? textConversationModel.model,
+      model: selected?.model ?? textConversationModel.model,
       requestId: null,
       responseId: null,
       outcome: 'started',
@@ -95,7 +98,7 @@ export function textModel(
     };
     const request = {
       model: attempt.model,
-      reasoning: { effort: profile?.effort ?? textConversationModel.effort },
+      reasoning: { effort: selected?.effort ?? textConversationModel.effort },
       ...(profile ? { service_tier: 'default' as const } : {}),
       store: false as const,
       parallel_tool_calls: false,
@@ -147,10 +150,34 @@ export function textModel(
       attempt.outcome = response.status === 'completed' ? 'completed' : 'incomplete';
       if (profile && (response.model !== profile.model || response.service_tier !== 'default'))
         throw new Error('model_profile_mismatch');
+      if (!profile && selected && response.model !== selected.model)
+        throw new MapError('assistant_model_unsupported', 409);
       return response;
     } catch (error) {
       attempt.outcome = signal.aborted ? 'aborted' : 'failed';
       if (error instanceof OpenAI.APIError) attempt.requestId = identifier(error.requestID);
+      if (!signal.aborted && selectProfile) {
+        const status = error instanceof OpenAI.APIError ? error.status : undefined;
+        const code =
+          error instanceof MapError
+            ? error.code
+            : status === 401 || status === 403 || status === 404
+              ? 'assistant_model_access'
+              : status === 400 || status === 422
+                ? 'assistant_model_unsupported'
+                : 'assistant_model_temporary';
+        console.error(
+          JSON.stringify({
+            event: 'assistant_model_failed',
+            reference: attempt.attemptId,
+            at: attempt.endedAt ?? new Date().toISOString(),
+            model: attempt.model,
+            effort: selected?.effort,
+            category: code,
+          }),
+        );
+        throw new MapError(code, 409);
+      }
       throw error;
     } finally {
       attempt.endedAt = new Date().toISOString();

@@ -1,3 +1,4 @@
+import type { ConversationModelChoice } from './conversation-model.js';
 import type { DraftConflict } from './draft-conflicts.js';
 import type { MapDraft, ObjectType, RelationshipType, SaveOperation, SaveReceipt } from './map.js';
 import type { SaveCheck } from './save-check.js';
@@ -57,6 +58,10 @@ export type ConversationReply = {
   saveCheck?: SaveCheck;
 };
 export interface TextAssistantView {
+  modelChoice?: ConversationModelChoice;
+  modelChoiceRevision?: number;
+  enabledModelChoices?: ConversationModelChoice[];
+  modelChoiceUnavailable?: boolean;
   /** Information accepted when this conversation began; later acceptance cannot replace it. */
   readonly consentTextVersion?: number;
   id: string;
@@ -67,6 +72,8 @@ export interface TextAssistantView {
   contextPercentage?: number;
   /** A provider handoff is separate from clearing the visible conversation. */
   contextSummaryState?: 'needed' | 'summarizing' | 'failed';
+  /** A summary failure does not change the verified outcome of completed work. */
+  contextSummaryFailure?: { code: string; message: string };
   contextGeneration?: number;
   contextSummaries?: { id: string; text: string }[];
   /** Origin of the explicit reset; pre-release spoken work still gets its voice reply. */

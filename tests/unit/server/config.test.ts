@@ -5,6 +5,29 @@ import { configurationEnvironment } from './fixture.js';
 afterEach(() => vi.unstubAllEnvs());
 
 describe('installation configuration', () => {
+  test('only explicit supported conversation model and reasoning combinations can be activated', () => {
+    const choices = [{ model: 'gpt-6.1-sol', effort: 'medium' }];
+    expect(
+      readConfig({
+        ...configurationEnvironment(),
+        SKYTTEL_CONVERSATION_MODELS: JSON.stringify(choices),
+      }).conversationModels,
+    ).toEqual(choices);
+    expect(
+      readConfig({ ...configurationEnvironment(), SKYTTEL_CONVERSATION_MODELS: '[]' })
+        .conversationModels,
+    ).toEqual([]);
+    for (const value of [
+      '',
+      '{}',
+      '[null]',
+      '[{"model":"unknown","effort":"high"}]',
+      '[{"model":"gpt-6.1-terra","effort":"max"}]',
+    ])
+      expect(() =>
+        readConfig({ ...configurationEnvironment(), SKYTTEL_CONVERSATION_MODELS: value }),
+      ).toThrow(new ConfigurationError('SKYTTEL_CONVERSATION_MODELS'));
+  });
   test('diagnostic settings come only from the explicit Skyttel configuration', () => {
     vi.stubEnv('LANGSMITH_API_KEY', 'synthetic-ambient-key');
     vi.stubEnv('SKYTTEL_LANGSMITH_API_KEY', 'synthetic-process-key');

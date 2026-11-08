@@ -107,6 +107,7 @@ installation's unique generation stable across ordinary restarts.
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Credentials for the installation's Google web application. |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Credentials for the installation's Microsoft web application. |
 | `OPENAI_API_KEY` | Optional server-only project key for Skyttel's text and voice assistants. Without it, manual map work remains available. |
+| `SKYTTEL_CONVERSATION_MODELS` | Optional JSON list of enabled model and reasoning combinations. See [model activation](conversation-models.md). Missing enables Terra and Sol at low, medium and high; an empty list disables model work. |
 | `PORT` | Optional; defaults to `3000`. Compose uses port `3000`. |
 | `HOST` | Optional; defaults to `0.0.0.0`. |
 <!-- markdownlint-enable MD013 -->

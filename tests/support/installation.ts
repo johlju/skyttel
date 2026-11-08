@@ -61,6 +61,7 @@ export async function createInstallation(
     deliverResponse?: (request: Request, response: Response) => Response | Promise<Response>;
     authorityFence?: Config['authorityFence'];
     clientAddress?: Config['clientAddress'];
+    conversationModels?: Config['conversationModels'];
   } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'skyttel-test-'));
@@ -105,6 +106,7 @@ export async function createInstallation(
     port: 0,
     host: '127.0.0.1',
     langSmith: databaseOptions.langSmith,
+    conversationModels: databaseOptions.conversationModels,
     ...(databaseOptions.providerApiKey
       ? { openaiApiKey: databaseOptions.providerApiKey }
       : databaseOptions.modelFetch

@@ -281,7 +281,8 @@ tillgängligt”.
   },
   "reference": "Dator; kontrollerad leverantör och den angivna motiverade felgränsen.",
   "outcomes": [
-    "Det verkliga meddelandet styr tillåtelsen att spara och ett leverantörsfel förstör inte utkastet."
+    "Det verkliga meddelandet styr tillåtelsen att spara och ett leverantörsfel förstör inte utkastet.",
+    "Samtalstexten förklarar att modellen är tillfälligt otillgänglig, att valet är kvar och att återförsök kräver en egen handling."
   ]
 }
 ```
@@ -295,7 +296,8 @@ tillgängligt”.
    Låt operatören försöka spara efter varje meddelande. Vänta på den
    uttryckliga felnotisen före nästa meddelande.
 2. Skicka **Beskriv mitt utkast.** och låt operatören ge leverantörsfel.
-   Läs felnotisen och kvarvarande Lo-förslag.
+   Läs felnotisen, modellens felbesked i samtalstexten och kvarvarande
+   Lo-förslag.
 3. Stäng textvyn, välj **Tabell → Redigera Lo Exempel**, rätta Namn till
    **Lo Lind** och välj **Lägg i utkastet och stäng**. Läs Lo Lind med
    oförändrad **Påhittad uppgift** i utkastets fullständiga uppgifter.
@@ -304,8 +306,11 @@ tillgängligt”.
 
 - Ingen av de nekade, hypotetiska, uppskjutna eller citerade begärandena
   sparar kartan, även när ersättaren försöker anropa sparverktyget.
-- Modellfelet visas begripligt. Utkastet och vanligt formulärarbete finns
-  kvar. Provet är ett kontrollerat verktygsprov, inte bevis på språkförståelse.
+- Felnotisen visar att uppdraget inte slutförs. Samtalstexten förklarar att
+  modellen är tillfälligt otillgänglig, att valet är kvar och att återförsök
+  kräver en egen handling när felet är löst.
+- Utkastet och vanligt formulärarbete finns kvar. Provet är ett kontrollerat
+  verktygsprov, inte bevis på språkförståelse.
 
 ## Kvitton och faktisk visning
 

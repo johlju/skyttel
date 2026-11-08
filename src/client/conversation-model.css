@@ -1,0 +1,107 @@
+.text-view-model {
+  flex: none;
+  padding: 0 12px 4px 24px;
+}
+
+/* Short keyboards leave room for one header row and the same message field. */
+.household-map.workspace-shell
+  .text-view[data-short="true"]:has(.conversation-model-button)
+  .text-view-header {
+  grid-template-columns: minmax(46px, 1fr) auto auto 44px 44px;
+}
+.household-map.workspace-shell
+  .text-view[data-short="true"]:has(.conversation-model-button)
+  .text-view-close {
+  grid-column: 5;
+}
+.text-view[data-short="true"] .text-view-model {
+  position: absolute;
+  top: -44px;
+  right: 48px;
+  z-index: 3;
+  padding: 0;
+}
+
+.conversation-model-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+}
+.conversation-model-button svg {
+  width: 22px;
+  height: 22px;
+}
+.conversation-model-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.conversation-model-dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 1.25rem;
+  color: var(--space-text);
+  background: var(--space-surface);
+}
+.conversation-model-dialog::backdrop {
+  background: #0009;
+}
+.conversation-model-dialog h2:focus {
+  outline: none;
+}
+.household-map .text-view[data-short="true"] .conversation-model-dialog h2 {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0 0 1rem;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}
+.conversation-model-dialog label {
+  display: block;
+  margin-block: 0.75rem;
+}
+.conversation-model-dialog fieldset label {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+.conversation-model-dialog input[type="radio"] {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  flex: 0 0 20px;
+  margin: 0 0.5rem 0 0;
+  padding: 0;
+}
+.conversation-model-dialog button {
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+}
+.conversation-model-dialog input[type="range"] {
+  width: 100%;
+  min-height: 44px;
+}
+.conversation-reasoning-steps {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.conversation-reasoning-steps button {
+  min-height: 44px;
+  flex: 1;
+}
+.conversation-model-name {
+  margin-bottom: 1rem;
+}

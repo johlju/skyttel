@@ -1160,6 +1160,7 @@ export function HouseholdMap({
     conversation.session?.securityReference ??
     conversation.session?.completedReplies?.at(-1)?.securityReference;
   const noticeState = useConversationNotice({
+    contextSummaryFailure: conversation.session?.contextSummaryFailure,
     conditions: {
       saveChecking: Boolean(conversation.saveChecking),
       saveCheckFailed: Boolean(conversation.saveCheckFailed),

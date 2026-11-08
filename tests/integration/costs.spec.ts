@@ -21,6 +21,22 @@ async function startAssistant(page: Page, origin: string) {
   // Finish the initial session creation before asking to open text or voice
   // again; a second start would supersede the request still in flight.
   await expect(page.getByRole('region', { name: 'Skriv till Skyttel', exact: true })).toBeVisible();
+  // The worked cost example uses the Sol rate card; new conversations default
+  // to Terra, whose usage must not be priced using that card.
+  await page
+    .getByRole('button', { name: 'Modell och resonemang: GPT-6.1 Terra, Hög', exact: true })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'GPT-6.1 Terra', exact: true })
+    .click();
+  const models = page.getByRole('dialog', { name: 'Modellval', exact: true });
+  await models.getByRole('radio', { name: 'GPT-6.1 Sol', exact: true }).click();
+  await expect(models.getByRole('status')).toContainText('Valet är sparat');
+  await page.keyboard.press('Escape');
+  await expect(
+    page.getByRole('button', { name: 'Modell och resonemang: GPT-6.1 Sol, Hög', exact: true }),
+  ).toBeVisible();
   return household.id as string;
 }
 async function sendText(page: Page) {

@@ -164,7 +164,7 @@ export function VoiceBox({
   announce = true,
 }: {
   conversation: Pick<Conversation, 'voice' | 'working' | 'cancel'> &
-    Partial<Pick<Conversation, 'session'>>;
+    Partial<Pick<Conversation, 'session' | 'configureModel'>>;
   microphoneButton?: () => HTMLElement | null;
   focusAfterStop?: () => HTMLElement | null;
   notice?: ReactNode;
@@ -221,6 +221,12 @@ export function VoiceBox({
             </svg>
           )}
           <span>{status.word}</span>
+          <ConversationModel
+            conversation={{
+              session: conversation.session ?? null,
+              configureModel: conversation.configureModel,
+            }}
+          />
           <ContextSymbol percentage={conversation.session?.contextPercentage ?? 0} />
           {status.stop && !hideStop && (
             <button
@@ -250,3 +256,5 @@ export function VoiceBox({
     </div>
   );
 }
+
+import { ConversationModel } from './ConversationModel.js';

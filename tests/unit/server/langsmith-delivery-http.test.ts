@@ -3143,7 +3143,7 @@ test('a failed provider task ends its own SDK span as failed without exposing pr
     await (
       await client.get(`${path}/text-assistant/${session.id}/messages/failed-provider`)
     ).json(),
-  ).toMatchObject({ taskStatus: 'completed', phase: 'error', error: 'assistant_provider_failed' });
+  ).toMatchObject({ taskStatus: 'completed', phase: 'error', error: 'assistant_model_temporary' });
   expect(await (await client.get(`${path}/map`)).json()).toEqual(before);
   expect(JSON.stringify(endpoint.received)).not.toContain('synthetic-provider-failure-secret');
   const attempt = endpoint.received.find(

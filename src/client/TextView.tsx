@@ -4,6 +4,7 @@ import {
   defaultConversationPreferences,
 } from '../shared/conversation-preferences.js';
 import { ContextMeter } from './ConversationContext.js';
+import { ConversationModel } from './ConversationModel.js';
 import { ConversationTranscript } from './ConversationTranscript.js';
 import { ConversationWidthHandle } from './ConversationWidthHandle.js';
 import type { Conversation } from './use-conversation.js';
@@ -284,6 +285,9 @@ export function TextView({
             {session?.canceled ? 'Avbrutet. Föreslagna ändringar ligger kvar i utkastet.' : ''}
           </p>
           {notice}
+          <div className="text-view-model">
+            <ConversationModel conversation={conversation} />
+          </div>
           <form
             className="text-view-message"
             onSubmit={(event) => {

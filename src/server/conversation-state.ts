@@ -1,4 +1,5 @@
 import type { ResponseInputItem } from 'openai/resources/responses/responses';
+import type { ConversationModelChoice } from '../shared/conversation-model.js';
 import type { PendingPartReference, TextAssistantView } from '../shared/text-assistant.js';
 import type { PendingPartsState } from './pending-parts.js';
 import type { AssistantResultSnapshot } from './text-assistant-snapshot.js';
@@ -23,6 +24,7 @@ type AcceptedMessage = {
 };
 /** The single owner of recoverable conversation data; no live process resources. */
 export type ConversationState = TextAssistantView & {
+  modelChoice: ConversationModelChoice;
   readonly consentTextVersion: number;
   pendingPartsLedger: PendingPartsState;
   answers?: string[];
@@ -47,6 +49,8 @@ export type ConversationState = TextAssistantView & {
   resetGeneration: number;
   summary?: string;
   summaryOffset?: number;
+  /** The request's binding survives the browser's deferred voice handoff. */
+  pendingSummaryChoice?: ConversationModelChoice;
   previousFailure?: string;
   pendingSave?: { operationId: string; version: number; contentVersion: number };
   /** Authority belongs to unfinished current work, never historical dialogue. */

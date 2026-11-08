@@ -7,6 +7,12 @@ export function blockedActionMessage(reference: string) {
 /** Only server-owned wording may describe failures to the model or the person. */
 export function assistantFailureMessage(code: string): string {
   switch (code) {
+    case 'assistant_model_access':
+      return 'Installationens konto saknar åtkomst till den valda modellen. Valet är kvar. Välj en annan modell eller kontakta installationsansvarig.';
+    case 'assistant_model_unsupported':
+      return 'Modellen och resonemangsnivån stöds inte eller är inte aktiverade på installationen. Valet är kvar. Välj ett aktiverat alternativ eller kontakta installationsansvarig.';
+    case 'assistant_model_temporary':
+      return 'Modellen är tillfälligt otillgänglig. Valet är kvar. Försök igen genom en egen handling när felet är löst.';
     case 'assistant_scope_unclear':
       return 'Förtydliga vilka ändringar du vill göra. Den oklara åtgärden har inte utförts.';
     case 'assistant_scope_unavailable':

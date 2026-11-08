@@ -181,6 +181,17 @@ for (const size of [
         const body = await bounds(view(page).locator('.text-view-body'));
         expect(body.height).toBeGreaterThanOrEqual(18);
         expect((await bounds(voiceBox(page))).height).toBe(36);
+        if (size.visible === 190) {
+          const model = view(page).getByRole('button', { name: /^Modell och resonemang:/ });
+          await model.click();
+          await expect(
+            page.getByRole('dialog').getByRole('heading', { name: 'Resonemangsnivå' }),
+          ).toBeVisible();
+          await page.keyboard.press('Escape');
+          await expect(model).toBeFocused();
+          await field(page).click();
+          await expect(field(page)).toHaveValue('Ett vanligt uppdrag.');
+        }
         if (size.width > 700)
           expect((await bounds(voiceBox(page))).bottom).toBeLessThanOrEqual(surface.y);
         else

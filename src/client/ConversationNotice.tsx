@@ -1,4 +1,5 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { TextAssistantView } from '../shared/text-assistant.js';
 import {
   type ConversationNotice,
   type ConversationNoticeConditions,
@@ -29,6 +30,7 @@ export function useConversationNotice({
   eventKey,
   diagnostic,
   securityReference,
+  contextSummaryFailure,
 }: {
   conditions: ConversationNoticeConditions;
   ongoing: boolean;
@@ -36,6 +38,7 @@ export function useConversationNotice({
   eventKey: string;
   diagnostic?: { noticeId: ConversationNotice['id']; reference?: string; eventKey?: string };
   securityReference?: string;
+  contextSummaryFailure?: TextAssistantView['contextSummaryFailure'];
 }) {
   const voiceSession = useContext(VoiceSessionContext);
   const [dismissed, setDismissed] = useState<Partial<Record<ConversationNotice['id'], string>>>({});
@@ -56,7 +59,14 @@ export function useConversationNotice({
   for (const definition of conversationNoticeDefinitions)
     if (dismissed[definition.id] === identityFor(definition))
       visibleConditions[definition.id] = false;
-  const definition = firstConversationNotice(visibleConditions);
+  const selected = firstConversationNotice(visibleConditions);
+  const definition =
+    selected?.id === 'contextFull' && contextSummaryFailure
+      ? {
+          ...selected,
+          text: `Skyttel kunde inte sammanfatta samtalet. ${contextSummaryFailure.message} Samtalstexten och utkastet ligger kvar. Ett nytt samtal tömmer samtalstexten och kontexten och använder ditt senaste personliga modellval. Det löser inte modellfelet och ändrar inte kontots åtkomst.`,
+        }
+      : selected;
   const reference =
     definition?.id === 'actionBlocked'
       ? securityReference

@@ -23,6 +23,15 @@ test('current household archives reimport without replacing or transferring inst
         data: approvedForVisit,
       })
     ).json();
+    // Generate the priced Sol example before checking archive isolation.
+    expect(
+      (
+        await owner.post(`${path}/text-assistant/${assistant.id}/model-choice`, {
+          headers,
+          data: { model: 'gpt-6.1-sol', effort: 'high' },
+        })
+      ).status(),
+    ).toBe(200);
     expect(
       (
         await owner.post(`${path}/text-assistant/${assistant.id}/messages`, {

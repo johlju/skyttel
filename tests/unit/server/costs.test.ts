@@ -81,6 +81,16 @@ async function setup(
   });
   expect(started.status()).toBe(201);
   const assistant = await started.json();
+  // This suite's worked prices use the Sol rate card, independent of the
+  // product's default model for a new conversation.
+  expect(
+    (
+      await browser.post(`${path}/${assistant.id}/model-choice`, {
+        headers: headers(),
+        data: { model: 'gpt-6.1-sol', effort: 'high' },
+      })
+    ).status(),
+  ).toBe(200);
   async function message() {
     const current = await (await browser.get(`${path}/${assistant.id}`)).json();
     const response = await browser.post(`${path}/${assistant.id}/messages`, {
@@ -121,7 +131,7 @@ async function setup(
   return { live, householdPath, path, assistant, message, settled, startVoice };
 }
 
-test('a missing effective model displays the requested Sol pricing assumption', async () => {
+test('a missing effective model retains the requested Sol pricing assumption while rejecting the reply', async () => {
   const provider = costProvider();
   const scene = await setup(async (input, init) => {
     const response = await provider.provider(input, init);
@@ -132,10 +142,21 @@ test('a missing effective model displays the requested Sol pricing assumption', 
   await scene.message();
   await scene.settled();
   const result = (await costs()).terra;
-  expect(result.estimatedUsd).toBeCloseTo(0.217 * 2, 10);
+  // Invalid model metadata stops at interpretation; its reported usage is
+  // still retained, with the requested model explicitly marked as assumed.
+  expect(result.estimatedUsd).toBeCloseTo(0.217, 10);
   expect(result).toMatchObject({
+    attempts: 1,
+    uncertainAttempts: 1,
     unpricedAttempts: 0,
-    issues: [{ code: 'assumed_requested_model', count: 2 }],
+    issues: [
+      { code: 'unfinished', count: 1 },
+      { code: 'assumed_requested_model', count: 1 },
+    ],
+  });
+  expect(await (await browser.get(`${scene.path}/${scene.assistant.id}`)).json()).toMatchObject({
+    phase: 'error',
+    error: 'assistant_model_unsupported',
   });
 });
 
@@ -260,16 +281,7 @@ test('permanent household erasure and restart retain the global cost ledger and 
 
 test('the operator reads separate measured Sol cost and Render assumptions after a real model response and restart', async () => {
   const model = textModel(() => [modelMessage('Privat syntetiskt svar.')]);
-  app = await createInstallation(undefined, { modelFetch: model.provider });
-  browser = await request.newContext();
-  await signIn(browser, app.origin);
-  const { household } = await (await createHousehold(browser, app.origin)).json();
-  const path = `${app.origin}/api/households/${household.id}/text-assistant`;
-  const started = await browser.post(path, {
-    headers: { origin: app.origin },
-    data: approvedForVisit,
-  });
-  const assistant = await started.json();
+  const { path, assistant } = await setup(model.provider);
   expect(
     (
       await browser.post(`${path}/${assistant.id}/messages`, {
@@ -576,11 +588,24 @@ test.each([
 });
 
 test.each([
-  { providerMetadata: { service_tier: 'priority' }, issue: 'unsupported_tier' },
-  { providerMetadata: { model: 'untrusted-private-provider-field' }, issue: 'unsupported_model' },
+  {
+    providerMetadata: { service_tier: 'priority' },
+    issue: 'unsupported_tier',
+    attempts: 2,
+    issues: [{ code: 'unsupported_tier', count: 2 }],
+  },
+  {
+    providerMetadata: { model: 'untrusted-private-provider-field' },
+    issue: 'unsupported_model',
+    attempts: 1,
+    issues: [
+      { code: 'unfinished', count: 1 },
+      { code: 'unsupported_model', count: 1 },
+    ],
+  },
 ])(
   'an unsupported provider response reports $issue without inventing a price or storing response text',
-  async ({ providerMetadata, issue }) => {
+  async ({ providerMetadata, issue, attempts, issues }) => {
     const provider = textModel(() => [modelMessage('Privat svar.')]).provider;
     const scene = await setup(async (input, init) => {
       const response = await provider(input, init);
@@ -595,12 +620,19 @@ test.each([
     await scene.settled();
     const result = await costs();
     expect(result.terra).toMatchObject({
-      attempts: 2,
+      attempts,
       estimatedUsd: 0,
-      uncertainAttempts: 2,
-      unpricedAttempts: 2,
-      issues: [{ code: issue, count: 2 }],
+      uncertainAttempts: attempts,
+      unpricedAttempts: attempts,
+      issues,
     });
+    if (issue === 'unsupported_model')
+      expect(await (await browser.get(`${scene.path}/${scene.assistant.id}`)).json()).toMatchObject(
+        {
+          phase: 'error',
+          error: 'assistant_model_unsupported',
+        },
+      );
     expect(JSON.stringify(result)).not.toContain('untrusted-private-provider-field');
   },
 );

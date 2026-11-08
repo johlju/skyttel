@@ -9,6 +9,38 @@ Första **Skicka** eller **Nytt samtal** börjar samtalet med text; utan
 giltigt medgivande visas först [medgivanderutan](#medgivande).
 Utkastets granskning och kartans formulär fungerar även när samtal saknas.
 
+## Modell och resonemang
+
+I ett pågående samtal öppnar ikonen **Modell och resonemang** ovanför
+meddelandefältet och till höger om röstindikatorn samma val. Dialogens
+slider har stegen **Låg**, **Medium** och **Hög**. Använd piltangenterna
+eller de tre knapparna för att välja utan att dra. Modellnamnet öppnar
+ett separat val mellan **GPT-6.1 Terra** och **GPT-6.1 Sol**. Modellbyte
+behåller resonemangsnivån. Escape eller **Stäng** återför fokus till
+kontrollen som öppnar dialogen utan att avbryta pågående eller köat arbete.
+
+Utan sparat personligt val används Terra och hög nivå. Ditt senaste
+uttryckliga val sparas för nya samtal i alla dina hushåll och på andra
+enheter. Ett annat redan pågående samtal behåller sitt eget val. Vanligt
+arbete i ett äldre samtal ändrar inte det personliga valet.
+
+Valet gäller uppdragstolkning, arbete, oberoende kontroll av föreslagna
+ändringar och sammanfattning. GPT-Live 1 lyssnar och talar även när du
+väljer en annan arbetsmodell. Text och röst delar val och samtalsarbete.
+Pågående begäran behåller valet från sin start. Nästa begäran, även en
+redan köad, använder det nya valet utan att utkast eller samtalstext töms.
+
+Installationsansvarig avgör vilka kombinationer som är aktiverade.
+Aktivering garanterar inte kontoåtkomst. Ett otillgängligt sparat val
+visas och behålls tills du själv väljer ett annat. Om både modell och
+nivå behöver ändras kan du välja en namngiven aktiverad kombination i
+dialogen. Det är ett uttryckligt val av båda inställningarna.
+Felbesked skiljer tillfälligt fel, saknad åtkomst och ett alternativ som
+inte stöds eller inte är aktiverat. Inget modellbyte eller återförsök sker
+automatiskt.
+Kostnadsöversikten kan sakna prisuppgift för en modell; saknade priser
+visas som okända och betyder inte noll kostnad.
+
 ## Medgivande
 
 Skyttel behöver ditt medgivande innan ett samtal startar. Textversion 3
@@ -228,12 +260,17 @@ replikerna för fortsatt arbete, och läser ditt aktuella utkast på nytt.
 Rösten pausar inspelningen under bytet och behåller mikrofonens läge.
 Tal som redan spelades in före släpp kan fortfarande skickas efteråt.
 
-Om sammanfattningen misslyckas visas **Kontexten är full, och Skyttel
-kunde inte sammanfatta samtalet. Inget har gått förlorat, och utkastet
-ligger kvar.** Det ursprungliga samtalet ligger kvar i textvyn, och
-**Skicka** och mikrofonen är avstängda. Välj **Nytt samtal** i notisen
-för att tömma samtalstexten och kontexten. Utkastet ligger kvar, och
-du kan fortsätta med det i det nya samtalet.
+Om sammanfattningen misslyckas visas ett hinderbesked. Vid modellfel
+förklarar notisen om modellen är tillfälligt otillgänglig, om kontot
+saknar åtkomst eller om kombinationen inte stöds. Följ det angivna nästa
+steget. Det ursprungliga samtalet och utkastet ligger kvar. **Skicka** och
+mikrofonen är avstängda; ett modellbyte startar inget arbete automatiskt.
+
+Du kan uttryckligen välja **Nytt samtal** i notisen för att tömma
+samtalstexten och kontexten. Det nya samtalet använder ditt senaste
+personliga modellval. Detta löser inte modellfelet och ger inte ny
+kontoåtkomst. Utkastet ligger kvar för fortsatt arbete när modellen
+är tillgänglig.
 
 Skyttel har med sig hela det pågående samtalet, också efter att ett förslag
 har lagts i utkastet, efter sparande, avbrott eller fel. Du kan exempelvis

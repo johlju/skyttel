@@ -613,8 +613,29 @@ for (const { seeded, viewport } of references)
       await expect.poll(() => events.filter(({ event }) => event === 'held').length).toBe(1);
       const rejected = events.find(({ event }) => event === 'held')?.id;
       if (!rejected) throw new Error('Missing literal notice request');
+      expect(
+        unexpectedPreparationDiagnostics(diagnostics),
+        'before deliberately failing the literal notice request',
+      ).toBe('');
       child.stdin.write(`${failed.replace('REQUEST', rejected)}\n`);
       await expect(notice).toContainText('Skyttel kunde inte slutföra uppdraget.');
+      // This deliberate model failure emits one content-free operator diagnostic.
+      // Exact fields reject transcripts, provider details and credentials; keep
+      // the captured output unchanged through recovery and launcher shutdown.
+      await expect.poll(() => unexpectedPreparationDiagnostics(diagnostics)).toMatch(/\n$/u);
+      const expectedFailureDiagnostics = unexpectedPreparationDiagnostics(diagnostics);
+      const failureDiagnostic = JSON.parse(expectedFailureDiagnostics);
+      expect(failureDiagnostic).toEqual({
+        event: 'assistant_model_failed',
+        reference: expect.stringMatching(
+          /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u,
+        ),
+        at: expect.any(String),
+        model: 'gpt-6.1-terra',
+        effort: 'high',
+        category: 'assistant_model_temporary',
+      });
+      expect(new Date(failureDiagnostic.at).toISOString()).toBe(failureDiagnostic.at);
       await expect(field).toBeFocused();
       await notice.getByRole('button', { name: 'Stäng notisen', exact: true }).focus();
       await page.keyboard.press('Enter');
@@ -635,7 +656,7 @@ for (const { seeded, viewport } of references)
       expect(
         unexpectedPreparationDiagnostics(diagnostics),
         'after literal playback/notice preparation and reset',
-      ).toBe('');
+      ).toBe(expectedFailureDiagnostics);
       expect(events.filter(({ event }) => event === 'held')).toHaveLength(2);
       expect(events.filter(({ event }) => event === 'released')).toHaveLength(4);
       expect(
@@ -654,7 +675,7 @@ for (const { seeded, viewport } of references)
       expect(
         unexpectedPreparationDiagnostics(diagnostics),
         'before literal-proof launcher quit',
-      ).toBe('');
+      ).toBe(expectedFailureDiagnostics);
       child.stdin.write('quit\n');
       await expect.poll(() => child.exitCode).toBe(0);
       expect(events.filter(({ event }) => event === 'closed')).toHaveLength(1);
@@ -668,7 +689,7 @@ for (const { seeded, viewport } of references)
       expect(
         unexpectedPreparationDiagnostics(diagnostics),
         'after literal-proof launcher quit',
-      ).toBe('');
+      ).toBe(expectedFailureDiagnostics);
       await expect(stat(ready.directory)).rejects.toMatchObject({ code: 'ENOENT' });
     } finally {
       if (child.exitCode === null) {

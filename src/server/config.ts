@@ -1,3 +1,5 @@
+import type { ConversationModelChoice } from '../shared/conversation-model.js';
+import { sameModelChoice, supportedConversationChoices } from '../shared/conversation-model.js';
 import {
   type ClientAddressPolicy,
   clientAddressHeader,
@@ -50,6 +52,7 @@ export interface Config {
   port: number;
   host: string;
   openaiApiKey?: string;
+  conversationModels?: ConversationModelChoice[];
   /** Optional diagnostic destination. Invalid values disconnect only this sender. */
   langSmith?: {
     endpoint: string;
@@ -151,6 +154,7 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
     port,
     host: environment.HOST ?? '0.0.0.0',
     openaiApiKey: environment.OPENAI_API_KEY || undefined,
+    conversationModels: readConversationModels(environment.SKYTTEL_CONVERSATION_MODELS),
     ...([
       'SKYTTEL_LANGSMITH_ENDPOINT',
       'SKYTTEL_LANGSMITH_PROJECT',
@@ -167,6 +171,27 @@ export function readConfig(environment: NodeJS.ProcessEnv = process.env): Config
         }
       : {}),
   };
+}
+
+function readConversationModels(value: string | undefined): ConversationModelChoice[] | undefined {
+  if (value === undefined) return undefined;
+  try {
+    const entries: unknown = JSON.parse(value);
+    if (
+      !Array.isArray(entries) ||
+      !entries.every(
+        (entry) =>
+          entry &&
+          typeof entry === 'object' &&
+          Object.keys(entry).length === 2 &&
+          supportedConversationChoices.some((choice) => sameModelChoice(choice, entry)),
+      )
+    )
+      throw new Error('unsupported');
+    return entries;
+  } catch {
+    throw new ConfigurationError('SKYTTEL_CONVERSATION_MODELS');
+  }
 }
 
 function readClientAddressPolicy(environment: NodeJS.ProcessEnv): ClientAddressPolicy {

@@ -601,6 +601,10 @@ for (const viewport of [
       else expect(card.y).toBeGreaterThan(box.bottom);
       await textButton(page).focus();
       await page.keyboard.press('Tab');
+      await expect(
+        voiceBox(page).getByRole('button', { name: /^Modell och resonemang:/ }),
+      ).toBeFocused();
+      await page.keyboard.press('Tab');
       await expect(notice(page).getByRole('button', { name: 'Stäng notisen' })).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(notice(page)).toHaveCount(0);

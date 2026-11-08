@@ -26,6 +26,11 @@ De körs uttryckligen med privat konfiguration och redovisas separat från CI.
 
 ## Ansvar och delade resultat
 
+[Modellval](conversation-model-choice.md) provar gemensamma modell- och
+resonemangsval i text och röst, otillgängliga och åtskilda aktiverade par,
+tangentbord och fokusåtergång medan samtalets arbete fortsätter. Verklig
+skärmläsare, förstoring och visuell UX bedöms separat.
+
 Använd områdesfallen för steg och förväntade resultat:
 
 - [Assistentförberedelsen](setup/assistants.md) beskriver verklig
